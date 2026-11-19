@@ -141,6 +141,36 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(requests[1]['messages'][-2]['tool_calls'][0]['id'],'call_fixture')
         self.assertEqual(payload['_agent_final'],'323')
 
+    async def test_full_unicode_tool_evidence_survives_model_followup(self):
+        # A long result must remain exact in the next model request, not only
+        # in a receipt; multi-turn S03 acceptance needs the complete evidence.
+        evidence='Нативный отчёт: ' + ('ñ🧠данные\n' * 1400) + 'LAST-EVIDENCE-MARKER'
+        self.assertGreater(len(evidence),8000)
+        first=Chunks([
+            frame(calls=[{'index':0,'id':'call_full_context','type':'function',
+                          'function':{'name':'calculate','arguments':'{}'}}]),
+            frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+        second=Chunks([frame('Принято'),frame(finish='stop'),
+                       b'data: [DONE]\\n\\n'])
+        requests,factory=self.transport([first,second])
+        native=self.native(result={'ok':True,'text':evidence})
+        original='Используй весь результат инструмента, включая конец.'
+        payload={'messages':[{'role':'user','content':original}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,original,True)
+            wire=''.join([chunk async for chunk in response.body_iterator])
+        self.assertEqual(len(requests),2)
+        self.assertEqual(requests[1]['messages'][0]['content'],original)
+        self.assertEqual(requests[1]['messages'][-1]['content'],evidence)
+        self.assertTrue(requests[1]['messages'][-1]['content'].endswith(
+            'LAST-EVIDENCE-MARKER'))
+        self.assertEqual(requests[1]['messages'][-1]['tool_call_id'],
+                         'call_full_context')
+        self.assertEqual(payload['_agent_final'],'Принято')
+        self.assertIn('[DONE]',wire)
+        self.assertEqual(self.dispatched,[('calculate',{})])
+
     async def test_untrusted_model_tool_id_overflow_never_dispatches_or_saves(self):
         # A tool-call ID may be streamed incrementally by Maya/llama.cpp.
         # The limit is cumulative, not a per-frame cap.
