@@ -258,5 +258,5 @@ if __name__ == '__main__':
         reason = str(exc)
         if not re.fullmatch(r'HOLD_[A-Z0-9_]{1,110}', reason):
             reason = 'HOLD_OWNER_CGROUP_REFILL_' + type(exc).__name__.upper()
-        print('NOX_MAINT_REFLEX_RESTORE=' + json.dumps({'state':reason, 'changes_applied':False, 'owner_stop_unchanged':True}, sort_keys=True, separators=(',',':')), flush=True)
+        print('NOX_MAINT_REFLEX_RESTORE=' + json.dumps({'state':reason, 'result_scope':'OWNER_ONE_SHOT_CGROUP_REFILL_ATTEMPT'}, sort_keys=True, separators=(',',':')), flush=True)
         raise SystemExit(2)
