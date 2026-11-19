@@ -34,8 +34,16 @@ except NameError:
 
 ROOT = Path("/root/nox")
 SCRIPT = ROOT / "scripts/nox_lifeline_observer.py"
+BOOTSTRAP = ROOT / "scripts/nox_lifeline_observer_bootstrap.py"
 POLICY = Path("/etc/nox/lifeline-observer.json")
 UNIT = Path("/etc/systemd/system/nox-lifeline-observer.service")
+SUPERVISOR_PROGRAM = Path("/etc/supervisor/conf.d/nox-lifeline-observer.conf")
+SUPERVISOR_PROGRAM_NAME = "nox-lifeline-observer"
+SUPERVISOR_PROGRAM_BUNDLE_KEY = "nox-lifeline-observer.conf"
+SUPERVISOR_BOOTSTRAP_BUNDLE_KEY = "nox_lifeline_observer_bootstrap.py"
+SUPERVISOR_STATE_POLL_ATTEMPTS = 40
+SUPERVISOR_STATE_POLL_INTERVAL_SECONDS = 0.25
+SUPERVISOR_SERVER_VERSION = None
 STATE_DIR = ROOT / "state/lifeline-observer"
 STATE = STATE_DIR / "state.json"
 SERVICE = "nox-lifeline-observer.service"
@@ -69,10 +77,23 @@ MAX_BYTES = {"nox_lifeline_observer.py": 262_144,
 FILES = {"nox_lifeline_observer.py": SCRIPT,
          "lifeline-observer.json": POLICY,
          "nox-lifeline-observer.service": UNIT}
+SUPERVISOR_INSTALL_FILES = {
+    "nox_lifeline_observer.py": SCRIPT,
+    "lifeline-observer.json": POLICY,
+    SUPERVISOR_BOOTSTRAP_BUNDLE_KEY: BOOTSTRAP,
+}
 BUNDLE_SHA256 = {
-    "nox_lifeline_observer.py": "3f631b9541b68e1639bb834e76aebd6abc2f7f3461d9d6653934dbc0d31563e0",
+    "nox_lifeline_observer.py": "acb7a0174d02ac106e33c4f5c35abfa1a571526454ac65ef70b241247d602990",
     "lifeline-observer.json": "116ef4bcc534d2ad3531156c6581adef40ffbbf7e3c4bdf9a68cfa487fced27b",
     "nox-lifeline-observer.service": UNIT_SHA256,
+}
+SUPERVISOR_BUNDLE_MAX_BYTES = {
+    SUPERVISOR_PROGRAM_BUNDLE_KEY: 8_192,
+    SUPERVISOR_BOOTSTRAP_BUNDLE_KEY: 16_384,
+}
+SUPERVISOR_BUNDLE_SHA256 = {
+    SUPERVISOR_PROGRAM_BUNDLE_KEY: "00f58d8a96fb9277f7e5e0f65acc4719b231608fe43e633011cc524ac04f66f4",
+    SUPERVISOR_BOOTSTRAP_BUNDLE_KEY: "3c556a5a4e81532aa50e05dbea9c7115740248799a15bfba45df70ae325b5584",
 }
 SOURCE_SHA = re.compile(r"^[0-9a-f]{40}$")
 OWNER_LOCK_FD = None
@@ -101,6 +122,29 @@ OBSERVER_RUNTIME_SOURCE_SHA256 = None
 CGROUP_TARGET_EVIDENCE = None
 CGROUP_TARGET_PRE_ENABLE = None
 CGROUP_TARGET_POST_ENABLE = None
+SUPERVISOR_BASELINE_PIN = None
+SUPERVISOR_ALLOWED_PROGRAM_CONFIG = None
+SUPERVISOR_PROGRAM_PREIMAGE = None
+SUPERVISOR_PROGRAM_INSTALLED = None
+SUPERVISOR_PROGRAM_RELOADED = False
+SUPERVISOR_PROGRAM_ADDED = False
+SUPERVISOR_PROGRAM_STARTED = False
+SUPERVISOR_PROGRAM_START_IDENTITY = None
+SUPERVISOR_PROGRAM_BEFORE_INVENTORY = None
+SUPERVISOR_PROGRAM_AFTER_INVENTORY = None
+SUPERVISOR_PROGRAM_ACTIVATION = None
+SUPERVISOR_PROGRAM_ROLLBACK_PRIOR_GROUPS_UNCHANGED = None
+SUPERVISOR_MEMORY_POST_START = None
+SUPERVISOR_BACKEND_ACTIVE = False
+SUPERVISOR_RESOURCE_RECEIPT = {
+    "address_space_limit_bytes": 512 * 1024**2,
+    "open_files_limit": 128,
+    "core_file_limit_bytes": 0,
+    "file_size_limit_bytes": 8 * 1024**2,
+    "nice": 10,
+    "hard_cgroup_memory_limit": "UNSUPPORTED_BY_SUPERVISOR",
+    "hard_cpu_quota": "UNSUPPORTED_BY_SUPERVISOR",
+}
 
 
 class Hold(RuntimeError):
@@ -327,9 +371,14 @@ def _supervisord_identity(endpoint=None):
     executable_identity = _supervisorctl_snapshot(Path(exe), max_size=64 * 1024**2)
     cgroup = process_cgroup_info(pid)
     start_epoch_ns = _proc_start_epoch_ns(pid, before)
-    if any(row["ctime_ns"] > start_epoch_ns - 1_500_000_000
-           for row in endpoint["config_inputs"]):
-        fail("SUPERVISOR_CONFIG_NOT_PREEXISTING_AT_START")
+    allowed_program = SUPERVISOR_ALLOWED_PROGRAM_CONFIG
+    for row in endpoint["config_inputs"]:
+        if allowed_program is not None and row["path"] == allowed_program["path"]:
+            if row["sha256"] != allowed_program["sha256"]:
+                fail("SUPERVISOR_OBSERVER_CONFIG_PIN_CHANGED")
+            continue
+        if row["ctime_ns"] > start_epoch_ns - 1_500_000_000:
+            fail("SUPERVISOR_CONFIG_NOT_PREEXISTING_AT_START")
     listener = _unix_listener_evidence(pid, endpoint)
     try:
         exe_final = os.readlink(proc / "exe")
@@ -628,6 +677,15 @@ def resolve_supervisorctl():
     return snapshot
 
 
+def refresh_supervisor_pin_for_program(expected_config):
+    global SUPERVISORCTL_PIN
+    current = _supervisor_client_snapshot()
+    if not supervisor_runtime_delta(current, SUPERVISOR_BASELINE_PIN, expected_config):
+        fail("SUPERVISOR_PROGRAM_CONFIG_DELTA_NOT_EXACT")
+    SUPERVISORCTL_PIN = current
+    return current
+
+
 def verify_supervisorctl_pin():
     if not isinstance(SUPERVISORCTL_PIN, dict):
         fail("SUPERVISORCTL_PIN_UNAVAILABLE")
@@ -635,6 +693,305 @@ def verify_supervisorctl_pin():
     if current != SUPERVISORCTL_PIN:
         fail("SUPERVISORCTL_PIN_CHANGED")
     return current
+
+
+SUPERVISOR_RPC_CALLS = {
+    "system.listMethods": (),
+    "supervisor.getVersion": (),
+    "supervisor.getAllProcessInfo": (),
+    "supervisor.reloadConfig": (),
+    "supervisor.addProcessGroup": (SUPERVISOR_PROGRAM_NAME,),
+    "supervisor.startProcess": (SUPERVISOR_PROGRAM_NAME, True),
+    "supervisor.stopProcess": (SUPERVISOR_PROGRAM_NAME, True),
+    "supervisor.removeProcessGroup": (SUPERVISOR_PROGRAM_NAME,),
+}
+
+
+def supervisor_rpc(method, *args):
+    """Call one fixed Supervisor UDS method and bind it to the pinned daemon."""
+    if method not in SUPERVISOR_RPC_CALLS or tuple(args) != SUPERVISOR_RPC_CALLS[method]:
+        fail("SUPERVISOR_RPC_OPERATION_NOT_ALLOWLISTED")
+    before = verify_supervisorctl_pin()
+    endpoint, daemon = before["endpoint"], before["daemon"]
+    transport = _UnixXMLRPCTransport(endpoint["path"],
+        {"pid": daemon["pid"], **daemon["credentials"]}, endpoint["parent_chain"],
+        timeout=8)
+    proxy = xmlrpc.client.ServerProxy("http://supervisor.local/RPC2", transport=transport,
+                                      allow_none=False, use_builtin_types=True)
+    try:
+        namespace, name = method.split(".", 1)
+        result = getattr(getattr(proxy, namespace), name)(*args)
+        peer = transport.peer_identity()
+    except (xmlrpc.client.Error, OSError, ValueError, KeyError, TypeError):
+        fail("SUPERVISOR_RPC_CALL_FAILED")
+    finally:
+        proxy.close()
+    if peer != {"pid": daemon["pid"], **daemon["credentials"]}:
+        fail("SUPERVISOR_RPC_PEER_MISMATCH")
+    after = verify_supervisorctl_pin()
+    if after != before:
+        fail("SUPERVISOR_RPC_PIN_CHANGED_DURING_CALL")
+    return result
+
+
+def validate_supervisor_none_log_version(version):
+    """Require Supervisor 3.0+, where stdout_logfile=NONE is supported."""
+    if not isinstance(version, str) or len(version) > 64:
+        fail("SUPERVISOR_VERSION_UNVERIFIED")
+    match = re.fullmatch(r"(\d+)\.(\d+)(?:\.(\d+))?(?:[-+][A-Za-z0-9.+-]+)?", version)
+    if not match:
+        fail("SUPERVISOR_VERSION_UNVERIFIED")
+    parsed = tuple(int(part or 0) for part in match.groups())
+    if parsed < (3, 0, 0):
+        fail("SUPERVISOR_NONE_LOG_UNSUPPORTED")
+    return version
+
+
+def normalize_supervisor_inventory(rows):
+    """Keep only stable public process fields; reject ambiguous or unbounded rows."""
+    if not isinstance(rows, list) or len(rows) > 512:
+        fail("SUPERVISOR_INVENTORY_INVALID")
+    result = []
+    seen = set()
+    states = {"RUNNING", "STOPPED", "STARTING", "STOPPING", "BACKOFF",
+              "EXITED", "FATAL", "UNKNOWN"}
+    for row in rows:
+        if not isinstance(row, dict):
+            fail("SUPERVISOR_INVENTORY_ROW_INVALID")
+        group, name, state, pid = (row.get("group"), row.get("name"),
+                                   row.get("statename"), row.get("pid"))
+        if (not isinstance(group, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", group) or
+                not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", name) or
+                state not in states or type(pid) is not int or not 0 <= pid <= 2**31 - 1 or
+                (state == "RUNNING" and pid <= 1) or (state == "STOPPED" and pid != 0)):
+            fail("SUPERVISOR_INVENTORY_ROW_INVALID")
+        key = (group, name)
+        if key in seen:
+            fail("SUPERVISOR_INVENTORY_DUPLICATE")
+        seen.add(key)
+        result.append({"group": group, "name": name, "state": state, "pid": pid})
+    return sorted(result, key=lambda item: (item["group"], item["name"]))
+
+
+def supervisor_inventory():
+    return normalize_supervisor_inventory(supervisor_rpc("supervisor.getAllProcessInfo"))
+
+
+def validate_reload_config_delta(result, *, added_name=SUPERVISOR_PROGRAM_NAME,
+                                 removed=False):
+    """Require a single explicit add (or rollback removal), with no other diff."""
+    added, changed, removed_groups = normalize_reload_config_result(result)
+    expected_added = [] if removed else [added_name]
+    expected_removed = [added_name] if removed else []
+    if (added != expected_added or changed or removed_groups != expected_removed or
+            len(set(added)) != len(added) or len(set(removed_groups)) != len(removed_groups)):
+        fail("SUPERVISOR_RELOAD_SCOPE_CHANGED")
+    return {"added": added, "changed": changed, "removed": removed_groups}
+
+
+def normalize_reload_config_result(result):
+    """Decode Supervisor API 3.0's one-element wrapper around its three arrays."""
+    # Supervisor 4.2.5/API 3.0 serializes this as one outer item containing
+    # [added, changed, removed]. Accept the documented flat equivalent too.
+    if (isinstance(result, (list, tuple)) and len(result) == 1 and
+            isinstance(result[0], (list, tuple)) and len(result[0]) == 3):
+        result = result[0]
+    if (not isinstance(result, (list, tuple)) or len(result) != 3 or
+            any(not isinstance(group_list, (list, tuple)) or
+                any(not isinstance(name, str) for name in group_list)
+                for group_list in result)):
+        fail("SUPERVISOR_RELOAD_DELTA_INVALID")
+    added, changed, removed_groups = (list(group_list) for group_list in result)
+    if (len(set(added)) != len(added) or len(set(changed)) != len(changed) or
+            len(set(removed_groups)) != len(removed_groups)):
+        fail("SUPERVISOR_RELOAD_DELTA_DUPLICATE")
+    return added, changed, removed_groups
+
+
+def supervisor_old_rows(inventory):
+    return [row for row in inventory if row["group"] != SUPERVISOR_PROGRAM_NAME]
+
+
+def supervisor_old_rows_match(baseline, current):
+    return supervisor_old_rows(current) == supervisor_old_rows(baseline)
+
+
+def assert_supervisor_old_rows_unchanged(baseline, current):
+    if not supervisor_old_rows_match(baseline, current):
+        fail("SUPERVISOR_EXISTING_GROUP_CHANGED")
+
+
+def assert_observer_group(inventory, state=None):
+    rows = [row for row in inventory if row["group"] == SUPERVISOR_PROGRAM_NAME]
+    if state is None:
+        if rows:
+            fail("SUPERVISOR_OBSERVER_GROUP_UNEXPECTED")
+        return None
+    if (len(rows) != 1 or rows[0]["name"] != SUPERVISOR_PROGRAM_NAME or
+            rows[0]["state"] != state or
+            (state == "RUNNING" and rows[0]["pid"] <= 1) or
+            (state == "STOPPED" and rows[0]["pid"] != 0)):
+        fail("SUPERVISOR_OBSERVER_GROUP_STATE")
+    return rows[0]
+
+
+def wait_for_observer_running(inventory_fn, baseline, *, max_polls=SUPERVISOR_STATE_POLL_ATTEMPTS,
+                              poll_interval=SUPERVISOR_STATE_POLL_INTERVAL_SECONDS,
+                              sleep_fn=time.sleep):
+    """Boundedly wait for the one new observer group to reach RUNNING."""
+    prior_pid = None
+    for index in range(max_polls):
+        current = inventory_fn()
+        assert_supervisor_old_rows_unchanged(baseline, current)
+        rows = [row for row in current if row["group"] == SUPERVISOR_PROGRAM_NAME]
+        if (len(rows) != 1 or rows[0]["name"] != SUPERVISOR_PROGRAM_NAME):
+            fail("SUPERVISOR_OBSERVER_START_INVENTORY")
+        target = rows[0]
+        if target["state"] == "RUNNING":
+            if prior_pid is not None and target["pid"] != prior_pid:
+                fail("SUPERVISOR_OBSERVER_START_PID_CHANGED")
+            return target, current
+        if target["state"] != "STARTING" or target["pid"] <= 1:
+            fail("SUPERVISOR_OBSERVER_START_STATE")
+        if prior_pid is not None and target["pid"] != prior_pid:
+            fail("SUPERVISOR_OBSERVER_START_PID_CHANGED")
+        prior_pid = target["pid"]
+        if index + 1 < max_polls:
+            sleep_fn(poll_interval)
+    fail("SUPERVISOR_OBSERVER_START_TIMEOUT")
+
+
+def wait_for_observer_quiescent(inventory_fn, prior_inventory, initial_pid, *,
+                                max_polls=SUPERVISOR_STATE_POLL_ATTEMPTS,
+                                poll_interval=SUPERVISOR_STATE_POLL_INTERVAL_SECONDS,
+                                sleep_fn=time.sleep):
+    """Boundedly wait for our observer process to stop, recording unrelated drift."""
+    global SUPERVISOR_PROGRAM_ROLLBACK_PRIOR_GROUPS_UNCHANGED
+    for index in range(max_polls):
+        current = inventory_fn()
+        SUPERVISOR_PROGRAM_ROLLBACK_PRIOR_GROUPS_UNCHANGED = (
+            bool(SUPERVISOR_PROGRAM_ROLLBACK_PRIOR_GROUPS_UNCHANGED) and
+            supervisor_old_rows_match(prior_inventory, current))
+        rows = [row for row in current if row["group"] == SUPERVISOR_PROGRAM_NAME]
+        if (len(rows) != 1 or rows[0]["name"] != SUPERVISOR_PROGRAM_NAME):
+            fail("SUPERVISOR_ROLLBACK_OBSERVER_INVENTORY")
+        target = rows[0]
+        if (target["state"] == "STOPPED" and target["pid"] == 0 or
+                target["state"] in {"BACKOFF", "EXITED", "FATAL"} and target["pid"] == 0):
+            return target, current
+        if (target["state"] not in {"RUNNING", "STARTING", "STOPPING"} or
+                target["pid"] <= 1 or target["pid"] != initial_pid):
+            fail("SUPERVISOR_ROLLBACK_TARGET_STATE_AMBIGUOUS")
+        if index + 1 < max_polls:
+            sleep_fn(poll_interval)
+    fail("SUPERVISOR_ROLLBACK_STOP_TIMEOUT")
+
+
+def read_supervisor_config_inputs(endpoint):
+    """Parse the exact already-pinned root-owned config files without globbing new files."""
+    parser = configparser.ConfigParser(interpolation=None, strict=True,
+                                       delimiters=("=", ":"))
+    for row in endpoint.get("config_inputs", []):
+        path = Path(row["path"])
+        raw, identity = bounded_read(path, 262_144)
+        if hashlib.sha256(raw).hexdigest() != row.get("sha256"):
+            fail("SUPERVISOR_CONFIG_INPUT_READBACK")
+        if identity is None or (identity[0], identity[1], stat.S_IMODE(identity[2]),
+                                identity[3], identity[4], identity[5], identity[6],
+                                identity[7], identity[8]) != (
+                row.get("device"), row.get("inode"), row.get("mode"), row.get("nlink"),
+                row.get("uid"), row.get("gid"), row.get("size"), row.get("mtime_ns"),
+                row.get("ctime_ns")):
+            fail("SUPERVISOR_CONFIG_INPUT_IDENTITY")
+        try:
+            parser.read_string(raw.decode("utf-8", "strict"), source=str(path))
+        except (UnicodeError, configparser.Error):
+            fail("SUPERVISOR_CONFIG_INPUT_INVALID")
+    if _socket_config_snapshot() != endpoint:
+        fail("SUPERVISOR_CONFIG_INPUTS_CHANGED_AFTER_PARSE")
+    return parser
+
+
+def supervisor_program_config_preflight(endpoint, config_raw):
+    validate_supervisor_program_config(config_raw)
+    if endpoint.get("include_glob") != "/etc/supervisor/conf.d/*.conf":
+        fail("SUPERVISOR_INCLUDE_PATTERN_NOT_ALLOWLISTED")
+    if SUPERVISOR_PROGRAM.exists() or SUPERVISOR_PROGRAM.is_symlink():
+        fail("SUPERVISOR_PROGRAM_CONFIG_PREEXISTS")
+    parser = read_supervisor_config_inputs(endpoint)
+    if "program:" + SUPERVISOR_PROGRAM_NAME in parser.sections():
+        fail("SUPERVISOR_PROGRAM_NAME_ALREADY_CONFIGURED")
+    if "group:" + SUPERVISOR_PROGRAM_NAME in parser.sections():
+        fail("SUPERVISOR_PROGRAM_NAME_ALREADY_GROUPED")
+    return {"input_count": len(endpoint["config_inputs"]),
+            "include_match": endpoint.get("include_glob") == "/etc/supervisor/conf.d/*.conf",
+            "observer_section_absent": True}
+
+
+def supervisor_runtime_delta(current, baseline, expected_config):
+    """Allow only the exact new config input while pinning the same running daemon."""
+    if not isinstance(current, dict) or not isinstance(baseline, dict):
+        return False
+    current_base = json.loads(json.dumps(current))
+    baseline_base = json.loads(json.dumps(baseline))
+    for value in (current_base, baseline_base):
+        value["endpoint"].pop("config_inputs", None)
+        value["daemon"].pop("config_inputs", None)
+    if current_base != baseline_base:
+        return False
+    expected_path = str(SUPERVISOR_PROGRAM)
+    def inputs(pin):
+        return pin.get("endpoint", {}).get("config_inputs")
+    before, after = inputs(baseline), inputs(current)
+    if not isinstance(before, list) or not isinstance(after, list):
+        return False
+    old_by_path = {row.get("path"): row for row in before if isinstance(row, dict)}
+    new_by_path = {row.get("path"): row for row in after if isinstance(row, dict)}
+    if (len(old_by_path) != len(before) or len(new_by_path) != len(after) or
+            set(new_by_path) != set(old_by_path) | {expected_path} or
+            any(new_by_path[path] != row for path, row in old_by_path.items()) or
+            new_by_path.get(expected_path) != expected_config):
+        return False
+    if pin_inputs := current.get("daemon", {}).get("config_inputs"):
+        return pin_inputs == after
+    return False
+
+
+def run_supervisor_group_activation(inventory_fn, rpc_fn, baseline, pre_start_fn=None,
+                                    sleep_fn=time.sleep):
+    """Apply only one new process group, checking the complete preexisting inventory."""
+    global SUPERVISOR_PROGRAM_RELOADED, SUPERVISOR_PROGRAM_ADDED
+    global SUPERVISOR_PROGRAM_STARTED, SUPERVISOR_PROGRAM_AFTER_INVENTORY
+    global SUPERVISOR_PROGRAM_ACTIVATION
+    SUPERVISOR_PROGRAM_RELOADED = True
+    delta = validate_reload_config_delta(rpc_fn("supervisor.reloadConfig"))
+    after_reload = inventory_fn()
+    assert_supervisor_old_rows_unchanged(baseline, after_reload)
+    assert_observer_group(after_reload)
+
+    result = rpc_fn("supervisor.addProcessGroup", SUPERVISOR_PROGRAM_NAME)
+    if result is not True:
+        fail("SUPERVISOR_ADD_PROCESS_GROUP_FAILED")
+    SUPERVISOR_PROGRAM_ADDED = True
+    after_add = inventory_fn()
+    assert_supervisor_old_rows_unchanged(baseline, after_add)
+    assert_observer_group(after_add, "STOPPED")
+
+    if pre_start_fn is not None:
+        pre_start_fn()
+    SUPERVISOR_PROGRAM_STARTED = True
+    result = rpc_fn("supervisor.startProcess", SUPERVISOR_PROGRAM_NAME, True)
+    if result is not True:
+        fail("SUPERVISOR_START_PROCESS_FAILED")
+    target, after_start = wait_for_observer_running(
+        inventory_fn, baseline, sleep_fn=sleep_fn)
+    SUPERVISOR_PROGRAM_AFTER_INVENTORY = after_start
+    receipt = {"reload_delta": delta, "process_inventory_count_before": len(baseline),
+               "process_inventory_count_after": len(after_start),
+               "existing_process_inventory_unchanged": True,
+               "observer_process": target}
+    SUPERVISOR_PROGRAM_ACTIVATION = receipt
+    return receipt
 
 
 def run(args, timeout=20):
@@ -703,8 +1060,14 @@ def _supervisor_process_info(name):
     endpoint = _socket_config_snapshot()
     daemon = _supervisord_identity(endpoint)
     pin = SUPERVISORCTL_PIN.get("daemon") if isinstance(SUPERVISORCTL_PIN, dict) else None
-    if pin is not None and any(pin.get(key) != value for key, value in daemon.items()):
-        fail("SUPERVISOR_RPC_DAEMON_PIN_CHANGED")
+    if pin is not None:
+        pinned_daemon = dict(pin)
+        current_daemon = dict(daemon)
+        if SUPERVISOR_ALLOWED_PROGRAM_CONFIG is not None:
+            pinned_daemon.pop("config_inputs", None)
+            current_daemon.pop("config_inputs", None)
+        if pinned_daemon != current_daemon:
+            fail("SUPERVISOR_RPC_DAEMON_PIN_CHANGED")
     if (endpoint["socket"]["uid"] != daemon["credentials"]["uid"] or
             endpoint["socket"]["gid"] != daemon["credentials"]["gid"]):
         fail("SUPERVISOR_SOCKET_CREDENTIAL_MISMATCH")
@@ -1231,6 +1594,61 @@ def checked_bundle(name):
     return raw
 
 
+def checked_supervisor_bundle(name):
+    """Validate only the two extra assets used by the non-systemd fallback."""
+    item = BUNDLE.get(name)
+    if not isinstance(item, dict) or set(item) != {"content", "sha256"}:
+        fail("SUPERVISOR_BUNDLE_SCHEMA")
+    try:
+        raw = base64.b64decode(item["content"], validate=True)
+    except Exception:
+        fail("SUPERVISOR_BUNDLE_BASE64")
+    if (not 10 <= len(raw) <= SUPERVISOR_BUNDLE_MAX_BYTES[name] or
+            hashlib.sha256(raw).hexdigest() != item["sha256"] or
+            hashlib.sha256(raw).hexdigest() != SUPERVISOR_BUNDLE_SHA256[name]):
+        fail("SUPERVISOR_BUNDLE_DIGEST")
+    return raw
+
+
+def validate_supervisor_program_config(raw):
+    """Accept exactly the single bounded observer group, with direct argv only."""
+    if not isinstance(raw, bytes) or len(raw) > SUPERVISOR_BUNDLE_MAX_BYTES[
+            SUPERVISOR_PROGRAM_BUNDLE_KEY]:
+        fail("SUPERVISOR_PROGRAM_CONFIG_SIZE")
+    parser = configparser.ConfigParser(interpolation=None, strict=True,
+                                       delimiters=("=", ":"))
+    try:
+        parser.read_string(raw.decode("utf-8", "strict"))
+    except (UnicodeError, configparser.Error):
+        fail("SUPERVISOR_PROGRAM_CONFIG_INVALID")
+    if parser.sections() != ["program:" + SUPERVISOR_PROGRAM_NAME]:
+        fail("SUPERVISOR_PROGRAM_CONFIG_SECTIONS")
+    section = "program:" + SUPERVISOR_PROGRAM_NAME
+    options = dict(parser.items(section, raw=True))
+    expected = {
+        "command": "/usr/bin/python3 -u /root/nox/scripts/nox_lifeline_observer_bootstrap.py",
+        "directory": "/root/nox",
+        "user": "root",
+        "numprocs": "1",
+        "process_name": "%(program_name)s",
+        "autostart": "true",
+        "autorestart": "unexpected",
+        "startsecs": "5",
+        "startretries": "2",
+        "stopsignal": "TERM",
+        "stopwaitsecs": "5",
+        "stopasgroup": "false",
+        "killasgroup": "false",
+        "umask": "0077",
+        "redirect_stderr": "true",
+        "stdout_logfile": "NONE",
+        "environment": 'PYTHONUNBUFFERED="1"',
+    }
+    if options != expected:
+        fail("SUPERVISOR_PROGRAM_CONFIG_POLICY")
+    return options
+
+
 def validate_unit(raw):
     if hashlib.sha256(raw).hexdigest() != UNIT_SHA256:
         fail("UNIT_PIN_MISMATCH")
@@ -1404,7 +1822,7 @@ EXPECTED_ARGV = ("/usr/bin/python3", "-u", "/root/nox/scripts/nox_lifeline_obser
                  "--observer-only")
 
 
-def fresh_receipt(started_at):
+def fresh_receipt(started_at, *, require_supervisor_limits=False):
     deadline = time.monotonic() + 45
     while time.monotonic() < deadline:
         try:
@@ -1416,6 +1834,20 @@ def fresh_receipt(started_at):
                     report.get("observer_only_enforced") is not True or
                     report.get("worker_starts_permitted") is not False):
                 raise ValueError
+            if require_supervisor_limits:
+                limits = report.get("resource_limits")
+                if (not isinstance(limits, dict) or
+                        type(limits.get("address_space_bytes")) is not int or
+                        not 0 < limits["address_space_bytes"] <= 512 * 1024**2 or
+                        type(limits.get("open_files")) is not int or
+                        not 1 <= limits["open_files"] <= 128 or
+                        limits.get("core_bytes") != 0 or
+                        limits.get("file_size_bytes") != 8 * 1024**2 or
+                        type(limits.get("nice")) is not int or limits["nice"] < 10 or
+                        limits.get("hard_cgroup_memory_limit") != "unsupported_by_supervisor" or
+                        limits.get("cpu_quota") != "unsupported_by_supervisor" or
+                        limits.get("cpu_scheduling") != "nice_only_no_hard_quota"):
+                    raise ValueError
             memory = report.get("cgroup_memory")
             if not isinstance(memory, dict):
                 raise ValueError
@@ -1638,6 +2070,328 @@ def restore_exact_preimages():
         fail("ROLLBACK_DAEMON_RELOAD")
 
 
+def supervisor_inventory_sha256(rows):
+    return hashlib.sha256(json.dumps(rows, sort_keys=True,
+                                    separators=(",", ":")).encode()).hexdigest()
+
+
+def restore_supervisor_file(path, installed, preimage):
+    current, identity = bounded_read(path, max(MAX_BYTES.values(), len(installed)),
+                                     allow_absent=True)
+    if current != installed:
+        fail("SUPERVISOR_ROLLBACK_FILE_CHANGED")
+    original, original_identity = preimage
+    if original is None:
+        path.unlink()
+        dirfd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(dirfd)
+        finally:
+            os.close(dirfd)
+        return
+    PREIMAGES[str(path)] = (installed, identity)
+    atomic_write(path, original, stat.S_IMODE(original_identity[2]),
+                 owner=(original_identity[4], original_identity[5]))
+
+
+def rollback_supervisor_fallback():
+    """Undo only this transaction's observer group, config, and exact file preimages."""
+    global SUPERVISORCTL_PIN, SUPERVISOR_ALLOWED_PROGRAM_CONFIG
+    global SUPERVISOR_PROGRAM_INSTALLED, SUPERVISOR_PROGRAM_ADDED
+    global SUPERVISOR_PROGRAM_RELOADED, SUPERVISOR_PROGRAM_STARTED
+    global SUPERVISOR_PROGRAM_ROLLBACK_PRIOR_GROUPS_UNCHANGED
+    if SUPERVISORCTL_PIN is None:
+        return "NOT_NEEDED"
+    if (SUPERVISOR_PROGRAM_INSTALLED is not None or
+            str(SUPERVISOR_PROGRAM) in INSTALLED) and SUPERVISORCTL_PIN == SUPERVISOR_BASELINE_PIN:
+        endpoint = _socket_config_snapshot()
+        config_row = next((row for row in endpoint["config_inputs"]
+                           if row["path"] == str(SUPERVISOR_PROGRAM)), None)
+        if config_row is None or SUPERVISOR_ALLOWED_PROGRAM_CONFIG is None or (
+                config_row["sha256"] != SUPERVISOR_ALLOWED_PROGRAM_CONFIG["sha256"]):
+            fail("SUPERVISOR_ROLLBACK_CONFIG_PREIMAGE_UNKNOWN")
+        refresh_supervisor_pin_for_program(config_row)
+    before = supervisor_inventory()
+    prior_inventory = SUPERVISOR_PROGRAM_BEFORE_INVENTORY or before
+    SUPERVISOR_PROGRAM_ROLLBACK_PRIOR_GROUPS_UNCHANGED = supervisor_old_rows_match(
+        prior_inventory, before)
+    target = assert_observer_group(before, None) if not any(
+        row["group"] == SUPERVISOR_PROGRAM_NAME for row in before) else next(
+            row for row in before if row["group"] == SUPERVISOR_PROGRAM_NAME)
+    if target is not None:
+        state, pid = target["state"], target["pid"]
+        if state in {"RUNNING", "STARTING", "STOPPING"} and pid > 1:
+            identity = process_identity(pid)
+            if (identity.get("pid") != pid or type(identity.get("start_ticks")) is not int or
+                    identity["start_ticks"] <= 0):
+                fail("SUPERVISOR_ROLLBACK_TARGET_IDENTITY_MISMATCH")
+            try:
+                stopped = supervisor_rpc("supervisor.stopProcess", SUPERVISOR_PROGRAM_NAME, True)
+            except Hold:
+                # STOPPING means a scoped stop may already be in flight. Continue only
+                # if bounded readback proves this exact PID reaches a non-running state.
+                if state != "STOPPING":
+                    raise
+            else:
+                if stopped is not True:
+                    fail("SUPERVISOR_ROLLBACK_STOP_FAILED")
+            wait_for_observer_quiescent(supervisor_inventory, prior_inventory, pid)
+        elif state == "STOPPED" and pid == 0:
+            pass
+        elif state in {"BACKOFF", "EXITED", "FATAL"} and pid == 0:
+            # Supervisor confirms there is no live process to signal. Remove
+            # only our failed group and continue the exact config/file rollback.
+            pass
+        else:
+            fail("SUPERVISOR_ROLLBACK_TARGET_STATE_AMBIGUOUS")
+        if target is not None:
+            removed = supervisor_rpc("supervisor.removeProcessGroup", SUPERVISOR_PROGRAM_NAME)
+            if removed is not True:
+                fail("SUPERVISOR_ROLLBACK_REMOVE_GROUP_FAILED")
+            SUPERVISOR_PROGRAM_ADDED = False
+
+    installed_config = (SUPERVISOR_PROGRAM_INSTALLED or
+                        INSTALLED.get(str(SUPERVISOR_PROGRAM)))
+    if installed_config is not None:
+        restore_supervisor_file(SUPERVISOR_PROGRAM, installed_config,
+                                SUPERVISOR_PROGRAM_PREIMAGE)
+        SUPERVISOR_PROGRAM_INSTALLED = None
+        current_pin = _supervisor_client_snapshot()
+        if current_pin != SUPERVISOR_BASELINE_PIN:
+            fail("SUPERVISOR_ROLLBACK_ENDPOINT_NOT_PREIMAGE")
+        SUPERVISORCTL_PIN = current_pin
+        SUPERVISOR_ALLOWED_PROGRAM_CONFIG = None
+        if SUPERVISOR_PROGRAM_RELOADED:
+            delta = supervisor_rpc("supervisor.reloadConfig")
+            added, changed, removed = normalize_reload_config_result(delta)
+            if (added or changed or removed not in ([], [SUPERVISOR_PROGRAM_NAME])):
+                fail("SUPERVISOR_ROLLBACK_RELOAD_SCOPE_CHANGED")
+
+    after = supervisor_inventory()
+    SUPERVISOR_PROGRAM_ROLLBACK_PRIOR_GROUPS_UNCHANGED = (
+        SUPERVISOR_PROGRAM_ROLLBACK_PRIOR_GROUPS_UNCHANGED and
+        supervisor_old_rows_match(prior_inventory, after))
+    assert_observer_group(after, None)
+    SUPERVISOR_PROGRAM_STARTED = False
+    SUPERVISOR_PROGRAM_RELOADED = False
+    for name, path in SUPERVISOR_INSTALL_FILES.items():
+        installed = INSTALLED.get(str(path))
+        if installed is None:
+            continue
+        restore_supervisor_file(path, installed, PREIMAGES[str(path)])
+    return "OBSERVER_GROUP_STOPPED_REMOVED;EXACT_CONFIG_AND_FILE_PREIMAGES_RESTORED"
+
+
+def supervisor_fallback_main():
+    """Install the observer as one named Supervisor process without touching other groups."""
+    global SUPERVISOR_BACKEND_ACTIVE, SUPERVISORCTL_PIN, SUPERVISOR_BASELINE_PIN
+    global SUPERVISOR_ALLOWED_PROGRAM_CONFIG, SUPERVISOR_PROGRAM_PREIMAGE
+    global SUPERVISOR_PROGRAM_INSTALLED, SUPERVISOR_PROGRAM_BEFORE_INVENTORY
+    global SUPERVISOR_PROGRAM_START_IDENTITY, MEMORY_PREFLIGHT, MEMORY_PRE_ENABLE
+    global SUPERVISOR_MEMORY_POST_START, LEGACY_GUARD_PREIMAGE
+    global LEGACY_GUARD_PRE_ENABLE, LEGACY_GUARD_POSTCHECK
+    global CGROUP_TARGET_EVIDENCE, CGROUP_TARGET_PRE_ENABLE, CGROUP_TARGET_POST_ENABLE
+    global SUPERVISORCTL_PRE_ENABLE, SUPERVISORCTL_POST_ENABLE
+    global OBSERVER_RUNTIME_SOURCE_SHA256
+    global SUPERVISOR_SERVER_VERSION
+
+    SUPERVISOR_BACKEND_ACTIVE = True
+    acquire_owner_lock()
+    SUPERVISORCTL_PIN = resolve_supervisorctl()
+    SUPERVISOR_BASELINE_PIN = SUPERVISORCTL_PIN
+    methods = supervisor_rpc("system.listMethods")
+    required_methods = {name for name in SUPERVISOR_RPC_CALLS
+                        if name != "system.listMethods"}
+    if (not isinstance(methods, list) or len(methods) > 256 or
+            any(not isinstance(name, str) for name in methods) or
+            not required_methods.issubset(set(methods))):
+        fail("SUPERVISOR_REQUIRED_RPC_METHODS_UNAVAILABLE")
+    SUPERVISOR_SERVER_VERSION = validate_supervisor_none_log_version(
+        supervisor_rpc("supervisor.getVersion"))
+
+    bundle = {name: checked_bundle(name) for name in
+              ("nox_lifeline_observer.py", "lifeline-observer.json")}
+    bundle[SUPERVISOR_BOOTSTRAP_BUNDLE_KEY] = checked_supervisor_bundle(
+        SUPERVISOR_BOOTSTRAP_BUNDLE_KEY)
+    bundle[SUPERVISOR_PROGRAM_BUNDLE_KEY] = checked_supervisor_bundle(
+        SUPERVISOR_PROGRAM_BUNDLE_KEY)
+    core_source = bundle["nox_lifeline_observer.py"]
+    OBSERVER_RUNTIME_SOURCE_SHA256 = hashlib.sha256(core_source).hexdigest()
+    token = b"__NOX_SUPERVISOR_SOCKET_PATH__"
+    identity_token = b"__NOX_SUPERVISOR_IDENTITY_PIN__"
+    socket_token = b"__NOX_SUPERVISOR_SOCKET_PIN__"
+    if any(core_source.count(item) != 1 for item in (token, identity_token, socket_token)):
+        fail("SUPERVISOR_UDS_SOURCE_TOKEN_MISMATCH")
+    bundle["nox_lifeline_observer.py"] = core_source.replace(
+        token, json.dumps(SUPERVISORCTL_PIN["endpoint"]["path"]).encode("ascii"), 1)
+    for marker, value in ((identity_token, SUPERVISORCTL_PIN["daemon"]),
+                          (socket_token, SUPERVISORCTL_PIN["endpoint"]["socket"])):
+        bundle["nox_lifeline_observer.py"] = bundle["nox_lifeline_observer.py"].replace(
+            marker, json.dumps(value).encode("ascii"), 1)
+    policy = json.loads(bundle["lifeline-observer.json"], object_pairs_hook=_unique_pairs,
+                        parse_constant=_reject_constant)
+    if (policy.get("enabled") is not False or not isinstance(policy.get("services"), list) or
+            any(item.get("restart") is not False for item in policy["services"])):
+        fail("BUNDLED_POLICY_NOT_OBSERVER_ONLY")
+    validate_supervisor_program_config(bundle[SUPERVISOR_PROGRAM_BUNDLE_KEY])
+    compile(bundle["nox_lifeline_observer.py"], str(SCRIPT), "exec")
+    compile(bundle[SUPERVISOR_BOOTSTRAP_BUNDLE_KEY], str(BOOTSTRAP), "exec")
+
+    inventory = supervisor_inventory()
+    assert_observer_group(inventory, None)
+    SUPERVISOR_PROGRAM_BEFORE_INVENTORY = inventory
+    LEGACY_GUARD_PREIMAGE = legacy_guard_snapshot()
+    CGROUP_TARGET_EVIDENCE = resolve_cgroup_target(LEGACY_GUARD_PREIMAGE)
+    config_preflight = supervisor_program_config_preflight(
+        SUPERVISORCTL_PIN["endpoint"], bundle[SUPERVISOR_PROGRAM_BUNDLE_KEY])
+    MEMORY_PREFLIGHT = cgroup_memory_snapshot(CGROUP_TARGET_EVIDENCE["target"])
+    require_memory_headroom(MEMORY_PREFLIGHT,
+                            MEMORY_FLOOR_BYTES + MEMORY_RESERVE_BYTES,
+                            "MEMORY_PREFLIGHT_BELOW_2_5GIB")
+
+    desired = dict(bundle)
+    preimage_receipts = {}
+    for name, path in SUPERVISOR_INSTALL_FILES.items():
+        protect_parents(path)
+        max_bytes = MAX_BYTES[name] if name in MAX_BYTES else SUPERVISOR_BUNDLE_MAX_BYTES[name]
+        old, identity = bounded_read(path, max_bytes, allow_absent=True)
+        target = desired[name]
+        if old is not None and old != target:
+            fail("UNEXPECTED_PREIMAGE_" + name.upper().replace(".", "_"))
+        PREIMAGES[str(path)] = (old, identity)
+        preimage_receipts[name] = {
+            "sha256": hashlib.sha256(old).hexdigest() if old is not None else None,
+            "absent": old is None,
+            "backup_created": bool(save_backup(REQUEST_ID, path, old)) if old is not None else False,
+        }
+    protect_parents(SUPERVISOR_PROGRAM)
+    SUPERVISOR_PROGRAM_PREIMAGE = bounded_read(
+        SUPERVISOR_PROGRAM, SUPERVISOR_BUNDLE_MAX_BYTES[SUPERVISOR_PROGRAM_BUNDLE_KEY],
+        allow_absent=True)
+    if SUPERVISOR_PROGRAM_PREIMAGE != (None, None):
+        fail("SUPERVISOR_PROGRAM_CONFIG_PREIMAGE_CHANGED")
+    save_backup(REQUEST_ID, SUPERVISOR_PROGRAM, None)
+    preimage_receipts[SUPERVISOR_PROGRAM_BUNDLE_KEY] = {
+        "sha256": None, "absent": True, "backup_created": False,
+    }
+
+    protect_parents(STATE_DIR / "state.json")
+    ensure_private_directory(STATE_DIR)
+    snapshot_state_artifacts(REQUEST_ID)
+    started_at = time.time()
+    for name, path in SUPERVISOR_INSTALL_FILES.items():
+        if PREIMAGES[str(path)][0] is None:
+            atomic_write(path, desired[name], 0o600 if path == POLICY else 0o644)
+    program_raw = bundle[SUPERVISOR_PROGRAM_BUNDLE_KEY]
+    SUPERVISOR_ALLOWED_PROGRAM_CONFIG = {
+        "path": str(SUPERVISOR_PROGRAM),
+        "sha256": hashlib.sha256(program_raw).hexdigest(),
+    }
+    PREIMAGES[str(SUPERVISOR_PROGRAM)] = SUPERVISOR_PROGRAM_PREIMAGE
+    atomic_write(SUPERVISOR_PROGRAM, program_raw, 0o644)
+    SUPERVISOR_PROGRAM_INSTALLED = program_raw
+
+    installed_config, _ = bounded_read(
+        SUPERVISOR_PROGRAM, SUPERVISOR_BUNDLE_MAX_BYTES[SUPERVISOR_PROGRAM_BUNDLE_KEY])
+    if installed_config != program_raw:
+        fail("SUPERVISOR_PROGRAM_CONFIG_READBACK")
+    endpoint = _socket_config_snapshot()
+    config_row = next((row for row in endpoint["config_inputs"]
+                       if row["path"] == str(SUPERVISOR_PROGRAM)), None)
+    if (config_row is None or config_row["sha256"] != SUPERVISOR_ALLOWED_PROGRAM_CONFIG["sha256"]):
+        fail("SUPERVISOR_PROGRAM_CONFIG_NOT_INCLUDED")
+    parser = read_supervisor_config_inputs(endpoint)
+    section = "program:" + SUPERVISOR_PROGRAM_NAME
+    if parser.sections().count(section) != 1:
+        fail("SUPERVISOR_PROGRAM_CONFIG_NOT_UNIQUE")
+    refresh_supervisor_pin_for_program(config_row)
+
+    LEGACY_GUARD_PRE_ENABLE = recheck_legacy_guard(LEGACY_GUARD_PREIMAGE)
+    CGROUP_TARGET_PRE_ENABLE = resolve_cgroup_target(LEGACY_GUARD_PRE_ENABLE)
+    if CGROUP_TARGET_PRE_ENABLE != CGROUP_TARGET_EVIDENCE:
+        fail("CGROUP_TARGET_CHANGED_BEFORE_ENABLE")
+    SUPERVISORCTL_PRE_ENABLE = verify_supervisorctl_pin()
+    MEMORY_PRE_ENABLE = cgroup_memory_snapshot(CGROUP_TARGET_EVIDENCE["target"])
+    require_memory_headroom(MEMORY_PRE_ENABLE,
+                            MEMORY_FLOOR_BYTES + MEMORY_RESERVE_BYTES,
+                            "MEMORY_PRE_START_BELOW_2_5GIB")
+
+    def before_start():
+        global LEGACY_GUARD_PRE_ENABLE, CGROUP_TARGET_PRE_ENABLE
+        global MEMORY_PRE_ENABLE, SUPERVISORCTL_PRE_ENABLE
+        LEGACY_GUARD_PRE_ENABLE = recheck_legacy_guard(LEGACY_GUARD_PREIMAGE)
+        CGROUP_TARGET_PRE_ENABLE = resolve_cgroup_target(LEGACY_GUARD_PRE_ENABLE)
+        if CGROUP_TARGET_PRE_ENABLE != CGROUP_TARGET_EVIDENCE:
+            fail("CGROUP_TARGET_CHANGED_BEFORE_START")
+        SUPERVISORCTL_PRE_ENABLE = verify_supervisorctl_pin()
+        MEMORY_PRE_ENABLE = cgroup_memory_snapshot(CGROUP_TARGET_EVIDENCE["target"])
+        require_memory_headroom(MEMORY_PRE_ENABLE,
+                                MEMORY_FLOOR_BYTES + MEMORY_RESERVE_BYTES,
+                                "MEMORY_PRE_START_BELOW_2_5GIB")
+
+    activation = run_supervisor_group_activation(
+        supervisor_inventory, supervisor_rpc, inventory, pre_start_fn=before_start)
+    target = activation["observer_process"]
+    SUPERVISOR_PROGRAM_START_IDENTITY = process_identity(target["pid"])
+    if SUPERVISOR_PROGRAM_START_IDENTITY["start_ticks"] <= 0:
+        fail("SUPERVISOR_OBSERVER_PROCESS_IDENTITY")
+    report = fresh_receipt(started_at, require_supervisor_limits=True)
+    final_inventory = supervisor_inventory()
+    assert_supervisor_old_rows_unchanged(inventory, final_inventory)
+    final_target = assert_observer_group(final_inventory, "RUNNING")
+    if final_target["pid"] != SUPERVISOR_PROGRAM_START_IDENTITY["pid"]:
+        fail("SUPERVISOR_OBSERVER_PID_CHANGED")
+    LEGACY_GUARD_POSTCHECK = recheck_legacy_guard(LEGACY_GUARD_PREIMAGE)
+    CGROUP_TARGET_POST_ENABLE = resolve_cgroup_target(LEGACY_GUARD_POSTCHECK)
+    if CGROUP_TARGET_POST_ENABLE != CGROUP_TARGET_EVIDENCE:
+        fail("CGROUP_TARGET_CHANGED_AFTER_START")
+    SUPERVISORCTL_POST_ENABLE = verify_supervisorctl_pin()
+    SUPERVISOR_MEMORY_POST_START = cgroup_memory_snapshot(CGROUP_TARGET_EVIDENCE["target"])
+    require_memory_headroom(SUPERVISOR_MEMORY_POST_START, MEMORY_FLOOR_BYTES,
+                            "MEMORY_POST_START_BELOW_2GIB")
+    emit({
+        "state": "OBSERVER_ACTIVE",
+        "reason": None,
+        "backend": "supervisor_program",
+        "supervisor_scope": "ONE_NAMED_OBSERVER_PROGRAM_ONLY",
+        "program_name": SUPERVISOR_PROGRAM_NAME,
+        "supervisor_version": SUPERVISOR_SERVER_VERSION,
+        "reload_delta": activation["reload_delta"],
+        "existing_groups_unchanged": activation["existing_process_inventory_unchanged"],
+        "process_inventory_before_count": len(inventory),
+        "process_inventory_before_sha256": supervisor_inventory_sha256(inventory),
+        "process_inventory_after_count": len(final_inventory),
+        "process_inventory_after_sha256": supervisor_inventory_sha256(final_inventory),
+        "observer_pid": final_target["pid"],
+        "observer_start_ticks": SUPERVISOR_PROGRAM_START_IDENTITY["start_ticks"],
+        "observer_exe_path_sha256": hashlib.sha256(
+            os.fsencode(SUPERVISOR_PROGRAM_START_IDENTITY["exe"])).hexdigest(),
+        "observer_argv_sha256": SUPERVISOR_PROGRAM_START_IDENTITY["argv_sha256"],
+        "observer_runtime_source_sha256": OBSERVER_RUNTIME_SOURCE_SHA256,
+        "supervisor_program_config_sha256": SUPERVISOR_BUNDLE_SHA256[
+            SUPERVISOR_PROGRAM_BUNDLE_KEY],
+        "supervisor_bootstrap_sha256": SUPERVISOR_BUNDLE_SHA256[
+            SUPERVISOR_BOOTSTRAP_BUNDLE_KEY],
+        "memory_preflight": MEMORY_PREFLIGHT,
+        "memory_pre_start": MEMORY_PRE_ENABLE,
+        "memory_post_start": SUPERVISOR_MEMORY_POST_START,
+        "memory_preflight_minimum_bytes": MEMORY_FLOOR_BYTES + MEMORY_RESERVE_BYTES,
+        "memory_post_start_minimum_bytes": MEMORY_FLOOR_BYTES,
+        "resource_controls": SUPERVISOR_RESOURCE_RECEIPT,
+        "runtime_resource_limits": report.get("resource_limits"),
+        "systemd_backend_available": False,
+        "global_supervisor_restarted": False,
+        "other_supervisor_groups_changed": False,
+        "supervisor_configured_autostart": True,
+        "host_boot_persistence": "UNKNOWN_SUPERVISOR_DAEMON_BOOT_OWNER_NOT_PROVEN_BY_REPOSITORY",
+        "config_preflight": config_preflight,
+        "preimage_artifacts": preimage_receipts,
+        "installed_asset_names": sorted(SUPERVISOR_INSTALL_FILES) + [
+            SUPERVISOR_PROGRAM_BUNDLE_KEY],
+    })
+    return 0
+
+
 def main():
     global UNIT_ENABLED_BEFORE, UNIT_ACTIVE_BEFORE, REQUEST_ID, SOURCE_SHA_VALUE
     global MEMORY_PREFLIGHT, MEMORY_PRE_ENABLE, MEMORY_POST_ENABLE
@@ -1655,7 +2409,7 @@ def main():
     if os.geteuid() != 0:
         fail("ROOT_REQUIRED")
     if not Path("/run/systemd/system").is_dir():
-        fail("SYSTEMD_NOT_RUNNING")
+        return supervisor_fallback_main()
     SYSTEMCTL_PIN = _supervisorctl_snapshot(SYSTEMCTL_PATH, max_size=64 * 1024**2)
     acquire_owner_lock()
     unit_before = unit_state(SERVICE)
@@ -1951,7 +2705,9 @@ def emit(value):
           json.dumps(public_value, sort_keys=True), flush=True)
 
 
-if __name__ == "__main__":
+def run_owner_entrypoint(main_fn=None):
+    global MEMORY_POST_ROLLBACK
+
     class OwnerAbort(BaseException):
         pass
 
@@ -1961,10 +2717,25 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, _owner_abort)
     signal.signal(signal.SIGINT, _owner_abort)
     try:
-        result = main()
+        result = (main_fn or main)()
     except BaseException as exc:
         rollback = "NOT_NEEDED"
-        if INSTALLED or STATE_DIR_PREIMAGE is not None:
+        if SUPERVISOR_BACKEND_ACTIVE:
+            try:
+                changed = bool(INSTALLED or STATE_DIR_PREIMAGE is not None or
+                              SUPERVISOR_PROGRAM_RELOADED or SUPERVISOR_PROGRAM_ADDED or
+                              SUPERVISOR_PROGRAM_STARTED)
+                if changed:
+                    rollback = rollback_supervisor_fallback()
+                    restore_state_artifacts()
+                    if CGROUP_TARGET_EVIDENCE is not None:
+                        MEMORY_POST_ROLLBACK = cgroup_memory_snapshot(
+                            CGROUP_TARGET_EVIDENCE["target"])
+            except BaseException as rollback_exc:
+                reason = type(rollback_exc).__name__.upper()
+                rollback = "ROLLBACK_INCOMPLETE_" + (reason if re.fullmatch(
+                    r"[A-Z0-9_]{1,40}", reason) else "UNKNOWN")
+        elif INSTALLED or STATE_DIR_PREIMAGE is not None:
             try:
                 if INSTALLED:
                     if UNIT_ACTIVE_BEFORE != "active":
@@ -2014,14 +2785,33 @@ if __name__ == "__main__":
               "supervisor_endpoint_pre_enable": SUPERVISORCTL_PRE_ENABLE,
               "supervisor_endpoint_post_enable": SUPERVISORCTL_POST_ENABLE,
               "observer_runtime_source_sha256": OBSERVER_RUNTIME_SOURCE_SHA256,
+              "supervisor_fallback": {
+                  "enabled": SUPERVISOR_BACKEND_ACTIVE,
+                  "supervisor_version": SUPERVISOR_SERVER_VERSION,
+                  "program_name": SUPERVISOR_PROGRAM_NAME if SUPERVISOR_BACKEND_ACTIVE else None,
+                  "reload_delta": (SUPERVISOR_PROGRAM_ACTIVATION or {}).get("reload_delta"),
+                  "observer_started": SUPERVISOR_PROGRAM_STARTED,
+                  "prior_groups_unchanged_during_rollback":
+                      SUPERVISOR_PROGRAM_ROLLBACK_PRIOR_GROUPS_UNCHANGED,
+                  "existing_groups_unchanged": (SUPERVISOR_PROGRAM_ACTIVATION or {}).get(
+                      "existing_process_inventory_unchanged"),
+                  "memory_post_start": SUPERVISOR_MEMORY_POST_START,
+                  "resource_controls": (SUPERVISOR_RESOURCE_RECEIPT
+                                         if SUPERVISOR_BACKEND_ACTIVE else None),
+                  "host_boot_persistence": "UNKNOWN_SUPERVISOR_DAEMON_BOOT_OWNER_NOT_PROVEN_BY_REPOSITORY",
+              },
               "state_directory_preimage": STATE_DIR_PREIMAGE,
               "state_artifact_preimages": {key: value for key, value in
                                             STATE_ARTIFACT_PREIMAGES.items()
                                             if key.endswith(".receipt")},
               "global_supervisor_mutated": False,
               "installed_paths": list(INSTALLED)})
-        sys.exit(2)
+        return 2
     finally:
         if OWNER_LOCK_FD is not None:
             os.close(OWNER_LOCK_FD)
-    sys.exit(result)
+    return result
+
+
+if __name__ == "__main__":
+    sys.exit(run_owner_entrypoint())

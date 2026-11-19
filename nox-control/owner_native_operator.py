@@ -12,16 +12,21 @@ PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'lifeline': 'nox-control/owner_native_lifeline_observer.py', 'memfd_audit': 'nox-control/owner_native_memfd_audit.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py'}
 LIFELINE_OBSERVER_ASSET_PINS=(
     ('nox_lifeline_observer.py','nox-control/nox_lifeline_observer.py',
-     '3f631b9541b68e1639bb834e76aebd6abc2f7f3461d9d6653934dbc0d31563e0',262144),
+     'acb7a0174d02ac106e33c4f5c35abfa1a571526454ac65ef70b241247d602990',262144),
     ('lifeline-observer.json','nox-control/lifeline-observer.json',
      '116ef4bcc534d2ad3531156c6581adef40ffbbf7e3c4bdf9a68cfa487fced27b',8192),
     ('nox-lifeline-observer.service','nox-control/systemd/nox-lifeline-observer.service',
      'd23c029063f058b3c3b65116fca25733aea359ebe071a51416c1dd2608c5f806',8192),
+    ('nox_lifeline_observer_bootstrap.py',
+     'nox-control/supervisor/nox_lifeline_observer_bootstrap.py',
+     '3c556a5a4e81532aa50e05dbea9c7115740248799a15bfba45df70ae325b5584',16384),
+    ('nox-lifeline-observer.conf','nox-control/supervisor/nox-lifeline-observer.conf',
+     '00f58d8a96fb9277f7e5e0f65acc4719b231608fe43e633011cc524ac04f66f4',8192),
 )
 MASTER=None
 
 def build_lifeline_observer_bundle():
-    if len(LIFELINE_OBSERVER_ASSET_PINS)!=3 or len({row[0] for row in LIFELINE_OBSERVER_ASSET_PINS})!=3:
+    if len(LIFELINE_OBSERVER_ASSET_PINS)!=5 or len({row[0] for row in LIFELINE_OBSERVER_ASSET_PINS})!=5:
         raise RuntimeError('HOLD_LIFELINE_ASSET_ALLOWLIST')
     assets={}
     for name,path,pinned_sha256,max_bytes in LIFELINE_OBSERVER_ASSET_PINS:

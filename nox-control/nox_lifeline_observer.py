@@ -163,6 +163,32 @@ def _reject_state_nonfinite(value):
     raise ValueError("HOLD_STATE_NONFINITE")
 
 
+def resource_limit_receipt():
+    """Read the bootstrap's sanitized RLIMIT report without exposing its environment."""
+    raw = os.environ.get("NOX_LIFELINE_RESOURCE_LIMITS")
+    if raw is None:
+        return None
+    try:
+        value = json.loads(raw)
+    except (ValueError, TypeError):
+        raise ValueError("HOLD_RESOURCE_LIMIT_RECEIPT") from None
+    expected = {"address_space_bytes", "open_files", "core_bytes", "file_size_bytes",
+                "nice", "hard_cgroup_memory_limit", "cpu_quota", "cpu_scheduling"}
+    if (not isinstance(value, dict) or set(value) != expected or
+            type(value.get("address_space_bytes")) is not int or
+            not 0 < value["address_space_bytes"] <= 512 * 1024**2 or
+            type(value.get("open_files")) is not int or
+            not 1 <= value["open_files"] <= 128 or
+            value.get("core_bytes") != 0 or
+            value.get("file_size_bytes") != 8 * 1024**2 or
+            type(value.get("nice")) is not int or value["nice"] < 10 or
+            value.get("hard_cgroup_memory_limit") != "unsupported_by_supervisor" or
+            value.get("cpu_quota") != "unsupported_by_supervisor" or
+            value.get("cpu_scheduling") != "nice_only_no_hard_quota"):
+        raise ValueError("HOLD_RESOURCE_LIMIT_RECEIPT")
+    return value
+
+
 def _read_cgroup_counter(path, *, allow_unlimited=False):
     """Read one small cgroup-v2 scalar without following symlinks or unbounded I/O."""
     try:
@@ -695,6 +721,9 @@ def main():
                 report = tick(policy, state, dry_run=a.dry_run)
                 report["observer_only_enforced"] = bool(a.observer_only)
                 report["worker_starts_permitted"] = False if a.observer_only else None
+                limits = resource_limit_receipt() if a.observer_only else None
+                if limits is not None:
+                    report["resource_limits"] = limits
                 if not a.dry_run:
                     atomic(state_path, {k:v for k,v in state.items() if k!="_path"})
                 print("NOX_LIFELINE_RESULT=" + json.dumps(report, sort_keys=True), flush=True)

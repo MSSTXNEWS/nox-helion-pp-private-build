@@ -13,7 +13,10 @@ EXPECTED_ASSET_NAMES = (
     "nox_lifeline_observer.py",
     "lifeline-observer.json",
     "nox-lifeline-observer.service",
+    "nox_lifeline_observer_bootstrap.py",
+    "nox-lifeline-observer.conf",
 )
+SYSTEMD_ASSET_NAMES = EXPECTED_ASSET_NAMES[:3]
 
 
 def load_installer():
@@ -29,12 +32,19 @@ class LifelineObserverOperatorBundleTests(unittest.TestCase):
         self.assertEqual(operator.FILES["lifeline"],
                          "nox-control/owner_native_lifeline_observer.py")
         installer = load_installer()
-        self.assertEqual(tuple(installer.MAX_BYTES), EXPECTED_ASSET_NAMES)
-        self.assertEqual(set(installer.FILES), set(EXPECTED_ASSET_NAMES))
+        self.assertEqual(tuple(installer.MAX_BYTES), SYSTEMD_ASSET_NAMES)
+        self.assertEqual(set(installer.FILES), set(SYSTEMD_ASSET_NAMES))
         self.assertEqual(installer.SCRIPT.name, "nox_lifeline_observer.py")
         self.assertEqual(installer.BUNDLE_SHA256,
                          {name: pin for name, _, pin, _ in
-                          operator.LIFELINE_OBSERVER_ASSET_PINS})
+                          operator.LIFELINE_OBSERVER_ASSET_PINS
+                          if name in SYSTEMD_ASSET_NAMES})
+        self.assertEqual(installer.SUPERVISOR_BUNDLE_SHA256,
+                         {name: pin for name, _, pin, _ in
+                          operator.LIFELINE_OBSERVER_ASSET_PINS
+                          if name not in SYSTEMD_ASSET_NAMES})
+        self.assertNotIn("nox_lifeline_observer_bootstrap.py", installer.FILES)
+        self.assertNotIn("nox-lifeline-observer.conf", installer.FILES)
 
     def test_bundle_has_only_exact_pinned_observer_artifacts(self):
         assets = operator.build_lifeline_observer_bundle()
