@@ -68,15 +68,12 @@ def service_receipt(activated_at):
 def record_hold(phase, error):
     code = str(error)
     print('NOX_MAINT_' + phase + '_HOLD=' + (
-        code if re.fullmatch(r'HOLD_[A-Z0-9_]+', code) else type(error).__name__), flush=True)
+        code if re.fullmatch(r'[A-Z][A-Z0-9_]{2,80}', code)
+        else type(error).__name__ + ('_' + str(error.errno) if isinstance(error, OSError) else '')),
+          flush=True)
 
 
-def main():
-    source = os.environ.get('NOX_OWNER_SOURCE_SHA', '')
-    request = os.environ.get('NOX_OWNER_REQUEST_ID', '')
-    need(os.geteuid() == os.getegid() == 0 and re.fullmatch(r'[a-f0-9]{40}', source)
-         and re.fullmatch(r'[1-9][0-9]{0,19}', request), 'OWNER_REQUEST')
-    data = sources()
+def install_cache(source, request, data):
     module('atomic_engram_stage', data)
     native = module('owner_supervisor_background_release', data)
     activate = module('owner_cache_maintenance_activation', data)
@@ -105,22 +102,30 @@ def main():
                 and os.environ.get('NOX_OWNER_SOURCE_SHA') == source
                 and os.environ.get('NOX_OWNER_REQUEST_ID') == request)
 
-    result = None
-    try:
-        result = activate.activate_cache_maintenance(
-            pin, workers={name: data[name] for name in activate.WORKERS},
-            unit=data[activate.UNIT_NAME], authorize=owner,
-        )
-        print('NOX_MAINT_CACHE_ACTIVATION=' + json.dumps(result, separators=(',', ':')), flush=True)
-    except Exception as error:
-        record_hold('CACHE_ACTIVATION', error)
+    result = activate.activate_cache_maintenance(
+        pin, workers={name: data[name] for name in activate.WORKERS},
+        unit=data[activate.UNIT_NAME], authorize=owner,
+    )
+    return result, now
+
+
+def main():
+    source = os.environ.get('NOX_OWNER_SOURCE_SHA', '')
+    request = os.environ.get('NOX_OWNER_REQUEST_ID', '')
+    need(os.geteuid() == os.getegid() == 0 and re.fullmatch(r'[a-f0-9]{40}', source)
+         and re.fullmatch(r'[1-9][0-9]{0,19}', request), 'OWNER_REQUEST')
+    data = sources()
 
     teacher = None
     try:
         module('owner_teacher_boot_diff', data)
         module('owner_disable_teacher_boot', data)
         warm = module('owner_remove_exact_teacher_line', data)
-        need(warm.pid1_start() == PID1 and activate.stop_clear(Path('/')), 'TEACHER_OWNER_SCOPE')
+        root = Path('/root/nox')
+        stops = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
+                 'state/STOP', 'state/STOP.flag', 'state/OWNER_MAINTENANCE.flag')
+        need(warm.pid1_start() == PID1 and not any(os.path.lexists(root / path) for path in stops)
+             and not os.path.lexists('/workspace/NOX_STOP'), 'TEACHER_OWNER_SCOPE')
         teacher = warm.remove_exact_teacher_line(
             instance_id=60509551, phase2_request='7011341488',
             phase2_source='8e5f6ef0bd034c7617edeb6711d4f2aa15f58932', apply=True,
@@ -128,6 +133,14 @@ def main():
         print('NOX_MAINT_TEACHER_BOOT_UPDATE=' + json.dumps(teacher, separators=(',', ':')), flush=True)
     except Exception as error:
         record_hold('TEACHER_BOOT_UPDATE', error)
+
+    result = None
+    now = time.time()
+    try:
+        result, now = install_cache(source, request, data)
+        print('NOX_MAINT_CACHE_ACTIVATION=' + json.dumps(result, separators=(',', ':')), flush=True)
+    except Exception as error:
+        record_hold('CACHE_ACTIVATION', error)
 
     if result and result['added']:
         print('NOX_MAINT_CACHE_FIRST_CYCLE=' + json.dumps(service_receipt(now), separators=(',', ':')), flush=True)
