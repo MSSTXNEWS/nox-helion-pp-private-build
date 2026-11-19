@@ -194,15 +194,15 @@
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
           const segmenter=typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function'?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
-          let trailing='',paintWaits=0;
+          let trailing='',waits=0;
           const emitPieces=async t=>{
             const parts=livePieces(t);
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
               event({type:'token',t:parts[index]});
-              if(index<parts.length-1&&
+              if(index<parts.length-1&&waits<2&&
                  (typeof document==='undefined'||document.visibilityState!=='hidden')&&
-                 !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches&&paintWaits++<2){
+                 !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches&&waits++<2){
                 await new Promise(resolve=>{
                   let settled=false,frameId,timerId;
                   const visibility=()=>{if(document.visibilityState==='hidden')finish();};
