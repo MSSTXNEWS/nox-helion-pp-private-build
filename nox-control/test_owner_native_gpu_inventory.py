@@ -62,6 +62,17 @@ class GpuInventoryTests(unittest.TestCase):
         self.assertEqual(rows[0]["memory_free_mib"], 16768)
         self.assertEqual(rows[1]["memory_used_mib"], 12000)
 
+    def test_bounded_driver_reserved_memory_is_valid_not_an_error(self):
+        # NVIDIA documents a third, driver-reserved FB memory segment.
+        rows = gpu.parse_gpu_rows(output(used_a=16000, free_a=16368))
+        self.assertEqual(rows[0]["memory_total_mib"] - rows[0]["memory_used_mib"]
+                         - rows[0]["memory_free_mib"], 400)
+        self.assertEqual(gpu.MAX_DRIVER_RESERVED_MIB, 1024)
+        boundary = gpu.parse_gpu_rows(output(used_a=16000, free_a=15744))
+        self.assertEqual(boundary[0]["memory_free_mib"], 15744)
+        with self.assertRaisesRegex(RuntimeError, "MEMORY"):
+            gpu.parse_gpu_rows(output(used_a=16000, free_a=15743))
+
     def test_builds_two_snapshots_and_binds_stable_boot_and_identity(self):
         runner = FakeRunner([output(), output(used_a=16100, free_a=16668,
                                                   used_b=12100, free_b=20668)])
@@ -124,7 +135,7 @@ class GpuInventoryTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "MEMORY"):
             gpu.parse_gpu_rows(output(used_a=20000, free_a=20000))
         with self.assertRaisesRegex(RuntimeError, "MEMORY"):
-            gpu.parse_gpu_rows(output(used_a=100, free_a=32000))
+            gpu.parse_gpu_rows(output(used_a=100, free_a=30000))
         with self.assertRaisesRegex(RuntimeError, "ROW_SHAPE"):
             gpu.parse_gpu_rows("0, Tesla V100-SXM2-32GB, " + GPU_A + ", 32768, 100\n")
         with self.assertRaisesRegex(RuntimeError, "MEMORY"):
