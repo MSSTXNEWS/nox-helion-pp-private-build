@@ -10,6 +10,7 @@ from owner_chat_browser_qa import (
     allowed_qa_request,
     canonical_s03_proof_valid,
     multiturn_followup_prompt,
+    ru_es_context_challenge,
     multiturn_history_valid,
 )
 
@@ -55,11 +56,39 @@ class OwnerRuEsContinuity(unittest.TestCase):
     def test_spanish_opt_in_preserves_token_and_requests_previous_ru_answer(self):
         text = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         self.assertTrue(text.startswith(f"[NOX UI QA {TOKEN}] "))
-        self.assertIn("respuesta anterior en ruso", text)
-        self.assertIn("números del diez al uno", text)
+        self.assertIn("respuesta a la pregunta anterior en ruso", text)
+        self.assertIn("secuencia de números en orden inverso", text)
         self.assertNotEqual(text, multiturn_followup_prompt(TOKEN, "multiturn"))
         with self.assertRaisesRegex(RuntimeError, "HOLD_QA_LANGUAGE_MODE"):
             multiturn_followup_prompt(TOKEN, "es_es")
+
+    def test_ru_es_requires_prior_randomized_russian_answer_not_rote_ten_to_one(self):
+        challenge = ru_es_context_challenge(TOKEN)
+        numbers = challenge.split(',')
+        self.assertEqual(set(numbers), {str(i) for i in range(1, 11)})
+        self.assertEqual(len(numbers), 10)
+        self.assertNotEqual(challenge, FIRST)
+        self.assertNotEqual(challenge, LAST)
+        self.assertEqual(challenge, ru_es_context_challenge(TOKEN))
+        self.assertNotEqual(challenge, ru_es_context_challenge('ghijk'))
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        self.assertNotIn(challenge, spanish)
+        reversed_answer = ','.join(reversed(numbers))
+        self.assertNotIn(reversed_answer, spanish)
+        self.assertTrue(multiturn_history_valid([
+            {'role': 'user', 'content': 'RU first turn: '+challenge},
+            {'role': 'assistant', 'content': challenge},
+            {'role': 'user', 'content': spanish},
+            {'role': 'assistant', 'content': reversed_answer},
+        ], 'RU first turn: '+challenge, challenge, spanish, reversed_answer))
+        self.assertFalse(multiturn_history_valid([
+            {'role': 'user', 'content': 'RU first turn: '+challenge},
+            {'role': 'assistant', 'content': FIRST},
+            {'role': 'user', 'content': spanish},
+            {'role': 'assistant', 'content': reversed_answer},
+        ], 'RU first turn: '+challenge, challenge, spanish, reversed_answer))
+        with self.assertRaisesRegex(RuntimeError, 'HOLD_QA_CHALLENGE_TOKEN'):
+            ru_es_context_challenge('bad!token')
 
     def test_exact_spanish_followup_keeps_same_dialog_and_one_shot_gate(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
