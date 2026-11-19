@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import fcntl
 import hashlib
 import http.client
+import json
 import os
 from pathlib import Path
 import re
@@ -162,6 +163,28 @@ def assert_scope(raw):
         if kind == "group":
             need(NAME not in [part.strip() for part in conf[section].get("programs", "").split(",")],
                  "OTHER_CONFIG_OWNS_GROUP")
+
+
+def config_diff(value, phase):
+    """Read only the XML-RPC diff structure and bounded process-group names."""
+    nested = value[0] if isinstance(value, list) and len(value) == 1 else None
+    rows = nested if isinstance(nested, list) and len(nested) == 3 else ()
+    fields = ("added", "changed", "removed")
+    name_ok = re.compile(r"[A-Za-z0-9_.:-]{1,128}").fullmatch
+    safe = {field: sorted({item for item in row[:256]
+                           if isinstance(item, str) and name_ok(item)})
+            for field, row in zip(fields, rows) if isinstance(row, list)}
+    valid = (set(safe) == set(fields) and sum(map(len, rows)) <= 256
+             and all(len(row) == len(safe[field]) for field, row in zip(fields, rows))
+             and len(set().union(*(set(row) for row in safe.values()))) == sum(map(len, rows)))
+    shape = {"outer": type(value).__name__, "outer_size": len(value) if isinstance(value, list) else None,
+             "nested": type(nested).__name__, "nested_size": len(nested) if isinstance(nested, list) else None,
+             "row_sizes": [len(row) if isinstance(row, list) else None for row in rows]}
+    print("NOX_MAINT_CACHE_CONFIG_DIFF=" + json.dumps(
+        {"phase": phase, "state": "VALID" if valid else "INVALID", "shape": shape, "groups": safe},
+        separators=(",", ":")), flush=True)
+    need(valid, "DIFF_SHAPE")
+    return tuple(frozenset(safe[field]) for field in fields)
 
 
 class NativeSupervisor:
@@ -327,6 +350,18 @@ def activate_cache_maintenance(pin, *, workers, unit, authorize, root=Path("/"),
         add_attempted = False
         added = False
         parsed = False
+        baseline = None
+
+        def pre_stage_check():
+            pin.verify()
+            verify_lease(lease_dir, lease)
+            assert_directory(root_fd, LEASE[:-1], lease_dir)
+            assert_directory(root_fd, WORKER_DIR[:-1], ops)
+            assert_directory(root_fd, assets[-1].path[:-1], inc)
+            need(stop_clear(root), "OWNER_STOP")
+            need(exact_file(inc, UNIT_NAME, assets[-1]) is None, "PREEXISTING_PENDING_UNIT")
+            native.inspect_configs()
+            native.verify_log()
 
         def check_files(allow_stop=False):
             pin.verify()
@@ -353,6 +388,9 @@ def activate_cache_maintenance(pin, *, workers, unit, authorize, root=Path("/"),
                 native.exact_process(observed[1])
 
         try:
+            if existing is None:
+                baseline = config_diff(native.rpc("reloadConfig", (), pre_stage_check), "before_stage")
+                need(all(NAME not in row for row in baseline), "PREEXISTING_PENDING_GROUP")
             entry = path_stat(ops, WORKER_DIR[-1])
             if entry is None:
                 need(existing is None, "ACTIVE_GROUP_ALREADY_EXISTS")
@@ -376,8 +414,8 @@ def activate_cache_maintenance(pin, *, workers, unit, authorize, root=Path("/"),
                 check()
                 need(native.lookup() is None, "GROUP_APPEARED")
                 parsed = True
-                diff = native.rpc("reloadConfig", (), check)
-                need(diff == [[[NAME], [], []]], "ADDITIVE_DIFF_REQUIRED")
+                diff = config_diff(native.rpc("reloadConfig", (), check), "after_stage")
+                need(diff == (baseline[0] | {NAME}, *baseline[1:]), "ADDITIVE_DIFF_REQUIRED")
                 add_attempted = True
                 added = native.rpc("addProcessGroup", (NAME,), check) is True
                 need(added, "ADD_NOT_CONFIRMED")
@@ -424,11 +462,8 @@ def activate_cache_maintenance(pin, *, workers, unit, authorize, root=Path("/"),
                         os.rmdir(WORKER_DIR[-1], dir_fd=ops)
                         os.fsync(ops)
                 if parsed and any(name == UNIT_NAME for _, name, _ in created):
-                    after = native.rpc("reloadConfig", (), native.inspect_configs)
-                    need(isinstance(after, list) and len(after) == 1 and isinstance(after[0], list)
-                         and len(after[0]) == 3
-                         and all(isinstance(row, list) and NAME not in row for row in after[0]),
-                         "ROLLBACK_PENDING_CONFIG")
+                    after = config_diff(native.rpc("reloadConfig", (), native.inspect_configs), "rollback")
+                    need(after == baseline, "ROLLBACK_PENDING_CONFIG")
             except BaseException as recovery:
                 raise Hold("HOLD_CACHE_ACTIVATION_RECONCILE") from recovery
             raise error

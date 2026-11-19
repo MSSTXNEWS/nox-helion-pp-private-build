@@ -1,133 +1,157 @@
-"""Protect only the existing DS41 launcher and attest the retained bytes."""
+"""Install only the authorized NOX cache maintenance group."""
 
-import fcntl
+import base64
+
 import hashlib
-import http.client
+
 import json
+
 import os
+
 from pathlib import Path
+
 import re
+
 import stat
-import subprocess
+
+import sys
+
 import time
 
+import types
 
-LAUNCH = Path('/root/nox/models/deepseek_v41_flash_iq2xxs/launch_ds41_8098_t119u.sh')
-LEASE = Path('/root/nox/state/owner_maintenance.lock')
-START = Path('/root/onstart.sh')
-EXPECTED_START = 'b36b916aadc8bb6047108823bf7b86f00448deafd9f79a824a9f4924c1190507'
-STOP = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP', 'state/STOP',
-        'state/STOP.flag', 'state/OWNER_MAINTENANCE.flag')
+BUNDLE = __NOX_BUNDLE_JSON__
 
+PINS = {"nox_cache_maintenance.py":"5113e633d66026b5821394a3d9e87433ddc14711fe59df1f09ff0dd6974a593c","owner_memory_cleanup_entry.py":"a308933a6df312ad6601bebae4e39ef8f0cd9794cea0f9c4ebc325ea45aac403","owner_memory_governor.py":"9cdcc97d333a4b2ea07f3003930f260d567a2b6a7cdebb1adcd36220befe617b","owner_storage_reclaim.py":"085403de23d817f1f1307df757901b914115c4745a78dea7ddda53a7fca350f8","nox-cache-maintenance.conf":"9c3eb4d108fa640936a05e178c3ec4f63cc3083c3c4aa7d0a1ac8074d79c09ad","atomic_engram_stage.py":"79b71a91f82b60e0761c5ed5bfe14723923ae69c9b70cebba048f338223e8e26","owner_supervisor_background_release.py":"1928cc0b4ab308f65f329a992376963769b1870984562a9fc12a213a2578b43a","owner_cache_maintenance_activation.py":"ad8d1f56aa87fad08e8965b011bf977ce5e0f9be43f76f2cc48f6dd850c374ef"}
 
-def need(value, code):
-    if not value:
-        raise RuntimeError('HOLD_MODEL_LAUNCH_PREPARE_' + code)
+BOOT = '9c0ecc02-85c1-452b-b8ae-521e9a11fd03'
 
+PID1 = 167790899
 
-def stop_clear():
-    need(not any(os.path.lexists(Path('/root/nox') / name) for name in STOP)
-         and not os.path.lexists('/workspace/NOX_STOP'), 'STOP')
+SUPERVISOR = (114, 167791115)
 
+MAIN = 'fcead12b4dcb7f56b31d223f1cfa89792bd6e8008f78708a831b41fab9ece25d'
 
-def identity(info):
-    return info.st_dev, info.st_ino, info.st_uid, info.st_gid, info.st_nlink, info.st_size
+CACHE_LOG = Path('/root/nox/logs/nox-cache-maintenance.log')
 
+def need(condition, reason):
+    if not condition:
+        raise RuntimeError('HOLD_CACHE_ENTRY_' + reason)
 
-def protected_file(path):
-    for parent in path.parents:
-        info = parent.lstat()
-        need(stat.S_ISDIR(info.st_mode) and info.st_uid == info.st_gid == 0
-             and not info.st_mode & 0o022, 'PARENT')
-    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK
-    fd = os.open(path, flags)
-    return os.fdopen(fd, 'rb')
+def sources():
+    need(isinstance(BUNDLE, dict) and set(BUNDLE) == set(PINS), 'ASSET_SCOPE')
+    data = {}
+    for name, content in BUNDLE.items():
+        raw = base64.b64decode(content, validate=True)
+        need(0 < len(raw) < 256 * 1024 and hashlib.sha256(raw).hexdigest() == PINS[name], 'ASSET_SHA')
+        data[name] = raw
+    return data
 
+def module(name, data):
+    loaded = types.ModuleType(name)
+    sys.modules[name] = loaded
+    exec(compile(data[name + '.py'], name + '.py', 'exec'), loaded.__dict__)
+    return loaded
 
-def launch_metadata(handle):
-    info = os.fstat(handle.fileno())
-    need(stat.S_ISREG(info.st_mode) and (info.st_uid, info.st_gid, info.st_nlink, info.st_size) == (0, 0, 1, 1844)
-         and identity(LAUNCH.lstat()) == identity(info), 'FILE_PREIMAGE')
-    return info
-
-
-def live_model():
-    pid = 3266857
-    try:
-        before = Path(f'/proc/{pid}/stat').read_text().rpartition(') ')[2].split()[19]
-        if before != '172046662':
-            return {'known_generation': False}
-        connection = http.client.HTTPConnection('127.0.0.1', 8098, timeout=3)
+def service_receipt(activated_at):
+    deadline = time.monotonic() + 32
+    while time.monotonic() < deadline:
         try:
-            connection.request('GET', '/health', headers={'Connection': 'close'})
-            response = connection.getresponse()
-            raw = response.read(4097)
-            status = response.status
-        finally:
-            connection.close()
-        after = Path(f'/proc/{pid}/stat').read_text().rpartition(') ')[2].split()[19]
-        return {'known_generation': after == before, 'status': status,
-                'healthy': after == before and status == 200 and len(raw) <= 4096
-                and isinstance(json.loads(raw), dict) and json.loads(raw).get('status') == 'ok'}
-    except (OSError, ValueError, IndexError, http.client.HTTPException):
-        return {'known_generation': False, 'healthy': False}
+            flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK
+            with os.fdopen(os.open(CACHE_LOG, flags), 'rb') as stream:
+                info = os.fstat(stream.fileno())
+                if (stat.S_ISREG(info.st_mode) and info.st_uid == 0
+                        and info.st_size <= 1024 ** 2 + 16384 and info.st_mtime >= activated_at):
+                    raw = stream.read(1024 ** 2 + 16385)
+                    prefix = b'NOX_CACHE_MAINTENANCE='
+                    for line in reversed(raw.splitlines()):
+                        if line.startswith(prefix) and len(line) < 16384:
+                            report = json.loads(line[len(prefix):])
+                            if isinstance(report, dict) and isinstance(report.get('state'), str):
+                                return report
+        except (OSError, ValueError):
+            pass
+        time.sleep(1)
+    return {'state': 'FIRST_CYCLE_NOT_OBSERVED'}
+
+def record_hold(phase, error):
+    code = str(error)
+    print('NOX_MAINT_' + phase + '_HOLD=' + (
+        code if re.fullmatch(r'[A-Z][A-Z0-9_]{2,80}', code)
+        else type(error).__name__ + ('_' + str(error.errno) if isinstance(error, OSError) else '')),
+          flush=True)
+
+def socket_scope(native, main):
+    conf = native.config_parse(main)
+    path = native.plain_socket_path(conf['unix_http_server']['file'], Path('/etc/supervisor'))
+    if path.is_relative_to('/var/run') and Path('/var/run').is_symlink():
+        if os.readlink('/var/run') in ('/run', '../run'):
+            path = Path('/run') / path.relative_to('/var/run')
+    device = []
+    for item in (path, *path.parents):
+        try:
+            info = item.lstat()
+            device.append({'path': str(item), 'mode': oct(stat.S_IMODE(info.st_mode)),
+                           'uid': info.st_uid, 'gid': info.st_gid,
+                           'type': 'socket' if stat.S_ISSOCK(info.st_mode) else 'directory'
+                                   if stat.S_ISDIR(info.st_mode) else 'other'})
+        except OSError as error:
+            device.append({'path': str(item), 'errno': error.errno})
+    print('NOX_MAINT_CACHE_SOCKET_SCOPE=' + json.dumps(device, separators=(',', ':')), flush=True)
+
+def install_cache(source, request, data):
+    module('atomic_engram_stage', data)
+    native = module('owner_supervisor_background_release', data)
+    activate = module('owner_cache_maintenance_activation', data)
+    main = native.read(activate.MAIN, 256 << 10, rooted=True)
+    need(hashlib.sha256(main).hexdigest() == MAIN, 'SUPERVISOR_MAIN_CHANGED')
+    daemon = native.process(SUPERVISOR[0])
+    need(native.process(1)[:2] == (PID1, 0) and daemon[:2] == (SUPERVISOR[1], 1), 'SUPERVISOR_EPOCH')
+    parsed = native.config_parse(main)
+    socket_scope(native, main)
+    endpoint = native.resolve_socket(native.plain_socket_path(parsed['unix_http_server']['file'], activate.MAIN.parent))
+    files = sorted(path for path in activate.INCLUDES.iterdir()
+                   if path.name.endswith('.conf') and path.name != activate.UNIT_NAME)
+    need(len(files) <= 96, 'SUPERVISOR_INCLUDE_CENSUS')
+    include = tuple((path.name, hashlib.sha256(native.read(path, 256 << 10, rooted=True)).hexdigest())
+                    for path in files)
+    now = time.time()
+    boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    need(boot == BOOT, 'SUPERVISOR_BOOT_CHANGED')
+    argv = native.read(Path(f'/proc/{SUPERVISOR[0]}/cmdline'), 16 << 10)
+    pin = activate.OwnerPin(request, source, now, now + 150, BOOT, PID1, *SUPERVISOR,
+                            hashlib.sha256(argv).hexdigest(), MAIN, str(endpoint), include,
+                            PINS[activate.UNIT_NAME], tuple((name, PINS[name]) for name in activate.WORKERS))
+
+    def owner(passed, scope):
+        return (passed == pin and scope in ('activate', 'parse', 'add', 'rollback_stop', 'rollback_remove')
+                and time.time() < pin.expires_at
+                and os.environ.get('NOX_OWNER_SOURCE_SHA') == source
+                and os.environ.get('NOX_OWNER_REQUEST_ID') == request)
+
+    until = time.monotonic() + 46
+    while True:
+        try:
+            result = activate.activate_cache_maintenance(
+                pin, workers={name: data[name] for name in activate.WORKERS},
+                unit=data[activate.UNIT_NAME], authorize=owner,
+            )
+            return result, now
+        except activate.Hold as error:
+            if str(error) != 'HOLD_CACHE_ACTIVATION_OWNER_BUSY' or time.monotonic() >= until:
+                raise
+            time.sleep(0.25)
 
 
 def main():
-    request = os.environ.get('NOX_OWNER_REQUEST_ID', '')
     source = os.environ.get('NOX_OWNER_SOURCE_SHA', '')
-    ticks = Path('/proc/1/stat').read_text().rpartition(') ')[2].split()[19]
-    need(os.geteuid() == os.getegid() == 0 and re.fullmatch('[1-9][0-9]{0,19}', request)
-         and re.fullmatch('[a-f0-9]{40}', source) and ticks == '167790899', 'OWNER_CONTEXT')
-    with protected_file(LEASE) as lease, protected_file(START) as startup:
-        locked = os.fstat(lease.fileno())
-        need(stat.S_ISREG(locked.st_mode) and (locked.st_dev, locked.st_ino, locked.st_uid, locked.st_gid, locked.st_nlink)
-             == (36, 59886214, 0, 0, 1) and not locked.st_mode & 0o077, 'OWNER_LEASE')
-        until = time.monotonic() + 36
-        while True:
-            stop_clear()
-            try:
-                fcntl.flock(lease.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
-            except BlockingIOError:
-                if time.monotonic() >= until:
-                    raise RuntimeError('HOLD_MODEL_LAUNCH_PREPARE_OWNER_BUSY') from None
-                time.sleep(0.25)
-        need(identity(LEASE.lstat()) == identity(locked), 'OWNER_LEASE_CHANGED')
-        need(hashlib.sha256(startup.read(65537)).hexdigest() == EXPECTED_START, 'STARTUP_CHANGED')
-        with protected_file(LAUNCH) as handle:
-            preimage = launch_metadata(handle)
-            mode = stat.S_IMODE(preimage.st_mode)
-            raw = handle.read(1845)
-            need(mode in (0o775, 0o755) and len(raw) == 1844 and b'\0' not in raw, 'FILE_BYTES')
-            result = subprocess.run(['/bin/bash', '--noprofile', '--norc', '-n', '-s'], input=raw,
-                                    env={'PATH': '/usr/bin:/bin', 'LC_ALL': 'C'}, timeout=4,
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            need(result.returncode == 0, 'BASH_SYNTAX')
-            stop_clear()
-            sampled = launch_metadata(handle)
-            need(identity(sampled) == identity(preimage) and sampled.st_mtime_ns == preimage.st_mtime_ns
-                 and stat.S_IMODE(sampled.st_mode) == mode, 'FILE_CHANGED')
-            if mode == 0o775:
-                os.fchmod(handle.fileno(), 0o755)
-            try:
-                os.fsync(handle.fileno())
-                handle.seek(0)
-                after = launch_metadata(handle)
-                need(identity(after) == identity(preimage) and stat.S_IMODE(after.st_mode) == 0o755
-                     and handle.read(1845) == raw, 'POSTIMAGE')
-            except (OSError, RuntimeError):
-                if mode == 0o775 and identity(launch_metadata(handle)) == identity(preimage):
-                    os.fchmod(handle.fileno(), 0o775)
-                    os.fsync(handle.fileno())
-                raise
-    output = {'launcher_sha256': hashlib.sha256(raw).hexdigest(), 'source_bytes': len(raw),
-              'group_write_removed': mode == 0o775, 'bash_syntax_verified': True,
-              'model_tree_reference': os.fsencode(LAUNCH.parent) in raw,
-              'engram_reference': b'engram_ram.gguf' in raw, 'port_8098_reference': b'8098' in raw,
-              'running_workload_changed': False, 'restart_verified': False,
-              'same_client_model': live_model()}
-    print('NOX_MAINT_MODEL_LAUNCH_PREPARED=' + json.dumps(output, separators=(',', ':')), flush=True)
+    request = os.environ.get('NOX_OWNER_REQUEST_ID', '')
+    need(os.geteuid() == os.getegid() == 0 and re.fullmatch(r'[a-f0-9]{40}', source)
+         and re.fullmatch(r'[1-9][0-9]{0,19}', request), 'OWNER_REQUEST')
+    result, now = install_cache(source, request, sources())
+    print('NOX_MAINT_CACHE_ACTIVATION=' + json.dumps(result, separators=(',', ':')), flush=True)
+    if result['added']:
+        print('NOX_MAINT_CACHE_FIRST_CYCLE=' + json.dumps(service_receipt(now), separators=(',', ':')), flush=True)
     print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
 
 
@@ -135,7 +159,5 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as error:
-        code = str(error)
-        print('NOX_MAINT_MODEL_LAUNCH_HOLD=' + (code if re.fullmatch('HOLD_[A-Z0-9_]+', code)
-                                               else type(error).__name__), flush=True)
+        record_hold('CACHE_ACTIVATION', error)
         raise SystemExit(2) from None
