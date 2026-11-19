@@ -149,7 +149,7 @@ class PairedReceiptTests(unittest.TestCase):
         b=example();c=copy.deepcopy(b)
         c["outcomes"][0]["output_tokens"]=2
         c["outcomes"][1]["output_tokens"]=22
-        c["outcomes"][0]["latency_ms"]=5
+        c["outcomes"][0]["latency_ms"]=15  # after first visible text at 10 ms
         out=compare_paired(b,c)
         self.assertEqual(out["baseline"]["total_output_tokens"],36)
         self.assertEqual(out["candidate"]["total_output_tokens"],36)
