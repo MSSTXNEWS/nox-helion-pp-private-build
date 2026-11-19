@@ -43,6 +43,23 @@ def main():
         elif isinstance(n, ast.Import) and any(a.asname=='SECRETS' for a in n.names):
             bindings.append({'binding':'Import'})
     found.append({'name':'SECRETS_BINDINGS','shapes':bindings[:12]})
+    common=Path('/root/nox/scripts/common.py')
+    common_result={'source_exists':False}
+    if common.is_file() and not common.is_symlink():
+        meta=common.lstat()
+        if stat.S_ISREG(meta.st_mode) and meta.st_nlink==1 and meta.st_size<=1048576:
+            common_raw=common.read_bytes();common_tree=ast.parse(common_raw)
+            common_bindings=[]
+            for n in ast.walk(common_tree):
+                if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in
+                        ('SECRETS','ROOT','STATE','BASE','BASE_DIR','NOX_ROOT','NOX_HOME')
+                        for t in n.targets):
+                    common_bindings.append({'line':n.lineno,'names':[t.id for t in n.targets if isinstance(t,ast.Name)],'shape':shape(n.value)})
+                elif isinstance(n,ast.ImportFrom) and any(a.name in ('SECRETS','ROOT','STATE')
+                        for a in n.names):
+                    common_bindings.append({'binding':'ImportFrom','module':(n.module or '')[:100]})
+            common_result={'source_exists':True,'sha256':hashlib.sha256(common_raw).hexdigest(),'bindings':common_bindings[:14]}
+    found.append({'name':'COMMON_MODULE','result':common_result})
     print('NOX_MAINT_REPAIR='+json.dumps({'kind':'owner_password_path_ast','data':{'request':req,'source_sha':sha,
        'no_password_read':True,'no_secrets_exported':True,'assignments':found[:16]}},separators=(',',':')),flush=True)
     print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
