@@ -637,9 +637,22 @@ def resource_admission(helper):
             raise ValueError('invalid CPU quota')
     except (OSError, ValueError) as exc:
         raise RuntimeError('HOLD_CGROUP_CPU_QUOTA') from exc
-    budget = helper.resource_budget(int(Path('/sys/fs/cgroup/memory.max').read_text()),
-        int(Path('/sys/fs/cgroup/memory.current').read_text()),
-        quota_cpus, affinity_cpus)
+    # Cgroup v2 may report an unlimited memory.max as "max".  An
+    # unbounded/malformed limit is not a verifiable RAM budget for training.
+    # Fail closed without treating host RAM as the owner's cgroup allowance.
+    try:
+        memory_limit_text = Path('/sys/fs/cgroup/memory.max').read_text().strip()
+        memory_current_text = Path('/sys/fs/cgroup/memory.current').read_text().strip()
+        if (not re.fullmatch('[0-9]{1,20}', memory_limit_text)
+                or not re.fullmatch('[0-9]{1,20}', memory_current_text)):
+            raise ValueError('unbounded or malformed cgroup memory')
+        memory_limit = int(memory_limit_text)
+        memory_current = int(memory_current_text)
+        if memory_limit <= 0 or memory_current > memory_limit:
+            raise ValueError('invalid cgroup memory limit or usage')
+    except (OSError, ValueError) as exc:
+        raise RuntimeError('HOLD_CGROUP_MEMORY_LIMIT') from exc
+    budget = helper.resource_budget(memory_limit, memory_current, quota_cpus, affinity_cpus)
     configured = re.findall(r'^TRAIN_CPU_MAX=([0-9]+)GiB$',
                             (STATE/'train_cpu_max.env').read_text(), re.MULTILINE)
     if len(configured) != 1 or not 56 <= int(configured[0]) <= 64:
