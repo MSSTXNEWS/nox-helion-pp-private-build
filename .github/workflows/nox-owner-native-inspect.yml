@@ -122,6 +122,18 @@ jobs:
             -p test_owner_chat_s03_source_export.py \
             -v
 
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: d882708c4ea7a8b7f4834b3b92168649845b33a7
+          path: mapped-memory-source
+          persist-credentials: false
+      - name: Test exact read-only mapped-memory attribution source
+        working-directory: mapped-memory-source
+        run: |
+          set -euo pipefail
+          python -B -m unittest discover -s nox-control -p test_owner_native_mapped_memory_attribution.py -v
+          python -B -m unittest discover -s nox-control -p test_owner_native_inspect_cgroup_pin.py -v
+
   owner-inspect:
     if: >-
       github.event_name == 'issue_comment' &&

@@ -14,6 +14,7 @@ from owner_native_inspect_comment_guard import (
     APPROVED_SOURCE_BY_ACTION,
     CGROUP_CONTROL_INSPECT_SHA,
     ISSUE_NUMBER,
+    MAPPED_MEMORY_INSPECT_SHA,
     OWNER_ID,
     REPOSITORY,
     authorize_event,
@@ -52,6 +53,19 @@ def event_for(body: str = f"/nox-maintain 60509551 {INSPECT_SHA} inspect") -> di
 
 
 class OwnerCommentGuardTests(unittest.TestCase):
+    def test_mapped_memory_source_is_additive_and_read_only(self) -> None:
+        self.assertEqual(MAPPED_MEMORY_INSPECT_SHA,
+                         "d882708c4ea7a8b7f4834b3b92168649845b33a7")
+        body = f"/nox-maintain 60509551 {MAPPED_MEMORY_INSPECT_SHA} inspect"
+        self.assertEqual(authorize_event(event_for(body), REPOSITORY, "issue_comment"),
+                         ("inspect", MAPPED_MEMORY_INSPECT_SHA))
+        for action in ("audit", "source_attest", "gpu_inventory", "browser_qa",
+                       "emergency_stop", "emergency_stop_preflight"):
+            with self.subTest(action=action), self.assertRaisesRegex(
+                    RuntimeError, "HOLD_SOURCE_ACTION_NOT_APPROVED"):
+                body = f"/nox-maintain 60509551 {MAPPED_MEMORY_INSPECT_SHA} {action}"
+                authorize_event(event_for(body), REPOSITORY, "issue_comment")
+
     def test_cgroup_control_sha_is_additive_and_only_accepts_read_only_inspect(self) -> None:
         self.assertEqual(CGROUP_CONTROL_INSPECT_SHA,
                          "4d0698a4222d765dc56b5525843d7d633c767584")
@@ -398,7 +412,8 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertNotIn("pull-requests: write", workflow)
         self.assertNotIn("actions: write", workflow)
         self.assertNotIn("github-script", workflow)
-        self.assertEqual(workflow.count("persist-credentials: false"), 4)
+        self.assertEqual(workflow.count("persist-credentials: false"), 5)
+        self.assertIn(f"ref: {MAPPED_MEMORY_INSPECT_SHA}\n          path: mapped-memory-source", workflow)
         self.assertEqual(workflow.count("NOX2: ${{ secrets.NOX2 }}"), 8)
         self.assertLess(workflow.index("owner_native_inspect_comment_guard.py"),
                         workflow.index("Run the fixed read-only inspect action"))

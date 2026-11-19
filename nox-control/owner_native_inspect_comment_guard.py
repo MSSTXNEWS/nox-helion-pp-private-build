@@ -30,6 +30,7 @@ APPROVED_SOURCE_BY_ACTION = {
 }
 # An additional read-only inspect pin preserves existing callers at the prior SHA.
 CGROUP_CONTROL_INSPECT_SHA = "4d0698a4222d765dc56b5525843d7d633c767584"
+MAPPED_MEMORY_INSPECT_SHA = "d882708c4ea7a8b7f4834b3b92168649845b33a7"
 SOURCE_EXPORT_KEY_MAX_CHARS = 12000
 COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) "
@@ -94,7 +95,8 @@ def authorize_event(event: object, repository: str | None,
 
     action, source_sha, _ = parse_command(comment.get("body"))
     allowed = (APPROVED_SOURCE_BY_ACTION.get(action) == source_sha
-               or (action == "inspect" and source_sha == CGROUP_CONTROL_INSPECT_SHA))
+               or (action == "inspect" and source_sha in
+                   (CGROUP_CONTROL_INSPECT_SHA, MAPPED_MEMORY_INSPECT_SHA)))
     if not allowed:
         raise RuntimeError("HOLD_SOURCE_ACTION_NOT_APPROVED")
     return action, source_sha
