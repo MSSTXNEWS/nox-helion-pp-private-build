@@ -386,7 +386,9 @@ def measure_openai_sse_wire(timed_chunks):
         content = delta.get("content")
         _require(content is None or isinstance(content, str), "SSE_CONTENT_SCHEMA")
         if content:
-            if first_text_ms is None:
+            # Keep every transmitted content byte in the digest; whitespace
+            # alone is not usable first text or evidence of a meaningful answer.
+            if first_text_ms is None and not content.isspace():
                 first_text_ms = at_ms
             encoded = content.encode("utf-8")
             visible_hash.update(encoded)
@@ -470,7 +472,7 @@ def measure_openai_sse_wire(timed_chunks):
         "model_finish_reason": finish_reason or "unknown",
         "partial_frame_at_eof": bool(line or data_lines),
         "wire_completed_normally": bool(terminal_seen and finish_reason == "stop"
-                                         and visible_bytes and not (line or data_lines)),
+                                         and first_text_ms is not None and not (line or data_lines)),
         "native_verified": False,
         "s03_durable_verified": False,
     }
