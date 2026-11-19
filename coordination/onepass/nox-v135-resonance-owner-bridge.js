@@ -267,9 +267,6 @@
             first_visible_token_ms:firstVisibleMs,
             seconds:+((performance.now()-started)/1000).toFixed(2)});
         }catch(e){
-          // A transport/protocol failure before terminal completion can leave
-          // native work alive after the browser lost its stream. Reuse the
-          // same session-scoped STOP path used by explicit user cancellation.
           if(modelStarted&&!streamDone&&!stopJob)await stopThenAbort();
           event({type:'error',
             error:(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
