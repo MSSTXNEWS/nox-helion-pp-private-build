@@ -143,16 +143,18 @@ class SourceExportTests(unittest.TestCase):
         self.assertTrue(callable(ephemeral_ssh_probe.cleanup))
         self.assertEqual(ephemeral_ssh_probe.INSTANCE_ID, 60509551)
 
-    def test_failed_owner_auth_or_dependency_never_imports_or_cleans_provider(self):
+    def test_failed_preflight_or_provider_import_never_loads_owner_credential(self):
         original_import = builtins.__import__
-        for failure in ("authorization", "dependency"):
+        for failure in ("authorization", "dependency", "provider_import"):
             with self.subTest(failure=failure):
                 attempted_provider_imports = []
 
-                def deny_provider_import(name, *args, **kwargs):
+                def guard_provider_import(name, *args, **kwargs):
                     if name.startswith("nox_runpod"):
                         attempted_provider_imports.append(name)
-                        raise AssertionError("provider import attempted before precheck")
+                        if failure == "provider_import":
+                            raise RuntimeError("HOLD_TEST_PROVIDER_IMPORT")
+                        raise AssertionError("provider import ran before precheck")
                     return original_import(name, *args, **kwargs)
 
                 auth_patch = (
@@ -161,29 +163,57 @@ class SourceExportTests(unittest.TestCase):
                     if failure == "authorization"
                     else mock.patch.object(operator, "authorize_event", return_value=123458)
                 )
-                dependency_patch = mock.patch.object(
-                    operator, "verify_source_export_dependencies",
-                    side_effect=RuntimeError("HOLD_SOURCE_EXPORT_DEPENDENCY_MANIFEST_HASH"),
-                ) if failure == "dependency" else mock.patch.object(
-                    operator, "verify_source_export_dependencies",
-                    side_effect=AssertionError("dependency check ran before owner authorization"),
+                dependency_patch = (
+                    mock.patch.object(operator, "verify_source_export_dependencies",
+                                      side_effect=RuntimeError("HOLD_SOURCE_EXPORT_DEPENDENCY_MANIFEST_HASH"))
+                    if failure == "dependency"
+                    else mock.patch.object(operator, "verify_source_export_dependencies",
+                                      return_value=True)
+                    if failure == "provider_import"
+                    else mock.patch.object(operator, "verify_source_export_dependencies",
+                                      side_effect=AssertionError("dependency check ran before owner authorization"))
                 )
                 original_path = list(sys.path)
+                safe_env = dict(os.environ)
+                safe_env.pop("NOX2", None)
+                safe_env["NOX2_FILE"] = "/tmp/nox2-s03-unused"
                 with (
                     mock.patch.object(sys, "argv",
                                       ["owner_native_operator.py", "source_export", "public-key"]),
+                    mock.patch.dict(os.environ, safe_env, clear=True),
                     mock.patch.object(operator, "source_export_key_info", return_value={}),
+                    mock.patch.object(operator, "load_source_export_credential_file") as load_credential,
                     auth_patch,
                     dependency_patch,
                     mock.patch.object(operator, "MASTER", None),
-                    mock.patch("builtins.__import__", side_effect=deny_provider_import),
+                    mock.patch("builtins.__import__", side_effect=guard_provider_import),
                     mock.patch("builtins.print"),
                 ):
                     result = operator.main()
 
                 self.assertEqual(result, 2)
-                self.assertEqual(attempted_provider_imports, [])
-                self.assertEqual(sys.path, original_path)
+                load_credential.assert_not_called()
+                self.assertNotIn("NOX2", safe_env)
+                self.assertEqual(
+                    attempted_provider_imports,
+                    ["nox_runpod.teacher_mesh.v51"] if failure == "provider_import" else [],
+                )
+                if failure != "provider_import":
+                    self.assertEqual(sys.path, original_path)
+
+    def test_staged_owner_credential_is_private_single_use_and_never_env_injected(self):
+        token = "test-owner-api-token"
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "nox2-s03-123456-1"
+            path.write_text(token, encoding="ascii")
+            path.chmod(0o600)
+            with mock.patch.dict(os.environ, {
+                "RUNNER_TEMP": td,
+                "NOX2_FILE": str(path),
+            }, clear=True):
+                self.assertEqual(operator.load_source_export_credential_file(), token)
+                self.assertFalse(path.exists())
+                self.assertNotIn("NOX2", os.environ)
 
     def test_export_artifact_is_exclusive_and_private_mode(self):
         with tempfile.TemporaryDirectory() as td:

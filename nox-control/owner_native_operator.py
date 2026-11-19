@@ -1147,6 +1147,59 @@ def verify_source_export_dependencies():
         raise RuntimeError('HOLD_SOURCE_EXPORT_DEPENDENCY_FILE_MISSING')
     return True
 
+SOURCE_EXPORT_CREDENTIAL_FILE_RE=re.compile(r'nox2-s03-[0-9]{1,20}-[0-9]{1,10}')
+SOURCE_EXPORT_CREDENTIAL_MAX_BYTES=4096
+
+
+def load_source_export_credential_file():
+    """Consume the staged NOX2 file only after auth, hashes, and provider import pass."""
+    runner_temp=os.environ.get('RUNNER_TEMP','')
+    encoded_path=os.environ.get('NOX2_FILE','')
+    if not runner_temp or not encoded_path:
+        raise RuntimeError('HOLD_SOURCE_EXPORT_CREDENTIAL_FILE_MISSING')
+    root=Path(runner_temp).resolve()
+    candidate=Path(encoded_path)
+    if (candidate.parent.resolve()!=root
+            or not SOURCE_EXPORT_CREDENTIAL_FILE_RE.fullmatch(candidate.name)):
+        raise RuntimeError('HOLD_SOURCE_EXPORT_CREDENTIAL_FILE_SCOPE')
+    nofollow=getattr(os,'O_NOFOLLOW',0)
+    if not nofollow:
+        raise RuntimeError('HOLD_SOURCE_EXPORT_CREDENTIAL_NOFOLLOW_UNAVAILABLE')
+    try:
+        fd=os.open(str(candidate),os.O_RDONLY|nofollow)
+    except OSError:
+        raise RuntimeError('HOLD_SOURCE_EXPORT_CREDENTIAL_FILE_UNAVAILABLE') from None
+    raw=bytearray()
+    try:
+        info=os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_nlink!=1
+                or info.st_size<1 or info.st_size>SOURCE_EXPORT_CREDENTIAL_MAX_BYTES
+                or info.st_mode&0o077
+                or (hasattr(os,'getuid') and info.st_uid!=os.getuid())):
+            raise RuntimeError('HOLD_SOURCE_EXPORT_CREDENTIAL_FILE_UNSAFE')
+        candidate.unlink()
+        while len(raw)<=SOURCE_EXPORT_CREDENTIAL_MAX_BYTES:
+            chunk=os.read(fd,SOURCE_EXPORT_CREDENTIAL_MAX_BYTES+1-len(raw))
+            if not chunk:
+                break
+            raw.extend(chunk)
+        if len(raw)!=info.st_size or len(raw)>SOURCE_EXPORT_CREDENTIAL_MAX_BYTES:
+            raise RuntimeError('HOLD_SOURCE_EXPORT_CREDENTIAL_FILE_SIZE')
+    except RuntimeError:
+        raise
+    except OSError:
+        raise RuntimeError('HOLD_SOURCE_EXPORT_CREDENTIAL_FILE_READ') from None
+    finally:
+        os.close(fd)
+    try:
+        value=bytes(raw).decode('ascii')
+    except UnicodeDecodeError:
+        raise RuntimeError('HOLD_SOURCE_EXPORT_CREDENTIAL_FILE_FORMAT') from None
+    if not re.fullmatch(r'[!-~]{1,4096}',value):
+        raise RuntimeError('HOLD_SOURCE_EXPORT_CREDENTIAL_FILE_FORMAT')
+    return value
+
+
 def source_export_key_info(encoded,now=None):
     if not isinstance(encoded,str) or len(encoded)>12000 or not re.fullmatch('[A-Za-z0-9_-]+',encoded):
         raise RuntimeError('HOLD_SOURCE_EXPORT_KEY_FORMAT')
@@ -1286,7 +1339,11 @@ def run_native(action,request_id,export_key_b64=None,provider_cleanup_sink=None)
     if provider_cleanup_sink is not None:
         if not callable(provider_cleanup_sink):raise RuntimeError('HOLD_SOURCE_EXPORT_PROVIDER_CLEANUP_SINK')
         provider_cleanup_sink(s.cleanup)
-    key=os.environ.get('NOX2','')
+    if action=='source_export':
+        key=load_source_export_credential_file()
+        os.environ['NOX2']=key
+    else:
+        key=os.environ.get('NOX2','')
     if not key:raise RuntimeError('HOLD_OWNER_API_CREDENTIAL_UNAVAILABLE')
     values=s.api('GET','/instances/',key)
     values=values.get('instances',values) if isinstance(values,dict) else values
@@ -1561,5 +1618,7 @@ def main():
             try:
                 if not verified_provider_cleanup():good=False
             except Exception:print('NOX_MAINT_CLEANUP=HOLD');good=False
+        if args.action=='source_export':
+            os.environ.pop('NOX2',None)
     return 0 if good else 2
 if __name__=='__main__':raise SystemExit(main())
