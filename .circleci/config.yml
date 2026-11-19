@@ -1,0 +1,24 @@
+# NOX B3 5A05: real source-only gate for the existing Resonance owner bridge.
+# This validates JS contract and Unicode/STOP/S03 fixtures, NOT installed serving,
+# model/tokenizer/weights identity, real browser frame time or native S03 readback.
+version: 2.1
+jobs:
+  b3-resonance-owner-source:
+    docker:
+      - image: cimg/node:20.19
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Exact-branch owner bridge syntax, hard size budget and Node regressions
+          command: |
+            set -eu
+            node --version
+            node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
+            node --check coordination/onepass/test_v135_resonance_owner_bridge.cjs
+            node -e "const fs=require('fs');const p='coordination/onepass/nox-v135-resonance-owner-bridge.js';const n=fs.statSync(p).size;if(n>20000)process.exitCode=1;console.log('owner_bridge_bytes='+n+' hard_limit=20000');"
+            node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+workflows:
+  b3-real-source-verification:
+    jobs:
+      - b3-resonance-owner-source
