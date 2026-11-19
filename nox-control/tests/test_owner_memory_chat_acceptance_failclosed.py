@@ -25,4 +25,28 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
         self.assertEqual(len(executed),2)
         self.assertEqual(executed[-1][1]['failed'][0]['component'],names[0])
 
+
+    def test_s03_system_exit_does_not_bypass_receipt_or_run_dependent_stages(self):
+        for raw_first in (
+            b'def main():\\n    raise SystemExit(0)\\n',
+            b'raise SystemExit(0)\\n',
+        ):
+            with self.subTest(raw_first=raw_first):
+                spec=importlib.util.spec_from_file_location('a3_exit_acceptance', SOURCE)
+                module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+                emitted=[]
+                raws=(raw_first, b'raise AssertionError("SECOND_STAGE_MUST_NOT_RUN")\\n')
+                names=('owner_s03_recover_activate.py','owner_chat_layout_entry.py')
+                module.STAGES=tuple((name,hashlib.sha256(raw).hexdigest()) for name,raw in zip(names,raws))
+                module.BUNDLE={name:base64.b64encode(raw).decode() for name,raw in zip(names,raws)}
+                module.emit=lambda kind,data:emitted.append((kind,data))
+                with tempfile.TemporaryDirectory() as t, patch.object(module,'Path',lambda _:pathlib.Path(t)):
+                    result=module.main()
+                self.assertEqual(result,2)
+                self.assertEqual(len(emitted),2)
+                self.assertEqual(emitted[0],('memory_chat_component_hold',
+                    {'component':names[0], 'reason':'HOLD_ACCEPTANCE_COMPONENT_SYSTEM_EXIT'}))
+                self.assertEqual(emitted[1][0],'memory_chat_batch')
+                self.assertEqual(emitted[1][1]['failed'],[emitted[0][1]])
+
 if __name__=='__main__':unittest.main()
