@@ -203,6 +203,53 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(len(partial_rows),1)
         self.assertEqual(partial_rows[0]['role'],'user')
 
+    def test_exact_replay_requires_unrevoked_untampered_receipt(self):
+        # A matching pair alone cannot certify saved=True on replay.
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db,_save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Replay receipt integrity','confirmed':True}).json()['dialog_id']
+        exchange='receipt-replay-integrity'
+        question='Первый вопрос café'; answer='Respuesta exacta ñ'
+        ids={'turn_id':'1'*32,'receipt_id':'2'*32,'lease_epoch':'3'*32}
+        self.assertTrue(_save_exchange(dialog,question,answer,exchange,**ids))
+        with _db() as db:
+            original=db.execute(
+                'SELECT assistant_sha256,receipt_sha256 FROM nox_v29_exchange_receipts '
+                'WHERE dialog_id=? AND exchange_id=?',(dialog,exchange)).fetchone()
+            revision=db.execute('SELECT revision FROM nox_v29_dialogs WHERE dialog_id=?',
+                                (dialog,)).fetchone()['revision']
+        self.assertTrue(_save_exchange(dialog,question,answer,exchange))
+        with _db(True) as db:
+            db.execute('UPDATE nox_v29_exchange_receipts SET verified=0 '
+                       'WHERE dialog_id=? AND exchange_id=?',(dialog,exchange))
+        self.assertFalse(_save_exchange(dialog,question,answer,exchange))
+        with _db(True) as db:
+            db.execute('UPDATE nox_v29_exchange_receipts SET verified=1,assistant_sha256=? '
+                       'WHERE dialog_id=? AND exchange_id=?',('0'*64,dialog,exchange))
+        self.assertFalse(_save_exchange(dialog,question,answer,exchange))
+        with _db(True) as db:
+            db.execute('UPDATE nox_v29_exchange_receipts '
+                       'SET assistant_sha256=?,receipt_sha256=? '
+                       'WHERE dialog_id=? AND exchange_id=?',
+                       (original['assistant_sha256'],'0'*64,dialog,exchange))
+        self.assertFalse(_save_exchange(dialog,question,answer,exchange))
+        with _db(True) as db:
+            db.execute('UPDATE nox_v29_exchange_receipts SET receipt_sha256=? '
+                       'WHERE dialog_id=? AND exchange_id=?',
+                       (original['receipt_sha256'],dialog,exchange))
+        self.assertTrue(_save_exchange(dialog,question,answer,exchange,**ids))
+        with _db(True) as db:
+            db.execute('DELETE FROM nox_v29_exchange_receipts '
+                       'WHERE dialog_id=? AND exchange_id=?',(dialog,exchange))
+        self.assertFalse(_save_exchange(dialog,question,answer,exchange))
+        with _db() as db:
+            self.assertEqual(db.execute(
+                'SELECT COUNT(*) FROM nox_v29_dialog_messages WHERE dialog_id=?',
+                (dialog,)).fetchone()[0],2)
+            self.assertEqual(db.execute(
+                'SELECT revision FROM nox_v29_dialogs WHERE dialog_id=?',
+                (dialog,)).fetchone()['revision'],revision)
+
     def test_auth_is_essential(self):
         for url,method in [
             ('/api/nox/status','get'),
