@@ -33,6 +33,19 @@ STOPS = tuple(ROOT / name for name in
 SCHEMA = 'NOX_SMART_CHAT_OWNER_E2E_ACCEPTANCE_V1'
 
 
+_MODULE_NAME_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*){0,15}$')
+
+
+def safe_missing_module_name(error):
+    """Return a bounded import identifier only; never expose message or paths."""
+    if not isinstance(error, ModuleNotFoundError):
+        return None
+    name = getattr(error, 'name', None)
+    if not isinstance(name, str) or len(name) > 200:
+        return None
+    return name if _MODULE_NAME_RE.fullmatch(name) else None
+
+
 def fail(code):
     raise RuntimeError('HOLD_SMART_CHAT_QA_' + code)
 
@@ -237,6 +250,9 @@ def main():
             outcome='NATIVE_OWNER_STREAM_AND_S03_READBACK_PASS')
         success = True
     except Exception as error:
+        missing_module = safe_missing_module_name(error)
+        if missing_module is not None:
+            status['missing_module'] = missing_module
         code = str(error)
         status['outcome'] = code if re.fullmatch(r'HOLD_SMART_CHAT_QA_[A-Z0-9_]{1,100}', code) else 'HOLD_SMART_CHAT_QA_' + type(error).__name__.upper()
     emit(status)
