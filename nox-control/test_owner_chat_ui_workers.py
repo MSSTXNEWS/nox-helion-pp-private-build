@@ -151,8 +151,9 @@ class ExistingExecutorClaimsTests(unittest.TestCase):
     def test_owner_scripts_present_maintenance_without_claims(self):
         script = Path(__file__).with_name("owner-chat-ui.js").read_text()
         presence = Path(__file__).with_name("owner-presence.js").read_text()
-        self.assertIn("value.state==='MODEL_UPDATE'", script)
-        self.assertIn("busy:0,state:value.state", script)
+        self.assertRegex(script, r"state==='MODEL_UPDATE'\s*\?maintenance==='PRESENT'&&rows.length===0")
+        self.assertIn("const busy=state==='OBSERVED'?rows.filter(row=>row.status==='busy').length:0", script)
+        self.assertIn("online:state==='OBSERVED',busy,state", script)
         self.assertIn("state==='MODEL_UPDATE'", presence)
         self.assertIn("set('updating')", presence)
 
