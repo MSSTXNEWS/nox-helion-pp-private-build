@@ -1,4 +1,4 @@
-name: NOX owner-authenticated inspect, audit, source attestation, GPU inventory, and one-stream browser QA
+name: NOX owner-authenticated inspect and encrypted S03 source export
 
 on:
   pull_request:
@@ -81,7 +81,8 @@ jobs:
        endsWith(github.event.comment.body, ' audit') ||
        endsWith(github.event.comment.body, ' source_attest') ||
        endsWith(github.event.comment.body, ' gpu_inventory') ||
-       endsWith(github.event.comment.body, ' browser_qa'))
+       endsWith(github.event.comment.body, ' browser_qa') ||
+       contains(github.event.comment.body, ' source_export '))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -197,3 +198,44 @@ jobs:
           NOX2: ${{ secrets.NOX2 }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
         run: python -B nox-control/owner_native_operator.py browser_qa
+      - name: Recheck exact pinned #415 source-export command before credentials
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          NOX_OWNER_EXPORT_KEY_B64: ${{ steps.owner-command.outputs.export_key_b64 }}
+          PYTHONPATH: nox-control
+        run: |
+          python -B - <<'PY'
+          import os
+          from owner_native_operator import authorize_event
+          authorize_event('source_export', os.environ.get('NOX_OWNER_EXPORT_KEY_B64'))
+          print('NOX_OWNER_SOURCE_EXPORT_SOURCE_AUTH=PASS')
+          PY
+      - name: Compile and test exact pinned #415 encrypted export source before credentials
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        working-directory: source
+        run: |
+          set -euo pipefail
+          python -B -m py_compile \
+            nox-control/owner_native_operator.py \
+            nox-control/owner_chat_s03_source_export.py \
+            nox-control/test_owner_chat_s03_source_export.py
+          python -B nox-control/test_owner_chat_s03_source_export.py
+      - name: Run the exact pinned #415 encrypted source-export action
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          NOX_OWNER_EXPORT_KEY_B64: ${{ steps.owner-command.outputs.export_key_b64 }}
+        run: python -B nox-control/owner_native_operator.py source_export "$NOX_OWNER_EXPORT_KEY_B64"
+      - name: Upload only the encrypted S03 source-export artifact
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_S03_SOURCE_EXPORT_${{ github.run_id }}
+          path: source/artifacts/nox-s03-source-export.enc
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error

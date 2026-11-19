@@ -22,7 +22,8 @@ jobs:
       !contains(github.event.comment.body, ' audit') &&
       !contains(github.event.comment.body, ' source_attest') &&
       !contains(github.event.comment.body, ' gpu_inventory') &&
-      !contains(github.event.comment.body, ' browser_qa')
+      !contains(github.event.comment.body, ' browser_qa') &&
+      !contains(github.event.comment.body, ' source_export ')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
