@@ -10,6 +10,7 @@ on:
       - 'nox-control/maya_launch_preflight_v1.py'
       - 'nox-control/test_maya_ds4_launch_preflight_v1.py'
       - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_active_queue_readback.py'
       - 'nox-control/maya_launch_preflight_v1.py'
       - 'nox-control/test_maya_ds4_launch_preflight_v1.py'
       - '.github/workflows/nox-p0-deepseek-range-ci.yml'
@@ -21,6 +22,7 @@ on:
       - 'nox-control/maya_launch_preflight_v1.py'
       - 'nox-control/test_maya_ds4_launch_preflight_v1.py'
       - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_active_queue_readback.py'
       - 'nox-control/maya_launch_preflight_v1.py'
       - 'nox-control/test_maya_ds4_launch_preflight_v1.py'
       - '.github/workflows/nox-p0-deepseek-range-ci.yml'
@@ -36,10 +38,11 @@ jobs:
           persist-credentials: false
       - name: Source, launch, and transfer safety regressions
         run: |
-          python3 -m py_compile nox-control/deepseek_owner_range_v10.py nox-control/test_deepseek_owner_range_v10.py nox-control/test_maya_ds4_source_compat_v10.py nox-control/owner_native_inspect.py nox-control/maya_launch_preflight_v1.py nox-control/test_maya_ds4_launch_preflight_v1.py
+          python3 -m py_compile nox-control/deepseek_owner_range_v10.py nox-control/test_deepseek_owner_range_v10.py nox-control/test_maya_ds4_source_compat_v10.py nox-control/owner_native_inspect.py nox-control/test_owner_native_active_queue_readback.py nox-control/maya_launch_preflight_v1.py nox-control/test_maya_ds4_launch_preflight_v1.py
           python3 -m unittest discover -s nox-control -p 'test_deepseek_owner_range_v10.py' -v
           python3 -m unittest discover -s nox-control -p 'test_maya_ds4_source_compat_v10.py' -v
           python3 -m unittest discover -s nox-control -p 'test_maya_ds4_launch_preflight_v1.py' -v
           python3 -m unittest discover -s nox-control -p 'test_maya_ds4_launch_preflight_v1.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_active_queue_readback.py' -v
       - name: Explicitly source-only
         run: echo 'SOURCE_TESTED only; no Vast SSH, no native bytes, no weight download, no model promotion, no CUDA/model execution'
