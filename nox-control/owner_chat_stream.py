@@ -9,6 +9,7 @@ import asyncio
 from contextlib import aclosing
 from datetime import datetime,timezone
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -37,7 +38,7 @@ def _strict_json(text):
     """Reject ambiguous JSON without clipping the original evidence."""
     def finite_float(number):
         value=float(number)
-        if not __import__('math').isfinite(value):
+        if not math.isfinite(value):
             raise ValueError('nonfinite JSON number')
         return value
     def reject_constant(number):
