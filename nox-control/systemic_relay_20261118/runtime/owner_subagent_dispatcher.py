@@ -1503,6 +1503,10 @@ class Native:
             if self.stop_active() or not self.writer_lease() or not self.owner_allowed():
                 return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
             with self.lock:
+                # An earlier interrupted execution may have produced an unobserved
+                # result. Never replay the same claim without owner reconciliation.
+                if task['id'] in self.interrupted:
+                    return 'wait', 'HOLD_NATIVE_INTERRUPTED_UNSETTLED'
                 reason = self._fresh_admission_reason(leaf_only=True)
                 if reason:
                     return 'wait', reason
@@ -1513,7 +1517,6 @@ class Native:
                 role = next((role for role in ROLES if role not in self.pool.active), None)
                 if role is None:
                     return 'wait', 'WAIT_NATIVE_LEAF_WORKER'
-                self.interrupted.pop(task['id'], None)
                 identity = next((row for row in self.process_readback() if row['role'] == role), None)
                 if identity is None:
                     return 'wait', 'HOLD_NATIVE_LEAF_WORKER_IDENTITY'
@@ -1534,7 +1537,7 @@ class Native:
                     self.close_pool('WAIT_OWNER_STOP_OR_CLAIM_CHANGED')
                     return 'wait', 'WAIT_OWNER_STOP_OR_CLAIM_CHANGED'
                 with self.lock:
-                    reason = self.interrupted.pop(task['id'], None)
+                    reason = self.interrupted.get(task['id'])
                     if reason:
                         return 'wait', reason
                     self._drain()
