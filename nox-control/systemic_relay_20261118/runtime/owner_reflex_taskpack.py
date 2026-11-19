@@ -13,6 +13,7 @@ import re
 
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 MAX = 3
+MAX_OBSERVED = 64  # Bound investigation, not just selected executable drafts.
 
 
 def _digest(value):
@@ -37,8 +38,10 @@ def propose_successor(manifest, monitor, source_pins):
     missions = manifest.get("missions", [])
     if not isinstance(candidates, list) or not isinstance(missions, list):
         raise ValueError("HOLD_REFLEX_CANDIDATES")
-    selected, decisions, seen = [], [], set()
-    for candidate in candidates[:MAX]:
+    if len(candidates) > MAX_OBSERVED:
+        raise ValueError("HOLD_REFLEX_CANDIDATE_BOUND")
+    selected, decisions, seen, selected_missions = [], [], set(), set()
+    for candidate in candidates:
         if not isinstance(candidate, dict):
             raise ValueError("HOLD_REFLEX_CANDIDATE")
         fingerprint = candidate.get("fingerprint")
@@ -59,6 +62,14 @@ def propose_successor(manifest, monitor, source_pins):
             decisions.append({"fingerprint": fingerprint, "state": "HOLD_MISSION_BINDING"})
             continue
         mission = matches[0]
+        identity = (mission["root_id"], mission["parent_task_id"], mission["mission_id"])
+        if identity in selected_missions:
+            decisions.append({"fingerprint": fingerprint,
+                              "state": "HOLD_DUPLICATE_MISSION_CANDIDATE"})
+            continue
+        if len(selected) >= MAX:
+            decisions.append({"fingerprint": fingerprint, "state": "DRAFT_CAPACITY_WAIT"})
+            continue
         root = mission["root_id"]
         observed = source_pins.get(root)
         if not isinstance(observed, dict):
@@ -120,6 +131,7 @@ def propose_successor(manifest, monitor, source_pins):
                            if row["path"] == match[0])
             defect["observed_source_sha256"] = next_pin
         selected.append(proposal)
+        selected_missions.add(identity)
         decisions.append({"fingerprint": fingerprint, "state": "DRAFT_REQUIRES_OWNER_REVIEW",
                           "mission_id": mission["mission_id"],
                           "source_pins_sha256": _digest(new_context)})
