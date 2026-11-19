@@ -1,0 +1,38 @@
+version: 2.1
+
+jobs:
+  lifeline-source:
+    docker:
+      - image: cimg/python:3.12
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Compile bounded lifeline observer sources
+          command: |
+            set -euo pipefail
+            python -m py_compile \
+              nox-control/owner_native_lifeline_observer.py \
+              nox-control/owner_native_operator.py \
+              nox-control/nox_lifeline_observer.py \
+              nox-control/supervisor/nox_lifeline_observer_bootstrap.py \
+              nox-control/test_owner_lifeline_observer_operator_bundle.py \
+              nox-control/test_owner_lifeline_supervisor_fallback.py \
+              nox-control/test_owner_native_lifeline_uds.py
+      - run:
+          name: Run observer fallback and rollback regressions
+          command: |
+            set -euo pipefail
+            PYTHONPATH=nox-control python -m unittest -v \
+              test_owner_native_lifeline_uds \
+              test_owner_lifeline_observer_operator_bundle \
+              test_owner_lifeline_supervisor_fallback
+
+workflows:
+  version: 2
+  lifeline-source-only:
+    jobs:
+      - lifeline-source:
+          filters:
+            branches:
+              only: task/lifeline-supervisor-fallback-20261119
