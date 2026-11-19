@@ -252,7 +252,12 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
            for row, role in zip(expected_messages,
                                 ('user', 'assistant', 'user', 'assistant'))):
         return False
-    if not distinct_explicit_message_ids(expected_messages):
+    # A witness scoped to this dialog cannot legitimize a foreign session's
+    # individual S03 rows, even when all four role/text values are identical.
+    # Legacy messages without explicit dialog_id remain compatible.
+    if (not distinct_explicit_message_ids(expected_messages)
+            or any('dialog_id' in row and row['dialog_id'] != dialog_id
+                   for row in expected_messages)):
         return False
     transcript_sha = multiturn_transcript_sha256(expected_messages)
     if transcript_sha is None:

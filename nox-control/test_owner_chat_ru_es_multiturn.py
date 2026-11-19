@@ -58,6 +58,23 @@ def s03_proof(transcript):
 
 
 class OwnerRuEsContinuity(unittest.TestCase):
+    def test_canonical_s03_four_rows_are_bound_to_own_dialog(self):
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        legacy = rows(es)
+        writer, readback = s03_proof(legacy)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, legacy))
+        scoped = [dict(row, dialog_id=DIALOG) for row in legacy]
+        writer, readback = s03_proof(scoped)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, scoped))
+        for wrong_scope in ("foreign-dialog", None, "", 17):
+            for row_index in range(4):
+                with self.subTest(row=row_index, scope=repr(wrong_scope)):
+                    forged = [dict(row) for row in scoped]
+                    forged[row_index]["dialog_id"] = wrong_scope
+                    writer, readback = s03_proof(forged)
+                    self.assertFalse(canonical_s03_proof_valid(
+                        writer, readback, DIALOG, forged))
+
     def test_explicit_message_ids_do_not_replay_one_row_as_multiple_ru_es_turns(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         legacy = rows(es)
