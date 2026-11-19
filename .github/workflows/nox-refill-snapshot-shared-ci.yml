@@ -1,0 +1,35 @@
+name: NOX exact owner refill snapshot shared-lock acceptance
+on:
+  pull_request:
+    paths:
+      - "nox-control/systemic_relay_20261118/owner_systemic_refill_snapshot.py"
+      - "nox-control/systemic_relay_20261118/test_owner_systemic_refill_snapshot.py"
+      - ".github/workflows/nox-refill-snapshot-shared-ci.yml"
+permissions:
+  contents: read
+jobs:
+  readonly-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+      - name: Verify exact read-only snapshot, shared owner lease and low-RAM nonpublish
+        run: |
+          python -B -m py_compile nox-control/systemic_relay_20261118/owner_systemic_refill_snapshot.py nox-control/owner_native_operator.py
+          python -B - <<'PY'
+          import ast
+          source=open('nox-control/owner_native_operator.py').read()
+          mod=ast.parse(source)
+          fn=next(n for n in mod.body if isinstance(n,ast.FunctionDef) and n.name=='authorize_event')
+          assert [a.arg for a in fn.args.args][:2]==['action','recipient']
+          assert "FILES['refill_snapshot']" in source
+          assert 'load_recipient_key(recipient)' in source
+          print('Compatible original encrypted owner authorization: PASS')
+          PY
+          cd nox-control/systemic_relay_20261118
+          python -B -m unittest test_owner_systemic_refill_snapshot -v
