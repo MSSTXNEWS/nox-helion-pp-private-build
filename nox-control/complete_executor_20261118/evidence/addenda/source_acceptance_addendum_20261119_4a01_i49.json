@@ -1,0 +1,210 @@
+{
+  "schema": "NOX_SOURCE_EVIDENCE_ACCEPTANCE_ADDENDUM_V1",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "Bind newly reviewed source evidence to the exact frozen source-task criteria without modifying the immutable 295-task disposition or work receipts.",
+  "scope": {
+    "task_ids": [
+      "4A01",
+      "I-49"
+    ],
+    "immutable_295_manifest": {
+      "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+      "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb"
+    },
+    "work_receipts": {
+      "path": "nox-control/four_queue_20261118/work_receipts.json",
+      "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+      "mutation": false
+    },
+    "task_registries": {
+      "4A01": {
+        "path": "nox-control/four_queue_20261118/work_tasks.json",
+        "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f"
+      },
+      "I-49": {
+        "path": "nox-control/four_queue_20261118/work_ideas.json",
+        "git_blob_sha": "6f84f315d9792cb43f08b72b062dc2f71ce1d4a6"
+      }
+    },
+    "mutation_boundary": "This sidecar is additive evidence only. It does not edit all295_execution_disposition.json, work_receipts.json, or historical receipt bindings."
+  },
+  "acceptance_records": [
+    {
+      "task_id": "4A01",
+      "title": "Прочитать точные манифесты модели: обучаемая ревизия, tokenizer, dtype, target modules, лицензия, размер тренировки и дефицит. GGUF имеет отдельный маршрут inference.",
+      "spec_sha256": "c7d3737748301a132e1bc7df66af486d8fc012839c3301c6b7d72c5cf4900486",
+      "required_evidence": "source",
+      "prior_receipt": {
+        "state": "verified",
+        "scope": "source",
+        "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/tree/08c8657f02291e11b6f6b63e0e16014f8e748518",
+        "prior_manifest_status": "HISTORICAL_VERIFIED"
+      },
+      "addendum_assessment": "ACCEPTED_SOURCE_CRITERION",
+      "acceptance_binding": {
+        "evidence_pointer": "#/evidence/4A01",
+        "source_commit": "71a8146443470d7d0c3ce2cdb1bcfad5d110a3ab",
+        "source_file_path": "nox-control/model_manifests/4A01_QWEN35_9B_TRAINING_20261119.json",
+        "source_file_git_blob_sha": "ee6aa7d493ea3e0a9e975b45e2d591eee562ce0c",
+        "pull_request": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/463",
+        "source_permalink": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/71a8146443470d7d0c3ce2cdb1bcfad5d110a3ab/nox-control/model_manifests/4A01_QWEN35_9B_TRAINING_20261119.json",
+        "criterion_satisfied": "The pinned source manifest explicitly records the trainable model revision, tokenizer files/class, mixed BF16/F32 tensor dtype counts, configured target-module suffixes and exclusions, license, training size, model-only storage deficit, and a separate inference-only GGUF route.",
+        "limitations": [
+          "The configured target suffixes are recorded, but resolved full module names/classes remain null and NOT_ENUMERATED_ON_PINNED_MODEL.",
+          "No dataset manifest is pinned; dataset bytes remain unknown and are excluded from the model-only storage calculation.",
+          "Training admission remains HOLD_STORAGE_DEFICIT_AND_NO_DATASET_MANIFEST. The recorded model-only deficit is 2,207,149,070 bytes (2.055 GiB); no weights were downloaded and no training was started.",
+          "The acceptance covers reading and recording the exact source manifest fields in the frozen task criterion; it does not assert resolved runtime target modules, training readiness, or a completed training run."
+        ]
+      }
+    },
+    {
+      "task_id": "I-49",
+      "title": "Сравнить тензоры двух checkpoints на CPU",
+      "spec_sha256": "c126701e3699969ab557e9fb99f4c2085a0d678f06e11895835d89241f194e1f",
+      "required_evidence": "source",
+      "acceptance_criterion": "Проверить разрешённые параметры выборочно, без загрузки полной модели",
+      "prior_receipt": {
+        "state": "verified",
+        "scope": "source",
+        "evidence": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/blob/e10c80f64e3fd88298be2776c58d03939e6e71f6/handoff/20261117/nox-v15-kit/execution/role4/TENSOR_ACCEPTANCE_RU.md",
+        "prior_manifest_status": "HISTORICAL_VERIFIED"
+      },
+      "addendum_assessment": "ACCEPTED_SOURCE_CRITERION",
+      "acceptance_binding": {
+        "evidence_pointer": "#/evidence/I-49",
+        "source_commit": "d56f5acae91aa01d2ba65d4bceb7b1715c253dba",
+        "pull_request": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/472",
+        "evidence_files": [
+          {
+            "path": "nox-control/i49_checkpoint_compare_20261119/evidence/i49_cpu_comparison.json",
+            "git_blob_sha": "a2f2ff6f52cab8b02b299efda6646a5f5eaae3be",
+            "permalink": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/d56f5acae91aa01d2ba65d4bceb7b1715c253dba/nox-control/i49_checkpoint_compare_20261119/evidence/i49_cpu_comparison.json"
+          },
+          {
+            "path": "nox-control/i49_checkpoint_compare_20261119/evidence/PROVENANCE.md",
+            "git_blob_sha": "c5765c517570b743b1508b865910440b0ead8308",
+            "permalink": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/d56f5acae91aa01d2ba65d4bceb7b1715c253dba/nox-control/i49_checkpoint_compare_20261119/evidence/PROVENANCE.md"
+          },
+          {
+            "path": "nox-control/i49_checkpoint_compare_20261119/evidence/all500_tensor_delta.json",
+            "git_blob_sha": "a5e9fc5d763b2872d4e61cd0f3a95a9324320b19",
+            "permalink": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/d56f5acae91aa01d2ba65d4bceb7b1715c253dba/nox-control/i49_checkpoint_compare_20261119/evidence/all500_tensor_delta.json",
+            "content_sha256": "bb2280f10646331b0528599f5d2693779da4076bdbe53e280a09634a45d99ec6"
+          }
+        ],
+        "comparator": {
+          "repository": "s-grouptwet/nox-helion-pp-private-build",
+          "path": "handoff/20261117/nox-v15-kit/execution/role4/tensor_delta.py",
+          "revision": "e10c80f64e3fd88298be2776c58d03939e6e71f6",
+          "source_sha256": "a1917cfda4fd012b92332a8b3513fb1ad3e4694050f254d38b3a88f803cfb867"
+        },
+        "selected_pair": {
+          "selected_under_current_owner_authorization": true,
+          "preexisting_allowlist_asserted": false,
+          "before_drive_folder_id": "1PNX-lRLaKVTRPakDOOqctF_rUoPvOu59",
+          "before_join_sha256": "924d05894749d2107629549d9d95ca4e5538d33c2eac351d0c0c26919ccbb7a2",
+          "after_drive_folder_id": "1CG_ALzrWsZLyrtuGxvNp4ajyZGfgh6nH",
+          "after_join_sha256": "8c32c5979470018bd260421b7ace2ef681e3c7f0e3dc978b6fecfdd98c25bcd1"
+        },
+        "result_summary": {
+          "matching_tensors": 500,
+          "compared_tensors": 500,
+          "changed_payload_hashes": 500,
+          "unchanged_payload_hashes": 0,
+          "dtype_shape_pairs_matched": true,
+          "payload_bytes_hashed_per_adapter": 306708480,
+          "training_started": false,
+          "drive_written": false,
+          "server_written": false
+        },
+        "scope_limit": "CPU-only bounded header/payload-byte hashing without loading the full model or materializing tensors as arrays. Hash inequality establishes byte-level change only; it does not report elementwise numeric-delta magnitudes, causal training provenance, or model quality."
+      }
+    }
+  ],
+  "evidence": {
+    "4A01": {
+      "manifest_task_spec_sha256": "c7d3737748301a132e1bc7df66af486d8fc012839c3301c6b7d72c5cf4900486",
+      "model_repo_id": "Qwen/Qwen3.5-9B",
+      "model_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+      "tokenizer": {
+        "files": [
+          "tokenizer.json",
+          "tokenizer_config.json",
+          "vocab.json",
+          "merges.txt",
+          "chat_template.jinja"
+        ],
+        "tokenizer_class": "Qwen2Tokenizer",
+        "model_max_length": 262144
+      },
+      "tensor_dtype_elements": {
+        "BF16": 9653100528,
+        "F32": 3840,
+        "total_parameters": 9653104368
+      },
+      "configured_target_modules": {
+        "language_decoder_only": true,
+        "suffixes": [
+          "linear_attn.in_proj_qkv",
+          "linear_attn.in_proj_z",
+          "linear_attn.in_proj_b",
+          "linear_attn.in_proj_a",
+          "linear_attn.out_proj",
+          "self_attn.q_proj",
+          "self_attn.k_proj",
+          "self_attn.v_proj",
+          "self_attn.o_proj",
+          "mlp.gate_proj",
+          "mlp.up_proj",
+          "mlp.down_proj"
+        ],
+        "resolved_modules": null,
+        "resolved_modules_status": "NOT_ENUMERATED_ON_PINNED_MODEL"
+      },
+      "license": "Apache-2.0",
+      "training_size": {
+        "parameters": 9653104368,
+        "weight_tensor_bytes": 19306216416,
+        "full_repository_storage_bytes": 19319118862,
+        "dataset_bytes": null
+      },
+      "storage_snapshot": {
+        "free_bytes": 17111969792,
+        "model_only_deficit_bytes": 2207149070,
+        "model_only_deficit_gib": 2.055,
+        "training_admission": "HOLD_STORAGE_DEFICIT_AND_NO_DATASET_MANIFEST"
+      },
+      "inference_route": {
+        "repo_id": "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
+        "role": "inference_only",
+        "training_allowed": false
+      }
+    },
+    "I-49": {
+      "sources": [
+        {
+          "label": "before",
+          "folder_name": "understanding_pref_checkpoint-105",
+          "drive_folder_id": "1PNX-lRLaKVTRPakDOOqctF_rUoPvOu59",
+          "assembled_bytes": 306787336,
+          "assembled_sha256": "924d05894749d2107629549d9d95ca4e5538d33c2eac351d0c0c26919ccbb7a2"
+        },
+        {
+          "label": "after",
+          "folder_name": "mix_final_sft_checkpoint-383",
+          "drive_folder_id": "1CG_ALzrWsZLyrtuGxvNp4ajyZGfgh6nH",
+          "assembled_bytes": 306787336,
+          "assembled_sha256": "8c32c5979470018bd260421b7ace2ef681e3c7f0e3dc978b6fecfdd98c25bcd1"
+        }
+      ],
+      "all_matching_tensors": {
+        "compared": 500,
+        "changed": 500,
+        "unchanged": 0,
+        "compared_payload_bytes": 306708480
+      },
+      "method": "CPU-only bounded read; no full model load; no Drive/server writes."
+    }
+  }
+}
