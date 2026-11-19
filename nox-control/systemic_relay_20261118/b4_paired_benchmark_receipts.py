@@ -173,6 +173,12 @@ def compare_paired(baseline, candidate):
     cache_changed = [task for task in baseline["declared_task_ids"]
                      if (old[task]["cache_tokens_reused"] != new[task]["cache_tokens_reused"]
                          or old[task]["prompt_tokens_evaluated"] != new[task]["prompt_tokens_evaluated"])]
+    # A constant aggregate token total can hide a shorter answer in one task
+    # and a longer answer in another. Neither is equivalent generation work.
+    output_tokens_changed = [task for task in baseline["declared_task_ids"]
+                             if old[task]["output_tokens"] != new[task]["output_tokens"]]
+    status_changed = [task for task in baseline["declared_task_ids"]
+                      if old[task]["status"] != new[task]["status"]]
     cache_reuse_regressed = [task for task in baseline["declared_task_ids"]
                              if new[task]["cache_tokens_reused"] < old[task]["cache_tokens_reused"]]
     cache_reuse_lost = [task for task in baseline["declared_task_ids"]
@@ -196,6 +202,11 @@ def compare_paired(baseline, candidate):
     first_text_p95_delta = (after["p95_first_text_ms_observed_only"] -
                             before["p95_first_text_ms_observed_only"]
                             if old_seen == new_seen and old_seen else None)
+    # This conservative like-for-like latency view is N/A if any observed
+    # completion size, terminal status, text coverage, or KV prefill differs.
+    # Matching these witnesses still cannot prove identical hidden compute.
+    same_observed_work = (not cache_changed and not output_tokens_changed
+                          and not status_changed and old_seen == new_seen)
     return {**answer, "comparable": True, "state": "DESCRIPTIVE_ONLY",
             "reason": None, "baseline": before, "candidate": after,
             "fixed_task_ids": fixed, "regressed_task_ids": regressed,
@@ -206,6 +217,12 @@ def compare_paired(baseline, candidate):
             "cache_reuse_lost_task_ids": cache_reuse_lost,
             "prompt_prefill_regressed_task_ids": prefill_regressed,
             "latency_cache_state_confounder": bool(cache_changed),
+            "output_tokens_changed_task_ids": output_tokens_changed,
+            "outcome_status_changed_task_ids": status_changed,
+            "latency_observed_workload_confounder": not same_observed_work,
+            "p95_latency_delta_ms_same_observed_work": (
+                after["p95_latency_ms_all_tasks"] - before["p95_latency_ms_all_tasks"]
+                if same_observed_work else None),
             "first_text_lost_task_ids": first_text_lost,
             "first_text_regressed_task_ids": first_text_regressed,
             "p95_first_text_delta_ms_same_coverage": first_text_p95_delta,
