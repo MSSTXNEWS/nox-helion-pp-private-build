@@ -1,8 +1,10 @@
-"""Exact A1 continuation contract; no browser, network, GPU or S03 writes."""
+"""A1 continuation gate tests; no browser, network, GPU or S03 writes."""
+import os
 import unittest
+from unittest.mock import patch
 
 from owner_chat_browser_qa import (admitted_qa_prompt, allowed_qa_request,
-                                   canonical_s03_proof_valid, multiturn_history_valid, progressive_stream_valid)
+                                   main, multiturn_history_valid, progressive_stream_valid)
 
 
 FIRST = 'Числа 1-10'
@@ -58,30 +60,15 @@ class SameDialogFourMessageContract(unittest.TestCase):
         self.assertFalse(allowed_qa_request(2, True, FIRST, SECOND, good_second, 'synthetic-dialog'))
         self.assertFalse(allowed_qa_request(0, False, FIRST, SECOND, good_first, 'other-dialog'))
 
-    def test_dialog_history_alone_is_not_canonical_s03_proof(self):
-        self.assertFalse(canonical_s03_proof_valid(None, None, 'synthetic-dialog', rows()))
-
-    def test_canonical_s03_requires_matching_writer_receipt_and_independent_readback(self):
-        expected = rows()
-        receipt = {'source':'canonical_s03', 'verified':True, 'durable':True,
-                   'event_id':'evt-1', 'turn_id':'turn-2', 'sequence':2,
-                   'dialog_id':'synthetic-dialog'}
-        readback = {'source':'canonical_s03', 'independent':True,
-                    'event_id':'evt-1', 'turn_id':'turn-2', 'sequence':2,
-                    'dialog_id':'synthetic-dialog', 'messages':expected,
-                    'full_answer_sha256':__import__('hashlib').sha256(
-                        SECOND_ANSWER.encode('utf-8')).hexdigest()}
-        self.assertTrue(canonical_s03_proof_valid(
-            receipt, readback, 'synthetic-dialog', expected))
-        bad = dict(readback, event_id='other-event')
-        self.assertFalse(canonical_s03_proof_valid(
-            receipt, bad, 'synthetic-dialog', expected))
-        bad = dict(readback, independent=False)
-        self.assertFalse(canonical_s03_proof_valid(
-            receipt, bad, 'synthetic-dialog', expected))
-        bad = dict(readback, full_answer_sha256='0' * 64)
-        self.assertFalse(canonical_s03_proof_valid(
-            receipt, bad, 'synthetic-dialog', expected))
+    def test_multiturn_holds_before_inventory_or_browser_work(self):
+        with patch.dict(os.environ, {'NOX_BROWSER_QA_MODE':'multiturn'}):
+            with patch('owner_chat_browser_qa.inventory',
+                       side_effect=AssertionError('inventory must not run')) as inventory:
+                with self.assertRaisesRegex(
+                        RuntimeError,
+                        'HOLD_CANONICAL_S03_WRITER_AND_INDEPENDENT_READBACK_NOT_WIRED'):
+                    main()
+                inventory.assert_not_called()
 
     def test_second_turn_progress_requires_two_real_visible_prefixes(self):
         proof={'ui_measurement_kind':'CUMULATIVE_VISIBLE_ASSISTANT_BODY',
