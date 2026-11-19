@@ -202,13 +202,99 @@ def run_child(python, program, request, source):
     return 0 if proc.returncode == 0 else 2
 
 
+
+def _checked_install(args, env, hold_code, timeout_sec=180):
+    """Only fixed argv, fixed version, private QA area; never use shell."""
+    try:
+        result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                env=env, timeout=timeout_sec, check=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RuntimeError('HOLD_BROWSER_BOOTSTRAP_' + hold_code) from exc
+    require(result.returncode == 0, 'BOOTSTRAP_' + hold_code)
+
+
+def ensure_runtime(request):
+    """Repair a missing *isolated QA* venv, not the production UI/model/S03.
+
+    No existing private QA directory is deleted. An incomplete old QA area is
+    preserved under a request-scoped backup before atomic promotion. Failures
+    restore it and remove only this attempt's temporary build.
+    """
+    try:
+        return existing_runtime(), False
+    except FileNotFoundError:
+        pass
+    # No repair of a mismatched/symlinked/foreign-owner runtime: those are holds.
+    resource_budget()
+    plain_directory(ROOT)
+    base = Path(ENV_SPEC['base_python'])
+    require(base.is_file() and os.access(base, os.X_OK), 'BOOTSTRAP_BASE_PYTHON')
+    request = str(request)
+    require(bool(re.fullmatch(r'[0-9]{1,24}', request)), 'BOOTSTRAP_REQUEST')
+    staging = Path(tempfile.mkdtemp(prefix='.nox-browserqa-', dir=str(ROOT)))
+    backup = ROOT / ('browser_qa.previous.' + request)
+    require(not backup.exists() and not backup.is_symlink(), 'BOOTSTRAP_BACKUP_COLLISION')
+    os.chmod(staging, 0o700)
+    original_moved = False
+    promoted = False
+    try:
+        venv = staging / 'venv'
+        # The checkout's Python is reused, but all packages/browser files go
+        # to private new paths. Do not upgrade torch/NOX environment.
+        sys_env = {
+            'PATH': os.environ.get('PATH', '/usr/bin:/bin'),
+            'LANG': 'C.UTF-8', 'HOME': str(staging),
+            'PIP_NO_INPUT': '1', 'PIP_DISABLE_PIP_VERSION_CHECK': '1',
+            'PYTHONNOUSERSITE': '1',
+            'PLAYWRIGHT_BROWSERS_PATH': str(staging / 'browsers'),
+        }
+        _checked_install([str(base), '-m', 'venv', '--copies', str(venv)],
+                         sys_env, 'VENV', 90)
+        child = venv / 'bin/python'
+        require(child.is_file() and os.access(child, os.X_OK), 'BOOTSTRAP_PYTHON')
+        _checked_install([
+            str(child), '-m', 'pip', 'install', '--no-cache-dir',
+            '--only-binary=:all:', 'playwright==1.65.2'],
+            sys_env, 'PIP', 200)
+        _checked_install([str(child), '-m', 'playwright', 'install', 'chromium'],
+                         sys_env, 'CHROMIUM', 260)
+        _checked_install([str(child), '-I', '-B', '-c',
+                          "import importlib.metadata as m; assert m.version('playwright')=='1.65.2'"],
+                         sys_env, 'VERSION', 20)
+        marker = staging / 'owner-environment.json'
+        raw = json.dumps(ENV_SPEC, sort_keys=True, separators=(',', ':')).encode()
+        fd = os.open(marker, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        try:
+            os.write(fd, raw); os.fsync(fd)
+        finally:
+            os.close(fd)
+        require(shutil.disk_usage(ROOT).free >= 7 * 1024**3, 'BOOTSTRAP_DISK_RESERVE')
+        require(not stop_present(), 'OWNER_STOP')
+        if AREA.exists() or AREA.is_symlink():
+            # No unknown symlink, world-writable or foreign-owned backup.
+            plain_directory(AREA, private=True)
+            AREA.rename(backup)
+            original_moved = True
+        staging.rename(AREA)
+        promoted = True
+        python = existing_runtime()
+        return python, True
+    except Exception:
+        if original_moved and not promoted and backup.exists():
+            backup.rename(AREA)
+        raise
+    finally:
+        if staging.exists() and staging.is_dir() and not staging.is_symlink():
+            shutil.rmtree(staging)
+
 def main():
     blobs = sources(); program = child_program(blobs)
     compile(program, '<stream-only-child>', 'exec')
-    request, source = owner_context(); python = existing_runtime(); resources = resource_budget()
+    request, source = owner_context(); resources = resource_budget(); python, bootstrap_performed = ensure_runtime(request)
     emit('browser_stream_only_sources', {'source_pins': PINS,
         'composed_child_sha256': hashlib.sha256(program).hexdigest(), 'existing_runtime_only': True,
-        'production_ui_changed': False, 'full_qa_scope_unchanged': True, 'resources_before_launch': resources})
+        'production_ui_changed': False, 'full_qa_scope_unchanged': True, 'resources_before_launch': resources,
+        'isolated_runtime_bootstrapped': bootstrap_performed})
     rc = run_child(python, program, request, source)
     if rc == 0:
         print('NOX_MAINT_BROWSER_QA_COMPLETE=true', flush=True)
