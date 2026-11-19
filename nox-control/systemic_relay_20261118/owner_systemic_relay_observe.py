@@ -914,6 +914,92 @@ def systemic_relay_readback():
                 emit('SYSTEMIC_RELAY_RECEIPT',{'state':'UNAVAILABLE','error':type(exc).__name__})
 
 
+
+def active_queue_row_report(tasks, row_cap=10, s03_check=None):
+    """Return bounded RUNNING task identity/receipt facts without private params."""
+    if not isinstance(tasks, dict) or len(tasks) > 5000:
+        return {'state':'UNKNOWN','reason':'QUEUE_SHAPE'}
+    if type(row_cap) is not int or not 1 <= row_cap <= 32:
+        return {'state':'UNKNOWN','reason':'ROW_CAP'}
+    if s03_check is None:
+        s03_check=s03_receipt_check
+    running=[]
+    for key,task in tasks.items():
+        if isinstance(task,dict) and isinstance(task.get('status'),str) and task['status'].lower()=='running':
+            running.append((str(key),task))
+    running.sort(key=lambda item:item[0])
+    rows=[]
+    for key,task in running[:row_cap]:
+        task_id=identifier(task.get('id')) or identifier(key)
+        handler=identifier(task.get('handler'))
+        row={'task_id':task_id,'handler':handler,'status':'running',
+             'queue_id':identifier(task.get('queue_id')),
+             'parent_task_id':identifier(task.get('parent_task_id')),
+             'retries':task.get('retries') if type(task.get('retries')) is int else None,
+             'original_task_accepted':task.get('original_task_accepted') if type(task.get('original_task_accepted')) is bool else None}
+        params=task.get('params') if isinstance(task.get('params'),dict) else {}
+        relay=task.get('systemic_relay') if isinstance(task.get('systemic_relay'),dict) else {}
+        op_key=task.get('operation_key') or task.get('op_key') or params.get('operation_key') or relay.get('operation_key')
+        row['operation_key']=identifier(op_key)
+        row['operation_key_state']='KNOWN' if row['operation_key'] else 'UNKNOWN'
+        claim=task.get('owner_claim')
+        if claim is None:
+            row['claim_state']='ABSENT'
+            row['claim_sha256']=None
+        else:
+            try:
+                claim_bytes=encoded(claim)
+                if len(claim_bytes)>8192:
+                    raise ValueError('CLAIM_OVERSIZED')
+                row['claim_state']='PRESENT'
+                row['claim_sha256']=hashlib.sha256(claim_bytes).hexdigest()
+            except (TypeError,ValueError):
+                row['claim_state']='UNKNOWN'
+                row['claim_sha256']=None
+        if isinstance(claim,dict):
+            row['claim_identity']={
+                'pid':claim.get('pid') if type(claim.get('pid')) is int and claim['pid']>0 else None,
+                'worker':identifier(claim.get('worker')),
+                'at':claim.get('at') if isinstance(claim.get('at'),(int,float)) and __import__('math').isfinite(claim['at']) else None,
+            }
+        result=task.get('result') if isinstance(task.get('result'),dict) else {}
+        receipt=result.get('receipt')
+        if not isinstance(receipt,dict):
+            row['terminal_receipt_state']='ABSENT'
+            row['receipt_sha256']=None
+            row['s03']={'verified':False,'state':'NO_TERMINAL_RECEIPT'}
+        else:
+            row['terminal_receipt_state']='PRESENT'
+            row['receipt']={key:identifier(receipt.get(key)) for key in
+                ('schema','phase','task_id','parent_task_id','queue_id','job_id','source_sha256','finished_at')}
+            actual_sha=hashlib.sha256(encoded(receipt)).hexdigest()
+            expected_sha=result.get('receipt_sha256')
+            row['receipt_sha256']=expected_sha if isinstance(expected_sha,str) and re.fullmatch(r'[a-f0-9]{64}',expected_sha) else None
+            row['receipt_sha_matches']=row['receipt_sha256']==actual_sha
+            row['receipt_claim_matches']=receipt.get('claim')==claim
+            if all(isinstance(receipt.get(k),str) and receipt.get(k) for k in ('job_id','phase')):
+                row['s03']=s03_check(receipt)
+            else:
+                row['s03']={'verified':False,'state':'RECEIPT_SHAPE_INCOMPLETE'}
+        rows.append(row)
+    return {'state':'OK' if len(running)<=row_cap else 'BOUNDED',
+            'running_count':len(running),'rows':rows,'rows_truncated':len(running)>row_cap,
+            'scope':'READ_ONLY_QUEUE_IDENTITY_AND_RECEIPT_METADATA_NO_PARAMS'}
+
+
+def active_queue_row_readback():
+    """Read only current RUNNING rows and disclose no task payload or raw claim nonce."""
+    path=ROOT/'state/dispatcher/state.json'
+    try:
+        data,raw,_=obj(path,16*1024*1024)
+        tasks=data.get('tasks')
+        report=active_queue_row_report(tasks)
+        report['queue_sha256']=hashlib.sha256(raw).hexdigest()
+        emit('ACTIVE_QUEUE_ROWS',report)
+    except (OSError,ValueError,TypeError) as exc:
+        emit('ACTIVE_QUEUE_ROWS',{'state':'UNKNOWN','error':type(exc).__name__})
+
+
 def main():
     emit('SNAPSHOT_A',runtime_snapshot())
     worker_status_sample()
@@ -923,6 +1009,7 @@ def main():
     continuous_install_receipts()
     systemic_relay_readback()
     proofs=project_execution_readback()
+    active_queue_row_readback()
     project_workspace_census(proofs)
     project_active_progress()
     emit('LOCKS',locks())
@@ -933,3 +1020,4 @@ def main():
     print('NOX_MAINT_INSPECT_COMPLETE=true',flush=True)
 
 if __name__=='__main__':main()
+
