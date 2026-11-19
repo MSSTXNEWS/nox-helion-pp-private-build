@@ -78,6 +78,19 @@ def public_numeric_answer(value):
     return re.sub(r'\s+','',value)
 
 
+def multiturn_followup_prompt(token, mode):
+    """Optional RU->ES owner QA, never enabled for normal or legacy runs."""
+    if mode not in ('multiturn', 'multiturn_ru_es'):
+        raise RuntimeError('HOLD_QA_LANGUAGE_MODE')
+    prefix = '[NOX UI QA ' + token + '] '
+    if mode == 'multiturn_ru_es':
+        return (prefix + 'Usando únicamente la respuesta anterior en ruso, '
+                'escribe los mismos números del diez al uno, separados por comas. '
+                'Sin explicaciones ni otras palabras.')
+    return (prefix + 'Используя предыдущий ответ, перечисли '
+            'те же числа в обратном порядке через запятую. Без пояснений.')
+
+
 def admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt):
     """A second native POST cannot start before terminal S03; a third never starts."""
     if count == 0:
@@ -627,8 +640,8 @@ async def browser_run(report, directory, available):
     token=secrets.token_hex(6).translate(str.maketrans('0123456789','ghijklmnop'))
     title='NOX Browser QA '+token
     prompt='[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.'
-    second_prompt=('[NOX UI QA '+token+'] Используя предыдущий ответ, перечисли '
-                   'те же числа в обратном порядке через запятую. Без пояснений.')
+    second_prompt=multiturn_followup_prompt(
+        token, 'multiturn_ru_es' if report.get('language_pair') == 'RU_ES' else 'multiturn')
     second_permitted=False
     stream_admitted=0
     report.update(nonloopback_auth=True,resources=budget(),synthetic_prompt_sha256=digest(prompt.encode()))
@@ -979,7 +992,10 @@ def main():
             'started_at':time.time(),'state':'RUNNING','artifacts':[],
             'actual_native_backend':False,'actual_native_model_stream_verified':False,'synthetic_backend_used':False,
             'functional_acceptance_verified':False,'screenshot_capture_verified':False,
-            'two_turn_mode':os.environ.get('NOX_BROWSER_QA_MODE')=='multiturn',
+            'two_turn_mode':os.environ.get('NOX_BROWSER_QA_MODE') in ('multiturn','multiturn_ru_es'),
+            'language_pair':'RU_ES' if os.environ.get('NOX_BROWSER_QA_MODE')=='multiturn_ru_es'
+                            else 'RU_RU' if os.environ.get('NOX_BROWSER_QA_MODE')=='multiturn'
+                            else 'SINGLE_RU',
             'screenshots_exported':False,'private_text_or_credentials_exported':False,
             'rendering_mode':'CPU_SWIFTSHADER_FUNCTIONAL_QA_NOT_CLIENT_GPU_BENCHMARK',
             'training_or_service_configuration_changed':False,'diagnostics_content':'COUNTS_PATHS_AND_PUBLIC_SYNTHETIC_NUMBERS_ONLY'}
