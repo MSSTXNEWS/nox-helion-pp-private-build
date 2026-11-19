@@ -11,7 +11,7 @@ import sys
 import unittest
 
 HERE=Path(__file__).resolve().parent
-ROOT=HERE.parents[1]
+ROOT=HERE.parent
 sys.path.insert(0,str(HERE/'runtime'))
 import owner_systemic_refill as refill
 
