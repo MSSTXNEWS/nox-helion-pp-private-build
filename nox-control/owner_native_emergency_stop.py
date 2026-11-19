@@ -473,6 +473,15 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
         fail(role + "_EXEC_IDENTITY_CHANGED_DURING_READ")
     if stable_start_ticks(pid, expected_ticks) != ticks:
         fail(role + "_IDENTITY_CHANGED_DURING_READ")
+    if role == "MODEL":
+        environment_final = model_environment_identity(pid, expected_ticks)
+        if (environment_final["environment_map_sha256"] !=
+                environment_overrides["environment_map_sha256"]):
+            fail("MODEL_ENVIRONMENT_CHANGED_DURING_IDENTITY_READ")
+        environment_overrides = environment_final
+        stat_final = proc_stat_identity(pid)
+        if stat_final != stat_before:
+            fail("MODEL_PROCESS_GROUP_CHANGED_DURING_ENVIRONMENT_READ")
     return {"pid": pid, "start_ticks": ticks, "exe": exe_name,
             "ppid": stat_before["ppid"], "pgrp": stat_before["pgrp"],
             "argv_sha256": hashlib.sha256(b"\0".join(raw_argv)).hexdigest(),
@@ -554,6 +563,37 @@ def require_same_process_identity(before: dict, after: dict, role: str) -> None:
         fail(role + "_FULL_IDENTITY_CHANGED")
 
 
+def require_exclusive_model_process_group(model: dict) -> None:
+    """Prove by two bounded procfs passes that only the exact model PID shares its PGID."""
+    group = model.get("pgrp")
+    if type(group) is not int or model.get("pid") != MODEL_PID:
+        fail("MODEL_PROCESS_GROUP_IDENTITY_UNKNOWN")
+
+    def census():
+        members = {}
+        scanned = 0
+        try:
+            with os.scandir("/proc") as entries:
+                for entry in entries:
+                    if not entry.name.isdecimal():
+                        continue
+                    scanned += 1
+                    if scanned > 8192:
+                        fail("PROCESS_GROUP_CENSUS_LIMIT")
+                    pid = int(entry.name)
+                    identity = proc_stat_identity(pid, missing_ok=True)
+                    if identity is not None and identity["pgrp"] == group:
+                        members[pid] = identity["start_ticks"]
+        except OSError:
+            fail("PROCESS_GROUP_CENSUS_UNAVAILABLE")
+        return members
+
+    first = census()
+    second = census()
+    if (first != second or first != {MODEL_PID: MODEL_START_TICKS}):
+        fail("MODEL_PROCESS_GROUP_NOT_EXCLUSIVE")
+
+
 def memory_headroom(group: Path) -> dict:
     try:
         raw_max = (group / "memory.max").read_text().strip()
@@ -613,6 +653,7 @@ def run_action(request_id: int, source_sha: str) -> dict:
     model = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
     holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
     require_holder_outside_model_group(model, holder)
+    require_exclusive_model_process_group(model)
     if model["cgroup"] != holder["cgroup"]:
         fail("TARGETS_NOT_IN_SAME_CGROUP")
     memfd = fd_memfd_identity(HOLDER_PID)
@@ -668,6 +709,7 @@ def run_action(request_id: int, source_sha: str) -> dict:
     require_same_process_identity(model, last_model, "MODEL_AFTER_FINAL_MAPS")
     require_same_process_identity(holder, last_holder, "HOLDER_AFTER_FINAL_MAPS")
     require_holder_outside_model_group(last_model, last_holder)
+    require_exclusive_model_process_group(last_model)
 
     PHASE["model_stop_requested"] = True
     stopped = command(["supervisorctl", "stop", SUPERVISOR_SERVICE], timeout=35)
@@ -692,7 +734,8 @@ def run_action(request_id: int, source_sha: str) -> dict:
                       "MODEL_STOPPED_HOLDER_PRESERVED_HEADROOM_STILL_SHORT"),
             "model": model, "holder": holder, "memfd": memfd,
             "process_groups": {"model": model["pgrp"], "holder": holder["pgrp"],
-                               "holder_separate_from_model": True},
+                               "holder_separate_from_model": True,
+                               "model_group_contains_only_model_pid": True},
             "before": before, "pre_stop": pre_stop,
             "after_model": after_model, "minimum_headroom": MIN_HEADROOM,
             "model_pid_state": model_pid_state, "markers": fence,
