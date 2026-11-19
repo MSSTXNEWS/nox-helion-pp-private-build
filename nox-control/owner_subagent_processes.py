@@ -373,7 +373,7 @@ class Subagents:
             return True
 
     def _replace_idle_dead_pool(self):
-        if self._resource_paused:
+        if getattr(self, '_resource_paused', False):
             raise GateError('HOLD_SUBAGENT_RESOURCE_PAUSED')
         if all(process.is_alive() for process in self.processes.values()):
             return

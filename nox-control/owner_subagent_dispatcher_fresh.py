@@ -405,7 +405,7 @@ class Native:
     def resume_after_resource_admission(self):
         """Clear the pause only after the caller has a fresh successful gate."""
         with self.lock:
-            if self.resource_pause_reason is None:
+            if getattr(self, 'resource_pause_reason', None) is None:
                 return True
             if self.pool is not None:
                 resume = getattr(self.pool, 'resume_scheduling', None)
