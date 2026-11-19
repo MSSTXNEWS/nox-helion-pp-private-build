@@ -9,8 +9,8 @@ const JS=fs.readFileSync(file,'utf8');
 const capPolicyPath='coordination/onepass/v135_owner_bridge_cap_policy.json';
 const capPolicyBytes=fs.readFileSync(capPolicyPath);
 const capPolicy=JSON.parse(capPolicyBytes);
-const CAP_POLICY_SHA256='74f16458cd7c2e295403d6569c289ec4861b036c60c72065d0ad8560164f2218';
-const OWNER_BRIDGE_SHA256='3de9f87874534e603e4040f4fc10a018679820569431a7a0b230bda035552af3';
+const CAP_POLICY_SHA256='6a7a36ce35d5a41032f13fce70bcd9290b5027cdf787832324beb9de9ecc1112';
+const OWNER_BRIDGE_SHA256='241c940cd9d45d7783ca53e1e5bab4fdc2ea1627005ec60840f165ca105762a4';
 const V112=fs.readFileSync('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py','utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
@@ -22,11 +22,11 @@ const ownerDialog={turn_id:'11111111111111111111111111111111',
  writer:'V112_OWNER_DIALOG_WRITER',receipt_sha256:'a'.repeat(64)};
 test('V135 staged owner bridge matches the pinned measured cap policy',()=>{
   const n=Buffer.byteLength(JS,'utf8');
-  assert.equal(n,24669);
+  assert.equal(n,24803);
   assert.equal(crypto.createHash('sha256').update(JS,'utf8').digest('hex'),OWNER_BRIDGE_SHA256);
   assert.equal(crypto.createHash('sha256').update(capPolicyBytes).digest('hex'),CAP_POLICY_SHA256);
   assert.deepEqual(capPolicy,{schema:'NOX_V135_OWNER_BRIDGE_CAP_POLICY_V2',
-    measured_bridge_bytes:24669,max_bridge_bytes:25181,reserve_bytes:512,
+    measured_bridge_bytes:24803,max_bridge_bytes:25315,reserve_bytes:512,
     bridge_sha256:OWNER_BRIDGE_SHA256});
   assert.equal(n<=capPolicy.max_bridge_bytes,true);
 });
@@ -200,6 +200,56 @@ test('V135 owner-dialog flag alone cannot bypass canonical S03 receipt or owner 
   assert.equal(frames.filter(e=>e.type==='done').length,0);
   assert.equal(reads,0);
   assert(frames.some(e=>e.type==='error'));
+});
+
+test('owner bridge preserves UTF-8 split across chunks and rejects corrupted native text',async()=>{
+  const text='Sí, Ж🙂';
+  const exchange='verified-utf8-exchange';
+  const frame=data=>Buffer.from(JSON.stringify(data)+'\n');
+  const beginning=[frame({type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'}),frame({type:'start'})];
+  const done=frame({type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:exchange});
+  async function run(chunks){
+    let historyReads=0;
+    const window={NOX_NATIVE_OWNER:true,fetch:async path=>{
+      if(path==='/api/nox/chat/stream')return new Response(new ReadableStream({start(controller){
+        for(const chunk of chunks)controller.enqueue(chunk);
+        controller.close();
+      }}));
+      if(path.startsWith('/api/ui/memory/dialogs/history?')){
+        historyReads++;
+        return Response.json({status:'READY',dialog_id:id,messages:[
+          {role:'user',exchange_id:exchange,content:prompt},
+          {role:'assistant',exchange_id:exchange,content:text}
+        ]});
+      }
+      assert.fail(`unexpected owner route ${path}`);
+    }};
+    const pathname='/nox-web-v29/pc/resonance.html';
+    const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window,location,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,Intl,setTimeout});
+    const response=await window.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'utf8-regression'})});
+    const seen=await events(response);
+    return {seen,historyReads};
+  }
+
+  const delta=frame({type:'delta',text});
+  const emojiOffset=delta.indexOf(Buffer.from('🙂'));
+  assert(emojiOffset>0);
+  const good=await run([...beginning,delta.subarray(0,emojiOffset+2),delta.subarray(emojiOffset+2),done]);
+  assert.equal(good.seen.filter(row=>row.type==='token').map(row=>row.t).join(''),text);
+  assert.equal(good.seen.filter(row=>row.type==='done').length,1);
+  assert.equal(good.historyReads,1);
+
+  const corrupted=Buffer.from(delta);
+  corrupted[emojiOffset+1]=0xff;
+  for(const chunks of [[corrupted,done],[delta.subarray(0,emojiOffset+2)]]){
+    const rejected=await run([...beginning,...chunks]);
+    assert.equal(rejected.seen.find(row=>row.type==='error')?.error,'HOLD_NATIVE_FRAME_UTF8');
+    assert(!rejected.seen.some(row=>row.type==='token'||row.type==='done'));
+    assert.equal(rejected.historyReads,0);
+  }
 });
 
 test('native V24 main Resonance streams tokens, only after S03 readback reports done',async()=>{
