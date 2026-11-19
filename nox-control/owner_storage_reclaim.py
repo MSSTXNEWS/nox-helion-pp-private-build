@@ -142,6 +142,37 @@ def write_receipt(path, value, replace=False):
     return digest_bytes(raw)
 
 
+def write_receipt_exclusive(path, value):
+    """Create a new receipt with O_EXCL; never replace an earlier action receipt."""
+    path = plain(path)
+    if path.parent != receipt_directory():
+        raise StorageHold('HOLD_STORAGE_RECEIPT_EXISTS_OR_SCOPE')
+    raw = (json.dumps(value, sort_keys=True, ensure_ascii=True, allow_nan=False) + '\n').encode()
+    if len(raw) > 2 * 1024 * 1024:
+        raise StorageHold('HOLD_STORAGE_RECEIPT_SIZE')
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        fd = os.open(path, flags, 0o600)
+    except FileExistsError as exc:
+        raise StorageHold('HOLD_PAGE_CACHE_ONE_SHOT_ALREADY_USED') from exc
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, 'wb') as stream:
+            fd = -1
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        if fd >= 0:
+            os.close(fd)
+    return digest_bytes(raw)
+
+
 def root_specs():
     # Reclaimable owner-approved areas first: NOX and venv can each contain
     # >100k protected files and exhaust the bounded audit budget before logs.
@@ -673,8 +704,9 @@ def reclaim_page_cache_candidate(candidate, deadline, maximum_bytes):
 
 
 def reclaim_page_cache(request, source, audit_request, expected_sha):
-    """Advise exact cold ephemeral cache pages while browser memory headroom is below 4 GiB."""
-    if (not audit_request.isdigit()
+    """Perform one no-retry DONTNEED pass against an exact fresh audit receipt."""
+    if (not isinstance(request, str) or not request.isdigit()
+            or request != audit_request or not audit_request.isdigit()
             or not re.fullmatch(r'[0-9a-f]{64}', expected_sha)):
         raise StorageHold('HOLD_EXACT_STORAGE_AUDIT_PIN_REQUIRED')
     audit_path = receipt_directory() / ('audit_' + audit_request + '.json')
@@ -705,6 +737,7 @@ def reclaim_page_cache(request, source, audit_request, expected_sha):
         limit = cgroup.get('limit_bytes')
         if type(headroom) is not int or type(limit) is not int:
             raise StorageHold('HOLD_PAGE_CACHE_HEADROOM_UNVERIFIED')
+        output = receipt_directory() / ('page_cache_' + request + '.json')
         receipt = {'schema': SCHEMA, 'instance_id': INSTANCE,
                    'action': 'PAGE_CACHE_RECLAIM', 'request': request,
                    'source_sha': source, 'audit_request': audit_request,
@@ -726,8 +759,32 @@ def reclaim_page_cache(request, source, audit_request, expected_sha):
                    'reclaim_amount_unverified': True,
                    'model_files_touched': False, 'files_unlinked': 0,
                    'processes_killed': 0, 'services_restarted': 0,
-                   'weights_or_S03_modified': False}
-        output = receipt_directory() / ('page_cache_' + request + '.json')
+                   'weights_or_S03_modified': False,
+                   'one_shot_no_retry': True, 'state': 'PAGE_CACHE_RECLAIM_IN_PROGRESS'}
+        # Claim the action receipt before any page-cache advice. O_EXCL makes
+        # repeated requests, including recovery from an inflight receipt, fail closed.
+        write_receipt_exclusive(output, receipt)
+        receipt_info = os.stat(output, follow_symlinks=False)
+        if (not stat.S_ISREG(receipt_info.st_mode)
+                or receipt_info.st_uid != os.geteuid()
+                or receipt_info.st_nlink != 1):
+            raise StorageHold('HOLD_PAGE_CACHE_RECEIPT_OWNERSHIP')
+        receipt_identity = identity(receipt_info)
+        def update_owned_receipt():
+            nonlocal receipt_identity
+            current = os.stat(output, follow_symlinks=False)
+            if (identity(current) != receipt_identity
+                    or not stat.S_ISREG(current.st_mode)
+                    or current.st_uid != os.geteuid()
+                    or current.st_nlink != 1):
+                raise StorageHold('HOLD_PAGE_CACHE_RECEIPT_OWNERSHIP_CHANGED')
+            write_receipt(output, receipt, replace=True)
+            updated = os.stat(output, follow_symlinks=False)
+            if (not stat.S_ISREG(updated.st_mode)
+                    or updated.st_uid != os.geteuid()
+                    or updated.st_nlink != 1):
+                raise StorageHold('HOLD_PAGE_CACHE_RECEIPT_OWNERSHIP_CHANGED')
+            receipt_identity = identity(updated)
         if headroom >= BROWSER_RUNTIME_HEADROOM:
             receipt['state'] = 'SKIPPED_HEADROOM_AT_OR_ABOVE_4_GIB'
         else:
@@ -745,7 +802,7 @@ def reclaim_page_cache(request, source, audit_request, expected_sha):
                     'category': candidate.get('category'),
                     'identity': candidate.get('identity'),
                     'state': 'EXACT_FILE_CENSUS_AND_RECHECK_REQUIRED'}
-                write_receipt(output, receipt, replace=output.exists())
+                update_owned_receipt()
                 try:
                     row = reclaim_page_cache_candidate(candidate, end, remaining)
                     receipt['advised_files'].append(row)
@@ -757,7 +814,7 @@ def reclaim_page_cache(request, source, audit_request, expected_sha):
                         'reason': code if re.fullmatch(r'HOLD_[A-Z_]+', code)
                                   else 'HOLD_PAGE_CACHE_OS_OPERATION'})
                 receipt['inflight'] = None
-                write_receipt(output, receipt, replace=output.exists())
+                update_owned_receipt()
                 latest_cgroup = filesystem_budget().get('cgroup', {})
                 latest_headroom = latest_cgroup.get('headroom_bytes')
                 if type(latest_headroom) is not int:
@@ -808,7 +865,7 @@ def reclaim_page_cache(request, source, audit_request, expected_sha):
         receipt['one_shot_no_retry'] = True
         receipt['page_cache_reclaimed_bytes_claimed'] = 0
         receipt['native_job_admitted'] = False
-        write_receipt(output, receipt, replace=output.exists())
+        update_owned_receipt()
         return receipt
 
 
