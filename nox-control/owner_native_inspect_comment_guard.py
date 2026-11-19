@@ -25,7 +25,10 @@ APPROVED_SOURCE_BY_ACTION = {
     "browser_qa": "eaa4b0d64d3d97a8c2b2680e8eb20137934d76b9",  # PR #543 helper source commit; preserve this pin with a merge commit
     "source_export": "845c76d44676d56157125e729db81b45e006cf92",  # exact pinned encrypted-only #415 source export
     "emergency_stop": "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23",  # exact drained emergency-stop source commit
+    "reflex_publish": "74785030650d15225c62ae50b2e763eaef2cd5cc",  # reviewed #411 publisher with per-write resource/lease gates
 }
+REFLEX_PUBLISH_MANIFEST_SHA: str | None = None
+REFLEX_PUBLISH_COMPLETE_MARKER = "NOX_MAINT_REFLEX_PUBLISH_COMPLETE=true"
 SOURCE_EXPORT_KEY_MAX_CHARS = 12000
 COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) "
@@ -35,6 +38,19 @@ SOURCE_EXPORT_COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ({re.escape(APPROVED_SOURCE_BY_ACTION['source_export'])}) "
     rf"source_export ([A-Za-z0-9_-]{{1,{SOURCE_EXPORT_KEY_MAX_CHARS}}})\Z"
 )
+REFLEX_PUBLISH_COMMAND = re.compile(
+    rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) reflex_publish ([0-9a-f]{{64}})\Z"
+)
+
+
+def parse_reflex_publish_command(body: object) -> tuple[str, str, str]:
+    if not isinstance(body, str):
+        raise RuntimeError("HOLD_EXACT_OWNER_COMMAND")
+    match = REFLEX_PUBLISH_COMMAND.fullmatch(body)
+    if match is None:
+        raise RuntimeError("HOLD_EXACT_OWNER_COMMAND")
+    source_sha, manifest_sha = match.groups()
+    return "reflex_publish", source_sha, manifest_sha
 
 
 def parse_command(body: object) -> tuple[str, str, str | None]:
@@ -80,9 +96,21 @@ def authorize_event(event: object, repository: str | None,
             or sender.get("id") != OWNER_ID):
         raise RuntimeError("HOLD_OWNER_COMMAND_IDENTITY")
 
-    action, source_sha, _ = parse_command(comment.get("body"))
+    try:
+        action, source_sha, _ = parse_command(comment.get("body"))
+        manifest_sha = None
+    except RuntimeError:
+        action, source_sha, manifest_sha = parse_reflex_publish_command(
+            comment.get("body"))
     if APPROVED_SOURCE_BY_ACTION.get(action) != source_sha:
         raise RuntimeError("HOLD_SOURCE_ACTION_NOT_APPROVED")
+    if action == "reflex_publish":
+        # Keep the route disabled until an owner-reviewed immutable candidate
+        # entry and manifest have been built and their exact SHA is pinned here.
+        if not isinstance(REFLEX_PUBLISH_MANIFEST_SHA, str):
+            raise RuntimeError("HOLD_REFLEX_PUBLISH_CANDIDATE_NOT_PINNED")
+        if manifest_sha != REFLEX_PUBLISH_MANIFEST_SHA:
+            raise RuntimeError("HOLD_REFLEX_PUBLISH_MANIFEST_MISMATCH")
     return action, source_sha
 
 
@@ -97,7 +125,12 @@ def main() -> int:
             os.environ.get("GITHUB_REPOSITORY"),
             os.environ.get("GITHUB_EVENT_NAME"),
         )
-        _, _, export_key_b64 = parse_command(event["comment"]["body"])
+        if action == "reflex_publish":
+            _, _, manifest_sha = parse_reflex_publish_command(
+                event["comment"]["body"])
+            export_key_b64 = None
+        else:
+            _, _, export_key_b64 = parse_command(event["comment"]["body"])
         output_path = os.environ.get("GITHUB_OUTPUT", "")
         if not output_path:
             raise RuntimeError("HOLD_OUTPUT_PATH")
@@ -108,6 +141,8 @@ def main() -> int:
                 # URL-safe base64 cannot inject an Actions output delimiter or
                 # newline; keep the public key out of stdout and logs.
                 output.write(f"export_key_b64={export_key_b64}\n")
+            if action == "reflex_publish":
+                output.write(f"manifest_sha256={manifest_sha}\n")
     except (OSError, ValueError, RuntimeError) as exc:
         reason = str(exc)
         if not re.fullmatch(r"HOLD_[A-Z0-9_]+", reason):

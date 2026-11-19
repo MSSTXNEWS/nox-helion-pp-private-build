@@ -33,32 +33,39 @@ jobs:
           python3 - <<'PY'
           import json,os,re
           e=json.load(open(os.environ['GITHUB_EVENT_PATH']))
-          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|emergency_stop|deploy|backup|memfd_audit)',e['comment']['body'])
-          assert m, 'Invalid bounded maintenance command'
+          body=e['comment']['body']
+          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|emergency_stop|deploy|backup|memfd_audit)',body)
+          reflex=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) reflex_publish ([0-9a-f]{64})',body)
+          assert m or reflex, 'Invalid bounded maintenance command'
           assert e['comment']['user']['id']==340718567 and e['sender']['id']==340718567
           assert e['repository']['owner']['id']==340718567 and e['issue']['number']==256
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:
-              f.write('sha='+m[1]+'\naction='+m[2]+'\n')
+              if reflex:
+                  f.write('sha='+reflex[1]+'\naction=reflex_publish\nmanifest_sha256='+reflex[2]+'\n')
+              else:
+                  f.write('sha='+m[1]+'\naction='+m[2]+'\n')
           PY
       - name: Checkout main owner approval guard
-        if: steps.request.outputs.action == 'emergency_stop'
+        if: steps.request.outputs.action == 'emergency_stop' || steps.request.outputs.action == 'reflex_publish'
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: main
           path: guard
           persist-credentials: false
       - name: Run main approved-source guard
-        if: steps.request.outputs.action == 'emergency_stop'
+        if: steps.request.outputs.action == 'emergency_stop' || steps.request.outputs.action == 'reflex_publish'
         id: approved
         working-directory: guard
         run: python3 -B nox-control/owner_native_inspect_comment_guard.py
       - name: Match approved action and immutable source pin
-        if: steps.request.outputs.action == 'emergency_stop'
+        if: steps.request.outputs.action == 'emergency_stop' || steps.request.outputs.action == 'reflex_publish'
         env:
           REQUEST_ACTION: ${{ steps.request.outputs.action }}
           REQUEST_SHA: ${{ steps.request.outputs.sha }}
+          REQUEST_MANIFEST_SHA: ${{ steps.request.outputs.manifest_sha256 }}
           APPROVED_ACTION: ${{ steps.approved.outputs.action }}
           APPROVED_SHA: ${{ steps.approved.outputs.source_sha }}
+          APPROVED_MANIFEST_SHA: ${{ steps.approved.outputs.manifest_sha256 }}
         run: |
           python3 - <<'PY'
           import os
@@ -66,7 +73,14 @@ jobs:
               raise SystemExit('HOLD_APPROVED_ACTION_MISMATCH')
           if os.environ['APPROVED_SHA'] != os.environ['REQUEST_SHA']:
               raise SystemExit('HOLD_APPROVED_SOURCE_MISMATCH')
+          if os.environ['REQUEST_ACTION'] == 'reflex_publish' and os.environ['APPROVED_MANIFEST_SHA'] != os.environ['REQUEST_MANIFEST_SHA']:
+              raise SystemExit('HOLD_APPROVED_MANIFEST_MISMATCH')
           PY
+      - name: Hold until a receipted candidate entry is pinned
+        if: steps.request.outputs.action == 'reflex_publish'
+        run: |
+          echo 'NOX_REFLEX_PUBLISH=HOLD_CANDIDATE_ENTRY_NOT_PINNED'
+          exit 1
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ steps.request.outputs.sha }}
