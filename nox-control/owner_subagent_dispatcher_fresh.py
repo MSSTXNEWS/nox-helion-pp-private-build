@@ -381,6 +381,7 @@ class Native:
         self.lease_identity = None
         self.task_lease_receipt = None
         self.last_admission_snapshot = None
+        self.resource_pause_reason = None
         self.loaded_binding = self._make_loaded_binding(namespace)
 
     def allowed_handlers(self):
@@ -388,6 +389,30 @@ class Native:
 
     def owner_allowed(self):
         return self.config.get('owner_authorized') is True and self.config.get('instance_id') == 60509551
+
+    def pause_for_resource_hold(self, reason):
+        """Stop new scheduling/respawns only for a real resource-gate denial."""
+        if reason != 'HOLD_NATIVE_SUBAGENT_RESOURCE_PRESSURE':
+            return False
+        with self.lock:
+            self.resource_pause_reason = reason
+            if self.pool is not None:
+                pause = getattr(self.pool, 'pause_scheduling', None)
+                if not callable(pause) or pause() is not True:
+                    raise GateError('HOLD_SUBAGENT_RESOURCE_PAUSE')
+        return True
+
+    def resume_after_resource_admission(self):
+        """Clear the pause only after the caller has a fresh successful gate."""
+        with self.lock:
+            if self.resource_pause_reason is None:
+                return True
+            if self.pool is not None:
+                resume = getattr(self.pool, 'resume_scheduling', None)
+                if not callable(resume) or resume() is not True:
+                    raise GateError('HOLD_SUBAGENT_RESOURCE_RESUME')
+            self.resource_pause_reason = None
+        return True
 
     def _make_loaded_binding(self, namespace):
         director = process_identity(os.getpid())
@@ -578,6 +603,7 @@ class Native:
                         or lease.get('owner') != process_identity(os.getpid())):
                     return 'HOLD_NATIVE_SUBAGENT_WRITER_LEASE'
             self.last_admission_snapshot = snapshot
+            self.resume_after_resource_admission()
             return None
         except (OSError, ValueError, TypeError, KeyError, GateError):
             return 'HOLD_NATIVE_SUBAGENT_ADMISSION'
@@ -608,6 +634,7 @@ class Native:
         if count != 3 or self.stop_active():
             return False
         with self.lock:
+            self.resume_after_resource_admission()
             if self.pool is not None:
                 self._drain()
                 if len(self.process_readback()) != 3:

@@ -33,12 +33,12 @@ class SourcePinClosureTests(unittest.TestCase):
                 self.assertEqual(actual, expected)
 
         self.assertEqual(pins["owner_subagent_dispatcher_fresh.py"],
-                         "063747e0f15535e03617b9733d7d3a7d61d20f6c8f985f7571f68e591e225716")
+                         "72582a65cf148128f4b84aa693c2be880bba8f681a64aed0b81502213a972e9d")
         self.assertEqual(installer.NEW_CALLBACK,
                          pins["owner_subagent_dispatcher_fresh.py"])
         self.assertEqual(
             hashlib.sha256((ROOT / "owner_subagent_fresh_install_entry.py").read_bytes()).hexdigest(),
-            "8158701f160876e0a2b4b45c936417f879e5d87d4d1fc5ef73f5e730fc77209c",
+            "28106f68f307ddaea22b418c23a5817ba6bc02ea7117461752d2285c9b35fc51",
         )
         self.assertEqual(installer.NEW_DEPENDENCIES["owner_autonomy_pool.py"],
                          pins["owner_autonomy_pool.py"])

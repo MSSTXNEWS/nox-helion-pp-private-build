@@ -13,7 +13,6 @@ import heapq
 import json
 import math
 import re
-import time
 from collections import deque
 from collections.abc import Mapping
 
@@ -24,8 +23,6 @@ ID = re.compile(r'^[A-Za-z0-9._:-]{1,128}$')
 SHA = re.compile(r'^[a-f0-9]{64}$')
 MAX_PAGE = 256
 MAX_PAGE_BYTES = 256 * 1024
-RESOURCE_ADMISSION_MAX_AGE_SECONDS = 5.0
-RESOURCE_ADMISSION_FUTURE_SKEW_SECONDS = 1.0
 
 
 class AutoHold(ValueError):
@@ -35,40 +32,6 @@ class AutoHold(ValueError):
 def fingerprint(obj):
     return sha256(json.dumps(obj, sort_keys=True, ensure_ascii=False,
                              separators=(',', ':'), allow_nan=False).encode()).hexdigest()
-
-
-def verify_resource_admission(snapshot, *, now=None):
-    """Verify the native gate decision is fresh and bound to this exact snapshot."""
-    if not isinstance(snapshot, Mapping) or snapshot.get('resource_admission_allowed') is not True:
-        raise AutoHold('HOLD_RESOURCE_ADMISSION')
-    if (snapshot.get('native_verified') is not True
-            or snapshot.get('instance_id') != 60509551
-            or snapshot.get('stop_active') is not False
-            or snapshot.get('source_sha_verified') is not True
-            or snapshot.get('owner_scope_verified') is not True):
-        raise AutoHold('HOLD_RESOURCE_ADMISSION_IDENTITY')
-    observed_at = snapshot.get('resource_admission_observed_at')
-    if type(observed_at) not in (int, float) or not math.isfinite(observed_at):
-        raise AutoHold('HOLD_RESOURCE_ADMISSION_TIMESTAMP')
-    current_time = time.time() if now is None else now
-    if type(current_time) not in (int, float) or not math.isfinite(current_time):
-        raise AutoHold('HOLD_RESOURCE_ADMISSION_CLOCK')
-    age = current_time - observed_at
-    if (age > RESOURCE_ADMISSION_MAX_AGE_SECONDS
-            or age < -RESOURCE_ADMISSION_FUTURE_SKEW_SECONDS):
-        raise AutoHold('HOLD_RESOURCE_ADMISSION_STALE')
-    expected = snapshot.get('resource_admission_snapshot_sha256')
-    if not isinstance(expected, str) or SHA.fullmatch(expected) is None:
-        raise AutoHold('HOLD_RESOURCE_ADMISSION_SNAPSHOT')
-    payload = dict(snapshot)
-    payload.pop('resource_admission_snapshot_sha256', None)
-    try:
-        actual = fingerprint(payload)
-    except (TypeError, ValueError, OverflowError) as exc:
-        raise AutoHold('HOLD_RESOURCE_ADMISSION_SNAPSHOT') from exc
-    if actual != expected:
-        raise AutoHold('HOLD_RESOURCE_ADMISSION_SNAPSHOT')
-    return expected
 
 
 def _task(row, allowed_handlers):
@@ -221,10 +184,6 @@ def tick_existing_dispatcher(namespace, state, *, mode):
             or runtime.get('source_sha_verified') is not True
             or runtime.get('owner_scope_verified') is not True):
             return {'state':'HOLD_AUTONOMY_NATIVE_SNAPSHOT','jobs_started':0}
-        try:
-            verify_resource_admission(runtime)
-        except AutoHold as exc:
-            return {'state':str(exc),'jobs_started':0}
         tasks=([] if isinstance(catalog,Mapping) and catalog.get('schema')==SCHEMA
                and catalog.get('tasks')==[] else
                validate_submission(catalog,allowed_handlers=native.allowed_handlers())['ordered'])
@@ -233,16 +192,26 @@ def tick_existing_dispatcher(namespace, state, *, mode):
             mode=mode,memory_ratio=runtime.get('cgroup_memory_ratio'),
             cpu_pressure=runtime.get('cpu_pressure',0),
             gpu_available=runtime.get('gpu_available') is True)
-    except (AutoHold,TypeError,ValueError,OverflowError) as exc:
-        return {'state':str(exc) if isinstance(exc,AutoHold) else 'HOLD_AUTONOMY_INPUT',
-                'jobs_started':0}
+    except AutoHold as exc:
+        reason = str(exc)
+        if reason == 'HOLD_NATIVE_SUBAGENT_RESOURCE_PRESSURE':
+            pause = getattr(native, 'pause_for_resource_hold', None)
+            if callable(pause):
+                try:
+                    if pause(reason) is not True:
+                        return {'state':'HOLD_RESOURCE_PAUSE_FAILED','jobs_started':0}
+                except Exception:
+                    return {'state':'HOLD_RESOURCE_PAUSE_FAILED','jobs_started':0}
+        return {'state':reason,'jobs_started':0}
+    except (TypeError,ValueError,OverflowError):
+        return {'state':'HOLD_AUTONOMY_INPUT','jobs_started':0}
     except Exception:
         return {'state':'HOLD_NATIVE_AUTONOMY_CALLBACK_EXCEPTION','jobs_started':0}
 
 
-def _choose_ready_with_diagnostics(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
-                                     gpu_available=False, verified_native=True):
-    """Select with an explanation snapshot; diagnostics never alter selection."""
+def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
+                 gpu_available=False, verified_native=True):
+    """Default three process claims, boost six; independent from queue length."""
     if mode not in MODES:
         raise AutoHold('HOLD_MODE')
     if verified_native is not True:
@@ -254,11 +223,10 @@ def _choose_ready_with_diagnostics(tasks, *, status, mode, memory_ratio, cpu_pre
     if type(cpu_pressure) not in (float, int) or not math.isfinite(cpu_pressure) or cpu_pressure < 0:
         raise AutoHold('HOLD_CPU_PRESSURE')
     budget = MODES[mode]
-    if memory_ratio >= .95: budget = 0
-    elif memory_ratio >= .85: budget = min(budget,3)
+    if memory_ratio >= 0.95: budget = 0
+    elif memory_ratio >= 0.85: budget = min(budget,3)
     if cpu_pressure >= 50: budget = min(budget,1)
     elif cpu_pressure >= 20:budget = min(budget,3)
-    pressure_limited_budget = budget
     # Reservation is native queue state, not only a lowercase "running".
     # A lost ACK can leave an admitted/queued/unknown job consuming a slot.
     # Fail closed for unknown/null/structured statuses; release capacity only
@@ -269,26 +237,17 @@ def _choose_ready_with_diagnostics(tasks, *, status, mode, memory_ratio, cpu_pre
         if not (isinstance(state, str) and state.casefold() in terminal))
     budget = max(0, budget-existing_claims)
     ranked=[]
-    known_task_count=0
-    dependency_blocked_count=0
-    gpu_blocked_count=0
     for task in tasks:
         tid=task['id']
         # Presence is authoritative even when an uncertain native claim has
         # status None. Distinguish absent from unresolved before any replay.
-        if tid in status:
-            known_task_count+=1
-            continue   # never reenqueue known/unknown/running/done jobs
+        if tid in status:continue   # never reenqueue known/unknown/running/done jobs
+        # The verified native snapshot may use DONE or COMPLETED case variants.
         # Only explicit successful terminals release DAG dependents; failures,
         # cancellations and unresolved claims must never unlock new work.
-        if any(not (isinstance(status.get(d), str) and status[d].casefold() in ('done', 'completed')) for d in task['deps']):
-            dependency_blocked_count+=1
-            continue
-        if task['resource']=='GPU_EXCLUSIVE' and not gpu_available:
-            gpu_blocked_count+=1
-            continue
+        if any(not (isinstance(status.get(d), str) and status[d].casefold() in ('done', 'completed')) for d in task['deps']): continue
+        if task['resource']=='GPU_EXCLUSIVE' and not gpu_available: continue
         heapq.heappush(ranked,(PRIORITIES[task['priority']],task['estimated_cost'],tid,task))
-    eligible_candidate_count=len(ranked)
     selected=[];gpu_used=False
     while ranked and len(selected)<budget:
         *_, row=heapq.heappop(ranked)
@@ -296,48 +255,8 @@ def _choose_ready_with_diagnostics(tasks, *, status, mode, memory_ratio, cpu_pre
             if gpu_used:continue
             gpu_used=True
         selected.append(row)
-    if selected:
-        reason_codes=[]
-    elif not tasks:
-        reason_codes=['EMPTY_CATALOG']
-    else:
-        reason_codes=[]
-        if known_task_count==len(tasks):
-            reason_codes.append('ALL_CATALOG_TASKS_ALREADY_KNOWN')
-        elif known_task_count:
-            reason_codes.append('KNOWN_TASKS_NOT_REPLAYED')
-        if dependency_blocked_count:
-            reason_codes.append('DEPENDENCIES_UNSATISFIED')
-        if gpu_blocked_count:
-            reason_codes.append('GPU_UNAVAILABLE')
-        if eligible_candidate_count and budget==0:
-            reason_codes.append('NO_DISPATCH_BUDGET')
-        if not reason_codes:
-            reason_codes=['NO_ELIGIBLE_TASK']
-    diagnostics={
-        'schema':'NOX_POOL_IDLE_DIAGNOSTICS_V1',
-        'reason_codes':reason_codes,
-        'catalog_task_count':len(tasks),
-        'known_task_count':known_task_count,
-        'dependency_blocked_count':dependency_blocked_count,
-        'gpu_blocked_count':gpu_blocked_count,
-        'eligible_candidate_count':eligible_candidate_count,
-        'configured_budget':MODES[mode],
-        'pressure_limited_budget':pressure_limited_budget,
-        'reserved_claim_count':existing_claims,
-        'remaining_budget':budget,
-        'selected_task_count':len(selected),
-    }
-    return selected,diagnostics
+    return selected
 
-
-def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
-                 gpu_available=False, verified_native=True):
-    """Default three process claims, boost six; independent from queue length."""
-    return _choose_ready_with_diagnostics(
-        tasks,status=status,mode=mode,memory_ratio=memory_ratio,
-        cpu_pressure=cpu_pressure,gpu_available=gpu_available,
-        verified_native=verified_native)[0]
 
 
 def classify_native_job_proof(proof):
@@ -396,9 +315,8 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
     if (native.owner_allowed() is not True or native.stop_active() is not False
         or native.writer_lease() is not True):
         return {'state':'HOLD_OWNER_STOP_OR_WRITER_LEASE','jobs_started':0}
-    ready,idle_diagnostics=_choose_ready_with_diagnostics(
-        tasks,status=status,mode=mode,memory_ratio=memory_ratio,
-        cpu_pressure=cpu_pressure,gpu_available=gpu_available)
+    ready=choose_ready(tasks,status=status,mode=mode,memory_ratio=memory_ratio,
+                       cpu_pressure=cpu_pressure,gpu_available=gpu_available)
     # Keep a fixed pool of actual OS workers ready even if the queue is idle.
     # Resource pressure can temporarily reduce the target; do not fake workers.
     target=MODES[mode]
@@ -406,8 +324,7 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
     elif memory_ratio>=.85:target=min(target,3)
     if cpu_pressure>=50:target=min(target,1)
     elif cpu_pressure>=20:target=min(target,3)
-    if target==0:return {'state':'HOLD_RESOURCE_PRESSURE','jobs_started':0,
-                            'idle_diagnostics':idle_diagnostics}
+    if target==0:return {'state':'HOLD_RESOURCE_PRESSURE','jobs_started':0}
     # This MUST be a native process-supervisor operation, not a Python thread.
     if native.ensure_processes(target) is not True:
         return {'state':'HOLD_NATIVE_PROCESS_START','jobs_started':0}
@@ -488,10 +405,7 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
         if not still_authorized:
             return {'state':'HOLD_STOP_OR_LEASE_CHANGED',
                     'jobs_started':len(receipts),'receipts':receipts}
-    result={'state':'NATIVE_QUEUE_READBACK_VERIFIED' if receipts else 'NATIVE_POOL_READY_IDLE',
+    return {'state':'NATIVE_QUEUE_READBACK_VERIFIED' if receipts else 'NATIVE_POOL_READY_IDLE',
             'jobs_started':len(receipts),  # legacy counter: CLAIMS, not executed jobs
             'jobs_completed_verified':sum(r['execution_evidence']=='DONE_NATIVE' for r in receipts),
             'active_subexecutor_processes':len(workers),'receipts':receipts}
-    if not receipts:
-        result['idle_diagnostics']=idle_diagnostics
-    return result

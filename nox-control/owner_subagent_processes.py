@@ -243,6 +243,7 @@ class Subagents:
         self._pending_events = deque()
         self._pending_checkpoint_events = deque()
         self._new_channels()
+        self._resource_paused = False
 
     def _new_channels(self):
         self.outbox = self.ctx.Queue()
@@ -359,7 +360,21 @@ class Subagents:
                 # a late queue fragment or replay this task.
                 self._failure(role, 'HOLD_SUBAGENT_PROCESS_EXIT')
 
+    def pause_scheduling(self):
+        """Fence new submissions and automatic dead-worker respawns."""
+        with self._abi_lock:
+            self._resource_paused = True
+            return True
+
+    def resume_scheduling(self):
+        """Reopen submissions only after the owner dispatcher proves a fresh gate."""
+        with self._abi_lock:
+            self._resource_paused = False
+            return True
+
     def _replace_idle_dead_pool(self):
+        if self._resource_paused:
+            raise GateError('HOLD_SUBAGENT_RESOURCE_PAUSED')
         if all(process.is_alive() for process in self.processes.values()):
             return
         self._notice_dead_workers()
@@ -386,6 +401,8 @@ class Subagents:
             raise GateError('HOLD_SUBAGENT_TASK_SCHEMA') from exc
         tid, role = task['id'], task['subagent']
         with self._abi_lock:
+            if self._resource_paused:
+                raise GateError('HOLD_SUBAGENT_RESOURCE_PAUSED')
             if tid in self._submitted_ids or tid in self._terminal_ids:
                 raise GateError('HOLD_SUBAGENT_TASK_REUSE')
             self._notice_dead_workers()
