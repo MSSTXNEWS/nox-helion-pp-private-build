@@ -617,6 +617,24 @@ class GatewayTests(unittest.TestCase):
                                        ('oversized',)).fetchone()[0],original)
             self.assertEqual(c.execute('SELECT count(*) FROM nox_s03_vectors').fetchone()[0],0)
 
+    def test_lexical_recall_covers_tail_after_sixteen_unique_terms(self):
+        # The first term can produce more hits than the answer budget. A tail
+        # term past the old [:16] cutoff must still retrieve its exact fact.
+        with g.connection(self.db,write=True) as c:
+            for number in range(14):
+                item(c,'early_'+str(number),'earlyquery memory '+str(number))
+            item(c,'tail','safetytailmarker')
+        query=' '.join(['earlyquery']+['absentword'+str(i) for i in range(18)]
+                       +['safetytailmarker'])
+        answer=g.recall(query,db=self.db,
+                        identity_fn=lambda:(_ for _ in ()).throw(OSError('offline')))
+        self.assertIn('tail',[row['id'] for row in answer])
+        self.assertTrue(next(row for row in answer if row['id']=='tail')['query_evidence'])
+        # An extreme question is a visible HOLD, never silent suffix loss.
+        with g.connection(self.db) as c:
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_LEXICAL_QUERY_BUDGET'):
+                g.lexical(c,' '.join('term'+str(i) for i in range(65)))
+
     def test_long_recall_query_preserves_keyword_after_old_cutoff(self):
         with g.connection(self.db,write=True) as c:
             item(c,'tail_fact','safetytailmarker')
