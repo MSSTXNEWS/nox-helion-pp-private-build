@@ -611,6 +611,10 @@ class Native:
             if self.pool is not None:
                 self._drain()
                 if len(self.process_readback()) != 3:
+                    # STOP/chat may become active while _drain() reconciles results.
+                    # Recheck before replacing any worker; never restart under STOP.
+                    if self.stop_active() or chat_priority_active():
+                        return False
                     # Stale heartbeat is not proof of death; preserve live peers.
                     # Previously drained results need owner/S03 reconciliation.
                     if self.pool.active or self.completed:
@@ -623,6 +627,9 @@ class Native:
                     except (GateError, OSError, ValueError):
                         return False
                 return len(self.process_readback()) == 3
+            # The initial STOP check precedes lock acquisition; reject a late STOP.
+            if self.stop_active() or chat_priority_active():
+                return False
             self.pool = Subagents(list(ROLES), timeout=60,
                                   worker_prepare=worker_input).__enter__()
             return len(self.process_readback()) == 3

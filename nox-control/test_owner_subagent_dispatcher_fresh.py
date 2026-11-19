@@ -236,6 +236,30 @@ class PoolLifecycleTests(unittest.TestCase):
         self.assertIs(native.pool.processes['weights'], healthy[1])
         native.close_pool.assert_not_called()
 
+    def test_late_owner_stop_after_drain_blocks_dead_worker_replacement(self):
+        native, children = self.native()
+        native.completed.clear()
+        children['runtime'].alive = False
+        native._drain = Mock()
+        native.process_readback = Mock(return_value=[])
+        native.stop_active = Mock(side_effect=[False, True])
+        with patch.object(binding, 'chat_priority_active', return_value=False):
+            self.assertFalse(native.ensure_processes(3))
+        self.assertEqual(native.stop_active.call_count, 2)
+        native.pool._replace_idle_dead_pool.assert_not_called()
+        self.assertIs(native.pool.processes['memory'], children['memory'])
+        self.assertIs(native.pool.processes['weights'], children['weights'])
+
+    def test_late_owner_stop_blocks_initial_pool_creation(self):
+        native, _ = self.native()
+        native.pool = None
+        native.stop_active = Mock(side_effect=[False, True])
+        with patch.object(binding, 'chat_priority_active', return_value=False), \
+             patch.object(binding, 'Subagents') as ctor:
+            self.assertFalse(native.ensure_processes(3))
+            ctor.assert_not_called()
+        self.assertEqual(native.stop_active.call_count, 2)
+
     def test_active_worker_failure_holds_without_pool_replacement(self):
         native, children = self.native(active={'runtime': 'job-1'})
         children['runtime'].alive = False
