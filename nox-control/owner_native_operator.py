@@ -21,9 +21,11 @@ FROZEN_BROWSER_PAGE_DEPENDENCIES={
 SCOPED_REPAIR_BUNDLES[FILES['repair']] = ()
 SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ()
 # Owner-authorized one-shot memory/storage cleanup. No new background service.
-FILES['repair'] = 'nox-control/owner_memory_cleanup_entry.py'
-SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('owner_memory_governor.py', 'owner_storage_reclaim.py')
-SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/owner_memory_governor.py',)
+# Isolated one-shot. Keep the normal owner repair mapping on its base branch.
+FILES['repair'] = 'nox-control/owner_chat_original_card_transport.py'
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = (
+    'owner_browser_stream_only_entry.py', 'owner_chat_browser_qa.py', 'owner_chat_original_card_qa.py')
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/owner_chat_original_card_qa.py',)
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
