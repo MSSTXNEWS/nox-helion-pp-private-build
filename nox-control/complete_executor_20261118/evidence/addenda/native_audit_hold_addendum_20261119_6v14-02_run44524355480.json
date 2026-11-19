@@ -1,0 +1,165 @@
+{
+  "schema": "NOX_NATIVE_EVIDENCE_ADDENDUM_V1",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "HOLD-only evidence sidecar for the owner-authenticated 6V14-02 read-only native process/GPU/Supervisor audit. Captured from the exact GitHub Actions job and its inline transfer chunks; it does not alter frozen ledgers.",
+  "scope": {
+    "task_ids": [
+      "6V14-02"
+    ],
+    "criteria": {
+      "task_spec_sha256": "00b403c24775060bb39c6d81f177c6c73073f1168538ca35a94a0213858f3d73",
+      "task_registry": {
+        "path": "nox-control/four_queue_20261118/work_tasks.json",
+        "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "task_title": "Проверить реальный набор фоновых процессов.",
+        "required_evidence": "native"
+      },
+      "all295_manifest": {
+        "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+        "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+        "task_record_key": "6V14-02",
+        "original_acceptance_added": false
+      },
+      "work_receipts": {
+        "path": "nox-control/four_queue_20261118/work_receipts.json",
+        "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+        "prior_receipt_state": "verified"
+      }
+    },
+    "mutation_boundary": "This PR adds only this sidecar. The frozen all295 manifest, work_tasks.json, and work_receipts.json are not changed. The observed audit performed no service, queue, or training writes."
+  },
+  "evidence": {
+    "kind": "OWNER_AUTHENTICATED_READ_ONLY_NATIVE_AUDIT_HOLD",
+    "workflow": {
+      "name": "NOX owner-authenticated native inspect and audit",
+      "file_path": ".github/workflows/nox-owner-native-inspect.yml",
+      "workflow_file_blob_sha": "8e92f739081ced585526b2b831bb7e6ef9404774",
+      "run_id": 44524355480,
+      "job_id": 135560889713,
+      "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44524355480",
+      "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44524355480/job/135560889713",
+      "event": "issue_comment",
+      "head_sha": "aec4700d510f99edd7d4c7812359cb05f9b4bf8c",
+      "actor_id": 340718567,
+      "started_at_utc": "2026-11-19T12:29:30Z",
+      "completed_at_utc": "2026-11-19T12:30:20Z",
+      "conclusion": "failure"
+    },
+    "authorization": {
+      "owner_comment_id": 7009138431,
+      "owner_author_association": "OWNER",
+      "exact_comment_body": "/nox-maintain 60509551 b1e33d60983885a7ebd1979bda4ec640b7ca7047 audit",
+      "authenticated_instance_id": 60509551,
+      "source_auth": "PASS",
+      "host_pin": "VERIFIED",
+      "command_scope": "audit",
+      "provider_instance_lookup_read_only": true,
+      "provider_instance_lookup_mutations": 0
+    },
+    "pinned_source": {
+      "sha": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",
+      "source_pr": "485",
+      "operator_path": "nox-control/owner_native_operator.py",
+      "operator_blob_sha": "32459885f2f6de545fcd53c3242aaaff242702f3",
+      "audit_path": "nox-control/owner_native_audit.py",
+      "audit_blob_sha": "e5c439c6733fcb276bec58dbf8af5193694645ac"
+    },
+    "audit_transfer": {
+      "transport": "inline_job_log_chunks",
+      "marker": "NOX_MAINT_AUDIT_BUNDLE",
+      "terminal_marker": "NOX_MAINT_TRANSFER_END",
+      "protocol_artifact_id": "e98ea09a8390f403d46ae1bb451d21b5594f5830817d4b6ab5bae6d185f62981",
+      "request_id": 7009138431,
+      "source_sha": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",
+      "chunk_count": 2,
+      "total_bytes": 32283,
+      "sha256": "e270c4c37264433033b5c3a792b5ef46d60c83d398e908e126a27aa9791421cc",
+      "integrity_check": {
+        "reconstructed_from_job_logs": true,
+        "assembled_bytes": 32283,
+        "assembled_sha256": "e270c4c37264433033b5c3a792b5ef46d60c83d398e908e126a27aa9791421cc",
+        "assembled_sha_matches_terminal": true,
+        "all_chunk_lengths_and_sha256_recomputed": true,
+        "chunks": [
+          {
+            "index": 0,
+            "bytes": 16384,
+            "sha256": "6bc35e85bc220cadb00539bc474d14cb9540cac1ba6475e82d61722edcb9ae5d"
+          },
+          {
+            "index": 1,
+            "bytes": 15899,
+            "sha256": "69ab9daa6bc624c23ff3bedc8b9251dc13d713e30ea1fd83e85fe2c5c3d71b94"
+          }
+        ]
+      },
+      "github_actions_artifact_api_listed_artifacts": false
+    },
+    "sanitized_gates": {
+      "worker_records_complete": true,
+      "worker_section_count": 7,
+      "worker_sections": [
+        "hardware",
+        "process_rows",
+        "supervisor",
+        "packages",
+        "models",
+        "storage",
+        "mount_inventory"
+      ],
+      "process_census": {
+        "scope": "ALL_NUMERIC_PROC_PIDS_MINIMAL_IDENTITY",
+        "complete": false,
+        "truncated": false,
+        "entries_seen": 60,
+        "row_count": 60,
+        "rows_sha256": "0a2d9ff5657997376a9b9ab16373af2824dcc6ff46bb1ad532c185adf6b0f9be",
+        "read_failure_count": 2,
+        "read_failure_fields": [
+          "namespace_cgroup",
+          "namespace_mnt"
+        ]
+      },
+      "gpu_census": {
+        "complete": false,
+        "link_count": 2,
+        "unmatched_gpu_pid": 1964117,
+        "classification": "NOT_VISIBLE",
+        "evidence_state": "INCOMPLETE",
+        "identity_stability": "NOT_VISIBLE",
+        "visibility": "INCOMPLETE_NSPID_SCAN",
+        "before_alias_scan_complete": false,
+        "after_alias_scan_complete": true
+      },
+      "supervisor": {
+        "inventory_complete": true,
+        "crosscheck_complete": true,
+        "rows_complete": true,
+        "identity_complete": true,
+        "status_consistent": true,
+        "command_rc": 3,
+        "command_success": false,
+        "service_health": "DEGRADED",
+        "service_counts": {
+          "running": 20,
+          "stopped": 34,
+          "fatal": 2
+        }
+      },
+      "result": "HOLD_AUDIT_CENSUS_INCOMPLETE",
+      "remote_exit_code": 0,
+      "temporary_ssh_key_attached": true,
+      "temporary_ssh_key_detached": true,
+      "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED"
+    }
+  },
+  "assessment": {
+    "task_id": "6V14-02",
+    "result": "HOLD_NOT_ACCEPTED",
+    "task_accepted": false,
+    "accepted_increment": 0,
+    "basis": "The all-PID census records 60 rows but is incomplete after two read failures for cgroup and mount namespaces. GPU PID 1964117 is not visible/reconciled for two GPU links, despite the after-scan completing. Supervisor inventory and cross-check are complete, but command rc=3 and service health is DEGRADED. Worker records are complete, but the audit gate therefore returns HOLD_AUDIT_CENSUS_INCOMPLETE.",
+    "scope_limit": "Point-in-time read-only observation from one owner-authenticated run; it is not task acceptance, service-health acceptance, or authorization to mutate host state."
+  }
+}
