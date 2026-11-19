@@ -118,6 +118,26 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual(result['done']['dialog_id'], '1'*32)
         self.assertTrue(response.closed)
 
+    def test_oversize_final_delta_is_rejected_before_done(self):
+        class Response:
+            status = 200
+            def __init__(self, amount): self.amount = amount; self.closed = False
+            def close(self): self.closed = True
+            def __iter__(self):
+                rows = ({'type':'delta','text':'x' * self.amount},
+                        {'type':'done','dialog_id':'1'*32,'saved':True,'s03_integrated':True})
+                return iter(json.dumps(row).encode()+b'\\n' for row in rows)
+        invalid = Response(10001)
+        with patch.object(probe, 'request', return_value=invalid):
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_TEXT_LIMIT'):
+                probe.consume_turn(object(), 'synthetic', '1'*32)
+        self.assertTrue(invalid.closed)
+        boundary = Response(10000)
+        with patch.object(probe, 'request', return_value=boundary):
+            result = probe.consume_turn(object(), 'synthetic', '1'*32)
+        self.assertEqual(len(result['answer']), 10000)
+        self.assertTrue(boundary.closed)
+
     def test_truncated_or_error_stream_cannot_pass(self):
         class Response:
             status = 200
