@@ -146,7 +146,8 @@ def work_progress_snapshot():
     unavailable={'schema':'NOX_OWNER_WORK_PROGRESS_V1','state':'UNAVAILABLE',
                  'frozen_295_count':295,'receipt_done_count':None,
                  'supplemental_accepted_count':None,'supplemental_accepted_task_ids':[],
-                 'supplemental_state':'UNAVAILABLE','original_acceptance_added':0,
+                 'receipt_groups':[],'supplemental_state':'UNAVAILABLE',
+                 'original_acceptance_added':0,
                  'evidence_scope':'RECEIPTS_AND_APPEND_ONLY_SUPPLEMENTAL_EVIDENCE',
                  'observed_at':time.time()}
     try:
@@ -161,6 +162,7 @@ def work_progress_snapshot():
         receipt_done=value.get('existing_receipt_count') if isinstance(value,dict) else None
         ids=value.get('supplemental_accepted_task_ids') if isinstance(value,dict) else None
         count=value.get('supplemental_accepted_count') if isinstance(value,dict) else None
+        group_rows=value.get('groups') if isinstance(value,dict) else None
         if (value.get('schema')!='nox-work-progress-v2'
                 or value.get('frozen_295_count')!=295
                 or not isinstance(total,dict)
@@ -174,10 +176,25 @@ def work_progress_snapshot():
                 or ids!=sorted(set(ids))
                 or type(count) is not int or count!=len(ids)
                 or value.get('original_acceptance_added')!=0
-                or not isinstance(supplemental,dict)):
+                or not isinstance(supplemental,dict)
+                or not isinstance(group_rows,list) or len(group_rows)!=7):
+            return unavailable
+        receipt_groups=[]
+        for row in group_rows:
+            if (not isinstance(row,dict) or not isinstance(row.get('label'),str)
+                    or not row['label'] or len(row['label'])>80
+                    or type(row.get('completed')) is not int
+                    or type(row.get('total')) is not int
+                    or not 0<=row['completed']<=row['total']):
+                return unavailable
+            receipt_groups.append({'label':row['label'],'done':row['completed'],
+                                   'total':row['total']})
+        if (sum(row['done'] for row in receipt_groups)!=receipt_done
+                or sum(row['total'] for row in receipt_groups)!=295):
             return unavailable
         return {'schema':'NOX_OWNER_WORK_PROGRESS_V1','state':'OBSERVED',
                 'frozen_295_count':295,'receipt_done_count':receipt_done,
+                'receipt_groups':receipt_groups,
                 'supplemental_accepted_count':count,
                 'supplemental_accepted_task_ids':ids,
                 'supplemental_state':supplemental.get('state','UNKNOWN'),

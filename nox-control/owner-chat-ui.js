@@ -73,17 +73,26 @@
       try{
         const value=await api('/api/ui/work-progress');
         const age=Date.now()/1000-Number(value.observed_at);
-        const ids=value.supplemental_accepted_task_ids;
+        const ids=value.supplemental_accepted_task_ids,groups=value.receipt_groups;
         if(value.schema!=='NOX_OWNER_WORK_PROGRESS_V1'||value.state!=='OBSERVED'
           ||value.frozen_295_count!==295||!Number.isSafeInteger(value.receipt_done_count)
           ||value.receipt_done_count<0||value.receipt_done_count>295
           ||!Number.isSafeInteger(value.supplemental_accepted_count)
           ||!Array.isArray(ids)||ids.length!==value.supplemental_accepted_count
+          ||!Array.isArray(groups)||groups.length!==7
+          ||groups.some(row=>!row||typeof row.label!=='string'
+            ||!Number.isSafeInteger(row.done)||!Number.isSafeInteger(row.total)
+            ||row.done<0||row.done>row.total)
+          ||groups.reduce((n,row)=>n+row.done,0)!==value.receipt_done_count
+          ||groups.reduce((n,row)=>n+row.total,0)!==295
           ||!Number.isFinite(age)||age < -5||age>45)throw Error('UNAVAILABLE');
         progressTitle.textContent='Прогресс · квитанции '+value.receipt_done_count+'/295';
         progressBody.replaceChildren();
         progressBody.append(E('p','Зафиксированная база: 295 требований.'));
         progressBody.append(E('p','Подтверждено квитанциями: '+value.receipt_done_count+' / 295.'));
+        const groupGrid=E('div');groupGrid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:2px 12px;margin:4px 0 10px';
+        for(const row of groups)groupGrid.append(E('span',row.label+': '+row.done+'/'+row.total));
+        progressBody.append(groupGrid);
         progressBody.append(E('p','Дополнительные подтверждённые критерии, отдельно от квитанций: '
           +value.supplemental_accepted_count+(ids.length?' · '+ids.join(', '):' · нет')));
         progressBody.append(E('p','Эти данные не подтверждают установку на сервере или live-приёмку.'));
