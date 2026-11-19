@@ -186,6 +186,32 @@ def validate_config(path):
     return p
 
 
+def ensure_chunker(config):
+    """Create the standard chunker overlay only after owner OAuth is configured.
+
+    rclone owns config serialization; this function never touches the OAuth token.
+    A preexisting differently configured overlay must never be overwritten.
+    """
+    try:
+        return validate_config(config)
+    except Hold as err:
+        if str(err) != "HOLD_DRIVE_FIRST_CHUNKER_CONFIG_REQUIRED":
+            raise
+    config = private_file(config, max_bytes=131072)
+    cfg = configparser.RawConfigParser(interpolation=None)
+    try:
+        cfg.read_string(config.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, configparser.Error):
+        raise Hold("HOLD_DRIVE_FIRST_CONFIG_PARSE") from None
+    require(not cfg.has_section(CHUNKER), "CHUNKER_CONFLICT")
+    stop_clear()
+    cgroup_admit()
+    run_rclone(["config", "create", CHUNKER, "chunker",
+                "remote", DEST_ROOT, "chunk_size", CHUNK,
+                "hash_type", "md5"], config, timeout=60)
+    return validate_config(config)
+
+
 def safe_local_source(file, roots=LOCAL_ROOTS):
     p = Path(os.path.abspath(file))
     require(p.is_file() and not p.is_symlink()
@@ -319,7 +345,7 @@ def save_receipt(path, value):
 def execute(m, config, state):
     stop_clear()
     cgroup_admit()
-    config = validate_config(config)
+    config = ensure_chunker(config)
     state = private_dir(state)
     lock = os.open(state / ".drive-first.lock",
                    os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)

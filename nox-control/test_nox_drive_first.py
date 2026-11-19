@@ -68,6 +68,36 @@ class DriveFirstTests(unittest.TestCase):
             "\nchunk_size = "+chunk+"\nhash_type = md5\n")
         self.conf.chmod(0o600)
 
+    def test_auto_chunker_created_after_google_auth_only(self):
+        self.conf.write_text('[noxdrive]\ntype = drive\nroot_folder_id = '+
+                             m.ROOT_ID+'\ntoken = {"refresh_token":"TEST_ONLY"}\n')
+        self.conf.chmod(0o600)
+        called=[]
+        def create(args, config, **kw):
+            called.append(args)
+            with self.conf.open('a') as out:
+                out.write('[noxchunks]\ntype = chunker\nremote = '+
+                          m.DEST_ROOT+'\nchunk_size = 1Gi\nhash_type = md5\n')
+        with patch.object(m,"run_rclone",side_effect=create),patch.object(m,"cgroup_admit"),patch.object(m,"stop_clear"):
+            self.assertEqual(m.ensure_chunker(self.conf),self.conf)
+        self.assertEqual(called[0][:4],["config","create","noxchunks","chunker"])
+
+    def test_existing_chunker_conflict_never_overwritten(self):
+        self.configure(remote="local:/tmp")
+        with patch.object(m,"run_rclone") as upload:
+            with self.assertRaisesRegex(m.Hold,"CHUNKER_CONFLICT"):
+                m.ensure_chunker(self.conf)
+            upload.assert_not_called()
+
+    def test_auto_chunker_cannot_bypass_google_auth(self):
+        self.conf.write_text('[noxdrive]\ntype = drive\nroot_folder_id = '+
+                             m.ROOT_ID+'\n')
+        self.conf.chmod(0o600)
+        with patch.object(m,"run_rclone") as upload:
+            with self.assertRaisesRegex(m.Hold,"GOOGLE_AUTH_REQUIRED"):
+                m.ensure_chunker(self.conf)
+            upload.assert_not_called()
+
     def test_manifest_requires_owner_exact_pin(self):
         file,sha=self.manifest()
         self.assertEqual(m.load_manifest(file,sha)["name"],"test.gguf")

@@ -9,7 +9,7 @@ The existing nox-drive-reconnect Supervisor monitor automatically refreshes a VA
 - root_folder_id = 1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v
 - private OAuth token only in the actual NOX server config (never in GitHub, chat or logs).
 
-After authorization, create the official chunker overlay using the same private server config:
+After owner OAuth authorization, NOX creates the standard chunker overlay automatically on its first approved transfer. For manual provisioning only, the equivalent official rclone command is:
 
     rclone --config /root/.config/rclone/rclone.conf config create noxchunks chunker remote noxdrive:NOX_WEIGHT_CHUNKS chunk_size 1Gi hash_type md5
 
