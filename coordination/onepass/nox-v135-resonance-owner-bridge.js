@@ -433,12 +433,19 @@ function sseChat(data,signal) {
           if(!ID.test(did))return errorResponse('HOLD_INVALID_DIALOG_SCOPE',422);
           const n=Number(url.searchParams.get('limit')||100);
           const limit=Number.isFinite(n)?Math.min(Math.max(Math.floor(n),1),100):100;
-          const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+did+'&limit='+limit,init);
-          if(data.status!=='READY'||data.dialog_id!==did||!Array.isArray(data.messages))
+          const cursor=url.searchParams.get('cursor');
+          if(cursor!==null&&!/^[1-9][0-9]{0,18}$/.test(cursor))
+            return errorResponse('HOLD_INVALID_HISTORY_CURSOR',422);
+          const params=new URLSearchParams({dialog_id:did,limit:String(limit)});
+          if(cursor!==null)params.set('cursor',cursor);
+          const data=await nativeJSON('/api/ui/memory/dialogs/history?'+params.toString(),init);
+          if(data.status!=='READY'||data.dialog_id!==did||!Array.isArray(data.messages)||
+             (data.next_cursor!==null&&data.next_cursor!==undefined&&
+              !/^[1-9][0-9]{0,18}$/.test(String(data.next_cursor))))
             throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
           return responseJSON({dialog_id:did,messages:data.messages.map(m=>({
             role:m.role,content:m.content,created_at:m.ts||'',status:'saved'
-          }))});
+          })),next_cursor:data.next_cursor??null});
         }
         const data=await nativeJSON('/api/ui/memory/dialogs?limit=80',init);
         if(data.status!=='READY'||!Array.isArray(data.dialogs))throw Error('HOLD_DIALOG_LIST_CONTRACT');

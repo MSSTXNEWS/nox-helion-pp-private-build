@@ -550,25 +550,47 @@ class V112Tests(unittest.TestCase):
             {'role':'user','content':'Как он называется?'}])
         self.assertEqual(json.loads(response.text.splitlines()[-1])['type'],'done')
 
-    def test_dialog_context_is_recent_bounded_complete_pairs(self):
-        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
-            _db,_dialog_context,_save_exchange,
-        )
+    def test_owner_dialog_history_cursor_pages_all_messages_once_in_order(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
         dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
-            json={'title':'Ограниченный контекст','confirmed':True}).json()['dialog_id']
-        for index in range(14):
+            json={'title':'История страницами','confirmed':True}).json()['dialog_id']
+        for index in range(130):
             self.assertTrue(_save_exchange(dialog,f'Вопрос {index}',f'Ответ {index}',
-                                          f'bounded-{index}'))
-        with _db(True) as db:
-            db.execute('INSERT INTO nox_v29_dialog_messages '
-                       '(dialog_id,exchange_id,role,content,ts) VALUES(?,?,?,?,?)',
-                       (dialog,'orphan','assistant','Незавершённая пара','2026-11-15'))
-        issue,history=_dialog_context(dialog)
-        self.assertIsNone(issue)
-        self.assertEqual(len(history),24)
-        self.assertEqual(history[0],{'role':'user','content':'Вопрос 2'})
-        self.assertEqual(history[-1],{'role':'assistant','content':'Ответ 13'})
-        self.assertTrue(all(row['content']!='Незавершённая пара' for row in history))
+                                          f'page-{index}'))
+        collected=[]
+        cursor=None
+        page_count=0
+        while True:
+            query={'dialog_id':dialog,'limit':100}
+            if cursor is not None:
+                query['cursor']=cursor
+            response=self.client.get('/api/ui/memory/dialogs/history',
+                                     params=query,cookies=self.cookie)
+            self.assertEqual(response.status_code,200)
+            page=response.json()
+            self.assertEqual(page['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+            self.assertFalse(page['canonical_s03_readback_verified'])
+            self.assertEqual(page['dialog_id'],dialog)
+            collected=page['messages']+collected
+            page_count+=1
+            next_cursor=page['next_cursor']
+            if next_cursor is None:
+                break
+            self.assertRegex(next_cursor,r'^[1-9][0-9]{0,18}$')
+            self.assertTrue(cursor is None or int(next_cursor)<int(cursor))
+            cursor=next_cursor
+            self.assertLessEqual(page_count,4)
+        self.assertEqual(page_count,3)
+        self.assertEqual(len(collected),260)
+        expected=[(role,content) for index in range(130)
+                  for role,content in (('user',f'Вопрос {index}'),
+                                       ('assistant',f'Ответ {index}'))]
+        self.assertEqual([(m['role'],m['content']) for m in collected],expected)
+        bad=self.client.get('/api/ui/memory/dialogs/history',
+            params={'dialog_id':dialog,'cursor':'0'},cookies=self.cookie)
+        self.assertEqual(bad.status_code,422)
+        self.assertEqual(bad.json()['error'],'INVALID_CURSOR')
+
     def test_dialog_context_preserves_full_multibyte_ru_and_es_text(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
         dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,

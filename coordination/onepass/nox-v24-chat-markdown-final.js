@@ -292,8 +292,24 @@
     state.dialog = id; try { localStorage.setItem(LS, id || ''); } catch { }
     $('messages').replaceChildren();
     if (id) {
-      const h = await getJSON('/api/nox/history?dialog_id=' + encodeURIComponent(id) + '&limit=200');
-      for (const m of h.messages || []) {
+      const all = [];
+      let cursor = null, priorCursor = null;
+      for (;;) {
+        const params = new URLSearchParams({ dialog_id: id, limit: '100' });
+        if (cursor !== null) params.set('cursor', cursor);
+        const h = await getJSON('/api/nox/history?' + params.toString());
+        if (!Array.isArray(h.messages)) throw Error('INVALID_HISTORY_PAGE');
+        all.unshift(...h.messages);
+        const next = h.next_cursor;
+        if (next === null || next === undefined || next === '') break;
+        const value = String(next);
+        const olderThan = priorCursor === null ||
+          value.length < priorCursor.length ||
+          (value.length === priorCursor.length && value < priorCursor);
+        if (!/^[1-9][0-9]{0,18}$/.test(value) || !olderThan) throw Error('INVALID_HISTORY_CURSOR');
+        priorCursor = value; cursor = value;
+      }
+      for (const m of all) {
         message(m.role === 'user' ? 'user' : 'assistant', m.content,
           m.role === 'user' ? String(m.created_at || '').slice(11, 16) : (m.status === 'stopped' ? 'остановлено STOP' : (m.status || '')) + ' · ' + String(m.created_at || '').slice(11, 16),
           { status: m.status, source: /\[(MOCK|HARNESS)\]/.exec(m.model || '')?.[1] || (/^nox(-prime)?/.test(m.model || '') ? 'LIVE_NOX' : '') });
