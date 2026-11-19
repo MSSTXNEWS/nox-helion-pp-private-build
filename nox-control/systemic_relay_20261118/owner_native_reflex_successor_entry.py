@@ -44,6 +44,29 @@ def sha(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
+def _start_after_lease_release(fd, helper):
+    """The director needs the owner SH lease during boot; never boot under EX."""
+    fcntl.flock(fd, fcntl.LOCK_UN)
+    return helper.start_checked(ROOT, require_native_status=True)
+
+
+def _supervisor_is_quiescent(snapshot):
+    """BACKOFF without PID is quiescent; live/unknown supervisor states are not."""
+    return (isinstance(snapshot, dict) and snapshot.get('pid') is None
+            and snapshot.get('state') in ('STOPPED', 'BACKOFF', 'FATAL', 'EXITED'))
+
+
+def _settle_supervisor_before_restore(helper):
+    """After a failed boot, a no-PID BACKOFF must be reset before restore."""
+    previous = helper.supervisor('status')
+    require(_supervisor_is_quiescent(previous), 'RESTORE_DIRECTOR_NOT_QUIESCENT')
+    if previous['state'] != 'STOPPED':
+        helper.stop_checked()
+    ready = helper.supervisor('status')
+    require(ready.get('state') == 'STOPPED' and ready.get('pid') is None,
+            'RESTORE_SUPERVISOR_NOT_STOPPED')
+
+
 def encoding(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
 
@@ -186,12 +209,12 @@ def run():
             applied.append(rel)
             h.atomic(ROOT/rel, raw, 0o600 if rel == CONFIG else 0o644)
             require(h.read_regular(ROOT/rel) == raw, 'WRITE_POSTIMAGE')
-        started = h.start_checked(ROOT, require_native_status=True)
-        require(h.stop_clear(ROOT) and service_guard() == protected, 'PROTECTED_SERVICE_CHANGED')
-        # The director must acquire the maintenance lock in SH mode to refill.
-        # Release our upgrade lock only after exact new source and director are live.
-        fcntl.flock(fd, fcntl.LOCK_UN)
+        # Release EX *before* starting. The director acquires SH on the same
+        # inode during its startup/recovery fence; the prior order deadlocked.
+        # Set the marker before the call because startup itself may fail.
         maintenance_released = True
+        started = _start_after_lease_release(fd, h)
+        require(h.stop_clear(ROOT) and service_guard() == protected, 'PROTECTED_SERVICE_CHANGED')
         native_status = {}
         deadline = time.monotonic()+25
         while time.monotonic() < deadline:
@@ -240,16 +263,19 @@ def run():
                     require(started is not None and live == started, 'FOREIGN_DIRECTOR_NO_ROLLBACK')
                     h.stop_checked()
                 else:
-                    require(present['state'] in ('STOPPED','FATAL','EXITED'), 'UNKNOWN_DIRECTOR_NO_ROLLBACK')
+                    require(_supervisor_is_quiescent(present), 'UNKNOWN_DIRECTOR_NO_ROLLBACK')
                 for rel in reversed(applied):
                     post = h.read_regular(ROOT/rel)
                     require(post == changes[rel], 'ROLLBACK_FOREIGN_FILE_CHANGE')
                     h.atomic(ROOT/rel, current[rel], 0o600 if rel == CONFIG else 0o644)
                 receipt['rollback_verified'] = all(h.read_regular(ROOT/rel) == raw for rel,raw in current.items())
-            if stopped and h.supervisor('status')['state'] in ('STOPPED','FATAL','EXITED') and receipt.get('rollback_verified',True):
+            if stopped and _supervisor_is_quiescent(h.supervisor('status')) and receipt.get('rollback_verified', True):
                 h.wait_previous_descendants_stopped(children, timeout=10)
                 require(h.stop_clear(ROOT), 'RESTORE_OWNER_STOP')
-                receipt['restored_director'] = h.start_checked(ROOT, require_native_status=True)
+                _settle_supervisor_before_restore(h)
+                # Restoration also boots under a shared owner lease, never EX.
+                maintenance_released = True
+                receipt['restored_director'] = _start_after_lease_release(fd, h)
         except BaseException as failure:
             receipt['recovery'] = str(failure) if str(failure).startswith('HOLD_') else 'HOLD_NATIVE_REFLEX_RECOVERY_'+type(failure).__name__
         emit()
