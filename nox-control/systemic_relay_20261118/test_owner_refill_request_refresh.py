@@ -82,7 +82,7 @@ class ExactRefillRefreshTests(unittest.TestCase):
         forged['original_task_states'] = []
         with patch.object(refresh, 'select_next',
                           return_value={'state': 'REFILL_REQUIRED', 'refill_request': forged}):
-            with self.assertRaisesRegex(ValueError, 'REFILL_REQUEST_'):
+            with self.assertRaisesRegex(ValueError, 'ORIGINAL_TASK_STATE_SNAPSHOT_SHA'):
                 refresh.generate(previous, sha, state, pins, capacity)
 
     def test_cli_pins_every_input_and_prints_only_request(self):
