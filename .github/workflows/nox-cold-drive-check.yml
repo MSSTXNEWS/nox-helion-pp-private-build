@@ -1,10 +1,11 @@
 name: NOX cold storage module check
 on:
   push:
-    branches: [main]
+    branches: [main, feature/nox-cold-stream-readback-20261119]
     paths:
       - 'nox-control/nox_cold_drive.py'
       - '.github/workflows/nox-cold-drive-check.yml'
+      - 'nox-control/test_nox_cold_stream.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,6 +22,7 @@ jobs:
           python3 nox-control/nox_cold_drive.py --help
           python3 nox-control/nox_cold_drive.py upload --help
           python3 nox-control/nox_cold_drive.py load --help
+          python3 -m unittest discover -s nox-control -p test_nox_cold_stream.py -v
       - name: Verify protected source rejection
         run: |
           set -euo pipefail
