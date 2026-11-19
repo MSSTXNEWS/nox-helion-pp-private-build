@@ -55,14 +55,19 @@ def _inventory(rows: list[dict], *, complete: bool = True) -> dict:
 
 def _fixture(process_count: int = 8, *, process_complete: bool = True,
              supervisor_complete: bool = True, gpu_complete: bool = True,
-             gpu_classification: str = "MATCHED") -> str:
+             gpu_classification: str = "MATCHED", parent_chain: bool = False) -> str:
     # The exact source producer returns a keyword/GPU-filtered LIST plus the
     # separate all-PID identity inventory. Its arguments/scripts are sensitive
     # and must never be included in the forwarded bundle.
-    pids = sorted([GPU_PID] + list(range(2, process_count + 1)))[:process_count]
+    service_pid = 1900 if parent_chain else GPU_PID
+    required_pids = [GPU_PID] + ([service_pid] if parent_chain else [])
+    fillers = [pid for pid in range(2, process_count + len(required_pids) + 2) if pid not in required_pids]
+    pids = sorted(required_pids + fillers[:max(0, process_count - len(required_pids))])
     rows = [_proc_row(pid) for pid in pids]
     gpu_row = next(row for row in rows if row["pid"] == GPU_PID)
+    gpu_row["ppid"] = service_pid
     gpu_identity = _proc_identity(GPU_PID)
+    service_identity = _proc_identity(service_pid)
     gpu_consumer = {
         "pid": GPU_PID, "comm": "fixture-worker", "executable": "python3",
         "arguments": [["-c", "SECRET_INLINE_CODE_SHOULD_NOT_FORWARD"]],
@@ -79,8 +84,8 @@ def _fixture(process_count: int = 8, *, process_complete: bool = True,
         "gpu_consumer": False, "start_ticks": 1301, "scripts": ["/secret/script.py"],
     }]
     gpu_apps = [{"gpu_pid": GPU_PID, "gpu_uuid": GPU_UUID, "used_gpu_memory": "1024"}]
-    running = {"service": "nox-model", "state": "RUNNING", "pid": GPU_PID,
-               "identity_state": "VERIFIED", "identity": gpu_identity}
+    running = {"service": "nox-model", "state": "RUNNING", "pid": service_pid,
+               "identity_state": "VERIFIED", "identity": service_identity}
     stopped = {"service": "nox-worker-stopped", "state": "STOPPED", "pid": None,
                "identity": None}
     services = {
@@ -98,11 +103,19 @@ def _fixture(process_count: int = 8, *, process_complete: bool = True,
         "identity_stability": "STABLE_BOTH", "classification": gpu_classification,
         "evidence_state": "COMPLETE", "visibility": "DIRECT_PROC",
         "proc_identity": gpu_identity,
-        "service_match": {"service": "nox-model", "pid": GPU_PID, "state": "RUNNING",
-                           "relation": "DIRECT_PID", "start_ticks": gpu_identity["start_ticks"]},
-        "parent_chain": [{"pid": GPU_PID, "ppid": 1, "start_ticks": gpu_identity["start_ticks"],
-                          "comm": "SECRET_PARENT_COMM_SHOULD_NOT_FORWARD", "pid_namespace": NS["pid"],
-                          "cgroups": ["/secret/cgroup/path"]}],
+        "service_match": {"service": "nox-model", "pid": service_pid, "state": "RUNNING",
+                           "relation": "PARENT_CHAIN" if parent_chain else "DIRECT_PID",
+                           "start_ticks": service_identity["start_ticks"]},
+        "parent_chain": ([
+            {"pid": GPU_PID, "ppid": service_pid, "start_ticks": gpu_identity["start_ticks"],
+             "comm": "SECRET_PARENT_COMM_SHOULD_NOT_FORWARD", "pid_namespace": NS["pid"],
+             "cgroups": ["/secret/cgroup/path"]},
+            {"pid": service_pid, "ppid": 1, "start_ticks": service_identity["start_ticks"],
+             "comm": "fixture-worker", "pid_namespace": NS["pid"],
+             "cgroups": ["/secret/cgroup/path"]},
+        ] if parent_chain else [{"pid": GPU_PID, "ppid": 1, "start_ticks": gpu_identity["start_ticks"],
+             "comm": "SECRET_PARENT_COMM_SHOULD_NOT_FORWARD", "pid_namespace": NS["pid"],
+             "cgroups": ["/secret/cgroup/path"]}]),
         "before_alias_scan_complete": True, "after_alias_scan_complete": True,
         "scope": "READ_ONLY_GPU_PID_TO_PROC_SERVICE",
     }
@@ -125,7 +138,7 @@ def _fixture(process_count: int = 8, *, process_complete: bool = True,
         elif section == "supervisor":
             result = {"available": True, "owner_fence_readonly": {"markers": {"STOP": "NOT_PRESENT"}},
                       "results": [{"config": "/secret/config/supervisord.conf", "rc": 3,
-                                   "services": [{"name": "nox-model", "state": "RUNNING", "pid": GPU_PID},
+                                   "services": [{"name": "nox-model", "state": "RUNNING", "pid": service_pid},
                                                 {"name": "nox-worker-stopped", "state": "STOPPED", "pid": None}]}]}
         elif section == "storage":
             result = {"storage_paths": ["/secret/storage/unrelated/path"]}
@@ -223,6 +236,17 @@ class OwnerNativeOutputTransferTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "HOLD_AUDIT_WORKER_INCOMPLETE"):
             OP.forward_remote_stdout(stdout, "audit", REQUEST_ID, SOURCE_SHA)
 
+    def test_every_worker_result_has_the_exact_container_type(self):
+        for section in OP.AUDIT_SECTIONS:
+            bad_value = {} if section == "process_rows" else None
+            with self.subTest(section=section), self.assertRaisesRegex(RuntimeError, "HOLD_AUDIT_WORKER_RESULT_SHAPE"):
+                stdout = _replace_section(_fixture(2), section, lambda row, value=bad_value: row.update(result=value))
+                OP.audit_bundle_line(stdout)
+            if section != "process_rows":
+                with self.subTest(section=section, wrong_type=True), self.assertRaisesRegex(RuntimeError, "HOLD_AUDIT_WORKER_RESULT_SHAPE"):
+                    stdout = _replace_section(_fixture(2), section, lambda row: row.update(result=[]))
+                    OP.audit_bundle_line(stdout)
+
     def test_incomplete_censuses_are_transferred_for_diagnostics_but_audit_holds(self):
         cases = (
             (_fixture(2, process_complete=False), "process_census_complete"),
@@ -274,6 +298,19 @@ class OwnerNativeOutputTransferTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "HOLD_AUDIT_PROCESS_INVENTORY_ROW_VALUE"):
             OP.audit_bundle_line(_replace_section(_fixture(2), "process_rows", add_path_comm))
 
+        def invalid_missing_fields(state, values):
+            def edit(row):
+                inv=row["bounded_process_identity_inventory"]
+                inv["rows"][0]["identity_state"]=state
+                if values is None:inv["rows"][0].pop("missing_fields",None)
+                else:inv["rows"][0]["missing_fields"]=values
+                _rehash(inv)
+            return edit
+        for state,values in (("VERIFIED",["comm"]),("UNAVAILABLE_OR_CHANGED",["pid"]),
+                             ("IDENTITY_INCOMPLETE",[]),("IDENTITY_INCOMPLETE",None)):
+            with self.subTest(missing_fields=(state,values)), self.assertRaisesRegex(RuntimeError,"HOLD_AUDIT_PROCESS_INVENTORY_MISSING_FIELDS"):
+                OP.audit_bundle_line(_replace_section(_fixture(2),"process_rows",invalid_missing_fields(state,values)))
+
     def test_gpu_identity_must_join_inventory_and_supervisor_rows(self):
         def drift_join(row):
             link = row["result"]["gpu_process_links"][0]
@@ -298,12 +335,46 @@ class OwnerNativeOutputTransferTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "HOLD_AUDIT_CENSUS_INCOMPLETE"):
             OP.require_audit_census_complete(mismatched_supervisor)
 
+    def test_parent_chain_service_join_binds_pid_start_ticks_and_pid_namespace(self):
+        stdout=_fixture(2,parent_chain=True)
+        self.assertTrue(OP.require_audit_census_complete(stdout)["gpu_census_complete"])
+        wrong_namespace=_replace_section(stdout,"hardware",lambda row:
+            row["result"]["gpu_process_links"][0]["parent_chain"][1].update(pid_namespace="pid:[4026539999]"))
+        self.assertFalse(OP.audit_census_status(wrong_namespace)["gpu_census_complete"])
+        with self.assertRaisesRegex(RuntimeError,"HOLD_AUDIT_CENSUS_INCOMPLETE"):
+            OP.require_audit_census_complete(wrong_namespace)
+
+    def test_mixed_valid_and_non_dict_gpu_supervisor_rows_hold(self):
+        cases=(
+            ("hardware",lambda row:row["result"]["gpu_apps_before"]["apps"].append(None),"HOLD_AUDIT_GPU_APP_ROW"),
+            ("hardware",lambda row:row["result"]["supervisor_services"]["services"].append(None),"HOLD_AUDIT_SUPERVISOR_SERVICE_ROW"),
+            ("supervisor",lambda row:row["result"]["results"].append(None),"HOLD_AUDIT_SUPERVISOR_ATTEMPT_ROW"),
+            ("supervisor",lambda row:row["result"]["results"][0]["services"].append(None),"HOLD_AUDIT_SUPERVISOR_ATTEMPT_SERVICE_ROW"),
+        )
+        for section,edit,error in cases:
+            with self.subTest(section=section,error=error),self.assertRaisesRegex(RuntimeError,error):
+                OP.audit_bundle_line(_replace_section(_fixture(2),section,edit))
+        projected=OP._project_supervisor_worker({"available":True,"results":[]})
+        self.assertTrue(OP._supervisor_attempt_count_matches(projected))
+        projected["attempt_count"]+=1
+        self.assertFalse(OP._supervisor_attempt_count_matches(projected))
+
     def test_oversized_non_audit_evidence_is_transferred_instead_of_dropped(self):
-        marker = "NOX_MAINT_STORAGE_CENSUS=" + ("x" * 190_000)
+        marker = "NOX_MAINT_SCOPE_LOCKS=" + json.dumps([
+            {"pid":1964117,"start_ticks":1965117,"pid_namespace":"pid:[4026531836]"}
+            for _ in range(7000)],separators=(",",":"))
         forwarded = OP.forward_remote_stdout(marker + "\n", "inspect", REQUEST_ID, SOURCE_SHA)
         restored = OP.reassemble_transfer_records(forwarded, REQUEST_ID, SOURCE_SHA)
         self.assertEqual(restored.decode("utf-8"), marker)
         self.assertTrue(all(len(line.encode("utf-8")) < OP.MAX_FORWARD_LINE_BYTES for line in forwarded))
+
+    def test_unknown_non_audit_markers_do_not_pass_raw_or_chunked(self):
+        for action,marker in (("inspect","NOX_MAINT_PRIVATE_SECRET=SECRET_SHOULD_NOT_FORWARD"),
+                              ("inspect","NOX_MAINT_SCOPE_PRIVATE_SECRET={\"secret\":true}"),
+                              ("audit","NOX_MAINT_PRIVATE_SECRET=SECRET_SHOULD_NOT_FORWARD")):
+            with self.subTest(action=action,marker=marker),self.assertRaisesRegex(RuntimeError,"HOLD_REMOTE_MARKER_NOT_ALLOWLISTED"):
+                stdout=(_fixture(2)+marker+"\n") if action=="audit" else marker+"\n"
+                OP.forward_remote_stdout(stdout,action,REQUEST_ID,SOURCE_SHA)
 
     def test_missing_duplicate_swapped_truncated_or_corrupt_chunks_hold(self):
         records = transfer_records("NOX_MAINT_AUDIT_BUNDLE=" + ("z" * 180_000))

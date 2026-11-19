@@ -22,10 +22,72 @@ TRANSFER_PREFIX='NOX_MAINT_TRANSFER_'
 AUDIT_PREFIX='NOX_MAINT_AUDIT='
 AUDIT_COMPLETE='NOX_MAINT_AUDIT_COMPLETE=true'
 AUDIT_SECTIONS=('hardware','process_rows','supervisor','packages','models','storage','mount_inventory')
+INSPECT_SCOPE_MARKERS=frozenset(('CONFIG','INSTALLED_SOURCE','POST_QUEUE','POST_TASK','POST_WORKERS',
+    'PROJECT_FILE','PROJECT_COVERAGE','ORIGINAL_QUEUE_PRESERVATION','OLD_REVIEW_PRESERVATION',
+    'INSTALL_RECEIPT','SNAPSHOT_A','HOST_CLOCK_CHAIN','LOCKS','SNAPSHOT_B'))
+STAGE_KINDS=frozenset(('source_installed','trainer_busy_no_change','installed_native_helpers',
+    'nvml_dependency_install','native_gpu_library_smoke','teacher_controller_reload','llama_roles_before',
+    'owned_gpu1_inference_yielded','gpu1_after_yield','manual_hold_released_by_explicit_owner_request',
+    'existing_trainer_start','native_receipt','failure'))
 TRANSFER_MARKER_RE=re.compile(r'^(NOX_MAINT_[A-Z0-9_]+)=')
 
 def _transfer_record(kind,value):
     return TRANSFER_PREFIX+kind+'='+json.dumps(value,separators=(',',':'),sort_keys=True)
+
+def _validate_forward_marker(action,line):
+    """Allow only source markers with a fixed, known action-specific schema."""
+    match=TRANSFER_MARKER_RE.match(line)
+    if not match:raise RuntimeError('HOLD_REMOTE_MARKER_FORMAT')
+    marker=match.group(1);payload=line[match.end():]
+    if action=='inspect':
+        if marker=='NOX_MAINT_INSPECT_COMPLETE':
+            if payload!='true':raise RuntimeError('HOLD_REMOTE_MARKER_VALUE')
+            return
+        if marker=='NOX_MAINT_COMPONENTS':
+            try:value=json.loads(payload)
+            except (ValueError,TypeError) as exc:raise RuntimeError('HOLD_REMOTE_MARKER_JSON') from exc
+            if (not isinstance(value,dict) or set(value)!={'receipts','tasks','queue_scope'}
+                    or not isinstance(value['receipts'],list) or not isinstance(value['tasks'],list)
+                    or not isinstance(value['queue_scope'],str)):
+                raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
+            return
+        prefix='NOX_MAINT_SCOPE_'
+        scope=marker[len(prefix):] if marker.startswith(prefix) else None
+        if scope not in INSPECT_SCOPE_MARKERS:raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
+        try:value=json.loads(payload)
+        except (ValueError,TypeError) as exc:raise RuntimeError('HOLD_REMOTE_MARKER_JSON') from exc
+        if not isinstance(value,(dict,list)):raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
+        return
+    if action=='stage':
+        if marker=='NOX_MAINT_STAGE_COMPLETE':
+            if payload!='true':raise RuntimeError('HOLD_REMOTE_MARKER_VALUE')
+            return
+        if marker!='NOX_MAINT_STAGE':raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
+        try:value=json.loads(payload)
+        except (ValueError,TypeError) as exc:raise RuntimeError('HOLD_REMOTE_MARKER_JSON') from exc
+        if (not isinstance(value,dict) or set(value)!={'kind','data'}
+                or value.get('kind') not in STAGE_KINDS):
+            raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
+        return
+    if action=='repair':
+        if marker=='NOX_MAINT_REPAIR_COMPLETE':
+            if payload!='true':raise RuntimeError('HOLD_REMOTE_MARKER_VALUE')
+            return
+        if marker!='NOX_MAINT_REFLEX_RESTORE':raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
+        try:value=json.loads(payload)
+        except (ValueError,TypeError) as exc:raise RuntimeError('HOLD_REMOTE_MARKER_JSON') from exc
+        if not isinstance(value,dict):raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
+        return
+    if action=='lifeline':
+        if marker=='NOX_MAINT_LIFELINE_COMPLETE':
+            if payload!='true':raise RuntimeError('HOLD_REMOTE_MARKER_VALUE')
+            return
+        if marker!='NOX_MAINT_LIFELINE':raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
+        try:value=json.loads(payload)
+        except (ValueError,TypeError) as exc:raise RuntimeError('HOLD_REMOTE_MARKER_JSON') from exc
+        if not isinstance(value,dict):raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
+        return
+    raise RuntimeError('HOLD_REMOTE_ACTION_NOT_ALLOWLISTED')
 
 def build_transfer_records(marker_line,request_id,source_sha,force=False):
     """Encode one NOX marker into a bounded BEGIN/CHUNK*/END transfer."""
@@ -133,33 +195,51 @@ def _project_identity(identity):
     return result
 
 def _project_gpu_snapshot(snapshot):
-    if not isinstance(snapshot,dict):return None
+    if not isinstance(snapshot,dict):raise RuntimeError('HOLD_AUDIT_GPU_SNAPSHOT_SHAPE')
     fields=('return_code','started_unix_ns','finished_unix_ns','rejected_rows',
             'unbounded','truncated','complete','scope')
     result={key:snapshot[key] for key in fields if key in snapshot}
     apps=snapshot.get('apps')
-    result['apps']=([{key:row[key] for key in ('gpu_pid','gpu_uuid','used_gpu_memory') if key in row}
-                     for row in apps if isinstance(row,dict)] if isinstance(apps,list) else None)
+    if not isinstance(apps,list):raise RuntimeError('HOLD_AUDIT_GPU_APPS_SHAPE')
+    result['apps']=[]
+    for row in apps:
+        if not isinstance(row,dict) or set(row)!={'gpu_pid','gpu_uuid','used_gpu_memory'}:
+            raise RuntimeError('HOLD_AUDIT_GPU_APP_ROW')
+        if (type(row.get('gpu_pid')) is not int or row['gpu_pid']<=1
+                or not re.fullmatch(r'GPU-[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}',str(row.get('gpu_uuid')))
+                or not isinstance(row.get('used_gpu_memory'),str)
+                or not (row['used_gpu_memory'].isdecimal()
+                        or row['used_gpu_memory'].lower() in ('n/a','not supported'))):
+            raise RuntimeError('HOLD_AUDIT_GPU_APP_ROW')
+        result['apps'].append({key:row[key] for key in ('gpu_pid','gpu_uuid','used_gpu_memory')})
     return result
 
 def _project_service_inventory(services):
-    if not isinstance(services,dict):return None
+    if not isinstance(services,dict):raise RuntimeError('HOLD_AUDIT_SUPERVISOR_INVENTORY_SHAPE')
     fields=('command_rc','command_success','inventory_complete','rows_complete',
             'status_consistent','truncated','rejected_lines','duplicate_service_names',
             'identity_complete','scope')
     result={key:services[key] for key in fields if key in services}
     health=services.get('service_health')
-    if isinstance(health,dict):
-        result['service_health']={key:health[key] for key in ('state','counts','running','not_running') if key in health}
+    if not isinstance(health,dict):raise RuntimeError('HOLD_AUDIT_SUPERVISOR_HEALTH_SHAPE')
+    result['service_health']={key:health[key] for key in ('state','counts','running','not_running') if key in health}
     raw_rows=services.get('services')
-    if isinstance(raw_rows,list):
-        result['services']=[]
-        for row in raw_rows:
-            if not isinstance(row,dict):continue
-            item={key:row[key] for key in ('service','state','pid','identity_state') if key in row}
-            if isinstance(row.get('identity'),dict):item['identity']=_project_identity(row['identity'])
-            result['services'].append(item)
-    else:result['services']=None
+    if not isinstance(raw_rows,list):raise RuntimeError('HOLD_AUDIT_SUPERVISOR_SERVICE_ROWS')
+    result['services']=[]
+    for row in raw_rows:
+        allowed={'service','state','pid','identity','identity_state'}
+        if (not isinstance(row,dict) or not {'service','state','pid','identity'}.issubset(row)
+                or set(row)-allowed or not isinstance(row.get('service'),str)
+                or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}',row['service'])
+                or row.get('state') not in ('RUNNING','STARTING','STOPPED','FATAL','BACKOFF','EXITED','STOPPING','UNKNOWN')
+                or (row.get('pid') is not None and (type(row['pid']) is not int or row['pid']<=1))
+                or (row.get('identity') is not None and not isinstance(row['identity'],dict))
+                or (row.get('identity_state') is not None and not isinstance(row['identity_state'],str))):
+            raise RuntimeError('HOLD_AUDIT_SUPERVISOR_SERVICE_ROW')
+        item={key:row[key] for key in ('service','state','pid','identity_state') if key in row}
+        if isinstance(row.get('identity'),dict):item['identity']=_project_identity(row['identity'])
+        else:item['identity']=None
+        result['services'].append(item)
     return result
 
 def _project_gpu_link(link):
@@ -189,21 +269,38 @@ def _project_hardware(result):
             'supervisor_services':_project_service_inventory(result.get('supervisor_services'))}
 
 def _project_supervisor_worker(result):
-    if not isinstance(result,dict):return None
+    if not isinstance(result,dict):raise RuntimeError('HOLD_AUDIT_SUPERVISOR_WORKER_SHAPE')
     output={'available':result.get('available') is True,'attempt_count':None,'results':[]}
     attempts=result.get('results')
-    if isinstance(attempts,list):
-        output['attempt_count']=len(attempts)
-        for attempt in attempts:
-            if not isinstance(attempt,dict):continue
-            rows=attempt.get('services')
-            safe_rows=[]
-            if isinstance(rows,list):
-                for row in rows:
-                    if isinstance(row,dict):
-                        safe_rows.append({key:row[key] for key in ('name','state','pid') if key in row})
-            output['results'].append({'rc':attempt.get('rc'),'services':safe_rows if isinstance(rows,list) else None})
+    if attempts is None and output['available'] is False:
+        attempts=[]
+    if not isinstance(attempts,list):raise RuntimeError('HOLD_AUDIT_SUPERVISOR_ATTEMPTS_SHAPE')
+    for attempt in attempts:
+        if not isinstance(attempt,dict):raise RuntimeError('HOLD_AUDIT_SUPERVISOR_ATTEMPT_ROW')
+        rows=attempt.get('services')
+        if not isinstance(rows,list):raise RuntimeError('HOLD_AUDIT_SUPERVISOR_ATTEMPT_SERVICES')
+        safe_rows=[]
+        for row in rows:
+            if (not isinstance(row,dict) or set(row)!={'name','state','pid'}
+                    or not isinstance(row.get('name'),str)
+                    or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}',row['name'])
+                    or row.get('state') not in ('RUNNING','STARTING','STOPPED','FATAL','BACKOFF','EXITED','STOPPING','UNKNOWN')
+                    or (row.get('pid') is not None and (type(row['pid']) is not int or row['pid']<=1))):
+                raise RuntimeError('HOLD_AUDIT_SUPERVISOR_ATTEMPT_SERVICE_ROW')
+            safe_rows.append({key:row[key] for key in ('name','state','pid')})
+        rc=attempt.get('rc')
+        if type(rc) is not int:raise RuntimeError('HOLD_AUDIT_SUPERVISOR_ATTEMPT_RC')
+        output['results'].append({'rc':rc,'services':safe_rows})
+    output['attempt_count']=len(attempts)
+    if output['attempt_count']!=len(output['results']):
+        raise RuntimeError('HOLD_AUDIT_SUPERVISOR_ATTEMPT_COUNT')
     return output
+
+def _supervisor_attempt_count_matches(snapshot):
+    if not isinstance(snapshot,dict):return False
+    attempts=snapshot.get('results')
+    return (type(snapshot.get('attempt_count')) is int and isinstance(attempts,list)
+            and snapshot['attempt_count']==len(attempts))
 
 def _validate_audit_process_inventory(inventory):
     if not isinstance(inventory,dict):return None
@@ -254,6 +351,10 @@ def _validate_audit_process_inventory(inventory):
             raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_MISSING_FIELDS')
         if row.get('identity_state') not in ('VERIFIED','IDENTITY_INCOMPLETE','UNAVAILABLE_OR_CHANGED'):
             raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_IDENTITY_STATE')
+        if ((row['identity_state']=='IDENTITY_INCOMPLETE'
+                and ('missing_fields' not in row or not row['missing_fields']))
+                or (row['identity_state']!='IDENTITY_INCOMPLETE' and 'missing_fields' in row)):
+            raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_MISSING_FIELDS')
         if ((row.get('ppid') is not None and (type(row['ppid']) is not int or row['ppid']<0))
                 or (row.get('uid') is not None and (type(row['uid']) is not int or row['uid']<0))
                 or (row.get('start_ticks') is not None and (type(row['start_ticks']) is not int or row['start_ticks']<=0))
@@ -329,6 +430,15 @@ def audit_bundle_line(stdout):
     if (len(complete_positions)!=1 or list(rows)!=list(AUDIT_SECTIONS)
             or complete_positions[0]<max(positions)):
         raise RuntimeError('HOLD_AUDIT_RECORD_SET_INCOMPLETE')
+
+    for section in AUDIT_SECTIONS:
+        row=rows[section]
+        if 'error' in row:
+            raise RuntimeError('HOLD_AUDIT_WORKER_INCOMPLETE')
+        expected_result_type=list if section=='process_rows' else dict
+        if ('result' not in row
+                or not isinstance(row['result'],expected_result_type)):
+            raise RuntimeError('HOLD_AUDIT_WORKER_RESULT_SHAPE')
 
     status_rows=[]
     for section in AUDIT_SECTIONS:
@@ -442,7 +552,8 @@ def audit_census_status(stdout):
     supervisor_results=supervisor_worker.get('results') if isinstance(supervisor_worker,dict) else None
     crosscheck_complete=False
     if (supervisor_complete and isinstance(supervisor_worker,dict)
-            and supervisor_worker.get('available') is True and isinstance(supervisor_results,list)):
+            and supervisor_worker.get('available') is True and isinstance(supervisor_results,list)
+            and _supervisor_attempt_count_matches(supervisor_worker)):
         nonempty=[result for result in supervisor_results if isinstance(result,dict)
                   and isinstance(result.get('services'),list) and result['services']]
         if len(nonempty)==1:
@@ -507,8 +618,11 @@ def audit_census_status(stdout):
         if service_match['relation']=='DIRECT_PID':
             return service_match['pid']==link.get('proc_identity',{}).get('pid') and service_match['start_ticks']==link.get('proc_identity',{}).get('start_ticks')
         chain=link.get('parent_chain')
-        return isinstance(chain,list) and any(isinstance(item,dict)
-            and item.get('pid')==service_match['pid'] and item.get('start_ticks')==service_match['start_ticks'] for item in chain)
+        supervisor_identity=matches[0].get('identity')
+        return (isinstance(chain,list) and isinstance(supervisor_identity,dict)
+            and any(isinstance(item,dict) and item.get('pid')==service_match['pid']
+                and item.get('start_ticks')==service_match['start_ticks']
+                and item.get('pid_namespace')==supervisor_identity.get('pid_namespace') for item in chain))
     if links_valid:
         allowed={'MATCHED','NAMESPACE_ALIAS','NO_SERVICE_ANCESTOR'}
         for link in links:
@@ -602,11 +716,14 @@ def forward_remote_stdout(stdout,action,request_id,source_sha):
             raise RuntimeError('HOLD_AUDIT_BUNDLE_REASSEMBLY')
     for line in lines:
         if not line.startswith('NOX_MAINT_'):continue
-        if line.startswith(AUDIT_PREFIX):continue
-        if action=='audit' and line==AUDIT_COMPLETE:
-            forwarded.extend(bundle_records)
-            forwarded.append('NOX_MAINT_AUDIT_WORKERS_COMPLETE=true')
-            continue
+        if action=='audit':
+            if line.startswith(AUDIT_PREFIX):continue
+            if line==AUDIT_COMPLETE:
+                forwarded.extend(bundle_records)
+                forwarded.append('NOX_MAINT_AUDIT_WORKERS_COMPLETE=true')
+                continue
+            raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
+        _validate_forward_marker(action,line)
         if len(line.encode('utf-8'))<MAX_FORWARD_LINE_BYTES:
             forwarded.append(line)
             continue
