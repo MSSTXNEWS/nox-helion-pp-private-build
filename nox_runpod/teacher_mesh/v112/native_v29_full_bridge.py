@@ -257,6 +257,7 @@ def _dialog_context(dialog_id):
     instead of silently selecting recent turns or truncating message text.
     """
     with _db() as db:
+        db.execute('BEGIN')
         found=_get_dialog(db,dialog_id)
         if found is None:
             return 'HOLD_DIALOG_SCOPE_NOT_BOUND',[]
