@@ -525,6 +525,8 @@ class ProjectBinding:
                 or receipt.get('claim') != task.get('owner_claim')
                 or receipt.get('parent_task_id') != task.get('parent_task_id')
                 or receipt.get('queue_id') != task.get('queue_id')
+                or receipt.get('job_id') != (task.get('params') or {}).get('job_id')
+                or receipt.get('plan_sha256') != (task.get('params') or {}).get('plan_sha256')
                 or receipt.get('original_task_accepted') is not False
                 or not self.native.receipt_source_allowed(task, receipt)
                 or evidence.get('receipt_sha256') != binding.digest(binding.encoded(receipt))):
@@ -543,6 +545,9 @@ class ProjectBinding:
                 or worker.get('task_id') != task.get('id')
                 or worker.get('parent_task_id') != task.get('parent_task_id')
                 or worker.get('queue_id') != task.get('queue_id')
+                or worker.get('plan_sha256') != receipt.get('plan_sha256')
+                or worker.get('contract_sha256') != (task.get('params') or {}).get('contract_sha256')
+                or worker.get('acceptance_scope') != receipt.get('scope')
                 or worker.get('state') != 'INTEGRATED'
                 or worker.get('original_task_accepted') is not False
                 or worker.get('project_source_changed') is not True
@@ -551,7 +556,14 @@ class ProjectBinding:
                 or worker['tests'].get('passed') is not True):
             return None
         proof = binding.s03_readback(receipt)
-        if not proof:
+        # The durable readback must attest this precise task/job and digest,
+        # not just return a truthy S03 result for another completed attempt.
+        if (not isinstance(proof, dict) or proof.get('native_verified') is not True
+                or proof.get('task_id') != task.get('id')
+                or proof.get('job_id') != receipt.get('job_id')
+                or proof.get('receipt_sha256') != evidence['receipt_sha256']
+                or not isinstance(proof.get('s03_item_id'), str)
+                or not proof['s03_item_id']):
             return None
         return {'kind':'bounded_native_project_change', 'task_id':task['id'],
                 'parent_task_id':task['parent_task_id'], 'scope':receipt['scope'],
