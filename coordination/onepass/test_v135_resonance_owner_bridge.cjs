@@ -71,6 +71,10 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   if(customIntl)context.Intl=customIntl;
   if(presentation){context.document=presentation.document||{visibilityState:presentation.hidden?'hidden':'visible'};
     window.matchMedia=()=>({matches:!!presentation.reduced});}
+  if(presentation?.onPhase){
+    window.dispatchEvent=e=>presentation.onPhase(e.detail.phase);
+    context.CustomEvent=class{constructor(type,opts){this.detail=opts.detail;}};
+  }
   vm.runInNewContext(JS,context,{filename:file});
   return {fetch:(...args)=>window.fetch(...args),calls,window};
 }
@@ -1562,4 +1566,22 @@ test('V184 scoped abort wakes frozen paint scheduler without false S03 done',asy
   assert.equal(timersPending.size,0,'no orphan fallback timer');
   assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1,'single model POST');
   assert.equal(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')),false);
+});
+
+
+test('V187 redundant token UI phases are deduplicated without changing SSE or S03 fixture',async()=>{
+  const phases=[];
+  const reply='NOX 🧠 español русский '.repeat(75);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+    undefined,false,240,undefined,'verified-exchange-01',[],false,false,prompt,
+    undefined,{onPhase:p=>phases.push(p)});
+  const out=await events(await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v187-phase'})}));
+  assert(out.filter(x=>x.type==='token').length>20,'real multi-slice fixture');
+  assert.deepEqual(phases,['waiting','speaking','idle'],'no redundant speaking phase dispatch');
+  assert.equal(out.filter(x=>x.type==='token').map(x=>x.t).join(''),reply);
+  assert.equal(out.filter(x=>x.type==='done').length,1);
+  assert.equal(out.filter(x=>x.type==='error').length,0);
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
 });
