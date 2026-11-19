@@ -203,5 +203,52 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                     self.assertIn(sha, subject.terminal_cache)
 
 
+    def test_reconcile_terminal_status_needs_exact_receipt_and_s03_witness(self):
+        """Do not mark an unverified pending attempt as durably blocked."""
+        from contextlib import nullcontext
+        task = {'id': '4V14-07', 'handler': executor.PROJECT_HANDLER,
+                'status': 'pending', 'owner_claim': {'nonce': 'claim-4V14-07'},
+                'params': {'job_id': 'job-4V14-07', 'source_sha256': 'pinned-source'}}
+        receipt = {'task_id': task['id'], 'job_id': task['params']['job_id'],
+                   'phase': 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED',
+                   'claim': task['owner_claim'], 'original_task_accepted': False}
+        sha = binding.digest(binding.encoded(receipt))
+        task['native_project_terminal'] = {'receipt': receipt, 'receipt_sha256': sha}
+        saves = []
+        native = types.SimpleNamespace(
+            stop_active=lambda: False, owner_allowed=lambda: True,
+            writer_lease=lambda: True, lock=nullcontext(), pool=None,
+            source='pinned-source', state={'tasks': {task['id']: task}},
+            ns={'_qlock': nullcontext(), 'save_state': lambda _state: saves.append(task['status'])},
+            receipt_source_allowed=lambda *_args: True)
+        subject = module.ProjectBinding.__new__(module.ProjectBinding)
+        subject.native = native
+        good = {'native_verified': True, 'task_id': task['id'],
+                'job_id': receipt['job_id'], 'receipt_sha256': sha,
+                's03_item_id': 'S03-EXACT'}
+        with patch.dict(sys.modules, {'owner_subagent_dispatcher': binding}):
+            for invalid in (True, {'native_verified': True},
+                            {**good, 'task_id': 'other-task'},
+                            {**good, 'job_id': 'other-job'},
+                            {**good, 'receipt_sha256': '0' * 64},
+                            {**good, 'native_verified': False},
+                            {**good, 's03_item_id': ''}):
+                with self.subTest(s03=repr(invalid)):
+                    with patch.object(binding, 's03_readback', return_value=invalid):
+                        subject.reconcile()
+                    self.assertEqual(task['status'], 'pending')
+                    self.assertFalse(saves)
+            # A fabricated local SHA cannot initiate a trusted S03 check.
+            task['native_project_terminal']['receipt_sha256'] = '0' * 64
+            with patch.object(binding, 's03_readback', side_effect=AssertionError('untrusted S03 call')):
+                subject.reconcile()
+            self.assertEqual(task['status'], 'pending')
+            task['native_project_terminal']['receipt_sha256'] = sha
+            with patch.object(binding, 's03_readback', return_value=good):
+                subject.reconcile()
+            self.assertEqual(task['status'], 'blocked')
+            self.assertEqual(saves, ['blocked'])
+
+
 if __name__ == '__main__':
     unittest.main()
