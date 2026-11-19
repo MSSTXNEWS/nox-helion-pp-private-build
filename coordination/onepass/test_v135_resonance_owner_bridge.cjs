@@ -1301,3 +1301,50 @@ test('V175 SSE pacing cancels the losing callback without changing STOP/S03',asy
     assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
   }
 });
+
+
+test('V176 later-chunk native frames after done fail closed before S03 on SSE and JSON',async()=>{
+  const q='V176 post-done second read',reply='Native terminal answer';
+  for(const streamed of [false,true]){
+    let reads=0,history=0;
+    const native=async path=>{
+      const u=new URL(String(path),'https://nox.local');
+      if(u.pathname==='/api/nox/chat/stream'){
+        const enc=new TextEncoder();
+        const first=[{type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+          {type:'start',model:'NOX HELION'}, {type:'delta',text:reply},
+          {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'v176-exchange'}]
+          .map(x=>JSON.stringify(x)+'\\n').join('');
+        return new Response(new ReadableStream({pull(c){
+          reads++;
+          if(reads===1)c.enqueue(enc.encode(first));
+          else {c.enqueue(enc.encode(JSON.stringify({type:'delta',text:'FORGED'})+'\\n'));c.close();}
+        }},{highWaterMark:0}),{headers:{'content-type':'application/x-ndjson'}});
+      }
+      if(u.pathname==='/api/ui/memory/dialogs/history'){
+        history++;
+        return Response.json({status:'READY',dialog_id:id,messages:[
+          {role:'user',content:q,exchange_id:'v176-exchange'},
+          {role:'assistant',content:reply,exchange_id:'v176-exchange'}]});
+      }
+      return new Response('NOT_FOUND',{status:404});
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:native};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+    const res=await w.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:q,dialog_id:id,...(streamed?{request_id:'v176'}:{})})});
+    if(streamed){
+      const streamEvents=await events(res);
+      assert.equal(streamEvents.filter(e=>e.type==='done').length,0);
+      assert.match(streamEvents.at(-1).error,/HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE/);
+    }else{
+      assert.equal(res.status,503);
+      assert.match((await res.json()).error,/HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE/);
+    }
+    assert.equal(reads,2,'must read the post-terminal network chunk');
+    assert.equal(history,0,'invalid protocol must not claim S03 readback');
+  }
+});
