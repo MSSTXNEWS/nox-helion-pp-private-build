@@ -60,6 +60,15 @@ def credential_path_not_static(expr):
     error.safe_ast_shape = safe_ast_shape(expr)
     return error
 
+
+def add_credential_path_ast_shape(status, error):
+    """Attach only the trusted bounded shape for the specific static-path HOLD."""
+    if not isinstance(error, RuntimeError) or str(error) != 'HOLD_SMART_CHAT_QA_CREDENTIAL_PATH_NOT_STATIC':
+        return
+    shape = getattr(error, 'safe_ast_shape', None)
+    if isinstance(shape, dict):
+        status['credential_path_ast_shape'] = shape
+
 def fail(code):
     raise RuntimeError('HOLD_SMART_CHAT_QA_' + code)
 
@@ -401,9 +410,7 @@ def main():
             outcome='NATIVE_OWNER_TWO_TURNS_AND_S03_READBACK_PASS')
         success = True
     except Exception as error:
-        shape = getattr(error, 'safe_ast_shape', None)
-        if isinstance(shape, dict):
-            status['credential_path_ast_shape'] = shape
+        add_credential_path_ast_shape(status, error)
         code = str(error)
         status['outcome'] = code if re.fullmatch(r'HOLD_SMART_CHAT_QA_[A-Z0-9_]{1,100}', code) else 'HOLD_SMART_CHAT_QA_' + type(error).__name__.upper()
     emit(status)
