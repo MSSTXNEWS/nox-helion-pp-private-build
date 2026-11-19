@@ -6,15 +6,31 @@ const crypto=require('node:crypto');
 const fs=require('node:fs');
 const file='coordination/onepass/nox-v135-resonance-owner-bridge.js';
 const JS=fs.readFileSync(file,'utf8');
+const capPolicyPath='coordination/onepass/v135_owner_bridge_cap_policy.json';
+const capPolicyBytes=fs.readFileSync(capPolicyPath);
+const capPolicy=JSON.parse(capPolicyBytes);
+const CAP_POLICY_SHA256='74f16458cd7c2e295403d6569c289ec4861b036c60c72065d0ad8560164f2218';
+const OWNER_BRIDGE_SHA256='3de9f87874534e603e4040f4fc10a018679820569431a7a0b230bda035552af3';
 const V112=fs.readFileSync('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py','utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-test('V135 staged owner bridge remains within byte bounds',()=>{
+const ownerDialog={turn_id:'11111111111111111111111111111111',
+ receipt_id:'22222222222222222222222222222222',
+ lease_epoch:'33333333333333333333333333333333',
+ exchange_id:'44444444444444444444444444444444',
+ writer:'V112_OWNER_DIALOG_WRITER',receipt_sha256:'a'.repeat(64)};
+test('V135 staged owner bridge matches the pinned measured cap policy',()=>{
   const n=Buffer.byteLength(JS,'utf8');
-  assert(n>=5000&&n<=22000, 'staging bridge byte bound');
+  assert.equal(n,24669);
+  assert.equal(crypto.createHash('sha256').update(JS,'utf8').digest('hex'),OWNER_BRIDGE_SHA256);
+  assert.equal(crypto.createHash('sha256').update(capPolicyBytes).digest('hex'),CAP_POLICY_SHA256);
+  assert.deepEqual(capPolicy,{schema:'NOX_V135_OWNER_BRIDGE_CAP_POLICY_V2',
+    measured_bridge_bytes:24669,max_bridge_bytes:25181,reserve_bytes:512,
+    bridge_sha256:OWNER_BRIDGE_SHA256});
+  assert.equal(n<=capPolicy.max_bridge_bytes,true);
 });
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,onStop,onModel){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,onStop,onModel,onOwnerReadback){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -24,6 +40,15 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       assert.equal(body.confirmed,true);
       if(stallCreateBody)return new Response(new ReadableStream({start(){}}));
       return Response.json({dialog_id:id,title:body.title});
+    }
+    if(u.pathname==='/api/ui/memory/dialogs/exchange-readback'){
+      const body=JSON.parse(opts.body||'{}'),proof=onOwnerReadback?.(body);
+      if(proof instanceof Response)return proof;
+      return Response.json(proof||{status:'READY',store_scope:'OWNER_DIALOG_TABLES_ONLY',
+        canonical_s03_verified:false,durable:true,verified:true,dialog_id:id,
+        ...ownerDialog,messages:[
+          {role:'user',content:expectedQuestion,exchange_id:ownerDialog.exchange_id},
+          {role:'assistant',content:reply,exchange_id:ownerDialog.exchange_id}]});
     }
     if(u.pathname==='/api/ui/memory/dialogs'){
       return Response.json({status:'READY',dialogs:[{dialog_id:id,title:'Тест',revision:2}]});
@@ -94,6 +119,89 @@ async function events(response){
   }
   return seen;
 }
+function ownerStream(reply=answer,flags={}) {
+  const bytes=new TextEncoder();
+  const frames=[
+    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+    {type:'start',model:'NOX HELION'},
+    {type:'delta',text:reply},
+    {type:'done',saved:true,s03_integrated:false,owner_dialog_saved:true,
+      canonical_s03_write_verified:false,dialog_id:id,...ownerDialog,
+      stream_mode:'NATIVE_TOKEN_STREAM',...flags}
+  ];
+  return new Response(new ReadableStream({start(c){for(const frame of frames)c.enqueue(bytes.encode(JSON.stringify(frame)+'\n'));c.close();}}),
+    {headers:{'content-type':'application/x-ndjson'}});
+}
+
+test('V135 owner-dialog receipt is independently read back and never claims canonical S03',async()=>{
+  const readbackBodies=[];
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,undefined,ownerDialog.exchange_id,[],false,false,prompt,undefined,
+    (_calls,opts)=>ownerStream(answer),body=>{
+      readbackBodies.push(body);
+      return {status:'READY',store_scope:'OWNER_DIALOG_TABLES_ONLY',canonical_s03_verified:false,
+        durable:true,verified:true,dialog_id:id,...ownerDialog,
+        messages:[
+          {role:'user',content:prompt,exchange_id:ownerDialog.exchange_id},
+          {role:'assistant',content:answer,exchange_id:ownerDialog.exchange_id}]};
+    });
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'owner-dialog-proof-01'})});
+  const frames=await events(response),done=frames.find(e=>e.type==='done');
+  assert(done,'verified owner-dialog exchange must produce a terminal event');
+  assert.equal(done.status,'done');
+  assert.equal(done.owner_dialog_saved,true);
+  assert.equal(done.s03_integrated,false);
+  assert.equal(done.canonical_s03_write_verified,false);
+  assert.equal(done.history_scope,'OWNER_DIALOG_TABLES_ONLY');
+  assert.match(done.note,/S03/);
+  assert.equal(readbackBodies.length,1);
+  assert.deepEqual(readbackBodies[0],{dialog_id:id,turn_id:ownerDialog.turn_id,
+    receipt_id:ownerDialog.receipt_id,lease_epoch:ownerDialog.lease_epoch});
+  const history=await f.fetch('/api/nox/history?dialog_id='+id);
+  assert.equal(history.status,200);
+  assert.equal((await history.json()).messages[1].content,answer);
+});
+test('V135 rejects owner-dialog completion when exact readback does not match',async()=>{
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,undefined,ownerDialog.exchange_id,[],false,false,prompt,undefined,
+    (_calls,opts)=>ownerStream(answer),body=>({status:'READY',store_scope:'OWNER_DIALOG_TABLES_ONLY',
+      canonical_s03_verified:false,durable:true,verified:true,dialog_id:id,...ownerDialog,
+      messages:[
+        {role:'user',content:prompt,exchange_id:ownerDialog.exchange_id},
+        {role:'assistant',content:'tampered',exchange_id:ownerDialog.exchange_id}]}));
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'owner-dialog-proof-bad'})});
+  const frames=await events(response);
+  assert.equal(frames.filter(e=>e.type==='done').length,0);
+  assert(frames.some(e=>e.type==='error'&&e.error==='HOLD_OWNER_DIALOG_RECEIPT_READBACK'));
+});
+test('V135 mixed owner-dialog and canonical S03 flags are rejected',async()=>{
+  let reads=0;
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,undefined,ownerDialog.exchange_id,[],false,false,prompt,undefined,
+    (_calls,opts)=>ownerStream(answer,{s03_integrated:true}),()=>{reads++;return {};});
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'owner-dialog-mixed-flags'})});
+  const frames=await events(response);
+  assert.equal(frames.filter(e=>e.type==='done').length,0);
+  assert.equal(reads,0,'contradictory owner-only receipt must never reach canonical readback');
+  assert(!f.calls.some(x=>x.path==='/api/nox/stop'),'terminal mixed receipt does not trigger STOP');
+  assert(frames.some(e=>e.type==='error'&&e.error==='HOLD_S03_COMMIT_RECEIPT'));
+});
+test('V135 owner-dialog flag alone cannot bypass canonical S03 receipt or owner readback',async()=>{
+  let reads=0;
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,undefined,ownerDialog.exchange_id,[],false,false,prompt,undefined,
+    (_calls,opts)=>ownerStream(answer,{canonical_s03_write_verified:undefined}),()=>{reads++;return {};});
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'owner-dialog-proof-missing-flag'})});
+  const frames=await events(response);
+  assert.equal(frames.filter(e=>e.type==='done').length,0);
+  assert.equal(reads,0);
+  assert(frames.some(e=>e.type==='error'));
+});
+
 test('native V24 main Resonance streams tokens, only after S03 readback reports done',async()=>{
   const f=fake();
   const r=await f.fetch('/api/nox/chat',{method:'POST',

@@ -85,10 +85,54 @@ const ADMISSION_WAIT_MS=250;
        pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
       throw Error('HOLD_DIALOG_HISTORY_READBACK');
   }
+  function ownerDialogReceipt(done,id) {
+    return done?.type==='done'&&done.saved===true&&done.s03_integrated===false&&
+      done.owner_dialog_saved===true&&done.canonical_s03_write_verified===false&&
+      done.dialog_id===id&&done.writer==='V112_OWNER_DIALOG_WRITER'&&
+      ID.test(done.turn_id)&&ID.test(done.receipt_id)&&ID.test(done.lease_epoch)&&
+      ID.test(done.exchange_id)&&/^[a-f0-9]{64}$/.test(done.receipt_sha256)&&
+      done.stream_mode==='NATIVE_TOKEN_STREAM';
+  }
+  function canonicalS03Receipt(done) {
+    return done?.s03_integrated===true&&done.owner_dialog_saved!==true&&
+      done.canonical_s03_write_verified!==false&&
+      done.canonical_s03_readback_verified!==false&&
+      done.history_scope!=='OWNER_DIALOG_TABLES_ONLY'&&
+      done.store_scope!=='OWNER_DIALOG_TABLES_ONLY'&&
+      done.writer!=='V112_OWNER_DIALOG_WRITER';
+  }
   function accepted(done,id) {
-    return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
-      done.dialog_id===id&&typeof done.exchange_id==='string'&&
-      done.exchange_id.length>=6&&done.exchange_id.length<=160;
+    return done?.type==='done'&&done.saved===true&&done.dialog_id===id&&
+      typeof done.exchange_id==='string'&&done.exchange_id.length>=6&&
+      done.exchange_id.length<=160&&
+      (canonicalS03Receipt(done)||ownerDialogReceipt(done,id));
+  }
+  async function checkOwnerDialog(done,prompt,answer,signal) {
+    const r=await nativePost('/api/ui/memory/dialogs/exchange-readback',{
+      dialog_id:done.dialog_id,turn_id:done.turn_id,
+      receipt_id:done.receipt_id,lease_epoch:done.lease_epoch
+    },signal);
+    if(!r.ok)throw Error('HOLD_OWNER_DIALOG_READBACK_'+await reason(r,signal));
+    const proof=await nativeBodyJSON(r,signal),rows=proof?.messages;
+    if(proof?.status!=='READY'||proof.store_scope!=='OWNER_DIALOG_TABLES_ONLY'||
+       proof.canonical_s03_verified!==false||proof.durable!==true||proof.verified!==true||
+       proof.dialog_id!==done.dialog_id||proof.turn_id!==done.turn_id||
+       proof.receipt_id!==done.receipt_id||proof.lease_epoch!==done.lease_epoch||
+       proof.writer!==done.writer||proof.exchange_id!==done.exchange_id||
+       proof.receipt_sha256!==done.receipt_sha256||!Array.isArray(rows)||rows.length!==2||
+       rows[0]?.role!=='user'||rows[0]?.content!==prompt||
+       rows[0]?.exchange_id!==done.exchange_id||rows[1]?.role!=='assistant'||
+       rows[1]?.content!==answer||rows[1]?.exchange_id!==done.exchange_id)
+      throw Error('HOLD_OWNER_DIALOG_RECEIPT_READBACK');
+  }
+  async function verifyAccepted(done,id,prompt,answer,signal) {
+    if(!accepted(done,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
+    if(done.s03_integrated===true) {
+      await checkHistory(id,prompt,answer,done.exchange_id,signal);
+      return true;
+    }
+    await checkOwnerDialog(done,prompt,answer,signal);
+    return false;
   }
   async function readNativeOrAbort(reader,signal) {
     if(!signal)return reader.read();
@@ -311,13 +355,14 @@ function sseChat(data,signal) {
 				streamDone=true;
 				if(trailing)await emitPieces(trailing);
 				if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-				if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
-				await checkHistory(id,data.message,answer,receipt.exchange_id,nativeSignal);
+				const s03Integrated=await verifyAccepted(receipt,id,data.message,answer,nativeSignal);
 				if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-				event({type:'done',status:'done',saved:true,s03_integrated:true,
+				event({type:'done',status:'done',saved:true,s03_integrated:s03Integrated,
 					history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
 					model_label:receipt.native_model_label||'UNKNOWN',
 					model_identity_verified:false,answer_source:'LIVE_NOX',
+					...(s03Integrated?{}:{owner_dialog_saved:true,canonical_s03_write_verified:false,
+						history_scope:'OWNER_DIALOG_TABLES_ONLY',note:'Сохранено в диалоге; каноническая S03 не подтверждена.'}),
 					first_visible_token_ms:firstVisibleMs,
 					seconds:+((performance.now()-started)/1000).toFixed(2)});
 			}catch(e){
@@ -366,11 +411,12 @@ function sseChat(data,signal) {
       },signal);
       const {answer,receipt,nativeModel}=await consume(upstream,()=>{},signal);
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
-      if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
-      await checkHistory(id,data.message,answer,receipt.exchange_id,signal);
+      const s03Integrated=await verifyAccepted(receipt,id,data.message,answer,signal);
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
       return responseJSON({answer,model:nativeModel,model_identity_verified:false,dialog_id:id,
-        exchange_id:receipt.exchange_id,history_persisted:true,s03_integrated:true});
+        exchange_id:receipt.exchange_id,history_persisted:true,s03_integrated:s03Integrated,
+        ...(s03Integrated?{}:{owner_dialog_saved:true,canonical_s03_write_verified:false,
+          history_scope:'OWNER_DIALOG_TABLES_ONLY',note:'Сохранено в диалоге; каноническая S03 не подтверждена.'})});
     }catch(e){return errorResponse(String(e.message||'HOLD_NATIVE_JSON').slice(0,150));}
   }
   async function legacyDialogs(url,init) {
