@@ -3,13 +3,16 @@
 No browser, native POST, live S03 or production host mutation. The historical
 multiturn canonical-S03 HOLD remains mandatory until real writer/readback wiring.
 """
+import asyncio
 import hashlib
 import json
 import unittest
+from unittest.mock import AsyncMock
 
 from owner_chat_browser_qa import (
     allowed_qa_request,
     canonical_s03_proof_valid,
+    click_send,
     multiturn_followup_prompt,
     ru_es_context_challenge,
     ru_es_unleaked_first_prompt,
@@ -261,6 +264,44 @@ class OwnerRuEsContinuity(unittest.TestCase):
         self.assertFalse(multiturn_history_valid(altered, RU, FIRST, es, LAST))
         self.assertFalse(canonical_s03_proof_valid(writer, proof, DIALOG, altered))
         self.assertFalse(multiturn_history_valid(transcript[:2], RU, FIRST, es, LAST))
+
+
+    def test_ambiguous_click_never_retries_native_first_or_second_turn(self):
+        # A client click timeout may occur after DOM dispatch but before the
+        # observable fetch counter advances. Do not submit a second click.
+        class Target:
+            async def evaluate(self, _):
+                return {"in_view": True, "pointer_hit_own_button": True, "x": 40, "y": 40}
+
+            async def click(self, timeout):
+                raise TimeoutError("not stable")
+
+        class Page:
+            def __init__(self, calls):
+                self.calls = calls
+                self.mouse = type("Mouse", (), {"click": AsyncMock()})()
+
+            def locator(self, _):
+                return Target()
+
+            async def evaluate(self, _):
+                return {"native_calls": self.calls}
+
+        for before in (0, 1):
+            with self.subTest(turn=before + 1, outcome="unknown"):
+                page, report = Page(before), {}
+                with self.assertRaisesRegex(RuntimeError, "HOLD_QA_SEND_OUTCOME_UNKNOWN"):
+                    asyncio.run(click_send(page, report, expected_before=before))
+                page.mouse.click.assert_not_awaited()
+                field = "qa_send_control" if before == 0 else "qa_second_send_control"
+                self.assertTrue(report[field]["native_request_outcome_unknown"])
+                self.assertEqual(report[field]["observed_native_calls"], before)
+            with self.subTest(turn=before + 1, outcome="already-started"):
+                page, report = Page(before + 1), {}
+                asyncio.run(click_send(page, report, expected_before=before))
+                page.mouse.click.assert_not_awaited()
+                field = "qa_send_control" if before == 0 else "qa_second_send_control"
+                self.assertTrue(report[field]["native_request_already_started"])
 
 
 if __name__ == "__main__":
