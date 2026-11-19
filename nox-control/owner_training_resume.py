@@ -181,9 +181,10 @@ def read_json(path, limit=4_000_000, expected_sha256=None):
 
 
 def file_sha(path):
-    """Hash only a stable, initially bounded regular file from one descriptor."""
+    """Hash only a stable, pathname-bound regular file from one descriptor."""
+    path = Path(path)
     try:
-        fd = os.open(Path(path), os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
     except OSError as exc:
         raise RuntimeError('HOLD_SOURCE_PATH') from exc
     try:
@@ -203,8 +204,15 @@ def file_sha(path):
             if stream.read(1):
                 raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED')
             after = os.fstat(stream.fileno())
-            if ((before.st_size, before.st_mtime_ns, before.st_ctime_ns)
-                    != (after.st_size, after.st_mtime_ns, after.st_ctime_ns)):
+            # A stable open descriptor is insufficient if the named checkpoint
+            # was replaced after open; the caller will use the pathname again.
+            try:
+                named = os.stat(path, follow_symlinks=False)
+            except OSError as exc:
+                raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED') from exc
+            keys = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+            if any(getattr(before, key) != getattr(after, key)
+                   or getattr(before, key) != getattr(named, key) for key in keys):
                 raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED')
         return digest.hexdigest()
     finally:
