@@ -139,6 +139,29 @@ def allowed_qa_request(count, second_permitted, first_prompt, second_prompt, bod
             and body.get('dialog_id') == dialog_id)
 
 
+def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
+    """Require the first persisted turn to belong to the owner QA dialog.
+
+    The API query's dialog_id is not proof of the returned row's scope.
+    Legacy rows lacking dialog_id metadata are accepted, but any supplied
+    mismatching/null identifier must HOLD before second-turn admission.
+    """
+    if (not isinstance(history, dict) or not isinstance(dialog_id, str)
+            or not dialog_id.strip()
+            or ('dialog_id' in history and history['dialog_id'] != dialog_id)):
+        return False
+    rows = history.get('messages')
+    if (not isinstance(rows, list) or len(rows) != 2
+            or not all(isinstance(row, dict) for row in rows)
+            or any('dialog_id' in row and row['dialog_id'] != dialog_id for row in rows)
+            or not isinstance(first_answer, str) or not first_answer.strip()):
+        return False
+    return (rows[0].get('role') == 'user'
+            and rows[0].get('content') == first_prompt
+            and rows[1].get('role') == 'assistant'
+            and rows[1].get('content') == first_answer)
+
+
 def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, second_answer,
                             dialog_id=None):
     """Require four exact role/text turns; reject cross-dialog row metadata."""
@@ -931,10 +954,10 @@ async def browser_run(report, directory, available):
             history=await json_response(await context.request.get(
                 base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))
             rows=history.get('messages')
-            saved=(isinstance(rows,list) and len(rows)==2 and rows[0].get('role')=='user'
-                   and rows[0].get('content')==prompt and rows[1].get('role')=='assistant'
-                   and isinstance(rows[1].get('content'),str))
-            answer=rows[1]['content'] if saved else ''
+            candidate=(rows[1].get('content') if isinstance(rows,list)
+                       and len(rows)==2 and isinstance(rows[1],dict) else None)
+            saved=firstturn_history_valid(history,prompt,candidate,did)
+            answer=candidate if saved else ''
             native_equal=await page.evaluate('(value)=>window.__NOX_BROWSER_QA.answer===value',answer)
             public=public_numeric_answer(answer)
             first_numeric_pass=(ru_es_unleaked_first_answer_valid(public) if ru_es
