@@ -181,7 +181,7 @@ def _frozen_receipt_disposition(module):
         task_id=row.get('task_id')
         spec=row.get('spec')
         routing=row.get('routing_source')
-        if (not isinstance(task_id,str) or not module.TASK_ID.fullmatch(task_id)
+        if (not isinstance(task_id,str) or not (module.TASK_ID.fullmatch(task_id) or task_id in module.IDEA_IDS)
                 or task_id in seen or not isinstance(spec,dict)
                 or spec.get('id')!=task_id or spec.get('evidence') not in module.EVIDENCE
                 or not isinstance(routing,dict) or routing.get('task_id')!=task_id):
