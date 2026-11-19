@@ -70,6 +70,16 @@ def _validate_sse_witness_binding(event):
              (_integer(end, 86_400_000) and event["sse_terminal_seen"]
               and end <= event["latency_ms"]),
              "SSE_WITNESS_COMPLETION_MISMATCH")
+    # [DONE] can arrive before later heartbeat bytes. The paired task's
+    # claimed wall time must cover the ENTIRE observed wire, not just [DONE].
+    # This is a source trace consistency fence, not live-host authentication.
+    last_byte = witness.get("last_byte_ms")
+    _require(_integer(last_byte, 86_400_000)
+             and last_byte <= event["latency_ms"]
+             and (end is None or end <= last_byte)
+             and (event["first_text_ms"] is None or
+                  event["first_text_ms"] <= last_byte),
+             "SSE_WITNESS_LAST_BYTE_MISMATCH")
     _require(type(witness.get("partial_frame_at_eof")) is bool and
              type(witness.get("wire_completed_normally")) is bool and
              witness["wire_completed_normally"] is bool(

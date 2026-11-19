@@ -774,4 +774,42 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(compare_paired(b, optional)["reason"],
                          "EVALUATION_PROTOCOL_MISMATCH")
 
+    def test_strict_sse_witness_walltime_must_cover_last_received_byte(self):
+        # A [DONE] at 10 ms may be followed by heartbeat bytes at 18 ms.
+        # Reporting 12 ms total latency would detach walltime from raw trace
+        # even though TTFT, finality, [DONE] and all hashes agree.
+        chunks = [
+            (5, b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":null}]}\\n\\n'),
+            (8, b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\\n\\n'),
+            (10, b'data: [DONE]\\n\\n'),
+            (18, b': heartbeat\\n\\n'),
+        ]
+        wire = measure_openai_sse_wire(chunks)
+        self.assertTrue(wire["wire_completed_normally"])
+        self.assertEqual(wire["completion_ms"], 10)
+        self.assertEqual(wire["last_byte_ms"], 18)
+        baseline = example()
+        baseline["declared_task_ids"] = ["t1"]
+        baseline["outcomes"] = [baseline["outcomes"][0]]
+        baseline["sse_binding_required"] = True
+        event = baseline["outcomes"][0]
+        event.update(latency_ms=18, first_text_ms=5,
+                     trace_sha256=wire["timed_trace_sha256"],
+                     sse_wire_witness=wire,
+                     sse_raw_wire_sha256=wire["raw_wire_sha256"],
+                     sse_visible_text_sha256=wire["visible_text_sha256"])
+        self.assertTrue(compare_paired(baseline, copy.deepcopy(baseline))["comparable"])
+        forged = copy.deepcopy(baseline)
+        forged["outcomes"][0]["latency_ms"] = 12
+        self.assertEqual(compare_paired(baseline, forged)["reason"],
+                         "SSE_WITNESS_LAST_BYTE_MISMATCH")
+        impossible = copy.deepcopy(baseline)
+        impossible["outcomes"][0]["sse_wire_witness"]["last_byte_ms"] = 9
+        self.assertEqual(compare_paired(baseline, impossible)["reason"],
+                         "SSE_WITNESS_LAST_BYTE_MISMATCH")
+        untyped = copy.deepcopy(baseline)
+        untyped["outcomes"][0]["sse_wire_witness"]["last_byte_ms"] = True
+        self.assertEqual(compare_paired(baseline, untyped)["reason"],
+                         "SSE_WITNESS_LAST_BYTE_MISMATCH")
+
 if __name__ == '__main__': unittest.main()
