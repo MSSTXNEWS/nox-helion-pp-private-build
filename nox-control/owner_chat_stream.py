@@ -136,6 +136,11 @@ def _reject_duplicate_json_keys(pairs):
     return result
 
 
+def _reject_nonfinite_json_constant(value):
+    """JSON does not permit NaN or Infinity in SSE or tool arguments."""
+    raise ValueError('non-finite JSON constant')
+
+
 async def _model_events(client, url, payload):
     """Forward content immediately; assemble function-call arguments privately."""
     request=dict(payload,model='maya',stream=True,cache_prompt=True)
@@ -212,7 +217,8 @@ async def _model_events(client, url, payload):
             if len(wire)>300000:
                 raise StreamFailure('HOLD_MODEL_SSE_SIZE')
             try:
-                doc=json.loads(wire,object_pairs_hook=_reject_duplicate_json_keys)
+                doc=json.loads(wire,object_pairs_hook=_reject_duplicate_json_keys,
+                               parse_constant=_reject_nonfinite_json_constant)
                 if not isinstance(doc,dict) or doc.get('error'):
                     raise ValueError('error')
                 choices=doc.get('choices')
@@ -311,7 +317,8 @@ def _normal_calls(rows,step):
         # Falsey non-objects ([], false, 0) must never become {} and dispatch.
         if args is None or (isinstance(args,str) and not args):args={}
         if isinstance(args,str):
-            try:args=json.loads(args,object_pairs_hook=_reject_duplicate_json_keys)
+            try:args=json.loads(args,object_pairs_hook=_reject_duplicate_json_keys,
+                                parse_constant=_reject_nonfinite_json_constant)
             except ValueError:raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         if not isinstance(args,dict):raise StreamFailure('HOLD_TOOL_ARGUMENTS')
         # Native parser / deterministic routes share the same bounded ID rule.
