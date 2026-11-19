@@ -27,6 +27,13 @@ OLD = {
 DIRECTOR_SHA = 'eac3ce9e2d8c862d1a7917ec447ea72e84454b7775a4260ad1e72e59de96fe11'
 REFILL_SHA = '5fd359514c64e6ab1e15040c7c8fcc36c46257df6973bee99c3b212e6391375a'
 HELPER_SHA = '8470a6720ca69864bbc4e6e630a1f853344839af424d3829dcdf1774442db609'
+WORKSPACE = 'projects/owner_executor/source_workspace'
+VERIFIER = 'test_forge_source_minhash.py'
+VERIFIER_PATH = WORKSPACE + '/' + VERIFIER
+MARKER_PATH = WORKSPACE + '/NOX_EXECUTOR_BOOTSTRAP.json'
+VERIFIER_SHA = 'deb62dc0501ba9c0bff2afb1c4a9760d84f3d452d4a889f81b42eedd815bcb13'
+FORGE_SHA = '82969cfb2b02939cfe60c6fbd62ab921754e5f61ff96183ccea53ddcc40cc9fb'
+BOOTSTRAP_SHA = '4140c8476a52d9d5e4f0f79f5ed3130acd8c3068b93d7ea0475c90771ceb7767'
 EXPECTED_PROCESSES = {
     'expected_director': {'pid': 762906, 'start_ticks': 189372583},
     'expected_workers': [
@@ -66,7 +73,7 @@ def load_module(name, raw):
 
 def decode_bundle(bundle):
     pins = {'owner_systemic_refill.py': REFILL_SHA,
-            'continuous_transaction_helpers.py': HELPER_SHA}
+            'continuous_transaction_helpers.py': HELPER_SHA, VERIFIER: VERIFIER_SHA}
     require(type(bundle) is dict and bundle.keys() == pins.keys(), 'BUNDLE_FILES')
     assets = {}
     for name, pin in pins.items():
@@ -77,7 +84,7 @@ def decode_bundle(bundle):
         compile(raw, '<owner-reviewed>/' + name, 'exec')
         assets[name] = raw
     helper = load_module('_refill_rollout_transaction', assets['continuous_transaction_helpers.py'])
-    return helper, assets['owner_systemic_refill.py']
+    return helper, assets['owner_systemic_refill.py'], assets[VERIFIER]
 
 
 def build_payload(repository):
@@ -85,7 +92,8 @@ def build_payload(repository):
                                           / 'runtime/owner_systemic_refill.py',
              'continuous_transaction_helpers.py': repository / 'nox-control'
                                                 / 'continuous_executor_20261118/assets'
-                                                / 'continuous_transaction_helpers.py'}
+                                                / 'continuous_transaction_helpers.py',
+             VERIFIER: repository / 'nox-control/systemic_relay_20261118/i39_verifier' / VERIFIER}
     assets = {name: base64.b64encode(path.read_bytes()).decode('ascii')
               for name, path in paths.items()}
     decode_bundle(assets)
@@ -310,7 +318,101 @@ def wait_for_legacy_workers(helper, root, director):
     require(False, 'ROLLBACK_WORKERS_NOT_VERIFIED')
 
 
-def rollout(helper, root, candidate, request, source):
+def prepare_verifier(helper, root, config, updated, verifier, source):
+    baseline = helper.source_snapshot(root, config)
+    marker_raw = helper.read_regular(root / MARKER_PATH, 65536)
+    require(sha(marker_raw) == baseline['bootstrap_sha256'] == BOOTSTRAP_SHA
+            and baseline['files'].get('forge_split_guard.py', {}).get('sha256') == FORGE_SHA,
+            'I39_SOURCE_PREIMAGE')
+    require(sha(verifier) == VERIFIER_SHA and not os.path.lexists(root / VERIFIER_PATH),
+            'I39_VERIFIER_SCOPE')
+    root_config = updated['project_executor']['roots']['NOX_PROJECT_SOURCE']
+    allowed = root_config['allowed_paths']
+    marker = json.loads(marker_raw)
+    pins, refs = marker['file_pins'], marker['source_refs']
+    require(root_config['path'] == str(root / WORKSPACE) and len(allowed) == len(pins) == 33
+            and marker.get('source_file_count') == 33 and VERIFIER not in allowed
+            and VERIFIER not in pins and isinstance(refs, list),
+            'I39_ALLOWLIST_PREIMAGE')
+    require(marker.get('manifest_sha256') == sha(encode({
+        'schema': 'NOX_PROJECT_SOURCE_BASELINE_V1', 'files': pins, 'source_refs': refs,
+    })), 'I39_BOOTSTRAP_MANIFEST')
+    allowed.append(VERIFIER)
+    pins[VERIFIER] = VERIFIER_SHA
+    refs.append({'kind': 'OWNER_REVIEWED_TRUSTED_TEST_APPEND', 'source_sha': source,
+                 'previous_marker_sha256': BOOTSTRAP_SHA, 'paths': [VERIFIER]})
+    marker['source_file_count'] = len(pins)
+    marker['manifest_sha256'] = sha(encode({'schema': 'NOX_PROJECT_SOURCE_BASELINE_V1',
+                                           'files': pins, 'source_refs': refs}))
+    return baseline, marker_raw, encode(marker)
+
+
+def verify_registered_workspace(helper, root, config, baseline):
+    observed = helper.source_snapshot(root, config)
+    files = dict(observed['files'])
+    added = files.pop(VERIFIER, {})
+    require(added.get('sha256') == VERIFIER_SHA and files == baseline['files']
+            and observed['git_pins'] == baseline['git_pins'], 'I39_EXISTING_SOURCE_CHANGED')
+
+
+def read_optional(helper, root, relative):
+    try:
+        return helper.read_regular(root / relative)
+    except FileNotFoundError:
+        return None
+
+
+def apply_tracked(helper, root, changes, current, applied, verifier_created):
+    for relative, raw in changes.items():
+        require(read_optional(helper, root, relative) == current[relative], 'WRITE_PREIMAGE')
+        if relative == VERIFIER_PATH:
+            target = root / relative
+            directory = os.open(target.parent, os.O_DIRECTORY | os.O_NOFOLLOW)
+            try:
+                fd = os.open(target.name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                             0o644, dir_fd=directory)
+                with os.fdopen(fd, 'wb') as stream:
+                    identity = os.fstat(stream.fileno())
+                    verifier_created.append({'inode': (identity.st_dev, identity.st_ino), 'complete': False})
+                    applied.append(relative)
+                    os.fchmod(stream.fileno(), 0o644)
+                    stream.write(raw)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        else:
+            applied.append(relative)
+            helper.atomic(root / relative, raw, 0o644 if relative.endswith('.py') else 0o600)
+        require(helper.read_regular(root / relative) == raw, 'WRITE_READBACK')
+        if relative == VERIFIER_PATH:
+            verifier_created[0]['complete'] = True
+
+
+def rollback_verifier(helper, root, changes, verifier_created):
+    if not verifier_created:
+        return
+    observed = read_optional(helper, root, VERIFIER_PATH)
+    if observed is None:
+        return
+    created = verifier_created[0]
+    expected = changes[VERIFIER_PATH]
+    require(observed == expected or (not created['complete'] and expected.startswith(observed)),
+            'I39_VERIFIER_FOREIGN_BYTES')
+    target = root / VERIFIER_PATH
+    directory = os.open(target.parent, os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        info = os.stat(target.name, dir_fd=directory, follow_symlinks=False)
+        require(stat.S_ISREG(info.st_mode) and (info.st_dev, info.st_ino) == created['inode'],
+                'I39_VERIFIER_FOREIGN_INODE')
+        os.unlink(target.name, dir_fd=directory)
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+
+
+def rollout(helper, root, candidate, request, source, *, verifier=None):
     current = helper.preimages(root, OLD)
     config = json.loads(current[CONFIG])
     pins = config.get('module_pins') or {}
@@ -331,7 +433,7 @@ def rollout(helper, root, candidate, request, source):
     lock = root / 'state/owner_maintenance.lock'
     require(not any(path.is_symlink() for path in (lock, *lock.parents)), 'LOCK_PATH')
     fd = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    applied, owned = [], None
+    applied, owned, verifier_created = [], None, []
     stop_attempted, candidate_start_attempted, released = False, False, False
     receipt = {'schema': 'NOX_OWNER_REFILL_CONTRACT_ROLLOUT_V1', 'request': request,
                'source_sha': source, 'state': 'PREFLIGHT', 'original_295_accepted': 0}
@@ -346,15 +448,25 @@ def rollout(helper, root, candidate, request, source):
         baseline, queue_sha = read_queue(helper, root)
         compared, manifest = verify_legacy_contracts(helper, root, config, old_module, module, baseline)
         headroom(helper, config)
+        source_before = None
+        if verifier is not None:
+            source_before, marker_before, marker_after = prepare_verifier(helper, root, config, updated, verifier, source)
+            current.update({MARKER_PATH: marker_before, VERIFIER_PATH: None})
+            changes = {REFILL: candidate, VERIFIER_PATH: verifier,
+                       MARKER_PATH: marker_after, CONFIG: encode(updated)}
         backup = root / 'state/dispatcher/refill_contract_rollouts' / request
         require(not any(path.is_symlink() for path in (backup, *backup.parents)), 'BACKUP_SCOPE')
         backup.mkdir(parents=True, mode=0o700)
         for rel, raw in current.items():
+            if raw is None:
+                continue
             saved = backup / Path(rel).name
             helper.atomic(saved, raw)
             require(helper.read_regular(saved) == raw, 'BACKUP_READBACK')
         helper.atomic(backup / 'queue_sha256.txt', (queue_sha + '\n').encode())
-        require(helper.preimages(root, OLD) == current and service_guard(helper) == protected
+        require(helper.preimages(root, OLD) == {rel: current[rel] for rel in OLD}
+                and (source_before is None or helper.source_snapshot(root, config) == source_before)
+                and service_guard(helper) == protected
                 and helper.expected_processes(EXPECTED_PROCESSES) == observed
                 and read_queue(helper, root)[1] == queue_sha, 'PRESTOP_DRIFT')
         maintenance_lease(fd, lock, helper, root)
@@ -370,7 +482,12 @@ def rollout(helper, root, candidate, request, source):
                 'STOPPED_QUEUE_OR_SERVING_DRIFT')
         maintenance_lease(fd, lock, helper, root)
         headroom(helper, config)
-        applied = helper.apply_transaction(root, changes, current)
+        if source_before is None:
+            applied = helper.apply_transaction(root, changes, current)
+        else:
+            require(helper.source_snapshot(root, config) == source_before, 'I39_STOPPED_PREIMAGE_DRIFT')
+            apply_tracked(helper, root, changes, current, applied, verifier_created)
+            verify_registered_workspace(helper, root, updated, source_before)
         maintenance_lease(fd, lock, helper, root)
         require(read_queue(helper, root)[1] == queue_sha and service_guard(helper) == protected,
                 'PRESTART_QUEUE_OR_SERVING_DRIFT')
@@ -384,6 +501,10 @@ def rollout(helper, root, candidate, request, source):
         require(helper.stop_clear(root) and service_guard(helper) == protected
                 and all(helper.read_regular(root / rel) == raw for rel, raw in changes.items())
                 and sha(helper.read_regular(root / DIRECTOR)) == DIRECTOR_SHA, 'POSTBOOT_DRIFT')
+        if source_before is not None:
+            verify_registered_workspace(helper, root, updated, source_before)
+            receipt.update(i39_verifier_sha256=VERIFIER_SHA, i39_forge_sha256=FORGE_SHA,
+                           i39_verifier_registered=True)
         receipt.update(state='REFILL_CONTRACT_RUNTIME_INSTALLED', new_director=owned,
                        old_director=old, worker_count=3, legacy_contracts_checked=compared,
                        refill_request_id=request_id, installed_refill_sha256=REFILL_SHA,
@@ -402,7 +523,12 @@ def rollout(helper, root, candidate, request, source):
                 present = helper.supervisor('status')
                 recover_director(helper, present, owned, old, children, candidate_start_attempted)
                 helper.rollback_transaction(root, changes, current, applied)
-                require(helper.preimages(root, OLD) == current, 'ROLLBACK_PREIMAGES')
+                require(all(read_optional(helper, root, rel) == raw for rel, raw in current.items()
+                            if rel != VERIFIER_PATH), 'ROLLBACK_PREIMAGES')
+                if source_before is not None:
+                    rollback_verifier(helper, root, changes, verifier_created)
+                    require(helper.source_snapshot(root, config) == source_before
+                            and not os.path.lexists(root / VERIFIER_PATH), 'I39_ROLLBACK_PREIMAGES')
                 receipt['rollback_preimages_verified'] = True
                 receipt['restored_director'] = start_owned_director(helper)
                 fcntl.flock(fd, fcntl.LOCK_UN)
@@ -426,8 +552,8 @@ def main():
     source = os.environ.get('NOX_OWNER_SOURCE_SHA', '')
     require(re.fullmatch('[1-9][0-9]{0,23}', request)
             and re.fullmatch('[0-9a-f]{40}', source), 'OWNER_CONTEXT')
-    helper, candidate = decode_bundle(BUNDLE)
-    return rollout(helper, ROOT, candidate, request, source)
+    helper, candidate, verifier = decode_bundle(BUNDLE)
+    return rollout(helper, ROOT, candidate, request, source, verifier=verifier)
 
 
 if __name__ == '__main__':

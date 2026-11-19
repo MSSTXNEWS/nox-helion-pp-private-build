@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - repair/nox-refill-contract-rollout-20261119
+      - repair/nox-i39-combined-rollout-20261119
     paths:
       - '.github/workflows/nox-refill-contract-rollout-ci.yml'
       - 'nox-control/owner_native_operator.py'

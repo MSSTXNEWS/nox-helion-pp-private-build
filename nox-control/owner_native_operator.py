@@ -1252,10 +1252,11 @@ FROZEN_BROWSER_PAGE_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
 }
 SCOPED_REPAIR_BUNDLES[FILES['repair']] = (
-    'owner_systemic_refill.py', 'continuous_transaction_helpers.py')
+    'owner_systemic_refill.py', 'continuous_transaction_helpers.py', 'test_forge_source_minhash.py')
 SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = (
     'nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py',
     'nox-control/continuous_executor_20261118/assets/continuous_transaction_helpers.py',
+    'nox-control/systemic_relay_20261118/i39_verifier/test_forge_source_minhash.py',
 )
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',

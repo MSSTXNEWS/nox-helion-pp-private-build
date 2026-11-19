@@ -20,7 +20,7 @@ RUNTIME = HERE / 'runtime/owner_systemic_refill.py'
 
 
 class RolloutContractTests(unittest.TestCase):
-    def test_owner_repair_transport_builds_the_exact_two_asset_payload(self):
+    def test_owner_repair_transport_builds_the_exact_three_asset_payload(self):
         spec = importlib.util.spec_from_file_location(
             '_refill_operator', REPOSITORY / 'nox-control/owner_native_operator.py')
         operator = importlib.util.module_from_spec(spec)
@@ -30,7 +30,7 @@ class RolloutContractTests(unittest.TestCase):
         paths = operator.repair_bundle_paths('repair', entry, ('nox-control/owner_native_repair.py',))
         assets = {Path(path).name: base64.b64encode(Path(path).read_bytes()).decode('ascii')
                   for path in paths}
-        self.assertEqual(set(assets), {'owner_systemic_refill.py', 'continuous_transaction_helpers.py'})
+        self.assertEqual(set(assets), {'owner_systemic_refill.py', 'continuous_transaction_helpers.py', rollout.VERIFIER})
         template = operator._load_action_payload('repair')
         self.assertEqual(template.count('__NOX_BUNDLE_JSON__'), 1)
         compiled = template.replace('__NOX_BUNDLE_JSON__', json.dumps(assets, sort_keys=True))
@@ -41,7 +41,7 @@ class RolloutContractTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'HOLD_REMOTE_MARKER_NOT_ALLOWLISTED'):
             operator._validate_forward_marker('repair', 'NOX_MAINT_FREEFORM=true')
 
-    def test_embedded_payload_and_both_assets_compile(self):
+    def test_embedded_payload_and_three_assets_compile(self):
         import ast
         payload = rollout.build_payload(REPOSITORY)
         assets = None
@@ -51,8 +51,9 @@ class RolloutContractTests(unittest.TestCase):
                     and isinstance(node.value, ast.Dict) and node.value.keys):
                 assets = ast.literal_eval(node.value)
         self.assertIsNotNone(assets)
-        helper, candidate = rollout.decode_bundle(assets)
+        helper, candidate, verifier = rollout.decode_bundle(assets)
         self.assertEqual(candidate, RUNTIME.read_bytes())
+        self.assertEqual(rollout.sha(verifier), rollout.VERIFIER_SHA)
         self.assertEqual(helper.STATE, 'state/dispatcher/state.json')
         damaged = {**assets, 'owner_systemic_refill.py': 'YQ=='}
         with self.assertRaisesRegex(RuntimeError, 'BUNDLE_PIN'):
@@ -108,7 +109,7 @@ class RolloutContractTests(unittest.TestCase):
 
 class RolloutTransactionTests(unittest.TestCase):
     def exercise(self, *, boot_issue=False, low_memory=False, backoff=False,
-                 prestart_memory=False, foreign=False, legacy_workers_issue=False):
+                 prestart_memory=False, foreign=False, legacy_workers_issue=False, combined=False):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             package = root / 'package'
@@ -120,8 +121,26 @@ class RolloutTransactionTests(unittest.TestCase):
                                 'owner_subagent_dispatcher.py': rollout.sha(b'director')},
                 'project_executor': {'package_root': str(package)},
                 'systemic_relay': {'sha256': 'a' * 64, 'path': str(package / 'relay/current.json')}}
-            original = {rollout.CONFIG: rollout.encode(config), rollout.REFILL: b'preimage'}
             helper, _ = self.helper(root)
+            verifier = None
+            source_pins = {}
+            if combined:
+                verifier = (HERE / 'i39_verifier' / rollout.VERIFIER).read_bytes()
+                source_files = {'forge_split_guard.py': b'unchanged Forge',
+                                **{f'source_{idx}.py': str(idx).encode() for idx in range(32)}}
+                source_pins = {name: rollout.sha(raw) for name, raw in source_files.items()}
+                for name, raw in source_files.items():
+                    helper.atomic(root / rollout.WORKSPACE / name, raw, 0o644)
+                helper.atomic(root / rollout.WORKSPACE / '.git/HEAD', b'a' * 40)
+                config['project_executor']['roots'] = {'NOX_PROJECT_SOURCE': {
+                    'path': str(root / rollout.WORKSPACE), 'allowed_paths': list(source_files)}}
+                marker = rollout.encode({'schema': 'NOX_PROJECT_SOURCE_BOOTSTRAP_RECEIPT_V1',
+                    'root': str(root / rollout.WORKSPACE), 'file_pins': source_pins,
+                    'source_refs': [], 'source_file_count': 33, 'manifest_sha256': rollout.sha(rollout.encode({
+                        'schema': 'NOX_PROJECT_SOURCE_BASELINE_V1', 'files': source_pins, 'source_refs': [],
+                    }))})
+                helper.atomic(root / rollout.MARKER_PATH, marker)
+            original = {rollout.CONFIG: rollout.encode(config), rollout.REFILL: b'preimage'}
             for path, raw in {**original, rollout.DIRECTOR: b'director',
                               helper.STATE: b'{"tasks":{}}',
                               'state/owner_maintenance.lock': b'',
@@ -174,7 +193,9 @@ class RolloutTransactionTests(unittest.TestCase):
                     raise RuntimeError('HOLD_FIXTURE_BOOT')
                 return 'a' * 64
             with (patch.multiple(rollout, OLD=old_pins, DIRECTOR_SHA=rollout.sha(b'director'),
-                                 REFILL_SHA=rollout.sha(candidate)),
+                                 REFILL_SHA=rollout.sha(candidate),
+                                 BOOTSTRAP_SHA=rollout.sha(marker) if combined else rollout.BOOTSTRAP_SHA,
+                                 FORGE_SHA=source_pins.get('forge_split_guard.py', rollout.FORGE_SHA)),
                   patch.object(rollout, 'load_module'),
                   patch.object(rollout, 'service_guard', return_value={}),
                   patch.object(rollout, 'verify_legacy_contracts', return_value=(6, {})),
@@ -190,9 +211,9 @@ class RolloutTransactionTests(unittest.TestCase):
                   contextlib.redirect_stdout(io.StringIO()) as log):
                 if low_memory or boot_issue or backoff or prestart_memory or foreign:
                     with self.assertRaisesRegex(RuntimeError, 'HOLD_FIXTURE_'):
-                        rollout.rollout(helper, root, candidate, '1', 'b' * 40)
+                        rollout.rollout(helper, root, candidate, '1', 'b' * 40, verifier=verifier)
                 else:
-                    receipt = rollout.rollout(helper, root, candidate, '1', 'b' * 40)
+                    receipt = rollout.rollout(helper, root, candidate, '1', 'b' * 40, verifier=verifier)
                     self.assertEqual(receipt['state'], 'REFILL_CONTRACT_RUNTIME_INSTALLED')
                     self.assertEqual(receipt['legacy_contracts_checked'], 6)
             self.assertEqual((root / 'state/TRAIN_PAUSE_REQUEST.flag').read_bytes(), b'pause')
@@ -224,6 +245,17 @@ class RolloutTransactionTests(unittest.TestCase):
                 self.assertEqual(attempted, ['stop', 'start'])
                 self.assertEqual(live, [new])
                 self.assertIn('RECOVERY_FOREIGN_DIRECTOR', log.getvalue())
+            if combined:
+                self.assertEqual((root / rollout.WORKSPACE / 'forge_split_guard.py').read_bytes(), b'unchanged Forge')
+                if boot_issue or low_memory:
+                    self.assertFalse((root / rollout.VERIFIER_PATH).exists())
+                    self.assertEqual((root / rollout.MARKER_PATH).read_bytes(), marker)
+                else:
+                    self.assertEqual(attempted, ['stop', 'start'])
+                    self.assertEqual((root / rollout.VERIFIER_PATH).read_bytes(), verifier)
+                    current_marker = json.loads((root / rollout.MARKER_PATH).read_bytes())
+                    self.assertEqual(current_marker['file_pins'], {**source_pins, rollout.VERIFIER: rollout.VERIFIER_SHA})
+                    self.assertTrue(receipt['i39_verifier_registered'])
 
     @staticmethod
     def helper(root):
@@ -250,6 +282,44 @@ class RolloutTransactionTests(unittest.TestCase):
 
     def test_restored_source_and_pid_do_not_imply_verified_worker_rollback(self):
         self.exercise(boot_issue=True, legacy_workers_issue=True)
+
+    def test_combined_one_restart_registers_only_the_verified_test(self):
+        self.exercise(combined=True)
+
+    def test_combined_boot_failure_restores_marker_and_removes_only_owned_test(self):
+        self.exercise(combined=True, boot_issue=True)
+
+    def test_combined_low_memory_leaves_marker_and_test_untouched(self):
+        self.exercise(combined=True, low_memory=True)
+
+    def test_no_rollback_of_foreign_test_with_the_same_bytes(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            helper, _ = self.helper(root)
+            verifier = root / rollout.VERIFIER_PATH
+            verifier.parent.mkdir(parents=True)
+            proposed = {rollout.VERIFIER_PATH: b'expected verifier'}
+            applied, created = [], []
+            rollout.apply_tracked(helper, root, proposed, {rollout.VERIFIER_PATH: None}, applied, created)
+            verifier.rename(verifier.with_suffix('.saved'))
+            verifier.write_bytes(proposed[rollout.VERIFIER_PATH])
+            with self.assertRaisesRegex(RuntimeError, 'I39_VERIFIER_FOREIGN_INODE'):
+                rollout.rollback_verifier(helper, root, proposed, created)
+            self.assertEqual(verifier.read_bytes(), proposed[rollout.VERIFIER_PATH])
+
+    def test_completed_verifier_rewritten_in_place_is_preserved(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            helper, _ = self.helper(root)
+            verifier = root / rollout.VERIFIER_PATH
+            verifier.parent.mkdir(parents=True)
+            proposed = {rollout.VERIFIER_PATH: b'expected verifier'}
+            applied, created = [], []
+            rollout.apply_tracked(helper, root, proposed, {rollout.VERIFIER_PATH: None}, applied, created)
+            verifier.write_bytes(b'expected')
+            with self.assertRaisesRegex(RuntimeError, 'I39_VERIFIER_FOREIGN_BYTES'):
+                rollout.rollback_verifier(helper, root, proposed, created)
+            self.assertEqual(verifier.read_bytes(), b'expected')
 
 
 if __name__ == '__main__':
