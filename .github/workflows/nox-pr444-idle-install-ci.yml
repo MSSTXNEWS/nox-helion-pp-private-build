@@ -1,0 +1,28 @@
+name: NOX PR444 scoped install source checks
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_native_deploy.py'
+      - 'nox-control/test_owner_pr444_idle_install.py'
+      - 'nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py'
+      - 'nox-control/systemic_relay_20261118/runtime/owner_subagent_processes.py'
+      - 'nox-control/systemic_relay_20261118/runtime/owner_subagent_instruction_truth.py'
+      - '.github/workflows/nox-pr444-idle-install-ci.yml'
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Compile source and run no-host-mutation checks
+        run: |
+          python -m py_compile nox-control/owner_native_operator.py nox-control/owner_native_deploy.py nox-control/test_owner_pr444_idle_install.py nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py nox-control/systemic_relay_20261118/runtime/owner_subagent_processes.py nox-control/systemic_relay_20261118/runtime/owner_subagent_instruction_truth.py
+          python -m unittest discover -s nox-control -p test_owner_pr444_idle_install.py -v
