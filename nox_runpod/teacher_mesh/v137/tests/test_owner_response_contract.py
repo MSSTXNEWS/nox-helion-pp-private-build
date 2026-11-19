@@ -105,6 +105,10 @@ class GroundedNativeQuality(unittest.TestCase):
         self.assertEqual(call(oversized,max_chars=1900),
                          {"state":"HOLD_CONTEXT_BUDGET"})
 
+    def test_more_than_forty_s03_hits_hold_without_partial_memory(self):
+        rows = [fact(source_uri=f"s03://owner/fact-{i}") for i in range(41)]
+        self.assertEqual(call(rows), {"state": "HOLD_S03_HIT_LIMIT"})
+
 
 if __name__=="__main__":
     unittest.main()
