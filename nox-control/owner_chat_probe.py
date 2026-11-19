@@ -219,10 +219,11 @@ def model_slots_state(client):
     for slot in slots:
         if not isinstance(slot, dict):
             raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
-        flag = slot.get('is_processing', slot.get('processing'))
-        if type(flag) is not bool:
+        flags = [slot[key] for key in ('is_processing', 'processing') if key in slot]
+        if (not flags or any(type(flag) is not bool for flag in flags)
+                or len(set(flags)) != 1):
             raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
-        busy += int(flag)
+        busy += int(flags[0])
     return {'count': len(slots), 'busy': busy}
 
 
