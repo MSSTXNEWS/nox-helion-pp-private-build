@@ -1,10 +1,11 @@
 """A1 continuation gate tests; no browser, network, GPU or S03 writes."""
+import asyncio
 import os
 import unittest
 from unittest.mock import patch
 
 from owner_chat_browser_qa import (admitted_qa_prompt, allowed_qa_request,
-                                   main, multiturn_history_valid, progressive_stream_valid)
+                                   browser_run, main, multiturn_history_valid, progressive_stream_valid)
 
 
 FIRST = 'Числа 1-10'
@@ -59,6 +60,12 @@ class SameDialogFourMessageContract(unittest.TestCase):
             self.assertFalse(allowed_qa_request(2, True, FIRST, SECOND, bad, 'synthetic-dialog'))
         self.assertFalse(allowed_qa_request(2, True, FIRST, SECOND, good_second, 'synthetic-dialog'))
         self.assertFalse(allowed_qa_request(0, False, FIRST, SECOND, good_first, 'other-dialog'))
+
+    def test_internal_browser_runner_also_holds_before_playwright(self):
+        with self.assertRaisesRegex(
+                RuntimeError,
+                'HOLD_CANONICAL_S03_WRITER_AND_INDEPENDENT_READBACK_NOT_WIRED'):
+            asyncio.run(browser_run({'two_turn_mode':True}, None, {}))
 
     def test_multiturn_holds_before_inventory_or_browser_work(self):
         with patch.dict(os.environ, {'NOX_BROWSER_QA_MODE':'multiturn'}):
