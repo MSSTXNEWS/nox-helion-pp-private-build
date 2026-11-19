@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import signal
 import subprocess
 import time
 
@@ -35,8 +36,8 @@ def emit(name, value):
 
 def safe_read(path, limit):
     path = Path(path)
-    if not path.is_absolute():
-        raise ValueError('ABSOLUTE_PATH_REQUIRED')
+    if not path.is_absolute() or '..' in path.parts:
+        raise ValueError('ABSOLUTE_CANONICAL_PATH_REQUIRED')
     parent = os.open('/', os.O_RDONLY | os.O_DIRECTORY)
     try:
         for part in path.parts[1:-1]:
@@ -821,12 +822,26 @@ def supervisor_config_readonly(config_path=SUPERVISOR_CONFIG_PATH,
     """
     config_path = Path(config_path)
     conf_dir = Path(conf_dir)
-    if (config_path.name != 'nox-dispatcher-t855u.conf'
+    if (not config_path.is_absolute() or not conf_dir.is_absolute()
+            or '..' in config_path.parts or '..' in conf_dir.parts
+            or config_path.name != 'nox-dispatcher-t855u.conf'
             or config_path.parent != conf_dir or not conf_dir.is_dir()
             or conf_dir.is_symlink()):
         raise ValueError('HOLD_SUPERVISOR_CONFIG_PATH')
-    names = sorted(path for path in conf_dir.iterdir() if path.name.endswith('.conf'))
-    if len(names) > 128 or config_path not in names:
+    names = []
+    try:
+        with os.scandir(conf_dir) as entries:
+            for index, entry in enumerate(entries):
+                if index >= 1024:
+                    raise ValueError('HOLD_SUPERVISOR_DIRECTORY_UNBOUNDED')
+                if entry.name.endswith('.conf'):
+                    if len(names) >= 128:
+                        raise ValueError('HOLD_SUPERVISOR_CONFIG_UNBOUNDED')
+                    names.append(conf_dir / entry.name)
+    except OSError as exc:
+        raise ValueError('HOLD_SUPERVISOR_CONFIG_DIRECTORY') from exc
+    names.sort()
+    if config_path not in names:
         raise ValueError('HOLD_SUPERVISOR_CONFIG_MISSING_OR_UNBOUNDED')
     sections = []
     selected = None
@@ -862,8 +877,14 @@ def supervisor_config_readonly(config_path=SUPERVISOR_CONFIG_PATH,
     if restart not in ('true', 'false', 'unexpected'):
         raise ValueError('HOLD_SUPERVISOR_AUTORESTART')
     stop_signal = parser.get(section, 'stopsignal', fallback='TERM').strip().upper()
-    if not re.fullmatch(r'(?:TERM|INT|QUIT|HUP|USR1|USR2|KILL|[0-9]{1,3})', stop_signal):
-        stop_signal = 'UNRECOGNIZED'
+    try:
+        if stop_signal.isdecimal():
+            signal.Signals(int(stop_signal))
+        elif (not re.fullmatch(r'[A-Z][A-Z0-9]{0,15}', stop_signal)
+              or 'SIG' + stop_signal not in signal.Signals.__members__):
+            raise ValueError
+    except ValueError as exc:
+        raise ValueError('HOLD_SUPERVISOR_STOPSIGNAL') from exc
     try:
         stop_as_group = parser.getboolean(section, 'stopasgroup', fallback=False)
         kill_as_group = parser.getboolean(section, 'killasgroup', fallback=False)
