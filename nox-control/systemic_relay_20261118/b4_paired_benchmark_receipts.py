@@ -355,6 +355,11 @@ def measure_openai_sse_wire(timed_chunks):
             obj[key] = value
         return obj
 
+    def _reject_nonfinite_json(_literal):
+        # Python accepts NaN/Infinity by default, despite RFC JSON forbidding
+        # them. Even ignored metadata must not turn malformed wire into PASS.
+        raise ReceiptHold("SSE_NONFINITE_JSON_CONSTANT")
+
     def dispatch(at_ms):
         nonlocal data_lines, visible_bytes, first_text_ms
         nonlocal terminal_ms, finish_reason, terminal_seen, event_count, usage_seen
@@ -368,7 +373,8 @@ def measure_openai_sse_wire(timed_chunks):
             terminal_ms = at_ms
             return
         try:
-            obj = json.loads(payload, object_pairs_hook=_unique_json_object)
+            obj = json.loads(payload, object_pairs_hook=_unique_json_object,
+                             parse_constant=_reject_nonfinite_json)
         except ReceiptHold:
             raise
         except (ValueError, TypeError) as exc:

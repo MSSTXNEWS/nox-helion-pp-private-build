@@ -388,6 +388,27 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertTrue(terminal_no_stop["sse_terminal_seen"])
         self.assertFalse(terminal_no_stop["wire_completed_normally"])
 
+    def test_sse_wire_nonfinite_json_constants_never_certify_chat(self):
+        # CPython's json.loads accepts these invalid JSON constants even in
+        # ignored metadata; malformed streams must never certify completion.
+        prefix = b'{"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]'
+        bad_suffixes = (b',"debug":NaN}',
+                        b',"debug":{"value":Infinity}}',
+                        b',"debug":[-Infinity]}')
+        for suffix in bad_suffixes:
+            with self.subTest(suffix=suffix):
+                with self.assertRaisesRegex(
+                        ReceiptHold, "SSE_NONFINITE_JSON_CONSTANT"):
+                    measure_openai_sse_wire([
+                        (2, b"data: " + prefix + suffix + b"\n\n"),
+                        (5, b"data: [DONE]\n\n")])
+        good = measure_openai_sse_wire([
+            (2, b"data: " + prefix + b'}\n\n'),
+            (5, b"data: [DONE]\n\n")])
+        self.assertTrue(good["wire_completed_normally"])
+        self.assertEqual(good["first_text_ms"], 2)
+        self.assertEqual(good["completion_ms"], 5)
+
     def test_sse_wire_rejects_duplicate_json_fields_at_every_depth(self):
         # json.loads normally uses last-wins and could invent a normal stop.
         ambiguous = (
