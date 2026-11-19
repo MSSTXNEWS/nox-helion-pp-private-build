@@ -127,7 +127,7 @@
         answer+=e.text;await emit(e.text);
       } else if(e.type==='done') {
         if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-        if(doneSeen)throw Error('HOLD_DUPLICATE_DONE');
+        
         doneSeen=true;done=e;
       } else if(e.type==='start') {
         if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
@@ -362,7 +362,7 @@
       if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.message!=='string'||
          !data.message.trim()||data.message.length>8000)return Promise.resolve(errorResponse('INVALID_MESSAGE',422));
       return typeof data.request_id==='string'||Object.prototype.hasOwnProperty.call(data,'dialog_id')
-        ?Promise.resolve(sseChat(data,init?.signal)):jsonChat(data,init?.signal);
+        ?Promise.resolve(sseChat(data,init?.signal||input.signal)):jsonChat(data,init?.signal||input.signal);
     }
     if((url.pathname==='/api/nox/history'&&method==='GET')||
        (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
