@@ -1,0 +1,63 @@
+name: NOX R6.1 owner read-only preflight (connection gap)
+on:
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: Explicitly permit one read-only preflight
+        type: choice
+        required: true
+        default: 'NO'
+        options: ['NO', 'YES']
+      asset_url:
+        description: Exact static R6.1 asset URL (no query or fragment)
+        type: string
+        required: true
+      asset_path:
+        description: Exact host filesystem path of that asset
+        type: string
+        required: true
+      proxy_path:
+        description: Exact host filesystem path of the proxy route configuration
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: nox-r61-owner-readonly-preflight
+  cancel-in-progress: false
+jobs:
+  owner-readonly-preflight:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.allow_native == 'YES' &&
+      github.actor == 'MSSTXNEWS' &&
+      github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
+      github.ref == 'refs/heads/repair/nox-native-reflex-autorefill-20261119'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+      NOX_R61_ASSET_URL: ${{ inputs.asset_url }}
+      NOX_R61_ASSET_PATH: ${{ inputs.asset_path }}
+      NOX_R61_PROXY_PATH: ${{ inputs.proxy_path }}
+      NOX_R61_REPORT_PATH: nox-r61-preflight-hold.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: repair/nox-native-reflex-autorefill-20261119
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate the read-only gap fixture
+        run: python -B -m unittest coordination.onepass.test_owner_r61_readonly_preflight -v
+      - name: Read control-plane status and report the host-access gate
+        run: python -B -m coordination.onepass.owner_r61_readonly_preflight
+      - name: Upload minimal HOLD receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-r61-owner-readonly-preflight
+          path: nox-r61-preflight-hold.json
+          if-no-files-found: ignore
+          retention-days: 1
