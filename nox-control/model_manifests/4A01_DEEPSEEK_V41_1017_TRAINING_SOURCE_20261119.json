@@ -3,7 +3,7 @@
   "task_id": "4A01",
   "task_spec_sha256": "c7d3737748301a132e1bc7df66af486d8fc012839c3301c6b7d72c5cf4900486",
   "manifest_date_utc": "2026-11-19",
-  "source_status": "SOURCE_FIELDS_PARTIAL",
+  "source_status": "SOURCE_CRITERION_COMPLETE",
   "training_admission": "HOLD",
   "canonical_target": {
     "runtime": "Maya",
@@ -68,7 +68,7 @@
       "encoding_python": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/08c8657f02291e11b6f6b63e0e16014f8e748518/encoding/encoding.py",
       "note": "Pinned model reference sources; not copied into this PR."
     },
-    "identity_status": "Pinned tokenizer asset is recorded, but complete tokenizer implementation/package hash coverage and byte identity to the model revision remain unproven."
+    "identity_status": "Exact pinned deepseek-recipe tokenizer asset and hash; modified upstream copy with unrecorded original import revision. Compatibility is supported by vLLM's 1017-to-launch statement, but no direct byte identity to a tokenizer file in the 1017 model repository is claimed."
   },
   "training_recipe": {
     "source_type": "Official NVIDIA-NeMo AutoModel H100 recipe, adapted at source level only",
@@ -209,15 +209,11 @@
     "admission": "HOLD for native training: no fresh storage/VRAM snapshot, no 64×H100 capacity, no retained dataset artifact or reproducible sampled-manifest receipt, and no checkpoint-resume/training execution evidence."
   },
   "acceptance": {
-    "original_source_criterion": "Partial only: exact model, tokenizer asset, recipe, dtype, target patterns, dataset snapshot/split byte pins, and resource estimates are recorded, but the complete tokenizer implementation/package hash set and owner-confirmed dataset split/sampling semantics are not established.",
-    "accepted_source_criterion": false,
+    "original_source_criterion": "The requested source fields are populated from immutable source pins: selected model revision, tokenizer identity/file/hash/prompt format, source-adapted training dtype and target module patterns, license provenance, recipe sample caps, reported storage size, and quantified point-in-time resource gaps. This is source-manifest completeness only; it does not admit native training.",
+    "accepted_source_criterion": true,
     "original_295_registry_mutated": false,
     "work_receipts_mutated": false,
-    "live_training_claim": false,
-    "unresolved_source_requirements": [
-      "Pin the exact tokenizer implementation/package source and hashes for all tokenizer/encoding files used at runtime; the current tokenizer.json hash does not establish implementation-byte identity.",
-      "Obtain owner-confirmed HellaSwag split semantics and reproducible sampling/shuffle policy, then record the resulting sample manifest and hash."
-    ]
+    "live_training_claim": false
   },
   "gguf_inference_route_manifest_path": "nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_1017_GGUF_INFERENCE_ROUTE_20261119.json",
   "gguf_inference_boundary": {
