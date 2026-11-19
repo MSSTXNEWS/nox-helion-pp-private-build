@@ -27,7 +27,7 @@ from fastapi.staticfiles import StaticFiles
 
 SITE = Path('/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site')
 ID_PATTERN = re.compile(r'^[a-f0-9]{32}$')
-REQUEST_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{16,128}$')
+REQUEST_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{1,128}$')
 OWNER = 'nox-single-owner'
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS nox_v29_dialogs (
