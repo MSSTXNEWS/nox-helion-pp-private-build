@@ -643,13 +643,17 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
         raise RuntimeError('HOLD_PAUSED_ADAPTER_DELTA')
     checkpoint = result.get('checkpoint', {})
     path = OUTPUT/('checkpoint-'+str(step))
+    if not isinstance(checkpoint, dict):
+        raise RuntimeError('HOLD_PAUSED_CHECKPOINT_SCOPE')
     hashes = checkpoint.get('files_sha256', {})
-    if (checkpoint.get('path') != str(path) or checkpoint.get('global_step') != step
+    if (checkpoint.get('path') != str(path) or type(checkpoint.get('global_step')) is not int
+            or checkpoint['global_step'] != step or not isinstance(hashes, dict)
             or path.is_symlink() or set(hashes) != set(helper.CHECKPOINT_NAMES)):
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_SCOPE')
     if any(file_sha(path/name) != hashes[name] for name in helper.CHECKPOINT_NAMES):
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_HASH')
-    if read_json(path/'trainer_state.json').get('global_step') != step:
+    state = read_json(path/'trainer_state.json')
+    if type(state.get('global_step')) is not int or state['global_step'] != step:
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_STEP')
     return True
 
