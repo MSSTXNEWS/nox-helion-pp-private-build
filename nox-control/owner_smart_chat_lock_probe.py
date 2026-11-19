@@ -215,13 +215,64 @@ def cgroup_memory():
                 'reclaim_attempted': False, 'model_or_services_modified': False}
 
 
+def dispatcher_diagnostic():
+    """Bounded read-only Supervisor classification; never export task/log bodies."""
+    report = {'source_imported': False, 'service_restarted': False,
+              'log_bodies_exported': False}
+    source = ROOT / 'scripts/nox_dispatcher_t855u.py'
+    try:
+        raw = bounded(source, 1024 * 1024)
+        report['script_sha256'] = hashlib.sha256(raw).hexdigest()
+        report['script_bytes'] = len(raw)
+        ast.parse(raw)
+        report['script_syntax'] = 'AST_OK'
+    except Exception as error:
+        report['script_syntax'] = type(error).__name__
+    try:
+        config = Path('/etc/supervisor/conf.d/nox-dispatcher-t855u.conf')
+        content = bounded(config, 32768).decode('utf-8','replace')
+        import configparser
+        cfg = configparser.ConfigParser(interpolation=None)
+        cfg.read_string(content)
+        section = 'program:nox-dispatcher-t855u'
+        report['config_exists'] = cfg.has_section(section)
+        if cfg.has_section(section):
+            report['supervisor_settings'] = {
+                name: cfg.get(section, name, fallback='UNKNOWN')[:64]
+                for name in ('autostart','autorestart','startsecs','startretries')}
+            command = cfg.get(section,'command',fallback='')
+            import shlex
+            argv = shlex.split(command)[:12]
+            report['command_basename'] = [os.path.basename(x) for x in argv]
+    except Exception as error:
+        report['config_error'] = type(error).__name__
+    try:
+        cmd = subprocess.run(['supervisorctl','tail','-20000',
+            'nox-dispatcher-t855u','stderr'],stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=5,
+            env={'PATH':'/usr/local/bin:/usr/bin:/bin','LANG':'C.UTF-8'})
+        raw = cmd.stdout[-20000:]
+        categories = ('Traceback','ModuleNotFoundError','ImportError','NameError',
+                      'SyntaxError','IndentationError','AttributeError','ValueError',
+                      'OSError','FileNotFoundError','PermissionError','RuntimeError',
+                      'MemoryError','OperationalError','Terminated','KeyboardInterrupt')
+        report['stderr_tail_rc'] = cmd.returncode
+        report['stderr_bytes_sampled'] = len(raw)
+        report['error_counts'] = {k: len(re.findall(rb'\b'+k.encode()+rb'\b',raw))
+                                  for k in categories if re.search(rb'\b'+k.encode()+rb'\b',raw)}
+        report['traceback_present'] = b'Traceback (most recent call last):' in raw
+    except Exception as error:
+        report['stderr_probe_error'] = type(error).__name__
+    return report
+
+
 def main():
     signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(TimeoutError()))
     signal.alarm(35)
     report = {'schema': 'NOX_SMART_CHAT_LOCK_PROBE_V1', 'observed_at': time.time(),
               'runtime_modules_imported': False, 'lock_modified': False, 'processes_controlled': False,
               'lock_before': lock_state(), 'files': {name: file_state(path) for name, path in PATHS.items()},
-              'services': services(), 'cgroup_memory': cgroup_memory(), 'credential_reader_shape': credential_reader_shape(),
+              'services': services(), 'cgroup_memory': cgroup_memory(), 'dispatcher_diagnostic': dispatcher_diagnostic(), 'credential_reader_shape': credential_reader_shape(),
               'cognitive_and_budget': cognitive_and_budget_metadata(),
               'lock_after': lock_state()}
     signal.alarm(0)
