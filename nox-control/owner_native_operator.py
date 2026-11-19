@@ -27,8 +27,8 @@ SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/owner_memory_governor
 FILES['repair'] = 'nox-control/owner_service_sizing_entry.py'
 # One exact owner-approved cache service and warm-hook transaction.
 FILES['repair'] = 'nox-control/owner_native_repair.py'
-SCOPED_REPAIR_BUNDLES[FILES['repair']] = tuple(["owner_stage_wow_menu.py","owner_wow_r62_menu_only_apply.py","owner_wow_served_asset_receipt.py","owner_quick_chat_receipt.py","owner_frozen_wow_route_auth.py","wow-menu.cms.b64","owner_pinned_wow_exchange.py"])
-SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = tuple(["nox-control/onehost-wow-native-menu/owner_stage_wow_menu.py","nox-control/onehost-wow-native-menu/owner_wow_r62_menu_only_apply.py","nox-control/onehost-wow-native-menu/owner_wow_served_asset_receipt.py","nox-control/onehost-wow-native-menu/owner_quick_chat_receipt.py","nox-control/onehost-wow-native-menu/owner_frozen_wow_route_auth.py","nox-control/onehost-wow-native-menu/wow-menu.cms.b64","nox-control/onehost-wow-native-menu/owner_pinned_wow_exchange.py"])
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('NOX_WOW_R62_DRIVE_STAGE.cms',)
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/onehost-wow-full-stage/NOX_WOW_R62_DRIVE_STAGE.cms',)
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
@@ -316,6 +316,23 @@ def main():
         request=authorize_event(args.action)
         print('NOX_MAINT_AUTHORIZED_COMMENT_ID='+str(request),flush=True)
         good=run_native(args.action,request)
+        try:
+            import http.client
+            edge = http.client.HTTPSConnection('correct-geometry-feof-meal.trycloudflare.com', timeout=10)
+            try:
+                edge.request('GET','/chat',headers={'Connection':'close','Accept-Encoding':'identity'})
+                response=edge.getresponse()
+                page=response.read(40000)
+                server=(response.getheader('Server') or '').casefold()
+                metadata={'status':response.status,'served_gateway':b'/api/nox/chat/stream' in page,
+                          'cloudflare_header':bool(response.getheader('CF-Ray')),
+                          'server_class':next((s for s in ('cloudflare','envoy','nginx','caddy') if s in server),None),
+                          'generic_block_message':b'Your request was blocked' in page}
+                print('NOX_MAINT_EXTERNAL_HTTPS_PROBE='+json.dumps(metadata,separators=(',',':')),flush=True)
+            finally:
+                edge.close()
+        except (OSError,ValueError) as issue:
+            print('NOX_MAINT_EXTERNAL_HTTPS_PROBE_HOLD='+type(issue).__name__,flush=True)
     except Exception as e:
         code=str(e)
         print('NOX_MAINT_RESULT='+(code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else 'HOLD_'+type(e).__name__.upper()),flush=True)
