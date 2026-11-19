@@ -746,6 +746,10 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 row=_get_dialog(db,id)
                 if row is None:
                     return JSONResponse({'error':'DIALOG_NOT_FOUND'},status_code=404)
+                # Browser reload cannot treat archived context as an active,
+                # authenticated recovery while next-turn and exact-ID reads HOLD.
+                if bool(row['archived']):
+                    return JSONResponse({'status':'HOLD','reason':'HOLD_DIALOG_ARCHIVED'},status_code=409)
                 msgs=db.execute(
                    'SELECT m.role, m.content, m.ts, m.exchange_id, '
                    'r.receipt_id, r.turn_id, r.lease_epoch, r.writer, r.committed_at, '
