@@ -20,7 +20,7 @@ TARGETS = ("_trim_ctx", "_build_messages", "prepare_payload")
 MAX_KEYS_PER_SCOPE = 32
 MAX_DIRECT_CALLS = 32
 KEY_PATTERN = __import__("re").compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
-CALL_SYMBOL_PATTERN = __import__("re").compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}(?:\\.[A-Za-z_][A-Za-z0-9_]{0,63}){0,5}$")
+CALL_SYMBOL_PATTERN = __import__("re").compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}(?:[.][A-Za-z_][A-Za-z0-9_]{0,63}){0,5}$")
 CALLBACK_CODES = tuple("C%02d" % n for n in range(1, 9))
 HYDRATION_TERMS = {
     "s03": ("s03",),
