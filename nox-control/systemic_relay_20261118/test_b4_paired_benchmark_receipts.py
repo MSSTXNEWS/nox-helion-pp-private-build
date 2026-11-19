@@ -305,4 +305,25 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertFalse(out["sse_reliability_regression"])
         self.assertFalse(out["promotion_authorized"])
 
+    def test_nonstop_failed_task_losing_terminal_is_reliability_regression(self):
+        b = example()
+        # An already-failed task can lose its SSE terminal after a network
+        # fault. Its original finish reason need not have been normal 'stop'.
+        b["outcomes"][2]["sse_terminal_seen"] = True
+        b["outcomes"][2]["model_finish_reason"] = "length"
+        c = copy.deepcopy(b)
+        c["outcomes"][2]["sse_terminal_seen"] = False
+        c["outcomes"][2]["model_finish_reason"] = "error"
+        out = compare_paired(b, c)
+        self.assertTrue(out["comparable"])
+        self.assertEqual(out["baseline"]["passed"], out["candidate"]["passed"])
+        self.assertEqual(out["sse_terminal_lost_task_ids"], ["t3"])
+        self.assertEqual(out["sse_normal_completion_regressed_task_ids"], [])
+        self.assertEqual(out["sse_terminal_coverage_delta"], -1 / 3)
+        self.assertTrue(out["sse_reliability_regression"])
+        self.assertTrue(out["quality_or_history_regression"])
+        self.assertIsNone(out["p95_latency_delta_ms_same_observed_work"])
+        self.assertFalse(out["promotion_authorized"])
+
+
 if __name__ == '__main__': unittest.main()
