@@ -106,6 +106,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             if kind=='delta':
                 text=frame.get('text','')
                 if not isinstance(text,str):raise RuntimeError('HOLD_STREAM_DELTA_SCHEMA')
+                if len(answer)+len(text)>10000:raise RuntimeError('HOLD_STREAM_TEXT_LIMIT')
                 answer+=text;delta_count+=1
                 if meaningful_delta(text):
                     if first is None:first=elapsed
