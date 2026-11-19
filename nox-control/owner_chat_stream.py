@@ -105,20 +105,23 @@ async def _bounded_sse_lines(response):
     """
     pending=''
     after_cr=False
-    async for chunk in response.aiter_text(chunk_size=8192):
-        for part in re.split(r'(\r\n|\r|\n)',chunk):
-            if part in ('\r\n','\r','\n'):
-                if part=='\n' and after_cr:
+    # Un-sized chunks preserve immediate first-token delivery. Fixed-size
+    # HTTPX text chunking can wait for 8 KiB and stall a live SSE response.
+    async for chunk in response.aiter_text():
+        for offset in range(0,len(chunk),8192):
+            for part in re.split(r'(\r\n|\r|\n)',chunk[offset:offset+8192]):
+                if part in ('\r\n','\r','\n'):
+                    if part=='\n' and after_cr:
+                        after_cr=False
+                        continue
+                    yield pending
+                    pending=''
+                    after_cr=(part=='\r')
+                elif part:
                     after_cr=False
-                    continue
-                yield pending
-                pending=''
-                after_cr=(part=='\r')
-            elif part:
-                after_cr=False
-                pending+=part
-                if len(pending)>300000:
-                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+                    pending+=part
+                    if len(pending)>300000:
+                        raise StreamFailure('HOLD_MODEL_SSE_FRAME')
     if pending:
         yield pending
 
