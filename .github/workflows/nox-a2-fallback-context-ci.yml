@@ -20,4 +20,4 @@ jobs:
           python3 -m venv .a2-ci
           . .a2-ci/bin/activate
           python -m pip install --disable-pip-version-check httpx==0.28.1 fastapi==0.116.1
-          PYTHONPATH=nox-control python -m unittest test_owner_chat_stream.StreamTests.test_full_unicode_tool_evidence_survives_model_followup -v
+          PYTHONPATH=nox-control python -m unittest test_owner_chat_stream.StreamTests.test_full_unicode_tool_evidence_survives_model_followup test_owner_chat_stream.StreamTests.test_falsy_tool_arguments_fail_closed_without_rewriting_model_evidence -v
