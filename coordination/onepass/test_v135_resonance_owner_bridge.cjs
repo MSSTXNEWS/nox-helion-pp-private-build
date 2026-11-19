@@ -1314,11 +1314,11 @@ test('V176 later-chunk native frames after done fail closed before S03 on SSE an
         const first=[{type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
           {type:'start',model:'NOX HELION'}, {type:'delta',text:reply},
           {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'v176-exchange'}]
-          .map(x=>JSON.stringify(x)+'\\n').join('');
+          .map(x=>JSON.stringify(x)+'\n').join('');
         return new Response(new ReadableStream({pull(c){
           reads++;
           if(reads===1)c.enqueue(enc.encode(first));
-          else {c.enqueue(enc.encode(JSON.stringify({type:'delta',text:'FORGED'})+'\\n'));c.close();}
+          else {c.enqueue(enc.encode(JSON.stringify({type:'delta',text:'FORGED'})+'\n'));c.close();}
         }},{highWaterMark:0}),{headers:{'content-type':'application/x-ndjson'}});
       }
       if(u.pathname==='/api/ui/memory/dialogs/history'){
