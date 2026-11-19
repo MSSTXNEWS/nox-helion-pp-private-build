@@ -11,6 +11,9 @@ on:
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/owner_native_emergency_stop.py'
       - 'nox-control/test_owner_native_emergency_stop_fence.py'
+      - 'nox-control/owner_native_emergency_stop_preflight.py'
+      - 'nox-control/test_owner_native_emergency_stop_preflight.py'
+      - 'nox-control/test_owner_native_operator_secret_env.py'
       - 'nox-control/owner_browser_stream_only_entry.py'
       - 'nox-control/owner_chat_stream_only_qa.py'
       - 'nox-control/owner_chat_browser_qa.py'
@@ -61,6 +64,9 @@ jobs:
             nox-control/owner_native_operator.py \
             nox-control/owner_native_emergency_stop.py \
             nox-control/test_owner_native_emergency_stop_fence.py \
+            nox-control/owner_native_emergency_stop_preflight.py \
+            nox-control/test_owner_native_emergency_stop_preflight.py \
+            nox-control/test_owner_native_operator_secret_env.py \
             nox-control/owner_browser_stream_only_entry.py \
             nox-control/owner_chat_stream_only_qa.py \
             nox-control/test_owner_chat_stream_only_qa.py \
@@ -76,6 +82,14 @@ jobs:
           python -B -m unittest discover \
             -s nox-control \
             -p test_owner_native_emergency_stop_fence.py \
+            -v
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_native_emergency_stop_preflight.py \
+            -v
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_native_operator_secret_env.py \
             -v
           python -B -m unittest discover \
             -s nox-control \

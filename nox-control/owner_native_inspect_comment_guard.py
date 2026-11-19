@@ -25,11 +25,12 @@ APPROVED_SOURCE_BY_ACTION = {
     "browser_qa": "eaa4b0d64d3d97a8c2b2680e8eb20137934d76b9",  # PR #543 helper source commit; preserve this pin with a merge commit
     "source_export": "845c76d44676d56157125e729db81b45e006cf92",  # exact pinned encrypted-only #415 source export
     "emergency_stop": "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23",  # exact drained emergency-stop source commit
+    "emergency_stop_preflight": "a087e3968171ebb338a2fd19736cfa340c30956f",  # bounded read-only endpoint facts
 }
 SOURCE_EXPORT_KEY_MAX_CHARS = 12000
 COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) "
-    rf"(inspect|audit|source_attest|gpu_inventory|browser_qa|emergency_stop)\Z"
+    rf"(inspect|audit|source_attest|gpu_inventory|browser_qa|emergency_stop_preflight|emergency_stop)\Z"
 )
 SOURCE_EXPORT_COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ({re.escape(APPROVED_SOURCE_BY_ACTION['source_export'])}) "

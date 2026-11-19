@@ -22,6 +22,7 @@ from owner_native_inspect_comment_guard import (
 
 INSPECT_SHA = APPROVED_SOURCE_BY_ACTION["inspect"]
 EMERGENCY_STOP_SHA = APPROVED_SOURCE_BY_ACTION["emergency_stop"]
+EMERGENCY_STOP_PREFLIGHT_SHA = APPROVED_SOURCE_BY_ACTION["emergency_stop_preflight"]
 AUDIT_SHA = APPROVED_SOURCE_BY_ACTION["audit"]
 SOURCE_ATTEST_SHA = APPROVED_SOURCE_BY_ACTION["source_attest"]
 GPU_INVENTORY_SHA = APPROVED_SOURCE_BY_ACTION["gpu_inventory"]
@@ -55,6 +56,8 @@ class OwnerCommentGuardTests(unittest.TestCase):
                          "1d76f3fbce0b9e9258f77cdc181b038acc4d69c9")
         self.assertEqual(EMERGENCY_STOP_SHA,
                          "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23")
+        self.assertEqual(EMERGENCY_STOP_PREFLIGHT_SHA,
+                         "a087e3968171ebb338a2fd19736cfa340c30956f")
         self.assertEqual(AUDIT_SHA,
                          "b1e33d60983885a7ebd1979bda4ec640b7ca7047")
         self.assertEqual(SOURCE_ATTEST_SHA,
@@ -90,6 +93,13 @@ class OwnerCommentGuardTests(unittest.TestCase):
             authorize_event(event_for(emergency_stop_body), REPOSITORY, "issue_comment"),
             ("emergency_stop", EMERGENCY_STOP_SHA),
         )
+        preflight_body = (
+            f"/nox-maintain 60509551 {EMERGENCY_STOP_PREFLIGHT_SHA} "
+            "emergency_stop_preflight")
+        self.assertEqual(
+            authorize_event(event_for(preflight_body), REPOSITORY, "issue_comment"),
+            ("emergency_stop_preflight", EMERGENCY_STOP_PREFLIGHT_SHA),
+        )
 
     def test_malformed_or_unavailable_actions_hold(self) -> None:
         bodies = (
@@ -105,6 +115,7 @@ class OwnerCommentGuardTests(unittest.TestCase):
             f"/nox-maintain 60509551 {GPU_INVENTORY_SHA} gpu_inventory extra",
             f"/nox-maintain 60509551 {BROWSER_QA_SHA} browser_qa extra",
             f"/nox-maintain 60509551 {EMERGENCY_STOP_SHA} emergency_stop extra",
+            f"/nox-maintain 60509551 {EMERGENCY_STOP_PREFLIGHT_SHA} emergency_stop_preflight extra",
         )
         for body in bodies:
             with self.subTest(body=body):
@@ -138,9 +149,13 @@ class OwnerCommentGuardTests(unittest.TestCase):
             (BROWSER_QA_SHA, "gpu_inventory"),
             (GPU_INVENTORY_SHA, "browser_qa"),
             (UNAPPROVED_SHA, "emergency_stop"),
+            (UNAPPROVED_SHA, "emergency_stop_preflight"),
             (INSPECT_SHA, "emergency_stop"),
+            (INSPECT_SHA, "emergency_stop_preflight"),
             (EMERGENCY_STOP_SHA, "inspect"),
             (EMERGENCY_STOP_SHA, "audit"),
+            (EMERGENCY_STOP_PREFLIGHT_SHA, "emergency_stop"),
+            (EMERGENCY_STOP_SHA, "emergency_stop_preflight"),
         )
         for sha, action in pairs:
             body = f"/nox-maintain 60509551 {sha} {action}"
@@ -400,6 +415,8 @@ class WorkflowScopeTests(unittest.TestCase):
     def test_emergency_stop_requires_main_source_pin_before_target_checkout(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github" / "workflows"
                     / "nox-owner-maintenance-command.yml").read_text(encoding="utf-8")
+        operator = (Path(__file__).parents[1] / "nox-control"
+                    / "owner_native_operator.py").read_text(encoding="utf-8")
         self.assertIn("issue_comment:", workflow)
         self.assertNotIn("workflow_dispatch:", workflow)
         self.assertIn("checkout main owner approval guard", workflow.lower())
@@ -407,6 +424,11 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertIn("steps.approved.outputs.action", workflow)
         self.assertIn("steps.approved.outputs.source_sha", workflow)
         self.assertIn("emergency_stop", workflow)
+        self.assertIn("emergency_stop_preflight", workflow)
+        self.assertIn(
+            "'emergency_stop_preflight': 'nox-control/owner_native_emergency_stop_preflight.py'",
+            operator,
+        )
         self.assertLess(workflow.index("Run main approved-source guard"),
                         workflow.index("ref: ${{ steps.request.outputs.sha }}"))
         self.assertLess(workflow.index("ref: ${{ steps.request.outputs.sha }}"),
@@ -423,7 +445,7 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertIn("source=(", workflow)
         self.assertIn("owner_native_'+a+'.py", workflow)
         self.assertEqual(
-            workflow.count("if: steps.request.outputs.action == 'emergency_stop'"),
+            workflow.count("if: steps.request.outputs.action == 'emergency_stop' || steps.request.outputs.action == 'emergency_stop_preflight'"),
             3,
         )
 
