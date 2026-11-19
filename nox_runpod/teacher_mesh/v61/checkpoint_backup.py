@@ -346,16 +346,33 @@ def publish_verified_backup(candidate:Path, final:Path, receipt_path:Path, recei
         raise RuntimeError('HOLD_V61_EXISTING_PUBLISHED_ARTIFACT')
     if not candidate.is_file():
         raise RuntimeError('HOLD_V61_CANDIDATE_MISSING')
-    pending=receipt_path.with_name(receipt_path.name+'.pending')
-    pending.write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
+    # An existence check followed by Path.replace() is not a CAS: a second
+    # publisher may create FINAL between the check and replacement. Hard-link
+    # publication fails atomically if its destination already exists.
+    import tempfile
+    pending=None
     try:
-        # Refuse an unexpected second publisher rather than overwrite it.
-        if final.exists() or receipt_path.exists():
-            raise RuntimeError('HOLD_V61_PUBLISH_RACE')
-        candidate.replace(final)
-        pending.replace(receipt_path)
+        with tempfile.NamedTemporaryFile(mode='w',encoding='utf-8',
+                prefix=receipt_path.name+'.pending.',
+                dir=str(receipt_path.parent),delete=False) as stream:
+            pending=Path(stream.name)
+            stream.write(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            os.link(candidate,final)
+        except FileExistsError as exc:
+            raise RuntimeError('HOLD_V61_PUBLISH_RACE') from exc
+        # Receipt is the last publication marker; a failed second link
+        # leaves partial evidence for owner reconciliation, never overwrites.
+        try:
+            os.link(pending,receipt_path)
+        except FileExistsError as exc:
+            raise RuntimeError('HOLD_V61_RECEIPT_RACE') from exc
+        candidate.unlink()
     finally:
-        pending.unlink(missing_ok=True)
+        if pending is not None:
+            pending.unlink(missing_ok=True)
 
 
 def run():
