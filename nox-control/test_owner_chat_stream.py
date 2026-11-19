@@ -122,6 +122,24 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload.get('_agent_final'),'Hola')
         self.assertTrue(chunks.closed)
 
+    async def test_bare_data_field_joins_following_json_without_losing_s03(self):
+        # WHATWG treats a bare `data` as `data:` (an empty data value).
+        # The resulting leading LF is JSON whitespace, not a second event.
+        chunks=Chunks([b'data\r\n',frame('Hola sin pérdida'),
+                       frame(finish='stop'),b'data: [DONE]\\n\\n'])
+        requests,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Hola',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertIn('Hola sin pérdida',wire)
+        self.assertIn('[DONE]',wire)
+        self.assertEqual(payload.get('_agent_final'),'Hola sin pérdida')
+        self.assertEqual(len(requests),1)
+        self.assertTrue(chunks.closed)
+
     async def test_unbounded_metadata_record_cannot_starve_chat_or_save_s03(self):
         # Every comment is a legal SSE field; their *unbounded number* is not.
         chunks=Chunks([frame('Partial'),b': keepalive\n'*1025+b'\n',
