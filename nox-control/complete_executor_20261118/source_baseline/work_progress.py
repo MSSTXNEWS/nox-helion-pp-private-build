@@ -709,7 +709,7 @@ def _hash_regular_file(path, expected_size, max_size):
             os.lseek(fd, 0, os.SEEK_SET)
             sha256 = hashlib.sha256()
             blob_sha1 = hashlib.sha1(
-                b'blob ' + str(expected_size).encode('ascii') + b'\\0'
+                b'blob ' + str(expected_size).encode('ascii') + b'\0'
             )
             remaining = expected_size
             while remaining:
