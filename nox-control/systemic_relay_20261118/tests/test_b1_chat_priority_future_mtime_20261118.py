@@ -687,6 +687,8 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                 task = {"id": "B1-TERMINAL-EXACT", "status": "running",
                         "handler": handler, "owner_claim": claim,
                         "params": {"job_id": "job1"}}
+                if handler == "owner_native_typed_leaf":
+                    task.update(parent_task_id="6V14-03", queue_id="queue-1")
                 intent = {"schema": "NOX_NATIVE_WORKER_SUBMIT_INTENT_V1",
                           "task_id": task["id"], "handler": handler,
                           "owner_claim": claim, "job_id": "job1",
@@ -697,6 +699,10 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                            "job_id": "job1", "claim": claim,
                            "source_sha256": "pinned-source",
                            "worker_result": {"text": "Привет 🌍", "tokens": [1, 2, 3]}}
+                if handler == "owner_native_typed_leaf":
+                    receipt.update(parent_task_id="6V14-03", queue_id="queue-1",
+                                   scope="SUBTASK_COMPLETED_ORIGINAL_NOT_ACCEPTED",
+                                   original_task_accepted=False)
                 state = {"tasks": {task["id"]: task}}
                 path.write_text(json.dumps(state, ensure_ascii=False))
                 def save(value):
@@ -717,6 +723,30 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                 self.assertEqual(restored["receipt"], receipt)
                 self.assertEqual(restored["s03"]["receipt_sha256"],
                                  evidence["receipt_sha256"])
+                # Recompute the forged receipt digest and accept its fake S03
+                # digest. Exact leaf queue/parent/scope must STILL reject it.
+                if handler == "owner_native_typed_leaf":
+                    for key, value in (("queue_id", "foreign-queue"),
+                                       ("parent_task_id", "foreign-parent"),
+                                       ("original_task_accepted", True),
+                                       ("scope", "PARENT_ACCEPTED")):
+                        forged = json.loads(path.read_text())
+                        terminal = forged["tasks"][task["id"]]["native_worker_terminal_evidence"]
+                        terminal["receipt"][key] = value
+                        terminal["receipt_sha256"] = digest(encoded(terminal["receipt"]))
+                        save(forged)
+                        self.assertIsNone(scope["_durable_terminal_s03_readback"](
+                            restarted, task["id"]), key)
+                        save(state)
+                original_reader = scope["s03_readback"]
+                try:
+                    def unavailable(_):
+                        raise OSError("ambiguous S03 read")
+                    scope["s03_readback"] = unavailable
+                    self.assertIsNone(scope["_durable_terminal_s03_readback"](
+                        restarted, task["id"]))
+                finally:
+                    scope["s03_readback"] = original_reader
                 with self.assertRaisesRegex(RuntimeError,
                                             "HOLD_NATIVE_TERMINAL_INTENT_UNSETTLED"):
                     scope["_durable_terminal_fence"](owner, task, receipt)

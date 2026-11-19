@@ -1509,9 +1509,21 @@ class Native:
                 or receipt.get('schema') != RECEIPT or receipt.get('phase') != phase
                 or receipt.get('task_id') != task_id
                 or receipt.get('job_id') != intent.get('job_id')
-                or receipt.get('claim') != row.get('owner_claim')):
+                or receipt.get('claim') != row.get('owner_claim')
+                # A leaf may never transform a child technical check into an
+                # accepted parent job, or reconcile a different queue claim.
+                or (row.get('handler') == LEAF_HANDLER and
+                    (receipt.get('parent_task_id') != row.get('parent_task_id')
+                     or receipt.get('queue_id') != row.get('queue_id')
+                     or receipt.get('original_task_accepted') is not False
+                     or receipt.get('scope') != 'SUBTASK_COMPLETED_ORIGINAL_NOT_ACCEPTED'))):
             return None
-        proof = s03_readback(receipt)
+        try:
+            proof = s03_readback(receipt)
+        except (OSError, ValueError, sqlite3.Error, GateError):
+            # An unavailable/ambiguous S03 reader is not terminal settlement.
+            # Preserve the original claim and never authorize a fresh IPC.
+            return None
         if not proof or proof.get('receipt_sha256') != terminal['receipt_sha256']:
             return None
         return {'receipt': receipt, 's03': proof,
