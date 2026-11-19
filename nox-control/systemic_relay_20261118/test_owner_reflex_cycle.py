@@ -64,7 +64,8 @@ class NativeReflexTests(unittest.TestCase):
 
     def test_failed_terminal_produces_new_review_not_replay(self):
         result = tick(state={'a':{
-            'status':'failed','systemic_relay':{'binding':{
+            'status':'failed', 'handler':'owner_native_project_work',
+            'systemic_relay':{'binding':{
                 'mission_id':'cache_fill_ttl','mission_revision':1,
                 'input_sha256':'f'*64}}}},
             deferred=[{'mission_id':'cache_fill_ttl','reason':'ALREADY_ADMITTED_NO_REPLAY'}])
