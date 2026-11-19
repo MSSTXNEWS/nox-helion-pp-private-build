@@ -119,104 +119,297 @@ def reassemble_transfer_records(records,expected_request_id,expected_source_sha)
     if expected_id!=begin['artifact_id']:raise RuntimeError('HOLD_TRANSFER_ARTIFACT_ID')
     return raw
 
+def _safe_audit_comm(value):
+    return (isinstance(value,str) and 1<=len(value)<=60
+            and re.fullmatch(r'[A-Za-z0-9_.+@= -]{1,60}',value) is not None)
+
+def _project_identity(identity):
+    if not isinstance(identity,dict):return None
+    fields=('pid','ppid','start_ticks','nspid','nspid_available',
+            'pid_namespace','mnt_namespace','cgroup_namespace','identity_state')
+    result={key:identity[key] for key in fields if key in identity}
+    if 'comm' in identity:
+        result['comm']=identity['comm'] if _safe_audit_comm(identity['comm']) else 'UNSAFE_OR_UNAVAILABLE'
+    return result
+
+def _project_gpu_snapshot(snapshot):
+    if not isinstance(snapshot,dict):return None
+    fields=('return_code','started_unix_ns','finished_unix_ns','rejected_rows',
+            'unbounded','truncated','complete','scope')
+    result={key:snapshot[key] for key in fields if key in snapshot}
+    apps=snapshot.get('apps')
+    result['apps']=([{key:row[key] for key in ('gpu_pid','gpu_uuid','used_gpu_memory') if key in row}
+                     for row in apps if isinstance(row,dict)] if isinstance(apps,list) else None)
+    return result
+
+def _project_service_inventory(services):
+    if not isinstance(services,dict):return None
+    fields=('command_rc','command_success','inventory_complete','rows_complete',
+            'status_consistent','truncated','rejected_lines','duplicate_service_names',
+            'identity_complete','scope')
+    result={key:services[key] for key in fields if key in services}
+    health=services.get('service_health')
+    if isinstance(health,dict):
+        result['service_health']={key:health[key] for key in ('state','counts','running','not_running') if key in health}
+    raw_rows=services.get('services')
+    if isinstance(raw_rows,list):
+        result['services']=[]
+        for row in raw_rows:
+            if not isinstance(row,dict):continue
+            item={key:row[key] for key in ('service','state','pid','identity_state') if key in row}
+            if isinstance(row.get('identity'),dict):item['identity']=_project_identity(row['identity'])
+            result['services'].append(item)
+    else:result['services']=None
+    return result
+
+def _project_gpu_link(link):
+    if not isinstance(link,dict):return None
+    fields=('gpu_pid','gpu_uuid','used_gpu_memory_before','used_gpu_memory_after',
+            'inventory_presence','identity_stability','classification','evidence_state',
+            'visibility','before_alias_scan_complete','after_alias_scan_complete','scope')
+    result={key:link[key] for key in fields if key in link}
+    if isinstance(link.get('proc_identity'),dict):result['proc_identity']=_project_identity(link['proc_identity'])
+    if isinstance(link.get('service_match'),dict):
+        match=link['service_match']
+        result['service_match']={key:match[key] for key in ('service','pid','state','relation','start_ticks') if key in match}
+    else:result['service_match']=None
+    chain=link.get('parent_chain')
+    if isinstance(chain,list):
+        result['parent_chain']=[{key:row[key] for key in ('pid','ppid','start_ticks','pid_namespace') if key in row}
+                                for row in chain if isinstance(row,dict)]
+    else:result['parent_chain']=None
+    return result
+
+def _project_hardware(result):
+    if not isinstance(result,dict):return None
+    return {'gpu_apps_before':_project_gpu_snapshot(result.get('gpu_apps_before')),
+            'gpu_apps_after':_project_gpu_snapshot(result.get('gpu_apps_after')),
+            'gpu_process_links':([_project_gpu_link(row) for row in result['gpu_process_links']]
+                                 if isinstance(result.get('gpu_process_links'),list) else None),
+            'supervisor_services':_project_service_inventory(result.get('supervisor_services'))}
+
+def _project_supervisor_worker(result):
+    if not isinstance(result,dict):return None
+    output={'available':result.get('available') is True,'attempt_count':None,'results':[]}
+    attempts=result.get('results')
+    if isinstance(attempts,list):
+        output['attempt_count']=len(attempts)
+        for attempt in attempts:
+            if not isinstance(attempt,dict):continue
+            rows=attempt.get('services')
+            safe_rows=[]
+            if isinstance(rows,list):
+                for row in rows:
+                    if isinstance(row,dict):
+                        safe_rows.append({key:row[key] for key in ('name','state','pid') if key in row})
+            output['results'].append({'rc':attempt.get('rc'),'services':safe_rows if isinstance(rows,list) else None})
+    return output
+
+def _validate_audit_process_inventory(inventory):
+    if not isinstance(inventory,dict):return None
+    inventory_keys={'scope','started_unix_ns','finished_unix_ns','entries_seen','row_count','cap',
+        'truncated','enumeration_error','read_failure_count','read_failure_pids','complete',
+        'fields','omitted_fields','rows_sha256','rows'}
+    if set(inventory)!=inventory_keys:
+        raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_KEYS')
+    process_rows=inventory.get('rows')
+    expected_fields=['pid','ppid','uid','start_ticks','nspid','namespaces.pid',
+        'namespaces.mnt','namespaces.cgroup','comm','exe','exe_state']
+    expected_omitted=['argv','cmdline','environ','cgroup_paths']
+    if (not isinstance(process_rows,list) or type(inventory.get('complete')) is not bool
+            or type(inventory.get('truncated')) is not bool
+            or inventory.get('scope')!='ALL_NUMERIC_PROC_PIDS_MINIMAL_IDENTITY'
+            or type(inventory.get('row_count')) is not int or inventory['row_count']<1
+            or inventory['row_count']!=len(process_rows)
+            or type(inventory.get('cap')) is not int or inventory['cap']!=8192
+            or type(inventory.get('entries_seen')) is not int
+            or not inventory['row_count']<=inventory['entries_seen']<=inventory['cap']+1
+            or type(inventory.get('read_failure_count')) is not int
+            or not 0<=inventory['read_failure_count']<=inventory['row_count']
+            or not isinstance(inventory.get('read_failure_pids'),list)
+            or len(inventory['read_failure_pids'])>64
+            or any(type(pid) is not int or pid<1 for pid in inventory['read_failure_pids'])
+            or type(inventory.get('started_unix_ns')) is not int
+            or type(inventory.get('finished_unix_ns')) is not int
+            or inventory['started_unix_ns']<=0 or inventory['finished_unix_ns']<inventory['started_unix_ns']
+            or inventory.get('fields')!=expected_fields or inventory.get('omitted_fields')!=expected_omitted
+            or 'enumeration_error' not in inventory
+            or (inventory['enumeration_error'] is not None
+                and not re.fullmatch(r'[A-Za-z0-9_]{1,64}',str(inventory['enumeration_error'])))
+            or not re.fullmatch(r'[0-9a-f]{64}',str(inventory.get('rows_sha256')))):
+        raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_SHAPE')
+    row_keys={'pid','ppid','uid','start_ticks','nspid','namespaces','comm','exe','exe_state','identity_state'}
+    missing_field_names={'pid','ppid','uid','start_ticks','nspid','namespace_pid','namespace_mnt',
+        'namespace_cgroup','comm','exe_read','exe'}
+    pids=[]
+    for row in process_rows:
+        if not isinstance(row,dict) or not row_keys.issubset(row) or set(row)-row_keys-{'missing_fields'}:
+            raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_ROW_KEYS')
+        if type(row.get('pid')) is not int or row['pid']<1:
+            raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_ROW_PID')
+        if 'missing_fields' in row and (not isinstance(row['missing_fields'],list)
+                or len(row['missing_fields'])>len(missing_field_names)
+                or any(not isinstance(name,str) or name not in missing_field_names for name in row['missing_fields'])
+                or row['missing_fields']!=sorted(set(row['missing_fields']))):
+            raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_MISSING_FIELDS')
+        if row.get('identity_state') not in ('VERIFIED','IDENTITY_INCOMPLETE','UNAVAILABLE_OR_CHANGED'):
+            raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_IDENTITY_STATE')
+        if ((row.get('ppid') is not None and (type(row['ppid']) is not int or row['ppid']<0))
+                or (row.get('uid') is not None and (type(row['uid']) is not int or row['uid']<0))
+                or (row.get('start_ticks') is not None and (type(row['start_ticks']) is not int or row['start_ticks']<=0))
+                or (row.get('nspid') is not None and (not isinstance(row['nspid'],list) or not row['nspid']
+                    or len(row['nspid'])>16 or any(type(value) is not int or value<1 for value in row['nspid'])))
+                or not isinstance(row.get('namespaces'),dict) or set(row['namespaces'])!={'pid','mnt','cgroup'}
+                or any(value is not None and (not isinstance(value,str)
+                    or not re.fullmatch(rf'{name}:\[[0-9]+\]',value))
+                    for name,value in row['namespaces'].items())
+                or (row.get('comm') is not None and not _safe_audit_comm(row['comm']))
+                or row.get('exe_state') not in ('AVAILABLE','MISSING','UNAVAILABLE','UNREADABLE','REDACTED')
+                or (row.get('exe') is not None and row['exe']!='[REDACTED]'
+                    and (not isinstance(row['exe'],str)
+                         or not re.fullmatch(r'[A-Za-z0-9_.+@= -]{1,256}',row['exe'])))):
+            raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_ROW_VALUE')
+        if row['identity_state']=='VERIFIED':
+            if (type(row.get('ppid')) is not int or row.get('uid') is None
+                    or row.get('start_ticks') is None or not isinstance(row.get('nspid'),list)
+                    or any(value is None for value in row['namespaces'].values())
+                    or not _safe_audit_comm(row.get('comm'))
+                    or row.get('exe_state') not in ('AVAILABLE','MISSING')
+                    or (row.get('exe_state')=='AVAILABLE' and row.get('exe') in (None,'[REDACTED]'))
+                    or (row.get('exe_state')=='MISSING' and row.get('exe') is not None)):
+                raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_VERIFIED_ROW')
+        if row['identity_state']=='IDENTITY_INCOMPLETE' and 'missing_fields' not in row:
+            raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_MISSING_FIELDS')
+        pids.append(row['pid'])
+    if pids!=sorted(set(pids)):
+        raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_PID_ORDER')
+    digest=hashlib.sha256(json.dumps(process_rows,sort_keys=True,separators=(',',':')).encode('utf-8')).hexdigest()
+    if digest!=inventory['rows_sha256']:
+        raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_SHA')
+    if inventory['complete']:
+        if (inventory['truncated'] or inventory['enumeration_error'] is not None
+                or inventory['read_failure_count']!=0 or inventory['read_failure_pids']
+                or inventory['entries_seen']!=inventory['row_count']
+                or any(row['identity_state']!='VERIFIED' for row in process_rows)):
+            raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_CONTRADICTION')
+        for row in process_rows:
+            nspid=row.get('nspid');namespaces=row.get('namespaces')
+            if (type(row.get('ppid')) is not int or row['ppid']<0
+                    or type(row.get('uid')) is not int or row['uid']<0
+                    or type(row.get('start_ticks')) is not int or row['start_ticks']<=0
+                    or not isinstance(nspid,list) or not nspid or len(nspid)>16
+                    or any(type(pid) is not int or pid<1 for pid in nspid)
+                    or not isinstance(namespaces,dict) or set(namespaces)!={'pid','mnt','cgroup'}
+                    or any(not isinstance(namespaces.get(ns),str)
+                           or not re.fullmatch(rf'{ns}:\[[0-9]+\]',namespaces[ns])
+                           for ns in ('pid','mnt','cgroup'))
+                    or not _safe_audit_comm(row.get('comm'))
+                    or row.get('exe_state') not in ('AVAILABLE','MISSING')
+                    or (row['exe_state']=='AVAILABLE' and (not isinstance(row.get('exe'),str)
+                        or not re.fullmatch(r'[A-Za-z0-9_.+@= -]{1,256}',row['exe'])))
+                    or (row['exe_state']=='MISSING' and row.get('exe') is not None)):
+                raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_IDENTITY')
+    return inventory
+
 def audit_bundle_line(stdout):
-    """Require the complete, unique seven-worker audit before it is forwarded."""
-    rows=[];complete=[];sections=[];row_positions=[];complete_positions=[]
+    """Build a minimal, sanitized bundle; validate all seven worker records."""
+    rows={};positions=[];complete_positions=[]
     for position,line in enumerate(stdout.splitlines()):
-        if line==AUDIT_COMPLETE:
-            complete.append(line);complete_positions.append(position)
-        if line.startswith(AUDIT_PREFIX):
-            try:row=json.loads(line[len(AUDIT_PREFIX):])
-            except (ValueError,TypeError) as exc:raise RuntimeError('HOLD_AUDIT_ROW_INVALID') from exc
-            if not isinstance(row,dict) or row.get('section') not in AUDIT_SECTIONS:
-                raise RuntimeError('HOLD_AUDIT_SECTION_INVALID')
-            if 'error' in row or not isinstance(row.get('result'),dict):
-                raise RuntimeError('HOLD_AUDIT_WORKER_INCOMPLETE')
-            if type(row.get('worker_pid')) is not int or row['worker_pid']<1:
-                raise RuntimeError('HOLD_AUDIT_WORKER_IDENTITY')
-            if row['section']=='process_rows':
-                inventory=row.get('bounded_process_identity_inventory')
-                if not isinstance(inventory,dict):raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_MISSING')
-                process_rows=inventory.get('rows')
-                expected_fields=['pid','ppid','uid','start_ticks','nspid','namespaces.pid',
-                    'namespaces.mnt','namespaces.cgroup','comm','exe','exe_state']
-                expected_omitted=['argv','cmdline','environ','cgroup_paths']
-                if (not isinstance(process_rows,list) or type(inventory.get('complete')) is not bool
-                        or type(inventory.get('truncated')) is not bool
-                        or inventory.get('scope')!='ALL_NUMERIC_PROC_PIDS_MINIMAL_IDENTITY'
-                        or type(inventory.get('row_count')) is not int
-                        or inventory['row_count']!=len(process_rows)
-                        or type(inventory.get('cap')) is not int or inventory['cap']!=8192
-                        or type(inventory.get('entries_seen')) is not int
-                        or not inventory['row_count']<=inventory['entries_seen']<=inventory['cap']+1
-                        or type(inventory.get('read_failure_count')) is not int
-                        or not 0<=inventory['read_failure_count']<=inventory['row_count']
-                        or not isinstance(inventory.get('read_failure_pids'),list)
-                        or len(inventory['read_failure_pids'])>64
-                        or any(type(pid) is not int or pid<1 for pid in inventory['read_failure_pids'])
-                        or type(inventory.get('started_unix_ns')) is not int
-                        or type(inventory.get('finished_unix_ns')) is not int
-                        or inventory['started_unix_ns']<=0 or inventory['finished_unix_ns']<inventory['started_unix_ns']
-                        or inventory.get('fields')!=expected_fields
-                        or inventory.get('omitted_fields')!=expected_omitted
-                        or 'enumeration_error' not in inventory
-                        or (inventory['enumeration_error'] is not None
-                            and not re.fullmatch(r'[A-Za-z0-9_]{1,64}',str(inventory['enumeration_error'])))
-                        or any(not isinstance(item,dict) or type(item.get('pid')) is not int or item['pid']<1
-                               or not {'pid','ppid','uid','start_ticks','nspid','namespaces','comm','exe','exe_state','identity_state'}.issubset(item)
-                               for item in process_rows)
-                        or not re.fullmatch(r'[0-9a-f]{64}',str(inventory.get('rows_sha256')))):
-                    raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_SHAPE')
-                pids=[item['pid'] for item in process_rows]
-                if pids!=sorted(set(pids)):
-                    raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_PID_ORDER')
-                row_digest=hashlib.sha256(json.dumps(process_rows,sort_keys=True,separators=(',',':')).encode('utf-8')).hexdigest()
-                if row_digest!=inventory['rows_sha256']:
-                    raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_SHA')
-                if inventory['complete']:
-                    if (inventory['truncated'] or inventory['enumeration_error'] is not None
-                            or inventory['read_failure_count']!=0 or inventory['read_failure_pids']
-                            or inventory['entries_seen']!=inventory['row_count']
-                            or any(item['identity_state']!='VERIFIED' for item in process_rows)):
-                        raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_CONTRADICTION')
-                    for item in process_rows:
-                        namespaces=item['namespaces'];nspid=item['nspid']
-                        if (type(item['ppid']) is not int or item['ppid']<0
-                                or type(item['uid']) is not int or item['uid']<0
-                                or type(item['start_ticks']) is not int or item['start_ticks']<=0
-                                or not isinstance(nspid,list) or not nspid or len(nspid)>16
-                                or any(type(pid) is not int or pid<1 for pid in nspid)
-                                or not isinstance(namespaces,dict)
-                                or any(not isinstance(namespaces.get(ns),str)
-                                       or not re.fullmatch(rf'{ns}:\[[0-9]+\]',namespaces[ns])
-                                       for ns in ('pid','mnt','cgroup'))
-                                or not isinstance(item['comm'],str) or not item['comm']
-                                or item['exe_state'] not in ('AVAILABLE','MISSING')
-                                or (item['exe_state']=='AVAILABLE' and not isinstance(item['exe'],str))
-                                or (item['exe_state']=='MISSING' and item['exe'] is not None)):
-                            raise RuntimeError('HOLD_AUDIT_PROCESS_INVENTORY_IDENTITY')
-            rows.append((line,row['section']))
-            sections.append(row['section']);row_positions.append(position)
-    if (len(complete)!=1 or len(rows)!=len(AUDIT_SECTIONS) or sections!=list(AUDIT_SECTIONS)
-            or complete_positions[0]<max(row_positions)):
+        if line==AUDIT_COMPLETE:complete_positions.append(position)
+        if not line.startswith(AUDIT_PREFIX):continue
+        try:row=json.loads(line[len(AUDIT_PREFIX):])
+        except (ValueError,TypeError) as exc:raise RuntimeError('HOLD_AUDIT_ROW_INVALID') from exc
+        if not isinstance(row,dict) or row.get('section') not in AUDIT_SECTIONS:
+            raise RuntimeError('HOLD_AUDIT_SECTION_INVALID')
+        section=row['section']
+        if section in rows:raise RuntimeError('HOLD_AUDIT_SECTION_DUPLICATE')
+        if type(row.get('worker_pid')) is not int or row['worker_pid']<1:
+            raise RuntimeError('HOLD_AUDIT_WORKER_IDENTITY')
+        rows[section]=row;positions.append(position)
+    if (len(complete_positions)!=1 or list(rows)!=list(AUDIT_SECTIONS)
+            or complete_positions[0]<max(positions)):
         raise RuntimeError('HOLD_AUDIT_RECORD_SET_INCOMPLETE')
-    bundle='NOX_MAINT_AUDIT_BUNDLE='+'\n'.join(line for line,_ in rows)
-    return bundle
+
+    status_rows=[]
+    for section in AUDIT_SECTIONS:
+        row=rows[section]
+        status_rows.append({'section':section,'worker_pid':row['worker_pid'],
+            'status':'ERROR' if 'error' in row else 'PRESENT' if 'result' in row else 'MISSING_RESULT'})
+    if any(row['status']!='PRESENT' for row in status_rows):
+        raise RuntimeError('HOLD_AUDIT_WORKER_INCOMPLETE')
+    hardware_row=rows['hardware']
+    process_row=rows['process_rows']
+    supervisor_row=rows['supervisor']
+    hardware=_project_hardware(hardware_row.get('result')) if 'error' not in hardware_row else None
+    supervisor=_project_supervisor_worker(supervisor_row.get('result')) if 'error' not in supervisor_row else None
+    inventory=None
+    if 'error' not in process_row:
+        inventory=_validate_audit_process_inventory(process_row.get('bounded_process_identity_inventory'))
+    filtered_rows=process_row.get('result')
+    if not isinstance(filtered_rows,list) or len(filtered_rows)>356:
+        raise RuntimeError('HOLD_AUDIT_FILTERED_PROCESS_ROWS')
+    gpu_consumer_pids=[]
+    allowed_process_keys={'pid','comm','executable','arguments','gpu_consumer','start_ticks','gpu_identity','scripts'}
+    links=hardware.get('gpu_process_links') if isinstance(hardware,dict) else None
+    links_by_gpu_pid={link.get('gpu_pid'):link for link in links if isinstance(link,dict)} if isinstance(links,list) else {}
+    for item in filtered_rows:
+        if (not isinstance(item,dict) or not {'pid','comm','executable','arguments','gpu_consumer','start_ticks'}.issubset(item)
+                or set(item)-allowed_process_keys or type(item.get('pid')) is not int or item['pid']<1
+                or type(item.get('start_ticks')) is not int or item['start_ticks']<=0
+                or type(item.get('gpu_consumer')) is not bool or not isinstance(item.get('arguments'),list)
+                or ('scripts' in item and not isinstance(item['scripts'],list))):
+            raise RuntimeError('HOLD_AUDIT_FILTERED_PROCESS_ROW')
+        if item['gpu_consumer']:
+            gpu_identity=item.get('gpu_identity')
+            gpu_identity_keys={'gpu_pid','start_ticks','nspid','pid_namespace','mnt_namespace',
+                'cgroup_namespace','classification','visibility'}
+            link=links_by_gpu_pid.get(gpu_identity.get('gpu_pid')) if isinstance(gpu_identity,dict) else None
+            identity=link.get('proc_identity') if isinstance(link,dict) else None
+            if (not isinstance(gpu_identity,dict) or set(gpu_identity)!=gpu_identity_keys
+                    or not isinstance(identity,dict) or item['pid']!=identity.get('pid')
+                    or item['start_ticks']!=identity.get('start_ticks')
+                    or gpu_identity.get('start_ticks')!=identity.get('start_ticks')
+                    or gpu_identity.get('nspid')!=identity.get('nspid')
+                    or any(gpu_identity.get(field)!=identity.get(source) for field,source in (
+                        ('pid_namespace','pid_namespace'),('mnt_namespace','mnt_namespace'),
+                        ('cgroup_namespace','cgroup_namespace')))
+                    or gpu_identity.get('classification')!=link.get('classification')
+                    or gpu_identity.get('visibility')!=link.get('visibility')):
+                raise RuntimeError('HOLD_AUDIT_FILTERED_GPU_IDENTITY')
+            gpu_consumer_pids.append(item['pid'])
+    process_summary={'filtered_row_count':len(filtered_rows) if filtered_rows is not None else None,
+        'gpu_consumer_pids':sorted(set(gpu_consumer_pids)),
+        'arguments_omitted':True,'scripts_omitted':True}
+    bundle={'schema':'NOX_NATIVE_AUDIT_OUTPUT_BUNDLE_V1',
+        'worker_sections':status_rows,
+        'redacted_fields':['process_rows.result.arguments','process_rows.result.scripts',
+            'hardware.supervisor_services.services.identity.cgroups',
+            'hardware.gpu_process_links.proc_identity.cgroups',
+            'hardware.gpu_process_links.parent_chain.cgroups',
+            'packages','models','storage','mount_inventory'],
+        'hardware':hardware,
+        'process_rows':{'filtered_summary':process_summary,
+            'bounded_process_identity_inventory':inventory},
+        'supervisor':supervisor}
+    return 'NOX_MAINT_AUDIT_BUNDLE='+json.dumps(bundle,separators=(',',':'),sort_keys=True)
 
 def audit_census_status(stdout):
-    """Return the independent acceptance gates carried by the full audit rows."""
-    bundle=audit_bundle_line(stdout)
-    rows=[json.loads(line[len(AUDIT_PREFIX):])
-          for line in bundle.split('=',1)[1].splitlines()]
-    by_section={row['section']:row for row in rows}
-    process=by_section['process_rows']['bounded_process_identity_inventory']
-    process_complete=(process['complete'] is True and not process['truncated']
-        and process['enumeration_error'] is None and process['read_failure_count']==0
-        and process['entries_seen']==process['row_count']==len(process['rows'])
-        and process['row_count']<=process['cap'])
+    """Return independent process, Supervisor, and GPU acceptance gates."""
+    bundle_line=audit_bundle_line(stdout)
+    bundle=json.loads(bundle_line.split('=',1)[1])
+    process_section=bundle.get('process_rows') if isinstance(bundle,dict) else None
+    process=process_section.get('bounded_process_identity_inventory') if isinstance(process_section,dict) else None
+    process_rows=process.get('rows') if isinstance(process,dict) else None
+    process_complete=(isinstance(process,dict) and process.get('complete') is True
+        and not process.get('truncated') and process.get('enumeration_error') is None
+        and process.get('read_failure_count')==0
+        and process.get('entries_seen')==process.get('row_count')==len(process_rows)
+        and process.get('row_count')>=1 and process.get('row_count')<=process.get('cap')
+        and isinstance(process_rows,list))
+    process_by_pid={row['pid']:row for row in process_rows if isinstance(row,dict) and type(row.get('pid')) is int} if isinstance(process_rows,list) else {}
 
-    hardware=by_section['hardware']['result']
-    services=hardware.get('supervisor_services')
+    hardware=bundle.get('hardware') if isinstance(bundle,dict) else None
+    services=hardware.get('supervisor_services') if isinstance(hardware,dict) else None
     service_rc=services.get('command_rc') if isinstance(services,dict) else None
     service_health_row=services.get('service_health') if isinstance(services,dict) else None
     service_health=service_health_row.get('state') if isinstance(service_health_row,dict) else None
@@ -245,9 +438,36 @@ def audit_census_status(stdout):
                 and service_health_row.get('running')==counts.get('RUNNING',0)
                 and service_health_row.get('not_running')==sum(count for state,count in counts.items() if state!='RUNNING')
                 and ((service_rc==0 and all_running) or (service_rc==3 and not all_running)))
+    supervisor_worker=bundle.get('supervisor') if isinstance(bundle,dict) else None
+    supervisor_results=supervisor_worker.get('results') if isinstance(supervisor_worker,dict) else None
+    crosscheck_complete=False
+    if (supervisor_complete and isinstance(supervisor_worker,dict)
+            and supervisor_worker.get('available') is True and isinstance(supervisor_results,list)):
+        nonempty=[result for result in supervisor_results if isinstance(result,dict)
+                  and isinstance(result.get('services'),list) and result['services']]
+        if len(nonempty)==1:
+            independent=nonempty[0]
+            raw_rows=independent.get('services')
+            hardware_rows=services.get('services')
+            if (independent.get('rc')==service_rc and type(independent.get('rc')) is int
+                    and isinstance(raw_rows,list) and isinstance(hardware_rows,list)):
+                def normalized_service_rows(rows,name_key):
+                    normalized=[]
+                    for row in rows:
+                        if not isinstance(row,dict):return None
+                        name=row.get(name_key);state=row.get('state');pid=row.get('pid')
+                        if (not isinstance(name,str) or not name
+                                or state not in ('RUNNING','STARTING','STOPPED','FATAL','BACKOFF','EXITED','STOPPING','UNKNOWN')
+                                or (pid is not None and (type(pid) is not int or pid<1))):return None
+                        normalized.append((name,state,pid))
+                    if len({item[0] for item in normalized})!=len(normalized):return None
+                    return sorted(normalized)
+                crosscheck_complete=(normalized_service_rows(raw_rows,'name')
+                    ==normalized_service_rows(hardware_rows,'service'))
 
-    before=hardware.get('gpu_apps_before');after=hardware.get('gpu_apps_after')
-    links=hardware.get('gpu_process_links')
+    before=hardware.get('gpu_apps_before') if isinstance(hardware,dict) else None
+    after=hardware.get('gpu_apps_after') if isinstance(hardware,dict) else None
+    links=hardware.get('gpu_process_links') if isinstance(hardware,dict) else None
     def gpu_inventory_valid(snapshot):
         if not isinstance(snapshot,dict) or snapshot.get('complete') is not True or snapshot.get('truncated') is not False:
             return False
@@ -258,6 +478,8 @@ def audit_census_status(stdout):
         if not isinstance(apps,list):return False
         valid=all(type(app.get('gpu_pid')) is int and app['gpu_pid']>1
             and re.fullmatch(r'GPU-[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}',str(app.get('gpu_uuid')))
+            and isinstance(app.get('used_gpu_memory'),str)
+            and (app['used_gpu_memory'].isdecimal() or app['used_gpu_memory'].lower() in ('n/a','not supported'))
             for app in apps if isinstance(app,dict)) and all(isinstance(app,dict) for app in apps)
         keys=[(app['gpu_pid'],app['gpu_uuid']) for app in apps] if valid else []
         return valid and len(keys)==len(set(keys))
@@ -265,27 +487,97 @@ def audit_census_status(stdout):
     if gpu_inventory_valid(before) and gpu_inventory_valid(after):
         expected_links={(app['gpu_pid'],app['gpu_uuid']) for app in before['apps']+after['apps']}
     observed_links=set();links_valid=isinstance(links,list)
+    supervisor_services=services.get('services',[]) if isinstance(services,dict) else []
+    def service_link_valid(link,classification):
+        service_match=link.get('service_match')
+        if classification=='NO_SERVICE_ANCESTOR':return service_match is None
+        if classification=='MATCHED' and not isinstance(service_match,dict):return False
+        if service_match is None:return classification=='NAMESPACE_ALIAS'
+        if not isinstance(service_match,dict):return False
+        if (service_match.get('relation') not in ('DIRECT_PID','PARENT_CHAIN')
+                or service_match.get('state')!='RUNNING' or type(service_match.get('pid')) is not int
+                or service_match['pid']<=1 or type(service_match.get('start_ticks')) is not int
+                or service_match['start_ticks']<=0):return False
+        matches=[service for service in supervisor_services if isinstance(service,dict)
+            and service.get('service')==service_match.get('service') and service.get('state')=='RUNNING'
+            and service.get('pid')==service_match['pid'] and isinstance(service.get('identity'),dict)
+            and service['identity'].get('pid')==service_match['pid']
+            and service['identity'].get('start_ticks')==service_match['start_ticks']]
+        if len(matches)!=1:return False
+        if service_match['relation']=='DIRECT_PID':
+            return service_match['pid']==link.get('proc_identity',{}).get('pid') and service_match['start_ticks']==link.get('proc_identity',{}).get('start_ticks')
+        chain=link.get('parent_chain')
+        return isinstance(chain,list) and any(isinstance(item,dict)
+            and item.get('pid')==service_match['pid'] and item.get('start_ticks')==service_match['start_ticks'] for item in chain)
     if links_valid:
         allowed={'MATCHED','NAMESPACE_ALIAS','NO_SERVICE_ANCESTOR'}
         for link in links:
             if not isinstance(link,dict):links_valid=False;break
             key=(link.get('gpu_pid'),link.get('gpu_uuid'))
+            classification=link.get('classification')
+            identity=link.get('proc_identity')
+            if (type(key[0]) is not int or key[0]<=1 or not isinstance(key[1],str)):
+                links_valid=False;break
+            local=process_by_pid.get(identity.get('pid')) if isinstance(identity,dict) else None
+            nspid=identity.get('nspid') if isinstance(identity,dict) else None
+            namespaces={'pid':'pid_namespace','mnt':'mnt_namespace','cgroup':'cgroup_namespace'}
+            identity_matches=(isinstance(identity,dict) and isinstance(local,dict)
+                and type(identity.get('pid')) is int and identity['pid']>1
+                and type(identity.get('start_ticks')) is int and identity['start_ticks']>0
+                and isinstance(nspid,list) and nspid and key[0] in nspid
+                and identity.get('nspid_available') is True and identity.get('identity_state')=='VERIFIED'
+                and local.get('start_ticks')==identity.get('start_ticks') and local.get('nspid')==nspid
+                and local.get('comm')==identity.get('comm')
+                and isinstance(local.get('namespaces'),dict)
+                and all(local['namespaces'].get(ns)==identity.get(field) for ns,field in namespaces.items()))
+            visibility_matches=((classification=='NAMESPACE_ALIAS' and link.get('visibility')=='NSPID_ALIAS'
+                                  and isinstance(identity,dict) and identity.get('pid')!=key[0])
+                or (classification in ('MATCHED','NO_SERVICE_ANCESTOR')
+                    and link.get('visibility')=='DIRECT_PROC' and isinstance(identity,dict)
+                    and identity.get('pid')==key[0]))
             if (key in observed_links or key not in expected_links
                     or link.get('evidence_state')!='COMPLETE'
-                    or link.get('classification') not in allowed
-                    or link.get('identity_stability') not in ('STABLE_BOTH','POST_ONLY')):
+                    or classification not in allowed
+                    or link.get('identity_stability') not in ('STABLE_BOTH','POST_ONLY')
+                    or ((link.get('inventory_presence')=='BOTH') != (link.get('identity_stability')=='STABLE_BOTH'))
+                    or link.get('inventory_presence') not in ('BOTH','AFTER_ONLY')
+                    or not identity_matches or not visibility_matches
+                    or not service_link_valid(link,classification)):
                 links_valid=False;break
             observed_links.add(key)
     gpu_complete=(gpu_inventory_valid(before) and gpu_inventory_valid(after)
         and links_valid and observed_links==expected_links)
-    return {'process_census_complete':process_complete,
+    if supervisor_complete and supervisor_services:
+        running_services=[service for service in supervisor_services
+            if isinstance(service,dict) and service.get('state')=='RUNNING']
+        for service in running_services:
+            identity=service.get('identity')
+            local=process_by_pid.get(service.get('pid'))
+            if (not isinstance(identity,dict) or not isinstance(local,dict)
+                    or identity.get('pid')!=service.get('pid')
+                    or identity.get('start_ticks')!=local.get('start_ticks')
+                    or identity.get('nspid')!=local.get('nspid')
+                    or identity.get('comm')!=local.get('comm')
+                    or not isinstance(local.get('namespaces'),dict)
+                    or any(local['namespaces'].get(ns)!=identity.get(field)
+                           for ns,field in (('pid','pid_namespace'),('mnt','mnt_namespace'),('cgroup','cgroup_namespace')))):
+                supervisor_complete=False
+    statuses=bundle.get('worker_sections',[]) if isinstance(bundle,dict) else []
+    required_workers_complete=(isinstance(statuses,list)
+        and {row.get('section') for row in statuses if isinstance(row,dict)}>=set(('hardware','process_rows','supervisor'))
+        and all(next((row.get('status')=='PRESENT' for row in statuses
+                      if isinstance(row,dict) and row.get('section')==name),False)
+                for name in ('hardware','process_rows','supervisor')))
+    return {'worker_records_complete':required_workers_complete,
+            'process_census_complete':process_complete,
             'supervisor_inventory_complete':supervisor_complete,
+            'supervisor_crosscheck_complete':crosscheck_complete,
             'supervisor_command_rc':service_rc,
             'supervisor_command_success':services.get('command_success') if isinstance(services,dict) else None,
             'supervisor_service_health':service_health,
             'gpu_census_complete':gpu_complete,
-            'process_row_count':process['row_count'],
-            'process_rows_sha256':process['rows_sha256'],
+            'process_row_count':process.get('row_count') if isinstance(process,dict) else None,
+            'process_rows_sha256':process.get('rows_sha256') if isinstance(process,dict) else None,
             'gpu_link_count':len(links) if isinstance(links,list) else None,
             'gpu_pid_reconciliation':[{'gpu_pid':link.get('gpu_pid'),'gpu_uuid':link.get('gpu_uuid'),
                 'classification':link.get('classification'),'evidence_state':link.get('evidence_state'),
@@ -294,7 +586,8 @@ def audit_census_status(stdout):
 
 def require_audit_census_complete(stdout):
     gate=audit_census_status(stdout)
-    if not (gate['process_census_complete'] and gate['supervisor_inventory_complete']
+    if not (gate['worker_records_complete'] and gate['process_census_complete']
+            and gate['supervisor_inventory_complete'] and gate['supervisor_crosscheck_complete']
             and gate['gpu_census_complete']):
         raise RuntimeError('HOLD_AUDIT_CENSUS_INCOMPLETE')
     return gate
