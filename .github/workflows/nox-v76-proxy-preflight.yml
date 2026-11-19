@@ -38,7 +38,7 @@ jobs:
           python3 -m py_compile nox_runpod/teacher_mesh/v76/proxy_source_inspect_v2.py nox_runpod/teacher_mesh/v76/test_proxy_source_inspect_v2.py
           python3 -m unittest nox_runpod.teacher_mesh.v76.test_proxy_source_inspect_v2 -v
   native-read-only:
-    if: "${{ github.event_name != 'workflow_dispatch' }}"
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
