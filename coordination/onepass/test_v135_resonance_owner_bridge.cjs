@@ -9,8 +9,8 @@ const JS=fs.readFileSync(file,'utf8');
 const capPolicyPath='coordination/onepass/v135_owner_bridge_cap_policy.json';
 const capPolicyBytes=fs.readFileSync(capPolicyPath);
 const capPolicy=JSON.parse(capPolicyBytes);
-const CAP_POLICY_SHA256='dfc589986e95145e66472f829bea2224fb7cf0970534fd31fe574a14369fb269';
-const OWNER_BRIDGE_SHA256='dff8fa66d2b822ab0055ccfacbf25f6b1eaa9a96ca02c60f1049f3799f8accd7';
+const CAP_POLICY_SHA256='74f16458cd7c2e295403d6569c289ec4861b036c60c72065d0ad8560164f2218';
+const OWNER_BRIDGE_SHA256='3de9f87874534e603e4040f4fc10a018679820569431a7a0b230bda035552af3';
 const V112=fs.readFileSync('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py','utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
@@ -22,11 +22,11 @@ const ownerDialog={turn_id:'11111111111111111111111111111111',
  writer:'V112_OWNER_DIALOG_WRITER',receipt_sha256:'a'.repeat(64)};
 test('V135 staged owner bridge matches the pinned measured cap policy',()=>{
   const n=Buffer.byteLength(JS,'utf8');
-  assert.equal(n,24293);
+  assert.equal(n,24669);
   assert.equal(crypto.createHash('sha256').update(JS,'utf8').digest('hex'),OWNER_BRIDGE_SHA256);
   assert.equal(crypto.createHash('sha256').update(capPolicyBytes).digest('hex'),CAP_POLICY_SHA256);
   assert.deepEqual(capPolicy,{schema:'NOX_V135_OWNER_BRIDGE_CAP_POLICY_V2',
-    measured_bridge_bytes:24293,max_bridge_bytes:24805,reserve_bytes:512,
+    measured_bridge_bytes:24669,max_bridge_bytes:25181,reserve_bytes:512,
     bridge_sha256:OWNER_BRIDGE_SHA256});
   assert.equal(n<=capPolicy.max_bridge_bytes,true);
 });
@@ -175,6 +175,19 @@ test('V135 rejects owner-dialog completion when exact readback does not match',a
   const frames=await events(response);
   assert.equal(frames.filter(e=>e.type==='done').length,0);
   assert(frames.some(e=>e.type==='error'&&e.error==='HOLD_OWNER_DIALOG_RECEIPT_READBACK'));
+});
+test('V135 mixed owner-dialog and canonical S03 flags are rejected',async()=>{
+  let reads=0;
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,undefined,ownerDialog.exchange_id,[],false,false,prompt,undefined,
+    (_calls,opts)=>ownerStream(answer,{s03_integrated:true}),()=>{reads++;return {};});
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'owner-dialog-mixed-flags'})});
+  const frames=await events(response);
+  assert.equal(frames.filter(e=>e.type==='done').length,0);
+  assert.equal(reads,0,'contradictory owner-only receipt must never reach canonical readback');
+  assert(!f.calls.some(x=>x.path==='/api/nox/stop'),'terminal mixed receipt does not trigger STOP');
+  assert(frames.some(e=>e.type==='error'&&e.error==='HOLD_S03_COMMIT_RECEIPT'));
 });
 test('V135 owner-dialog flag alone cannot bypass canonical S03 receipt or owner readback',async()=>{
   let reads=0;
