@@ -208,6 +208,96 @@ class V130Tests(unittest.TestCase):
         self.assertEqual(self.calls,0)
 
 
+    def readback(self,data,headers=None):
+        return self.client.post('/api/ui/memory/facts/exact-readback',
+            json=data,cookies={'owner':'yes'},headers=headers or {})
+
+    def _receipt(self,write):
+        return {'event_id':write['event_id'],'fact_key':self.payload['fact_key'],
+                'source_ref':self.payload['source_ref'],'valid_from':self.payload['valid_from'],
+                'source_sha256':self.payload['source_sha256'],
+                'record_sha256':write['record_sha256']}
+
+    def test_independent_exact_receipt_readback_returns_only_matching_owner_fact(self):
+        write=self.post()
+        self.assertEqual(write.status_code,200,write.text)
+        receipt=self._receipt(write.json())
+        before=self.calls
+        read=self.readback(receipt)
+        self.assertEqual(read.status_code,200,read.text)
+        proof=read.json()
+        self.assertEqual(proof['readback_scope'],'EXACT_NATIVE_S03_M2_OWNER_FACT')
+        self.assertTrue(proof['readback_verified'])
+        self.assertEqual(proof['event_id'],write.json()['event_id'])
+        self.assertEqual(proof['content'],self.payload['content'])
+        self.assertEqual(proof['fact_key'],self.payload['fact_key'])
+        self.assertEqual(proof['source_ref'],self.payload['source_ref'])
+        self.assertEqual(proof['valid_from'],self.payload['valid_from'])
+        self.assertEqual(proof['source_sha256'],self.payload['source_sha256'])
+        self.assertEqual(proof['record_sha256'],write.json()['record_sha256'])
+        self.assertEqual(proof['segment'],'M2')
+        self.assertEqual(self.calls,before,'readback must not call the S03 writer')
+
+    def test_exact_readback_rejects_each_receipt_mismatch(self):
+        write=self.post()
+        self.assertEqual(write.status_code,200,write.text)
+        receipt=self._receipt(write.json())
+        variants=[]
+        for key,value in (
+            ('event_id','x'*32),
+            ('fact_key','OTHER-FACT'),
+            ('source_ref','OTHER-SOURCE'),
+            ('valid_from','2026-11-16T00:00:00Z'),
+            ('source_sha256','0'*64),
+            ('record_sha256','f'*64),
+        ):
+            changed=dict(receipt);changed[key]=value;variants.append(changed)
+        for bad in variants:
+            response=self.readback(bad)
+            self.assertEqual(response.status_code,409,response.text)
+            self.assertEqual(response.json()['reason'],'HOLD_FACT_EXACT_READBACK_NOT_VERIFIED')
+        self.assertEqual(self.calls,1)
+
+    def test_exact_readback_rejects_tampered_s03_content_and_owner_metadata(self):
+        write=self.post()
+        self.assertEqual(write.status_code,200,write.text)
+        receipt=self._receipt(write.json())
+        with sqlite3.connect(self.db) as db:
+            db.execute('UPDATE s03_items SET text=? WHERE id=?',
+                       ('tampered content',write.json()['event_id']))
+        response=self.readback(receipt)
+        self.assertEqual(response.status_code,409,response.text)
+        with sqlite3.connect(self.db) as db:
+            meta={'schema':'NOX_OWNER_CONFIRMED_FACT_V1','owner_scope':'another-owner',
+                  'fact_key':self.payload['fact_key'],'source_ref':self.payload['source_ref'],
+                  'source_sha256':self.payload['source_sha256'],
+                  'valid_from':self.payload['valid_from']}
+            db.execute('UPDATE s03_items SET text=?,meta=? WHERE id=?',
+                       (self.payload['content'],json.dumps(meta),write.json()['event_id']))
+        response=self.readback(receipt)
+        self.assertEqual(response.status_code,409,response.text)
+        self.assertEqual(self.calls,1)
+
+    def test_exact_readback_is_owner_auth_and_origin_guarded(self):
+        write=self.post()
+        self.assertEqual(write.status_code,200,write.text)
+        receipt=self._receipt(write.json())
+        anonymous=self.client.post('/api/ui/memory/facts/exact-readback',json=receipt)
+        self.assertEqual(anonymous.status_code,401)
+        cross=self.readback(receipt,headers={'Origin':'https://example.evil'})
+        self.assertEqual(cross.status_code,403)
+        self.assertEqual(self.calls,1)
+
+    def test_exact_readback_rejects_invalid_schema_and_hashes(self):
+        bad=self.readback({'event_id':'x','fact_key':'k'})
+        self.assertEqual(bad.status_code,422)
+        write=self.post()
+        receipt=self._receipt(write.json())
+        receipt['source_sha256']='A'*64
+        bad=self.readback(receipt)
+        self.assertEqual(bad.status_code,422)
+        self.assertEqual(self.calls,1)
+
 
 class CanonicalStopTests(unittest.TestCase):
     def test_existing_state_stop_marker_blocks(self):

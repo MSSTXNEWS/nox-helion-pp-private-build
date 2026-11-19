@@ -15,6 +15,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 
 _ROUTE='/api/nox/memory/facts'
+_READBACK_ROUTE='/api/ui/memory/facts/exact-readback'
 _OWNER='nox-single-owner'
 _HEX=re.compile(r'^[a-f0-9]{64}$')
 _STOP=('/root/nox/state/STOP.flag','/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag',
@@ -186,12 +187,93 @@ def _persist(data):
             'duplicate':False,'committed':True,'readback_verified':True,
             'source':'EXISTING_NATIVE_S03_M2','weight_update':False}
 
+def _validate_readback(payload):
+    fields=('event_id','fact_key','source_ref','valid_from','source_sha256','record_sha256')
+    if not isinstance(payload,dict) or set(payload)!=set(fields):
+        raise ValueError('HOLD_FACT_READBACK_FIELDS')
+    clean={}
+    for key in fields:
+        value=payload.get(key)
+        if not isinstance(value,str) or value!=value.strip() or not value:
+            raise ValueError('HOLD_FACT_READBACK_FIELDS')
+        if any(ord(c)<32 or ord(c)==127 for c in value):
+            raise ValueError('HOLD_FACT_READBACK_FIELDS')
+        clean[key]=value
+    if not 6<=len(clean['event_id'])<=160:
+        raise ValueError('HOLD_FACT_READBACK_EVENT_ID')
+    if not 1<=len(clean['fact_key'])<=128 or not 1<=len(clean['source_ref'])<=180:
+        raise ValueError('HOLD_FACT_READBACK_BOUNDS')
+    stamp=clean['valid_from']
+    if not 15<=len(stamp)<=45:
+        raise ValueError('HOLD_FACT_READBACK_DATE')
+    try:
+        parsed=datetime.fromisoformat(stamp.replace('Z','+00:00'))
+    except ValueError as exc:
+        raise ValueError('HOLD_FACT_READBACK_DATE') from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError('HOLD_FACT_READBACK_DATE_TZ')
+    for key in ('source_sha256','record_sha256'):
+        if not _HEX.fullmatch(clean[key]):
+            raise ValueError('HOLD_FACT_READBACK_SHA')
+    return clean
+
+
+def _exact_readback(data):
+    """Independently re-read one V130 owner-confirmed M2 fact by immutable receipt."""
+    with _conn() as db:
+        required={'id','segment','text','provenance','sha256','meta','ts'}
+        cols={str(r[1]) for r in db.execute('PRAGMA table_info(s03_items)')}
+        if not required.issubset(cols):
+            raise RuntimeError('HOLD_ORIGINAL_S03_SCHEMA')
+        if db.execute('PRAGMA quick_check').fetchone()[0]!='ok':
+            raise RuntimeError('HOLD_ORIGINAL_S03_INTEGRITY')
+        rows=db.execute(
+            'SELECT id,segment,text,provenance,sha256,meta,ts FROM s03_items WHERE id=? LIMIT 2',
+            (data['event_id'],)).fetchall()
+    if len(rows)!=1:
+        return None
+    row=rows[0]
+    if (row['id']!=data['event_id'] or row['segment']!='M2'
+            or not isinstance(row['text'],str)
+            or not 2<=len(row['text'])<=4096
+            or len(row['text'].encode('utf-8'))>16000
+            or row['provenance']!='OWNER-CONFIRMED:'+data['source_ref']
+            or not isinstance(row['sha256'],str)
+            or not _HEX.fullmatch(row['sha256'])
+            or row['sha256']!=data['record_sha256']):
+        return None
+    content_sha=hashlib.sha256(row['text'].encode('utf-8')).hexdigest()
+    if content_sha!=data['source_sha256']:
+        return None
+    try:
+        meta=json.loads(row['meta']) if isinstance(row['meta'],str) else None
+    except (ValueError,TypeError):
+        return None
+    if (not isinstance(meta,dict)
+            or meta.get('schema')!='NOX_OWNER_CONFIRMED_FACT_V1'
+            or meta.get('owner_scope')!=_OWNER
+            or meta.get('fact_key')!=data['fact_key']
+            or meta.get('source_ref')!=data['source_ref']
+            or meta.get('valid_from')!=data['valid_from']
+            or meta.get('source_sha256')!=data['source_sha256']):
+        return None
+    return {
+        'status':'READY','readback_verified':True,
+        'readback_scope':'EXACT_NATIVE_S03_M2_OWNER_FACT',
+        'event_id':data['event_id'],'fact_key':data['fact_key'],
+        'content':row['text'],'source_ref':data['source_ref'],
+        'valid_from':data['valid_from'],'source_sha256':content_sha,
+        'record_sha256':row['sha256'],'segment':'M2',
+        'provenance':row['provenance'],'schema':'NOX_OWNER_CONFIRMED_FACT_V1',
+        'owner_scope':_OWNER
+    }
+
 def register_nox_v130_owner_fact_write(app,trusted):
     session=trusted.get('_session_ok')
     unauthorized=trusted.get('_unauthorized')
     if not callable(session) or not callable(unauthorized):
         raise RuntimeError('HOLD_OWNER_COOKIE_CALLBACK')
-    if _ROUTE in {getattr(r,'path','') for r in app.routes}:
+    if {_ROUTE,_READBACK_ROUTE} & {getattr(r,'path','') for r in app.routes}:
         raise RuntimeError('HOLD_NATIVE_ROUTE_ALREADY_EXISTS')
     lock=asyncio.Lock()
 
@@ -226,3 +308,34 @@ def register_nox_v130_owner_fact_write(app,trusted):
                 reason=str(exc)
                 return _hold(reason if reason.startswith('HOLD_') and len(reason)<100
                              else 'HOLD_S03_NATIVE_WRITE')
+    @app.post(_READBACK_ROUTE)
+    async def owner_s03_fact_exact_readback(request:Request):
+        if not session(request):
+            return unauthorized()
+        if not _safe_request(request):
+            return _hold('HOLD_FACT_CROSS_ORIGIN',403)
+        if 'application/json' not in request.headers.get('content-type','').lower():
+            return _hold('HOLD_FACT_CONTENT_TYPE',415)
+        data=b''
+        try:
+            async for part in request.stream():
+                if len(data)+len(part)>20000:
+                    return _hold('HOLD_FACT_REQUEST_TOO_LARGE',413)
+                data+=part
+            parsed=json.loads(data)
+            clean=_validate_readback(parsed)
+        except (ValueError,TypeError,UnicodeDecodeError) as exc:
+            reason=str(exc)
+            return _hold(reason if reason.startswith('HOLD_') and len(reason)<100
+                         else 'HOLD_FACT_JSON',422)
+        try:
+            proof=await asyncio.to_thread(_exact_readback,clean)
+        except Exception as exc:
+            reason=str(exc)
+            return _hold(reason if reason.startswith('HOLD_') and len(reason)<100
+                         else 'HOLD_S03_EXACT_READBACK')
+        if proof is None:
+            return _hold('HOLD_FACT_EXACT_READBACK_NOT_VERIFIED',409)
+        return JSONResponse(proof,headers={
+            'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
+
