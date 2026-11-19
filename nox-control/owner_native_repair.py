@@ -1,6 +1,5 @@
-"""Read the active web/edge binding and repair exact scoped S03 turn persistence."""
+"""Publish a narrow HTTPS entry for the original NOX product."""
 import base64
-import hashlib
 import json
 import re
 import sys
@@ -9,43 +8,42 @@ from types import ModuleType
 BUNDLE = __NOX_BUNDLE_JSON__
 
 def load(name, dependencies=()):
+    value = ModuleType(name.removesuffix('.py'))
+    sys.modules[value.__name__] = value
+    value.__dict__['__NOX_' + 'BUNDLE_JSON__'] = {key: BUNDLE[key] for key in dependencies}
     raw = base64.b64decode(BUNDLE[name], validate=True)
-    module = ModuleType(name.removesuffix('.py'))
-    module.BUNDLE = {asset: BUNDLE[asset] for asset in dependencies}
-    module.__dict__['__NOX_BUNDLE_JSON__'] = module.BUNDLE
-    sys.modules[module.__name__] = module
-    exec(compile(raw, name, 'exec'), module.__dict__)
-    return module
+    exec(compile(raw, name, 'exec'), value.__dict__)
+    return value
 
-def hold(marker, error):
+def emit(name, value):
+    print(name + json.dumps(value, sort_keys=True, separators=(',', ':')), flush=True)
+
+def hold(name, error):
     code = str(error)
-    print(marker + (code if re.fullmatch(r'HOLD_[A-Z0-9_]{1,100}', code) else type(error).__name__), flush=True)
+    print(name + (code if re.fullmatch(r'HOLD_[A-Z0-9_]{1,100}', code) else type(error).__name__), flush=True)
 
 def main():
-    portal = load('owner_vast_chat_portal_observe.py')
-    if portal.main():
-        raise RuntimeError('HOLD_PORTAL_OWNER_BINDING')
-    matrix = load('owner_wow_served_asset_receipt.py', ('owner_frozen_wow_route_auth.py',))
-    matrix.BUNDLE = {'owner_frozen_wow_route_auth.py': BUNDLE['owner_frozen_wow_route_auth.py']}
-    matrix.OPTIONAL += ('nox-select-tiles-v5.css', 'nox-select-tiles-v5.js')
-    record = {'schema': 'NOX_WOW_SERVED_ASSET_MATRIX_V1', 'assets': []}
-    try:
-        matrix.main(record)
-        record['state'] = 'AUTHENTICATED_CURRENT_STATIC_MATRIX'
-    except Exception as error:
-        record['state'] = 'HOLD'
-        hold('NOX_MAINT_WOW_MATRIX_HOLD=', error)
-    print('NOX_MAINT_WOW_MATRIX=' + json.dumps(record, separators=(',', ':'), sort_keys=True), flush=True)
-    try:
-        load('owner_prepare_wow_recipient.py').main()
-    except Exception as error:
-        hold('NOX_MAINT_WOW_RECIPIENT_HOLD=', error)
-    repair = load('owner_scoped_s03_pair_entry.py')
-    repair.BUNDLE = {key: BUNDLE[key] for key in repair.ASSETS}
+    repair = load('owner_scoped_s03_pair_entry.py', (
+        'owner_refresh_cognition_c04.py', 'nox_s03_scoped_pair.py', 'native-bridge.patch'))
     try:
         repair.main()
     except Exception as error:
         hold('NOX_MAINT_SCOPED_S03_PAIR_HOLD=', error)
+    load('owner_quick_tunnel_launch.py')
+    installer = load('owner_quick_chat_install.py')
+    try:
+        tunnel = installer.install_and_launch(base64.b64decode(BUNDLE['owner_resonance_gateway.py'], validate=True))
+    except Exception as error:
+        hold('NOX_MAINT_QUICK_CHAT_HOLD=', error)
+        print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
+        return
+    emit('NOX_MAINT_QUICK_CHAT_TUNNEL=', tunnel)
+    proof = load('owner_quick_chat_receipt.py')
+    auth = load('owner_frozen_wow_route_auth.py')
+    try:
+        emit('NOX_MAINT_HTTPS_RESONANCE=', proof.prove(tunnel, auth.OwnerClient))
+    except Exception as error:
+        hold('NOX_MAINT_HTTPS_RESONANCE_HOLD=', error)
     print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
 
 if __name__ == '__main__':

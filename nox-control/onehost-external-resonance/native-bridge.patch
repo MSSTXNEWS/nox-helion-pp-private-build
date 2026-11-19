@@ -1,0 +1,123 @@
+--- a/nox_v29_chat_bridge.py
++++ b/nox_v29_chat_bridge.py
+@@ -206,4 +206,27 @@
+     return None
+ 
++async def _read_completed_turn(dialog_id, request_id, question, answer, started,
++                               *, legacy_prefix=False, stop_requested=None):
++    if stop_requested is not None and stop_requested():
++        return None
++    if dialog_id:
++        from nox_s03_scoped_pair import commit_scoped_pair
++        return await asyncio.to_thread(
++            commit_scoped_pair, _db, _now, dialog_id, request_id, question, answer, stop_requested)
++    # No-dialog NDJSON preserves the existing strict-first, prefix-second read.
++    for attempt in range(4):
++        if stop_requested is not None and stop_requested():
++            return None
++        proof = await asyncio.to_thread(_readback, question, answer, started, True)
++        if proof is not None:
++            return {**proof, 'proof': 'M1_LENGTH_FRAMED_V2_SHA256'}
++        if legacy_prefix and (stop_requested is None or not stop_requested()):
++            proof = await asyncio.to_thread(_readback, question, answer, started)
++            if proof is not None:
++                return {**proof, 'proof': 'LEGACY_SUBSTRING_READBACK'}
++        if attempt < 3:
++            await asyncio.sleep(.12)
++    return None
++
+ def _save_exchange(dialog_id,question,answer,exchange_id):
+     if not dialog_id:
+@@ -700,4 +723,5 @@
+             upstream_done = False
+             answer = []
++            answer_chars = 0
+             started = time.time()
+             wire = None
+@@ -754,4 +778,10 @@
+                         kind, part = _sse_delta(frame)
+                         if kind == 'delta' and part:
++                            answer_chars += len(part)
++                            if answer_chars > 2_000_000:
++                                yield pack({'type': 'error', 'error': 'HOLD_OUTPUT_SIZE'})
++                                yield done_frame('error')
++                                sent_done = True
++                                return
+                             answer.append(part)
+                             yield pack({'type': 'token', 't': part})
+@@ -778,28 +808,21 @@
+                     sent_done = True
+                     return
+-                if not upstream_done or not ''.join(answer).strip():
++                answer_text = ''.join(answer)
++                if not upstream_done or not answer_text.strip():
+                     yield pack({'type': 'error', 'error': 'HOLD_INCOMPLETE_NATIVE_RESPONSE'})
+                     yield done_frame('error')
+                     sent_done = True
+                     return
+-                # Reuse the native S03 reader; no second history store or receipt queue.
+-                proof = None
+-                for attempt in range(4):
+-                    proof = await asyncio.to_thread(_readback, text.strip(), ''.join(answer), started, True)
+-                    if proof is not None:
+-                        break
+-                    if attempt < 3:
+-                        await asyncio.sleep(.12)
++                proof = await _read_completed_turn(
++                    dialog_id, _nox_received_request_id, text.strip(), answer_text, started)
+                 if proof is None:
+                     yield pack({'type': 'error', 'error': 'HOLD_S03_COMMIT_NOT_VERIFIED'})
+-                    yield done_frame('error')
+-                elif not await asyncio.to_thread(_nox_pending_save_exchange, dialog_id, text.strip(), ''.join(answer), proof['record_id'], _nox_received_request_id):
+-                    yield pack({'type': 'error', 'error': 'HOLD_DIALOG_SAVE_NOT_VERIFIED'})
+                     yield done_frame('error')
+                 else:
+                     yield pack({'type': 'done', 'status': 'done', 'saved': True,
+                                 's03_integrated': True, 'exchange_id': proof['record_id'],
+-                                's03_readback': 'FULL_QUESTION_AND_ANSWER_SUBSTRINGS',
+-                                's03_proof': 'M1_LENGTH_FRAMED_V2_SHA256',
++                                's03_readback': ('FULL_DIALOG_PAIR_BYTES' if dialog_id else
++                                                 'FULL_QUESTION_AND_ANSWER_SUBSTRINGS'),
++                                's03_proof': proof['proof'],
+                                 's03_record_sha256': proof['sha256']})
+                 sent_done = True
+@@ -849,8 +872,10 @@
+         dialog_id=data.get('dialog_id')
+         if dialog_id:
++            # Use the same normalized question for receipt, model and commit.
++            question = question.strip()
+             if not _schema_ready():
+                 return JSONResponse({'error':'HOLD_S03_DIALOG_SCHEMA'},status_code=503)
+             try:
+-                issue,history=await asyncio.to_thread(_nox_pending_dialog_context, dialog_id, data.get('message'), _nox_received_request_id, data.get('request_id'))
++                issue,history=await asyncio.to_thread(_nox_pending_dialog_context, dialog_id, question, _nox_received_request_id, data.get('request_id'))
+                 if issue:
+                     return JSONResponse({'error':issue},status_code=409)
+@@ -971,20 +996,15 @@
+                     yield _jsonl({'type':'error','error':'HOLD_INCOMPLETE_NATIVE_RESPONSE'})
+                     return
+-                proof=None
+-                for attempt in range(4):
+-                    proof=await asyncio.to_thread(_readback,question,answer,started,True)
+-                    if proof is None:
+-                        proof=await asyncio.to_thread(_readback,question,answer,started)
+-                    if proof is not None:break
+-                    if attempt<3:await asyncio.sleep(.12)
++                proof = await _read_completed_turn(
++                    dialog_id, _nox_received_request_id, question, answer, started,
++                    legacy_prefix=True, stop_requested=cancel.is_set)
+                 if proof is None:
+-                    yield _jsonl({'type':'error','error':'HOLD_S03_COMMIT_NOT_VERIFIED'})
+-                    return
+-                if not await asyncio.to_thread(_nox_pending_save_exchange, dialog_id, question, answer, proof['record_id'], _nox_received_request_id):
+-                    yield _jsonl({'type':'error','error':'HOLD_S03_DIALOG_COMMIT_NOT_VERIFIED'})
++                    error = 'STREAM_STOP_REQUESTED' if cancel.is_set() else 'HOLD_S03_COMMIT_NOT_VERIFIED'
++                    yield _jsonl({'type':'error','error':error})
+                     return
+                 yield _jsonl({'type':'done','model':'NOX HELION','saved':True,
+                               's03_integrated':True,'dialog_id':dialog_id,
+-                              'exchange_id':proof['record_id'],'stream_mode':'NATIVE_TOKEN_STREAM'})
++                              'exchange_id':proof['record_id'],'stream_mode':'NATIVE_TOKEN_STREAM',
++                              's03_proof':proof['proof'], 's03_record_sha256':proof['sha256']})
+             except asyncio.CancelledError:
+                 raise
