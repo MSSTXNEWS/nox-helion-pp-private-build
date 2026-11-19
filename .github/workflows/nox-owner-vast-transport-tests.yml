@@ -1,0 +1,33 @@
+name: NOX owner Vast transport source checks
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/test_owner_native_operator_browser_qa.py'
+      - 'nox-control/test_owner_vast_ssh_helper.py'
+      - 'nox_runpod/teacher_mesh/v51/**'
+      - '.github/workflows/nox-owner-vast-transport-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/test_owner_native_operator_browser_qa.py'
+      - 'nox-control/test_owner_vast_ssh_helper.py'
+      - 'nox_runpod/teacher_mesh/v51/**'
+      - '.github/workflows/nox-owner-vast-transport-tests.yml'
+permissions:
+  contents: read
+jobs:
+  exact-head-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Compile the pinned owner transport and regression
+        run: |
+          python3 -B -m py_compile             nox-control/owner_native_operator.py             nox-control/test_owner_native_operator_browser_qa.py             nox-control/test_owner_vast_ssh_helper.py             nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py
+      - name: Run offline owner transport regressions
+        run: |
+          python3 -B -m unittest discover             -s nox-control             -p 'test_owner_vast_ssh_helper.py'             -v
