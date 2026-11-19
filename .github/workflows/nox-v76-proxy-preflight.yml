@@ -1,23 +1,44 @@
-name: NOX V76 exact live proxy preflight before one patch
+name: NOX V76 dynamic owner proxy source inspection
 on:
+  pull_request:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v76/proxy_source_inspect_v2.py'
+      - 'nox_runpod/teacher_mesh/v76/test_proxy_source_inspect_v2.py'
+      - '.github/workflows/nox-v76-proxy-preflight.yml'
   push:
     branches: [feature/nox-v38-synaptic-brain-20261114]
-    paths: [.github/workflows/nox-v76-proxy-preflight.yml]
+    paths:
+      - 'nox_runpod/teacher_mesh/v76/proxy_source_inspect_v2.py'
+      - 'nox_runpod/teacher_mesh/v76/test_proxy_source_inspect_v2.py'
+      - '.github/workflows/nox-v76-proxy-preflight.yml'
   workflow_dispatch:
     inputs:
       allow_native:
-        description: 'Owner-approved original NOX OneHost access only'
+        description: 'Owner-approved read-only NOX OneHost inspection'
         type: choice
         required: true
         options: ['NO', 'YES']
         default: 'NO'
 permissions: {contents: read}
 concurrency:
-  group: nox-v76-proxy-admission
+  group: nox-v76-proxy-source-inspection
   cancel-in-progress: false
 jobs:
-  inspect:
-    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+  source-tests:
+    if: "${{ github.event_name != 'workflow_dispatch' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compile and run bounded AST source tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v76/proxy_source_inspect_v2.py nox_runpod/teacher_mesh/v76/test_proxy_source_inspect_v2.py
+          python3 -m unittest nox_runpod.teacher_mesh.v76.test_proxy_source_inspect_v2 -v
+  native-read-only:
+    if: "${{ github.event_name != 'workflow_dispatch' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
@@ -25,10 +46,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: {persist-credentials: false}
-      - name: Source syntax
-        run: python3 -m py_compile nox_runpod/teacher_mesh/v76/proxy_preflight.py
-      - name: Check live proxy SHA and streaming idle gate
-        run: python3 -m nox_runpod.teacher_mesh.v76.proxy_preflight
-      - name: Revoke exact temporary SSH key
+      - name: Compile exact pinned inspection entry
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v76/proxy_source_inspect_v2.py
+      - name: Resolve and inspect current proxy PID without restart
+        run: python3 -m nox_runpod.teacher_mesh.v76.proxy_source_inspect_v2
+      - name: Revoke temporary SSH key
         if: always()
         run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
