@@ -12,7 +12,7 @@ const answer='Живой поток NOX';
 const prompt='Привет, NOX';
 test('V135 staged owner bridge remains within byte bounds',()=>{
   const n=Buffer.byteLength(JS,'utf8');
-  assert(n>=5000&&n<=20000, 'staging bridge byte bound');
+  assert(n>=5000&&n<=22000, 'staging bridge byte bound');
 });
 function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,onStop,onModel){
   const calls=[];
@@ -253,6 +253,38 @@ test('V135 active-session retry conflict never sends session-wide STOP',async()=
     'the rejected retry did not acquire the session stream and must not stop its active owner');
   assert(!f.calls.some(c=>c.path.includes('/api/ui/memory/dialogs/history')),
     'a rejected retry cannot read back or certify another request');
+});
+
+test('V135 every HTTP 409 is pre-admission and never sends cookie-wide STOP',async()=>{
+  const encoder=new TextEncoder();
+  const slow409=(delay,body)=>new Response(new ReadableStream({start(c){
+    setTimeout(()=>{c.enqueue(encoder.encode(body));c.close();},delay);
+  }}),{status:409});
+  const cases=[
+    {name:'exact active-session conflict',make:()=>Response.json({error:'HOLD_ACTIVE_SESSION_STREAM'},{status:409}),abort:true,stops:0},
+    {name:'caller abort before delayed 409 status',make:()=>new Promise(resolve=>setTimeout(()=>resolve(Response.json({error:'HOLD_ACTIVE_SESSION_STREAM'},{status:409})),100)),abort:true,stops:0},
+    {name:'exact body after classification deadline',make:()=>slow409(1200,'{"error":"HOLD_ACTIVE_SESSION_STREAM"}'),stops:0},
+    {name:'malformed body',make:()=>new Response('{',{status:409}),stops:0},
+    {name:'oversized body',make:()=>Response.json({error:'HOLD_ACTIVE_SESSION_STREAM',padding:'x'.repeat(700)},{status:409}),stops:0},
+    {name:'different pre-admission error code',make:()=>Response.json({error:'REVISION_CONFLICT'},{status:409}),stops:0}
+  ];
+  for(const item of cases){
+    const caller=new AbortController();let modelSignal;
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+      undefined,false,5,undefined,'verified-exchange-01',[],false,false,prompt,undefined,
+      (_calls,opts)=>{modelSignal=opts.signal;return item.make();});
+    const response=await f.fetch('/api/nox/chat',{method:'POST',signal:caller.signal,
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v462-'+item.name})});
+    if(item.abort)setTimeout(()=>caller.abort(),20);
+    const frames=await Promise.race([events(response),
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_409_CASE_'+item.name)),2500))]);
+    assert.equal(frames.filter(e=>e.type==='done').length,0,item.name+' cannot certify a rejected stream');
+    assert(frames.some(e=>e.type==='error'),item.name+' must terminate with an error');
+    assert.equal(f.calls.filter(c=>c.path==='/api/nox/stop').length,item.stops,item.name+' STOP count');
+    assert(!f.calls.some(c=>c.path.includes('/api/ui/memory/dialogs/history')),
+      item.name+' cannot read/certify history');
+    assert.equal(modelSignal.aborted,true,item.name+' must abort the local request');
+  }
 });
 
 test('V135 already-aborted caller never starts a native inference',async()=>{
@@ -1097,6 +1129,8 @@ test('V168 pending native POST must unblock after scoped STOP even if transport 
       assert.equal(next.done,false);
       const error=JSON.parse(dec.decode(next.value).slice(6).trim());
       assert.equal(error.type,'error');assert.equal(error.error,'STREAM_STOP_REQUESTED');
+      assert.equal(error.stop_admission_outcome,'HEADER_TIMEOUT_TRANSPORT_AMBIGUOUS');
+      assert.equal(error.cookie_stop_may_have_targeted_older_stream,true);
       assert.equal((await reader.read()).done,true);
     }else{
       await new Promise(ok=>setTimeout(ok,5));abort.abort();
@@ -1289,7 +1323,7 @@ test('V174 abort before model headers cancels the same POST and keeps GPU stop u
   for(let i=0;i<40&&!modelSignal;i++)await new Promise(resolve=>setTimeout(resolve,0));
   assert(modelSignal,'the original native stream request must be pending before abort');
   caller.abort();
-  for(let i=0;i<40&&!stopEntered;i++)await new Promise(resolve=>setTimeout(resolve,0));
+  for(let i=0;i<80&&!stopEntered;i++)await new Promise(resolve=>setTimeout(resolve,10));
   assert(stopEntered,'the same-session V112 STOP endpoint must be signalled');
   assert.equal(stopSawLiveModel,true,'STOP request must start before aborting the pending model POST');
   assert.equal(modelSignal.aborted,false,'model request stays connected until STOP responds');

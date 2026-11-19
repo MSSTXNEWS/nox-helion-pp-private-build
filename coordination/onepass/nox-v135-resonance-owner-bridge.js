@@ -9,6 +9,7 @@
   const enc=new TextEncoder();
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
+const ADMISSION_WAIT_MS=250;
   function livePieces(text) {
     const glyphs=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
       ? Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text),part=>part.segment)
@@ -104,207 +105,256 @@
     try{return await Promise.race([reader.read(),aborted]);}
     finally{signal.removeEventListener('abort',onAbort);}
   }
-	async function consume(response,emit,signal) {
-		if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
-		const reader=response.body.getReader(),decoder=new TextDecoder();
-		let buf='',answer='',done=null,doneSeen=false,startSeen=false,preparingSeen=false;
-		let nativeModel='UNKNOWN';
-		const line=async str=>{
-			if(!str.trim())return;
-			let e;
-			try{e=JSON.parse(str);}catch{throw Error('HOLD_NATIVE_FRAME_JSON');}
-			if(!e||typeof e!=='object'||Array.isArray(e))throw Error('HOLD_NATIVE_FRAME_TYPE');
-			if(doneSeen){
-				if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
-				throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
-			}
-			if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
-			if(e.type==='delta'){
-				if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-				if(doneSeen||typeof e.text!=='string'||answer.length+e.text.length>MAX)throw Error('HOLD_NATIVE_DELTA');
-				answer+=e.text;await emit(e.text);
-			} else if(e.type==='done') {
-				if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-				if(doneSeen)throw Error('HOLD_DUPLICATE_DONE');
-				doneSeen=true;done=e;
-			} else if(e.type==='start') {
-				if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
-				if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
-				startSeen=true;
-				nativeModel=typeof e.model==='string'
-					?e.model.replace(/[\x00-\x1F\x7F]/g,' ').trim().slice(0,96)||'UNKNOWN'
-					:'UNKNOWN';
-			} else if(e.type==='preparing') {
-				if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
-				if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
-				preparingSeen=true;
-			} else {
-				throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
-			}
-		};
-		try{
-			for(;;){
-				if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
-				const chunk=await readNativeOrAbort(reader,signal);
-				if(chunk.done)break;
-				buf+=decoder.decode(chunk.value,{stream:true});
-				let j;while((j=buf.indexOf('\n'))>=0){
-					if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
-					await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
-				}
-				if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
-				if(doneSeen){
-					if(buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
-					break;
-				}
-			}
-			buf+=decoder.decode();
-			if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
-			if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
-			return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};
-		}finally{
-			try{Promise.resolve(reader.cancel('STREAM_CLOSED')).catch(()=>{});}catch{}
+async function consume(response,emit,signal) {
+	if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
+	const reader=response.body.getReader(),decoder=new TextDecoder();
+	let buf='',answer='',done=null,doneSeen=false,startSeen=false,preparingSeen=false;
+	let nativeModel='UNKNOWN';
+	const line=async str=>{
+		if(!str.trim())return;
+		let e;
+		try{e=JSON.parse(str);}catch{throw Error('HOLD_NATIVE_FRAME_JSON');}
+		if(!e||typeof e!=='object'||Array.isArray(e))throw Error('HOLD_NATIVE_FRAME_TYPE');
+		if(doneSeen){
+			if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
+			throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
 		}
+		if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
+		if(e.type==='delta'){
+			if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
+			if(doneSeen||typeof e.text!=='string'||answer.length+e.text.length>MAX)throw Error('HOLD_NATIVE_DELTA');
+			answer+=e.text;await emit(e.text);
+		} else if(e.type==='done') {
+			if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
+			if(doneSeen)throw Error('HOLD_DUPLICATE_DONE');
+			doneSeen=true;done=e;
+		} else if(e.type==='start') {
+			if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
+			if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
+			startSeen=true;
+			nativeModel=typeof e.model==='string'
+				?e.model.replace(/[\x00-\x1F\x7F]/g,' ').trim().slice(0,96)||'UNKNOWN'
+				:'UNKNOWN';
+		} else if(e.type==='preparing') {
+			if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
+			if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
+			preparingSeen=true;
+		} else {
+			throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
+		}
+	};
+	try{
+		for(;;){
+			if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
+			const chunk=await readNativeOrAbort(reader,signal);
+			if(chunk.done)break;
+			buf+=decoder.decode(chunk.value,{stream:true});
+			let j;while((j=buf.indexOf('\n'))>=0){
+				if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
+				await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
+			}
+			if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
+			if(doneSeen){
+				if(buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
+				break;
+			}
+		}
+		buf+=decoder.decode();
+		if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
+		if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
+		return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};
+	}finally{
+		try{Promise.resolve(reader.cancel('STREAM_CLOSED')).catch(()=>{});}catch{}
 	}
-	function sseChat(data,signal) {
-		let closed=false,finished=false,canceling=false,modelStarted=false,streamDone=false,stopJob=null;
-		let activeConflictRejected=false;
-		let state='not_requested';
-		let stopAdmission=true;
-		const started=performance.now();let firstVisibleMs=null;
-		const upstreamAbort=new AbortController();
-		const stopThenAbort=()=>{
-			if(finished)return;
-			canceling=true;
-			return stopJob||(stopJob=(async()=>{
-				if(modelStarted&&!streamDone&&await stopAdmission){
-					const c=new AbortController(),t=setTimeout(()=>c.abort(),1000);
-					try{
-						const r=await nativePost('/api/nox/stop',{},c.signal);
-						if(!r.ok)state='rejected';
-						else{
-							const x=await nativeBodyJSON(r,c.signal);
-							state=x?.status==='STOP_REQUESTED'&&x?.stream_cancellation_signalled===true
-								?'signal_accepted':'unconfirmed';
-						}
-					}catch{state=c.signal.aborted?'timeout':'unknown';}
-					finally{if(typeof clearTimeout==='function')clearTimeout(t);}
-				}
-				upstreamAbort.abort();
-				if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-					window.dispatchEvent(new CustomEvent('nox:native-stop-result',{detail:{
-						transport_outcome:state,gpu_stop_verified:false
-					}}));
-			})());
-		};
-		const onAbort=stopThenAbort;
-		if(signal?.aborted)onAbort();
-		else signal?.addEventListener?.('abort',onAbort,{once:true});
-		const nativeSignal=upstreamAbort.signal;
-		const body=new ReadableStream({
-			async start(controller){
-				const event=payload=>{
-					if(closed||(canceling&&payload.type!=='error'))return;
-					if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
-						firstVisibleMs=Math.round(performance.now()-started);
-					const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
-					if(phase&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-						window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
-					controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
-				};
-				try {
-					if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-					const id=await dialogId(data,nativeSignal);
-					if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-					event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
-						answer_source:'NATIVE_PENDING',model_identity_verified:false});
-					modelStarted=true;
-					const upstream=await nativePost('/api/nox/chat/stream',{
+}
+function sseChat(data,signal) {
+	let closed=false,finished=false,canceling=false,modelStarted=false,streamDone=false,stopJob=null;
+	let state='not_requested';
+	let stopAdmission=true;
+	let stopAdmissionOutcome='NOT_STARTED';
+	let admissionResponseClass='NO_RESPONSE_YET';
+	let preAdmissionRejected=false;
+	let resolveAdmission;
+	let admissionResolved=false;
+	let admissionTimer=null;
+	let stopAttempted=false;
+	const resolveStopAdmission=(allowStop,outcome)=>{
+		if(admissionResolved)return;
+		admissionResolved=true;
+		stopAdmissionOutcome=outcome;
+		if(admissionTimer!==null&&typeof clearTimeout==='function')clearTimeout(admissionTimer);
+		resolveAdmission(allowStop);
+	};
+	const started=performance.now();let firstVisibleMs=null;
+	const upstreamAbort=new AbortController();
+	const stopThenAbort=()=>{
+		if(finished)return;
+		canceling=true;
+		return stopJob||(stopJob=(async()=>{
+			if(modelStarted&&!streamDone&&await stopAdmission){
+				stopAttempted=true;
+				const c=new AbortController(),t=setTimeout(()=>c.abort(),1000);
+				try{
+					const r=await nativePost('/api/nox/stop',{},c.signal);
+					if(!r.ok)state='rejected';
+					else{
+						const x=await nativeBodyJSON(r,c.signal);
+						state=x?.status==='STOP_REQUESTED'&&x?.stream_cancellation_signalled===true
+							?'signal_accepted':'unconfirmed';
+					}
+				}catch{state=c.signal.aborted?'timeout':'unknown';}
+				finally{if(typeof clearTimeout==='function')clearTimeout(t);}
+			}
+			upstreamAbort.abort();
+			if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+				window.dispatchEvent(new CustomEvent('nox:native-stop-result',{detail:{
+					transport_outcome:state,
+					stop_admission_outcome:stopAdmissionOutcome,
+					admission_response_class:admissionResponseClass,
+					cookie_stop_may_have_targeted_older_stream:
+						stopAttempted&&stopAdmissionOutcome.includes('AMBIGUOUS'),
+					gpu_stop_verified:false
+				}}));
+		})());
+	};
+	const onAbort=stopThenAbort;
+	if(signal?.aborted)onAbort();
+	else signal?.addEventListener?.('abort',onAbort,{once:true});
+	const nativeSignal=upstreamAbort.signal;
+	const body=new ReadableStream({
+		async start(controller){
+			const event=payload=>{
+				if(closed||(canceling&&payload.type!=='error'))return;
+				if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
+					firstVisibleMs=Math.round(performance.now()-started);
+				const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
+				if(phase&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+					window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
+				controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
+			};
+			try {
+				if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+				const id=await dialogId(data,nativeSignal);
+				if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+				event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
+					answer_source:'NATIVE_PENDING',model_identity_verified:false});
+				modelStarted=true;
+				stopAdmission=new Promise(resolve=>{
+					resolveAdmission=resolve;
+					admissionTimer=setTimeout(()=>{
+						admissionResponseClass='NO_HEADERS_TIMEOUT';
+						resolveStopAdmission(true,'HEADER_TIMEOUT_TRANSPORT_AMBIGUOUS');
+					},ADMISSION_WAIT_MS);
+				});
+				let upstream;
+				try{
+					upstream=await nativePost('/api/nox/chat/stream',{
 						message:data.message,dialog_id:id,task:'general',history:[]
 					},nativeSignal);
-					if(upstream.status===409){
-						let resolveAdmission;
-						stopAdmission=new Promise(resolve=>{resolveAdmission=resolve;});
-						const detail=await Promise.race([
-							upstream.clone().json().catch(()=>null),
-							new Promise(resolve=>setTimeout(()=>resolve(null),1000))
-						]);
-						const activeConflict=detail?.error==='HOLD_ACTIVE_SESSION_STREAM';
-						resolveAdmission(!activeConflict);
-						if(activeConflict){
-							activeConflictRejected=true;
-							throw Error('HOLD_NATIVE_STREAM_HOLD_ACTIVE_SESSION_STREAM');
+					admissionResponseClass='HTTP_'+upstream.status;
+					preAdmissionRejected=upstream.status===409;
+					resolveStopAdmission(!preAdmissionRejected,preAdmissionRejected
+						?'HTTP_409_PRE_ADMISSION'
+						:upstream.status===200?'HTTP_200_ADMITTED'
+						:'NON_409_HTTP_STATUS_BEST_EFFORT');
+				}catch(e){
+					if(!admissionResolved){
+						admissionResponseClass='NO_HTTP_RESPONSE_TRANSPORT_FAILURE';
+						resolveStopAdmission(true,'TRANSPORT_NO_RESPONSE_AMBIGUOUS');
+					}
+					throw e;
+				}
+				if(upstream.status===409){
+					let reader,timed=false,timer;const detail=await Promise.race([(async()=>{reader=upstream.clone().body.getReader();let n=0,s='',d=new TextDecoder();for(;;){const c=await reader.read();if(c.done)return JSON.parse(s+d.decode());if((n+=c.value.byteLength)>512){reader.cancel().catch(()=>{});return null;}s+=d.decode(c.value,{stream:true});}})().catch(()=>null),new Promise(resolve=>{timer=setTimeout(()=>{timed=true;reader?.cancel().catch(()=>{});resolve(null);},1000);})]);clearTimeout(timer);
+					if(detail?.error==='HOLD_ACTIVE_SESSION_STREAM')throw Error('HOLD_NATIVE_STREAM_HOLD_ACTIVE_SESSION_STREAM');
+					if(timed)throw Error('HOLD_409');
+					throw Error('HOLD_409_REJECTED');
+				}
+				if(upstream.status!==200){
+					await stopThenAbort();
+					throw Error('HOLD_NATIVE_STREAM_HTTP_'+upstream.status);
+				}
+				const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
+				const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
+				let trailing='';
+				const emitPieces=async t=>{
+					const parts=livePieces(t);
+					for(let index=0;index<parts.length;index++){
+						if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+						event({type:'token',t:parts[index]});
+						if(index<Math.min(parts.length-1,7)){
+							await new Promise(resolve=>{
+								let settled=false;
+								const finish=()=>{if(!settled){settled=true;resolve();}};
+								if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);
+								if(typeof setTimeout==='function')setTimeout(finish,18);
+								else if(typeof requestAnimationFrame!=='function')finish();
+							});
 						}
 					}
-					const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
-					const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
-					let trailing='';
-					const emitPieces=async t=>{
-						const parts=livePieces(t);
-						for(let index=0;index<parts.length;index++){
-							if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-							event({type:'token',t:parts[index]});
-							if(index<Math.min(parts.length-1,7)){
-								await new Promise(resolve=>{
-									let settled=false;
-									const finish=()=>{if(!settled){settled=true;resolve();}};
-									if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);
-									if(typeof setTimeout==='function')setTimeout(finish,18);
-									else if(typeof requestAnimationFrame!=='function')finish();
-								});
-							}
+				};
+				const {answer,receipt}=await consume(upstream,async t=>{
+					trailing+=t;
+					if(!segmenter){
+						const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
+						if(ascii){
+							const safe=ascii[0].slice(0,-1);
+							trailing=trailing.slice(safe.length);
+							await emitPieces(safe);
 						}
-					};
-					const {answer,receipt}=await consume(upstream,async t=>{
-						trailing+=t;
-						if(!segmenter){
-							const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
-							if(ascii){
-								const safe=ascii[0].slice(0,-1);
-								trailing=trailing.slice(safe.length);
-								await emitPieces(safe);
-							}
-							return;
-						}
-						const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
-						trailing=glyphs.pop()||'';
-						if(glyphs.length)await emitPieces(glyphs.join(''));
-					},nativeSignal);
-					streamDone=true;
-					if(trailing)await emitPieces(trailing);
-					if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-					if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
-					await checkHistory(id,data.message,answer,receipt.exchange_id,nativeSignal);
-					if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-					event({type:'done',status:'done',saved:true,s03_integrated:true,
-						history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
-						model_label:receipt.native_model_label||'UNKNOWN',
-						model_identity_verified:false,answer_source:'LIVE_NOX',
-						first_visible_token_ms:firstVisibleMs,
-						seconds:+((performance.now()-started)/1000).toFixed(2)});
-				}catch(e){
-					if(modelStarted&&!streamDone&&!activeConflictRejected)await stopThenAbort();
-					event({type:'error',
-						error:(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
-						gpu_stop_verified:false,
-						stop_transport_outcome:state});
-				}finally{
-					finished=true;
-					signal?.removeEventListener?.('abort',onAbort);
-					if(!closed){closed=true;try{controller.close();}catch{}}
+						return;
+					}
+					const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
+					trailing=glyphs.pop()||'';
+					if(glyphs.length)await emitPieces(glyphs.join(''));
+				},nativeSignal);
+				streamDone=true;
+				if(trailing)await emitPieces(trailing);
+				if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+				if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
+				await checkHistory(id,data.message,answer,receipt.exchange_id,nativeSignal);
+				if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+				event({type:'done',status:'done',saved:true,s03_integrated:true,
+					history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
+					model_label:receipt.native_model_label||'UNKNOWN',
+					model_identity_verified:false,answer_source:'LIVE_NOX',
+					first_visible_token_ms:firstVisibleMs,
+					seconds:+((performance.now()-started)/1000).toFixed(2)});
+			}catch(e){
+				if(modelStarted&&!streamDone){
+					if(preAdmissionRejected){
+						if(stopJob)await stopJob;
+						upstreamAbort.abort();
+					}else{
+						await stopThenAbort();
+					}
 				}
-			},
-			cancel(){
-				closed=true;
-				const stopping=stopThenAbort();
-				if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-					window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopping'}}));
+				event({type:'error',
+					error:preAdmissionRejected?String(e.message||'HOLD_409_REJECTED').slice(0,150):
+						(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
+					gpu_stop_verified:false,
+					stop_transport_outcome:state,
+					stop_admission_outcome:stopAdmissionOutcome,
+					admission_response_class:admissionResponseClass,
+					cookie_stop_may_have_targeted_older_stream:
+						stopAttempted&&stopAdmissionOutcome.includes('AMBIGUOUS')});
+			}finally{
+				finished=true;
 				signal?.removeEventListener?.('abort',onAbort);
-				return stopping;
+				if(!closed){closed=true;try{controller.close();}catch{}}
 			}
-		});
-		return responseJSONStream(body);
-	}
+		},
+		cancel(){
+			closed=true;
+			const stopping=stopThenAbort();
+			if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+				window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopping'}}));
+			signal?.removeEventListener?.('abort',onAbort);
+			return stopping;
+		}
+	});
+	return responseJSONStream(body);
+}
   const responseJSONStream=body=>new Response(body,{status:200,headers:{
     'Content-Type':'text/event-stream','Cache-Control':'no-store','X-Accel-Buffering':'no'
   }});
