@@ -337,6 +337,36 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(done['state'], 'REVIEWED_BATCH_READY')
         self.assertEqual(len(done['rows']), 1)
 
+    def test_legacy_global_running_is_not_native_worker_claim(self):
+        # D3 owner readback #44526232282 observed a legacy global queue
+        # RUNNING transition, while all three physical native workers were
+        # idle. Global rows are not native READY/RUNNING or proof of admission.
+        legacy = {
+            'global-running': {'handler': 'legacy_queue_worker',
+                               'status': 'running'},
+            'global-pending': {'handler': 'legacy_queue_worker',
+                               'status': 'pending'},
+            'global-done': {'handler': 'legacy_queue_worker',
+                            'status': 'done'},
+        }
+        legacy_only = tick(state=legacy)
+        self.assertEqual(legacy_only['state'], 'REFILL_REQUIRED')
+        self.assertEqual(legacy_only['native_records_observed'], 0)
+        self.assertEqual(legacy_only['legacy_or_non_native_records_ignored'], 3)
+        self.assertEqual(legacy_only['observed_task_counts']['running'], 0)
+        self.assertEqual(legacy_only['observed_task_counts']['pending'], 0)
+        self.assertEqual(legacy_only['new_native_jobs'], 0)
+        self.assertFalse(legacy_only['automatic_owner_approval'])
+        # The same global rows must not conceal a real, native READY claim.
+        native = tick(state={**legacy, 'native-ready': {
+            'handler': 'owner_native_project_work', 'status': 'ready'}})
+        self.assertEqual(native['state'], 'EXECUTION_OR_ADMISSION_IN_PROGRESS')
+        self.assertEqual(native['native_records_observed'], 1)
+        self.assertEqual(native['legacy_or_non_native_records_ignored'], 3)
+        self.assertEqual(native['observed_task_counts']['ready'], 1)
+        self.assertEqual(native['next_action'], 'WAIT_EXISTING_NATIVE_WORK')
+        self.assertEqual(native['new_native_jobs'], 0)
+
     def test_active_jobs_do_not_report_idle(self):
         state={'a': {'handler':'owner_native_project_work','status':'running'},
                'b': {'handler':'owner_native_typed_leaf','status':'pending'}}
