@@ -459,7 +459,15 @@ class ProjectBinding:
             return False
         sha = value['receipt_sha256']
         if sha not in self.terminal_cache:
-            if not binding.s03_readback(receipt):
+            # A truthy witness for another task/job must not release capacity.
+            # Match the exact durable readback contract used by verify().
+            proof = binding.s03_readback(receipt)
+            if (not isinstance(proof, dict) or proof.get('native_verified') is not True
+                    or proof.get('task_id') != task.get('id')
+                    or proof.get('job_id') != receipt.get('job_id')
+                    or proof.get('receipt_sha256') != sha
+                    or not isinstance(proof.get('s03_item_id'), str)
+                    or not proof['s03_item_id']):
                 return False
             self.terminal_cache.add(sha)
         evidence = (receipt.get('worker_result') or {}).get('project_evidence') or {}
