@@ -1,7 +1,7 @@
 """Exact A1 continuation contract; no browser, network, GPU or S03 writes."""
 import unittest
 
-from owner_chat_browser_qa import multiturn_history_valid, progressive_stream_valid
+from owner_chat_browser_qa import admitted_qa_prompt, multiturn_history_valid, progressive_stream_valid
 
 
 FIRST = 'Числа 1-10'
@@ -37,6 +37,12 @@ class SameDialogFourMessageContract(unittest.TestCase):
         values=rows();values[3]['role']='tool';self.assertFalse(self.check(values))
         values=rows();values[3]=None;self.assertFalse(self.check(values))
         self.assertFalse(self.check(None))
+
+    def test_one_shot_native_post_admission_blocks_replay_and_third_turn(self):
+        self.assertEqual(admitted_qa_prompt(0, False, FIRST, SECOND), FIRST)
+        self.assertIsNone(admitted_qa_prompt(1, False, FIRST, SECOND))
+        self.assertEqual(admitted_qa_prompt(1, True, FIRST, SECOND), SECOND)
+        self.assertIsNone(admitted_qa_prompt(2, True, FIRST, SECOND))
 
     def test_second_turn_progress_requires_two_real_visible_prefixes(self):
         proof={'ui_measurement_kind':'CUMULATIVE_VISIBLE_ASSISTANT_BODY',
