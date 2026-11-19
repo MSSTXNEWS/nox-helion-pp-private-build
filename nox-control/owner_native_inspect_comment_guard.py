@@ -23,7 +23,7 @@ APPROVED_SOURCE_BY_ACTION = {
     "source_attest": "3e399979e5b2e5ac16c1504542bd5cace989ddd3",  # updated chat/S03 static scope #520
     "gpu_inventory": "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e",  # exact-head source tests green
     "browser_qa": "eaa4b0d64d3d97a8c2b2680e8eb20137934d76b9",  # PR #543 helper source commit; preserve this pin with a merge commit
-    "source_export": "1fe739fa49141805701e8f969b77b536a4e49a4b",  # exact pinned encrypted-only #415 source export
+    "source_export": "4133cdeda03abbed5b93ebcfa17179aebff668c3",  # exact pinned encrypted-only #415 source export
     "emergency_stop": "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23",  # exact drained emergency-stop source commit
 }
 SOURCE_EXPORT_KEY_MAX_CHARS = 12000

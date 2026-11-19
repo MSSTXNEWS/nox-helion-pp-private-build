@@ -259,7 +259,7 @@ class OwnerCommentGuardTests(unittest.TestCase):
         key = "AbC_012-def"
         body = f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export {key}"
         self.assertEqual(SOURCE_EXPORT_SHA,
-                         "1fe739fa49141805701e8f969b77b536a4e49a4b")
+                         "4133cdeda03abbed5b93ebcfa17179aebff668c3")
         self.assertEqual(authorize_event(event_for(body), REPOSITORY, "issue_comment"),
                          ("source_export", SOURCE_EXPORT_SHA))
         for invalid in (
@@ -356,7 +356,7 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertNotIn("pull-requests: write", workflow)
         self.assertNotIn("actions: write", workflow)
         self.assertNotIn("github-script", workflow)
-        self.assertEqual(workflow.count("persist-credentials: false"), 3)
+        self.assertEqual(workflow.count("persist-credentials: false"), 4)
         self.assertEqual(workflow.count("NOX2: ${{ secrets.NOX2 }}"), 6)
         self.assertLess(workflow.index("owner_native_inspect_comment_guard.py"),
                         workflow.index("Run the fixed read-only inspect action"))
@@ -427,15 +427,40 @@ class WorkflowScopeTests(unittest.TestCase):
             3,
         )
 
-    def test_source_export_route_rechecks_key_and_uploads_ciphertext_only(self) -> None:
+    def test_source_export_route_stages_provider_credential_after_preflight(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github" / "workflows"
                     / "nox-owner-native-inspect.yml").read_text(encoding="utf-8")
+        guard = (Path(__file__).with_name(
+            "owner_native_inspect_comment_guard.py")).read_text(encoding="utf-8")
         legacy = (Path(__file__).parents[1] / ".github" / "workflows"
                   / "nox-owner-maintenance-command.yml").read_text(encoding="utf-8")
+        self.assertIn(f'"source_export": "{SOURCE_EXPORT_SHA}"', guard)
+        self.assertIn(f"ref: {SOURCE_EXPORT_SHA}", workflow)
         self.assertIn("steps.owner-command.outputs.export_key_b64", workflow)
         self.assertIn("path: source/artifacts/nox-s03-source-export.enc", workflow)
         self.assertNotIn("path: artifacts/", workflow.replace(
             "path: source/artifacts/nox-s03-source-export.enc", ""))
+        stage_name = "Stage NOX2 only after #415 authorization, dependency, and import checks"
+        run_name = "Run the exact pinned #415 encrypted source-export action"
+        clean_name = "Remove staged #415 owner credential"
+        upload_name = "Upload only the encrypted S03 source-export artifact"
+        self.assertIn("umask 077", workflow)
+        self.assertIn("unset NOX2", workflow)
+        self.assertLess(workflow.index("Compile and test exact pinned #415 encrypted export source before credentials"),
+                        workflow.index("Install crypto dependency before #415 owner credential staging"))
+        self.assertLess(workflow.index("Install crypto dependency before #415 owner credential staging"),
+                        workflow.index(stage_name))
+        self.assertLess(workflow.index(stage_name), workflow.index(run_name))
+        self.assertLess(workflow.index(run_name), workflow.index(clean_name))
+        self.assertLess(workflow.index(clean_name), workflow.index(upload_name))
+        run_block = workflow.split(run_name, 1)[1].split(clean_name, 1)[0]
+        cleanup_block = workflow.split(clean_name, 1)[1].split(upload_name, 1)[0]
+        upload_block = workflow.split(upload_name, 1)[1]
+        self.assertNotIn("NOX2: ${{ secrets.NOX2 }}", run_block)
+        self.assertIn("NOX2_FILE:", run_block)
+        self.assertIn("if: always()", cleanup_block)
+        self.assertNotIn("NOX2: ${{ secrets.NOX2 }}", cleanup_block)
+        self.assertIn("if: success()", upload_block)
         self.assertIn("!contains(github.event.comment.body, ' source_export ')", legacy)
 
 

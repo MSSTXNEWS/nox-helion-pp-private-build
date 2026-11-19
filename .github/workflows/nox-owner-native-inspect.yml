@@ -41,6 +41,8 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
+      - name: Install crypto dependency for encrypted-envelope tests
+        run: "python -m pip install --disable-pip-version-check --only-binary=:all: cryptography"
       - name: Parse owner workflow YAML files
         run: |
           ruby -e 'require "yaml"; ARGV.each { |path| YAML.parse_file(path); puts "#{path}: YAML parsed" }' \
@@ -74,6 +76,28 @@ jobs:
           python -B -m unittest discover \
             -s nox-control \
             -p test_owner_native_operator_browser_qa.py \
+            -v
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 4133cdeda03abbed5b93ebcfa17179aebff668c3
+          path: source-export
+          persist-credentials: false
+      - name: Compile and test exact pinned S03 export source, provider manifest, and secret-gated operator
+        working-directory: source-export
+        run: |
+          set -euo pipefail
+          python -B -m py_compile \
+            nox-control/owner_native_operator.py \
+            nox-control/owner_chat_s03_source_export.py \
+            nox-control/test_owner_chat_s03_source_export.py \
+            nox_runpod/__init__.py \
+            nox_runpod/teacher_mesh/__init__.py \
+            nox_runpod/teacher_mesh/v51/__init__.py \
+            nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_chat_s03_source_export.py \
             -v
 
   owner-inspect:
@@ -220,6 +244,9 @@ jobs:
           authorize_event('source_export', os.environ.get('NOX_OWNER_EXPORT_KEY_B64'))
           print('NOX_OWNER_SOURCE_EXPORT_SOURCE_AUTH=PASS')
           PY
+      - name: Install crypto dependency before #415 owner credential staging
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        run: "python -m pip install --disable-pip-version-check --only-binary=:all: cryptography"
       - name: Compile and test exact pinned #415 encrypted export source before credentials
         if: success() && steps.owner-command.outputs.action == 'source_export'
         working-directory: source
@@ -230,14 +257,46 @@ jobs:
             nox-control/owner_chat_s03_source_export.py \
             nox-control/test_owner_chat_s03_source_export.py
           python -B nox-control/test_owner_chat_s03_source_export.py
+      - name: Stage NOX2 only after #415 authorization, dependency, and import checks
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: |
+          set -eu
+          if [ -z "$NOX2" ]; then
+            echo "NOX_OWNER_CREDENTIAL=HOLD_MISSING"
+            exit 2
+          fi
+          umask 077
+          credential_file="${RUNNER_TEMP}/nox2-s03-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          if [ -e "$credential_file" ] || [ -L "$credential_file" ]; then
+            unset NOX2
+            echo "NOX_OWNER_CREDENTIAL=HOLD_FILE_EXISTS"
+            exit 2
+          fi
+          if ! printf '%s' "$NOX2" > "$credential_file"; then
+            unset NOX2
+            echo "NOX_OWNER_CREDENTIAL=HOLD_STAGE"
+            exit 2
+          fi
+          unset NOX2
+          echo "NOX_OWNER_CREDENTIAL=STAGED"
       - name: Run the exact pinned #415 encrypted source-export action
         if: success() && steps.owner-command.outputs.action == 'source_export'
         working-directory: source
         env:
-          NOX2: ${{ secrets.NOX2 }}
+          NOX2_FILE: ${{ runner.temp }}/nox2-s03-${{ github.run_id }}-${{ github.run_attempt }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
           NOX_OWNER_EXPORT_KEY_B64: ${{ steps.owner-command.outputs.export_key_b64 }}
         run: python -B nox-control/owner_native_operator.py source_export "$NOX_OWNER_EXPORT_KEY_B64"
+      - name: Remove staged #415 owner credential
+        if: always() && steps.owner-command.outputs.action == 'source_export'
+        env:
+          NOX2_FILE: ${{ runner.temp }}/nox2-s03-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          rm -f -- "$NOX2_FILE"
+          unset NOX2_FILE
+          echo "NOX_OWNER_CREDENTIAL_CLEANUP=COMPLETE"
       - name: Upload only the encrypted S03 source-export artifact
         if: success() && steps.owner-command.outputs.action == 'source_export'
         uses: actions/upload-artifact@v4
