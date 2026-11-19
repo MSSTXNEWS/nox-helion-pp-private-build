@@ -62,6 +62,15 @@ class MemfdAuditTests(unittest.TestCase):
         self.assertEqual(identity["pid"], 777010)
         self.assertEqual(identity["start_ticks"], 12345)
 
+    def test_python310_executable_basename_is_accepted_for_holder(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "proc"
+            root.mkdir()
+            write_proc(root, 777013, argv=holder_argv(), exe_path="/opt/python/bin/python3.10")
+            identity = audit.proc_identity(root, 777013)
+        self.assertEqual(identity["pid"], 777013)
+        self.assertEqual(identity["start_ticks"], 12345)
+
     def test_arbitrary_executable_basename_is_rejected_for_holder(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "proc"

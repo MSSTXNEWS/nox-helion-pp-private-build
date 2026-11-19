@@ -123,7 +123,7 @@ def proc_identity(proc_root: Path, pid: int) -> dict:
         raise Hold("HOLD_HOLDER_PATH_IDENTITY") from exc
     exe_name = Path(os.fsdecode(exe).removesuffix(" (deleted)")).name
     if exe_name not in {
-            "python", "python3", "python3.11", "python3.12", "python3.13"}:
+            "python", "python3", "python3.10", "python3.11", "python3.12", "python3.13"}:
         safe_name = safe_executable_basename(exe_name)
         diagnostics = {"executable_basename": safe_name} if safe_name else {}
         raise Hold("HOLD_HOLDER_EXECUTABLE_SHAPE", diagnostics)
