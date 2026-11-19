@@ -1,0 +1,44 @@
+name: NOX A1 multi-turn browser source gate
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_chat_browser_qa.py'
+      - 'nox-control/test_owner_chat_browser_multiturn.py'
+      - '.github/workflows/nox-a1-multiturn-browser-source.yml'
+  push:
+    branches:
+      - 'work/a1-browser-multiturn-*'
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: One focused four-message continuation and UI prefix gate
+        run: |
+          PYTHONPATH=nox-control python -m unittest -v test_owner_chat_browser_multiturn
+      - name: Syntax of exact candidate and injected browser observer
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          path=Path('nox-control/owner_chat_browser_qa.py')
+          tree=ast.parse(path.read_text(encoding='utf-8'))
+          node=next(n for n in tree.body if isinstance(n, ast.Assign) and any(
+              isinstance(t, ast.Name) and t.id=='OBSERVER_JS' for t in n.targets))
+          observer=ast.literal_eval(node.value)
+          Path('/tmp/nox-a1-multiturn-observer.js').write_text(observer, encoding='utf-8')
+          assert 'q.nativeCalls===2' in observer
+          assert 'q.uiPrefixLengthsBeforeDone=[]' in observer
+          print('SOURCE_BROWSER_ONLY=true')
+          print('NATIVE_POSTS=0')
+          PY
+          node --check /tmp/nox-a1-multiturn-observer.js
