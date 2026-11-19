@@ -21,6 +21,7 @@ class GateError(RuntimeError):
     pass
 subprocesses.GateError = GateError
 binding = types.ModuleType('owner_subagent_dispatcher')
+binding.RECEIPT = 'NOX_TEST_RECEIPT'
 binding.encoded = lambda data: json.dumps(
     data, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
 binding.digest = lambda data: hashlib.sha256(data).hexdigest()
