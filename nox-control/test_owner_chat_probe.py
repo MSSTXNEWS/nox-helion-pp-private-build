@@ -44,6 +44,27 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual([event['type'] for event in result['events']], ['preparing','start','delta','done'])
         self.assertTrue(response.closed)
 
+    def test_full_two_turn_durable_history_and_fail_closed_completion(self):
+        first, answer, second = '17 * 19?', '323', 'What number?'
+        expected = [(first, answer), (second, answer)]
+        messages = [{'content': first}, {'content': answer},
+                    {'content': second}, {'content': answer}]
+        self.assertTrue(probe.history_matches_turns(messages, expected))
+        for corrupted in (
+            [{'content': 'foreign session'}, *messages[1:]],
+            messages[2:],
+            [messages[0], messages[1], messages[3], messages[2]],
+            {'messages': messages},
+            messages[:3],
+        ):
+            self.assertFalse(probe.history_matches_turns(corrupted, expected))
+        self.assertIsNone(probe.require_durable_result(True, True, 'SECOND_TURN'))
+        for saved, correct in ((False, True), (True, False), (False, False)):
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_SECOND_TURN_NOT_ACCEPTED'):
+                probe.require_durable_result(saved, correct, 'SECOND_TURN')
+        with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_FIRST_TURN_NOT_ACCEPTED'):
+            probe.require_durable_result(False, True, 'FIRST_TURN')
+
     def test_truncated_or_error_stream_cannot_pass(self):
         class Response:
             status = 200
