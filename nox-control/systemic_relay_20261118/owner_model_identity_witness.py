@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import struct
+import stat
 from pathlib import Path
 
 MAX_CMDLINE = 8192
@@ -194,8 +195,15 @@ def witness(pid: int, expected_start_ticks: int, model_file: str | None = None,
         chosen = model_file if model_file is not None else arg
         if not chosen:
             raise EvidenceUnavailable('MODEL_PATH_NOT_IN_CMDLINE')
-        with open(chosen, 'rb') as f:
+        # Model paths come from a process argument or an explicit probe input.
+        # Opening a FIFO read-only can block indefinitely before fstat; use
+        # nonblocking open, then accept only a regular file before reading.
+        flags = os.O_RDONLY | getattr(os, 'O_CLOEXEC', 0) | getattr(os, 'O_NONBLOCK', 0)
+        fd = os.open(chosen, flags)
+        with os.fdopen(fd, 'rb') as f:
             st = os.fstat(f.fileno())
+            if not stat.S_ISREG(st.st_mode):
+                raise EvidenceUnavailable('MODEL_PATH_NOT_REGULAR_FILE')
             mapped = mapped_inode(pid, st.st_dev, st.st_ino, proc_root)
             metadata = gguf_metadata(f)
             # Parsing a current pathname is not evidence for the mapped file

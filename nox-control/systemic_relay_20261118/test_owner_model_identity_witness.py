@@ -1,7 +1,10 @@
 import hashlib
 import importlib.util
+import json
 import os
+import subprocess
 import struct
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -198,6 +201,32 @@ class WitnessTests(unittest.TestCase):
         self.file.write_bytes(b)
         out = w.witness(self.pid, self.ticks, proc_root=self.proc)
         self.assertEqual(out['reason'], 'GGUF_ARRAY_COUNT_BUDGET')
+
+    def test_fifo_model_path_is_rejected_without_blocking(self):
+        # A blocking read-open of a FIFO with no writer hangs before fstat.
+        # Exercise the witness in a child with a timeout so a regression fails
+        # quickly instead of wedging the whole test job.
+        fifo = self.root / 'model.fifo'
+        os.mkfifo(fifo)
+        (self.p / 'cmdline').write_bytes(
+            b'llama-server\0-m\0' + os.fsencode(fifo) + b'\0'
+        )
+        code = (
+            "import importlib.util,json,sys;from pathlib import Path;"
+            "p=Path(sys.argv[1]);spec=importlib.util.spec_from_file_location('w',p);"
+            "w=importlib.util.module_from_spec(spec);spec.loader.exec_module(w);"
+            "print(json.dumps(w.witness(int(sys.argv[2]),int(sys.argv[3]),"
+            "proc_root=Path(sys.argv[4]))))"
+        )
+        proc = subprocess.run(
+            [sys.executable, '-c', code, str(Path(__file__).with_name('owner_model_identity_witness.py')),
+             str(self.pid), str(self.ticks), str(self.proc)],
+            capture_output=True, text=True, timeout=2, check=False
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        out = json.loads(proc.stdout)
+        self.assertEqual(out['state'], 'UNKNOWN')
+        self.assertEqual(out['reason'], 'MODEL_PATH_NOT_REGULAR_FILE')
 
 
 if __name__ == '__main__':
