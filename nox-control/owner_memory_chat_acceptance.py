@@ -47,6 +47,9 @@ def main():
             value = str(exc)
             failed.append({'component': name, 'reason': value if re.fullmatch('(HOLD|WAIT)_[A-Z0-9_]+', value) else type(exc).__name__})
             emit('memory_chat_component_hold', failed[-1])
+            # All later stages depend on S03 recovery and ordered owner acceptance.
+            # Never mutate the chat layout or start browser QA after a failed stage.
+            break
     emit('memory_chat_batch', {'failed': failed, 'training_started': False, 'private_content_exported': False})
     if not failed:
         print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
