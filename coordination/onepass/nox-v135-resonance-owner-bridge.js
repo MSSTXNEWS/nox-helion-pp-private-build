@@ -227,7 +227,7 @@ function sseChat(data,signal) {
 					const detail=await Promise.race([(async()=>{reader=upstream.clone().body.getReader();let n=0,s='',d=new TextDecoder();for(;;){const c=await reader.read();if(c.done)return JSON.parse(s+d.decode());if((n+=c.value.byteLength)>512){reader.cancel().catch(()=>{});return null;}s+=d.decode(c.value,{stream:true});}})().catch(()=>null),new Promise(resolve=>{timer=setTimeout(()=>{timed=true;reader?.cancel().catch(()=>{});resolve(null);},1000);})]);clearTimeout(timer);
 					const activeConflict=detail?.error==='HOLD_ACTIVE_SESSION_STREAM';resolveAdmission(!activeConflict&&!timed);
 					if(activeConflict){conflictRejected=true;throw Error('HOLD_NATIVE_STREAM_HOLD_ACTIVE_SESSION_STREAM');}
-					if(timed)throw Error('HOLD_409_TIMEOUT');
+					if(timed)throw Error('HOLD_409');
 				}
 				const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
 				const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
