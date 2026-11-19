@@ -1,9 +1,12 @@
 """V112 regression against fixture SQLite and synthetic SSE. Never a live NOX receipt."""
+import asyncio
 import hashlib
+import httpx
 import json
 import sqlite3
 import sys
 import tempfile
+import threading
 import types
 import unittest
 from pathlib import Path
@@ -45,11 +48,17 @@ class V112Tests(unittest.TestCase):
         self.calls=[]
         self.record=True
         self.bulk_sse=''
+        self.block_native=False
+        self.native_started=threading.Event()
         async def native(payload):
             self.calls.append(payload)
             q=payload['messages'][-1]['content']
             answer='Готов. Это проверенный ответ.'
             async def chunks():
+                if self.block_native:
+                    self.native_started.set()
+                    await asyncio.Event().wait()
+                    yield 'unreachable'
                 if self.bulk_sse=='coalesced':
                     # Two individually valid 160 KB SSE comment frames in
                     # ONE network read: aggregate >300 KB is not oversize.
@@ -550,7 +559,87 @@ class V112Tests(unittest.TestCase):
     def test_no_false_gpu_stop(self):
         r=self.client.post('/api/nox/stop',cookies=self.cookie,json={})
         self.assertEqual(r.status_code,409)
-        self.assertNotIn('gpu_stop_verified',r.json())
+        self.assertEqual(r.json()['status'],'HOLD')
+        self.assertEqual(r.json()['gpu_stop_verified'],False)
+
+    def test_parallel_stop_mismatch_cannot_cancel_active_attempt(self):
+        asyncio.run(self._parallel_stop_mismatch_scenario())
+
+    async def _parallel_stop_mismatch_scenario(self):
+        transport=httpx.ASGITransport(app=self.app)
+        async with httpx.AsyncClient(transport=transport,base_url='http://test',
+                                     cookies=self.cookie) as client:
+            dialog=(await client.post('/api/ui/memory/dialogs/create',
+                json={'title':'Attempt-scoped STOP parallel','confirmed':True})).json()['dialog_id']
+            attempt_a='a'*32
+            attempt_b='b'*32
+            self.block_native=True
+            active=asyncio.create_task(client.post('/api/nox/chat/stream',
+                json={'message':'Active attempt A','dialog_id':dialog,'attempt_id':attempt_a}))
+            self.assertTrue(await asyncio.to_thread(self.native_started.wait,2),
+                            'A must reach the blocked native iterator')
+            parallel=await client.post('/api/nox/chat/stream',
+                json={'message':'Parallel attempt B','dialog_id':dialog,'attempt_id':attempt_b})
+            self.assertEqual(parallel.status_code,409)
+            self.assertEqual(parallel.json()['error'],'HOLD_ACTIVE_SESSION_STREAM')
+            mismatch=await client.post('/api/nox/stop',json={'attempt_id':attempt_b})
+            self.assertEqual(mismatch.status_code,409)
+            self.assertEqual(mismatch.json()['reason'],'HOLD_STOP_ATTEMPT_MISMATCH')
+            self.assertNotIn('stream_cancellation_signalled',mismatch.json())
+            await asyncio.sleep(.05)
+            self.assertFalse(active.done(),'B STOP must leave A active')
+            accepted=await client.post('/api/nox/stop',json={'attempt_id':attempt_a})
+            self.assertEqual(accepted.status_code,200)
+            self.assertEqual(accepted.json()['attempt_id'],attempt_a)
+            self.assertTrue(accepted.json()['stream_cancellation_signalled'])
+            response=await asyncio.wait_for(active,2)
+            frames=[json.loads(x) for x in response.text.splitlines() if x.strip()]
+            self.assertEqual(frames[-1]['error'],'STREAM_STOP_REQUESTED')
+            self.assertEqual(frames[-1]['attempt_id'],attempt_a)
+            self.assertNotIn('done',[x['type'] for x in frames])
+
+    def test_late_stop_for_completed_attempt_cannot_cancel_next_stream(self):
+        asyncio.run(self._late_stop_scenario())
+
+    async def _late_stop_scenario(self):
+        transport=httpx.ASGITransport(app=self.app)
+        async with httpx.AsyncClient(transport=transport,base_url='http://test',
+                                     cookies=self.cookie) as client:
+            dialog=(await client.post('/api/ui/memory/dialogs/create',
+                json={'title':'Attempt-scoped STOP late','confirmed':True})).json()['dialog_id']
+            old_attempt='c'*32
+            response=await client.post('/api/nox/chat/stream',json={
+                'message':'Completed attempt C','dialog_id':dialog,'attempt_id':old_attempt})
+            self.assertEqual(response.status_code,200)
+            frames=[json.loads(x) for x in response.text.splitlines() if x.strip()]
+            self.assertEqual(frames[-1]['type'],'done')
+            self.assertEqual(frames[-1]['attempt_id'],old_attempt)
+
+            next_attempt='d'*32
+            next_prompt='Next active attempt D unique'
+            self.block_native=True
+            self.native_started.clear()
+            active=asyncio.create_task(client.post('/api/nox/chat/stream',json={
+                'message':next_prompt,'dialog_id':dialog,'attempt_id':next_attempt}))
+            self.assertTrue(await asyncio.to_thread(self.native_started.wait,2),
+                            'D must reach the blocked native iterator')
+            late=await client.post('/api/nox/stop',json={'attempt_id':old_attempt})
+            self.assertEqual(late.status_code,409)
+            self.assertEqual(late.json()['reason'],'HOLD_STOP_ATTEMPT_MISMATCH')
+            await asyncio.sleep(.05)
+            self.assertFalse(active.done(),'late C STOP must leave D active')
+            accepted=await client.post('/api/nox/stop',json={'attempt_id':next_attempt})
+            self.assertEqual(accepted.status_code,200)
+            self.assertEqual(accepted.json()['attempt_id'],next_attempt)
+            stopped=await asyncio.wait_for(active,2)
+            stopped_frames=[json.loads(x) for x in stopped.text.splitlines() if x.strip()]
+            self.assertEqual(stopped_frames[-1]['error'],'STREAM_STOP_REQUESTED')
+            self.assertEqual(stopped_frames[-1]['attempt_id'],next_attempt)
+            with sqlite3.connect(self.db) as db:
+                written=db.execute('SELECT 1 FROM nox_v29_dialog_messages '
+                                   'WHERE dialog_id=? AND content=? LIMIT 1',
+                                   (dialog,next_prompt)).fetchone()
+            self.assertIsNone(written,'stopped attempt must bypass the S03 write path')
 
     def test_s03_timestamp_guard(self):
         self.assertLess(_timestamp('2025-01-01T00:00:00Z'), _timestamp('2026-11-14T00:00:00Z'))

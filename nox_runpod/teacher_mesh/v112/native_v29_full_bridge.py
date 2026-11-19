@@ -661,6 +661,10 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         dialog_id=data.get('dialog_id')
         if not isinstance(dialog_id,str) or not ID_PATTERN.fullmatch(dialog_id):
             return JSONResponse({'error':'HOLD_DIALOG_SCOPE_NOT_BOUND'},status_code=409)
+        attempt_id=data.get('attempt_id')
+        if attempt_id is not None and (not isinstance(attempt_id,str)
+                or not ID_PATTERN.fullmatch(attempt_id)):
+            return JSONResponse({'error':'HOLD_STOP_ATTEMPT_ID_INVALID'},status_code=422)
         if dialog_id:
             if not _schema_ready():
                 return JSONResponse({'error':'HOLD_S03_DIALOG_SCHEMA'},status_code=503)
@@ -676,7 +680,8 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         if key in active:
             return JSONResponse({'error':'HOLD_ACTIVE_SESSION_STREAM'},status_code=409)
         cancel=asyncio.Event()
-        active[key]=cancel
+        stream_entry={'attempt_id':attempt_id,'cancel':cancel}
+        active[key]=stream_entry
         payload={'messages':history+[{'role':'user','content':question}],
                  '_owner':True,'stream':True}
         started=time.time()
@@ -684,9 +689,11 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         async def generate():
             wire=None;buffer='';answer='';complete=False
             try:
-                yield _jsonl({'type':'preparing','stream_mode':'NATIVE_TOKEN_STREAM'})
+                yield _jsonl({'type':'preparing','stream_mode':'NATIVE_TOKEN_STREAM',
+                              'attempt_id':attempt_id})
                 if cancel.is_set():
-                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED',
+                                  'attempt_id':attempt_id})
                     return
                 if not check(request):
                     yield _jsonl({'type':'error','error':'HOLD_OWNER_SESSION_REVOKED'})
@@ -695,13 +702,15 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 if not hasattr(wire,'body_iterator'):
                     yield _jsonl({'type':'error','error':'HOLD_NATIVE_STREAM_MISSING'})
                     return
-                yield _jsonl({'type':'start','model':'NOX HELION','stream_mode':'NATIVE_TOKEN_STREAM'})
+                yield _jsonl({'type':'start','model':'NOX HELION','stream_mode':'NATIVE_TOKEN_STREAM',
+                              'attempt_id':attempt_id})
                 decoder=codecs.getincrementaldecoder('utf8')('strict')
                 upstream=wire.body_iterator.__aiter__()
                 while True:
                     event,chunk=await _next_native_chunk_or_stop(upstream,cancel)
                     if event=='stop':
-                        yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                        yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED',
+                                      'attempt_id':attempt_id})
                         return
                     if event=='eof':
                         break
@@ -760,7 +769,8 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                         'HOLD_SSE_FRAME_AFTER_DONE' if complete else 'HOLD_SSE_UNTERMINATED_FRAME'})
                     return
                 if cancel.is_set():
-                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED',
+                                  'attempt_id':attempt_id})
                     return
                 if not complete or not answer.strip():
                     yield _jsonl({'type':'error','error':'HOLD_INCOMPLETE_NATIVE_RESPONSE'})
@@ -778,13 +788,14 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                     return
                 yield _jsonl({'type':'done','model':'NOX HELION','saved':True,
                               's03_integrated':True,'dialog_id':dialog_id,
-                              'exchange_id':proof['record_id'],'stream_mode':'NATIVE_TOKEN_STREAM'})
+                              'exchange_id':proof['record_id'],'stream_mode':'NATIVE_TOKEN_STREAM',
+                              'attempt_id':attempt_id})
             except asyncio.CancelledError:
                 raise
             except Exception:
                 yield _jsonl({'type':'error','error':'HOLD_EXISTING_ONEHOST_RUNTIME'})
             finally:
-                if active.get(key) is cancel:active.pop(key,None)
+                if active.get(key) is stream_entry:active.pop(key,None)
                 if wire is not None and hasattr(getattr(wire,'body_iterator',None),'aclose'):
                     try:await wire.body_iterator.aclose()
                     except Exception:pass
@@ -797,10 +808,23 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             return trusted['_unauthorized']()
         key=scope(request)
         if key is None or key not in active:
-            return JSONResponse({'status':'HOLD','reason':'NO_ACTIVE_SESSION_STREAM'},status_code=409)
-        active[key].set()
-        return {'status':'STOP_REQUESTED','stream_cancellation_signalled':True,
-                'gpu_stop_verified':False}
+            return JSONResponse({'status':'HOLD','reason':'HOLD_STOP_ATTEMPT_NOT_ACTIVE',
+                                 'gpu_stop_verified':False},status_code=409)
+        try:data=await request.json()
+        except Exception:
+            return JSONResponse({'status':'HOLD','reason':'HOLD_STOP_ATTEMPT_INVALID_JSON',
+                                 'gpu_stop_verified':False},status_code=400)
+        attempt_id=data.get('attempt_id') if isinstance(data,dict) else None
+        if not isinstance(attempt_id,str) or not ID_PATTERN.fullmatch(attempt_id):
+            return JSONResponse({'status':'HOLD','reason':'HOLD_STOP_ATTEMPT_ID_REQUIRED',
+                                 'gpu_stop_verified':False},status_code=422)
+        stream=active.get(key)
+        if stream is None or stream.get('attempt_id')!=attempt_id:
+            return JSONResponse({'status':'HOLD','reason':'HOLD_STOP_ATTEMPT_MISMATCH',
+                                 'gpu_stop_verified':False},status_code=409)
+        stream['cancel'].set()
+        return {'status':'STOP_REQUESTED','attempt_id':attempt_id,
+                'stream_cancellation_signalled':True,'gpu_stop_verified':False}
 
     directory=Path(site_dir) if site_dir is not None else SITE
     if directory.is_dir() and (directory/'nox-chat.js').is_file():
