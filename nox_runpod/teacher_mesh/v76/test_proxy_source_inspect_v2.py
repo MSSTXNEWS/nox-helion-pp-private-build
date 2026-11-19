@@ -74,6 +74,43 @@ def route(body):
         self.assertNotIn("load_s03_history", encoded)
         self.assertNotIn("dialog_id)", encoded)
 
+    def test_route_binding_contract_reports_static_calls_but_unknown_runtime_identity(self):
+        raw = b'''
+API_KEY = "DO_NOT_PRINT_BINDING_SECRET"
+@app.post("/api/nox/chat")
+async def chat_route(request):
+    return model_bridge.stream(load_model(request))
+'''
+        report = analyzer()(raw)
+        route = report["chat_routes"][0]
+        self.assertEqual(route["handler"], "chat_route")
+        self.assertEqual(
+            route["direct_call_symbols"],
+            ["load_model", "model_bridge.stream"],
+        )
+        bindings = route["serving_bindings"]
+        self.assertEqual(bindings["evidence_scope"], "PROXY_SOURCE_AST_ONLY")
+        self.assertEqual(bindings["bridge_identity"], "UNKNOWN")
+        self.assertEqual(bindings["model_identity"], "UNKNOWN")
+        self.assertEqual(
+            bindings["callbacks"],
+            {f"C{i:02d}": "UNKNOWN" for i in range(1, 9)},
+        )
+        encoded = json.dumps(report, ensure_ascii=False)
+        self.assertNotIn("DO_NOT_PRINT_BINDING_SECRET", encoded)
+        self.assertIn("UNKNOWN", report["analysis_note"])
+
+    def test_route_direct_call_metadata_is_bounded(self):
+        calls = "\\n".join(f"    f{i}()" for i in range(40))
+        raw = (
+            '@app.post("/api/nox/chat")\\ndef chat_route():\\n'
+            + calls
+            + "\\n    return None\\n"
+        ).encode()
+        route = analyzer()(raw)["chat_routes"][0]
+        self.assertEqual(len(route["direct_call_symbols"]), 32)
+        self.assertEqual(route["direct_call_symbols"], sorted(route["direct_call_symbols"]))
+
     def test_missing_context_functions_are_explicitly_reported(self):
         report = analyzer()(b"def health():\n    return True\n")
         self.assertEqual(report["functions"]["_trim_ctx"], [])
