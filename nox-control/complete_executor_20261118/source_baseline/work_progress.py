@@ -340,6 +340,20 @@ I49_CRITERION = 'Проверить разрешённые параметры в
 I49_COMPARISON_PATH = 'nox-control/i49_checkpoint_compare_20261119/evidence/all500_tensor_delta_corrected_source_20261119.json'
 I49_COMPARISON_BLOB = '4b136169a2a8fc76b64cc2001ff66ced393d18c4'
 I49_COMPARISON_SHA256 = 'cde4705f5803e3a23292bd2a1026ac8bbcce08fe3758e9e62d170c203403f8b4'
+TWO_V14_02_SPEC_SHA256 = 'f353440a6056d219deeafbd1f9554497383cb5367b77447e75e3d603fd7a47c7'
+TWO_V14_02_TITLE = 'Установить владельца процессов и действующие STOP/maintenance locks.'
+TWO_V14_02_SCOPE = 'Point-in-time identity of explicitly selected NOX service/worker processes plus scoped STOP/maintenance markers and kernel locks.'
+TWO_V14_02_NORMALIZED_PATH = 'nox-control/complete_executor_20261118/evidence/addenda/normalized_acceptance_addendum_20261119_2v14-02_pr492.json'
+TWO_V14_02_NORMALIZED_BLOB = '6df95f8746e721a64728e379627c2e88d574663'
+TWO_V14_02_SOURCE_PATH = 'nox-control/complete_executor_20261118/evidence/addenda/native_snapshot_addendum_20261119_2v14-02_run44517972435.json'
+TWO_V14_02_SOURCE_BLOB = '47b2f3f58f51908b3f754c99145646d806be9c68'
+TWO_V14_02_SOURCE_MERGE = '8287795276d686ad39529ef25027b19d00c0ef76'
+TWO_V14_02_RUN_ID = 44517972435
+TWO_V14_02_JOB_ID = 135538844060
+TWO_V14_02_OWNER_COMMENT_ID = 7008196167
+TWO_V14_02_PINNED_SOURCE_SHA = '215abe9bfe6a9f969899cb2a5be2ddacc071f4c8'
+TWO_V14_02_INSTANCE_ID = 60509551
+TWO_V14_02_LEGACY_RUN_ID = 44517972448
 
 
 def git_blob_sha(raw):
@@ -615,6 +629,15 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
         result_status = evidence_binding.get('workflow_run_conclusion')
         if conclusion != 'success' or result_status != 'success':
             raise ValueError('GPU_WORKFLOW_STATUS_NOT_SUCCESS')
+    elif task_id == '2V14-02':
+        if acceptance_scope != TWO_V14_02_SCOPE:
+            raise ValueError('PROCESS_STOP_LOCK_SCOPE_UNSUPPORTED')
+        if (record_workflow.get('conclusion') != 'success'
+                or evidence.get('workflow_run_conclusion') != 'success'
+                or evidence.get('job_conclusion') != 'success'):
+            raise ValueError('PROCESS_STOP_LOCK_WORKFLOW_STATUS_MISMATCH')
+        conclusion = record_workflow.get('conclusion')
+        result_status = evidence.get('workflow_run_conclusion')
     elif task_id == '6V14-02':
         if acceptance_scope != 'POINT_IN_TIME_PROCESS_SET_ENUMERATION_AND_CORE_IDENTITY_ONLY':
             raise ValueError('PROCESS_CENSUS_SCOPE_UNSUPPORTED')
@@ -897,6 +920,342 @@ def _validate_source_sidecar(document, manifest_rows, manifest_titles, control_r
         'training_admission': document.get('training_admission'),
         'live_training_or_weight_update': document.get('live_training_or_weight_update'),
     }
+
+
+
+def _validate_2v14_02_point_in_time_refresh(document, control_root, existing_receipts,
+                                             source_path, source_blob, item):
+    """Bind the #536 wrapper to the exact merged #492 read-only point-in-time record."""
+    def require(condition, reason):
+        if not condition:
+            raise ValueError(reason)
+
+    require(source_path == TWO_V14_02_NORMALIZED_PATH
+            and source_blob == TWO_V14_02_NORMALIZED_BLOB
+            and document.get('schema') == SIDECAR_SCHEMA
+            and document.get('append_only') is True,
+            '2V14_02_NORMALIZED_SIDECAR_PIN_MISMATCH')
+    scope = document.get('scope')
+    require(isinstance(scope, dict) and scope.get('task_ids') == ['2V14-02']
+            and scope.get('immutable_295_manifest') == {
+                'path': 'nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json',
+                'git_blob_sha': FROZEN_295_MANIFEST_BLOB,
+                'task_record_key': '2V14-02',
+                'spec_sha256': TWO_V14_02_SPEC_SHA256,
+                'original_acceptance_added': False,
+            }
+            and scope.get('task_registry', {}).get('path') ==
+                'nox-control/four_queue_20261118/work_tasks.json'
+            and scope.get('task_registry', {}).get('git_blob_sha') == FROZEN_WORK_TASKS_BLOB
+            and scope.get('receipts', {}).get('path') ==
+                'nox-control/four_queue_20261118/work_receipts.json'
+            and scope.get('receipts', {}).get('git_blob_sha') == FROZEN_WORK_RECEIPTS_BLOB,
+            '2V14_02_FROZEN_INPUT_BINDING_MISMATCH')
+
+    criterion = document.get('criteria', {}).get('2V14-02')
+    records = document.get('additional_evidence_records')
+    require(isinstance(criterion, dict) and isinstance(records, list) and len(records) == 1
+            and criterion.get('spec_sha256') == TWO_V14_02_SPEC_SHA256
+            and criterion.get('addendum_assessment') == 'ACCEPTED'
+            and criterion.get('result') == 'ACCEPTED'
+            and criterion.get('acceptance_scope') == TWO_V14_02_SCOPE
+            and criterion.get('acceptance_increment') == 0
+            and criterion.get('evidence_pointer') == '#/evidence',
+            '2V14_02_NORMALIZED_CRITERION_MISMATCH')
+    binding = criterion.get('acceptance_binding')
+    require(isinstance(binding, dict)
+            and binding.get('evidence_pointer') == '#/additional_evidence_records/0'
+            and binding.get('workflow_run_id') == TWO_V14_02_RUN_ID
+            and binding.get('workflow_job_id') == TWO_V14_02_JOB_ID
+            and binding.get('owner_authorization_id') == TWO_V14_02_OWNER_COMMENT_ID
+            and binding.get('pinned_source_sha') == TWO_V14_02_PINNED_SOURCE_SHA,
+            '2V14_02_NORMALIZED_WORKFLOW_BINDING_MISMATCH')
+    record = _pointer_value(document, binding.get('evidence_pointer'))
+    evidence = _pointer_value(document, '#/evidence')
+    expected_source_binding = {
+        'path': TWO_V14_02_SOURCE_PATH,
+        'git_blob_sha': TWO_V14_02_SOURCE_BLOB,
+        'merge_commit_sha': TWO_V14_02_SOURCE_MERGE,
+        'accepted_record_pointer': '#/additional_evidence_records/0',
+        'source_evidence_pointer': '#/evidence',
+        'source_criterion_pointer': '#/scope/criteria/2V14-02',
+        'source_acceptance_review_pointer': '#/acceptance_review/2V14-02',
+    }
+    require(record is records[0] and record.get('task_id') == '2V14-02'
+            and record.get('result') == 'ACCEPTED'
+            and record.get('criterion_spec_sha256') == TWO_V14_02_SPEC_SHA256
+            and record.get('acceptance_scope') == TWO_V14_02_SCOPE
+            and record.get('evidence_pointer') == '#/evidence'
+            and record.get('acceptance_increment') == 0
+            and record.get('original_all295_ledger_updated') is False
+            and record.get('source_sidecar_binding') == expected_source_binding,
+            '2V14_02_NORMALIZED_ACCEPTANCE_RECORD_MISMATCH')
+    require(isinstance(evidence, dict)
+            and evidence.get('source_sidecar_binding') == expected_source_binding
+            and evidence.get('run_id') == TWO_V14_02_RUN_ID
+            and evidence.get('workflow_run_id') == TWO_V14_02_RUN_ID
+            and evidence.get('job_id') == TWO_V14_02_JOB_ID
+            and evidence.get('workflow_job_id') == TWO_V14_02_JOB_ID
+            and evidence.get('owner_authorization_id') == TWO_V14_02_OWNER_COMMENT_ID
+            and evidence.get('owner_authorization_comment_id') == TWO_V14_02_OWNER_COMMENT_ID
+            and evidence.get('conclusion') == 'success'
+            and evidence.get('workflow_run_conclusion') == 'success'
+            and evidence.get('job_conclusion') == 'success'
+            and evidence.get('head_sha') == '54aa2ded6f836530f6be30ab8a82f2bf7575ffe5'
+            and evidence.get('pinned_source_sha') == TWO_V14_02_PINNED_SOURCE_SHA
+            and evidence.get('host_pin') == 'VERIFIED'
+            and evidence.get('source_auth') == 'PASS'
+            and evidence.get('inspect_complete') is True
+            and evidence.get('remote_exit_code') == 0
+            and evidence.get('temporary_ssh_key_cleanup') == 'DETACHED_AND_VERIFIED'
+            and evidence.get('accepted_scope') == TWO_V14_02_SCOPE
+            and evidence.get('original_acceptance_added') is False
+            and evidence.get('duplicate_legacy_run', {}).get('run_id') ==
+                TWO_V14_02_LEGACY_RUN_ID
+            and evidence.get('duplicate_legacy_run', {}).get('counted_as_accepted_evidence') is False
+            and len(evidence.get('health_limits', [])) == 3
+            and 'no full Supervisor health claim' in evidence['health_limits'][0]
+            and 'two scoped kernel-lock paths' in evidence['health_limits'][1]
+            and 'point-in-time observation' in evidence['health_limits'][2],
+            '2V14_02_NORMALIZED_EVIDENCE_OR_SCOPE_MISMATCH')
+    require(binding.get('scope_limit') ==
+            'Exact point-in-time evidence only: named service/worker identities, listed STOP/maintenance markers, and the two scoped kernel-lock observations recorded in the cited accepted source sidecar.',
+            '2V14_02_NORMALIZED_SCOPE_LIMIT_MISMATCH')
+
+    source_relative = Path(*TWO_V14_02_SOURCE_PATH.split('/')[1:])
+    source_raw, source_doc = read_json_with_raw(Path(control_root) / source_relative)
+    require(git_blob_sha(source_raw) == TWO_V14_02_SOURCE_BLOB
+            and source_doc.get('schema') == SIDECAR_SCHEMA
+            and source_doc.get('append_only') is True,
+            '2V14_02_MERGED_SOURCE_SIDECAR_PIN_MISMATCH')
+    source_scope = source_doc.get('scope')
+    require(isinstance(source_scope, dict)
+            and source_scope.get('task_ids') == ['2V14-02']
+            and source_scope.get('task_registry', {}).get('git_blob_sha') == FROZEN_WORK_TASKS_BLOB
+            and source_scope.get('immutable_295_manifest', {}).get('git_blob_sha') == FROZEN_295_MANIFEST_BLOB
+            and source_scope.get('receipts', {}).get('git_blob_sha') == FROZEN_WORK_RECEIPTS_BLOB,
+            '2V14_02_SOURCE_FROZEN_INPUT_BINDING_MISMATCH')
+    source_criterion = _pointer_value(source_doc, '#/scope/criteria/2V14-02')
+    source_record = _pointer_value(source_doc, '#/additional_evidence_records/0')
+    source_evidence = _pointer_value(source_doc, '#/evidence')
+    source_review = _pointer_value(source_doc, '#/acceptance_review/2V14-02')
+    require(isinstance(source_criterion, dict)
+            and source_criterion.get('spec_sha256') == TWO_V14_02_SPEC_SHA256
+            and source_criterion.get('addendum_assessment') ==
+                'ACCEPTED_FOR_EXACT_POINT_IN_TIME_PROCESS_STOP_KERNEL_LOCK_SCOPE'
+            and source_criterion.get('acceptance_binding', {}).get('workflow_run_id') ==
+                TWO_V14_02_RUN_ID
+            and source_criterion.get('acceptance_binding', {}).get('job_id') == TWO_V14_02_JOB_ID
+            and source_criterion.get('acceptance_binding', {}).get('owner_comment_id') ==
+                TWO_V14_02_OWNER_COMMENT_ID,
+            '2V14_02_SOURCE_CRITERION_BINDING_MISMATCH')
+    source_workflow = source_record.get('workflow') if isinstance(source_record, dict) else None
+    require(isinstance(source_record, dict)
+            and source_record.get('record_number') == 5
+            and source_record.get('task_id') == '2V14-02'
+            and source_record.get('result') == 'ACCEPTED'
+            and source_record.get('evidence_pointer') == '#/evidence'
+            and isinstance(source_workflow, dict)
+            and source_workflow.get('run_id') == TWO_V14_02_RUN_ID
+            and source_workflow.get('job_id') == TWO_V14_02_JOB_ID
+            and source_workflow.get('conclusion') == 'success'
+            and source_workflow.get('owner_authorization_comment_id') == TWO_V14_02_OWNER_COMMENT_ID
+            and source_workflow.get('duplicate_legacy_run_id') == TWO_V14_02_LEGACY_RUN_ID,
+            '2V14_02_MERGED_ACCEPTANCE_RECORD_MISMATCH')
+    require(isinstance(source_evidence, dict)
+            and source_evidence.get('workflow_run_id') == TWO_V14_02_RUN_ID
+            and source_evidence.get('job_id') == TWO_V14_02_JOB_ID
+            and source_evidence.get('workflow_run_conclusion') == 'success'
+            and source_evidence.get('job_conclusion') == 'success'
+            and source_evidence.get('owner_authorization_comment_id') == TWO_V14_02_OWNER_COMMENT_ID
+            and source_evidence.get('exact_owner_comment_body') ==
+                '/nox-maintain 60509551 215abe9bfe6a9f969899cb2a5be2ddacc071f4c8 inspect'
+            and source_evidence.get('authenticated_instance_id') == TWO_V14_02_INSTANCE_ID
+            and source_evidence.get('host_pin') == 'VERIFIED'
+            and source_evidence.get('source_auth') == 'PASS'
+            and source_evidence.get('command_scope') == 'inspect'
+            and source_evidence.get('inspect_complete') is True
+            and source_evidence.get('remote_exit_code') == 0
+            and source_evidence.get('cleanup_marker') == 'DETACHED_AND_VERIFIED',
+            '2V14_02_OWNER_AUTHENTICATION_EVIDENCE_MISMATCH')
+    require(isinstance(source_review, dict)
+            and source_review.get('result') ==
+                'ACCEPTED_FOR_EXACT_POINT_IN_TIME_PROCESS_STOP_KERNEL_LOCK_SCOPE'
+            and len(source_review.get('caveats', [])) == 4
+            and 'Supervisor rc=3' in source_review['caveats'][0]
+            and 'not a full process census' in source_review['caveats'][1]
+            and 'point-in-time' in source_review['caveats'][3]
+            and 'not a lease acquisition' in source_review['caveats'][3],
+            '2V14_02_ACCEPTANCE_REVIEW_SCOPE_MISMATCH')
+
+    snapshots = source_evidence.get('snapshots')
+    expected_service_names = {
+        'nox-agent-architect-t859u', 'nox-agent-integrator-t859u',
+        'nox-agent-tuner-t858u', 'nox-dispatcher-t855u', 'nox-ds41-8098',
+        'nox-proxy', 'nox-web29-18775',
+    }
+    require(isinstance(snapshots, list) and len(snapshots) == 2,
+            '2V14_02_PROCESS_SNAPSHOTS_MISSING')
+    boot_id = None
+    dispatcher_identity = None
+    for snapshot in snapshots:
+        require(isinstance(snapshot, dict) and snapshot.get('snapshot_complete') is True
+                and snapshot.get('host_clock_snapshot_status') == 'STABLE'
+                and snapshot.get('supervisor_rc') == 3,
+                '2V14_02_PROCESS_SNAPSHOT_STATUS_MISMATCH')
+        snapshot_boot_id = snapshot.get('host_boot_id')
+        require(isinstance(snapshot_boot_id, str) and snapshot_boot_id
+                and (boot_id is None or boot_id == snapshot_boot_id),
+                '2V14_02_PROCESS_SNAPSHOT_BOOT_MISMATCH')
+        boot_id = snapshot_boot_id
+        services = snapshot.get('services')
+        service_map = {row.get('name'): row for row in services if isinstance(row, dict)} \
+            if isinstance(services, list) else {}
+        require(len(service_map) == 7 and set(service_map) == expected_service_names,
+                '2V14_02_SELECTED_SERVICE_SET_MISMATCH')
+        identities = {}
+        for name, row in service_map.items():
+            if row.get('state') == 'RUNNING':
+                require(_positive_int(row.get('pid')) and _positive_int(row.get('start_ticks'))
+                        and row.get('host_clock_binding_status') == 'VERIFIED',
+                        '2V14_02_SELECTED_SERVICE_IDENTITY_MISSING')
+                identities[name] = (row['pid'], row['start_ticks'])
+            else:
+                require(row.get('state') == 'STOPPED'
+                        and row.get('pid') is None and row.get('start_ticks') is None,
+                        '2V14_02_SELECTED_SERVICE_STATE_MISMATCH')
+        require(len(identities) == 4
+                and all(row == 'ABSENT' for row in snapshot.get(
+                    'stop_and_maintenance_flags', {}).values())
+                and len(snapshot.get('stop_and_maintenance_flags', {})) == 11,
+                '2V14_02_STOP_MARKER_OR_SERVICE_STATE_MISMATCH')
+        if dispatcher_identity is None:
+            dispatcher_identity = identities.get('nox-dispatcher-t855u')
+            first_identities = identities
+        else:
+            require(identities == first_identities,
+                    '2V14_02_SERVICE_IDENTITIES_NOT_STABLE')
+
+    workers = source_evidence.get('post_workers')
+    worker_rows = workers.get('workers') if isinstance(workers, dict) else None
+    director = workers.get('director') if isinstance(workers, dict) else None
+    require(isinstance(workers, dict)
+            and workers.get('snapshot_complete') is True
+            and workers.get('scope_limit') ==
+                'Bounded post-worker snapshot; not a complete process inventory.'
+            and isinstance(director, dict)
+            and isinstance(dispatcher_identity, tuple)
+            and (director.get('pid'), director.get('start_ticks')) == dispatcher_identity
+            and isinstance(worker_rows, list) and len(worker_rows) == 3
+            and {row.get('role') for row in worker_rows if isinstance(row, dict)} ==
+                {'runtime', 'memory', 'weights'}
+            and all(_positive_int(row.get('pid')) and _positive_int(row.get('start_ticks'))
+                    and row.get('state') == 'RUNNING' and row.get('verified') is True
+                    for row in worker_rows if isinstance(row, dict)),
+            '2V14_02_POST_WORKER_SCOPE_OR_IDENTITY_MISMATCH')
+
+    locks = source_evidence.get('locks')
+    expected_locks = [
+        ('/root/nox/state/owner_maintenance.lock', 'READ'),
+        ('/root/nox/state/dispatcher/native_subagents.lock', 'WRITE'),
+    ]
+    require(isinstance(locks, list) and len(locks) == 2,
+            '2V14_02_SCOPED_KERNEL_LOCKS_MISSING')
+    lock_summary = []
+    for lock, (expected_path, expected_access) in zip(locks, expected_locks):
+        require(isinstance(lock, dict)
+                and lock.get('path') == expected_path
+                and lock.get('scope') == 'PROC_LOCKS_OBSERVATION_NOT_LEASE_ACQUISITION'
+                and lock.get('present') is True
+                and lock.get('type_regular') is True
+                and lock.get('path_identity_status') == 'STABLE'
+                and lock.get('proc_locks_read_status') == 'READ_OK'
+                and lock.get('lock_kind') == 'FLOCK'
+                and lock.get('access') == expected_access
+                and lock.get('lock_pid') == dispatcher_identity[0]
+                and lock.get('matching_lock_count') == 1
+                and lock.get('lock_observation_complete') is True
+                and lock.get('matching_lock_records_truncated') is False
+                and lock.get('unparsed_matching_lock_count') == 0
+                and lock.get('proc_locks_stability') == 'STABLE'
+                and lock.get('proc_locks_recheck_status') == 'READ_OK'
+                and _hex_digest(lock.get('proc_locks_sha256'))
+                and lock.get('proc_locks_sha256') == lock.get('proc_locks_recheck_sha256')
+                and lock.get('holder_identity_recheck_status') == 'STABLE',
+                '2V14_02_SCOPED_KERNEL_LOCK_OBSERVATION_INVALID')
+        match = re.fullmatch(
+            r'[0-9]+: FLOCK  ADVISORY  (READ|WRITE) ([0-9]+) 00:24:([0-9]+) 0 EOF',
+            lock.get('kernel_lock') if isinstance(lock.get('kernel_lock'), str) else ''
+        )
+        holder = lock.get('holder')
+        require(match is not None and match.group(1) == expected_access
+                and int(match.group(2)) == dispatcher_identity[0]
+                and int(match.group(3)) == lock.get('inode')
+                and isinstance(holder, dict)
+                and holder.get('pid') == dispatcher_identity[0]
+                and holder.get('start_ticks') == dispatcher_identity[1]
+                and holder.get('host_boot_id') == boot_id
+                and holder.get('host_clock_binding_status') == 'VERIFIED',
+                '2V14_02_KERNEL_LOCK_HOLDER_OR_LINE_MISMATCH')
+        lock_summary.append({
+            'path': expected_path,
+            'lock_kind': 'FLOCK',
+            'access': expected_access,
+            'observation_complete': True,
+            'recheck_stable': True,
+        })
+    clock_chain = source_evidence.get('host_clock_chain')
+    require(isinstance(clock_chain, dict)
+            and clock_chain.get('status') == 'STABLE'
+            and set(clock_chain.get('boot_ids', [])) == {boot_id}
+            and len(clock_chain.get('boot_ids', [])) == 4,
+            '2V14_02_HOST_CLOCK_CHAIN_MISMATCH')
+
+    control_root = Path(control_root)
+    task_raw, task_doc = read_json_with_raw(
+        control_root / 'four_queue_20261118' / 'work_tasks.json'
+    )
+    require(git_blob_sha(task_raw) == FROZEN_WORK_TASKS_BLOB
+            and any(isinstance(row, dict) and row.get('id') == '2V14-02'
+                    and row.get('title') == TWO_V14_02_TITLE
+                    and row.get('evidence') == 'native'
+                    for row in task_doc.get('tasks', [])),
+            '2V14_02_TASK_REGISTRY_PIN_OR_ROW_MISMATCH')
+    receipt_raw, receipt_doc = read_json_with_raw(
+        control_root / 'four_queue_20261118' / 'work_receipts.json'
+    )
+    historical_receipt = receipt_doc.get('tasks', {}).get('2V14-02')
+    require(git_blob_sha(receipt_raw) == FROZEN_WORK_RECEIPTS_BLOB
+            and isinstance(existing_receipts, dict)
+            and historical_receipt == existing_receipts.get('2V14-02')
+            and is_verified({'evidence': 'native'}, historical_receipt)
+            and historical_receipt.get('evidence') ==
+                'https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43977285252/job/133684411002',
+            '2V14_02_HISTORICAL_NATIVE_RECEIPT_NOT_PRESERVED')
+    require(item.get('task_id') == '2V14-02'
+            and item.get('workflow_run_id') == TWO_V14_02_RUN_ID
+            and item.get('job_id') == TWO_V14_02_JOB_ID
+            and item.get('owner_authorization_id') == TWO_V14_02_OWNER_COMMENT_ID,
+            '2V14_02_ROLLUP_ITEM_BINDING_MISMATCH')
+    item.update({
+        'evidence_kind': 'OWNER_AUTHENTICATED_NATIVE_POINT_IN_TIME_REFRESH',
+        'counting_status': 'ALREADY_PRESENT_IN_RECEIPT_COUNT',
+        'supplemental_count_increment': 0,
+        'original_acceptance_added': 0,
+        'historical_receipt_preserved': True,
+        'source_sidecar_path': TWO_V14_02_SOURCE_PATH,
+        'source_sidecar_git_blob_sha': TWO_V14_02_SOURCE_BLOB,
+        'source_sidecar_merge_commit_sha': TWO_V14_02_SOURCE_MERGE,
+        'source_acceptance_review_pointer': '#/acceptance_review/2V14-02',
+        'scope_limit': (
+            'Point-in-time only: seven named Supervisor rows, three bounded worker identities, '
+            'listed STOP/maintenance marker paths, and two scoped stable /proc/locks FLOCK '
+            'observations. Supervisor rc=3 and three selected agents were STOPPED; this is not '
+            'full Supervisor health or a full process census.'
+        ),
+        'scoped_kernel_lock_observations': lock_summary,
+    })
+    return item
 
 
 def _validate_i49_post_merge_receipt(document, manifest_rows, manifest_titles,
@@ -1266,10 +1625,18 @@ def supplemental_acceptance(directory, existing_receipt_count, existing_receipts
                     _sidecar_refs(document, task_id, spec_sha)
                     if not isinstance(criteria, dict) or task_id not in criteria:
                         raise ValueError('SUPPORTED_ACCEPTANCE_BINDING_MISSING')
+                    source_blob = git_blob_sha(raw)
                     item = _validate_record_sidecar(
-                        document, task_id, spec_sha, source_path, source_hash, git_blob_sha(raw)
+                        document, task_id, spec_sha, source_path, source_hash, source_blob
                     )
-                    items.append(item)
+                    if task_id == '2V14-02':
+                        item = _validate_2v14_02_point_in_time_refresh(
+                            document, directory.parent, existing_receipts,
+                            source_path, source_blob, item
+                        )
+                        evidence_refreshes.append(item)
+                    else:
+                        items.append(item)
                 except (KeyError, TypeError, ValueError, AttributeError) as exc:
                     excluded.append({'path': source_path, 'task_id': task_id, 'reason': str(exc)})
         except (OSError, KeyError, TypeError, ValueError, AttributeError) as exc:
