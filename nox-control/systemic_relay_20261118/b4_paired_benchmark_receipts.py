@@ -360,8 +360,19 @@ def measure_openai_sse_wire(timed_chunks):
             obj = json.loads(payload)
         except (ValueError, TypeError) as exc:
             raise ReceiptHold("SSE_INVALID_JSON") from exc
-        _require(isinstance(obj, dict) and isinstance(obj.get("choices"), list)
-                 and len(obj["choices"]) == 1 and isinstance(obj["choices"][0], dict),
+        _require(isinstance(obj, dict) and isinstance(obj.get("choices"), list),
+                 "SSE_CHOICE_SCHEMA")
+        # The last include_usage chunk has choices=[] and no text/finish reason.
+        # It is a real SSE event, but only [DONE] closes the wire receipt.
+        if not obj["choices"]:
+            usage = obj.get("usage")
+            _require(finish_reason is not None and isinstance(usage, dict)
+                     and all(_integer(usage.get(key), 10 ** 10) for key in
+                             ("prompt_tokens", "completion_tokens", "total_tokens")),
+                     "SSE_USAGE_CHUNK_SCHEMA")
+            event_count += 1
+            return
+        _require(len(obj["choices"]) == 1 and isinstance(obj["choices"][0], dict),
                  "SSE_CHOICE_SCHEMA")
         choice = obj["choices"][0]
         delta = choice.get("delta")

@@ -399,5 +399,39 @@ class PairedReceiptTests(unittest.TestCase):
                 with self.assertRaisesRegex(ReceiptHold, reason):
                     measure_openai_sse_wire(chunks)
 
+    def test_sse_wire_final_usage_chunk_is_not_an_error_or_terminal(self):
+        # OpenAI-compatible stream_options.include_usage emits an extra
+        # choices=[] chunk before [DONE], without a delta or finish_reason.
+        visible = b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":null}]}\n\n'
+        stop = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        usage = (b'data: {"choices":[],"usage":{"prompt_tokens":17,'
+                 b'"completion_tokens":2,"total_tokens":19}}\n\n')
+        chunks = [(4, visible), (8, stop), (11, usage[:22]),
+                  (15, usage[22:]), (18, b"data: [DONE]\n\n")]
+        witness = measure_openai_sse_wire(chunks)
+        self.assertTrue(witness["wire_completed_normally"])
+        self.assertEqual(witness["parsed_events"], 3)
+        self.assertEqual(witness["first_text_ms"], 4)
+        self.assertEqual(witness["completion_ms"], 18)
+        self.assertEqual(witness["model_finish_reason"], "stop")
+        self.assertEqual(witness["visible_text_sha256"],
+                         hashlib.sha256(b"ready").hexdigest())
+        self.assertFalse(witness["native_verified"])
+        before_done = measure_openai_sse_wire(chunks[:-1])
+        self.assertFalse(before_done["wire_completed_normally"])
+        self.assertFalse(before_done["sse_terminal_seen"])
+
+    def test_sse_wire_empty_choices_requires_valid_final_usage_and_prior_finish(self):
+        visible = b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":"stop"}]}\n\n'
+        good_usage = (b'data: {"choices":[],"usage":{"prompt_tokens":17,'
+                      b'"completion_tokens":2,"total_tokens":19}}\n\n')
+        bad_usage = b'data: {"choices":[],"usage":{"total_tokens":19}}\n\n'
+        no_usage = b'data: {"choices":[]}\n\n'
+        for chunks in ([(1, good_usage)], [(1, visible), (2, bad_usage)],
+                       [(1, visible), (2, no_usage)]):
+            with self.subTest(chunks=chunks):
+                with self.assertRaisesRegex(ReceiptHold, "SSE_USAGE_CHUNK_SCHEMA"):
+                    measure_openai_sse_wire(chunks)
+
 
 if __name__ == '__main__': unittest.main()
