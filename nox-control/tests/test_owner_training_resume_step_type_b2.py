@@ -176,6 +176,48 @@ class CheckpointStepProvenance(unittest.TestCase):
                     read_json(fifo, limit=64)
 
 
+    def test_bounded_json_rejects_growth_during_single_descriptor_read(self):
+        # Even without a receipt SHA, appended whitespace is valid JSON.
+        # The preimage returned a parsed state although the inode changed
+        # between fstat and read. Only a stable descriptor can be accepted.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            state = root / "trainer_state.json"
+            state.write_text('{"global_step":1}', encoding="utf-8")
+            read_json = load_pinned_verifier(root)["read_json"]
+            self.assertEqual(read_json(state, limit=64), {"global_step": 1})
+            real_fdopen = os.fdopen
+
+            class AppendWhitespaceOnRead:
+                def __init__(self, stream):
+                    self.stream = stream
+                    self.appended = False
+
+                def __enter__(self):
+                    self.stream.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.stream.__exit__(*args)
+
+                def fileno(self):
+                    return self.stream.fileno()
+
+                def read(self, size):
+                    if not self.appended:
+                        self.appended = True
+                        with state.open("ab") as writer:
+                            writer.write(b"  ")
+                    return self.stream.read(size)
+
+            def fdopen_with_append(fd, mode):
+                return AppendWhitespaceOnRead(real_fdopen(fd, mode))
+
+            with mock.patch("os.fdopen", side_effect=fdopen_with_append):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_STATE_FILE_MUTATED"):
+                    read_json(state, limit=64)
+
+
     def test_checkpoint_file_hash_is_descriptor_scoped(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
