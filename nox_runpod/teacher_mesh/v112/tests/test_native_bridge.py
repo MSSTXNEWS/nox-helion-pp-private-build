@@ -313,7 +313,7 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(collision.status_code,409)
         self.assertEqual(collision.json()['error'],'HOLD_REQUEST_ID_COLLISION')
         invalid=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-            json={'message':'invalid id','dialog_id':created['dialog_id'],'request_id':'short'})
+            json={'message':'invalid id','dialog_id':created['dialog_id'],'request_id':'bad id'})
         self.assertEqual(invalid.status_code,422)
         self.assertEqual(invalid.json()['error'],'INVALID_REQUEST_ID')
         self.assertEqual(len(self.calls),1)
