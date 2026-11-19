@@ -2,6 +2,8 @@
 import hashlib
 import json
 import unittest
+from unittest.mock import patch
+from nox_runpod.teacher_mesh.v137 import owner_response_contract as response_contract
 from nox_runpod.teacher_mesh.v137.owner_response_contract import build_owner_response_contract as build
 
 S={"tenant":"noxtenant","principal":"owner","chat_id":"dialogA",
@@ -108,6 +110,20 @@ class GroundedNativeQuality(unittest.TestCase):
     def test_more_than_forty_s03_hits_hold_without_partial_memory(self):
         rows = [fact(source_uri=f"s03://owner/fact-{i}") for i in range(41)]
         self.assertEqual(call(rows), {"state": "HOLD_S03_HIT_LIMIT"})
+
+
+    def test_forty_s03_hits_are_preserved_when_context_fits(self):
+        rows = [fact(content="x", source_uri=f"s03://{i}") for i in range(40)]
+        # The full production policy plus 40 provenance records exceeds the
+        # fixed context budget; shrink only policy fixture to isolate the hit cap.
+        with patch.dict(response_contract._POLICY, {"test": "minimal"}, clear=True):
+            result = call(rows, max_chars=6000)
+        self.assertNotEqual(result.get("state"), "HOLD_S03_HIT_LIMIT")
+        self.assertEqual(result["state"], "READY_FOR_EXISTING_SINGLE_MODEL")
+        evidence = json.loads(result["source_evidence_json"])["retrieved_s03"]
+        self.assertEqual(len(evidence), 40)
+        self.assertEqual([row["source_uri"] for row in evidence],
+                         [f"s03://{i}" for i in range(40)])
 
 
 if __name__=="__main__":
