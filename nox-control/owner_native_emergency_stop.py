@@ -24,7 +24,14 @@ import time
 ROOT = Path("/root/nox")
 SUPERVISOR_CONFIG_DIR = Path("/etc/supervisor/conf.d")
 SUPERVISOR_CLIENT_CONFIG = Path("/etc/supervisor/supervisord.conf")
-SUPERVISORCTL_BIN = Path("/usr/bin/supervisorctl")
+SUPERVISORCTL_CANDIDATES = (
+    Path("/usr/bin/supervisorctl"),
+    Path("/usr/local/bin/supervisorctl"),
+    Path("/opt/venv/bin/supervisorctl"),
+)
+SUPERVISORCTL_BIN: Path | None = None
+SUPERVISORCTL_SELECTED_IDENTITY: dict | None = None
+SUPERVISORCTL_SELECTED_DAEMON_IDENTITY: dict | None = None
 SUPERVISOR_CONFIG_MAX_FILES = 128
 STOP = ROOT / "STOP"
 MAINTENANCE = ROOT / "state/OWNER_MAINTENANCE.flag"
@@ -175,6 +182,19 @@ def linux_boot_time_ns() -> int:
         fail("LINUX_BOOT_TIME_INVALID")
 
 
+def supervisor_start_lower_bound_ns(start_ticks: int) -> int:
+    boot_time_ns = linux_boot_time_ns()
+    try:
+        ticks_per_second = int(os.sysconf("SC_CLK_TCK"))
+    except (ValueError, OSError):
+        fail("SUPERVISOR_START_TIME_UNAVAILABLE")
+    if ticks_per_second <= 0:
+        fail("SUPERVISOR_START_TIME_UNAVAILABLE")
+    return (boot_time_ns + start_ticks * 1_000_000_000 // ticks_per_second -
+            1_000_000_000 -
+            (1_000_000_000 + ticks_per_second - 1) // ticks_per_second)
+
+
 def verify_root_executable_path(path_text: str, label: str) -> dict:
     path = Path(path_text)
     if not path.is_absolute() or ".." in path.parts:
@@ -229,6 +249,76 @@ def verify_root_executable_path(path_text: str, label: str) -> dict:
         os.close(fd)
 
 
+def probe_supervisor_daemon_identity(pid: int) -> dict:
+    before = proc_stat_identity(pid)
+    proc = Path("/proc") / str(pid)
+    try:
+        exe = os.readlink(proc / "exe")
+        with (proc / "cmdline").open("rb") as stream:
+            raw_cmdline = stream.read(MAX_CMDLINE_BYTES + 1)
+    except OSError:
+        fail("SUPERVISOR_PROCESS_IDENTITY_UNAVAILABLE")
+    if len(raw_cmdline) > MAX_CMDLINE_BYTES or not raw_cmdline.endswith(b"\0"):
+        fail("SUPERVISOR_PROCESS_ARGV_INVALID")
+    try:
+        argv = [part.decode("utf-8", "strict")
+                for part in raw_cmdline[:-1].split(b"\0")]
+    except UnicodeDecodeError:
+        fail("SUPERVISOR_PROCESS_ARGV_ENCODING_INVALID")
+    if len(argv) < 2 or any(not part for part in argv):
+        fail("SUPERVISOR_PROCESS_ARGV_INVALID")
+    exe_name = Path(exe.removesuffix(" (deleted)")).name
+    argv_names = [Path(part.removesuffix(" (deleted)")).name for part in argv]
+    if exe_name != "supervisord" and not re.fullmatch(r"python3(?:\.[0-9]+)?", exe_name):
+        fail("SUPERVISOR_PROCESS_EXECUTABLE_MISMATCH")
+    script_indexes = [index for index, name in enumerate(argv_names)
+                      if name == "supervisord"]
+    if len(script_indexes) != 1 or not Path(argv[script_indexes[0]]).is_absolute():
+        fail("SUPERVISOR_PROCESS_ARGV_MISMATCH")
+    script_path = argv[script_indexes[0]]
+    configs = []
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token in ("-c", "--configuration"):
+            if index + 1 >= len(argv):
+                fail("SUPERVISOR_CONFIG_PATH_MISSING")
+            configs.append(argv[index + 1])
+            index += 2
+            continue
+        if token.startswith("--configuration="):
+            configs.append(token.partition("=")[2])
+        index += 1
+    if len(configs) != 1 or configs[0] != str(SUPERVISOR_CLIENT_CONFIG):
+        fail("SUPERVISOR_CONFIG_PATH_MISMATCH")
+    exe_identity = verify_root_executable_path(
+        exe.removesuffix(" (deleted)"), "SUPERVISOR_DAEMON_EXECUTABLE")
+    script_identity = verify_root_executable_path(
+        script_path, "SUPERVISOR_DAEMON_SCRIPT")
+    try:
+        exe_after = os.readlink(proc / "exe")
+        with (proc / "cmdline").open("rb") as stream:
+            cmdline_after = stream.read(MAX_CMDLINE_BYTES + 1)
+    except OSError:
+        fail("SUPERVISOR_PROCESS_IDENTITY_REREAD_UNAVAILABLE")
+    after = proc_stat_identity(pid)
+    if (before != after or exe_after != exe or cmdline_after != raw_cmdline):
+        fail("SUPERVISOR_PROCESS_IDENTITY_CHANGED")
+    if (verify_root_executable_path(
+            exe.removesuffix(" (deleted)"), "SUPERVISOR_DAEMON_EXECUTABLE_REREAD") !=
+            exe_identity or verify_root_executable_path(
+            script_path, "SUPERVISOR_DAEMON_SCRIPT_REREAD") != script_identity):
+        fail("SUPERVISOR_PROCESS_EXECUTABLE_CHANGED")
+    return {
+        "pid": pid, "start_ticks": before["start_ticks"],
+        "exe": exe_identity, "script": script_identity,
+        "argv_sha256": hashlib.sha256(raw_cmdline).hexdigest(),
+        "config_path": configs[0],
+        "start_lower_bound_ns": supervisor_start_lower_bound_ns(
+            before["start_ticks"]),
+    }
+
+
 def read_supervisor_stop_settings() -> dict:
     """Read the active daemon config and its one supported include directory."""
     DIAGNOSTICS["supervisor_stanza"] = {"state": "READ_ONLY_CONFIG_READ_STARTED"}
@@ -248,21 +338,11 @@ def read_supervisor_stop_settings() -> dict:
         fail("SUPERVISORCTL_CLIENT_IDENTITY_MISSING")
     daemon_pid = int(pid_lines[0])
     daemon_before = proc_stat_identity(daemon_pid)
-    boot_time_ns = linux_boot_time_ns()
-    try:
-        ticks_per_second = int(os.sysconf("SC_CLK_TCK"))
-    except (ValueError, OSError):
-        fail("SUPERVISOR_START_TIME_UNAVAILABLE")
-    if ticks_per_second <= 0:
-        fail("SUPERVISOR_START_TIME_UNAVAILABLE")
     # btime is second-resolution and start_ticks is tick-resolution. Subtract
     # both rounding bounds so this is an earliest-possible start epoch, not an
     # optimistic point estimate for the ctime comparison.
-    daemon_start_lower_bound_ns = (
-        boot_time_ns +
-        daemon_before["start_ticks"] * 1_000_000_000 // ticks_per_second -
-        1_000_000_000 -
-        (1_000_000_000 + ticks_per_second - 1) // ticks_per_second)
+    daemon_start_lower_bound_ns = supervisor_start_lower_bound_ns(
+        daemon_before["start_ticks"])
     try:
         daemon_exe = os.readlink(Path("/proc") / str(daemon_pid) / "exe")
         with (Path("/proc") / str(daemon_pid) / "cmdline").open("rb") as stream:
@@ -425,6 +505,9 @@ def read_supervisor_stop_settings() -> dict:
         "config_path": str(main_path),
         "start_lower_bound_ns": daemon_start_lower_bound_ns,
     }
+    if (SUPERVISORCTL_SELECTED_DAEMON_IDENTITY is None or
+            daemon_identity != SUPERVISORCTL_SELECTED_DAEMON_IDENTITY):
+        fail("SUPERVISORCTL_SELECTED_DAEMON_IDENTITY_CHANGED")
 
     effective_sha = hashlib.sha256(json.dumps(
         inputs, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -555,34 +638,127 @@ def ensure_owner_fence(request_id: int, source_sha: str) -> dict:
     }
 
 
-def verify_supervisorctl_executable() -> str:
-    path = SUPERVISORCTL_BIN
-    if path != Path("/usr/bin/supervisorctl"):
-        fail("SUPERVISORCTL_PATH_NOT_PINNED")
+def verify_supervisorctl_executable(path: Path,
+                                   expected_identity: dict | None = None) -> dict:
+    if path not in SUPERVISORCTL_CANDIDATES:
+        fail("SUPERVISORCTL_PATH_NOT_ALLOWLISTED")
     identity = verify_root_executable_path(str(path), "SUPERVISORCTL_EXECUTABLE")
     identity["root_owned_nonwritable"] = True
+    if expected_identity is not None and identity != expected_identity:
+        fail("SUPERVISORCTL_SELECTED_IDENTITY_CHANGED")
     DIAGNOSTICS["supervisorctl_client"] = identity
-    return identity["sha256"]
+    return identity
+
+
+def invoke_supervisorctl_path(path: Path, args: list[str], timeout: int = 15,
+                              expected_identity: dict | None = None):
+    identity = verify_supervisorctl_executable(path, expected_identity)
+    try:
+        result = subprocess.run(
+            [str(path), *args], shell=False, capture_output=True, text=True,
+            timeout=timeout, check=False,
+            env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C",
+                 "LC_ALL": "C", "HOME": "/root"})
+    except (OSError, subprocess.TimeoutExpired):
+        fail("COMMAND_UNAVAILABLE")
+    return result, identity
+
+
+def select_supervisorctl_candidate() -> None:
+    global SUPERVISORCTL_BIN, SUPERVISORCTL_SELECTED_IDENTITY
+    global SUPERVISORCTL_SELECTED_DAEMON_IDENTITY
+    outcomes = []
+    matches = []
+    present_paths = []
+    for path in SUPERVISORCTL_CANDIDATES:
+        try:
+            path.lstat()
+        except FileNotFoundError:
+            outcomes.append({"path": str(path), "outcome": "ABSENT"})
+            continue
+        except OSError:
+            outcomes.append({"path": str(path), "outcome": "STAT_FAILED"})
+            DIAGNOSTICS["supervisorctl_candidates"] = outcomes
+            fail("SUPERVISORCTL_CANDIDATE_STAT_FAILED")
+        present_paths.append(path)
+        try:
+            identity = verify_supervisorctl_executable(path)
+            pid_result, _ = invoke_supervisorctl_path(
+                path, ["-c", str(SUPERVISOR_CLIENT_CONFIG), "pid"],
+                expected_identity=identity)
+            status_result, _ = invoke_supervisorctl_path(
+                path, ["-c", str(SUPERVISOR_CLIENT_CONFIG), "status",
+                       SUPERVISOR_SERVICE], expected_identity=identity)
+            pid_lines = pid_result.stdout.strip().splitlines()
+            if (pid_result.returncode != 0 or len(pid_lines) != 1 or
+                    not pid_lines[0].isdecimal()):
+                outcomes.append({"path": str(path), "identity": identity,
+                                 "outcome": "PID_RESPONSE_MISMATCH"})
+                continue
+            daemon_pid = int(pid_lines[0])
+            daemon_identity = probe_supervisor_daemon_identity(daemon_pid)
+            status_lines = status_result.stdout.strip().splitlines()
+            status_match = (STATUS_LINE.fullmatch(status_lines[0])
+                            if len(status_lines) == 1 else None)
+            if (status_result.returncode != 0 or status_match is None or
+                    status_match.group(1) != SUPERVISOR_SERVICE or
+                    status_match.group(2) != "RUNNING" or
+                    status_match.group(3) is None or
+                    int(status_match.group(3)) != MODEL_PID or
+                    daemon_identity["config_path"] != str(SUPERVISOR_CLIENT_CONFIG)):
+                outcomes.append({"path": str(path), "identity": identity,
+                                 "daemon_identity": daemon_identity,
+                                 "pid": daemon_pid, "outcome": "TARGET_SERVICE_MISMATCH"})
+                continue
+            match = {"path": path, "identity": identity,
+                     "daemon_identity": daemon_identity, "pid": daemon_pid}
+            matches.append(match)
+            outcomes.append({"path": str(path), "identity": identity,
+                             "daemon_identity": daemon_identity,
+                             "pid": daemon_pid, "service_state": "RUNNING",
+                             "service_pid": MODEL_PID, "outcome": "MATCH"})
+        except RuntimeError:
+            outcomes.append({"path": str(path), "outcome": "INSECURE_OR_UNAVAILABLE"})
+            DIAGNOSTICS["supervisorctl_candidates"] = outcomes
+            fail("SUPERVISORCTL_CANDIDATE_PROBE_FAILED")
+    DIAGNOSTICS["supervisorctl_candidates"] = outcomes
+    if not present_paths:
+        fail("SUPERVISORCTL_NO_ALLOWLISTED_CANDIDATE")
+    if len(matches) != 1 or any(item.get("outcome") != "MATCH"
+                                 for item in outcomes
+                                 if item.get("outcome") != "ABSENT"):
+        fail("SUPERVISORCTL_CANDIDATE_SELECTION_AMBIGUOUS_OR_MISMATCH")
+    selected = matches[0]
+    SUPERVISORCTL_BIN = selected["path"]
+    SUPERVISORCTL_SELECTED_IDENTITY = selected["identity"]
+    SUPERVISORCTL_SELECTED_DAEMON_IDENTITY = selected["daemon_identity"]
+    DIAGNOSTICS["supervisorctl_selected"] = {
+        "path": str(SUPERVISORCTL_BIN),
+        "identity": SUPERVISORCTL_SELECTED_IDENTITY,
+        "daemon_identity": SUPERVISORCTL_SELECTED_DAEMON_IDENTITY,
+    }
 
 
 def command(argv: list[str], timeout: int = 15,
             verified_client_sha256: str | None = None) -> subprocess.CompletedProcess:
     if not argv or argv[0] != "supervisorctl":
         fail("COMMAND_OUTSIDE_SUPERVISORCTL_SCOPE")
+    if SUPERVISORCTL_BIN is None or SUPERVISORCTL_SELECTED_IDENTITY is None:
+        fail("SUPERVISORCTL_CANDIDATE_NOT_SELECTED")
     if verified_client_sha256 is None:
-        verify_supervisorctl_executable()
+        verify_supervisorctl_executable(SUPERVISORCTL_BIN,
+                                        SUPERVISORCTL_SELECTED_IDENTITY)
     elif (not re.fullmatch(r"[0-9a-f]{64}", verified_client_sha256) or
           DIAGNOSTICS.get("supervisorctl_client", {}).get("sha256") !=
-          verified_client_sha256):
+          verified_client_sha256 or
+          verified_client_sha256 != SUPERVISORCTL_SELECTED_IDENTITY["sha256"]):
         fail("SUPERVISORCTL_VERIFICATION_TOKEN_INVALID")
-    try:
-        return subprocess.run(
-            [str(SUPERVISORCTL_BIN), *argv[1:]], shell=False,
-            capture_output=True, text=True, timeout=timeout, check=False,
-            env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C",
-                 "LC_ALL": "C", "HOME": "/root"})
-    except (OSError, subprocess.TimeoutExpired):
-        fail("COMMAND_UNAVAILABLE")
+    if DIAGNOSTICS.get("supervisorctl_client") != SUPERVISORCTL_SELECTED_IDENTITY:
+        fail("SUPERVISORCTL_SELECTED_IDENTITY_CHANGED")
+    result, _ = invoke_supervisorctl_path(
+        SUPERVISORCTL_BIN, argv[1:], timeout,
+        expected_identity=SUPERVISORCTL_SELECTED_IDENTITY)
+    return result
 
 
 def supervisor_status() -> dict:
@@ -1663,6 +1839,7 @@ def wait_model_stopped() -> dict:
 
 def run_action(request_id: int, source_sha: str) -> dict:
     # Fresh read-only identity and memory preflight happens before any marker.
+    select_supervisorctl_candidate()
     status = require_model_running()
     model = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
     holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
@@ -1749,7 +1926,9 @@ def run_action(request_id: int, source_sha: str) -> dict:
 
     # Verify the fixed client before the process census. Then make the stable
     # PGRP/cgroup closure scan the last proc/cgroup read before the stop RPC.
-    stop_client_sha256 = verify_supervisorctl_executable()
+    stop_client_identity = verify_supervisorctl_executable(
+        SUPERVISORCTL_BIN, SUPERVISORCTL_SELECTED_IDENTITY)
+    stop_client_sha256 = stop_client_identity["sha256"]
     if DIAGNOSTICS.get("supervisorctl_client") != stop_settings_final.get(
             "supervisorctl_client"):
         fail("SUPERVISORCTL_CLIENT_CHANGED_LAST_PRE_STOP")
