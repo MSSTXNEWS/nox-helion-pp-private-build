@@ -650,7 +650,6 @@ class RefillEligibilityTests(unittest.TestCase):
         review = {'reviewed_mission_ids': ['a', 'b']}
         with (patch.object(diagnostic, 'strict_parent_registry', return_value=registry),
               patch.object(diagnostic, 'eligibility_ledger', return_value=[]),
-              patch.object(diagnostic, 'proposal_predicate_diff', return_value=[]),
               patch.object(diagnostic, '_validate_refill_request'),
               patch.object(diagnostic, '_validate_proposal_request'),
               patch.object(diagnostic, 'immutable_verifier_sha256', return_value='b' * 64),
@@ -669,7 +668,8 @@ class RefillEligibilityTests(unittest.TestCase):
             for corrupt in ([{'mission_id': 'a'}, {'mission_id': None}],
                             [{'mission_id': []}], ['not-an-object'], None):
                 with self.subTest(missions=corrupt):
-                    self.assertFalse(predicate(corrupt)['passed'])
+                    row = predicate(corrupt)
+                    self.assertFalse(row['passed'])
             self.assertTrue(predicate([
                 {'mission_id': 'b'}, {'mission_id': 'a'}])['passed'])
 
