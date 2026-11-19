@@ -75,13 +75,14 @@ POLICY = {'minimum_projected_headroom_bytes': 2 * admission.GIB,
 
 
 class ChatResourceAdmissionTests(unittest.TestCase):
-    def test_low_raw_headroom_can_pass_only_on_measured_projected_cache(self):
+    def test_low_raw_headroom_holds_even_when_measured_projection_would_fit(self):
         value = valid_snapshot()
         result = admission.evaluate_chat_admission(value, policy=POLICY, now=NOW)
-        self.assertEqual(result['state'], 'ELIGIBLE_PROJECTED_CACHE_RECLAIM')
+        self.assertEqual(result['state'], 'HOLD_CACHE_RECLAIM_REQUIRED')
         self.assertEqual(result['raw_headroom_bytes'], 100_000_000)
         self.assertEqual(result['reclaimable_file_bytes'], 50_000_000_000)
         self.assertGreater(result['projected_headroom_bytes'], POLICY['minimum_projected_headroom_bytes'])
+        self.assertTrue(result['cache_reclaim_required'])
         self.assertFalse(result['memory_reclaim_invoked'])
         self.assertEqual(value, valid_snapshot(), 'validator must not mutate caller evidence')
 
