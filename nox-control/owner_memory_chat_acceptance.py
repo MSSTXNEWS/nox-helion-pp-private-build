@@ -106,10 +106,10 @@ class _StageOutputFilter:
         if not isinstance(value, str):
             raise TypeError('stage output must be text')
         self.pending += value
-        while '\\n' in self.pending:
-            line, self.pending = self.pending.split('\\n', 1)
-            if line.rstrip('\\r') != self._marker:
-                self.destination.write(line + '\\n')
+        while '\n' in self.pending:
+            line, self.pending = self.pending.split('\n', 1)
+            if line.rstrip('\r') != self._marker:
+                self.destination.write(line + '\n')
         if len(self.pending) > 65536:
             raise RuntimeError('HOLD_ACCEPTANCE_COMPONENT_LOG_SIZE')
         return len(value)
@@ -118,7 +118,7 @@ class _StageOutputFilter:
         self.destination.flush()
 
     def finish(self):
-        if self.pending and self.pending.rstrip('\\r') != self._marker:
+        if self.pending and self.pending.rstrip('\r') != self._marker:
             self.destination.write(self.pending)
         self.pending = ''
         self.destination.flush()
