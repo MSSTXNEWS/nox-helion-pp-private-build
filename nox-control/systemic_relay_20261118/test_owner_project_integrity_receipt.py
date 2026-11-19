@@ -238,6 +238,14 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                     self.assertTrue(subject.terminal_for_capacity(task))
                     self.assertIn(sha, subject.terminal_cache)
 
+                # A previous positive cannot survive an S03 revoke/delete.
+                with patch.object(binding, 's03_readback', return_value=None):
+                    self.assertFalse(subject.terminal_for_capacity(task))
+                    self.assertNotIn(sha, subject.terminal_cache)
+                with patch.object(binding, 's03_readback', return_value=good):
+                    self.assertTrue(subject.terminal_for_capacity(task))
+                    self.assertIn(sha, subject.terminal_cache)
+
                 # Even a matching, independently readable S03 receipt must not
                 # settle this task when the stored receipt belongs to another job.
                 foreign_receipt = {**receipt, 'job_id': 'other-job'}
