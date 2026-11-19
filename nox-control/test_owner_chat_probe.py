@@ -11,6 +11,38 @@ probe = importlib.util.module_from_spec(spec); spec.loader.exec_module(probe)
 
 
 class ProbeTests(unittest.TestCase):
+    def test_obj_releases_http_response_on_success_and_hold(self):
+        class Response:
+            def __init__(self, status, payload, read_error=False):
+                self.status, self.payload, self.closed = status, payload, False
+                self.read_error = read_error
+            def read(self, limit):
+                if self.read_error:
+                    raise OSError('synthetic-read-error')
+                return self.payload[:limit]
+            def close(self):
+                self.closed = True
+
+        ok = Response(200, b'{"ok":true}')
+        self.assertEqual(probe.obj(ok), {'ok': True})
+        self.assertTrue(ok.closed)
+        for response, expected in (
+            (Response(503, b'{}'), 'HOLD_HTTP_503'),
+            (Response(200, b'x' * 11), 'HOLD_RESPONSE_LIMIT'),
+        ):
+            with self.subTest(expected=expected):
+                with self.assertRaisesRegex(RuntimeError, expected):
+                    probe.obj(response, limit=10)
+                self.assertTrue(response.closed)
+        malformed = Response(200, b'{')
+        with self.assertRaises(ValueError):
+            probe.obj(malformed)
+        self.assertTrue(malformed.closed)
+        interrupted = Response(200, b'{}', read_error=True)
+        with self.assertRaises(OSError):
+            probe.obj(interrupted)
+        self.assertTrue(interrupted.closed)
+
     def test_placeholders_do_not_count_as_model_output_but_zero_does(self):
         for text in ('', ' ', '\n', '...', '…\n', '. … .'):
             self.assertFalse(probe.meaningful_delta(text), repr(text))
