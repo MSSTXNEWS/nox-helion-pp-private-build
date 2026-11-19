@@ -6,6 +6,11 @@ on:
       - 'coordination/NOX_RELAY35_20261119.json'
       - 'coordination/NOX_RELAY35_RUNBOOK.md'
       - '.github/workflows/nox-relay35-check.yml'
+  pull_request:
+    paths:
+      - 'coordination/NOX_RELAY35_20261119.json'
+      - 'coordination/NOX_RELAY35_RUNBOOK.md'
+      - '.github/workflows/nox-relay35-check.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,7 +25,7 @@ jobs:
       - name: Single bounded provenance check
         run: |
           python3 - <<'PY'
-          import json,re,collections
+          import hashlib,json,re,collections,urllib.request
           d=json.load(open('coordination/NOX_RELAY35_20261119.json'))
           assert d['schema']=='NOX_RELAY35_CANONICAL_PROPOSAL_V1'
           assert d['instructions_version']=='0.0.6'
@@ -34,5 +39,34 @@ jobs:
           assert all(t['seed_lane']==lanes[i%7] for i,t in enumerate(a))
           assert all(re.fullmatch(r'[0-9a-f]{64}',t['spec_sha256']) for t in a)
           assert all(t['original_acceptance_added'] is False and t['execution_state']=='PLANNED_NOT_NATIVE_CLAIMED' for t in a)
-          print('RELAY35_SOURCE_SCOPE_PASS count=35 lanes=7 each=5 original_acceptance_delta=0')
+
+          # Bind every handoff row to its exact original 295-registry task at
+          # the immutable source commit; syntactic SHA shape is not provenance.
+          repo='MSSTXNEWS/nox-helion-pp-private-build'
+          path='nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json'
+          ref=d['source_ref']
+          assert d['source_repository']==repo and d['source_registry_path']==path
+          assert re.fullmatch(r'[0-9a-f]{40}',ref)
+          url=f'https://raw.githubusercontent.com/{repo}/{ref}/{path}'
+          req=urllib.request.Request(url,headers={'User-Agent':'NOX-RELAY35-source-check'})
+          with urllib.request.urlopen(req,timeout=20) as response:
+              raw=response.read()
+          blob=hashlib.sha1(b'blob '+str(len(raw)).encode()+bytes([0])+raw).hexdigest()
+          assert blob==d['source_registry_blob_sha'], 'pinned registry blob mismatch'
+          registry=json.loads(raw)
+          assert registry['total_original_ids']==d['source_registry_total']==295
+          originals=registry['tasks']
+          by_id={t['task_id']:t for t in originals}
+          assert len(originals)==295 and len(by_id)==295
+          for t in a:
+              source=by_id.get(t['task_id'])
+              assert source is not None, f"unknown original TaskID: {t['task_id']}"
+              spec=source['spec']
+              spec_sha=hashlib.sha256(json.dumps(spec,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode('utf-8')).hexdigest()
+              assert spec_sha==source['spec_sha256']==t['spec_sha256'], f"spec hash mismatch: {t['task_id']}"
+              assert spec['id']==t['task_id'] and spec['title']==t['title'], f"spec identity mismatch: {t['task_id']}"
+              assert source['queue_id']==t['queue_id'], f"queue mismatch: {t['task_id']}"
+              assert source['routing_source']['priority']==t['original_priority'], f"priority mismatch: {t['task_id']}"
+              assert spec['evidence']==t['required_evidence'], f"evidence scope mismatch: {t['task_id']}"
+          print('RELAY35_SOURCE_SCOPE_PASS count=35 lanes=7 each=5 registry_blob=PINNED bindings=35 exact_spec_sha=PASS original_acceptance_delta=0')
           PY
