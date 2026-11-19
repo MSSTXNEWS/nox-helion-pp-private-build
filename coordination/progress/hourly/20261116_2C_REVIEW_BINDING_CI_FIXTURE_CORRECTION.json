@@ -1,0 +1,16 @@
+{
+  "schema": "NOX_2C_SOURCE_TEST_CORRECTION",
+  "instructions_version": "0.0.6",
+  "slot": "2C",
+  "head_before": "4878a39e250cb78cc1afdd789e8c93ef92df949b",
+  "head_after": "COMMIT_CONTAINING_THIS_RECEIPT",
+  "failed_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43825971905",
+  "failure": "V28 source tests: 36/36 V28 PASS; corpus_gate 14/15; previously valid duplicate fixture now failed earlier on newly enforced owner reviewed-payload SHA mismatch. Not a runtime bug.",
+  "root_cause": "The old test mutated a prompt after approved payload mapping was built, but did not independently update the synthetic owner-approved fingerprint.",
+  "correction": "For this one dedup test fixture only, update the synthetic owner review digest to match the mutated row; retain runtime strict binding and cross-source duplicate guard. Added security tests (privacy swap, payload/rights substitution, missing owner maps) remain unchanged.",
+  "lesson": "When a stronger earlier provenance gate becomes mandatory, a downstream test must satisfy the stronger gate intentionally; never weaken gate to make a test reach downstream branch.",
+  "source_only": true,
+  "native_modified": false,
+  "verified_corpus_count_new": 0,
+  "next_action": "Exact commit CI and readback; owner-native original 1C signed STOP/lease and Hunter→S03 readback remain separate HOLD."
+}

@@ -1,0 +1,45 @@
+name: NOX V62 existing model duplicate fingerprint audit (no cleanup)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v62-model-fingerprint-audit.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v62-weight-fingerprint-readonly
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Syntax check of native read-only probe
+        run: |
+          python3 -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py nox_runpod/teacher_mesh/v62/dedup_fingerprint.py
+      - name: Read 3 small blocks per large model, no full model copy
+        run: |
+          python3 -m nox_runpod.teacher_mesh.v62.dedup_fingerprint
+      - name: Always detach per-instance temporary SSH key
+        if: always()
+        run: |
+          python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: No cleanup or false speed claim
+        if: success()
+        run: |
+          echo "NOX_MODEL_WEIGHTS_UNCHANGED=true"
+          echo "NOX_FINGERPRINTS_NOT_FULL_SHA=true"
+          echo "NOX_TRAINING_NOT_ACCELERATED_BY_THIS_AUDIT=true"

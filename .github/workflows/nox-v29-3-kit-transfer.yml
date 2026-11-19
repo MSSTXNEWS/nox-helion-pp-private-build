@@ -1,0 +1,20 @@
+name: NOX V29.3 completed offline kit transfer receipt
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-current-release-receipt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify closed transfer SHA without network access
+        run: |
+          python3 - <<'PY'
+          import json
+          x=json.load(open('nox_runpod/web_wow_merge/v29/NOX_V29_3_RELEASE_RECEIPT.json'))
+          assert x['artifact']['sha256']=='166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0'
+          assert x['frozen_kit']['sha256']=='ee52e35023c65e1a1cdd045958d425ca8c0d827091536f2c2e2fd3b82286be10'
+          assert x['remaining_physical_gates']['release_accepted'] is False
+          print('NOX_V29_3_PRIVATE_TRANSFER_CLOSED_SHA_RECEIPT_PASS')
+          PY

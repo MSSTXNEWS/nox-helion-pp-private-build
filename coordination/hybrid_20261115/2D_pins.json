@@ -1,0 +1,106 @@
+{
+  "schema": "NOX_2D_PINNED_PUBLIC_DATASET_EVIDENCE_V1",
+  "instructions_version": "0.0.6",
+  "review_date": "2026-11-15",
+  "status": "RESEARCHED_PUBLIC_METADATA_ONLY",
+  "native_download_count": 0,
+  "native_optimizer_steps": 0,
+  "native_merge_count": 0,
+  "active_hf_base_verified": false,
+  "active_hf_base_revision": null,
+  "approved_for_training": false,
+  "error_id": "NOX-P1-HYBRID-DATASETS-LACK-IMMUTABLE-SHA-20261115",
+  "datasets": [
+    {
+      "repo_id": "OpenAssistant/oasst2",
+      "repo_type": "dataset",
+      "revision": "1fa43badbffe5b390ff6bfa10164cf1bfd352a54",
+      "licence_card": "apache-2.0",
+      "language_card": [
+        "en",
+        "es",
+        "ru"
+      ],
+      "purpose": "RU/ES dialog candidate, after privacy and quality review",
+      "split_group_key": "message_tree_id",
+      "sensitive_data_filter_required": true,
+      "files": [
+        {
+          "path": "data/train-00000-of-00001-88ba0162028a73fc.parquet",
+          "size_bytes": 63494018,
+          "sha256": "9638227b41b0a4fb69afa5d5c4b52e3fb6abfd56c9870d81bae32c9981e769b1",
+          "role": "training_candidate"
+        },
+        {
+          "path": "data/validation-00000-of-00001-1deeef95c3248fe0.parquet",
+          "size_bytes": 3180111,
+          "sha256": "fd46c63babc0756909a957ee40975bcf5610d58c5d1ab5ff2c57c0f57be1f273",
+          "role": "validation_candidate"
+        }
+      ],
+      "evidence": [
+        "https://huggingface.co/datasets/OpenAssistant/oasst2/commit/1fa43badbffe5b390ff6bfa10164cf1bfd352a54",
+        "https://huggingface.co/datasets/OpenAssistant/oasst2/raw/main/data/train-00000-of-00001-88ba0162028a73fc.parquet",
+        "https://huggingface.co/datasets/OpenAssistant/oasst2/raw/main/data/validation-00000-of-00001-1deeef95c3248fe0.parquet"
+      ]
+    },
+    {
+      "repo_id": "google-research-datasets/go_emotions",
+      "repo_type": "dataset",
+      "revision": "add492243ff905527e67aeb8b80c082af02207c3",
+      "licence_card": "apache-2.0",
+      "language_card": [
+        "en"
+      ],
+      "purpose": "English-only auxiliary emotion label evaluation, not a RU/ES dialog corpus or empathy model",
+      "split_group_key": "id",
+      "sensitive_data_filter_required": true,
+      "files": [
+        {
+          "path": "simplified/train-00000-of-00001.parquet",
+          "size_bytes": 2767678,
+          "sha256": "b7d74279616ae7c9b8374ab62ea9f9d6504d36a577bb17f745d720dc2b0d4e76",
+          "role": "auxiliary_training_candidate"
+        },
+        {
+          "path": "simplified/validation-00000-of-00001.parquet",
+          "size_bytes": 350063,
+          "sha256": "d46ad5633c4fa41829d22d549743a7bf858d94129536a02af7280c281db5e63a",
+          "role": "auxiliary_validation_candidate"
+        },
+        {
+          "path": "simplified/test-00000-of-00001.parquet",
+          "size_bytes": 346630,
+          "sha256": "fd0953e535ba2569edc6a1daaa1133f8e4b9071691d540c9bab812fda132bc26",
+          "role": "auxiliary_test_candidate"
+        }
+      ],
+      "evidence": [
+        "https://huggingface.co/datasets/google-research-datasets/go_emotions/commit/add492243ff905527e67aeb8b80c082af02207c3"
+      ]
+    }
+  ],
+  "adapters_research_only": [
+    {
+      "repo_id": "rk500/Born-9B-Qwen3.5-9B-Preview",
+      "declared_base": "Qwen/Qwen3.5-9B",
+      "licence_card": "apache-2.0",
+      "revision": null,
+      "adapter_weight_sha256": null,
+      "exact_weight_bytes": null,
+      "may_merge": false,
+      "source": "https://huggingface.co/rk500/Born-9B-Qwen3.5-9B-Preview"
+    },
+    {
+      "repo_id": "6cf/qwen35-9b-deepseek-v4-pro-agent-lora",
+      "declared_base": "Qwen/Qwen3.5-9B",
+      "licence_card": null,
+      "revision": "494fa3e1bc0c7c0e0441cb51ef498af1f69bd5da",
+      "adapter_weight_sha256": null,
+      "exact_weight_bytes": null,
+      "may_merge": false,
+      "untrusted_pickle_training_args_bin": true,
+      "source": "https://huggingface.co/6cf/qwen35-9b-deepseek-v4-pro-agent-lora/tree/main"
+    }
+  ]
+}

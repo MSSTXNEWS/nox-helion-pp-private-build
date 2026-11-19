@@ -1,0 +1,302 @@
+{
+  "engines": [
+    {
+      "kind": "workflow_engine",
+      "license": "check repository and third-party nodes",
+      "name": "ComfyUI",
+      "need": "source checkout + vetted workflows only",
+      "reused": false,
+      "role": "UI-compatible pipeline, use existing OneHost authorized job queue",
+      "source": "https://github.com/comfyanonymous/ComfyUI",
+      "source_status": "LINK_ONLY_NOT_INSTALLED"
+    },
+    {
+      "kind": "workflow_catalog",
+      "license": "review individual workflows",
+      "name": "ComfyUI examples",
+      "need": "Pin SHA + hash each accepted workflow",
+      "reused": false,
+      "role": "Read-only candidate JSON workflows for Z-image, Wan, LTX, edits",
+      "source": "https://github.com/comfyanonymous/ComfyUI_examples",
+      "source_status": "LINK_ONLY_NOT_INSTALLED"
+    },
+    {
+      "kind": "image_engine",
+      "license": "Apache-2.0 code",
+      "name": "Z-Image official",
+      "need": "model snapshot separately",
+      "reused": false,
+      "role": "primary image generation and optional training",
+      "source": "https://github.com/Tongyi-MAI/Z-Image",
+      "source_status": "LINK_ONLY_NOT_INSTALLED"
+    },
+    {
+      "kind": "video_engine",
+      "license": "Apache-2.0 code",
+      "name": "Wan2.1 official",
+      "need": "model snapshot separately",
+      "reused": false,
+      "role": "fast video 1.3B CLI",
+      "source": "https://github.com/Wan-Video/Wan2.1",
+      "source_status": "LINK_ONLY_NOT_INSTALLED"
+    },
+    {
+      "kind": "video_engine",
+      "license": "Apache-2.0 code",
+      "name": "Wan2.2 official",
+      "need": "verify 24GB->23GB low VRAM fallback",
+      "reused": false,
+      "role": "quality video 5B later",
+      "source": "https://github.com/Wan-Video/Wan2.2",
+      "source_status": "LINK_ONLY_NOT_INSTALLED"
+    },
+    {
+      "kind": "optional_video_engine",
+      "license": "separate LTX-2.x community weights license",
+      "name": "LTX Desktop",
+      "need": "gated weights and community license approval",
+      "reused": false,
+      "role": "optional fast audio-video local; large storage",
+      "source": "https://github.com/Lightricks/LTX-Desktop",
+      "source_status": "LINK_ONLY_NOT_INSTALLED"
+    },
+    {
+      "kind": "image_runtime",
+      "license": "Apache-2.0",
+      "name": "Diffusers",
+      "need": "Z-Image version compatible test",
+      "reused": false,
+      "role": "ZImagePipeline with CPU offload and SDPA",
+      "source": "https://github.com/huggingface/diffusers",
+      "source_status": "LINK_ONLY_NOT_INSTALLED"
+    },
+    {
+      "kind": "lora_trainer_image",
+      "license": "review toolkit and weights",
+      "name": "AI Toolkit (ostris)",
+      "need": "model-specific config and isolated environment",
+      "reused": false,
+      "role": "train style/characters only after owner-licensed images and holdout",
+      "source": "https://github.com/ostris/ai-toolkit",
+      "source_status": "LINK_ONLY_NOT_INSTALLED"
+    },
+    {
+      "kind": "nox_student_adapter",
+      "license": "Apache-2.0",
+      "name": "PEFT",
+      "need": "venv version ABI check",
+      "reused": true,
+      "role": "V34 17 source archive present, reuse; no installer assumed",
+      "source": "https://github.com/huggingface/peft",
+      "source_status": "REUSE_SOURCE_ARCHIVE"
+    },
+    {
+      "kind": "student_sft_dpo",
+      "license": "Apache-2.0",
+      "name": "TRL",
+      "need": "owner data gates",
+      "reused": true,
+      "role": "V34 17 source archive present, reuse; no repeated training",
+      "source": "https://github.com/huggingface/trl",
+      "source_status": "REUSE_SOURCE_ARCHIVE"
+    },
+    {
+      "kind": "native_s03_vector",
+      "license": "MIT/Apache-2.0 source",
+      "name": "sqlite-vec",
+      "need": "host attach requires QA",
+      "reused": true,
+      "role": "V34 existing source present; no second vector database",
+      "source": "https://github.com/asg017/sqlite-vec",
+      "source_status": "REUSE_SOURCE_ARCHIVE"
+    },
+    {
+      "kind": "memory_research",
+      "license": "review",
+      "name": "Hindsight",
+      "need": "none until gap proven",
+      "reused": false,
+      "role": "research ideas only, no separate truth memory",
+      "source": "https://github.com/vectorize-io/hindsight",
+      "source_status": "LINK_ONLY_NOT_INSTALLED"
+    },
+    {
+      "kind": "temporal_graph_research",
+      "license": "review",
+      "name": "Graphiti",
+      "need": "no separate graph store",
+      "reused": true,
+      "role": "V34 source archive present; retain S03 as owner",
+      "source": "https://github.com/getzep/graphiti",
+      "source_status": "REUSE_SOURCE_ARCHIVE"
+    },
+    {
+      "kind": "optimization_candidate",
+      "license": "Apache-2.0",
+      "name": "Liger Kernel",
+      "need": "A/B benchmark on same GPU/dataset",
+      "reused": false,
+      "role": "SFT throughput if actual trainer compatible",
+      "source": "https://github.com/linkedin/Liger-Kernel",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "v100_policy": "BLOCK_BY_DEFAULT_UNTIL_ACTUAL_SM70_KERNEL_TEST_AND_BENCHMARK"
+    },
+    {
+      "kind": "optimization_candidate",
+      "license": "BSD-3",
+      "name": "FlashAttention",
+      "need": "benchmark and fallback to SDPA",
+      "reused": false,
+      "role": "GPU kernel only if driver/CUDA/arch fits",
+      "source": "https://github.com/Dao-AILab/flash-attention",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "v100_policy": "BLOCK_BY_DEFAULT_UNTIL_ACTUAL_SM70_KERNEL_TEST_AND_BENCHMARK"
+    },
+    {
+      "kind": "optimization_candidate",
+      "license": "review",
+      "name": "SageAttention",
+      "need": "CUDA/architecture gate",
+      "reused": false,
+      "role": "quantized attention option for video only after quality A/B",
+      "source": "https://github.com/thu-ml/SageAttention",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "v100_policy": "BLOCK_BY_DEFAULT_UNTIL_ACTUAL_SM70_KERNEL_TEST_AND_BENCHMARK"
+    },
+    {
+      "kind": "download_cache",
+      "license": "Apache-2.0",
+      "name": "Hugging Face Hub",
+      "need": "install only for download",
+      "reused": false,
+      "role": "content-addressed snapshot store and pinned commit SHA",
+      "source": "https://huggingface.co/docs/huggingface_hub",
+      "source_status": "LINK_ONLY_NOT_INSTALLED"
+    },
+    {
+      "name": "PyTorch CUDA12",
+      "role": "pin a CUDA12-supported Torch wheel, check torch.cuda.get_device_capability and 2 real GPUs",
+      "source": "https://pytorch.org/get-started/previous-versions/",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "DeepSpeed ZeRO",
+      "role": "optional ZeRO-2/ZeRO-3 offload only after ABI and optimizer tests",
+      "source": "https://github.com/deepspeedai/DeepSpeed",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "Accelerate",
+      "role": "two GPU launch/config and CPU offload, separate chat GPU from training",
+      "source": "https://github.com/huggingface/accelerate",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "Datasets",
+      "role": "train-dev-heldout source-disjoint dataset packaging",
+      "source": "https://github.com/huggingface/datasets",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "Safetensors",
+      "role": "weight storage and SHA verification; reuse V34 if already packaged",
+      "source": "https://github.com/huggingface/safetensors",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "Sentence Transformers",
+      "role": "embedding inference for existing S03",
+      "source": "https://github.com/UKPLab/sentence-transformers",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "EvalPlus",
+      "role": "code validation, already present in V34 source archive",
+      "source": "https://github.com/evalplus/evalplus",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "LongMemEval",
+      "role": "multi-session S03 benchmark",
+      "source": "https://github.com/xiaowu0162/LongMemEval",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "LoCoMo",
+      "role": "long conversation memory benchmark",
+      "source": "https://github.com/snap-research/locomo",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "BFCL",
+      "role": "tool calling benchmark",
+      "source": "https://github.com/ShishirPatil/gorilla",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "VBench",
+      "role": "video generation quality benchmark",
+      "source": "https://github.com/Vchitect/VBench",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "Wan2.1",
+      "role": "video baseline with FP16 kernel fallback guarded",
+      "source": "https://github.com/Wan-Video/Wan2.1",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "Wan2.2",
+      "role": "quality video after 24GB+ and SM70 preflight",
+      "source": "https://github.com/Wan-Video/Wan2.2",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    },
+    {
+      "name": "Z-Image",
+      "role": "photorealism, select FP16 source and check 50GB+ repo size",
+      "source": "https://github.com/Tongyi-MAI/Z-Image",
+      "source_status": "LINK_ONLY_NOT_INSTALLED",
+      "status": "REVIEW_LICENSE_DRIVER_ABI",
+      "v100_policy": "PYTORCH_CUDA12_SM70_COMPATIBLE_ONLY"
+    }
+  ],
+  "note": "Existing 17 upstream source archives in V34 are not automatically installed. Reuse SHA-verified source instead of refetching.",
+  "schema": "nox-v36-engines",
+  "sources_exist_in_v34_archive": [
+    "Graphiti",
+    "Mem0",
+    "LangMem",
+    "sqlite-vec",
+    "PEFT",
+    "TRL",
+    "Huey",
+    "watchdog",
+    "EvalPlus"
+  ]
+}

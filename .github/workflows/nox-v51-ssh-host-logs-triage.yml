@@ -1,0 +1,50 @@
+name: NOX V51 Vast SSH host-log classification (no secrets printed)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v51-ssh-host-logs-triage.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+jobs:
+  classify:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      VAST_API_KEY: ${{ secrets.NOX2 }}
+    steps:
+      - name: Vast CLI logs read-only to private runner temp
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --disable-pip-version-check --no-input vastai
+          timeout 50s vastai logs 60509551 --tail 120 > "$RUNNER_TEMP/nox-v51-private-logs" 2>&1 || true
+      - name: Classify SSH daemon errors without exporting log contents
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os,re
+          p=os.path.join(os.environ['RUNNER_TEMP'],'nox-v51-private-logs')
+          with open(p,encoding='utf-8',errors='replace') as f:text=f.read(200000).lower()
+          terms={
+            'SSHD_BAD_AUTHORIZED_KEYS_OWNER':r'authentication refused: bad ownership|bad ownership or modes',
+            'SSH_PERMISSION_DENIED':r'permission denied \(publickey\)',
+            'SSHD_AUTHORIZED_KEYS_MISSING':r'authorized_keys.*no such file',
+            'SSHD_NOT_RUNNING':r'sshd.*(not running|failed|exited)',
+            'SSH_PUBLIC_KEY_REJECTED':r'failed publickey|invalid user',
+            'SSH_NETWORK_REFUSED':r'connection refused|connection reset',
+            'SSH_KEY_INJECTION':r'ssh_public_key|authorized_keys|inject.*ssh',
+          }
+          for key,pattern in terms.items():
+              print(key+'='+str(bool(re.search(pattern,text))).lower())
+          print('HOST_LOG_FETCH_NONEMPTY='+str(bool(text.strip())).lower())
+          print('RAW_HOST_LOGS_NOT_PUBLISHED=true')
+          PY

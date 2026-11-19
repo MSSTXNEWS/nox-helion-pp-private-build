@@ -1,0 +1,38 @@
+{
+  "schema": "NOX_KERNEL_SELF_FD_INSTALLER_LOCAL_QA_V1",
+  "state": "FROZEN_LOCAL_PASS_PENDING_INDEPENDENT_REVIEW",
+  "installer_sha256": "c1a9a4b2fac0de5ce3a983decfb42a61680aa379206db0092f901156d5930517",
+  "installer_bytes": 56343,
+  "body_sha256": "7b096161336080ec233f86aeee263b77875f85554cb9b1a55b80b7b6ec81e062",
+  "spec_sha256": "a461e450552c5ecbc5a6437df5d74715a9a1ba07e10cc79204e8493b20e650ae",
+  "tests": {
+    "run": 7,
+    "passed": 7,
+    "failures": 0,
+    "scope": "LOCAL_INSTALLER_FIXTURES_NOT_NATIVE_PREFLIGHT"
+  },
+  "actual_inputs": {
+    "assets": 5,
+    "runtime_changed": [
+      "owner_project_test_runner.py"
+    ],
+    "old_config_sha256": "085fa4e3c8c96ae4ffb952dee53bb0d8bda0a1c50416a4d8a365017d043e95be",
+    "proposed_config_sha256": "42b95517bdcf8919b2ed782dadf0d98e6a1431113688f4f4259550f968458c89",
+    "old_catalog_count": 20,
+    "new_catalog_count": 21,
+    "old20_preserved": true,
+    "new_task_id": "1A03.project.cursor_admission.proc_retry.20261118",
+    "executor_validate_plan": true,
+    "retry_changes_only_task_id": true,
+    "both_payload_hashes": true,
+    "rescue_and_fd_contexts_match_latest_native_census": true
+  },
+  "native_preflight_required_before_stop": {
+    "generic_tests": 4,
+    "reviewed_rescue_tests": 30,
+    "fd_current_postimage_tests": 36,
+    "kernel_self_fd_proof": true
+  },
+  "native_preflight_executed": false,
+  "remote_actions": 0
+}

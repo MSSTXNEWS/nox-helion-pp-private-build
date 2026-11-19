@@ -1,0 +1,43 @@
+name: NOX V66 classify probable duplicate weight groups before offsite
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v66-duplicate-groups-readonly.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v66-duplicate-groups
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Python syntax guard
+        run: python3 -m py_compile nox_runpod/teacher_mesh/v66/duplicate_groups_audit.py
+      - name: Read-only classify likely repeated weights and open handles
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v66.duplicate_groups_audit
+      - name: Exact temporary SSH key revocation
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: No mutation
+        if: success()
+        run: |
+          echo "PROBABLE_FINGERPRINT_NOT_SHA_VERIFIED=true"
+          echo "NO_MODELS_DELETED=true"

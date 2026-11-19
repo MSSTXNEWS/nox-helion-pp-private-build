@@ -1,0 +1,52 @@
+{
+  "schema": "NOX_ROOT_REVIEWED_CHAT_CHAIN_REVIEW_V1",
+  "reviewed_at_utc": "2026-11-18T03:09:02Z",
+  "scope": "OWNER_REVIEWED_SOURCE_ONLY_NOT_NATIVE_ACCEPTANCE",
+  "model_generated_code_claimed": false,
+  "failed_model_receipt_preserved": "284d6284b5d088b4dcaa16250f4151ba26cad0b9f20f73bd708e9a60a097b80d",
+  "rescue_plan_sha256": "379d1c5b50e42fb50165ce1fbe904cf47b1b45b3747878c60f9b1208d6e13e23",
+  "followup_plan_sha256": "3f620116ee563127d7e94bfeac7aae1408aaa4f1752f431fee774c49023e6509",
+  "source_chain_exact": true,
+  "rescue_postimages": {
+    "owner_chat_request_ledger.py": "5201af0115e1ead68d3369794e33bbc97d7b7b2f00762c5c2ecfdaa7dda45926",
+    "native_v29_full_bridge.py": "4329f7389b24cfbb1fbb47c91b43eb7407bf18c95d15064fc7ea8166cde0a821"
+  },
+  "followup_postimages": {
+    "owner_chat_request_ledger.py": "a71051c085f8bfdbeda93f3f4c16501444ca35942ac4ca7f3a46d7bd16acfbbc",
+    "native_v29_full_bridge.py": "f5c8eb6b42e71efa38745bc6f729a989b4a199999d7c3b9aa45cebbde36f851a"
+  },
+  "rescue_findings": [
+    "Cursor type/range is checked before source state changes.",
+    "Existing request cursor is checked after existing context/payload fences and before recovery.",
+    "New request positive cursor is rejected before insertion/producer launch.",
+    "Bridge forwards the existing validated cursor; default zero preserves existing callers."
+  ],
+  "followup_findings": [
+    "Queries explicitly order persisted messages by row_id.",
+    "Content comparison preserves ordered user/assistant tuple sequence.",
+    "Existing reversed or duplicate pairs are rejected without rewriting them.",
+    "Exact replay preserves row identities and dialog revision."
+  ],
+  "unchanged_scope": [
+    "authentication",
+    "owner/session/dialog/payload fences",
+    "request-specific STOP",
+    "SQLite S03 backend",
+    "protected tests"
+  ],
+  "local_verification": {
+    "rescue": {
+      "tests_passed": 30,
+      "baseline_failures": 4,
+      "proof_sha256": "33ec54ce3866a4c90970f3ed586807899992389f5bb39d349f0f89d82ec72cd1"
+    },
+    "followup": {
+      "tests_passed": 36,
+      "baseline_failures": 2,
+      "proof_sha256": "2b2ba10fda0b9c59c113a15237460ef4c88a578fba0a783f0cbf271417dae098"
+    }
+  },
+  "native_execution_required": true,
+  "live_service_deployed": false,
+  "original_task_acceptance_added": 0
+}

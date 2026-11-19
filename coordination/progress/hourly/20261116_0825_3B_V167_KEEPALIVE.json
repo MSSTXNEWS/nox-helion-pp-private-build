@@ -1,0 +1,77 @@
+{
+  "schema": "NOX_3B_V167_V06_RELAY",
+  "instructions_version": "0.0.6",
+  "slot": "3B",
+  "time_utc": "2026-11-16T05:37:19.091Z",
+  "source_preimage_sha": "87190867c60a98c1f40c94c47020816f638a8d19",
+  "test_preimage_sha": "e842752facbbbeaaa54736488062bbd45e01a661",
+  "source_bytes": 19286,
+  "patch": "Native terminal done breaks after same-chunk validation, without transport EOF; asynchronous reader.cancel prevents hanging readback; exact S03 exchange+scoped STOP preserved.",
+  "tasks": [
+    {
+      "name": "owner auth / actual model",
+      "status": "HOLD_NATIVE",
+      "why": "No new authenticated browser or exact model SHA"
+    },
+    {
+      "name": "SSE first delta & completion",
+      "status": "SOURCE_PATCHED",
+      "why": "Protocol terminates on done even if HTTP keepalive open; no artificial token"
+    },
+    {
+      "name": "S03 history",
+      "status": "SOURCE_PATCHED",
+      "why": "Receipt saved+S03 flags, matching exchange_id user+assistant history still enforced"
+    },
+    {
+      "name": "STOP/abort",
+      "status": "SOURCE_PATCHED",
+      "why": "Per-request cancel retained and native reader cancellation nonblocking"
+    },
+    {
+      "name": "RU/ES p50/p95 browser",
+      "status": "HOLD_NATIVE",
+      "why": "No paired original owner browser measurement"
+    }
+  ],
+  "control_append": [
+    {
+      "kind": "WEIGHTS",
+      "state": "NATIVE_PREVIOUS_SIX_UPDATES_CURRENT_HOLD",
+      "native_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43806455891",
+      "successful_updates_total_last_verified": 6,
+      "skipped": 0,
+      "checkpoint_manifest": "bbe6ff24861fdcf33d28eba089edba583406ffbb9184c68e5a43d305a619b293",
+      "checkpoint_files": 10,
+      "checkpoint_bytes": 519882866,
+      "holdout_loss_before": 1.5214923173189163,
+      "holdout_loss_after": 1.3033105581998825,
+      "independent_offsite_restore": "UNKNOWN",
+      "last_train_service": "EXITED / TRAIN_HOLD",
+      "new_optimizer_updates_this_slot": 0
+    },
+    {
+      "kind": "KNOWLEDGE",
+      "state": "3_NATIVE_REVIEWS_NOT_HUNTER_CYCLE",
+      "native_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43808069968",
+      "native_completed_reviews": 3,
+      "hunter_source_to_s03_recall_verified": false
+    },
+    {
+      "kind": "DISPATCHER+RESOURCES",
+      "state": "PARTIAL_NATIVE",
+      "native_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43808405786",
+      "owner_service_pid": 687415,
+      "health_8080_8081_8082": "200 at 05:10 UTC",
+      "native_three_worker_count_now": "UNKNOWN; most recent reviewer_pool_actual=0 WAITING_READY_TASK",
+      "resources_now": "UNKNOWN",
+      "restarts_this_slot": 0
+    }
+  ],
+  "source_tests_precommit": "Local prototype on older V139 2/2 PASS; exact latest source CI pending",
+  "native_changes": false,
+  "web_deployed": false,
+  "weights_changed": false,
+  "files_deleted": false,
+  "next": "Run exact SHA CI; owner-native target preimage, STOP/lease/rollback, original browser authenticated SSE/STOP/S03 and RU/ES p50/p95."
+}

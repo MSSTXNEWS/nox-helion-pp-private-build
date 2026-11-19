@@ -1,0 +1,78 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_RECONFIG_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-16",
+  "owner_scope": "Latest accepted original NOX WEB29 plus weights; preserve cinematic D02, 14 worlds and Resonance; no EXE or replacement frontend",
+  "policy_id": "NOX_WEB_WEIGHTS_V06",
+  "policy_path": "coordination/NOX_PRIME_SIX_RELAY_20261115.md",
+  "policy_commit": "c552d11a5ed5e74f30ef3b13a08e0676374ee8b0",
+  "policy_blob_sha_read_back": "404589c6fe6afdaf51fbd10cfd091cb33b8e2946",
+  "superseded_policy_blob_preserved_in_git": "382cd3f1b941ed5831d98b1bc64427f03c62bea9",
+  "configuration_status": "SAVED_AND_READ_BACK",
+  "automation_verification": {
+    "method": "14 successful update responses followed by independent Automations.peek readback",
+    "expected_active": 14,
+    "verified_active_v06": 14,
+    "all_prompts_have_v06_marker": true,
+    "all_existing_schedules_preserved": true,
+    "new_automations_created": 0,
+    "paused_legacy_jobs_reactivated": 0,
+    "entries": [
+      {"slot":"1A","id":"6af903a3a9f0819185c32b64e51e4ecc"},
+      {"slot":"1B","id":"6af903a5c1208191a22263faae73d193"},
+      {"slot":"1C","id":"6af903a81f348191b18f01a8cde7ec05"},
+      {"slot":"1D","id":"6af9d05d909881918e20e732baf36aec"},
+      {"slot":"2A","id":"Automation_c10be790f1cc819192f5678833c2c029"},
+      {"slot":"2B","id":"Automation_699343fbe37881919cdb75168812fafe"},
+      {"slot":"2C","id":"Automation_26409201a5f88191875878544488d623"},
+      {"slot":"2D","id":"6af9d06031408191a0d7fb4d91e31da5"},
+      {"slot":"3A","id":"6afa68f921b48191a8f7875efae6e783"},
+      {"slot":"3B","id":"6afa68fb554481918bbe95db73b560a7"},
+      {"slot":"3C","id":"6afa68fde1988191a33e4029103e6cfe"},
+      {"slot":"3D","id":"6afa6900607c8191a2048d2319fbb4fa"},
+      {"slot":"CONTROL_A","id":"Automation_84a52b3e3c188191bf26037991b96005"},
+      {"slot":"CONTROL_MAIN_B","id":"6afa6a3187448191b80e4a925ce71710"}
+    ],
+    "limitation": "Saved prompts govern subsequent runs; this does not prove completion or interruption of already-running jobs. Schedules are not native workers."
+  },
+  "primary_web_archive_check": {
+    "scope": "LOCAL_ARCHIVE_ONLY_NOT_NATIVE_DEPLOYMENT",
+    "filename": "NOX_HELION_WEB29_MAIN_20261116.zip",
+    "drive_id": "1R9RXZN0FJUJJUq8sJ_n1k3Rh1YcY3R5N",
+    "bytes": 84223045,
+    "sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
+    "matches_canonical_primary": true,
+    "zip_members": 1212,
+    "zip_crc_error": null,
+    "required_paths_present": ["site/index.html", "site/chat.html", "site/progress.html"],
+    "cinematic_512_identity": "Preservation requirement and earlier primary manifest evidence retained; not a new 512-file native acceptance in this run"
+  },
+  "optimizations": [
+    "Replace contradictory accumulated prompts rather than append another override",
+    "Read changed sources and latest relevant receipts instead of rescanning unchanged history",
+    "Reuse verified downloads; one owner per artifact, shared blocker, source path and native write resource",
+    "Retain five ready full-cycle tasks per run without manufacturing DONE for blocked tasks",
+    "Separate DeepSeek primary inference candidate from Qwen3.5-9B trainable student; approved LoRA/QLoRA and exact-base merge",
+    "Do not block student preparation on full DeepSeek transfer when approved existing data are available",
+    "Normal native target is NOX director plus three actual OS workers; six only explicit resource-admitted FORSAZH",
+    "Keep newest accepted compatible WEB29 patches without replacing cinematic original",
+    "Mandate immediate eligible cleanup with exact allowlist, safe replacement, dependency checks and verified recovery"
+  ],
+  "native_effects_this_run": {
+    "server_commands_executed": false,
+    "model_weights_downloaded_or_changed": false,
+    "model_switched": false,
+    "training_started_or_restarted": false,
+    "verified_new_optimizer_steps": 0,
+    "web_deployed": false,
+    "files_deleted_on_server_or_drive": false,
+    "ai_child_sessions_spawned": 0
+  },
+  "remaining_native_gates": [
+    "Fresh authorised OneHost and server Drive/storage readback",
+    "Complete mandatory DeepSeek weights and validated bounded placement/cache/runtime",
+    "Qwen student/env/API compatibility, real optimizer steps, checkpoint/reload and fixed held-out comparison",
+    "Latest original WEB29 live stream/STOP/owner/S03/browser acceptance",
+    "Eligible cleanup after verified replacement, preserving unique memory and training state"
+  ]
+}

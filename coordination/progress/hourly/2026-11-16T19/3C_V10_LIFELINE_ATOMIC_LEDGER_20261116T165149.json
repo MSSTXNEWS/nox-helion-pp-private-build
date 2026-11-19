@@ -1,0 +1,98 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_3C_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_3C",
+  "at_utc": "2026-11-16T16:51:49.361Z",
+  "at_msk": "2026-11-16T19:51:49.361+03:00",
+  "accepted_head_sha": "d20100f24cfb650951c37af8823b6064c28a3c26",
+  "status": "SOURCE_TESTED_NATIVE_HOLD",
+  "source_preimage_sha": "62bcabf1bdee47dc7a0e65a658cd89d56cff32bb",
+  "test_preimage_sha": "aa2149c6da5e652cc1710b8e187fab3a0c77f742",
+  "source_blob_sha": "31d2dfb51005d87b2673678a3a1565668b6a30f7",
+  "test_blob_sha": "52bd707cd09028d8b7c2a431aef0ad122bc02a42",
+  "five_task_outcomes": [
+    {
+      "id": "S1-06",
+      "state": "SOURCE_TESTED_NATIVE_HOLD",
+      "evidence": "Persisted JSON ambiguous keys/nonfinite values and later invalid service ledger preflight; 2 regression tests; NOT native installed; final exact CI 43912406238 PASS"
+    },
+    {
+      "id": "S1-01",
+      "state": "LIVE_VERIFIED_READ_ONLY",
+      "evidence": "16:48:21Z native job; owner STOP and MAINTENANCE present, 5 critical services STOPPED and :8081 absent"
+    },
+    {
+      "id": "S1-03",
+      "state": "HOLD_NATIVE_CLAIM",
+      "evidence": "writer lease UNKNOWN; native 3/6 runners PID/start_ticks not verified; no claim"
+    },
+    {
+      "id": "S1-07",
+      "state": "HOLD_RESTORE",
+      "evidence": "No independently verified S03/Genesis/optimizer/scaler/RNG restore"
+    },
+    {
+      "id": "S2-07",
+      "state": "HOLD_STORAGE",
+      "evidence": "Original SSD 183609851904 total < 248834257920 unique DeepSeek required + 16GiB reserve; no rclone remote verified"
+    }
+  ],
+  "native": {
+    "job_id": 133453659138,
+    "observed_at_utc": "2026-11-16T16:48:21Z",
+    "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803/job/133453659138",
+    "manual_stop": "PRESENT",
+    "owner_maintenance": "PRESENT",
+    "owner_maintenance_lock": "PRESENT",
+    "writer_lease": "UNKNOWN_NO_OWNER_CAS_READBACK",
+    "five_critical_supervisor": "STOPPED",
+    "port_8081": "NO_LISTENER",
+    "gpu0_used_mib": 0,
+    "gpu1_used_mib": 0,
+    "cpu_quota_cores": 19.2,
+    "ram_cgroup_current_bytes": 60386963456,
+    "ram_cgroup_max_bytes": 194065203200,
+    "ssd_total_bytes": 183609851904,
+    "ssd_free_bytes": 43158790144,
+    "shm_free_bytes": 3366711296,
+    "current_worker_pids": [],
+    "native_task_claims": [],
+    "new_successful_optimizer_updates": 0,
+    "new_s03_recall": 0,
+    "model_switched": false,
+    "new_downloaded_bytes": 0,
+    "new_deleted_bytes": 0,
+    "restarts": 0
+  },
+  "groups": {
+    "WEIGHTS": {
+      "status": "HOLD",
+      "optimizer_updates": 0,
+      "checkpoint25_restore_verified": false
+    },
+    "KNOWLEDGE": {
+      "status": "HOLD",
+      "hunter_source_s03_recall": 0
+    },
+    "DISPATCHER_RESOURCES": {
+      "status": "LIVE_VERIFIED_READ_ONLY__WRITE_HOLD",
+      "native_job_id": 133453659138,
+      "writer_lease": "UNKNOWN",
+      "restarts": 0,
+      "new_bytes": 0
+    }
+  },
+  "regression": {
+    "source_tests": "PASS_GITHUB_ACTIONS_EXACT_SOURCE",
+    "workflow": ".github/workflows/nox-native-lifeline-ci.yml",
+    "coverage": "strict state JSON; atomic multi-service repair-ledger admission; reject negative/noninteger failure counts",
+    "ci_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43912406238",
+    "lifeline_tests": "25/25 PASS",
+    "adjacent_tests": "4+6+11+11+18+7+10 PASS; final 16 test suite executed",
+    "root_cause_of_first_ci_failure": "Broad ValueError handler swallowed HOLD_STATE_PERMISSIONS; corrected to wrap only JSON decoder ValueError; previous 24/25 with one failure, final all lifeline tests pass"
+  },
+  "rollback": "CAS revert only exact source/test blobs after inspecting current branch head; NO native rollback because not installed",
+  "next_owner": "Keep owner STOP. Verify independent restore, seekable authorized storage ≥248834257920 B+16GiB+rollback and exact owner lease before one existing Range claim and Maya inference; deploy source only with owner consent and verified preimage.",
+  "source_fix_commit": "1ec4994d61df1c774238d3e2d7da134f9bc13fcf",
+  "first_patch_commit": "cd0b3e439261abc2f343f1c105186b9f09453ab6"
+}

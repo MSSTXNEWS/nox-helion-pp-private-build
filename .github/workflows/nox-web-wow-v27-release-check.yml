@@ -1,0 +1,53 @@
+name: NOX WEB WOW V27 Source Release & Windows Script QA
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - "nox_runpod/web_wow_merge/**"
+      - ".github/workflows/nox-web-wow-v27-release-check.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  python-negative-no-loss:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check source syntax and full synthetic regression
+        run: |
+          set -Eeuo pipefail
+          python -m compileall -q nox_runpod/web_wow_merge
+          python -m unittest discover -s nox_runpod/web_wow_merge/tests -v
+          python nox_runpod/web_wow_merge/tools/verify_nox_v27.py --help >/dev/null
+          python nox_runpod/web_wow_merge/tools/build_nox_web_v27.py --help >/dev/null
+          node --check nox_runpod/web_wow_merge/nox_genesis_live_panel.mjs
+      - name: Report true acceptance boundary
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          src=Path("nox_runpod/web_wow_merge/tools/build_nox_web_v27.py").read_text()
+          assert "release_accepted':False" in src
+          assert "'production_modified':False" in src
+          assert "'site/'" in src
+          assert "NOX_V27_SOURCE_LOCK.json" in src
+          assert "SOURCE_MERGED_CRC_SHA_STATIC_QA_PENDING_WINDOWS_E07_HOLD" in src
+          print("NOX_V27_SOURCE_NOT_WINDOWS_PASS")
+          PY
+  windows-powershell-syntax:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native Windows PowerShell parser — syntax only (NO -Apply)
+        shell: powershell
+        run: |
+          $path = "nox_runpod/web_wow_merge/NOX_V27_WINDOWS_PREFLIGHT.ps1"
+          $tokens = $null; $parseErrors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $path).Path, [ref]$tokens, [ref]$parseErrors)
+          if ($parseErrors -and $parseErrors.Count -gt 0) { $parseErrors | Out-String | Write-Error; exit 1 }
+          $source = Get-Content -LiteralPath $path -Raw -Encoding UTF8
+          foreach ($must in @('ApproveSha256','NOX_OWNER_EXACT_ARCHIVE_SHA_APPROVAL_REQUIRED','NOX_V27_ROLLBACK_AFTER_FAILURE','NOX_SOURCE_HASH_MISMATCH')) {
+              if (-not $source.Contains($must)) { throw "MISSING_GUARD: $must" }
+          }
+          Write-Output 'NOX_V27_WINDOWS_POWERSHELL_PARSER_PASS_NO_RUNTIME_QA'

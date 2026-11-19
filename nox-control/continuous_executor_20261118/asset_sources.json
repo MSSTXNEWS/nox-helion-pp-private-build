@@ -1,0 +1,12 @@
+{
+  "cw_test_nox_forge_language_task_coverage.py": "nox-control/continuous_executor_20261118/assets/cw_test_nox_forge_language_task_coverage.py",
+  "cw_test_nox_readonly_retry_backoff.py": "nox-control/continuous_executor_20261118/assets/cw_test_nox_readonly_retry_backoff.py",
+  "cw_test_nox_warm_cache_limit_contract.py": "nox-control/continuous_executor_20261118/assets/cw_test_nox_warm_cache_limit_contract.py",
+  "cw_contract_510dbdec4dd2538ebeac.json": "nox-control/continuous_executor_20261118/assets/cw_contract_510dbdec4dd2538ebeac.json",
+  "cw_contract_9efad5217ab0e554a383.json": "nox-control/continuous_executor_20261118/assets/cw_contract_9efad5217ab0e554a383.json",
+  "cw_contract_683c5086d66e750d4ed1.json": "nox-control/continuous_executor_20261118/assets/cw_contract_683c5086d66e750d4ed1.json",
+  "continuous_transaction_helpers.py": "nox-control/continuous_executor_20261118/assets/continuous_transaction_helpers.py",
+  "continuous_dispatcher.py": "nox-control/continuous_executor_20261118/assets/continuous_dispatcher.py",
+  "continuous_planner.py": "nox-control/continuous_executor_20261118/assets/continuous_planner.py",
+  "continuous_truth.py": "nox-control/continuous_executor_20261118/assets/continuous_truth.py"
+}

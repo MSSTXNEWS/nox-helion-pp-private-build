@@ -1,0 +1,44 @@
+name: NOX V95 physically prepare HF weights in RAM page cache, P0 chat-safe
+on:
+  push:
+    branches: [nox/e2-v95-ram-weight-pipeline-20261114]
+    paths: ['.github/workflows/nox-e2-v95-ram-warm.yml']
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v95-ram-weight-warm-60509551
+  cancel-in-progress: false
+jobs:
+  warm:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Existing NOX2 and safe source gates
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v95/ram_weight_prepare_once.py
+      - name: Native RAM prefetch verified base-weight shards, bounded 2GiB and chat preemption
+        run: python3 -m nox_runpod.teacher_mesh.v95.ram_weight_prepare_once
+      - name: Revoke ephemeral Vast SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Limitations
+        if: success()
+        run: |
+          echo "NOX_V95_CPU_RAM_PAGECACHE_WARMED=true"
+          echo "NOX_NEW_MODEL_OR_TRAINER=none"
+          echo "NOX_NO_GENUINE_OPTIMIZER_STEPS_CLAIMED=true"
+          echo "NOX_S03_AND_CHAT_UNCHANGED=true"

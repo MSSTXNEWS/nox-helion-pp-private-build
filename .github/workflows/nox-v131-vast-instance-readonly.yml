@@ -1,0 +1,58 @@
+name: NOX V131 owner Vast inventory (documented LIST; guarded native READ)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v131/**'
+      - '.github/workflows/nox-v131-vast-instance-readonly.yml'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost metadata READ only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v131-owner-vast-list-60509551
+  cancel-in-progress: false
+jobs:
+  offline-source-tests:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Offline test exact owner metadata and no secret exposure
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v131/vast_no_billing_inventory.py
+          python -m unittest discover -s nox_runpod/teacher_mesh/v131/tests -p 'test_*.py' -v
+          echo 'NOX_V131_OFFLINE_TESTS_PASS=true'
+          echo 'VAST_AUTH_OR_NATIVE_REQUEST_SENT=false'
+  inspect:
+    if: "github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && github.ref == 'refs/heads/feature/nox-v38-synaptic-brain-20261114'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify existing owner instance using only official Vast GET LIST endpoints
+        run: |
+          set -euo pipefail
+          python -m nox_runpod.teacher_mesh.v131.vast_no_billing_inventory
+      - name: No SSH or production change
+        if: always()
+        run: |
+          echo 'NOX_NATIVE_COMMAND_EXECUTED=false'
+          echo 'NOX_S03_OR_WEIGHTS_MODIFIED=false'
+          echo 'NOX_NO_NEW_INSTANCE_OR_BILLING=true'

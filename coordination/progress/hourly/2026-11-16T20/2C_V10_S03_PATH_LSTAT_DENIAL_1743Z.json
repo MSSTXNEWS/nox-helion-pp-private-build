@@ -1,0 +1,103 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2C",
+  "time_utc": "2026-11-16T17:43:53Z",
+  "time_msk": "2026-11-16T20:43:53+03:00",
+  "instance_id": 60509551,
+  "scope": "SOURCE_TESTED_NOT_NATIVE_INSTALLED",
+  "error_id": "NOX-P0-2C-S03-PATH-LSTAT-DENIAL-20261116T1743Z",
+  "changed_paths": [
+    "nox-control/owner_s03_gateway.py",
+    "nox-control/test_owner_s03_gateway.py"
+  ],
+  "preimage_git_blob_sha1": {
+    "source": "eac13ee428c6b80cd499dddbeeaf710e859a4e79",
+    "tests": "5b9a8ecd2d3713d836e6d31d68f07cf775e1ad23"
+  },
+  "readback_git_blob_sha1": {
+    "source": "b38fc673dd4109b015bb6e4c8cdafa3a3eeb3ad4",
+    "tests": "838a80434da31a00938ddef398c848404b32e5ef"
+  },
+  "commits": {
+    "source": "78f878bc46ecdc1d561d0257419bcf895541327b",
+    "tests": "785a71d982ab13453287d366e4702002a94d444a"
+  },
+  "source_ci": {
+    "run_id": 43921389489,
+    "job_id": 133489303236,
+    "head_sha": "785a71d982ab13453287d366e4702002a94d444a",
+    "conclusion": "success",
+    "tests_v38": 39,
+    "tests_s03": 19,
+    "all_pass": 58,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43921389489"
+  },
+  "root_cause": "S03 plain(path) used Path.is_symlink to admit path ancestry; Python may return False on ELOOP/EACCES, misclassifying inaccessible ancestors as ordinary paths. O_NOFOLLOW on final open does not protect a symlink ancestor.",
+  "fix": "S03 plain(path) lstat each ancestor and target; only FileNotFoundError may mean absent output, all other OSError fail-closed HOLD_S03_PATH_UNREADABLE, symlink always HOLD_S03_SYMLINK; no new service. Regression covers leaf/parent EACCES and ELOOP, absent output, dangling ancestor symlink.",
+  "rollback": "Before native promotion recheck exact source/test blob SHA, owner STOP/lease and known rollback; revert these two source blobs through CAS only if needed. Not deployed on OneHost.",
+  "task_outcomes": [
+    {
+      "id": "S2-09",
+      "status": "SOURCE_TESTED",
+      "native": "HOLD",
+      "evidence": "New source guard; GitHub CI exact commit 58/58; no native S03 change"
+    },
+    {
+      "id": "S1-01",
+      "status": "HOLD_FRESH_NATIVE",
+      "evidence": "No new authenticated read-only OneHost PID/start_ticks/port snapshot"
+    },
+    {
+      "id": "S1-03",
+      "status": "HOLD_OWNER_STOP_LEASE",
+      "evidence": "Historical owner STOP, writer lease UNKNOWN; no native CLAIM"
+    },
+    {
+      "id": "S1-07",
+      "status": "HOLD_OFFSITE_RESTORE",
+      "evidence": "Independent S03/Genesis/checkpoint optimizer/scaler/RNG restore unverified"
+    },
+    {
+      "id": "S2-07",
+      "status": "HOLD_STORAGE_SEEKABILITY",
+      "evidence": "No owner-authenticated seekable placement for pinned 248834257920 B DeepSeek unique set plus reserve"
+    }
+  ],
+  "native_previous_observation": {
+    "at_utc": "2026-11-16T16:48:21Z",
+    "job_id": 133453659138,
+    "owner_stop": "PRESENT_THEN",
+    "owner_maintenance": "PRESENT_THEN",
+    "gpu0_vram_mib": 0,
+    "gpu1_vram_mib": 0,
+    "ssd_free_bytes": 43158790144,
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803",
+    "writer_lease": "UNKNOWN_NOW"
+  },
+  "native_this_slot": {
+    "claimed_jobs": [],
+    "verified_pid_start_ticks": [],
+    "installed": false,
+    "restarts": 0,
+    "downloaded_bytes_by_slot": 0,
+    "deleted_bytes_by_slot": 0,
+    "owner_stop_cleared": false,
+    "actual_server_progress_now": "UNKNOWN"
+  },
+  "WEIGHTS": {
+    "new_verified_optimizer_updates": 0,
+    "independent_restore": false,
+    "deepseek_live_inference": false
+  },
+  "KNOWLEDGE": {
+    "new_verified_hunter_to_s03_recalls": 0,
+    "new_verified_s03_skill_write_readback_recall": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "new_verified_native_job_ids": [],
+    "writer_lease": "UNKNOWN",
+    "fresh_vram_cpu_disk_readback": false
+  },
+  "next_owner_action": "Original owner-auth read-only OneHost STOP/lease/PID/start_ticks, independently restore S03/Genesis and optimizer/scaler/RNG, verify seekable >=248834257920 B+reserve; only then native model staging and Maya/Resonance RU/ES SSE/STOP/S03 E2E."
+}

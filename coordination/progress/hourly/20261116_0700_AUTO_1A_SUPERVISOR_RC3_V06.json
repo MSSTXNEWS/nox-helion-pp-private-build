@@ -1,0 +1,108 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_1A_FINAL_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "1A",
+  "stream": "1/3",
+  "utc": "2026-11-16T04:14:41.537Z",
+  "msk": "2026-11-16 ~07:00 Europe/Moscow",
+  "accepted_head_at_receipt": "0293843e1564c7b71ed8e42ede54347edded0af7",
+  "source_patches": [
+    {
+      "commit": "094c9887e8a807126206739a2e8e9de7ba7cd1d3",
+      "path": "nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py",
+      "final_blob_sha": "5a87cba2eb9f981066f8c4c183d274b6ea821c01"
+    },
+    {
+      "commit": "d9bb9a1dfb6afb3c075492ef6d9516b0db5148a9",
+      "path": "nox_runpod/teacher_mesh/v50/tests/test_v51_native_safety_readonly.py",
+      "blob_sha": "d5efacf9f6bdfb87468a373c623a5b4685424147"
+    },
+    {
+      "commit": "1566944a66966bf5139cd49fac3250f4099433f4",
+      "meaning": "fixed accidental triple-quoted string in embedded V51 remote payload"
+    }
+  ],
+  "error_id": "NOX-P0-V51-SUPERVISOR-RC3-STATUS-DROPPED-20261116",
+  "original_native_evidence": [
+    {
+      "run_id": 43801309236,
+      "job_id": 133081989868,
+      "readback_utc": "2026-11-16T03:59:45Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43801309236"
+    },
+    {
+      "run_id": 43799988405,
+      "job_id": 133078409605,
+      "readback_utc": "2026-11-16T03:47:57Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43799988405"
+    }
+  ],
+  "five_tasks": [
+    {
+      "task": 1,
+      "status": "DONE_PREEXISTING_NATIVE_ACCESS_VERIFIED",
+      "proof": "Original Vast v1 owner/pinned ephemeral SSH readback, exact instance 60509551, not a new login by AUTO 1A."
+    },
+    {
+      "task": 2,
+      "status": "DONE_HISTORICAL_NATIVE_PROCESSES",
+      "proof": "At 03:59Z Supervisor rc3: nox-dispatcher-t855u RUNNING PID498177, nox-priority-scheduler RUNNING PID498221, nox-selfheal RUNNING PID498241, nox-train-volta-t866u FATAL PID null, nox-chat-8081 STOPPED despite independent llama-server PID7637. Original ports 8080/8081/8082 historical health 200, not full auth stream."
+    },
+    {
+      "task": 3,
+      "status": "DONE_HISTORICAL_NATIVE_RESOURCES",
+      "proof": "At 03:59Z cgroup current=86554632192/max=194065203200 B, CPU quota=19.2, SSD free=13270163456 B, GPU0 V100 used=21562 MiB util=0 temp=21C, GPU1 V100 used=474 MiB util=0 temp=24C. At 03:47Z cgroup OOM=0 OOM_kill=0, shared memory free=7983484928 B, TRAIN_HOLD.flag exists."
+    },
+    {
+      "task": 4,
+      "status": "DONE_SOURCE_REPAIR_NATIVE_DEPLOY_HOLD",
+      "proof": "Existing V51 read-only probe accepts Supervisor rc3 and prints sanitized bounded NOX service/state/PID via preexisting owner-only NATIVE_P0_ output route. No restart/installation on Vast."
+    },
+    {
+      "task": 5,
+      "status": "DONE_REPOSITORY_READBACK_NATIVE_AFTER_PATCH_HOLD",
+      "proof": "Changed exact source/test blobs read back; source-equivalent Python compile and 12 assertions PASS, original test file expanded. No new owner-native V51 receipt on repaired exact SHA."
+    }
+  ],
+  "WEIGHTS": {
+    "status": "HOLD_NO_VERIFIED_SUCCESSFUL_OPTIMIZER_UPDATES",
+    "old_35b_checkpoint_step_reported": 5,
+    "optimizer_state_entries_in_native_calibration": 0,
+    "checkpoint_optimizer_scaler_rng_independent_restore_verified": false,
+    "current_trainer": "FATAL",
+    "current_trainer_pid": null,
+    "new_qwen_student_optimizer_updates_verified": 0,
+    "new_deepseek_main_weights_loaded_verified": false,
+    "training_restarted_this_run": false
+  },
+  "KNOWLEDGE": {
+    "status": "HOLD_NO_NEW_NATIVE_CHAIN",
+    "hunter_job_id": null,
+    "s03_source_write_recall_verified_this_run": false,
+    "weights_updated_from_s03": false
+  },
+  "DISPATCHER+RESOURCES": {
+    "status": "NATIVE_READONLY_OBSERVED",
+    "dispatcher_pid": 498177,
+    "priority_pid": 498221,
+    "selfheal_pid": 498241,
+    "dispatcher_native_state_counts_at_0347Z": {
+      "done": 318,
+      "pending": 4,
+      "blocked": 9,
+      "failed": 3,
+      "running": 0
+    },
+    "three_os_subagents_verified": false,
+    "native_60_job_ids_verified": false,
+    "manual_owner_stop_cleared": false,
+    "downloads_bytes_this_run": 0,
+    "deleted_paths": [],
+    "freed_bytes_verified": 0
+  },
+  "one_final_test": "SOURCE_EQUIVALENT_PYTHON_COMPILE_AND_12_ASSERTIONS_PASS; original full module CI/new owner-native V51 test not yet performed.",
+  "source_scope": "SOURCE_FIXED_AND_TESTED_EQUIVALENT_NOT_LIVE_VERIFIED",
+  "native_scope": "HISTORICAL_OWNER_NATIVE_READONLY_OBSERVED_ONLY",
+  "exact_blocker": "Owner-approved manual V51 dispatch for patched HEAD plus current single-writer lease, STOP, independent S03/optimizer restore before any source/service restart; train FATAL terminal cause unproven",
+  "next_one_action": "Run original V51 workflow_dispatch allow_native=YES as owner on exact current branch SHA, read sanitized rc3 Supervisor PID/STOP and checkpoint/S03 restore evidence; do not start second trainer or clear TRAIN_HOLD."
+}

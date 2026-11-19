@@ -1,0 +1,101 @@
+{
+  "schema": "NOX_CONTINUOUS_MODEL_BATCH_BUILD_V1",
+  "source_test_paths": {
+    "cw_test_nox_forge_language_task_coverage.py": "test_nox_forge_language_task_coverage.py",
+    "cw_test_nox_readonly_retry_backoff.py": "test_nox_readonly_retry_backoff.py",
+    "cw_test_nox_warm_cache_limit_contract.py": "test_nox_warm_cache_limit_contract.py"
+  },
+  "package_paths": {
+    "cw_contract_510dbdec4dd2538ebeac.json": "state/dispatcher/project_executor/package/contracts/510dbdec4dd2538ebeac2f8fdd0ecda8305ba9ee370ec53820a1f62b92c5a16e.json",
+    "cw_contract_9efad5217ab0e554a383.json": "state/dispatcher/project_executor/package/contracts/9efad5217ab0e554a38362342c859938de9bb2de3a962aae773e599e5aade386.json",
+    "cw_contract_683c5086d66e750d4ed1.json": "state/dispatcher/project_executor/package/contracts/683c5086d66e750d4ed19a2ddc8b0fa8f88878050797eb0f989ee5ef70894251.json"
+  },
+  "asset_sources": {
+    "cw_test_nox_forge_language_task_coverage.py": "nox-control/continuous_work_20261118/trusted_tests/test_nox_forge_language_task_coverage.py",
+    "cw_test_nox_readonly_retry_backoff.py": "nox-control/continuous_work_20261118/trusted_tests/test_nox_readonly_retry_backoff.py",
+    "cw_test_nox_warm_cache_limit_contract.py": "nox-control/continuous_work_20261118/trusted_tests/test_nox_warm_cache_limit_contract.py",
+    "cw_contract_510dbdec4dd2538ebeac.json": "nox-control/continuous_work_20261118/package/contracts/510dbdec4dd2538ebeac2f8fdd0ecda8305ba9ee370ec53820a1f62b92c5a16e.json",
+    "cw_contract_9efad5217ab0e554a383.json": "nox-control/continuous_work_20261118/package/contracts/9efad5217ab0e554a38362342c859938de9bb2de3a962aae773e599e5aade386.json",
+    "cw_contract_683c5086d66e750d4ed1.json": "nox-control/continuous_work_20261118/package/contracts/683c5086d66e750d4ed19a2ddc8b0fa8f88878050797eb0f989ee5ef70894251.json"
+  },
+  "catalog_append": [
+    {
+      "deps": [],
+      "estimated_cost": 2,
+      "handler": "owner_native_project_work",
+      "id": "6V14-12.project.readonly_transient_retry.20261118",
+      "params": {
+        "contract_sha256": "510dbdec4dd2538ebeac2f8fdd0ecda8305ba9ee370ec53820a1f62b92c5a16e",
+        "parent_task_id": "6V14-12"
+      },
+      "priority": "P1",
+      "queue_id": "Q4_INTEGRATION_ACCEPTANCE",
+      "resource": "CPU_LIGHT",
+      "title": "Resume bounded read-only probes after transient failures without requiring a senior model",
+      "source_sha256": "84c08283fc3e0e0714704b8bf540eaacb979ec6618f8c1920eb5d75062561c6b"
+    },
+    {
+      "deps": [],
+      "estimated_cost": 2,
+      "handler": "owner_native_project_work",
+      "id": "3A03.project.cache_limit_contract.20261118",
+      "params": {
+        "contract_sha256": "9efad5217ab0e554a38362342c859938de9bb2de3a962aae773e599e5aade386",
+        "parent_task_id": "3A03"
+      },
+      "priority": "P1",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "resource": "CPU_LIGHT",
+      "title": "Prevent malformed S03 cache limits from aliasing valid queries or reaching native recall",
+      "source_sha256": "84c08283fc3e0e0714704b8bf540eaacb979ec6618f8c1920eb5d75062561c6b"
+    },
+    {
+      "deps": [],
+      "estimated_cost": 2,
+      "handler": "owner_native_project_work",
+      "id": "4A02.project.bilingual_task_matrix.20261118",
+      "params": {
+        "contract_sha256": "683c5086d66e750d4ed19a2ddc8b0fa8f88878050797eb0f989ee5ef70894251",
+        "parent_task_id": "4A02"
+      },
+      "priority": "P1",
+      "queue_id": "Q3_TRAINING_WEIGHTS",
+      "resource": "CPU_LIGHT",
+      "title": "Require independent Russian and Spanish coverage for every training and evaluation task",
+      "source_sha256": "84c08283fc3e0e0714704b8bf540eaacb979ec6618f8c1920eb5d75062561c6b"
+    }
+  ],
+  "source_context_pins": {
+    "forge_split_guard.py": "06940cb13bd568d4cfaa893aab9e43c6d0b03010163cba13f2f5bf5ea144db00",
+    "merge_web_source.py": "f336c58fb5062aec6d5b4d99986adc0386159bc6013f0429cb2dae88daf7eb81",
+    "native_v29_full_bridge.py": "f5c8eb6b42e71efa38745bc6f729a989b4a199999d7c3b9aa45cebbde36f851a",
+    "nox_runpod/teacher_mesh/v38/durable_runtime.py": "f7b69405224c63868b767792d68c3b0d73e2561b37216e2e855ca34ec93d5f2f",
+    "nox_runpod/teacher_mesh/v38/synaptic_brain.py": "8657ad367e6dd25b48ca8d6d7c4a947c0e1b0d4b979d63fbdaaf2a8e9ba5e74c",
+    "owner_chat_request_ledger.py": "a71051c085f8bfdbeda93f3f4c16501444ca35942ac4ca7f3a46d7bd16acfbbc",
+    "owner_dispatcher_mentor.py": "b980a61884965f4838f8deafd43dac2ea4642e41dea7870d6a6904ee5a274fc6",
+    "s03_existing_readback.py": "fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5",
+    "source_tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_tests/test_cache_race.py": "092db7d32a048c1706da5fc4cf1fcb04a33781e23bbe42252ea14f990985b582",
+    "source_tests/test_owner_chat_request_scope.py": "dc19594b45a7fae32bf9bdde665620c2eec1a29bb02ba03758baa53a8158c509",
+    "source_tests/test_request_ledger.py": "b4ece67144248808a12c7c84450d61a919984ad756f6f15b46e0686c6d65ff96",
+    "test_3b05_skill_ancestor_swap.py": "21f8538fec15d39b4dbc875a4087be1c911c60b06ba04e2c682e8810f7b8b8fd",
+    "test_forge_split_guard.py": "3efe025681c3a54cbfac10f0da6f20ff7b2e249ed087b8db39d582002f32c080",
+    "test_nox_1a03_cursor_admission.py": "b3c5d26011400b110a1b88849c7aebfc0c7d8c636e541f8ab8d89d37ceed0db7",
+    "test_nox_exchange_receipt_order.py": "f299d32099c25ea1822c1a10db524b088ec16c38198b7372f362395d39c7c823",
+    "test_nox_existing_cache_race.py": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
+    "test_nox_forge_split_coverage.py": "fd815f9a743bfcdf6e71a8ebb035a180c031aa8f0c5e0484164d36aaf309f6cf",
+    "test_nox_merge_overlay_paths.py": "97c433b8893514f5812b69fd53b0bb1e25d1fcd7b290f35c72407ad54b989667",
+    "test_nox_s03_readback_revoke.py": "fc5d6c564c651c2abc818005da461711cdfc2c5cedff9146c6db8b12a6037eb5",
+    "test_nox_skill_evidence_strict_json.py": "623bfb4ba2d28d3dd3dbc5e46852ed5be5c29d516d20a390aed69c2ec5c3089c",
+    "test_nox_warm_cache_final_revision.py": "9201bc3629682a577c80a66c1040ef244b82f89b3b2cab26ce06ba3c95db38b2",
+    "test_nox_work_progress_time_order.py": "d6042e38549360ace8f9136fc2c36e0c195d54666e0dca34944955bf70e9e9c0",
+    "test_s03_readback_contract.py": "2860173d8d6ed7147af2392f82c5fe4df5880ebc781ad359f15dcb30617fc391",
+    "test_work_progress_changes.py": "970d6681ce5dc57156e23746fa8df213eb5746c7a6b19354a0ca864e87830c4f",
+    "test_work_progress_durable_write.py": "6aa9265942695d2b54b33a0192dc1ebfb912277e86c909eeb4f49a1b45477edd",
+    "test_work_progress_pinned_read.py": "4b06687bbad8fe6ab0466bdaf06ed9239c70da2232bf14e6820eed4919251f5e",
+    "work_progress.py": "7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d"
+  },
+  "reviewed_batch": "nox-control/continuous_work_20261118/reviewed_batch.json",
+  "original_acceptance_added": 0,
+  "callback_pin_requires_final_build": true
+}

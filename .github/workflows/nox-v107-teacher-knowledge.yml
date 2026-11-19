@@ -1,0 +1,46 @@
+name: NOX V107 existing distinct local teacher verified public lesson S03
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - "nox_runpod/teacher_mesh/v107/**"
+      - ".github/workflows/nox-v107-teacher-knowledge.yml"
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-60509551-v107-local-teacher
+  cancel-in-progress: false
+jobs:
+  acceptance:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate synthetic public-only teacher source
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v107/local_teacher_s03.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v107.local_teacher_s03 import REMOTE
+          compile(REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0],'<remote>','exec')
+          PY
+      - name: Independent model identity, public answer, safe S03 lesson
+        run: python -m nox_runpod.teacher_mesh.v107.local_teacher_s03
+      - name: Mandatory temporary key cleanup
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

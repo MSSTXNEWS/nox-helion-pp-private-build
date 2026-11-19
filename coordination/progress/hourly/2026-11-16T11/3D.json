@@ -1,0 +1,176 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3D_RELAY_RECEIPT_V6",
+  "instructions_version": "0.0.6",
+  "slot": "3D",
+  "recorded_at_utc": "2026-11-16T08:23:02Z",
+  "recorded_at_msk": "2026-11-16T11:23:02+03:00",
+  "scope": "SOURCE_PATCH_AND_REAL_OFFLINE_CHROMIUM_DOM;HOLD_OWNER_HTTP_SSE_E2E",
+  "source_head_before": "e7e8bee988bec2be095fa5db933da6897d3402e0",
+  "source_commits": [
+    "d6ffed1690bf67d9805e3cfc23488c66a388d6e0",
+    "567b6722442610df0b46f0b459927360d98ed069",
+    "4afd9343c0dd800b344b05b3e488465248524139"
+  ],
+  "changed_source": [
+    "coordination/onepass/web29_3d_20261116/site/nox-cinematic-accessibility-3d.css",
+    "coordination/onepass/web29_3d_20261116/integration/stage_original_3d.py",
+    "coordination/onepass/web29_3d_20261116/tests/test_responsive_3d_source.mjs"
+  ],
+  "root_cause": "Original WEB29 mobile chat CSS had min-height:450px!important for chat-conversation even when compact viewport, causing the composer textarea to start below the visible viewport at 320x480, 390x667, 760x480. Fixed sizing only under <=760px width and <=860px height, without changing render pipeline or D02.",
+  "canonical_web_sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
+  "approved_3a_input_sha256": "48fa3a189b100242a3ff965e15da3ef83e426c443e275df03bdaae76dfaf413a",
+  "new_css_git_blob_sha": "d65629a3e35894899a4a3cd983f2499918919030",
+  "new_stage_py_git_blob_sha": "ef2b30218aa62549ca9570a2deb10c3269824f89",
+  "new_test_git_blob_sha": "33935ebc446a7015e567b10860b801d25c659ec4",
+  "staged_source_zip_sha256": "18faa0b933d72f7be3668b541036fab513f69cdbd10e6427fe7a4e2866f734dc",
+  "staged_source_zip_bytes": 84227725,
+  "staged_zip_members": 1214,
+  "source_preservation": {
+    "original_1212_members_retained": true,
+    "zip_crc": "PASS",
+    "d02_shader_sha256": "124a5d341059eb1070adcf58640657aa471ea4888e4409101503ecaa9337f952",
+    "orbit_14_sha256": "3aced1774354b6212b665ef40514e78fb7660a3319fd346c4b12bbf277a39d38",
+    "additional_assets": [
+      "site/nox-motion-idle-loader.js",
+      "site/nox-cinematic-accessibility-3d.css"
+    ],
+    "changed_original_paths_relative_to_3A_preimage": [
+      "site/chat.html",
+      "site/nox-chat.js"
+    ],
+    "changed_original_paths_relative_to_PRIMARY": [
+      "site/chat.html",
+      "site/nox-chat.js",
+      "site/pc/hub.html",
+      "site/pc/menu.html",
+      "site/pc/progress.html",
+      "site/pc/v25/nox-shell-v25.js",
+      "site/pc/world.html",
+      "site/progress.html"
+    ],
+    "note": "Last receipt listed two original path modifications relative to the 3A input, not the canonical primary. Explicitly recorded all eight pre-existing accepted 3A+3D deltas from original to prevent false no-loss assumptions."
+  },
+  "chrome_evidence": {
+    "method": "Chromium Playwright set_content with original WEB29 chat DOM and same-order inline archived CSS; not localhost or OneHost HTTP, script execution not tested",
+    "viewport_pairs": [
+      "320x480",
+      "320x568",
+      "390x667",
+      "390x844",
+      "760x480",
+      "800x480",
+      "1024x600",
+      "1440x900"
+    ],
+    "composer_bottom_px": {
+      "320x480": {
+        "before": 507,
+        "after": 411,
+        "height": 480
+      },
+      "320x568": {
+        "before": 528,
+        "after": 499,
+        "height": 568
+      },
+      "390x667": {
+        "before": 676,
+        "after": 647,
+        "height": 667
+      },
+      "390x844": {
+        "before": 853,
+        "after": 824,
+        "height": 844
+      },
+      "760x480": {
+        "before": 559.8,
+        "after": 463.8,
+        "height": 480
+      }
+    },
+    "desktop_800_1024_1440_unchanged": true,
+    "doc_horizontal_overflow_8_viewports": false,
+    "reduced_motion_button_animation": "none",
+    "node_tests_local": "5/5 PASS",
+    "full_authenticated_browser": false,
+    "actual_ttft_ms": null,
+    "ttft_p95_ms": null
+  },
+  "five_tasks": [
+    {
+      "n": 1,
+      "state": "DONE_SOURCE",
+      "detail": "Full 1212 member preservation and D02/orbit locks confirmed, eight-path canonical source lineage corrected"
+    },
+    {
+      "n": 2,
+      "state": "SOURCE_PRESERVED",
+      "detail": "Previous Motion idle/STOP fixes preserved bitwise, no false model latency claim"
+    },
+    {
+      "n": 3,
+      "state": "DONE_SOURCE_PATCH",
+      "detail": "Fixed compact mobile composer below fold at 320x480,390x667,760x480; no desktop regression"
+    },
+    {
+      "n": 4,
+      "state": "DONE_OFFLINE_BROWSER_HOLD_LIVE",
+      "detail": "8 viewport pairs in real Chromium offline; native owner auth HTTP/SSE/p50/p95 not verified"
+    },
+    {
+      "n": 5,
+      "state": "DONE_SOURCE_STAGE_HOLD_NATIVE",
+      "detail": "Staged 1214-member SHA-pinned candidate, CRC and protected D02 verified; OneHost installation not attempted"
+    }
+  ],
+  "relay_control": [
+    {
+      "lane": "WEIGHTS",
+      "state": "HISTORICAL_NATIVE_8_SUCCESSFUL_UPDATES_CURRENT_UNVERIFIED",
+      "student": "Qwen3.5-9B",
+      "prior_successful_optimizer_updates": 8,
+      "new_verified_updates_current_run": 0,
+      "current_pid": null,
+      "current_loss": null,
+      "checkpoint8_previous_verified": true,
+      "optimizer_scaler_rng_current_readback": null,
+      "independent_offsite_restore_verified": false
+    },
+    {
+      "lane": "KNOWLEDGE",
+      "state": "HOLD_FULL_HUNTER_SOURCE_S03_RECALL",
+      "prior_review_receipts": 3,
+      "new_full_Hunter_source_write_recall_verified": 0
+    },
+    {
+      "lane": "DISPATCHER+RESOURCES",
+      "state": "HISTORICAL_PID_CURRENT_UNKNOWN",
+      "historical_dispatcher_pid": 746352,
+      "historical_observed_at_utc": "2026-11-16T06:15:54Z",
+      "native_worker_pids_current": null,
+      "STOP_current": null,
+      "writer_lease_current": null,
+      "CPU_RAM_GPU_VRAM_SSD_temperature_current": null,
+      "downloads_bytes_this_run": 0,
+      "restarts_this_run": 0,
+      "completed_native_jobs_this_run": 0
+    }
+  ],
+  "native_context": "Latest 3B Notion observation: owner login/session HTTP200 in a separate native browser run but synthetic QA dialog click stalled before native POST; this run did not claim real SSE or memory acceptance.",
+  "cleanup": {
+    "state": "HOLD_NOT_ELIGIBLE",
+    "deleted_files": 0,
+    "freed_bytes": 0,
+    "reason": "Fully accepted DeepSeek serving replacement, independent restore and cleanup lease not verified"
+  },
+  "native_actions": {
+    "server_modified": false,
+    "weights_modified": false,
+    "S03_modified": false,
+    "trainer_restarted": false,
+    "dispatcher_restarted": false,
+    "owner_STOP_changed": false
+  },
+  "next_action": "Native owner V51/STOP/lease/preimage/rollback -> apply accepted WEB29 3A+3D including mobile composer fix -> authentic browser responsive, keyboard, SSE meaningful first token, STOP and S03 -> p50/p95 -> only then promote and cleanup."
+}

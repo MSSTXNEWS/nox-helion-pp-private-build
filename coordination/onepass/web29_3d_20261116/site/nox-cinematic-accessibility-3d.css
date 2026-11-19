@@ -1,0 +1,178 @@
+/* WEB29 3D: preserve D02 shaders/orbits, suppress only decorative metal breathing.
+ * A stronger live !important rule previously overrode reduced motion in Chromium.
+ */
+html:root:root[data-nox-cinema="still"] body:is([data-page],.helion-home)
+  :is(button:not(:disabled),a.graphic-button,a.command-key,a.nox-route-orbit,
+      .home-primary-navigation a.helion-card,.brand-name,.core-name,.eyebrow){
+  animation:none!important;
+}
+/* No contrast-theme or explicit-full exception: OS reduced motion wins.
+ * Four :root pseudo-classes outrank the original live-mode :is() specificity. */
+@media (prefers-reduced-motion: reduce){
+  html:root:root:root:root body:is([data-page],.helion-home)
+    :is(button:not(:disabled),a.graphic-button,a.command-key,a.nox-route-orbit,
+        .home-primary-navigation a.helion-card,.brand-name,.core-name,.eyebrow){
+    animation:none!important;
+    transition-duration:0s!important;
+  }
+}
+
+/* Existing WEB29 tablet grid root-cause (Chromium source render):
+ * base stylesheet moves telemetry into grid-column:1/-1 at <=1399px,
+ * while its one-row minmax(0,1fr) rule collapses messages to 6px.
+ * Keep three original panels, cinematic sources and streaming untouched. */
+@media (min-width:761px) and (max-width:1199px){
+ html body.chat-workspace-v2 .chat-layout{
+  grid-template-columns:145px minmax(0,1fr)!important;
+  grid-template-rows:minmax(260px,1fr) minmax(80px,135px)!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-history-panel{
+  grid-column:1!important;grid-row:1!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-conversation{
+  grid-column:2!important;grid-row:1!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-telemetry-panel{
+  grid-column:1/-1!important;grid-row:2!important;
+  height:135px!important;max-height:135px!important;overflow:auto!important;
+ }
+}
+@media (min-width:1200px) and (max-width:1399px){
+ html body.chat-workspace-v2 .chat-layout > .chat-history-panel{
+  grid-column:1!important;grid-row:1!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-conversation{
+  grid-column:2!important;grid-row:1!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-telemetry-panel{
+  grid-column:3!important;grid-row:1!important;
+ }
+}
+/* WEB29 3D compact-height correction: the original mobile 450px floor
+ * pushed the composer below the visible viewport at 320x480 / 390x667.
+ * Preserve the three original panels and scrollable message list.
+ * Only sizing is changed; tokens, S03, STOP, 14 worlds and animations are not.
+ */
+@media (max-width:760px) and (max-height:860px){
+ html body.chat-workspace-v2 .chat-conversation{
+  height:max(220px,calc(100dvh - 126px))!important;
+  min-height:220px!important;
+ }
+}
+
+/* Compact desktop / landscape regression: when width >=1200px but viewport
+ * height <=600px, WEB29's 420px floor can push the composer below fold.
+ * At 1400px+ the legacy responsive grid also forms an implicit second row,
+ * collapsing the conversation to 6px. Keep all THREE original panels,
+ * one scrollable token pane, and the original cinematic D02 untouched. */
+@media (min-width:1200px) and (max-height:600px){
+ html body.chat-workspace-v2 .chat-layout{
+  height:max(260px,calc(100dvh - 175px))!important;
+  min-height:0!important;
+  grid-template-rows:minmax(0,1fr)!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-history-panel,
+ html body.chat-workspace-v2 .chat-layout > .chat-conversation,
+ html body.chat-workspace-v2 .chat-layout > .chat-telemetry-panel{
+  grid-row:1!important;
+  height:100%!important;min-height:0!important;max-height:100%!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-history-panel{grid-column:1!important;}
+ html body.chat-workspace-v2 .chat-layout > .chat-conversation{grid-column:2!important;}
+ html body.chat-workspace-v2 .chat-layout > .chat-telemetry-panel{grid-column:3!important;}
+ html body.chat-workspace-v2 .chat-conversation #messages{
+  flex:1 1 0!important;min-height:0!important;overflow:auto!important;
+ }
+}
+
+/* Compact landscape tablet: keep the original history/conversation/telemetry
+ * visible within the viewport. Previously the hard 260px+135px rows
+ * overflowed a 480px-high window, obscuring telemetry and causing page scroll.
+ * Only geometry changes; original cinematic D02 and token rendering stay put. */
+@media (min-width:761px) and (max-width:1199px) and (min-height:420px) and (max-height:540px){
+ html body.chat-workspace-v2 .chat-layout{
+  height:max(220px,calc(100dvh - 183px))!important;
+  min-height:0!important;
+  grid-template-rows:minmax(0,1fr) 56px!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-history-panel,
+ html body.chat-workspace-v2 .chat-layout > .chat-conversation{
+  height:100%!important;min-height:0!important;max-height:100%!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-telemetry-panel{
+  height:56px!important;min-height:0!important;max-height:56px!important;
+  overflow-y:auto!important;
+ }
+ html body.chat-workspace-v2 .chat-conversation #messages{
+  flex:1 1 0!important;min-height:0!important;overflow:auto!important;
+ }
+}
+
+/* 3D short landscape: preserve existing three panels and keep command rail
+ * visible in 400-419px-high tablet and 400-600px compact desktop windows.
+ * This is geometry only; original D02/14 worlds and Motion/STOP untouched. */
+@media (min-width:761px) and (max-width:1199px) and (min-height:400px) and (max-height:419px){
+ html body.chat-workspace-v2 .chat-layout{
+  height:max(230px,calc(100dvh - 170px))!important;
+  min-height:0!important;
+  grid-template-rows:minmax(0,1fr) 40px!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-history-panel,
+ html body.chat-workspace-v2 .chat-layout > .chat-conversation{
+  height:100%!important;min-height:0!important;max-height:100%!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-telemetry-panel{
+  height:40px!important;min-height:0!important;max-height:40px!important;
+  overflow-y:auto!important;
+ }
+ html body.chat-workspace-v2 .chat-conversation #messages{
+  flex:1 1 0!important;min-height:0!important;overflow:auto!important;
+ }
+}
+@media (min-width:960px) and (max-width:1199px) and (min-height:400px) and (max-height:419px){
+ html body.chat-workspace-v2 .chat-layout{
+  height:max(220px,calc(100dvh - 180px))!important;
+ }
+}
+@media (min-width:1200px) and (max-width:1399px) and (min-height:400px) and (max-height:600px){
+ html body.chat-workspace-v2 .chat-layout{
+  height:max(200px,calc(100dvh - 180px))!important;
+  min-height:0!important;
+ }
+}
+/* Short landscape WEB29: place three ORIGINAL panels side-by-side while
+ * preserving scrollable transcript and accessible telemetry. Earlier two-row
+ * geometry left only 33–43px for real tokens at 800–1199px x 400–420px.
+ * No changes to D02, 14 worlds, owner/S03/STOP or motion runtime. */
+@media (min-width:761px) and (max-width:1199px) and (max-height:540px){
+ html body.chat-workspace-v2 .chat-layout{
+  grid-template-columns:clamp(98px,15vw,145px) minmax(0,1fr) clamp(120px,16vw,165px)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  height:max(190px,calc(100dvh - 180px))!important;
+  min-height:0!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-history-panel{
+  grid-column:1!important;grid-row:1!important;
+  height:100%!important;min-height:0!important;max-height:100%!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-conversation{
+  grid-column:2!important;grid-row:1!important;
+  height:100%!important;min-height:0!important;max-height:100%!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-telemetry-panel{
+  grid-column:3!important;grid-row:1!important;
+  height:100%!important;min-height:0!important;max-height:100%!important;
+  overflow:auto!important;
+ }
+ html body.chat-workspace-v2 .chat-conversation #messages{
+  flex:1 1 0!important;min-height:0!important;overflow:auto!important;
+ }
+}
+/* Tall mobile original floor sometimes puts the composer 9–13px below
+ * viewport. Keep its full feature set, shrink only the conversation track. */
+@media (max-width:760px) and (min-height:861px){
+ html body.chat-workspace-v2 .chat-conversation{
+  height:max(220px,calc(100dvh - 155px))!important;
+  min-height:220px!important;
+ }
+}

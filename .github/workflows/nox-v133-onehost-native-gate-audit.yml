@@ -1,0 +1,60 @@
+name: NOX V133 source-only OneHost dangerous auto-run audit
+on:
+  push:
+    branches: [nox/e2-v133-native-gates-atomic-20261115, feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - '.github/workflows/nox-v133-onehost-native-gate-audit.yml'
+      - 'coordination/onepass/native_job_gate_audit.py'
+      - 'coordination/onepass/test_native_job_gate_audit.py'
+      - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_inspect_pinned_python_v13.py'
+      - '.github/workflows/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned YAML reader for source-only audit
+        run: python -m pip install -q PyYAML==6.0.2
+      - name: NOX native workflow protection unit tests
+        run: |
+          set -euo pipefail
+          python -m py_compile coordination/onepass/native_job_gate_audit.py
+          python -m unittest -v coordination.onepass.test_native_job_gate_audit
+      - name: V14-2-08 pinned venv audit (source-only, no CUDA or OneHost)
+        run: |
+          set -euo pipefail
+          python -m py_compile nox-control/owner_native_inspect.py nox-control/test_owner_native_inspect_pinned_python_v13.py
+          PYTHONPATH=nox-control python -m unittest -v test_owner_native_inspect_pinned_python_v13
+          echo 'V14_2_08_SOURCE_ONLY=true'
+          echo 'NOX_NATIVE_COMMAND_EXECUTED=false'
+      - name: Enumerate all sensitive NOX2 native jobs and accidental push triggers
+        run: |
+          set -euo pipefail
+          python -m coordination.onepass.native_job_gate_audit --root . --strict --out nox_native_gate_audit.json
+          python - <<'PY'
+          import json
+          r=json.load(open('nox_native_gate_audit.json'))
+          assert r['files_checked'] >= 100
+          assert r['source_only'] and not r['ssh_connection_attempted']
+          assert r['release_state']=='SOURCE_POLICY_PASS'
+          assert r['unsafe_auto_native_count']==0
+          assert r['yaml_parse_errors']==[]
+          print('NOX_V133_GITHUB_NATIVE_SOURCE_AUDITED='+str(r['files_checked']))
+          print('NOX_V133_UNSAFE_AUTO_NATIVE_COUNT='+str(r['unsafe_auto_native_count']))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V133_NATIVE_WORKFLOW_SOURCE_AUDIT
+          path: nox_native_gate_audit.json
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,41 @@
+name: NOX V69 live cold-file and RAM staging inventory (read only)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v69-offload-inventory.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v69-offload
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline syntax
+        run: python3 -m py_compile nox_runpod/teacher_mesh/v69/offload_inventory.py
+      - name: Native selected backup archive candidates, active file handles and RAM capacity
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v69.offload_inventory
+      - name: Guaranteed exact ephemeral SSH key revoke
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: No server mutation
+        if: success()
+        run: echo 'NOX_V69_SOURCE_FILES_UNCHANGED=true'

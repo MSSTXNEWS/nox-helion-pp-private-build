@@ -1,0 +1,18 @@
+{
+  "schema": "NOX_BUDGET_OBSERVER_LOCAL_REVIEW_V1",
+  "candidate": "complete_executor/owner_complete_executor_budget_observe.py",
+  "sha256": "497a402fa18706f5ec8ee1a90b24ce00c795ca83e430cfaba669e63a84e6d844",
+  "bytes": 38021,
+  "base_sha256": "af81aeddc5dade6dda1563a056a4f8965ee6310db63ca4218fa29d0e56c21e89",
+  "syntax_passed": true,
+  "local_assertions": [
+    "old_exact_source_classification",
+    "unapproved_old_source_rejected",
+    "current_source_classification",
+    "two_full_exact_postimages_exported",
+    "export_limit_explicit",
+    "source_drift_explicit"
+  ],
+  "read_only_scope": "Existing supervisor status, proc/sysfs/file reads, SQLite mode=ro/query_only SELECT, local model GET /slots only. No model inference or native mutation.",
+  "native_execution_performed": false
+}

@@ -1,0 +1,336 @@
+{
+  "schema": "NOX_COMPLETE_EXECUTOR_INSTALL_SPEC_V1",
+  "assets": {
+    "ce_runtime_2c4735938dacd2a062ed.py": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+    "ce_runtime_71dd03dee52f1673c297.py": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+    "ce_runtime_f6b2f98ac5c7c291ffef.py": "f6b2f98ac5c7c291ffef009886442302d407921ad12827044443e72e75eb0aae",
+    "ce_runtime_687ea3b3548badf9b7ba.py": "687ea3b3548badf9b7babd8c5d420b5270e0fb4d82a72bcaa9a4cee1be44d306",
+    "ce_runtime_35b0e94f9c883da017e4.py": "35b0e94f9c883da017e444162d1f84b9c0f8ad7bc4c92354bebd12551ae6c3b1",
+    "ce_runtime_d0ff44d4752128c26779.py": "d0ff44d4752128c267799202620c34d2503241dad1f7008f8b3539f49efc18b5",
+    "ce_runtime_119115603be6dba84121.py": "119115603be6dba84121dc2c9c3460482e85fe59f4e5b2598551bcd62ffbdff1",
+    "ce_runtime_7f18d69529582b65f7b8.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
+    "ce_runtime_126c77c1281b74676930.py": "126c77c1281b7467693063bfe33d17c89eb0d553a1e8ff112ae058994e0a30ba",
+    "ce_runtime_485d4a4a571c434afb98.py": "485d4a4a571c434afb98512547a7f2a2198606eb1e168b749ae607aaf3c2133f",
+    "ce_baseline_bb2c543979ad58801d97.source": "bb2c543979ad58801d97290e9edf1fe035435c8e9e5f0ebaced4abf3ecbf9053",
+    "ce_baseline_4d1274059d034bb9b96a.source": "4d1274059d034bb9b96a445e26601d33da54ea309c8a5233df6512a2d546020f",
+    "ce_baseline_d9ec6a8250a167d774ba.source": "d9ec6a8250a167d774ba5090219cfaac3ad2995ddd88228d1abe5514fc9dd791",
+    "ce_baseline_c676fdda4fa47d316eb1.source": "c676fdda4fa47d316eb10572c5718868a01408d450a5a0d91a7133ff20507799",
+    "ce_baseline_8657ad367e6dd25b48ca.source": "8657ad367e6dd25b48ca8d6d7c4a947c0e1b0d4b979d63fbdaaf2a8e9ba5e74c",
+    "ce_baseline_006fc038f43682fa36d2.source": "006fc038f43682fa36d2310f2343c83a42fd28897e7debfbe0d63536ee069729",
+    "ce_baseline_d35064a3fc5707dfc174.source": "d35064a3fc5707dfc174852fc4de5030ee6ea2276fd0a4d06850ffff71ee0c64",
+    "ce_baseline_66a6617d6f582876dbdc.source": "66a6617d6f582876dbdcb9791273c5eca724e3633a65bf1c93ecb4b2f2b14947",
+    "ce_baseline_e3b0c44298fc1c149afb.source": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "ce_baseline_092db7d32a048c1706da.source": "092db7d32a048c1706da5fc4cf1fcb04a33781e23bbe42252ea14f990985b582",
+    "ce_baseline_dc19594b45a7fae32bf9.source": "dc19594b45a7fae32bf9bdde665620c2eec1a29bb02ba03758baa53a8158c509",
+    "ce_baseline_b4ece67144248808a12c.source": "b4ece67144248808a12c7c84450d61a919984ad756f6f15b46e0686c6d65ff96",
+    "ce_baseline_21f8538fec15d39b4dbc.source": "21f8538fec15d39b4dbc875a4087be1c911c60b06ba04e2c682e8810f7b8b8fd",
+    "ce_baseline_3efe025681c3a54cbfac.source": "3efe025681c3a54cbfac10f0da6f20ff7b2e249ed087b8db39d582002f32c080",
+    "ce_baseline_b3c5d26011400b110a1b.source": "b3c5d26011400b110a1b88849c7aebfc0c7d8c636e541f8ab8d89d37ceed0db7",
+    "ce_baseline_f299d32099c25ea1822c.source": "f299d32099c25ea1822c1a10db524b088ec16c38198b7372f362395d39c7c823",
+    "ce_baseline_0fff97b7e758e3e43073.source": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
+    "ce_baseline_fd815f9a743bfcdf6e71.source": "fd815f9a743bfcdf6e71a8ebb035a180c031aa8f0c5e0484164d36aaf309f6cf",
+    "ce_baseline_97c433b8893514f5812b.source": "97c433b8893514f5812b69fd53b0bb1e25d1fcd7b290f35c72407ad54b989667",
+    "ce_baseline_fc5d6c564c651c2abc81.source": "fc5d6c564c651c2abc818005da461711cdfc2c5cedff9146c6db8b12a6037eb5",
+    "ce_baseline_623bfb4ba2d28d3dd3db.source": "623bfb4ba2d28d3dd3dbc5e46852ed5be5c29d516d20a390aed69c2ec5c3089c",
+    "ce_baseline_9201bc3629682a577c80.source": "9201bc3629682a577c80a66c1040ef244b82f89b3b2cab26ce06ba3c95db38b2",
+    "ce_baseline_d6042e38549360ace8f9.source": "d6042e38549360ace8f9136fc2c36e0c195d54666e0dca34944955bf70e9e9c0",
+    "ce_baseline_2860173d8d6ed7147af2.source": "2860173d8d6ed7147af2392f82c5fe4df5880ebc781ad359f15dcb30617fc391",
+    "ce_baseline_970d6681ce5dc57156e2.source": "970d6681ce5dc57156e23746fa8df213eb5746c7a6b19354a0ca864e87830c4f",
+    "ce_baseline_6aa9265942695d2b54b3.source": "6aa9265942695d2b54b33a0192dc1ebfb912277e86c909eeb4f49a1b45477edd",
+    "ce_baseline_8d2070c2f0819e7d1c2b.source": "8d2070c2f0819e7d1c2b5cf2bdb5acb0e9a7f1c027a180ba0528e89ead3f894d",
+    "ce_baseline_60e28219f670a8449a56.source": "60e28219f670a8449a56f6f9ab8641624c424d01447c9d156b1ecf5ce914d1fa",
+    "ce_plans_283ff826ba1180398888.json": "283ff826ba11803988884e35aa6b20dfa3d658e9887059e2e604f05062f5ad4a",
+    "ce_blobs_fa3d69e506d727295094.source": "fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5",
+    "ce_plans_e7c99335a4a790202f22.json": "e7c99335a4a790202f229a41ddd6420cc4f8a0d85765af931e00818eb726b13f",
+    "ce_blobs_f7b69405224c63868b76.source": "f7b69405224c63868b767792d68c3b0d73e2561b37216e2e855ca34ec93d5f2f",
+    "ce_plans_de41f4de77a043c695fe.json": "de41f4de77a043c695fe12ccb3a60a389c4cd112102a9257dbf1c7b47c25d5eb",
+    "ce_blobs_7e625acddd71fe95988e.source": "7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d",
+    "ce_plans_67e819b4ff1b94cc5bdd.json": "67e819b4ff1b94cc5bdd6547702ce5383f5ea8a0cb42a44428a1b7740c147e09",
+    "ce_blobs_b980a61884965f4838f8.source": "b980a61884965f4838f8deafd43dac2ea4642e41dea7870d6a6904ee5a274fc6",
+    "ce_plans_4037501920f2e9f3ea41.json": "4037501920f2e9f3ea41c9b623b8a2aae1c942edb1308a186b1398c646e7bee7",
+    "ce_blobs_06940cb13bd568d4cfaa.source": "06940cb13bd568d4cfaa893aab9e43c6d0b03010163cba13f2f5bf5ea144db00",
+    "ce_plans_9b80e2075b52602ac9e1.json": "9b80e2075b52602ac9e113d9dbe1e2f4458ed555d50abd7623ae5ecb408fb2ee",
+    "ce_blobs_f336c58fb5062aec6d5b.source": "f336c58fb5062aec6d5b4d99986adc0386159bc6013f0429cb2dae88daf7eb81",
+    "ce_contracts_b40696685ca2b7c848a2.json": "b40696685ca2b7c848a233f2d193d3cb57442d6b1046d2488c7d5b29ac1821b7",
+    "ce_manifests_79a8efb2d344479471bd.json": "79a8efb2d344479471bd87f9129e1df3aab198586818a5f001e1e2a3a969336d",
+    "ce_manifests_e040c40bd8ee3d29b0cc.json": "e040c40bd8ee3d29b0ccc2240322975da37cacff73b3752b32a34d5a2a9beacb"
+  },
+  "runtime_paths": {
+    "ce_runtime_2c4735938dacd2a062ed.py": "scripts/owner_autonomy_pool.py",
+    "ce_runtime_71dd03dee52f1673c297.py": "scripts/owner_subagent_dispatcher.py",
+    "ce_runtime_f6b2f98ac5c7c291ffef.py": "scripts/owner_subagent_processes.py",
+    "ce_runtime_687ea3b3548badf9b7ba.py": "scripts/owner_project_executor.py",
+    "ce_runtime_35b0e94f9c883da017e4.py": "scripts/owner_project_test_runner.py",
+    "ce_runtime_d0ff44d4752128c26779.py": "scripts/owner_project_native.py",
+    "ce_runtime_119115603be6dba84121.py": "scripts/owner_project_model_client.py",
+    "ce_runtime_7f18d69529582b65f7b8.py": "scripts/owner_project_model_bridge.py",
+    "ce_runtime_126c77c1281b74676930.py": "scripts/owner_project_planner.py",
+    "ce_runtime_485d4a4a571c434afb98.py": "scripts/owner_subagent_instruction_truth.py"
+  },
+  "package_files": {
+    "plans/283ff826ba11803988884e35aa6b20dfa3d658e9887059e2e604f05062f5ad4a.json": "ce_plans_283ff826ba1180398888.json",
+    "blobs/fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5": "ce_blobs_fa3d69e506d727295094.source",
+    "plans/e7c99335a4a790202f229a41ddd6420cc4f8a0d85765af931e00818eb726b13f.json": "ce_plans_e7c99335a4a790202f22.json",
+    "blobs/f7b69405224c63868b767792d68c3b0d73e2561b37216e2e855ca34ec93d5f2f": "ce_blobs_f7b69405224c63868b76.source",
+    "plans/de41f4de77a043c695fe12ccb3a60a389c4cd112102a9257dbf1c7b47c25d5eb.json": "ce_plans_de41f4de77a043c695fe.json",
+    "blobs/7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d": "ce_blobs_7e625acddd71fe95988e.source",
+    "plans/67e819b4ff1b94cc5bdd6547702ce5383f5ea8a0cb42a44428a1b7740c147e09.json": "ce_plans_67e819b4ff1b94cc5bdd.json",
+    "blobs/b980a61884965f4838f8deafd43dac2ea4642e41dea7870d6a6904ee5a274fc6": "ce_blobs_b980a61884965f4838f8.source",
+    "plans/4037501920f2e9f3ea41c9b623b8a2aae1c942edb1308a186b1398c646e7bee7.json": "ce_plans_4037501920f2e9f3ea41.json",
+    "blobs/06940cb13bd568d4cfaa893aab9e43c6d0b03010163cba13f2f5bf5ea144db00": "ce_blobs_06940cb13bd568d4cfaa.source",
+    "plans/9b80e2075b52602ac9e113d9dbe1e2f4458ed555d50abd7623ae5ecb408fb2ee.json": "ce_plans_9b80e2075b52602ac9e1.json",
+    "blobs/f336c58fb5062aec6d5b4d99986adc0386159bc6013f0429cb2dae88daf7eb81": "ce_blobs_f336c58fb5062aec6d5b.source",
+    "contracts/b40696685ca2b7c848a233f2d193d3cb57442d6b1046d2488c7d5b29ac1821b7.json": "ce_contracts_b40696685ca2b7c848a2.json",
+    "manifests/79a8efb2d344479471bd87f9129e1df3aab198586818a5f001e1e2a3a969336d.json": "ce_manifests_79a8efb2d344479471bd.json",
+    "manifests/e040c40bd8ee3d29b0ccc2240322975da37cacff73b3752b32a34d5a2a9beacb.json": "ce_manifests_e040c40bd8ee3d29b0cc.json"
+  },
+  "expected_native": {
+    "scripts/nox_dispatcher_t855u.py": "9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21",
+    "scripts/owner_subagent_dispatcher.py": "5f134b8b1915851de15318e23885951885ca84d6515ca1e48c56286862830db5",
+    "scripts/owner_subagent_processes.py": "c1d5adfcc83300d749b42f66d50f41d5c62c4df52215e43cfc0b891e7c91101b",
+    "scripts/owner_autonomy_pool.py": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+    "scripts/owner_subagent_instruction_truth.py": "95ba80a1175c545032a13ff0fd8942ebd39280dec3283f244d200527629ad048",
+    "scripts/owner_task_plans.py": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
+    "scripts/owner_component_tasks.py": "190bf9948dbe821b5fe3512e3edbc0a7a9348b14aa2a154274e78f058d5d6d5d",
+    "scripts/owner_resource_policy.py": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+    "config/owner_native_subagents.json": "0a4df8b0c6c4bf0f6175872a8731cccdc3e387aba1e5bd1ab2ef74302c5e8f98"
+  },
+  "protected_processes": {
+    "chat": {
+      "pid": 3266857,
+      "start_ticks": 172046662
+    },
+    "proxy": {
+      "pid": 3703386,
+      "start_ticks": 175609570
+    },
+    "web": {
+      "pid": 3505392,
+      "start_ticks": 173653097
+    }
+  },
+  "source_bootstrap": {
+    "schema": "NOX_PROJECT_SOURCE_BOOTSTRAP_V1",
+    "root": "/root/nox/projects/owner_executor/source_workspace",
+    "files": {
+      "forge_split_guard.py": "ce_baseline_bb2c543979ad58801d97.source",
+      "merge_web_source.py": "ce_baseline_4d1274059d034bb9b96a.source",
+      "native_v29_full_bridge.py": "ce_baseline_d9ec6a8250a167d774ba.source",
+      "nox_runpod/teacher_mesh/v38/durable_runtime.py": "ce_baseline_c676fdda4fa47d316eb1.source",
+      "nox_runpod/teacher_mesh/v38/synaptic_brain.py": "ce_baseline_8657ad367e6dd25b48ca.source",
+      "owner_chat_request_ledger.py": "ce_baseline_006fc038f43682fa36d2.source",
+      "owner_dispatcher_mentor.py": "ce_baseline_d35064a3fc5707dfc174.source",
+      "s03_existing_readback.py": "ce_baseline_66a6617d6f582876dbdc.source",
+      "source_tests/__init__.py": "ce_baseline_e3b0c44298fc1c149afb.source",
+      "source_tests/test_cache_race.py": "ce_baseline_092db7d32a048c1706da.source",
+      "source_tests/test_owner_chat_request_scope.py": "ce_baseline_dc19594b45a7fae32bf9.source",
+      "source_tests/test_request_ledger.py": "ce_baseline_b4ece67144248808a12c.source",
+      "test_3b05_skill_ancestor_swap.py": "ce_baseline_21f8538fec15d39b4dbc.source",
+      "test_forge_split_guard.py": "ce_baseline_3efe025681c3a54cbfac.source",
+      "test_nox_1a03_cursor_admission.py": "ce_baseline_b3c5d26011400b110a1b.source",
+      "test_nox_exchange_receipt_order.py": "ce_baseline_f299d32099c25ea1822c.source",
+      "test_nox_existing_cache_race.py": "ce_baseline_0fff97b7e758e3e43073.source",
+      "test_nox_forge_split_coverage.py": "ce_baseline_fd815f9a743bfcdf6e71.source",
+      "test_nox_merge_overlay_paths.py": "ce_baseline_97c433b8893514f5812b.source",
+      "test_nox_s03_readback_revoke.py": "ce_baseline_fc5d6c564c651c2abc81.source",
+      "test_nox_skill_evidence_strict_json.py": "ce_baseline_623bfb4ba2d28d3dd3db.source",
+      "test_nox_warm_cache_final_revision.py": "ce_baseline_9201bc3629682a577c80.source",
+      "test_nox_work_progress_time_order.py": "ce_baseline_d6042e38549360ace8f9.source",
+      "test_s03_readback_contract.py": "ce_baseline_2860173d8d6ed7147af2.source",
+      "test_work_progress_changes.py": "ce_baseline_970d6681ce5dc57156e2.source",
+      "test_work_progress_durable_write.py": "ce_baseline_6aa9265942695d2b54b3.source",
+      "test_work_progress_pinned_read.py": "ce_baseline_8d2070c2f0819e7d1c2b.source",
+      "work_progress.py": "ce_baseline_60e28219f670a8449a56.source"
+    },
+    "source_refs": [
+      {
+        "repository": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+        "commit": "78ee41fb4ac1e48128fdce2eb25e52d40c70cc15"
+      },
+      {
+        "repository": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+        "commit": "895c5ed3f5e08b8c473e873aed768ac56e60767f"
+      }
+    ],
+    "manifest_sha256": "0db34c871ef80c67dcaeabea6225dfd34aed3b5500be3c2a1a3c78d491d272f2"
+  },
+  "catalog_append": [
+    {
+      "id": "1A03.project.cursor_admission.20261118",
+      "handler": "owner_native_project_work",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "estimated_cost": 2,
+      "title": "Implement request cursor admission through existing local NOX model and protected source tests",
+      "params": {
+        "parent_task_id": "1A03",
+        "contract_sha256": "b40696685ca2b7c848a233f2d193d3cb57442d6b1046d2488c7d5b29ac1821b7"
+      }
+    },
+    {
+      "id": "3A02.project.readback_revoke.20261118",
+      "handler": "owner_native_project_work",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "estimated_cost": 1,
+      "title": "Observed owner revocation during connection entry prevents the SQL read.",
+      "params": {
+        "parent_task_id": "3A02",
+        "plan_sha256": "283ff826ba11803988884e35aa6b20dfa3d658e9887059e2e604f05062f5ad4a"
+      }
+    },
+    {
+      "id": "3A03.project.cache_revision_lock.20261118",
+      "handler": "owner_native_project_work",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "estimated_cost": 1,
+      "title": "Final native revision lookup runs outside the cache mutex; revocation completes and fences the result.",
+      "params": {
+        "parent_task_id": "3A03",
+        "plan_sha256": "e7c99335a4a790202f229a41ddd6420cc4f8a0d85765af931e00818eb726b13f"
+      }
+    },
+    {
+      "id": "6V14-04.project.receipt_time_order.20261118",
+      "handler": "owner_native_project_work",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "estimated_cost": 1,
+      "title": "Latest receipt ordering compares actual timezone-aware instants before applying the limit.",
+      "params": {
+        "parent_task_id": "6V14-04",
+        "plan_sha256": "de41f4de77a043c695fe12ccb3a60a389c4cd112102a9257dbf1c7b47c25d5eb"
+      }
+    },
+    {
+      "id": "3B05.project.strict_skill_json.20261118",
+      "handler": "owner_native_project_work",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "estimated_cost": 1,
+      "title": "Duplicate keys and nonfinite JSON cannot certify skill journal or marker evidence.",
+      "params": {
+        "parent_task_id": "3B05",
+        "plan_sha256": "67e819b4ff1b94cc5bdd6547702ce5383f5ea8a0cb42a44428a1b7740c147e09"
+      }
+    },
+    {
+      "id": "4A02.project.forge_split_coverage.20261118",
+      "handler": "owner_native_project_work",
+      "queue_id": "Q3_TRAINING_WEIGHTS",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "estimated_cost": 1,
+      "title": "Every independent train/dev/holdout split includes all required task categories.",
+      "params": {
+        "parent_task_id": "4A02",
+        "plan_sha256": "4037501920f2e9f3ea41c9b623b8a2aae1c942edb1308a186b1398c646e7bee7"
+      }
+    },
+    {
+      "id": "0V14-14.project.overlay_paths.20261118",
+      "handler": "owner_native_project_work",
+      "queue_id": "Q4_INTEGRATION_ACCEPTANCE",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "estimated_cost": 1,
+      "title": "Overlay manifest paths cannot escape the output root or import a symlinked foreign source.",
+      "params": {
+        "parent_task_id": "0V14-14",
+        "plan_sha256": "9b80e2075b52602ac9e113d9dbe1e2f4458ed555d50abd7623ae5ecb408fb2ee"
+      }
+    }
+  ],
+  "project_executor": {
+    "schema": "NOX_PROJECT_EXECUTOR_CONFIG_V1",
+    "enabled": true,
+    "max_workers": 3,
+    "package_root": "/root/nox/state/dispatcher/project_executor/package",
+    "state_root": "/root/nox/state/dispatcher/project_executor/run",
+    "roots": {
+      "NOX_PROJECT_SOURCE": {
+        "path": "/root/nox/projects/owner_executor/source_workspace",
+        "integration_kind": "SOURCE_WORKSPACE",
+        "allowed_paths": [
+          "forge_split_guard.py",
+          "merge_web_source.py",
+          "native_v29_full_bridge.py",
+          "nox_runpod/teacher_mesh/v38/durable_runtime.py",
+          "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "owner_chat_request_ledger.py",
+          "owner_dispatcher_mentor.py",
+          "s03_existing_readback.py",
+          "source_tests/__init__.py",
+          "source_tests/test_cache_race.py",
+          "source_tests/test_owner_chat_request_scope.py",
+          "source_tests/test_request_ledger.py",
+          "test_3b05_skill_ancestor_swap.py",
+          "test_forge_split_guard.py",
+          "test_nox_1a03_cursor_admission.py",
+          "test_nox_exchange_receipt_order.py",
+          "test_nox_existing_cache_race.py",
+          "test_nox_forge_split_coverage.py",
+          "test_nox_merge_overlay_paths.py",
+          "test_nox_s03_readback_revoke.py",
+          "test_nox_skill_evidence_strict_json.py",
+          "test_nox_warm_cache_final_revision.py",
+          "test_nox_work_progress_time_order.py",
+          "test_s03_readback_contract.py",
+          "test_work_progress_changes.py",
+          "test_work_progress_durable_write.py",
+          "test_work_progress_pinned_read.py",
+          "work_progress.py"
+        ],
+        "deny_paths": []
+      }
+    },
+    "sandbox": {
+      "backend": "chroot_seccomp",
+      "python": "/usr/bin/python3.12",
+      "python_sha256": "1396795801a792fc4a0faa7a47762751e85c76293b4fd925f32c49e27c0f978a",
+      "stdlib": "/usr/lib/python3.12",
+      "uid": 65534,
+      "gid": 65534,
+      "memory_mb": 256
+    },
+    "source_pins": {
+      "owner_project_executor.py": "687ea3b3548badf9b7babd8c5d420b5270e0fb4d82a72bcaa9a4cee1be44d306",
+      "owner_project_test_runner.py": "35b0e94f9c883da017e444162d1f84b9c0f8ad7bc4c92354bebd12551ae6c3b1"
+    },
+    "model": {
+      "expected_model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+      "max_tokens": 900,
+      "lock_path": "/root/nox/state/dispatcher/project_model_slot.lock",
+      "source_pins": {
+        "owner_project_model_client.py": "119115603be6dba84121dc2c9c3460482e85fe59f4e5b2598551bcd62ffbdff1",
+        "owner_project_model_bridge.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
+        "owner_project_planner.py": "126c77c1281b7467693063bfe33d17c89eb0d553a1e8ff112ae058994e0a30ba"
+      }
+    },
+    "dependency_manifest": {
+      "path": "/root/nox/state/dispatcher/project_executor/package/manifests/79a8efb2d344479471bd87f9129e1df3aab198586818a5f001e1e2a3a969336d.json",
+      "sha256": "79a8efb2d344479471bd87f9129e1df3aab198586818a5f001e1e2a3a969336d"
+    }
+  },
+  "startup_observe_seconds": 45
+}

@@ -1,0 +1,25 @@
+{
+  "schema": "NOX_SOURCE_CAP3_PATCH_VERIFICATION_V1",
+  "instructions_version": "0.0.6",
+  "native_preimage_sha256": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
+  "candidate_sha256": "a553f32027d8740450d15ff06b3ddcbde87a184ce803088865d008b38945c52a",
+  "test_sha256": "f98da0329c5f985babc9bfe2e9e48e9888e35f677bd0229d8f7e39f84bc478a0",
+  "source_tests": {
+    "framework": "Python unittest",
+    "passed": 6,
+    "failed": 0,
+    "native_process_attestation": false
+  },
+  "baseline_regressions": {
+    "ran": 2,
+    "failed_as_expected": 2,
+    "scenarios": [
+      "explicit cap3 NORMAL and BOOST",
+      "global fourth claim blocked across plans"
+    ]
+  },
+  "runtime_installation": "NOT_PERFORMED_BY_THIS_AGENT",
+  "policy_field": "config/owner_task_lifecycle.json parallelism.global_cap=3",
+  "existing_plan_hash_migration": "not performed; retain source pin HOLD rather than silently accepting changed source",
+  "source_only": true
+}

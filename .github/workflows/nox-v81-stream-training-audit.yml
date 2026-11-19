@@ -1,0 +1,34 @@
+name: NOX V81 native chat streaming and training step diagnosis
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v81-stream-training-audit.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v81-stream-train-readonly
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compile audit
+        run: python3 -m py_compile nox_runpod/teacher_mesh/v81/stream_training_audit.py
+      - name: Inspect native streaming and training without mutation
+        run: python3 -m nox_runpod.teacher_mesh.v81.stream_training_audit
+      - name: Revoke exact SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

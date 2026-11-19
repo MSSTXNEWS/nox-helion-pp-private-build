@@ -1,0 +1,44 @@
+name: NOX V63 live model pointer and interpreter environments (read only)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v63-runtime-paths-audit.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v63-runtime-interpreters-readonly
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Syntax test
+        run: python3 -m py_compile nox_runpod/teacher_mesh/v63/runtime_paths_audit.py
+      - name: Read symlink model and NOX Python interpreters without training
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v63.runtime_paths_audit
+      - name: Guaranteed temporary SSH key revoke
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Source evidence scope
+        if: success()
+        run: |
+          echo "RUNTIME_PACKAGE_AUDIT_NATIVE=true"
+          echo "MODEL_WEIGHTS_NOT_LOADED_BY_AUDIT=true"
+          echo "NO_MODEL_INSTALLATION=true"

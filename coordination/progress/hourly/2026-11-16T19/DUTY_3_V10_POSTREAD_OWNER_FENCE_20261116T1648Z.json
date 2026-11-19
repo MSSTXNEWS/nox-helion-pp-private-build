@@ -1,0 +1,107 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_NATIVE_GATED_RELAY",
+  "instructions_version": "0.0.6",
+  "slot": "DUTY_3",
+  "timezone": "Europe/Moscow",
+  "at_utc": "2026-11-16T16:48:00Z",
+  "at_msk": "2026-11-16T19:48:00+03:00",
+  "instance_id": 60509551,
+  "branch": "feature/nox-v38-synaptic-brain-20261114",
+  "root_cause": "The existing owner-leased DeepSeek HTTP Range handler checked STOP and lease before a blocking socket read, then appended the returned chunk without rechecking; a STOP or revoked/expired lease arriving during read could write up to CHUNK bytes afterward. Old test explicitly expected 6 post-STOP bytes.",
+  "fix": "Recheck original owner STOP and exact owner lease immediately after each response.read and before output.write, fail closed with zero appended bytes if either changed. No new worker/backend or server access.",
+  "source": {
+    "path": "nox-control/deepseek_owner_range_v10.py",
+    "commit": "78479255deaa6b0ab17c89e84fde90303c6011c6",
+    "preimage_blob_sha1": "ffa46b0f6e7ed9fed00e622449b07e3f756466fc",
+    "after_blob_sha1": "cc028f352dcc72fb13b8da9b9142af5acac3de54"
+  },
+  "regression": {
+    "path": "nox-control/test_deepseek_owner_range_v10.py",
+    "commit": "a0e8a26dc768d927bb9bfd7650d384aaca0f2843",
+    "preimage_blob_sha1": "cc16cc8ce5070d89b342ddf6c1b4316c2165c8ac",
+    "after_blob_sha1": "4f9d144ab52551cb1f5689c850307886fb422251",
+    "cases": [
+      "STOP arrives during final Range read: .part remains zero bytes",
+      "Lease expires during Range read: .part remains zero bytes"
+    ],
+    "tested_exact_commit": "a0e8a26dc768d927bb9bfd7650d384aaca0f2843",
+    "source_ci": {
+      "run_id": 43911145588,
+      "job_id": 133453046802,
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43911145588",
+      "conclusion": "success",
+      "source_tests": "38 DeepSeek + 4 Maya compatibility + 16 Maya preflight (other fixture tests also run)"
+    }
+  },
+  "task_outcomes": [
+    {
+      "task_id": "S2-07",
+      "status": "SOURCE_TESTED",
+      "native_status": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "claim": "SOURCE_ONLY_NO_NATIVE_DOWNLOAD",
+      "reason": "Owner STOP/revoked lease fence repaired in source and tested; physical placement still absent"
+    },
+    {
+      "task_id": "S1-01",
+      "status": "HOLD",
+      "reason": "Prior owner-auth native read-only evidence 2026-11-16T16:31:59Z; no new owner-native snapshot in this slot; current PID/start_ticks UNKNOWN"
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD",
+      "reason": "Owner STOP/maintenance PRESENT at prior 16:31:59Z; writer lease UNKNOWN; no claims or recovery attempted"
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD",
+      "reason": "Independent externally-restorable S03, history, Genesis and unique optimizer/scaler/RNG checkpoint not proven"
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD",
+      "reason": "Maya pinned ELF verified historically but no full model placement, real two-V100 inference or original Resonance RU/ES SSE/STOP/S03 tested"
+    }
+  ],
+  "last_native_readonly": {
+    "observed_utc": "2026-11-16T16:31:59Z",
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803/job/133443213794",
+    "instance_status": "running",
+    "owner_stop": "PRESENT",
+    "maintenance": "PRESENT",
+    "supervisor": "5_STOPPED",
+    "listener_8081": "ABSENT",
+    "trainer_pid": null,
+    "dispatcher_pid": null,
+    "os_workers_verified": 0,
+    "gpu0_used_mib": 0,
+    "gpu1_used_mib": 0,
+    "ssd_total_bytes": 183609851904,
+    "ssd_free_bytes": 43158827008,
+    "shm_free_bytes": 3366711296,
+    "rclone_remotes": 0,
+    "writer_lease": "UNKNOWN",
+    "stale_not_current": true
+  },
+  "WEIGHTS": {
+    "successful_optimizer_updates_this_slot": 0,
+    "holdout": null,
+    "checkpoint_readback": null,
+    "new_model_accepted": false
+  },
+  "KNOWLEDGE": {
+    "hunter_licensed_s03_write_readback_recall_this_slot": 0,
+    "owner_auth_skill_callback": "HOLD_NATIVE"
+  },
+  "DISPATCHER_RESOURCES": {
+    "server_claims_this_slot": 0,
+    "server_pids_verified_this_slot": 0,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "native_restarts": 0,
+    "manual_stop_cleared": false
+  },
+  "rollback": "Exact prior two source blobs using fresh GitHub CAS only; runtime untouched; no native rollback required.",
+  "handoff_to": "DUTY_1",
+  "next_first_ready": "S2-07 owner-auth independent restore, genuinely seekable storage >=248834257920 bytes plus reserve, fresh original STOP/writer lease; single native Range claim then SHA/Maya/original Resonance RU+ES E2E.",
+  "caution": "Source CI does NOT prove installed/server-side STOP semantics; no signed native proof of current process identity or new model"
+}

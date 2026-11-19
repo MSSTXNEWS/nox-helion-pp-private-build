@@ -1,0 +1,43 @@
+name: NOX V35 knowledge map source gate
+on:
+  pull_request:
+    paths:
+      - 'nox_runpod/teacher_mesh/v35/**'
+      - '.github/workflows/nox-v35-knowledge-ci.yml'
+  push:
+    branches:
+      - 'feature/nox-v35-knowledge-cortex-map-20261113'
+permissions:
+  contents: read
+jobs:
+  source_contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile source-only adapters
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v35/knowledge_bridge_v35.py
+          python -m py_compile nox_runpod/teacher_mesh/v35/s03_native_import_v35.py
+          python -m py_compile nox_runpod/teacher_mesh/v35/verify_knowledge_pack_v35.py
+      - name: Verify fail-closed S03 admission with local data only
+        run: |
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          p=Path('nox_runpod/teacher_mesh/v35/s03_native_import_v35.py')
+          s=importlib.util.spec_from_file_location('nox_v35_import',p)
+          m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
+          v={'event_id':'e1','segment':'M3','source_uri':'https://docs.google.com/document/d/test/edit','content':'data only','verified':False,'requires_manual_review':True}
+          kw={'tenant':'tn','principal':'me','chat_id':'chat','owner_receipt':'signed-host-only'}
+          hold=m.prepare([v],native_authorize=lambda *a:False,native_stop=lambda:False,**kw)
+          assert hold['state']=='HOLD_STOP_OR_OWNER_DENIED'
+          stop=m.prepare([v],native_authorize=lambda *a:True,native_stop=lambda:True,**kw)
+          assert stop['state']=='HOLD_STOP_OR_OWNER_DENIED'
+          accepted=m.prepare([v],native_authorize=lambda *a:True,native_stop=lambda:False,**kw)
+          assert accepted['state']=='PREPARED_UNVERIFIED_NOT_WRITTEN'
+          assert accepted['items'][0]['verified'] is False
+          print('SOURCE CONTRACT PASS; NO S03 WRITE OR MODEL TRAINING')
+          PY

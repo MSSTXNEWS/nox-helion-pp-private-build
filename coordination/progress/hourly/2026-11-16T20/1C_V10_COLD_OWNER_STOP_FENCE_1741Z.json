@@ -1,0 +1,81 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_1C",
+  "at_utc": "2026-11-16T17:41:13Z",
+  "at_msk": "2026-11-16T20:41:13+03:00",
+  "source_base_commit": "12aa867027a7ad2d19ad51657bd4ed87bcf3c44e",
+  "source_patch_commit": "f3521edfa99b6941ac034f0300f0fa9c2f34ebcb",
+  "ci_fixture_patch_commit": "2038aa0cc53180347ae9089d1401dd0235a092af",
+  "source_blob_before": "2f9f5764312237a2c1f861fbe7a1a8a850da3ee9",
+  "source_blob_after": "67171e2fc5c98dd896fde27fa61b352b5690c429",
+  "tests_blob_before": "1162b75c397f939ab85e0e34fc6fdfc5613e946d",
+  "tests_blob_after": "5071d20ec27dccb192c31cc478451958862a6f9c",
+  "source_ci": {
+    "status": "SUCCESS",
+    "run_id": 43920789089,
+    "job_id": 133487199247,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43920789089",
+    "tests_passed": 93,
+    "tests_total": 93,
+    "new_tests": 4,
+    "kind": "OFFLINE_FIXTURE_SOURCE_ONLY"
+  },
+  "previous_failed_ci": {
+    "run_id": 43920280050,
+    "status": "FAIL",
+    "reason": "Unprivileged GitHub runner could not stat /root/nox owner STOP aliases; application correctly held; fixture parent directories prepared in isolated CI only"
+  },
+  "root_cause": "Original cold storage used Path.exists()/is_symlink() so unreadable STOP aliases could be mistaken for absent; externally passed range stop_probe could replace original STOP checks and did not cover OWNER_MODEL_UPDATE.",
+  "repair": "All original STOP aliases+maintenance lstat checked fail-closed; range callback additive only; read-only storage audit now holds unreadable controls. No owner auth or default schedule change.",
+  "rollback": "Reverse exact source/test/workflow blob changes with CAS after fresh HEAD. No native rollback required because no live deployment.",
+  "task_outcomes": [
+    {
+      "id": "S2-STORAGE-CAPACITY",
+      "status": "HOLD_NATIVE",
+      "evidence": "last 2026-11-16T16:48:21Z readback: SSD total 183609851904 B vs unique DeepSeek 248834257920 B, insufficient; no fresh quota"
+    },
+    {
+      "id": "S2-STORAGE-REMOTE",
+      "status": "HOLD_NATIVE",
+      "evidence": "last readback rclone remotes []; no authorized PC/Drive seekable mount or IAM"
+    },
+    {
+      "id": "S2-STORAGE-TRANSFER",
+      "status": "HOLD_NATIVE",
+      "evidence": "owner writer lease unknown and OWNER_STOP+MAINTENANCE present at last readback; no OneHost write/read/SHA"
+    },
+    {
+      "id": "S2-STORAGE-SEEKABLE",
+      "status": "SOURCE_TESTED_LIVE_HOLD",
+      "evidence": "custom stop probe cannot bypass owner STOP/MAINTENANCE in verified range; four new regressions and 93/93 fixture CI"
+    },
+    {
+      "id": "S2-STORAGE-ADMISSION",
+      "status": "SOURCE_TESTED_LIVE_HOLD",
+      "evidence": "unreadable owner flags fail closed even in read-only metadata scan; no current owner quota/lease proof"
+    }
+  ],
+  "native": {
+    "instance_id": 60509551,
+    "last_readonly_observed_at_utc": "2026-11-16T16:48:21Z",
+    "last_readonly_job_id": 133453659138,
+    "owner_stop_prior": "PRESENT",
+    "maintenance_prior": "PRESENT",
+    "writer_lease": "UNKNOWN",
+    "new_pid_start_ticks": [],
+    "new_native_job_ids": [],
+    "new_optimizer_updates": 0,
+    "independent_restore_verified": false,
+    "new_s03_hunter_recalls": 0,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0,
+    "model_promoted": false,
+    "native_installed": false
+  },
+  "WEIGHTS": "0 new verified successful updates; old Qwen lineage not renewed under V10",
+  "KNOWLEDGE": "0 new Hunter -> licensed source -> owner S03 write/readback/recall",
+  "DISPATCHER_RESOURCES": "0 new PID/start_ticks, claims, downloads, deletions or restarts; writer lease UNKNOWN; historical owner STOP PRESENT",
+  "next": "Fresh authorized OneHost read-only STOP/lease, external seekable capacity >= 248834257920 B + reserve and independent optimizer/S03 restore; under valid owner fence one resumable download claim for missing DeepSeek shards, then Maya+original Resonance SSE/STOP/S03 acceptance."
+}

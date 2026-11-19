@@ -1,0 +1,91 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2D",
+  "at_utc": "2026-11-16T16:02:03.785Z",
+  "at_msk": "2026-11-16T19:02:03.785+03:00",
+  "instance_id": 60509551,
+  "source_head_observed": "b057ad5a3aadf3296e5325a11dee1fb8bd0d04fa",
+  "source_patch_commits": [
+    "56a9c1e3334c776fa579c92086bc4faf5f88c57d",
+    "5fa069fce16f9d3d05fff37ea9d02cd7d5d4cdfb",
+    "dec35fc44d9cfd369a23aa9b812d00a3fd540acf"
+  ],
+  "source_readback": {
+    "code": "nox-control/maya_launch_preflight_v1.py",
+    "code_blob_sha": "20688930feec17d4d3f5464ff4bfe7eed802bdcb",
+    "test": "nox-control/test_maya_ds4_launch_preflight_v1.py",
+    "test_blob_sha": "433e081049ef8784c06510404dbe223a3f8be05a"
+  },
+  "ci": {
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43902631052",
+    "conclusion": "SUCCESS",
+    "scope": "SOURCE_ONLY",
+    "test_batches": [
+      31,
+      4,
+      10,
+      10
+    ],
+    "tests_total": 55,
+    "exact_new_regression": "test_unknown_stop_or_malformed_native_attestations_hold_without_exception",
+    "previous_failed_ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43902029879",
+    "failure_repaired": "literal escaped newline SyntaxError in existing Maya launch test"
+  },
+  "task_results": [
+    {
+      "id": "S3-04",
+      "state": "SOURCE_TESTED",
+      "native_state": "HOLD",
+      "root_cause": "Maya source preflight treated unknown/falsey owner STOP as no STOP and malformed GPU or tensor attestations raised exceptions",
+      "fix": "Fail closed on non-boolean STOP, non-2-int GPU identities, unexpected tensor types and unhashable file path receipts",
+      "proof": "SOURCE code/test readback plus exact 55/55 CI; not model inference",
+      "rollback": "GitHub CAS revert exact source blob after reconciling concurrent edits; no native rollback necessary"
+    },
+    {
+      "id": "S1-03",
+      "state": "HOLD",
+      "native_state": "STOP_OWNER_MODEL_UPDATE_HISTORICAL__WRITER_LEASE_UNKNOWN",
+      "reason": "No current owner lease/PID/start_ticks verified in this slot; preserve existing owner STOP"
+    },
+    {
+      "id": "S2-07",
+      "state": "HOLD",
+      "native_state": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "reason": "Five unique DeepSeek payloads absent on verified seekable owner media, zero authenticated rclone remotes",
+      "missing_payload_bytes": 248828477216,
+      "unique_total_bytes": 248834257920,
+      "historical_ssd_total_bytes": 183609851904,
+      "historical_ssd_free_bytes": 43158855680
+    },
+    {
+      "id": "S1-07",
+      "state": "HOLD",
+      "native_state": "HOLD_INDEPENDENT_RESTORE",
+      "reason": "No verified offsite readback+restore of S03/Genesis and unique model optimizer/scaler/RNG in this slot"
+    },
+    {
+      "id": "S2-10",
+      "state": "HOLD",
+      "native_state": "HOLD_NEW_MODEL_PREPOST_BENCH",
+      "reason": "DeepSeek complete weights and Maya live inference not admitted; fixed RU/ES/code/anti-forgetting before/after invalid"
+    }
+  ],
+  "native_evidence_historical": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43893252400"
+  ],
+  "native_owner_stop_at_last_verified": "PRESENT_OWNER_MODEL_UPDATE",
+  "writer_lease_current": null,
+  "current_pids_start_ticks": null,
+  "gpu_current": null,
+  "downloaded_bytes_this_slot": 0,
+  "deleted_bytes_this_slot": 0,
+  "server_restarts_this_slot": 0,
+  "native_claims_this_slot": 0,
+  "optimizer_successful_updates_this_slot": 0,
+  "checkpoint_restore_this_slot": false,
+  "hunter_s03_recalls_this_slot": 0,
+  "merged_model_this_slot": false,
+  "next_owner": "Existing native owner to verify current STOP/lease, independently restored unique backups, and authenticated >=248828477216B seekable storage + reserve; keep STOP until authorized staged Maya inference and full Resonance RU/ES SSE/STOP/S03 test"
+}

@@ -1,0 +1,103 @@
+name: NOX Catalog Recover Oversized or Moved Sources
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths: ['.github/workflows/nox-catalog-recover-sources.yml']
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/nox-catalog-recover-sources.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  recover-real-upstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        no: [10,20,25,34,46,59,70,74,105,108,110,111,115]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/nox-teacher-mycelium-20261112
+      - name: Fetch official source distribution or pinned GitHub snapshot
+        shell: bash
+        env:
+          NOX_NO: ${{ matrix.no }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import os,urllib.request,urllib.parse,json,zipfile,tarfile,hashlib,base64,time,pathlib
+          no=int(os.environ["NOX_NO"]);root=pathlib.Path(f"NOX_CATALOG_RECOVERY_{no}");root.mkdir(exist_ok=True)
+          sources=root/"sources";sources.mkdir(exist_ok=True)
+          selection={
+          10:("pypi","argilla"),20:("pypi","deepspeed"),25:("pypi","alpaca-eval"),34:("pypi","llama-index-core"),
+          46:("github","moby/moby"),59:("npm","three"),70:("github","vectorize-io/hindsight"),74:("github","joonspk-research/generative_agents"),
+          105:("npm","motion"),108:("npm","tsparticles"),110:("npm","@babylonjs/core"),111:("npm","playcanvas"),115:("github","rive-app/rive-wasm")}
+          kind,ref=selection[no]
+          def req(url,auth=False):
+              headers={"User-Agent":"NOX-Source-Recovery/1.0","Accept":"application/vnd.github+json"}
+              if auth and os.environ.get("GH_TOKEN"):headers["Authorization"]="Bearer "+os.environ["GH_TOKEN"]
+              return urllib.request.Request(url,headers=headers)
+          def api(url,auth=False):
+              with urllib.request.urlopen(req(url,auth),timeout=45) as r:return json.load(r)
+          def download(url,dst,max_bytes=1_500_000_000):
+              temp=dst.with_suffix(dst.suffix+".partial");h=hashlib.sha256();n=0
+              try:
+                  with urllib.request.urlopen(req(url),timeout=240) as r,temp.open("wb") as f:
+                      for b in iter(lambda:r.read(4*1024*1024),b''):
+                          n+=len(b)
+                          if n>max_bytes:raise RuntimeError("exceeded 1.5GB safety cap")
+                          f.write(b);h.update(b)
+                  if n<100:raise RuntimeError("truncated archive")
+                  if zipfile.is_zipfile(temp):
+                      with zipfile.ZipFile(temp) as z:
+                          if z.testzip() is not None: raise RuntimeError("corrupt zip")
+                  elif tarfile.is_tarfile(temp):
+                      with tarfile.open(temp,"r:*") as t:
+                          if not t.getmembers():raise RuntimeError("empty tar")
+                  else:raise RuntimeError("unexpected non-archive response")
+                  temp.replace(dst);return n,h.hexdigest()
+              finally:temp.unlink(missing_ok=True)
+          result={"number":no,"source":ref,"source_type":kind,"status":"FAILED"}
+          try:
+              if kind=="github":
+                  data=api("https://api.github.com/repos/"+ref,True)
+                  branch=data["default_branch"]
+                  commit=api("https://api.github.com/repos/"+ref+"/commits/"+urllib.parse.quote(branch,safe=""),True)["sha"]
+                  download_url="https://codeload.github.com/"+ref+"/zip/"+commit
+                  dest=sources/f"NOX_{no}_{ref.replace('/','_')}_{commit[:12]}.zip"
+                  result.update({"pinned_commit":commit,"branch":branch,"kind":"GITHUB_FULL_TREE_SNAPSHOT"})
+                  external_digest=None
+              elif kind=="pypi":
+                  data=api("https://pypi.org/pypi/"+urllib.parse.quote(ref)+"/json")
+                  choices=[p for p in data["urls"] if p["packagetype"]=="sdist"]
+                  if not choices:raise RuntimeError("No source distribution")
+                  entry=choices[0];download_url=entry["url"]
+                  dest=sources/f"NOX_{no}_{entry['filename']}"
+                  external_digest=entry["digests"]["sha256"]
+                  result.update({"version":data["info"]["version"],"kind":"PYPI_SOURCE_DISTRIBUTION_NOT_FULL_GIT_REPO"})
+              elif kind=="npm":
+                  data=api("https://registry.npmjs.org/"+urllib.parse.quote(ref,safe="@/")+"/latest")
+                  download_url=data["dist"]["tarball"]
+                  dest=sources/f"NOX_{no}_{ref.replace('/','_').replace('@','')}_{data['version']}.tgz"
+                  external_digest=None
+                  result.update({"version":data["version"],"kind":"NPM_PACKAGE_TARBALL_NOT_FULL_GIT_REPO"})
+              result["upstream_download_url"]=download_url
+              n,h=download(download_url,dest)
+              if external_digest and h!=external_digest:raise RuntimeError("PyPI source SHA256 mismatch")
+              result.update({"status":"DOWNLOADED_VERIFIED","bytes":n,"sha256":h,"file":dest.relative_to(root).as_posix()})
+          except Exception as exc:result["error"]=str(exc)[:300]
+          (root/"RESULT.json").write_text(json.dumps(result,indent=2,ensure_ascii=False)+"\n")
+          print("NOX_RECOVERY",no,result["status"],result.get("bytes",0),result.get("error",""))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_RECOVERY_${{ matrix.no }}
+          path: NOX_CATALOG_RECOVERY_${{ matrix.no }}/
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0

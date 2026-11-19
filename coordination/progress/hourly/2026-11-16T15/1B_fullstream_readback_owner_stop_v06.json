@@ -1,0 +1,64 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_SLOT_1B_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "1B",
+  "at_utc": "2026-11-16T12:32:34Z",
+  "at_msk": "2026-11-16T15:32:34+03:00",
+  "head_before": "17410611a008a76523bc4b9a6d3021391594c64b",
+  "source_preimages": {
+    "nox-control/nox_cold_drive.py": "ce9478d8023b32b885f3b43baea1ce3af4316ee4",
+    "nox-control/test_nox_cold_drive.py": "e9d9c6a4965f9047db0c394e76997f733db88544"
+  },
+  "error_id": "NOX-P0-1B-FULL-REMOTE-READBACK-STOP-STARVATION-20261116",
+  "root_cause": "Existing stream_sha256 used 1s select with no owner STOP probe and one blocking p.wait after EOF; complete offsite readback could continue despite manual STOP, and TimeoutExpired escaped as untyped exception.",
+  "fix": "Reuse canonical OWNER_STOP_PATHS via assert_owner_stop_clear before rclone, during every 200ms streaming slice, after stdout EOF while waiting child, and prior to reporting SHA; discard stderr to DEVNULL; bounded size and timeout validation; signal only own child.",
+  "paths_changed": [
+    "nox-control/nox_cold_drive.py",
+    "nox-control/test_nox_cold_drive.py"
+  ],
+  "status": "SOURCE_PATCH_COMMITTED_CI_PENDING",
+  "native_status": "HOLD_NO_OWNER_NATIVE_WRITER_LEASE",
+  "source_test_added": 4,
+  "tasks": [
+    {
+      "task": 1,
+      "status": "HOLD",
+      "detail": "Existing sm70 Maya CUDA12.4 build historically reported; no fresh native hash, cgroup, driver or binary identity to revalidate"
+    },
+    {
+      "task": 2,
+      "status": "HOLD_NOT_REPEATED",
+      "detail": "Pinned Maya build previously staged; unchanged source SHA and no native deployment lease; avoid duplicate build"
+    },
+    {
+      "task": 3,
+      "status": "SOURCE",
+      "detail": "Existing bounded <=1MiB Range function retained; strengthened the full offsite stream SHA readback that its cold-store path relies on; no FUSE, new backend or download"
+    },
+    {
+      "task": 4,
+      "status": "SOURCE",
+      "detail": "Four new offline fixture tests preflight STOP, stalled stream STOP, post-EOF STOP, post-EOF timeout. CI result must be attached separately"
+    },
+    {
+      "task": 5,
+      "status": "HOLD",
+      "detail": "No verified live Drive Range, model placement or identical before/after TTFT TPS; speed improvement not claimed"
+    }
+  ],
+  "WEIGHTS": "HOLD: latest canonical historical Qwen3.5-9B checkpoint25/25 successful updates only; 0 fresh updates, full optimizer/scaler/RNG restore not verified; live trainer PID unknown.",
+  "KNOWLEDGE": "HOLD: 0 newly proven Hunter→licensed source→S03 write→readback→recall candidates.",
+  "DISPATCHER_RESOURCES": "HOLD: latest owner 1A historical inconsistent Supervisor STOPPED vs independent llama-server PID7637 on port8081; no current owner-pinned exact STOP/lease, PID/starttime, CPU quota, GPU0/1 VRAM, disk or three worker/job readback.",
+  "server_instance": 60509551,
+  "source_only": true,
+  "native_changes": [],
+  "new_download_bytes": 0,
+  "installed": [],
+  "restarts": 0,
+  "deleted_paths": [],
+  "freed_bytes_verified": 0,
+  "cleanup": "HOLD_NO_VERIFIED_REPLACEMENT_RESTORE",
+  "rollback": "Revert this two-file source diff only by Git CAS; no OneHost side effects.",
+  "lesson": "Full remote SHA verification is a live subprocess too: bounded byte count is not an emergency-stop policy; poll STOP and deadline across read, post-EOF, and publication.",
+  "next_ready_step": "Use existing owner-pinned exact HEAD V51 READ-ONLY OneHost session for original STOP, confirmed service PID/lease/GPU/cgroup and one 1MiB Drive range independent SHA; then identical live A/B. No DeepSeek full load until placement accepted."
+}

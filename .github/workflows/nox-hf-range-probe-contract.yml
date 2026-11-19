@@ -1,0 +1,29 @@
+name: NOX HF one-byte range contract
+on:
+  push:
+    branches:
+      - feature/nox-v38-synaptic-brain-20261114
+    paths:
+      - nox_runpod/teacher_mesh/v51/hf_range_probe.py
+      - nox_runpod/teacher_mesh/v51/test_hf_range_probe.py
+      - .github/workflows/nox-hf-range-probe-contract.yml
+  pull_request:
+    paths:
+      - nox_runpod/teacher_mesh/v51/hf_range_probe.py
+      - nox_runpod/teacher_mesh/v51/test_hf_range_probe.py
+      - .github/workflows/nox-hf-range-probe-contract.yml
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run isolated offline contract tests
+        run: python -m unittest -v nox_runpod.teacher_mesh.v51.test_hf_range_probe

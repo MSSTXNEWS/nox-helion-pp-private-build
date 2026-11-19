@@ -1,0 +1,210 @@
+{
+  "schema": "nox-cognitive-overlays-catalog-v1",
+  "revision": "2026-11-12",
+  "student_model_agnostic": true,
+  "canonical_memory": "S03_ONLY",
+  "subjective_consciousness_proved": false,
+  "offline_capable": true,
+  "auto_install": false,
+  "program": "source-and-design options; do not install all 18",
+  "records": [
+    {
+      "id": "C01",
+      "source": "LangMem",
+      "url": "https://github.com/langchain-ai/langmem",
+      "domain": "memory_extraction",
+      "priority": "P0",
+      "integration_note": "S03 function-only integration; do not replace store",
+      "kind": "library",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C02",
+      "source": "Mem0",
+      "url": "https://github.com/mem0ai/mem0",
+      "domain": "memory_significance",
+      "priority": "P1",
+      "integration_note": "Study recall scoring; external storage disabled",
+      "kind": "design_reference",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C03",
+      "source": "Graphiti",
+      "url": "https://github.com/getzep/graphiti",
+      "domain": "temporal_knowledge",
+      "priority": "P1",
+      "integration_note": "Study temporal fact edges + source/time in S03, no Neo4j on production",
+      "kind": "design_reference",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C04",
+      "source": "Hindsight",
+      "url": "https://github.com/vectorize-io/hindsight",
+      "domain": "autobiographical_memory",
+      "priority": "P1",
+      "integration_note": "Study episodic memories, observation and mental models, no second DB",
+      "kind": "design_reference",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C05",
+      "source": "Letta Code",
+      "url": "https://github.com/letta-ai/letta-code",
+      "domain": "identity_lifecycle",
+      "priority": "P1",
+      "integration_note": "Study persistent agent identity and episodic memory; no replacement runtime",
+      "kind": "design_reference",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C06",
+      "source": "Cognee",
+      "url": "https://github.com/topoteretes/cognee",
+      "domain": "semantic_graph",
+      "priority": "P2",
+      "integration_note": "Optional isolated pilot; do not fork canonical S03",
+      "kind": "sandbox_pilot",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C07",
+      "source": "HippoRAG 2",
+      "url": "https://github.com/OSU-NLP-Group/HippoRAG",
+      "domain": "associative_retrieval",
+      "priority": "P1",
+      "integration_note": "Benchmark on source-attributed S03 retrieval against sqlite-vec",
+      "kind": "sandbox_pilot",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C08",
+      "source": "Generative Agents",
+      "url": "https://github.com/joonspk-research/generative_agents",
+      "domain": "reflection_planning",
+      "priority": "P1",
+      "integration_note": "Research memory importance and planning, not genuine consciousness",
+      "kind": "design_reference",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C09",
+      "source": "OpenPsi Hyperon",
+      "url": "https://github.com/iCog-Labs-Dev/hyperon-openpsi",
+      "domain": "cognitive_appraisal",
+      "priority": "P2",
+      "integration_note": "Experimental motivations and feeling updater; no independent 'needs' claims",
+      "kind": "sandbox_pilot",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C10",
+      "source": "DSPy",
+      "url": "https://github.com/stanfordnlp/dspy",
+      "domain": "quality_optimizer",
+      "priority": "P0",
+      "integration_note": "Improve prompt/program via independent eval, only propose new weights separately",
+      "kind": "library",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C11",
+      "source": "LangGraph",
+      "url": "https://github.com/langchain-ai/langgraph",
+      "domain": "safe_durable_agents",
+      "priority": "P1",
+      "integration_note": "Existing dispatcher integration: bounded loops and approval",
+      "kind": "optional_library",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C12",
+      "source": "ruBERT CEDR Emotion",
+      "url": "https://huggingface.co/cointegrated/rubert-tiny2-cedr-emotion-detection",
+      "domain": "emotion_ru",
+      "priority": "P1",
+      "integration_note": "Local text emotion classification; output is uncertain observation, not diagnosis",
+      "kind": "small_model",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C13",
+      "source": "MarIA Emotion ES",
+      "url": "https://huggingface.co/UMUTeam/MarIA-emotion-es",
+      "domain": "emotion_es",
+      "priority": "P1",
+      "integration_note": "Separate local Spanish classifier; compare label mappings and licenses",
+      "kind": "small_model",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C14",
+      "source": "MemOS",
+      "url": "https://github.com/MemTensor/MemOS",
+      "domain": "memory_skills",
+      "priority": "P2",
+      "integration_note": "Study memory cubes/skill traces; no duplicate canonical DB",
+      "kind": "design_reference",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C15",
+      "source": "LightRAG",
+      "url": "https://github.com/HKUDS/LightRAG",
+      "domain": "graph_rag",
+      "priority": "P1",
+      "integration_note": "Optional isolated indexer; no public API; S03 remains master",
+      "kind": "sandbox_pilot",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C16",
+      "source": "Memory Agent Benchmarks",
+      "url": "https://github.com/RonsenbergVI/agent-memory-benchmarks",
+      "domain": "memory_evaluation",
+      "priority": "P0",
+      "integration_note": "Measure LoCoMo/LongMemEval end-to-end before replacing retrieval",
+      "kind": "benchmark",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C17",
+      "source": "Aniemore",
+      "url": "https://github.com/aniemore/Aniemore",
+      "domain": "emotion_voice_ru",
+      "priority": "P2",
+      "integration_note": "Optional local acoustic emotion; opt-in only; no mood diagnosis",
+      "kind": "sandbox_pilot",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    },
+    {
+      "id": "C18",
+      "source": "Microsoft GraphRAG",
+      "url": "https://github.com/microsoft/graphrag",
+      "domain": "knowledge_graph_research",
+      "priority": "P2",
+      "integration_note": "Research-only, maintainer says maintenance mode and costly indexing",
+      "kind": "design_reference",
+      "status": "SOURCE_RESEARCHED_NOT_INSTALLED",
+      "license": "RECHECK_CURRENT_LICENSE_AND_MODEL_TERMS"
+    }
+  ]
+}

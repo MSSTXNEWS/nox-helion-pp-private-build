@@ -1,0 +1,63 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2C_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2C",
+  "created_utc": "2026-11-16T04:42:19.064Z",
+  "at_msk": "2026-11-16 07:42:19 MSK",
+  "accepted_head": "00b216f3b4377210ef243a7f3810155dfcd859d8",
+  "source_sha_after": "COMMIT_CONTAINING_THIS_RECEIPT",
+  "source_preimage_blobs": {
+    "nox_runpod/teacher_mesh/autonomous_hunt_v27.py": "3c051dd6211f6671770ec37add154aa853bba904",
+    "nox_runpod/teacher_mesh/tests/test_autonomous_hunt_v27.py": "ed5044ea8ff7af71f302d843c8ee1f70505681f3"
+  },
+  "error_id": "NOX-P0-V27-UNKNOWN-ACTIVITY-AND-NAN-RESOURCE-ADMISSION-20261116",
+  "symptom": "HuntDirector could stage a model/start the existing GPU trainer when chat/trainer state was missing, or GPU resources/owner minimums were NaN or Infinity.",
+  "root_cause": "Tests for activity checked only `is True`; numeric admission used `<` without finite validation, allowing unknown state and nonfinite floats to pass.",
+  "lesson": "Native activity requires explicit false and every resource quantity/minimum must be finite and nonnegative; a missing reading is HOLD rather than idle or free.",
+  "scope": "SOURCE_ONLY; existing V27 module, no new hunter, trainer, S03 or backend",
+  "tasks": [
+    {
+      "n": 1,
+      "status": "SOURCE_PATCHED",
+      "evidence": "V27 HuntDirector original callbacks and native guards retained; fail-closed chat/trainer/VRAM/disk admission patched"
+    },
+    {
+      "n": 2,
+      "status": "HOLD_NATIVE",
+      "evidence": "Signed policy, owner STOP, quota/enqueue/train callbacks remain existing; no new owner-native fenced lease for 2C; shared 1C dispatcher untouched"
+    },
+    {
+      "n": 3,
+      "status": "DONE_SOURCE_INSPECTION",
+      "evidence": "V28 Curriculum accepted error digest pin preserved; no new native signed benchmark errors verified; Matchmaker/Arena not reimplemented"
+    },
+    {
+      "n": 4,
+      "status": "HOLD_NATIVE_CORPUS",
+      "evidence": "Owner native Qwen corpus snapshot 128 train/16 holdout from prior run 43803984949, private data not exported; source-separated DEV split/license per-source approval unverified for new Hunter data"
+    },
+    {
+      "n": 5,
+      "status": "HOLD_NEW_NATIVE_HUNTER_JOB",
+      "evidence": "Three separate technical review jobs completed in native OneHost (run 43804648527), NOT new Hunter research; no Hunter job registered by 2C"
+    }
+  ],
+  "control": {
+    "WEIGHTS": "run 43803984949: Qwen3.5-9B revision c202236..., PID 646467 at 04:26 UTC, started loading; successful_optimizer_updates UNKNOWN, full checkpoint/restore UNKNOWN, no DeepSeek distillation",
+    "KNOWLEDGE": "run 43804648527: 3 technical review job_id+S03 receipts VERIFIED; all CANDIDATE_NOT_APPLIED. These are not Hunter→new licensed source→recall→train-candidate evidence",
+    "DISPATCHER_RESOURCES": "run 43804648527: director PID652295, workers 652465/652466/652467 at 04:32 UTC, normal mode, heartbeat, model PID7637; cgroup cpu.max=1920000/100000, memory.current=87571746816, max=194065203200, SSD free=12226236416 bytes. GPU0/GPU1, temps, current trainer update unknown. No restart/STOP/cleanup."
+  },
+  "source_test": "NEW_SOURCE_REGRESSION_TESTS_WRITTEN; CI_PENDING_EXACT_SHA",
+  "native_live_install": false,
+  "native_job_created": false,
+  "training_started_by_slot": false,
+  "optimizer_updates_by_slot": 0,
+  "s03_modified_by_slot": false,
+  "weights_modified_by_slot": false,
+  "freed_bytes_verified": 0,
+  "native_evidence_links": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43803984949",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43804648527"
+  ],
+  "next_one_action": "Obtain fresh owner-authenticated read-only Qwen optimizer/checkpoint/recovery + owner-native HuntDirector signed_policy/STOP/lease/queue; then admit one bounded licensed research job if safe."
+}

@@ -1,0 +1,205 @@
+{
+  "schema": "NOX_V37_OWNER_REPORTED_INVENTORY_NOT_DIRECT_VERIFIED",
+  "collection": [
+    "17 active owner-reported",
+    "16 installed unconnected",
+    "28 missing candidates",
+    "10 unresolved discrepancies"
+  ],
+  "as_of": "2026-11-13 19:41 MSK",
+  "items": [
+    {
+      "id": "nox_s1_l05_chat",
+      "name": "NOX S1-L05 + knowledge LoRA",
+      "state": "ACTIVE_USER_REPORTED",
+      "action": "DO_NOT_TOUCH",
+      "source": "existing native port 11555",
+      "evidence": "NOX user host status"
+    },
+    {
+      "id": "student_qwen35_08",
+      "name": "Qwen3.5 0.8B draft",
+      "state": "ACTIVE_USER_REPORTED",
+      "action": "PRESERVE_EVAL_BASE",
+      "source": "no new download",
+      "evidence": "user reported"
+    },
+    {
+      "id": "teacher_dolphin3_8b",
+      "name": "Dolphin 3 8B",
+      "state": "ACTIVE_USER_REPORTED",
+      "action": "REUSE_TEACHER",
+      "source": "local",
+      "evidence": "user reported"
+    },
+    {
+      "id": "teacher_deephermes3_8b",
+      "name": "DeepHermes-3 8B",
+      "state": "ACTIVE_USER_REPORTED",
+      "action": "REUSE_TEACHER",
+      "source": "local",
+      "evidence": "user reported"
+    },
+    {
+      "id": "judge_qwen3guard_4b",
+      "name": "Qwen3Guard 4B 3 processes",
+      "state": "ACTIVE_USER_REPORTED",
+      "action": "EVAL_NOT_SOLE_JUDGE",
+      "source": "local",
+      "evidence": "user reported"
+    },
+    {
+      "id": "model_35b_new",
+      "name": "NOX 35B 67 GB source weights, GGUF pending SHA",
+      "state": "QUANTIZING_REPORTED",
+      "action": "NO_TRAIN_UNTIL_ABI",
+      "source": "local source > disk constrained",
+      "evidence": "user reported"
+    },
+    {
+      "id": "llama_cpp",
+      "name": "llama.cpp",
+      "state": "INSTALLED_USER_REPORTED",
+      "action": "REUSE_SM70",
+      "source": "https://github.com/ggml-org/llama.cpp",
+      "evidence": "user reported"
+    },
+    {
+      "id": "torch26_peft_trl",
+      "name": "torch2.6, exllamav2, PEFT, TRL, bitsandbytes",
+      "state": "INSTALLED_USER_REPORTED",
+      "action": "PRESERVE_ENV",
+      "source": "https://pytorch.org/",
+      "evidence": "user reported"
+    },
+    {
+      "id": "hermes3_8b",
+      "name": "Hermes-3 8B",
+      "state": "DOWNLOADED_NOT_CONNECTED_USER_REPORTED",
+      "action": "CONNECT_IF_USEFUL",
+      "source": "local",
+      "evidence": "user reported"
+    },
+    {
+      "id": "saiga12b",
+      "name": "Saiga 12B",
+      "state": "DOWNLOADED_UNSTABLE_USER_REPORTED",
+      "action": "HOLD_COMPARE_FIRST",
+      "source": "local",
+      "evidence": "user reported"
+    },
+    {
+      "id": "vikhr12b",
+      "name": "Vikhr 12B",
+      "state": "DOWNLOADED_NOT_CONNECTED_USER_REPORTED",
+      "action": "HOLD_COMPARE_FIRST",
+      "source": "local",
+      "evidence": "user reported"
+    },
+    {
+      "id": "qwen25coder7b",
+      "name": "Qwen2.5-Coder-7B",
+      "state": "DOWNLOADED_NOT_CONNECTED_USER_REPORTED",
+      "action": "CODE_TEACHER_READ_ONLY",
+      "source": "local",
+      "evidence": "user reported"
+    },
+    {
+      "id": "qwen25vl7b",
+      "name": "Qwen2.5-VL-7B",
+      "state": "DOWNLOADED_NOT_CONNECTED_USER_REPORTED",
+      "action": "VISION_EVAL_PRECHECK",
+      "source": "local",
+      "evidence": "user reported"
+    },
+    {
+      "id": "whisper_small_medium_tiny",
+      "name": "Whisper 3 sizes",
+      "state": "DOWNLOADED_NOT_CONNECTED_USER_REPORTED",
+      "action": "CONNECT_RU_ES_IF_ALLOWED",
+      "source": "local",
+      "evidence": "user reported"
+    },
+    {
+      "id": "bge_m3",
+      "name": "BAAI/bge-m3",
+      "state": "DOWNLOADED_NOT_CONNECTED_USER_REPORTED",
+      "action": "S03_RETRIEVAL_EVAL",
+      "source": "https://huggingface.co/BAAI/bge-m3",
+      "evidence": "user reported"
+    },
+    {
+      "id": "cedr_emotion",
+      "name": "CEDR RU",
+      "state": "DOWNLOADED_NOT_CONNECTED_USER_REPORTED",
+      "action": "STYLE_RU_EVAL",
+      "source": "https://huggingface.co/cointegrated/rubert-tiny2-cedr-emotion-detection",
+      "evidence": "user reported"
+    },
+    {
+      "id": "qwen3embed",
+      "name": "Qwen3 Embedding 0.6B",
+      "state": "DOWNLOADING_USER_REPORTED",
+      "action": "WAIT_ALREADY_DOWNLOADING",
+      "source": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B",
+      "evidence": "user reported"
+    },
+    {
+      "id": "searxng",
+      "name": "SearXNG",
+      "state": "DOWNLOADED_NOT_CONNECTED_USER_REPORTED",
+      "action": "CONNECT_CAPABILITY",
+      "source": "https://github.com/searxng/searxng",
+      "evidence": "user reported"
+    },
+    {
+      "id": "comfyui",
+      "name": "ComfyUI",
+      "state": "DOWNLOADED_NOT_CONNECTED_USER_REPORTED",
+      "action": "REUSE_IMAGE_GRAPH",
+      "source": "https://github.com/comfyanonymous/ComfyUI",
+      "evidence": "user reported"
+    },
+    {
+      "id": "reranker",
+      "name": "Qwen3-Reranker-0.6B",
+      "state": "NOT_YET_VERIFIED_LOCAL",
+      "action": "FIRST_SMALL_DOWNLOAD_IF_MISSING",
+      "source": "https://huggingface.co/Qwen/Qwen3-Reranker-0.6B",
+      "evidence": "official model card"
+    },
+    {
+      "id": "sdxl_fp16",
+      "name": "SDXL base FP16",
+      "state": "NOT_YET_VERIFIED_LOCAL",
+      "action": "PRIORITY_GRAPHICS_FP16",
+      "source": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0",
+      "evidence": "official model card"
+    },
+    {
+      "id": "wan21_small",
+      "name": "Wan2.1 T2V 1.3B",
+      "state": "NOT_YET_VERIFIED_LOCAL",
+      "action": "LATER_VIDEO_SINGLE_MODEL",
+      "source": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B",
+      "evidence": "official model card"
+    },
+    {
+      "id": "no_vllm_default",
+      "name": "vLLM modern official",
+      "state": "AVOID_ON_SM70",
+      "action": "MODERN_VLLM_REQUIRES_SM75",
+      "source": "https://docs.vllm.ai/en/stable/getting_started/installation/gpu/",
+      "evidence": "official docs"
+    },
+    {
+      "id": "no_cuda13",
+      "name": "CUDA 13 toolkit",
+      "state": "AVOID_ON_SM70",
+      "action": "VOLTA_UNSUPPORTED",
+      "source": "https://docs.nvidia.com/cuda/archive/13.0.0/cuda-toolkit-release-notes/",
+      "evidence": "official docs"
+    }
+  ],
+  "important": "Availability and GPU process ownership require direct nvidia-smi/PID and exact SHA host readback. No automatic downloads."
+}

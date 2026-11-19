@@ -1,0 +1,39 @@
+name: NOX E2 R60 / existing OneHost handoff contract
+on:
+  push:
+    branches: [nox/e2-r60-bridge-handoff-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v49/e2_handoff.py'
+      - 'nox_runpod/teacher_mesh/v49/tests/test_e2_handoff.py'
+      - 'coordination/bridge/NOX_E2_R60_READ_HANDOFF.json'
+      - '.github/workflows/nox-e2-handoff-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-no-second-dispatcher:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and exercise real source-plan contracts
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v49/e2_handoff.py
+          python -m unittest nox_runpod.teacher_mesh.v49.tests.test_e2_handoff -v
+          if [ -f nox_runpod/teacher_mesh/v49/tests/test_onehost_bridge.py ]; then
+            python -m unittest nox_runpod.teacher_mesh.v49.tests.test_onehost_bridge -v
+          else
+            echo "V49 base tests are present on PR #256 but not on this older executor-2 branch; checked after PR merge"
+          fi
+      - name: Explicitly mark hardware / weight limitations
+        run: |
+          echo "SOURCE_TESTED_ONLY=true"
+          echo "NATIVE_ONEHOST_REGISTRATION_VERIFIED=false"
+          echo "TRAINER_STEPS_VERIFIED=false"
+          echo "CHECKPOINT_RESTORE_VERIFIED=false"
+          echo "NO_GPU_JOB_STARTED=true"

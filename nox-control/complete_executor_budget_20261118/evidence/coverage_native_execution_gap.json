@@ -1,0 +1,216 @@
+{
+  "schema": "NOX_295_NATIVE_HANDOFF_VS_EXECUTION_COVERAGE_REVIEW_V1",
+  "scope": "LOCAL_READ_ONLY_REVIEW_NO_NEW_ADMISSION_OR_COMPLETION",
+  "registry_unique_ids": 295,
+  "registry_counts": {
+    "work_tasks": 230,
+    "ideas": 65
+  },
+  "native_registry_files": [
+    {
+      "path": "/root/nox/state/dispatcher/project_work_tasks.json",
+      "bytes": 67790,
+      "sha256": "5347258ca08500d61173d9b36f69cc0632eff36d3ea1e10fcbbc420de69be000",
+      "matches_expected_source": true,
+      "row_count": 230
+    },
+    {
+      "path": "/root/nox/state/dispatcher/project_work_ideas.json",
+      "bytes": 32764,
+      "sha256": "e1c84397506c6e46fdc3ce71b63cc5eba2f5cc0cd290f8d1e32d4840e25972ae",
+      "matches_expected_source": true,
+      "row_count": 65
+    },
+    {
+      "path": "/root/nox/state/dispatcher/project_work_receipts_source.json",
+      "bytes": 104321,
+      "sha256": "b40c012a7280889722f446083c4cbe878db15fd6da34ac19855a99a0a099af71",
+      "matches_expected_source": true,
+      "row_count": 60
+    },
+    {
+      "path": "/root/nox/state/dispatcher/project_routing_4q.json",
+      "bytes": 128862,
+      "sha256": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671",
+      "matches_expected_source": true,
+      "row_count": 295
+    }
+  ],
+  "native_disposition_manifest": {
+    "path": "/root/nox/state/dispatcher/project_executor/package/manifests/e040c40bd8ee3d29b0ccc2240322975da37cacff73b3752b32a34d5a2a9beacb.json",
+    "sha256": "e040c40bd8ee3d29b0ccc2240322975da37cacff73b3752b32a34d5a2a9beacb",
+    "installed_file_verified_by_receipt": "complete_executor/install_receipt_6966579330.json"
+  },
+  "queues": {
+    "Q1_RUNTIME_CHAT": {
+      "total": 145,
+      "unbound": 140,
+      "bindings": {
+        "UNBOUND_PENDING_REAL_EXECUTION_PLAN": 140,
+        "DEFERRED_UNTIL_ACTUAL_1A03_MODEL_POSTIMAGE": 1,
+        "MODEL_SOURCE_CHALLENGE_READY": 1,
+        "HISTORICAL_EVIDENCE_PRESERVED_NO_NEW_EXECUTION_PLAN": 2,
+        "REVIEWED_SCOPED_SOURCE_PLAN_READY": 1
+      }
+    },
+    "Q2_MEMORY_KNOWLEDGE": {
+      "total": 71,
+      "unbound": 66,
+      "bindings": {
+        "UNBOUND_PENDING_REAL_EXECUTION_PLAN": 66,
+        "REVIEWED_SCOPED_SOURCE_PLAN_READY": 3,
+        "HISTORICAL_EVIDENCE_PRESERVED_NO_NEW_EXECUTION_PLAN": 2
+      }
+    },
+    "Q3_TRAINING_WEIGHTS": {
+      "total": 34,
+      "unbound": 31,
+      "bindings": {
+        "UNBOUND_PENDING_REAL_EXECUTION_PLAN": 31,
+        "HISTORICAL_EVIDENCE_PRESERVED_NO_NEW_EXECUTION_PLAN": 2,
+        "REVIEWED_SCOPED_SOURCE_PLAN_READY": 1
+      }
+    },
+    "Q4_INTEGRATION_ACCEPTANCE": {
+      "total": 45,
+      "unbound": 39,
+      "bindings": {
+        "UNBOUND_PENDING_REAL_EXECUTION_PLAN": 39,
+        "HISTORICAL_EVIDENCE_PRESERVED_NO_NEW_EXECUTION_PLAN": 5,
+        "REVIEWED_SCOPED_SOURCE_PLAN_READY": 1
+      }
+    }
+  },
+  "binding_counts": {
+    "UNBOUND_PENDING_REAL_EXECUTION_PLAN": 276,
+    "HISTORICAL_EVIDENCE_PRESERVED_NO_NEW_EXECUTION_PLAN": 11,
+    "DEFERRED_UNTIL_ACTUAL_1A03_MODEL_POSTIMAGE": 1,
+    "MODEL_SOURCE_CHALLENGE_READY": 1,
+    "REVIEWED_SCOPED_SOURCE_PLAN_READY": 6
+  },
+  "unbound_spec_evidence": {
+    "count": 276,
+    "with_acceptance_and_source_url": 63,
+    "without_acceptance_field": 213,
+    "executable_fields_in_raw_specs": []
+  },
+  "installed_catalog": {
+    "rows": 19,
+    "by_handler": {
+      "owner_native_subagent_review": 3,
+      "owner_native_typed_leaf": 5,
+      "owner_native_project_work": 11
+    },
+    "project_attempt_rows": 11,
+    "distinct_project_parent_ids": [
+      "0V14-14",
+      "1A03",
+      "3A02",
+      "3A03",
+      "3B05",
+      "4A02",
+      "6V14-04"
+    ]
+  },
+  "runtime_context": {
+    "roots": {
+      "NOX_PROJECT_SOURCE": {
+        "allowed_paths": [
+          "forge_split_guard.py",
+          "merge_web_source.py",
+          "native_v29_full_bridge.py",
+          "nox_runpod/teacher_mesh/v38/durable_runtime.py",
+          "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "owner_chat_request_ledger.py",
+          "owner_dispatcher_mentor.py",
+          "s03_existing_readback.py",
+          "source_tests/__init__.py",
+          "source_tests/test_cache_race.py",
+          "source_tests/test_owner_chat_request_scope.py",
+          "source_tests/test_request_ledger.py",
+          "test_3b05_skill_ancestor_swap.py",
+          "test_forge_split_guard.py",
+          "test_nox_1a03_cursor_admission.py",
+          "test_nox_exchange_receipt_order.py",
+          "test_nox_existing_cache_race.py",
+          "test_nox_forge_split_coverage.py",
+          "test_nox_merge_overlay_paths.py",
+          "test_nox_s03_readback_revoke.py",
+          "test_nox_skill_evidence_strict_json.py",
+          "test_nox_warm_cache_final_revision.py",
+          "test_nox_work_progress_time_order.py",
+          "test_s03_readback_contract.py",
+          "test_work_progress_changes.py",
+          "test_work_progress_durable_write.py",
+          "test_work_progress_pinned_read.py",
+          "work_progress.py"
+        ],
+        "deny_paths": [],
+        "integration_kind": "SOURCE_WORKSPACE",
+        "path": "/root/nox/projects/owner_executor/source_workspace"
+      }
+    },
+    "plan_store": "/root/nox/state/dispatcher/project_executor/package/plans/<SHA>.json",
+    "model_contract_store": "/root/nox/state/dispatcher/project_executor/package/contracts/<SHA>.json",
+    "operation": "apply_reviewed_files",
+    "verification": "pinned python_unittest in confined source workspace",
+    "registry_used_for": "project_status coverage/hash checks; no installed295-spec-to-contract expansion loop",
+    "model_receives": "selected pinned contract + only its approved source/test context",
+    "full_specs_automatically_present_in_model_context": false
+  },
+  "unbound_examples": {
+    "Q1_RUNTIME_CHAT": [
+      {
+        "task_id": "1B02",
+        "title": "«Продолжи с места» при смене окна, темы или устройства. Сверка открытых задач по серверу, очередность сообщений по проекту, поиск по истории.",
+        "concrete_gap": "Cross-window/device continuation needs the serving dialog history and client integration outside the28-file source root."
+      },
+      {
+        "task_id": "5B02",
+        "title": "Видео: таймлайн, trim/cut, громкость, субтитры WebVTT, preview proxy, вертикаль/горизонт, постер и независимый экспорт. Нативный FFmpeg в существующем задании OneHost.",
+        "concrete_gap": "Video timeline/preview/export needs media workflow sources and an approved native FFmpeg action; current verifier denies exec/fork/network."
+      }
+    ],
+    "Q2_MEMORY_KNOWLEDGE": [
+      {
+        "task_id": "3B01",
+        "title": "Hunter непрерывно наблюдает источники: релизы GitHub, официальные RSS/Atom, changelog, arXiv/Crossref, страницы в разрешённых каталогах. HTTP-кэш, дедуп по URL+контенту, расписание по частоте обновления.",
+        "concrete_gap": "Continuous Hunter ingestion needs its actual fetcher/schedule/source allowlist and persistence integration; no such execution contract is installed."
+      },
+      {
+        "task_id": "I-32",
+        "title": "Мгновенный повтор вопроса после уточнения",
+        "concrete_gap": "WarmS03Cache source exists, but a full source-selection integration/readback contract is absent; the3A03 lock fix cannot be relabelled as fullI-32 completion."
+      }
+    ],
+    "Q3_TRAINING_WEIGHTS": [
+      {
+        "task_id": "4A04",
+        "title": "Возобновить тестовый checkpoint с optimizer, scaler, RNG и положением данных. Принять кандидата по качеству и стабильности, зафиксировать rollback.",
+        "concrete_gap": "Checkpoint resume requires real trainer, optimizer/scaler/RNG/data cursor, selected weights and quality/rollback contract; CPU source executor does not run training."
+      },
+      {
+        "task_id": "4B01",
+        "title": "FORGE непрерывно собирает разрешённые обучающие примеры из проверенных знаний, собственных успешных действий и разрешённых учителей. Хранить provenance, лицензию, хеш и долю каждого источника.",
+        "concrete_gap": "FORGE collection/provenance is broader than the included split guard; ingestion sources/datasets/native handler are missing from this approved context."
+      }
+    ],
+    "Q4_INTEGRATION_ACCEPTANCE": [
+      {
+        "task_id": "0A02",
+        "title": "Собрать манифест исходных ZIP, сцен, редакторов, версии ядра, SHA, зависимостей и отката в текущем релизе. Выбрать один вход HOME и один вход «Резонанса».",
+        "concrete_gap": "Release manifest requires current ZIP/scene/editor/core inputs and actual rollback targets absent from the28-file source workspace."
+      },
+      {
+        "task_id": "0B05",
+        "title": "Первая видимая демонстрация одного живого сценария — уточнение голосом, память со ссылкой, фоновое выполнение, перезапуск браузера, возвращённый отредактированный артефакт.",
+        "concrete_gap": "End-to-end voice/chat/memory/media/reload demonstration needs live integration and acceptance observations beyond Python source-unit tests."
+      }
+    ]
+  },
+  "answer": "No verified execution plans for all276 can be supplied using only the current28-file context and fixed source executor. Individual additional scoped fixes may be possible after demonstrating an actual defect and pinning an acceptance contract; none should be manufactured or counted as full parent acceptance. Additional canonical source/context and typed integration/training/media/release operations are needed for the broader tasks.",
+  "remote_reads": 0,
+  "remote_writes": 0,
+  "frozen_inputs_changed": false,
+  "original_acceptance_added": 0
+}

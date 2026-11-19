@@ -1,0 +1,41 @@
+name: NOX V79 live teacher S03 read-only inventory
+on:
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - '.github/workflows/nox-v79-readonly-teacher-s03.yml'
+      - 'nox_runpod/teacher_mesh/v79/**'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v79-native-readonly-60509551
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Source validation
+        run: python -m py_compile nox_runpod/teacher_mesh/v79/native_teacher_s03_audit.py
+      - name: Audit existing model, S03 hooks and teacher interfaces
+        run: python -m nox_runpod.teacher_mesh.v79.native_teacher_s03_audit
+      - name: Mandatory SSH key cleanup
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

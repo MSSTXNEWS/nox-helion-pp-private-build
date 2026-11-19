@@ -1,0 +1,62 @@
+name: NOX V118 genuine owner-only OneHost read surfaces
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v118/**'
+      - '.github/workflows/nox-v118-real-read-surfaces.yml'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Only after read-only forensics, idle slots, STOP and current source SHA review'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-60509551-v118-real-owner-routes
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile runner and remote source
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v118/real_read_surfaces.py nox_runpod/teacher_mesh/v118/upgrade_existing_onehost.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v118.upgrade_existing_onehost import REMOTE_TEMPLATE
+          src=REMOTE_TEMPLATE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(src,'<native V118>','exec')
+          for anchor in ('HOLD_EXPECTED_ONEHOST_SHA','HOLD_BUSY_OR_HEALTH','HOLD_ANONYMOUS_AUTH_BYPASS',
+                         'rollback','HOLD_BACKUP_SHA','NATIVE_V118_REAL_DATA_ROUTES_BOUND'):
+              assert anchor in src,anchor
+          print('NOX_V118_SOURCE_COMPILE_PASS=true')
+          PY
+  native:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: SHA pinned real read-only owner routes with rollback
+        run: python -m nox_runpod.teacher_mesh.v118.upgrade_existing_onehost
+      - name: Mandatory cleanup SSH key
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

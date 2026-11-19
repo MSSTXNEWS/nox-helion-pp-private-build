@@ -1,0 +1,45 @@
+name: NOX V66 Windows offsite Drive receiver and verified manifest portable ZIP
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v66-windows-offsite-package.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build owner-side distribution folder without credentials
+        run: |
+          set -euo pipefail
+          mkdir -p package
+          cp nox_runpod/teacher_mesh/v66/windows_offsite_receiver.ps1 package/
+          cp nox_runpod/teacher_mesh/v66/NOX_PC_OFFSITE_README_RU.md package/
+          cp nox_runpod/teacher_mesh/v66/NOX_V66_COPY_OFFSITE_TO_PC.cmd package/
+          cp coordination/NOX_V66_OFFSITE_HANDOFF_20261114.json package/
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,hashlib
+          root=Path('package')
+          names=[p.name for p in root.iterdir() if p.is_file()]
+          assert len(names)==4 and all('key' not in x.lower() for x in names)
+          data=json.loads((root/'NOX_V66_OFFSITE_HANDOFF_20261114.json').read_text())
+          assert data['pc_disk_copy']['status']=='NOT_VERIFIED'
+          assert data['pending']['delete_original_weights_allowed'] is False
+          print('NOX_V66_PACKAGE_CONTAINS_SECRET=false')
+          print('NOX_V66_OWNER_COPY_SCRIPT_SHA256='+hashlib.sha256((root/'windows_offsite_receiver.ps1').read_bytes()).hexdigest())
+          PY
+      - name: Upload portable Windows package (only code and verified index, not model weights)
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V66_WINDOWS_OFFSITE_RECEIVER_20261114
+          path: package/*
+          retention-days: 30
+          if-no-files-found: error
+      - name: No physical PC change
+        run: echo 'WINDOWS_USER_PC_NOT_ACCESSED_BY_RUNNER=true'

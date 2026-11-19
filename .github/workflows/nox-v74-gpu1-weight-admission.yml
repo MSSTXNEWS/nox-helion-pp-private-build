@@ -1,0 +1,52 @@
+name: NOX V74 physical GPU1 full-weight training admission and provenance (no faux steps)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v74-gpu1-weight-admission.yml, nox_runpod/teacher_mesh/v74/training_gpu_admission.py]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-60509551-v74-training-gpu1-admission
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Source syntax and 5 training safety tests
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v74/training_gpu_admission.py
+          python -m unittest discover -s nox_runpod/teacher_mesh/v74/tests -p test_training_admission.py -v
+      - name: One native GPU1 teacher/model/train and source dataset admission check
+        run: |
+          set -euo pipefail
+          python -m nox_runpod.teacher_mesh.v74.training_gpu_admission
+      - name: Mandatory temporary SSH-key revocation
+        if: always()
+        run: |
+          python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Distinguish status from actual weight updates
+        if: success()
+        run: |
+          echo "GPU1_FULL_WEIGHT_ADMISSION_READBACK=true"
+          echo "REAL_TRAINING_WEIGHT_DELTA_VERIFIED=false"
+          echo "NOX_ACTIVE_CHAT_S03_WEIGHTS_UNTOUCHED=true"
+          echo "TRAINER_NOT_RESTARTED_BY_INSPECTION=true"

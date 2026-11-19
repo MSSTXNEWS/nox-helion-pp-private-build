@@ -1,0 +1,231 @@
+--- runner_84d54c64.py
++++ owner_project_test_runner.py
+@@ -11,6 +11,7 @@
+ import ctypes
+ import ctypes.util
+ import errno
++import fcntl
+ import hashlib
+ import importlib
+ import io
+@@ -21,6 +22,7 @@
+ import re
+ import signal
+ import socket
++import stat
+ import sys
+ import time
+ import unittest
+@@ -46,6 +48,151 @@
+ 
+ class RunnerHold(RuntimeError):
+     pass
++
++
++class KernelSelfFdAdapter:
++    """Two live procfs file capabilities for this verifier, never a proc mount.
++
++    Source code still parses its normal Path.read_text result. Every permitted
++    read comes from the same real kernel file through pread(offset=0); no source
++    bytes, fake proc file, snapshot response, directory fd or foreign PID is
++    supplied. All other paths retain ordinary filesystem behavior.
++    """
++    BOOT_PATH = '/proc/sys/kernel/random/boot_id'
++    PROC_MAGIC = 0x9fa0
++
++    def __init__(self):
++        self.pid = os.getpid()
++        self.stat_path = '/proc/' + str(self.pid) + '/stat'
++        self.entries = {}
++        self.read_counts = {}
++        self.start_ticks = None
++        self.boot_sha256 = None
++        self.original_read_text = None
++        self.libc = ctypes.CDLL(None, use_errno=True)
++        self.libc.fstatfs.argtypes = [ctypes.c_int, ctypes.c_void_p]
++        self.libc.fstatfs.restype = ctypes.c_int
++        try:
++            for path, bound in ((self.stat_path, 16384), (self.BOOT_PATH, 128)):
++                fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
++                info = os.fstat(fd)
++                self.entries[path] = (fd, info.st_dev, info.st_ino, bound)
++                self.read_counts[path] = 0
++                if not 3 <= fd < 96:
++                    raise RunnerHold('HOLD_PROJECT_SELF_FD_NUMBER')
++                self._checked_read(path)
++            self.start_ticks = self.stat_fields(self._checked_read(self.stat_path))[2]
++            self.boot_sha256 = hashlib.sha256(self._checked_read(self.BOOT_PATH)).hexdigest()
++        except BaseException:
++            self.close()
++            raise
++
++    @property
++    def descriptors(self):
++        return tuple(entry[0] for entry in self.entries.values())
++
++    @staticmethod
++    def stat_fields(raw):
++        try:
++            pid = int(raw.split(b' ', 1)[0])
++            fields = raw.rsplit(b') ', 1)[1].split()
++            ticks = int(fields[19])
++            cpu_ticks = int(fields[11]) + int(fields[12])
++            if ticks <= 0 or len(fields[0]) != 1:
++                raise ValueError()
++            return pid, fields[0].decode('ascii'), ticks, cpu_ticks
++        except (ValueError, IndexError, UnicodeError) as exc:
++            raise RunnerHold('HOLD_PROJECT_SELF_FD_STAT_FORMAT') from exc
++
++    def _check_fd(self, entry):
++        fd, dev, ino, _ = entry
++        try:
++            info = os.fstat(fd)
++            access = fcntl.fcntl(fd, fcntl.F_GETFL) & os.O_ACCMODE
++            fs = ctypes.create_string_buffer(256)
++            if (not stat.S_ISREG(info.st_mode) or (info.st_dev, info.st_ino) != (dev, ino)
++                    or access != os.O_RDONLY or os.get_inheritable(fd)
++                    or self.libc.fstatfs(fd, ctypes.byref(fs)) != 0
++                    or ctypes.cast(fs, ctypes.POINTER(ctypes.c_long))[0] != self.PROC_MAGIC):
++                raise RunnerHold('HOLD_PROJECT_SELF_FD_CAPABILITY')
++        except OSError as exc:
++            raise RunnerHold('HOLD_PROJECT_SELF_FD_CLOSED_OR_CHANGED') from exc
++
++    def _checked_read(self, path):
++        if path not in self.entries or os.getpid() != self.pid:
++            raise RunnerHold('HOLD_PROJECT_SELF_FD_PATH_OR_PID')
++        entry = self.entries[path]
++        self._check_fd(entry)
++        try:
++            raw = os.pread(entry[0], entry[3] + 1, 0)
++        except OSError as exc:
++            raise RunnerHold('HOLD_PROJECT_SELF_FD_KERNEL_READ') from exc
++        self._check_fd(entry)
++        if not raw or len(raw) > entry[3]:
++            raise RunnerHold('HOLD_PROJECT_SELF_FD_READ_BOUND')
++        if path == self.stat_path:
++            pid, _state, ticks, _cpu_ticks = self.stat_fields(raw)
++            if pid != self.pid or self.start_ticks is not None and ticks != self.start_ticks:
++                raise RunnerHold('HOLD_PROJECT_SELF_FD_IDENTITY_CHANGED')
++        elif (re.fullmatch(rb'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\n?', raw) is None
++              or self.boot_sha256 is not None and hashlib.sha256(raw).hexdigest() != self.boot_sha256):
++            raise RunnerHold('HOLD_PROJECT_SELF_FD_BOOT_CHANGED')
++        self.read_counts[path] += 1
++        return raw
++
++    def install(self):
++        if self.original_read_text is not None:
++            raise RunnerHold('HOLD_PROJECT_SELF_FD_ALREADY_INSTALLED')
++        original = Path.read_text
++        self.original_read_text = original
++        def read_text(path, encoding=None, errors=None):
++            literal = str(path)
++            if literal in self.entries:
++                return self._checked_read(literal).decode(encoding or 'utf-8', errors or 'strict')
++            return original(path, encoding=encoding, errors=errors)
++        Path.read_text = read_text
++
++    def proof(self):
++        if self.original_read_text is None or Path('/proc').exists() or Path('/proc').is_symlink():
++            raise RunnerHold('HOLD_PROJECT_SELF_FD_CONFINEMENT_SCOPE')
++        current = self.stat_fields(self._checked_read(self.stat_path))
++        self._checked_read(self.BOOT_PATH)
++        return {'schema':'NOX_KERNEL_SELF_FD_TEST_ADAPTER_V1',
++                'mode':'KERNEL_SELF_FD_TEST_ADAPTER',
++                'scope':'SELF_STAT_AND_BOOT_ID_ONLY', 'full_proc_available':False,
++                'foreign_pid_visibility':False, 'kernel_backed':True,
++                'fresh_pread_offset_zero':True, 'reserved_regular_file_descriptors':2,
++                'directory_descriptors_preserved':0, 'procfs_magic':self.PROC_MAGIC,
++                'verifier_pid':self.pid, 'verifier_parent_pid':os.getppid(),
++                'start_ticks':self.start_ticks, 'own_pid_start_verified':True,
++                'observed_process_state':current[1], 'boot_id_sha256':self.boot_sha256,
++                'stat_reads':self.read_counts[self.stat_path],
++                'boot_reads':self.read_counts[self.BOOT_PATH]}
++
++    def close(self):
++        if self.original_read_text is not None:
++            Path.read_text = self.original_read_text
++            self.original_read_text = None
++        for entry in self.entries.values():
++            fd, dev, ino, _ = entry
++            try:
++                info = os.fstat(fd)
++                # Do not close an unrelated descriptor if candidate code has
++                # already closed/replaced this capability. Reads fail closed.
++                if (info.st_dev, info.st_ino) == (dev, ino):
++                    os.close(fd)
++            except OSError:
++                pass
++        self.entries.clear()
++
++
++def close_unapproved_descriptors(adapter):
++    keep = sorted(adapter.descriptors) if adapter is not None else []
++    first = 3
++    for fd in keep:
++        os.closerange(first, fd)
++        first = fd + 1
++    os.closerange(first, 65536)
+ 
+ 
+ class ScmpArgCmp(ctypes.Structure):
+@@ -205,6 +352,22 @@
+         sys.path.insert(0, path)
+     for name in spec.get('preload_modules', []):
+         importlib.import_module(name)
++    adapter = None
++    try:
++        if spec['backend'] == 'chroot_seccomp':
++            if os.getuid() != 0:
++                raise RunnerHold('HOLD_PROJECT_SANDBOX_REQUIRES_ROOT')
++            # Only the verifier's standard pipes and two actual read-only
++            # procfs files survive. Never retain a host directory descriptor.
++            os.closerange(3, 65536)
++            adapter = KernelSelfFdAdapter()
++        return _run_confined(spec, lib, adapter)
++    finally:
++        if adapter is not None:
++            adapter.close()
++
++
++def _run_confined(spec, lib, adapter):
+     os.environ.clear()
+     os.environ.update({'PATH':'/usr/bin:/bin', 'HOME':'/tmp', 'TMPDIR':'/tmp',
+                        'LANG':'C.UTF-8', 'PYTHONDONTWRITEBYTECODE':'1',
+@@ -213,9 +376,7 @@
+     if spec['backend'] == 'chroot_seccomp':
+         if os.getuid() != 0:
+             raise RunnerHold('HOLD_PROJECT_SANDBOX_REQUIRES_ROOT')
+-        # All descriptors except the bounded parent's standard pipes are shut
+-        # before changing root; no inherited directory handle can escape it.
+-        os.closerange(3, 65536)
++        close_unapproved_descriptors(adapter)
+         os.chroot(spec['rootfs'])
+         os.chdir(SANDBOX_WORK)
+         os.setgroups([])
+@@ -234,10 +395,14 @@
+         raise RunnerHold('HOLD_PROJECT_VERIFIER_PARENT')
+     if spec['backend'] == 'chroot_seccomp' and os.getppid() != spec['worker_pid']:
+         raise RunnerHold('HOLD_PROJECT_VERIFIER_PARENT')
+-    os.closerange(3, 65536)
++    close_unapproved_descriptors(adapter)
+     _limits(spec)
+     _restrict_syscalls(lib)
++    if adapter is not None:
++        adapter.install()
+     isolation = _self_test(spec)
++    if adapter is not None:
++        isolation['kernel_self_fd_adapter'] = adapter.proof()
+     capture = BoundedText()
+     started = time.monotonic()
+     with contextlib.redirect_stdout(capture), contextlib.redirect_stderr(capture):
+@@ -252,6 +417,10 @@
+         if discovered < spec['min_tests']:
+             raise RunnerHold('HOLD_PROJECT_EMPTY_TEST_SUITE')
+         result = unittest.TextTestRunner(stream=capture, verbosity=1).run(suite)
++    if adapter is not None:
++        # Recheck both live capabilities after all candidate imports/tests;
++        # closed or replaced handles cannot yield a successful test report.
++        isolation['kernel_self_fd_adapter'] = adapter.proof()
+     return {'schema':'NOX_PROJECT_TEST_REPORT_V1', 'completed':True,
+             'passed':result.wasSuccessful() and not result.skipped
+                      and result.testsRun >= spec['min_tests'],

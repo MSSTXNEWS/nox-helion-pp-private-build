@@ -1,0 +1,90 @@
+{
+  "schema": "NOX_REVIEWED_CATALOG_APPEND_LOCAL_QA_V1",
+  "state": "FROZEN_LOCAL_REAL_PLAN_COMPATIBILITY_PASS",
+  "helper": {
+    "path": "/workspace/scratch/552ada07ed4f/complete_executor/native/owner_reviewed_project_catalog_append.py",
+    "sha256": "7063eae6da1a113595b45261e0780f0e4121f1569d94a355642c09573c3e14a5",
+    "bytes": 28242
+  },
+  "original_model_only_helper": {
+    "path": "/workspace/scratch/552ada07ed4f/complete_executor/native/owner_project_catalog_append.py",
+    "sha256": "01dbe77cb122802c7f82328af6120ce687fa34a5fb7fe40fe98b29b50348fe59",
+    "unchanged": true
+  },
+  "tests": {
+    "path": "/workspace/scratch/552ada07ed4f/complete_executor/native/test_owner_reviewed_project_catalog_append.py",
+    "sha256": "d08142019edcd1ae30766c52869694795521af350aeaea2b472af3799fd0e35a",
+    "run": 13,
+    "passed": 13,
+    "failed": 0,
+    "scope": "LOCAL_SAFETY_FIXTURES_NOT_NATIVE_EXECUTION",
+    "full_append_modes": [
+      "FAILED_MODEL_RESCUE",
+      "VERIFIED_REVIEWED_FOLLOWUP"
+    ]
+  },
+  "spec_schema": "NOX_REVIEWED_PROJECT_CATALOG_APPEND_SPEC_V1",
+  "spec_keys": [
+    "schema",
+    "mode",
+    "expected_config_sha256",
+    "expected_callback_sha256",
+    "expected_director",
+    "expected_workers",
+    "expected_source_pins",
+    "required_task",
+    "assets",
+    "plan_asset",
+    "payload_assets",
+    "catalog_row"
+  ],
+  "required_task_shapes": {
+    "FAILED_MODEL_RESCUE": [
+      "id",
+      "receipt_sha256",
+      "contract_sha256"
+    ],
+    "VERIFIED_REVIEWED_FOLLOWUP": [
+      "id",
+      "receipt_sha256",
+      "plan_sha256"
+    ]
+  },
+  "allowed_changed_source_paths": [
+    "owner_chat_request_ledger.py",
+    "native_v29_full_bridge.py"
+  ],
+  "new_catalog_deps": {
+    "FAILED_MODEL_RESCUE": [],
+    "VERIFIED_REVIEWED_FOLLOWUP": [
+      "1A03.project.cursor_admission.owner_rescue.20261118"
+    ]
+  },
+  "invariants": [
+    "exclusive existing maintenance lease",
+    "current exact config/callback/module pins",
+    "same three worker PID and start ticks",
+    "exact predecessor S03 and durable claim",
+    "original catalog rows and owner metadata preserved",
+    "no source tree writes",
+    "no queue writes",
+    "no supervisor calls",
+    "CAS config rollback only before lease release",
+    "scoped immutable plan/blob materialization"
+  ],
+  "remote_actions": 0,
+  "independent_review": {
+    "agent": "/root/queue_runtime",
+    "result": "PASS_ON_PREVIOUS_SOURCE_PLUS_ONE_LINE_CONTRACT_SCHEMA_CORRECTION_PENDING_ACK",
+    "previous_source_sha256": "320647cb7bc2258311506e1d489e021c431822b7fb5ea9a96d8a76394d322a4e",
+    "correction": "Remove requirement for absent original_task_accepted on immutable contract; retain false on plan/receipt/evidence."
+  },
+  "actual_rescue_plan": {
+    "sha256": "379d1c5b50e42fb50165ce1fbe904cf47b1b45b3747878c60f9b1208d6e13e23",
+    "executor_validate_plan": true,
+    "helper_reviewed_plan_scope": true,
+    "contract_sha256": "eece310e5608fa9c633d7c75ce280541d9bec6af8a0c35815465ae82679d4ce4",
+    "native_execution_proven": false
+  },
+  "actual_input_qa": "/workspace/scratch/552ada07ed4f/complete_executor/native/reviewed_catalog_append_actual_input_qa.json"
+}

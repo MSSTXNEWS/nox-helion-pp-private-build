@@ -1,0 +1,42 @@
+name: NOX V133 onepass native admission source preflight only
+on:
+  push:
+    branches: [nox/e2-v133-native-workflow-single-gate-20261115]
+    paths:
+      - '.github/workflows/nox-v133-autofix-source-preflight.yml'
+      - 'coordination/onepass/native_job_gate_autofix.py'
+      - 'coordination/onepass/test_native_job_gate_autofix.py'
+permissions:
+  contents: read
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -q PyYAML==6.0.2
+      - name: Unit tests of source-only YAML rewriter and NOX owner gate
+        run: |
+          set -euo pipefail
+          python -m unittest -v coordination.onepass.test_native_job_gate_audit coordination.onepass.test_native_job_gate_autofix
+          python -m coordination.onepass.native_job_gate_autofix --root . --out nox_v133_dryrun.json
+          python - <<'PY'
+          import json
+          data=json.load(open('nox_v133_dryrun.json'))
+          assert data['unsafe_jobs_before']>0
+          assert data['changed_files']>0
+          assert data['applied'] is False and data['git_source_only'] is True
+          print('NOX_V133_NATIVE_ONEPASS_DRY_RUN=PASS')
+          print('NOX_V133_NATIVE_AUTOFIX_PLANNED_FILES='+str(data['changed_files']))
+          PY
+          git diff --exit-code -- .github/workflows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V133_AUTOFIX_DRYRUN_NO_WRITES
+          path: nox_v133_dryrun.json
+          retention-days: 14

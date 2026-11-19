@@ -1,0 +1,28 @@
+{
+  "schema": "NOX_OBSERVER_REFERENCE_FIX_REVIEW_V1",
+  "candidate": "complete_executor/owner_complete_executor_workspace_observe_fixed.py",
+  "sha256": "a2c903b372c85a10fc815cfa403dfd3b7ea2ec1e8292082fe96aef4ab76f8874",
+  "bytes": 50610,
+  "base_sha256": "40418f1927076113f25b1b44bce2d7516a4ca16db7b88788e83911a94df960e1",
+  "actual_failure": "OWNER_REVIEWED event lacks reference; readback therefore never loaded exact plan from durable task.params",
+  "parent_gate_weakened": false,
+  "syntax_passed": true,
+  "owner_reviewed_bindings_checked": [
+    "3A02.project.readback_revoke.layout_retry.20261118",
+    "3A03.project.cache_revision_lock.20261118",
+    "6V14-04.project.receipt_time_order.fd_retry.20261118",
+    "3B05.project.strict_skill_json.layout_retry.20261118",
+    "4A02.project.forge_split_coverage.20261118",
+    "0V14-14.project.overlay_paths.20261118"
+  ],
+  "recorded_current_census_postimages_matched": 7,
+  "negative_checks": [
+    "receipt_plan_sha_mismatch",
+    "parent_identity_mismatch",
+    "model_generated_reference_mismatch"
+  ],
+  "contract_only_without_plan_remains_unaccepted": true,
+  "native_calls": false,
+  "package_mutated": false,
+  "note": "Helper fixtures reuse observed identity/pins plus plan metadata; this is local observer verification, not new S03 proof."
+}

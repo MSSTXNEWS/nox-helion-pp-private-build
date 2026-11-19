@@ -1,0 +1,54 @@
+name: NOX V95 background RAM-hashed training data acceleration install
+on:
+  push:
+    branches: [nox/e2-v95-ram-weight-pipeline-20261114]
+    paths: ['.github/workflows/nox-e2-v95-data-install.yml']
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v95-ram-data-install-60509551
+  cancel-in-progress: false
+jobs:
+  install:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Existing NOX2 and safe remote syntax
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v95/install_ram_data_accel.py
+          python3 - <<'PY'
+          import ast
+          from nox_runpod.teacher_mesh.v95 import install_ram_data_accel as x
+          remote=x.REMOTE.lstrip("\n").split("python3 - <<'PYREMOTE'\n",1)[1].rsplit("\nPYREMOTE",1)[0]
+          ast.parse(remote)
+          assert "NOX_V95_RAM_DATA_V1" in remote
+          for forbidden in ("pip install torch","supervisorctl restart","systemctl restart","os.kill("):
+              assert forbidden not in remote
+          print("NOX_V95_SOURCE_SAFE=PASS")
+          PY
+      - name: ONE native RAM cached data accelerators install and real smoke
+        run: python3 -m nox_runpod.teacher_mesh.v95.install_ram_data_accel
+      - name: Revoke exact temporary SSH owner key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Scope
+        if: success()
+        run: |
+          echo "NOX_V95_CPU_DATA_PREPARATION_READY=true"
+          echo "NOX_V95_GPU1_NOT_ALLOCATED=true"
+          echo "NOX_V95_NOX_STUDENT_WEIGHTS_UNCHANGED=true"

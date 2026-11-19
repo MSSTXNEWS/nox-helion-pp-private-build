@@ -1,0 +1,22 @@
+{
+  "schema": "NOX_V175_WORM60_OWNER_POLICY_V1",
+  "instructions_version": "0.0.6",
+  "expected_worm_tasks": 60,
+  "verified_native_registered_at_audit": 0,
+  "verified_native_queue_live": false,
+  "concurrent_cpu_max": 8,
+  "concurrent_gpu1_trainers_max": 1,
+  "backend": "EXISTING_ONEHOST_ONLY",
+  "heartbeat_timeout_s": 600,
+  "retry_max": 3,
+  "retry_requires_terminal_owner_release": true,
+  "retry_requires_checkpoint_for_gpu": true,
+  "stale_heartbeat_never_kill": true,
+  "three_hour_release_period_s": 10800,
+  "release_requires": [
+    "native_web_e2e",
+    "quality_holdout",
+    "restorable_backup"
+  ],
+  "native_install_verified": false
+}

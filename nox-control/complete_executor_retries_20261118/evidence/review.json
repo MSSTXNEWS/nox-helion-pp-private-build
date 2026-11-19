@@ -1,0 +1,33 @@
+{
+  "schema": "NOX_INDEPENDENT_RUNTIME_UPDATE_REVIEW_V1",
+  "entry_path": "/workspace/scratch/552ada07ed4f/complete_executor/native/owner_project_runtime_update.py",
+  "entry_sha256": "2be2752f4e784e94db08159e39b852ec2f22a513f080247740eaf6bdc625c640",
+  "body_sha256": "cb66ba9238415a3a916250bf712e0a61b993d0f16574863befe5e38eda211103",
+  "exact_current_config_sha256": "6df47b8e65801f1c22af8bf46e3d836b8776b08bf771a54568e2b477d7e8b848",
+  "local_focused_tests": {
+    "count": 8,
+    "result": "PASS",
+    "log_sha256": "cf8c6ffb1cf0a11f5a5278e1b366facafa2783bc8fb64fd0b4805c43c7f209d9"
+  },
+  "review_result": "NO_BLOCKER_IN_REVIEWED_INCREMENTAL_SCOPE",
+  "verified_design": {
+    "existing_catalog_rows_preserved": 15,
+    "retry_rows_appended": 4,
+    "source_files_snapshot_count": 28,
+    "dirty_postimages_not_reseeded": true,
+    "runtime_mutations_allowlisted": true,
+    "callback_transport_truth_unchanged": true,
+    "terminal_retry_receipts_exact_s03_required": 4,
+    "history_owner_claim_result_native_terminal_preserved": true,
+    "all_runtime_preimages_checked_again_under_lease": true,
+    "preflight_before_dispatcher_stop": true,
+    "source_tree_before_after_compared_until_admission_release": true,
+    "new_configuration_written_after_runtime_and_package": true,
+    "new_director_identity_guarded_on_rollback": true,
+    "foreign_bytes_preserved_on_rollback": true,
+    "protected_model_service_identities_checked": true,
+    "model_first_prompt_tokenized_without_inference": true
+  },
+  "scope": "READ_ONLY_CODE_REVIEW_AND_TEMP_FIXTURES_NO_NATIVE_EXECUTION",
+  "native_updated": false
+}

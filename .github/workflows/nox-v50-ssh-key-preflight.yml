@@ -1,0 +1,61 @@
+name: NOX V50 Vast SSH access capability preflight (read only)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v50-ssh-key-preflight.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+jobs:
+  inspect-ssh-access:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      VAST_API_KEY: ${{ secrets.NOX2 }}
+    steps:
+      - name: Inspect current instance and SSH-key API without changing anything
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,json,urllib.request,urllib.error
+          key=os.getenv('VAST_API_KEY','')
+          if not key: raise SystemExit('HOLD_NOX2_MISSING')
+          url='https://console.vast.ai/api/v0/instances/60509551/'
+          h={'Authorization':'Bearer '+key,'Accept':'application/json'}
+          def read(endpoint):
+              with urllib.request.urlopen(urllib.request.Request(endpoint,headers=h),timeout=25) as r:
+                  return json.load(r)
+          response=read(url)
+          d=response.get('instances',response) if isinstance(response,dict) else None
+          if isinstance(d,list): d=next((v for v in d if str(v.get('id'))=='60509551'),None)
+          if not isinstance(d,dict) or str(d.get('id'))!='60509551':raise SystemExit('HOLD_INSTANCE')
+          print('INSTANCE_CONFIRMED=true')
+          print('INSTANCE_RUNNING='+str(d.get('actual_status')=='running').lower())
+          print('SSH_ROUTE_AVAILABLE='+str(bool(d.get('ssh_host') and d.get('ssh_port'))).lower())
+          for k in ('runtype','image_runtype','vm','is_vm','machine_type'):
+              if k in d and isinstance(d[k],(str,bool,int)):
+                  print('SAFE_INSTANCE_'+k.upper()+'='+str(d[k])[:60].replace(' ','_'))
+          try:
+              keys=read(url+'ssh/')
+          except urllib.error.HTTPError as e:
+              print('SSH_KEYS_API_HTTP='+str(e.code))
+              raise SystemExit('HOLD_SSH_KEYS_READ_NOT_AVAILABLE')
+          value=keys.get('ssh_keys') if isinstance(keys,dict) else None
+          if isinstance(value,str):
+              try: value=json.loads(value)
+              except (TypeError,ValueError):value=None
+          print('SSH_KEYS_API_AUTHENTICATED=true')
+          print('SSH_KEYS_LIST_PARSEABLE='+str(isinstance(value,list)).lower())
+          print('SSH_KEY_VALUES_EXPORTED=false')
+          if not isinstance(value,list): raise SystemExit('HOLD_SSH_KEYS_SCHEMA')
+          print('PREFLIGHT_READ_ONLY_PASS=true')
+          PY

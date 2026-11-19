@@ -1,0 +1,166 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3D_FULL_CYCLE_RECEIPT_V2",
+  "instructions_version": "0.0.6",
+  "slot": "3D",
+  "date_msk": "2026-11-16",
+  "scope": "ORIGINAL_WEB29_CINEMATIC_3D_SOURCE_REPAIR_LOCAL_CHROMIUM_NATIVE_HOLD",
+  "accepted_original": {
+    "archive": "NOX_HELION_WEB29_MAIN_20261116.zip",
+    "bytes": 84223045,
+    "archive_sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
+    "zip_entries": 1212,
+    "crc_pass": true,
+    "world_shader_sha256": "124a5d341059eb1070adcf58640657aa471ea4888e4409101503ecaa9337f952",
+    "orbit14_sha256": "3aced1774354b6212b665ef40514e78fb7660a3319fd346c4b12bbf277a39d38",
+    "original_cinematic_files_protected_from_prior_manifest": 512,
+    "original_zip_modified": false,
+    "original_d02_shaders_or_orbits_changed": false
+  },
+  "changes": [
+    {
+      "path": "coordination/onepass/web29_3d_20261116/site/nox-motion-idle-loader.js",
+      "commit": "a0e12e8a7a1700b765d36b4baf7ffe9b5ccfcfca",
+      "blob_sha": "06677e5c843c48aff733f6615e75776ea24b23f2"
+    },
+    {
+      "path": "coordination/onepass/web29_3d_20261116/site/nox-cinematic-accessibility-3d.css",
+      "commit": "ad66d6ce268f15fecc6b4ddf57b8500bcb2175aa",
+      "blob_sha": "4bd89145cfd1cf6d2ab0066ee6acfabc67e539ef"
+    },
+    {
+      "path": "coordination/onepass/web29_3d_20261116/tests/test_motion_idle_loader.mjs",
+      "commit": "04fc2278df304197edbaa71d558cbdba3a9d87ec",
+      "blob_sha": "d1941fe3efe86f17d3aff81c81680bbf8752c756"
+    },
+    {
+      "path": "coordination/onepass/web29_3d_20261116/README.md",
+      "commit": "ffcd40fff54c9f9e6f8ba986656ab32c95ed1e5c",
+      "blob_sha": "90de81567e8db108316c5dc7e240fb4c202896ca"
+    },
+    {
+      "path": ".github/workflows/nox-onepass-source-acceptance.yml",
+      "commit": "3ed6c4907e114a0beafa737313ab6735dd77d0bf",
+      "blob_sha": "96c8cdac063938e1b7bdac9eed1ba99f0b706ef4"
+    }
+  ],
+  "tasks": [
+    {
+      "id": 1,
+      "status": "DONE_SOURCE_VERIFIED",
+      "result": "Verified untouched original primary ZIP and hashes of orbit-14 and world shaders; no new visual template; 512 prior protected cinematic file references remain primary."
+    },
+    {
+      "id": 2,
+      "status": "DONE_SOURCE_PATCHED_CI_PASS",
+      "result": "Optional Motion.js now listens to original native runtime observation, media, composer and training activity; no forced 4-second idle deadline; STOP/chat inhibit decorative admission; no main chat/server changes."
+    },
+    {
+      "id": 3,
+      "status": "DONE_SOURCE_PATCHED_BROWSER_PASS",
+      "result": "Fixed live !important reduced-motion specificity across contrast theme, live/still modes and six mobile/desktop viewport widths; no shader downgrade or page-wide overflow in CSS fixture."
+    },
+    {
+      "id": 4,
+      "status": "DONE_LOCAL_CHROMIUM_NATIVE_HOLD",
+      "result": "48/48 computed-style cases passed in real local Chromium using pinned original CSS plus staged patch; attempted original full standalone page navigation did not complete under local static harness timeout and is not passed. No authenticated owner OneHost/browser TTFT/STOP/S03 screenshot or visual production benchmark."
+    },
+    {
+      "id": 5,
+      "status": "DONE_SOURCE_INTEGRATED_CI_PASS_NATIVE_HOLD",
+      "result": "Updated existing source files/tests/README and existing source-only CI workflow in PR256; exact GitHub Actions job success after readback, 16/16 Node assertions, 0 failed. Live original owner target unchanged; prior overlay ZIP is stale relative to corrected source."
+    }
+  ],
+  "validation": {
+    "local_node_tests_passed": 15,
+    "local_css_chromium_computed_style_cases_passed": 48,
+    "css_test_matrix": {
+      "widths": [
+        320,
+        390,
+        800,
+        1024,
+        1440,
+        1920
+      ],
+      "themes": [
+        "obsidian",
+        "contrast"
+      ],
+      "cinema": [
+        "live",
+        "still"
+      ],
+      "reduced_motion": [
+        "reduce",
+        "no-preference"
+      ]
+    },
+    "github_source_ci_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43801923232",
+    "github_job_id": 133083944485,
+    "github_result": "SUCCESS",
+    "github_exact_source_node_tests": 16,
+    "github_exact_source_node_failed": 0,
+    "authenticated_native_onehost_browser_verified": false,
+    "live_ttft_before_after": null,
+    "live_sse_stop_s03_e2e_verified": false
+  },
+  "relay_control": {
+    "WEIGHTS": {
+      "status": "HOLD_NATIVE_FRESH_CHECK_REQUIRED",
+      "last_readonly_source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43795017295",
+      "historical_supervisor": "nox-train-volta-t866u",
+      "historical_last_state": "FATAL_PID_NULL",
+      "reported_global_step": 5,
+      "reported_loss": 3.0604379177093506,
+      "successful_optimizer_updates_verified": null,
+      "trainable_tensor_delta_verified": false,
+      "checkpoint_optimizer_rng_restore_verified": false,
+      "restart_performed": false,
+      "lesson": "A reported step counter is not a confirmed successful weight update; owner STOP/lease and terminal stderr must be inspected before safe recovery."
+    },
+    "KNOWLEDGE": {
+      "status": "HOLD_NATIVE_NO_NEW_PROOF",
+      "hunter_job_id": null,
+      "verified_source_license_dedup": null,
+      "s03_write_readback_this_slot": false,
+      "training_candidate_verified": false,
+      "lesson": "Do not treat a source-only Hunter candidate or fabricated S03 fixture as learned knowledge."
+    },
+    "DISPATCHER_RESOURCES": {
+      "status": "HOLD_NATIVE_NO_NEW_PID",
+      "last_readonly_observed_utc": "2026-11-16T03:27:57Z",
+      "reference": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43797425325",
+      "http_health_ports": {
+        "8080": 200,
+        "8081": 200,
+        "8082": 200
+      },
+      "historical_dispatcher_work_stealing_threads": 6,
+      "verified_distinct_os_subagent_pids": 0,
+      "verified_native_job_ids": 0,
+      "owner_lease_verified": false,
+      "resource_telemetry_current": false,
+      "last_known_hardware": "2 x V100 32GB; cgroup RAM max 194065203200 bytes; CPU quota about 19.2",
+      "last_known_ssd_free_bytes_approx": 14020000000,
+      "bytes_downloaded_this_slot": 0,
+      "restart_performed": false,
+      "lesson": "Six threads != three OS worker PIDs. Historical HTTP health is not owner authenticated S03 and streaming acceptance."
+    }
+  },
+  "cleanup": {
+    "eligible": false,
+    "reason": "No accepted replacement DeepSeek serving set, independent restore, stopped old serving process or cleanup lease",
+    "files_deleted": 0,
+    "freed_bytes_verified": 0,
+    "unique_s03_genesis_checkpoints_or_weights_changed": false
+  },
+  "native_mutations": {
+    "model_weights_changed": false,
+    "training_changed": false,
+    "dispatcher_changed": false,
+    "web_production_deployed": false,
+    "server_process_restarted": false,
+    "server_files_deleted": false
+  },
+  "next_one_action": "Use existing authorised pinned OneHost path to verify current WEB29 serving preimage, STOP/lease and independently restorable backup; stage only corrected 3D CSS/JS with rollback; run authenticated original browser streaming/STOP/S03/reduced-motion and measure TTFT p50/p95 before promotion. Other slots own trainer recovery and downloader, do not duplicate them."
+}

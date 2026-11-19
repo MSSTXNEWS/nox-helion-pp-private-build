@@ -1,0 +1,47 @@
+[
+  {
+    "name": "baseline_pinned_python",
+    "exit_code": 1,
+    "test_methods": 11,
+    "summary": "         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: module 'nox_v13_native_inspect' has no attribute 'pinned_python_path_status'\n\n----------------------------------------------------------------------\nRan 11 tests in 0.008s\n\nFAILED (errors=12)\n",
+    "error_entries": 12,
+    "error_types": [
+      "AttributeError",
+      "UnboundLocalError"
+    ],
+    "sha256": "3ffc50750dcc7f24bc18c48a6a719de7911309cd137c259acb8d97923340dce2"
+  },
+  {
+    "name": "baseline_mounts",
+    "exit_code": 1,
+    "test_methods": 4,
+    "summary": "', fail)\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: module 'nox_owner_mount_probe' has no attribute 'storage_mount_metadata'\n\n----------------------------------------------------------------------\nRan 4 tests in 0.004s\n\nFAILED (errors=4)\n",
+    "error_entries": 4,
+    "error_types": [
+      "AttributeError"
+    ],
+    "sha256": "93f1c63acbb7a4d03a85b0a59f10cd855eaf1c23e8cbde25b8ebc37d3b81f30f"
+  },
+  {
+    "name": "baseline_maya_linkage",
+    "exit_code": 1,
+    "test_methods": 4,
+    "summary": "om '/workspace/scratch/d89c44a8751d/nox-live/nox-control/owner_native_inspect.py'> does not have the attribute 'maya_p0_binary_readback'\n\n----------------------------------------------------------------------\nRan 4 tests in 0.005s\n\nFAILED (errors=4)\n",
+    "error_entries": 4,
+    "error_types": [
+      "AttributeError"
+    ],
+    "sha256": "e59d381b13a25494761966683e7755a94cf9c413d876ee82a0cfe53b6be054d0"
+  },
+  {
+    "name": "baseline_hf_metadata",
+    "exit_code": 1,
+    "test_methods": null,
+    "summary": "/nox-live/coordination/progress/hourly/nox_auto_2a_hf_metadata_test.py\", line 23, in <module>\n    good=m.hf_metadata_probe(root)\n         ^^^^^^^^^^^^^^^^^^^\nAttributeError: module 'original_owner_native_inspect' has no attribute 'hf_metadata_probe'\n",
+    "error_entries": 0,
+    "error_types": [
+      "AttributeError"
+    ],
+    "sha256": "fed99425e9669d85564c6c8304194826997c0076ad7394f007f4c3de1a4f884a"
+  }
+]

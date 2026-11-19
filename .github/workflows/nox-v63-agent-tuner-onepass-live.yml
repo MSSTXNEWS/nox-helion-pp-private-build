@@ -1,0 +1,49 @@
+name: NOX V63 one-shot guarded recovery existing Agent Tuner
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v63-agent-tuner-onepass-live.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner approval for original NOX OneHost only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v63-agent-tuner-single-native
+  cancel-in-progress: false
+jobs:
+  guarded-recover:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Gate on source security tests before live service action
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v63/recover_agent_tuner.py
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/v63/tests -p 'test_safe_recovery.py' -v
+      - name: Single native Supervisor start only after source SHA, STOP and GPU gates
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v63.recover_agent_tuner
+      - name: Revoke exact temporary Vast key even after errors
+        if: always()
+        run: |
+          python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Evidence limits
+        if: success()
+        run: |
+          echo "ONLY_AGENT_TUNER_MAY_HAVE_STARTED=true"
+          echo "NOX_TRAIN_WORM_NOT_STARTED=true"
+          echo "NOX_WEIGHTS_NOT_MODIFIED_BY_WORKFLOW=true"
+          echo "NOX_QUEUE_JOBS_NOT_REGISTERED=true"

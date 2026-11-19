@@ -1,0 +1,174 @@
+[
+  {
+    "kind": "AUTHORIZED_COMMENT_ID",
+    "data": 6968165628
+  },
+  {
+    "kind": "INSTANCE_STATE",
+    "data": {
+      "actual_status": "running",
+      "cur_state": "running",
+      "found": true,
+      "instance": 60509551,
+      "intended_status": "running",
+      "num_gpus": 2,
+      "provider_mutations": 0,
+      "read_only_provider_lookup": true
+    }
+  },
+  {
+    "kind": "HOST_PIN",
+    "data": "VERIFIED"
+  },
+  {
+    "kind": "AUTH_ATTEMPT",
+    "data": "1_RETRY"
+  },
+  {
+    "kind": "AUTH_ATTEMPT",
+    "data": "2_RETRY"
+  },
+  {
+    "kind": "AUTHENTICATED_INSTANCE",
+    "data": 60509551
+  },
+  {
+    "kind": "SCOPE_PROJECT_USERNS_PROBE",
+    "data": {
+      "config_sha256": "085fa4e3c8c96ae4ffb952dee53bb0d8bda0a1c50416a4d8a365017d043e95be",
+      "config_writes": 0,
+      "finished_at": 1794972693.2925699,
+      "probe": {
+        "attempt_count": 1,
+        "binaries": {
+          "python": {
+            "mode": "0o755",
+            "path": "/usr/bin/python3.12",
+            "setgid": false,
+            "setuid": false,
+            "sha256": "1396795801a792fc4a0faa7a47762751e85c76293b4fd925f32c49e27c0f978a"
+          },
+          "unshare": {
+            "mode": "0o755",
+            "path": "/usr/bin/unshare",
+            "setgid": false,
+            "setuid": false,
+            "sha256": "9f41a192393e7a05b843ae51bd187a76e09482392d37275d796f8881db97dde6"
+          }
+        },
+        "child_record": null,
+        "cleanup": "OWN_PROCESS_EXITED",
+        "elapsed_seconds": 0.054,
+        "fixed_environment_without_inherited_credentials": true,
+        "followup_or_escalation_attempted": false,
+        "fresh_proc_mount_requested": true,
+        "host_policy_changes": 0,
+        "host_proc_bound": false,
+        "namespace_support_proven": false,
+        "native_code_sandbox_acceptance_proven": false,
+        "output_bytes": 49,
+        "output_sha256": "8f8f94f07ecd0e6152663b425f33f1fe8ce609762b9d02fa570dcb92c42a3150",
+        "owned_process": {
+          "pid": 3794939,
+          "ppid": 3794938,
+          "start_ticks": 176542197,
+          "state": "R"
+        },
+        "owned_process_group": 3794939,
+        "parent_namespaces_after": {
+          "mnt": "mnt:[4026533020]",
+          "pid": "pid:[4026533828]",
+          "user": "user:[4026531837]"
+        },
+        "parent_namespaces_before": {
+          "mnt": "mnt:[4026533020]",
+          "pid": "pid:[4026533828]",
+          "user": "user:[4026531837]"
+        },
+        "private_propagation_requested": true,
+        "returncode": 1,
+        "sanitized_output": "unshare: unshare failed: Operation not permitted\n",
+        "schema": "NOX_BOUNDED_USERNS_PROBE_V1",
+        "state": "NAMESPACE_DENIED_NO_ESCALATION",
+        "suid_mount_executed": false
+      },
+      "processes_after": {
+        "director": {
+          "pid": 3760381,
+          "ppid": 114,
+          "start_ticks": 176197984,
+          "state": "S"
+        },
+        "same_three_pid_start_ticks": true,
+        "workers": [
+          {
+            "pid": 3760595,
+            "ppid": 3760381,
+            "start_ticks": 176199997,
+            "state": "S"
+          },
+          {
+            "pid": 3760596,
+            "ppid": 3760381,
+            "start_ticks": 176199997,
+            "state": "S"
+          },
+          {
+            "pid": 3760597,
+            "ppid": 3760381,
+            "start_ticks": 176199997,
+            "state": "S"
+          }
+        ]
+      },
+      "processes_before": {
+        "director": {
+          "pid": 3760381,
+          "ppid": 114,
+          "start_ticks": 176197984,
+          "state": "S"
+        },
+        "same_three_pid_start_ticks": true,
+        "workers": [
+          {
+            "pid": 3760595,
+            "ppid": 3760381,
+            "start_ticks": 176199997,
+            "state": "S"
+          },
+          {
+            "pid": 3760596,
+            "ppid": 3760381,
+            "start_ticks": 176199997,
+            "state": "S"
+          },
+          {
+            "pid": 3760597,
+            "ppid": 3760381,
+            "start_ticks": 176199997,
+            "state": "S"
+          }
+        ]
+      },
+      "queue_writes": 0,
+      "schema": "NOX_PROJECT_USERNS_CAPABILITY_INSPECT_V1",
+      "service_changes": 0,
+      "source_census": {
+        "count": 28,
+        "files_sha256": "f9d914745e8b42bc7d8f45bc5dd0804291a86eacab4edd1cd2dc42d4c17f583f",
+        "matches_expected": true
+      },
+      "source_writes": 0,
+      "started_at": 1794972693.2025716,
+      "state": "BOUNDED_PROBE_COMPLETE"
+    }
+  },
+  {
+    "kind": "INSPECT_COMPLETE",
+    "data": true
+  },
+  {
+    "kind": "REMOTE_EXIT_CODE",
+    "data": 0
+  }
+]

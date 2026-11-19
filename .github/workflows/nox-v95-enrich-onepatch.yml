@@ -1,0 +1,45 @@
+name: NOX V95 onepass optional 26-second enrich TTFT budget
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v95-enrich-onepatch.yml, nox_runpod/teacher_mesh/v95/optional_enrich_onepatch.py]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner approval for original NOX OneHost only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v95-optional-enrich-native-onepatch
+  cancel-in-progress: false
+jobs:
+  patch:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compile full patch and native code
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v95/optional_enrich_onepatch.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v95.optional_enrich_onepatch import REMOTE
+          code=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(code,'<nox-v95-native>','exec')
+          for key in ('HOLD_ACTIVE_OR_UNHEALTHY_CHAT','HOLD_EXACT_ENRICH_ANCHORS','HOLD_MANDATORY_MEMORY_CHANGED',
+                       'HOLD_BACKUP_SHA','HOLD_POST_DEPLOY','revert(original,meta)'):
+              assert key in code
+          print('NOX_V95_RUNNER_NATIVE_COMPILE=PASS')
+          PY
+      - name: Apply native optional context time budget with automatic rollback
+        run: python3 -m nox_runpod.teacher_mesh.v95.optional_enrich_onepatch
+      - name: Always revoke temporary SSH identity
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

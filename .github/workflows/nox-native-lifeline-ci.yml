@@ -1,0 +1,83 @@
+name: NOX native Supervisor lifeline safety regression
+on:
+  pull_request:
+    paths:
+      - 'nox-control/nox_native_lifeline.py'
+      - 'nox-control/test_nox_native_lifeline.py'
+      - 'nox-control/nox_agent.py'
+      - 'nox-control/test_nox_agent_status.py'
+      - 'nox-control/nox_neuro_evolution_ingress.py'
+      - 'nox-control/test_nox_neuro_evolution_ingress.py'
+      - 'nox-control/owner_native_lifeline.py'
+      - 'nox-control/test_owner_native_lifeline.py'
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_dispatcher_mentor.py'
+      - 'nox-control/test_owner_dispatcher_mentor.py'
+      - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_inspect_safety.py'
+      - 'nox-control/test_owner_native_inspect_inventory.py'
+      - 'nox-control/test_owner_native_inspect_receipt_privacy.py'
+      - 'nox-control/test_owner_native_inspect_compat_privacy.py'
+      - 'nox-control/test_owner_native_inspect_maya_read_bounds.py'
+      - 'nox-control/owner_native_audit.py'
+      - 'nox-control/test_owner_native_audit_mount_inventory.py'
+      - '.github/workflows/nox-native-lifeline-ci.yml'
+  push:
+    paths:
+      - 'nox-control/nox_native_lifeline.py'
+      - 'nox-control/test_nox_native_lifeline.py'
+      - 'nox-control/nox_agent.py'
+      - 'nox-control/test_nox_agent_status.py'
+      - 'nox-control/nox_neuro_evolution_ingress.py'
+      - 'nox-control/test_nox_neuro_evolution_ingress.py'
+      - 'nox-control/owner_native_lifeline.py'
+      - 'nox-control/test_owner_native_lifeline.py'
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_dispatcher_mentor.py'
+      - 'nox-control/test_owner_dispatcher_mentor.py'
+      - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_inspect_safety.py'
+      - 'nox-control/test_owner_native_inspect_inventory.py'
+      - 'nox-control/test_owner_native_inspect_receipt_privacy.py'
+      - 'nox-control/test_owner_native_inspect_compat_privacy.py'
+      - 'nox-control/test_owner_native_inspect_maya_read_bounds.py'
+      - 'nox-control/owner_native_audit.py'
+      - 'nox-control/test_owner_native_audit_mount_inventory.py'
+      - '.github/workflows/nox-native-lifeline-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Source syntax
+        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py nox-control/nox_agent.py nox-control/test_nox_agent_status.py nox-control/nox_neuro_evolution_ingress.py nox-control/test_nox_neuro_evolution_ingress.py nox-control/owner_native_lifeline.py nox-control/test_owner_native_lifeline.py nox-control/owner_native_operator.py nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py
+      - name: Independent lifeline unit and failure tests
+        run: python3 -m unittest discover -s nox-control -p 'test_nox_native_lifeline.py' -v
+      - name: Native NOX status truthfulness tests
+        run: python3 -m unittest discover -s nox-control -p 'test_nox_agent_status.py' -v
+      - name: Verified neural experience-to-training data gate
+        run: python3 -m unittest discover -s nox-control -p 'test_nox_neuro_evolution_ingress.py' -v
+      - name: Bounded owner native installation gate
+        run: python3 -m unittest discover -s nox-control -p 'test_owner_native_lifeline.py' -v
+      - name: Bounded Linux mountinfo storage inventory tests
+        run: |
+          python3 -m py_compile nox-control/owner_native_audit.py nox-control/test_owner_native_audit_mount_inventory.py
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_audit_mount_inventory.py' -v
+      - name: Owner OneHost STOP lease and 8081 listener identity read-only gates
+        run: |
+          python3 -m py_compile nox-control/owner_native_inspect.py nox-control/test_owner_native_inspect_safety.py
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_safety.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_inventory.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_receipt_privacy.py' -v
+      - name: Existing mentor Supervisor recovery safety gates (source only)
+        run: python3 -m unittest discover -s nox-control -p 'test_owner_dispatcher_mentor.py' -v
+      - name: Read-only compatibility privacy and bounded identity regressions
+        run: |
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_compat_privacy.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_maya_read_bounds.py' -v

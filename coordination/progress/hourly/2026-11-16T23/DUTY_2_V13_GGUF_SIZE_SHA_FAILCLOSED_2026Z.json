@@ -1,0 +1,123 @@
+{
+  "schema": "NOX_V13_DUTY2_SOURCE_AND_NATIVE_BOUNDARY_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "NOX_DUTY_2_CONTROL_14",
+  "observed_at_utc": "2026-11-16T20:26:03.626Z",
+  "observed_at_msk": "2026-11-16T23:26:03.626+03:00",
+  "scope": "Existing Vast #60509551, V13-03..06 and consolidated existing preproduction admission ONLY; no production cutover",
+  "source": {
+    "problem": "pinned_model_paths previously returned OK if all six expected GGUF pathname lengths matched, despite sha_status NOT_CHECKED for each payload",
+    "fix": "return HOLD_MODEL_SHA_UNVERIFIED on six exact lengths until independent full-file SHA and live Maya tests exist",
+    "source_file": "nox-control/owner_native_audit.py",
+    "preimage_blob": "7318a107fca0535f7f317a2bbc85d2da73f07f9e",
+    "source_blob": "ee5161d1097cd632ed55662bcf3b1ec48434d3b3",
+    "source_commit": "0bba1c3b0819d5c37aed38b0a4e18df3fa466f48",
+    "test_file": "nox-control/test_owner_native_audit_pinned_v10.py",
+    "test_blob": "bf80279f4fe3447f57914df6fc9978ffbe2fc034",
+    "test_commit": "92d698beaf7d2c21827903b44931e693504071ba",
+    "test": "mocked six exact-size GGUF regular-file stat rows (sparse-free), SHA NOT_CHECKED -> HOLD_MODEL_SHA_UNVERIFIED",
+    "ci_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43949032579",
+    "ci_job": 133586263964,
+    "ci_result": "SOURCE_TESTED_37_OF_37_PASS",
+    "manifest_commit": "8b278bbf5350ca1f11a9946f413b205fa9e5b6b4",
+    "manifest_blob": "8613b47a65367e6f3e527785d3349183f6cbae17"
+  },
+  "drive_metadata_read": {
+    "starter": {
+      "folder": "https://drive.google.com/drive/folders/1bTf6pYSghj6rG7KslA34Vjqkc3OakVb2",
+      "parts": 4,
+      "unique_ids": 4,
+      "bytes": 331718151,
+      "sha_full_archive": "UNVERIFIED_THIS_RUN",
+      "native_installed": "UNKNOWN"
+    },
+    "wheelhouse": {
+      "folder": "https://drive.google.com/drive/folders/1q1qR71IiOU7LsGAYjPiIbYAN5PrffDNX",
+      "parts": 39,
+      "unique_ids": 39,
+      "bytes": 3831295823,
+      "tag": "CP311_CU126",
+      "sha_full_archive": "UNVERIFIED_THIS_RUN",
+      "native_installed": "NOT_VERIFIED"
+    }
+  },
+  "prior_native_read_only": {
+    "observed_at_utc": "2026-11-16T20:09:37Z",
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43939988374",
+    "job": 133578083721,
+    "instance_id": 60509551,
+    "owner_stop": "PRESENT_AT_OBSERVATION",
+    "owner_maintenance": "PRESENT_AT_OBSERVATION",
+    "supervisor_critical": "FIVE_STOPPED",
+    "port_8081": "NO_LISTENER",
+    "gpu0_and_gpu1_vram_mib_used": [
+      0,
+      0
+    ],
+    "root_fs_bytes": 183609851904,
+    "root_free_bytes": 43158585344,
+    "rclone_remotes": 0,
+    "python_package_env": "/root/venv_volta Python3.12 torch2.6.0+cu124 PEFT0.21.3 TRL1.18.0 DeepSpeed0.20.0",
+    "wheelhouse_mismatch": "CP311/cu126 metadata pack cannot be blindly installed into native Python3.12/cu124",
+    "maya_elf_sha256": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+    "maya_executed": false,
+    "fp16_sm70_gpu0_gpu1": false,
+    "writer_lease": "UNKNOWN",
+    "independent_restore": "NOT_VERIFIED"
+  },
+  "model": {
+    "expected_unique_total_bytes": 248834257920,
+    "missing_5_unique_bytes": 248828477216,
+    "current_verified_new_model": false,
+    "full_file_shas_currently_verified": false,
+    "maya_tp2_inference_currently_verified": false,
+    "seekable_new_storage_verified": false,
+    "needed_missing_bytes_over_old_root_free_without_reserve": 205669891872
+  },
+  "task_outcomes": [
+    {
+      "task_id": "V13-03",
+      "status": "SOURCE_METADATA_VERIFIED",
+      "evidence": "Drive connector 4+39 numbered part sizes; no part payloads rehashed"
+    },
+    {
+      "task_id": "V13-04",
+      "status": "HOLD_NATIVE_SM70_GPU0_GPU1",
+      "evidence": "Read historical native pinned py312/cu124; CP311/cu126 metadata source; no isolated current FP16 kernel"
+    },
+    {
+      "task_id": "V13-05",
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
+      "evidence": "New metadata sha-unverified guard, CI 37/37; no seekable storage or all 5 GGUF SHA"
+    },
+    {
+      "task_id": "V13-06",
+      "status": "HOLD_REAL_MAYA_INFERENCE",
+      "evidence": "Prior native Maya ELF exact SHA only; no Maya TP2 answer"
+    },
+    {
+      "task_id": "V13-10",
+      "status": "SOURCE_MANIFEST_UPDATED",
+      "evidence": "GitHub CAS manifest commit 8b278bbf"
+    }
+  ],
+  "native_effects_from_this_slot": {
+    "service_starts": 0,
+    "service_stops": 0,
+    "owner_STOP_changed": false,
+    "downloads_initiated_bytes": 0,
+    "deletions_initiated_bytes": 0,
+    "optimizer_updates_verified_new": 0,
+    "s03_recall_verified_new": 0,
+    "new_native_pid_start_ticks": [],
+    "new_writer_lease": false
+  },
+  "rollback": {
+    "source_preimage_blob": "7318a107fca0535f7f317a2bbc85d2da73f07f9e",
+    "test_preimage_blob": "003b583da9f029ffe820dbdee5ed1f34427d7dce",
+    "deployment_rollback": "NOT_NEEDED_SOURCE_ONLY",
+    "unique_assets_untouched": true
+  },
+  "first_ready": "Owner-native current STOP+exclusive lease; independently restore S03/history/skills/checkpoint optimizer scaler RNG; authorize same-instance durable seekable>=248834257920 B plus reserve; only then 5 full SHA, isolated Maya TP2 GPU0+GPU1 and original active WEB SSE+S03+STOP",
+  "release_status": "HOLD_NATIVE_STORAGE_RESTORE_NO_NEW_MODEL"
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2A_HF_LAYOUT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "2A",
+  "at_utc": "2026-11-16T07:21:35.360Z",
+  "at_msk": "2026-11-16T10:21:35+03:00",
+  "head_before": "a664e05ed92f34fec6153572ce8911ac4210ff98",
+  "head_after": "THIS_COMMIT",
+  "tasks": [
+    "1 HOLD loaded GGUF SHA/current PID, Qwen student separate",
+    "2 PRIOR NATIVE verified 16 Qwen files at pinned c202236235762e1c871ad0ccb60c8ee5ba337b9a, no repeat download",
+    "3 PRIOR SOURCE Qwen student distinct from 35B optimizer/adapter lineage",
+    "4 PRIOR SOURCE SFTConfig compatibility patch, server TRL runtime HOLD",
+    "5 NEW SOURCE reject invalid HF tensor header layout; native install HOLD"
+  ],
+  "tests": {
+    "source_new_synthetic_assertions": 6,
+    "total_synthetic_assertions": 13,
+    "exact_ci": "PENDING",
+    "native": "NOT_RUN"
+  },
+  "native_evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43820928237",
+  "native_latest_at_utc": "2026-11-16T07:04:20Z",
+  "WEIGHTS": {
+    "previously_independently_verified_updates": 8,
+    "latest_self_reported_updates": 10,
+    "verified_updates_9_10": false,
+    "updates_by_2A": 0,
+    "checkpoint8_sha256": "107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2",
+    "offsite_restore": "HOLD"
+  },
+  "KNOWLEDGE": {
+    "new_hunter_source_s03_recall": "HOLD",
+    "new_s03_writes": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "last_native_dispatcher_pid": 746352,
+    "cpu_quota_cores": 19.2,
+    "gpu0_used_mib": 21562,
+    "gpu1_used_mib": 474,
+    "ssd_free_bytes": 12005203968,
+    "owner_stop_lease": "UNKNOWN",
+    "restarts": 0,
+    "downloads_bytes": 0,
+    "deletions_bytes": 0
+  },
+  "error_id": "NOX-P1-HF-SAFETENSORS-LAYOUT-FALSE-PASS-20261116",
+  "root_cause": "Index and header names matched without byte-layout consistency checks; corrupt overlap/gap/shape could appear valid",
+  "lesson": "HF header checks never equal tensor payload SHA or native base identity",
+  "next_action": "Owner-auth read-only exact loaded GGUF SHA/Qwen tokenizer and 8-to-10 optimizer proof; independent offsite restore before lease-fenced merge/restart"
+}

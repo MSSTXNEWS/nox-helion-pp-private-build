@@ -1,0 +1,387 @@
+{
+  "schema": "NOX_V13_PREP_DEPENDENCY_RECONCILIATION_2C_V1",
+  "instructions_version": "0.0.6",
+  "run_started_at_utc": "2026-11-16T19:39:05Z",
+  "run_started_at_msk": "2026-11-16T22:39:05+03:00",
+  "instance_id": 60509551,
+  "onehost_only": true,
+  "scope": "PREP_SOURCE_AND_DRIVE_METADATA_READ_ONLY_NOT_PRODUCTION_DEPLOYMENT",
+  "master_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/feature/nox-v38-synaptic-brain-20261114/coordination/NOX_PRIME_SIX_RELAY_20261115.md",
+  "master_blob_sha": "4d1fd6c8bff93abffa414e052abed29fcf652546",
+  "latest_native_inspection": {
+    "at_utc": "2026-11-16T19:31:00Z",
+    "run_id": 43939988374,
+    "job_id": 133554647274,
+    "receipt_blob": "be74b8c52159b44aa05f3d5c7382da399b73cb0e",
+    "status": "HISTORICAL_OWNER_AUTH_READ_ONLY_NOT_CURRENT_WRITER_LEASE",
+    "owner_stop": "PRESENT",
+    "owner_maintenance": "PRESENT",
+    "five_supervisors": "STOPPED",
+    "listener_8081": false,
+    "gpu_vram_mib": [
+      0,
+      0
+    ],
+    "ssd_total_bytes": 183609851904,
+    "ssd_free_bytes": 43158650880,
+    "seekable_mount_in_allowlisted_scan": "NOT_FOUND",
+    "rclone_remotes": [],
+    "writer_lease": "UNKNOWN",
+    "s03_recovery": "NOT_VERIFIED"
+  },
+  "bundles": [
+    {
+      "name": "starter",
+      "url": "https://drive.google.com/drive/folders/1bTf6pYSghj6rG7KslA34Vjqkc3OakVb2",
+      "prefix": "NOX_24H_STARTER_KIT_20261116.zip.",
+      "expected_count": 4,
+      "expected_bytes": 331718151,
+      "archive_sha256": "e1a48952fafbd8c7a0a64deb4ea645fd328b5d726c0317e1d2d323f4198c8290",
+      "expected_manifest_id": "1h479rBz2iQwAzfmEyfSNAFAct2J6B0kg",
+      "actual_parts": [
+        {
+          "part": 1,
+          "filename": "NOX_24H_STARTER_KIT_20261116.zip.001",
+          "id": "1ErUA9ezoPINpHtugANfI0T3YWagF3cxw",
+          "bytes": 100000000
+        },
+        {
+          "part": 2,
+          "filename": "NOX_24H_STARTER_KIT_20261116.zip.002",
+          "id": "1EQJhG6cNl2roQ7pjLlPBt5UYenx3DpRV",
+          "bytes": 100000000
+        },
+        {
+          "part": 3,
+          "filename": "NOX_24H_STARTER_KIT_20261116.zip.003",
+          "id": "1RN6L3-FIEL1-Uk3migP18IdduNzDx32u",
+          "bytes": 100000000
+        },
+        {
+          "part": 4,
+          "filename": "NOX_24H_STARTER_KIT_20261116.zip.004",
+          "id": "1XbSyrNKQ1-yumH1SEQwIdQ4yNOq5bKlh",
+          "bytes": 31718151
+        }
+      ],
+      "observed_folder_entries": 7,
+      "source_scope": "GOOGLE_DRIVE_LISTING_METADATA_ONLY",
+      "sha_status": "EXPECTED_FROM_PUBLISHED_MANIFEST_NOT_REHASHED_THIS_RUN",
+      "all_expected_part_sizes_verified": true
+    },
+    {
+      "name": "wheelhouse",
+      "url": "https://drive.google.com/drive/folders/1q1qR71IiOU7LsGAYjPiIbYAN5PrffDNX",
+      "prefix": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.",
+      "expected_count": 39,
+      "expected_bytes": 3831295823,
+      "archive_sha256": "7f1b932f38df0872ee21e009eb8f3005da5eb99b662a372dcb389e8d4e056b95",
+      "expected_manifest_id": "1oxmS0ZiboacyGmHG_OJ49FyoouNVjGRf",
+      "actual_parts": [
+        {
+          "part": 1,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.001",
+          "id": "1sU31Vfl8hJNIF09wFC7PI1TxYr30DrEI",
+          "bytes": 100000000
+        },
+        {
+          "part": 2,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.002",
+          "id": "10c0nocfhWm8suEZMoW2LPwcrfWw-RU7b",
+          "bytes": 100000000
+        },
+        {
+          "part": 3,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.003",
+          "id": "1tWquwFuJyiCtz3DNOSBkVKxtPsTzBD09",
+          "bytes": 100000000
+        },
+        {
+          "part": 4,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.004",
+          "id": "1Q2Ql3Vgli1thJHDfypC56OCEtJgJwG1N",
+          "bytes": 100000000
+        },
+        {
+          "part": 5,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.005",
+          "id": "1v5KlHbIAbeaH7Jn3KTOH8qOANs4gQ_Db",
+          "bytes": 100000000
+        },
+        {
+          "part": 6,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.006",
+          "id": "13y9jYPWn57YZdsFQwuOIVSwESw20JSwY",
+          "bytes": 100000000
+        },
+        {
+          "part": 7,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.007",
+          "id": "1HBUad3NvA_93iWKJV1XYQBQ7YTdHuGYQ",
+          "bytes": 100000000
+        },
+        {
+          "part": 8,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.008",
+          "id": "1nz6641jbpvRczt-tI0HmecEWIb4z5aLd",
+          "bytes": 100000000
+        },
+        {
+          "part": 9,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.009",
+          "id": "1gdhSjIW_v194D8O8fJZHIut2JvB3ytfg",
+          "bytes": 100000000
+        },
+        {
+          "part": 10,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.010",
+          "id": "1gZYbyPgKSOJw4_3sN_oN8ImlKqpWJWNO",
+          "bytes": 100000000
+        },
+        {
+          "part": 11,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.011",
+          "id": "1IXohkLr6MKbZYWibtsy2jm93z28PkO5n",
+          "bytes": 100000000
+        },
+        {
+          "part": 12,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.012",
+          "id": "1T9tUD79DQv8NYyca1kf8WndkwFkMMHDK",
+          "bytes": 100000000
+        },
+        {
+          "part": 13,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.013",
+          "id": "1T3FR7DQ5UmMAXsXjnC_d-ly7HdgLxH1B",
+          "bytes": 100000000
+        },
+        {
+          "part": 14,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.014",
+          "id": "17_5ZIvDoIjXfccyRV8jV5Q-r4W9GQ9sZ",
+          "bytes": 100000000
+        },
+        {
+          "part": 15,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.015",
+          "id": "1L8bT7OZkZ8EmDYtklgzG8oyiNrgHzGxr",
+          "bytes": 100000000
+        },
+        {
+          "part": 16,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.016",
+          "id": "1Q3-pOf-u5ZAMGMqeldZeyYmg56UJ_Rtc",
+          "bytes": 100000000
+        },
+        {
+          "part": 17,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.017",
+          "id": "15qvUY65OzYkEfWkZ-Nnoq6XERxTSfRWn",
+          "bytes": 100000000
+        },
+        {
+          "part": 18,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.018",
+          "id": "1LB7UEM7H5pSRn_0pBgF96Xil_l5tyV9Z",
+          "bytes": 100000000
+        },
+        {
+          "part": 19,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.019",
+          "id": "1SyRJI6Q81ycClJZ-RLlYXMuvYLmowCNe",
+          "bytes": 100000000
+        },
+        {
+          "part": 20,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.020",
+          "id": "1AlRDM-xPVOmbwEnF-EtzxYvpr0uPAYMH",
+          "bytes": 100000000
+        },
+        {
+          "part": 21,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.021",
+          "id": "1TKP6F1qAH2B1KRvmm7xh--FUXGCkDKSl",
+          "bytes": 100000000
+        },
+        {
+          "part": 22,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.022",
+          "id": "10dgVEzv2ZJMWfU0HFAguey2RdBOo728B",
+          "bytes": 100000000
+        },
+        {
+          "part": 23,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.023",
+          "id": "1_6obmUy-OFpGo3__WJaE9OE6Y4GsrnJj",
+          "bytes": 100000000
+        },
+        {
+          "part": 24,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.024",
+          "id": "1iySEmn0Ea1rm1iBFqG4q5Cnk0Ww5Nhu_",
+          "bytes": 100000000
+        },
+        {
+          "part": 25,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.025",
+          "id": "1X9UwumqYI6keH7ROQ4fEt4Am-gv22YF5",
+          "bytes": 100000000
+        },
+        {
+          "part": 26,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.026",
+          "id": "1qCUdH9AeFX70seZ5ieY_KaHnSbFIjS5m",
+          "bytes": 100000000
+        },
+        {
+          "part": 27,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.027",
+          "id": "1LuWlLXqIs0Zy4UuIeRC_kAmCQp0Wf7xY",
+          "bytes": 100000000
+        },
+        {
+          "part": 28,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.028",
+          "id": "1y7DKt8QkO5B8zuIEkHE9472PXWqPPRoN",
+          "bytes": 100000000
+        },
+        {
+          "part": 29,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.029",
+          "id": "1z5M-2khZG_D099NFoDHzmLVD9P0lyp6e",
+          "bytes": 100000000
+        },
+        {
+          "part": 30,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.030",
+          "id": "1PnPXYeRFmZScuenhnF2D2wkoCrPXNBQh",
+          "bytes": 100000000
+        },
+        {
+          "part": 31,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.031",
+          "id": "1ya-QkwozzAQPFGV9ln5QSCX4IFzys2oR",
+          "bytes": 100000000
+        },
+        {
+          "part": 32,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.032",
+          "id": "1BqEJ8SNe1L0zHl3do2XBKeYX-i0y7NOH",
+          "bytes": 100000000
+        },
+        {
+          "part": 33,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.033",
+          "id": "1Vo6mrLxWYfCLRX-rO070fSUISr_zpHKf",
+          "bytes": 100000000
+        },
+        {
+          "part": 34,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.034",
+          "id": "1yWhvefXyikH68hehLRmUryID98eZZz6o",
+          "bytes": 100000000
+        },
+        {
+          "part": 35,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.035",
+          "id": "1HcGJjX5yq6iRI_ekelwhBDJ8cjZCFQN-",
+          "bytes": 100000000
+        },
+        {
+          "part": 36,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.036",
+          "id": "132GZ6Sl-wWHHiv2nl6QB43bSgt69dTqH",
+          "bytes": 100000000
+        },
+        {
+          "part": 37,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.037",
+          "id": "1Sgp2G-CvJ0BdMHsnRcA8SQlUZUNMho7H",
+          "bytes": 100000000
+        },
+        {
+          "part": 38,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.038",
+          "id": "1mbPDGOShxfnG2WuXRnFtMqBXy5ldIEsv",
+          "bytes": 100000000
+        },
+        {
+          "part": 39,
+          "filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.039",
+          "id": "1dgX_rUuD1etttH8RyesZx1kG0NHS7RZu",
+          "bytes": 31295823
+        }
+      ],
+      "observed_folder_entries": 45,
+      "source_scope": "GOOGLE_DRIVE_LISTING_METADATA_ONLY",
+      "sha_status": "EXPECTED_FROM_PUBLISHED_MANIFEST_NOT_REHASHED_THIS_RUN",
+      "all_expected_part_sizes_verified": true
+    }
+  ],
+  "package_admission": {
+    "wheelhouse_archive_bytes": 3831295823,
+    "wheel_count_producer_manifest": 72,
+    "wheel_sha_verified_count_producer_claim": 72,
+    "cp311_specific_non_abi3_wheels_count": 13,
+    "archive_target_python": "CPython 3.11",
+    "archive_target_cuda": "PyTorch +cu126/CUDA 12.6",
+    "native_runtime_historical_python": "3.12",
+    "native_runtime_historical_cuda": "12.4",
+    "native_sm": 70,
+    "decision": "HOLD_INCOMPATIBLE_FOR_BLIND_INSTALL",
+    "safe_preparation": "Reconcile exact live Python and CUDA and driver; create isolated version-pinned CP311 runtime only after owner authorization and GPU0/GPU1 SM70 FP16 smoke; don't install CP311 wheels into Python3.12",
+    "actual_native_import_cuda_smoke": "NOT_RUN"
+  },
+  "full_model_admission": {
+    "name": "DeepSeek-V4.1-Flash-1017 GSQ-RCO IQ2_XXS",
+    "unique_bytes": 248834257920,
+    "missing_payload_bytes": 248828477216,
+    "starter_metadata_bytes": 5780704,
+    "full_model_deficit_against_observed_free_bytes": 205675607040,
+    "full_model_deficit_against_empty_root_capacity": 65224406016,
+    "minimum_required_extra_reserve_bytes": "POSITIVE_UNKNOWN",
+    "seekable_storage": "HOLD_UNVERIFIED",
+    "full_payload_sha": "NOT_CHECKED",
+    "maya_elf_sha256_historical": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+    "maya_native_tokens": "NOT_GENERATED"
+  },
+  "task_outcomes": [
+    {
+      "task_id": "V13-01",
+      "status": "PRIOR_NATIVE_READONLY_VERIFIED_SOURCE_REUSED",
+      "evidence": "owner job 133554647274; no new live claim"
+    },
+    {
+      "task_id": "V13-03",
+      "status": "SOURCE_METADATA_TESTED",
+      "evidence": "Drive listings confirm contiguous 4+39 numbered parts and exact reported bytes; archive payload SHA not rehashed"
+    },
+    {
+      "task_id": "V13-04",
+      "status": "SOURCE_ABI_HOLD",
+      "evidence": "CP311/cu126 wheelhouse vs historical runtime Python3.12/CUDA12.4; native imports not run"
+    },
+    {
+      "task_id": "V13-05",
+      "status": "HOLD_NATIVE_STORAGE",
+      "evidence": "owner native observed free 43158650880B < full 248834257920B, no seekable mount shown among allowlisted paths"
+    },
+    {
+      "task_id": "V13-10",
+      "status": "SOURCE_MANIFEST_READY_NATIVE_INSTALL_HOLD",
+      "evidence": "machine-readable pack inventory, present-by-Drive metadata, provenance and no-install admission"
+    }
+  ],
+  "safety": {
+    "downloaded_native_bytes_this_slot": 0,
+    "deleted_native_bytes_this_slot": 0,
+    "new_optimizer_updates_verified": 0,
+    "new_native_jobs_this_slot": [],
+    "new_s03_write_recall_verified": 0,
+    "manual_stop_changed": false,
+    "new_processes_started": 0,
+    "cleanup_attempted": false
+  },
+  "next": "Owner authorization/lease + independent S03/Genesis/optimizer restore; provision persistent seekable quota ≥248834257920B plus reserve, recheck byte hashes and live Python ABI; only then stage isolated preproduction dependencies and payloads. No production launch until V13 gates."
+}

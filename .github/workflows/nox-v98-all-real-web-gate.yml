@@ -1,0 +1,42 @@
+name: NOX V98 full WEB all-functions no-stub native gate
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v98-all-real-web-gate.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v98-web-route-acceptance
+  cancel-in-progress: false
+jobs:
+  read:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Validate both native and workflow source syntax
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v98/full_web_native_api_gate.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v98.full_web_native_api_gate import REMOTE
+          compile(REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0],
+                  '<nox-v98-native>','exec')
+          print('NOX_V98_SOURCE_SYNTAX=PASS')
+          PY
+      - name: Confirm actual WEB source, all routes, and native security requirements
+        run: python3 -m nox_runpod.teacher_mesh.v98.full_web_native_api_gate
+      - name: Always revoke SSH identity
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

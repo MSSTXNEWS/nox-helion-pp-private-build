@@ -1,0 +1,51 @@
+name: NOX V121 owner HTTP live S03 knowledge provenance and history
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v121/**'
+      - '.github/workflows/nox-v121-owner-s03-memory.yml'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v121-owner-s03-60509551
+  cancel-in-progress: false
+jobs:
+  e2e:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile native script and check ACL
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v121/owner_s03_memory_http.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v121.owner_s03_memory_http import REMOTE
+          script=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(script,'<native V121>','exec')
+          for key in ('HOLD_ANON_MEMORY_ACCESS','HOLD_OWNER_SESSION','HOLD_CHAT_HISTORY_SCHEMA',
+                      'HOLD_KNOWLEDGE_SOURCE_SCHEMA','records_transmitted_to_github'):
+              assert key in script,key
+          print('NOX_V121_SOURCE_COMPILE=PASS')
+          PY
+      - name: Actual owner HMAC cookie S03 history and knowledge E2E
+        run: python -m nox_runpod.teacher_mesh.v121.owner_s03_memory_http
+      - name: Always revoke ephemeral SSH key
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

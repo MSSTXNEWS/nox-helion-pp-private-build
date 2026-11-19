@@ -1,0 +1,58 @@
+name: NOX V68 live weight lineage and cleanup admission (read-only)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - '.github/workflows/nox-v68-weights-admission.yml'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v68-weights-admission
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Syntax and fail-closed source assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v68/weights_admission.py
+          python3 - <<'PY'
+          from pathlib import Path
+          code=Path('nox_runpod/teacher_mesh/v68/weights_admission.py').read_text()
+          assert "'destructive_weight_cleanup_allowed':False" in code
+          assert "'no_training_started':True" in code
+          assert "'no_weight_changes':True" in code
+          assert "NATIVE_ADMISSION" in code
+          print('NOX_V68_SOURCE_SAFETY=PASS')
+          PY
+      - name: Read actual Vast models and active checkpoint admission
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v68.weights_admission
+      - name: Always revoke same temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Scope
+        if: success()
+        run: |
+          echo 'NOX_WEIGHTS_UNCHANGED=true'
+          echo 'NOX_DELETE_NOT_ATTEMPTED=true'
+          echo 'NOX_DOWNLOAD_NOT_ATTEMPTED=true'
+          echo 'NOX_TRAINING_NOT_STARTED=true'

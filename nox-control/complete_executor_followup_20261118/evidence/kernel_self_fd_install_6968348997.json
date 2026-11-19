@@ -1,0 +1,1304 @@
+[
+  {
+    "kind": "AUTHORIZED_COMMENT_ID",
+    "data": 6968348997
+  },
+  {
+    "kind": "INSTANCE_STATE",
+    "data": {
+      "actual_status": "running",
+      "cur_state": "running",
+      "found": true,
+      "instance": 60509551,
+      "intended_status": "running",
+      "num_gpus": 2,
+      "provider_mutations": 0,
+      "read_only_provider_lookup": true
+    }
+  },
+  {
+    "kind": "HOST_PIN",
+    "data": "VERIFIED"
+  },
+  {
+    "kind": "AUTH_ATTEMPT",
+    "data": "1_RETRY"
+  },
+  {
+    "kind": "AUTH_ATTEMPT",
+    "data": "2_RETRY"
+  },
+  {
+    "kind": "AUTHENTICATED_INSTANCE",
+    "data": 60509551
+  },
+  {
+    "kind": "BOUNDED_CPU_PREFLIGHT",
+    "data": {
+      "decision": {
+        "effective_bytes": 185630593024,
+        "effective_memory_ratio": 0.9565372357490207,
+        "eligible": true,
+        "headroom_bytes": 7226650624,
+        "projected_bytes": 186838552576,
+        "projected_memory_ratio": 0.9627617393286505,
+        "raw_memory_ratio": 0.9998185701742537,
+        "reason": null,
+        "reclaimable_bytes": 8399400960,
+        "reserved_bytes": 1207959552
+      },
+      "model_inference_called": false,
+      "phase": "before_stop",
+      "schema": "NOX_BOUNDED_CPU_NATIVE_PREFLIGHT_V1",
+      "snapshot": {
+        "cpu_pressure": 0,
+        "current_bytes": 194029993984,
+        "file_bytes": 190185005056,
+        "inactive_file_bytes": 8399400960,
+        "instance_id": 60509551,
+        "max_bytes": 194065203200,
+        "memory_psi_full_avg10": 0,
+        "memory_psi_some_avg10": 0,
+        "minimum_headroom_bytes": 2147483648,
+        "observed_at": 1794973409.1677592,
+        "planner_reserve_bytes": 134217728,
+        "sandbox_limit_bytes": 268435456,
+        "schema": "NOX_BOUNDED_CPU_BUDGET_V1",
+        "shmem_bytes": 75403436032,
+        "source": "cgroup_v2",
+        "worker_slots": 3
+      },
+      "source_tree_writes": 0,
+      "workers_started": 0
+    }
+  },
+  {
+    "kind": "COMPLETE_EXECUTOR_PREFLIGHT",
+    "data": {
+      "at": 1794973410.8586712,
+      "business_task_completed": false,
+      "dependency_manifest_sha256": "79a8efb2d344479471bd87f9129e1df3aab198586818a5f001e1e2a3a969336d",
+      "evidence_sha256": "0453762bedcb1410370d521865730c46cfc8e99d172732eb704529eaee325f46",
+      "fixture_only": true,
+      "model_inference_called": false,
+      "original_task_accepted": false,
+      "path": "/root/nox/state/dispatcher/complete_executor_preflight/6968348997",
+      "reason": null,
+      "runtime_source_pins": {
+        "owner_project_executor.py": "fcb77cc59eb9a88dde68da62db05195a494fbeda40dad2954c77de95a807eae6",
+        "owner_project_test_runner.py": "192d0c1b7b87447d4f088073fb6f6bfe9f733cf542df8f9b0eaf911d374f1e3f"
+      },
+      "sandbox": {
+        "exec_denied": true,
+        "fork_denied": true,
+        "gid": 65534,
+        "host_path_hidden": true,
+        "kernel_self_fd_adapter": {
+          "boot_id_sha256": "b7db2e068dc11eb064319097459af457658964a45e7b7390986a2ffe51f04bef",
+          "boot_reads": 4,
+          "directory_descriptors_preserved": 0,
+          "foreign_pid_visibility": false,
+          "fresh_pread_offset_zero": true,
+          "full_proc_available": false,
+          "kernel_backed": true,
+          "mode": "KERNEL_SELF_FD_TEST_ADAPTER",
+          "observed_process_state": "R",
+          "own_pid_start_verified": true,
+          "procfs_magic": 40864,
+          "reserved_regular_file_descriptors": 2,
+          "schema": "NOX_KERNEL_SELF_FD_TEST_ADAPTER_V1",
+          "scope": "SELF_STAT_AND_BOOT_ID_ONLY",
+          "start_ticks": 176613886,
+          "stat_reads": 4,
+          "verifier_parent_pid": 3802126,
+          "verifier_pid": 3802128
+        },
+        "network_denied": true,
+        "no_new_privs": true,
+        "seccomp_filter": true,
+        "uid": 65534,
+        "workdir": "/work/project/source"
+      },
+      "schema": "NOX_NATIVE_PROJECT_SANDBOX_PREFLIGHT_V1",
+      "source_unchanged": true,
+      "state": "PREPARED",
+      "tests_run": 4
+    }
+  },
+  {
+    "kind": "SELF_FD_RESCUE_PREFLIGHT",
+    "data": {
+      "reason": null,
+      "shared_source_integrated": false,
+      "state": "PREPARED",
+      "tests": {
+        "completed": true,
+        "elapsed_ms": 1768,
+        "errors": 0,
+        "failed_tests": [],
+        "failures": 0,
+        "log_bytes": 364,
+        "log_sha256": "4d5aade2b87fb385e9854502e5322b1244b080a9ef6852f88ad857f3a27d5d8d",
+        "modules": [
+          "source_tests.test_owner_chat_request_scope",
+          "source_tests.test_request_ledger",
+          "test_nox_1a03_cursor_admission"
+        ],
+        "output": ".....Executing <Task finished name='Task-1' coro=<BridgeTests.asyncSetUp() done, defined at /work/project/source/source_tests/test_request_ledger.py:176> result=None created at /usr/lib/python3.12/asyncio/runners.py:100> took 0.113 seconds\n.........................\n----------------------------------------------------------------------\nRan 30 tests in 1.725s\n\nOK\n",
+        "passed": true,
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "kernel_self_fd_adapter": {
+            "boot_id_sha256": "b7db2e068dc11eb064319097459af457658964a45e7b7390986a2ffe51f04bef",
+            "boot_reads": 148,
+            "directory_descriptors_preserved": 0,
+            "foreign_pid_visibility": false,
+            "fresh_pread_offset_zero": true,
+            "full_proc_available": false,
+            "kernel_backed": true,
+            "mode": "KERNEL_SELF_FD_TEST_ADAPTER",
+            "observed_process_state": "R",
+            "own_pid_start_verified": true,
+            "procfs_magic": 40864,
+            "reserved_regular_file_descriptors": 2,
+            "schema": "NOX_KERNEL_SELF_FD_TEST_ADAPTER_V1",
+            "scope": "SELF_STAT_AND_BOOT_ID_ONLY",
+            "start_ticks": 176614078,
+            "stat_reads": 148,
+            "verifier_parent_pid": 3802126,
+            "verifier_pid": 3802153
+          },
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534,
+          "workdir": "/work/project/source"
+        },
+        "schema": "NOX_PROJECT_TEST_REPORT_V1",
+        "skipped": 0,
+        "tests_discovered": 30,
+        "tests_run": 30
+      }
+    }
+  },
+  {
+    "kind": "SELF_FD_FD_REGRESSION_PREFLIGHT",
+    "data": {
+      "queue_claim": false,
+      "shared_source_integrated": false,
+      "tests": {
+        "completed": true,
+        "elapsed_ms": 65,
+        "errors": 0,
+        "failed_tests": [],
+        "failures": 0,
+        "log_bytes": 135,
+        "log_sha256": "82b1da95143c348dc1865f1b2d35831655b529648c571245de93a341a80d931f",
+        "modules": [
+          "test_work_progress_changes",
+          "test_work_progress_durable_write",
+          "test_work_progress_pinned_read",
+          "test_nox_work_progress_time_order"
+        ],
+        "output": "....................................\n----------------------------------------------------------------------\nRan 36 tests in 0.033s\n\nOK\n",
+        "passed": true,
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "kernel_self_fd_adapter": {
+            "boot_id_sha256": "b7db2e068dc11eb064319097459af457658964a45e7b7390986a2ffe51f04bef",
+            "boot_reads": 4,
+            "directory_descriptors_preserved": 0,
+            "foreign_pid_visibility": false,
+            "fresh_pread_offset_zero": true,
+            "full_proc_available": false,
+            "kernel_backed": true,
+            "mode": "KERNEL_SELF_FD_TEST_ADAPTER",
+            "observed_process_state": "R",
+            "own_pid_start_verified": true,
+            "procfs_magic": 40864,
+            "reserved_regular_file_descriptors": 2,
+            "schema": "NOX_KERNEL_SELF_FD_TEST_ADAPTER_V1",
+            "scope": "SELF_STAT_AND_BOOT_ID_ONLY",
+            "start_ticks": 176614423,
+            "stat_reads": 4,
+            "verifier_parent_pid": 3802126,
+            "verifier_pid": 3802218
+          },
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534,
+          "workdir": "/work/project/source"
+        },
+        "schema": "NOX_PROJECT_TEST_REPORT_V1",
+        "skipped": 0,
+        "tests_discovered": 36,
+        "tests_run": 36
+      }
+    }
+  },
+  {
+    "kind": "BOUNDED_CPU_PREFLIGHT",
+    "data": {
+      "decision": {
+        "effective_bytes": 185467383808,
+        "effective_memory_ratio": 0.9556962337903553,
+        "eligible": true,
+        "headroom_bytes": 7389859840,
+        "projected_bytes": 186675343360,
+        "projected_memory_ratio": 0.9619207373699852,
+        "raw_memory_ratio": 0.9985821204241524,
+        "reason": null,
+        "reclaimable_bytes": 8322658304,
+        "reserved_bytes": 1207959552
+      },
+      "model_inference_called": false,
+      "phase": "after_stop",
+      "schema": "NOX_BOUNDED_CPU_NATIVE_PREFLIGHT_V1",
+      "snapshot": {
+        "cpu_pressure": 0,
+        "current_bytes": 193790042112,
+        "file_bytes": 190145024000,
+        "inactive_file_bytes": 8322658304,
+        "instance_id": 60509551,
+        "max_bytes": 194065203200,
+        "memory_psi_full_avg10": 0,
+        "memory_psi_some_avg10": 0,
+        "minimum_headroom_bytes": 2147483648,
+        "observed_at": 1794973417.3697093,
+        "planner_reserve_bytes": 134217728,
+        "sandbox_limit_bytes": 268435456,
+        "schema": "NOX_BOUNDED_CPU_BUDGET_V1",
+        "shmem_bytes": 75403325440,
+        "source": "cgroup_v2",
+        "worker_slots": 3
+      },
+      "source_tree_writes": 0,
+      "workers_started": 0
+    }
+  },
+  {
+    "kind": "KERNEL_SELF_FD_INSTALL",
+    "data": {
+      "backup_path": "/root/nox/state/dispatcher/kernel_self_fd_rollback/6968348997",
+      "budget_after_stop": {
+        "decision": {
+          "effective_bytes": 185467383808,
+          "effective_memory_ratio": 0.9556962337903553,
+          "eligible": true,
+          "headroom_bytes": 7389859840,
+          "projected_bytes": 186675343360,
+          "projected_memory_ratio": 0.9619207373699852,
+          "raw_memory_ratio": 0.9985821204241524,
+          "reason": null,
+          "reclaimable_bytes": 8322658304,
+          "reserved_bytes": 1207959552
+        },
+        "model_inference_called": false,
+        "phase": "after_stop",
+        "schema": "NOX_BOUNDED_CPU_NATIVE_PREFLIGHT_V1",
+        "snapshot": {
+          "cpu_pressure": 0,
+          "current_bytes": 193790042112,
+          "file_bytes": 190145024000,
+          "inactive_file_bytes": 8322658304,
+          "instance_id": 60509551,
+          "max_bytes": 194065203200,
+          "memory_psi_full_avg10": 0,
+          "memory_psi_some_avg10": 0,
+          "minimum_headroom_bytes": 2147483648,
+          "observed_at": 1794973417.3697093,
+          "planner_reserve_bytes": 134217728,
+          "sandbox_limit_bytes": 268435456,
+          "schema": "NOX_BOUNDED_CPU_BUDGET_V1",
+          "shmem_bytes": 75403325440,
+          "source": "cgroup_v2",
+          "worker_slots": 3
+        },
+        "source_tree_writes": 0,
+        "workers_started": 0
+      },
+      "budget_before_stop": {
+        "decision": {
+          "effective_bytes": 185630593024,
+          "effective_memory_ratio": 0.9565372357490207,
+          "eligible": true,
+          "headroom_bytes": 7226650624,
+          "projected_bytes": 186838552576,
+          "projected_memory_ratio": 0.9627617393286505,
+          "raw_memory_ratio": 0.9998185701742537,
+          "reason": null,
+          "reclaimable_bytes": 8399400960,
+          "reserved_bytes": 1207959552
+        },
+        "model_inference_called": false,
+        "phase": "before_stop",
+        "schema": "NOX_BOUNDED_CPU_NATIVE_PREFLIGHT_V1",
+        "snapshot": {
+          "cpu_pressure": 0,
+          "current_bytes": 194029993984,
+          "file_bytes": 190185005056,
+          "inactive_file_bytes": 8399400960,
+          "instance_id": 60509551,
+          "max_bytes": 194065203200,
+          "memory_psi_full_avg10": 0,
+          "memory_psi_some_avg10": 0,
+          "minimum_headroom_bytes": 2147483648,
+          "observed_at": 1794973409.1677592,
+          "planner_reserve_bytes": 134217728,
+          "sandbox_limit_bytes": 268435456,
+          "schema": "NOX_BOUNDED_CPU_BUDGET_V1",
+          "shmem_bytes": 75403436032,
+          "source": "cgroup_v2",
+          "worker_slots": 3
+        },
+        "source_tree_writes": 0,
+        "workers_started": 0
+      },
+      "drain_snapshots": [
+        {
+          "at": 1794973409.1376908,
+          "children": [
+            {
+              "pgrp": 3760381,
+              "pid": 3760487,
+              "ppid": 3760381,
+              "start_ticks": 176198953
+            },
+            {
+              "pgrp": 3760381,
+              "pid": 3760595,
+              "ppid": 3760381,
+              "start_ticks": 176199997
+            },
+            {
+              "pgrp": 3760381,
+              "pid": 3760596,
+              "ppid": 3760381,
+              "start_ticks": 176199997
+            },
+            {
+              "pgrp": 3760381,
+              "pid": 3760597,
+              "ppid": 3760381,
+              "start_ticks": 176199997
+            }
+          ],
+          "observed_resource_trackers": [
+            {
+              "pgrp": 3760381,
+              "pid": 3760487,
+              "ppid": 3760381,
+              "start_ticks": 176198953
+            }
+          ],
+          "processes": {
+            "director": {
+              "pgrp": 3760381,
+              "pid": 3760381,
+              "ppid": 114,
+              "start_ticks": 176197984
+            },
+            "workers": [
+              {
+                "pgrp": 3760381,
+                "pid": 3760595,
+                "ppid": 3760381,
+                "start_ticks": 176199997
+              },
+              {
+                "pgrp": 3760381,
+                "pid": 3760596,
+                "ppid": 3760381,
+                "start_ticks": 176199997
+              },
+              {
+                "pgrp": 3760381,
+                "pid": 3760597,
+                "ppid": 3760381,
+                "start_ticks": 176199997
+              }
+            ]
+          },
+          "unexpected_children": []
+        },
+        {
+          "at": 1794973416.4974768,
+          "children": [
+            {
+              "pgrp": 3760381,
+              "pid": 3760487,
+              "ppid": 3760381,
+              "start_ticks": 176198953
+            },
+            {
+              "pgrp": 3760381,
+              "pid": 3760595,
+              "ppid": 3760381,
+              "start_ticks": 176199997
+            },
+            {
+              "pgrp": 3760381,
+              "pid": 3760596,
+              "ppid": 3760381,
+              "start_ticks": 176199997
+            },
+            {
+              "pgrp": 3760381,
+              "pid": 3760597,
+              "ppid": 3760381,
+              "start_ticks": 176199997
+            }
+          ],
+          "observed_resource_trackers": [
+            {
+              "pgrp": 3760381,
+              "pid": 3760487,
+              "ppid": 3760381,
+              "start_ticks": 176198953
+            }
+          ],
+          "processes": {
+            "director": {
+              "pgrp": 3760381,
+              "pid": 3760381,
+              "ppid": 114,
+              "start_ticks": 176197984
+            },
+            "workers": [
+              {
+                "pgrp": 3760381,
+                "pid": 3760595,
+                "ppid": 3760381,
+                "start_ticks": 176199997
+              },
+              {
+                "pgrp": 3760381,
+                "pid": 3760596,
+                "ppid": 3760381,
+                "start_ticks": 176199997
+              },
+              {
+                "pgrp": 3760381,
+                "pid": 3760597,
+                "ppid": 3760381,
+                "start_ticks": 176199997
+              }
+            ]
+          },
+          "unexpected_children": []
+        }
+      ],
+      "final_stopped_queue_sha256": "1fd463f6e3732820eb89314a4b92c6c8e226b0cc5c719c6abba77bf041e456f4",
+      "finished_at": 1794973434.7302463,
+      "history_preservation": {
+        "changed_terminal_claim_result_ids": [],
+        "missing_old_ids": [],
+        "nonterminal_claim_changes": [
+          {
+            "id": "t168u.opt.T162U-01",
+            "new_claim_sha256": "7ba0c260ebe3b14552660bbd7f75f70ce8878ed05761e7145f4e25b015905805",
+            "new_status": "pending",
+            "old_claim_sha256": "a68cee8e818ff7df310b5d5b1b48bce1e27014298b6368df72fcd0e08195a328",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T162U-03",
+            "new_claim_sha256": "0cd794c1268ac0b68d3fd4bfd8637f43857743ea5f2bb842a7c4525633cb5c41",
+            "new_status": "pending",
+            "old_claim_sha256": "7f15eed2082e9fe5919b836962fd44ccdc8cd6d19344ce8f84b8d35494af2c2a",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T162U-05",
+            "new_claim_sha256": "0f9c8f6b31a72ebca42b8713c9119d314ac18858860e059fa44d7312d13b8dbd",
+            "new_status": "pending",
+            "old_claim_sha256": "b124f1589ec658ea31f80452eaecf606050509f9a864fc3b8ccfb2cf84f7fed1",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T162U-06",
+            "new_claim_sha256": "d2d39a4f9517b73fb9ccba2a663bc95bfb2d5a617b0e85530d5e5e2560277ac7",
+            "new_status": "pending",
+            "old_claim_sha256": "beac03510c8aff927b90ca461e59848f9b979b1d9a071db640e649d2519c5874",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T162U-07",
+            "new_claim_sha256": "a0076da23dbf7ebfaf473548409f33e2838ad65c6a43e8770faaa3fdb3d04b56",
+            "new_status": "pending",
+            "old_claim_sha256": "3522c63a59b561f07f9f2b94f0132505fe70e9b8442c2c8e56c7cfcd8b0d420d",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T162U-08",
+            "new_claim_sha256": "c784ed1f9756a0398269b5d32d1e5ced6a7f663755c966c451691d8d753a2f38",
+            "new_status": "pending",
+            "old_claim_sha256": "0663cb5c5aa0e4bbb30c1ef982dfd02a449a901b1f0d1352029ee060287c5623",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T162U-10",
+            "new_claim_sha256": "a25320316053252001af8708b62ad2dc24e60bf36bfb830a48c76f91fdeb4fb6",
+            "new_status": "pending",
+            "old_claim_sha256": "5dc0f084bb7e868e935ae2db7427002934a46d8d663a2936e5167e48c8559085",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T162U-12",
+            "new_claim_sha256": "3f94077b30cce759e3ece9d4ade51c7327f7cb1b2712f4f8f237263a657ae62c",
+            "new_status": "pending",
+            "old_claim_sha256": "a55a50dd816ecf8090ab858bc0fc4ddcdcda3aab216260a2042843e156381fbc",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T162U-16",
+            "new_claim_sha256": "5ed5b800c88ebfa3fd6caeced66706e4ea452f958fad659e335d335d37f89fb0",
+            "new_status": "running",
+            "old_claim_sha256": "74bc027911a3d76a170b1f7a961ab95a77f5bf8652b703fe798590fd97f9532e",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T162U-18",
+            "new_claim_sha256": "70d4f710a3b6b75c93ad0ef190133ec106d41ed181f362f89d29c12cb0af1a49",
+            "new_status": "pending",
+            "old_claim_sha256": "3834fc8210e4004ba7b1bcda524b70f876ddd3846d13c9d773fd9e933cbcabaa",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T162U-24",
+            "new_claim_sha256": "df417bd5336fb51baf386c62f83733e054d3693d9e6d4a2b91d430324b6134cb",
+            "new_status": "pending",
+            "old_claim_sha256": "a69d8fc0fd462cd04ae9fa2da8cfa274a52780f826e8adea2996cb608322b5d3",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T168U-32",
+            "new_claim_sha256": "dc9a6dd0553db6217ebf747131db76aa41d517221afd498b6c1965fc1d5c687a",
+            "new_status": "pending",
+            "old_claim_sha256": "dd5fd1c1dc88872be1026181f5f4582b3af19feb6ed346f507d1a87e4947bb2b",
+            "old_status": "pending",
+            "same_result": true
+          },
+          {
+            "id": "t168u.opt.T168U-43",
+            "new_claim_sha256": "bad6a4e202c60ec504965dc0dfad1aaeba76d86115f840713e8cbad377b7fcc8",
+            "new_status": "pending",
+            "old_claim_sha256": "3c02826766116931c5aed1c1d32cd2268caf11edc9660525a4cfc266ce7e038b",
+            "old_status": "pending",
+            "same_result": true
+          }
+        ],
+        "nonterminal_claim_changes_count": 13,
+        "old_count": 1470,
+        "terminal_rows_checked": 424,
+        "verified": true
+      },
+      "installed_files": {
+        "config/owner_native_subagents.json": "42b95517bdcf8919b2ed782dadf0d98e6a1431113688f4f4259550f968458c89",
+        "scripts/owner_project_test_runner.py": "192d0c1b7b87447d4f088073fb6f6bfe9f733cf542df8f9b0eaf911d374f1e3f",
+        "state/dispatcher/project_executor/package/plans/457dbaf4484cfb5b7e14c5308285a42f01714dcec28358a54e6c926adf787e0b.json": "457dbaf4484cfb5b7e14c5308285a42f01714dcec28358a54e6c926adf787e0b"
+      },
+      "model_restarted": false,
+      "native_preflight": {
+        "fd_current_regression": {
+          "descriptor_sha256": "768d28516014a124a3809ee5af0a410508a621ee95d780ce7b1681fce5da1c58",
+          "tests": {
+            "completed": true,
+            "elapsed_ms": 65,
+            "errors": 0,
+            "failed_tests": [],
+            "failures": 0,
+            "log_bytes": 135,
+            "log_sha256": "82b1da95143c348dc1865f1b2d35831655b529648c571245de93a341a80d931f",
+            "modules": [
+              "test_work_progress_changes",
+              "test_work_progress_durable_write",
+              "test_work_progress_pinned_read",
+              "test_nox_work_progress_time_order"
+            ],
+            "output": "....................................\n----------------------------------------------------------------------\nRan 36 tests in 0.033s\n\nOK\n",
+            "passed": true,
+            "sandbox": {
+              "exec_denied": true,
+              "fork_denied": true,
+              "gid": 65534,
+              "host_path_hidden": true,
+              "kernel_self_fd_adapter": {
+                "boot_id_sha256": "b7db2e068dc11eb064319097459af457658964a45e7b7390986a2ffe51f04bef",
+                "boot_reads": 4,
+                "directory_descriptors_preserved": 0,
+                "foreign_pid_visibility": false,
+                "fresh_pread_offset_zero": true,
+                "full_proc_available": false,
+                "kernel_backed": true,
+                "mode": "KERNEL_SELF_FD_TEST_ADAPTER",
+                "observed_process_state": "R",
+                "own_pid_start_verified": true,
+                "procfs_magic": 40864,
+                "reserved_regular_file_descriptors": 2,
+                "schema": "NOX_KERNEL_SELF_FD_TEST_ADAPTER_V1",
+                "scope": "SELF_STAT_AND_BOOT_ID_ONLY",
+                "start_ticks": 176614423,
+                "stat_reads": 4,
+                "verifier_parent_pid": 3802126,
+                "verifier_pid": 3802218
+              },
+              "network_denied": true,
+              "no_new_privs": true,
+              "seccomp_filter": true,
+              "uid": 65534,
+              "workdir": "/work/project/source"
+            },
+            "schema": "NOX_PROJECT_TEST_REPORT_V1",
+            "skipped": 0,
+            "tests_discovered": 36,
+            "tests_run": 36
+          }
+        },
+        "generic": {
+          "at": 1794973410.8586712,
+          "business_task_completed": false,
+          "dependency_manifest_sha256": "79a8efb2d344479471bd87f9129e1df3aab198586818a5f001e1e2a3a969336d",
+          "evidence_sha256": "0453762bedcb1410370d521865730c46cfc8e99d172732eb704529eaee325f46",
+          "fixture_only": true,
+          "model_inference_called": false,
+          "original_task_accepted": false,
+          "path": "/root/nox/state/dispatcher/complete_executor_preflight/6968348997",
+          "reason": null,
+          "runtime_source_pins": {
+            "owner_project_executor.py": "fcb77cc59eb9a88dde68da62db05195a494fbeda40dad2954c77de95a807eae6",
+            "owner_project_test_runner.py": "192d0c1b7b87447d4f088073fb6f6bfe9f733cf542df8f9b0eaf911d374f1e3f"
+          },
+          "sandbox": {
+            "exec_denied": true,
+            "fork_denied": true,
+            "gid": 65534,
+            "host_path_hidden": true,
+            "kernel_self_fd_adapter": {
+              "boot_id_sha256": "b7db2e068dc11eb064319097459af457658964a45e7b7390986a2ffe51f04bef",
+              "boot_reads": 4,
+              "directory_descriptors_preserved": 0,
+              "foreign_pid_visibility": false,
+              "fresh_pread_offset_zero": true,
+              "full_proc_available": false,
+              "kernel_backed": true,
+              "mode": "KERNEL_SELF_FD_TEST_ADAPTER",
+              "observed_process_state": "R",
+              "own_pid_start_verified": true,
+              "procfs_magic": 40864,
+              "reserved_regular_file_descriptors": 2,
+              "schema": "NOX_KERNEL_SELF_FD_TEST_ADAPTER_V1",
+              "scope": "SELF_STAT_AND_BOOT_ID_ONLY",
+              "start_ticks": 176613886,
+              "stat_reads": 4,
+              "verifier_parent_pid": 3802126,
+              "verifier_pid": 3802128
+            },
+            "network_denied": true,
+            "no_new_privs": true,
+            "seccomp_filter": true,
+            "uid": 65534,
+            "workdir": "/work/project/source"
+          },
+          "schema": "NOX_NATIVE_PROJECT_SANDBOX_PREFLIGHT_V1",
+          "source_unchanged": true,
+          "state": "PREPARED",
+          "tests_run": 4
+        },
+        "model_calls": 0,
+        "path": "/root/nox/state/dispatcher/complete_executor_preflight/6968348997",
+        "queue_claims": 0,
+        "rescue": {
+          "plan_sha256": "457dbaf4484cfb5b7e14c5308285a42f01714dcec28358a54e6c926adf787e0b",
+          "tests": {
+            "completed": true,
+            "elapsed_ms": 1768,
+            "errors": 0,
+            "failed_tests": [],
+            "failures": 0,
+            "log_bytes": 364,
+            "log_sha256": "4d5aade2b87fb385e9854502e5322b1244b080a9ef6852f88ad857f3a27d5d8d",
+            "modules": [
+              "source_tests.test_owner_chat_request_scope",
+              "source_tests.test_request_ledger",
+              "test_nox_1a03_cursor_admission"
+            ],
+            "output": ".....Executing <Task finished name='Task-1' coro=<BridgeTests.asyncSetUp() done, defined at /work/project/source/source_tests/test_request_ledger.py:176> result=None created at /usr/lib/python3.12/asyncio/runners.py:100> took 0.113 seconds\n.........................\n----------------------------------------------------------------------\nRan 30 tests in 1.725s\n\nOK\n",
+            "passed": true,
+            "sandbox": {
+              "exec_denied": true,
+              "fork_denied": true,
+              "gid": 65534,
+              "host_path_hidden": true,
+              "kernel_self_fd_adapter": {
+                "boot_id_sha256": "b7db2e068dc11eb064319097459af457658964a45e7b7390986a2ffe51f04bef",
+                "boot_reads": 148,
+                "directory_descriptors_preserved": 0,
+                "foreign_pid_visibility": false,
+                "fresh_pread_offset_zero": true,
+                "full_proc_available": false,
+                "kernel_backed": true,
+                "mode": "KERNEL_SELF_FD_TEST_ADAPTER",
+                "observed_process_state": "R",
+                "own_pid_start_verified": true,
+                "procfs_magic": 40864,
+                "reserved_regular_file_descriptors": 2,
+                "schema": "NOX_KERNEL_SELF_FD_TEST_ADAPTER_V1",
+                "scope": "SELF_STAT_AND_BOOT_ID_ONLY",
+                "start_ticks": 176614078,
+                "stat_reads": 148,
+                "verifier_parent_pid": 3802126,
+                "verifier_pid": 3802153
+              },
+              "network_denied": true,
+              "no_new_privs": true,
+              "seccomp_filter": true,
+              "uid": 65534,
+              "workdir": "/work/project/source"
+            },
+            "schema": "NOX_PROJECT_TEST_REPORT_V1",
+            "skipped": 0,
+            "tests_discovered": 30,
+            "tests_run": 30
+          }
+        },
+        "shared_source_integrated": false,
+        "state": "NATIVE_PREFLIGHT_70_PASSED",
+        "tests_run": 70
+      },
+      "new_director": {
+        "pgrp": 3802230,
+        "pid": 3802230,
+        "ppid": 114,
+        "start_ticks": 176614633
+      },
+      "old_catalog_rows_preserved": 20,
+      "old_processes": {
+        "director": {
+          "pgrp": 3760381,
+          "pid": 3760381,
+          "ppid": 114,
+          "start_ticks": 176197984
+        },
+        "workers": [
+          {
+            "pgrp": 3760381,
+            "pid": 3760595,
+            "ppid": 3760381,
+            "start_ticks": 176199997
+          },
+          {
+            "pgrp": 3760381,
+            "pid": 3760596,
+            "ppid": 3760381,
+            "start_ticks": 176199997
+          },
+          {
+            "pgrp": 3760381,
+            "pid": 3760597,
+            "ppid": 3760381,
+            "start_ticks": 176199997
+          }
+        ]
+      },
+      "old_project_s03": {
+        "0V14-14.project.overlay_paths.20261118": {
+          "receipt_sha256": "14a4568e19be8a14f25ba27d65e00acdb7664f5ebaddc88ab3177cf793aaa480",
+          "s03_item_id": "S03-7b9fb72bb5a7475a",
+          "verified": true
+        },
+        "1A03.project.cursor_admission.20261118": {
+          "receipt_sha256": "cd585f48de5d8947081ebe34982b9ec2be974b97df66e81f073c6c9860267a84",
+          "s03_item_id": "S03-51fdb13a46f541aa",
+          "verified": true
+        },
+        "1A03.project.cursor_admission.focus_retry.20261118": {
+          "receipt_sha256": "284d6284b5d088b4dcaa16250f4151ba26cad0b9f20f73bd708e9a60a097b80d",
+          "s03_item_id": "S03-91a21bc89b584236",
+          "verified": true
+        },
+        "1A03.project.cursor_admission.owner_rescue.20261118": {
+          "receipt_sha256": "c3f293373560fcb1950cc1d134ac94b8c7d4fb8ec16045dc95b868bb39d30d32",
+          "s03_item_id": "S03-98e99cf014f84c0e",
+          "verified": true
+        },
+        "3A02.project.readback_revoke.20261118": {
+          "receipt_sha256": "6b6e7addf886ac52ab6b496d6f1cf3d2097f2eecc765c1667f22281033144970",
+          "s03_item_id": "S03-f782c4659e4b4a77",
+          "verified": true
+        },
+        "3A02.project.readback_revoke.layout_retry.20261118": {
+          "receipt_sha256": "2f3f9bf6308488b30bdc18c68550c061c6158179ef60e47843cac95910685064",
+          "s03_item_id": "S03-523dee470f354ea6",
+          "verified": true
+        },
+        "3A03.project.cache_revision_lock.20261118": {
+          "receipt_sha256": "4c76bcd9bda6ab8f104d7d79ad52ef4cc154d3a67f8f838e746cd26a79b173e9",
+          "s03_item_id": "S03-3a7c9020a0754d61",
+          "verified": true
+        },
+        "3B05.project.strict_skill_json.20261118": {
+          "receipt_sha256": "4948d762437c79d9a52dfb26f2f822d1a52bea7bfc07a675604e341fd4240a8e",
+          "s03_item_id": "S03-613522f8891d484f",
+          "verified": true
+        },
+        "3B05.project.strict_skill_json.layout_retry.20261118": {
+          "receipt_sha256": "8bcf4efea429a04146246cedd08ebc589c2e6c464e7a94435527d0cfb382b6ac",
+          "s03_item_id": "S03-c7bec831061d4a74",
+          "verified": true
+        },
+        "4A02.project.forge_split_coverage.20261118": {
+          "receipt_sha256": "27d01a1f58dde560c98f139707a6e683ca5df5bb4b5f1ad6504d5b8ba1bd3fa1",
+          "s03_item_id": "S03-956b8a141d794183",
+          "verified": true
+        },
+        "6V14-04.project.receipt_time_order.20261118": {
+          "receipt_sha256": "6f117bd8ac9f584e5380e4ef494574df19fe2876dfd001e2d18024bb30a31c52",
+          "s03_item_id": "S03-c2979c639cfc469a",
+          "verified": true
+        },
+        "6V14-04.project.receipt_time_order.fd_retry.20261118": {
+          "receipt_sha256": "bf37f57979635e69289d69a648e19d2f89c0a341827c44d74b442caad463c66f",
+          "s03_item_id": "S03-d4b5032e16194976",
+          "verified": true
+        }
+      },
+      "old_project_s03_after": {
+        "0V14-14.project.overlay_paths.20261118": {
+          "receipt_sha256": "14a4568e19be8a14f25ba27d65e00acdb7664f5ebaddc88ab3177cf793aaa480",
+          "s03_item_id": "S03-7b9fb72bb5a7475a",
+          "verified": true
+        },
+        "1A03.project.cursor_admission.20261118": {
+          "receipt_sha256": "cd585f48de5d8947081ebe34982b9ec2be974b97df66e81f073c6c9860267a84",
+          "s03_item_id": "S03-51fdb13a46f541aa",
+          "verified": true
+        },
+        "1A03.project.cursor_admission.focus_retry.20261118": {
+          "receipt_sha256": "284d6284b5d088b4dcaa16250f4151ba26cad0b9f20f73bd708e9a60a097b80d",
+          "s03_item_id": "S03-91a21bc89b584236",
+          "verified": true
+        },
+        "1A03.project.cursor_admission.owner_rescue.20261118": {
+          "receipt_sha256": "c3f293373560fcb1950cc1d134ac94b8c7d4fb8ec16045dc95b868bb39d30d32",
+          "s03_item_id": "S03-98e99cf014f84c0e",
+          "verified": true
+        },
+        "3A02.project.readback_revoke.20261118": {
+          "receipt_sha256": "6b6e7addf886ac52ab6b496d6f1cf3d2097f2eecc765c1667f22281033144970",
+          "s03_item_id": "S03-f782c4659e4b4a77",
+          "verified": true
+        },
+        "3A02.project.readback_revoke.layout_retry.20261118": {
+          "receipt_sha256": "2f3f9bf6308488b30bdc18c68550c061c6158179ef60e47843cac95910685064",
+          "s03_item_id": "S03-523dee470f354ea6",
+          "verified": true
+        },
+        "3A03.project.cache_revision_lock.20261118": {
+          "receipt_sha256": "4c76bcd9bda6ab8f104d7d79ad52ef4cc154d3a67f8f838e746cd26a79b173e9",
+          "s03_item_id": "S03-3a7c9020a0754d61",
+          "verified": true
+        },
+        "3B05.project.strict_skill_json.20261118": {
+          "receipt_sha256": "4948d762437c79d9a52dfb26f2f822d1a52bea7bfc07a675604e341fd4240a8e",
+          "s03_item_id": "S03-613522f8891d484f",
+          "verified": true
+        },
+        "3B05.project.strict_skill_json.layout_retry.20261118": {
+          "receipt_sha256": "8bcf4efea429a04146246cedd08ebc589c2e6c464e7a94435527d0cfb382b6ac",
+          "s03_item_id": "S03-c7bec831061d4a74",
+          "verified": true
+        },
+        "4A02.project.forge_split_coverage.20261118": {
+          "receipt_sha256": "27d01a1f58dde560c98f139707a6e683ca5df5bb4b5f1ad6504d5b8ba1bd3fa1",
+          "s03_item_id": "S03-956b8a141d794183",
+          "verified": true
+        },
+        "6V14-04.project.receipt_time_order.20261118": {
+          "receipt_sha256": "6f117bd8ac9f584e5380e4ef494574df19fe2876dfd001e2d18024bb30a31c52",
+          "s03_item_id": "S03-c2979c639cfc469a",
+          "verified": true
+        },
+        "6V14-04.project.receipt_time_order.fd_retry.20261118": {
+          "receipt_sha256": "bf37f57979635e69289d69a648e19d2f89c0a341827c44d74b442caad463c66f",
+          "s03_item_id": "S03-d4b5032e16194976",
+          "verified": true
+        }
+      },
+      "original_tasks_accepted": 0,
+      "previous_children_stopped": {
+        "all_exact_processes_exited": true,
+        "observed": 4
+      },
+      "process_snapshots": [
+        {
+          "director": {
+            "pgrp": 3802230,
+            "pid": 3802230,
+            "ppid": 114,
+            "start_ticks": 176614633
+          },
+          "native_last_admission": {
+            "jobs_started": 0,
+            "state": "HOLD_OWNER_STOP_OR_MAINTENANCE"
+          },
+          "observed_at": 1794973430.2869234,
+          "tasks": [
+            {
+              "claim_present": false,
+              "id": "1A03.project.cursor_admission.proc_retry.20261118",
+              "status": "pending"
+            }
+          ],
+          "workers": [
+            {
+              "current_task": null,
+              "heartbeat_at": 1794973428.7249708,
+              "pgrp": 3802230,
+              "pid": 3802351,
+              "ppid": 3802230,
+              "role": "runtime",
+              "start_ticks": 176615700
+            },
+            {
+              "current_task": null,
+              "heartbeat_at": 1794973428.7755315,
+              "pgrp": 3802230,
+              "pid": 3802352,
+              "ppid": 3802230,
+              "role": "memory",
+              "start_ticks": 176615700
+            },
+            {
+              "current_task": null,
+              "heartbeat_at": 1794973428.7492125,
+              "pgrp": 3802230,
+              "pid": 3802353,
+              "ppid": 3802230,
+              "role": "weights",
+              "start_ticks": 176615700
+            }
+          ]
+        },
+        {
+          "director": {
+            "pgrp": 3802230,
+            "pid": 3802230,
+            "ppid": 114,
+            "start_ticks": 176614633
+          },
+          "native_last_admission": {
+            "active_subexecutor_processes": 3,
+            "jobs_started": 0,
+            "policy_decisions": {},
+            "soft_yield_requests": [],
+            "state": "NATIVE_POOL_CONTINUING"
+          },
+          "observed_at": 1794973434.6799755,
+          "tasks": [
+            {
+              "claim_present": true,
+              "id": "1A03.project.cursor_admission.proc_retry.20261118",
+              "status": "running"
+            }
+          ],
+          "workers": [
+            {
+              "current_task": "1A03.project.cursor_admission.proc_retry.20261118",
+              "heartbeat_at": 1794973433.6182475,
+              "pgrp": 3802230,
+              "pid": 3802351,
+              "ppid": 3802230,
+              "role": "runtime",
+              "start_ticks": 176615700
+            },
+            {
+              "current_task": null,
+              "heartbeat_at": 1794973433.8009872,
+              "pgrp": 3802230,
+              "pid": 3802352,
+              "ppid": 3802230,
+              "role": "memory",
+              "start_ticks": 176615700
+            },
+            {
+              "current_task": null,
+              "heartbeat_at": 1794973433.774218,
+              "pgrp": 3802230,
+              "pid": 3802353,
+              "ppid": 3802230,
+              "role": "weights",
+              "start_ticks": 176615700
+            }
+          ]
+        }
+      ],
+      "protected_processes": {
+        "chat": {
+          "pgrp": 3266857,
+          "pid": 3266857,
+          "ppid": 114,
+          "start_ticks": 172046662
+        },
+        "proxy": {
+          "pgrp": 3703386,
+          "pid": 3703386,
+          "ppid": 114,
+          "start_ticks": 175609570
+        },
+        "web": {
+          "pgrp": 3505392,
+          "pid": 3505392,
+          "ppid": 114,
+          "start_ticks": 173653097
+        }
+      },
+      "queue_writes": 0,
+      "readback": {
+        "director": {
+          "pgrp": 3802230,
+          "pid": 3802230,
+          "ppid": 114,
+          "start_ticks": 176614633
+        },
+        "native_last_admission": {
+          "active_subexecutor_processes": 3,
+          "jobs_started": 0,
+          "policy_decisions": {},
+          "soft_yield_requests": [],
+          "state": "NATIVE_POOL_CONTINUING"
+        },
+        "observed_at": 1794973434.6799755,
+        "tasks": [
+          {
+            "claim_present": true,
+            "id": "1A03.project.cursor_admission.proc_retry.20261118",
+            "status": "running"
+          }
+        ],
+        "workers": [
+          {
+            "current_task": "1A03.project.cursor_admission.proc_retry.20261118",
+            "heartbeat_at": 1794973433.6182475,
+            "pgrp": 3802230,
+            "pid": 3802351,
+            "ppid": 3802230,
+            "role": "runtime",
+            "start_ticks": 176615700
+          },
+          {
+            "current_task": null,
+            "heartbeat_at": 1794973433.8009872,
+            "pgrp": 3802230,
+            "pid": 3802352,
+            "ppid": 3802230,
+            "role": "memory",
+            "start_ticks": 176615700
+          },
+          {
+            "current_task": null,
+            "heartbeat_at": 1794973433.774218,
+            "pgrp": 3802230,
+            "pid": 3802353,
+            "ppid": 3802230,
+            "role": "weights",
+            "start_ticks": 176615700
+          }
+        ]
+      },
+      "request": "6968348997",
+      "runtime_changed": [
+        "owner_project_test_runner.py"
+      ],
+      "schema": "NOX_KERNEL_SELF_FD_RUNNER_INSTALL_RECEIPT_V1",
+      "source_before": {
+        "bootstrap_sha256": "634114cbf2d546069cfa68cc2303d56fa952b40ad50ddf5d491aa2a2831b480e",
+        "count": 28,
+        "files": {
+          "forge_split_guard.py": {
+            "mode": 420,
+            "sha256": "06940cb13bd568d4cfaa893aab9e43c6d0b03010163cba13f2f5bf5ea144db00",
+            "size": 10964
+          },
+          "merge_web_source.py": {
+            "mode": 420,
+            "sha256": "f336c58fb5062aec6d5b4d99986adc0386159bc6013f0429cb2dae88daf7eb81",
+            "size": 2083
+          },
+          "native_v29_full_bridge.py": {
+            "mode": 420,
+            "sha256": "d9ec6a8250a167d774ba5090219cfaac3ad2995ddd88228d1abe5514fc9dd791",
+            "size": 51862
+          },
+          "nox_runpod/teacher_mesh/v38/durable_runtime.py": {
+            "mode": 420,
+            "sha256": "f7b69405224c63868b767792d68c3b0d73e2561b37216e2e855ca34ec93d5f2f",
+            "size": 18769
+          },
+          "nox_runpod/teacher_mesh/v38/synaptic_brain.py": {
+            "mode": 420,
+            "sha256": "8657ad367e6dd25b48ca8d6d7c4a947c0e1b0d4b979d63fbdaaf2a8e9ba5e74c",
+            "size": 22851
+          },
+          "owner_chat_request_ledger.py": {
+            "mode": 420,
+            "sha256": "006fc038f43682fa36d2310f2343c83a42fd28897e7debfbe0d63536ee069729",
+            "size": 13714
+          },
+          "owner_dispatcher_mentor.py": {
+            "mode": 420,
+            "sha256": "b980a61884965f4838f8deafd43dac2ea4642e41dea7870d6a6904ee5a274fc6",
+            "size": 56702
+          },
+          "s03_existing_readback.py": {
+            "mode": 420,
+            "sha256": "fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5",
+            "size": 2805
+          },
+          "source_tests/__init__.py": {
+            "mode": 420,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "size": 0
+          },
+          "source_tests/test_cache_race.py": {
+            "mode": 420,
+            "sha256": "092db7d32a048c1706da5fc4cf1fcb04a33781e23bbe42252ea14f990985b582",
+            "size": 4231
+          },
+          "source_tests/test_owner_chat_request_scope.py": {
+            "mode": 420,
+            "sha256": "dc19594b45a7fae32bf9bdde665620c2eec1a29bb02ba03758baa53a8158c509",
+            "size": 3503
+          },
+          "source_tests/test_request_ledger.py": {
+            "mode": 420,
+            "sha256": "b4ece67144248808a12c7c84450d61a919984ad756f6f15b46e0686c6d65ff96",
+            "size": 18304
+          },
+          "test_3b05_skill_ancestor_swap.py": {
+            "mode": 420,
+            "sha256": "21f8538fec15d39b4dbc875a4087be1c911c60b06ba04e2c682e8810f7b8b8fd",
+            "size": 4045
+          },
+          "test_forge_split_guard.py": {
+            "mode": 420,
+            "sha256": "3efe025681c3a54cbfac10f0da6f20ff7b2e249ed087b8db39d582002f32c080",
+            "size": 11822
+          },
+          "test_nox_1a03_cursor_admission.py": {
+            "mode": 420,
+            "sha256": "b3c5d26011400b110a1b88849c7aebfc0c7d8c636e541f8ab8d89d37ceed0db7",
+            "size": 8865
+          },
+          "test_nox_exchange_receipt_order.py": {
+            "mode": 420,
+            "sha256": "f299d32099c25ea1822c1a10db524b088ec16c38198b7372f362395d39c7c823",
+            "size": 6764
+          },
+          "test_nox_existing_cache_race.py": {
+            "mode": 420,
+            "sha256": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
+            "size": 683
+          },
+          "test_nox_forge_split_coverage.py": {
+            "mode": 420,
+            "sha256": "fd815f9a743bfcdf6e71a8ebb035a180c031aa8f0c5e0484164d36aaf309f6cf",
+            "size": 1388
+          },
+          "test_nox_merge_overlay_paths.py": {
+            "mode": 420,
+            "sha256": "97c433b8893514f5812b69fd53b0bb1e25d1fcd7b290f35c72407ad54b989667",
+            "size": 3774
+          },
+          "test_nox_s03_readback_revoke.py": {
+            "mode": 420,
+            "sha256": "fc5d6c564c651c2abc818005da461711cdfc2c5cedff9146c6db8b12a6037eb5",
+            "size": 2962
+          },
+          "test_nox_skill_evidence_strict_json.py": {
+            "mode": 420,
+            "sha256": "623bfb4ba2d28d3dd3dbc5e46852ed5be5c29d516d20a390aed69c2ec5c3089c",
+            "size": 3096
+          },
+          "test_nox_warm_cache_final_revision.py": {
+            "mode": 420,
+            "sha256": "9201bc3629682a577c80a66c1040ef244b82f89b3b2cab26ce06ba3c95db38b2",
+            "size": 2620
+          },
+          "test_nox_work_progress_time_order.py": {
+            "mode": 420,
+            "sha256": "d6042e38549360ace8f9136fc2c36e0c195d54666e0dca34944955bf70e9e9c0",
+            "size": 2070
+          },
+          "test_s03_readback_contract.py": {
+            "mode": 420,
+            "sha256": "2860173d8d6ed7147af2392f82c5fe4df5880ebc781ad359f15dcb30617fc391",
+            "size": 3198
+          },
+          "test_work_progress_changes.py": {
+            "mode": 420,
+            "sha256": "970d6681ce5dc57156e23746fa8df213eb5746c7a6b19354a0ca864e87830c4f",
+            "size": 3981
+          },
+          "test_work_progress_durable_write.py": {
+            "mode": 420,
+            "sha256": "6aa9265942695d2b54b33a0192dc1ebfb912277e86c909eeb4f49a1b45477edd",
+            "size": 6106
+          },
+          "test_work_progress_pinned_read.py": {
+            "mode": 420,
+            "sha256": "4b06687bbad8fe6ab0466bdaf06ed9239c70da2232bf14e6820eed4919251f5e",
+            "size": 8761
+          },
+          "work_progress.py": {
+            "mode": 420,
+            "sha256": "7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d",
+            "size": 23548
+          }
+        },
+        "files_sha256": "f9d914745e8b42bc7d8f45bc5dd0804291a86eacab4edd1cd2dc42d4c17f583f",
+        "git_pins": {
+          "HEAD": "a6b06801389a17f98c8835330525d89a870738dd35357c3c437af422fe08b023",
+          "index": "8600deb1a97edca8850d00f8f3e6fc23f96c4c446e212b368fd9911c24c302d7",
+          "refs/heads/nox-owner-project-source": "fc3d9ffff63048c523726fbe3c9769b0961799c739e3a7008317181218f80ef0"
+        },
+        "root": "/root/nox/projects/owner_executor/source_workspace",
+        "total_bytes": 299471
+      },
+      "source_preserved_before_admission": true,
+      "source_reseeded": false,
+      "source_sha": "a356b22c888d0f362fd437aa57157075e25b6386",
+      "source_tree_writes": 0,
+      "started_at": 1794973408.9881566,
+      "state": "KERNEL_SELF_FD_THREE_WORKERS_RETRY_ADMITTED",
+      "three_live_workers_verified": true,
+      "training_started": false
+    }
+  },
+  {
+    "kind": "REPAIR_COMPLETE",
+    "data": true
+  },
+  {
+    "kind": "REMOTE_EXIT_CODE",
+    "data": 0
+  }
+]

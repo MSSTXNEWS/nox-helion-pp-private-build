@@ -1,0 +1,174 @@
+name: NOX V29 Verified Future Open Source Downloads
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-v29-extra-open-source.yml
+      - nox_runpod/teacher_mesh/stages/download_v29_extra_sources.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-only-download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [kernels,benchmarks]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download pinned upstream with real CRC/SHA and license status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          python3 nox_runpod/teacher_mesh/stages/download_v29_extra_sources.py --group ${{ matrix.group }} --out sources/
+      - name: Pack full bytes and verify chunk hashes
+        run: |
+          set -Eeuo pipefail
+          mkdir -p transfer/parts
+          tar --sort=name -cf transfer/NOX_V29_SOURCE_TREE.tar -C sources .
+          (cd transfer && sha256sum NOX_V29_SOURCE_TREE.tar > ROOT_SHA256SUM.txt)
+          split -b 45m -d -a 2 transfer/NOX_V29_SOURCE_TREE.tar transfer/parts/piece
+          python3 - <<'PY'
+          import pathlib,hashlib,json
+          root=pathlib.Path('transfer')
+          entries=[]
+          for p in sorted((root/'parts').iterdir()):
+              b=p.read_bytes()
+              entries.append({'name':p.name,'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()})
+          original=root/'NOX_V29_SOURCE_TREE.tar'
+          report={'schema':'nox-v29-source-chunks-v1',
+                  'group':'${{ matrix.group }}',
+                  'archive_name':'NOX_V29_SOURCE_TREE.tar',
+                  'archive_bytes':original.stat().st_size,
+                  'archive_sha256':hashlib.sha256(original.read_bytes()).hexdigest(),
+                  'parts':entries,
+                  'note':'Unpack source archives only after license review; no execution/install'}
+          (root/'PARTS_INDEX.json').write_text(json.dumps(report,indent=2)+'\n')
+          assert entries and len(entries)<=12, 'UPSTREAM_DOWNLOAD_OVER_SIZE_BUDGET'
+          print('NOX_V29_SOURCE_CHUNK_HASH_PASS',report['group'],len(entries),report['archive_bytes'])
+          PY
+          rm transfer/NOX_V29_SOURCE_TREE.tar
+      - name: Upload index and provenance
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_INDEX
+          path: |
+            transfer/PARTS_INDEX.json
+            transfer/ROOT_SHA256SUM.txt
+            sources/UPSTREAM_PROVENANCE.json
+            sources/SHA256SUMS.txt
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: warn
+      - name: Upload verified chunk 00
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_00
+          path: transfer/parts/piece00
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified chunk 01
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_01
+          path: transfer/parts/piece01
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified chunk 02
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_02
+          path: transfer/parts/piece02
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified chunk 03
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_03
+          path: transfer/parts/piece03
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified chunk 04
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_04
+          path: transfer/parts/piece04
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified chunk 05
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_05
+          path: transfer/parts/piece05
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified chunk 06
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_06
+          path: transfer/parts/piece06
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified chunk 07
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_07
+          path: transfer/parts/piece07
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified chunk 08
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_08
+          path: transfer/parts/piece08
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified chunk 09
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_09
+          path: transfer/parts/piece09
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified chunk 10
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_10
+          path: transfer/parts/piece10
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore
+      - name: Upload verified chunk 11
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: NOX_V29_EXTRA_${{ matrix.group }}_PART_11
+          path: transfer/parts/piece11
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: ignore

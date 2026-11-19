@@ -1,0 +1,54 @@
+{
+  "schema": "NOX_2D_BORN_CODE_BENCHMARK_PROVENANCE_V1",
+  "instructions_version": "0.0.6",
+  "review_date_msk": "2026-11-16",
+  "error_id": "NOX-P1-HYBRID-2D-BORN-BENCHMARK-INDEPENDENCE-UNPROVEN-20261116",
+  "review_state": "RESEARCHED_HOLD_NOT_PROVEN_CONTAMINATION",
+  "adapter": {
+    "repository": "rk500/Born-9B-Qwen3.5-9B-Preview",
+    "weights_revision": "f9eff01a754f2ce1274d1edfbe861cba608165b6",
+    "weights_file": "adapter_model.safetensors",
+    "weights_size_bytes": 116426136,
+    "weights_sha256_from_published_pointer": "4f55e1cd99ba9c1fc92aea69aa412b8e794b56198060398140b6c6dde59f9542",
+    "declared_base": "Qwen/Qwen3.5-9B",
+    "exact_current_nox_hf_base_verified": false,
+    "production_merge_approved": false
+  },
+  "card_reported_train_source_counts": {
+    "mbppplus": 355,
+    "humanevalplus": 154,
+    "mbpp": 1,
+    "bigcodebench": 845,
+    "ds1000": 724,
+    "swebench_verified": 312,
+    "born9b_v2_eval_curriculum": 85
+  },
+  "card_reported_local_code_eval_25_per_family": {
+    "base": {
+      "humaneval_pass": 21,
+      "mbpp_pass": 17,
+      "total_pass": 38
+    },
+    "born_v2": {
+      "humaneval_pass": 17,
+      "mbpp_pass": 19,
+      "total_pass": 36
+    }
+  },
+  "proven_item_level_overlap": false,
+  "proven_item_level_disjointness": false,
+  "interpretation": "Published train-source families overlap in name/provenance with published evaluation families. Actual item overlap is UNKNOWN; these particular self-reported evaluations are not accepted as independently leakage-audited evidence. On the 50-item reported slice Born 36/50 versus base 38/50, not a demonstrated overall exact-code gain.",
+  "language_scope": "The card describes Irish synthetic rows; these do not establish RU/ES empathy, emotion or factual self-model quality.",
+  "policy": "Keep third-party adapter in research quarantine. Before any comparative evaluation or training promotion, require author/owner source-lineage manifest and item/question/source-family disjointness, independent RU/ES/code/tool tests, exact NOX base+tokenizer+weights identity, native backup/rollback. Do not train on sealed test cases.",
+  "source_links": [
+    "https://huggingface.co/rk500/Born-9B-Qwen3.5-9B-Preview",
+    "https://huggingface.co/rk500/Born-9B-Qwen3.5-9B-Preview/commit/f9eff01a754f2ce1274d1edfbe861cba608165b6",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3addef914090dc940a97b7533a9916d8ff22265a/coordination/hybrid_20261115/2D_public_evidence_v2.json"
+  ],
+  "verification_scope": "PUBLIC_LIVE_MODEL_CARD_AND_PRIOR_IMMUTABLE_WEIGHT_POINTER_METADATA_ONLY; pinned card body and actual model bytes not independently downloaded",
+  "native_onehost_examined_this_run": false,
+  "native_downloads_this_run": 0,
+  "native_optimizer_steps_this_run": 0,
+  "native_merge_this_run": false,
+  "native_cleanup_bytes": 0
+}

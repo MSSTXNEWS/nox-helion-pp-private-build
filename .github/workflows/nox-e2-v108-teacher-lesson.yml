@@ -1,0 +1,60 @@
+name: NOX V108 real local generative-teacher S03 knowledge receipt
+on:
+  push:
+    branches: [nox/e2-v108-teacher-corpus-repair-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v108-teacher-lesson.yml'
+      - 'nox_runpod/teacher_mesh/v107/local_teacher_s03.py'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v108-teacher-native-60509551
+  cancel-in-progress: false
+jobs:
+  local-teacher:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Static proof of safe teacher selection and STOP gates
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v107/local_teacher_s03.py
+          python3 - <<'PY'
+          import ast
+          from nox_runpod.teacher_mesh.v107 import local_teacher_s03 as m
+          code=m.REMOTE.lstrip("\n").split("python3 - <<'PYREMOTE'\n",1)[1].rsplit("\nPYREMOTE",1)[0]
+          ast.parse(code)
+          assert "vikhr-nemo-12b" in code and "saiga_nemo_12b" in code
+          assert "HOLD_GPU1_BUSY_OR_VRAM_LOW" in code
+          assert "HOLD_CHAT_PREEMPTS_TEACHER" in code
+          assert "HOLD_NO_VERIFIED_GENERATIVE_TEACHER" in code
+          assert "s03_memory.remember" in code and "s03_memory.recall" in code
+          print("NOX_V108_SOURCE_GATES=PASS")
+          PY
+      - name: ONE native benign teacher response and verified S03 save
+        run: python3 -m nox_runpod.teacher_mesh.v107.local_teacher_s03
+      - name: Revoke the temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Evidence scope
+        if: success()
+        run: |
+          echo "NOX_LOCAL_GENERATIVE_TEACHER_USED=true"
+          echo "NOX_PUBLIC_FACT_VERIFIED_ARITHMETICALLY=true"
+          echo "NOX_S03_MEMORY_UPDATED=true"
+          echo "NOX_BASE_WEIGHTS_UNCHANGED=true"
+          echo "NOX_STUDENT_OPTIMIZER_STEPS=0"

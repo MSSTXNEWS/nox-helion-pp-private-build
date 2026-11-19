@@ -1,0 +1,40 @@
+name: NOX V94 read-only optional context latency provider inspection
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v94-enrich-audit.yml, nox_runpod/teacher_mesh/v94/enrich_provider_audit.py]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v94-enrich-readonly
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compile source and native diagnostic
+        run: |
+          python3 -m py_compile nox_runpod/teacher_mesh/v94/enrich_provider_audit.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v94.enrich_provider_audit import REMOTE
+          compile(REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0],
+                  '<v94-native>','exec')
+          PY
+      - name: Examine live enrichment without reading user data
+        run: python3 -m nox_runpod.teacher_mesh.v94.enrich_provider_audit
+      - name: Detach temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

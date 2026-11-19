@@ -1,0 +1,206 @@
+{
+  "schema": "NOX_HOURLY_PROGRESS_V1",
+  "instructions_version": "0.0.6",
+  "scope": "SOURCE",
+  "stable_hour_id": "NOX-HOURLY-2026-11-16T00Z",
+  "utc_hour_start": "2026-11-16T00:00:00Z",
+  "utc_hour_end_exclusive": "2026-11-16T01:00:00Z",
+  "msk_hour": "2026-11-16 03:00–03:59 Europe/Moscow",
+  "generated_from": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "feature/nox-v38-synaptic-brain-20261114",
+    "pr": 256,
+    "accepted_feature_head_at_write": "fc30eeda7d395437352aeae3e055447bc39f3d5b",
+    "last_commit_within_hour": "2a09e5975e0bfbd84e22bbaea1c0347a9b41ec63",
+    "source_hour_commit_count": 27,
+    "source_hour_commit_filter": "GitHub /commits?sha=feature/...&since=2026-11-16T00:00Z&until=2026-11-16T00:59:59Z, committer dates",
+    "evidence_boundary": "HEAD may include later-hour commits; current repo SHA is a source anchor only, not a native deployment SHA",
+    "onepass_evolution_board_contract": "coordination/onepass/evolution_board/README.md NOT_FOUND on inspected branch; no claims of having applied an absent contract"
+  },
+  "executive_summary": "27 source commits in UTC 00Z. Owner-authenticated original Resonance chat upgrade succeeded for one bounded arithmetic+history native probe (43779355450), but no paired before/after p50/p95 quality improvement or independent full S03 restore is shown. Separate owner dispatcher upgrade (43781527714) failed after native mutations; later read-only inspection (43781890290) found three controllers RUNNING and S03 metadata. Knowledge additions and optimizer weight changes not verified.",
+  "self_improvement": {
+    "status": "SOURCE_PASS_PARTIAL__NATIVE_CHAT_NARROW_PASS__DISPATCHER_FAIL_HOLD",
+    "color": "YELLOW_WITH_PROVEN_NATIVE_FAILURE",
+    "source_commit_count": 27,
+    "source_cutoff_sha": "2a09e5975e0bfbd84e22bbaea1c0347a9b41ec63",
+    "source_changes": [
+      "SSE/Resonance source and temporary WEB29 progress dock",
+      "Fail-closed queue state and RU/ES holdout checks",
+      "Owner-scoped storage/Drive RAM preparation, Chromium diagnostics",
+      "Dispatcher lifecycle recovery and bounded S03 diagnostic source"
+    ],
+    "source_ci": [
+      {
+        "run_id": 43783474593,
+        "result": "SUCCESS",
+        "scope": "SOURCE_ONLY",
+        "sha": "2a09e5975e0bfbd84e22bbaea1c0347a9b41ec63",
+        "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43783474593"
+      },
+      {
+        "run_id": 43783474428,
+        "result": "SKIPPED",
+        "scope": "NATIVE_92_ROUTE_NOT_VERIFIED",
+        "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43783474428"
+      }
+    ],
+    "native_chat_upgrade": {
+      "run_id": 43779355450,
+      "event": "OWNER_AUTHENTICATED_NATIVE",
+      "observed_msk": "2026-11-16 03:16–03:17",
+      "source_sha_applied": "0432d11f7485644af803bb7a821c0abfab12acb6",
+      "result": "LIVE_RESONANCE_REAL_STREAM_S03_HISTORY_ACCEPTED (single bounded probe, not full release)",
+      "original_chat_restarted": true,
+      "model_restarted": false,
+      "single_synthetic_arithmetic": {
+        "first_meaningful_delta_ms": 4168,
+        "full_response_ms": 4479,
+        "arithmetic_pass": true,
+        "reported_saved_verified": true
+      },
+      "single_history_followup": {
+        "first_meaningful_delta_ms": 568,
+        "full_response_ms": 760,
+        "history_model_pass": true
+      },
+      "second_owner_question": {
+        "first_meaningful_delta_ms": 592,
+        "reported_saved": true,
+        "s03_integrated_reported": true
+      },
+      "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43779355450",
+      "limitation": "saved_verified is workflow/API evidence for this synthetic dialog; no independent restart/durable full S03 recovery, broad RU/ES benchmark, or same-prompt p50/p95 proof"
+    },
+    "native_dispatcher_upgrade": {
+      "run_id": 43781527714,
+      "event": "OWNER_AUTHENTICATED_NATIVE",
+      "observed_msk": "2026-11-16 03:38–03:39",
+      "outcome": "FAIL: HOLD_NATIVE_PAYLOAD_INCOMPLETE / HOLD_UPGRADE_CONTROLLER_START",
+      "native_effects": [
+        "paused three existing controllers",
+        "staged original dispatcher assets",
+        "queued one owner.autonomy.audit plan with 6 planned branches"
+      ],
+      "claimed_rollback": true,
+      "independent_restored_file_sha_readback": false,
+      "independent_optimizer_s03_restore": false,
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43781527714"
+    },
+    "postfailure_readonly": {
+      "run_id": 43781890290,
+      "observed_msk": "2026-11-16 03:42",
+      "scope": "OWNER_PINNED_SSH_READ_ONLY",
+      "controllers": [
+        {
+          "name": "nox-dispatcher-t855u",
+          "state": "RUNNING",
+          "pid": 429864
+        },
+        {
+          "name": "nox-priority-scheduler",
+          "state": "RUNNING",
+          "pid": 429857
+        },
+        {
+          "name": "nox-selfheal",
+          "state": "RUNNING",
+          "pid": 429905
+        }
+      ],
+      "caveat": "RUNNING is not proof of job completion or rollback SHA restoration",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43781890290"
+    },
+    "measured_before_after_chat_speed_or_quality": "нет данных: last-hour native probes and earlier 6551/7222ms failed test are not proven same-prompt/same-condition paired benchmark",
+    "ttft_p50_p95": "нет данных",
+    "tokens_per_sec": "нет данных",
+    "live_full_web_e2e": "HOLD",
+    "summary": "Physical chat improvement on narrow arithmetic/history probe; dispatcher native update failed and requires owner readback before any further write. Source success is not proof of complete release."
+  },
+  "knowledge_training": {
+    "status": "NATIVE_S03_METADATA_READ_ONLY__NEW_INGEST_HOLD",
+    "color": "YELLOW",
+    "observed_native_readonly_msk": "2026-11-16 03:42",
+    "knowledge_sqlite": {
+      "s03_items_rows": 302,
+      "s03_fts_rows": 302,
+      "docs_rows": 1598,
+      "chunks_rows": 3444,
+      "s03_ledger_rows": 1
+    },
+    "observed_embedding_probe": {
+      "endpoint": "existing BGE 8082",
+      "synthetic_inputs": 2,
+      "vector_count": 2,
+      "vector_dimensions": 1024,
+      "quality_retrieval_verified": false
+    },
+    "accepted_sources_this_hour": "нет данных",
+    "accepted_new_s03_records_this_hour": "нет данных",
+    "confirmed_original_s03_revision": "нет данных",
+    "independent_signed_s03_write_readback": "нет данных",
+    "new_corpus_indexed_and_retrieved": "нет данных",
+    "ru_es_quality_delta": "нет данных",
+    "C01_C08_M0_M7_emotions_live_quality": "нет данных",
+    "caveat": "302 total existing rows are inventory, not 302 new accepted sources; synthetic saved_verified is not full restart/restore proof; no separate database created",
+    "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43781890290",
+    "summary": "S03 schema and FTS existence verified read-only; neither knowledge growth nor retrieval quality gain is demonstrated."
+  },
+  "weight_training": {
+    "status": "HOLD_LAST_KNOWN_BF16_FAILURE_NOT_NEW_RUN",
+    "color": "YELLOW_WITH_HISTORICAL_RED",
+    "last_observed_trainer_service": "nox-train-volta-t866u",
+    "historical_observed_at_msk": "2026-11-16 01:53 outside this hour",
+    "historical_phase": "init",
+    "historical_status_step": 0,
+    "historical_step_is_verified_optimizer_step": false,
+    "historical_loss": null,
+    "historical_exception": "BFloat16 unscale CUDA kernel unsupported on V100 in prior owner log",
+    "actual_current_training_run_id": "нет данных",
+    "training_mode": "нет данных",
+    "verified_optimizer_global_step_this_hour": "нет данных",
+    "same_run_optimizer_step_delta": "нет данных",
+    "loss_this_hour": "нет данных",
+    "checkpoint_sha": "нет данных",
+    "updated_weights_sha": "нет данных",
+    "gpu0_util_vram_this_hour": "нет данных",
+    "gpu1_util_vram_this_hour": "нет данных",
+    "ram_cgroup_this_hour": "нет данных",
+    "disk_headroom_this_hour": "нет данных",
+    "historical_resource_source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43772141002",
+    "independent_full_optimizer_weights_s03_restore": "не подтвержден",
+    "evaluation_quality_delta": "нет данных",
+    "summary": "No positive optimizer step or new model weight digest in owner receipts. No training mutation by this reporter."
+  },
+  "bounded_queue": {
+    "manifest_path": "coordination/NOX_R60_MASTER.json",
+    "source_planned_tasks": 60,
+    "source_pending_native_registration": 60,
+    "verified_native_job_id_plus_s03_receipt_pairs": 0,
+    "total_actual_live_queue_size": "нет данных",
+    "separate_one_plan_six_branches": "owner.autonomy.audit.6904105034 is one plan with 6 planned branches, NOT six R60 registered jobs",
+    "note": "0/60 = zero positively verified pairs in inspected source receipts; does not assert live native queue is empty"
+  },
+  "publication": {
+    "original_s03_authenticated_writer_available_for_this_report": false,
+    "original_s03_mutation_attempted": false,
+    "web_publish": "WEB_PUBLISH_HOLD",
+    "path": "coordination/progress/hourly/2026-11-16T00.json",
+    "save_policy": "ONE_SOURCE_CAS_APPEND_ONLY_NO_FORCE",
+    "report_scope": "SOURCE",
+    "notion_write": "NOT_ATTEMPTED; hourly report belongs in canonical GitHub coordination path"
+  },
+  "reporter_actions": {
+    "onehost_native_mutations": [],
+    "new_trainers": 0,
+    "new_schedulers": 0,
+    "production_restart_or_delete": false,
+    "source_report_only": true
+  },
+  "one_next_action": "One owner-fenced authenticated READ-ONLY current original OneHost audit: post-dispatcher rollback executable/per-file SHA, original Resonance and S03 independent durable write/readback+restart, GPU0/GPU1 PID/STOP/writer lease, optimizer checkpoint and independent offsite restore. Do not repeat upgrade or start another trainer until the evidence gate closes.",
+  "primary_evidence": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43779355450",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43781527714",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43781890290",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43783474593"
+  ]
+}

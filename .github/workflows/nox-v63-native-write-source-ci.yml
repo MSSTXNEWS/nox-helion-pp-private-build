@@ -1,0 +1,34 @@
+name: NOX V63 single native write transport and Downloads patch safety CI
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - .github/workflows/nox-v63-native-write-source-ci.yml
+      - nox_runpod/teacher_mesh/v63/native_once.py
+      - nox_runpod/teacher_mesh/v63/repair_download_hf_path.py
+      - nox_runpod/teacher_mesh/v63/tests/test_native_write_gate.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile bounded patch and exactly-once native transport
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v63/native_once.py nox_runpod/teacher_mesh/v63/repair_download_hf_path.py
+      - name: Execute non-mocking source/invariant tests offline
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/v63/tests -p 'test_native_write_gate.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/v63/tests -p 'test_safe_recovery.py' -v
+      - name: Offline only
+        run: |
+          echo "SOURCE_AND_PROTOCOL_SAFETY_TESTS=true"
+          echo "LIVE_VAST_SCRIPT_PATCH_EXECUTED=false"
+          echo "NOX_SERVICE_RESTARTS=0"

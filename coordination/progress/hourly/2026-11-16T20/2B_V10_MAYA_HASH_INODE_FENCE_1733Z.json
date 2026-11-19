@@ -1,0 +1,96 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2B",
+  "at_utc": "2026-11-16T17:34:56.373Z",
+  "at_msk": "2026-11-16T20:34:56.373+03:00",
+  "source_commit": "d9e9dbbb53378d563aec7c439fdda538b89a8010",
+  "source_preimage_sha": "d9e66c1ec7d7f343d66c1f6595e15207f5260337",
+  "source_after_sha": "1132ef99d0687274138f5930a285abc855688045",
+  "test_preimage_sha": "45c250327183c7f5abbb2ffc87367f5a3158d2de",
+  "test_after_sha": "a924678624248b07ac4205aaf6aca58f055f8ae0",
+  "source_ci": {
+    "run_id": 43919478690,
+    "job_id": 133482568127,
+    "result": "SUCCESS",
+    "test_invocations": "45 + 4 + 18 + 18 = 85",
+    "new_tests": "2 tests in Maya suite each run twice",
+    "note": "SOURCE TESTS ONLY; no CUDA or native deployment"
+  },
+  "tasks": [
+    {
+      "task_id": "S3-04",
+      "status": "SOURCE_TESTED_COMPONENT_ONLY",
+      "claim": "NO_NATIVE_CLAIM",
+      "evidence": "Maya preflight one-inode hash and name swap fail-closed. CI 43919478690 SUCCESS; two new tests PASS twice; no real Maya inference."
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD_NATIVE_STOP_LEASE",
+      "claim": "NONE",
+      "evidence": "Prior native owner STOP/MAINTENANCE; current writer lease unknown; no owner write authorized"
+    },
+    {
+      "task_id": "S1-04",
+      "status": "HOLD_FRESH_RESOURCE_READBACK",
+      "claim": "NONE",
+      "evidence": "Prior cgroup/GPU/SSD evidence only; no current PID/start_ticks or GPU readback"
+    },
+    {
+      "task_id": "S2-07",
+      "status": "HOLD_SEEKABLE_STORAGE",
+      "claim": "NONE",
+      "evidence": "No verified owner-auth seekable capacity for remaining 248828477216 unique DeepSeek bytes"
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD_INDEPENDENT_RESTORE",
+      "claim": "NONE",
+      "evidence": "S03/Genesis and checkpoint+optimizer/scaler/RNG recovery not independently proven"
+    }
+  ],
+  "WEIGHTS": {
+    "successful_optimizer_updates_new": 0,
+    "checkpoint_optimizer_scaler_rng_restore_verified": false,
+    "model_promotion": false,
+    "student_training_not_resumed": true
+  },
+  "KNOWLEDGE": {
+    "hunter_source_s03_write_readback_recall_new": 0,
+    "acl_recall_latency_new": null
+  },
+  "DISPATCHER_RESOURCES": {
+    "new_native_pid_start_ticks": [],
+    "new_native_claims": [],
+    "writer_lease": "UNKNOWN",
+    "stop_not_cleared": true,
+    "prior_native": {
+      "job": 133453659138,
+      "at_utc": "2026-11-16T16:48:21Z",
+      "owner_stop": "PRESENT_THEN",
+      "maintenance": "PRESENT_THEN",
+      "supervisors": "FIVE_STOPPED_THEN",
+      "port_8081": "ABSENT_THEN",
+      "gpu_vram_mib": [
+        0,
+        0
+      ],
+      "ssd_total_bytes": 183609851904,
+      "ssd_free_bytes": 43158790144,
+      "writer_lease": "UNKNOWN"
+    },
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0,
+    "current_gpu_ram_ssd": "UNKNOWN"
+  },
+  "root_cause": "TOCTOU: after lstat check, Path.open followed a replaced name; a size-matched immutable-looking shard could be hashed from a different inode, with no after-read identity validation.",
+  "fix": "Use O_NOFOLLOW/O_NONBLOCK regular-file descriptor hashing; compare before/after fstat and current lexical name inode metadata; HOLD on changed parent symlinks. Source preflight only, no launcher or backend.",
+  "rollback": "CAS revert both source and test to pinned preimage blobs only after confirming current branch preimages; do not touch native owner state",
+  "native_install": false,
+  "source_files": [
+    "nox-control/maya_launch_preflight_v1.py",
+    "nox-control/test_maya_ds4_launch_preflight_v1.py"
+  ],
+  "native_next": "Fresh original owner-auth READ-ONLY STOP/lease PID/start_ticks, storage quota + seekability and exact shard inventory; independent S03/checkpoint restore; then gated native Maya 2xV100/RU-ES/SSE test."
+}

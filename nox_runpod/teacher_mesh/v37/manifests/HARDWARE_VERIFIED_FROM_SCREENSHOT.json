@@ -1,0 +1,48 @@
+{
+  "activation": "READ_ONLY_STAGE: no training/download/install without native owner grant, live inspection and checkpoint external backup",
+  "anti_duplication": "All existing models, adapters, NOX PRs/checkpoints and V35 indices are protected; no automatic download/overwrite.",
+  "compute_capability": "7.0 (Volta)",
+  "cpu_allocation_reported": 20.0,
+  "cpu_vcpus_reported": 80,
+  "cuda_max_reported": "13.0 (driver/platform label, does NOT prove CUDA 13 toolkit is installed)",
+  "cuda_toolkit_requirement": "CUDA 12.x torch build with sm_70, preflight from actual GPU; NO CUDA13 rebuild",
+  "disk_free_gb_estimate": 65,
+  "disk_total_gb_at_capture": 171,
+  "disk_used_gb_at_capture": 106,
+  "flashattention2_cuda": false,
+  "fp16_tensor_cores": true,
+  "gpu_count": 2,
+  "gpu_name": "NVIDIA Tesla V100",
+  "gpu_per_card_gib_nominal": 32,
+  "gpu_total_gib_nominal": 64,
+  "hard_constraint": "The same GPU may have 32GB nominal but less usable. Per-device available VRAM must be checked, NOT aggregate 39.8/64 only.",
+  "host_id": "381795",
+  "instance_id": "60509551",
+  "native_bf16": false,
+  "network_speed_mbps": {
+    "down": 690,
+    "up": 719
+  },
+  "provider": "Vast.ai",
+  "ram_total_gib_at_capture": 96.4,
+  "ram_used_gib_at_capture": 8.5,
+  "schema": "NOX-V36-REAL-SERVER-HARDWARE-20261113",
+  "source": "Owner-provided Vast.ai screenshot 2026-11-13; screenshot only; current host requires live independent verification",
+  "usd_hour_at_capture": 0.181,
+  "user_targets": {
+    "disk_free_min_gb": 20,
+    "gpu_core_temp_stop_c": 80,
+    "ram_hard_gib": 86,
+    "ram_soft_gib": 82,
+    "short_peak_compute_pct": 100,
+    "sustained_gpu_compute_pct": [
+      85,
+      95
+    ],
+    "vram_hard_gib_per_gpu": 30.0,
+    "vram_preflight_headroom_gib": 3.0,
+    "vram_soft_gib_per_gpu": 28.0
+  },
+  "volume": "NO_VOLUMES_DISPLAYED",
+  "vram_used_gib_at_capture": 39.8
+}

@@ -1,0 +1,88 @@
+name: NOX ONEPASS owner-stage legacy JSON/SSE native stream compatibility - SOURCE ONLY
+on:
+  push:
+    branches: [fix/nox-web-v293-onepass-native-compat-20261115, feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'coordination/onepass/nox-legacy-chat-bridge-v293.js'
+      - 'coordination/onepass/build_legacy_compat_v2.py'
+      - 'coordination/onepass/v134_native_owner_compat_converger.py'
+      - 'coordination/onepass/test_v134_native_owner_compat_converger.py'
+      - 'coordination/onepass/NOX_V134_DRIVE_PARTS_SHA256.json'
+      - 'coordination/onepass/NOX_V134_CONVERGED_ACCEPTANCE.json'
+      - 'coordination/onepass/test_chat_compat_node.cjs'
+      - 'coordination/onepass/test_build_legacy_compat_v2.py'
+      - '.github/workflows/nox-onepass-native-compat-source.yml'
+  pull_request:
+    paths:
+      - 'coordination/onepass/nox-legacy-chat-bridge-v293.js'
+      - 'coordination/onepass/build_legacy_compat_v2.py'
+      - 'coordination/onepass/v134_native_owner_compat_converger.py'
+      - 'coordination/onepass/test_v134_native_owner_compat_converger.py'
+      - 'coordination/onepass/NOX_V134_DRIVE_PARTS_SHA256.json'
+      - 'coordination/onepass/NOX_V134_CONVERGED_ACCEPTANCE.json'
+      - 'coordination/onepass/test_chat_compat_node.cjs'
+      - 'coordination/onepass/test_build_legacy_compat_v2.py'
+      - '.github/workflows/nox-onepass-native-compat-source.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify existing native owner protocol boundaries in JavaScript
+        run: |
+          set -euo pipefail
+          node --check coordination/onepass/nox-legacy-chat-bridge-v293.js
+          node coordination/onepass/test_chat_compat_node.cjs
+      - name: Verify deterministic native-owner-only derived full ZIP builder, no original mutation
+        run: |
+          set -euo pipefail
+          python -m py_compile coordination/onepass/build_legacy_compat_v2.py
+          python -m unittest -v coordination.onepass.test_build_legacy_compat_v2
+          python -m py_compile coordination/onepass/v134_native_owner_compat_converger.py
+          python -m unittest -v coordination.onepass.test_v134_native_owner_compat_converger
+          python - <<'PY'
+          import json
+          from coordination.onepass import v134_native_owner_compat_converger as x
+          base='coordination/onepass/'
+          a=json.load(open(base+'NOX_V134_CONVERGED_ACCEPTANCE.json',encoding='utf8'))
+          d=json.load(open(base+'NOX_V134_DRIVE_PARTS_SHA256.json',encoding='utf8'))
+          assert a['source']['original_v29_entries_preserved']==1089
+          assert a['source']['original_entries_byte_identical']==1071
+          assert a['source']['source_v133_changed_paths_with_immediate_rollback']==16
+          assert a['source']['owner_stage_source_sha256']==x.OWNER_FROZEN_SHA
+          assert a['source']['owner_v122_runtime_response_sha256']==x.OWNER_V122_SHA
+          assert a['source']['native_legacy_chat_js_sha256']==x.BRIDGE_JS_SHA
+          assert d['output_sha256']==a['source']['output_sha256']
+          assert sum(v['bytes'] for v in d['parts'])==a['source']['output_bytes']
+          assert a['local_acceptance']['local_missing_assets']==0
+          assert a['local_acceptance']['chromium_owner_load_test']['state'].startswith('HOLD_')
+          assert not a['safety']['production_main_not_merged'] is False
+          assert a['blockers']['full_weight_no_adapter_optimizer_steps_verified'] is False
+          print('NOX_V134_SOURCE_DRIVE_RELEASE_RECEIPT_ADMISSION=PASS_SOURCE_ONLY')
+          PY
+      - name: Export exact tested owner-stage compatibility source for V134 convergence
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V134_OWNER_CHAT_COMPAT_SOURCE
+          path: |
+            coordination/onepass/nox-legacy-chat-bridge-v293.js
+            coordination/onepass/build_legacy_compat_v2.py
+            coordination/onepass/NOX_V293_NATIVE_COMPAT_ACCEPTANCE.json
+            coordination/onepass/v134_native_owner_compat_converger.py
+            coordination/onepass/test_v134_native_owner_compat_converger.py
+            nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py
+          if-no-files-found: error
+          retention-days: 14
+      - name: Confirm no native Vast/Windows changes from source tests
+        run: |
+          echo 'NOX_ONEPASS_COMPAT_SOURCE_TESTED=true'
+          echo 'NOX_ONEPASS_COMPAT_NATIVE_DEPLOYED=false'
+          echo 'NOX_ORIGINAL_S03_WEIGHTS_UNMODIFIED=true'

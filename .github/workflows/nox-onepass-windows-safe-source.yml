@@ -1,0 +1,46 @@
+name: NOX ONEPASS owner Windows safe one-click verification source CI
+on:
+  push:
+    branches: [fix/nox-onepass-windows-readonly-preflight-20261115, fix/nox-e1-v147-windows-receipt-noloss-20261115, feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'coordination/onepass/windows/**'
+      - 'coordination/onepass/test_windows_readonly_contract.py'
+      - 'coordination/onepass/test_windows_receipt_no_clobber.py'
+      - 'coordination/onepass/test_windows_pc_owner_probe.py'
+      - 'coordination/onepass/test_ci_guard_coverage.py'
+      - '.github/workflows/nox-onepass-windows-safe-source.yml'
+  pull_request:
+    paths:
+      - 'coordination/onepass/windows/**'
+      - 'coordination/onepass/test_windows_readonly_contract.py'
+      - 'coordination/onepass/test_windows_receipt_no_clobber.py'
+      - 'coordination/onepass/test_windows_pc_owner_probe.py'
+      - 'coordination/onepass/test_ci_guard_coverage.py'
+      - '.github/workflows/nox-onepass-windows-safe-source.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Confirm Windows entrypoint only hashes archive and checks localhost, no native mutations
+        run: |
+          set -euo pipefail
+          python -m unittest -v coordination.onepass.test_windows_readonly_contract
+          command -v pwsh
+          pwsh -NoLogo -NoProfile -NonInteractive -Command '$tokens=$null; $errors=$null; [System.Management.Automation.Language.Parser]::ParseFile("coordination/onepass/windows/NOX_ONEPASS_VERIFY_WINDOWS.ps1", [ref]$tokens, [ref]$errors) | Out-Null; if ($errors.Count -ne 0) { $errors | Out-String | Write-Error; exit 1 }'
+          python -m unittest -v coordination.onepass.test_windows_pc_owner_probe
+          python -m unittest -v coordination.onepass.test_windows_receipt_no_clobber
+          python -m unittest -v coordination.onepass.test_ci_guard_coverage
+          echo 'NOX_WINDOWS_PC_ANONYMOUS_GET_ONLY=true'
+          echo 'NOX_WINDOWS_PC_OWNER_COOKIE_E2E=HOLD'
+          echo 'NOX_WINDOWS_BACKUP_NATIVE_HANDLER=HOLD'
+          echo 'NOX_WINDOWS_CHECK_SOURCE_ONLY=PASS'
+          echo 'NOX_WINDOWS_CHECK_PHYSICAL_HOST=NOT_TESTED'

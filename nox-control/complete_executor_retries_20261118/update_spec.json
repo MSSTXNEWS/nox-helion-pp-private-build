@@ -1,0 +1,157 @@
+{
+  "schema": "NOX_PROJECT_RUNTIME_UPDATE_SPEC_V1",
+  "assets": {
+    "ru_runtime_fcb77cc59eb9a88dde68.py": "fcb77cc59eb9a88dde68da62db05195a494fbeda40dad2954c77de95a807eae6",
+    "ru_runtime_84d54c647b0a63447aca.py": "84d54c647b0a63447aca91d34b90372e36dcd59442e3066458a21688fcb5a595",
+    "ru_runtime_52e62a143d16f387899f.py": "52e62a143d16f387899ff1737ce4eb698dee5ceca510fc6f97f931c11a0aec10",
+    "ru_runtime_aa0dd1c8266106b599ce.py": "aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420",
+    "ru_plans_a171fa7a94084a1f4b67.data": "a171fa7a94084a1f4b6751d78097257b9ed0755fc1a46cdfb4d34a27838347dc",
+    "ru_blobs_fa3d69e506d727295094.data": "fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5",
+    "ru_plans_79b77425ff05d3337c2e.data": "79b77425ff05d3337c2e46653e2e6e0190c2ec59848d617fa2204876fc89eb0d",
+    "ru_blobs_b980a61884965f4838f8.data": "b980a61884965f4838f8deafd43dac2ea4642e41dea7870d6a6904ee5a274fc6",
+    "ru_plans_dd24421576ae4160fa01.data": "dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9",
+    "ru_blobs_7e625acddd71fe95988e.data": "7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d",
+    "ru_blobs_4b06687bbad8fe6ab046.data": "4b06687bbad8fe6ab0466bdaf06ed9239c70da2232bf14e6820eed4919251f5e",
+    "ru_contracts_eece310e5608fa9c633d.data": "eece310e5608fa9c633d7c75ce280541d9bec6af8a0c35815465ae82679d4ce4"
+  },
+  "runtime_paths": {
+    "ru_runtime_fcb77cc59eb9a88dde68.py": "scripts/owner_project_executor.py",
+    "ru_runtime_84d54c647b0a63447aca.py": "scripts/owner_project_test_runner.py",
+    "ru_runtime_52e62a143d16f387899f.py": "scripts/owner_project_model_client.py",
+    "ru_runtime_aa0dd1c8266106b599ce.py": "scripts/owner_project_planner.py"
+  },
+  "package_files": {
+    "plans/a171fa7a94084a1f4b6751d78097257b9ed0755fc1a46cdfb4d34a27838347dc.json": "ru_plans_a171fa7a94084a1f4b67.data",
+    "blobs/fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5": "ru_blobs_fa3d69e506d727295094.data",
+    "plans/79b77425ff05d3337c2e46653e2e6e0190c2ec59848d617fa2204876fc89eb0d.json": "ru_plans_79b77425ff05d3337c2e.data",
+    "blobs/b980a61884965f4838f8deafd43dac2ea4642e41dea7870d6a6904ee5a274fc6": "ru_blobs_b980a61884965f4838f8.data",
+    "plans/dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9.json": "ru_plans_dd24421576ae4160fa01.data",
+    "blobs/7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d": "ru_blobs_7e625acddd71fe95988e.data",
+    "blobs/4b06687bbad8fe6ab0466bdaf06ed9239c70da2232bf14e6820eed4919251f5e": "ru_blobs_4b06687bbad8fe6ab046.data",
+    "contracts/eece310e5608fa9c633d7c75ce280541d9bec6af8a0c35815465ae82679d4ce4.json": "ru_contracts_eece310e5608fa9c633d.data"
+  },
+  "expected_native": {
+    "scripts/nox_dispatcher_t855u.py": "9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21",
+    "scripts/owner_subagent_dispatcher.py": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+    "scripts/owner_subagent_processes.py": "f6b2f98ac5c7c291ffef009886442302d407921ad12827044443e72e75eb0aae",
+    "scripts/owner_autonomy_pool.py": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+    "scripts/owner_subagent_instruction_truth.py": "485d4a4a571c434afb98512547a7f2a2198606eb1e168b749ae607aaf3c2133f",
+    "scripts/owner_task_plans.py": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
+    "scripts/owner_component_tasks.py": "190bf9948dbe821b5fe3512e3edbc0a7a9348b14aa2a154274e78f058d5d6d5d",
+    "scripts/owner_resource_policy.py": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+    "config/owner_native_subagents.json": "6df47b8e65801f1c22af8bf46e3d836b8776b08bf771a54568e2b477d7e8b848",
+    "scripts/owner_project_executor.py": "687ea3b3548badf9b7babd8c5d420b5270e0fb4d82a72bcaa9a4cee1be44d306",
+    "scripts/owner_project_model_bridge.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
+    "scripts/owner_project_model_client.py": "119115603be6dba84121dc2c9c3460482e85fe59f4e5b2598551bcd62ffbdff1",
+    "scripts/owner_project_native.py": "d0ff44d4752128c267799202620c34d2503241dad1f7008f8b3539f49efc18b5",
+    "scripts/owner_project_planner.py": "126c77c1281b7467693063bfe33d17c89eb0d553a1e8ff112ae058994e0a30ba",
+    "scripts/owner_project_test_runner.py": "35b0e94f9c883da017e444162d1f84b9c0f8ad7bc4c92354bebd12551ae6c3b1"
+  },
+  "expected_director": {
+    "pid": 3734446,
+    "start_ticks": 175943736
+  },
+  "expected_workers": [
+    {
+      "pid": 3734568,
+      "start_ticks": 175944600
+    },
+    {
+      "pid": 3734569,
+      "start_ticks": 175944600
+    },
+    {
+      "pid": 3734570,
+      "start_ticks": 175944600
+    }
+  ],
+  "protected_processes": {
+    "chat": {
+      "pgrp": 3266857,
+      "pid": 3266857,
+      "ppid": 114,
+      "start_ticks": 172046662
+    },
+    "proxy": {
+      "pgrp": 3703386,
+      "pid": 3703386,
+      "ppid": 114,
+      "start_ticks": 175609570
+    },
+    "web": {
+      "pgrp": 3505392,
+      "pid": 3505392,
+      "ppid": 114,
+      "start_ticks": 173653097
+    }
+  },
+  "catalog_append": [
+    {
+      "id": "3A02.project.readback_revoke.layout_retry.20261118",
+      "handler": "owner_native_project_work",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "deps": [],
+      "params": {
+        "parent_task_id": "3A02",
+        "plan_sha256": "a171fa7a94084a1f4b6751d78097257b9ed0755fc1a46cdfb4d34a27838347dc"
+      }
+    },
+    {
+      "id": "3B05.project.strict_skill_json.layout_retry.20261118",
+      "handler": "owner_native_project_work",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "deps": [],
+      "params": {
+        "parent_task_id": "3B05",
+        "plan_sha256": "79b77425ff05d3337c2e46653e2e6e0190c2ec59848d617fa2204876fc89eb0d"
+      }
+    },
+    {
+      "id": "6V14-04.project.receipt_time_order.fd_retry.20261118",
+      "handler": "owner_native_project_work",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "deps": [],
+      "params": {
+        "parent_task_id": "6V14-04",
+        "plan_sha256": "dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9"
+      }
+    },
+    {
+      "id": "1A03.project.cursor_admission.focus_retry.20261118",
+      "handler": "owner_native_project_work",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "estimated_cost": 2,
+      "title": "Implement request cursor admission using current focused source and protected tests",
+      "params": {
+        "parent_task_id": "1A03",
+        "contract_sha256": "eece310e5608fa9c633d7c75ce280541d9bec6af8a0c35815465ae82679d4ce4"
+      }
+    }
+  ],
+  "retry_of": {
+    "3A02.project.readback_revoke.layout_retry.20261118": "3A02.project.readback_revoke.20261118",
+    "3B05.project.strict_skill_json.layout_retry.20261118": "3B05.project.strict_skill_json.20261118",
+    "6V14-04.project.receipt_time_order.fd_retry.20261118": "6V14-04.project.receipt_time_order.20261118",
+    "1A03.project.cursor_admission.focus_retry.20261118": "1A03.project.cursor_admission.20261118"
+  },
+  "terminal_receipts": {
+    "1A03.project.cursor_admission.20261118": "cd585f48de5d8947081ebe34982b9ec2be974b97df66e81f073c6c9860267a84",
+    "3A02.project.readback_revoke.20261118": "6b6e7addf886ac52ab6b496d6f1cf3d2097f2eecc765c1667f22281033144970",
+    "3B05.project.strict_skill_json.20261118": "4948d762437c79d9a52dfb26f2f822d1a52bea7bfc07a675604e341fd4240a8e",
+    "6V14-04.project.receipt_time_order.20261118": "6f117bd8ac9f584e5380e4ef494574df19fe2876dfd001e2d18024bb30a31c52"
+  },
+  "wait_for_idle_seconds": 40
+}

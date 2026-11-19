@@ -1,0 +1,63 @@
+name: NOX V108 native V29 late route binding
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v108/**'
+      - '.github/workflows/nox-v108-native-v29-binding.yml'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner approval for original NOX OneHost only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-native-v29-routes-60509551
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile source and embedded native patch, check route auth gates
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v108/late_native_v29_binding.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v108.late_native_v29_binding import REMOTE
+          body=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(body,'<v108 native>','exec')
+          for token in ('HOLD_ACTIVE_OR_UNHEALTHY_CHAT','HOLD_SOURCE_SHA_OR_OWNER',
+                        'HOLD_ISOLATED_REGISTER_','HOLD_OWNER_AUTH_ROUTES','rollback(original,meta)',
+                        'register_native_v29_chat(app, globals())'):
+              assert token in REMOTE, token
+          print('NOX_V108_CODE_SOURCE_COMPILES=PASS')
+          PY
+  native:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install only after native idle/auth/backup gates, rollback on failure
+        run: python -m nox_runpod.teacher_mesh.v108.late_native_v29_binding
+      - name: Always detach temporary SSH key
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

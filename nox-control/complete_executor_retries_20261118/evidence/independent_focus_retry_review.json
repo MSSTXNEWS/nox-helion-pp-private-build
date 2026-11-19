@@ -1,0 +1,34 @@
+{
+  "schema": "NOX_INDEPENDENT_FOCUS_CONTRACT_REVIEW_V1",
+  "contract_sha256": "eece310e5608fa9c633d7c75ce280541d9bec6af8a0c35815465ae82679d4ce4",
+  "contract_matches_manifest": true,
+  "contract_fields_changed": [
+    "focus_regions",
+    "prior_receipt_sha256",
+    "retry_of",
+    "task_id"
+  ],
+  "protected_context_unchanged": true,
+  "editable_paths_unchanged": true,
+  "verification_unchanged": true,
+  "focused_source_current": true,
+  "focus_lines": 51,
+  "focus_bytes": 3616,
+  "accept_and_db_transaction_in_focus": true,
+  "cursor_type_range_validation_in_focus": true,
+  "actual_call_and_producer_start_in_focus": true,
+  "source_only": true,
+  "reference_afterbytes_included": false,
+  "source_pins_match": true,
+  "local_validation": {
+    "planner_client_tests": 16,
+    "model_bridge_integration_tests": 1,
+    "total_tests": 17,
+    "result": "PASS",
+    "runtime_import_root": "complete_executor/runtime_sandbox_fix",
+    "initial_command_without_runtime_path": "16 planner tests passed; bridge import failed because owner_project_executor was not on PYTHONPATH. Correct scoped path supplied;17/17 passed."
+  },
+  "metadata_note": "planner/manifest.json still records old test count13; focused planner suite is16 and bridge adds1.",
+  "review_result": "NO_BLOCKER_IN_FOCUSED_CHANGE",
+  "native_model_execution_verified": false
+}

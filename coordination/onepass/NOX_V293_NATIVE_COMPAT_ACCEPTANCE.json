@@ -1,0 +1,45 @@
+{
+  "schema": "NOX_V293_ONEPASS_NATIVE_COMPAT_LOCAL_ACCEPTANCE",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-15",
+  "release_status": "HOLD_NATIVE_AND_WINDOWS_ACCEPTANCE",
+  "source_base_sha256": "e70f0439fdf0a028c1d52fc638a38086aa7863fb7b33733a9609532dd544a9d5",
+  "derived_zip_sha256": "45893adaf1fa49991dbb9f61f3d5cc4f2273eddf5d6f2e2548cf57d0b09fb947",
+  "derived_entries": 1091,
+  "unchanged_entries": 1075,
+  "changed_existing_html": 14,
+  "changed_existing_native_stage_sse_client": 1,
+  "new_js_modules": 1,
+  "original_web_frozen_sha256": "166becb90fce63e2db3f9a74281d756995844552cddb7b67a190aa0",
+  "new_bridge_js_sha256": "f953f83cb49087847b7125ff85a8cbf791ecc9de2f9efb44b7140e548b5f2c4d",
+  "proofs": {
+    "original_archive_crc": "PASS",
+    "derived_archive_crc": "PASS",
+    "all_injected_html_relative_urls": "PASS 14/14",
+    "node_vm_fixture": "PASS 10/10",
+    "chromium_mock_native_fixture": "PASS 8/8",
+    "github_source_ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43657334292",
+    "native_onehost_e2e": "NOT_PERFORMED_VAST_API_404",
+    "windows_physical_browser": "NOT_PERFORMED"
+  },
+  "scope": {
+    "legacy_api": "POST /api/nox/chat",
+    "real_single_backend": "POST /api/nox/chat/stream",
+    "owner_stage_only": "/nox-web-v29/",
+    "requires_owner_cookie": true,
+    "errors_fail_closed": true,
+    "no_fake_s03_receipt": true,
+    "original_s03_touched": false,
+    "weights_touched": false,
+    "production_main_switched": false
+  },
+  "last_verified_live": {
+    "exact_registered_web_routes": 23,
+    "expected_web_routes": 92,
+    "without_direct_native_match": 69,
+    "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43650605385"
+  },
+  "kit_filename": "NOX_HELION_WEB_V293_ONEPASS_NATIVE_COMPAT_KIT_20261115.zip",
+  "kit_sha256": "dfe291784aa94a30e0feaebf80be44ffd63fe3a8a99f7c107f4eec9368ae9d9a",
+  "no_new_backend": true
+}

@@ -1,0 +1,103 @@
+name: NOX existing OneHost official Vast v1 owner authentication (GET only)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: ['.github/workflows/nox-existing-onehost-origin-readonly.yml']
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original Vast read-only credential lookup'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-existing-onehost-api-origin-readonly
+  cancel-in-progress: false
+jobs:
+  discover:
+    if: "${{ github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && github.actor == 'MSSTXNEWS' && github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - name: Compare public unauthenticated status against owner Bearer on official v1; print only allowlisted result
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, time, urllib.request, urllib.error
+          key=os.environ.get('NOX2','').strip()
+          if not key:
+              print('NOX_VAST_OWNER_SECRET=HOLD_NOT_CONFIGURED')
+              raise SystemExit(2)
+          print('NOX_VAST_OWNER_SECRET=CONFIGURED_NOT_VERIFIED')
+          # v0 list is deprecated (410). Avoid it entirely.
+          endpoints=(
+              ('CLOUD_V1','https://cloud.vast.ai/api/v1/instances'),
+              ('CONSOLE_V1','https://console.vast.ai/api/v1/instances'),
+              ('CLOUD_V1_TRAILING','https://cloud.vast.ai/api/v1/instances/'),
+              ('CONSOLE_V1_TRAILING','https://console.vast.ai/api/v1/instances/'),
+          )
+          allowed_errors={'auth_error','invalid_api_key','api_key_invalid','not_authorized',
+                          'missing_api_key','permission_denied','deprecated_endpoint',
+                          'not_found','invalid_args'}
+          accepted=[]
+          for tag,url in endpoints:
+              for auth in (False,True):
+                  headers={'Accept':'application/json',
+                           'User-Agent':'NOX-onehost-current-v1-verified/1'}
+                  if auth:
+                      headers['Authorization']='Bearer '+key
+                  req=urllib.request.Request(url,headers=headers,method='GET')
+                  code=0
+                  cls='UNKNOWN'
+                  found=False
+                  try:
+                      with urllib.request.urlopen(req,timeout=10) as resp:
+                          code=resp.status
+                          raw=resp.read(65537)
+                      if code==200 and len(raw)<=65536:
+                          doc=json.loads(raw)
+                          if isinstance(doc,dict):
+                              instances=doc.get('instances')
+                              if isinstance(instances,list):
+                                  found=any(isinstance(x,dict) and str(x.get('id'))=='60509551'
+                                            for x in instances)
+                                  cls='TARGET_FOUND' if found else 'VALID_RESPONSE_NO_TARGET_IN_PAGE'
+                              else:
+                                  cls='UNEXPECTED_SCHEMA'
+                          else:
+                              cls='UNEXPECTED_SCHEMA'
+                      elif code==200:
+                          cls='RESPONSE_TOO_LARGE'
+                  except urllib.error.HTTPError as exc:
+                      code=exc.code
+                      try:
+                          data=json.loads(exc.read(4096))
+                          value=data.get('error') if isinstance(data,dict) else None
+                          if isinstance(value,str) and value in allowed_errors:
+                              cls=value
+                          else:
+                              cls='UNCLASSIFIED_PROVIDER_ERROR'
+                      except Exception:
+                          cls='NON_JSON_ERROR'
+                  except Exception as exc:
+                      cls='TRANSPORT_'+type(exc).__name__
+                  phase='BEARER' if auth else 'NO_AUTH'
+                  print('NOX_VAST_'+tag+'_'+phase+'_HTTP='+str(code))
+                  print('NOX_VAST_'+tag+'_'+phase+'_ERROR_CLASS='+cls)
+                  if auth and found:
+                      accepted.append(tag)
+                  time.sleep(0.8)
+          key=''
+          print('NOX_ORIGINAL_ONEHOST_OWNER_V1='+('PASS' if accepted else 'HOLD'))
+          print('NOX_ORIGINAL_ONEHOST_VERIFIED_ORIGINS='+','.join(accepted))
+          print('NOX_OWNER_KEY_VALUE_OR_HASH_EXPORTED=false')
+          print('NOX_OWNER_INSTANCE_PRIVATE_RECORDS_EXPORTED=false')
+          print('NOX_NATIVE_WRITE_OR_PAID_VM=false')
+          raise SystemExit(0 if accepted else 2)
+          PY

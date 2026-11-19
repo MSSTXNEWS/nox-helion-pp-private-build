@@ -1,0 +1,112 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_3D",
+  "at_utc": "2026-11-16T18:03:49.066Z",
+  "at_msk": "2026-11-16T21:03:13+03:00",
+  "task_claim_scope": "SOURCE_CAS_ONLY_NO_NATIVE_CLAIM",
+  "source_branch": "feature/nox-v38-synaptic-brain-20261114",
+  "patch_head_sha": "8921138248bf95ae9c4c0566813b8b845355fe31",
+  "source_change_commit": "341210b92dbf3da874da02b64e962cf21a01f48b",
+  "test_change_commit": "8921138248bf95ae9c4c0566813b8b845355fe31",
+  "files": [
+    {
+      "path": "nox-control/deepseek_owner_range_v10.py",
+      "before_blob": "8fba8a65aea4a96233aa306a3d90cffd852ca94e",
+      "after_blob": "71ed574b6db320c801479b83bac8353424b1b663"
+    },
+    {
+      "path": "nox-control/test_deepseek_owner_range_v10.py",
+      "before_blob": "a5a2b2fdf4436aa4153eab0477934302c5bed46f",
+      "after_blob": "9855bffc943f7e7ff3151cd12fd02317cc99ae7d"
+    }
+  ],
+  "root_cause": "atomic_receipt() used os.replace to overwrite a pre-existing .verified.json, losing the prior owner SHA verification record on conflicting retry",
+  "fix": "Use atomic non-clobber os.link for receipt publication, HOLD_RECEIPT_ALREADY_EXISTS on collision, fsync directory, remove only own temp file",
+  "regressions": [
+    "pre-existing immutable receipt contents preserved",
+    "pre-existing dangling receipt link preserved",
+    "new receipt created and decoded",
+    "repeat publication refused without changes",
+    "temporary files removed"
+  ],
+  "source_ci": {
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43924537120",
+    "conclusion": "success",
+    "jobs": 1,
+    "unit_test_invocations": 87,
+    "range_test_count": 47,
+    "failed": 0
+  },
+  "tasks": [
+    {
+      "task_id": "S2-07",
+      "status": "SOURCE_TESTED",
+      "native_status": "HOLD",
+      "evidence": "source/test CAS readback + exact source-only CI success; no original download or model promotion"
+    },
+    {
+      "task_id": "S1-01",
+      "status": "HOLD",
+      "evidence": "no fresh owner-auth OneHost PID+start_ticks readback; last independent observation 2026-11-16T16:48:21Z"
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD",
+      "evidence": "manual OWNER STOP and MAINTENANCE present at last observed snapshot; current writer lease unknown, no native claims"
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD",
+      "evidence": "no independent S03/Genesis/checkpoint+optimizer/scaler/RNG restore proof"
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD",
+      "evidence": "DeepSeek/Maya not accepted through original web RU/ES SSE, STOP, S03 and quality tests"
+    }
+  ],
+  "prior_native": {
+    "observed_at_utc": "2026-11-16T16:48:21Z",
+    "owner_stop": "PRESENT",
+    "maintenance": "PRESENT",
+    "critical_supervisors": "STOPPED",
+    "port_8081_listener": "NONE",
+    "gpu0_vram_mib": 0,
+    "gpu1_vram_mib": 0,
+    "ssd_total_bytes": 183609851904,
+    "ssd_free_bytes": 43158790144,
+    "rclone_remotes": [],
+    "not_current": true
+  },
+  "required_unique_gguf_bytes": 248834257920,
+  "WEIGHTS": {
+    "new_successful_optimizer_updates": "UNVERIFIED_ZERO_OBSERVED_BY_THIS_SLOT",
+    "checkpoint_restore": "HOLD",
+    "no_restart": true
+  },
+  "KNOWLEDGE": {
+    "new_hunter_s03_recall": "NONE_VERIFIED",
+    "s03_native_write": false
+  },
+  "DISPATCHER_RESOURCES": {
+    "fresh_native_pid_startticks": [],
+    "fresh_native_job_ids": [],
+    "owner_writer_lease": "UNKNOWN",
+    "downloaded_bytes_by_slot": 0,
+    "deleted_bytes_by_slot": 0,
+    "restarts_by_slot": 0,
+    "owner_stop_cleared": false
+  },
+  "source_status": "SOURCE_TESTED",
+  "installed": false,
+  "live_verified": false,
+  "rollback": "re-read branch/current Git blobs; revert only exact two changed files via CAS if authorized; native rollback not required",
+  "next": "Owner-auth read-only OneHost STOP/lease and current UI/model, independent offsite restores and seekable quota for 248834257920 B plus reserve. Only afterward one download claim/Maya-to-original-SSE live acceptance.",
+  "no_new_backend": true,
+  "no_new_trainer": true,
+  "no_new_scheduler": true,
+  "no_s03_change": true,
+  "no_web_d02_change": true,
+  "no_schedule_change": true
+}

@@ -1,0 +1,49 @@
+{
+  "schema": "NOX_PRIME_3C_RELAY_RECEIPT_V2",
+  "instructions_version": "0.0.6",
+  "slot": "3C",
+  "stream": 3,
+  "cycle_start_msk": "2026-11-16T06:35:29+03:00",
+  "accepted_source_commit": "cc23d5bcd241f92c4c54badf04aeefe1e3438302",
+  "scope": "ORIGINAL_WEB29_SOURCE_ONLY",
+  "issue": "P0_3C_HOLD_HOURS_HIDDEN_AND_STALE_NATIVE_TELEMETRY",
+  "fix": "Expired hours lacking exact persisted owner-scoped S03 readback now render explicit HOLD cards; stale native API values are no longer displayed as current TTFT/GPU/RAM.",
+  "five_tasks": [
+    {
+      "task": 1,
+      "status": "SOURCE_VERIFIED",
+      "detail": "Original evolution page/menu/S03 API and previous 3C receipt inspected; original D02/14 worlds untouched"
+    },
+    {
+      "task": 2,
+      "status": "SOURCE_VERIFIED_NATIVE_HOLD",
+      "detail": "Three existing self_improvement/knowledge/weights lanes preserved; native sources not independently wired"
+    },
+    {
+      "task": 3,
+      "status": "SOURCE_PATCHED_NATIVE_HOLD",
+      "detail": "Expired hourly cards with missing readback remain visible as HOLD instead of silently disappearing"
+    },
+    {
+      "task": 4,
+      "status": "SOURCE_PATCHED_NATIVE_HOLD",
+      "detail": "Existing columns/filter/provenance and labels retained; stale native TTFT/GPU/RAM suppressed, amber stale indicator"
+    },
+    {
+      "task": 5,
+      "status": "SOURCE_REGRESSION_ADDED_NATIVE_HOLD",
+      "detail": "Python 7/7, Node source regressions, JS syntax passed in existing GitHub Actions; authenticated OneHost S03/browser not tested."
+    }
+  ],
+  "source_validation": "PASS: GitHub Actions existing onepass source workflow 43799969276 completed success; Python hourly SQLite 7/7 PASS, Node pure regression PASS, node --check PASS.",
+  "production_deployed": false,
+  "onehost_mutations": 0,
+  "original_deleted": 0,
+  "next_action": "Use existing owner-authorized OneHost deployment with preimage SHA, backup/rollback and real STOP/lease. Bind existing progress API/hourly_tick to original S03/dispatcher, verify owner-auth browser and real persisted readback; preserve D02/14 worlds.",
+  "source_ci": {
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43799969276",
+    "job_id": 133077579005,
+    "result": "SUCCESS",
+    "log_observed_utc": "2026-11-16T03:44:56Z"
+  }
+}

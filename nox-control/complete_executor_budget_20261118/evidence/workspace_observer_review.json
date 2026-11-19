@@ -1,0 +1,19 @@
+{
+  "schema": "NOX_WORKSPACE_OBSERVER_LOCAL_REVIEW_V1",
+  "candidate": "complete_executor/owner_complete_executor_workspace_observe.py",
+  "sha256": "40418f1927076113f25b1b44bce2d7516a4ca16db7b88788e83911a94df960e1",
+  "bytes": 47770,
+  "base_sha256": "497a402fa18706f5ec8ee1a90b24ce00c795ca83e430cfaba669e63a84e6d844",
+  "syntax_passed": true,
+  "focused_assertions": [
+    "baseline_and_verified_postimage_classification",
+    "two_reads_without_atomic_claim",
+    "no_source_payload_in_census",
+    "unattributed_drift_explicit",
+    "symlink_read_rejected",
+    "hidden_and_escape_paths_rejected"
+  ],
+  "native_execution_performed": false,
+  "read_only_scope": "Existing status/proc/sysfs/SQLite SELECT/local GET slots preserved; additions only safe_read/hash/metadata projections. No native writes or model inference.",
+  "planner_review": "aa0dd1c8 candidate and turn trace stay in process memory; test attempts journal only appears after verify_candidate; absence of journals does not prove absence of source edits."
+}

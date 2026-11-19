@@ -1,0 +1,121 @@
+{
+  "schema": "NOX_ACCELERATION_PROFILE_V1",
+  "profile_id": "20261118-v1",
+  "state": "REVIEWED_INSTALL_PROFILE",
+  "release_root": "/root/nox/owner_tools_acceleration/releases/20261118-v1",
+  "current_pointer": "/root/nox/owner_tools_acceleration/current.json",
+  "permanent_cli": "/root/nox/owner_tools_acceleration/bin/nox-fast",
+  "installed_manifest_schema": "NOX_ACCELERATION_INSTALLED_V1",
+  "upstream_lock": "toolchain.lock.json",
+  "providers": {
+    "uv": {
+      "provider": "astral-sh/uv",
+      "version": "0.13.9",
+      "path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/uv/0.13.9/uv",
+      "archive_sha256": "58ccf5f1792b8a5a88d01bc910ea131a8b3db4a319a17ad5fad75e0845a3e271",
+      "installed_binary_sha256": null
+    },
+    "uvx": {
+      "provider": "astral-sh/uv",
+      "version": "0.13.9",
+      "path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/uv/0.13.9/uvx",
+      "archive_sha256": "58ccf5f1792b8a5a88d01bc910ea131a8b3db4a319a17ad5fad75e0845a3e271",
+      "installed_binary_sha256": null
+    },
+    "ruff": {
+      "provider": "astral-sh/ruff",
+      "version": "0.17.5",
+      "path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/ruff/0.17.5/ruff",
+      "archive_sha256": "dc94b7e225b8910fb6f55298ada32d00e356dbd195a5ffb647847f388cb54f84",
+      "installed_binary_sha256": null
+    },
+    "rg": {
+      "provider": "BurntSushi/ripgrep",
+      "version": "15.2.0",
+      "path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/rg/15.2.0/rg",
+      "archive_sha256": "33e15bcf1624b25cdd2a55813a47a2f95dbe126268203e76aa6a585d1e7b149c",
+      "installed_binary_sha256": null
+    }
+  },
+  "tasks": {
+    "context": {
+      "engine": "python_stdlib_ast",
+      "purpose": "Return exact source anchors and bounded function scope from a source snapshot",
+      "source_policy": "APPROVED_REGULAR_SOURCE_WITH_PREIMAGE_SHA"
+    },
+    "search": {
+      "engine": "rg",
+      "purpose": "Find literal symbols and nearby source within the same bounded snapshot",
+      "input": "stdin",
+      "configuration": "NO_CONFIG",
+      "pattern_mode": "FIXED_STRINGS",
+      "network": false,
+      "source_writes": false
+    },
+    "check": {
+      "engine": "ruff",
+      "purpose": "Return parser diagnostics for the bounded source snapshot",
+      "input": "stdin",
+      "configuration": "ISOLATED_NO_CACHE_NO_FIX",
+      "scope": "SYNTAX_ONLY",
+      "network": false,
+      "source_writes": false,
+      "semantic_acceptance": false
+    },
+    "status": {
+      "engine": "local_manifest_and_version",
+      "purpose": "Read installed provider pins and runtime availability",
+      "network": false,
+      "source_writes": false
+    }
+  },
+  "resource_policy": {
+    "cpu_only": true,
+    "gpu_required": false,
+    "daemons": 0,
+    "source_input_bytes_max": 524288,
+    "source_files_max": 100,
+    "source_total_bytes_max": 16777216,
+    "stdout_bytes_max": 65536,
+    "wall_seconds_max": 10,
+    "source_snapshot_reused_for_tools": true,
+    "partial_output_is_success": false,
+    "cache_root": "/root/nox/owner_tools_acceleration/cache",
+    "ruff_cache_enabled": false
+  },
+  "uv_policy": {
+    "automatic_execution": false,
+    "cli_provisioning_allowed": false,
+    "use": "EXPLICIT_PINNED_DEPENDENCY_PREPARATION_IN_TOOL_ENVIRONMENTS",
+    "python_downloads": "never",
+    "managed_python_required": false,
+    "default_network": "offline",
+    "approved_dependency_lock_required": true,
+    "project_or_training_venv_mutation": false,
+    "environment": {
+      "UV_PYTHON_DOWNLOADS": "never",
+      "UV_OFFLINE": "true",
+      "UV_NO_CONFIG": "true",
+      "UV_CACHE_DIR": "/root/nox/owner_tools_acceleration/cache/uv"
+    }
+  },
+  "validation_claims": {
+    "native_installation_verified": false,
+    "source_semantics_verified": false,
+    "existing_verifier_passed": false,
+    "original_project_tasks_accepted": false,
+    "measured_latency_improvement": false,
+    "model_quality_improved": false,
+    "top30_rank_established": false,
+    "optimizer_steps_completed": false
+  },
+  "primary_sources": [
+    "https://github.com/astral-sh/uv/releases/tag/0.13.9",
+    "https://docs.astral.sh/uv/reference/policies/platforms/",
+    "https://releases.astral.sh/github/uv/releases/download/0.13.9/uv-x86_64-unknown-linux-musl.tar.gz.sha256",
+    "https://github.com/astral-sh/ruff/releases/tag/0.17.5",
+    "https://releases.astral.sh/github/ruff/releases/download/0.17.5/ruff-x86_64-unknown-linux-musl.tar.gz.sha256",
+    "https://github.com/BurntSushi/ripgrep/releases/tag/15.2.0",
+    "https://api.github.com/repos/BurntSushi/ripgrep/releases/assets/478120097"
+  ]
+}

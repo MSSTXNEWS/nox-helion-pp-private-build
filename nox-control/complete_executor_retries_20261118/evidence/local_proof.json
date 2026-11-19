@@ -1,0 +1,75 @@
+{
+  "baseline": {
+    "returncode": 1,
+    "tests_run": 36,
+    "summary": "FAILED (failures=3)",
+    "log_sha256": "9bb3c6c98b636116fdecde0b68decb7e6cf545a1291ea4d35eb7e121f44dd008"
+  },
+  "candidate": {
+    "returncode": 0,
+    "tests_run": 36,
+    "summary": "OK",
+    "log_sha256": "2246985da8859c353d1a2344d2085ad29b4509f46cfd7615f248afa6fc817c21"
+  },
+  "fixture_equivalence": {
+    "schema": "NOX_PORTABLE_FD_FIXTURE_EQUIVALENCE_V1",
+    "actual_nofile_limit": [
+      96,
+      96
+    ],
+    "pipe_delta_original": 2,
+    "pipe_delta_portable": 2,
+    "all_expected_outcomes_verified": true,
+    "cases": {
+      "original_no_leak": {
+        "tests_run": 1,
+        "failures": 0,
+        "errors": 0,
+        "skips": 0,
+        "actual_leaked_descriptors_injected": 0
+      },
+      "portable_no_leak": {
+        "tests_run": 1,
+        "failures": 0,
+        "errors": 0,
+        "skips": 0,
+        "actual_leaked_descriptors_injected": 0
+      },
+      "original_actual_leak": {
+        "tests_run": 1,
+        "failures": 1,
+        "errors": 0,
+        "skips": 0,
+        "actual_leaked_descriptors_injected": 1
+      },
+      "portable_actual_leak": {
+        "tests_run": 1,
+        "failures": 1,
+        "errors": 0,
+        "skips": 0,
+        "actual_leaked_descriptors_injected": 1
+      },
+      "portable_without_proc": {
+        "tests_run": 1,
+        "failures": 0,
+        "errors": 0,
+        "skips": 0,
+        "actual_leaked_descriptors_injected": 0
+      },
+      "portable_actual_leak_without_proc": {
+        "tests_run": 1,
+        "failures": 1,
+        "errors": 0,
+        "skips": 0,
+        "actual_leaked_descriptors_injected": 1
+      }
+    }
+  },
+  "schema": "NOX_REVIEWED_RETRY_LOCAL_PROOF_V1",
+  "plan_sha256": "dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9",
+  "plan_validated": true,
+  "original_test_preserved_sha256": "8d2070c2f0819e7d1c2b5cf2bdb5acb0e9a7f1c027a180ba0528e89ead3f894d",
+  "fixture_revision": "4b06687bbad8fe6ab0466bdaf06ed9239c70da2232bf14e6820eed4919251f5e",
+  "original_task_accepted": false,
+  "native_applied": false
+}

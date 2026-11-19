@@ -1,0 +1,52 @@
+name: NOX V124 one controlled existing OneHost V29 bootstrap/catalog activation
+on:
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner approval for original NOX OneHost only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+  push:
+    branches: [nox/v124-owner-v29-combined-20261115]
+    paths:
+      - '.github/workflows/nox-v124-one-shot-native.yml'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v124-single-safe-owner-60509551
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify only current V124 AST, SHA checks and rollback source
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v118/activate_staged_catalog.py
+          python -m unittest -v nox_runpod.teacher_mesh.v118.test_activate_staged_catalog
+  native:
+    needs: source
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.event_name == 'workflow_dispatch' && github.actor == 'MSSTXNEWS') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Require existing owner authorization without printing key
+        run: test -n "$NOX2" || { echo 'HOLD_NOX2'; exit 2; }
+      - name: Exact SHA + idle STOP gates; single small patch; owner cookie QA; rollback
+        run: python -m nox_runpod.teacher_mesh.v118.activate_staged_catalog
+      - name: Revoke temporary SSH identity no matter what
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

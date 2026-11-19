@@ -1,0 +1,97 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2B_SOURCE_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2B",
+  "stream": "2/3",
+  "at_utc": "2026-11-16T04:20:00Z",
+  "at_msk": "2026-11-16 07:20 Europe/Moscow",
+  "accepted_source_head": "c6e107227de4452a0541582a7402728d5ad0004e",
+  "source_patch_commit": "95e7486f0739f6767eb08af7aa1286c51e443486",
+  "source_patch_blob_sha": "23c0161fd36357b8c95232b323fc4aea070e4e2f",
+  "latest_parallel_head_observed": "2c8bbea6fa8b76482684634282546ce0b25ab663",
+  "scope": "ONLY_EXISTING_WEB29/S03_READONLY_DIAGNOSTIC; NO_NEW_DB_BACKEND_TRAINER",
+  "error_id": "NOX-P1-S03-STATIC514-FTS-COVERAGE-COUNT-MASKING-20261116",
+  "symptom": "Previous owned audit used fixed 514 historical activation target and FTS row-count equality; could show a noncurrent coverage claim and miss equal-count missing/orphaned or mismatched FTS rows.",
+  "root_cause": "Coverage acceptance derived from historical target rather than actual nonblank canonical items; no key/content FTS reconciliation, no mode or SQLite integrity evidence.",
+  "change": {
+    "path": "coordination/progress/hourly/2026-11-16T06_AUTO_2B_S03_FIVE_GATE_READONLY.py",
+    "change_type": "SOURCE_READONLY_AUDIT_IN_PLACE",
+    "verified_git_blob_readback": true,
+    "includes": [
+      "SQLite mode/integrity quick_check",
+      "FTS missing/mismatched/orphaned reconciliation",
+      "dynamic canonical nonblank vector coverage and joint dimension/content hash",
+      "index identity form and orphan check",
+      "synthetic regression for FTS text mismatch"
+    ],
+    "existing_s03_untouched": true
+  },
+  "five_tasks": [
+    {
+      "task": 1,
+      "state": "DONE_SOURCE / HOLD_LIVE",
+      "evidence": "Original canonical path only, read-only SQLite, file mode and quick_check are implemented; current server not invoked."
+    },
+    {
+      "task": 2,
+      "state": "HOLD_NATIVE",
+      "evidence": "No signed owner-native evidence tying owner_s03_gateway→CallbackS03Adapter→CognitiveOverlay to deployed chat inference; no replacement DB."
+    },
+    {
+      "task": 3,
+      "state": "DONE_SOURCE / HOLD_LIVE",
+      "evidence": "Static 514 threshold removed. Coverage now computed from current canonical nonblank rows and independently reconciled FTS/vector content; live values UNKNOWN."
+    },
+    {
+      "task": 4,
+      "state": "HOLD_NATIVE",
+      "evidence": "Imported history without explicit per-item persona fence remains flagged in metadata; original Gateway import is not edited without writer lease; verified Genesis/retrieval ACL E2E outstanding."
+    },
+    {
+      "task": 5,
+      "state": "HOLD_NATIVE",
+      "evidence": "No authorized write→reload→recall, 2-Persona negative test, or independent offsite S03 restore during this run."
+    }
+  ],
+  "one_test": {
+    "scope": "SQLITE_SYNTHETIC_QUERY_REGRESSION",
+    "test_result": "5/5 SQL read-only reconciliation assertions PASS; FTS5 UPDATE synthetic PASS",
+    "exact_python_module_selftest": "NOT_EXECUTED_IN_THIS_RUNTIME",
+    "live_test": "NOT_EXECUTED",
+    "source_review": "GitHub complete modified blob readback equal",
+    "git_ci": "Generic source workflows SUCCESS observed on patch SHA, NOT an exact module selftest"
+  },
+  "control": {
+    "WEIGHTS": {
+      "native_optimizer_success_updates": "NO_NEW_EVIDENCE; last owner 35B successful_updates=0, skipped=5",
+      "checkpoint_optimizer_rng_offsite_restore": "HOLD_UNVERIFIED",
+      "current_student_lineage": "Qwen3.5-9B distinct; NOT equivalent to prior 35B",
+      "tensor_delta_sha": "UNMEASURED"
+    },
+    "KNOWLEDGE": {
+      "hunter_verified_source_s03_write_recall": "NOT_OBSERVED",
+      "native_canonical_s03_items": "UNMEASURED_THIS_RUN",
+      "vector_index_coverage": "UNMEASURED_THIS_RUN; no fixed 514"
+    },
+    "DISPATCHER_RESOURCES": {
+      "native_readback_this_run": false,
+      "last_observed": "Owner native 2026-11-16 03:59 UTC Supervisor dispatcher PID498177 running, scheduler PID498221 and selfheal PID498241 running, trainer T866U FATAL; cgroup OOM=0 earlier; observations historical.",
+      "three_native_os_subexecutor_pids": "NOT_PROVED",
+      "gpu_ram_vram_live": "NO_FRESH_MEASUREMENT",
+      "native_download_claim": "NOT_EXECUTED",
+      "restart": "NONE",
+      "stop_cleared": false
+    }
+  },
+  "installed_native": [],
+  "deleted_native": [],
+  "freed_bytes": 0,
+  "model_weights_changed": false,
+  "s03_modified": false,
+  "web29_modified": false,
+  "STOP_changed": false,
+  "writer_lease_acquired": false,
+  "native_access": "NOT_REQUESTED_IN_THIS_RUN; V51 requires manual owner dispatch",
+  "lesson": "A count equals historical target or another count only on paper; use current keyed reconciliation and bound owner-verified observations. Source tests cannot certify S03 or actual model learning.",
+  "one_next_action": "Execute existing exact-SHA owner V51 manual read-only five-gate S03 audit on original /root/nox/kb/knowledge.sqlite and return real ACL/FTS/vector coverage plus proxy callback status; no write until offsite restore and owner lease."
+}

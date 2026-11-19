@@ -1,0 +1,126 @@
+{
+  "schema": "nox-v28-stage0-source-baseline-v1",
+  "instructions_version": "0.0.6",
+  "observed_date": "2026-11-13",
+  "project": "NOX HELION",
+  "source_branch": "feature/nox-teacher-mycelium-20261112",
+  "baseline_commit_sha": "80be3443c08193c1dc8461cc6c901f50ec32bde0",
+  "canonical_pr_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251",
+  "policy": {
+    "one_active_nox_student": true,
+    "one_onehost": true,
+    "one_s03": true,
+    "no_second_backend": true,
+    "no_live_mutations": true,
+    "no_old_checkpoint_deletions": true
+  },
+  "web": {
+    "receipt_file": "nox_runpod/web_wow_merge/NOX_V26_PHYSICAL_SOURCE_ACCEPTANCE_20261112.json",
+    "source_archive_sha256": "9556b5be3e8e9ce24eee7c6ae77a62ab8c8d58fe145568a35981565e14240145",
+    "staged_candidate_sha256": "829173a42a2ba42586328c6c810a5334f2332e1b6a856aec96088f5053cf1ca9",
+    "original_d02_sha256": "f3fc804d238146ffe42c50103d3e04c9736b8b587c6572987f59b61a6112eb17",
+    "original_unchanged_files_claimed": 1053,
+    "source_only_acceptance_not_windows": true
+  },
+  "historical_model_benchmark": {
+    "report_url": "https://drive.google.com/file/d/11i7cz37KzMHryTGnnNNNzqHtVlDY9VDv/view",
+    "model": "nox-final-l03-Q4_K_M.gguf",
+    "reported_model_sha256": "fee7cec81978b4b6a9e5d7632773d87b562c32383cf9da2bc25cedbde3652f37",
+    "source_report_only": true,
+    "replayed_independently": false,
+    "subset_scores": {
+      "GSM8K": {
+        "correct": 88,
+        "total": 100
+      },
+      "IFEval": {
+        "correct": 54,
+        "total": 100
+      },
+      "HumanEval": {
+        "correct": 84,
+        "total": 100
+      },
+      "ruMMLU": {
+        "correct": 117,
+        "total": 200
+      }
+    }
+  },
+  "source_files_required": [
+    "nox_runpod/teacher_mesh/NOX_GENESIS_FUTURE_V28_ULTIMATE_PROGRAM_RU.md",
+    "nox_runpod/teacher_mesh/NOX_WOW50_V28_EVAL_AND_ARCHITECTURE.json",
+    "nox_runpod/teacher_mesh/NOX_FUTURE_OWN_WOW50_V28.json",
+    "nox_runpod/teacher_mesh/NOX_V28_ORIGINAL_WOW40_IDEAS.json",
+    "nox_runpod/teacher_mesh/cognitive_overlay.py",
+    "nox_runpod/teacher_mesh/s03_callback_adapter.py",
+    "nox_runpod/teacher_mesh/autonomous_hunt_v27.py",
+    "nox_runpod/teacher_mesh/nox_curriculum_dna_v28.py",
+    "nox_runpod/teacher_mesh/nox_speed_lab_v28.py",
+    "nox_runpod/teacher_mesh/nox_future_cortex_bridge_v28.py",
+    "nox_runpod/teacher_mesh/v28_experiment_gate.py",
+    "nox_runpod/web_wow_merge/merge_physical_web_v25.py",
+    "nox_runpod/web_wow_merge/stage_genesis_web.py",
+    "nox_runpod/web_wow_merge/nox_genesis_live_panel.mjs",
+    "nox_runpod/web_wow_merge/NOX_V26_PHYSICAL_SOURCE_ACCEPTANCE_20261112.json"
+  ],
+  "unverified_runtime_gates": [
+    "WINDOWS_ONEHOST",
+    "S03_RESTART",
+    "AUTHENTICATED_GENESIS_ENDPOINT",
+    "STREAMING_STOP",
+    "VOICE_RU_ES",
+    "GPU_OPTIMIZER",
+    "INDEPENDENT_WINDOWS_E07",
+    "PRODUCTION_INSTALLED"
+  ],
+  "source_artifacts_drive": [
+    {
+      "name": "NOX_GENESIS_FUTURE_V28_WOW150_ALL_PATCHES_AND_PROGRAM.zip",
+      "drive_file_id": "1WyhIOQkTjwC2jJzr6l43CDcc8x-AsdTi",
+      "size_bytes": 303575
+    },
+    {
+      "name": "NOX_V28_FUTURE_COGNITION_140_WOW_PROGRAM_PATCH_TESTS.zip",
+      "drive_file_id": "1Q648C7mYNBi7yHXE1tdiJI7a2-v4Z9fR",
+      "size_bytes": 86052
+    }
+  ],
+  "stages": [
+    {
+      "step": 0,
+      "name": "Immutable source and historical benchmark lock",
+      "deliverable": "verified SHA and source package; no runtime claims"
+    },
+    {
+      "step": 1,
+      "name": "Real S03 memory witness and dialogue continuity",
+      "deliverable": "read-only owner-scoped M7 fingerprint and reboot acceptance"
+    },
+    {
+      "step": 2,
+      "name": "Fast inference and benchmark A/B",
+      "deliverable": "same-GPU TTFT, tok/s, quality and STOP"
+    },
+    {
+      "step": 3,
+      "name": "Advisor arena / teacher selection",
+      "deliverable": "independent evidence, no private leakage"
+    },
+    {
+      "step": 4,
+      "name": "GPU train and loss-proof",
+      "deliverable": "changed-weights, optimizer, checkpoint, anti-forget"
+    },
+    {
+      "step": 5,
+      "name": "Worms + continuous OneHost",
+      "deliverable": "verified native callbacks, actual runtime ticks, E07"
+    },
+    {
+      "step": 6,
+      "name": "Release promotion",
+      "deliverable": "same SHA Windows E07 and rollback"
+    }
+  ]
+}

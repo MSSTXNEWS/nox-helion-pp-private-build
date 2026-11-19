@@ -1,0 +1,102 @@
+{
+  "schema": "NOX_ENGINE_CONTROL_V05_READONLY_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-16",
+  "scope": "WEB_NOX_AND_MODEL_WEIGHTS_ONLY",
+  "source_state": "NATIVE_READONLY_OBSERVED_NOT_DEPLOYED",
+  "repository_pr": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/256",
+  "native_inspect": {
+    "workflow_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43797425325",
+    "job_id": 133072087802,
+    "inspected_utc": "2026-11-16T03:27:57Z",
+    "instance_id": 60509551,
+    "health_http": {
+      "8080": 200,
+      "8081": 200,
+      "8082": 200
+    },
+    "current_model_alias": "/root/nox/models/current.gguf",
+    "current_model_alias_target": "/root/nox/progress_pull_t784u/gguf/nox36-mix_final_pref-Q4_K_M.gguf",
+    "current_model_bytes": 21836629568,
+    "active_full_model_sha256_verified": false,
+    "rclone_binary_installed": true,
+    "documented_rclone_remotes": [],
+    "dispatcher_workers_declared": 6,
+    "worker_kind": "work_stealing_threads_not_independent_native_subagents",
+    "native_three_distinct_subagents_verified": false,
+    "s03_live_recall_verified": false,
+    "model_slots_are_llm_slots_not_workers": true
+  },
+  "training": {
+    "initial_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43793426711",
+    "initial_job_id": 133056770466,
+    "observed_train_pid": 542746,
+    "observed_progress_step": 1,
+    "observed_progress_loss": 1.7651418447494507,
+    "later_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43795017295",
+    "later_job_id": 133061742668,
+    "later_state": "HOLD_TRAINING_RECOVERY_OBSERVATION",
+    "optimizer_steps_verified": false,
+    "checkpoint_reload_verified": false,
+    "auto_worker_claim_progress_step_5": "REPORTED_NOT_INDEPENDENTLY_VERIFIED",
+    "supervisor_fatal": "REPORTED_REQUIRES_FRESH_READBACK",
+    "restart_performed_by_this_run": false
+  },
+  "main_model": {
+    "name": "DeepSeek-V4.1-Flash-1017 GSQ-RCO IQ2_XXS",
+    "revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+    "required_unique_gguf_bytes": 248834257920,
+    "source_manifest": "coordination/NOX_ENGINE_STACK_20261116/deepseek_iq2_xxs_manifest.json",
+    "source_branch": "feature/nox-engine-stage-20261116",
+    "metadata_shard_bytes_in_prior_preparation": 5780704,
+    "full_weights_verified": false,
+    "deployed_to_chat_verified": false
+  },
+  "training_student": {
+    "name": "Qwen3.5-9B",
+    "prepared_files_bytes": 19329393661,
+    "training_installed_verified": false,
+    "protect_from_cleanup": true
+  },
+  "starter_kit": {
+    "parts": 4,
+    "aggregate_bytes": 331718151,
+    "role": "SOURCES_AND_METADATA_NOT_FULL_MAIN_WEIGHTS"
+  },
+  "training_wheelhouse": {
+    "parts": 39,
+    "aggregate_bytes": 3831295823,
+    "source_verified": true,
+    "native_installed_verified": false
+  },
+  "cleanup": {
+    "state": "HOLD_NEW_MODEL_NOT_DEPLOYED",
+    "files_deleted": 0,
+    "bytes_reclaimed": 0,
+    "eligible": false,
+    "reason": "Old model is still active alias; new full weights/endpoint, owner writer lease and independent restore unverified",
+    "protect": [
+      "S03",
+      "Genesis",
+      "WEB29/D02 original",
+      "student Qwen3.5-9B",
+      "unique optimizer/checkpoints",
+      "unique source weights"
+    ]
+  },
+  "web": {
+    "source": "WEB29/D02/14 worlds",
+    "native_health_8080_8081_8082": true,
+    "real_sse_ttft_p50_p95_verified": false,
+    "after_restart_s03_recall_verified": false,
+    "image_render_verified": false
+  },
+  "automation_controller": {
+    "id": "6afa6a3187448191b80e4a925ce71710",
+    "new_prompt_marker": "NOX CONTROL V05",
+    "persisted_readback": true,
+    "enabled": true,
+    "schedule_preserved": true
+  },
+  "next_first_fail": "Verify native trainer FATAL/STOP/optimizer/checkpoint and owner GPU1 lease; resolve exact root cause before any conditional resume. Then prove Drive OAuth/cache/248GB model placement, SSE/S03 cutover and cleanup."
+}

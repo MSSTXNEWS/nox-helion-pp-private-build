@@ -1,0 +1,216 @@
+{
+  "schema": "NOX_REVIEWED_SOURCE_FIX_PROOFS_V1",
+  "scope": "LOCAL_SOURCE_FIXTURES_NO_NATIVE_SERVING_CHANGE",
+  "original_acceptance_added": 0,
+  "tasks": [
+    {
+      "parent_task_id": "3A02",
+      "modules": [
+        "test_s03_readback_contract",
+        "test_nox_s03_readback_revoke"
+      ],
+      "expected_tests": 13,
+      "baseline": {
+        "returncode": 1,
+        "tests_run": 13,
+        "result": "EXPECTED_FAIL",
+        "failure_summary": "failures=1",
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/3A02/baseline_test.log",
+        "log_sha256": "7340909e0f9f8f6e80b852b4e644649d741ae25b2fce92b0fcbcd8db4653f000",
+        "source_sha256": "66a6617d6f582876dbdcb9791273c5eca724e3633a65bf1c93ecb4b2f2b14947",
+        "tests_sha256": {
+          "test_nox_s03_readback_revoke.py": "fc5d6c564c651c2abc818005da461711cdfc2c5cedff9146c6db8b12a6037eb5",
+          "test_s03_readback_contract.py": "2860173d8d6ed7147af2392f82c5fe4df5880ebc781ad359f15dcb30617fc391"
+        }
+      },
+      "candidate": {
+        "returncode": 0,
+        "tests_run": 13,
+        "result": "PASS",
+        "failure_summary": null,
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/3A02/candidate_test.log",
+        "log_sha256": "a2c0503509e41db818a0f772096dc724f65f429b4518764f91366f7927ea6dc3",
+        "source_sha256": "fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5",
+        "tests_sha256": {
+          "test_nox_s03_readback_revoke.py": "fc5d6c564c651c2abc818005da461711cdfc2c5cedff9146c6db8b12a6037eb5",
+          "test_s03_readback_contract.py": "2860173d8d6ed7147af2392f82c5fe4df5880ebc781ad359f15dcb30617fc391"
+        }
+      }
+    },
+    {
+      "parent_task_id": "3A03",
+      "modules": [
+        "test_nox_existing_cache_race",
+        "test_nox_warm_cache_final_revision"
+      ],
+      "expected_tests": 10,
+      "baseline": {
+        "returncode": 1,
+        "tests_run": 10,
+        "result": "EXPECTED_FAIL",
+        "failure_summary": "failures=1",
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/3A03/baseline_test.log",
+        "log_sha256": "d0bfaea8f6ec52e3904f270b2d403e06a6e6841a9deb18f2e8bc69eb37b59c26",
+        "source_sha256": "c676fdda4fa47d316eb10572c5718868a01408d450a5a0d91a7133ff20507799",
+        "tests_sha256": {
+          "test_nox_existing_cache_race.py": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
+          "test_nox_warm_cache_final_revision.py": "9201bc3629682a577c80a66c1040ef244b82f89b3b2cab26ce06ba3c95db38b2",
+          "source_tests/test_cache_race.py": "092db7d32a048c1706da5fc4cf1fcb04a33781e23bbe42252ea14f990985b582"
+        }
+      },
+      "candidate": {
+        "returncode": 0,
+        "tests_run": 10,
+        "result": "PASS",
+        "failure_summary": null,
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/3A03/candidate_test.log",
+        "log_sha256": "fd891eb6cbd63eafcad119910fc7901be758e0d45aa5553de2cad45736acedd7",
+        "source_sha256": "f7b69405224c63868b767792d68c3b0d73e2561b37216e2e855ca34ec93d5f2f",
+        "tests_sha256": {
+          "test_nox_existing_cache_race.py": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
+          "test_nox_warm_cache_final_revision.py": "9201bc3629682a577c80a66c1040ef244b82f89b3b2cab26ce06ba3c95db38b2",
+          "source_tests/test_cache_race.py": "092db7d32a048c1706da5fc4cf1fcb04a33781e23bbe42252ea14f990985b582"
+        }
+      }
+    },
+    {
+      "parent_task_id": "6V14-04",
+      "modules": [
+        "test_work_progress_changes",
+        "test_work_progress_durable_write",
+        "test_work_progress_pinned_read",
+        "test_nox_work_progress_time_order"
+      ],
+      "expected_tests": 36,
+      "baseline": {
+        "returncode": 1,
+        "tests_run": 36,
+        "result": "EXPECTED_FAIL",
+        "failure_summary": "failures=3",
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/6V14-04/baseline_test.log",
+        "log_sha256": "36aba4b0c080372ea9c26ef52d817c87d027670313e13972577ded4e102b453a",
+        "source_sha256": "60e28219f670a8449a56f6f9ab8641624c424d01447c9d156b1ecf5ce914d1fa",
+        "tests_sha256": {
+          "test_work_progress_pinned_read.py": "8d2070c2f0819e7d1c2b5cf2bdb5acb0e9a7f1c027a180ba0528e89ead3f894d",
+          "test_nox_work_progress_time_order.py": "d6042e38549360ace8f9136fc2c36e0c195d54666e0dca34944955bf70e9e9c0",
+          "test_work_progress_changes.py": "970d6681ce5dc57156e23746fa8df213eb5746c7a6b19354a0ca864e87830c4f",
+          "test_work_progress_durable_write.py": "6aa9265942695d2b54b33a0192dc1ebfb912277e86c909eeb4f49a1b45477edd"
+        }
+      },
+      "candidate": {
+        "returncode": 0,
+        "tests_run": 36,
+        "result": "PASS",
+        "failure_summary": null,
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/6V14-04/candidate_test.log",
+        "log_sha256": "bd1ba10fe2899b3bfd56ad71f0a5c75d6c9b2d0ea39a5c49af82aa3ce4653db8",
+        "source_sha256": "7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d",
+        "tests_sha256": {
+          "test_work_progress_pinned_read.py": "8d2070c2f0819e7d1c2b5cf2bdb5acb0e9a7f1c027a180ba0528e89ead3f894d",
+          "test_nox_work_progress_time_order.py": "d6042e38549360ace8f9136fc2c36e0c195d54666e0dca34944955bf70e9e9c0",
+          "test_work_progress_changes.py": "970d6681ce5dc57156e23746fa8df213eb5746c7a6b19354a0ca864e87830c4f",
+          "test_work_progress_durable_write.py": "6aa9265942695d2b54b33a0192dc1ebfb912277e86c909eeb4f49a1b45477edd"
+        }
+      }
+    },
+    {
+      "parent_task_id": "3B05",
+      "modules": [
+        "test_3b05_skill_ancestor_swap",
+        "test_nox_skill_evidence_strict_json"
+      ],
+      "expected_tests": 10,
+      "baseline": {
+        "returncode": 1,
+        "tests_run": 10,
+        "result": "EXPECTED_FAIL",
+        "failure_summary": "failures=3",
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/3B05/baseline_test.log",
+        "log_sha256": "654e818f0350799865bd43ab644ce4b1db4bf6a222f221b61848862e3753e556",
+        "source_sha256": "d35064a3fc5707dfc174852fc4de5030ee6ea2276fd0a4d06850ffff71ee0c64",
+        "tests_sha256": {
+          "test_nox_skill_evidence_strict_json.py": "623bfb4ba2d28d3dd3dbc5e46852ed5be5c29d516d20a390aed69c2ec5c3089c",
+          "test_3b05_skill_ancestor_swap.py": "21f8538fec15d39b4dbc875a4087be1c911c60b06ba04e2c682e8810f7b8b8fd"
+        }
+      },
+      "candidate": {
+        "returncode": 0,
+        "tests_run": 10,
+        "result": "PASS",
+        "failure_summary": null,
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/3B05/candidate_test.log",
+        "log_sha256": "e1427260fbfdc7c8068f6de52d0d28cb7dd138862f25ef9594d3907dc6df33c9",
+        "source_sha256": "b980a61884965f4838f8deafd43dac2ea4642e41dea7870d6a6904ee5a274fc6",
+        "tests_sha256": {
+          "test_nox_skill_evidence_strict_json.py": "623bfb4ba2d28d3dd3dbc5e46852ed5be5c29d516d20a390aed69c2ec5c3089c",
+          "test_3b05_skill_ancestor_swap.py": "21f8538fec15d39b4dbc875a4087be1c911c60b06ba04e2c682e8810f7b8b8fd"
+        }
+      }
+    },
+    {
+      "parent_task_id": "4A02",
+      "modules": [
+        "test_forge_split_guard",
+        "test_nox_forge_split_coverage"
+      ],
+      "expected_tests": 35,
+      "baseline": {
+        "returncode": 1,
+        "tests_run": 35,
+        "result": "EXPECTED_FAIL",
+        "failure_summary": "failures=3",
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/4A02/baseline_test.log",
+        "log_sha256": "7352e6ccf531f36d09e66755e66e114611192dbe6113cf5732b3ced493fdafda",
+        "source_sha256": "bb2c543979ad58801d97290e9edf1fe035435c8e9e5f0ebaced4abf3ecbf9053",
+        "tests_sha256": {
+          "test_nox_forge_split_coverage.py": "fd815f9a743bfcdf6e71a8ebb035a180c031aa8f0c5e0484164d36aaf309f6cf",
+          "test_forge_split_guard.py": "3efe025681c3a54cbfac10f0da6f20ff7b2e249ed087b8db39d582002f32c080"
+        }
+      },
+      "candidate": {
+        "returncode": 0,
+        "tests_run": 35,
+        "result": "PASS",
+        "failure_summary": null,
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/4A02/candidate_test.log",
+        "log_sha256": "b78bc1c353af5ed808355f77e31ab3bd475d3f07dfca804c3ec8ad73e4cbbaa0",
+        "source_sha256": "06940cb13bd568d4cfaa893aab9e43c6d0b03010163cba13f2f5bf5ea144db00",
+        "tests_sha256": {
+          "test_nox_forge_split_coverage.py": "fd815f9a743bfcdf6e71a8ebb035a180c031aa8f0c5e0484164d36aaf309f6cf",
+          "test_forge_split_guard.py": "3efe025681c3a54cbfac10f0da6f20ff7b2e249ed087b8db39d582002f32c080"
+        }
+      }
+    },
+    {
+      "parent_task_id": "0V14-14",
+      "modules": [
+        "test_nox_merge_overlay_paths"
+      ],
+      "expected_tests": 6,
+      "baseline": {
+        "returncode": 1,
+        "tests_run": 6,
+        "result": "EXPECTED_FAIL",
+        "failure_summary": "failures=4, errors=1",
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/0V14-14/baseline_test.log",
+        "log_sha256": "bc6805d2356d6762278729daac180860e1dcf60b72be4133fe7508b21150f850",
+        "source_sha256": "4d1274059d034bb9b96a445e26601d33da54ea309c8a5233df6512a2d546020f",
+        "tests_sha256": {
+          "test_nox_merge_overlay_paths.py": "97c433b8893514f5812b69fd53b0bb1e25d1fcd7b290f35c72407ad54b989667"
+        }
+      },
+      "candidate": {
+        "returncode": 0,
+        "tests_run": 6,
+        "result": "PASS",
+        "failure_summary": null,
+        "log_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed/0V14-14/candidate_test.log",
+        "log_sha256": "bb8fee2d1ac237cf4bb98e864b8f99d4e54fa5693a27335ccdf4541c456b5ae7",
+        "source_sha256": "f336c58fb5062aec6d5b4d99986adc0386159bc6013f0429cb2dae88daf7eb81",
+        "tests_sha256": {
+          "test_nox_merge_overlay_paths.py": "97c433b8893514f5812b69fd53b0bb1e25d1fcd7b290f35c72407ad54b989667"
+        }
+      }
+    }
+  ]
+}

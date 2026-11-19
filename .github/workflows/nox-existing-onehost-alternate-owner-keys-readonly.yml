@@ -1,0 +1,99 @@
+name: NOX original OneHost alternate existing owner keys (GET only)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: ['.github/workflows/nox-existing-onehost-alternate-owner-keys-readonly.yml']
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original Vast read-only credential lookup'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-original-owner-alternate-vast-keys
+  cancel-in-progress: false
+jobs:
+  metadata:
+    if: "${{ github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && github.actor == 'MSSTXNEWS' && github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+      VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+      VASTAI_API_KEY: ${{ secrets.VASTAI_API_KEY }}
+      NOX_VAST_API_KEY: ${{ secrets.NOX_VAST_API_KEY }}
+      NOX_VAST_TOKEN: ${{ secrets.NOX_VAST_TOKEN }}
+      NOX_API_KEY: ${{ secrets.NOX_API_KEY }}
+      VAST_KEY: ${{ secrets.VAST_KEY }}
+    steps:
+      - name: Check existing owner-designated Vast keys only; never export secret or instance data
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.error
+          names=('NOX2','VAST_API_KEY','VASTAI_API_KEY','NOX_VAST_API_KEY',
+                 'NOX_VAST_TOKEN','NOX_API_KEY','VAST_KEY')
+          hosts=('https://console.vast.ai/api/v0/instances/',
+                 'https://cloud.vast.ai/api/v0/instances/')
+          target=60509551
+          found=[]
+          checked_values=set()
+          for name in names:
+              key=os.environ.get(name,'').strip()
+              if not key:
+                  print('NOX_VAST_ALIAS_'+name+'=UNCONFIGURED')
+                  continue
+              # Avoid testing the same key multiple times without printing its value or fingerprint.
+              if key in checked_values:
+                  print('NOX_VAST_ALIAS_'+name+'=DUPLICATE_SKIPPED')
+                  continue
+              checked_values.add(key)
+              status='NO_AUTHORIZED_INSTANCE'
+              for url in hosts:
+                  req=urllib.request.Request(url,headers={
+                      'Authorization':'Bearer '+key,
+                      'Accept':'application/json',
+                      'User-Agent':'NOX-onehost-owner-metadata-readonly/1'},method='GET')
+                  try:
+                      with urllib.request.urlopen(req,timeout=10) as resp:
+                          if resp.status!=200:
+                              status='HTTP_'+str(resp.status)
+                              continue
+                          raw=resp.read(262145)
+                      if len(raw)>262144:
+                          status='HOLD_RESPONSE_BOUNDS'
+                          break
+                      doc=json.loads(raw)
+                      value=doc.get('instances',doc) if isinstance(doc,dict) else doc
+                      if isinstance(value,dict):
+                          value=[value]
+                      if not isinstance(value,list):
+                          status='HOLD_API_SCHEMA'
+                          continue
+                      item=next((x for x in value if isinstance(x,dict) and
+                                 str(x.get('id'))==str(target)),None)
+                      if item is not None:
+                          status='OWNER_VERIFIED_INSTANCE_'+str(target)
+                          found.append(name)
+                          break
+                      status='AUTHENTICATED_OTHER_SCOPE_OR_INSTANCE_NOT_LISTED'
+                  except urllib.error.HTTPError as exc:
+                      status='HTTP_'+str(exc.code)
+                  except (OSError,ValueError,TypeError) as exc:
+                      status='HOLD_'+type(exc).__name__
+              print('NOX_VAST_ALIAS_'+name+'='+status)
+          print('NOX_VAST_ORIGINAL_INSTANCE_AUTH='+
+                ('PASS' if len(found)==1 else 'HOLD'))
+          print('NOX_VAST_VALID_ALIAS_COUNT='+str(len(found)))
+          if len(found)==1:
+              print('NOX_VAST_VALID_ALIAS='+found[0])
+          print('NOX_VAST_GET_ONLY=true')
+          print('NOX_VAST_NO_SSH_OR_REMOTE_MUTATION=true')
+          print('NOX_VAST_NO_SECRETS_OR_PRIVATE_RESPONSE_LOGGED=true')
+          raise SystemExit(0 if len(found)==1 else 2)
+          PY

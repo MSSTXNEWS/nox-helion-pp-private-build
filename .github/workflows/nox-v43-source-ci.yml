@@ -1,0 +1,21 @@
+name: NOX V43 verified cold-vault source checks
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: ['nox_runpod/teacher_mesh/v43/**','.github/workflows/nox-v43-source-ci.yml']
+  pull_request:
+    paths: ['nox_runpod/teacher_mesh/v43/**','.github/workflows/nox-v43-source-ci.yml']
+permissions: { contents: read }
+jobs:
+  source-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check V43 manifest and source-only unit tests
+        run: |
+          python3 -m compileall -q nox_runpod/teacher_mesh/v43/pc nox_runpod/teacher_mesh/v43/nox
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/v43/tests -p 'test_*.py' -v
+      - name: Mark runtime boundaries
+        run: |
+          echo 'SOURCE ONLY. No model downloaded, no PC/Vast.ai connected, no production service changed.'

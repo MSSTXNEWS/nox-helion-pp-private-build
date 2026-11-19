@@ -1,0 +1,44 @@
+name: NOX V104 genuine owner WEB status endpoint on existing proxy
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v104-live-status.yml, nox_runpod/teacher_mesh/v104/native_status_live_once.py]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v104-single-status-route-patch
+  cancel-in-progress: false
+jobs:
+  production:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Verify source + native syntax and fail-closed guards
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v104/native_status_live_once.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v104.native_status_live_once import REMOTE
+          inner=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(inner,'<nox-v104-native>','exec')
+          assert 'HOLD_SOURCE_CHANGED' in inner and 'HOLD_PUBLIC_AUTH_NOT_ENFORCED' in inner
+          assert 's03_database_unchanged=True' in inner
+          print('NOX_V104_SOURCE_NO_STUB=PASS')
+          PY
+      - name: Install native status with rollback if service/auth check fails
+        run: python3 -m nox_runpod.teacher_mesh.v104.native_status_live_once
+      - name: Always revoke temporary SSH
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

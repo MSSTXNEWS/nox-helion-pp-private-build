@@ -1,0 +1,118 @@
+{
+  "schema": "NOX_UNIVERSAL_3A_OWNER_P0_NATIVE_READBACK_V10",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_3A",
+  "run_timestamp_utc": "2026-11-16T15:40:20Z",
+  "run_timestamp_msk": "2026-11-16T18:40:20+03:00",
+  "source_head_pre_receipt": "c4ca2f40a1865293a658a7bd06a194fd99021868",
+  "owner_native_observation_utc": "2026-11-16T15:38:23Z",
+  "native_evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803/job/133407972993",
+  "native_run_id": 43887943803,
+  "native_job_id": 133407972993,
+  "mode": "OWNER_APPROVED_INSPECT_RERUN_OF_EXISTING_EXACT_MANUAL_REQUEST_NO_NEW_NATIVE_WRITER",
+  "native_exit_code": 0,
+  "temporary_ssh_public_key": "DETACHED_AND_VERIFIED",
+  "tasks": [
+    {
+      "task_id": "S1-01",
+      "status": "LIVE_VERIFIED_READ_ONLY",
+      "scope": "OWNER_STOP_AND_FIVE_SUPERVISOR_AND_PORT",
+      "observation": "Original owner STOP, TRAIN_HOLD, TRAIN_PAUSE_REQUEST and OWNER_MAINTENANCE present; original five NOX Supervisor services STOPPED, no :8081 socket listener",
+      "owner_writer_lease": "UNKNOWN_NO_OWNER_CAS_READBACK",
+      "native_chat_pid": null,
+      "dispatcher_pid": null,
+      "trainer_pid": null
+    },
+    {
+      "task_id": "S1-04",
+      "status": "LIVE_VERIFIED_READ_ONLY",
+      "scope": "V100_CGROUP_SSD_SHM",
+      "gpu_used_mib": [
+        0,
+        0
+      ],
+      "gpu_count": 2,
+      "cpu_quota_cores": 19.2,
+      "cgroup_memory_max_bytes": 194065203200,
+      "cgroup_memory_current_bytes": 60385349632,
+      "ssd_total_bytes": 183609851904,
+      "ssd_free_bytes": 43158855680,
+      "shm_free_bytes": 3366711296
+    },
+    {
+      "task_id": "P0-2A-MAYA-ELF-SHA",
+      "status": "LIVE_VERIFIED_BINARY_IDENTITY_ONLY",
+      "binary_bytes": 71289520,
+      "sha256": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+      "runtime_sm70": "NOT_TESTED",
+      "inference": "NOT_TESTED"
+    },
+    {
+      "task_id": "S2-07",
+      "status": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "scope": "DEEPSEEK_EXACT_PINNED_MANIFEST",
+      "manifest_git_blob": "0608cdcacb1573835e4edc194c8ee63d4877180b",
+      "unique_model_bytes": 248834257920,
+      "missing_five_bytes": 248828477216,
+      "internal_ssd_total_bytes": 183609851904,
+      "capacity_shortfall_even_if_empty_bytes": 65224406016,
+      "capacity_shortfall_now_bytes": 205675402240,
+      "server_rclone_remote_count": 0,
+      "download_new_bytes": 0,
+      "reason": "Physical internal SSD capacity is smaller than unique model even if 100% empty. External owner-authorized seekable volume or storage enlargement required; no deletion can solve physical size gap."
+    },
+    {
+      "task_id": "S3-01",
+      "status": "HOLD_ACTUAL_LIVE_UI_UNKNOWN",
+      "scope": "8080_8081_8082_HTTP_ROUTES",
+      "observations": {
+        "8080": "URLError",
+        "8081": "URLError",
+        "8082": "URLError"
+      },
+      "reason": "OWNER_MODEL_UPDATE deliberate STOP; no active UI HTTP; source family cannot prove live frontend"
+    }
+  ],
+  "weights": {
+    "historical_qwen_successful_updates": 55,
+    "live_optimizer_updates_this_run": 0,
+    "new_checkpoint_restore": false,
+    "old_qwen_restart": false
+  },
+  "knowledge": {
+    "hunter_licensed_source_s03_write_readback_recall_this_run": false,
+    "native_s03_jobs_done_this_run": 0
+  },
+  "dispatcher_resources": {
+    "existing_dispatcher_pid": null,
+    "three_native_worker_pids": "NOT_PROVEN",
+    "owner_writer_lease": "UNKNOWN_NO_OWNER_CAS_READBACK",
+    "gpu_used_mib": [
+      0,
+      0
+    ],
+    "ssd_free_bytes": 43158855680,
+    "shm_free_bytes": 3366711296,
+    "new_download_bytes": 0,
+    "freed_bytes": 0,
+    "new_restarts": 0,
+    "native_model_switch": false
+  },
+  "production": {
+    "installed_new_engine": false,
+    "live_DeepSeek_resonance": false,
+    "stop_cleared": false,
+    "s03_changed": false,
+    "original_web_changed": false,
+    "models_deleted": false
+  },
+  "no_loss": [
+    "D02",
+    "14 worlds",
+    "S03",
+    "Genesis",
+    "checkpoint/optimizer/scaler/RNG",
+    "manual STOP"
+  ],
+  "next_ready": "Owner-authorized verified seekable volume with at least 248834257920 bytes unique model capacity plus rollback reserve and read/write/random-access receipt, then single owner lease transfer five shards SHA; Maya runtime inference and original UI SSE acceptance. Do not resume Qwen under STOP."
+}

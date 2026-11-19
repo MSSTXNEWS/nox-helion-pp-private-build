@@ -1,0 +1,101 @@
+{
+  "schema": "NOX_3D_V13_PINNED_NATIVE_TRL_VENV_SOURCE_V1",
+  "instructions_version": "0.0.6",
+  "slot": "3D",
+  "event_utc": "2026-11-16T21:03:06Z",
+  "event_msk": "2026-11-17T00:03:06+03:00",
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "feature/nox-v38-synaptic-brain-20261114",
+  "pr": 256,
+  "latest_native_readonly_observed_utc": "2026-11-16T20:40:57Z",
+  "latest_native_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43952157726",
+  "source_start_blob": "cb19b6e1720ffd708a4afa85eb6b7ed0c1154317",
+  "source_end_blob": "aac3ff067fd837c9823fc047e46c32c69340725c",
+  "test_blob": "3256f349b5c38b1eba4750b4e5221d3b47dd42e5",
+  "workflow_blob": "e81a3a0dd4c4fa3cf417b490d8b4807d7b648c2a",
+  "source_commits": [
+    "0a89f721951e1ba71957e62fcee80bb5e8e9faab",
+    "287fc447ab2548823f51b303f1a310793cd62773",
+    "4c4cb9cd9572216a9ebe21e9ea3ff3fd6c92920e"
+  ],
+  "test_commit": "d1463c522141073f353e7ca528bcc4da36aadf23",
+  "workflow_commit": "8cae9afbc9594cce8c1cb3bfa1b22b52050543d3",
+  "ci_exact_head": "4c4cb9cd9572216a9ebe21e9ea3ff3fd6c92920e",
+  "ci_run_id": 43955822567,
+  "ci_job_id": 133609964934,
+  "ci_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43955822567",
+  "ci_conclusion": "success",
+  "new_regression_tests": {
+    "passed": 7,
+    "total": 7
+  },
+  "aggregate_ci_suites": [
+    39,
+    21,
+    8,
+    7,
+    21,
+    10
+  ],
+  "aggregate_ci_tests": {
+    "passed": 106,
+    "total": 106
+  },
+  "source_root_cause": "pinned_sftconfig_signature_probe rejected py.is_symlink() even when package metadata from the same pinned virtualenv Python completed rc=0; normal venv symlink was mislabeled missing.",
+  "source_fix": "Read-only trusted root-owned venv/pyvenv.cfg/executable symlink admission; require Python 3.12 and sys.prefix identity; reject outside/writable/broken symlinks. No trainer, second backend or package install.",
+  "tasks": [
+    {
+      "task_id": "V13-01",
+      "status": "PRIOR_LIVE_VERIFIED_READONLY_PARTIAL",
+      "proof": "2026-11-16T20:40:57Z STOP/MAINTENANCE/TRAIN_HOLD present, 5 Supervisor STOPPED, GPU0/GPU1 VRAM 0/0. Writer lease unknown, no new native sweep in 3D."
+    },
+    {
+      "task_id": "V13-02",
+      "status": "HOLD_NATIVE_INDEPENDENT_RESTORE",
+      "proof": "No confirmed independent S03+WAL/Genesis/history/skills/checkpoint+optimizer/scaler/RNG restore from this pass."
+    },
+    {
+      "task_id": "V13-04",
+      "status": "SOURCE_TESTED_NATIVE_REPROBE_HOLD",
+      "proof": "7/7 source regression tests, CI 106/106 success exact SHA; new native TRL signature + two V100 FP16 smoke NOT run."
+    },
+    {
+      "task_id": "V13-05",
+      "status": "HOLD_SEEKABLE_STORAGE",
+      "proof": "Latest native root 183609851904B total, 43158556672B free; unique model 248834257920B before reserve. No authenticated persistent seekable mount."
+    },
+    {
+      "task_id": "V13-06",
+      "status": "PRIOR_LIVE_READONLY_BINARY_SHA_ONLY",
+      "proof": "Latest native Maya ELF 71289520B SHA256 3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20, no TP2 inference."
+    }
+  ],
+  "weights": {
+    "new_successful_optimizer_updates": 0,
+    "training_started": false,
+    "restore_confirmed": false,
+    "teacher_student_merge": false
+  },
+  "knowledge": {
+    "new_s03_write_readback_recall": 0,
+    "new_skills_saved_native": 0
+  },
+  "dispatcher_resources": {
+    "new_native_pid_start_ticks": [],
+    "new_job_ids": [],
+    "new_lease_cas": false,
+    "server_download_bytes": 0,
+    "server_delete_bytes": 0,
+    "server_restarts": 0,
+    "root_free_last_native_bytes": 43158556672,
+    "shm_free_last_native_bytes": 3366711296,
+    "owner_stop_changed": false,
+    "schedules_changed": false
+  },
+  "owner_model_update": "RETAINED_OWNER_STOP_NOT_RELEASED",
+  "source_error_ledger_commit": "3ba618863389f10f7a664345dad529004ea23176",
+  "source_handoff_commit": "bff0bb1cc27527de9a06909ef130bea0d4a64dd2",
+  "rollback": "Restore known source preimage only with exact CAS preserving other edits. No native change to roll back.",
+  "next_ready": "Under original authorized native read-only path rerun patched pinned interpreter signature check and independently verify owner lease/S03 recovery; parallel source or preproduction isolated FP16 only after owner admission, seekable storage 248834257920B+reserve; then five GGUF SHA, Maya TP2 and original WEB SSE STOP S03. No old Qwen training.",
+  "no_false_pass": "SOURCE_TESTED != native INSTALLED/LIVE. Six configured workers != six verified OS PIDs. OWNER STOP remains."
+}

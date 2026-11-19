@@ -1,0 +1,119 @@
+{
+  "schema": "NOX_UNIVERSAL_RELAY_RECEIPT_V10",
+  "instructions_version": "0.0.6",
+  "slot": "2C",
+  "utc": "2026-11-16T18:38:42Z",
+  "msk": "2026-11-16T21:38:42+03:00",
+  "scope": "EXISTING_S03_SOURCE_ONLY",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "feature/nox-v38-synaptic-brain-20261114",
+  "pr": 256,
+  "source_commits": [
+    "db16bcf4220d5e61cec78bb44472beb62208b7a2",
+    "11fd4f6baa81d2589d6f2e4bfbf2d1261846d517"
+  ],
+  "source_files": [
+    {
+      "path": "nox-control/owner_s03_gateway.py",
+      "preimage_git_blob": "b38fc673dd4109b015bb6e4c8cdafa3a3eeb3ad4",
+      "postimage_git_blob": "c8d3f7f38f95792392987a003898c875a36b11ad"
+    },
+    {
+      "path": "nox-control/test_owner_s03_gateway.py",
+      "preimage_git_blob": "838a80434da31a00938ddef398c848404b32e5ef",
+      "postimage_git_blob": "c957cd22cc4be5de392308376ec030f77ae61c28"
+    }
+  ],
+  "root_cause": "S03 index_batch checked owner STOP only before calling the embedding endpoint; OWNER_MODEL_UPDATE STOP arriving during the remote embedding call or before SQLite commit could allow unapproved vector writes.",
+  "change": "Recheck owner STOP after embedding, before BEGIN IMMEDIATE and before transaction commit; an in-flight STOP raises MemoryHold and rolls back every pending SQLite vector row. Existing gateway and dispatcher unchanged.",
+  "rollback": "Revert only the two patched Git blobs with content-SHA CAS after current HEAD/source readback, retaining all unrelated changes; never remove live S03 data or clear STOP.",
+  "tests": {
+    "type": "GitHub Actions source-only",
+    "run_id": 43930519081,
+    "job_id": 133521361279,
+    "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43930519081",
+    "head_sha": "11fd4f6baa81d2589d6f2e4bfbf2d1261846d517",
+    "result": "SUCCESS",
+    "groups": [
+      {
+        "name": "V38",
+        "passed": 39
+      },
+      {
+        "name": "S03",
+        "passed": 21
+      },
+      {
+        "name": "UI workers",
+        "passed": 10
+      }
+    ],
+    "total_passed": 70,
+    "total_failed": 0,
+    "new_regressions": [
+      "test_owner_stop_arriving_during_embedding_aborts_without_s03_write",
+      "test_owner_stop_before_sqlite_commit_rolls_back_all_vectors"
+    ]
+  },
+  "five_task_outcomes": [
+    {
+      "id": "S2-09",
+      "status": "SOURCE_TESTED",
+      "native": "HOLD",
+      "reason": "Source owner STOP race closed; CI and SHA readback PASS; original native owner writer lease not obtained",
+      "claim": null
+    },
+    {
+      "id": "S1-01",
+      "status": "HOLD",
+      "reason": "Fresh authoritative native OneHost read-only PID/start_ticks/STOP needed",
+      "claim": null
+    },
+    {
+      "id": "S1-03",
+      "status": "HOLD",
+      "reason": "Current owner STOP/lease and OS-worker PID/jobID unknown",
+      "claim": null
+    },
+    {
+      "id": "S1-07",
+      "status": "HOLD",
+      "reason": "Independent S03+Genesis+checkpoint optimizer/scaler/RNG restore not proven",
+      "claim": null
+    },
+    {
+      "id": "S2-07",
+      "status": "HOLD",
+      "reason": "Five DeepSeek unique files need 248828477216 bytes plus reserve with owner-authorized seekable storage; remote and quota not validated",
+      "claim": null
+    }
+  ],
+  "native": {
+    "installed": false,
+    "live_verified": false,
+    "writer_lease": null,
+    "unique_claims": 0,
+    "new_pid_start_ticks": [],
+    "native_job_ids": [],
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "restarted_processes": 0,
+    "owner_stop_modified": false,
+    "prior_read_only": {
+      "utc": "2026-11-16T17:54:57Z",
+      "job_id": 133495640855,
+      "status": "HISTORICAL_NOT_CURRENT"
+    }
+  },
+  "weights": {
+    "successful_optimizer_updates_verified": 0,
+    "checkpoint_restored": false,
+    "student": "Qwen3.5-9B historical only",
+    "deepseek_live": false
+  },
+  "knowledge": {
+    "hunter_source_s03_recall_verified": 0,
+    "skill_memory_written": false
+  },
+  "next_action": "With original owner-auth native read-only inspect current STOP, writer lease, /proc start_ticks, five Supervisor, GPU, SSD, cgroup and S03; reconcile source SHA with installed preimage and stage only under original maintenance lease. Separately verify offsite rollback and seekable DeepSeek storage before any download/Maya."
+}

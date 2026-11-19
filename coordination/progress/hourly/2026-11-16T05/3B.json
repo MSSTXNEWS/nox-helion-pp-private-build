@@ -1,0 +1,53 @@
+{
+  "schema": "NOX_PRIME_3B_RELAY_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "3B",
+  "stream": 3,
+  "at_msk": "2026-11-16 05:25",
+  "accepted_head": "4a24aebcd5bd9e0d20ba5c65e31ade74c472e4de",
+  "error_id": "NOX-P0-V165-NATIVE-STREAM-ABORT-HUNG-READ-20261116",
+  "scope": "WEB29_EXISTING_V135_RESONANCE_SSE_STOP_SOURCE",
+  "cause": "Original consume() awaits reader.read() while the native ReadableStream may ignore the fetch AbortSignal; downstream STOP/abort cannot complete until a new native chunk arrives.",
+  "fix": "Add request-scoped abortable stream read: cancel only this reader and race with abort; never call global /api/nox/stop; do not wait for hung cancel in aborted cleanup.",
+  "existing_native_routes": [
+    "/api/nox/chat/stream",
+    "/api/ui/memory/dialogs/history"
+  ],
+  "preserve": [
+    "D02",
+    "14 worlds",
+    "original WEB29",
+    "S03",
+    "STOP",
+    "OneHost #60509551",
+    "model",
+    "weights",
+    "checkpoints"
+  ],
+  "changed_files": [
+    "coordination/onepass/nox-v135-resonance-owner-bridge.js",
+    "coordination/onepass/test_v135_resonance_owner_bridge.cjs",
+    "coordination/progress/hourly/2026-11-16T05/3B.json"
+  ],
+  "source_head_after": "THIS_CORRECTION_COMMIT",
+  "source_test": "V135 and V139 source regression re-triggered by test correction; exact-SHA readback pending",
+  "regression": "V165 existing Node browser fixture: stalled native model read, first genuine delta, abort, scoped cancellation, no S03 false done/no global STOP",
+  "native_live_verified": false,
+  "production_deployed": false,
+  "files_deleted": [],
+  "freed_bytes_verified": 0,
+  "next_slot": "3C",
+  "next_action": "Read exact V135 CI results at this commit, then owner-authenticated native OneHost browser STOP/TTFT/S03 acceptance and independent full restore before live deployment; do not repeat source patch if CI passes.",
+  "previous_ci": {
+    "v135": {
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43792452988",
+      "result": "PASS_27_OF_27_NODE_PLUS_6_STAGE_PLUS_8_GUARDS"
+    },
+    "v139": {
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43792452814",
+      "result": "FAIL_26_OF_27_V165_ONLY",
+      "root_cause": "V139 source-only transport acceleration batches an already-emitted native delta into multiple queued visual token frames; stop regression assumed immediate error frame and rejected legitimate prebuffered tokens."
+    }
+  },
+  "test_correction": "Accept bounded prebuffered genuine token pieces after browser abort, forbid done, require terminal STREAM_STOP_REQUESTED within 64 frames/400ms per read; preserve native request-only cancellation and S03 fail closed."
+}

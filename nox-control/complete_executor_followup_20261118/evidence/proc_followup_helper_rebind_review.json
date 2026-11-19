@@ -1,0 +1,10 @@
+{
+  "schema": "NOX_PROC_FOLLOWUP_HELPER_REBIND_REVIEW_V1",
+  "base_sha256": "7063eae6da1a113595b45261e0780f0e4121f1569d94a355642c09573c3e14a5",
+  "candidate_sha256": "aa480926a4fffc378e39b149302791e130b6d7c6b15fd289a9174cd1e7926407",
+  "only_ast_assignment_changed": "RESCUE_TASK",
+  "new_required_predecessor": "1A03.project.cursor_admission.proc_retry.20261118",
+  "old_failed_rescue_unchanged": true,
+  "all_gates_function_bodies_unchanged": true,
+  "native_calls": 0
+}

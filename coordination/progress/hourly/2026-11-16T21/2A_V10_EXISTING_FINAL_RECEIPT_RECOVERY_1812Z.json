@@ -1,0 +1,88 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2A",
+  "at_utc": "2026-11-16T18:12:00Z",
+  "at_msk": "2026-11-16T21:12:00+03:00",
+  "status": "SOURCE_PATCHED_TESTS_ADDED_CI_UNVERIFIED_NATIVE_HOLD",
+  "source_branch": "feature/nox-v38-synaptic-brain-20261114",
+  "source_commits": [
+    "f33fa80774a7044989dcbdc6645088e40834f3c7",
+    "93a4da327e649660f86026b2ffdd79688ebec864"
+  ],
+  "source_blob_before": "5b90a02f5bab6fb86c14052a49876174c0e28b23",
+  "source_blob_after": "8d47cd848a865b0bde367129111a935dc426fb88",
+  "test_blob_before": "5984739bf777ba3c8687c2a4e4edca4e5ff409a8",
+  "test_blob_after": "36daf4af32e1c82a90ed4c02b98825149027c1e7",
+  "task_id": "S2-07",
+  "task_claim": "SOURCE_FILE_BLOB_CAS_ONLY_NO_NATIVE_WRITER_CLAIM",
+  "root_cause": "After SHA-verified partial is hardlinked to final and .part unlinked, owner STOP/lease loss before atomic_receipt() can leave a valid full GGUF without immutable *.verified.json. Existing-final reuse previously skipped receipt creation indefinitely.",
+  "change": "Only under original owner STOP/lease, when an existing complete final GGUF passes pinned SHA and *.verified.json is truly absent, rehash, re-check STOP/lease, publish unique immutable recovered_existing receipt (zero network bytes). Existing receipt left intact; dangling/unsafe link HOLD.",
+  "regression_tests_added": [
+    "test_reused_complete_final_recovers_missing_receipt_without_download",
+    "test_reused_final_dangling_receipt_is_never_replaced"
+  ],
+  "test_execution": "NOT_RUN_IN_THIS_SLOT",
+  "github_ci_new_commit": "NOT_CONFIRMED",
+  "rollback": "Revert both exact source/test blob changes via fresh GitHub branch CAS after testing; no native rollback because no server mutation.",
+  "tasks": [
+    {
+      "task_id": "S2-07",
+      "status": "SOURCE_PATCHED_CI_PENDING_NATIVE_HOLD"
+    },
+    {
+      "task_id": "S1-01",
+      "status": "PRIOR_LIVE_VERIFIED_READONLY",
+      "native_job_id": 133495640855,
+      "observed_utc": "2026-11-16T17:54:57Z"
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD_OWNER_STOP_AND_UNKNOWN_WRITER_LEASE"
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD_INDEPENDENT_S03_AND_CHECKPOINT_RESTORE"
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD_FULL_MODEL_MAYA_CUDA_AND_SSE_E2E"
+    }
+  ],
+  "native": {
+    "instance_id": 60509551,
+    "read_only_observed_utc": "2026-11-16T17:54:57Z",
+    "read_only_job": 133495640855,
+    "source_pin": "ec8f885d04981d3e8fcd76e836c4e1d41cd869f3",
+    "stop": "PRESENT_AT_OBSERVATION",
+    "maintenance": "PRESENT_AT_OBSERVATION",
+    "lease": "UNKNOWN",
+    "supervisors": "FIVE_STOPPED_AT_OBSERVATION",
+    "port_8081": "NO_LISTENER_AT_OBSERVATION",
+    "gpu0_vram_mib": 0,
+    "gpu1_vram_mib": 0,
+    "ssd_free_bytes": 43158749184,
+    "shm_free_bytes": 3366711296,
+    "rclone_remotes": [],
+    "maya_sha256": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+    "maya_binary_bytes": 71289520,
+    "model_inference": "NOT_TESTED"
+  },
+  "WEIGHTS": {
+    "new_successful_optimizer_updates_verified": 0,
+    "new_checkpoint_sha": null,
+    "independent_restore": false
+  },
+  "KNOWLEDGE": {
+    "new_hunter_s03_recall_verified": 0,
+    "new_job_ids": []
+  },
+  "DISPATCHER_RESOURCES": {
+    "new_native_writer_claims": 0,
+    "new_verified_native_worker_pids": [],
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0
+  },
+  "next": "Run exact-source GitHub regression CI; retain OWNER_MODEL_UPDATE STOP, verify native owner writer lease and independent S03/Genesis/checkpoint restore, then authorize >=248834257920 B+reserve seekable model placement before Maya inference. No cleanup, Qwen resume, or chat switch."
+}

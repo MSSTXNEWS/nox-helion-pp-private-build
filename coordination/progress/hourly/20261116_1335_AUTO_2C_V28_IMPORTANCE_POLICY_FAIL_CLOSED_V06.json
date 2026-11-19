@@ -1,0 +1,66 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2C",
+  "instructions_version": "0.0.6",
+  "slot": "2C",
+  "recorded_utc": "2026-11-16T10:35:58Z",
+  "head_before": "bae7827cc56bb74fceaef6b15a5a384f805f187f",
+  "head_after": "COMMIT_CONTAINING_THIS_RECEIPT",
+  "scope": "SOURCE_ONLY_CAS",
+  "error_id": "NOX-P1-2C-V28-INVALID-DOMAIN-PRIORITY-CRASH-20261116",
+  "root_cause": "V28 build_curriculum called .get on arbitrary domain_importance and float() on malformed policy values; a corrupt signed policy could throw, aborting original autonomous curriculum tick rather than returning bounded HOLD.",
+  "correction": "Fail closed on non-dict owner domain importance, unknown keys, non-finite/boolean/string/out-of-range priorities; preserve verified domain gap source and model; no new backend, trainer or S03.",
+  "changed_files": [
+    "nox_runpod/teacher_mesh/nox_curriculum_dna_v28.py",
+    "nox_runpod/teacher_mesh/tests/test_v28_future_lab.py"
+  ],
+  "source_before": {
+    "nox_runpod/teacher_mesh/nox_curriculum_dna_v28.py": "1e50ad937e5c3a2029571b075388cdc951add707",
+    "nox_runpod/teacher_mesh/tests/test_v28_future_lab.py": "bec97b43d86f559009e0bfd905647fd4814a1ca6"
+  },
+  "tests": "3 new regressions added, exact source CI pending (do not count PASS before run)",
+  "tasks": [
+    {
+      "n": 1,
+      "status": "SOURCE_INSPECTED_EXISTING_V27_NO_DUPLICATION"
+    },
+    {
+      "n": 2,
+      "status": "HOLD_NATIVE_NO_CURRENT_OWNER_STOP_LEASE_OR_QUEUE_ACK"
+    },
+    {
+      "n": 3,
+      "status": "DONE_SOURCE_PATCH_V28_CURRICULUM_POLICY_CRASH_GUARD_CI_PENDING"
+    },
+    {
+      "n": 4,
+      "status": "SOURCE_EXISTING_OWNER_PINNED_THREEWAY_EXPORT_UNCHANGED_NO_NEW_NATIVE_SAMPLES"
+    },
+    {
+      "n": 5,
+      "status": "HOLD_NATIVE_NO_PROVEN_HUNTER_JOB_S03_WRITE_READBACK_RECALL"
+    }
+  ],
+  "WEIGHTS": {
+    "successful_optimizer_updates_this_slot": 0,
+    "checkpoint_restore_verified_this_slot": false,
+    "student": "Qwen3.5-9B",
+    "future_teacher": "DeepSeek-V4.1-Flash-1017 IQ2_XXS",
+    "new_distillation": false
+  },
+  "KNOWLEDGE": {
+    "hunter_job_id": null,
+    "s03_write_readback_recall_verified": false,
+    "new_corpus_rows_native": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "current_pids_verified": false,
+    "stop_lease_verified": false,
+    "gpu_ram_ssd_fresh": false,
+    "downloads_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0
+  },
+  "native_modified": false,
+  "lesson": "Malformed owner priority policy must return explicit HOLD, never crash or silently coerce; only independent signed error receipts determine genuine learning gaps.",
+  "next_action": "Read original 1C owner STOP/lease, dispatcher queue and signed policy; run one admitted Hunter→licensed source→S03 write/readback/recall, hand source-disjoint candidate to 2D. No blind restart."
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "parent_task_id": "3A02",
+    "task_id": "3A02.project.readback_revoke.layout_retry.20261118",
+    "retry_of": "3A02.project.readback_revoke.20261118",
+    "original_plan_sha256": "283ff826ba11803988884e35aa6b20dfa3d658e9887059e2e604f05062f5ad4a",
+    "plan_sha256": "a171fa7a94084a1f4b6751d78097257b9ed0755fc1a46cdfb4d34a27838347dc",
+    "plan_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/retries/3A02/plans/a171fa7a94084a1f4b6751d78097257b9ed0755fc1a46cdfb4d34a27838347dc.json",
+    "required_executor_change": "REAL_SANDBOX_WORKDIR_/work/project/source",
+    "only_plan_field_changed": "task_id",
+    "source_and_test_payloads_unchanged": true,
+    "plan_validated": true,
+    "native_applied": false
+  },
+  {
+    "parent_task_id": "3B05",
+    "task_id": "3B05.project.strict_skill_json.layout_retry.20261118",
+    "retry_of": "3B05.project.strict_skill_json.20261118",
+    "original_plan_sha256": "67e819b4ff1b94cc5bdd6547702ce5383f5ea8a0cb42a44428a1b7740c147e09",
+    "plan_sha256": "79b77425ff05d3337c2e46653e2e6e0190c2ec59848d617fa2204876fc89eb0d",
+    "plan_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/retries/3B05/plans/79b77425ff05d3337c2e46653e2e6e0190c2ec59848d617fa2204876fc89eb0d.json",
+    "required_executor_change": "REAL_SANDBOX_WORKDIR_/work/project/source",
+    "only_plan_field_changed": "task_id",
+    "source_and_test_payloads_unchanged": true,
+    "plan_validated": true,
+    "native_applied": false
+  },
+  {
+    "parent_task_id": "6V14-04",
+    "task_id": "6V14-04.project.receipt_time_order.fd_retry.20261118",
+    "retry_of": "6V14-04.project.receipt_time_order.20261118",
+    "original_plan_sha256": "de41f4de77a043c695fe12ccb3a60a389c4cd112102a9257dbf1c7b47c25d5eb",
+    "plan_sha256": "dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9",
+    "plan_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/retries/6V14-04/plans/dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9.json",
+    "owner_reviewed_fixture_revision": true,
+    "native_applied": false
+  }
+]

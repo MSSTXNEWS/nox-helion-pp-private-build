@@ -1,0 +1,99 @@
+name: NOX V139 exact merged V135 V137 full WEB source handoff - no native writes
+on:
+  pull_request:
+    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+    paths:
+      - '.github/workflows/nox-v139-single-merged-web-source-export.yml'
+      - 'coordination/onepass/acceleration/**'
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-verify-and-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply reviewed transport acceleration in source workspace only
+        run: |
+          set -euo pipefail
+          cp coordination/onepass/nox-v135-resonance-owner-bridge.js "$RUNNER_TEMP/nox-bridge-before.js"
+          printf '%s\n' 'df486e1c1f1b1397d11b20737c206723ec94c34bf32330c41910c0e4f8fc54bc  coordination/onepass/acceleration/max_speed_transport.patch' | sha256sum --check
+          git apply --check coordination/onepass/acceleration/max_speed_transport.patch
+          git apply coordination/onepass/acceleration/max_speed_transport.patch
+      - name: Existing original owner NOX bridge and self modules compile
+        run: |
+          set -euo pipefail
+          node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
+          node --check coordination/onepass/nox-v137-owner-self-status.js
+          python -m py_compile coordination/onepass/v135_resonance_owner_stage.py nox_runpod/teacher_mesh/v137/owner_self_observation.py nox_runpod/teacher_mesh/v137/owner_response_contract.py
+          node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+          node --test coordination/onepass/test_v137_owner_self_status.cjs
+          python -m unittest -v coordination.onepass.test_v135_resonance_owner_stage
+          echo 'NOX_V139_MERGED_SOURCE_TESTED=true'
+      - name: Paired isolated transport benchmark - not model inference
+        run: |
+          set -euo pipefail
+          node coordination/onepass/acceleration/test_transport_benchmark.cjs "$RUNNER_TEMP/nox-bridge-before.js" coordination/onepass/nox-v135-resonance-owner-bridge.js NOX_TRANSPORT_BENCHMARK.json
+      - name: Export current accelerated source only with individual hashes
+        run: |
+          set -euo pipefail
+          mkdir -p export/coordination/onepass export/nox_runpod/teacher_mesh/v137
+          for name in nox-v135-resonance-owner-bridge.js nox-v137-owner-self-status.js v135_resonance_owner_stage.py test_v135_resonance_owner_bridge.cjs test_v137_owner_self_status.cjs test_v135_resonance_owner_stage.py; do
+            cp "coordination/onepass/$name" "export/coordination/onepass/$name"
+          done
+          for name in owner_self_observation.py owner_response_contract.py; do
+            cp "nox_runpod/teacher_mesh/v137/$name" "export/nox_runpod/teacher_mesh/v137/$name"
+          done
+          (cd export && find coordination nox_runpod -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > SOURCE_SHA256SUMS.txt)
+          (cd export && zip -qr ../NOX_V139_EXACT_MERGED_SOURCE.zip .)
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib,zipfile
+          p=Path('NOX_V139_EXACT_MERGED_SOURCE.zip')
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              files={n for n in z.namelist() if not n.endswith('/')}
+              expected={
+                'SOURCE_SHA256SUMS.txt',
+                'coordination/onepass/nox-v135-resonance-owner-bridge.js',
+                'coordination/onepass/nox-v137-owner-self-status.js',
+                'coordination/onepass/v135_resonance_owner_stage.py',
+                'coordination/onepass/test_v135_resonance_owner_bridge.cjs',
+                'coordination/onepass/test_v137_owner_self_status.cjs',
+                'coordination/onepass/test_v135_resonance_owner_stage.py',
+                'nox_runpod/teacher_mesh/v137/owner_self_observation.py',
+                'nox_runpod/teacher_mesh/v137/owner_response_contract.py'}
+              assert files==expected, 'HOLD_SOURCE_FILE_SET'
+              manifest=z.read('SOURCE_SHA256SUMS.txt').decode('utf8').splitlines()
+              assert len(manifest)==len(expected)-1
+              for row in manifest:
+                  sha,name=row.split('  ',1)
+                  assert name in files and hashlib.sha256(z.read(name)).hexdigest()==sha
+              print('NOX_V139_SOURCE_MEMBERS_SHA256=9/9_PASS')
+          print('NOX_V139_MERGED_SOURCE_ZIP_SHA256='+hashlib.sha256(p.read_bytes()).hexdigest())
+          print('NOX_V139_NATIVE_DEPLOYED=false')
+          print('NOX_V139_ORIGINAL_S03_WEIGHT_MODIFIED=false')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V139_EXACT_MERGED_SOURCE
+          path: NOX_V139_EXACT_MERGED_SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V139_TRANSPORT_BENCHMARK
+          path: NOX_TRANSPORT_BENCHMARK.json
+          if-no-files-found: error
+          retention-days: 14

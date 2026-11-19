@@ -1,0 +1,60 @@
+name: NOX Master Catalog 200 Final Physical Audit CI
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-master-catalog-final-audit-ci.yml
+      - nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_200_FINAL_ACQUISITION_20261112.json
+      - nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_200_FINAL_README_RU.md
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/nox-master-catalog-final-audit-ci.yml
+      - nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_200_FINAL_ACQUISITION_20261112.json
+      - nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_200_FINAL_README_RU.md
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Strict offline audit contract checks
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import pathlib,json
+          base=pathlib.Path('nox_runpod/teacher_mesh')
+          audit=json.loads((base/'NOX_MASTER_CATALOG_200_FINAL_ACQUISITION_20261112.json').read_text())
+          original=json.loads((base/'NOX_MASTER_CATALOG_200.json').read_text())
+          assert audit['schema']=='nox-master-catalog-200-final-physical-acquisition-audit-v2'
+          assert len(audit['entry_status'])==len(original['entries'])==200
+          assert [e['number'] for e in audit['entry_status']]==list(range(1,201))
+          assert len({e['number'] for e in audit['entry_status']})==200
+          summary=audit['summary']
+          assert summary['physical_files_components']==199
+          assert summary['hosted_api_service_entries']==1
+          assert summary['installation_verified'] is False
+          assert summary['teacher_models_15_deployed'] is False
+          assert summary['by_provenance']=={'original_sha_verified':182,'recoveries':11,'completed_after_recovery':6,'hosted_services_with_sdk':1}
+          groups=audit['source_groups']
+          assert len(groups)==20
+          assert sum(len(g['parts']) for g in groups)==69
+          assert all(p['drive_url'] and len(p['sha256'])==64 for g in groups for p in g['parts'])
+          assert all(e['state'] and e['source_reference'] for e in audit['entry_status'])
+          assert 'SERVICE_REFERENCE' in next(e for e in audit['entry_status'] if e['number']==6)['state']
+          assert len((base/'NOX_MASTER_CATALOG_200_FINAL_README_RU.md').read_text())>1500
+          print('NOX_MASTER_CATALOG_200_FINAL_AUDIT_CONTRACT_PASS')
+          PY
+          mkdir -p dist
+          cp nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_200_FINAL_ACQUISITION_20261112.json dist/
+          cp nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_200_FINAL_README_RU.md dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_MASTER_CATALOG_200_FINAL_AUDIT_INDEX
+          path: dist/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,58 @@
+name: NOX V108 one-pass bind authentic V29 stream to existing OneHost
+on:
+  push:
+    branches: [nox/e2-v108-teacher-corpus-repair-20261114]
+    paths: ['.github/workflows/nox-e2-v108-bridge-live.yml']
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v108-existing-proxy-60509551-onepass
+  cancel-in-progress: false
+jobs:
+  existing-onehost:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Verify exact native owner and source before live attempt
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "::error::HOLD_NOX2"; exit 2; }
+          python3 -m py_compile nox_runpod/teacher_mesh/v105/native_v29_chat_bridge.py nox_runpod/teacher_mesh/v106/native_install_v29_bridge.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v106.native_install_v29_bridge import REMOTE_TEMPLATE
+          source=REMOTE_TEMPLATE.split("<<'PYREMOTE'\n",1)[1].rsplit("\nPYREMOTE",1)[0]
+          compile(source,"<NOX-V108-onepass>","exec")
+          for marker in ("HOLD_SOURCE_SHA_CHANGED","HOLD_AUTH_NOT_ENFORCED",
+                        "HOLD_CHAT_BECAME_BUSY","HOLD_BACKUP_CONFLICT",
+                        "HOLD_REGISTERED_ROUTES_NOT_VERIFIED",
+                        "revert(original,meta)","HOLD_NATIVE_OWNER_HANDLER_NOT_DEFINED"):
+              assert marker in source,marker
+          assert "lines.insert(where" not in source
+          print("NOX_V108_SAFETY_SOURCE_GATE=PASS")
+          PY
+      - name: ONE existing-proxy owner-route activation, immediate health and rollback on failure
+        run: python3 -m nox_runpod.teacher_mesh.v106.native_install_v29_bridge
+      - name: Revoke temporary Vast SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Honest acceptance scope
+        if: success()
+        run: |
+          echo "NOX_V108_NATIVE_V29_ROUTE_BOUND=true"
+          echo "NOX_V108_STUDENT_MODEL_UNCHANGED=true"
+          echo "NOX_V108_OWNER_SESSION_AUTH_ENFORCED=true"
+          echo "NOX_V108_BROWSER_E2E_NOT_CLAIMED=true"

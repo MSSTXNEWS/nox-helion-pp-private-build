@@ -1,0 +1,53 @@
+name: NOX V38.1 source acceptance
+on:
+  push:
+    branches:
+      - feature/nox-v38-synaptic-brain-20261114
+      - repair/nox-continuous-execution-20261118
+  pull_request:
+    paths:
+      - "nox_runpod/teacher_mesh/v38/**"
+      - ".github/workflows/nox-v38-1-source-ci.yml"
+permissions:
+  contents: read
+jobs:
+  source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source and Python syntax
+        run: |
+          python3 -m compileall -q nox_runpod/teacher_mesh/v38
+          PYTHONPATH=. python3 -m unittest nox_runpod.teacher_mesh.v38.tests.test_v38_control nox_runpod.teacher_mesh.v38.tests.test_v38_memory_speed -v
+          PYTHONPATH=. python3 -m unittest discover -s nox-control/c02_memory_progress_20261118/trusted_tests -p 'test_nox_c02_*.py' -v
+          PYTHONPATH=. python3 -m unittest discover -s nox-control/c02_memory_progress_20261118/reviewed_tests -p 'test_submission_errors.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_c02_memory_reviewed_recovery.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_s03_gateway.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_s03_diagnostic.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_pinned_python_v13.py' -v
+          python3 -m py_compile nox-control/owner_native_inspect.py nox-control/test_owner_native_inspect_inventory.py
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_inventory.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_media_install.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_ssh_failure_class.py' -v
+          python3 -m py_compile nox-control/systemic_relay_20261118/owner_chat_foreground_counter_observe.py
+          python3 -m py_compile nox-control/systemic_relay_20261118/owner_counter_policy_incident_inspect.py
+          python3 -m py_compile nox-control/systemic_relay_20261118/next_chat_review/package_counter_reconcile_policy_v1/owner_chat_counter_policy_entry.py
+          python3 -m unittest discover -s nox-control/systemic_relay_20261118/next_chat_review -p 'test_owner_chat_counter_policy_recovery.py' -v
+          python3 -m unittest discover -s nox-control/systemic_relay_20261118/next_chat_review -p 'test_owner_chat_terminal_guard_v6.py' -v
+          python3 -m unittest discover -s nox-control/systemic_relay_20261118/next_chat_review -p 'test_owner_chat_incremental_v6.py' -v
+          python3 -m unittest discover -s nox-control/systemic_relay_20261118/next_chat_review -p 'test_owner_chat_policy_only_v1.py' -v
+          python3 -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_owner_chat_counter_lifecycle_patch.py' -v
+          python3 -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_owner_counter_incident_current_service.py' -v
+          python3 -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_owner_chat_policy_live_smoke.py' -v
+          python3 -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_owner_chat_policy_live_smoke_entry.py' -v
+          python3 -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_owner_web_r62_source_preflight.py' -v
+      - name: Check original owner UI maintenance mode without native writes
+        run: |
+          python3 -m pip install -q fastapi==0.128.2
+          python3 -m unittest discover -s nox-control -p 'test_owner_chat_ui_workers.py' -v
+          node --check nox-control/owner-chat-ui.js
+          node --check nox-control/owner-presence.js
+      - name: Mark boundaries (NO GPU model training)
+        run: |
+          echo "SOURCE ONLY — no Vast.ai deployment or NOX inference benchmark"

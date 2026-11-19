@@ -1,0 +1,92 @@
+{
+  "schema": "NOX_RELAY_CONTROL_APPEND_V1",
+  "instructions_version": "0.0.6",
+  "slot": "3A",
+  "at_utc": "2026-11-16T07:34:19.979Z",
+  "scope": "SOURCE_ONLY_WEB29_CATALOG_RETRY",
+  "primary_archive_sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
+  "input_candidate_sha256": "b51563815baf1a48214ce2b586cd86e4901be60015f57bf0789385f32c54f328",
+  "preimage_js_sha256": "c12a85540ae0f715f0e6669771d6331ff49f58e4c61331c9df7ab348afb6dadc",
+  "postimage_js_sha256": "8bb1e07e8e5e5fdd573af5f4e0e6e56bfb035f39b007cfd014bcc52e2c6731b1",
+  "patch_sha256": "deab7398e666599a0dded8ee1b45710607deab15a524946832513e95bdbbb8ef",
+  "changed_paths": [
+    "site/pc/v25/nox-shell-v25.js"
+  ],
+  "test": {
+    "chromium_offline_dom": 6,
+    "source_js_syntax": "PASS",
+    "git_apply_forward_reverse": "PASS",
+    "double_apply_preimage_rejected": true,
+    "path_count": 1212,
+    "other_members_preserved": 1211,
+    "cinematic_D02_media_diff": 0,
+    "http_e2e": "HOLD_ERR_BLOCKED_BY_ADMINISTRATOR"
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "state": "DONE_SOURCE",
+      "desc": "Latest verified primary+3A patch selected"
+    },
+    {
+      "id": 2,
+      "state": "DONE_SOURCE",
+      "desc": "D02/14 worlds and original media preserved"
+    },
+    {
+      "id": 3,
+      "state": "DONE_SOURCE",
+      "desc": "Transient IA HTTP/schema failure gets retryable HOLD/overlay refresh"
+    },
+    {
+      "id": 4,
+      "state": "HOLD_NATIVE",
+      "reason": "No current owner deploy writer lease/preimage/independent restore"
+    },
+    {
+      "id": 5,
+      "state": "DONE_SOURCE_BROWSER_HOLD",
+      "desc": "6/6 offline Chromium, git apply/rollback, node syntax and archive CRC; no live HTTP E2E"
+    }
+  ],
+  "control_rows": [
+    {
+      "kind": "WEIGHTS",
+      "state": "HISTORICAL_NATIVE_HOLD",
+      "last_verified_successful_updates": 8,
+      "skipped": 0,
+      "checkpoint_files": 10,
+      "checkpoint_bytes": 519884896,
+      "proof": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43813584758",
+      "new_updates_this_slot": 0
+    },
+    {
+      "kind": "KNOWLEDGE",
+      "state": "HOLD_NATIVE",
+      "hunter_source_s03_recall_verified": false,
+      "new_native_jobs_this_slot": 0
+    },
+    {
+      "kind": "DISPATCHER+RESOURCES",
+      "state": "HOLD_PARTIAL_NATIVE",
+      "last_observed_dispatcher_pid": 724331,
+      "last_observed_media_pid": 447681,
+      "last_observed_trainer_state": "FATAL",
+      "last_observed_handoff": "HOLD_MEDIA_HANDBACK_FILE_CHANGED",
+      "three_current_worker_pids_verified": false,
+      "current_gpu_vram_cpu_ssd": null,
+      "restarts_this_slot": 0,
+      "proof": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43814277490"
+    }
+  ],
+  "native_actions": {
+    "server_writes": 0,
+    "model_switches": 0,
+    "training_updates": 0,
+    "cleanups": 0
+  },
+  "next_action": "Native owner-approved WEB29 SHA/preimage/read-only then single-writer reversible staging and browser owner/S03/STOP acceptance",
+  "at_msk": "2026-11-16 10:34:20 MSK",
+  "source_head_before": "ba3c99d3e61a15212c7513ca4d987d61371b7fe5",
+  "patch_generator_path": "coordination/progress/hourly/20261116_1015_3A_CATALOG_RETRY_V06.py"
+}

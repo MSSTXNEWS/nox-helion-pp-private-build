@@ -1,0 +1,61 @@
+{
+  "schema": "NOX-HELION-WEB-V29_3-FROZEN-BINARY-SOURCE-RELEASE-v1",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-13",
+  "version": "V29.3",
+  "source": {
+    "version": "V28-V27 PRIMARY+PC-S03+GENESIS",
+    "archive_sha256": "def872e6c81d407a57c96f1385438ee010c8cf7df89e0c74e5d61de2f9589905",
+    "bytes": 85149208,
+    "drive_url": "https://drive.google.com/file/d/1YBOJYNzvsjnhzg5TAZj7iL2h543NgOe0/view"
+  },
+  "artifact": {
+    "name": "NOX_HELION_WEB_V29_3_FROZEN_20261113.zip",
+    "exact_zip_bytes": 85218272,
+    "sha256": "166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0",
+    "entries": 1089,
+    "manifest_hash_locked_files": 1085,
+    "crc": "PASS",
+    "drive_wrapper_url": "https://drive.google.com/file/d/1A0ZAb8nsqpWlv7PZEUDcyQKV3kSbeCsI/view",
+    "artifact_github_run": 43441048683
+  },
+  "frozen_kit": {
+    "name": "NOX_V29_3_OFFLINE_REBUILD_AND_WINDOWS_STAGE_20261113.zip",
+    "bytes": 27213,
+    "sha256": "ee52e35023c65e1a1cdd045958d425ca8c0d827091536f2c2e2fd3b82286be10",
+    "kit_members": 15,
+    "drive_wrapper_url": "https://drive.google.com/file/d/1PtSvooSPHll8-F4l9iq-Z_iGi0-i5uZ4/view",
+    "artifact_github_run": 43442602329
+  },
+  "source_evidence": {
+    "two_builds_exact_same_sha": true,
+    "extra_independent_offline_kit_build_verified": true,
+    "site_html_route_static_qa": "PASS_38_ACTIVE_HTML_0_MISSING",
+    "static_http_qa": "PASS_17_OF_17",
+    "chromium_component": "PASS_5_OF_5_FIXTURE_BASED",
+    "api_endpoint_contract": "PASS_16_ASSERTIONS",
+    "windows_real_zip_e2e_source_stage": "PASS_GITHUB_RUN_43441913621",
+    "original_D02_sha256": "f3fc804d238146ffe42c50103d3e04c9736b8b587c6572987f59b61a6112eb17"
+  },
+  "security": {
+    "ephemeral_transfer_port_disabled": true,
+    "ephemeral_transfer_server_stopped": true,
+    "no_new_backend": true,
+    "no_new_database": true,
+    "no_model_weight_changes": true,
+    "original_source_and_checkpoints_not_deleted": true,
+    "production_modified": false
+  },
+  "remaining_physical_gates": {
+    "user_machine_C_NOX": "NOT_TOUCHED",
+    "OneHost_8766_Ollama_stream_STOP": "NOT_TESTED_ON_USER_MACHINE",
+    "S03_restart_persistence": "NOT_TESTED_ON_USER_MACHINE",
+    "voice_RU_ES": "NOT_TESTED_ON_USER_MACHINE",
+    "SAFE70_gpu_sensor": "NOT_TESTED_ON_USER_MACHINE",
+    "model_student_optimizer_steps": "NOT_VERIFIED",
+    "Windows_WPF_WebView2_visual_E07_same_EXE_SHA": "NOT_TESTED_ON_USER_MACHINE",
+    "release_accepted": false
+  },
+  "canonical_pr": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251",
+  "note": "One source ZIP and one offline kit, private Google Drive wrapper ZIPs. Download and extract wrapper to obtain exact inner ZIP. No installed Windows release claimed."
+}

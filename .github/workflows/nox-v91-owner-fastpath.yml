@@ -1,0 +1,47 @@
+name: NOX V91 real owner chat TTFT fastpath onepatch
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v91-owner-fastpath.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner approval for original NOX OneHost only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-60509551-v91-one-proxy-patch
+  cancel-in-progress: false
+jobs:
+  apply:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Verify syntax, exact scope and Python route before native changes
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v91/owner_self_fastpath_live_once.py
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('nox_runpod/teacher_mesh/v91/owner_self_fastpath_live_once.py').read_text()
+          for t in ('HOLD_CHAT_OR_STOP_CHANGED','HOLD_EXACT_ROUTE_LAYOUT',
+                    'HOLD_SOURCE_SHA','HOLD_BACKUP_CONFLICT','HOLD_POST_LIVE','restore(raw,meta)'):
+              assert t in src,t
+          from nox_runpod.teacher_mesh.v91.owner_self_fastpath_live_once import REMOTE
+          remote=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(remote,'<v91-native>','exec')
+          print('NOX_V91_PY_SOURCE_AND_NATIVE=PASS')
+          PY
+      - name: One safe current OneHost live patch with SHA and rollback
+        run: python3 -m nox_runpod.teacher_mesh.v91.owner_self_fastpath_live_once
+      - name: Always detach temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

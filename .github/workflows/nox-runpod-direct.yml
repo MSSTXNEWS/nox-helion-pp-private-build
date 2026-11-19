@@ -1,0 +1,72 @@
+name: NOX RunPod Direct Orchestrator (adapter-free A5000 boost)
+run-name: NOX A5000 direct second CUDA lane + A40 health
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/nox-runpod-direct.yml']
+permissions:
+  contents: read
+concurrency:
+  group: nox-runpod-direct-orchestrator
+  cancel-in-progress: false
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      ssh_ready: ${{ steps.check.outputs.ssh_ready }}
+    steps:
+      - id: check
+        name: Verify that GitHub has a RunPod SSH secret
+        env:
+          RUNPOD_KEY: ${{ secrets.NOX_RUNPOD_SSH_PRIVATE_KEY }}
+        run: |
+          if [[ -n "$RUNPOD_KEY" ]]; then
+            echo "ssh_ready=true" >> "$GITHUB_OUTPUT"
+            echo "Secret is configured; remote deployment can proceed."
+          else
+            echo "ssh_ready=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Missing NOX_RUNPOD_SSH_PRIVATE_KEY secret. No RunPod command was executed."
+            exit 1
+          fi
+  deploy:
+    needs: preflight
+    if: ${{ needs.preflight.outputs.ssh_ready == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node: A5000
+            host: 69.30.85.188
+            port: 22199
+          - node: A40
+            host: 69.30.85.193
+            port: 22088
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Install SSH key from secure repo secret
+        env:
+          RUNPOD_KEY: ${{ secrets.NOX_RUNPOD_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$RUNPOD_KEY" > ~/.ssh/nox
+          chmod 600 ~/.ssh/nox
+      - name: Start A5000 second teacher CUDA stream (A40 unaffected)
+        env:
+          NODE: ${{ matrix.node }}
+          HOST: ${{ matrix.host }}
+          PORT: ${{ matrix.port }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/nox -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new -p "$PORT" "root@$HOST" \
+            "if [ \"$NODE\" = A5000 ]; then curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/0f6d1a0899444019f2e8dfd910fdeec382f52757/nox_runpod/stage0/start_a5000_cuda_secondary_direct.sh | bash; else echo NOX_A40_EXISTING_TASKS_UNTOUCHED; fi"
+      - name: Check remotely requested processes, GPU and persistence
+        if: always()
+        env:
+          NODE: ${{ matrix.node }}
+          HOST: ${{ matrix.host }}
+          PORT: ${{ matrix.port }}
+        run: |
+          ssh -i ~/.ssh/nox -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new -p "$PORT" "root@$HOST" \
+            'nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total --format=csv; find /workspace/nox/dispatcher/dual_gpu -maxdepth 1 -name "*.pid" -print 2>/dev/null; df -h /workspace' || exit 1

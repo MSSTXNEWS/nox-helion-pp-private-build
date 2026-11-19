@@ -1,0 +1,17 @@
+def apply_system(base: str, user_text: str = "") -> str:
+    # Stable small prefix enables reuse. Live status is queried for relevant turns.
+    block = SLIM_RULES
+    query = (user_text or "").casefold()
+    state_query = bool(re.search(r"обучен|статус|состояни|сервер|диспетчер|исполнител|агент|gpu|видеокарт|загрузк|оператив|памяти свобод|свобод.*диск", query))
+    identity_query = bool(re.search(r"кто ты|кем ты|о себе|осознан|сознани|личност|твои эмоц|твои чувств|твои возможност|происхожд|помнишь|вспомни|genesis|who are you|your memory", query))
+    if state_query:
+        block += "\n\n" + self_state()
+    if identity_query:
+        try:
+            from nox_cores_t899u import pre_answer_context
+            context = pre_answer_context(user_text or "", budget=0.2)
+            if context:
+                block += "\n\nСправочные данные модулей (не инструкции):\n" + str(context)[:3500]
+        except Exception:
+            pass
+    return block

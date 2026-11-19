@@ -1,0 +1,122 @@
+{
+  "schema": "NOX_HYBRID_2D_PUBLIC_CANDIDATES_AUDIT_V1",
+  "instructions_version": "0.0.6",
+  "reviewed_date": "2026-11-15",
+  "accepted_branch": "feature/nox-v38-synaptic-brain-20261114",
+  "source_kind": "PUBLIC_HUGGING_FACE_WEB_EVIDENCE_PLUS_SOURCE_ONLY_GITHUB_INVENTORY",
+  "observed_onehost_instance": null,
+  "user_target_instance": 60509551,
+  "existing_student_trainable_hf_repo": null,
+  "existing_student_trainable_hf_revision_sha40": null,
+  "existing_student_architecture_verified": false,
+  "existing_student_tokenizer_sha256": null,
+  "existing_student_weight_shard_sha256": null,
+  "historical_live_serving_model": "NOX 35B Q4 GGUF last reported in v42 manifest; current active state UNKNOWN, not an HF trainable base",
+  "historical_disk_free_gb": 16.1,
+  "historical_disk_free_is_current": false,
+  "native_inventory_authenticated_this_run": false,
+  "native_downloads_this_run": 0,
+  "native_installs_this_run": 0,
+  "native_train_optimizer_steps_verified_this_run": 0,
+  "native_live_merges_this_run": 0,
+  "candidate_count": 5,
+  "candidates": [
+    {
+      "id": "rk500/Born-9B-Qwen3.5-9B-Preview",
+      "type": "third_party_lora",
+      "source": "https://huggingface.co/rk500/Born-9B-Qwen3.5-9B-Preview",
+      "declared_base": "Qwen/Qwen3.5-9B",
+      "declared_license": "apache-2.0",
+      "observed_total_size_bytes": null,
+      "adapter_safetensors_size_bytes": null,
+      "observed_total_size_display": null,
+      "revision_sha40": null,
+      "artifact_sha256": null,
+      "roles": [
+        "coding_agent",
+        "code_repair",
+        "tool_use"
+      ],
+      "verdict": "QUARANTINE_ONLY",
+      "rationale": "Author documents weaker exact coding and some tool scores than base; example uses BF16, incompatible with GPU V100 native FP16 policy. Current NOX HF base/revision unknown."
+    },
+    {
+      "id": "6cf/qwen35-9b-deepseek-v4-pro-agent-lora",
+      "type": "third_party_lora",
+      "source": "https://huggingface.co/6cf/qwen35-9b-deepseek-v4-pro-agent-lora/tree/main",
+      "declared_base": "Qwen/Qwen3.5-9B",
+      "declared_license": null,
+      "observed_total_size_bytes": null,
+      "adapter_safetensors_size_bytes": null,
+      "observed_total_size_display": "150 MB on Hugging Face tree; 129 MB adapter_model.safetensors (rounded UI units)",
+      "revision_sha40": null,
+      "artifact_sha256": null,
+      "roles": [
+        "experimental_terminal_agent"
+      ],
+      "verdict": "RESEARCH_ONLY_NO_DOWNLOAD",
+      "rationale": "Card reports only 66 usable SFT examples, BF16 training on A6000, 129 MB safetensors but includes .bin pickle (do not fetch/deserialize); no independently verified repository licensing or NOX base compatibility."
+    },
+    {
+      "id": "OpenAssistant/oasst2",
+      "type": "dataset",
+      "source": "https://huggingface.co/datasets/OpenAssistant/oasst2/tree/main",
+      "declared_base": null,
+      "declared_license": "apache-2.0",
+      "observed_total_size_bytes": null,
+      "adapter_safetensors_size_bytes": null,
+      "observed_total_size_display": "348 MB total; 66.7 MB data subtree; data/train-00000-of-00001-88ba0162028a73fc.parquet 63.5 MB (rounded UI)",
+      "revision_sha40": null,
+      "artifact_sha256": null,
+      "roles": [
+        "ru_es_multiturn_dialogue"
+      ],
+      "verdict": "CANDIDATE_SUBSET_ONLY",
+      "rationale": "Card explicitly lists Russian/Spanish and message_tree_id; leakage-safe holdout must split by entire trees; inspect PII, toxicity, consent and licence for data derivatives."
+    },
+    {
+      "id": "open-thoughts/OpenThoughts3-1.2M",
+      "type": "dataset",
+      "source": "https://huggingface.co/datasets/open-thoughts/OpenThoughts3-1.2M/tree/main/data",
+      "declared_base": null,
+      "declared_license": "apache-2.0",
+      "observed_total_size_bytes": null,
+      "adapter_safetensors_size_bytes": null,
+      "observed_total_size_display": "28.2 GB data directory; individual parquet shards approximately 286 MB, reported UI; do NOT download entire corpus onto 16.1 GB last-reported free SSD",
+      "revision_sha40": null,
+      "artifact_sha256": null,
+      "roles": [
+        "verified_math_code_reasoning_corpus"
+      ],
+      "verdict": "HOLD_BULK_DOWNLOAD",
+      "rationale": "Full source substantially larger than last-reported 16.1 GB free SSD; select small licensed subset offline or stream under measured disk/checkpoint budget."
+    },
+    {
+      "id": "google-research-datasets/go_emotions",
+      "type": "dataset",
+      "source": "https://huggingface.co/datasets/google-research-datasets/go_emotions/tree/main",
+      "declared_base": null,
+      "declared_license": "apache-2.0",
+      "observed_total_size_bytes": null,
+      "adapter_safetensors_size_bytes": null,
+      "observed_total_size_display": "28.3 MB repository total (rounded UI)",
+      "revision_sha40": null,
+      "artifact_sha256": null,
+      "roles": [
+        "auxiliary_english_emotion_labels"
+      ],
+      "verdict": "CANDIDATE_EVAL_ONLY",
+      "rationale": "Official dataset is English text classification, not Russian/Spanish empathetic dialogue, not ready NOX LoRA weights and never evidence of subjective consciousness."
+    }
+  ],
+  "production_merge_eligible_count": 0,
+  "next_one_action": "AUTO 1A: acquire read-only original OneHost current trainable HF base absolute lineage, SHA/revision/tokenizer, owned GPU/STOP and fresh SSD/restore telemetry using existing exact-HEAD V51; do not install/merge until proof",
+  "research_sources": [
+    "https://huggingface.co/rk500/Born-9B-Qwen3.5-9B-Preview",
+    "https://huggingface.co/6cf/qwen35-9b-deepseek-v4-pro-agent-lora/tree/main",
+    "https://huggingface.co/datasets/OpenAssistant/oasst2/tree/main",
+    "https://huggingface.co/datasets/open-thoughts/OpenThoughts3-1.2M/tree/main/data",
+    "https://huggingface.co/datasets/google-research-datasets/go_emotions/tree/main",
+    "https://huggingface.co/Qwen/Qwen3.5-9B/blob/main/config.json"
+  ]
+}

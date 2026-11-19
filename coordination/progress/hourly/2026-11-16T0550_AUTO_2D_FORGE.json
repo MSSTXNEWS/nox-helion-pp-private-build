@@ -1,0 +1,52 @@
+{
+  "schema": "NOX_AUTO_2D_FIVE_TASK_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2D",
+  "lane": "2/3",
+  "at_msk": "2026-11-16 05:50 Europe/Moscow",
+  "accepted_head": "35463e7fc8a32e9634d54e763fd9147ff5fe8684",
+  "source_sha_after": "COMMIT_CONTAINING_THIS_RECEIPT",
+  "error_id": "NOX-P1-2D-V100-ADAPTER-RECIPE-BF16-RAM-AND-LINEAGE-20261116",
+  "source_changed_paths": [
+    "nox_runpod/teacher_mesh/adapter_recipe.py",
+    "coordination/hybrid_20261115/test_2D_adapter_recipe.py",
+    ".github/workflows/nox-hybrid-2d-source-acceptance.yml",
+    "coordination/hybrid_20261115/2D.md",
+    "coordination/progress/hourly/2026-11-16T0550_AUTO_2D_FORGE.json"
+  ],
+  "tasks": [
+    {
+      "task": 1,
+      "status": "HOLD",
+      "cause": "35B historical only; current OneHost train_error and GPU1 post-stage state not independently read back"
+    },
+    {
+      "task": 2,
+      "status": "SOURCE_GUARD_IMPROVED_NATIVE_HOLD",
+      "cause": "exact HF base adapter optimizer lineage/resource fit not owner-authenticated"
+    },
+    {
+      "task": 3,
+      "status": "SOURCE_PATCHED_NATIVE_HOLD",
+      "cause": "existing FORGE adapter recipe bounded streaming SHA/FP16/immutable lineage and explicit rsLoRA mode; no new trainer"
+    },
+    {
+      "task": 4,
+      "status": "HOLD",
+      "cause": "no authenticated fenced native GPU1 writer + full offsite restore + resource admission"
+    },
+    {
+      "task": 5,
+      "status": "HOLD",
+      "cause": "no native tensor SHA/offsite restore/independent holdout receipt"
+    }
+  ],
+  "source_test": "PENDING_EXACT_SHA_OFFLINE_CI",
+  "native_verified": false,
+  "native_optimizer_steps_verified": null,
+  "live_model_changed": false,
+  "deleted": [],
+  "freed_bytes_verified": 0,
+  "next_lane": "AUTO_1A",
+  "next_one_action": "Owner-authenticated read-only post-failed-stage OneHost GPU0/chat/S03+GPU1 PID/STOP/lease/reservation, exact HF/tensor/tokenizer SHA and verified independent S03+optimizer restore."
+}

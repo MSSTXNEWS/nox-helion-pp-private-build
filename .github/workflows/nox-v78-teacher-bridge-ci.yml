@@ -1,0 +1,29 @@
+name: NOX V78 internet teacher safe source checks
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v78/**'
+      - '.github/workflows/nox-v78-teacher-bridge-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax and isolated tests — no external model or network
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v78/internet_teacher_bridge.py
+          python -m unittest discover -s nox_runpod/teacher_mesh/v78/tests -p 'test_*.py' -v
+      - name: No production activation claim
+        run: |
+          echo 'SOURCE_ONLY=true'
+          echo 'MODEL_DOWNLOADED=false'
+          echo 'LIVE_ONEHOST_BOUND=false'
+          echo 'FULL_WEIGHT_DISTILLATION_VERIFIED=false'

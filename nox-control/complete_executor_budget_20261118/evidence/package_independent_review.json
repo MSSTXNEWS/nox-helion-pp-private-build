@@ -1,0 +1,20 @@
+{
+  "schema": "NOX_BUDGET_PACKAGE_INDEPENDENT_REVIEW_V1",
+  "entry_sha256": "ba9360876576484087a423b7844760e0a2c3af6c5c9ee8222778bfaabd37576d",
+  "frozen_template_ast_matches": true,
+  "four_assets_exact_manifest_matches": {
+    "scripts/owner_autonomy_pool.py": "d5fb476f53e64d2014f27465c7bd64192158b5bcdd79a72ff7c962d853602339",
+    "scripts/owner_subagent_dispatcher.py": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+    "scripts/owner_project_native.py": "2c83ec53f7ee7c2d76bc1fac21c80adf76c58f83c5a219ba0294f9b3f713d707",
+    "scripts/owner_subagent_instruction_truth.py": "294473d35d4870f50467d843c551c9b9fd7c4644e4b615e92403dc916ed109e4"
+  },
+  "proposed_config_sha256": "26fb86f00dd35cb2b711d275926a4aafb19eb8c22813b12e82df8dcce8a5c8b1",
+  "operator_changes": [
+    "FILES",
+    "SCOPED_REPAIR_BUNDLES",
+    "SCOPED_REPAIR_EXTRA_PATHS"
+  ],
+  "auth_ssh_hostpin_cleanup_functions_unchanged": true,
+  "native_mutations": 0,
+  "blocking_findings": []
+}

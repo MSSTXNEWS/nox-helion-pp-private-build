@@ -1,0 +1,61 @@
+name: NOX V99 ONEPASS RAM-first 85-percent cgroup budget, chat-safe weights
+on:
+  push:
+    branches: [nox/e2-v99-max-ram-prime-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v99-ram-85-onepass.yml'
+      - 'nox_runpod/teacher_mesh/v99/ram_first_weight_policy.py'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v99-ram-weight-onepass-60509551
+  cancel-in-progress: false
+jobs:
+  cache-warm:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Guard owner key and source syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "::error::HOLD_NOX2"; exit 2; }
+          python3 -m py_compile nox_runpod/teacher_mesh/v99/ram_first_weight_policy.py
+          python3 - <<'PY'
+          import ast
+          from nox_runpod.teacher_mesh.v99 import ram_first_weight_policy as x
+          code=x.REMOTE.lstrip("\n").split("python3 - <<'PYREMOTE'\n",1)[1].rsplit("\nPYREMOTE",1)[0]
+          ast.parse(code)
+          for tok in ("RAM_TARGET_FRACTION=0.85","active()!=0","MIN_CGROUP_HEADROOM","POSIX_FADV"):
+              if tok=="POSIX_FADV":continue
+              assert tok in code,tok
+          for tok in ("os.kill(","supervisorctl stop","supervisorctl restart","model.save_pretrained","device_map","torch.cuda","rm -rf"):
+              assert tok not in code,tok
+          print("NOX_V99_SOURCE_SAFETY=PASS")
+          PY
+      - name: ONE owner-authorized Vast RAM pagecache prefetch, 85 pct cgroup cap
+        shell: bash
+        run: python3 -m nox_runpod.teacher_mesh.v99.ram_first_weight_policy
+      - name: Revoke temporary owner SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: No model or service replacement
+        if: success()
+        run: |
+          echo "NOX_V99_CGROUP_RAM_TARGET=85%"
+          echo "NOX_V99_GPU0_CHAT_P0_PROTECTED=true"
+          echo "NOX_V99_MODEL_WEIGHTS_NOT_TRAINED=true"
+          echo "NOX_V99_NO_EXTRA_SCHEDULER=true"

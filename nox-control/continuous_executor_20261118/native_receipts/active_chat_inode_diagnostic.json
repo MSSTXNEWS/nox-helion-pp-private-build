@@ -1,0 +1,134 @@
+{
+  "result": {
+    "elapsed_seconds": 0.059,
+    "environ_read": false,
+    "files_written": 0,
+    "keeper_command": {
+      "approved_script_arguments": [],
+      "argv_count": 3,
+      "cmdline_bytes": 43,
+      "cmdline_sha256": "35f379354687daac56932bc6cd415f5c83321db4b50b3ccb4766b035cf0e45d2",
+      "identity": {
+        "pid": 498569,
+        "ppid": 498567,
+        "start_ticks": 168416044
+      },
+      "inline_command_argument_present": false,
+      "invocation_class": "PYTHON_NAME_ONLY",
+      "raw_command_exported": false,
+      "role_established": false
+    },
+    "mappings": {
+      "census_complete": true,
+      "known_processes": {
+        "chat": {
+          "identity": {
+            "pid": 3266857,
+            "ppid": 114,
+            "start_ticks": 172046662
+          },
+          "malformed_lines": 0,
+          "mapped_virtual_bytes": 75266240512,
+          "mapping_count": 1,
+          "unique_file_bytes_mapped": 75266239716
+        },
+        "keeper": {
+          "identity": {
+            "pid": 498569,
+            "ppid": 498567,
+            "start_ticks": 168416044
+          },
+          "malformed_lines": 0,
+          "mapped_virtual_bytes": 0,
+          "mapping_count": 0,
+          "unique_file_bytes_mapped": 0
+        },
+        "keeper_parent": {
+          "identity": {
+            "pid": 498567,
+            "ppid": 1,
+            "start_ticks": 168416044
+          },
+          "malformed_lines": 0,
+          "mapped_virtual_bytes": 0,
+          "mapping_count": 0,
+          "unique_file_bytes_mapped": 0
+        }
+      },
+      "map_paths_and_addresses_exported": false,
+      "map_read_bytes_upper_bound": 776507,
+      "mapped_bytes_are_resident_memory": false,
+      "mapped_virtual_bytes_sum": 75266240512,
+      "mapper_count": 1,
+      "pids_examined": 60,
+      "sample_is_atomic": false,
+      "target_mappers": [
+        {
+          "identity": {
+            "pid": 3266857,
+            "ppid": 114,
+            "start_ticks": 172046662
+          },
+          "malformed_lines": 0,
+          "mapped_virtual_bytes": 75266240512,
+          "mapping_count": 1,
+          "unique_file_bytes_mapped": 75266239716
+        }
+      ],
+      "unavailable_processes": 0,
+      "unique_file_bytes_mapped_all_processes": 75266239716,
+      "unstable_processes": 0
+    },
+    "memory_released": false,
+    "parent_command": {
+      "approved_script_arguments": [],
+      "argv_count": 2,
+      "cmdline_bytes": 8,
+      "cmdline_sha256": "88bd0fbfc483e7a67a7459ed0230d33457c308a1efd64ae2e45f6dfc0d8199ee",
+      "identity": {
+        "pid": 498567,
+        "ppid": 1,
+        "start_ticks": 168416044
+      },
+      "inline_command_argument_present": false,
+      "invocation_class": "SHELL_NAME_ONLY",
+      "raw_command_exported": false,
+      "role_established": false
+    },
+    "raw_cmdline_exported": false,
+    "release_authorized": false,
+    "schema": "NOX_TRAINING_INODE_DIAGNOSTIC_V1",
+    "service_mutations": 0,
+    "state": "READ_ONLY_INODE_DIAGNOSIS_COMPLETE",
+    "target": {
+      "device": 1,
+      "inode": 131095,
+      "logical_bytes": 75266239716
+    },
+    "target_after": {
+      "fd_payload_read": false,
+      "identity": {
+        "pid": 498569,
+        "ppid": 498567,
+        "start_ticks": 168416044
+      },
+      "scan_complete": true,
+      "target_fd_count": 1,
+      "target_identity_observed": true
+    },
+    "target_before": {
+      "fd_payload_read": false,
+      "identity": {
+        "pid": 498569,
+        "ppid": 498567,
+        "start_ticks": 168416044
+      },
+      "scan_complete": true,
+      "target_fd_count": 1,
+      "target_identity_observed": true
+    },
+    "target_stable": true,
+    "weight_payloads_read": false
+  },
+  "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44338410353"
+}

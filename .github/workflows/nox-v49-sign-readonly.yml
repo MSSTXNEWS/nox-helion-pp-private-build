@@ -1,0 +1,60 @@
+name: NOX V49 sign read-only OneHost bridge request
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "OneHost READ action only; never executes shell or training"
+        required: true
+        type: choice
+        default: server.status
+        options:
+          - server.status
+          - server.gpus
+          - server.disk
+          - nox.queue.status
+          - nox.s03.status
+          - nox.training.status
+          - nox.model.status
+          - nox.audit.status
+permissions:
+  contents: write
+concurrency:
+  group: nox-v49-bridge-owner-signing
+  cancel-in-progress: false
+jobs:
+  sign:
+    if: ${{ github.actor == 'MSSTXNEWS' && github.ref == 'refs/heads/feature/nox-v38-synaptic-brain-20261114' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      NOX_BRIDGE_HMAC_KEY: ${{ secrets.NOX_BRIDGE_HMAC_KEY }}
+      NOX_BRIDGE_ACTION: ${{ inputs.action }}
+    steps:
+      - name: Checkout approved NOX branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Stage ONE owner-signed request, but no remote execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m nox_runpod.teacher_mesh.v49.sign_readonly
+          git diff --exit-code --quiet -- coordination/bridge/NOX_BRIDGE_RECEIPTS.json
+          git add -- coordination/bridge/NOX_BRIDGE_INBOX.json
+          if git diff --cached --quiet; then
+            echo "::error::No signed request staged."
+            exit 2
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "NOX V49: one owner-signed read-only OneHost request"
+          git push origin HEAD:feature/nox-v38-synaptic-brain-20261114
+      - name: Explicit native HOLD until OneHost receipt
+        run: |
+          echo "BRIDGE_INBOX_REQUEST_COMMITTED=true"
+          echo "VAST_NATIVE_EXECUTION_NOT_IMPLIED=true"
+          echo "REQUIRES_ONEHOST_NATIVE_S03_RECEIPT=true"
