@@ -182,6 +182,9 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
            for row, role in zip(expected_messages,
                                 ('user', 'assistant', 'user', 'assistant'))):
         return False
+    transcript_sha = multiturn_transcript_sha256(expected_messages)
+    if transcript_sha is None:
+        return False
     if (not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict)
             or writer_receipt is independent_readback):
         return False
@@ -194,7 +197,8 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
             or not isinstance(event_id, str) or not event_id.strip()
             or not isinstance(turn_id, str) or not turn_id.strip()
             or type(sequence) is not int or sequence != 2
-            or writer_receipt.get('dialog_id') != dialog_id):
+            or writer_receipt.get('dialog_id') != dialog_id
+            or writer_receipt.get('full_transcript_sha256') != transcript_sha):
         return False
     if (independent_readback.get('source') != 'canonical_s03'
             or independent_readback.get('independent') is not True
@@ -202,6 +206,7 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
             or independent_readback.get('turn_id') != turn_id
             or independent_readback.get('sequence') != sequence
             or independent_readback.get('dialog_id') != dialog_id
+            or independent_readback.get('full_transcript_sha256') != transcript_sha
             or independent_readback.get('messages') != expected_messages):
         return False
     answer = expected_messages[-1].get('content') if expected_messages else None
