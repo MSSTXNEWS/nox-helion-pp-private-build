@@ -132,6 +132,15 @@ class OperatorSecretEnvironmentTests(unittest.TestCase):
                             stderr="")
                     return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
 
+                def fake_cleanup_with_receipt():
+                    self.assertTrue(key.exists())
+                    self.assertTrue(key.with_suffix(".pub").exists())
+                    key.unlink()
+                    key.with_suffix(".pub").unlink()
+                    if track.exists():
+                        track.unlink()
+                    return True, "DETACHED_AND_VERIFIED", "REMOVED_AND_VERIFIED"
+
                 with mock.patch.dict(os.environ, {
                         "NOX2": "owner-api-secret-sentinel",
                         "NOX_PINNED_SOURCE_SHA": "a" * 40,
@@ -141,7 +150,7 @@ class OperatorSecretEnvironmentTests(unittest.TestCase):
                      mock.patch.object(OP.socket, "create_connection", return_value=FakeSocket()), \
                      mock.patch.object(provider, "api", side_effect=fake_api), \
                      mock.patch.object(provider, "match", side_effect=fake_match), \
-                     mock.patch.object(provider, "cleanup", return_value=True), \
+                     mock.patch.object(provider, "cleanup_with_receipt", side_effect=fake_cleanup_with_receipt), \
                      mock.patch.object(OP.subprocess, "run", side_effect=fake_run), \
                      mock.patch.object(sys, "argv", [str(SOURCE), "emergency_stop_preflight"]):
                     self.assertEqual(OP.main(), 0)
@@ -149,7 +158,8 @@ class OperatorSecretEnvironmentTests(unittest.TestCase):
                 self.assertGreaterEqual(len(seen_envs), 6)
                 self.assertTrue(all(isinstance(env, dict) and "NOX2" not in env
                                     for env in seen_envs))
-                self.assertTrue(key.with_suffix(".pub").exists())
+                self.assertFalse(key.exists())
+                self.assertFalse(key.with_suffix(".pub").exists())
             finally:
                 provider.RUNNER, provider.KEY, provider.TRACK = original
 
