@@ -101,10 +101,17 @@ class ZipFastFallbackTests(TestCase):
         return helper,bundle
 
     def invoke(self,helper,bundle):
+        # A synthetic config cannot reproduce a private live SHA; simulate only
+        # the verified owner config pin while retaining real asset/diff hashes.
+        actual_sha=m.sha
+        fake_config=m.encoded(helper.config)
+        def pinned_sha(raw):
+            return m.CONFIG_SHA if raw == fake_config else actual_sha(raw)
         with patch.dict(m.os.environ,{'NOX_OWNER_REQUEST_ID':'123456',
                                       'NOX_OWNER_SOURCE_SHA':'e'*40}), \
              patch.object(m,'BUNDLE',bundle), \
-             patch.object(m,'module',return_value=helper):
+             patch.object(m,'module',return_value=helper), \
+             patch.object(m,'sha',side_effect=pinned_sha):
             return m.prepare()
 
     def test_exact_asset_and_owner_schema(self):
