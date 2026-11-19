@@ -15,7 +15,7 @@ PAGE_CACHE_RECLAIM_HELPER_BLOB_SHA='08ada5def3e96761498a3840445459ee3d672742'
 PAGE_CACHE_RECLAIM_MARKER='NOX_MAINT_PAGE_CACHE_RECLAIM='
 PAGE_CACHE_RECLAIM_COMPLETE='NOX_MAINT_PAGE_CACHE_RECLAIM_COMPLETE=true'
 PAGE_CACHE_RECLAIM_SCHEMA='NOX_OWNER_PAGE_CACHE_RECLAIM_GUARD_V1'
-FILES={'drive_probe': 'nox-control/owner_native_drive_probe.py', 'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_chat_policy_live_smoke_entry.py', 'browser_qa': 'nox-control/owner_browser_stream_only_entry.py', 'page_cache_reclaim': 'nox-control/owner_page_cache_reclaim_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py', 'emergency_stop_preflight': 'nox-control/owner_native_emergency_stop_preflight.py'}
+FILES={'drive_probe': 'nox-control/owner_native_drive_probe.py', 'drive_reconnect_install': 'nox-control/owner_native_drive_reconnect_install.py', 'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_chat_policy_live_smoke_entry.py', 'browser_qa': 'nox-control/owner_browser_stream_only_entry.py', 'page_cache_reclaim': 'nox-control/owner_page_cache_reclaim_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py', 'emergency_stop_preflight': 'nox-control/owner_native_emergency_stop_preflight.py'}
 MASTER=None
 
 
@@ -278,6 +278,26 @@ def run_native(action,request_id):
             assets[source.name]={'content':base64.b64encode(raw).decode('ascii'),
                                  'sha256':__import__('hashlib').sha256(raw).hexdigest()}
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
+    elif action == 'drive_reconnect_install':
+        assets={}
+        bundle_paths=(
+            'nox-control/nox_drive_reconnect.py',
+            'nox-control/nox_drive_reconnect_loop.sh',
+            'nox-control/supervisor/nox-drive-reconnect.conf',
+        )
+        for path in bundle_paths:
+            target=Path(path)
+            if not target.is_file() or target.stat().st_size > 65536:
+                raise RuntimeError('HOLD_DRIVE_RECONNECT_INSTALL_ASSET')
+            raw=target.read_bytes()
+            assets[target.name]={
+                'content':base64.b64encode(raw).decode('ascii'),
+                'sha256':hashlib.sha256(raw).hexdigest(),
+            }
+        token='__NOX_BUNDLE_JSON__'
+        if payload.count(token)!=1 or len(assets)!=3:
+            raise RuntimeError('HOLD_DRIVE_RECONNECT_INSTALL_BUNDLE')
+        payload=payload.replace(token,json.dumps(assets))
     elif action in ('stage','repair','browser_qa'):
         assets={}
         for path in repair_bundle_paths(action,FILES[action],('nox-control/nox_cold_drive.py','nox-control/owner_native_audit.py',
