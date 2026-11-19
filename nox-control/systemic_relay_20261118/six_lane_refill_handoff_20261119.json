@@ -33,11 +33,13 @@
       "area": "cognition_chat",
       "parent_task_id": "1A01",
       "queue_id": "Q1_RUNTIME_CHAT",
-      "parent_spec_sha256": "source_registry_required",
+      "parent_spec_sha256": "e0bc3244e0a176baa7fc02827c364d15b37bd56cdd93223f6d3d869264377b3e",
       "repo_file": "nox-control/owner_chat_stream.py",
       "source_blob_sha": "febc13ba810ec3d4f28c23fe0bb0247690e5b579",
       "task": "Сверить реальный SSE/token stream + полную историю в существующем Resonance, устранить одну подтвержденную потерю или усечение с exact SHA и текущим контрактом; не вводить prompt[:N] и silently trimmed excerpts.",
-      "acceptance": "Тест истинного полного входа/Unicode/STOP, серверный однократный stream→финальная квитанция без усечения, S03 обмен подтвержден."
+      "acceptance": "Тест истинного полного входа/Unicode/STOP, серверный однократный stream→финальная квитанция без усечения, S03 обмен подтвержден.",
+      "required_evidence": "native",
+      "parent_title": "Оставить один поток реальных токенов в исходном «Резонансе». Показывать отдельно принятый ввод, ожидание, ответы и подтверждённое завершение."
     },
     {
       "slot": 2,
@@ -46,11 +48,13 @@
       "area": "memory_s03_persona",
       "parent_task_id": "3A02",
       "queue_id": "Q2_MEMORY_KNOWLEDGE",
-      "parent_spec_sha256": "source_registry_required",
+      "parent_spec_sha256": "69304203abfe875fca340cb8ae1d2d342efc4b15274fc9432b4aadc9e90b64cc",
       "repo_file": "nox-control/owner_memory_chat_acceptance.py",
       "source_blob_sha": "97690d9796d5ac66a1ee906cff31d91b811ff5df",
       "task": "Проверить реальный S03 M0–M7: извлечение незакрепленного 11-го факта после restart и PersonaID границы, исправить один точный источник потери без переписывания базы.",
-      "acceptance": "Точные provenance+PersonaID+readback до и после restart, revoke/forget тест, единый S03 без потери истории."
+      "acceptance": "Точные provenance+PersonaID+readback до и после restart, revoke/forget тест, единый S03 без потери истории.",
+      "required_evidence": "native",
+      "parent_title": "Подключить существующую S03 и сегменты M0–M7: контекст, эпизоды, знания, хронология, навыки, PersonaID, эмоциональная значимость, биография."
     },
     {
       "slot": 3,
@@ -59,11 +63,13 @@
       "area": "tools_forge_pc",
       "parent_task_id": "4V14-07",
       "queue_id": "Q4_INTEGRATION_ACCEPTANCE",
-      "parent_spec_sha256": "source_registry_required",
+      "parent_spec_sha256": "5306c9469f04c3a8f4fa03636a99ac87d390f8874cb2982064d745bd1d2e391a",
       "repo_file": "nox-control/systemic_relay_20261118/runtime/owner_project_native.py",
       "source_blob_sha": "731b9fc3571ca9b9ba4233a018aba7bbf890c694",
       "task": "Устранить один реально наблюдаемый дефект owner_project/Forge исполнения: безопасная правка существующего файла только через pinned plan/CAS, без arbitrary shell, без изменения чужого claim.",
-      "acceptance": "Проверен ровно один TaskID: immutable verifier, source CAS, integration receipt, S03, STOP и откат."
+      "acceptance": "Проверен ровно один TaskID: immutable verifier, source CAS, integration receipt, S03, STOP и откат.",
+      "required_evidence": "native",
+      "parent_title": "Реализовать изменение существующего кода без потери функций."
     },
     {
       "slot": 4,
@@ -72,11 +78,13 @@
       "area": "training_checkpoints",
       "parent_task_id": "4A02",
       "queue_id": "Q3_TRAINING_WEIGHTS",
-      "parent_spec_sha256": "source_registry_required",
+      "parent_spec_sha256": "dcec8628dab49be9b85c52864df224f5a012fd6fda82b4ade0822ba2a525d463",
       "repo_file": "nox-control/owner_training_resume.py",
       "source_blob_sha": "b93b9426b41d11f2e61fba72150d059457737bda",
       "task": "Проверить действительный optimizer/checkpoint/holdout admission, устранять только документированный дефект. Не объявлять обучение без измеренного шага и full-chain restore.",
-      "acceptance": "Подтвержденные шаги optimizer, tensor SHA before/after, loss+holdout, сохранение и загрузка checkpoint, RAM/VRAM/STOP защита. При недопуске — source-only."
+      "acceptance": "Подтвержденные шаги optimizer, tensor SHA before/after, loss+holdout, сохранение и загрузка checkpoint, RAM/VRAM/STOP защита. При недопуске — source-only.",
+      "required_evidence": "native",
+      "parent_title": "Подготовить независимые train/dev/holdout по RU/ES, памяти, речи, планированию, инструментам, коду и поведению. Убрать дубли по цели и происхождению."
     },
     {
       "slot": 5,
@@ -85,11 +93,13 @@
       "area": "wow_web_cinema_voice",
       "parent_task_id": "5A05",
       "queue_id": "Q1_RUNTIME_CHAT",
-      "parent_spec_sha256": "source_registry_required",
+      "parent_spec_sha256": "f53056e626e1885f537f09dfbaba334499f3cf837d5776840ac140592b95512f",
       "repo_file": "coordination/onepass/nox-v135-resonance-owner-bridge.js",
       "source_blob_sha": "820c31034a1e46c31c89332acac46eb559487ba0",
       "task": "Сверить актуальный serving веб-код с V140-derived и D02, снизить один измеренный источник render/main-thread latency, сохранить Reduced Motion и все ассеты.",
-      "acceptance": "Визуальный screenshot 320/390/1440+ и замер frame time до/после; работоспособный streaming/STOP/voice маршруты без заглушек."
+      "acceptance": "Визуальный screenshot 320/390/1440+ и замер frame time до/после; работоспособный streaming/STOP/voice маршруты без заглушек.",
+      "required_evidence": "native",
+      "parent_title": "Освободить основной поток браузера: ленивые ассеты WebGL и медиа, Reduced Motion, простой фон без потери функций. D02 вычисляет анимацию из фактического этапа, один оригинальный набор эффектов."
     },
     {
       "slot": 6,
@@ -98,11 +108,20 @@
       "area": "gpu_ram_refill_recovery",
       "parent_task_id": "6B01",
       "queue_id": "Q1_RUNTIME_CHAT",
-      "parent_spec_sha256": "source_registry_required",
+      "parent_spec_sha256": "2c3e7a20c9b2c94d10477283f44725258cdfaf872e5e1386c847387d974ead79",
       "repo_file": "nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py",
       "source_blob_sha": "95d26706fbfeec853867b2b5c2898830871c80b6",
       "task": "P0: устранить REFILL_REQUIRED через 1–3 новых действительно OWNER_REVIEWED taskpack с текущими source/test SHA; в параллель проверить governor, не трогая горячую модель и 75GB memfd.",
-      "acceptance": "Свежая CAS публикация manifest, native READY→RUNNING→DONE с точной S03 квитанцией, без replay старых blocked/done tasks; 3/3 workers и serving сохранены."
+      "acceptance": "Свежая CAS публикация manifest, native READY→RUNNING→DONE с точной S03 квитанцией, без replay старых blocked/done tasks; 3/3 workers и serving сохранены.",
+      "required_evidence": "native",
+      "parent_title": "Ввести справедливость очереди и гистерезис hot/cold режима. Короткие знания, сбор данных и обслуживание получают CPU/I/O, пока чат временно забрал GPU."
     }
-  ]
+  ],
+  "registry_total_original_ids": 295,
+  "registry_source_pins": {
+    "tasks": "5347258ca08500d61173d9b36f69cc0632eff36d3ea1e10fcbbc420de69be000",
+    "ideas": "e1c84397506c6e46fdc3ce71b63cc5eba2f5cc0cd290f8d1e32d4840e25972ae",
+    "receipts": "b40c012a7280889722f446083c4cbe878db15fd6da34ac19855a99a0a099af71",
+    "routing": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671"
+  }
 }
