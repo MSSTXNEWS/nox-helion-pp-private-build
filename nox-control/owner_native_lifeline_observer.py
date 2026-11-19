@@ -97,6 +97,14 @@ SUPERVISOR_BUNDLE_SHA256 = {
 }
 SOURCE_SHA = re.compile(r"^[0-9a-f]{40}$")
 OWNER_LOCK_FD = None
+OWNER_LOCK_PARENT_FD = None
+OWNER_LOCK_IDENTITY = None
+OWNER_FENCE_DIR_FDS = []
+OWNER_FENCES_CREATED = []
+OWNER_FENCES_PREEXISTING = []
+OWNER_FENCE_STATUS = {"state": "NOT_ACQUIRED", "cleanup": "NOT_ATTEMPTED",
+                      "retained": False}
+NATIVE_MUTATION_ATTEMPTED = False
 SYSTEMCTL_PIN = None
 PREIMAGES = {}
 INSTALLED = {}
@@ -153,6 +161,11 @@ class Hold(RuntimeError):
 
 def fail(code: str) -> None:
     raise Hold("HOLD_LIFELINE_OBSERVER_" + code)
+
+
+def mark_native_mutation_attempted():
+    global NATIVE_MUTATION_ATTEMPTED
+    NATIVE_MUTATION_ATTEMPTED = True
 
 
 def _supervisorctl_snapshot(path: Path, max_size=1_048_576):
@@ -720,6 +733,10 @@ def supervisor_rpc(method, *args):
                                       allow_none=False, use_builtin_types=True)
     try:
         namespace, name = method.split(".", 1)
+        if method in {"supervisor.reloadConfig", "supervisor.addProcessGroup",
+                      "supervisor.startProcess", "supervisor.stopProcess",
+                      "supervisor.removeProcessGroup"}:
+            mark_native_mutation_attempted()
         result = getattr(getattr(proxy, namespace), name)(*args)
         peer = transport.peer_identity()
     except (xmlrpc.client.Error, OSError, ValueError, KeyError, TypeError):
@@ -995,6 +1012,7 @@ def run_supervisor_group_activation(inventory_fn, rpc_fn, baseline, pre_start_fn
 
 
 def run(args, timeout=20):
+    global NATIVE_MUTATION_ATTEMPTED
     argv = list(args)
     if argv and argv[0] == "supervisorctl":
         verify_supervisorctl_pin()
@@ -1028,6 +1046,9 @@ def run(args, timeout=20):
         }
         if tuple(argv[1:]) not in allowed:
             fail("SYSTEMCTL_OPERATION_NOT_ALLOWLISTED")
+        if tuple(argv[1:]) in {("daemon-reload",), ("enable", "--now", SERVICE),
+                               ("stop", SERVICE), ("disable", SERVICE)}:
+            mark_native_mutation_attempted()
         return _systemctl_run(argv[1:], timeout)
     try:
         return subprocess.run(argv, capture_output=True, text=True, shell=False,
@@ -1730,6 +1751,7 @@ def atomic_write(path: Path, raw: bytes, mode: int, owner=(0, 0)):
                                          allow_absent=True)
         if current != expected[0] or identity != expected[1]:
             fail("TARGET_CAS_RACE")
+        mark_native_mutation_attempted()
         os.replace(temp, path)
         INSTALLED[str(path)] = raw
         dirfd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
@@ -1870,34 +1892,322 @@ def fresh_receipt(started_at, *, require_supervisor_limits=False):
     fail("FRESH_OBSERVER_RECEIPT_TIMEOUT")
 
 
-def acquire_owner_lock():
-    global OWNER_LOCK_FD
-    for flag in (OWNER_STOP, OWNER_MAINTENANCE):
-        try:
-            meta = flag.lstat()
-        except OSError:
-            fail("OWNER_FENCE_MISSING")
-        if (not stat.S_ISREG(meta.st_mode) or meta.st_uid != 0 or
-                meta.st_mode & 0o022):
-            fail("OWNER_FENCE_UNSAFE")
+def _open_owner_directory(path: Path, owner_uid=0):
+    path = Path(path)
+    if not path.is_absolute() or ".." in path.parts:
+        fail("OWNER_FENCE_PARENT_UNSAFE")
+    flags = (os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) |
+             getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0))
     try:
-        fd = os.open(OWNER_LOCK, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
-                     getattr(os, "O_CLOEXEC", 0))
+        fd = os.open("/", flags)
     except OSError:
-        fail("OWNER_LOCK_UNAVAILABLE")
+        fail("OWNER_FENCE_PARENT_UNAVAILABLE")
     try:
-        meta = os.fstat(fd)
-        if (not stat.S_ISREG(meta.st_mode) or meta.st_nlink != 1 or
-                meta.st_uid != 0 or meta.st_mode & 0o022):
-            fail("OWNER_LOCK_UNSAFE")
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        OWNER_LOCK_FD = fd
-    except BlockingIOError:
-        os.close(fd)
-        fail("OWNER_LOCK_BUSY")
+        info = os.fstat(fd)
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid not in (0, owner_uid) or
+                info.st_mode & 0o022):
+            fail("OWNER_FENCE_PARENT_UNSAFE")
+        for component in path.parts[1:]:
+            if component in ("", ".", ".."):
+                fail("OWNER_FENCE_PARENT_UNSAFE")
+            try:
+                child = os.open(component, flags, dir_fd=fd)
+            except OSError:
+                fail("OWNER_FENCE_PARENT_UNAVAILABLE")
+            child_info = os.fstat(child)
+            if (not stat.S_ISDIR(child_info.st_mode) or
+                    child_info.st_uid not in (0, owner_uid) or
+                    child_info.st_mode & 0o022):
+                os.close(child)
+                fail("OWNER_FENCE_PARENT_UNSAFE")
+            os.close(fd)
+            fd = child
+        return fd
     except BaseException:
         os.close(fd)
         raise
+
+
+def _owner_fence_note(request, source_sha):
+    if (not isinstance(request, str) or not re.fullmatch(r"[0-9]{1,24}", request) or
+            not isinstance(source_sha, str) or not SOURCE_SHA.fullmatch(source_sha)):
+        fail("OWNER_FENCE_CONTEXT")
+    # Keep the marker wire format identical to the emergency-stop owner
+    # helper, which validates exact request binding before accepting markers.
+    return (f"NOX_OWNER_EMERGENCY_STOP_V1\nrequest_id={request}\n"
+            f"source_sha={source_sha}\n"
+            ).encode("ascii")
+
+
+def _owner_fence_marker_matches(record):
+    name, parent_fd = record["path"].name, record["parent_fd"]
+    try:
+        entry = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+    except OSError:
+        return False
+    if (not stat.S_ISREG(entry.st_mode) or entry.st_uid != record["owner_uid"] or
+            stat.S_IMODE(entry.st_mode) != 0o600 or entry.st_nlink != 1 or
+            (entry.st_dev, entry.st_ino) != (record["dev"], record["ino"])):
+        return False
+    flags = (os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
+             getattr(os, "O_CLOEXEC", 0))
+    try:
+        fd = os.open(name, flags, dir_fd=parent_fd)
+    except OSError:
+        return False
+    try:
+        current = os.fstat(fd)
+        if ((current.st_dev, current.st_ino) != (record["dev"], record["ino"]) or
+                not stat.S_ISREG(current.st_mode) or current.st_uid != record["owner_uid"] or
+                stat.S_IMODE(current.st_mode) != 0o600 or current.st_nlink != 1):
+            return False
+        raw = os.read(fd, len(record["content_written"]) + 1)
+        return raw == record["content_written"]
+    except OSError:
+        return False
+    finally:
+        os.close(fd)
+
+
+def _create_owner_fence_marker(path, role, parent_fd, note, owner_uid=0, *, track=True):
+    flags = (os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW |
+             getattr(os, "O_CLOEXEC", 0))
+    try:
+        fd = os.open(path.name, flags, 0o600, dir_fd=parent_fd)
+    except OSError:
+        OWNER_FENCE_STATUS.update({"state": "CREATE_CONFLICT", "retained": True,
+                                   "untracked_role": role})
+        fail("OWNER_FENCE_CREATE")
+    try:
+        meta = os.fstat(fd)
+        parent = os.fstat(parent_fd)
+    except OSError:
+        os.close(fd)
+        OWNER_FENCE_STATUS.update({"state": "CREATE_IDENTITY_UNVERIFIED",
+                                   "retained": True, "untracked_role": role})
+        fail("OWNER_FENCE_CREATE_IDENTITY_UNVERIFIED")
+    record = {"role": role, "path": Path(path), "parent_fd": parent_fd,
+              "parent_dev": parent.st_dev, "parent_ino": parent.st_ino,
+              "dev": meta.st_dev, "ino": meta.st_ino, "owner_uid": owner_uid,
+              "note": note, "content_written": b""}
+    if track:
+        OWNER_FENCES_CREATED.append(record)
+    try:
+        if (not stat.S_ISREG(meta.st_mode) or meta.st_uid != owner_uid or
+                meta.st_nlink != 1):
+            fail("OWNER_FENCE_CREATE_UNSAFE")
+        os.fchmod(fd, 0o600)
+        if stat.S_IMODE(os.fstat(fd).st_mode) != 0o600:
+            fail("OWNER_FENCE_CREATE_MODE")
+        offset = 0
+        while offset < len(note):
+            written = os.write(fd, note[offset:])
+            if type(written) is not int or written <= 0:
+                fail("OWNER_FENCE_CREATE_WRITE")
+            record["content_written"] += note[offset:offset + written]
+            offset += written
+        os.fsync(fd)
+        os.fsync(parent_fd)
+        if not _owner_fence_marker_matches(record):
+            fail("OWNER_FENCE_CREATE_READBACK")
+        return record
+    except OSError:
+        fail("OWNER_FENCE_CREATE_WRITE")
+    finally:
+        os.close(fd)
+
+
+def _owner_fence_receipt():
+    return {"state": OWNER_FENCE_STATUS.get("state"),
+            "created_roles": sorted({row["role"] for row in OWNER_FENCES_CREATED}),
+            "preexisting_roles": sorted(set(OWNER_FENCES_PREEXISTING)),
+            "untracked_role": OWNER_FENCE_STATUS.get("untracked_role"),
+            "cleanup": OWNER_FENCE_STATUS.get("cleanup"),
+            "retained": bool(OWNER_FENCES_CREATED or OWNER_FENCE_STATUS.get("retained") or
+                             OWNER_FENCE_STATUS.get("untracked_role")),
+            "note_sha256": OWNER_FENCE_STATUS.get("note_sha256")}
+
+
+def _verify_owner_fence_parent(record):
+    current_fd = _open_owner_directory(record["path"].parent, record["owner_uid"])
+    try:
+        current = os.fstat(current_fd)
+        if (current.st_dev, current.st_ino) != (record["parent_dev"], record["parent_ino"]):
+            return False
+        return True
+    finally:
+        os.close(current_fd)
+
+
+def _owner_lock_is_held():
+    if (OWNER_LOCK_FD is None or OWNER_LOCK_PARENT_FD is None or
+            OWNER_LOCK_IDENTITY is None):
+        return False
+    try:
+        held = os.fstat(OWNER_LOCK_FD)
+        path = os.stat(Path(OWNER_LOCK).name, dir_fd=OWNER_LOCK_PARENT_FD,
+                       follow_symlinks=False)
+        if (not stat.S_ISREG(held.st_mode) or not stat.S_ISREG(path.st_mode) or
+                held.st_nlink != 1 or path.st_nlink != 1 or
+                (held.st_dev, held.st_ino) != OWNER_LOCK_IDENTITY or
+                (path.st_dev, path.st_ino) != OWNER_LOCK_IDENTITY or
+                held.st_uid != path.st_uid):
+            return False
+        fcntl.flock(OWNER_LOCK_FD, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except (OSError, TypeError, ValueError):
+        return False
+
+
+def cleanup_owner_fences(reason):
+    """CAS-remove only this request's markers while the owner flock is held."""
+    global OWNER_FENCE_STATUS
+    if not OWNER_FENCES_CREATED:
+        OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, cleanup="NO_OWNED_MARKERS",
+                                  retained=bool(OWNER_FENCE_STATUS.get("retained")))
+        return True
+    if not _owner_lock_is_held():
+        OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, state="RETAINED",
+                                  cleanup="OWNER_LOCK_NOT_HELD", retained=True)
+        return False
+    records = list(OWNER_FENCES_CREATED)
+    try:
+        for record in records:
+            if (not _verify_owner_fence_parent(record) or
+                    not _owner_fence_marker_matches(record)):
+                OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, state="RETAINED",
+                                          cleanup="IDENTITY_CONTENT_CAS_HOLD", retained=True)
+                return False
+    except BaseException:
+        OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, state="RETAINED",
+                                  cleanup="PARENT_IDENTITY_HOLD", retained=True)
+        return False
+
+    removed = []
+    try:
+        for record in records:
+            if (not _verify_owner_fence_parent(record) or
+                    not _owner_fence_marker_matches(record)):
+                fail("OWNER_FENCE_CLEANUP_CAS")
+            os.unlink(record["path"].name, dir_fd=record["parent_fd"])
+            removed.append(record)
+            os.fsync(record["parent_fd"])
+        for record in records:
+            try:
+                os.stat(record["path"].name, dir_fd=record["parent_fd"],
+                        follow_symlinks=False)
+            except FileNotFoundError:
+                continue
+            fail("OWNER_FENCE_CLEANUP_READBACK")
+    except BaseException:
+        restored = True
+        for old in reversed(removed):
+            try:
+                try:
+                    os.stat(old["path"].name, dir_fd=old["parent_fd"],
+                            follow_symlinks=False)
+                except FileNotFoundError:
+                    new = _create_owner_fence_marker(
+                        old["path"], old["role"], old["parent_fd"],
+                        old["content_written"], old["owner_uid"], track=False)
+                    index = next(i for i, item in enumerate(OWNER_FENCES_CREATED)
+                                 if item["role"] == old["role"])
+                    OWNER_FENCES_CREATED[index] = new
+                else:
+                    restored = False
+            except BaseException:
+                restored = False
+        OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, state="RETAINED",
+                                  cleanup="UNLINK_OR_RESTORE_HOLD",
+                                  retained=True, release_restore_verified=restored)
+        return False
+
+    OWNER_FENCES_CREATED.clear()
+    conflict = OWNER_FENCE_STATUS.get("untracked_role")
+    OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS,
+                              state="RELEASED_WITH_UNTRACKED_CONFLICT" if conflict else "RELEASED",
+                              cleanup=reason + "_IDENTITY_CONTENT_CAS_FSYNC_VERIFIED",
+                              retained=bool(conflict))
+    return True
+
+
+def _close_owner_fence_directory_fds():
+    while OWNER_FENCE_DIR_FDS:
+        fd = OWNER_FENCE_DIR_FDS.pop()
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+
+def acquire_owner_lock(owner_uid=0):
+    """Acquire the existing exclusive owner lease before creating any fences."""
+    global OWNER_LOCK_FD, OWNER_LOCK_PARENT_FD, OWNER_LOCK_IDENTITY, OWNER_FENCE_STATUS
+    if OWNER_LOCK_FD is not None:
+        fail("OWNER_LOCK_ALREADY_HELD")
+    lock_dir_fd = _open_owner_directory(Path(OWNER_LOCK).parent, owner_uid)
+    fd = None
+    try:
+        flags = (os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
+                 getattr(os, "O_CLOEXEC", 0))
+        try:
+            fd = os.open(Path(OWNER_LOCK).name, flags, dir_fd=lock_dir_fd)
+        except OSError:
+            fail("OWNER_LOCK_UNAVAILABLE")
+        meta = os.fstat(fd)
+        if (not stat.S_ISREG(meta.st_mode) or meta.st_nlink != 1 or
+                meta.st_uid != owner_uid or meta.st_mode & 0o022):
+            fail("OWNER_LOCK_UNSAFE")
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            fail("OWNER_LOCK_BUSY")
+        lock_meta = os.fstat(fd)
+        OWNER_LOCK_FD, fd = fd, None
+        OWNER_LOCK_PARENT_FD, lock_dir_fd = lock_dir_fd, None
+        OWNER_LOCK_IDENTITY = (lock_meta.st_dev, lock_meta.st_ino)
+    finally:
+        if fd is not None:
+            os.close(fd)
+        if lock_dir_fd is not None:
+            os.close(lock_dir_fd)
+
+    note = _owner_fence_note(REQUEST_ID, SOURCE_SHA_VALUE)
+    OWNER_FENCE_STATUS = {"state": "LOCKED_PREFLIGHT", "cleanup": "NOT_ATTEMPTED",
+                          "retained": False,
+                          "note_sha256": hashlib.sha256(note).hexdigest()}
+    specs = (("stop", Path(OWNER_STOP)),
+             ("maintenance", Path(OWNER_MAINTENANCE)))
+    absent = []
+    for role, path in specs:
+        parent_fd = _open_owner_directory(path.parent, owner_uid)
+        OWNER_FENCE_DIR_FDS.append(parent_fd)
+        parent = os.fstat(parent_fd)
+        try:
+            os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            absent.append((role, path, parent_fd, parent.st_dev, parent.st_ino))
+        except OSError:
+            fail("OWNER_FENCE_PREFLIGHT_UNAVAILABLE")
+        else:
+            OWNER_FENCES_PREEXISTING.append(role)
+    if OWNER_FENCES_PREEXISTING:
+        OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, state="BLOCKED_PREEXISTING",
+                                  retained=True)
+        fail("OWNER_FENCE_PREEXISTING")
+    if len(absent) != 2:
+        fail("OWNER_FENCE_PREFLIGHT_INCOMPLETE")
+
+    try:
+        for role, path, parent_fd, _, _ in absent:
+            _create_owner_fence_marker(path, role, parent_fd, note, owner_uid)
+    except BaseException:
+        OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, state="CREATE_FAILED",
+                                  retained=True,
+                                  cleanup="CREATE_FAILURE_REQUIRES_OWNER_REVIEW")
+        raise
+    OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, state="CREATED",
+                              created_at_lock=True, retained=True)
 
 
 def save_backup(request, path, raw):
@@ -2570,7 +2880,6 @@ def main():
                                         if key.endswith(".receipt")},
           "rollback": "PREIMAGE_CONTENT_MODE_OWNER_CAS;FILE_INODES_NOT_RESTORABLE",
           "weights_training_supervisor_workloads_changed": False})
-    print("NOX_MAINT_LIFELINE_COMPLETE=true", flush=True)
     return 0
 
 
@@ -2706,7 +3015,8 @@ def emit(value):
 
 
 def run_owner_entrypoint(main_fn=None):
-    global MEMORY_POST_ROLLBACK
+    global MEMORY_POST_ROLLBACK, OWNER_LOCK_FD, OWNER_LOCK_PARENT_FD
+    global OWNER_LOCK_IDENTITY, OWNER_FENCE_STATUS
 
     class OwnerAbort(BaseException):
         pass
@@ -2716,10 +3026,74 @@ def run_owner_entrypoint(main_fn=None):
 
     signal.signal(signal.SIGTERM, _owner_abort)
     signal.signal(signal.SIGINT, _owner_abort)
+    installation_verified = False
     try:
         result = (main_fn or main)()
+        if result == 0:
+            # From here on the installed observer has passed its runtime and
+            # readback gates. Report finalization failures as HOLD; never roll
+            # back an already verified install after fences may be removed.
+            installation_verified = True
+            if not OWNER_FENCES_CREATED:
+                emit({"state": "HOLD", "reason": "HOLD_LIFELINE_OBSERVER_OWNER_FENCE_MISSING",
+                      "rollback": "INSTALL_VERIFIED_WITHOUT_OWNED_FENCES",
+                      "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
+                      "native_mutation_attempted": NATIVE_MUTATION_ATTEMPTED,
+                      "owner_fences": _owner_fence_receipt()})
+                result = 2
+            elif not cleanup_owner_fences("SUCCESS"):
+                emit({"state": "HOLD", "reason": "HOLD_LIFELINE_OBSERVER_OWNER_FENCE_CLEANUP",
+                      "rollback": "INSTALL_VERIFIED_FENCES_RETAINED",
+                      "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
+                      "native_mutation_attempted": NATIVE_MUTATION_ATTEMPTED,
+                      "owner_fences": _owner_fence_receipt()})
+                result = 2
+            else:
+                emit({"state": "OWNER_FENCES_RELEASED", "reason": None,
+                      "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
+                      "owner_fences": _owner_fence_receipt()})
+                print("NOX_MAINT_LIFELINE_COMPLETE=true", flush=True)
+        elif result != 0 and OWNER_FENCES_CREATED:
+            if not NATIVE_MUTATION_ATTEMPTED:
+                if not cleanup_owner_fences("NO_WRITE_FAILURE"):
+                    emit({"state": "HOLD", "reason": "HOLD_LIFELINE_OBSERVER_OWNER_FENCE_CLEANUP",
+                          "rollback": "NO_WRITE_FAILURE_FENCES_RETAINED",
+                          "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
+                          "native_mutation_attempted": False,
+                          "owner_fences": _owner_fence_receipt()})
+                    result = 2
+            else:
+                OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, state="RETAINED",
+                                          cleanup="NONZERO_AFTER_MUTATION_RETAINED",
+                                          retained=True)
+                emit({"state": "HOLD", "reason": "HOLD_LIFELINE_OBSERVER_MUTATION_INCOMPLETE",
+                      "rollback": "MUTATION_NOT_VERIFIED_FENCES_RETAINED",
+                      "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
+                      "native_mutation_attempted": True,
+                      "owner_fences": _owner_fence_receipt()})
+                result = 2
     except BaseException as exc:
+        if installation_verified:
+            # Fence cleanup may already have removed the markers. Do not
+            # initiate rollback from this post-verification reporting path.
+            if OWNER_FENCES_CREATED:
+                OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, state="RETAINED",
+                                          cleanup="INSTALL_VERIFIED_FINALIZATION_HOLD",
+                                          retained=True)
+            code = str(exc)
+            if not re.fullmatch(r"HOLD_LIFELINE_OBSERVER_[A-Z0-9_]+", code):
+                code = "HOLD_LIFELINE_OBSERVER_" + type(exc).__name__.upper()
+            try:
+                emit({"state": "HOLD", "reason": code,
+                      "rollback": "INSTALL_VERIFIED_NO_POST_RELEASE_ROLLBACK",
+                      "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
+                      "native_mutation_attempted": NATIVE_MUTATION_ATTEMPTED,
+                      "owner_fences": _owner_fence_receipt()})
+            except BaseException:
+                pass
+            return 2
         rollback = "NOT_NEEDED"
+        rollback_verified = not NATIVE_MUTATION_ATTEMPTED
         if SUPERVISOR_BACKEND_ACTIVE:
             try:
                 changed = bool(INSTALLED or STATE_DIR_PREIMAGE is not None or
@@ -2731,6 +3105,7 @@ def run_owner_entrypoint(main_fn=None):
                     if CGROUP_TARGET_EVIDENCE is not None:
                         MEMORY_POST_ROLLBACK = cgroup_memory_snapshot(
                             CGROUP_TARGET_EVIDENCE["target"])
+                    rollback_verified = True
             except BaseException as rollback_exc:
                 reason = type(rollback_exc).__name__.upper()
                 rollback = "ROLLBACK_INCOMPLETE_" + (reason if re.fullmatch(
@@ -2759,10 +3134,22 @@ def run_owner_entrypoint(main_fn=None):
                     MEMORY_POST_ROLLBACK = cgroup_memory_snapshot(
                         CGROUP_TARGET_EVIDENCE["target"])
                 rollback = "PREIMAGE_CONTENT_MODE_OWNER_RESTORED;FILE_INODES_NOT_RESTORABLE"
+                rollback_verified = True
             except BaseException as rollback_exc:
                 reason = type(rollback_exc).__name__.upper()
                 rollback = "ROLLBACK_INCOMPLETE_" + (reason if re.fullmatch(
                     r"[A-Z0-9_]{1,40}", reason) else "UNKNOWN")
+        if OWNER_FENCES_CREATED:
+            if not NATIVE_MUTATION_ATTEMPTED:
+                if not cleanup_owner_fences("NO_WRITE_FAILURE"):
+                    rollback += ";OWNER_FENCES_RETAINED"
+            elif rollback_verified:
+                if not cleanup_owner_fences("VERIFIED_ROLLBACK"):
+                    rollback += ";OWNER_FENCES_RETAINED"
+            else:
+                OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, state="RETAINED",
+                                          cleanup="AMBIGUOUS_MUTATION_RETAINED",
+                                          retained=True)
         code = str(exc)
         if not re.fullmatch(r"HOLD_LIFELINE_OBSERVER_[A-Z0-9_]+", code):
             code = "HOLD_LIFELINE_OBSERVER_" + type(exc).__name__.upper()
@@ -2805,11 +3192,21 @@ def run_owner_entrypoint(main_fn=None):
                                             STATE_ARTIFACT_PREIMAGES.items()
                                             if key.endswith(".receipt")},
               "global_supervisor_mutated": False,
-              "installed_paths": list(INSTALLED)})
+              "installed_paths": list(INSTALLED),
+              "native_mutation_attempted": NATIVE_MUTATION_ATTEMPTED,
+              "owner_fences": _owner_fence_receipt()})
         return 2
     finally:
+        _close_owner_fence_directory_fds()
         if OWNER_LOCK_FD is not None:
-            os.close(OWNER_LOCK_FD)
+            owner_lock_fd = OWNER_LOCK_FD
+            OWNER_LOCK_FD = None
+            os.close(owner_lock_fd)
+        if OWNER_LOCK_PARENT_FD is not None:
+            owner_lock_parent_fd = OWNER_LOCK_PARENT_FD
+            OWNER_LOCK_PARENT_FD = None
+            os.close(owner_lock_parent_fd)
+        OWNER_LOCK_IDENTITY = None
     return result
 
 

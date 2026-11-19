@@ -1,6 +1,8 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -10,16 +12,388 @@ spec = importlib.util.spec_from_file_location(
     "lifeline_supervisor_fallback", ROOT / "owner_native_lifeline_observer.py")
 observer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(observer)
+emergency_spec = importlib.util.spec_from_file_location(
+    "nox_owner_emergency_stop", ROOT / "owner_native_emergency_stop.py")
+emergency_stop = importlib.util.module_from_spec(emergency_spec)
+emergency_spec.loader.exec_module(emergency_stop)
 
 
 class SupervisorFallbackTests(unittest.TestCase):
     def setUp(self):
+        observer._close_owner_fence_directory_fds()
+        if observer.OWNER_LOCK_FD is not None:
+            os.close(observer.OWNER_LOCK_FD)
+        observer.OWNER_LOCK_FD = None
+        if observer.OWNER_LOCK_PARENT_FD is not None:
+            os.close(observer.OWNER_LOCK_PARENT_FD)
+        observer.OWNER_LOCK_PARENT_FD = None
+        observer.OWNER_LOCK_IDENTITY = None
+        observer.OWNER_FENCES_CREATED.clear()
+        observer.OWNER_FENCES_PREEXISTING.clear()
+        observer.OWNER_FENCE_STATUS = {"state": "NOT_ACQUIRED",
+                                       "cleanup": "NOT_ATTEMPTED",
+                                       "retained": False}
+        observer.NATIVE_MUTATION_ATTEMPTED = False
+        observer.SUPERVISOR_BACKEND_ACTIVE = False
+        observer.INSTALLED.clear()
+        observer.STATE_DIR_PREIMAGE = None
+        observer.STATE_ARTIFACT_PREIMAGES.clear()
+        observer.CGROUP_TARGET_EVIDENCE = None
         observer.SUPERVISOR_PROGRAM_RELOADED = False
         observer.SUPERVISOR_PROGRAM_ADDED = False
         observer.SUPERVISOR_PROGRAM_STARTED = False
         observer.SUPERVISOR_PROGRAM_AFTER_INVENTORY = None
         observer.SUPERVISOR_PROGRAM_ACTIVATION = None
         observer.SUPERVISOR_PROGRAM_ROLLBACK_PRIOR_GROUPS_UNCHANGED = None
+
+    def owner_fence_paths(self, *, lock=True, preexisting=()):
+        class Paths:
+            pass
+
+        home = Path.home()
+        temp = tempfile.TemporaryDirectory(prefix="nox-lifeline-fence-test-",
+                                           dir=str(home))
+        base = Path(temp.name)
+        nox = base / "nox"
+        state = nox / "state"
+        nox.mkdir(mode=0o700)
+        state.mkdir(mode=0o700)
+        paths = Paths()
+        paths.base = base
+        paths.stop = nox / "STOP"
+        paths.maintenance = state / "OWNER_MAINTENANCE.flag"
+        paths.lock = state / "owner_maintenance.lock"
+        paths.owner_uid = os.getuid()
+        paths.temp = temp
+        if lock:
+            fd = os.open(paths.lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            os.close(fd)
+        for role in preexisting:
+            marker = paths.stop if role == "stop" else paths.maintenance
+            marker.write_bytes(b"preexisting-marker-must-be-preserved\n")
+            os.chmod(marker, 0o600)
+        patches = [patch.object(observer, "OWNER_STOP", paths.stop),
+                   patch.object(observer, "OWNER_MAINTENANCE", paths.maintenance),
+                   patch.object(observer, "OWNER_LOCK", paths.lock),
+                   patch.object(observer, "REQUEST_ID", "123456789"),
+                   patch.object(observer, "SOURCE_SHA_VALUE", "a" * 40)]
+        for item in patches:
+            item.start()
+        return paths, patches
+
+    def close_owner_fence_paths(self, paths, patches):
+        observer._close_owner_fence_directory_fds()
+        if observer.OWNER_LOCK_FD is not None:
+            os.close(observer.OWNER_LOCK_FD)
+            observer.OWNER_LOCK_FD = None
+        if observer.OWNER_LOCK_PARENT_FD is not None:
+            os.close(observer.OWNER_LOCK_PARENT_FD)
+            observer.OWNER_LOCK_PARENT_FD = None
+        observer.OWNER_LOCK_IDENTITY = None
+        for item in reversed(patches):
+            item.stop()
+        paths.temp.cleanup()
+
+    def test_fence_acquisition_requires_preexisting_owner_lock(self):
+        paths, patches = self.owner_fence_paths(lock=False)
+        try:
+            with self.assertRaisesRegex(observer.Hold, "OWNER_LOCK_UNAVAILABLE"):
+                observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            self.assertFalse(paths.stop.exists())
+            self.assertFalse(paths.maintenance.exists())
+            self.assertIsNone(observer.OWNER_LOCK_FD)
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_fence_acquisition_refuses_and_preserves_preexisting_markers(self):
+        paths, patches = self.owner_fence_paths(preexisting=("stop",))
+        try:
+            before = paths.stop.read_bytes()
+            with self.assertRaisesRegex(observer.Hold, "OWNER_FENCE_PREEXISTING"):
+                observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            self.assertEqual(paths.stop.read_bytes(), before)
+            self.assertFalse(paths.maintenance.exists())
+            self.assertEqual(observer.OWNER_FENCE_STATUS["state"], "BLOCKED_PREEXISTING")
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_fence_success_is_bound_private_and_removed_after_verified_success(self):
+        paths, patches = self.owner_fence_paths()
+        try:
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            for marker in (paths.stop, paths.maintenance):
+                self.assertEqual(marker.stat().st_mode & 0o777, 0o600)
+                self.assertIn(b"request_id=123456789\n", marker.read_bytes())
+                self.assertIn((b"source_sha=" + b"a" * 40 + b"\n"), marker.read_bytes())
+            self.assertEqual(observer.OWNER_FENCE_STATUS["state"], "CREATED")
+            self.assertTrue(observer.cleanup_owner_fences("SUCCESS"))
+            self.assertFalse(paths.stop.exists())
+            self.assertFalse(paths.maintenance.exists())
+            self.assertEqual(observer.OWNER_FENCE_STATUS["state"], "RELEASED")
+            self.assertIsNotNone(observer.OWNER_LOCK_FD)
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_created_fences_match_the_real_emergency_stop_marker_parser(self):
+        paths, patches = self.owner_fence_paths()
+        old_emergency_state = (emergency_stop.STOP, emergency_stop.MAINTENANCE,
+                               emergency_stop.PHASE, emergency_stop.MARKERS)
+        try:
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            emergency_stop.STOP = paths.stop
+            emergency_stop.MAINTENANCE = paths.maintenance
+            emergency_stop.PHASE = {"stop_marker": False, "maintenance_marker": False}
+            emergency_stop.MARKERS = {}
+            original_lstat = Path.lstat
+
+            class RootOwnedStat:
+                def __init__(self, real):
+                    self.real = real
+
+                def __getattr__(self, name):
+                    if name == "st_uid":
+                        return 0
+                    return getattr(self.real, name)
+
+            def lstat_with_root_owner(path):
+                result = original_lstat(path)
+                if Path(path) in (paths.stop, paths.maintenance):
+                    return RootOwnedStat(result)
+                return result
+
+            with patch.object(Path, "lstat", lstat_with_root_owner):
+                receipt = emergency_stop.ensure_owner_fence(123456789, "a" * 40)
+                wrong = (b"NOX_OWNER_EMERGENCY_STOP_V1\nrequest_id=123456788\n"
+                         b"source_sha=" + b"a" * 40 + b"\n")
+                with self.assertRaisesRegex(RuntimeError, "REQUEST_BINDING_MISMATCH"):
+                    emergency_stop.check_marker(paths.stop, "STOP", wrong)
+            self.assertEqual(receipt["stop"]["sha256"],
+                             observer.hashlib.sha256(paths.stop.read_bytes()).hexdigest())
+            self.assertTrue(emergency_stop.PHASE["stop_marker"])
+            self.assertTrue(emergency_stop.PHASE["maintenance_marker"])
+        finally:
+            (emergency_stop.STOP, emergency_stop.MAINTENANCE,
+             emergency_stop.PHASE, emergency_stop.MARKERS) = old_emergency_state
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_partial_marker_creation_is_cleaned_after_no_write_failure(self):
+        paths, patches = self.owner_fence_paths()
+        original_create = observer._create_owner_fence_marker
+
+        def fail_second(path, role, *args, **kwargs):
+            if role == "maintenance":
+                raise observer.Hold("HOLD_LIFELINE_OBSERVER_INJECTED_CREATE_FAILURE")
+            return original_create(path, role, *args, **kwargs)
+
+        try:
+            with (patch.object(observer, "_create_owner_fence_marker", side_effect=fail_second),
+                  patch.object(observer.signal, "signal"),
+                  patch.object(observer, "emit")):
+                result = observer.run_owner_entrypoint(
+                    lambda: observer.acquire_owner_lock(owner_uid=paths.owner_uid))
+            self.assertEqual(result, 2)
+            self.assertFalse(paths.stop.exists())
+            self.assertFalse(paths.maintenance.exists())
+            self.assertEqual(observer.OWNER_FENCE_STATUS["cleanup"],
+                             "NO_WRITE_FAILURE_IDENTITY_CONTENT_CAS_FSYNC_VERIFIED")
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_no_write_install_failure_releases_fences_but_keeps_hold_result(self):
+        paths, patches = self.owner_fence_paths()
+
+        def fail_before_write():
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            observer.fail("INJECTED_PREFLIGHT_FAILURE")
+
+        try:
+            with (patch.object(observer.signal, "signal"),
+                  patch.object(observer, "emit")):
+                result = observer.run_owner_entrypoint(fail_before_write)
+            self.assertEqual(result, 2)
+            self.assertFalse(paths.stop.exists())
+            self.assertFalse(paths.maintenance.exists())
+            self.assertEqual(observer.OWNER_FENCE_STATUS["state"], "RELEASED")
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_verified_rollback_releases_fences_after_mutation_failure(self):
+        paths, patches = self.owner_fence_paths()
+
+        def fail_after_write_attempt():
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            observer.NATIVE_MUTATION_ATTEMPTED = True
+            observer.INSTALLED["injected"] = b"changed"
+            observer.fail("INJECTED_INSTALL_FAILURE")
+
+        try:
+            with (patch.object(observer.signal, "signal"),
+                  patch.object(observer, "rollback_supervisor_fallback",
+                               return_value="VERIFIED_TEST_ROLLBACK"),
+                  patch.object(observer, "restore_state_artifacts"),
+                  patch.object(observer, "emit")):
+                observer.SUPERVISOR_BACKEND_ACTIVE = True
+                result = observer.run_owner_entrypoint(fail_after_write_attempt)
+            self.assertEqual(result, 2)
+            self.assertFalse(paths.stop.exists())
+            self.assertFalse(paths.maintenance.exists())
+            self.assertTrue(observer.OWNER_FENCE_STATUS["cleanup"].startswith(
+                "VERIFIED_ROLLBACK_"))
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_ambiguous_rollback_failure_retains_both_fences(self):
+        paths, patches = self.owner_fence_paths()
+
+        def fail_after_write_attempt():
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            observer.NATIVE_MUTATION_ATTEMPTED = True
+            observer.INSTALLED["injected"] = b"changed"
+            observer.fail("INJECTED_INSTALL_FAILURE")
+
+        try:
+            with (patch.object(observer.signal, "signal"),
+                  patch.object(observer, "rollback_supervisor_fallback",
+                               side_effect=observer.Hold("ROLLBACK_INJECTED")),
+                  patch.object(observer, "emit")):
+                observer.SUPERVISOR_BACKEND_ACTIVE = True
+                result = observer.run_owner_entrypoint(fail_after_write_attempt)
+            self.assertEqual(result, 2)
+            self.assertTrue(paths.stop.exists())
+            self.assertTrue(paths.maintenance.exists())
+            self.assertEqual(observer.OWNER_FENCE_STATUS["cleanup"],
+                             "AMBIGUOUS_MUTATION_RETAINED")
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_cleanup_unlink_failure_restores_removed_fence_and_holds(self):
+        paths, patches = self.owner_fence_paths()
+        try:
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            original_unlink = os.unlink
+            calls = []
+
+            def fail_second_unlink(path, *args, **kwargs):
+                calls.append(path)
+                if len(calls) == 2:
+                    raise OSError("injected unlink failure")
+                return original_unlink(path, *args, **kwargs)
+
+            with patch.object(observer.os, "unlink", side_effect=fail_second_unlink):
+                self.assertFalse(observer.cleanup_owner_fences("SUCCESS"))
+            self.assertTrue(paths.stop.exists())
+            self.assertTrue(paths.maintenance.exists())
+            self.assertEqual(observer.OWNER_FENCE_STATUS["state"], "RETAINED")
+            self.assertTrue(observer.OWNER_FENCE_STATUS["release_restore_verified"])
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_cleanup_compare_and_swap_preserves_foreign_replacement(self):
+        paths, patches = self.owner_fence_paths()
+        try:
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            paths.stop.unlink()
+            paths.stop.write_bytes(b"foreign replacement\n")
+            os.chmod(paths.stop, 0o600)
+            self.assertFalse(observer.cleanup_owner_fences("SUCCESS"))
+            self.assertEqual(paths.stop.read_bytes(), b"foreign replacement\n")
+            self.assertTrue(paths.maintenance.exists())
+            self.assertEqual(observer.OWNER_FENCE_STATUS["cleanup"],
+                             "IDENTITY_CONTENT_CAS_HOLD")
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_cleanup_holds_if_owner_lock_path_identity_changes(self):
+        paths, patches = self.owner_fence_paths()
+        try:
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            old_lock = paths.base / "owner_maintenance.lock.old"
+            paths.lock.rename(old_lock)
+            paths.lock.write_bytes(b"replacement lock\n")
+            os.chmod(paths.lock, 0o600)
+            self.assertFalse(observer.cleanup_owner_fences("SUCCESS"))
+            self.assertTrue(paths.stop.exists())
+            self.assertTrue(paths.maintenance.exists())
+            self.assertEqual(observer.OWNER_FENCE_STATUS["cleanup"],
+                             "OWNER_LOCK_NOT_HELD")
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_complete_marker_is_emitted_only_after_verified_fence_cleanup(self):
+        paths, patches = self.owner_fence_paths()
+        observed_release = []
+
+        def install_successfully():
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            return 0
+
+        def capture_receipt(value):
+            if value.get("state") == "OWNER_FENCES_RELEASED":
+                observed_release.append((paths.stop.exists(), paths.maintenance.exists(),
+                                         observer.OWNER_FENCE_STATUS.get("state")))
+
+        try:
+            from contextlib import redirect_stdout
+            import io
+            output = io.StringIO()
+            with (patch.object(observer.signal, "signal"),
+                  patch.object(observer, "emit", side_effect=capture_receipt),
+                  redirect_stdout(output)):
+                result = observer.run_owner_entrypoint(install_successfully)
+            self.assertEqual(result, 0)
+            self.assertEqual(observed_release, [(False, False, "RELEASED")])
+            self.assertIn("NOX_MAINT_LIFELINE_COMPLETE=true", output.getvalue())
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_post_release_emit_failure_does_not_start_unfenced_rollback(self):
+        paths, patches = self.owner_fence_paths()
+
+        def install_successfully():
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            observer.SUPERVISOR_BACKEND_ACTIVE = True
+            observer.INSTALLED["injected"] = b"installed"
+            return 0
+
+        try:
+            from contextlib import redirect_stdout
+            import io
+            output = io.StringIO()
+            with (patch.object(observer.signal, "signal"),
+                  patch.object(observer, "emit", side_effect=RuntimeError("output failed")),
+                  patch.object(observer, "rollback_supervisor_fallback") as rollback,
+                  redirect_stdout(output)):
+                result = observer.run_owner_entrypoint(install_successfully)
+            self.assertEqual(result, 2)
+            rollback.assert_not_called()
+            self.assertFalse(paths.stop.exists())
+            self.assertFalse(paths.maintenance.exists())
+            self.assertNotIn("NOX_MAINT_LIFELINE_COMPLETE=true", output.getvalue())
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_cleanup_failure_holds_and_does_not_emit_complete(self):
+        paths, patches = self.owner_fence_paths()
+
+        def install_successfully():
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            return 0
+
+        try:
+            from contextlib import redirect_stdout
+            import io
+            output = io.StringIO()
+            with (patch.object(observer.signal, "signal"),
+                  patch.object(observer, "cleanup_owner_fences", return_value=False),
+                  patch.object(observer, "emit"),
+                  redirect_stdout(output)):
+                result = observer.run_owner_entrypoint(install_successfully)
+            self.assertEqual(result, 2)
+            self.assertTrue(paths.stop.exists())
+            self.assertTrue(paths.maintenance.exists())
+            self.assertNotIn("NOX_MAINT_LIFELINE_COMPLETE=true", output.getvalue())
+        finally:
+            self.close_owner_fence_paths(paths, patches)
 
     def test_config_is_one_bounded_root_observer_group(self):
         raw = (ROOT / "supervisor/nox-lifeline-observer.conf").read_bytes()
