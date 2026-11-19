@@ -164,6 +164,13 @@ class RefillPreviewTest(unittest.TestCase):
             self.native.preview_refill_request()
         self.assertEqual(self.write_calls, [])
 
+    def test_callback_sha_mismatch_holds(self):
+        self.config['module_pins']['owner_subagent_dispatcher.py'] = 'c'*64
+        self.native.config = copy.deepcopy(self.config)
+        with self.assertRaisesRegex(dispatcher.GateError, 'HOLD_REFILL_PREVIEW_CALLBACK_OR_CATALOG'):
+            self.native.preview_refill_request()
+        self.assertEqual(self.write_calls, [])
+
     def test_stale_resource_observation_holds(self):
         self.native.read_resource_snapshot = lambda leaf_only=None: {**RESOURCE,
             'observed_at': time.time()-6}
