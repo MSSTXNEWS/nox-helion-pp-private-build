@@ -565,7 +565,7 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
         if not isinstance(binding,dict):
             continue
         admitted_missions.add((binding.get('mission_id'),binding.get('mission_revision')))
-        if task.get('status') not in TERMINAL:
+        if type(task.get('status')) is not str or task['status'] not in TERMINAL:
             for target in binding.get('editable_paths',[]):
                 if type(target) is str:
                     reserved.add((binding.get('root_id'),target))
