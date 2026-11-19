@@ -68,6 +68,54 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_lone_utf16_surrogate_rejected_before_browser_and_s03(self):
+        # Python JSON decoding allows unpaired \uD800/\uDFFF escapes.
+        # Such values are not Unicode scalar strings; valid astral
+        # characters and Cyrillic/Spanish text must still stream normally.
+        for escaped in (b'\\ud800',b'\\udfff'):
+            for route in ('content','id','name','arguments'):
+                with self.subTest(escaped=escaped,route=route):
+                    if route=='content':
+                        bad=(b'data: {"choices":[{"delta":{"content":"' +
+                             escaped + b'"},"finish_reason":null}]}\n\n')
+                    else:
+                        identifier=escaped if route=='id' else b'safe-id'
+                        name=escaped if route=='name' else b'calculate'
+                        arguments=escaped if route=='arguments' else b'{}'
+                        bad=(b'data: {"choices":[{"delta":{"tool_calls":[{"index":0,'
+                             b'"id":"' + identifier + b'","type":"function",'
+                             b'"function":{"name":"' + name + b'","arguments":"' +
+                             arguments + b'"}}]},"finish_reason":null}]}\n\n')
+                    chunks=Chunks([bad,frame(finish='stop'),b'data: [DONE]\n\n'])
+                    requests,factory=self.transport([chunks])
+                    native=self.native()
+                    payload={'messages':[{'role':'user','content':'Unicode'}]}
+                    with factory:
+                        response=await native['owner_completion'](
+                            'http://native/model',payload,'Unicode',True)
+                        wire=''.join([piece async for piece in response.body_iterator])
+                    self.assertIn('HOLD_MODEL_SSE_INVALID',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+                    self.assertEqual(len(requests),1)
+                    self.assertEqual(self.dispatched,[])
+                    self.assertTrue(chunks.closed)
+
+        valid='Привет 🌍 — ¡Hola!'
+        chunks=Chunks([frame(valid),frame(finish='stop'),b'data: [DONE]\n\n'])
+        requests,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Unicode'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Unicode',True)
+            wire=''.join([piece async for piece in response.body_iterator])
+        self.assertIn(valid,wire)
+        self.assertIn('[DONE]',wire)
+        self.assertEqual(payload['_agent_final'],valid)
+        self.assertEqual(len(requests),1)
+        self.assertTrue(chunks.closed)
+
     async def test_nonfinite_json_constants_hold_before_dispatch_and_s03(self):
         # Python json.loads accepts NaN/Infinity by default although these
         # are not JSON. Neither SSE envelopes nor tool arguments may use them.
