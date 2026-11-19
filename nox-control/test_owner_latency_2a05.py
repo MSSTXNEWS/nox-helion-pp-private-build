@@ -4,7 +4,7 @@ from owner_latency_2a05 import summarize
 
 M = 'a' * 64
 R = 'b' * 64
-S = 'c' * 64
+S = 'c' * 40
 A = 'd' * 64
 
 
@@ -15,8 +15,11 @@ def fixture(i):
         'both_terminal_sse_done_records_saved_s03_integrated': True,
         'authenticated_s03_history_readback_verified': True,
         'first_turn_terminal_sse_verified': True,
+        'owner_auth_verified': {'anonymous_status': 401, 'login_status': 200, 'session_status': 200},
+        'authenticated_native_endpoint_stream_verified': True,
         'verified_model_sha256': M, 'verified_route_sha256': R,
         'request': str(i), 'source_sha': S, 'served_asset_sha256': A,
+        'served_asset_sha256_before_second_post': A,
         'stream': {'native_first_ms': i * 10, 'ui_first_ms': i * 20},
         'elapsed_turn_ms': i * 100, 'multiturn_second_elapsed_ms': i * 200,
         'private_dialog': 'must-never-be-echoed',
@@ -37,6 +40,14 @@ class NativeLatencyContract(unittest.TestCase):
         for bad in (rows + [fixture(1)], [dict(rows[0], verified_model_sha256='e'*64)]):
             with self.assertRaisesRegex(ValueError, 'HOLD_2A05_'):
                 summarize(bad, model_sha256=M, route_sha256=R)
+        for changes, reason in (
+            ({'source_sha': 'c' * 64}, 'SOURCE_PIN'),
+            ({'owner_auth_verified': {}}, 'OWNER_AUTH_EVIDENCE'),
+            ({'served_asset_sha256_before_second_post': 'e' * 64},
+             'SERVED_ASSET_CHANGED_BETWEEN_TURNS'),
+        ):
+            with self.subTest(reason=reason), self.assertRaisesRegex(ValueError, 'HOLD_2A05_' + reason):
+                summarize([dict(rows[0], **changes)], model_sha256=M, route_sha256=R)
         # Python int > 1e308 must fail closed; math.isfinite(int) overflows.
         huge = fixture(21)
         huge['stream']['native_first_ms'] = 10 ** 401
