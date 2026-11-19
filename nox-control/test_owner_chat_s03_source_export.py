@@ -208,17 +208,26 @@ class SourceExportTests(unittest.TestCase):
                 operator.operator_argument_parser().parse_args(["source_export", "public-key"])
 
     def test_export_key_preflight_is_secret_only_and_fails_closed(self):
-        with mock.patch.dict(os.environ, {}, clear=True):
-            with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_EXPORT_KEY_UNAVAILABLE"):
-                operator.preflight_source_export_key()
-        with mock.patch.dict(os.environ, {"NOX_OWNER_EXPORT_KEY_B64": "not-a-key"}, clear=True):
-            with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_EXPORT_KEY"):
-                operator.preflight_source_export_key()
         current = int(__import__("time").time())
         fresh_info = dict(self.key_info, created_at=current, expires_at=current + 1800)
         fresh_key = base64.urlsafe_b64encode(helper.canonical(fresh_info)).decode().rstrip("=")
-        with mock.patch.dict(os.environ, {"NOX_OWNER_EXPORT_KEY_B64": fresh_key}, clear=True):
-            self.assertEqual(operator.preflight_source_export_key(), fresh_key)
+        stdout = StringIO()
+        stderr = StringIO()
+        with mock.patch.object(operator.subprocess, "run") as run, \
+                mock.patch.object(operator.subprocess, "check_output") as check_output, \
+                mock.patch("sys.stdout", stdout), mock.patch("sys.stderr", stderr):
+            with mock.patch.dict(os.environ, {}, clear=True):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_EXPORT_KEY_UNAVAILABLE"):
+                    operator.preflight_source_export_key()
+            with mock.patch.dict(os.environ, {"NOX_OWNER_EXPORT_KEY_B64": "not-a-key"}, clear=True):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_EXPORT_KEY"):
+                    operator.preflight_source_export_key()
+            with mock.patch.dict(os.environ, {"NOX_OWNER_EXPORT_KEY_B64": fresh_key}, clear=True):
+                self.assertEqual(operator.preflight_source_export_key(), fresh_key)
+        run.assert_not_called()
+        check_output.assert_not_called()
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(stderr.getvalue(), "")
 
     def test_staged_owner_credential_is_private_single_use_and_never_env_injected(self):
         token = "test-owner-api-token"
