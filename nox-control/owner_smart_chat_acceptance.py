@@ -316,7 +316,7 @@ def main():
         status['actual_generation_requests'] = 2
         second = http_request(opener, base + '/api/nox/chat/stream', 'POST',
             {'message': second_question, 'dialog_id': dialog_id}, timeout=150, stream=True)
-        second_answer = []; second_done = None; second_error = None; second_bytes = 0
+        second_answer = []; second_done = None; second_error = None; second_bytes = 0; second_types = []
         with second:
             if second.status != 200:
                 fail('CONTINUATION_HTTP')
@@ -330,6 +330,8 @@ def main():
                 frame = json.loads(line)
                 if not isinstance(frame, dict):
                     fail('CONTINUATION_FRAME')
+                if isinstance(frame.get('type'), str) and len(second_types) < 32:
+                    second_types.append(frame['type'])
                 if frame.get('type') == 'delta' and isinstance(frame.get('text'), str):
                     second_answer.append(frame['text'])
                     if sum(len(x) for x in second_answer) > 4000:
@@ -344,6 +346,9 @@ def main():
         status['continuation_characters'] = len(resumed)
         status['continuation_sha256'] = hashlib.sha256(resumed.encode()).hexdigest() if resumed else None
         status['continuation_done'] = bool(second_done)
+        status['continuation_frame_types'] = sorted(set(second_types))
+        errcode = (second_error.get('code') if isinstance(second_error, dict) else second_error)
+        status['continuation_error_code'] = (errcode if isinstance(errcode, str) and re.fullmatch(r'[A-Z0-9_]{3,100}', errcode) else 'UNCLASSIFIED' if second_error else None)
         if second_error or not second_done or not resumed.strip() or resumed.strip() in ('—','-','...'):
             fail('CONTINUATION_INCOMPLETE')
         if (second_done.get('saved') is not True or second_done.get('s03_integrated') is not True
