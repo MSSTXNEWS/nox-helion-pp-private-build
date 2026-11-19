@@ -181,6 +181,7 @@ def probe_source_hash():
 if __name__ == "__main__":
     ok = False
     conn.REMOTE = REMOTE
+    print("NOX_PROXY_INSPECTOR_REMOTE_SHA256=" + probe_source_hash(), flush=True)
     try:
         ok = conn.probe()
     except Exception as exc:
