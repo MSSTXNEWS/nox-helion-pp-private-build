@@ -334,13 +334,17 @@ def memory_governor_projection(capacity):
                 'auto_reclaim': False}
     raw_ratio = budget['current_bytes'] / budget['max_bytes']
     raw_headroom = budget['max_bytes'] - budget['current_bytes']
-    # A reclaim-aware estimate can look healthy with almost no free cgroup RAM.
-    # Observation only: actual work still requires the existing owner admission.
+    # Reclaim-aware estimates can look healthy with almost no raw cgroup RAM.
+    # Preserve the 512 MiB chat buffer, but do not recommend background work
+    # below the owner-required 2 GiB raw resource fence. Observation only.
     chat_buffer_available = raw_headroom >= 512 * 1024 ** 2
+    owner_raw_admission_available = raw_headroom >= 2 * 1024 ** 3
     psi_some = budget['memory_psi_some_avg10']
     psi_full = budget['memory_psi_full_avg10']
     if not chat_buffer_available:
         condition = 'RAW_CGROUP_CHAT_BUFFER_HOLD'
+    elif not owner_raw_admission_available:
+        condition = 'RAW_CGROUP_ADMISSION_HEADROOM_HOLD'
     elif psi_full >= 2 or psi_some >= 10 or decision['projected_memory_ratio'] >= .94:
         condition = 'PRESSURE_CRITICAL'
     elif psi_full >= .2 or psi_some >= 2 or decision['projected_memory_ratio'] >= .85:
@@ -351,7 +355,7 @@ def memory_governor_projection(capacity):
     # background work when measured PSI or projected RAM is already critical,
     # even if an inconsistent upstream decision claims eligible=True.
     observed_eligible = (decision.get('eligible') is True
-                         and chat_buffer_available
+                         and chat_buffer_available and owner_raw_admission_available
                          and condition != 'PRESSURE_CRITICAL')
     return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
             'state': condition,
