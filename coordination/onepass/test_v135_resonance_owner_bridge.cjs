@@ -1429,3 +1429,44 @@ test('V180 tab hiding during pacing frees queued callbacks and still verifies S0
   assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
   assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
 });
+
+test('V181 visibility becomes hidden as listener attaches without lost pacing wakeup',async()=>{
+  const rafPending=new Map(),timerPending=new Map(),listeners=new Set();
+  let serial=0;
+  const doc={visibilityState:'visible',
+    addEventListener(type,callback){
+      if(type==='visibilitychange'){
+        listeners.add(callback);
+        // A browser can hide between the initial state check and listener attachment.
+        // It is already hidden when registration finishes, without another event.
+        this.visibilityState='hidden';
+      }
+    },
+    removeEventListener(type,callback){
+      if(type==='visibilitychange')listeners.delete(callback);
+    }
+  };
+  const scheduler={
+    requestAnimationFrame(cb){const n=++serial;rafPending.set(n,cb);return n;},
+    cancelAnimationFrame(n){rafPending.delete(n);},
+    setTimeout(cb){const n=++serial;timerPending.set(n,cb);return n;},
+    clearTimeout(n){timerPending.delete(n);}
+  };
+  const reply='NOX 🧠 español русский '.repeat(35);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+    scheduler,false,5,undefined,'verified-exchange-01',[],false,false,prompt,undefined,
+    {document:doc,reduced:false});
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v181-visibility-race'})});
+  const output=await Promise.race([events(response),
+    new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V181_LOST_VISIBILITY_WAKEUP')),900))]);
+  assert.equal(doc.visibilityState,'hidden');
+  assert.equal(output.filter(x=>x.type==='token').map(x=>x.t).join(''),reply);
+  assert.equal(output.filter(x=>x.type==='done').length,1);
+  assert.equal(output.filter(x=>x.type==='error').length,0);
+  assert.equal(rafPending.size,0,'no stale animation frame after registration race');
+  assert.equal(timerPending.size,0,'no delayed fallback timeout after registration race');
+  assert.equal(listeners.size,0,'registered visibility callback must be removed');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+});
