@@ -182,57 +182,78 @@ def _remove_local_files():
     return True
 
 
-def cleanup():
-    """Detach only the tracked temporary key, verify removal, then wipe local files."""
+def cleanup_result(*, require_tracked_id=False):
+    """Clean only this run's tracked key; return a sanitized outcome."""
     if RUNNER.is_symlink() or (RUNNER.exists() and not RUNNER.is_dir()):
-        return False
-    if not TRACK.exists() and not TRACK.is_symlink():
-        return _remove_local_files()
+        return "HOLD"
+    tracked_file = TRACK.exists() or TRACK.is_symlink()
+    if not tracked_file:
+        if require_tracked_id:
+            return "HOLD"
+        return "NO_TRACKED_KEY" if _remove_local_files() else "HOLD"
     if TRACK.is_symlink() or not TRACK.is_file():
-        return False
+        return "HOLD"
     try:
         if TRACK.stat().st_size > 8192:
-            return False
+            return "HOLD"
         record = json.loads(TRACK.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return False
+        return "HOLD"
     if not isinstance(record, dict) or not _valid_public_key(record.get("public")):
-        return False
+        return "HOLD"
     public = record["public"]
     tracked = record.get("key_id")
     if tracked is not None and (type(tracked) is not int or tracked <= 0):
-        return False
+        return "HOLD"
+    if require_tracked_id and tracked is None:
+        return "HOLD"
 
     token = os.environ.get("NOX2", "")
     if not token:
-        return False
+        return "HOLD"
     try:
         found = match(token, public)
         if len(found) > 1:
-            return False
+            return "HOLD"
         if tracked is None:
             target = found[0] if found else None
         else:
             if found and found != [tracked]:
-                return False
+                return "HOLD"
             target = tracked if found else None
+        detached_and_verified = False
         if target is not None:
             result = api("DELETE", f"/instances/{INSTANCE_ID}/ssh/{target}", token)
             if isinstance(result, dict) and result and result.get("success") is not True:
-                return False
+                return "HOLD"
+            # Read back by exact public-key bytes after deleting only this ID.
             if match(token, public):
-                return False
-    except RuntimeError:
-        return False
-    return _remove_local_files()
+                return "HOLD"
+            detached_and_verified = True
+    except Exception:
+        # Never export provider responses, key material, or exception details.
+        return "HOLD"
+    if not _remove_local_files():
+        return "HOLD"
+    return "DETACHED_AND_VERIFIED" if detached_and_verified else "ALREADY_ABSENT_VERIFIED"
+
+
+def cleanup():
+    """Boolean compatibility wrapper for older local callers."""
+    return cleanup_result() != "HOLD"
 
 
 def _main(argv):
-    if argv != ["cleanup"]:
+    if argv == ["cleanup"]:
+        outcome = cleanup_result()
+    elif argv == ["cleanup-only"]:
+        # This mode requires the helper's exact tracked numeric key ID and
+        # matching public-key bytes; it cannot perform a broad key deletion.
+        outcome = cleanup_result(require_tracked_id=True)
+    else:
         return 2
-    ok = cleanup()
-    print("NOX_MAINT_CLEANUP=" + ("COMPLETE" if ok else "HOLD"), flush=True)
-    return 0 if ok else 2
+    print("TEMP_SSH_CLEANUP=" + outcome, flush=True)
+    return 0 if outcome != "HOLD" else 2
 
 
 if __name__ == "__main__":
