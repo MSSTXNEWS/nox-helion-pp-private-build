@@ -63,13 +63,19 @@ class V135NoLossTests(unittest.TestCase):
             self.assertTrue(meta["native_owner_only"])
             self.assertFalse(meta["native_observer_attached_in_live_onehost"])
             self.assertFalse(meta["process_control_actions_enabled"])
+            policy = json.loads(z.read(m.CAP_POLICY))
+            self.assertEqual(policy["schema"], "NOX_V135_OWNER_BRIDGE_CAP_POLICY_V2")
+            self.assertEqual(meta["owner_bridge_cap_policy"]["sha256"], m.CAP_POLICY_SHA256)
+            self.assertEqual(meta["owner_bridge_cap_policy"]["max_bridge_bytes"], 24805)
+            self.assertEqual(meta["added_js_bytes"], 24293)
+            self.assertEqual(meta["added_js_sha256"], policy["bridge_sha256"])
             self.assertEqual(z.read(m.OBS_JS),
                              m.OBS_SOURCE.read_bytes())
             self.assertEqual(z.read(m.NATIVE_SELF_MODULE),
                              m.NATIVE_SELF_SOURCE.read_bytes())
             self.assertEqual(z.read(m.NATIVE_RESPONSE_MODULE),
                              m.NATIVE_RESPONSE_SOURCE.read_bytes())
-        self.assertEqual(receipt["output_entries"], m.FROZEN_N+2+len(m.PAGES)+5)
+        self.assertEqual(receipt["output_entries"], m.FROZEN_N+2+len(m.PAGES)+6)
 
     def test_owner_bridge_limit_accepts_current_patch_and_rejects_overflow(self):
         current = self.js.read_bytes()
@@ -81,6 +87,19 @@ class V135NoLossTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "HOLD_OWNER_BRIDGE_BOUNDS"):
             m.build(self.stage, self.frozen, oversized, self.output,
                     expected_source_sha=self.sha)
+        self.assertFalse(self.output.exists())
+
+    def test_cap_policy_tampering_is_rejected(self):
+        policy = self.frozen.parent / "tampered-policy.json"
+        policy.write_text(json.dumps({"schema":"NOX_V135_OWNER_BRIDGE_CAP_POLICY_V3",
+                                      "measured_bridge_bytes":24293,
+                                      "max_bridge_bytes":999999,
+                                      "reserve_bytes":512,
+                                      "bridge_sha256":"dff8fa66d2b822ab0055ccfacbf25f6b1eaa9a96ca02c60f1049f3799f8accd7"}))
+        with patch.object(m, "CAP_POLICY_SOURCE", policy):
+            with self.assertRaisesRegex(ValueError, "HOLD_OWNER_BRIDGE_CAP_POLICY_SHA"):
+                m.build(self.stage, self.frozen, self.js, self.output,
+                        expected_source_sha=self.sha)
         self.assertFalse(self.output.exists())
 
     def test_exact_same_source_is_bitwise_repeatable(self):
