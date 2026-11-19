@@ -97,6 +97,32 @@ def _executor_status_reply(user_text,path=None):
         return unknown
 
 
+async def _bounded_sse_lines(response):
+    """Bound partial SSE fields before a newline; httpx.aiter_lines() does not.
+
+    Preserve CR, LF, CRLF (including split CRLF) and UTF-8 chunk boundaries.
+    No buffering of untrusted unterminated model output beyond 300k chars.
+    """
+    pending=''
+    after_cr=False
+    async for chunk in response.aiter_text(chunk_size=8192):
+        for part in re.split(r'(\r\n|\r|\n)',chunk):
+            if part in ('\r\n','\r','\n'):
+                if part=='\n' and after_cr:
+                    after_cr=False
+                    continue
+                yield pending
+                pending=''
+                after_cr=(part=='\r')
+            elif part:
+                after_cr=False
+                pending+=part
+                if len(pending)>300000:
+                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+    if pending:
+        yield pending
+
+
 async def _model_events(client, url, payload):
     """Forward content immediately; assemble function-call arguments privately."""
     request=dict(payload,model='maya',stream=True,cache_prompt=True)
@@ -111,7 +137,7 @@ async def _model_events(client, url, payload):
         record_size=0
         frame_lines=0
         first_line=True
-        async for line in response.aiter_lines():
+        async for line in _bounded_sse_lines(response):
             # WHATWG SSE decoding ignores one leading UTF-8 BOM, and only
             # at the start of the stream. Do not erase later payload bytes.
             if first_line:

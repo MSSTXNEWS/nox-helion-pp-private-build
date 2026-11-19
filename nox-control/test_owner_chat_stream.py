@@ -138,6 +138,26 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('_agent_final',payload)
         self.assertTrue(chunks.closed)
 
+    async def test_unterminated_oversized_sse_line_holds_before_next_network_chunk(self):
+        # A 350k-byte comment without a newline made httpx.aiter_lines()
+        # await another network read before the adapter's line limit ran.
+        gate=asyncio.Event()
+        chunks=Chunks([b': '+b'x'*350000,frame('unreachable')],gate)
+        requests,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Hola',True)
+            async def collect():
+                return ''.join([part async for part in response.body_iterator])
+            wire=await asyncio.wait_for(collect(),2.0)
+        self.assertIn('HOLD_MODEL_SSE_FRAME',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertNotIn('_agent_final',payload)
+        self.assertEqual(len(requests),1)
+        self.assertTrue(chunks.closed)
+
     async def test_large_metadata_bytes_cannot_starve_chat_or_certify_s03(self):
         # Six comments are under the line-count and per-line caps, but their
         # aggregate 360k-byte record must never consume unbounded chat work.
