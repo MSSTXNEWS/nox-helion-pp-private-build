@@ -173,7 +173,10 @@ def rewrite_browser(body):
     body = replace_once(body,
         "            report['browser_stage']='QA_REPORTS_COMPOSER_LAYOUT'\n"
         "            await check_report_layout(page,report)\n", '')
-    body = replace_once(body, "            idle_slots()\n", "            report['resources_before_submit']=budget()\n")
+    body = replace_once(body,
+        "            idle_slots()\n            report['composer_before']=await page.evaluate(COMPOSER_JS)\n",
+        "            report['resources_before_submit']=budget()\n"
+        "            report['composer_before']=await page.evaluate(COMPOSER_JS)\n")
     body = replace_once(body, "            report['browser_stage']='QA_SEND_CLICK'\n",
         "            report['resources_at_submit']=budget()\n"
         "            report['browser_stage']='QA_SEND_CLICK'\n")
