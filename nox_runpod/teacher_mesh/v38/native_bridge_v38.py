@@ -22,6 +22,7 @@ class HostBindings:
     s03_revision: Callable[[Session], str] | None
     s03_append: Callable[[Session, dict], Mapping[str, Any]]
     model_stream: Callable[[str, dict], Iterator[str]]
+    s03_readback: Callable[[Session, str], Mapping[str, Any]] | None = None
     sensors: Callable[[Session], Mapping[str, Any]] | None = None
     self_receipts: Callable[[Session], list[dict]] | None = None
     affect: Callable[[Session, str], Mapping[str, Any]] | None = None
@@ -77,6 +78,7 @@ class AttachedNOX:
                      queue_status=host.queue_status,
                      memory_scope_authorize=host.memory_scope_authorize),config or PulseConfig())
         self.turn=DurableTurn(self.brain,DurablePorts(s03_append=host.s03_append,
+                                  s03_readback=host.s03_readback,
                                   s03_backup=host.s03_backup,
                                   s03_backup_verify=host.s03_backup_verify,
                                   native_revision=host.s03_revision))
