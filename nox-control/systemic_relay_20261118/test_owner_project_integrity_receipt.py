@@ -169,6 +169,7 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
     def test_blocked_terminal_capacity_needs_exact_durable_witness(self):
         """A truthy S03 result for a different job cannot free this worker slot."""
         task = {'id': '4V14-07', 'status': 'blocked',
+                'params': {'job_id': 'job-4V14-07'},
                 'owner_claim': {'nonce': 'claim-4V14-07'}}
         receipt = {'task_id': task['id'], 'job_id': 'job-4V14-07',
                    'phase': 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED',
@@ -202,6 +203,20 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                 with patch.object(binding, 's03_readback', return_value=good):
                     self.assertTrue(subject.terminal_for_capacity(task))
                     self.assertIn(sha, subject.terminal_cache)
+
+                # Even a matching, independently readable S03 receipt must not
+                # settle this task when the stored receipt belongs to another job.
+                foreign_receipt = {**receipt, 'job_id': 'other-job'}
+                foreign_sha = binding.digest(binding.encoded(foreign_receipt))
+                task['native_project_terminal'] = {
+                    'receipt': foreign_receipt, 'receipt_sha256': foreign_sha}
+                foreign_readback = {**good, 'job_id': 'other-job',
+                                    'receipt_sha256': foreign_sha}
+                with patch.object(binding, 's03_readback',
+                                  return_value=foreign_readback) as read:
+                    self.assertFalse(subject.terminal_for_capacity(task))
+                    read.assert_not_called()
+                self.assertNotIn(foreign_sha, subject.terminal_cache)
 
 
     def test_reconcile_terminal_status_needs_exact_receipt_and_s03_witness(self):
