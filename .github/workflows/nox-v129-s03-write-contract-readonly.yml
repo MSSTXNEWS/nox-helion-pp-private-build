@@ -4,6 +4,7 @@ on:
     branches: [feature/nox-v37-v100-firsthour-14d-20261113]
     paths:
       - 'nox_runpod/teacher_mesh/v129/read_native_s03_write_contract.py'
+      - 'nox_runpod/teacher_mesh/v129/tests/test_read_native_s03_writer_contract.py'
       - '.github/workflows/nox-v129-s03-write-contract-readonly.yml'
   workflow_dispatch:
     inputs:
@@ -33,13 +34,17 @@ jobs:
         run: |
           set -euo pipefail
           python -m py_compile nox_runpod/teacher_mesh/v129/read_native_s03_write_contract.py
+          python -m unittest nox_runpod.teacher_mesh.v129.tests.test_read_native_s03_writer_contract -v
           python - <<'PY'
           from nox_runpod.teacher_mesh.v129.read_native_s03_write_contract import REMOTE
           src=REMOTE.partition("<<'PYREMOTE'")[2].rpartition('PYREMOTE')[0]
           compile(src,'<NATIVE_S03_READONLY>','exec')
-          for k in ('PRAGMA query_only=ON','PRAGMA quick_check','private_rows_exported','TEMP_SSH_CLEANUP','NATIVE_READ_ONLY_COMPLETE=true'):
+          for k in ('PRAGMA query_only=ON','mode=ro','O_NOFOLLOW','MODULE_ALLOWLIST','MAX_SOURCE_BYTES',
+                    'PRAGMA table_info','PRAGMA index_list','PRAGMA index_info','private_rows_exported',
+                    'TEMP_SSH_CLEANUP','NATIVE_READ_ONLY_COMPLETE=true'):
               assert k in (src+REMOTE if k!='TEMP_SSH_CLEANUP' else open('nox_runpod/teacher_mesh/v129/read_native_s03_write_contract.py').read()),k
           assert 'SELECT * FROM s03_items' not in src
+          assert 'SELECT text FROM s03_items' not in src
           print('NOX_V129_S03_SOURCE_ONLY_PASS=true')
           PY
   native-readonly:
