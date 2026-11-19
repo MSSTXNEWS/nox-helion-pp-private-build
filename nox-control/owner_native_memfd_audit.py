@@ -621,4 +621,20 @@ def main() -> int:
     started = time.time()
     try:
         result = run_audit()
-        result.update(request_id=int(request), source
+        result.update(request_id=int(request), source_sha=source_sha,
+                      started_at=started, finished_at=time.time())
+        print("NOX_MAINT_MEMFD_AUDIT=" + json.dumps(result, separators=(",", ":")), flush=True)
+        print("NOX_MAINT_MEMFD_AUDIT_COMPLETE=true", flush=True)
+        return 0
+    except Hold as exc:
+        print("NOX_MAINT_MEMFD_AUDIT=" + json.dumps({
+            "schema": SCHEMA, "request_id": int(request), "source_sha": source_sha,
+            "state": str(exc), "complete": False, "partial": True,
+            "scan_counters": LAST_SCAN, "diagnostics": exc.diagnostics,
+            "host_mutations": False, "signals_sent": False, "supervisor_rpc": False,
+            "finished_at": time.time()}, separators=(",", ":")), flush=True)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -287,4 +287,30 @@ class MemfdAuditTests(unittest.TestCase):
             b"x" * 4097, None, None)
         self.assertTrue(truncated)
 
-    def t
+    def test_owner_operator_dispatches_exact_owner_action(self):
+        self.assertEqual(operator.FILES["memfd_audit"],
+                         "nox-control/owner_native_memfd_audit.py")
+
+    def test_start_tick_parser_handles_parenthesis_in_comm(self):
+        fields = ["S", "7", "8"] + ["0"] * 16 + ["456"]
+        raw = ("123 (worker ) nested) " + " ".join(fields) + "\n").encode()
+        self.assertEqual(audit._parse_start_ticks(raw, 123), 456)
+
+    def test_source_has_no_remote_mutation_or_raw_path_export(self):
+        tree = ast.parse(Path(audit.__file__).read_text())
+        imported = {alias.name.split(".")[0]
+                    for node in ast.walk(tree)
+                    if isinstance(node, (ast.Import, ast.ImportFrom))
+                    for alias in node.names}
+        self.assertFalse(imported & {"subprocess", "socket", "xmlrpc"})
+        calls = [node.func.attr if isinstance(node.func, ast.Attribute)
+                 else node.func.id if isinstance(node.func, ast.Name) else ""
+                 for node in ast.walk(tree) if isinstance(node, ast.Call)]
+        self.assertFalse({"kill", "unlink", "write_text", "write_bytes", "system"} & set(calls))
+        source = Path(audit.__file__).read_text().lower()
+        self.assertNotIn("supervisorctl", source)
+        self.assertNotIn("sigterm", source)
+
+
+if __name__ == "__main__":
+    unittest.main()
