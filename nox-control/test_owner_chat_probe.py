@@ -106,6 +106,14 @@ class ProbeTests(unittest.TestCase):
             with self.subTest(elapsed=elapsed):
                 with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_EXECUTOR_TURN_BUDGET_EXHAUSTED'):
                     probe.require_executor_turn_budget(elapsed)
+        # Both before issuing a third POST and after verifying its persistence,
+        # the same wall-clock budget must be enforced before any COMPLETE.
+        source = path.read_text()
+        gate = 'require_executor_turn_budget(time.monotonic()-probe_started)'
+        self.assertEqual(source.count(gate), 2)
+        self.assertLess(source.index(gate), source.index('turn3=consume_turn('))
+        self.assertLess(source.index('require_executor_witness(end,third_history,'), source.rindex(gate))
+        self.assertLess(source.rindex(gate), source.index("emit('chat_recent_timing_after'"))
 
     def test_stream_terminal_done_must_bind_to_requested_dialog(self):
         class Response:
