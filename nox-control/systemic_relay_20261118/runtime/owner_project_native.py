@@ -541,6 +541,7 @@ class ProjectBinding:
                 or worker.get('parent_task_id') != task.get('parent_task_id')
                 or worker.get('queue_id') != task.get('queue_id')
                 or worker.get('state') != 'INTEGRATED'
+                or worker.get('original_task_accepted') is not False
                 or worker.get('project_source_changed') is not True
                 or worker.get('integration_verified') is not True
                 or not isinstance(worker.get('tests'), dict)
