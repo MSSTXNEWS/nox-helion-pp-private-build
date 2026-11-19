@@ -27,7 +27,7 @@ def main():
         if isinstance(n,ast.Assign) and len(n.targets)==1 and isinstance(n.targets[0],ast.Name):
             name=n.targets[0].id
             if name=='CHAT_PASSWORD_PATH':found.append({'name':name,'shape':shape(n.value)})
-            elif name in ('ROOT','STATE','BASE_DIR','NOX_ROOT','ROOT_DIR','CONFIG_DIR','PASSWORD_DIR','NOX_STATE'):
+            elif name in ('ROOT','STATE','BASE_DIR','NOX_ROOT','ROOT_DIR','CONFIG_DIR','PASSWORD_DIR','NOX_STATE','SECRETS','BASE','NOX_HOME'):
                 found.append({'name':name,'shape':shape(n.value)})
         if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and n.target.id=='CHAT_PASSWORD_PATH':
             found.append({'name':'CHAT_PASSWORD_PATH','shape':shape(n.value)})
