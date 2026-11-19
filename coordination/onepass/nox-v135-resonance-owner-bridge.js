@@ -267,7 +267,7 @@
             first_visible_token_ms:firstVisibleMs,
             seconds:+((performance.now()-started)/1000).toFixed(2)});
         }catch(e){
-          if(modelStarted&&!streamDone&&!stopJob)await stopThenAbort();
+          if(modelStarted&&!streamDone)await stopThenAbort();
           event({type:'error',
             error:(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
             gpu_stop_verified:false,
