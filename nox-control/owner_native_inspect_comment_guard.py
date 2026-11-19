@@ -18,17 +18,18 @@ ISSUE_NUMBER = 256
 INSTANCE_ID = 60509551
 # Only reviewed immutable source commits may receive the NOX2 secret.
 APPROVED_SOURCE_BY_ACTION = {
-    "inspect": "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8",  # merged PR #477
+    "inspect": "1d76f3fbce0b9e9258f77cdc181b038acc4d69c9",  # merged PR #550 cgroup route
     "audit": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",  # merged PR #485
     "source_attest": "3e399979e5b2e5ac16c1504542bd5cace989ddd3",  # updated chat/S03 static scope #520
     "gpu_inventory": "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e",  # exact-head source tests green
     "browser_qa": "eaa4b0d64d3d97a8c2b2680e8eb20137934d76b9",  # PR #543 helper source commit; preserve this pin with a merge commit
     "source_export": "1fe739fa49141805701e8f969b77b536a4e49a4b",  # exact pinned encrypted-only #415 source export
+    "emergency_stop": "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23",  # exact drained emergency-stop source commit
 }
 SOURCE_EXPORT_KEY_MAX_CHARS = 12000
 COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) "
-    rf"(inspect|audit|source_attest|gpu_inventory|browser_qa)\Z"
+    rf"(inspect|audit|source_attest|gpu_inventory|browser_qa|emergency_stop)\Z"
 )
 SOURCE_EXPORT_COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ({re.escape(APPROVED_SOURCE_BY_ACTION['source_export'])}) "

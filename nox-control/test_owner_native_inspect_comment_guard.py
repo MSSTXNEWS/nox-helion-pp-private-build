@@ -21,6 +21,7 @@ from owner_native_inspect_comment_guard import (
 
 
 INSPECT_SHA = APPROVED_SOURCE_BY_ACTION["inspect"]
+EMERGENCY_STOP_SHA = APPROVED_SOURCE_BY_ACTION["emergency_stop"]
 AUDIT_SHA = APPROVED_SOURCE_BY_ACTION["audit"]
 SOURCE_ATTEST_SHA = APPROVED_SOURCE_BY_ACTION["source_attest"]
 GPU_INVENTORY_SHA = APPROVED_SOURCE_BY_ACTION["gpu_inventory"]
@@ -30,6 +31,7 @@ SOURCE_EXPORT_SHA = APPROVED_SOURCE_BY_ACTION["source_export"]
 OLD_UNAPPROVED_SHA = "80fc87881036462cfbe0aa27bb02b69daf8bfe6a"  # prior #437
 STALE_AUDIT_SHA = "22efccc957bc72d54899a701e6d09e5ef69b20c2"  # pre-fix #475
 UNAPPROVED_SHA = "a" * 40
+OLD_INSPECT_SHA = "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8"
 
 
 def event_for(body: str = f"/nox-maintain 60509551 {INSPECT_SHA} inspect") -> dict:
@@ -50,7 +52,9 @@ def event_for(body: str = f"/nox-maintain 60509551 {INSPECT_SHA} inspect") -> di
 class OwnerCommentGuardTests(unittest.TestCase):
     def test_exact_inspect_audit_and_attestation_commands_return_pinned_pairs(self) -> None:
         self.assertEqual(INSPECT_SHA,
-                         "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8")
+                         "1d76f3fbce0b9e9258f77cdc181b038acc4d69c9")
+        self.assertEqual(EMERGENCY_STOP_SHA,
+                         "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23")
         self.assertEqual(AUDIT_SHA,
                          "b1e33d60983885a7ebd1979bda4ec640b7ca7047")
         self.assertEqual(SOURCE_ATTEST_SHA,
@@ -80,6 +84,12 @@ class OwnerCommentGuardTests(unittest.TestCase):
             authorize_event(event_for(browser_body), REPOSITORY, "issue_comment"),
             ("browser_qa", BROWSER_QA_SHA),
         )
+        emergency_stop_body = (
+            f"/nox-maintain 60509551 {EMERGENCY_STOP_SHA} emergency_stop")
+        self.assertEqual(
+            authorize_event(event_for(emergency_stop_body), REPOSITORY, "issue_comment"),
+            ("emergency_stop", EMERGENCY_STOP_SHA),
+        )
 
     def test_malformed_or_unavailable_actions_hold(self) -> None:
         bodies = (
@@ -94,6 +104,7 @@ class OwnerCommentGuardTests(unittest.TestCase):
             f"/nox-maintain 60509551 {SOURCE_ATTEST_SHA} source_attest extra",
             f"/nox-maintain 60509551 {GPU_INVENTORY_SHA} gpu_inventory extra",
             f"/nox-maintain 60509551 {BROWSER_QA_SHA} browser_qa extra",
+            f"/nox-maintain 60509551 {EMERGENCY_STOP_SHA} emergency_stop extra",
         )
         for body in bodies:
             with self.subTest(body=body):
@@ -103,6 +114,7 @@ class OwnerCommentGuardTests(unittest.TestCase):
 
     def test_well_formed_unapproved_or_cross_action_shas_hold(self) -> None:
         pairs = (
+            (OLD_INSPECT_SHA, "inspect"),
             (OLD_UNAPPROVED_SHA, "inspect"),
             (STALE_AUDIT_SHA, "audit"),
             (UNAPPROVED_SHA, "inspect"),
@@ -125,6 +137,10 @@ class OwnerCommentGuardTests(unittest.TestCase):
             (BROWSER_QA_SHA, "source_attest"),
             (BROWSER_QA_SHA, "gpu_inventory"),
             (GPU_INVENTORY_SHA, "browser_qa"),
+            (UNAPPROVED_SHA, "emergency_stop"),
+            (INSPECT_SHA, "emergency_stop"),
+            (EMERGENCY_STOP_SHA, "inspect"),
+            (EMERGENCY_STOP_SHA, "audit"),
         )
         for sha, action in pairs:
             body = f"/nox-maintain 60509551 {sha} {action}"
@@ -219,8 +235,17 @@ class OwnerCommentGuardTests(unittest.TestCase):
             self.assertEqual(output_path.read_text(encoding="utf-8"),
                              f"action=browser_qa\nsource_sha={BROWSER_QA_SHA}\n")
 
+            emergency_body = (
+                f"/nox-maintain 60509551 {EMERGENCY_STOP_SHA} emergency_stop")
+            event_path.write_text(json.dumps(event_for(emergency_body)), encoding="utf-8")
+            output_path.write_text("", encoding="utf-8")
+            with mock.patch.dict(os.environ, env, clear=False):
+                self.assertEqual(main(), 0)
+            self.assertEqual(output_path.read_text(encoding="utf-8"),
+                             f"action=emergency_stop\nsource_sha={EMERGENCY_STOP_SHA}\n")
+
             unapproved_body = (
-                f"/nox-maintain 60509551 {OLD_UNAPPROVED_SHA} audit"
+                f"/nox-maintain 60509551 {OLD_INSPECT_SHA} inspect"
             )
             event_path.write_text(json.dumps(event_for(unapproved_body)),
                                   encoding="utf-8")
@@ -370,6 +395,36 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertLess(
             workflow.index("Run the exact pinned #415 encrypted source-export action"),
             workflow.index("Upload only the encrypted S03 source-export artifact"),
+        )
+
+    def test_emergency_stop_requires_main_source_pin_before_target_checkout(self) -> None:
+        workflow = (Path(__file__).parents[1] / ".github" / "workflows"
+                    / "nox-owner-maintenance-command.yml").read_text(encoding="utf-8")
+        self.assertIn("issue_comment:", workflow)
+        self.assertNotIn("workflow_dispatch:", workflow)
+        self.assertIn("checkout main owner approval guard", workflow.lower())
+        self.assertIn("owner_native_inspect_comment_guard.py", workflow)
+        self.assertIn("steps.approved.outputs.action", workflow)
+        self.assertIn("steps.approved.outputs.source_sha", workflow)
+        self.assertIn("emergency_stop", workflow)
+        self.assertLess(workflow.index("Run main approved-source guard"),
+                        workflow.index("ref: ${{ steps.request.outputs.sha }}"))
+        self.assertLess(workflow.index("ref: ${{ steps.request.outputs.sha }}"),
+                        workflow.index("NOX2: ${{ secrets.NOX2 }}"))
+        self.assertIn("persist-credentials: false", workflow)
+        self.assertIn(
+            "os.environ['APPROVED_ACTION'] != os.environ['REQUEST_ACTION']",
+            workflow,
+        )
+        self.assertIn(
+            "os.environ['APPROVED_SHA'] != os.environ['REQUEST_SHA']",
+            workflow,
+        )
+        self.assertIn("source=(", workflow)
+        self.assertIn("owner_native_'+a+'.py", workflow)
+        self.assertEqual(
+            workflow.count("if: steps.request.outputs.action == 'emergency_stop'"),
+            3,
         )
 
     def test_source_export_route_rechecks_key_and_uploads_ciphertext_only(self) -> None:
