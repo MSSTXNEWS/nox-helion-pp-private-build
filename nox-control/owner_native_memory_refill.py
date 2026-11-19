@@ -252,4 +252,11 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
+    try:
+        run()
+    except Exception as exc:
+        reason = str(exc)
+        if not re.fullmatch(r'HOLD_[A-Z0-9_]{1,110}', reason):
+            reason = 'HOLD_OWNER_CGROUP_REFILL_' + type(exc).__name__.upper()
+        print('NOX_MAINT_CGROUP_REFILL_DIAGNOSTIC=' + reason, flush=True)
+        raise SystemExit(2)
