@@ -13,6 +13,7 @@ on:
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/owner_chat_s03_source_attest.py'
       - 'nox-control/test_owner_chat_s03_source_attest.py'
+      - 'nox-control/test_owner_native_operator_source_attest.py'
       - 'nox-control/test_owner_native_operator_output_transfer.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
@@ -39,6 +40,7 @@ on:
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/owner_chat_s03_source_attest.py'
       - 'nox-control/test_owner_chat_s03_source_attest.py'
+      - 'nox-control/test_owner_native_operator_source_attest.py'
       - 'nox-control/test_owner_native_operator_output_transfer.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
@@ -94,5 +96,5 @@ jobs:
         run: python3 -m unittest discover -s nox-control -p 'test_owner_native_operator_output_transfer.py' -v
       - name: Fixed chat and S03 source attestation privacy tests
         run: |
-          python3 -m py_compile nox-control/owner_chat_s03_source_attest.py nox-control/test_owner_chat_s03_source_attest.py
+          python3 -m py_compile nox-control/owner_native_operator.py nox-control/test_owner_native_operator_source_attest.py nox-control/owner_chat_s03_source_attest.py nox-control/test_owner_chat_s03_source_attest.py
           python3 -m unittest discover -s nox-control -p 'test_owner_chat_s03_source_attest.py' -v

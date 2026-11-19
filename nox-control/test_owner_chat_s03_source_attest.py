@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 
 import owner_chat_s03_source_attest as ATTEST
+from test_owner_native_operator_source_attest import OwnerSourceAttestOperatorTests
 
 
 CHAT_SOURCE = '''

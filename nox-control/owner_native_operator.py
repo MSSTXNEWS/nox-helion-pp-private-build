@@ -9,7 +9,7 @@ REPO='MSSTXNEWS/nox-helion-pp-private-build'
 OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
-FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
+FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
 # GitHub Actions may omit an individual log line above the operator's historical
@@ -750,6 +750,7 @@ def _has_exact_terminal_completion_marker(stdout,marker):
 
 def forward_remote_stdout(stdout,action,request_id,source_sha):
     """Return only bounded marker lines; oversized audit records become a verified bundle."""
+    if action=='source_attest':return forward_source_attestation_stdout(stdout)[0]
     lines=stdout.splitlines();forwarded=[];audit_bundle=None
     if action=='audit':
         audit_bundle=audit_bundle_line(stdout)
@@ -774,6 +775,232 @@ def forward_remote_stdout(stdout,action,request_id,source_sha):
     if action=='audit' and not any(line=='NOX_MAINT_AUDIT_WORKERS_COMPLETE=true' for line in forwarded):
         raise RuntimeError('HOLD_AUDIT_WORKERS_COMPLETE_MARKER_MISSING')
     return forwarded
+
+SOURCE_ATTEST_MARKER='NOX_MAINT_SOURCE_ATTESTATION='
+SOURCE_ATTEST_COMPLETE_TRUE='NOX_MAINT_SOURCE_ATTESTATION_COMPLETE=true'
+SOURCE_ATTEST_COMPLETE_FALSE='NOX_MAINT_SOURCE_ATTESTATION_COMPLETE=false'
+SOURCE_ATTEST_SCHEMA='NOX_CHAT_S03_SOURCE_ATTESTATION_V1'
+SOURCE_ATTEST_MAX_LINE_BYTES=64*1024
+SOURCE_ATTEST_IDENT_RE=re.compile(r'^[A-Za-z_][A-Za-z0-9_]{0,79}$')
+SOURCE_ATTEST_SECRET_NAME_RE=re.compile(
+    r'(?:secret|password|credential|(?:api|access|private|auth)[_-]?key|(?:access|auth)[_-]?token)', re.I)
+SOURCE_ATTEST_HASH_RE=re.compile(r'^[0-9a-f]{64}$')
+SOURCE_ATTEST_GUARANTEES={
+    'target_paths_fixed':True, 'target_modules_imported':False,
+    'target_code_executed':False, 'subprocesses_run':False,
+    'database_opened':False, 'chat_rows_read':False,
+    'source_text_emitted':False, 'source_literals_emitted':False,
+}
+
+
+def _source_attest_hold():
+    raise RuntimeError('HOLD_SOURCE_ATTESTATION_REPORT_SCHEMA')
+
+
+def _source_attest_int(value,maximum=(1<<63)-1):
+    if type(value) is not int or value < 0 or value > maximum:_source_attest_hold()
+
+
+def _source_attest_bool(value):
+    if type(value) is not bool:_source_attest_hold()
+
+
+def _source_attest_ident(value):
+    if (not isinstance(value,str) or not SOURCE_ATTEST_IDENT_RE.fullmatch(value)
+            or SOURCE_ATTEST_SECRET_NAME_RE.search(value)):_source_attest_hold()
+
+
+def _source_attest_qualname(value,module=False):
+    if module and value=='<module>':return
+    if not isinstance(value,str) or len(value)>200:_source_attest_hold()
+    for part in value.split('.'):_source_attest_ident(part)
+
+
+def _source_attest_hash(value):
+    if not isinstance(value,str) or not SOURCE_ATTEST_HASH_RE.fullmatch(value):_source_attest_hold()
+
+
+def _source_attest_signature(row):
+    keys={'qualname','async','posonly','posonly_has_default','positional','positional_has_default',
+          'vararg','kwonly','kwonly_required','kwarg','argument_annotations_present',
+          'return_annotation_present','positional_default_count','kwonly_default_count',
+          'candidate_reasons','return_none_count','return_value_count','commit_call',
+          'rollback_call','context_manager_count','function_ast_sha256'}
+    if not isinstance(row,dict) or set(row)!=keys:_source_attest_hold()
+    _source_attest_qualname(row['qualname'])
+    for key in ('async','argument_annotations_present','return_annotation_present','commit_call','rollback_call'):
+        _source_attest_bool(row[key])
+    if '.' not in row['qualname'] and row['qualname'].startswith('UNSAFE_'):_source_attest_hold()
+    for names_key,defaults_key in (('posonly','posonly_has_default'),('positional','positional_has_default'),
+                                   ('kwonly','kwonly_required')):
+        names=row[names_key];flags=row[defaults_key]
+        if not isinstance(names,list) or not isinstance(flags,list) or len(names)!=len(flags) or len(names)>128:
+            _source_attest_hold()
+        for name in names:_source_attest_ident(name)
+        for flag in flags:_source_attest_bool(flag)
+    for key in ('vararg','kwarg'):
+        if row[key] is not None:_source_attest_ident(row[key])
+    reasons=row['candidate_reasons']
+    if (not isinstance(reasons,list) or not reasons or len(reasons)>2
+            or any(not isinstance(item,str) or item not in ('writer_name','s03_table_dml')
+                   for item in reasons)
+            or len(set(reasons))!=len(reasons)):
+        _source_attest_hold()
+    for key in ('positional_default_count','kwonly_default_count','return_none_count',
+                'return_value_count','context_manager_count'):_source_attest_int(row[key],100000)
+    if row['positional_default_count'] != (sum(row['posonly_has_default'])+sum(row['positional_has_default'])):
+        _source_attest_hold()
+    if row['kwonly_default_count'] != sum(not flag for flag in row['kwonly_required']):
+        _source_attest_hold()
+    _source_attest_hash(row['function_ast_sha256'])
+
+
+def _source_attest_target(row,label,relative):
+    common={'target','relative_path','status'}
+    metadata={'bytes','uid','gid','mode','mtime_ns','ctime_ns','file_identity_sha256','sha256'}
+    ast_fields={'ast_node_count','source_text_emitted','source_literals_emitted'}
+    chat_fields={'imports','imports_truncated','call_sites','call_sites_truncated',
+                 'dynamic_access_detected','static_scope_complete'}
+    memory_fields={'writer_signatures','writer_signature_count'}
+    if not isinstance(row,dict) or not common.issubset(row):_source_attest_hold()
+    if row['target']!=label or row['relative_path']!=relative:_source_attest_hold()
+    status=row['status']
+    if not isinstance(status,str) or (status!='AST_PARSED' and not re.fullmatch(r'HOLD_[A-Z0-9_]{1,64}',status)):
+        _source_attest_hold()
+    allowed=common|metadata|ast_fields|(chat_fields if label=='chat_proxy' else memory_fields)
+    if not set(row).issubset(allowed):_source_attest_hold()
+    for key in ('bytes','uid','gid','mtime_ns','ctime_ns'):
+        if key in row:_source_attest_int(row[key],1<<63)
+    if 'bytes' in row and row['bytes']>1024*1024:_source_attest_hold()
+    if 'mode' in row and (not isinstance(row['mode'],str) or not re.fullmatch(r'[0-7]{4}',row['mode'])):
+        _source_attest_hold()
+    for key in ('file_identity_sha256','sha256'):
+        if key in row:_source_attest_hash(row[key])
+    if 'ast_node_count' in row:_source_attest_int(row['ast_node_count'],100000)
+    for key in ('source_text_emitted','source_literals_emitted'):
+        if key in row and row[key] is not False:_source_attest_hold()
+    if status=='AST_PARSED':
+        required=common|metadata|ast_fields|(chat_fields if label=='chat_proxy' else memory_fields)
+        if set(row)!=required:_source_attest_hold()
+        if row['bytes']<0 or row['ast_node_count']<1:_source_attest_hold()
+        if row['source_text_emitted'] is not False or row['source_literals_emitted'] is not False:
+            _source_attest_hold()
+        if label=='chat_proxy':
+            for key in ('imports_truncated','call_sites_truncated','dynamic_access_detected','static_scope_complete'):
+                _source_attest_bool(row[key])
+            imports=row['imports'];calls=row['call_sites']
+            if not isinstance(imports,list) or len(imports)>32 or not isinstance(calls,list) or len(calls)>64:
+                _source_attest_hold()
+            for item in imports:
+                if not isinstance(item,dict):_source_attest_hold()
+                if item.get('kind')=='module' and set(item)=={'kind','alias'}:
+                    _source_attest_ident(item['alias'])
+                elif item.get('kind')=='symbol' and set(item)=={'kind','symbol','alias'}:
+                    _source_attest_ident(item['symbol']);_source_attest_ident(item['alias'])
+                else:_source_attest_hold()
+            for item in calls:
+                if (not isinstance(item,dict) or set(item)!={'caller','symbol','kind'}
+                        or item['kind'] not in ('module_attribute','imported_symbol')):_source_attest_hold()
+                _source_attest_qualname(item['caller'],module=True);_source_attest_ident(item['symbol'])
+        else:
+            rows=row['writer_signatures']
+            if not isinstance(rows,list) or len(rows)>48:_source_attest_hold()
+            _source_attest_int(row['writer_signature_count'],48)
+            if row['writer_signature_count']!=len(rows):_source_attest_hold()
+            for signature in rows:_source_attest_signature(signature)
+    elif 'writer_signatures' in row or 'imports' in row or 'call_sites' in row:
+        _source_attest_hold()
+
+
+def validate_source_attestation_report(report):
+    """Accept only the fixed AST receipt schema; reject unknown or secret-like fields."""
+    if not isinstance(report,dict) or report.get('schema')!=SOURCE_ATTEST_SCHEMA:
+        _source_attest_hold()
+    _source_attest_bool(report.get('complete'))
+    status=report.get('status')
+    if not isinstance(status,str):_source_attest_hold()
+    if set(report)=={'schema','status','complete'}:
+        if report['complete'] or not re.fullmatch(r'HOLD_[A-Z0-9_]{1,64}',status):_source_attest_hold()
+        return report
+    full_keys={'schema','status','complete','targets','chat_to_s03_writer_links','guarantees'}
+    short_oversize={'schema','status','complete','targets','guarantees'}
+    if set(report) not in (full_keys,short_oversize):_source_attest_hold()
+    if status not in ('SOURCE_STATIC_ATTESTED','HOLD_STATIC_WRITER_LINK_INCOMPLETE') \
+            and not re.fullmatch(r'HOLD_[A-Z0-9_]{1,64}',status):_source_attest_hold()
+    targets=report['targets']
+    if not isinstance(targets,list) or len(targets) not in (0,2):_source_attest_hold()
+    if set(report)==short_oversize:
+        if report['complete'] or status!='HOLD_REPORT_OVERSIZED' or targets:_source_attest_hold()
+    elif not targets:
+        _source_attest_hold()
+    if targets:
+        _source_attest_target(targets[0],'chat_proxy','scripts/chat_proxy.py')
+        _source_attest_target(targets[1],'s03_memory','scripts/s03_memory.py')
+    guarantees=report['guarantees']
+    if not isinstance(guarantees,dict) or set(guarantees)!=set(SOURCE_ATTEST_GUARANTEES):
+        _source_attest_hold()
+    for key,expected in SOURCE_ATTEST_GUARANTEES.items():
+        if type(guarantees[key]) is not bool or guarantees[key] is not expected:_source_attest_hold()
+    if report['complete']:
+        if set(report)!=full_keys or status!='SOURCE_STATIC_ATTESTED' or len(targets)!=2:_source_attest_hold()
+        proxy,memory=targets
+        if (proxy['status']!='AST_PARSED' or memory['status']!='AST_PARSED'
+                or not proxy['static_scope_complete'] or proxy['imports_truncated']
+                or proxy['call_sites_truncated']):
+            _source_attest_hold()
+        calls={row['symbol'] for row in proxy['call_sites']}
+        writers={row['qualname'] for row in memory['writer_signatures'] if '.' not in row['qualname']}
+        expected=[row for row in memory['writer_signatures']
+                  if '.' not in row['qualname'] and row['qualname'] in calls]
+        links=report['chat_to_s03_writer_links']
+        if not expected or links!=expected or not calls.intersection(writers):_source_attest_hold()
+    else:
+        if status=='SOURCE_STATIC_ATTESTED':_source_attest_hold()
+        if set(report)==full_keys:
+            links=report['chat_to_s03_writer_links']
+            if not isinstance(links,list) or len(links)>48:_source_attest_hold()
+            for signature in links:_source_attest_signature(signature)
+            if len(targets)==2 and all(row.get('status')=='AST_PARSED' for row in targets):
+                proxy,memory=targets
+                calls={row['symbol'] for row in proxy['call_sites']}
+                expected=[row for row in memory['writer_signatures']
+                          if '.' not in row['qualname'] and row['qualname'] in calls]
+                if links!=expected:_source_attest_hold()
+        elif targets:
+            _source_attest_hold()
+    return report
+
+
+def _source_attest_json(payload):
+    def no_duplicate_keys(pairs):
+        value={}
+        for key,item in pairs:
+            if key in value:_source_attest_hold()
+            value[key]=item
+        return value
+    def reject_constant(_value):_source_attest_hold()
+    try:
+        report=json.loads(payload,object_pairs_hook=no_duplicate_keys,parse_constant=reject_constant)
+    except RuntimeError:
+        raise
+    except (ValueError,TypeError,RecursionError):
+        _source_attest_hold()
+    return validate_source_attestation_report(report)
+
+
+def forward_source_attestation_stdout(stdout):
+    """Validate and forward exactly the report and its terminal marker."""
+    if not isinstance(stdout,str):_source_attest_hold()
+    lines=stdout.splitlines()
+    if len(lines)!=2 or not lines[0].startswith(SOURCE_ATTEST_MARKER) \
+            or lines[1] not in (SOURCE_ATTEST_COMPLETE_TRUE,SOURCE_ATTEST_COMPLETE_FALSE):
+        _source_attest_hold()
+    if len(lines[0].encode('utf-8'))>SOURCE_ATTEST_MAX_LINE_BYTES:_source_attest_hold()
+    report=_source_attest_json(lines[0][len(SOURCE_ATTEST_MARKER):])
+    if report['complete'] != (lines[1]==SOURCE_ATTEST_COMPLETE_TRUE):_source_attest_hold()
+    if report['complete'] and report['status']!='SOURCE_STATIC_ATTESTED':_source_attest_hold()
+    return lines,report
+
 
 SCOPED_REPAIR_BUNDLES={'nox-control/systemic_relay_20261118/owner_chat_policy_live_smoke_entry.py': (), 'nox-control/systemic_relay_20261118/owner_chat_policy_live_smoke.py': (), 'nox-control/systemic_relay_20261118/next_chat_review/package_counter_reconcile_policy_v1/owner_chat_counter_policy_entry.py': (), 'nox-control/systemic_relay_20261118/next_reviewed_merge_20261118/prepared_v3/owner_systemic_reviewed_merge_embedded_entry.py': (), 'nox-control/systemic_relay_20261118/next_chat_review/package_v5/owner_chat_decomposition_embedded_entry.py': (), 'nox-control/owner_continuous_executor_install.py': ('cw_test_nox_forge_language_task_coverage.py', 'cw_test_nox_readonly_retry_backoff.py', 'cw_test_nox_warm_cache_limit_contract.py', 'cw_contract_510dbdec4dd2538ebeac.json', 'cw_contract_9efad5217ab0e554a383.json', 'cw_contract_683c5086d66e750d4ed1.json', 'continuous_transaction_helpers.py', 'continuous_dispatcher.py', 'continuous_planner.py', 'continuous_truth.py'), 'nox-control/owner_bounded_cpu_install.py': ('bc_runtime_d5fb476f53e64d2014f2.py', 'bc_runtime_6c67e567e669b993d016.py', 'bc_runtime_2c83ec53f7ee7c2d76bc.py', 'bc_runtime_294473d35d4870f50467.py'), 'nox-control/owner_project_runtime_update.py': ('ru_runtime_fcb77cc59eb9a88dde68.py', 'ru_runtime_84d54c647b0a63447aca.py', 'ru_runtime_52e62a143d16f387899f.py', 'ru_runtime_aa0dd1c8266106b599ce.py', 'ru_plans_a171fa7a94084a1f4b67.data', 'ru_blobs_fa3d69e506d727295094.data', 'ru_plans_79b77425ff05d3337c2e.data', 'ru_blobs_b980a61884965f4838f8.data', 'ru_plans_dd24421576ae4160fa01.data', 'ru_blobs_7e625acddd71fe95988e.data', 'ru_blobs_4b06687bbad8fe6ab046.data', 'ru_contracts_eece310e5608fa9c633d.data'), 'nox-control/owner_complete_executor_install.py': ('ce_runtime_2c4735938dacd2a062ed.py', 'ce_runtime_71dd03dee52f1673c297.py', 'ce_runtime_f6b2f98ac5c7c291ffef.py', 'ce_runtime_687ea3b3548badf9b7ba.py', 'ce_runtime_35b0e94f9c883da017e4.py', 'ce_runtime_d0ff44d4752128c26779.py', 'ce_runtime_119115603be6dba84121.py', 'ce_runtime_7f18d69529582b65f7b8.py', 'ce_runtime_126c77c1281b74676930.py', 'ce_runtime_485d4a4a571c434afb98.py', 'ce_baseline_bb2c543979ad58801d97.source', 'ce_baseline_4d1274059d034bb9b96a.source', 'ce_baseline_d9ec6a8250a167d774ba.source', 'ce_baseline_c676fdda4fa47d316eb1.source', 'ce_baseline_8657ad367e6dd25b48ca.source', 'ce_baseline_006fc038f43682fa36d2.source', 'ce_baseline_d35064a3fc5707dfc174.source', 'ce_baseline_66a6617d6f582876dbdc.source', 'ce_baseline_e3b0c44298fc1c149afb.source', 'ce_baseline_092db7d32a048c1706da.source', 'ce_baseline_dc19594b45a7fae32bf9.source', 'ce_baseline_b4ece67144248808a12c.source', 'ce_baseline_21f8538fec15d39b4dbc.source', 'ce_baseline_3efe025681c3a54cbfac.source', 'ce_baseline_b3c5d26011400b110a1b.source', 'ce_baseline_f299d32099c25ea1822c.source', 'ce_baseline_0fff97b7e758e3e43073.source', 'ce_baseline_fd815f9a743bfcdf6e71.source', 'ce_baseline_97c433b8893514f5812b.source', 'ce_baseline_fc5d6c564c651c2abc81.source', 'ce_baseline_623bfb4ba2d28d3dd3db.source', 'ce_baseline_9201bc3629682a577c80.source', 'ce_baseline_d6042e38549360ace8f9.source', 'ce_baseline_2860173d8d6ed7147af2.source', 'ce_baseline_970d6681ce5dc57156e2.source', 'ce_baseline_6aa9265942695d2b54b3.source', 'ce_baseline_8d2070c2f0819e7d1c2b.source', 'ce_baseline_60e28219f670a8449a56.source', 'ce_plans_283ff826ba1180398888.json', 'ce_blobs_fa3d69e506d727295094.source', 'ce_plans_e7c99335a4a790202f22.json', 'ce_blobs_f7b69405224c63868b76.source', 'ce_plans_de41f4de77a043c695fe.json', 'ce_blobs_7e625acddd71fe95988e.source', 'ce_plans_67e819b4ff1b94cc5bdd.json', 'ce_blobs_b980a61884965f4838f8.source', 'ce_plans_4037501920f2e9f3ea41.json', 'ce_blobs_06940cb13bd568d4cfaa.source', 'ce_plans_9b80e2075b52602ac9e1.json', 'ce_blobs_f336c58fb5062aec6d5b.source', 'ce_contracts_b40696685ca2b7c848a2.json', 'ce_manifests_79a8efb2d344479471bd.json', 'ce_manifests_e040c40bd8ee3d29b0cc.json'), 'nox-control/owner_post_reset_state_observe.py': (), 'nox-control/owner_chat_markdown_asset_install_v2.py': ('owner_chat_stream_asset_install_v2.py', 'owner_media_acceptance_entry.py', 'owner_native_repair.py', 'nox-v24-chat-markdown-final.js'), 'nox-control/owner_chat_markdown_metadata.py': (), 'nox-control/owner_chat_markdown_asset_install.py': ('owner_chat_stream_asset_install_v2.py', 'owner_media_acceptance_entry.py', 'owner_native_repair.py', 'nox-v24-chat-markdown-final.js'), 'nox-control/owner_workspace_browser_acceptance_v6.py': ('owner_workspace_browser_acceptance_v5.py', 'owner_workspace_browser_acceptance_v2.py', 'owner_workspace_browser_acceptance.py', 'owner_chat_page_diagnose.py', 'owner_browser_stream_only_entry.py', 'owner_chat_browser_qa.py'), 'nox-control/owner_qwen_successor_checkpoint_proof_v2.py': (), 'nox-control/owner_workspace_browser_acceptance_v5.py': ('owner_workspace_browser_acceptance_v2.py', 'owner_workspace_browser_acceptance.py', 'owner_chat_page_diagnose.py', 'owner_browser_stream_only_entry.py', 'owner_chat_browser_qa.py'), 'nox-control/owner_chat_markdown_acceptance.py': ('owner_browser_stream_only_entry.py', 'owner_chat_browser_qa.py'), 'nox-control/owner_qwen_successor_memfd_progress.py': (), 'nox-control/owner_qwen_successor_checkpoint_proof.py': (), 'nox-control/owner_qwen_successor_observe_v2.py': (), 'nox-control/owner_workspace_browser_acceptance_v3.py': ('owner_workspace_browser_acceptance_v2.py', 'owner_workspace_browser_acceptance.py', 'owner_chat_page_diagnose.py', 'owner_browser_stream_only_entry.py', 'owner_chat_browser_qa.py'), 'nox-control/owner_qwen_successor_entry_v2.py': ('owner_qwen_successor_install_v2.py', 'owner_qwen_execution_successor.py', 'qwen_student_training_entry_successor.py', 'owner_qwen_successor_guard.py', 'owner_qwen_successor_status.py', 'owner_qwen_successor_media_handoff.py', 'owner_qwen_successor_media_guard.py', 'owner_qwen_successor_handback_retry.py', 'owner_qwen_successor_hermes_hydrate.py', 'owner_qwen_successor_watch.py', 'owner_download_status_entry.py', 'owner_native_repair.py', 'owner_qwen_disk_rearm_entry.py'), 'nox-control/owner_workspace_browser_acceptance_v2.py': ('owner_workspace_browser_acceptance.py', 'owner_chat_page_diagnose.py', 'owner_browser_stream_only_entry.py', 'owner_chat_browser_qa.py'), 'nox-control/owner_qwen_successor_entry.py': ('owner_qwen_successor_install.py', 'owner_qwen_execution_successor.py', 'qwen_student_training_entry_successor.py', 'owner_qwen_successor_guard.py', 'owner_qwen_successor_status.py', 'owner_qwen_successor_media_handoff.py', 'owner_qwen_successor_media_guard.py', 'owner_qwen_successor_handback_retry.py', 'owner_qwen_successor_hermes_hydrate.py', 'owner_qwen_successor_watch.py', 'owner_download_status_entry.py', 'owner_native_repair.py', 'owner_qwen_disk_rearm_entry.py'), 'nox-control/owner_workspace_browser_acceptance.py': ('owner_chat_page_diagnose.py', 'owner_browser_stream_only_entry.py', 'owner_chat_browser_qa.py'), 'nox-control/owner_qwen_budget_failure_diagnose.py': (), 'nox-control/owner_workspace_asset_install.py': ('owner_chat_stream_asset_install_v2.py', 'owner_media_acceptance_entry.py', 'owner_native_repair.py', 'workspace-owner-capabilities.js'), 'nox-control/owner_qwen_public_memfd_access_probe.py': (), 'nox-control/owner_training_control_readonly_batch.py': ('owner_qwen_transport_budget_observe.py', 'owner_admin_control_structure_probe.py', 'owner_qwen_public_memfd_access_probe.py'), 'nox-control/owner_qwen_transport_budget_observe.py': (), 'nox-control/owner_admin_control_structure_probe.py': (), 'nox-control/owner_qwen_transport_budget_finalize_6914959637.py': (), 'nox-control/owner_chat_page_diagnose.py': ('owner_browser_stream_only_entry.py', 'owner_chat_browser_qa.py'), 'nox-control/owner_chat_action_routing_install.py': ('owner_chat_stream_action_routing.py', 'owner_download_status_entry.py', 'owner_native_repair.py'), 'nox-control/owner_chat_plan_api_probe.py': (), 'nox-control/owner_chat_stream_asset_install_v2.py': ('nox-v135-resonance-owner-bridge-coalesced.js', 'owner_media_acceptance_entry.py', 'owner_native_repair.py'), 'nox-control/owner_qwen_transport_rollback_entry.py': ('owner_qwen_transport_rollback.py', 'owner_qwen_transport_revision_install.py', 'owner_download_status_entry.py', 'owner_native_repair.py', 'owner_qwen_disk_rearm_entry.py', 'owner_qwen_transport_failed_diagnostic.json'), 'nox-control/owner_qwen_transport_budget_entry.py': ('owner_qwen_revision_install.py', 'qwen_student_training_entry_revision.py', 'owner_qwen_transport_budget_install.py', 'qwen_student_training_entry_transport_budget.py', 'owner_qwen_execution_revision.py', 'owner_qwen_revision_guard.py', 'owner_qwen_revision_status.py', 'owner_qwen_revision_media_handoff.py', 'owner_qwen_revision_media_guard.py', 'owner_qwen_revision_handback_retry.py', 'owner_hermes_revision_hydrate.py', 'owner_download_status_entry.py', 'owner_native_repair.py', 'owner_qwen_disk_rearm_entry.py'), 'nox-control/owner_chat_stream_asset_install.py': ('nox-v135-resonance-owner-bridge-coalesced.js', 'owner_media_acceptance_entry.py', 'owner_native_repair.py'), 'nox-control/owner_browser_asset_identity_entry.py': ('owner_browser_normal_motion_entry.py', 'owner_browser_stream_only_entry.py', 'owner_chat_browser_qa.py', 'owner_chat_browser_transport_qa.py', 'owner_chat_browser_release_qa.py', 'owner_chat_stream_only_qa.py', 'owner_chat_normal_motion_qa.py', 'owner_chat_asset_identity_qa.py'), 'nox-control/owner_qwen_held_media_smoke_v2_entry.py': ('owner_qwen_held_media_smoke_v2.py', 'owner_media_acceptance_entry.py', 'owner_qwen_revision_install.py', 'owner_native_repair.py', 'owner_download_status_entry.py'), 'nox-control/owner_browser_normal_motion_entry.py': ('owner_browser_stream_only_entry.py', 'owner_chat_browser_qa.py', 'owner_chat_browser_transport_qa.py', 'owner_chat_browser_release_qa.py', 'owner_chat_stream_only_qa.py', 'owner_chat_normal_motion_qa.py'), 'nox-control/owner_qwen_held_media_smoke_entry.py': ('owner_qwen_held_media_smoke.py', 'owner_media_acceptance_entry.py', 'owner_qwen_revision_install.py', 'owner_native_repair.py', 'owner_download_status_entry.py'), 'nox-control/owner_qwen_transport_install_entry.py': ('owner_qwen_revision_install.py', 'qwen_student_training_entry_revision.py', 'owner_qwen_transport_revision_install.py', 'qwen_student_training_entry_transport_candidate.py', 'owner_qwen_execution_revision.py', 'owner_qwen_revision_guard.py', 'owner_qwen_revision_status.py', 'owner_qwen_revision_media_handoff.py', 'owner_qwen_revision_media_guard.py', 'owner_qwen_revision_handback_retry.py', 'owner_hermes_revision_hydrate.py', 'owner_download_status_entry.py', 'owner_native_repair.py', 'owner_qwen_disk_rearm_entry.py'), 'nox-control/owner_reviewed_rescue_catalog_append.py': ('rv_plan_379d1c5b50e42fb50165ce1fbe904cf47b1b45b3747878c60f9b1208d6e13e23.json', 'rv_payload_5201af0115e1ead68d3369794e33bbc97d7b7b2f00762c5c2ecfdaa7dda45926.source', 'rv_payload_4329f7389b24cfbb1fbb47c91b43eb7407bf18c95d15064fc7ea8166cde0a821.source'), 'nox-control/owner_kernel_self_fd_install.py': ('sf_runtime_192d0c1b7b87447d4f08.py', 'sf_plan_457dbaf4484cfb5b7e14.json', 'sf_payload_5201af0115e1ead68d33.source', 'sf_payload_4329f7389b24cfbb1fbb.source', 'sf_fd_descriptor_768d28516014a124a380.json'), 'nox-control/owner_reviewed_proc_followup_catalog_append.py': ('fu_plan_3f620116ee563127d7e94bfeac7aae1408aaa4f1752f431fee774c49023e6509.json', 'fu_payload_a71051c085f8bfdbeda93f3f4c16501444ca35942ac4ca7f3a46d7bd16acfbbc.source', 'fu_payload_f5c8eb6b42e71efa38745bc6f729a989b4a199999d7c3b9aa45cebbde36f851a.source'), 'nox-control/owner_model_slot_recovery.py': ('slot_contract_3f43e152774c159bbe45.json', 'slot_contract_60a6abf6691f6c3fb186.json', 'slot_transaction_helpers.py', 'slot_model_client.py'), 'nox-control/owner_c02_memory_progress_install.py': ('c02_contract_4a8f20c371f3211c2351.json', 'c02_test_nox_c02_existing_cognition.py', 'c02_test_nox_c02_optional_starvation.py', 'c02_transaction_helpers.py'), 'nox-control/owner_c02_memory_reviewed_recovery.py': ('c02r_payload_b504248ac1ae4a093382.source', 'c02r_plan_5d05ba50d058981ce8ba.json', 'c02r_transaction_helpers.py'), 'nox-control/systemic_relay_20261118/owner_systemic_relay_entry.py': ('systemic_owner_subagent_dispatcher.py', 'systemic_owner_subagent_processes.py', 'systemic_owner_project_native.py', 'systemic_owner_project_planner.py', 'systemic_owner_subagent_instruction_truth.py', 'systemic_owner_systemic_refill.py', 'systemic_transaction_helpers.py', 'systemic_cache_fill_ttl.json', 'systemic_forge_read_budget.json', 'systemic_relay_manifest.json', 'systemic_skill_journal_budget.json'), 'nox-control/systemic_relay_20261118/owner_eval_checkpoint_prepare.py': (), 'nox-control/systemic_relay_20261118/owner_systemic_reviewed_entry.py': ('reviewed_systemic_transaction_helpers.py', 'reviewed_cache_ttl_plan.json', 'reviewed_cache_ttl_payload.source', 'reviewed_forge_budget_plan.json', 'reviewed_forge_budget_payload.source', 'reviewed_skill_budget_plan.json', 'reviewed_skill_budget_payload.source'), 'nox-control/systemic_relay_20261118/next_pack_44368502183/package/native_publish_entry_d58ed9b020a78c3c8fcbfd476b3b0eecfd235e50f3a6ded29c8cec550e1a4212.py': (), 'nox-control/systemic_relay_20261118/tooling/owner_nox_acceleration_entry.py': (), 'nox-control/systemic_relay_20261118/next_chat_review/package_v4/owner_chat_decomposition_embedded_entry.py': ()}
 SCOPED_REPAIR_EXTRA_PATHS={'nox-control/owner_continuous_executor_install.py': ('nox-control/continuous_executor_20261118/assets/cw_test_nox_forge_language_task_coverage.py', 'nox-control/continuous_executor_20261118/assets/cw_test_nox_readonly_retry_backoff.py', 'nox-control/continuous_executor_20261118/assets/cw_test_nox_warm_cache_limit_contract.py', 'nox-control/continuous_executor_20261118/assets/cw_contract_510dbdec4dd2538ebeac.json', 'nox-control/continuous_executor_20261118/assets/cw_contract_9efad5217ab0e554a383.json', 'nox-control/continuous_executor_20261118/assets/cw_contract_683c5086d66e750d4ed1.json', 'nox-control/continuous_executor_20261118/assets/continuous_transaction_helpers.py', 'nox-control/continuous_executor_20261118/assets/continuous_dispatcher.py', 'nox-control/continuous_executor_20261118/assets/continuous_planner.py', 'nox-control/continuous_executor_20261118/assets/continuous_truth.py'), 'nox-control/owner_bounded_cpu_install.py': ('nox-control/complete_executor_budget_20261118/assets/bc_runtime_d5fb476f53e64d2014f2.py', 'nox-control/complete_executor_budget_20261118/assets/bc_runtime_6c67e567e669b993d016.py', 'nox-control/complete_executor_budget_20261118/assets/bc_runtime_2c83ec53f7ee7c2d76bc.py', 'nox-control/complete_executor_budget_20261118/assets/bc_runtime_294473d35d4870f50467.py'), 'nox-control/owner_project_runtime_update.py': ('nox-control/complete_executor_retries_20261118/assets/ru_runtime_fcb77cc59eb9a88dde68.py', 'nox-control/complete_executor_retries_20261118/assets/ru_runtime_84d54c647b0a63447aca.py', 'nox-control/complete_executor_retries_20261118/assets/ru_runtime_52e62a143d16f387899f.py', 'nox-control/complete_executor_retries_20261118/assets/ru_runtime_aa0dd1c8266106b599ce.py', 'nox-control/complete_executor_retries_20261118/assets/ru_plans_a171fa7a94084a1f4b67.data', 'nox-control/complete_executor_retries_20261118/assets/ru_blobs_fa3d69e506d727295094.data', 'nox-control/complete_executor_retries_20261118/assets/ru_plans_79b77425ff05d3337c2e.data', 'nox-control/complete_executor_retries_20261118/assets/ru_blobs_b980a61884965f4838f8.data', 'nox-control/complete_executor_retries_20261118/assets/ru_plans_dd24421576ae4160fa01.data', 'nox-control/complete_executor_retries_20261118/assets/ru_blobs_7e625acddd71fe95988e.data', 'nox-control/complete_executor_retries_20261118/assets/ru_blobs_4b06687bbad8fe6ab046.data', 'nox-control/complete_executor_retries_20261118/assets/ru_contracts_eece310e5608fa9c633d.data'), 'nox-control/owner_complete_executor_install.py': ('nox-control/complete_executor_20261118/assets/ce_runtime_2c4735938dacd2a062ed.py', 'nox-control/complete_executor_20261118/assets/ce_runtime_71dd03dee52f1673c297.py', 'nox-control/complete_executor_20261118/assets/ce_runtime_f6b2f98ac5c7c291ffef.py', 'nox-control/complete_executor_20261118/assets/ce_runtime_687ea3b3548badf9b7ba.py', 'nox-control/complete_executor_20261118/assets/ce_runtime_35b0e94f9c883da017e4.py', 'nox-control/complete_executor_20261118/assets/ce_runtime_d0ff44d4752128c26779.py', 'nox-control/complete_executor_20261118/assets/ce_runtime_119115603be6dba84121.py', 'nox-control/complete_executor_20261118/assets/ce_runtime_7f18d69529582b65f7b8.py', 'nox-control/complete_executor_20261118/assets/ce_runtime_126c77c1281b74676930.py', 'nox-control/complete_executor_20261118/assets/ce_runtime_485d4a4a571c434afb98.py', 'nox-control/complete_executor_20261118/assets/ce_baseline_bb2c543979ad58801d97.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_4d1274059d034bb9b96a.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_d9ec6a8250a167d774ba.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_c676fdda4fa47d316eb1.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_8657ad367e6dd25b48ca.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_006fc038f43682fa36d2.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_d35064a3fc5707dfc174.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_66a6617d6f582876dbdc.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_e3b0c44298fc1c149afb.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_092db7d32a048c1706da.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_dc19594b45a7fae32bf9.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_b4ece67144248808a12c.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_21f8538fec15d39b4dbc.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_3efe025681c3a54cbfac.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_b3c5d26011400b110a1b.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_f299d32099c25ea1822c.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_0fff97b7e758e3e43073.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_fd815f9a743bfcdf6e71.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_97c433b8893514f5812b.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_fc5d6c564c651c2abc81.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_623bfb4ba2d28d3dd3db.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_9201bc3629682a577c80.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_d6042e38549360ace8f9.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_2860173d8d6ed7147af2.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_970d6681ce5dc57156e2.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_6aa9265942695d2b54b3.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_8d2070c2f0819e7d1c2b.source', 'nox-control/complete_executor_20261118/assets/ce_baseline_60e28219f670a8449a56.source', 'nox-control/complete_executor_20261118/assets/ce_plans_283ff826ba1180398888.json', 'nox-control/complete_executor_20261118/assets/ce_blobs_fa3d69e506d727295094.source', 'nox-control/complete_executor_20261118/assets/ce_plans_e7c99335a4a790202f22.json', 'nox-control/complete_executor_20261118/assets/ce_blobs_f7b69405224c63868b76.source', 'nox-control/complete_executor_20261118/assets/ce_plans_de41f4de77a043c695fe.json', 'nox-control/complete_executor_20261118/assets/ce_blobs_7e625acddd71fe95988e.source', 'nox-control/complete_executor_20261118/assets/ce_plans_67e819b4ff1b94cc5bdd.json', 'nox-control/complete_executor_20261118/assets/ce_blobs_b980a61884965f4838f8.source', 'nox-control/complete_executor_20261118/assets/ce_plans_4037501920f2e9f3ea41.json', 'nox-control/complete_executor_20261118/assets/ce_blobs_06940cb13bd568d4cfaa.source', 'nox-control/complete_executor_20261118/assets/ce_plans_9b80e2075b52602ac9e1.json', 'nox-control/complete_executor_20261118/assets/ce_blobs_f336c58fb5062aec6d5b.source', 'nox-control/complete_executor_20261118/assets/ce_contracts_b40696685ca2b7c848a2.json', 'nox-control/complete_executor_20261118/assets/ce_manifests_79a8efb2d344479471bd.json', 'nox-control/complete_executor_20261118/assets/ce_manifests_e040c40bd8ee3d29b0cc.json'), 'nox-control/owner_chat_markdown_asset_install_v2.py': ('nox-control/owner_chat_stream_asset_install_v2.py', 'coordination/onepass/nox-v24-chat-markdown-final.js'), 'nox-control/owner_chat_markdown_asset_install.py': ('nox-control/owner_chat_stream_asset_install_v2.py', 'coordination/onepass/nox-v24-chat-markdown-final.js'), 'nox-control/owner_workspace_browser_acceptance_v6.py': ('nox-control/owner_workspace_browser_acceptance_v5.py', 'nox-control/owner_workspace_browser_acceptance_v2.py', 'nox-control/owner_workspace_browser_acceptance.py', 'nox-control/owner_chat_page_diagnose.py'), 'nox-control/owner_workspace_browser_acceptance_v5.py': ('nox-control/owner_workspace_browser_acceptance_v2.py', 'nox-control/owner_workspace_browser_acceptance.py', 'nox-control/owner_chat_page_diagnose.py'), 'nox-control/owner_workspace_browser_acceptance_v3.py': ('nox-control/owner_workspace_browser_acceptance_v2.py', 'nox-control/owner_workspace_browser_acceptance.py', 'nox-control/owner_chat_page_diagnose.py'), 'nox-control/owner_qwen_successor_entry_v2.py': ('nox-control/owner_qwen_successor_install_v2.py', 'nox-control/owner_qwen_execution_successor.py', 'nox-control/qwen_student_training_entry_successor.py', 'nox-control/owner_qwen_successor_guard.py', 'nox-control/owner_qwen_successor_status.py', 'nox-control/owner_qwen_successor_media_handoff.py', 'nox-control/owner_qwen_successor_media_guard.py', 'nox-control/owner_qwen_successor_handback_retry.py', 'nox-control/owner_qwen_successor_hermes_hydrate.py', 'nox-control/owner_qwen_successor_watch.py'), 'nox-control/owner_workspace_browser_acceptance_v2.py': ('nox-control/owner_workspace_browser_acceptance.py', 'nox-control/owner_chat_page_diagnose.py'), 'nox-control/owner_qwen_successor_entry.py': ('nox-control/owner_qwen_successor_install.py', 'nox-control/owner_qwen_execution_successor.py', 'nox-control/qwen_student_training_entry_successor.py', 'nox-control/owner_qwen_successor_guard.py', 'nox-control/owner_qwen_successor_status.py', 'nox-control/owner_qwen_successor_media_handoff.py', 'nox-control/owner_qwen_successor_media_guard.py', 'nox-control/owner_qwen_successor_handback_retry.py', 'nox-control/owner_qwen_successor_hermes_hydrate.py', 'nox-control/owner_qwen_successor_watch.py'), 'nox-control/owner_workspace_browser_acceptance.py': ('nox-control/owner_chat_page_diagnose.py',), 'nox-control/owner_workspace_asset_install.py': ('nox-control/owner_chat_stream_asset_install_v2.py', 'coordination/onepass/workspace-owner-capabilities.js'), 'nox-control/owner_training_control_readonly_batch.py': ('nox-control/owner_qwen_transport_budget_observe.py', 'nox-control/owner_admin_control_structure_probe.py', 'nox-control/owner_qwen_public_memfd_access_probe.py'), 'nox-control/owner_chat_action_routing_install.py': ('nox-control/owner_chat_stream_action_routing.py',), 'nox-control/owner_chat_stream_asset_install_v2.py': ('coordination/onepass/nox-v135-resonance-owner-bridge-coalesced.js',), 'nox-control/owner_qwen_transport_rollback_entry.py': ('nox-control/owner_qwen_transport_rollback.py', 'nox-control/owner_qwen_transport_revision_install.py', 'nox-control/owner_qwen_transport_failed_diagnostic.json'), 'nox-control/owner_qwen_transport_budget_entry.py': ('nox-control/owner_qwen_transport_budget_install.py', 'nox-control/qwen_student_training_entry_transport_budget.py'), 'nox-control/owner_chat_stream_asset_install.py': ('coordination/onepass/nox-v135-resonance-owner-bridge-coalesced.js',), 'nox-control/owner_browser_asset_identity_entry.py': ('nox-control/owner_browser_normal_motion_entry.py', 'nox-control/owner_chat_normal_motion_qa.py', 'nox-control/owner_chat_asset_identity_qa.py'), 'nox-control/owner_qwen_held_media_smoke_v2_entry.py': ('nox-control/owner_qwen_held_media_smoke_v2.py',), 'nox-control/owner_browser_normal_motion_entry.py': ('nox-control/owner_chat_normal_motion_qa.py',), 'nox-control/owner_qwen_transport_install_entry.py': ('nox-control/owner_qwen_transport_revision_install.py', 'nox-control/qwen_student_training_entry_transport_candidate.py'), 'nox-control/owner_reviewed_rescue_catalog_append.py': ('nox-control/complete_executor_rescue_20261118/assets/rv_plan_379d1c5b50e42fb50165ce1fbe904cf47b1b45b3747878c60f9b1208d6e13e23.json', 'nox-control/complete_executor_rescue_20261118/assets/rv_payload_5201af0115e1ead68d3369794e33bbc97d7b7b2f00762c5c2ecfdaa7dda45926.source', 'nox-control/complete_executor_rescue_20261118/assets/rv_payload_4329f7389b24cfbb1fbb47c91b43eb7407bf18c95d15064fc7ea8166cde0a821.source'), 'nox-control/owner_kernel_self_fd_install.py': ('nox-control/complete_executor_proc_identity_20261118/assets/sf_runtime_192d0c1b7b87447d4f08.py', 'nox-control/complete_executor_proc_identity_20261118/assets/sf_plan_457dbaf4484cfb5b7e14.json', 'nox-control/complete_executor_proc_identity_20261118/assets/sf_payload_5201af0115e1ead68d33.source', 'nox-control/complete_executor_proc_identity_20261118/assets/sf_payload_4329f7389b24cfbb1fbb.source', 'nox-control/complete_executor_proc_identity_20261118/assets/sf_fd_descriptor_768d28516014a124a380.json'), 'nox-control/owner_reviewed_proc_followup_catalog_append.py': ('nox-control/complete_executor_followup_20261118/assets/fu_plan_3f620116ee563127d7e94bfeac7aae1408aaa4f1752f431fee774c49023e6509.json', 'nox-control/complete_executor_followup_20261118/assets/fu_payload_a71051c085f8bfdbeda93f3f4c16501444ca35942ac4ca7f3a46d7bd16acfbbc.source', 'nox-control/complete_executor_followup_20261118/assets/fu_payload_f5c8eb6b42e71efa38745bc6f729a989b4a199999d7c3b9aa45cebbde36f851a.source'), 'nox-control/owner_model_slot_recovery.py': ('nox-control/model_slot_recovery_20261118/assets/slot_contract_3f43e152774c159bbe45.json', 'nox-control/model_slot_recovery_20261118/assets/slot_contract_60a6abf6691f6c3fb186.json', 'nox-control/model_slot_recovery_20261118/assets/slot_transaction_helpers.py', 'nox-control/model_slot_recovery_20261118/assets/slot_model_client.py'), 'nox-control/owner_c02_memory_progress_install.py': ('nox-control/c02_memory_progress_20261118/assets/c02_contract_4a8f20c371f3211c2351.json', 'nox-control/c02_memory_progress_20261118/assets/c02_test_nox_c02_existing_cognition.py', 'nox-control/c02_memory_progress_20261118/assets/c02_test_nox_c02_optional_starvation.py', 'nox-control/c02_memory_progress_20261118/assets/c02_transaction_helpers.py'), 'nox-control/owner_c02_memory_reviewed_recovery.py': ('nox-control/c02_memory_progress_20261118/recovery_assets/c02r_payload_b504248ac1ae4a093382.source', 'nox-control/c02_memory_progress_20261118/recovery_assets/c02r_plan_5d05ba50d058981ce8ba.json', 'nox-control/c02_memory_progress_20261118/recovery_assets/c02r_transaction_helpers.py'), 'nox-control/systemic_relay_20261118/owner_systemic_relay_entry.py': ('nox-control/systemic_relay_20261118/assets/systemic_owner_subagent_dispatcher.py', 'nox-control/systemic_relay_20261118/assets/systemic_owner_subagent_processes.py', 'nox-control/systemic_relay_20261118/assets/systemic_owner_project_native.py', 'nox-control/systemic_relay_20261118/assets/systemic_owner_project_planner.py', 'nox-control/systemic_relay_20261118/assets/systemic_owner_subagent_instruction_truth.py', 'nox-control/systemic_relay_20261118/assets/systemic_owner_systemic_refill.py', 'nox-control/systemic_relay_20261118/assets/systemic_transaction_helpers.py', 'nox-control/systemic_relay_20261118/assets/systemic_cache_fill_ttl.json', 'nox-control/systemic_relay_20261118/assets/systemic_forge_read_budget.json', 'nox-control/systemic_relay_20261118/assets/systemic_relay_manifest.json', 'nox-control/systemic_relay_20261118/assets/systemic_skill_journal_budget.json'), 'nox-control/systemic_relay_20261118/owner_eval_checkpoint_prepare.py': (), 'nox-control/systemic_relay_20261118/owner_systemic_reviewed_entry.py': ('nox-control/systemic_relay_20261118/reviewed_recovery/assets/reviewed_systemic_transaction_helpers.py', 'nox-control/systemic_relay_20261118/reviewed_recovery/assets/reviewed_cache_ttl_plan.json', 'nox-control/systemic_relay_20261118/reviewed_recovery/assets/reviewed_cache_ttl_payload.source', 'nox-control/systemic_relay_20261118/reviewed_recovery/assets/reviewed_forge_budget_plan.json', 'nox-control/systemic_relay_20261118/reviewed_recovery/assets/reviewed_forge_budget_payload.source', 'nox-control/systemic_relay_20261118/reviewed_recovery/assets/reviewed_skill_budget_plan.json', 'nox-control/systemic_relay_20261118/reviewed_recovery/assets/reviewed_skill_budget_payload.source')}
@@ -810,6 +1037,7 @@ def repair_bundle_paths(action,entrypoint,paths):
     return result
 
 def authorize_event(action):
+    if action not in FILES:raise RuntimeError('HOLD_ACTION_NOT_ALLOWLISTED')
     e=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
     if os.environ.get('GITHUB_REPOSITORY')!=REPO or os.environ.get('GITHUB_EVENT_NAME')!='issue_comment':raise RuntimeError('HOLD_EVENT_SCOPE')
     c=e.get('comment',{});owner=e.get('repository',{}).get('owner',{})
@@ -822,6 +1050,7 @@ def authorize_event(action):
     return c['id']
 
 def run_native(action,request_id):
+    if action not in FILES:raise RuntimeError('HOLD_ACTION_NOT_ALLOWLISTED')
     global MASTER
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
     from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
@@ -1049,7 +1278,7 @@ def run_native(action,request_id):
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
     sha=os.environ['NOX_PINNED_SOURCE_SHA']
     script=f"set -euo pipefail\nNOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD'\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
-    timeout=150 if action in ('audit','inspect') else 900
+    timeout=150 if action in ('audit','inspect','source_attest') else 900
     # Reuse the authenticated channel. A dead master must not fall back to
     # a fresh, potentially ambiguous TCP connection while starting a mutation.
     r=subprocess.run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
@@ -1061,17 +1290,21 @@ def run_native(action,request_id):
         err=r.stderr.lower()
         cls='AUTH' if 'permission denied' in err else 'TIMEOUT' if 'timed out' in err else 'CONNECTION' if 'connect' in err else 'PAYLOAD'
         print('NOX_MAINT_FAILURE_CLASS='+cls,flush=True)
-    marker='NOX_MAINT_'+action.upper()+'_COMPLETE=true'
+    marker=SOURCE_ATTEST_COMPLETE_TRUE if action=='source_attest' else 'NOX_MAINT_'+action.upper()+'_COMPLETE=true'
     if r.returncode or not _has_exact_terminal_completion_marker(r.stdout,marker):
-        raise RuntimeError('HOLD_NATIVE_PAYLOAD_INCOMPLETE')
+        hold='HOLD_SOURCE_ATTESTATION_INCOMPLETE' if action=='source_attest' else 'HOLD_NATIVE_PAYLOAD_INCOMPLETE'
+        raise RuntimeError(hold)
     if action=='audit':
         gate=audit_census_status(r.stdout)
         print('NOX_MAINT_AUDIT_CENSUS_GATE='+json.dumps(gate,separators=(',',':'),sort_keys=True),flush=True)
         require_audit_census_complete(r.stdout)
     return True
 
+def operator_argument_parser():
+    parser=argparse.ArgumentParser();parser.add_argument('action',choices=FILES);return parser
+
 def main():
-    p=argparse.ArgumentParser();p.add_argument('action',choices=FILES);args=p.parse_args();good=False
+    args=operator_argument_parser().parse_args();good=False
     try:
         request=authorize_event(args.action)
         print('NOX_MAINT_AUTHORIZED_COMMENT_ID='+str(request),flush=True)
