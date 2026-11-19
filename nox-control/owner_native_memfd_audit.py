@@ -33,6 +33,12 @@ MAX_MAPS_BYTES_PER_PID = 1024 * 1024
 MAX_MAPS_BYTES_TOTAL = 8 * 1024 * 1024
 MAX_MAPS_LINES_TOTAL = 65536
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
+IDENTITY_HOLD_ALLOWLIST = {
+    "HOLD_PROC_STAT_IDENTITY", "HOLD_PROC_STAT_FIELDS", "HOLD_READ_LIMIT",
+    "HOLD_HOLDER_SCRIPT_SHAPE", "HOLD_HOLDER_PATH_IDENTITY",
+    "HOLD_HOLDER_CWD_SHAPE", "HOLD_HOLDER_CGROUP_UNAVAILABLE",
+    "HOLD_HOLDER_IDENTITY_UNSTABLE",
+}
 HISTORICAL_HOLDER_PID_PRIORITY = 498569
 MODEL_PID_PRIORITY = 3266857
 MAP_LINE = re.compile(
@@ -53,6 +59,12 @@ LAST_SCAN = {}
 
 def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def sanitized_identity_failure(exc: BaseException) -> str:
+    if isinstance(exc, Hold) and str(exc) in IDENTITY_HOLD_ALLOWLIST:
+        return str(exc)
+    return "HOLD_HOLDER_IDENTITY_UNREADABLE"
 
 
 def _read(path: Path, limit: int) -> bytes:
@@ -390,12 +402,14 @@ def run_audit(proc_root: Path = Path("/proc")) -> dict:
         "fd_entries_scanned": 0, "fd_link_bytes_scanned": 0,
         "fd_unreadable_entries": 0, "fd_races": 0,
         "label_size_mismatch_count": 0, "exact_fd_owner_pids": 0,
-        "identity_unreadable_pids": 0, "pids_vanished": 0,
+        "global_identity_unreadable_pids": 0, "candidate_identity_failures": [],
+        "pids_vanished": 0,
         "unstable_pids": 0, "limits_hit": [],
     }
     LAST_SCAN = counters
     pids, entries_seen = proc_pid_order(proc_root)
     counters["proc_entries_seen"] = entries_seen
+    global_identity_unreadable = set()
     budget = {"entries": 0, "bytes": 0, "fd_races": 0}
     cmdline_bytes = 0
     fd_owners = []
@@ -409,7 +423,7 @@ def run_audit(proc_root: Path = Path("/proc")) -> dict:
             counters["pids_vanished"] += 1
             continue
         except (OSError, Hold):
-            counters["identity_unreadable_pids"] += 1
+            global_identity_unreadable.add(pid)
         argv = None
         try:
             argv = _read(pdir / "cmdline", MAX_CMDLINE_BYTES)
@@ -459,7 +473,7 @@ def run_audit(proc_root: Path = Path("/proc")) -> dict:
                 counters["unstable_pids"] += 1
             continue
         except (OSError, Hold):
-            counters["identity_unreadable_pids"] += 1
+            global_identity_unreadable.add(pid)
             continue
         if before_ticks is None or before_ticks != after_ticks:
             counters["unstable_pids"] += 1
@@ -479,10 +493,22 @@ def run_audit(proc_root: Path = Path("/proc")) -> dict:
                 if identity["start_ticks"] != before_ticks:
                     raise Hold("HOLD_HOLDER_IDENTITY_UNSTABLE")
                 owner["identity"] = identity
-            except (OSError, Hold, UnicodeError, ValueError):
-                counters["identity_unreadable_pids"] += 1
+            except Exception as exc:
+                failure = {"pid": pid, "failure_code": sanitized_identity_failure(exc)}
+                if before_ticks is not None and before_ticks == after_ticks:
+                    failure["start_ticks"] = before_ticks
+                if (fd_result.get("status") == "OK" and
+                        fd_result.get("identity_count") == 1 and
+                        fd_result.get("matching_fd_count", 0) > 0 and
+                        len(fd_result.get("matches", [])) > 0):
+                    match = fd_result["matches"][0]
+                    failure["exact_fd_count"] = fd_result["matching_fd_count"]
+                    failure["device"] = match["device"]
+                    failure["inode"] = match["inode"]
+                counters["candidate_identity_failures"].append(failure)
         fd_owners.append(owner)
 
+    counters["global_identity_unreadable_pids"] = len(global_identity_unreadable)
     if counters["limits_hit"]:
         raise Hold("HOLD_CENSUS_LIMIT")
 
@@ -496,7 +522,7 @@ def run_audit(proc_root: Path = Path("/proc")) -> dict:
         incomplete = bool(counters["cmdline_unreadable_pids"] or
                           counters["cmdline_truncated_pids"] or
                           counters["fd_unreadable_entries"] or
-                          counters["identity_unreadable_pids"] or
+                          counters["global_identity_unreadable_pids"] or
                           counters["unstable_pids"])
         if label_map_pids:
             raise Hold("HOLD_MEMFD_MAPS_FOUND_WITHOUT_FD_IDENTITY",
@@ -519,9 +545,14 @@ def run_audit(proc_root: Path = Path("/proc")) -> dict:
         raise Hold("HOLD_MEMFD_OWNER_PID_AMBIGUOUS")
     owner = fd_owners[0]
     if not owner["script_basename_candidate"] or owner["identity"] is None:
-        raise Hold("HOLD_MEMFD_OWNER_SCRIPT_IDENTITY_UNVERIFIED")
+        raise Hold("HOLD_MEMFD_OWNER_SCRIPT_IDENTITY_UNVERIFIED",
+                   {"candidate_identity_failures":
+                    counters["candidate_identity_failures"],
+                    "global_identity_unreadable_pids":
+                    counters["global_identity_unreadable_pids"],
+                    "exact_fd_owner_pid_count": counters["exact_fd_owner_pids"]})
     if (counters["cmdline_unreadable_pids"] or counters["cmdline_truncated_pids"] or
-            counters["fd_unreadable_entries"] or counters["identity_unreadable_pids"] or
+            counters["fd_unreadable_entries"] or counters["global_identity_unreadable_pids"] or
             counters["unstable_pids"]):
         raise Hold("HOLD_GLOBAL_CENSUS_PARTIAL")
     fd_matches = owner["fd_census"]["matches"]

@@ -123,6 +123,57 @@ class MemfdAuditTests(unittest.TestCase):
                 audit.run_audit(root)
         self.assertEqual(audit.LAST_SCAN["exact_fd_owner_pids"], 2)
 
+    def test_candidate_identity_failure_receipt_is_sanitized_and_binds_stable_fd(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "proc"
+            root.mkdir()
+            memfd = make_memfd_fixture(Path(temp))
+            memfd_stat = memfd.stat()
+            write_proc(root, 777007, argv=holder_argv(), memfd=memfd)
+            secret_error = PermissionError("private /root/path and raw argv")
+            with mock.patch.object(audit, "proc_identity", side_effect=secret_error):
+                with self.assertRaisesRegex(
+                        audit.Hold, "HOLD_MEMFD_OWNER_SCRIPT_IDENTITY_UNVERIFIED") as raised:
+                    audit.run_audit(root)
+        diagnostics = raised.exception.diagnostics
+        failure = diagnostics["candidate_identity_failures"][0]
+        self.assertEqual(failure["pid"], 777007)
+        self.assertEqual(failure["start_ticks"], 12345)
+        self.assertEqual(failure["exact_fd_count"], 1)
+        self.assertEqual(failure["device"], memfd_stat.st_dev)
+        self.assertEqual(failure["inode"], memfd_stat.st_ino)
+        self.assertEqual(failure["failure_code"], "HOLD_HOLDER_IDENTITY_UNREADABLE")
+        encoded = json.dumps(diagnostics, sort_keys=True)
+        self.assertNotIn("private", encoded)
+        self.assertNotIn("/root/path", encoded)
+        self.assertNotIn("raw argv", encoded)
+
+    def test_candidate_hold_code_is_allowlisted_and_global_read_errors_are_separate(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "proc"
+            root.mkdir()
+            memfd = make_memfd_fixture(Path(temp))
+            write_proc(root, 777008, argv=holder_argv(), memfd=memfd)
+            write_proc(root, 777009, argv=b"python3\0ordinary_worker.py\0")
+            original = audit._read
+
+            def unreadable_other_pid(path, limit):
+                if path.parent.name == "777009" and path.name == "stat":
+                    raise PermissionError("do not disclose this text")
+                return original(path, limit)
+
+            with mock.patch.object(audit, "_read", side_effect=unreadable_other_pid), \
+                 mock.patch.object(audit, "proc_identity",
+                                   side_effect=audit.Hold("HOLD_HOLDER_SCRIPT_SHAPE")):
+                with self.assertRaisesRegex(
+                        audit.Hold, "HOLD_MEMFD_OWNER_SCRIPT_IDENTITY_UNVERIFIED") as raised:
+                    audit.run_audit(root)
+        diagnostics = raised.exception.diagnostics
+        self.assertEqual(diagnostics["global_identity_unreadable_pids"], 1)
+        failure = diagnostics["candidate_identity_failures"][0]
+        self.assertEqual(failure["failure_code"], "HOLD_HOLDER_SCRIPT_SHAPE")
+        self.assertNotIn("do not disclose", json.dumps(diagnostics))
+
     def test_fd_and_maps_limits_are_partial_with_counters(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "proc"
