@@ -685,6 +685,12 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             wire=None;buffer='';answer='';complete=False
             try:
                 yield _jsonl({'type':'preparing','stream_mode':'NATIVE_TOKEN_STREAM'})
+                if cancel.is_set():
+                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                    return
+                if not check(request):
+                    yield _jsonl({'type':'error','error':'HOLD_OWNER_SESSION_REVOKED'})
+                    return
                 wire=await trusted['_proxy_completion'](payload)
                 if not hasattr(wire,'body_iterator'):
                     yield _jsonl({'type':'error','error':'HOLD_NATIVE_STREAM_MISSING'})
