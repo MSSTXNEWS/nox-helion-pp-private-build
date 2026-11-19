@@ -195,11 +195,15 @@ def witness(pid: int, expected_start_ticks: int, model_file: str | None = None,
         chosen = model_file if model_file is not None else arg
         if not chosen:
             raise EvidenceUnavailable('MODEL_PATH_NOT_IN_CMDLINE')
-        # Model paths come from a process argument or an explicit probe input.
+        # Relative -m/--model arguments are resolved against the serving PID's
+        # CWD, not the inspector's CWD. Never change the inspector process CWD.
+        # Missing/inaccessible /proc/PID/cwd fails closed as UNKNOWN.
+        is_absolute = os.path.isabs(chosen)
+        probe_path = chosen if is_absolute else os.fspath(proc_root / str(pid) / 'cwd' / chosen)
         # Opening a FIFO read-only can block indefinitely before fstat; use
         # nonblocking open, then accept only a regular file before reading.
         flags = os.O_RDONLY | getattr(os, 'O_CLOEXEC', 0) | getattr(os, 'O_NONBLOCK', 0)
-        fd = os.open(chosen, flags)
+        fd = os.open(probe_path, flags)
         with os.fdopen(fd, 'rb') as f:
             st = os.fstat(f.fileno())
             if not stat.S_ISREG(st.st_mode):
@@ -209,9 +213,11 @@ def witness(pid: int, expected_start_ticks: int, model_file: str | None = None,
             # Parsing a current pathname is not evidence for the mapped file
             # if that pathname was replaced or the inode mutated mid-probe.
             if (_file_signature(os.fstat(f.fileno())) != _file_signature(st)
-                    or _file_signature(os.stat(chosen)) != _file_signature(st)):
+                    or _file_signature(os.stat(probe_path)) != _file_signature(st)):
                 raise EvidenceUnavailable('MODEL_FILE_CHANGED_DURING_PROBE')
-            result.update({'model_file': chosen, 'model_size': st.st_size,
+            result.update({'model_file': chosen,
+                           'model_path_resolution': 'ABSOLUTE' if is_absolute else 'PROCESS_CWD',
+                           'model_size': st.st_size,
                            'model_inode': st.st_ino, 'model_device': st.st_dev,
                            'model_cmdline_match': arg == chosen,
                            'file_inode_mapped_by_pid': mapped,

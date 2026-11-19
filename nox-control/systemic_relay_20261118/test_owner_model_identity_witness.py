@@ -58,6 +58,23 @@ class WitnessTests(unittest.TestCase):
         self.assertIsNone(out['loaded_model_sha256'])
         self.assertNotIn('SECRET', str(out))
 
+    def test_relative_model_path_uses_server_cwd(self):
+        # Fake /proc/PID/cwd points to model owner's CWD, not the inspector's.
+        (self.p / 'cwd').symlink_to(self.root, target_is_directory=True)
+        (self.p / 'cmdline').write_bytes(b'llama-server\\0-m\\0model.gguf\\0')
+        out = w.witness(self.pid, self.ticks, proc_root=self.proc)
+        self.assertEqual(out['state'], 'MAPPED_GGUF_METADATA_VERIFIED', out.get('reason'))
+        self.assertEqual(out['model_file'], 'model.gguf')
+        self.assertEqual(out['model_path_resolution'], 'PROCESS_CWD')
+        self.assertTrue(out['file_inode_mapped_by_pid'])
+        self.assertIsNone(out['loaded_model_sha256'])
+
+    def test_missing_process_cwd_is_unknown_not_a_false_match(self):
+        (self.p / 'cmdline').write_bytes(b'llama-server\\0-m\\0model.gguf\\0')
+        out = w.witness(self.pid, self.ticks, proc_root=self.proc)
+        self.assertEqual(out['state'], 'UNKNOWN')
+        self.assertNotIn('gguf', out)
+
     def test_stale_pid_rejected(self):
         self.assertEqual(w.witness(self.pid, self.ticks + 1, proc_root=self.proc)['reason'],
                          'PID_START_TICKS_MISMATCH')
