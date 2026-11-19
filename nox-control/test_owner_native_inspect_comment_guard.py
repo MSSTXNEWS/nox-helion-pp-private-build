@@ -446,8 +446,8 @@ class WorkflowScopeTests(unittest.TestCase):
         upload_name = "Upload only the encrypted S03 source-export artifact"
         self.assertIn("umask 077", workflow)
         self.assertIn("unset NOX2", workflow)
-        self.assertLess(workflow.index("Compile and test exact pinned #415 encrypted export source before credentials"),
-                        workflow.index("Install crypto dependency before #415 owner credential staging"))
+        self.assertLess(workflow.index("Install crypto dependency before #415 owner credential staging"),
+                        workflow.index("Compile and test exact pinned #415 encrypted export source before credentials"))
         self.assertLess(workflow.index("Install crypto dependency before #415 owner credential staging"),
                         workflow.index(stage_name))
         self.assertLess(workflow.index(stage_name), workflow.index(run_name))
