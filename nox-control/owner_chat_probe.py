@@ -86,6 +86,16 @@ def require_multiturn_requested(value):
         raise RuntimeError('HOLD_CHAT_PROBE_MULTITURN_NOT_REQUESTED')
 
 
+def require_latency_target(turn, phase, first_limit_ms):
+    """Fail closed when the already-advertised browser latency target is missed."""
+    first = turn.get('first_meaningful_delta_ms') if isinstance(turn, dict) else None
+    total = turn.get('stream_total_ms') if isinstance(turn, dict) else None
+    valid = (type(first) in (int, float) and type(total) in (int, float)
+             and 0 <= first <= first_limit_ms and first <= total <= 25000)
+    if not valid:
+        raise RuntimeError('HOLD_CHAT_PROBE_' + phase + '_LATENCY_TARGET')
+
+
 def numeric_public_answer(text):
     # Raw model text can unexpectedly draw on private memory. Export only a
     # bounded numeric answer to this synthetic arithmetic prompt, plus hashes.
@@ -234,6 +244,7 @@ def main():
             'arithmetic_pass':numeric_public_answer(answer)=='323',
             'performance_target_pass':first<=8000 and turn['stream_total_ms']<=25000})
         require_durable_result(saved, numeric_public_answer(answer)=='323', 'FIRST_TURN')
+        require_latency_target(turn, 'FIRST_TURN', 8000)
         if os.environ.get('NOX_PROBE_SECOND_TURN')=='1':
             followup='Какое число ты только что получил? Ответь только этим числом.'
             follow=consume_turn(client,followup,did);answer2=follow['answer'];done=follow['done']
@@ -246,6 +257,7 @@ def main():
                 'answer_sha256':digest(answer2.encode()),
                 'performance_target_pass':follow['first_meaningful_delta_ms']<=5000 and follow['stream_total_ms']<=25000})
             require_durable_result(passed, numeric_public_answer(answer2)=='323', 'SECOND_TURN')
+            require_latency_target(follow, 'SECOND_TURN', 5000)
             require_executor_turn_budget(time.monotonic()-probe_started)
             question='Сколько сейчас исполнителей и агентов у NOX?'
             turn3=consume_turn(client,question,did,timeout=30)
