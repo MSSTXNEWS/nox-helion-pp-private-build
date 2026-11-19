@@ -747,6 +747,7 @@ class Native:
             'manifest_sha256':reference['sha256'], 'fingerprint':proposed.get('fingerprint'),
             'eligible_proposals':len(proposed['rows']), 'slots_available':capacity['slots_available'],
             'refill_request':proposed.get('refill_request'),
+            'self_monitor':proposed.get('self_monitor'),
             'shared_queue':True, 'original_task_acceptance_added':0}
         return result
 
