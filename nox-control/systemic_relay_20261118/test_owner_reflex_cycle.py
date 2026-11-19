@@ -6,6 +6,10 @@ Run with: python -m unittest test_owner_reflex_cycle
 from __future__ import annotations
 
 import importlib.util
+import fcntl
+import inspect
+import os
+import tempfile
 from pathlib import Path
 import unittest
 
@@ -108,6 +112,81 @@ class NativeReflexTests(unittest.TestCase):
         state={'a': {'status':'running'},'b': {'status':'pending'}}
         result=tick(state=state)
         self.assertEqual(result['state'],'EXECUTION_OR_ADMISSION_IN_PROGRESS')
+
+
+
+class NativeReflexLeaseHandoffTests(unittest.TestCase):
+    """No host actions: a second fd models the director's required SH lease."""
+
+    @classmethod
+    def setUpClass(cls):
+        entry = Path(__file__).with_name('owner_native_reflex_successor_entry.py')
+        spec = importlib.util.spec_from_file_location('nox_reflex_lockfix', entry)
+        cls.entry = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.entry)
+
+    def test_boot_releases_ex_before_director_acquires_shared(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lock = Path(tmp) / 'owner_maintenance.lock'
+            lock.write_bytes(b'')
+            fd = os.open(lock, os.O_RDONLY)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+                class FakeDirector:
+                    def start_checked(self, root, require_native_status):
+                        self_root = root
+                        self.assert_native = require_native_status
+                        shared = os.open(lock, os.O_RDONLY)
+                        try:
+                            fcntl.flock(shared, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                            return {'pid': 999, 'start_ticks': 42}
+                        finally:
+                            os.close(shared)
+
+                director = FakeDirector()
+                result = self.entry._start_after_lease_release(fd, director)
+                self.assertEqual(result['pid'], 999)
+                self.assertTrue(director.assert_native)
+            finally:
+                os.close(fd)
+
+    def test_failed_boot_leaves_no_ex_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lock = Path(tmp) / 'owner_maintenance.lock'
+            lock.write_bytes(b'')
+            fd = os.open(lock, os.O_RDONLY)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+                class BrokenDirector:
+                    def start_checked(self, root, require_native_status):
+                        raise RuntimeError('simulated BACKOFF')
+
+                with self.assertRaisesRegex(RuntimeError, 'BACKOFF'):
+                    self.entry._start_after_lease_release(fd, BrokenDirector())
+                shared = os.open(lock, os.O_RDONLY)
+                try:
+                    fcntl.flock(shared, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                finally:
+                    os.close(shared)
+            finally:
+                os.close(fd)
+
+    def test_backoff_recovery_requires_absent_pid(self):
+        check = self.entry._supervisor_is_quiescent
+        for state in ('STOPPED', 'BACKOFF', 'FATAL', 'EXITED'):
+            self.assertTrue(check({'state': state, 'pid': None}))
+        for state in ('RUNNING', 'STARTING', 'STOPPING', 'UNKNOWN'):
+            self.assertFalse(check({'state': state, 'pid': None}))
+        self.assertFalse(check({'state': 'BACKOFF', 'pid': 678}))
+        self.assertFalse(check(None))
+
+    def test_upgrade_and_rollback_both_use_unlocked_start(self):
+        body = inspect.getsource(self.entry.run)
+        self.assertIn('started = _start_after_lease_release(fd, h)', body)
+        self.assertIn("receipt['restored_director'] = _start_after_lease_release(fd, h)", body)
+        self.assertIn("require(_supervisor_is_quiescent(present), 'UNKNOWN_DIRECTOR_NO_ROLLBACK')", body)
 
 
 if __name__ == '__main__':
