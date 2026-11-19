@@ -63,7 +63,10 @@ def verify_browser_receipt(browser_started_ns):
             or proof.get('state') != 'PASSED'
             or any(proof.get(key) is not True for key in (
                 'functional_acceptance_verified', 'actual_native_model_stream_verified',
-                's03_readback_verified', 'screenshot_capture_verified'))
+                's03_readback_verified', 'screenshot_capture_verified',
+                'actual_native_backend', 'nonloopback_auth',
+                'empty_dialog_history_verified', 'synthetic_number_sequence_pass',
+                'progressive_stream_render_verified', 'stop_visible_during_generation'))
             or proof.get('synthetic_backend_used') is not False
             or proof.get('private_text_or_credentials_exported') is not False):
         raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_INCOMPLETE')

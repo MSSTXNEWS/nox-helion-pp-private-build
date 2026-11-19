@@ -98,7 +98,11 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
                        'state':'PASSED','functional_acceptance_verified':True,
                        'actual_native_model_stream_verified':True,'s03_readback_verified':True,
                        'screenshot_capture_verified':True,'synthetic_backend_used':False,
-                       'private_text_or_credentials_exported':False}
+                       'private_text_or_credentials_exported':False,
+                       'actual_native_backend':True,'nonloopback_auth':True,
+                       'empty_dialog_history_verified':True,'synthetic_number_sequence_pass':True,
+                       'progressive_stream_render_verified':True,
+                       'stop_visible_during_generation':True}
                 # This receipt was written BEFORE the browser stage; all fields
                 # match, but accepting it would replay a prior acceptance.
                 receipt.write_text(json.dumps(proof))
@@ -127,6 +131,21 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
                 self.assertEqual(emitted[0][1]['reason'],'HOLD_BROWSER_QA_RECEIPT_INCOMPLETE')
 
                 proof['s03_readback_verified']=True
+                # The native producer reports these independent observations.
+                # A successful exit or one-turn memory readback alone is not
+                # evidence of progressive streaming and authenticated backend.
+                for missing_evidence in (
+                    'actual_native_backend', 'nonloopback_auth',
+                    'empty_dialog_history_verified', 'synthetic_number_sequence_pass',
+                    'progressive_stream_render_verified', 'stop_visible_during_generation'):
+                    proof[missing_evidence]=False
+                    install_fresh_receipt_stage(proof)
+                    emitted.clear()
+                    with self.subTest(missing_evidence=missing_evidence), redirect_stdout(io.StringIO()):
+                        self.assertEqual(module.main(),2)
+                        self.assertEqual(emitted[0][1]['reason'],
+                                         'HOLD_BROWSER_QA_RECEIPT_INCOMPLETE')
+                    proof[missing_evidence]=True
                 install_fresh_receipt_stage(proof)
                 emitted.clear()
                 with redirect_stdout(io.StringIO()) as output:
