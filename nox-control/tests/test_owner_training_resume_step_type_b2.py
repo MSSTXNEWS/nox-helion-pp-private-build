@@ -242,7 +242,7 @@ class CheckpointStepProvenance(unittest.TestCase):
                 "/sys/fs/cgroup/cpu.max": "max 100000",
                 "/sys/fs/cgroup/memory.max": "194065203200",
                 "/sys/fs/cgroup/memory.current": "188662734848",
-                str(root / "train_cpu_max.env"): "TRAIN_CPU_MAX=64GiB\\n",
+                str(root / "train_cpu_max.env"): "TRAIN_CPU_MAX=64GiB\n",
             }
             cpu_calls = []
 
