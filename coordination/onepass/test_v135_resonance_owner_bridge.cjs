@@ -1470,3 +1470,42 @@ test('V181 visibility becomes hidden as listener attaches without lost pacing wa
   assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
   assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
 });
+
+test('V182 legacy CJK and Hangul safely stream before native completion with S03 readback',async()=>{
+  for(const reply of ['中文界面实时回答','한국어대답실시간']){
+    let s03Seen=false;
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+      undefined,true,5,()=>{s03Seen=true;});
+    const response=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v182-legacy-cjk'})});
+    const reader=response.body.getReader(),decoder=new TextDecoder();
+    const meta=JSON.parse(decoder.decode((await reader.read()).value).slice(6).trim());
+    assert.equal(meta.type,'meta');
+    const first=await Promise.race([
+      reader.read(),
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V182_LEGACY_UNICODE_BUFFERED')),95))
+    ]);
+    assert.equal(first.done,false);
+    const initial=JSON.parse(decoder.decode(first.value).slice(6).trim());
+    assert.equal(initial.type,'token');
+    assert.equal(initial.t,reply.slice(0,4),'keep final potentially incomplete grapheme');
+    assert.equal(s03Seen,false,'do not fabricate durable receipt before model completion');
+    const frames=[initial];
+    for(;;){
+      const chunk=await reader.read();
+      if(chunk.done)break;
+      frames.push(JSON.parse(decoder.decode(chunk.value).slice(6).trim()));
+    }
+    const tokens=frames.filter(x=>x.type==='token');
+    assert.equal(tokens.map(x=>x.t).join(''),reply,'full native text preserved');
+    const boundaries=new Set(),segmenter=new Intl.Segmenter(undefined,{granularity:'grapheme'});
+    let count=0;
+    for(const g of segmenter.segment(reply)){count+=g.segment.length;boundaries.add(count);}
+    count=0;
+    for(const t of tokens){count+=t.t.length;assert(boundaries.has(count),'no broken grapheme');}
+    assert.equal(frames.filter(x=>x.type==='done').length,1);
+    assert.equal(frames.filter(x=>x.type==='error').length,0);
+    assert.equal(s03Seen,true,'terminal done waits for genuine S03 history');
+    assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  }
+});
