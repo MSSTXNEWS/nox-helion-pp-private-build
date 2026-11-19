@@ -322,16 +322,41 @@ def _canonical_long_option(option: str) -> str:
     return option.replace("_", "-") if option.startswith("--") else option
 
 
-def _expected_extra_model_shards() -> tuple[tuple[str, ...], int]:
-    match = re.fullmatch(r"(.+-)([0-9]{5})-of-([0-9]{5})(\.gguf)", MODEL_PATH)
-    if match is None:
-        fail("PINNED_MODEL_SHARD_PATTERN_INVALID")
-    prefix, first_raw, total_raw, suffix = match.groups()
-    first, total = int(first_raw), int(total_raw)
-    if first != 1 or not 2 <= total <= 64:
-        fail("PINNED_MODEL_SHARD_RANGE_INVALID")
-    return (tuple(f"{prefix}{index:05d}-of-{total:05d}{suffix}"
-                  for index in range(first + 1, total + 1)), total)
+def _extra_model_file_identity(values: list[str], options: list[str]) -> dict:
+    if not values:
+        return {"count": 0, "paths_sha256": hashlib.sha256(b"").hexdigest()}
+    if len(values) > 32:
+        _selector_preflight_hold("MODEL_EXTRA_FILE_COUNT_LIMIT", options)
+    root = "/root/nox/models"
+    normalized = []
+    for value in values:
+        if (not value.startswith(root + "/") or not value.endswith(".gguf") or
+                any(part in ("", ".", "..") for part in value.split("/")[1:])):
+            _selector_preflight_hold("MODEL_EXTRA_FILE_PATH_UNAPPROVED", options)
+        candidate = Path(value)
+        if str(candidate) != value:
+            _selector_preflight_hold("MODEL_EXTRA_FILE_PATH_NONCANONICAL", options)
+        probe = Path("/")
+        parts = candidate.parts[1:]
+        for position, part in enumerate(parts):
+            probe = probe / part
+            try:
+                metadata = probe.lstat()
+            except FileNotFoundError:
+                break  # The running loader may retain an unlinked model file.
+            except OSError:
+                _selector_preflight_hold("MODEL_EXTRA_FILE_PATH_UNREADABLE", options)
+            if stat.S_ISLNK(metadata.st_mode):
+                _selector_preflight_hold("MODEL_EXTRA_FILE_SYMLINK", options)
+            if position < len(parts) - 1 and not stat.S_ISDIR(metadata.st_mode):
+                _selector_preflight_hold("MODEL_EXTRA_FILE_PATH_COMPONENT", options)
+            if position == len(parts) - 1 and not stat.S_ISREG(metadata.st_mode):
+                _selector_preflight_hold("MODEL_EXTRA_FILE_NOT_REGULAR", options)
+        normalized.append(value)
+    if len(set(normalized)) != len(normalized):
+        _selector_preflight_hold("MODEL_EXTRA_FILE_DUPLICATE", options)
+    digest = hashlib.sha256(b"\0".join(path.encode("utf-8") for path in normalized)).hexdigest()
+    return {"count": len(normalized), "paths_sha256": digest}
 
 
 def _selector_preflight_hold(reason: str, options: list[str]) -> None:
@@ -344,7 +369,7 @@ def _selector_preflight_hold(reason: str, options: list[str]) -> None:
 
 
 def reject_model_context_selectors(args: list[str]) -> dict:
-    """Validate selectors while allowing only the pinned shard set and parallel bound."""
+    """Validate exact base selectors and bounded extra-file/parallel options."""
     short_selectors = {
         "-mu", "-dr", "-hf", "-hfr", "-hff", "-mm", "-mmu",
         "-md", "-hfd", "-hfrd", "-ns", "-ctx", "-ctxcp",
@@ -359,16 +384,23 @@ def reject_model_context_selectors(args: list[str]) -> dict:
     long_exact = {
         "--docker-repo", "--shard", "--ple", "--kv-unified-per-slot",
         "--no-kv-unified", "--mtp", "--dflash", "--eagle3", "--spec-type",
-        "--parallel", "--sequences", "--ctx-checkpoints", "--swa-checkpoints",
+        "--parallel", "--np", "--n-parallel", "--sequences",
+        "--ctx-checkpoints", "--swa-checkpoints",
         "--swa-full", "--fit", "--fit-ctx", "--override-kv", "--lora",
         "--control-vector", "--control-vector-scaled", "--control-vector-layer-range",
     }
     preset_prefixes = ("--embd-", "--fim-", "--gpt-oss-", "--vision-gemma-")
-    shard_values = []
-    shard_options = []
+    value_options = {
+        "--alias", "--host", "--port", "--path", "--api-key", "--api-key-file",
+        "--threads", "--threads-http", "--threads-batch", "--n-gpu-layers",
+        "--gpu-layers", "--device", "--devices", "--split-mode", "--tensor-split",
+        "--main-gpu", "--cache-type-k", "--cache-type-v", "--batch-size",
+        "--ubatch-size", "--timeout", "--log-file", "--log-format",
+    }
+    extra_file_options = []
+    extra_file_values = []
     parallel_options = []
     parallel_value = None
-    rejected = []
     index = 0
     while index < len(args):
         token = args[index]
@@ -376,24 +408,27 @@ def reject_model_context_selectors(args: list[str]) -> dict:
         option = _canonical_long_option(raw_option)
         inline_value = token.partition("=")[2] if "=" in token else None
         if option in ("--shard", "--ple"):
-            shard_options.append(raw_option)
+            if extra_file_options:
+                _selector_preflight_hold("MODEL_EXTRA_FILE_ALIAS_MIXED_OR_DUPLICATE",
+                                         extra_file_options + [raw_option])
+            extra_file_options.append(raw_option)
             if inline_value is None:
                 if index + 1 >= len(args):
-                    _selector_preflight_hold("MODEL_SHARD_VALUE_MISSING", shard_options)
+                    _selector_preflight_hold("MODEL_EXTRA_FILE_VALUE_MISSING", extra_file_options)
                 index += 1
                 value = args[index]
             else:
                 value = inline_value
             values = value.split(",")
             if not value or any(not item for item in values):
-                _selector_preflight_hold("MODEL_SHARD_VALUE_INVALID", shard_options)
-            shard_values.extend(values)
+                _selector_preflight_hold("MODEL_EXTRA_FILE_VALUE_INVALID", extra_file_options)
+            extra_file_values.extend(values)
             index += 1
             continue
         if option in ("-np", "--parallel"):
             parallel_options.append(raw_option)
             if len(parallel_options) > 1:
-                _selector_preflight_hold("MODEL_PARALLEL_SELECTOR_REPEATED", parallel_options)
+                _selector_preflight_hold("MODEL_PARALLEL_ALIAS_MIXED_OR_DUPLICATE", parallel_options)
             if inline_value is None:
                 if index + 1 >= len(args):
                     _selector_preflight_hold("MODEL_PARALLEL_VALUE_MISSING", parallel_options)
@@ -412,24 +447,27 @@ def reject_model_context_selectors(args: list[str]) -> dict:
                 _selector_preflight_hold("MODEL_PARALLEL_VALUE_INVALID", parallel_options)
             index += 1
             continue
-
+        if option in ("-m", "-c") and inline_value is None:
+            if index + 1 >= len(args):
+                _selector_preflight_hold("MODEL_BASE_SELECTOR_VALUE_MISSING", [raw_option])
+            index += 2
+            continue
         blocked = (token.startswith("-c=") or token.startswith("-m=") or
                    option in short_selectors or
-                   (option in long_exact and option not in ("--shard", "--ple", "--parallel")) or
+                   (option in long_exact and option not in ("--parallel",)) or
                    option.startswith(long_prefixes) or option.startswith(preset_prefixes))
         if blocked:
-            rejected.append(raw_option)
+            _selector_preflight_hold("MODEL_OR_CONTEXT_SELECTOR_ALIAS", [raw_option])
+        if option in value_options and inline_value is None:
+            if index + 1 >= len(args):
+                _selector_preflight_hold("MODEL_OPTION_VALUE_MISSING", [raw_option])
+            index += 2
+            continue
         index += 1
 
-    if rejected:
-        _selector_preflight_hold("MODEL_OR_CONTEXT_SELECTOR_ALIAS", rejected)
-    expected_shards, shard_total = _expected_extra_model_shards()
-    if shard_values and tuple(shard_values) != expected_shards:
-        _selector_preflight_hold("MODEL_SHARD_SELECTION_MISMATCH", shard_options)
+    extra_files = _extra_model_file_identity(extra_file_values, extra_file_options)
     return {
-        "shard_mode": "explicit_exact_rest" if shard_values else "pinned_first_shard_only",
-        "explicit_shard_count": len(shard_values),
-        "pinned_model_shard_total": shard_total,
+        "extra_model_files": extra_files,
         "parallel_mode": ("default" if not parallel_options else
                           "auto" if parallel_value == -1 else "explicit"),
         "parallel_count": (parallel_value if parallel_value not in (None, -1) else None),
