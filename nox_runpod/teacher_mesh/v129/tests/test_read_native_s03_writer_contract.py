@@ -115,7 +115,6 @@ class ReadNativeS03WriterContractTests(unittest.TestCase):
         self.assertIn('"name": "remember"', encoded)
         self.assertIn('"return_type": "dict[str, str]"', encoded)
         self.assertNotIn("secret", encoded)
-        self.assertNotIn("return", encoded)
 
 
 if __name__ == "__main__":
