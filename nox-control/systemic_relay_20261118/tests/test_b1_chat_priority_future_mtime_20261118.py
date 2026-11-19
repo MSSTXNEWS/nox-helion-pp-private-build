@@ -6,6 +6,7 @@ native dispatcher would require a running NOX host and must not occur in CI.
 import ast
 import os
 from pathlib import Path
+from types import SimpleNamespace
 import tempfile
 import time
 import unittest
@@ -28,7 +29,53 @@ def load_chat_priority(root):
     return namespace["chat_priority_active"]
 
 
+
+def load_bound_admission(*, chat_active=False, stop=False, project_allowed=True):
+    """Extract the real bound admission callback without importing live modules."""
+    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    binders = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "bind_dispatcher"
+    ]
+    if len(binders) != 1:
+        raise AssertionError("HOLD_NATIVE_BINDER_SOURCE_SHAPE")
+    matches = [
+        node for node in binders[0].body
+        if isinstance(node, ast.FunctionDef) and node.name == "admission"
+    ]
+    if len(matches) != 1:
+        raise AssertionError("HOLD_NATIVE_ADMISSION_SOURCE_SHAPE")
+    isolated = ast.fix_missing_locations(ast.Module(body=matches, type_ignores=[]))
+    namespace = {
+        "HANDLER": "review", "LEAF_HANDLER": "leaf",
+        "PROJECT_HANDLER": "project",
+        "chat_priority_active": lambda: chat_active,
+        "native": SimpleNamespace(
+            stop_active=lambda: stop,
+            projects=SimpleNamespace(admitted=lambda _: project_allowed)),
+        "old_admission": lambda _: True,
+    }
+    exec(compile(isolated, str(SOURCE), "exec"), namespace)
+    return namespace["admission"]
+
 class ChatPriorityFutureMtimeTests(unittest.TestCase):
+    def test_chat_priority_blocks_all_native_handlers_at_admission(self):
+        # Old code blocked only "review"; "leaf" and "project" were admitted.
+        waiting = load_bound_admission(chat_active=True)
+        for kind in ("review", "leaf", "project"):
+            with self.subTest(handler=kind):
+                self.assertFalse(waiting({"handler": kind}))
+
+        unblocked = load_bound_admission(chat_active=False)
+        for kind in ("review", "leaf", "project"):
+            with self.subTest(handler=kind):
+                self.assertTrue(unblocked({"handler": kind}))
+
+        self.assertFalse(load_bound_admission(stop=True)({"handler": "leaf"}))
+        self.assertFalse(load_bound_admission(stop=True)({"handler": "review"}))
+        self.assertFalse(load_bound_admission(stop=True)({"handler": "project"}))
+        self.assertFalse(load_bound_admission(project_allowed=False)({"handler": "project"}))
+
     def test_marker_absent_is_inactive(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
