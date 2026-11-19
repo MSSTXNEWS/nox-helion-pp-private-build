@@ -40,7 +40,7 @@
       stop=()=>reject(Error('STREAM_STOP_REQUESTED'));
       signal.addEventListener('abort',stop,{once:true});
     });
-    try{return await Promise.race([Promise.resolve().then(op),cancelled]);}
+    try{return await Promise.race([Promise.resolve().then(()=>{if(signal.aborted)throw Error('STREAM_STOP_REQUESTED');return op();}),cancelled]);}
     finally{signal.removeEventListener('abort',stop);}
   }
   const nativeBodyJSON=(response,signal)=>waitOrAbort(()=>response.json(),signal);
