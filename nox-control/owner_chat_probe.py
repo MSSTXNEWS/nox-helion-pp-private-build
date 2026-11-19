@@ -80,6 +80,12 @@ def require_executor_turn_budget(elapsed_seconds):
         raise RuntimeError('HOLD_CHAT_PROBE_EXECUTOR_TURN_BUDGET_EXHAUSTED')
 
 
+def require_multiturn_requested(value):
+    """Do not certify full multi-turn acceptance after only one chat turn."""
+    if value != '1':
+        raise RuntimeError('HOLD_CHAT_PROBE_MULTITURN_NOT_REQUESTED')
+
+
 def numeric_public_answer(text):
     # Raw model text can unexpectedly draw on private memory. Export only a
     # bounded numeric answer to this synthetic arithmetic prompt, plus hashes.
@@ -209,6 +215,8 @@ def main():
                 or any(page['status']!=200 for page in report['paths'])):
             raise RuntimeError('HOLD_RESONANCE_ASSET_HTTP')
         if report['slots']['busy']:raise RuntimeError('HOLD_CHAT_BUSY_FOR_SYNTHETIC_PROBE')
+        # Single-turn diagnostics must not be reported as completed multi-turn acceptance.
+        require_multiturn_requested(os.environ.get('NOX_PROBE_SECOND_TURN'))
         marker='nox_latency_'+secrets.token_hex(5)
         prompt='[QA '+marker+'] Сколько будет 17 умножить на 19? Ответь только числом.'
         dialog=obj(request(client,'/api/ui/memory/dialogs/create','POST',{'title':'NOX QA '+marker,'confirmed':True}))
