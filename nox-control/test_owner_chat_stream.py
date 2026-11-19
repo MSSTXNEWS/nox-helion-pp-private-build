@@ -435,6 +435,46 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(first.closed)
         self.assertTrue(second.closed)
 
+    async def test_deterministic_falsey_arguments_never_bypass_call_guard(self):
+        # The pool's deterministic short path used "arguments or {}", which
+        # silently turned []/False/0 into executable no-argument native calls.
+        for malformed in ([], False, 0, 0.0):
+            with self.subTest(malformed=repr(malformed)):
+                native=self.native()
+                native['_POOL']=True
+                native['prepare_payload']=lambda req,cache=False:req
+                native['try_deterministic']=lambda text,value=malformed:{
+                    'tool':'calculate','arguments':value}
+                payload={'messages':[{'role':'user','content':'Compute deterministic'}]}
+                with patch.object(stream.httpx,'AsyncClient',
+                                  side_effect=AssertionError('no model transport')):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Compute deterministic',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertIn('HOLD_TOOL_ARGUMENTS',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+
+        # Valid absent/empty deterministic parameters remain callable.
+        for absent in (None, {}, ''):
+            with self.subTest(valid=repr(absent)):
+                native=self.native()
+                native['_POOL']=True
+                native['prepare_payload']=lambda req,cache=False:req
+                native['try_deterministic']=lambda text,value=absent:{
+                    'tool':'calculate','arguments':value}
+                requests,factory=self.transport([])
+                payload={'messages':[{'role':'user','content':'Compute deterministic'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Compute deterministic',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(self.dispatched,[('calculate',{})])
+                self.assertEqual(len(requests),0)
+                self.assertIn('[DONE]',wire)
+                self.assertEqual(payload.get('_agent_final'),'323')
+
     async def test_direct_admin_multiple_actions_holds_before_model_or_dispatch(self):
         # Exact regression from previously reviewed #394/#420: ambiguous
         # administrative actions must neither be clipped nor partly executed.
