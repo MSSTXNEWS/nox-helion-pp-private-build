@@ -165,10 +165,13 @@ class DurablePorts:
     """Host callbacks are authenticated and must run S03 transactions durably.
 
     `s03_append` must return {verified: true, event_id: nonempty, durable: true}.
+    `s03_readback` must independently query that event by exact ID and return
+    verified/durable plus matching turn_id, seq, kind, and canonical payload_sha256.
     The callback, not this module, must set SQLite WAL + synchronous FULL,
     perform idempotency on (turn_id,seq), and commit a native transaction.
     """
     s03_append:Callable[[Session,dict],Mapping[str,Any]]
+    s03_readback:Callable[[Session,str],Mapping[str,Any]]|None=None
     s03_backup:Callable[[Session],Mapping[str,Any]]|None=None
     s03_backup_verify:Callable[[Session,Mapping[str,Any]],bool]|None=None
     native_revision:Callable[[Session],str]|None=None
@@ -216,9 +219,23 @@ class DurableTurn:
         except Exception:raise RuntimeError('HOLD_S03_WRITE_FAILED') from None
         if (not isinstance(receipt,Mapping) or receipt.get('verified') is not True
             or receipt.get('durable') is not True or not isinstance(receipt.get('event_id'),str)
-            or not receipt['event_id']):
+            or not receipt['event_id'] or len(receipt['event_id'])>128):
             raise RuntimeError('HOLD_NO_DURABLE_RECEIPT')
-        return {'event_id':receipt['event_id'][:128], 'seq':seq}
+        if not callable(self.storage.s03_readback):
+            raise RuntimeError('HOLD_S03_READBACK_UNBOUND')
+        event_id=receipt['event_id']
+        try:
+            expected_sha256=sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True,
+                separators=(',',':'),allow_nan=False).encode('utf8')).hexdigest()
+            proof=self.storage.s03_readback(session,event_id)
+        except Exception:
+            raise RuntimeError('HOLD_S03_READBACK_FAILED') from None
+        if (not isinstance(proof,Mapping) or proof.get('verified') is not True
+            or proof.get('durable') is not True or proof.get('event_id')!=event_id
+            or proof.get('turn_id')!=turn_id or proof.get('seq')!=seq
+            or proof.get('kind')!=kind or proof.get('payload_sha256')!=expected_sha256):
+            raise RuntimeError('HOLD_S03_READBACK_MISMATCH')
+        return {'event_id':event_id, 'seq':seq}
 
     def run(self,session:Session,prompt:str,turn_id:str,
             model_stream:Callable[[str,dict],Iterator[str]], *,
