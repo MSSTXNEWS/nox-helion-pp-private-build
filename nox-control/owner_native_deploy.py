@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import re
 import signal
+import stat
 import subprocess
 import tempfile
 import time
@@ -296,7 +297,7 @@ def collect_gate(request_id, source_sha, lock_held):
 
 
 def write_receipt(receipt):
-    path = ROOT / 'state/dispatcher/pr444_idle_install_' + receipt['request_id'] + '.json'
+    path = ROOT / ('state/dispatcher/pr444_idle_install_' + receipt['request_id'] + '.json')
     atomic_write(path, json.dumps(receipt, sort_keys=True, separators=(',', ':')).encode(), 0o600)
     print('NOX_PR444_IDLE_INSTALL=' + json.dumps(receipt, sort_keys=True), flush=True)
 
