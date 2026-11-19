@@ -6,6 +6,7 @@ on:
       - 'nox-control/test_owner_memory_governor.py'
       - '.github/workflows/nox-memory-governor-ci.yml'
       - 'nox-control/owner_memory_cleanup_entry.py'
+      - 'nox-control/owner_storage_reclaim.py'
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py'
       - 'nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py'
@@ -24,7 +25,7 @@ jobs:
           python-version: '3.11'
       - name: Compile + bounded cgroup fixtures, no host mutation
         run: |
-          python -m py_compile nox-control/owner_memory_governor.py nox-control/test_owner_memory_governor.py nox-control/owner_memory_cleanup_entry.py nox-control/owner_native_operator.py
+          python -m py_compile nox-control/owner_memory_governor.py nox-control/test_owner_memory_governor.py nox-control/owner_memory_cleanup_entry.py nox-control/owner_native_operator.py nox-control/owner_storage_reclaim.py nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py
           python -m unittest discover -s nox-control -p test_owner_memory_governor.py -v
           python -m unittest discover -s nox-control/systemic_relay_20261118 -p test_owner_reflex_cycle.py -v
       - name: Assert exact owner transport and no live service mutation
