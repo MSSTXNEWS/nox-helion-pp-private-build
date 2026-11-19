@@ -637,10 +637,16 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
         raise ValueError('ORIGINAL_LEDGER_MUTATION_CLAIM')
     if task_id == '6V14-02' and document.get('overall_audit') != 'HOLD':
         raise ValueError('PROCESS_CENSUS_OVERALL_STATUS_MISMATCH')
+    task_criterion = scope_document.get('task_criterion')
+    if not isinstance(task_criterion, dict):
+        task_criterion = {}
+    task_registry = task_criterion.get('task_registry')
+    if not isinstance(task_registry, dict):
+        task_registry = {}
     return {
         'task_id': task_id,
-        'title': criterion.get('title') or record.get('title') or
-                 scope_document.get('task_criterion', {}).get('task_title'),
+        'title': criterion.get('title') or record.get('title')
+                 or task_criterion.get('task_title') or task_registry.get('task_title'),
         'result': 'ACCEPTED',
         'acceptance_scope': acceptance_scope,
         'acceptance_pointer': pointer,
