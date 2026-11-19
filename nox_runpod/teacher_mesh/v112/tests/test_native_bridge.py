@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.testclient import TestClient
 
 from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
-    _sse_delta, _timestamp, ensure_dialog_schema, register_native_v29_chat,
+    _sse_delta, _timestamp, _V122_OWNER_UI_PATCHES, ensure_dialog_schema, register_native_v29_chat,
 )
 
 class V112Tests(unittest.TestCase):
@@ -198,7 +198,7 @@ class V112Tests(unittest.TestCase):
             self.assertEqual(r.status_code,401,url)
         self.assertEqual(self.calls,[])
 
-    def test_source_status_is_augmented_not_faked(self):
+    def test_source_status_does_not_infer_v38_memory_from_s03_table(self):
         r=self.client.get('/api/nox/status',cookies=self.cookie)
         self.assertEqual(r.status_code,200)
         data=r.json()
@@ -206,8 +206,21 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(data['primary_model'],'NOX PRIME 8B')
         self.assertEqual(data['backend'],'EXISTING_NATIVE_ONEHOST')
         self.assertTrue(data['native_p02_bound'])
-        self.assertTrue(data['native_cognitive_memory_bound'])
+        self.assertTrue(data['native_s03_store_present'])
+        self.assertFalse(data['native_s03_recall_bound'])
+        self.assertFalse(data['native_cognitive_memory_bound'])
+        self.assertEqual(data['native_cognitive_memory_state'],'UNBOUND')
         self.assertTrue(data['native_dialogs_ready'])
+        required=['authorize','stop','s03_recall','s03_append','model_stream']
+        self.assertEqual(data['v38_integration_state'],'UNBOUND')
+        self.assertFalse(data['v38_adapter_registered'])
+        self.assertEqual(data['v38_required_host_bindings'],required)
+        self.assertEqual(data['v38_bound_host_bindings'],[])
+        self.assertEqual(data['v38_missing_required_host_bindings'],required)
+        ready_replacement=next(new for old,new in _V122_OWNER_UI_PATCHES
+                               if new.startswith('const ready='))
+        self.assertIn('core.native_s03_recall_bound===true',ready_replacement)
+        self.assertNotIn('core.native_cognitive_memory_bound===true',ready_replacement)
         self.assertTrue(self.client.get('/api/ui/memory/dialogs/status',cookies=self.cookie)
                         .json()['persistent_threads'])
 
