@@ -100,10 +100,13 @@ def preflight():
     state, active = helper.queue_idle(ROOT)
     require(not active, 'ACTIVE_NATIVE_CLAIM')
     prior = state['tasks'].get(PREDECESSOR_ID)
+    result = prior.get('result') or {} if isinstance(prior, dict) else {}
+    receipt = result.get('receipt') or {}
+    evidence = (receipt.get('worker_result') or {}).get('project_evidence') or {}
     require(isinstance(prior, dict) and prior.get('status') == 'blocked'
-            and prior.get('result',{}).get('receipt_sha256') == PREDECESSOR_RECEIPT_SHA
+            and result.get('receipt_sha256') == PREDECESSOR_RECEIPT_SHA
             and prior.get('native_worker_lease',{}).get('phase') == 'SETTLED'
-            and prior.get('project_evidence',{}).get('reason') == PREDECESSOR_REASON,
+            and evidence.get('reason') == PREDECESSOR_REASON,
             'BLOCKED_PREDECESSOR_READBACK')
     require(TASK_ID not in state['tasks']
             and all(row.get('id') != TASK_ID for row in old['catalog']['tasks']),
