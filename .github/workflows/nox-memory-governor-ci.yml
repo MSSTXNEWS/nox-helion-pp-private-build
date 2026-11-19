@@ -5,6 +5,8 @@ on:
       - 'nox-control/owner_memory_governor.py'
       - 'nox-control/test_owner_memory_governor.py'
       - '.github/workflows/nox-memory-governor-ci.yml'
+      - 'nox-control/owner_memory_cleanup_entry.py'
+      - 'nox-control/owner_native_operator.py'
   workflow_dispatch:
 permissions: {contents: read}
 jobs:
@@ -20,5 +22,24 @@ jobs:
           python-version: '3.11'
       - name: Compile + bounded cgroup fixtures, no host mutation
         run: |
-          python -m py_compile nox-control/owner_memory_governor.py nox-control/test_owner_memory_governor.py
+          python -m py_compile nox-control/owner_memory_governor.py nox-control/test_owner_memory_governor.py nox-control/owner_memory_cleanup_entry.py nox-control/owner_native_operator.py
           python -m unittest discover -s nox-control -p test_owner_memory_governor.py -v
+      - name: Assert exact owner transport and no live service mutation
+        run: |
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          p = Path('nox-control/owner_native_operator.py')
+          spec=importlib.util.spec_from_file_location('operator_under_test',p)
+          m=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          assert m.FILES['repair']=='nox-control/owner_memory_cleanup_entry.py'
+          assert m.SCOPED_REPAIR_BUNDLES[m.FILES['repair']]==('owner_storage_reclaim.py','owner_memory_governor.py')
+          paths=m.repair_bundle_paths('repair',m.FILES['repair'],('nox-control/owner_storage_reclaim.py',))
+          assert sorted(Path(p).name for p in paths)==['owner_memory_governor.py','owner_storage_reclaim.py']
+          text=Path(m.FILES['repair']).read_text()
+          assert text.count('__NOX_BUNDLE_JSON__')==1
+          assert 'NOX_MAINT_REPAIR_COMPLETE=true' in text
+          assert not any(q in text for q in ('supervisorctl stop', 'drop_caches', '/proc/sys/vm/'))
+          print('OWNER_MEMORY_TRANSPORT_SOURCE_PASS')
+          PY
