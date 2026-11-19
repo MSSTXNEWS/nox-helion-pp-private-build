@@ -171,6 +171,51 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('[DONE]',wire)
         self.assertEqual(self.dispatched,[('calculate',{})])
 
+    async def test_tool_success_evidence_requires_bool_before_followup(self):
+        # A nonboolean 'ok' is neither verified success nor a verified
+        # failure. Do not let a model turn certify a fabricated tool result.
+        for bad in (None, 0, 1, [], {}, 'false', 'true'):
+            with self.subTest(invalid_ok=repr(bad)):
+                first=Chunks([
+                    frame(calls=[{'index':0,'id':'call_status',
+                                  'type':'function','function':{
+                                      'name':'calculate','arguments':'{}'}}]),
+                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+                requests,factory=self.transport([first])
+                native=self.native(result={'ok':bad,'text':'Tool says completed'})
+                payload={'messages':[{'role':'user','content':'Verify status'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Verify status',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(len(requests),1)
+                self.assertEqual(self.dispatched,[('calculate',{})])
+                self.assertIn('HOLD_TOOL_RESULT_OK',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertTrue(first.closed)
+
+        # An actual false remains an explicit failed observation, not HOLD.
+        first=Chunks([
+            frame(calls=[{'index':0,'id':'call_failed',
+                          'type':'function','function':{
+                              'name':'calculate','arguments':'{}'}}]),
+            frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+        second=Chunks([frame('Failure reported'),frame(finish='stop'),
+                       b'data: [DONE]\\n\\n'])
+        requests,factory=self.transport([first,second])
+        native=self.native(result={'ok':False,'text':'Access denied'})
+        payload={'messages':[{'role':'user','content':'Verify status'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Verify status',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertEqual(len(requests),2)
+        self.assertTrue(requests[1]['messages'][-1]['content'].startswith(
+            'Инструмент не подтвердил выполнение действия. Access denied'))
+        self.assertEqual(payload['_agent_final'],'Failure reported')
+        self.assertIn('[DONE]',wire)
+
     async def test_nonstring_tool_evidence_holds_without_second_model_request(self):
         # Present non-string results must never become empty evidence for the
         # second model turn or a fabricated S03-eligible final answer.
