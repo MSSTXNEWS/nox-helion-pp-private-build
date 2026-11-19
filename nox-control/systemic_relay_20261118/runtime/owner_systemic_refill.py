@@ -321,7 +321,8 @@ def memory_governor_projection(capacity):
               budget.get('shmem_bytes'), decision.get('projected_memory_ratio'),
               budget.get('memory_psi_some_avg10'),
               budget.get('memory_psi_full_avg10'))
-    if (any(type(v) not in (int, float) or not math.isfinite(v) or v < 0
+    if (any(type(v) not in (int, float) or v < 0
+            or v > (1 << 63) - 1 or not math.isfinite(v)
             for v in fields)
             or not 0 < budget['max_bytes']
             or budget['current_bytes'] > budget['max_bytes']
