@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the one permitted owner issue-comment inspect command.
+"""Validate the two owner issue-comment commands with immutable source pins.
 
 This runs before checking out the source SHA named in the comment and before
 the NOX2 secret is added to any step environment. It emits no comment text.
@@ -16,16 +16,19 @@ REPOSITORY = "MSSTXNEWS/nox-helion-pp-private-build"
 OWNER_ID = 340718567
 ISSUE_NUMBER = 256
 INSTANCE_ID = 60509551
-# PR #477 merge commit: reviewed boot-bound lock/process identity observer.
-APPROVED_SOURCE_SHA = "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8"
+# Only reviewed immutable source commits may receive the NOX2 secret.
+APPROVED_SOURCE_BY_ACTION = {
+    "inspect": "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8",  # merged PR #477
+    "audit": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",  # merged PR #485
+}
 COMMAND = re.compile(
-    rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) inspect\Z"
+    rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) (inspect|audit)\Z"
 )
 
 
 def authorize_event(event: object, repository: str | None,
-                    event_name: str | None) -> str:
-    """Return the pinned source SHA, or raise a sanitized HOLD code."""
+                    event_name: str | None) -> tuple[str, str]:
+    """Return an allowlisted action/SHA pair, or raise a sanitized HOLD."""
     if repository != REPOSITORY or event_name != "issue_comment":
         raise RuntimeError("HOLD_EVENT_SCOPE")
     if not isinstance(event, dict):
@@ -57,10 +60,10 @@ def authorize_event(event: object, repository: str | None,
     match = COMMAND.fullmatch(body)
     if match is None:
         raise RuntimeError("HOLD_EXACT_OWNER_COMMAND")
-    source_sha = match.group(1)
-    if source_sha != APPROVED_SOURCE_SHA:
-        raise RuntimeError("HOLD_SOURCE_SHA_NOT_APPROVED")
-    return source_sha
+    source_sha, action = match.groups()
+    if APPROVED_SOURCE_BY_ACTION.get(action) != source_sha:
+        raise RuntimeError("HOLD_SOURCE_ACTION_NOT_APPROVED")
+    return action, source_sha
 
 
 def main() -> int:
@@ -69,7 +72,7 @@ def main() -> int:
         if not event_path:
             raise RuntimeError("HOLD_EVENT_PATH")
         event = json.loads(Path(event_path).read_text(encoding="utf-8"))
-        source_sha = authorize_event(
+        action, source_sha = authorize_event(
             event,
             os.environ.get("GITHUB_REPOSITORY"),
             os.environ.get("GITHUB_EVENT_NAME"),
@@ -78,15 +81,16 @@ def main() -> int:
         if not output_path:
             raise RuntimeError("HOLD_OUTPUT_PATH")
         with Path(output_path).open("a", encoding="utf-8") as output:
+            output.write(f"action={action}\n")
             output.write(f"source_sha={source_sha}\n")
     except (OSError, ValueError, RuntimeError) as exc:
         reason = str(exc)
         if not re.fullmatch(r"HOLD_[A-Z0-9_]+", reason):
             reason = "HOLD_INVALID_EVENT"
-        print(f"NOX_OWNER_INSPECT_COMMAND={reason}", file=sys.stderr)
+        print(f"NOX_OWNER_COMMAND={reason}", file=sys.stderr)
         return 2
 
-    print("NOX_OWNER_INSPECT_COMMAND=AUTHORIZED")
+    print("NOX_OWNER_COMMAND=AUTHORIZED")
     return 0
 
 
