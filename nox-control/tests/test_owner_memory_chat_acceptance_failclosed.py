@@ -295,4 +295,44 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
                 self.assertLess(time.monotonic()-started,1.0)
 
 
+    def test_nested_success_marker_cannot_certify_later_s03_batch_hold(self):
+        """A child activation's COMPLETE must not survive a later HOLD."""
+        spec=importlib.util.spec_from_file_location('a3_nested_complete', SOURCE)
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        names=('owner_s03_recover_activate.py','owner_chat_layout_entry.py')
+        raws=(
+            b'def main():\n    print("NOX_MAINT_REPAIR_COMPLETE=true")\n    print("NOX_MAINT_REPAIR=child_evidence")\n    return 0\n',
+            b'def main():\n    return 2\n',
+        )
+        module.STAGES=tuple((name,hashlib.sha256(raw).hexdigest()) for name,raw in zip(names,raws))
+        module.BUNDLE={name:base64.b64encode(raw).decode() for name,raw in zip(names,raws)}
+        with tempfile.TemporaryDirectory() as t:
+            with patch.object(module,'Path',lambda _:pathlib.Path(t)), patch.dict(os.environ,{'NOX_BROWSER_QA_MODE':''}):
+                output=io.StringIO()
+                with redirect_stdout(output):
+                    result=module.main()
+        self.assertEqual(result,2)
+        self.assertNotIn('NOX_MAINT_REPAIR_COMPLETE=true',output.getvalue())
+        self.assertIn('NOX_MAINT_REPAIR=child_evidence',output.getvalue())
+        self.assertIn('HOLD_ACCEPTANCE_COMPONENT_RESULT',output.getvalue())
+        self.assertIn('memory_chat_batch',output.getvalue())
+
+    def test_nested_success_marker_emitted_once_only_after_full_source_batch(self):
+        """No duplicate COMPLETE when every synthetic component succeeds."""
+        spec=importlib.util.spec_from_file_location('a3_nested_success', SOURCE)
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        name='owner_s03_recover_activate.py'
+        raw=b'def main():\n    print("NOX_MAINT_REPAIR_COMPLETE=true")\n    return 0\n'
+        module.STAGES=((name,hashlib.sha256(raw).hexdigest()),)
+        module.BUNDLE={name:base64.b64encode(raw).decode()}
+        with tempfile.TemporaryDirectory() as t:
+            with patch.object(module,'Path',lambda _:pathlib.Path(t)), patch.dict(os.environ,{'NOX_BROWSER_QA_MODE':''}):
+                output=io.StringIO()
+                with redirect_stdout(output):
+                    result=module.main()
+        self.assertEqual(result,0)
+        self.assertEqual(output.getvalue().count('NOX_MAINT_REPAIR_COMPLETE=true'),1)
+        self.assertIn('"failed":[]',output.getvalue())
+
+
 if __name__=='__main__':unittest.main()
