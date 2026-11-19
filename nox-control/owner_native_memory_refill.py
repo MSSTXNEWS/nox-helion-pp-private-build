@@ -71,13 +71,15 @@ def run():
     h, scripts = decode()
     current = h.preimages(ROOT, OLD)
     old_config = json.loads(current[CONFIG])
+    # Attested native inspect on the EXACT file SHA proves NORMAL/target=3,
+    # not the legacy execution_mode/global_worker_cap metadata. Never require
+    # stale fields; keep full-byte config pin, owner, source and process fences.
     require(old_config.get('schema') == 'NOX_NATIVE_SUBAGENT_BINDING_V1'
         and old_config.get('instance_id') == 60509551
         and old_config.get('owner_authorized') is True
-        and old_config.get('execution_mode') == 'NATIVE_PROJECT_V1'
-        and old_config.get('global_worker_cap') == 3
+        and old_config.get('mode') == 'NORMAL'
         and old_config.get('target') == 3
-        and (old_config.get('systemic_relay') or {}).get('sha256') == MANIFEST,
+        and old_config.get('policy_id') == 'NOX_WEB_WEIGHTS_V06',
         'CURRENT_NATIVE_IDENTITY')
     pins = old_config['module_pins']
     require(pins.get('owner_systemic_refill.py') == OLD[REFILL]
