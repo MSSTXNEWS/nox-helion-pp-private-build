@@ -73,9 +73,7 @@ class GroundedNativeQuality(unittest.TestCase):
          fact(sha256="not-a-sha"),fact()
         ]
         r=call(rows)
-        self.assertEqual(r["memory_hit_count"],1)
-        self.assertNotIn("should_not_appear",r["source_evidence_json"])
-        self.assertNotIn("other",json.loads(r["source_evidence_json"])["retrieved_s03"][0]["content"])
+        self.assertEqual(r,{"state":"HOLD_S03_REDACTION_REQUIRED"})
 
     def test_unavailable_source_cannot_claim_local_omnipotence(self):
         bad=dict(OBS,service_observation={"state":"HOLD","services":[]})
@@ -88,12 +86,37 @@ class GroundedNativeQuality(unittest.TestCase):
                    content="информация "+("Т"*220))
               for i in range(28)]
         result=call(rows,max_chars=1900)
-        self.assertEqual(result["state"],"READY_FOR_EXISTING_SINGLE_MODEL")
-        self.assertLessEqual(len(result["source_evidence_json"])+
-                             len(result["trusted_system_policy"]),1900)
-        self.assertLessEqual(result["memory_hit_count"],6)
-        self.assertTrue(len(result["context_sha256"])==64)
-        self.assertFalse(result["new_server_spawned"])
+        self.assertEqual(result,{"state":"HOLD_CONTEXT_BUDGET"})
+
+    def test_full_memory_text_and_source_are_preserved_or_hold(self):
+        long_text="Полное подтверждённое воспоминание "+("ж"*420)
+        long_uri="s03://owner/source/"+("x"*130)
+        r=call([fact(content=long_text,source_uri=long_uri)])
+        self.assertEqual(r["state"],"READY_FOR_EXISTING_SINGLE_MODEL")
+        evidence=json.loads(r["source_evidence_json"])["retrieved_s03"][0]
+        self.assertEqual(evidence["content"],long_text)
+        self.assertEqual(evidence["source_uri"],long_uri)
+        self.assertEqual(evidence["source_sha256"],"a"*64)
+
+        # A complete set that exceeds the budget is rejected as a whole.
+        oversized=[fact(source_uri=f"s03://owner/long-{i}",
+                        content="Проверенная запись "+("м"*500))
+                   for i in range(8)]
+        self.assertEqual(call(oversized,max_chars=1900),
+                         {"state":"HOLD_CONTEXT_BUDGET"})
+
+    def test_more_than_forty_s03_hits_hold_without_partial_memory(self):
+        rows = [fact(source_uri=f"s03://owner/fact-{i}") for i in range(41)]
+        self.assertEqual(call(rows), {"state": "HOLD_S03_HIT_LIMIT"})
+
+
+    def test_forty_s03_hits_are_below_count_limit_but_hold_on_context_budget(self):
+        rows = [fact(content="x", source_uri=f"s03://{i}") for i in range(40)]
+        # Forty full provenance records exceed the hard context budget. The
+        # builder must HOLD rather than misclassify the count or return a subset.
+        result = call(rows, max_chars=6000)
+        self.assertEqual(result, {"state": "HOLD_CONTEXT_BUDGET"})
+        self.assertNotEqual(result.get("state"), "HOLD_S03_HIT_LIMIT")
 
 
 if __name__=="__main__":
