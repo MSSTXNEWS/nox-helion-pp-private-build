@@ -441,6 +441,9 @@ async def _run(native,url,payload,user_text):
             if len(by_id)!=len(calls) or set(by_id)!={call['id'] for call in message['tool_calls']}:
                 raise StreamFailure('HOLD_TOOL_CALL_ID')
             calls=[by_id[row['id']] for row in message['tool_calls']]
+            # Inspect the *original* model batch: pool deduplication must not
+            # hide a second action and accidentally authorize run_admin.
+            _refuse_multi_admin_batch(calls)
             if native.get('_POOL'):calls=native['dedup_calls'](calls)
             if not calls:raise StreamFailure('HOLD_TOOL_PARSE')
             _refuse_multi_admin_batch(calls)
