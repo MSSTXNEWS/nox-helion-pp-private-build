@@ -44,6 +44,26 @@ def obj(response,limit=100000):
 def meaningful_delta(text):
     return isinstance(text,str) and re.search(r'[^\s.…]',text) is not None
 
+def history_matches_turns(messages, turns):
+    """Verify every requested turn is present in the same durable dialog tail."""
+    if not isinstance(messages, list) or len(messages) < len(turns) * 2:
+        return False
+    tail = messages[-len(turns) * 2:]
+    for index, (prompt, answer) in enumerate(turns):
+        user, assistant = tail[2 * index:2 * index + 2]
+        if not isinstance(user, dict) or not isinstance(assistant, dict):
+            return False
+        if user.get('content') != prompt or assistant.get('content') != answer:
+            return False
+    return True
+
+
+def require_durable_result(saved, answered, phase):
+    """A diagnostic run cannot emit COMPLETE after an unsuccessful chat turn."""
+    if not saved or not answered:
+        raise RuntimeError('HOLD_CHAT_PROBE_' + phase + '_NOT_ACCEPTED')
+
+
 def numeric_public_answer(text):
     # Raw model text can unexpectedly draw on private memory. Export only a
     # bounded numeric answer to this synthetic arithmetic prompt, plus hashes.
@@ -176,8 +196,8 @@ def main():
         if not isinstance(did,str) or not re.fullmatch('[a-f0-9]{32}',did):raise RuntimeError('HOLD_DIALOG_CREATE')
         turn=consume_turn(client,prompt,did);answer=turn['answer'];receipt=turn['done']
         history=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6'))
-        pair=history.get('messages',[])[-2:]
-        saved=bool(receipt and receipt.get('saved') is True and receipt.get('s03_integrated') is True and len(pair)==2 and pair[0].get('content')==prompt and pair[1].get('content')==answer)
+        saved=bool(receipt and receipt.get('saved') is True and receipt.get('s03_integrated') is True
+                   and history_matches_turns(history.get('messages'), [(prompt, answer)]))
         first=turn['first_meaningful_delta_ms']
         emit('chat_synthetic_latency',{'events':turn['events'],'total_ms':turn['stream_total_ms'],
             'first_meaningful_delta_ms':first,'placeholder_delta_count':turn['placeholder_delta_count'],
@@ -185,17 +205,19 @@ def main():
             'answer_sha256':digest(answer.encode()),'saved_verified':saved,
             'arithmetic_pass':numeric_public_answer(answer)=='323',
             'performance_target_pass':first<=8000 and turn['stream_total_ms']<=25000})
+        require_durable_result(saved, numeric_public_answer(answer)=='323', 'FIRST_TURN')
         if os.environ.get('NOX_PROBE_SECOND_TURN')=='1':
             followup='Какое число ты только что получил? Ответь только этим числом.'
             follow=consume_turn(client,followup,did);answer2=follow['answer'];done=follow['done']
             stored=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6')).get('messages',[])
-            passed=bool(done and done.get('saved') and done.get('s03_integrated') and numeric_public_answer(answer2)=='323'
-                        and len(stored)>=4 and stored[-2].get('content')==followup and stored[-1].get('content')==answer2)
+            passed=bool(done and done.get('saved') is True and done.get('s03_integrated') is True
+                        and history_matches_turns(stored, [(prompt, answer), (followup, answer2)]))
             emit('chat_history_followup',{'history_model_pass':passed,'client_history_empty':True,
                 'first_delta_ms':follow['first_meaningful_delta_ms'],'first_meaningful_delta_ms':follow['first_meaningful_delta_ms'],
                 'total_ms':follow['stream_total_ms'],'answer_public_synthetic':numeric_public_answer(answer2),
                 'answer_sha256':digest(answer2.encode()),
                 'performance_target_pass':follow['first_meaningful_delta_ms']<=5000 and follow['stream_total_ms']<=25000})
+            require_durable_result(passed, numeric_public_answer(answer2)=='323', 'SECOND_TURN')
             if time.monotonic()-probe_started<210:
                 question='Сколько сейчас исполнителей и агентов у NOX?'
                 turn3=consume_turn(client,question,did,timeout=30)
