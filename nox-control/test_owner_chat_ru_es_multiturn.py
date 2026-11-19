@@ -145,6 +145,21 @@ class OwnerRuEsContinuity(unittest.TestCase):
         self.assertFalse(allowed_qa_request(1, True, RU, es, good, "different-dialog"))
         self.assertFalse(allowed_qa_request(1, True, RU, es, dict(good, message=es[:-1]), DIALOG))
 
+    def test_second_turn_fails_closed_without_real_dialog_scope(self):
+        # A missing/null request dialog ID must never become a matching
+        # unscoped native POST just because expected dialog_id is also None.
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        valid = {"message": es, "dialog_id": DIALOG}
+        self.assertTrue(allowed_qa_request(1, True, RU, es, valid, DIALOG))
+        for missing_scope in (None, "", "   "):
+            self.assertFalse(allowed_qa_request(
+                1, True, RU, es, {"message": es}, missing_scope))
+            self.assertFalse(allowed_qa_request(
+                1, True, RU, es, {"message": es, "dialog_id": missing_scope},
+                missing_scope))
+        self.assertFalse(allowed_qa_request(
+            1, True, RU, es, valid, "other-dialog"))
+
     def test_ru_es_four_turn_history_needs_independent_canonical_s03(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         transcript = rows(es)
