@@ -1,0 +1,26 @@
+name: NOX A3 3A02 focused S03 receipt source regression
+on:
+  push:
+    branches:
+      - a3/3a02-owner-stage-failclosed-20261119
+    paths:
+      - nox-control/owner_memory_chat_acceptance.py
+      - nox-control/tests/test_owner_memory_chat_acceptance_failclosed.py
+      - .github/workflows/nox-a3-3a02-focused-source.yml
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact A3 fail-closed receipt regression (no server or model)
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s nox-control/tests -p test_owner_memory_chat_acceptance_failclosed.py -v
+          echo "SOURCE_ONLY_NO_NATIVE_MUTATION=true"
