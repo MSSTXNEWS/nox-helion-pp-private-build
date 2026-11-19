@@ -183,8 +183,10 @@ async def _model_events(client, url, payload):
                 if len(line)>256:
                     raise StreamFailure('HOLD_MODEL_SSE_FRAME')
                 continue
-            elif line.startswith('data:'):
-                value=line[5:]
+            elif line.startswith('data:') or line=='data':
+                # WHATWG: a field without ':' has an empty value. A bare
+                # `data` is still a data field, not an unknown SSE command.
+                value=line[5:] if line!='data' else ''
                 if value.startswith(' '):
                     value=value[1:]
                 frame_size+=len(value)+1
