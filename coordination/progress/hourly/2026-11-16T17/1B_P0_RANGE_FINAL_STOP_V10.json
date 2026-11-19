@@ -1,0 +1,96 @@
+{
+  "schema": "NOX_AUTO_1B_P0_V10",
+  "instructions_version": "0.0.6",
+  "utc": "2026-11-16T14:44:34.775Z",
+  "msk": "2026-11-16T17:44:34.775+03:00",
+  "slot": "AUTO_1B",
+  "instance": 60509551,
+  "branch": "feature/nox-v38-synaptic-brain-20261114",
+  "head_before": "26482eab4f8f51afd0fd75b1e2756dedbae17491",
+  "head_after": "COMMIT_CARRYING_RECEIPT",
+  "source_before_blob": "4ca91f04c0f280166a967a0fc8b5d18cc19a95ad",
+  "source_after_blob": "8504639a97efc6cdddd3922eb3d952b2b1d7c4c3",
+  "test_after_blob": "8ce7fabbaabaac22c475d09bb9bf8d887a2b1e47",
+  "source_regressions_added": 3,
+  "source_status": "SOURCE_PATCHED_CI_PENDING",
+  "native_status": "HOLD_OWNER_STOP_AND_LEASE",
+  "five_task_outcomes": [
+    {
+      "id": "P0-1B-01",
+      "status": "HOLD",
+      "detail": "Historical original df/SSD GPU/cgroup in native 13:59Z, but fresh du/inodes/handles/model-path readback absent."
+    },
+    {
+      "id": "P0-1B-02",
+      "status": "HOLD_PARTIAL_SHA",
+      "detail": "Owner backup S03 49037312B SHA ac00032c43bb0c79257e1be540ae349a969a06610609546695a952c332f19ab7; Genesis/checkpoints and current S03 not independently rehashed."
+    },
+    {
+      "id": "P0-1B-03",
+      "status": "HOLD_RESTORE",
+      "detail": "Independent offsite restore S03/Genesis/checkpoint+optimizer/scaler/RNG remains unverified."
+    },
+    {
+      "id": "P0-1B-04",
+      "status": "PRIOR_OWNER_NATIVE_DONE_THIS_SLOT_ZERO",
+      "detail": "Original owner already removed 3 exact GGUF and verified 27903528960 filesystem bytes reclaimed at 13:40Z. Five teachers were held; 1B deleted 0 bytes."
+    },
+    {
+      "id": "P0-1B-05",
+      "status": "HOLD_S03_POSTCLEAN_READBACK",
+      "detail": "After owner cleanup, SSD free 43158925312 at 13:59Z; no current S03 integrity/recall or individual live df/du readback from 1B."
+    }
+  ],
+  "independent_source_task": {
+    "id": "S2-07",
+    "status": "SOURCE_PATCHED_CI_PENDING",
+    "error_id": "NOX-P0-DEEPSEEK-POSTREAD-STOP-LEASE-PARTIAL-ACK-20261116"
+  },
+  "owner_stop": {
+    "state": "PRESENT_135456Z_OWNER_MODEL_UPDATE",
+    "flag_sha256": "395020b6190f7175de8b1d3b53614a0e155dc0e5d96fad877af2995abd0868f7",
+    "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43880277767",
+    "lease_now": null
+  },
+  "historical_native": {
+    "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43881016385",
+    "observed_at": "2026-11-16T13:59:30Z",
+    "job_id": 133346595991,
+    "ssd_free_bytes": 43158925312,
+    "shm_free_bytes": 3366711296,
+    "gpu_mib_used": [
+      0,
+      0
+    ],
+    "rclone_remotes": [],
+    "original_services": "STOPPED_AS_OWNER_MODEL_UPDATE",
+    "trainer": "FATAL_PRIOR"
+  },
+  "historical_owner_cleanup": {
+    "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43877715577",
+    "job_id": 133335015919,
+    "deleted_exact_paths": 3,
+    "deleted_logical_bytes": 27903516896,
+    "verified_reclaimed_filesystem_bytes": 27903528960,
+    "free_after_bytes": 43158958080,
+    "held_teachers": 5
+  },
+  "WEIGHTS": {
+    "historical_qwen_successful_optimizer_updates": 55,
+    "this_slot_new_updates": 0,
+    "checkpoint_restore": "HOLD"
+  },
+  "KNOWLEDGE": {
+    "new_hunter_s03_recall": 0
+  },
+  "DISPATCHER+RESOURCES": {
+    "new_native_claims": 0,
+    "new_process_pids": [],
+    "new_jobs": [],
+    "current_writer_lease": null,
+    "new_download_bytes": 0,
+    "new_delete_bytes": 0,
+    "new_restarts": 0
+  },
+  "next_ready": "Fresh owner-auth current STOP+exclusive lease, independent offsite S03/optimizer restore, verified 248834257920B seekable GGUF placement and Maya ELF SHA; only then one bounded real Range claim."
+}

@@ -1,0 +1,76 @@
+{
+  "schema": "NOX_PRIME_3B_RELAY_RECEIPT_V2",
+  "instructions_version": "0.0.6",
+  "slot": "3B",
+  "at_msk": "2026-11-16 06:28+03:00",
+  "accepted_head": "86e2417fa45dd7ba3dea713f53a523cc6e839346",
+  "scope": "WEB29_ORIGINAL_RESONANCE_SOURCE_ONLY",
+  "error_id": "NOX-P1-V166-S03-CONCURRENT-RECEIPT-TAIL-RACE-20261116",
+  "root_cause": "S03 readback accepted only messages.slice(-2), causing false HOLD for valid committed exchange when a newer dialog exchange arrived before history readback.",
+  "changed_files": [
+    "coordination/onepass/nox-v135-resonance-owner-bridge.js",
+    "coordination/onepass/test_v135_resonance_owner_bridge.cjs",
+    "coordination/progress/hourly/2026-11-16T06/3B.json"
+  ],
+  "tests_added": [
+    "V166 exact history exchange while newer exchange occupies tail in JSON and SSE",
+    "V166 fail-closed on duplicate receipt IDs"
+  ],
+  "source_test": "V166 29/29 NODE_PASS; V135 STAGE 3 FAILED ON 20056>20000 BYTE GUARD; corrected source to 19898 BYTE without loosening bound; EXACT_SHA_CI_RERUN_PENDING",
+  "native_live_verified": false,
+  "production_deployed": false,
+  "five_tasks": [
+    {
+      "task": 1,
+      "state": "HOLD",
+      "reason": "No fresh owner-authenticated native SSE TTFT/completion readback"
+    },
+    {
+      "task": 2,
+      "state": "SOURCE_PATCHED",
+      "reason": "Exact bounded S03 exchange_id matching with duplicate/mixed/stale fail-closed; owner live auth unverified"
+    },
+    {
+      "task": 3,
+      "state": "SOURCE_VERIFIED_PREVIOUS_RUN",
+      "reason": "V165 abortable reader STOP patch CI accepted; native owner browser STOP remains unverified"
+    },
+    {
+      "task": 4,
+      "state": "SOURCE_ONLY",
+      "reason": "Only native generated token deltas are emitted; no fake quick replies or new model introduced"
+    },
+    {
+      "task": 5,
+      "state": "SOURCE_PATCHED_CI_PENDING",
+      "reason": "Concurrent S03 false-HOLD regression fixed; live p50/p95 and E2E require owner runtime"
+    }
+  ],
+  "source_head_after": "CORRECTION_COMMIT_CARRYING_THIS_RECORD",
+  "owner_writer_lease_verified": false,
+  "model_switched": false,
+  "weights_changed": false,
+  "s03_modified": false,
+  "files_deleted": [],
+  "freed_bytes_verified": 0,
+  "preserve": [
+    "original WEB29",
+    "D02",
+    "14 worlds",
+    "S03",
+    "GENESIS",
+    "STOP",
+    "OneHost #60509551",
+    "weights/checkpoints"
+  ],
+  "next_slot": "3C",
+  "next_one_action": "Verify V135 source CI on exact SHA, then native owner-cookie original OneHost SSE p50/p95, STOP, interleaved S03 exchange readback and rollback before production stage.",
+  "first_ci": {
+    "v135": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43798966830",
+    "node_pass": 29,
+    "staging_fail": "HOLD_OWNER_BRIDGE_BOUNDS",
+    "v139": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43798966767",
+    "v139_status": "SUCCESS"
+  },
+  "corrective_change": "Shorten comment only; preserve 20 KB stage gate and exact exchange ID logic; rebuild same test acceptance."
+}

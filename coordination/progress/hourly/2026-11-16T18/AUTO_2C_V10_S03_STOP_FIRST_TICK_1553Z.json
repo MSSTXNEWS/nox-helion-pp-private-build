@@ -1,0 +1,101 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2C",
+  "at_utc": "2026-11-16T15:53:38Z",
+  "at_msk": "2026-11-16T18:53:38+03:00",
+  "source_checkout_head_ci": "2645e04cf65afe174edeabe7f49c29d1867653ff",
+  "source_changes": {
+    "nox-control/owner_s03_gateway.py": {
+      "before_blob": "b2ec720822b1b8e89238f5c1959436cbb5590706",
+      "after_blob": "8bd71959ccddd7f1702cf259fe79b4892de69c40"
+    },
+    "nox-control/test_owner_s03_gateway.py": {
+      "after_blob": "be978685f60aa91ac8a6141622b1ae9ac78382dc"
+    },
+    ".github/workflows/nox-v38-1-source-ci.yml": {
+      "after_blob": "7a531338c865ebceb98052966014c29b71d97583"
+    }
+  },
+  "fixes": [
+    {
+      "error_id": "NOX-P0-2C-S03-EIGHTH-OWNER-STOP-MISSING-20261116",
+      "root_cause": "S03 gateway stop_active() omitted canonical /root/nox/state/STOP.flag, allowing native index admission under sole owner stop alias.",
+      "fix": "Add exact eighth alias; regular and dangling symlink both block index_batch; no owner STOP reset.",
+      "rollback": "Restore exact source preimage blob via GitHub CAS, no native rollout occurred."
+    },
+    {
+      "error_id": "NOX-P0-2C-S03-FIRST-DISPATCHER-TICK-SUPPRESSED-20261116",
+      "root_cause": "last=[0.0] gated initial S03 indexing job for uptime below 90 seconds despite an otherwise healthy original dispatcher.",
+      "fix": "Initialize last=None; only rate-limit after first allowed ingest; deterministic 30-second monotonic regression and second tick dedup.",
+      "rollback": "Restore exact original gateway source blob through CAS with upstream changes reconciled, no production control changed."
+    }
+  ],
+  "github_ci": {
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43901345052",
+    "job_id": 133418481525,
+    "conclusion": "success",
+    "v38_tests_pass": 39,
+    "existing_s03_gateway_tests_pass": 17,
+    "total_pass": 56,
+    "scope": "SOURCE_TESTED_ONLY"
+  },
+  "task_outcomes": [
+    {
+      "task_id": "S2-09",
+      "state": "SOURCE_TESTED",
+      "native_state": "HOLD_OWNER_STOP_AND_LEASE",
+      "proof": "56 source tests, two safe original S03 gateway fixes; no native S03 callback proof"
+    },
+    {
+      "task_id": "S1-03",
+      "state": "HOLD",
+      "reason": "Owner MODEL_UPDATE STOP historically PRESENT; fresh signed writer lease/PID readback unavailable"
+    },
+    {
+      "task_id": "S2-07",
+      "state": "HOLD",
+      "reason": "Actual SSD total 183609851904 B is physically smaller than pinned DeepSeek 248834257920 B; no owner-authorized seekable placement verified"
+    },
+    {
+      "task_id": "S2-08",
+      "state": "HOLD",
+      "reason": "No admitted original Hunter job, ACL S03 write/readback/recall or training candidate"
+    },
+    {
+      "task_id": "S3-05",
+      "state": "HOLD",
+      "reason": "No owner-native original SSE/STOP/persist/restart/recall E2E under deliberate MODEL_UPDATE STOP"
+    }
+  ],
+  "native_claims": 0,
+  "native_pids_startticks_verified_this_slot": null,
+  "native_writer_lease": null,
+  "owner_stop_current": "UNKNOWN_NEW_READBACK",
+  "owner_stop_last_verified": {
+    "present": true,
+    "at_utc": "2026-11-16T15:38:23Z",
+    "proof": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803"
+  },
+  "weights": {
+    "successful_optimizer_updates_this_slot": 0,
+    "model_changed": false,
+    "checkpoint_restore_verified": false
+  },
+  "knowledge": {
+    "s03_write_readback_recall_verified": false,
+    "new_hunter_jobs": 0
+  },
+  "resources": {
+    "gpu_vram_now": null,
+    "ssd_free_now": null,
+    "ssd_total_historical": 183609851904,
+    "deepseek_pinned_unique_bytes": 248834257920,
+    "physical_shortfall_even_empty": 65224406016,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "server_restarts": 0
+  },
+  "next_action": "Owner-native read-only fresh STOP/lease and verified seekable >=248834257920 B + reserve; then original single-owner model placement and S03 source deployment with independent restore, rollback, real readback. Do not resume old Qwen.",
+  "note": "Native queue READY/CLAIM not accessible from current connector. These are verified source/HOLD outcomes, not five native task claims."
+}

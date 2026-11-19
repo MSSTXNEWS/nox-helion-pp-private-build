@@ -1,0 +1,77 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_SLOT_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "1B",
+  "at_utc": "2026-11-16T06:17:17.717Z",
+  "at_msk": "2026-11-16T09:17:17.717+03:00",
+  "accepted_feature_head": "b5fce78db463922c5ec61a78d420d632f86059c6",
+  "source_blobs_before": {
+    "nox-control/nox_cold_drive.py": "7a98de7514f6e767da98c5ca60a835e91ccd39b1",
+    "nox-control/test_nox_cold_drive.py": "c983b2029b757cf681d052153ecf802615082904"
+  },
+  "error_id": "NOX-P1-1B-RANGE-POST-EOF-STOP-STARVATION-20261116",
+  "root_cause": "After rclone cat stdout EOF, original code performed one blocking proc.wait(timeout=remaining), not polling owner STOP and exposing raw subprocess.TimeoutExpired rather than typed HOLD_RANGE_TIMEOUT.",
+  "fix": "Bound process-exit wait with 200-ms STOP polling and a single shared deadline; do not return SHA-verified bytes if owner STOP is latched during child shutdown; keep 1MiB request cap, 64KiB metadata cap and no disk spool.",
+  "task_outcomes": [
+    {
+      "task": 1,
+      "status": "HOLD",
+      "reason": "Existing pinned CUDA12.4/sm70 Maya build previously inspected; no new owner-native Maya/toolchain readback this slot"
+    },
+    {
+      "task": 2,
+      "status": "HOLD_NOT_REPEATED",
+      "reason": "Existing isolated Maya candidate already built; no native lease/placement for install or second build"
+    },
+    {
+      "task": 3,
+      "status": "SOURCE_PATCH",
+      "reason": "Existing rclone Range read exit phase corrected; no FUSE, new backend, or full model read"
+    },
+    {
+      "task": 4,
+      "status": "SOURCE_REGRESSION_ADDED",
+      "reason": "Two deterministic local-transport tests: STOP/timeout after stdout EOF with live child. Exact-commit CI pending"
+    },
+    {
+      "task": 5,
+      "status": "HOLD_NATIVE_AB",
+      "reason": "No owner-native bounded Range readback, verified placement or identical SSE before/after route"
+    }
+  ],
+  "weights": {
+    "last_owner_native_receipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43813584758",
+    "parent_model": "Qwen3.5-9B student",
+    "successful_updates_observed": 8,
+    "updates_added_this_slot": 0,
+    "checkpoint": "checkpoint8 sha manifest 107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2 (historical)",
+    "offsite_restore_verified": false,
+    "latest_trainer_state": "FATAL PID null as of 2026-11-16T06:05Z; not live rechecked"
+  },
+  "knowledge": {
+    "hunter_source_s03_write_readback_recall_verified": false,
+    "new_learning_candidates_verified": 0
+  },
+  "dispatcher_resources": {
+    "owner_native_snapshot": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43814277490",
+    "dispatcher_pid_last_seen": 724331,
+    "trainer_pid_last_seen": null,
+    "job_id_last_seen": "943c960553eb5f6cf13702455d06a5d8",
+    "job_status_last_seen": "COMPLETED_MEDIA_ONLY",
+    "gpu0_gpu1_vram_new_snapshot": null,
+    "cgroup_ram_new_snapshot": null,
+    "ssd_free_new_snapshot": null,
+    "download_bytes_this_slot": 0,
+    "live_stop_changes": 0,
+    "restarts": 0,
+    "owner_writer_lease_verified": false
+  },
+  "source_validation": "PATCH_APPLIED_CI_PENDING",
+  "native_validation": "HOLD_NO_NEW_OWNER_NATIVE_LEASE_OR_RANGE_AB",
+  "changed_native_paths": [],
+  "deleted_paths": [],
+  "freed_bytes_verified": 0,
+  "cleanup": "HOLD_RESTORE_OR_REPLACEMENT_UNVERIFIED",
+  "lesson": "Bounded data and metadata reads do not bound the post-EOF subprocess lifetime; enforce STOP/deadline through every subprocess state.",
+  "next_one_action": "Read exact-commit source CI then obtain one authorized owner-native <=1MiB Range object read with independent block SHA and STOP/lease; do not promote Maya or download full DeepSeek without accepted full placement."
+}

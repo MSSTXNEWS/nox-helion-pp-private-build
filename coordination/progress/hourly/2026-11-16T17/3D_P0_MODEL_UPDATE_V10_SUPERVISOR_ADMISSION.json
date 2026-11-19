@@ -1,0 +1,110 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_UNIVERSAL_V10_RELAY_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "3D",
+  "mode": "UNIVERSAL_FULL_CYCLE",
+  "at_utc": "2026-11-16T14:14:00Z",
+  "at_msk": "2026-11-16T17:14:00+03:00",
+  "owner_priority": "OWNER_P0_REPLACE_EXISTING_NOX_INFERENCE_WITH_MAYA_SM70_DEEPSEEK_IQ2_XXS",
+  "canonical_pr": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/256",
+  "source_sha_before": "fef88b235b78910639e5ff84286226b97e9a1a38",
+  "source_commits": [
+    "0520402beb4c0ff8eb2da77584e90dcf8001af65",
+    "4afa83d89009ba2bc33eeeccb5d0631d06dbe2d8",
+    "0d7f47b6fb3c2e64218f68cde7c40595d5f32cc2"
+  ],
+  "source_blobs": {
+    "nox-control/owner_native_lifeline.py": "ea000ece9e7abc98d08ee414bfbb162c96545a03",
+    "nox-control/test_owner_native_lifeline.py": "c04603a74eda6aae0c6c1341463f585c1390de97"
+  },
+  "one_source_change": "Installer-only fail-closed Supervisor status admission: nonzero supervisorctl rc and RUNNING without positive PID / STOPPED or EXITED with PID return UNKNOWN instead of permitting unauthorised staging. Existing OneHost policy stays disabled; no supervisorctl start/restart invocation in this patch.",
+  "regression": "New focused source regression tests in repository; local equivalent ten-case Python logic simulation PASS. Exact full repo CI was not yet available as completed at readback: do NOT claim CI PASS.",
+  "target_model": {
+    "name": "DeepSeek-V4.1-Flash-1017",
+    "revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+    "quant": "GSQ-RCO-IQ2_XXS",
+    "unique_bytes": 248834257920,
+    "missing_unique_files_from_pinned_manifest": 5,
+    "metadata_only_bytes": 5780704,
+    "full_native_download_verified": false,
+    "active_chat_model_verified_this_slot": null
+  },
+  "existing_maya": {
+    "path": "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/build/maya-ds4",
+    "historical_sha256": "3783980bb65861de36fe4d93b8e6bbd6a631207677bcabf330bf7830c21b20",
+    "current_binary_sha256": null,
+    "transport": "stdio NOT HTTP",
+    "native_loaded": false
+  },
+  "task_outcomes": [
+    {
+      "task_id": "S1-06",
+      "status": "SOURCE_TESTED",
+      "claim": "REPOSITORY_BLOB_CAS_ONLY; no native claim",
+      "result": "Corrected separate installer Supervisor rc/identity parsing with focused tests, read back GitHub source/test SHA",
+      "native": false
+    },
+    {
+      "task_id": "S1-01",
+      "status": "HOLD_NATIVE_AUTH",
+      "claim": null,
+      "result": "Current authorized owner V51 read-only OneHost session not established; no fresh STOP/lease/PID-start_ticks/current UI and model routes",
+      "native": false
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD_RESTORE",
+      "claim": null,
+      "result": "S03/Genesis/current model and checkpoint+optimizer/scaler/RNG independent offsite restore not freshly verified; no PAUSE/STOP or deletion",
+      "native": false
+    },
+    {
+      "task_id": "S2-07",
+      "status": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "claim": null,
+      "result": "Pinned manifest confirms five missing unique DeepSeek files; no server Drive OAuth, actual quota or bounded seekable placement; 248.834GB cannot fit latest historical ~16.9GB free SSD",
+      "native": false
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD_LIVE_MODEL_SSE",
+      "claim": null,
+      "result": "Maya binary historical build but no live model load/stdio->existing HTTP adapter/RU-ES first meaningful SSE/full reply/STOP/S03 readback or p50/p95",
+      "native": false
+    }
+  ],
+  "WEIGHTS": {
+    "state": "HOLD_NO_NEW_NATIVE_UPDATE",
+    "qwen_checkpoint25": "HISTORICAL; Qwen55 manual-only source export observed but not verified accepted/live",
+    "new_successful_optimizer_updates": 0,
+    "restore_tested": false,
+    "deepseek_new_verified_bytes": 0,
+    "model_switch": false
+  },
+  "KNOWLEDGE": {
+    "state": "HOLD_NATIVE_CALLBACK",
+    "hunter_to_licensed_source_to_s03_commit_to_recall_verified_this_slot": false,
+    "knowledge_candidates_admitted": 0,
+    "source_code_patch_is_not_weight_update": true
+  },
+  "DISPATCHER+RESOURCES": {
+    "state": "HOLD_NO_FRESH_OWNER_READBACK",
+    "onehost_instance": 60509551,
+    "existing_native_worker_pids_verified_this_slot": [],
+    "gpu0": null,
+    "gpu1": null,
+    "cgroup_ram": null,
+    "cpu_quota": null,
+    "ssd": null,
+    "shm": null,
+    "stop": null,
+    "writer_lease": null,
+    "latest_historical_native_at_utc": "2026-11-16T10:14:54Z",
+    "restarts": 0,
+    "downloads_bytes": 0,
+    "deleted_bytes": 0
+  },
+  "cleanup": "HOLD_NEW_ENGINE_NOT_LIVE_AND_NO_INDEPENDENT_RESTORE",
+  "rollback": "Exact CAS revert the three source commits only, preserving other concurrent HEAD contributions; no live resources modified",
+  "next_ready": "Single owner-authorized existing V51/V52 read-only one-shot exact #60509551 STOP/lease/5 Supervisor/8081 independent listener PID+start_ticks/current model/GPU0+1/cgroup/SSD+shm/S03; verify storage OAuth or owner-approved seekable external 249GB+ placement and current Maya binary, then safely stage one model-load and SSE test. No blind restart, no backup/delete without restore."
+}

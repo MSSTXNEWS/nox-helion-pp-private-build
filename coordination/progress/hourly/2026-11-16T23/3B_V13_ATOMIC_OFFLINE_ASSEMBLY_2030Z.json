@@ -1,0 +1,84 @@
+{
+  "schema": "NOX_V13_3B_PREP_OUTCOMES_V1",
+  "instructions_version": "0.0.6",
+  "slot": "NOX_3B",
+  "at_utc": "2026-11-16T20:30:19Z",
+  "at_msk": "2026-11-16T23:30:19+03:00",
+  "scope": "Existing Vast.ai #60509551; PREP source only, no production mutation",
+  "source_head_before": "15c99b81e26944a58caf7f57d00e6141f506c438",
+  "source_commits": [
+    "a30e899397481e83663c6e584a5ade19d00ba30a",
+    "5b45703453edda735083a4daa1b0360222854392"
+  ],
+  "source_paths": [
+    {
+      "path": "nox-control/v13_split_archive.py",
+      "blob_sha": "d761c21516c4159eafb92b0a1e29a24104af822f",
+      "local_sha256": "df1f6d4ae49f2a238563c39b958c002e34c0a430d78b7d01debcae4d15524b90"
+    },
+    {
+      "path": "nox-control/test_v13_split_archive.py",
+      "blob_sha": "a2f9de4c68f9b3b40164fbab5182932e055b6db5",
+      "local_sha256": "23b63d4c61aae0b4c49950589b5113b2e57ae68dfe714f284296ac39c05cec21"
+    }
+  ],
+  "root_cause": "Original Google Drive assemble_download_parts.py checks output.exists(), then calls Path.rename(temp, output). POSIX rename can replace an owner file created after the check. This race is unacceptable for no-loss V13 reuse even when original archive SHA inputs are valid.",
+  "change": "New opt-in source-only V13 offline part assembler uses SHA-256 each part plus final SHA, symlink/path guards, duplicate JSON-key rejection, size/space checks, and atomic no-overwrite os.link publication. Original Drive tool, live service and backend left untouched; adoption requires pre-production owner acceptance.",
+  "verification": {
+    "local_python": "Python 3 unittest 8/8 PASS and python -O unittest 8/8 PASS (test-only temporary synthetic archives)",
+    "source_readback": "GitHub fetch_file both blob SHA confirmed",
+    "github_ci": "NOT_RUN",
+    "native_install": false,
+    "real_payload_archive_sha": "NOT_REHASHED",
+    "source_bug_race_reproduced_by": "Injected competing output before publish; unique bytes preserved with FileExistsError",
+    "rollback": "Remove newly added standalone source+test only through exact blob CAS if rejected; no runtime rollback required."
+  },
+  "drive_metadata": {
+    "starter_parts": "4/4 exact names and sizes; archive 331718151 B",
+    "wheelhouse_parts": "39/39 exact names and sizes; archive 3831295823 B",
+    "payload_sha_validated_on_OneHost": false,
+    "starter_folder": "https://drive.google.com/drive/folders/1bTf6pYSghj6rG7KslA34Vjqkc3OakVb2",
+    "wheelhouse_folder": "https://drive.google.com/drive/folders/1q1qR71IiOU7LsGAYjPiIbYAN5PrffDNX"
+  },
+  "task_outcomes": [
+    {
+      "task_id": "V13-03",
+      "status": "SOURCE_TESTED_LOCAL",
+      "outcome": "Offline Drive starter and wheelhouse split-archive publication race fixed in optional repository preproduction assembler; 8/8 tests twice, no native installation."
+    },
+    {
+      "task_id": "V13-04",
+      "status": "HOLD_NATIVE_GPU_SMOKE",
+      "outcome": "Wheelhouse CP311/cu126 must be isolated from live Python3.12 torch2.6.0+cu124. No dual-V100 FP16 import/kernel smoke."
+    },
+    {
+      "task_id": "V13-01",
+      "status": "PRIOR_LIVE_READ_ONLY_LEASE_HOLD",
+      "outcome": "Native inspection 2026-11-16T20:09:37Z showed owner STOP, MAINTENANCE, five primary Supervisor stopped, 8081 zero listeners, GPU0/GPU1 0 MiB; current writer lease, two independent PID/starttime sweeps not available."
+    },
+    {
+      "task_id": "V13-02",
+      "status": "HOLD_RESTORE",
+      "outcome": "S03 knowledge.sqlite metadata 49037312 B, but no independently restored SQLite WAL/history/skills/Genesis and unique checkpoint+optimizer/scaler/RNG."
+    },
+    {
+      "task_id": "V13-05",
+      "status": "HOLD_STORAGE",
+      "outcome": "Latest owner-audited root free 43158585344 B; missing DeepSeek unique payload 248828477216 B; no native rclone remote or verified seekable mount + reserve; no download claim opened."
+    }
+  ],
+  "last_native_evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43939988374",
+  "native_effects": {
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "optimizer_updates": 0,
+    "s03_writes": 0,
+    "new_native_jobs": 0,
+    "new_pid_starttime": [],
+    "installs": 0,
+    "restarts": 0,
+    "stop_change": false,
+    "schedule_change": false
+  },
+  "next": "Verify owner writer lease and independent offsite S03/checkpoint restore; establish persistent authenticated seekable >=248834257920 B plus positive reserve; only then stage SHA-verified Drive reused tools, isolated ABI GPU0/1 FP16, 5 DeepSeek weights and Maya TP2 before single CUTOVER."
+}

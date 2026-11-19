@@ -1,0 +1,80 @@
+{
+  "schema": "NOX_1C_P0_STOP_AWARE_STORAGE_V10",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_1C",
+  "utc": "2026-11-16T14:43:01.702Z",
+  "msk": "2026-11-16T17:43:01.702+03:00",
+  "source_head_before": "afbe7be76358711113eb5822feef7eff83ac88c4",
+  "old_source_blob": "5579a9d1eced5fa87f1006970339208895664083",
+  "old_test_blob": "e64d9364bdac17f59d72aa461b63349590f04779",
+  "root_cause": "DeepSeek storage metadata-only admission wrongly invoked assert_owner_stop_clear(), preventing read-only capacity inspection under intentional OWNER_MODEL_UPDATE STOP.",
+  "fix": "Read-only metadata/stat/capacity inspection allowed under observed STOP/maintenance, but full SHA/mmap remains fail-closed; observed flags are not an authorization or native lease.",
+  "tests": "84/84 existing cold drive + 2 STOP/maintenance regressions PASS on exact source SHA; SOURCE ONLY",
+  "rollback": "CAS revert only exact source and test blobs after checking descendants",
+  "native": {
+    "owner_stop_last_verified_at": "2026-11-16T13:54:56Z",
+    "owner_stop": "PRESENT_OWNER_MODEL_UPDATE",
+    "fresh_owner_lease": null,
+    "worker_pids": null,
+    "native_job_id": null,
+    "model_switch": false
+  },
+  "five_tasks": [
+    {
+      "id": "S2-07",
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
+      "cause": "OWNER_MODEL_UPDATE metadata gate"
+    },
+    {
+      "id": "S2-STORAGE-CAPACITY",
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
+      "cause": "no fresh native capacity"
+    },
+    {
+      "id": "S2-STORAGE-REMOTE",
+      "status": "HOLD_NATIVE",
+      "cause": "no authenticated server Drive/PC remote"
+    },
+    {
+      "id": "S2-STORAGE-TRANSFER",
+      "status": "HOLD_NATIVE",
+      "cause": "no native storage lease or write/read/SHA"
+    },
+    {
+      "id": "S2-STORAGE-SEEKABLE",
+      "status": "HOLD_NATIVE",
+      "cause": "full model files absent/seekable mount unverified"
+    }
+  ],
+  "WEIGHTS": {
+    "new_optimizer_updates": 0,
+    "checkpoint_restore_this_slot": false
+  },
+  "KNOWLEDGE": {
+    "hunter_s03_recall_this_slot": false
+  },
+  "DISPATCHER_RESOURCES": {
+    "live_pids": null,
+    "ssd_free_historical_bytes": 43158925312,
+    "downloaded_bytes_this_slot": 0,
+    "deleted_bytes_this_slot": 0,
+    "restarts_this_slot": 0
+  },
+  "next": "Owner-auth original instance read-only STOP/maintenance, mount/quota, exact shards; verified seekable 248834257920B plus reserve and restore, then lease-bounded staging and Maya/SSE acceptance. Keep STOP; do not restart Qwen.",
+  "source_ci": {
+    "scope": "SOURCE_TESTED_OFFLINE_FIXTURES",
+    "status": "SUCCESS",
+    "tests_passed": 84,
+    "tests_total": 84,
+    "workflow_run_id": 43888715815,
+    "job_id": 133373770350,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43888715815",
+    "validated_source_sha": "26482eab4f8f51afd0fd75b1e2756dedbae17491",
+    "new_regression_tests": [
+      "test_owner_stop_readonly_metadata_not_full_sha",
+      "test_owner_model_update_maintenance_does_not_authorize_full_scan"
+    ],
+    "verified_at_utc": "2026-11-16T14:47:43.165Z"
+  },
+  "overall": "SOURCE_TESTED_NATIVE_HOLD"
+}

@@ -1,0 +1,41 @@
+name: NOX E2 V104 native default vs quick one-model stream benchmark
+on:
+  push:
+    branches: [nox/e2-v104-chatquality-training-recovery-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v104-chat-fast.yml'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v104-chat-measured-60509551
+  cancel-in-progress: false
+jobs:
+  smoke:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Source and NOX2 preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v104/one_model_thinking_benchmark.py
+      - name: One native SSH, two 64-token synthetic streams, no service edits
+        shell: bash
+        run: python3 -m nox_runpod.teacher_mesh.v104.one_model_thinking_benchmark
+      - name: Revoke temporary SSH owner key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

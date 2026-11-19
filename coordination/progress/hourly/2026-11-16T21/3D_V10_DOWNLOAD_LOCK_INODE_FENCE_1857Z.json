@@ -1,0 +1,91 @@
+{
+  "schema": "NOX_RELAY_V10_FIVE_TASKID_V1",
+  "instructions_version": "0.0.6",
+  "slot": "3D",
+  "run_utc": "2026-11-16T18:58:18.835Z",
+  "run_msk": "2026-11-16T21:58:18.835+03:00",
+  "site": "Vast.ai #60509551",
+  "priority": "OWNER_MODEL_REPLACEMENT_V10",
+  "source_branch": "feature/nox-v38-synaptic-brain-20261114",
+  "source_preimage_blob": "1e70aee30e28d907925bb2d128b23816e14d41ff",
+  "source_commit": "4746ec37ac959d19d3a45a635881ca7f46daf0b9",
+  "source_blob": "5495d08d21ed89f3daf055142ada2190d2947090",
+  "test_preimage_blob": "7e63a1640bb73047512ab5b3b49fae840f06212d",
+  "test_commit": "a1d6a6571e656ec43cc7e866f7f9eee90dadec69",
+  "test_blob": "f7356c81228772f0b0c863ce1e5d8266fde7b0e1",
+  "error_id": "NOX-P0-3D-DEEPSEEK-FLOCK-PATH-REPLACEMENT-20261116T1857Z",
+  "status": "SOURCE_TESTED_NOT_INSTALLED",
+  "root_cause": "Linux flock is held on file inode, not pathname. If original .nox-deepseek-owner.lock is unlinked/recreated during an HTTP Range, another process could take a new inode lock while the old worker continues appending GGUF.",
+  "fix": "The existing DeepSeek downloader verifies lock path/inode/owner/mode/link count after flock and before appending each HTTP chunk; rejects preexisting group/other-accessible lock, guards final Range readback, preserves original owner STOP/lease and single download policy.",
+  "tests": {
+    "github_run_id": 43934055199,
+    "github_job_id": 133533822702,
+    "github_result": "SUCCESS",
+    "deepseek_tests": 57,
+    "maya_source_tests": 4,
+    "maya_preflight_tests": 36,
+    "total_tests": 97,
+    "new_tests": 2,
+    "scope": "OFFLINE_FIXTURE_ONLY",
+    "native_e2e": false
+  },
+  "outcomes": [
+    {
+      "task_id": "S2-07",
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
+      "evidence": "97 fixture checks success; GitHub source and tests readback; no GGUF bytes downloaded"
+    },
+    {
+      "task_id": "S1-01",
+      "status": "HOLD_NATIVE_VAST_API_429",
+      "evidence": "Earlier owner read-only job 133518526346 at 18:32Z; more recent 18:51Z 429 run 43932618696, not a fresh host sample"
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD_OWNER_STOP_LEASE_AND_NATIVE_PIDS",
+      "evidence": "Manual STOP and MAINTENANCE historically present; current native owner writer lease and PID/start_ticks unknown"
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD_INDEPENDENT_RESTORE",
+      "evidence": "No independently proven S03/Genesis/checkpoint/optimizer/scaler/RNG recovery"
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD_ORIGINAL_RESONANCE_LIVE_E2E",
+      "evidence": "Complete DeepSeek weights/seekable storage, Maya native inference/SSE/STOP/RU-ES/S03 not accepted"
+    }
+  ],
+  "native": {
+    "installed": false,
+    "model_replaced": false,
+    "writer_claimed": false,
+    "last_verified_owner_readonly_job_id": 133518526346,
+    "last_verified_owner_readonly_at_utc": "2026-11-16T18:32:35Z",
+    "last_known_stop": "PRESENT_HISTORICAL",
+    "current_stop": "UNKNOWN",
+    "owner_writer_lease": "UNKNOWN",
+    "current_ui_and_serving_model": "UNKNOWN",
+    "new_native_pid_start_ticks": [],
+    "new_native_job_ids": [],
+    "new_restarts": 0,
+    "bytes_downloaded": 0,
+    "bytes_deleted": 0,
+    "deepseek_unique_bytes_needed": 248834257920
+  },
+  "WEIGHTS": "0 new successful optimizer updates; independent optimizer/scaler/RNG restore HOLD; Qwen3.5-9B not resumed",
+  "KNOWLEDGE": "0 new Hunter->verified licensed source->S03 write/readback/recall",
+  "DISPATCHER_RESOURCES": "0 owner-native claims/PIDs/jobs, 0 download/delete bytes, 0 restarts; 18:51Z Vast 429 prevents current evidence",
+  "protection": [
+    "OWNER STOP",
+    "OneHost single scheduler/trainer",
+    "S03",
+    "Genesis",
+    "D02",
+    "14 worlds",
+    "previously stored checkpoints",
+    "automations"
+  ],
+  "rollback": "After refreshing latest HEAD and exact CAS, revert only these source and test edits. Native rollback unnecessary: nothing deployed.",
+  "next": "Respect provider cooldown, obtain one owner-auth original read-only STOP/lease/PID/start_ticks and independent restore; validate >=248834257920 B unique verified seekable storage + reserve; then one owned download and Maya/Resonance SSE acceptance."
+}

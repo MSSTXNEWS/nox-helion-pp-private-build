@@ -1,0 +1,93 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RELAY",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_1B",
+  "verified_at_utc": "2026-11-16T18:25:53Z",
+  "verified_at_msk": "2026-11-16T21:25:53+03:00",
+  "scope": "Existing owner_native_audit.py read-only process identity; no server install",
+  "baseline_head_observed": "e966aaebabb180c1f4ab6e6d454bf9b4534cafaf",
+  "source_commits": [
+    "b1f60b55099076fc6a1928d13aed053720f8b30d",
+    "d04a3400212b246e056c2e5475b50889006aee4f",
+    "864f52ef173d027a3757f201382e20ad773d20be"
+  ],
+  "files": [
+    {
+      "path": "nox-control/owner_native_audit.py",
+      "preimage_blob": "4e6142ec7684a5a149412aeb65cbde55aa2e4454",
+      "current_blob": "c3ebaa8338db47a6b75e0205cc908d9b65a4a30b"
+    },
+    {
+      "path": "nox-control/test_owner_native_audit_model_paths.py",
+      "preimage_blob": "cb133a9819845c604cd73e519bf23bbfbc932757",
+      "current_blob": "28aeaf0f934e346a471d9e8648adbee87aeb83cb"
+    }
+  ],
+  "root_cause": "Read-only owner_native_audit.process_rows exported numeric PID without stat field22 start_ticks; PID reuse may make historical identity/progress comparisons incorrect. Existing owner_native_inspect already has separate starttime; do not conflate probes.",
+  "correction": "Read bounded /proc/<pid>/stat field22 twice around metadata collection, require expected PID and matching start_ticks, omit raced/malformed/unreadable rows and raw stat. No side effects.",
+  "source_test": {
+    "status": "SOURCE_TESTED",
+    "run_id": 43928692855,
+    "job_id": 133514987612,
+    "head_sha": "864f52ef173d027a3757f201382e20ad773d20be",
+    "result": "success",
+    "tests": 28,
+    "new_regressions": 3,
+    "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43928692855"
+  },
+  "rollback": "Exact Git blob CAS to the two preimage blobs only after refreshing branch and reconciling concurrent changes; no native rollback.",
+  "tasks": [
+    {
+      "task_id": "P0-1B-01",
+      "status": "SOURCE_TESTED_PARTIAL",
+      "source_evidence": "PID+start_ticks inventory guard, 28/28 CI; native df/du/inodes/open handles not measured"
+    },
+    {
+      "task_id": "P0-1B-02",
+      "status": "HOLD_NATIVE",
+      "reason": "No current independent SHA readback for S03/Genesis/checkpoint"
+    },
+    {
+      "task_id": "P0-1B-03",
+      "status": "HOLD_NATIVE",
+      "reason": "No independently tested protected restore/optimizer/scaler/RNG"
+    },
+    {
+      "task_id": "P0-1B-04",
+      "status": "HOLD_OWNER_STOP_LEASE",
+      "reason": "No current owner writer lease; previous manual STOP and no verified external placement; no deletion"
+    },
+    {
+      "task_id": "P0-1B-05",
+      "status": "HOLD_NATIVE",
+      "reason": "No new freed bytes or S03 integrity/recall after cleanup"
+    }
+  ],
+  "native": {
+    "installed": false,
+    "live_verified": false,
+    "claims": [],
+    "pid_start_ticks_new": [],
+    "job_ids_new": [],
+    "successful_optimizer_updates_new": 0,
+    "hunter_s03_recalls_new": 0,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0,
+    "manual_stop_cleared": false,
+    "prior_native_observed_at_utc": "2026-11-16T17:54:57Z",
+    "prior_native_job_id": 133495640855,
+    "owner_stop_prior": "PRESENT",
+    "writer_lease_current": "UNKNOWN"
+  },
+  "fresh_network_evidence": {
+    "at_utc": "2026-11-16T18:18:22Z",
+    "run_id": 43927389034,
+    "ssh_direct_banner": true,
+    "ssh_authenticated": false,
+    "native_command_executed": false,
+    "proxy_tcp_connect": true,
+    "proxy_banner": false
+  },
+  "handoff": "Original owner-auth native STOP+lease read-only; protected hashes and independent restore; exact df/du/inodes/fd + S03 integrity; verify full 248834257920 B seekable model placement plus reserve before any model write, then bounded Maya/chat E2E."
+}

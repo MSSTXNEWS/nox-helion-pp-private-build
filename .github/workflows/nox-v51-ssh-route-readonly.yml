@@ -1,0 +1,70 @@
+name: NOX V51 SSH route alternatives (no SSH keys or commands)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v51-ssh-route-readonly.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+jobs:
+  routes:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - name: Read live Vast routes and inspect only TCP SSH banner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,json,urllib.request,ipaddress,socket,re
+          key=os.environ.get('NOX2','')
+          if not key:raise SystemExit('HOLD_NOX2')
+          req=urllib.request.Request('https://console.vast.ai/api/v0/instances/60509551/',
+              headers={'Authorization':'Bearer '+key})
+          with urllib.request.urlopen(req,timeout=25) as r:data=json.load(r)
+          d=data.get('instances',data) if isinstance(data,dict) else None
+          if isinstance(d,list):d=next((v for v in d if str(v.get('id'))=='60509551'),None)
+          if not isinstance(d,dict) or str(d.get('id'))!='60509551' or d.get('actual_status')!='running':
+              raise SystemExit('HOLD_WRONG_INSTANCE')
+          candidates=[]
+          if isinstance(d.get('ssh_host'),str) and str(d.get('ssh_port')).isdigit():
+              candidates.append(('VAST_PROXY_OR_DECLARED',d['ssh_host'],int(d['ssh_port'])))
+          direct=d.get('public_ipaddr')
+          try:
+              direct_valid=ipaddress.ip_address(direct).is_global
+          except (ValueError,TypeError):direct_valid=False
+          ports=d.get('ports')
+          if direct_valid and isinstance(ports,dict):
+              for entry in ports.get('22/tcp',[]):
+                  if isinstance(entry,dict) and str(entry.get('HostPort')).isdigit():
+                      candidates.append(('PUBLIC_MAPPED_22',direct,int(entry['HostPort'])))
+          print('CANDIDATE_ROUTE_COUNT='+str(len(candidates)))
+          for name,host,port in candidates:
+              print('ROUTE_NAME='+name)
+              try:
+                  with socket.create_connection((host,port),timeout=7) as client:
+                      client.settimeout(5)
+                      print(name+'_TCP_OPEN=true')
+                      try:
+                          banner=client.recv(120)
+                          print(name+'_SSH_BANNER_VALID='+str(banner.startswith(b'SSH-2.')).lower())
+                      except (OSError,TimeoutError):
+                          print(name+'_SSH_BANNER_VALID=false')
+              except socket.timeout:
+                  print(name+'_TCP_RESULT=TIMEOUT')
+              except OSError as ex:
+                  msg=type(ex).__name__
+                  if 'refused' in str(ex).lower():msg='REFUSED'
+                  print(name+'_TCP_RESULT='+msg)
+          print('NO_AUTH_OR_REMOTE_COMMANDS_SENT=true')
+          PY

@@ -1,0 +1,49 @@
+name: NOX V106 onepass native V29 authenticated chat stream binding
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v106-live-chat-bridge.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v106-one-native-v29-bridge
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate source and exact native safety gates before SSH
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v105/native_v29_chat_bridge.py nox_runpod/teacher_mesh/v106/native_install_v29_bridge.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v106.native_install_v29_bridge import REMOTE_TEMPLATE
+          compile(REMOTE_TEMPLATE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0],
+                  '<nox-v106-native>','exec')
+          for k in ('HOLD_SOURCE_SHA_CHANGED','HOLD_AUTH_NOT_ENFORCED',
+                    'HOLD_REGISTERED_ROUTES_NOT_VERIFIED','HOLD_BACKUP_CONFLICT','HOLD_CHAT_BECAME_BUSY',
+                    'HOLD_PROXY_RESTART','revert(original,meta)'):
+              assert k in REMOTE_TEMPLATE,k
+          print('NOX_V106_NO_STUB_NATIVE_SOURCE=PASS')
+          PY
+      - name: Install genuine owner SSE translation and session STOP into existing proxy
+        run: python3 -m nox_runpod.teacher_mesh.v106.native_install_v29_bridge
+      - name: Always detach exact SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

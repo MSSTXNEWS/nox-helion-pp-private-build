@@ -1,0 +1,83 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_3C",
+  "at_utc": "2026-11-16T17:45:04.696Z",
+  "at_msk": "2026-11-16T20:45:04.696+03:00",
+  "source_head_preimage": "785a71d982ab13453287d366e4702002a94d444a",
+  "source_blobs_before": {
+    "nox-control/nox_native_lifeline.py": "31d2dfb51005d87b2673678a3a1565668b6a30f7",
+    "nox-control/test_nox_native_lifeline.py": "52bd707cd09028d8b7c2a431aef0ad122bc02a42"
+  },
+  "task_outcomes": [
+    {
+      "task_id": "S1-06",
+      "status": "SOURCE_TESTED",
+      "claim": "SOURCE_CAS_ONLY_NO_NATIVE_LEASE",
+      "evidence": "Malformed Supervisor STOPPED pid unknown previously parsed as repairable STOPPED; patched to UNKNOWN; two regression cases."
+    },
+    {
+      "task_id": "S1-01",
+      "status": "HOLD_FRESH_NATIVE",
+      "claim": null,
+      "evidence": "Last owner native readback 16:48:21Z; no current PID/start_ticks"
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD_OWNER_LEASE",
+      "claim": null,
+      "evidence": "Current owner STOP/lease and 6 native runners not confirmed"
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD_INDEPENDENT_RESTORE",
+      "claim": null,
+      "evidence": "Independent S03/Genesis/checkpoint optimizer scaler RNG restore missing"
+    },
+    {
+      "task_id": "S2-07",
+      "status": "HOLD_SEEKABLE_PLACEMENT",
+      "claim": null,
+      "evidence": "248828477216 missing DeepSeek bytes; no verified owner-auth seekable storage"
+    }
+  ],
+  "tests": {
+    "scope": "GitHub source regression only, not native deployment",
+    "run_id": 43921842367,
+    "job_id": 133490872053,
+    "conclusion": "SUCCESS",
+    "commit_sha": "9755dcc061c4aab3123a92b90c4b310ad586e0e2",
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43921842367",
+    "checks": [
+      "source syntax",
+      "lifeline unit and failure",
+      "native status source truthfulness",
+      "verified experience ingress",
+      "read-only native installation gates",
+      "mountinfo inventory",
+      "owner STOP/lease/8081",
+      "mentor Supervisor"
+    ]
+  },
+  "native": {
+    "installed": false,
+    "owner_lease": "UNKNOWN",
+    "stop_current": "UNKNOWN",
+    "stop_prior": "PRESENT_AT_2026-11-16T16:48:21Z",
+    "new_pid_start_ticks": [],
+    "new_optimizer_updates": 0,
+    "new_s03_recall": 0,
+    "downloads_verified_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0,
+    "restore_verified": false
+  },
+  "root_cause": "Optional PID regex matches only decimal suffix; malformed pid evidence is silently ignored, allowing STOPPED to be mistaken as repairable.",
+  "rollback": "Restore exact prior source/test blobs with Git CAS after fresh HEAD; no native effects",
+  "next": "Verify CI; obtain owner-auth native STOP/lease/current deployed SHA/PID/start_ticks and independent restore; no uncontrolled restart.",
+  "source_patch_commit": "955f82373a6d307b0d8b93ad3dfd2b5fba807828",
+  "test_patch_commit": "9755dcc061c4aab3123a92b90c4b310ad586e0e2",
+  "test_blob_sha": "d440a10d8dcfce4b3018c779a9b31f5462f697e4",
+  "source_prepared_commit_unpublished": "645b4a9ed8fc1fd9bffe8dc1eb430f5000930a9b",
+  "verified_at_utc": "2026-11-16T17:49:49.624Z"
+}

@@ -1,0 +1,39 @@
+name: NOX V96 independent post-V95 native streaming and memory acceptance
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v96-post-qa.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v96-native-postcheck
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compile read-only post-check
+        run: |
+          python3 -m py_compile nox_runpod/teacher_mesh/v96/native_post_qa.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v96.native_post_qa import REMOTE
+          compile(REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0],'<v96-native>','exec')
+          PY
+      - name: Native S03+stream source and bounded optional context acceptance
+        run: python3 -m nox_runpod.teacher_mesh.v96.native_post_qa
+      - name: Revoke SSH
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

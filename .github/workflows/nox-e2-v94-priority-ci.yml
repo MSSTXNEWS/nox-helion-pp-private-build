@@ -1,0 +1,44 @@
+name: NOX V94 performance-first AI task graph — one OneHost
+on:
+  push:
+    branches: [nox/e2-v94-performance-ai-volta-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v94-priority-ci.yml'
+      - 'nox_runpod/teacher_mesh/v47/control/dispatcher.py'
+      - 'nox_runpod/teacher_mesh/v47/control/test_v94_priority.py'
+      - 'nox_runpod/teacher_mesh/v47/control/TASKS_60_V46.json'
+      - 'coordination/NOX_R60_MASTER.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PYTHONPATH: ".:nox_runpod/teacher_mesh/v41:nox_runpod/teacher_mesh/v47"
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Canonical R60 source blob hash and no-loss registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD:nox_runpod/teacher_mesh/v47/control/TASKS_60_V46.json)"
+          expected="$(python3 -c 'import json;print(json.load(open("coordination/NOX_R60_MASTER.json"))["source_matrix_blob_sha"])')"
+          test "$actual" = "$expected" || { echo "::error::R60 source hash mismatch";exit 2; }
+          python3 -m py_compile nox_runpod/teacher_mesh/v47/control/dispatcher.py
+      - name: Run V94 tasks/AI performance + original safety regressions
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v \
+            nox_runpod.teacher_mesh.v47.control.test_v94_priority \
+            nox_runpod.teacher_mesh.v41.tests.test_priority_autonomy \
+            nox_runpod.teacher_mesh.v47.tests.test_night_v47 \
+            nox_runpod.teacher_mesh.v71.test_one_prime
+      - name: Report source-only status
+        if: success()
+        run: |
+          echo "NOX_SOURCE_R60_JOBS=60"
+          echo "NOX_P0_CHAT_STOP_ABOVE_P1_AI_ACCEL=true"
+          echo "NOX_PHYSICAL_QUEUE_REGISTERED_NOT_CLAIMED=true"

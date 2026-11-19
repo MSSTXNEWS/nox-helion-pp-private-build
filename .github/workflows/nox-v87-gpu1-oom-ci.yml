@@ -1,0 +1,39 @@
+name: NOX V87 single-GPU1 Volta CUDA OOM admission source acceptance
+on:
+  push:
+    branches: [nox/e2-v87-gpu1-oom-admission-20261114]
+    paths: ['.github/workflows/nox-v87-gpu1-oom-ci.yml',
+            'nox_runpod/teacher_mesh/v87/**',
+            'nox_runpod/teacher_mesh/v47/night_v47/policy.py',
+            'nox_runpod/teacher_mesh/v47/tests/test_night_v47.py']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PYTHONPATH: ".:nox_runpod/teacher_mesh/v47:nox_runpod/teacher_mesh/v41"
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compile existing FORGE and new V87 admission
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v87/gpu1_oom_gate.py nox_runpod/teacher_mesh/v47/night_v47/policy.py
+      - name: Full source regression for Volta GPU1/OneHost and active PRIME
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v \
+            nox_runpod.teacher_mesh.v87.test_gpu1_oom_gate \
+            nox_runpod.teacher_mesh.v47.tests.test_night_v47 \
+            nox_runpod.teacher_mesh.v71.test_one_prime \
+            nox_runpod.teacher_mesh.v41.tests.test_priority_autonomy
+      - name: Scope boundaries
+        if: success()
+        run: |
+          echo 'NOX_FULL_WEIGHT_GPU1_OOM_ADMISSION_SOURCE_PASS=true'
+          echo 'NOX_V100_FP16_ONLY=true'
+          echo 'NOX_PRODUCTION_TRAINER_NOT_RESTARTED=true'
+          echo 'NOX_WEIGHTS_AND_S03_UNCHANGED=true'
+          echo 'NOX_ZERO_NEW_OPTIMIZER_STEPS=true'

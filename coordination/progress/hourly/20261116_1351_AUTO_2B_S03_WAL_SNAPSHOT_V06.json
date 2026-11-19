@@ -1,0 +1,109 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2B_S03_WAL_SNAPSHOT_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "2B",
+  "stream": "2/3",
+  "observation_time_utc": "2026-11-16T10:50:41Z",
+  "observation_time_msk": "2026-11-16T13:50:41+03:00",
+  "head_before": "14eb9371d60c766f1d7f8dbb4bbbd1cfadc6cbf4",
+  "source_patch_commit": "9894ea9a13ac2092cb281f6c1567b579e1c9d825",
+  "source_path": "coordination/progress/hourly/2026-11-16T06_AUTO_2B_S03_FIVE_GATE_READONLY.py",
+  "source_blob_before": "cb4036ba3d35f49e4cdad55b41667eb635676b40",
+  "source_blob_after": "fb3ec106ed52bce9caf00b3d2a30a6cc8eb4dc68",
+  "touched_paths": [
+    "coordination/progress/hourly/2026-11-16T06_AUTO_2B_S03_FIVE_GATE_READONLY.py",
+    "coordination/progress/hourly/20261116_1351_AUTO_2B_S03_WAL_SNAPSHOT_V06.json"
+  ],
+  "error_id": "NOX-S03-2B-NONATOMIC-READ-SNAPSHOT-AND-BUSY-UNHANDLED-20261116",
+  "root_cause": "Prior read-only S03 audit ran count/FTS/vector/Persona queries without an explicit SQLite read transaction; concurrent native WAL commits could yield mutually incompatible snapshots. sqlite3.Error on busy/interrupt also aborted five-gate receipt instead of fail-closed HOLD.",
+  "implementation": "Pin read snapshot with BEGIN plus first schema SELECT; use consistent WAL snapshot across all five gates; return all five HOLD on SQLite read/connection failure without reporting private DB contents; add concurrent-writer WAL selftest.",
+  "tests": {
+    "local_sqlite_wal_concurrent_writer_regression": "PASS: before=1, reader snapshot=1 while writer commits second row, reader after rollback=2; direct Python SQLite rehearsal",
+    "exact_source_replacement_assertions": "5/5 unique substitutions applied",
+    "source_readback": "PASS; blob fb3ec106ed52bce9caf00b3d2a30a6cc8eb4dc68",
+    "full_script_selftest": "NOT_RUN; source code not locally mounted",
+    "source_ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43852299275",
+    "source_ci_scope": "Generic ONEPASS success; no evidence of dedicated updated audit full selftest",
+    "native_e2e": "NOT_RUN"
+  },
+  "five_tasks": [
+    {
+      "n": 1,
+      "state": "SOURCE_TESTED_LIMITED",
+      "native": "HOLD",
+      "evidence": "Read-only snapshot/SQLite contention guard added; actual /root/nox/kb/knowledge.sqlite integrity/ACL/PersonaID unmeasured this slot"
+    },
+    {
+      "n": 2,
+      "state": "HOLD_NATIVE",
+      "evidence": "owner_s03_gateway, CallbackS03Adapter and CognitiveOverlay exist in source but no fresh authenticated generator callback chain/lease receipt"
+    },
+    {
+      "n": 3,
+      "state": "SOURCE_TESTED_LIMITED",
+      "native": "HOLD",
+      "evidence": "Consistent read snapshot protects joint BGE/FTS counts; no current vector count, model bytes SHA or recall p95"
+    },
+    {
+      "n": 4,
+      "state": "HOLD_NATIVE",
+      "evidence": "Genesis/provenance/persona no new owner-scoped live evidence, previous source guards preserved"
+    },
+    {
+      "n": 5,
+      "state": "HOLD_NATIVE",
+      "evidence": "No native write→reload/restart→recall, cross-owner ACL or independent offsite restore"
+    }
+  ],
+  "WEIGHTS": {
+    "state": "HOLD_CURRENT_NATIVE",
+    "historical_student": "Qwen3.5-9B",
+    "historical_owner_reported_successful_updates": 25,
+    "historical_provenance": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43828903713",
+    "new_successful_updates_verified_this_slot": 0,
+    "current_trainer_pid": null,
+    "current_loss": null,
+    "current_gradients": null,
+    "current_checkpoint": null,
+    "current_restore": null,
+    "primary_candidate": "DeepSeek-V4.1-Flash-1017 GSQ-RCO IQ2_XXS",
+    "downloaded_new_bytes": 0
+  },
+  "KNOWLEDGE": {
+    "state": "HOLD_CURRENT_NATIVE",
+    "hunter_to_source_to_S03_readback": false,
+    "current_vector_count": null,
+    "current_fts_coverage": null,
+    "recall_latency_p95_ms": null,
+    "live_persona_acl": false,
+    "s03_writes_this_slot": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "state": "HOLD_CURRENT_NATIVE",
+    "historical_read_only_owner_probe": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43846952110",
+    "current_dispatcher_pid": null,
+    "worker_pids": null,
+    "current_GPU0": null,
+    "current_GPU1": null,
+    "current_CPU_quota": null,
+    "current_cgroup_RAM": null,
+    "current_SSD": null,
+    "current_STOP": null,
+    "current_writer_lease": null,
+    "restarts": 0,
+    "deleted_bytes": 0,
+    "download_bytes": 0
+  },
+  "safety": {
+    "live_installed": false,
+    "original_S03_changed": false,
+    "WEB29_D02_changed": false,
+    "model_tensors_changed": false,
+    "stop_reset": false,
+    "new_DB": false,
+    "new_backend": false,
+    "cleaned_files": 0
+  },
+  "lessons": "Multi-statement metadata audits require one anchored SQLite snapshot and fail-closed contention statuses; generic CI success must not be mistaken for this script's full selftest or live OneHost.",
+  "next_action": "Run existing owner-authorized read-only V51 native S03 audit and invoke updated read-only script on canonical /root/nox/kb/knowledge.sqlite; obtain FTS/model/Persona/STOP/lease and callback receipts. Before native writes, prove independent offsite restore and exclusive writer."
+}

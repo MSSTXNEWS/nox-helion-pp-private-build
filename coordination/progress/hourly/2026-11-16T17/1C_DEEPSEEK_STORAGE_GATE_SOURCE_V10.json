@@ -1,0 +1,27 @@
+{
+  "schema": "NOX_1C_STORAGE_GATE_V10",
+  "instructions_version": "0.0.6",
+  "source_head_before": "4afa83d89009ba2bc33eeeccb5d0631d06dbe2d8",
+  "scope": "SOURCE_ONLY_CI_UNVERIFIED",
+  "native": "HOLD_NO_FRESH_OWNER_LEASE",
+  "task_ids": [
+    "S2-STORAGE-CAPACITY",
+    "S2-STORAGE-REMOTE",
+    "S2-STORAGE-TRANSFER",
+    "S2-STORAGE-SEEKABLE",
+    "S2-STORAGE-ADMISSION"
+  ],
+  "outcomes": [
+    "SOURCE_PATCH_NATIVE_HOLD",
+    "HOLD_NO_SERVER_OAUTH",
+    "HOLD_NO_ONEHOST_WRITE_SHA",
+    "SOURCE_PATCH_NATIVE_HOLD",
+    "SOURCE_PATCH_NATIVE_HOLD"
+  ],
+  "bytes_downloaded": 0,
+  "bytes_deleted": 0,
+  "new_optimizer_updates": 0,
+  "weights": "historical Qwen checkpoint25 not new DeepSeek",
+  "knowledge": "no Hunter S03 recall",
+  "next": "owner-auth read-only V51, source SHA check, exact storage mount/Drive remote, shard transfer, full SHA and mmap, native rollback"
+}

@@ -1,0 +1,112 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_1A",
+  "at_utc": "2026-11-16T18:08:51Z",
+  "at_msk": "2026-11-16T21:08:51+03:00",
+  "source_head_verified": "4750fd3173711c0a0b75df490be0d75a754f9eec",
+  "source_before": "71ed574b6db320c801479b83bac8353424b1b663",
+  "source_after": "5b90a02f5bab6fb86c14052a49876174c0e28b23",
+  "test_before": "9855bffc943f7e7ff3151cd12fd02317cc99ae7d",
+  "test_after": "5984739bf777ba3c8687c2a4e4edca4e5ff409a8",
+  "commits": [
+    "184121ed556ba596524032c3f6e3a81fa0de2dfe",
+    "ad9a627480ca2dcc4e59fe4ec48b595a6fffdea5",
+    "4750fd3173711c0a0b75df490be0d75a754f9eec"
+  ],
+  "ci": {
+    "run_id": 43925700586,
+    "job_id": 133504427729,
+    "result": "SUCCESS",
+    "test_suites": [
+      51,
+      4,
+      18,
+      18
+    ],
+    "source_only": true
+  },
+  "root_cause": "Existing DeepSeek Range V10 used O_NOFOLLOW without O_NONBLOCK when reopening previously lstat-checked GGUF/.part in hash/partial guard/append/fsync. A FIFO swapped after metadata check can block forever while holding the single download lock.",
+  "patch": "Use O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC for four existing file opens, hash via pinned fd and compare fstat/path identity; convert open races into explicit HOLD. No new download service, trainer, backend or scheduler.",
+  "regressions": [
+    "raced FIFO after existing complete GGUF metadata check",
+    "raced FIFO before partial guard fd",
+    "raced FIFO after HTTP response before O_WRONLY append",
+    "raced FIFO before complete-partial fsync"
+  ],
+  "rollback": {
+    "source_preimage_blob": "71ed574b6db320c801479b83bac8353424b1b663",
+    "test_preimage_blob": "9855bffc943f7e7ff3151cd12fd02317cc99ae7d",
+    "mode": "per-file Git CAS only after latest HEAD verification; no native rollback because not deployed"
+  },
+  "task_outcomes": [
+    {
+      "id": "S2-07/FIFO_OPEN_NONBLOCK",
+      "status": "SOURCE_TESTED",
+      "native": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT"
+    },
+    {
+      "id": "S1-01",
+      "status": "PRIOR_NATIVE_VERIFIED_NOT_REPEATED",
+      "native_receipt": "coordination/progress/hourly/2026-11-16T20/2D_V10_FRESH_OWNER_NATIVE_READONLY_1754Z.json",
+      "job_id": 133495640855
+    },
+    {
+      "id": "S1-03",
+      "status": "HOLD_OWNER_STOP_AND_WRITER_LEASE"
+    },
+    {
+      "id": "S1-07",
+      "status": "HOLD_INDEPENDENT_S03_GENESIS_OPTIMIZER_SCALER_RNG_RESTORE"
+    },
+    {
+      "id": "S3-04",
+      "status": "HOLD_FULL_MODEL_MAYA_ORIGINAL_RESONANCE_RU_ES_SSE"
+    }
+  ],
+  "prior_owner_readonly": {
+    "observed_at_utc": "2026-11-16T17:54:57Z",
+    "native_job_id": 133495640855,
+    "owner_stop": "PRESENT",
+    "maintenance": "PRESENT",
+    "train_hold": "PRESENT",
+    "train_pause_request": "PRESENT",
+    "supervisors_stopped": 5,
+    "listener_8081": null,
+    "gpu_vram_mib": [
+      0,
+      0
+    ],
+    "ssd_free_bytes": 43158749184,
+    "ssd_total_bytes": 183609851904,
+    "shm_free_bytes": 3366711296,
+    "cgroup_ram_current_bytes": 60390379520,
+    "cpu_quota_cores": 19.2,
+    "rclone_remotes": [],
+    "lease": "UNKNOWN_NO_OWNER_CAS_READBACK"
+  },
+  "WEIGHTS": {
+    "new_verified_successful_optimizer_updates": 0,
+    "checkpoint_restore_verified": false,
+    "new_model_accepted": false
+  },
+  "KNOWLEDGE": {
+    "new_verified_hunter_s03_recall": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "new_native_pid_start_ticks": [],
+    "new_native_claims": 0,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0,
+    "production_changes": 0
+  },
+  "owner_stop_cleared": false,
+  "native_installed": false,
+  "live_verified": false,
+  "next_ready": "Fresh owner-authorized read-only lease/STOP and independent backup restore; verify authorized seekable storage >=248834257920 B plus reserve, then exact shard bytes/SHA, Maya bounded inference and original Resonance RU/ES SSE/STOP/S03.",
+  "do_not_repeat": [
+    "same FIFO-open source patch at source blob 5b90a02f5bab6fb86c14052a49876174c0e28b23",
+    "same FIFO tests at blob 5984739bf777ba3c8687c2a4e4edca4e5ff409a8"
+  ]
+}

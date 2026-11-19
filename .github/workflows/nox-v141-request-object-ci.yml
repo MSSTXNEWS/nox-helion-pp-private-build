@@ -1,0 +1,29 @@
+name: NOX V141 original Resonance Request-object source regression
+on:
+  pull_request:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
+      - '.github/workflows/nox-v141-request-object-ci.yml'
+permissions: {contents: read}
+jobs:
+  real-node-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Syntax of original owner bridge and regression
+        run: |
+          node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
+          node --check coordination/onepass/test_v135_resonance_owner_bridge.cjs
+      - name: Original V135 SSE S03 and V141 Request-object regression
+        run: node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+      - name: Explicit release boundary
+        run: |
+          echo 'SOURCE_TEST_ONLY=true'
+          echo 'NATIVE_OWNER_SSH_E2E=HOLD'
+          echo 'PRODUCTION_DEPLOYED=false'

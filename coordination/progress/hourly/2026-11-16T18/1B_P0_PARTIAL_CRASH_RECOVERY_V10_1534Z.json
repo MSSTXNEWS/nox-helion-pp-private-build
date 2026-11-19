@@ -1,0 +1,76 @@
+{
+  "schema": "NOX_RELAY_CONTROL_APPEND_V10",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_1B",
+  "at_utc": "2026-11-16T15:34:45.940Z",
+  "at_msk": "2026-11-16T18:34:45+03:00",
+  "branch": "feature/nox-v38-synaptic-brain-20261114",
+  "source_head_before": "17cc4b3e60cd978beea8b284e710875be61102aa",
+  "code_commit": "25ef0ba8b3441239e83f6b4bb9365e7191f3b5f6",
+  "source_preimage": "78cf73c3e12314a54224672c0083fc62f8451c88",
+  "source_blob": "4990bdf18191a39bdd3e9ffc1e9bad4e925d0442",
+  "test_blob": "72657e0a1255e88759dd3128ce53f007af2910c6",
+  "ci_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43897272922",
+  "ci": "29/29 PASS source-only fixture; four new crash-recovery/STOP tests",
+  "native_status": "HOLD_NO_NATIVE_WRITER_LEASE_OR_FRESH_OWNER_READBACK",
+  "tasks": [
+    {
+      "id": "P0-1B-01",
+      "status": "HOLD",
+      "reason": "No fresh owner-authorized df/du/inodes/open FDs/model path inventory. Historical SSD snapshot not current."
+    },
+    {
+      "id": "P0-1B-02",
+      "status": "HOLD",
+      "reason": "No fresh owner-native SHA of protected S03/Genesis/checkpoints."
+    },
+    {
+      "id": "P0-1B-03",
+      "status": "HOLD",
+      "reason": "No independent restore of checkpoint+optimizer/scaler/RNG or S03 verified."
+    },
+    {
+      "id": "P0-1B-04",
+      "status": "HOLD_NO_DELETE",
+      "reason": "OWNER_MODEL_UPDATE STOP historical present; current writer lease/backup/open handles not independently verified. Prior exact owner deletion not repeated."
+    },
+    {
+      "id": "P0-1B-05",
+      "status": "HOLD",
+      "reason": "No fresh free-space delta and native S03 integrity/recall post-cleanup readback."
+    }
+  ],
+  "independent_ready_task": {
+    "id": "S2-07",
+    "status": "SOURCE_TESTED",
+    "scope": "Full verified .part can be published without network or double-copy after crash; malformed full part HOLD; canonical state/STOP.flag honored",
+    "native_installed": false
+  },
+  "manual_stop_last_observed": "OWNER_MODEL_UPDATE_PRESENT_at_2026-11-16T14:39:40Z",
+  "manual_stop_current": "UNKNOWN",
+  "source_manifest": {
+    "branch": "feature/nox-engine-stage-20261116",
+    "blob": "0608cdcacb1573835e4edc194c8ee63d4877180b",
+    "revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+    "unique_bytes": 248834257920
+  },
+  "WEIGHTS": {
+    "successful_updates_new": 0,
+    "checkpoint_restore_this_run": false,
+    "train_pid_new": null
+  },
+  "KNOWLEDGE": {
+    "s03_write_readback_recall_new": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "native_pid_start_ticks_new": null,
+    "job_ids_new": [],
+    "writer_lease": null,
+    "downloaded_bytes_new": 0,
+    "deleted_bytes_new": 0,
+    "restarts": 0,
+    "ssd_free_current": null
+  },
+  "rollback": "GitHub exact preimage blobs; no native install or server rollback",
+  "next": "One owner-auth READ-ONLY check of STOP/lease, live UI/port/PIDs, df/du/inodes/open file handles, S03/Genesis/checkpoint SHA and independent restore; verify authorized seekable storage ≥248834257920 B + reserve; only then single native download claim and no-duplicate full-part promotion."
+}

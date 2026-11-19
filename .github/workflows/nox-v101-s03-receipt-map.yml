@@ -1,0 +1,42 @@
+name: NOX V101 actual native S03 write/readback receipt contracts
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v101-s03-receipt-map.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v101-s03-contract-readonly
+  cancel-in-progress: false
+jobs:
+  schema:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Verify both local and native syntax
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v101/native_memory_receipt_audit.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v101.native_memory_receipt_audit import REMOTE
+          compile(REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0],
+                  '<nox-v101-native>','exec')
+          print('NOX_V101_SOURCE=PASS')
+          PY
+      - name: Inspect S03 native schema and provenance without reading user content
+        run: python3 -m nox_runpod.teacher_mesh.v101.native_memory_receipt_audit
+      - name: Revoke ephemeral SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

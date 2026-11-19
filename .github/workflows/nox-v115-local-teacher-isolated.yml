@@ -1,0 +1,45 @@
+name: NOX V115 isolated local Vikhr public teacher callback proof
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: ['nox_runpod/teacher_mesh/v115/**','.github/workflows/nox-v115-local-teacher-isolated.yml']
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v115-teacher-isolated-60509551
+  cancel-in-progress: false
+jobs:
+  test:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Source and remote Python compile
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v115/isolated_teacher_hook.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v115.isolated_teacher_hook import REMOTE
+          native=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(native,'<v115 native>','exec')
+          PY
+      - name: Physical safe local teacher callback for public arithmetic only
+        run: python -m nox_runpod.teacher_mesh.v115.isolated_teacher_hook
+      - name: Detach SSH key even after failure
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

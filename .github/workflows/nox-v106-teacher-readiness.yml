@@ -1,0 +1,46 @@
+name: NOX V106 existing live teacher model read only readiness
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - "nox_runpod/teacher_mesh/v106/**"
+      - ".github/workflows/nox-v106-teacher-readiness.yml"
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v106-60509551-teacher-readonly
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v106/teacher_native_readonly.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v106.teacher_native_readonly import REMOTE
+          compile(REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0],'<remote>','exec')
+          PY
+      - name: Enumerate existing service endpoints without user prompts
+        run: python -m nox_runpod.teacher_mesh.v106.teacher_native_readonly
+      - name: Always revoke ephemeral SSH key
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

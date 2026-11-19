@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2D",
+  "instructions_version": "0.0.6",
+  "slot": "2D",
+  "scope": "SOURCE_ONLY",
+  "recorded_utc": "2026-11-16T10:29:37Z",
+  "head_before": "55aef04282f5d87d106cdf59b9a01a55d086fbe6",
+  "head_after": "THIS_COMMIT",
+  "error_id": "NOX-P1-2D-THREEWAY-MANIFEST-ROW-PROOF-UNBOUND-20261116",
+  "root_cause": "2D source corpus gate checked split group SHA metadata shape and JSONL file hashes independently, but never bound owner source_receipts prompt/answer fingerprints and group IDs to actual per-row payloads. A consistent regenerated JSONL+manifest hash could be silently accepted while reusing stale owner review proofs.",
+  "fix": "Require exact one-to-one threeway owner source receipts, unique source identity, source-group equality and V28 canonical prompt/answer hash match against streamed file rows. Preserve legacy two-way gate; require fresh owner-native provenance separately.",
+  "lesson": "Content hashes plus unattested group lists are insufficient to attest owner-reviewed dataset lineage; receipt and JSONL must be joined by exact row hashes before native admission.",
+  "changed_files": [
+    "nox_runpod/teacher_mesh/adapter_recipe.py",
+    "coordination/hybrid_20261115/test_2D_adapter_recipe.py"
+  ],
+  "tests_planned": "COMPLETED_OFFLINE_EXACT_CI_SUCCESS; 40+39 tests normal and Python -O =158 total; two earlier red CI runs caused by before-repair test staged commit and literal backslash escapes, corrected.",
+  "native_status": "HOLD: 2D did not enter OneHost, no live GPU training, no STOP clearing, no writer lease, no native restart/merge, no offsite optimizer restore. Historical original owner read-only audit 2026-11-16T10:14:55Z, not same-cycle training.",
+  "weights": {
+    "prior_owner_reported_global_step": 25,
+    "prior_owner_reported_loss": 1.0348,
+    "new_successful_updates_this_slot": 0,
+    "live_train_pid": null,
+    "new_checkpoint_sha": null,
+    "new_adapter_tensor_sha": null,
+    "offsite_restore_verified": false,
+    "anti_forgetting_ru_es_code_genesis_verified": false,
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43846952110"
+  },
+  "knowledge": {
+    "new_hunter_s03_recall_verified": false,
+    "source_threeway_native_export_verified": false
+  },
+  "dispatcher_resources": {
+    "native_snapshot_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43846952110",
+    "observed_utc": "2026-11-16T10:14:55Z",
+    "dispatcher_pid": 945279,
+    "gpu0_used_mib": 21562,
+    "gpu1_used_mib": 474,
+    "ssd_free_bytes": 16922000000,
+    "stop_writer_lease_verified": false,
+    "os_worker_pids_verified": false
+  },
+  "tasks": [
+    {
+      "n": 1,
+      "status": "SOURCE_FIXED_ROW_PROVENANCE_NATIVE_CORPUS_HOLD"
+    },
+    {
+      "n": 2,
+      "status": "HOLD_STOP_NATIVE_WRITER_LEASE_OFFSITE_RESTORE"
+    },
+    {
+      "n": 3,
+      "status": "HOLD_NO_NEW_OPTIMIZER_UPDATES;_PRIOR_25_HISTORICAL"
+    },
+    {
+      "n": 4,
+      "status": "HOLD_NO_NEW_NATIVE_INDEPENDENT_CHECKPOINT_RESTORE"
+    },
+    {
+      "n": 5,
+      "status": "HOLD_FIXED_RU_ES_CODE_GENESIS_ANTIFORGETTING_NOT_PROVEN"
+    }
+  ],
+  "no_native_writes": true,
+  "download_bytes": 0,
+  "deleted_bytes": 0,
+  "web29_modified": false,
+  "next": "Under owner-auth original OneHost obtain STOP+writer lease+offsite checkpoint25 optimizer/RNG restore, then compare independent RU/ES/code/Genesis on pinned base against adapter checkpoint25; no automatic promotion.",
+  "finalized_ci_utc": "2026-11-16T10:42:05Z",
+  "head_after_source_commit": "bae7827cc56bb74fceaef6b15a5a384f805f187f",
+  "accepted_concurrent_source_head_at_readback": "5f6ae869fed1fbf6c2ac204d0dcca4dccafce36b",
+  "git_integration": "Per-file GitHub contents blob-SHA CAS; Git data atomic branch ref update twice returned GraphQL errors during concurrent HEAD advances, so three production updates and followup regression fixes were applied serially; preserved after independent subsequent HEAD.",
+  "patch_commit_chain": [
+    "60caafa55082e59285b8c7f2e46ef1dfea6113a0",
+    "190c75244e3bbcb47aa1131ce4d6115c83ea1baf",
+    "2b582f75675cbfdbf74082483bdd88fb3005b929",
+    "8db303cf682b847635d0eccc88fcfd77ae33ee33",
+    "378c5ac551c7e3e7f68edca8856c69e19a808fe8",
+    "bae7827cc56bb74fceaef6b15a5a384f805f187f"
+  ],
+  "source_blobs_final": {
+    "nox_runpod/teacher_mesh/adapter_recipe.py": "94a7fdd956e19397bb46885aeefb5a93ee17bda4",
+    "coordination/hybrid_20261115/test_2D_adapter_recipe.py": "3cbda934e2256746cd3b89ba7b2fa38d9690a049"
+  },
+  "exact_ci": {
+    "run_id": 43851172423,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43851172423",
+    "sha": "bae7827cc56bb74fceaef6b15a5a384f805f187f",
+    "conclusion": "success",
+    "offline_reasoning_tests": 40,
+    "offline_adapter_tests": 39,
+    "normal_and_optimized": true,
+    "total_test_executions": 158,
+    "python_compile": "PASS"
+  },
+  "dispatched": "No native queue enqueue/dequeue by 2D; three OS subworker PIDs currently unconfirmed; dispatcher PID945279 from prior read-only audit, not current liveness proof."
+}

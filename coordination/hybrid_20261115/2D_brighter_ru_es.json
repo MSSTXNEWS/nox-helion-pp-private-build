@@ -1,0 +1,86 @@
+{
+  "schema": "NOX_2D_BRIGHTER_RU_ES_CATEGORIES_PINS_V1",
+  "instructions_version": "0.0.6",
+  "verified_on": "2026-11-16",
+  "evidence_scope": "OFFICIAL_HF_IMMUTABLE_REPOSITORY_TREE_XET_POINTERS_ONLY",
+  "repo_id": "brighter-dataset/BRIGHTER-emotion-categories",
+  "repo_type": "dataset",
+  "revision": "419566ac8f46f951b51584be36c13e5363008144",
+  "license_card": "cc-by-4.0",
+  "origin": "human-annotated multilingual emotion classification; source text licensing/privacy requires separate review",
+  "labels": [
+    "anger",
+    "disgust",
+    "fear",
+    "joy",
+    "sadness",
+    "surprise"
+  ],
+  "languages": [
+    {
+      "code": "esp",
+      "locale": "es",
+      "dialect_caution": "Spanish samples include Latin American varieties; not independently validated for European Spanish"
+    },
+    {
+      "code": "rus",
+      "locale": "ru",
+      "dialect_caution": "Russian samples have not been quality-reviewed for NOX"
+    }
+  ],
+  "role": "HOLDOUT_EVAL_CANDIDATE_ONLY_NOT_AN_EMPATHY_MODEL",
+  "approved_for_training": false,
+  "approved_for_merge": false,
+  "active_nox_hf_base_verified": false,
+  "native_files_downloaded": 0,
+  "native_training_steps_verified": 0,
+  "native_files_removed": 0,
+  "native_freed_bytes": 0,
+  "files": [
+    {
+      "path": "esp/dev-00000-of-00001.parquet",
+      "split": "dev",
+      "size_bytes": 16128,
+      "sha256": "8d50aa3e0e9099af800088a3912e52faa066cd3bba09d2b01d6ac9978d4276f7"
+    },
+    {
+      "path": "esp/test-00000-of-00001.parquet",
+      "split": "test",
+      "size_bytes": 100028,
+      "sha256": "aca2327c3bb63493759a39539e569540eec7b9c816e898ceb9b57a1f8686da0b"
+    },
+    {
+      "path": "esp/train-00000-of-00001.parquet",
+      "split": "train",
+      "size_bytes": 100563,
+      "sha256": "89bda45d0e5c08227c1c32c5a3a0b9b8eaef4215ed9ccf619fbea9423ed27968"
+    },
+    {
+      "path": "rus/dev-00000-of-00001.parquet",
+      "split": "dev",
+      "size_bytes": 20896,
+      "sha256": "44b26790b8699b5a0bf860b40dc2dbb6a30d1f8e890c12706c0e69e2b22100ab"
+    },
+    {
+      "path": "rus/test-00000-of-00001.parquet",
+      "split": "test",
+      "size_bytes": 86892,
+      "sha256": "0fbadac53f28dd8f2652bc13c90221af3bcbc3236d92efdaeb2fed511225a64f"
+    },
+    {
+      "path": "rus/train-00000-of-00001.parquet",
+      "split": "train",
+      "size_bytes": 204424,
+      "sha256": "10fcc51921a451adb6064c9bd04e08bbf10c43afca4844d2958c5cce6caade6d"
+    }
+  ],
+  "total_remote_bytes": 528931,
+  "split_policy": "Separate train/dev/test by original group identifier where available; never train on dev/test. No import of text or labels into private S03 without privacy/consent review.",
+  "sources": [
+    "https://huggingface.co/datasets/brighter-dataset/BRIGHTER-emotion-categories/blob/419566ac8f46f951b51584be36c13e5363008144/README.md",
+    "https://huggingface.co/api/datasets/brighter-dataset/BRIGHTER-emotion-categories/tree/419566ac8f46f951b51584be36c13e5363008144/esp?recursive=true&expand=true",
+    "https://huggingface.co/api/datasets/brighter-dataset/BRIGHTER-emotion-categories/tree/419566ac8f46f951b51584be36c13e5363008144/rus?recursive=true&expand=true",
+    "https://github.com/emotion-analysis-project/BRIGHTER"
+  ],
+  "limitations": "Xet/LFS SHA256 and byte sizes are official remote metadata; payloads not downloaded or independently hashed; no native NOX evaluation, model identity, GPU lease, backup/restore, training or merge evidence. Classification labels cannot prove empathy or consciousness."
+}

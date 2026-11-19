@@ -1,0 +1,53 @@
+{
+  "schema": "NOX_V69_RAM_STAGED_OWNER_ENCRYPTED_OFFSITE_V1",
+  "instance_id": 60509551,
+  "evidence_date_utc": "2026-11-14T17:50:26Z",
+  "onecore_policy": "coordination/NOX_SINGLE_CORE_RESONANCE_PRIORITY_V1.json",
+  "service_priority": "NOX PRIME / one Resonance chat / one primary model / S03 before background teachers or distillation",
+  "archive_source": {
+    "class": "cold incoming ZIP",
+    "bytes": 85218466,
+    "exact_full_sha256": "171c1b7894391ead3d376ae0e375fb34991854eeb3cce2aa04f2c28a301000c5",
+    "original_source_deleted": false,
+    "readback_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43622575039"
+  },
+  "ram_and_security": {
+    "remote_ram_tmpfs_used": true,
+    "tmpfs_staging_closed": true,
+    "remote_model_or_s03_touched": false,
+    "no_backend_or_second_main_chat_started": true,
+    "background_transfer_nice_low_priority": true,
+    "owner_recipient_ssh_fingerprint": "4a9cab493ae0f51145c0609271022a185b9310b6432ec1914b5b0ce89b7571a5",
+    "temporary_ssh_key_removed_and_verified": true,
+    "ephemeral_test_decrypt_sha_verified": true,
+    "owner_actual_private_key_restore_verified": false,
+    "upload_and_test_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43623149415"
+  },
+  "offsite_drive": {
+    "drive_id": "1v6--j3qRfyZTKDiD1hXF3PGHPgzFHt8R",
+    "download_url": "https://drive.google.com/file/d/1v6--j3qRfyZTKDiD1hXF3PGHPgzFHt8R/view",
+    "parent_folder_id": "1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR",
+    "zip_file_name": "NOX_V69_OWNER_ENCRYPTED_COLD_INCOMING_20261114.zip",
+    "drive_zip_bytes": 85241014,
+    "drive_zip_sha256": "3cc65b5ddc113316351314328177b7d46644ec09adfabd11616b81ba82ed536d",
+    "ciphertext_bytes": 85239576,
+    "ciphertext_sha256": "026541c57fc41e11f1d7b77d9dab67c3ada0e28e8f7a953d5672447bd5763699",
+    "independent_drive_download_verified": true,
+    "independent_zip_content_sha_verified": true
+  },
+  "local_pc": {
+    "physically_written": false,
+    "user_pc_file_system_access_available": false,
+    "existing_receiver_kit": "https://drive.google.com/file/d/1fmFZenC1tPDDJJGJFQTEBvWDnftNL5Ml/view",
+    "receiver_kit_precedes_new_v69_archive": true,
+    "updated_six_archive_receiver_kit": "https://drive.google.com/file/d/1oVxptFWybZWgmByDmhtpJ1LKClZplQgB/view",
+    "updated_receiver_kit_bytes": 6601,
+    "updated_receiver_kit_windows_parser_source_ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43623711555",
+    "updated_receiver_includes_cold_v69_ciphertext": true
+  },
+  "cleanup": {
+    "bytes_freed_by_this_offload": 0,
+    "source_retained_for_no_loss": true,
+    "model_s03_checkpoint_files_deleted": false
+  }
+}

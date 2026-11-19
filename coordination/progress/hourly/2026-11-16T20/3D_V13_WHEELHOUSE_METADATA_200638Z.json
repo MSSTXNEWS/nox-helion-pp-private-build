@@ -1,0 +1,79 @@
+{
+  "schema": "NOX_V13_3D_SOURCE_PREP_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "observed_at_utc": "2026-11-16T20:06:38.476Z",
+  "observed_at_msk": "2026-11-16T23:06:38.476+03:00",
+  "target_instance": 60509551,
+  "status": "SOURCE_TESTED_NATIVE_HOLD",
+  "source_head_at_receipt": "55b837395a0a5758e281daf1ed774ef04e174285",
+  "updated_manifest_blob_sha": "6150e78ac62b53e794310896b8e5fa07966161cb",
+  "metadata_patch_commit": "b23156fbbee03f7e6316e7d024f84ee15b152707",
+  "five_task_outcomes": [
+    {
+      "task_id": "V13-01",
+      "status": "HOLD_NATIVE",
+      "proof": "No new owner-auth native PID+start_ticks and STOP/lease sample; last read-only owner inspect 2026-11-16T19:31Z; do not start."
+    },
+    {
+      "task_id": "V13-02",
+      "status": "HOLD_NATIVE",
+      "proof": "Independent S03/Genesis/history/skills+optimizer/scaler/RNG restore not evidenced by a native readback; no deletion."
+    },
+    {
+      "task_id": "V13-03",
+      "status": "SOURCE_TESTED",
+      "proof": "Drive 4/4 starter parts (331718151 B), 39/39 wheelhouse parts (3831295823 B) correct filenames and sizes; exact SHA256 wheel manifest 58795a...; exact lock SHA256 8484b...; 72/72 matched lock entries and manifest artifact SHA; archive payload bytes not rehashed."
+    },
+    {
+      "task_id": "V13-04",
+      "status": "HOLD_NATIVE",
+      "proof": "CP311/cu126 wheel cache has 72 source metadata matches; native is historically Python3.12/cu124/sm70; no compatible isolated native env or GPU0/GPU1 smoke, no pip install."
+    },
+    {
+      "task_id": "V13-05",
+      "status": "HOLD_NATIVE_STORAGE",
+      "proof": "Historical disk free 43158650880 B versus 248834257920 B entire DeepSeek; seekable external volume+reserve and owner claim not verified; no GGUF download."
+    }
+  ],
+  "metadata_artifact_checks": {
+    "starter_parts": 4,
+    "starter_bytes": 331718151,
+    "wheelhouse_parts": 39,
+    "wheelhouse_bytes": 3831295823,
+    "wheelhouse_72_lock_entries_matched": 72,
+    "sha256_small_manifest": "58795a1d71d32aa390b6765fd97c64639832b3672a5726dae9820ab2e20cca3d",
+    "sha256_small_lock": "8484b77f5020abd8e8d62f667845ee5da23684be7b4e738ec8f5833b98f3c362",
+    "archive_payload_verified_this_run": false,
+    "native_installed": false
+  },
+  "native_effects": {
+    "restarts": 0,
+    "claims": [],
+    "installed": false,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "optimizer_updates_verified": 0,
+    "s03_recall_verified": 0,
+    "native_pid_start_ticks_verified": false
+  },
+  "latest_native_previous_only": {
+    "observed_at_utc": "2026-11-16T19:31:00Z",
+    "owner_stop": "PRESENT_READ_ONLY",
+    "five_supervisors": "STOPPED_READ_ONLY",
+    "gpu_used_mib": [
+      0,
+      0
+    ],
+    "root_free_bytes": 43158650880,
+    "writer_lease": "UNKNOWN",
+    "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43939988374"
+  },
+  "next": "First owner-auth read-only STOP/lease+PID process sweep and independent S03/checkpoint restore. Verify seekable 248834257920B+reserve. Then isolated Python/SM70 smoke and stage existing Maya/DeepSeek; retain STOP until full V13 acceptance.",
+  "protected": [
+    "OWNER STOP/MAINTENANCE unchanged",
+    "no model deletion",
+    "no production restart",
+    "no new backend/scheduler",
+    "no schedule changes"
+  ]
+}

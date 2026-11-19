@@ -1,0 +1,108 @@
+{
+  "schema": "NOX_3A_OWNER_MODEL_UPDATE_VISIBILITY_V10",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_3A",
+  "at_utc": "2026-11-16T14:28:39.593Z",
+  "at_msk": "2026-11-16T17:28:39.593+03:00",
+  "source_head_test_commit": "945aefb6b2390b661a76946ad96c5a0d0e9ea118",
+  "source_changes": [
+    {
+      "path": "nox-control/owner_native_inspect.py",
+      "previous_blob": "9220cc83ad813c3188f0902f865b803b08f02372",
+      "new_blob": "fe7d522b9f23c1af2641cd1adfa3021dd1ed6eec"
+    },
+    {
+      "path": "nox-control/test_owner_native_inspect_safety.py",
+      "previous_blob": "bbe0e24fbeeb49309ac6f4f8cb112ed2fe3b7042",
+      "new_blob": "b9d505fe4b8b98ae89129d2e454bf4c49298823a"
+    }
+  ],
+  "source_ci": {
+    "run_id": 43885607579,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43885607579",
+    "status": "SUCCESS",
+    "regression": "test_owner_model_update_maintenance_flag_is_visible_not_a_lease PASSED",
+    "scope": "SOURCE_FIXTURE_ONLY"
+  },
+  "native_reference": {
+    "run_id": 43880277767,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43880277767",
+    "observed_utc": "2026-11-16T13:54:56Z",
+    "owner_stop": "PRESENT",
+    "owner_maintenance": "PRESENT",
+    "owner_request": "6917926683",
+    "owner_intent": "OWNER_MODEL_UPDATE",
+    "permission_to_resume": false,
+    "source_only_this_run": true
+  },
+  "native_snapshot": {
+    "run_id": 43881016385,
+    "at_utc": "2026-11-16T13:59:30Z",
+    "chat_port_8081": "CONNECTION_REFUSED",
+    "supervisor_chat": "STOPPED",
+    "supervisor_dispatcher": "STOPPED",
+    "supervisor_trainer": "FATAL",
+    "v100_gpu_mib": [
+      0,
+      0
+    ],
+    "ssd_free_bytes": 43158925312,
+    "rclone_remotes": [],
+    "native_status": "HISTORICAL_READBACK_NOT_CURRENT_SESSION"
+  },
+  "tasks": [
+    {
+      "task_id": "S3-01",
+      "state": "HOLD_NATIVE_UI_OFFLINE",
+      "claim": "NONE",
+      "proof": "Existing owner STOP, 8080/8081/8082 refused; no actual UI route fingerprint until owner maintenance admits a read-only check"
+    },
+    {
+      "task_id": "S3-02",
+      "state": "HOLD_OWNER_QUIESCE",
+      "claim": "NONE",
+      "proof": "No verified running UI or authenticated model-update UI handler; do not install an unrelated frontend or reset owner STOP"
+    },
+    {
+      "task_id": "S1-06",
+      "state": "SOURCE_TESTED",
+      "claim": "GITHUB_BLOB_CAS_ONLY",
+      "proof": "Original native owner safety inspector now includes observed OWNER_MAINTENANCE.flag; symlink and absence distinct; no lease inference. CI 43885607579 PASS"
+    },
+    {
+      "task_id": "S2-07",
+      "state": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "claim": "NONE",
+      "proof": "DeepSeek five missing files 248828477216 bytes; last SSD free 43158925312; no owner verified external seekable storage"
+    },
+    {
+      "task_id": "S3-05",
+      "state": "HOLD_LIVE_E2E",
+      "claim": "NONE",
+      "proof": "Cannot verify UI mode, owner STOP interaction, chat SSE, rollback until authorized native release and stable model loaded"
+    }
+  ],
+  "WEIGHTS": {
+    "verified_updates_this_slot": 0,
+    "previous_qwen_successful_updates_historical": 55,
+    "student_inhibit": "HOLDOUT_REGRESSION",
+    "new_model_loaded": false,
+    "checkpoint_independent_full_restore": false
+  },
+  "KNOWLEDGE": {
+    "hunter_verified_source_to_owner_s03_recall_this_slot": false,
+    "native_s03_writes": 0
+  },
+  "DISPATCHER+RESOURCES": {
+    "three_current_os_worker_pids_verified": false,
+    "writer_lease_current": "UNKNOWN",
+    "owner_stop": "PRESENT_AS_OF_13_54_56Z",
+    "native_restarts_this_slot": 0,
+    "downloaded_bytes_this_slot": 0,
+    "deleted_bytes_this_slot": 0,
+    "prior_owner_cleanup_bytes": 27903528960
+  },
+  "rollback": "Revert exact GitHub blob CAS changes only, no native rollback needed; preserve original flags, WEB assets, S03 and model data.",
+  "next_action": "Owner authorized existing OneHost read-only snapshot to confirm active MODEL_UPDATE lease, stopped resources and current UI route; secure verified >=248.83GB seekable DeepSeek placement and pin Maya ELF, then staged one-writer cutover and original UI E2E. Never clear STOP blindly.",
+  "note": "Five recorded task outcomes/gaps; only S1-06 source tested, NONE are native claim, installed or live verified this run."
+}

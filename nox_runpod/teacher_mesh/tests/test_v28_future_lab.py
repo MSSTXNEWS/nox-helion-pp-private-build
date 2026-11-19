@@ -39,19 +39,23 @@ def bench(domain,model=STUDENT,correct=54,total=100):
             "observed_at_utc":NOW.isoformat()}
 def curriculum_policy():
     return {"signed_by_native_owner":True,"active_student_sha256":STUDENT,
-            "stop_requested":False,"max_proposals":3}
+            "stop_requested":False,"max_proposals":3,
+            "accepted_error_receipt_shas":[RECEIPT]}
 def advice(ident="teacher1",text="Independent tested solution with evidence",score=.9):
     return {"teacher_id":ident,"origin":"isolated_frozen_teacher","text":text,
             "text_sha256":hashlib.sha256(text.encode()).hexdigest(),
             "source_uri":"https://example.org/sources/"+ident,
             "training_data_rights_verified":True,"deidentified":True,
-            "owner_sample_approved":True,
+            "source_license_verified":True,"source_provenance_verified":True,
+            "pii_review":"PASS","owner_sample_approved":True,
             "independent_grade":{"verified":True,"harness_sha256":HARNESS,
                 "source_receipt_sha256":RECEIPT,"quality_score":score}}
 def arena_policy():
     return {"signed_by_native_owner":True,"stop_requested":False,
             "allowed_teacher_ids":["teacher1","teacher2"],"max_evidence_capsules":2,
-            "user_data_private":False}
+            "user_data_private":False,"scope":"owner",
+            "accepted_source_receipt_shas":[RECEIPT],
+            "training_approved_source_receipt_shas":[RECEIPT]}
 def speed_signals():
     return {"measured":True,"sensor_valid":True,"machine_signature_verified":True,
             "source_model_sha256_verified":True,
@@ -108,11 +112,68 @@ class CurriculumTests(unittest.TestCase):
     def test_training_denied_on_source_split_tamper(self):
         r=bench("coding");r["source_separated"]=False
         self.assertEqual(build_curriculum([r],curriculum_policy(),now=NOW)["proposals"],[])
+    def test_unpinned_benchmark_error_cannot_generate_curriculum(self):
+        p=curriculum_policy()
+        p["accepted_error_receipt_shas"]=["f"*64]
+        out=build_curriculum([bench("coding",correct=10)],p,now=NOW)
+        self.assertEqual(out["state"],"HOLD_NO_INDEPENDENT_BENCHMARK_GAPS")
+        self.assertEqual(out["proposals"],[])
+    def test_missing_native_owner_error_allowlist_fails_closed(self):
+        p=curriculum_policy();p.pop("accepted_error_receipt_shas")
+        out=build_curriculum([bench("reasoning",correct=10)],p,now=NOW)
+        self.assertEqual(out["state"],"HOLD_OWNER_ERROR_RECEIPT_ALLOWLIST")
+    def test_malformed_owner_error_allowlist_fails_closed(self):
+        for invalid in (None,{},[],["invalid"],["f"*64,None],["g"*64]):
+            with self.subTest(invalid=invalid):
+                p=curriculum_policy();p["accepted_error_receipt_shas"]=invalid
+                self.assertEqual(build_curriculum([bench("coding")],p,now=NOW)["state"],
+                                 "HOLD_OWNER_ERROR_RECEIPT_ALLOWLIST")
+    def test_only_owner_pinned_receipts_count_in_mixed_results(self):
+        p=curriculum_policy()
+        good=bench("coding",correct=20)
+        rogue=bench("instruction",correct=1)
+        rogue["source_receipt_sha256"]="f"*64
+        out=build_curriculum([good,rogue],p,now=NOW)
+        self.assertEqual(out["state"],"CURRICULUM_PROPOSED_NOT_TRAINED")
+        self.assertEqual(out["evaluation_records_accepted"],1)
+        self.assertEqual([x["domain"] for x in out["proposals"]],["coding"])
+    def test_invalid_owner_domain_priority_map_holds_without_crashing(self):
+        # Before the fix, .get on None/list/string threw AttributeError.
+        for invalid in (None, [], "corrupted", 1):
+            with self.subTest(priority_map=repr(invalid)):
+                p=curriculum_policy();p["domain_importance"]=invalid
+                out=build_curriculum([bench("reasoning",correct=10)],p,now=NOW)
+                self.assertEqual(out["state"],"HOLD_OWNER_DOMAIN_IMPORTANCE_POLICY")
+                self.assertEqual(out["proposals"],[])
+
+    def test_invalid_owner_domain_priority_values_fail_closed(self):
+        # Owner policy, not a model-generated coercible string or boolean.
+        for invalid in (None, True, "1.2", float("nan"), float("inf"), -1, 4, []):
+            with self.subTest(priority=repr(invalid)):
+                p=curriculum_policy()
+                p["domain_importance"]={"reasoning":invalid}
+                out=build_curriculum([bench("reasoning",correct=10)],p,now=NOW)
+                self.assertEqual(out["state"],"HOLD_OWNER_DOMAIN_IMPORTANCE_POLICY")
+                self.assertEqual(out["proposals"],[])
+
+    def test_owner_priority_typo_holds_but_valid_finite_priority_works(self):
+        p=curriculum_policy()
+        p["domain_importance"]={"resoning":2.0}
+        self.assertEqual(build_curriculum([bench("reasoning",correct=10)],p,now=NOW)["state"],
+                         "HOLD_OWNER_DOMAIN_IMPORTANCE_POLICY")
+        p["domain_importance"]={"reasoning":2.0}
+        out=build_curriculum([bench("reasoning",correct=10)],p,now=NOW)
+        self.assertEqual(out["state"],"CURRICULUM_PROPOSED_NOT_TRAINED")
+        self.assertEqual(len(out["proposals"]),1)
+        self.assertEqual(out["proposals"][0]["domain"],"reasoning")
+        self.assertEqual(out["proposals"][0]["optimizer_steps_verified"],0)
+
     def test_owner_native_stop_blocks_curriculum(self):
         p=curriculum_policy();p["stop_requested"]=True
         self.assertEqual(build_curriculum([bench("instruction")],p,now=NOW)["state"],"HOLD_NATIVE_STOP")
     def test_promotion_blocks_regression(self):
-        p={"signed_by_native_owner":True,"baseline_sha256":STUDENT,
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],"baseline_sha256":STUDENT,
            "candidate_sha256":CANDIDATE,
            "required_domains":["instruction","coding"],
            "checkpoint_reloaded_and_sha_verified":True,
@@ -123,7 +184,8 @@ class CurriculumTests(unittest.TestCase):
         self.assertEqual(promotion_gate(baseline=b,candidate=c,policy=p,now=NOW)["state"],
                          "REJECT_MEASURED_REGRESSION")
     def test_promotion_only_for_owner_review(self):
-        p={"signed_by_native_owner":True,"baseline_sha256":STUDENT,
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],"baseline_sha256":STUDENT,
            "candidate_sha256":CANDIDATE,"required_domains":["instruction","coding"],
            "checkpoint_reloaded_and_sha_verified":True,"real_optimizer_receipt_verified":True}
         b=[bench("instruction",correct=50),bench("coding",correct=80)]
@@ -132,11 +194,59 @@ class CurriculumTests(unittest.TestCase):
         self.assertEqual(r["state"],"READY_FOR_OWNER_REVIEW_NOT_PROMOTED")
         self.assertFalse(r["production_modified"])
     def test_same_harness_required(self):
-        p={"signed_by_native_owner":True,"baseline_sha256":STUDENT,
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],"baseline_sha256":STUDENT,
            "candidate_sha256":CANDIDATE,"required_domains":["instruction"]}
         c=bench("instruction",model=CANDIDATE,correct=90);c["harness_sha256"]="1"*64
         self.assertEqual(promotion_gate(baseline=[bench("instruction",correct=50)],
               candidate=[c],policy=p,now=NOW)["state"],"HOLD_DIFFERENT_HARNESS_SPLIT_OR_SAMPLE_COUNT")
+
+
+    def test_promotion_missing_native_eval_allowlist_fails_closed(self):
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "baseline_sha256":STUDENT,"candidate_sha256":CANDIDATE,
+           "required_domains":["coding"]}
+        r=promotion_gate(baseline=[bench("coding",correct=20)],
+                         candidate=[bench("coding",model=CANDIDATE,correct=80)],
+                         policy=p,now=NOW)
+        self.assertEqual(r["state"],"HOLD_OWNER_EVAL_RECEIPT_ALLOWLIST")
+    def test_promotion_cannot_use_unpinned_candidate_receipt(self):
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],
+           "baseline_sha256":STUDENT,"candidate_sha256":CANDIDATE,
+           "required_domains":["coding"]}
+        c=bench("coding",model=CANDIDATE,correct=80)
+        c["source_receipt_sha256"]="f"*64
+        r=promotion_gate(baseline=[bench("coding",correct=20)],
+                         candidate=[c],policy=p,now=NOW)
+        self.assertEqual(r["state"],"HOLD_MISSING_SAME_DOMAIN_RESULTS")
+    def test_promotion_duplicate_domain_scores_are_not_last_writer_wins(self):
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],
+           "baseline_sha256":STUDENT,"candidate_sha256":CANDIDATE,
+           "required_domains":["coding"]}
+        r=promotion_gate(baseline=[bench("coding",correct=90),bench("coding",correct=20)],
+                         candidate=[bench("coding",model=CANDIDATE,correct=95)],
+                         policy=p,now=NOW)
+        self.assertEqual(r["state"],"HOLD_AMBIGUOUS_DUPLICATE_DOMAIN_EVAL")
+    def test_promotion_native_stop_preempts_owner_review(self):
+        p={"signed_by_native_owner":True,"stop_requested":True,
+           "accepted_eval_receipt_shas":[RECEIPT],
+           "baseline_sha256":STUDENT,"candidate_sha256":CANDIDATE,
+           "required_domains":["coding"]}
+        r=promotion_gate(baseline=[bench("coding",correct=20)],
+                         candidate=[bench("coding",model=CANDIDATE,correct=80)],
+                         policy=p,now=NOW)
+        self.assertEqual(r["state"],"HOLD_NATIVE_STOP")
+    def test_promotion_duplicate_required_domain_fails_closed(self):
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],
+           "baseline_sha256":STUDENT,"candidate_sha256":CANDIDATE,
+           "required_domains":["coding","coding"]}
+        r=promotion_gate(baseline=[bench("coding",correct=20)],
+                         candidate=[bench("coding",model=CANDIDATE,correct=80)],
+                         policy=p,now=NOW)
+        self.assertEqual(r["state"],"HOLD_REQUIRED_DOMAINS")
 
 class ArenaTests(unittest.TestCase):
     def test_teacher_text_is_evidence_not_nox_answer(self):

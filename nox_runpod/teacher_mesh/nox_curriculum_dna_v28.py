@@ -66,7 +66,27 @@ def build_curriculum(records:list[dict], policy:dict, *, now:datetime|None=None)
     total_budget=policy.get("max_proposals",3)
     if type(total_budget) is not int or not 1<=total_budget<=5:
         return {"schema":SCHEMA,"state":"HOLD_CURRICULUM_BUDGET","proposals":[]}
-    verified=[r for r in records if _valid_record(r,student_sha,now)]
+    # The signed priority policy is a safety-critical input, not model text.
+    # A malformed mapping/value must HOLD rather than crash the entire
+    # owner-owned curriculum tick (or silently coerce True/"2" to priority).
+    importance_by_domain=policy.get("domain_importance",{})
+    if (not isinstance(importance_by_domain,dict) or
+            any(domain not in DOMAINS or type(value) not in (int,float) or
+                not math.isfinite(value) or not 0<=value<=3
+                for domain,value in importance_by_domain.items())):
+        return {"schema":SCHEMA,"state":"HOLD_OWNER_DOMAIN_IMPORTANCE_POLICY","proposals":[]}
+    # Only owner-pinned original S03/benchmark error receipts may become
+    # measured learning gaps. Record-provided independent_replay/heldout flags
+    # and a syntactically valid digest alone do not prove native provenance.
+    accepted=policy.get("accepted_error_receipt_shas")
+    if (not isinstance(accepted,list) or not 1<=len(accepted)<=400
+            or any(not isinstance(x,str) or SHA.fullmatch(x) is None
+                   for x in accepted)):
+        return {"schema":SCHEMA,"state":"HOLD_OWNER_ERROR_RECEIPT_ALLOWLIST","proposals":[]}
+    accepted_set=set(accepted)
+    verified=[r for r in records
+              if _valid_record(r,student_sha,now)
+              and r["source_receipt_sha256"] in accepted_set]
     latest_by_domain={}
     for r in verified:
         domain=r["domain"];t=_timestamp(r["observed_at_utc"])
@@ -77,8 +97,7 @@ def build_curriculum(records:list[dict], policy:dict, *, now:datetime|None=None)
         score=r["correct"]/r["total"]
         # Deficiency estimate with sample caution; no novelty without evidence.
         uncertainty=min(0.2,1/sqrt(r["total"]))
-        importance=float(policy.get("domain_importance",{}).get(domain,1.0))
-        if not math.isfinite(importance) or not 0<=importance<=3:continue
+        importance=importance_by_domain.get(domain,1.0)
         severity=round((1-score)*(1-uncertainty)*importance,6)
         if severity<=0.05:continue
         strategy=METHODS[domain]
@@ -110,6 +129,17 @@ def promotion_gate(*,baseline:list[dict],candidate:list[dict],policy:dict,now:da
     now=now or datetime.now(timezone.utc)
     if not isinstance(policy,dict) or policy.get("signed_by_native_owner") is not True:
         return {"schema":SCHEMA,"state":"HOLD_NATIVE_OWNER_POLICY"}
+    if policy.get("stop_requested") is not False:
+        return {"schema":SCHEMA,"state":"HOLD_NATIVE_STOP"}
+    # A benchmark row may claim independent replay, heldout and PASS itself.
+    # Promotion requires the native owner to pin actual benchmark/S03 receipts,
+    # independently of the candidate's own JSON assertions.
+    approved=policy.get("accepted_eval_receipt_shas")
+    if (not isinstance(approved,list) or not 1<=len(approved)<=400
+            or any(not isinstance(x,str) or SHA.fullmatch(x) is None
+                   for x in approved)):
+        return {"schema":SCHEMA,"state":"HOLD_OWNER_EVAL_RECEIPT_ALLOWLIST"}
+    approved_set=set(approved)
     base_sha=policy.get("baseline_sha256");candidate_sha=policy.get("candidate_sha256")
     if not all(isinstance(v,str) and SHA.fullmatch(v) for v in (base_sha,candidate_sha)):
         return {"schema":SCHEMA,"state":"HOLD_MODEL_SHA"}
@@ -117,14 +147,23 @@ def promotion_gate(*,baseline:list[dict],candidate:list[dict],policy:dict,now:da
     if not isinstance(baseline,list) or not isinstance(candidate,list):
         return {"schema":SCHEMA,"state":"HOLD_EVAL_DATA"}
     required=policy.get("required_domains")
-    if not isinstance(required,list) or not required or not all(x in DOMAINS for x in required):
+    if (not isinstance(required,list) or not required
+            or not all(x in DOMAINS for x in required)
+            or len(set(required))!=len(required)):
         return {"schema":SCHEMA,"state":"HOLD_REQUIRED_DOMAINS"}
     def by_domain(seq,sha):
         out={}
         for r in seq:
-            if _valid_record(r,sha,now):out[r["domain"]]=r
+            if (_valid_record(r,sha,now)
+                    and r["source_receipt_sha256"] in approved_set):
+                # The last submitted row must not silently replace an earlier
+                # score for the same model+domain, even when both are pinned.
+                if r["domain"] in out:return None
+                out[r["domain"]]=r
         return out
     b=by_domain(baseline,base_sha);c=by_domain(candidate,candidate_sha)
+    if b is None or c is None:
+        return {"schema":SCHEMA,"state":"HOLD_AMBIGUOUS_DUPLICATE_DOMAIN_EVAL"}
     if any(x not in b or x not in c for x in required):
         return {"schema":SCHEMA,"state":"HOLD_MISSING_SAME_DOMAIN_RESULTS"}
     regressions=[];improvements=[]

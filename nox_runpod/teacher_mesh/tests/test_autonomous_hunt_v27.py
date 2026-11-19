@@ -189,5 +189,123 @@ class TestAutonomy(unittest.TestCase):
         self.assertFalse(HuntDirector._valid_idea(dict(IDEA,worm_kind="execute_python")))
         self.assertFalse(HuntDirector._valid_idea(dict(IDEA,worm_kind="isolated_browser")))
         self.assertTrue(HuntDirector._valid_idea(IDEA))
+    def test_missing_or_malformed_chat_activity_blocks_research_and_training(self):
+        for bad in (None,0,"false"):
+            with self.subTest(chat_busy=bad):
+                h=NativeHarness();h.current_state["chat_busy"]=bad
+                result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                self.assertEqual(result["reason"],"CHAT_PRIORITY_STATE_UNVERIFIED")
+                self.assertEqual(h.worm_ticks,0)
+                self.assertFalse(h.created or h.downloads or h.training_jobs)
+
+    def test_unknown_trainer_or_gpu_chat_activity_blocks_gpu_admission(self):
+        for key in ("trainer_running","chat_gpu_busy"):
+            for bad in (None,0,"false"):
+                with self.subTest(field=key,value=bad):
+                    h=NativeHarness()
+                    target=(h.current_state if key=="trainer_running"
+                            else h.current_state["gpu"])
+                    target[key]=bad
+                    result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                    self.assertEqual(result["gpu"],"HOLD_TRAINER_OR_CHAT_ACTIVITY_UNVERIFIED")
+                    self.assertFalse(h.downloads or h.training_jobs)
+
+    def test_nonfinite_gpu_resources_and_policy_minimums_fail_closed(self):
+        for key,where in (("free_disk_gb","gpu"),("free_vram_mb","gpu"),
+                          ("min_free_disk_gb","policy"),("min_free_vram_mb","policy")):
+            for bad in (float("nan"),float("inf"),-float("inf"),True):
+                with self.subTest(field=key,value=str(bad)):
+                    h=NativeHarness()
+                    target=(h.current_state["gpu"] if where=="gpu" else h.policy)
+                    target[key]=bad
+                    result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                    self.assertEqual(result["gpu"],"HOLD_DISK_OR_VRAM_BUDGET")
+                    self.assertFalse(h.downloads or h.training_jobs)
+    def test_malformed_owner_model_allowlist_fails_closed(self):
+        # A signed string is not a typed list of approved model IDs.
+        for bad in (None, "Qwen/Qwen3-8B", {"Qwen/Qwen3-8B":True},
+                    [None,"Qwen/Qwen3-8B"], True):
+            with self.subTest(allowlist=repr(bad)):
+                h=NativeHarness();h.policy["allowed_model_ids"]=bad
+                result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                self.assertNotIn("model_download",result)
+                self.assertEqual(h.downloads,[])
+
+    def test_malformed_owner_model_byte_budget_fails_closed(self):
+        for bad in (None, True, "2000000000", float("nan"),
+                    float("inf"), -1, 0):
+            with self.subTest(max_bytes=repr(bad)):
+                h=NativeHarness();h.policy["max_model_bytes"]=bad
+                result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                self.assertNotIn("model_download",result)
+                self.assertEqual(h.downloads,[])
+        h=NativeHarness();h.models[0]["license_id"]=None
+        self.assertNotIn("model_download",
+                         HuntDirector(h.callbacks()).tick("owner",now=NOW))
+        self.assertEqual(h.downloads,[])
+
+    def test_malformed_owner_optimizer_budget_fails_closed(self):
+        for bad in (None, True, "30", float("nan"),
+                    float("inf"), -1, 0):
+            with self.subTest(max_steps=repr(bad)):
+                h=NativeHarness();h.policy["max_optimizer_steps_per_job"]=bad
+                result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                self.assertNotIn("gpu_train",result)
+                self.assertEqual(h.training_jobs,[])
+
+    def test_boolean_download_bytes_is_not_verified_staging(self):
+        h=NativeHarness();base=h.callbacks()
+        callbacks=NativeCallbacks(**{**vars(base),
+           "stage_model_existing":lambda scope,task:{
+               "sha256_verified":True,"sha256":"f"*64,"bytes":True}})
+        result=HuntDirector(callbacks).tick("owner",now=NOW)
+        self.assertEqual(result["model_download"],"HOLD_DOWNLOAD_NOT_VERIFIED")
+        self.assertEqual(result["training_weight_updates_verified"],0)
+
+    def test_chat_becomes_busy_after_worm_quota_claim_blocks_enqueue(self):
+        h=NativeHarness(); original=h.callbacks()
+        def claim(scope,action,key):
+            accepted=h.claim(scope,action,key)
+            if action=="worm_create":h.current_state["chat_busy"]=True
+            return accepted
+        c=NativeCallbacks(**{**vars(original),"quota_claim":claim})
+        r=HuntDirector(c).tick("owner",now=NOW)
+        self.assertEqual(r["reason"],"STOP_BEFORE_WORM")
+        self.assertFalse(h.created or h.downloads or h.training_jobs)
+
+    def test_trainer_begins_after_model_claim_blocks_staging(self):
+        h=NativeHarness(); original=h.callbacks()
+        def claim(scope,action,key):
+            accepted=h.claim(scope,action,key)
+            if action=="model_download":h.current_state["trainer_running"]=True
+            return accepted
+        c=NativeCallbacks(**{**vars(original),"quota_claim":claim})
+        r=HuntDirector(c).tick("owner",now=NOW)
+        self.assertEqual(r["reason"],"STOP_BEFORE_MODEL_DOWNLOAD")
+        self.assertFalse(h.downloads or h.training_jobs)
+
+    def test_resource_drops_after_training_claim_blocks_trainer(self):
+        h=NativeHarness(); original=h.callbacks()
+        def claim(scope,action,key):
+            accepted=h.claim(scope,action,key)
+            if action=="gpu_train":h.current_state["gpu"]["free_vram_mb"]=0
+            return accepted
+        c=NativeCallbacks(**{**vars(original),"quota_claim":claim})
+        r=HuntDirector(c).tick("owner",now=NOW)
+        self.assertEqual(r["reason"],"STOP_BEFORE_TRAIN")
+        self.assertFalse(h.training_jobs)
+
+    def test_safe70_trip_after_model_claim_blocks_staging(self):
+        h=NativeHarness(); original=h.callbacks()
+        def claim(scope,action,key):
+            accepted=h.claim(scope,action,key)
+            if action=="model_download":
+                h.current_state["gpu"]["samples_hotspot_ge70"]=3
+            return accepted
+        c=NativeCallbacks(**{**vars(original),"quota_claim":claim})
+        r=HuntDirector(c).tick("owner",now=NOW)
+        self.assertEqual(r["reason"],"STOP_BEFORE_MODEL_DOWNLOAD")
+        self.assertFalse(h.downloads)
+
 if __name__=="__main__":
     unittest.main()

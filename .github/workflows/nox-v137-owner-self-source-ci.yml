@@ -1,0 +1,60 @@
+name: NOX V137 native self observation and progressive owner Resonance — source gates
+on:
+  pull_request:
+    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+    paths:
+      - 'coordination/onepass/nox-v137-owner-self-status.js'
+      - 'coordination/onepass/test_v137_owner_self_status.cjs'
+      - '.github/workflows/nox-v137-owner-self-source-ci.yml'
+  push:
+    branches: [fix/nox-v135-resonance-native-stream-20261115]
+    paths:
+      - 'nox_runpod/teacher_mesh/v137/**'
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/nox-v137-owner-self-status.js'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
+      - 'coordination/onepass/test_v137_owner_self_status.cjs'
+      - 'coordination/onepass/v135_resonance_owner_stage.py'
+      - 'coordination/onepass/test_v135_resonance_owner_stage.py'
+      - '.github/workflows/nox-v137-owner-self-source-ci.yml'
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  read-only-source-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install bounded test-only native route dependencies
+        run: python -m pip install -q "fastapi==0.115.6" "httpx==0.28.1"
+      - name: Compile modules and JS
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v137/owner_self_observation.py nox_runpod/teacher_mesh/v137/owner_response_contract.py
+          node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
+          node --check coordination/onepass/nox-v137-owner-self-status.js
+      - name: Real model delta split and native S03 terminal proof fixtures
+        run: |
+          set -euo pipefail
+          node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+      - name: Browser owner-only status and fail-closed telemetry fixtures
+        run: |
+          set -euo pipefail
+          node --test coordination/onepass/test_v137_owner_self_status.cjs
+      - name: Existing OneHost native self and process evidence fixtures
+        run: |
+          set -euo pipefail
+          python -m unittest -v nox_runpod.teacher_mesh.v137.tests.test_owner_self_observation nox_runpod.teacher_mesh.v137.tests.test_owner_response_contract
+      - name: Assert no production mutations
+        run: |
+          echo 'NOX_V137_SOURCE_GATES=PASS'
+          echo 'NOX_V137_LIVE_DEPLOYED=false'
+          echo 'NOX_V137_C03_SELF_NATIVE_BOUND=false'
+          echo 'NOX_V137_ONE_MODEL_GROUNDING_SOURCE_TESTED=true'
+          echo 'NOX_V137_REAL_GPU_TRAINING_CHANGED=false'
+          echo 'NOX_V137_EXISTING_S03_MUTATED=false'

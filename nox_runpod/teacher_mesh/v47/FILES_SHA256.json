@@ -1,0 +1,19 @@
+{
+  "schema": "NOX_V47_SOURCE_HASHES",
+  "files": {
+    "README_MASTER_RU.md": "183bf44db66e90f59ee07b83b9b3a15c862f84a641cfc3af20c5fb6971dce1dc",
+    "__init__.py": "904eb7d6841a1d1505240db46d4afd0d92520f759578288fff52a0d5deb38b3b",
+    "source_contract/WEB_V29_3_LOCK.json": "df086483b1e80570ed39457f53719957335cfac5ee738e9b72b34109fcaef352",
+    "night_v47/native_cycle.py": "3a410a376ce00d01a399df2f2c8867daeff2ac05e91f4e8cb42434ae74499e36",
+    "night_v47/__init__.py": "a73c7ec1f70c19241fac63b0a99a0d8681afd1e9a871ff8b06c5539d6b114d85",
+    "night_v47/probe.py": "4c9302b292152f7c845ff8918b1bfb3eebd010042bf6f4de8ce738a4ada2fc37",
+    "night_v47/direct_weights_smoke.py": "5bc966141cdbb91cb757b5fcbea7478818d926712002d29fe5b2e6eea2efa53e",
+    "night_v47/README_RU.md": "e87770a53719531c0012d2f53f349969bace8854421895476a0e0420ae04d39f",
+    "night_v47/policy.py": "fb890fcb42636b3151339d30fa47a7a10c0e64f96973a58b9e712cdb478ad457",
+    "control/README_TASKS.md": "de0ce0782167c257be4c616a6378911829be96bb9aa2a843282d02969e2f0099",
+    "control/__init__.py": "1f4859b7ef0464d2169072234717726547fa1616d6c47376df7a27cbe61e85a3",
+    "control/TASKS_60_V46.json": "5997943cc8beb56672ebdcbc09964d9b283134dbe7a6f489d6b90cdcf841ba06",
+    "control/dispatcher.py": "fe3557904f28b58c12da06f3a938c171f97c3cae79fb1e333e0a9dd42c8cbe4c",
+    "tests/test_night_v47.py": "97c79adae3350dde3a51cef7e7cc164c6c705b79a2ce42d0fa8f0586a656670c"
+  }
+}

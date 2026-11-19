@@ -1,0 +1,86 @@
+{
+  "schema": "NOX_V133_CONVERGED_FULL_WEB_SOURCE_ACCEPTANCE_V1",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-15",
+  "source_frozen_zip_sha256": "166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0",
+  "pr281_derived_sha256": "e70f0439fdf0a028c1d52fc638a38086aa7863fb7b33733a9609532dd544a9d5",
+  "owner_v122_ui_sha256": "18d8c8d6009323188b9f903920308b3b871a6123f7b425a77184a6b2c147640e",
+  "v132_source_bundle_sha256": "6e13a5b63607acfd2f3a1890dec33bd10c6f3ee7add59b84ef82c628e162da77",
+  "converged_zip": "NOX_HELION_WEB_V29_3_CONVERGED_FULL_ONEPASS.zip",
+  "converged_zip_bytes": 106992154,
+  "converged_zip_sha256": "2ac6be7b5f84e77f35f9b8b1dbfb25cab72e197f0d9f0aad70b886166a296bc4",
+  "original_site_paths_preserved": 1089,
+  "original_site_paths_changed": 9,
+  "original_site_paths_unchanged": 1080,
+  "original_site_paths_deleted": 0,
+  "new_functional_site_js": 1,
+  "new_functional_site_js_path": "site/pc/nox-choice-buttons-v293.js",
+  "rollback_copy_per_changed_source": true,
+  "local_html_static_dependencies": {
+    "html_pages_checked": 42,
+    "missing_local_references": 0,
+    "state": "PASS_SOURCE_ONLY"
+  },
+  "chromium_isolated_ui": {
+    "five_pages": [
+      "cinema",
+      "games",
+      "graph",
+      "music",
+      "voice"
+    ],
+    "viewports": [
+      "1440x900",
+      "390x844"
+    ],
+    "checks": 10,
+    "passed": 10,
+    "from_local_set_content": true,
+    "real_server_runtime_tested": false
+  },
+  "repo_regression": {
+    "run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43656783496",
+    "source_tests_passed": true,
+    "v133_full_convergence_fixtures_passed": 5
+  },
+  "drive": {
+    "part1": {
+      "id": "1_2RXe1_FJRUoXvvfcOUEot1ZXCMSeZwd",
+      "bytes": 55000000,
+      "sha256": "47011d0ee62c299dbd7388101185862d523c746c6b71438bf3b00517c2c76847"
+    },
+    "part2": {
+      "id": "1q9C1IvpkCqEzLlQFUoe7uZ9u9EFCU5tS",
+      "bytes": 51992154,
+      "sha256": "e906e8b66aef160f04652322e0d6805625c2c27555bc074c0e38308d58a7e9b0"
+    },
+    "oneclick_assembler": {
+      "id": "1bgKPe1gF9e--B5-ivh9K1h-R0ns-1nrM",
+      "zip_sha256": "b320d11169ef6708863a7f02fddbd120eb90ed2b3a1f9cea664f2868c0b20515"
+    },
+    "independently_downloaded_from_drive": true,
+    "concat_sha256_matches_full_zip": true
+  },
+  "native_last_verified": {
+    "api_routes_total": 63,
+    "exact_compatible_92": 23,
+    "nonmatching_exact_92": 69,
+    "fully_validated_92": false,
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43650602202"
+  },
+  "vast_owner_access": {
+    "api_nox2": "HOLD_AUTH_ERROR",
+    "direct_ssh": "HOLD_TCP_CONNECTION_REFUSED",
+    "instance_status": "UNKNOWN"
+  },
+  "release": {
+    "production_promoted": false,
+    "full_base_weight_optimizer_accepted": false,
+    "external_restoration_accepted": false,
+    "physical_windows_accepted": false,
+    "real_gpu_stop_accepted": false
+  },
+  "owner_source_only": true,
+  "existing_s03_untouched": true,
+  "main_model_weights_untouched": true
+}

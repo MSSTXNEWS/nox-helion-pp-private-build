@@ -1,0 +1,43 @@
+name: NOX V86 onepatch live progressive stream paint no proxy restart
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v86-stream-onepatch.yml, nox_runpod/teacher_mesh/v86/live_stream_paint_once.py]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner approval for original NOX OneHost only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v86-single-chat-html-change
+  cancel-in-progress: false
+jobs:
+  patch:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Confirm exact source syntax and patch safety
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v86/live_stream_paint_once.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('nox_runpod/teacher_mesh/v86/live_stream_paint_once.py').read_text()
+          for term in ('HOLD_SOURCE_SHA_CHANGED','HOLD_EXACT_JS_ANCHORS','HOLD_NODE_SYNTAX','HOLD_BACKUP_CONFLICT','HOLD_AFTER_INSTALL_HTTP_OR_JS','rollback'):
+              assert term in s
+          print('NOX_V86_SOURCE_GATES_PASS=true')
+          PY
+      - name: One atomic HTML patch with original backup and live readback
+        run: python3 -m nox_runpod.teacher_mesh.v86.live_stream_paint_once
+      - name: Revoke temporary SSH identity
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

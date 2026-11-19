@@ -1,0 +1,88 @@
+{
+  "schema": "NOX_CONTROL_A_HOURLY_VERIFIED_V1",
+  "instructions_version": "0.0.6",
+  "run_id": "NOX_CONTROL_A_20261116_0502_MSK_11",
+  "emitted_at_utc": "2026-11-16T03:14:03.716Z",
+  "emitted_at_msk": "2026-11-16T06:14:03.716+03:00",
+  "scope": "SOURCE_RECEIPT_FROM_AUTHENTICATED_ACTIONS_LOGS; NOT_A_NEW_NATIVE_SESSION",
+  "source_head_observed": "9a6d1da9732bff0a2126d09fc2750a2b05d47b3f",
+  "source_head_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/9a6d1da9732bff0a2126d09fc2750a2b05d47b3f",
+  "onehost_instance": 60509551,
+  "five_tasks": [
+    {
+      "n": 1,
+      "status": "SOURCE_DONE_LIVE_PARTIAL",
+      "result": "12/12 registered slots enabled; results independently peeked. As-of 03:12Z, 1A,1B,1C,1D,2B,2C,2D,3B,3C completed; 2A,3A,3D in progress. 2B most recent completed in preceding hour. No blind restarts or dedup changes.",
+      "native_proof": false
+    },
+    {
+      "n": 2,
+      "status": "AUTHENTICATED_HISTORICAL_READBACK_NO_NEW_SESSION",
+      "result": "Owner pinned-SSH 60509551 verified in Actions #43791009883. 8080/8081/8082 HTTP200; 05:15Z-minus3h: GPU0 21562MiB 0%, GPU1 474MiB 0%; RAM cgroup 85521559552/194065203200 bytes, oom and oom_kill counters 0 at that snapshot, SSD free 14020829184 bytes. Later 05:55 MSK receipt chat HTTP200, disk free 13934723072, GPU/cgroup 149.3GB RAM from another slot. No direct owner-native session in this controller run.",
+      "native_proof": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43791009883"
+    },
+    {
+      "n": 3,
+      "status": "SOURCE_DONE_NATIVE_QUEUE_REGISTRATION_HOLD",
+      "result": "Original dispatcher PID 498177 in read-only 05:15 snapshot; six logical work-stealing worker IDs, not six independent PIDs. R60-020 depends on R60-056 outside 40-profile. Native R60 job_id+S03 pair count positively verified 0, actual live queue cardinality unknown. No new claimed task/heartbeat proven by this controller; no new dispatcher."
+    },
+    {
+      "n": 4,
+      "status": "LIVE_FAIL_HOLD_TRAINING_RESTART",
+      "result": "Owner run #43793426711 started existing nox-train-volta-t866u: supervisor PID 542745, child PID 542746. Initial progress step1 loss1.76514 observed; later 1A saw progress status step5/5 loss3.0604, but subsequent readback #43795017295 Supervisor FATAL pid null and optimizer_steps_verified=false. No independently proven optimizer global_step, checkpoint/weight SHA or full restore. TRAIN_HOLD enforced. No restart by this controller.",
+      "native_proof": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43793426711",
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43795017295"
+      ]
+    },
+    {
+      "n": 5,
+      "status": "SOURCE_RECEIPT_ONLY_NO_REDUNDANT_PATCH",
+      "result": "Previously confirmed old SFTConfig save_safetensors bug came from pinned historical source 4c1de82; current hybrid_training_entry.py already removed deprecated kw and has regression test, so do not duplicate patch or modify production. This receipt is the only write in this run; next operator gets exact current blocker."
+    }
+  ],
+  "verified_native_r60_pair_count": 0,
+  "actual_native_queue_count": null,
+  "training": {
+    "run_id": "6905764817",
+    "mode": "QLORA_NF4_FP16",
+    "last_status_step_reported": 5,
+    "reported_loss": 3.0604,
+    "verified_optimizer_global_step": null,
+    "optimizer_delta": null,
+    "checkpoint_sha256": null,
+    "weight_sha256": null,
+    "independent_restore_verified": false,
+    "supervisor_after": "FATAL",
+    "trainer_pid_before": 542746,
+    "trainer_pid_after": null,
+    "hold": "HOLD_TRAINING_RESTART"
+  },
+  "chat": {
+    "health_ports": {
+      "8080": 200,
+      "8081": 200,
+      "8082": 200
+    },
+    "new_native_ttft_ms": null,
+    "pre_post_tps": null,
+    "quality_delta": null,
+    "s03_durable_new_receipt_verified": false
+  },
+  "safety": {
+    "native_mutations_this_run": false,
+    "trainer_restarted_by_this_run": false,
+    "stop_cleared": false,
+    "files_deleted": false,
+    "web_replaced": false,
+    "second_scheduler_created": false,
+    "second_training_writer_created": false
+  },
+  "evidence": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43791009883",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43793426711",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43795017295",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/bc388e4511418f634183030d31e7a1fc10416ad0"
+  ],
+  "next_one_priority": "Under the EXISTING authorized owner-native lease obtain terminal trainer stderr and exact fully hashed adapter/optimizer/RNG checkpoint inventory, independent isolated restore, STOP/lease and GPU1 single-writer proof. Only then diagnose or resume the existing trainer; preserve GPU0/S03/WEB29."
+}

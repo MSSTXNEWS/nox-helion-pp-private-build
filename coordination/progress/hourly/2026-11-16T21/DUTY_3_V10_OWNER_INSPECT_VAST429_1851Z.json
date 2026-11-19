@@ -1,0 +1,117 @@
+{
+  "schema": "NOX_UNIVERSAL_WATCH_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "DUTY_3",
+  "instance_id": 60509551,
+  "at_utc": "2026-11-16T18:51:05Z",
+  "at_msk": "2026-11-16T21:51:05+03:00",
+  "mode": "OWNER_EXACT_READ_ONLY_INSPECT_FAILED_CLOSED",
+  "source_branch": "feature/nox-v38-synaptic-brain-20261114",
+  "source_head_at_receipt": "cd611964bfafa64901b73bb1be7f86473fe8fcbc",
+  "authorized_attempt": {
+    "comment_id": 6925775774,
+    "comment_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/256#issuecomment-6925775774",
+    "requested_source_sha": "43dc0955dd14e5f264cf5396faebb5e753933f7b",
+    "requested_action": "inspect",
+    "action_run_id": 43932618696,
+    "action_job_id": 133528758879,
+    "workflow_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43932618696",
+    "observed_at_utc": "2026-11-16T18:48:08Z",
+    "owner_request_authorized": true,
+    "provider_instance_found": true,
+    "provider_instance_running": true,
+    "provider_gpu_count": 2,
+    "ssh_host_key_pin_verified": true,
+    "ssh_authenticated": false,
+    "native_payload_executed": false,
+    "failure_code": "HOLD_VAST_API_HTTP_429",
+    "workflow_result": "FAILED",
+    "temp_ssh_cleanup": "DETACHED_AND_VERIFIED; always cleanup NOT_ATTACHED",
+    "provider_mutations": "no durable provider change verified; temporary key safely detached",
+    "retry_performed_this_slot": 0
+  },
+  "latest_prior_native_read": {
+    "observed_at_utc": "2026-11-16T18:32:35Z",
+    "run_id": 43929707415,
+    "job_id": 133518526346,
+    "original_owner_stop": "PRESENT_PRIOR",
+    "original_owner_maintenance": "PRESENT_PRIOR",
+    "supervisor_core": "FIVE_STOPPED_PRIOR",
+    "listener_8081": "NO_LISTENER_PRIOR",
+    "gpu_vram_mib": [
+      0,
+      0
+    ],
+    "ssd_total_bytes": 183609851904,
+    "ssd_free_bytes": 43158712320,
+    "cgroup_memory_current_bytes": 60389244928,
+    "shm_free_bytes": 3366711296,
+    "owner_writer_lease": "UNKNOWN",
+    "current_runtime_status": "UNKNOWN_NOT_SAMPLED_IN_THIS_RUN"
+  },
+  "model_candidate": {
+    "name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO IQ2_XXS",
+    "reference_branch": "feature/nox-engine-stage-20261116",
+    "immutable_revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+    "total_unique_gguf_bytes": 248834257920,
+    "missing_five_bytes": 248828477216,
+    "metadata_shard_bytes": 5780704,
+    "full_current_verified_residency": false,
+    "server_seekable_quota_verified": false,
+    "local_maya_sha_current_verified": false,
+    "original_sse_inference_verified": false
+  },
+  "task_outcomes": [
+    {
+      "task_id": "S1-01",
+      "status": "HOLD",
+      "reason": "Native read-only attempt failed on Vast API 429 before ephemeral SSH authentication; provider running and pinned host only"
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD",
+      "reason": "Current owner STOP and writer lease, 5 Supervisor and 3 OS worker PIDs/start_ticks UNKNOWN; prior STOP preserved"
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD",
+      "reason": "No independent S03/Genesis/optimizer/scaler/RNG checkpoint restore or recovery SHA confirmed"
+    },
+    {
+      "task_id": "S2-07",
+      "status": "HOLD",
+      "reason": "No owner-auth seekable quota >=248834257920 bytes plus reserve and no single verified shard claim"
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD",
+      "reason": "Maya DeepSeek model not verified through original authenticated Resonance SSE RU/ES/STOP/S03"
+    }
+  ],
+  "WEIGHTS": {
+    "new_verified_optimizer_updates": "UNKNOWN_NOT_SAMPLED; NONE_VERIFIED_BY_THIS_SLOT",
+    "new_checkpoint_restores_verified": 0,
+    "training_control_changed": false
+  },
+  "KNOWLEDGE": {
+    "new_hunter_licensed_source_s03_write_readback_recalls_verified": 0,
+    "owner_s03_write_attempted": false
+  },
+  "DISPATCHER_RESOURCES": {
+    "current_nox_pids_start_ticks": "UNKNOWN",
+    "current_owner_lease": "UNKNOWN",
+    "current_heartbeat": "UNKNOWN",
+    "current_gpu_metrics": "UNKNOWN",
+    "current_model_identity": "UNKNOWN",
+    "downloaded_bytes_by_this_slot": 0,
+    "deleted_bytes_by_this_slot": 0,
+    "restarts_by_this_slot": 0,
+    "manual_stop_reset": false,
+    "new_native_tasks_claimed": 0
+  },
+  "correction": "429 is a transient upstream API admission HOLD; no automatic retry of non-idempotent temporary SSH key attach. Keep owner STOP; back off and schedule next single owner-auth READ_ONLY probe after provider cooldown. Do not launch competing writers or delete artifacts.",
+  "rollback": "No native changes: no server rollback. Git receipt is append-only; exact path and SHA must be verified. Continue branch only after rereading current HEAD.",
+  "next_first_ready": "S1-01 after Vast API cooldown; if blocked, independent S2-11 Maya source/preflight and S2-07 storage gate, no runtime claims",
+  "handoff_to": "DUTY_1",
+  "notify_user": true
+}

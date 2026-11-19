@@ -1,0 +1,20 @@
+{
+  "schema": "NOX_OWNER_SENIOR_CONFIG_V1",
+  "enabled": false,
+  "providers": ["openai", "anthropic", "google"],
+  "minimum_verified_providers": 1,
+  "allowed_handlers": [
+    "wait_q4", "verify_q4", "delete_q8", "identity", "hot_swap", "write_live",
+    "start_qlora", "holdout_gate", "merge_gated", "new_gguf", "ensure_downloads",
+    "ensure_scheduler", "ensure_offload", "ensure_program", "ensure_gpu_watchdog",
+    "track", "owner_order", "exec_plan", "owner_component_validate",
+    "owner_component", "owner_media", "owner_plan_step", "owner_plan_join"
+  ],
+  "max_requests_per_hour": 12,
+  "max_requests_per_day": 48,
+  "max_reserved_output_tokens_per_day": 73728,
+  "max_output_tokens": 1536,
+  "request_timeout_seconds": 25,
+  "cache_ttl_seconds": 300,
+  "access_ttl_seconds": 86400
+}

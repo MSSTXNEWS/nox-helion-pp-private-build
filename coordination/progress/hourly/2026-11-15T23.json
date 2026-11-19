@@ -1,0 +1,178 @@
+{
+  "schema": "NOX_HOURLY_PROGRESS_V1",
+  "instructions_version": "0.0.6",
+  "scope": "SOURCE",
+  "stable_hour_id": "NOX-HOURLY-2026-11-15T23Z",
+  "utc_hour_start": "2026-11-15T23:00:00Z",
+  "utc_hour_end_exclusive": "2026-11-16T00:00:00Z",
+  "msk_hour": "2026-11-16 02:00–02:59 Europe/Moscow",
+  "generated_from": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "feature/nox-v38-synaptic-brain-20261114",
+    "pr": 256,
+    "accepted_feature_head_at_write": "34c70870b94eb42c5e7c1642017f6b3d67196ad2",
+    "source_hour_change_count": "нет данных: по проверенным slot handoffs нельзя получить полный git commit count строго внутри UTC-часа",
+    "source_only": true,
+    "evidence_boundary": "Included CI+owner native work is time-scoped; branch HEAD may include changes after 00:00Z"
+  },
+  "executive_summary": "Original OneHost owner chat upgrade attempted physically and FAILED acceptance after installing 11 files and restarting only the chat, with self-reported rollback but without independent post-rollback readback. One measured synthetic chat question had first meaningful model delta 6551ms and arithmetic failure; a follow-up failed history handling. SOURCE-only RU/ES/WEB evidence tests passed; no independently verified knowledge ingest, native optimizer step or new student weights.",
+  "self_improvement": {
+    "status": "SOURCE_VERIFIED_PARTIAL__NATIVE_FAIL_HOLD",
+    "color": "RED_NATIVE_YELLOW_SOURCE",
+    "source_scope": [
+      "2C bounded TTFT values and strict JSON: 44/44 synthetic source fixtures PASS at run 43776142560",
+      "2D OpenCodeReasoning exact normalized question cross-ID split/holdout gate source CI SUCCESS at run 43777489779 (unit tests in normal and Python -O)",
+      "V38 and original owner-ui source checks passed at 43777489923 / 43777493884; native-owner job SKIPPED in source-only workflow",
+      "1B original queue evidence fail-closed non-JSON event check source patch (no native attestation)",
+      "1D paired evaluator scoring rubric SHA gate prepared, exact new CI not established by this report"
+    ],
+    "source_ci": [
+      {
+        "run_id": 43776142560,
+        "conclusion": "SUCCESS",
+        "scope": "SYNTHETIC_SOURCE",
+        "observed": "44/44",
+        "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43776142560"
+      },
+      {
+        "run_id": 43777489779,
+        "conclusion": "SUCCESS",
+        "scope": "SOURCE",
+        "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43777489779"
+      },
+      {
+        "run_id": 43777489923,
+        "conclusion": "SUCCESS",
+        "scope": "SOURCE",
+        "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43777489923"
+      },
+      {
+        "run_id": 43777493884,
+        "conclusion": "SOURCE_SUCCESS_NATIVE_SKIPPED",
+        "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43777493884"
+      }
+    ],
+    "physical_native_owner_run": {
+      "run_id": 43777294443,
+      "scope": "AUTHENTICATED_OWNER_NATIVE",
+      "observed_msk": "2026-11-16 02:54–02:55",
+      "instance_id": 60509551,
+      "source_sha_applied": "463f508c38c3a0c001db11f7eeaf62c8ada15709",
+      "result": "HOLD_CHAT_NATIVE_ACCEPTANCE",
+      "action": "11 chat/bridge/UI paths installed; original chat restarted; model NOT restarted; explicit owner rollback reported",
+      "native_remote_exit_code": 2,
+      "original_paths_http": {
+        "root": 200,
+        "chat": 200,
+        "resonance": 200
+      },
+      "synthetic_chat_first_meaningful_delta_ms": 6551,
+      "synthetic_chat_total_ms": 7985,
+      "synthetic_chat_arithmetic_pass": false,
+      "history_followup_first_meaningful_delta_ms": 7222,
+      "history_followup_total_ms": 8552,
+      "history_model_pass": false,
+      "client_history_empty": true,
+      "one_executor_question_meaningful_delta_ms": 633,
+      "one_executor_question_saved_reported": true,
+      "post_rollback_file_sha_verified_independently": false,
+      "full_s03_restore_verified": false,
+      "independent_rollback_verified": false,
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43777294443",
+      "note": "Native receipt self-reports rollback_verified=true; that flag is NOT independent readback of restored file hashes and S03."
+    },
+    "measured_comparable_before_after_chat_delta": "нет данных",
+    "token_generation_per_sec": "нет данных",
+    "native_model_promotion_verified": false,
+    "summary": "Owner-native chat regression recorded; SOURCE CI success is not deployed live improvement."
+  },
+  "knowledge_training": {
+    "status": "RESEARCH_SOURCE_VERIFIED__S03_NATIVE_HOLD",
+    "color": "YELLOW",
+    "sources_reviewed_source_only": [
+      "NVIDIA OpenCodeReasoning per-row license/source/split; exact normalized question SHA holdout",
+      "RU/ES benchmark family + rubric identity controls",
+      "BRIGHTER RU/ES emotional dataset evaluated as research/holdout only"
+    ],
+    "source_tests": "2D source CI success and 2C synthetic source report acceptance; these do not validate real dataset rows",
+    "accepted_native_sources": "нет данных",
+    "accepted_native_records": "нет данных",
+    "original_s03_signed_write_readback": "нет данных",
+    "observed_chat_s03_saved_flag": "One executor question reported saved=true at owner run 43777294443, but independent durable S03 write+readback not verified.",
+    "original_s03_revision": "нет данных",
+    "original_s03_indexing_search_verified": "нет данных",
+    "native_ru_es_quality_before_after": "нет данных",
+    "C01_C08_M0_M7_emotions_live_verified": "нет данных",
+    "summary": "No confirmed new knowledge ingested/indexed/retrieved in original S03; source-only admission controls improved."
+  },
+  "weight_training": {
+    "status": "NATIVE_HOLD_HISTORICAL_BF16_FAILURE",
+    "color": "YELLOW_WITH_HISTORICAL_RED",
+    "actual_training_run_id": "нет данных",
+    "current_mode": "нет данных",
+    "owner_observed_service": "nox-train-volta-t866u",
+    "last_native_training_status_observed_msk": "2026-11-16 01:53 (outside this hour)",
+    "last_status_phase": "init",
+    "last_status_step": 0,
+    "last_status_step_is_optimizer_verified": false,
+    "last_status_loss": null,
+    "last_observed_error": "RuntimeError: _amp_foreach_non_finite_check_and_unscale_cuda not implemented for BFloat16 (01:28 and 01:53 MSK historical)",
+    "same_run_verified_optimizer_global_step": "нет данных",
+    "same_run_optimizer_delta": "нет данных",
+    "loss_current_hour": "нет данных",
+    "verified_new_optimizer_checkpoint_sha": "нет данных",
+    "verified_new_weights_sha": "нет данных",
+    "hf_base_tokenizer_shard_identity": "нет данных",
+    "independent_full_s03_optimizer_weights_restore": "нет данных",
+    "no_duplicate_writer_attested_current_hour": "нет данных",
+    "native_training_evaluation": "нет данных",
+    "measured_weight_quality_delta": "нет данных",
+    "summary": "02:55 owner chat run had no new GPU1 optimizer or checkpoint receipts. Old BF16 failure remains an observed unresolved safety blocker but is not a fresh 02-hour optimizer sample."
+  },
+  "bounded_native_queue": {
+    "master_path": "coordination/NOX_R60_MASTER.json",
+    "source_planned_count": 60,
+    "source_states": "60 PENDING_NATIVE_REGISTRATION",
+    "source_registered_count": 0,
+    "positive_native_job_id_plus_s03_receipt_count": 0,
+    "live_queue_size": "нет данных",
+    "note": "6 executor worker IDs in owner chat status are not 60 signed native queue IDs"
+  },
+  "historical_resource_snapshot_not_this_hour": {
+    "native_run_id": 43772141002,
+    "observed_msk": "2026-11-16 01:58",
+    "gpu0_used_vram_mib": 27360,
+    "gpu0_util_pct": 7,
+    "gpu1_used_vram_mib": 21622,
+    "gpu1_util_pct": 0,
+    "cgroup_memory_current_bytes": 163799330816,
+    "cgroup_memory_max_bytes": 194065203200,
+    "disk_free_bytes": 16385937408,
+    "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43772141002",
+    "current_hour_gpu_vram_ram": "нет данных"
+  },
+  "publication": {
+    "original_s03_native_writer_authenticated_for_this_report": false,
+    "original_s03_mutation_attempted": false,
+    "web_publish": "WEB_PUBLISH_HOLD",
+    "git_source_report_path": "coordination/progress/hourly/2026-11-15T23.json",
+    "write_policy": "ONE_GIT_PARENT_CAS_NO_FORCE",
+    "notion_project_journal_write": "NOT_ATTEMPTED; hourly progress belongs in GitHub coordination report"
+  },
+  "operator_actions": {
+    "on_onehost_by_this_reporter": [],
+    "new_trainers": 0,
+    "new_schedulers": 0,
+    "production_restart_or_deletion_by_reporter": false,
+    "native_owner_run_is_separate_executor": true,
+    "verified_freed_disk_bytes_by_reporter": 0
+  },
+  "one_next_action": "Single existing owner-fenced operator: execute one authenticated READ-ONLY post-rollback original WEB/Resonance SSE+S03 durable readback, per-file restore SHA, GPU0/GPU1 PID+STOP+writer lease and independent offsite S03+optimizer restore audit. Then address original chat regression and BF16 path under sole owner lock, no competing trainer.",
+  "primary_evidence": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43777294443",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43776142560",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43777489779",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43772141002",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/34c70870b94eb42c5e7c1642017f6b3d67196ad2/coordination/NOX_HYBRID_TRAINING_OWNER_APPROVAL_20261115.md"
+  ]
+}

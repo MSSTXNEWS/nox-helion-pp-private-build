@@ -1,0 +1,41 @@
+name: NOX V63 existing HF executable and disk admission integration
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v63-hf-cli-readonly.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v63-hf-dependency-readonly
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile audit
+        run: python3 -m py_compile nox_runpod/teacher_mesh/v63/hf_cli_alignment.py
+      - name: Identify existing HF venv binary without installation or download
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v63.hf_cli_alignment
+      - name: Mandatory temporary SSH key revoke
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: GENESIS admissibility receipt
+        if: success()
+        run: echo 'NOX_GENESIS_V1_1_HF_DEPENDENCY_AUDITED=true'

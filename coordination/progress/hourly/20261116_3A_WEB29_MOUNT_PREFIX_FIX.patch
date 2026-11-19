@@ -1,0 +1,64 @@
+# NOX WEB29 3A · V06 · source-only fix 2026-11-16
+# preimage JS sha256: 02ea1798aae7b024b29f709f4d19ac65b4386a19e7271143f4989e130d62a2f8
+# postimage JS sha256: c12a85540ae0f715f0e6669771d6331ff49f58e4c61331c9df7ab348afb6dadc
+# input 3A ZIP sha256: 9b3b4a3cb7e1e0e8050823801296fc0e992ee0862fd2b7265e80ec013c0539b2
+# output 3A ZIP sha256: b91d2a5c11ef7365fee6d76396c619611c0d2f1bf4399fb7ab388484b2659b7f
+# Test: node --check, 14 route assertions, 1211/1212 members byte-identical, ZIP CRC PASS.
+# Browser/native: HOLD_ERR_BLOCKED_BY_ADMINISTRATOR; no owner lease/STOP/rollback; no live deploy.
+# WEIGHTS unknown successful native updates/checkpoint/restore; no changes this run.
+# KNOWLEDGE no new Hunter native S03 recall receipt this run.
+# DISPATCHER+RESOURCES no new PID/lease/cgroup/GPU snapshot; no restarts/deletions.
+# Next: owner-authorized exact preimage and rollback, stage one file, authenticated web E2E.
+
+--- a/site/pc/v25/nox-shell-v25.js
++++ b/site/pc/v25/nox-shell-v25.js
+@@ -8,0 +9,12 @@
++  // Resolve existing V25 menu routes against the actual mounted WEB29 path.
++  // Owner WEB is usually under /nox-web-v29/, not at origin root.
++  const PC_BASE = new URL('../', SCRIPT_URL).pathname;
++  const SITE_BASE = new URL('../../', SCRIPT_URL).pathname;
++  const localHref = (href) => {
++    if (typeof href !== 'string' || !href) return href;
++    if (/^(?:https?:|mailto:|#|\/\/)/i.test(href) || !href.startsWith('/')) return href;
++    if (/^\/(?:api\/|chat\/login(?:[/?#]|$))/.test(href)) return href;
++    if (SITE_BASE !== '/' && href.startsWith(SITE_BASE)) return href;
++    if (href.startsWith('/pc/')) return SITE_BASE + href.slice(1);
++    return PC_BASE + href.slice(1);
++  };
+@@ -10,2 +22,2 @@
+-  const isHome = location.pathname === '/' || location.pathname === '/index.html';
+-  const isRes = location.pathname === '/resonance.html' || location.pathname === '/chat.html';
++  const isHome = location.pathname === PC_BASE || location.pathname === PC_BASE + 'index.html';
++  const isRes = location.pathname === PC_BASE + 'resonance.html' || location.pathname === PC_BASE + 'chat.html';
+@@ -37 +49 @@
+-  const hrefOf = (t, x) => x.routeId === 'work.evolution' ? PROGRESS_URL : x.href || `/hub.html?s=${t.id}#${x.routeId}`;
++  const hrefOf = (t, x) => x.routeId === 'work.evolution' ? PROGRESS_URL : localHref(x.href || `/hub.html?s=${t.id}#${x.routeId}`);
+@@ -40,2 +52,2 @@
+-    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/pc/v25/nox-shell-v25.css'; l.dataset.n25Css = '1'; document.head.append(l);
+-    if (!document.querySelector('link[href*="tektur.css"]')) { const f = document.createElement('link'); f.rel = 'stylesheet'; f.href = '/pc/vendor/fonts/tektur/tektur.css'; document.head.append(f); }
++    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = localHref('/pc/v25/nox-shell-v25.css'); l.dataset.n25Css = '1'; document.head.append(l);
++    if (!document.querySelector('link[href*="tektur.css"]')) { const f = document.createElement('link'); f.rel = 'stylesheet'; f.href = localHref('/pc/vendor/fonts/tektur/tektur.css'); document.head.append(f); }
+@@ -50 +62 @@
+-    return `<article class="n25-tile" data-tile="${t.id}"><header><span class="n25-orb">${svg(t.icon)}</span><h2><a href="/pc/hub.html?s=${t.id}">${esc(t.title)}</a></h2></header><p>${esc(t.desc)}</p><ul class="n25-sub">${rows}</ul><a class="n25-btn n25-more" href="/pc/hub.html?s=${t.id}">${more}открыть раздел →</a></article>`;
++    return `<article class="n25-tile" data-tile="${t.id}"><header><span class="n25-orb">${svg(t.icon)}</span><h2><a href="${localHref(`/pc/hub.html?s=${t.id}`)}">${esc(t.title)}</a></h2></header><p>${esc(t.desc)}</p><ul class="n25-sub">${rows}</ul><a class="n25-btn n25-more" href="${localHref(`/pc/hub.html?s=${t.id}`)}">${more}открыть раздел →</a></article>`;
+@@ -66 +78 @@
+-      <a class="n25-btn" href="/index.html">${svg('home')}Главная</a><a class="n25-btn" href="/resonance.html">${svg('chat')}Резонанс</a><a class="n25-btn" href="${PROGRESS_URL}" data-nox-evolution>↗ Развитие NOX</a>
++      <a class="n25-btn" href="${localHref('/index.html')}">${svg('home')}Главная</a><a class="n25-btn" href="${localHref('/resonance.html')}">${svg('chat')}Резонанс</a><a class="n25-btn" href="${PROGRESS_URL}" data-nox-evolution>↗ Развитие NOX</a>
+@@ -87 +99 @@
+-    d.innerHTML = `<a href="/index.html" title="Главная · HELION + 8 CoreID">${svg('home')}<span>Главная</span></a><button type="button" class="n25-primary" data-n25-open title="МЕНЮ NOX · Alt+M">${svg('menu')}<span>Меню</span></button><a href="/resonance.html" title="Резонанс · чат NOX">${svg('chat')}</a><a href="${PROGRESS_URL}" title="Развитие NOX" data-nox-evolution>${svg('brain')}</a><button type="button" data-n25-search title="Поиск разделов">${svg('search')}</button><button type="button" data-n25-back title="Назад">${svg('back')}</button>`;
++    d.innerHTML = `<a href="${localHref('/index.html')}" title="Главная · HELION + 8 CoreID">${svg('home')}<span>Главная</span></a><button type="button" class="n25-primary" data-n25-open title="МЕНЮ NOX · Alt+M">${svg('menu')}<span>Меню</span></button><a href="${localHref('/resonance.html')}" title="Резонанс · чат NOX">${svg('chat')}</a><a href="${PROGRESS_URL}" title="Развитие NOX" data-nox-evolution>${svg('brain')}</a><button type="button" data-n25-search title="Поиск разделов">${svg('search')}</button><button type="button" data-n25-back title="Назад">${svg('back')}</button>`;
+@@ -90 +102 @@
+-    d.querySelector('[data-n25-back]').onclick = () => (history.length > 1 ? history.back() : location.assign('/index.html'));
++    d.querySelector('[data-n25-back]').onclick = () => (history.length > 1 ? history.back() : location.assign(localHref('/index.html')));
+@@ -97 +109 @@
+-    box.innerHTML = `<div class="n25-row"><a class="n25-btn" href="/index.html" title="Главная">${svg('home')}Главная</a><button type="button" class="n25-btn" data-n25-open title="МЕНЮ NOX · Alt+M">${svg('menu')}Меню</button></div><div class="n25-title">РАЗДЕЛЫ</div>` +
++    box.innerHTML = `<div class="n25-row"><a class="n25-btn" href="${localHref('/index.html')}" title="Главная">${svg('home')}Главная</a><button type="button" class="n25-btn" data-n25-open title="МЕНЮ NOX · Alt+M">${svg('menu')}Меню</button></div><div class="n25-title">РАЗДЕЛЫ</div>` +
+@@ -115 +127 @@
+-      if (!document.querySelector('.n25-kithome')) { const h = document.createElement('a'); h.className = 'nx-btn n25-kithome'; h.href = '/index.html'; h.title = 'Главная · HELION + 8 CoreID'; h.innerHTML = svg('home'); h.style.cssText = 'display:inline-grid;place-items:center;width:30px;height:30px;padding:0'; h.querySelector('svg').style.cssText = 'width:16px;height:16px'; b.before(h); } } }, 300);
++      if (!document.querySelector('.n25-kithome')) { const h = document.createElement('a'); h.className = 'nx-btn n25-kithome'; h.href = localHref('/index.html'); h.title = 'Главная · HELION + 8 CoreID'; h.innerHTML = svg('home'); h.style.cssText = 'display:inline-grid;place-items:center;width:30px;height:30px;padding:0'; h.querySelector('svg').style.cssText = 'width:16px;height:16px'; b.before(h); } } }, 300);
+@@ -149 +161 @@
+-    else if (location.pathname.startsWith('/pc/pages/')) hookPagesKit();
++    else if (location.pathname.startsWith(PC_BASE + 'pages/')) hookPagesKit();
+@@ -152 +164 @@
+-  window.NOX_V25_SHELL = { openMenu, closeMenu, loadIA, svg, esc, tileHTML, hrefOf, buildOverlay, ST };
++  window.NOX_V25_SHELL = { openMenu, closeMenu, loadIA, svg, esc, tileHTML, hrefOf, buildOverlay, localHref, ST };

@@ -1,0 +1,38 @@
+name: NOX E2 V71 RAM and S03 live capacity (read-only)
+on:
+  push:
+    branches: [nox/e2-v71-oneprime-chatfirst-20261114]
+    paths: ['.github/workflows/nox-e2-v71-ram-readonly.yml']
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v71-ram-readonly
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Validate source and NOX2
+        run: |
+          set -euo pipefail
+          test -n "$NOX2"
+          python3 -m py_compile nox_runpod/teacher_mesh/v71/ram_inventory.py
+      - name: Native measured RAM tmpfs and S03 size audit
+        run: python3 -m nox_runpod.teacher_mesh.v71.ram_inventory
+      - name: Detach temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

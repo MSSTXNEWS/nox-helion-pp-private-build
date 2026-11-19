@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_3B",
+  "at_utc": "2026-11-16T17:37:17.326Z",
+  "at_msk": "2026-11-16T20:00:00+03:00 (hour bucket; UTC exact above)",
+  "start_head": "f3521edfa99b6941ac034f0300f0fa9c2f34ebcb",
+  "source_preimage_blob": "b2e97bc9a48edf2c39dfd8953fdf4db78c33788c",
+  "test_preimage_blob": "9adfc316752626578f5149f505d4a25f47a52c7e",
+  "task_id": "S3-04",
+  "error_id": "NOX-P0-3B-SSE-POST-FINISH-DELTA",
+  "root_cause": "Original owner_chat_stream._model_events accepted fresh content/tool deltas and repeated finish frames after finish_reason=stop/tool_calls, before [DONE], allowing invalid model output to be shown and _agent_final/S03 to be certified.",
+  "repair": "Reject nonempty model content, tool calls or a second finish_reason after first terminal finish; allow usage-only choices=[] metadata, preserve early first meaningful token and original model transport. No fake content.",
+  "source_status": "SOURCE_TESTED",
+  "native_status": "HOLD",
+  "native": {
+    "instance_id": 60509551,
+    "prior_owner_read_only_at": "2026-11-16T16:48:21Z",
+    "prior_job_id": 133453659138,
+    "owner_stop_prior": "PRESENT",
+    "writer_lease": "UNKNOWN",
+    "new_pid_start_ticks": [],
+    "new_verified_jobs": [],
+    "new_optimizer_updates": 0,
+    "new_hunter_s03_recalls": 0,
+    "new_downloaded_bytes": 0,
+    "new_deleted_bytes": 0,
+    "restarts": 0,
+    "model_promoted": false
+  },
+  "tasks": [
+    {
+      "id": "S3-04",
+      "state": "SOURCE_TESTED_NATIVE_HOLD",
+      "evidence": "Post-terminal illegal SSE delta regression; native deepseek/adapter unavailable"
+    },
+    {
+      "id": "S1-01",
+      "state": "HOLD_FRESH_NATIVE",
+      "evidence": "Latest prior read-only 16:48Z; current processes/owner not read back"
+    },
+    {
+      "id": "S1-03",
+      "state": "HOLD_WRITER_LEASE",
+      "evidence": "Manual STOP prior; no current owner lease or native claim"
+    },
+    {
+      "id": "S1-07",
+      "state": "HOLD_INDEPENDENT_RESTORE",
+      "evidence": "S03+optimizer/scaler/RNG independent recoverable checkpoint not proven"
+    },
+    {
+      "id": "S2-07",
+      "state": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "evidence": "Prior internal disk 183609851904 B total/43158790144 B free vs 248834257920 B unique model requirement"
+    }
+  ],
+  "WEIGHTS": {
+    "successful_updates_new": 0,
+    "independent_restore_verified": false
+  },
+  "KNOWLEDGE": {
+    "hunter_source_s03_readback_recall_new": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "native_claims_new": 0,
+    "writer_lease": "UNKNOWN",
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0
+  },
+  "rollback": "Source CAS restore exact preimage file blobs if regression, no native rollback necessary",
+  "next": "Verify exact source CI. Current owner-native read-only STOP/lease/UI/model identity and offsite restore; admit seekable storage, then integrate verified Maya stdio to existing OneHost SSE and benchmark RU/ES.",
+  "source_commit": "a94029e4e1cd71cc4245d4964e6ad3d9877b5c2b",
+  "test_fix_commit": "e560aeeb09d6fabbb1d0a3d7e24ac2a76ab3989c",
+  "workflow_commit": "71db0bcc206d79ff2712d4eca915081263b513e7",
+  "source_blob": "3af23129f9e1549f68f9b55eaddda2d96a40549d",
+  "test_blob": "dc2ba6d3c8f3629417f677380eda08e771c75c3e",
+  "workflow_blob": "77e51b3fd977415991309c34202930e3d252fe36",
+  "ci": {
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43920970821",
+    "run_id": 43920970821,
+    "job_id": 133487826763,
+    "status": "SUCCESS",
+    "scope": "SOURCE_ONLY_GITHUB_ACTIONS",
+    "test_owner_chat_stream": {
+      "discovered": 15,
+      "passed": 13,
+      "skipped_local_only": 2,
+      "failed": 0
+    },
+    "extra_v135_steps": "SUCCESS"
+  },
+  "last_checked_at_utc": "2026-11-16T17:45:01.312Z",
+  "evidence_failure_before_fix": {
+    "run_id": 43920723971,
+    "diagnosis": "Test fixture used literal escaped LF instead of real SSE LF delimiters; stream never reached DONE. Corrected test-only encoding, no source change."
+  }
+}

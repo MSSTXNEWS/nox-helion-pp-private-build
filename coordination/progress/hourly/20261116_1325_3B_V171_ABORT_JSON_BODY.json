@@ -1,0 +1,77 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3B_V171",
+  "instructions_version": "0.0.6",
+  "slot": "3B",
+  "at_utc": "2026-11-16T10:27:58.618Z",
+  "head_before": "c09a784a1842638cda0107bc8c67f1d92758557c",
+  "bridge_blob_before": "f98b879c2afb4656ca23b7cb336581423c851b3e",
+  "tests_blob_before": "7376eb8ea8b1358f5cc12c32bba357a90e46b613",
+  "issue": "Owner S03 history or dialog create returns HTTP headers but response.json body stalls; caller AbortSignal could not interrupt pending body parse, so STOP hangs before final response.",
+  "fix": "Use existing waitOrAbort helper for owner JSON body parsing on history/create/rename. Preserve native same-origin owner ACL, S03 exchange_id verification, per-request STOP and source locks. No backend or UI rewrite.",
+  "changed_paths": [
+    "coordination/onepass/nox-v135-resonance-owner-bridge.js",
+    "coordination/onepass/test_v135_resonance_owner_bridge.cjs"
+  ],
+  "source_length_before": 18818,
+  "source_length_after": 18961,
+  "within_20k_owner_bridge": true,
+  "tests_added": [
+    "abort after headers during S03 history JSON body",
+    "abort after headers during dialog creation JSON body"
+  ],
+  "test_scope": "SOURCE_FIX_PENDING_CI_NO_NATIVE_DEPLOY",
+  "tasks": [
+    {
+      "number": 1,
+      "state": "HOLD_NATIVE_NEW_MODEL_SHA",
+      "evidence": "prior original owner-auth/health and NOX36 documented; no fresh authenticated browser model readback in this run"
+    },
+    {
+      "number": 2,
+      "state": "SOURCE_PRESERVED_NATIVE_HOLD",
+      "evidence": "Existing first genuine delta source unchanged; live p50/p95 pending"
+    },
+    {
+      "number": 3,
+      "state": "SOURCE_FIX_PENDING_CI",
+      "evidence": "Abort now interrupts stalled native S03 history body without fake history_persisted"
+    },
+    {
+      "number": 4,
+      "state": "SOURCE_FIX_PENDING_CI",
+      "evidence": "Per-request STOP now interrupts S03 readback and dialog-create body after HTTP headers"
+    },
+    {
+      "number": 5,
+      "state": "HOLD_NATIVE_BENCHMARK",
+      "evidence": "No fresh RU/ES TTFT/tokens-per-second/p50/p95 measured"
+    }
+  ],
+  "WEIGHTS": {
+    "state": "HOLD_NO_FRESH_TRAINER_NATIVE_RECEIPT",
+    "prior_verified_successful_qwen_updates": 8,
+    "new_verified_updates": null,
+    "checkpoint_restore_current": null
+  },
+  "KNOWLEDGE": {
+    "state": "HOLD_HUNTER_S03_RECALL",
+    "new_native_jobid": null,
+    "new_verified_recall": null
+  },
+  "DISPATCHER+RESOURCES": {
+    "state": "HOLD_NO_FRESH_NATIVE_TELEMETRY",
+    "previous_observed_dispatcher_pid": 876007,
+    "current_pid": null,
+    "current_lease": null,
+    "restarted": false,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0
+  },
+  "protection": {
+    "web29_d02_14worlds_unchanged": true,
+    "genesis_s03_weights_checkpoints_unchanged": true,
+    "deploy_executed": false,
+    "cleanup_executed": false
+  },
+  "next": "Check source CI on exact commit; if PASS execute owner-authorized original WEB29 browser SSE/STOP/S03 RU/ES E2E with real model readback/lease and measured p50/p95."
+}

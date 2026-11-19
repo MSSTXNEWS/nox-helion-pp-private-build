@@ -21,8 +21,10 @@ def review(candidate, *, current_head, independent_test_receipt=None):
                 reasons.append('OUT_OF_SCOPE_CHANGE');break
     if not re.fullmatch(r'[0-9a-f]{64}',str(candidate.get('diff_sha256',''))):reasons.append('PATCH_SHA_REQUIRED')
     if not candidate.get('owner_review_required'):reasons.append('NO_OWNER_REVIEW_GATE')
-    if independent_test_receipt is None or independent_test_receipt.get('source_head')!=current_head:
+    if not isinstance(independent_test_receipt,dict) or independent_test_receipt.get('source_head')!=current_head:
         reasons.append('INDEPENDENT_TEST_NOT_CONFIRMED')
+    elif independent_test_receipt.get('diff_sha256')!=candidate.get('diff_sha256'):
+        reasons.append('INDEPENDENT_PATCH_NOT_CONFIRMED')
     elif independent_test_receipt.get('all_pass') is not True:reasons.append('TEST_FAILURE')
     return {'state':'REVIEWABLE_PR_CANDIDATE_NOT_MERGED' if not reasons else 'HOLD',
             'reasons':reasons,'auto_merged':False,'weights_changed':False}

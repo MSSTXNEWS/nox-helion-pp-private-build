@@ -1,0 +1,144 @@
+{
+  "schema": "NOX_V13_DUTY_3_OWNER_NATIVE_INSPECT_V1",
+  "instructions_version": "0.0.6",
+  "observed_utc": "2026-11-16T20:40:57Z",
+  "observed_msk": "2026-11-16T23:40:57+03:00",
+  "snapshot_source_head": "3ddae12f2bb4c04e27b8a63f2aa81f0f559d69b8",
+  "native_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43952157726",
+  "native_job": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43952157726/job/133597198617",
+  "owner_inspect_comment": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/256#issuecomment-6928671300",
+  "native": {
+    "instance_id": 60509551,
+    "state": "RUNNING",
+    "gpus": "2x V100 SXM2 32GB",
+    "provider_mutations": 0,
+    "owner_stop": "PRESENT",
+    "owner_maintenance": "PRESENT",
+    "train_hold": "PRESENT",
+    "train_pause": "PRESENT",
+    "lease": "UNKNOWN_NO_OWNER_CAS_READBACK",
+    "core_supervisor": {
+      "nox-chat-8081": "STOPPED",
+      "nox-dispatcher-t855u": "STOPPED",
+      "nox-priority-scheduler": "STOPPED",
+      "nox-selfheal": "STOPPED",
+      "nox-gpu-watchdog-t865u": "STOPPED"
+    },
+    "core_pid_start_ticks": null,
+    "listener_8081_socket_inodes": 0,
+    "listener_8081_pid_map_complete": true,
+    "nox_owned_gpu_processes": 0,
+    "configured_six_native_workers": "NO_SIX_OS_PIDS_OR_CLAIMS_VERIFIED",
+    "guest_process_rows": 12,
+    "preserved_base_host_processes": [
+      {
+        "name": "caddy",
+        "pid": 179,
+        "start_ticks": 149186729
+      },
+      {
+        "name": "cron",
+        "pid": 181
+      },
+      {
+        "name": "instance_portal",
+        "pid": 184
+      },
+      {
+        "name": "tensorboard",
+        "pid": 222
+      },
+      {
+        "name": "tunnel_manager",
+        "pid": 228
+      }
+    ],
+    "gpu_vram_mib": [
+      0,
+      0
+    ],
+    "gpu_utilization_pct": [
+      0,
+      0
+    ],
+    "cgroup_cpu_quota_cores": 19.2,
+    "cgroup_memory_current_bytes": 60387471360,
+    "cgroup_memory_max_bytes": 194065203200,
+    "root_total_bytes": 183609851904,
+    "root_free_bytes": 43158556672,
+    "shm_total_bytes": 50465865728,
+    "shm_free_bytes": 3366711296,
+    "available_mounts_allowlist": [
+      "/ overlay"
+    ],
+    "mounted_seekable_write_verified": false,
+    "server_rclone_remote_count": 0,
+    "http_8080_8081_8082": "URLError",
+    "active_model_identity": "UNKNOWN",
+    "s03_sqlite_metadata_bytes": 49037312,
+    "s03_independent_restore": false,
+    "s03_live_recall": false,
+    "maya_binary_sha256": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+    "maya_binary_bytes": 71289520,
+    "maya_elf_sha_matches": true,
+    "maya_tp2_inference": false,
+    "python_venv_metadata": "/root/venv_volta/bin/python",
+    "torch": "2.6.0+cu124",
+    "transformers": "5.23.0",
+    "trl": "1.18.0",
+    "peft": "0.21.3",
+    "deepspeed": "0.20.0",
+    "bitsandbytes": "0.50.2",
+    "python_metadata_probe_rc": 0,
+    "trl_signature_probe": "HOLD_PINNED_NATIVE_PYTHON_MISSING (inconsistent with successful package metadata; investigate, don't assume python missing)",
+    "dual_gpu_sm70_fp16_smoke": false,
+    "deepseek_total_unique_bytes": 248834257920,
+    "deepseek_missing_five_bytes": 248828477216,
+    "missing_five_shortfall_vs_free_bytes": 205669920544,
+    "full_model_shortfall_vs_total_root_bytes": 65224406016,
+    "remote_guest_exit": 0,
+    "temp_ssh_key": "DETACHED_AND_VERIFIED"
+  },
+  "tasks": [
+    {
+      "id": "V13-01",
+      "status": "LIVE_VERIFIED_READONLY_PARTIAL",
+      "details": "Owner STOP/Maintenance/Hold, 5 supervisors STOPPED and no 8081 listener, no NOX-owned GPU apps. Fresh lease CAS remains UNKNOWN."
+    },
+    {
+      "id": "V13-02",
+      "status": "HOLD_NATIVE_RESTORE",
+      "details": "S03+WAL/Genesis/skills/history/unique checkpoint+optimizer/scaler/RNG independent restore/readback not proven."
+    },
+    {
+      "id": "V13-04",
+      "status": "LIVE_READONLY_ABI_METADATA_NATIVE_FP16_HOLD",
+      "details": "Native venv package metadata checked; CP311/cu126 Drive wheelhouse not installed. No GPU0+GPU1 FP16 smoke; TRL signature probe contradictory."
+    },
+    {
+      "id": "V13-05",
+      "status": "HOLD_NATIVE_SEEKABLE_STORAGE",
+      "details": "Root 183,609,851,904B total and 43,158,556,672B free; five missing GGUF 248,828,477,216B, 205,669,920,544B free shortfall before reserve; no verified persistent seekable external mount."
+    },
+    {
+      "id": "V13-06",
+      "status": "LIVE_VERIFIED_READONLY_BINARY_SHA_ONLY",
+      "details": "Maya 71,289,520B pinned ELF SHA matches; no TP2 inference/complete model/native promotion."
+    }
+  ],
+  "tail_control_v13_07_to_12": "HOLD; currently served WEB/model, RU/ES SSE/STOP, S03/skills recall, media workflows, six worker OS PIDs and new model weight training not accepted.",
+  "effects_attributed_to_run": {
+    "native_download_bytes": 0,
+    "native_deleted_bytes": 0,
+    "native_restarts": 0,
+    "native_packages_installed": 0,
+    "new_optimizer_updates_verified": 0,
+    "native_s03_writes_or_recalls_verified": 0,
+    "owner_stop_modified": false,
+    "automation_ids_schedules_enabled_changed": false,
+    "owner_native_readonly_inspects": 1
+  },
+  "rollback": "No native mutation to roll back; this receipt is an append-only coordination artifact.",
+  "first_next_ready": "V13-02 independent restore & owner lease proof; in parallel V13-05 persistent same-instance seekable >=248,834,257,920 B plus reserve; then V13-04 bounded dual V100 FP16, full GGUF SHA, Maya TP2 and original WEB acceptance.",
+  "no_false_pass": "SOURCE CI or configured six dispatcher worker threads do not prove model installation, six OS workers, new optimizer steps or real inference."
+}

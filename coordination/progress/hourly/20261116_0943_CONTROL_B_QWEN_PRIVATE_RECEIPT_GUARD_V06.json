@@ -1,0 +1,89 @@
+{
+  "schema": "NOX_CONTROL_B_READ_ONLY_RECEIPT_V06",
+  "instructions_version": "0.0.6",
+  "created_at_utc": "2026-11-16T06:43:02Z",
+  "created_at_msk": "2026-11-16T09:43:02+03:00",
+  "scope": "EXISTING_WEB29_AND_WEIGHTS_ONLY",
+  "task_id": "control_b.qwen_private_receipt_contract.20261116",
+  "source_fix": {
+    "error_id": "NOX-P0-QWEN-INSPECT-PRIVATE-ERROR-AND-NONFINITE-METRIC-20261116",
+    "source_path": "nox-control/owner_native_inspect.py",
+    "source_commit": "a98b959bfe17db24a0fb01bff0feffd6551b94c8",
+    "test_path": "nox-control/test_owner_native_inspect_receipt_privacy.py",
+    "regression_commit": "c74133e20831f052079a4cb6c7c0c45fbf623bb6",
+    "fixed": "qwen_training_readback no longer emits arbitrary owner-private error/reason/request/timestamp strings or nonfinite/boolean-as-step fields; result marked SELF_REPORTED_NOT_LIVE_PROOF",
+    "readback_sha_source": "369d9e2d033ccb938a5a76a44c1c8382cba498f4",
+    "readback_sha_test": "d3d928ed950003d137ee283a2a1d955afab51ce1",
+    "isolated_exact_helper_tests": {
+      "passed": 2,
+      "total": 2,
+      "scope": "EXACT_HELPER_ONLY"
+    },
+    "github_ci_exact_added_tests": "NOT_EXECUTED_OR_NOT_OBSERVED",
+    "native_installed": false
+  },
+  "auto_slots": {
+    "enabled": "12/12",
+    "controllers_enabled": 2,
+    "verified_with": "Automations.peek",
+    "all_execution_outcomes_verified": false
+  },
+  "latest_owner_native": {
+    "observed_at_utc": "2026-11-16T06:15:54Z",
+    "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43815393580",
+    "case": "qwen_handback_retry_install",
+    "dispatcher": "RUNNING",
+    "dispatcher_pid": 746352,
+    "trainer": "RUNNING at native readback",
+    "request_state": "RESUMED",
+    "start_command_issued": true,
+    "checkpoints": [
+      {
+        "step": 6,
+        "verified_files": 10,
+        "verified_bytes": 519882866
+      },
+      {
+        "step": 8,
+        "verified_files": 10,
+        "verified_bytes": 519884896
+      }
+    ],
+    "successful_optimizer_updates_verified_through": 8,
+    "new_optimizer_updates_after_handback_verified": false,
+    "current_optimizer_pid_after_snapshot": null,
+    "live_s03_recall_verified": false,
+    "note": "Workflow conclusion SUCCESS applies to owner maintenance operation, not proof of step 9 or updated main model."
+  },
+  "cleanup": {
+    "status": "HOLD_NEW_MODEL_NOT_DEPLOYED",
+    "delete_count": 0,
+    "deleted_bytes": 0,
+    "last_verified_serving_model": "NOX36 Q4_K_M symlink (older native inspect), not new DeepSeek",
+    "server_drive_oauth_verified": false,
+    "independent_offsite_restore_verified": false,
+    "exact_old_model_sha256_verified": false,
+    "reason": "No fully accepted new serving model, and required remote restore/ownership/STOP gates absent"
+  },
+  "model_transfer": {
+    "deepseek_target_unique_bytes": 248834257920,
+    "latest_saved_progress": "one complete shard 00005-of-00006 (19,923,784,832 bytes) reported SHA verified in 06:24Z Notion owner ledger; other 4 files remain, not native inference",
+    "remaining_reported_bytes": 228904692384,
+    "native_placement_ready": false,
+    "source": "https://app.notion.com/p/40cacc184a9f81248703e3840d4c2422"
+  },
+  "web": {
+    "native_deployed_this_run": false,
+    "source_sha_primary": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
+    "s03_recall_new_this_run": false,
+    "streaming_live_accepted": false
+  },
+  "run_effects": {
+    "native_commands_executed": false,
+    "training_started_or_restarted": false,
+    "model_switched": false,
+    "server_files_deleted": false,
+    "external_api_purchases": false
+  },
+  "next_first_fail": "Read-only owner-authorized live observation of current trainer process/starttime/STOP/GPU lease and optimizer step after checkpoint8; verify S03 recall and independent offsite restore before any restart, merge or cleanup."
+}

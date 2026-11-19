@@ -1,0 +1,48 @@
+name: NOX V117 existing full WEB V29 92 route physical inventory
+on:
+  pull_request:
+    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+    paths: ['nox_runpod/teacher_mesh/v117/**','.github/workflows/nox-v117-route-matrix.yml']
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: ['nox_runpod/teacher_mesh/v117/**','.github/workflows/nox-v117-route-matrix.yml']
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v117-60509551-readonly
+  cancel-in-progress: false
+jobs:
+  inventory:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.event_name == 'workflow_dispatch' && github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile both runner and native inspector
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v117/web_route_matrix.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v117.web_route_matrix import REMOTE_TEMPLATE
+          src=REMOTE_TEMPLATE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(src,'<v117 native>','exec')
+          PY
+      - name: Physical native OneHost route registration audit
+        run: python -m nox_runpod.teacher_mesh.v117.web_route_matrix
+      - name: Revoke only temporary SSH key
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

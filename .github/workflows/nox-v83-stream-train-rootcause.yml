@@ -1,0 +1,34 @@
+name: NOX V83 stream first-token and Volta exit root cause
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v83-stream-train-rootcause.yml, nox_runpod/teacher_mesh/v83/stream_trainer_cause.py]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v83-live-diag
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compile
+        run: python3 -m py_compile nox_runpod/teacher_mesh/v83/stream_trainer_cause.py
+      - name: Native browser stream and Volta log class
+        run: python3 -m nox_runpod.teacher_mesh.v83.stream_trainer_cause
+      - name: Temporary key removal
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

@@ -1,0 +1,39 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_CI_CLOSURE",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2A",
+  "at_utc": "2026-11-16T18:15:37Z",
+  "status": "SOURCE_TESTED_NATIVE_HOLD",
+  "previous_immutable_receipt": "coordination/progress/hourly/2026-11-16T21/2A_V10_EXISTING_FINAL_RECEIPT_RECOVERY_1812Z.json",
+  "source_commit": "f33fa80774a7044989dcbdc6645088e40834f3c7",
+  "test_commit": "93a4da327e649660f86026b2ffdd79688ebec864",
+  "source_blob": "8d47cd848a865b0bde367129111a935dc426fb88",
+  "test_blob": "36daf4af32e1c82a90ed4c02b98825149027c1e7",
+  "ci_commit": "7edb563144a5d93ba0c1943ca45fc3cbf31f7f97",
+  "ci_run_id": 43926909831,
+  "ci_job_id": 133508682992,
+  "ci_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43926909831",
+  "ci_status": "SUCCESS",
+  "test_counts": {
+    "deepseek": 53,
+    "maya_source": 4,
+    "maya_preflight_first": 18,
+    "maya_preflight_second": 18,
+    "total_invocations": 93,
+    "failed": 0
+  },
+  "new_regressions": [
+    "test_reused_complete_final_recovers_missing_receipt_without_download PASSED",
+    "test_reused_final_dangling_receipt_is_never_replaced PASSED"
+  ],
+  "scope": "GITHUB_SOURCE_FIXTURES_NOT_NATIVE_ONEHOST_INSTALL",
+  "native_owner_writer_claim": false,
+  "new_downloaded_bytes": 0,
+  "new_deleted_bytes": 0,
+  "new_optimizer_updates": 0,
+  "new_native_s03_recall": 0,
+  "restarts": 0,
+  "owner_stop_changed": false,
+  "rollback": "Source/test exact preimage blobs with GitHub CAS after fresh HEAD; no server mutation",
+  "next": "Current owner STOP/lease, independent S03/checkpoint restore and 248834257920 B+reserve seekable storage; only then one native download and Maya inference."
+}

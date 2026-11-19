@@ -1,0 +1,80 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2B",
+  "at_utc": "2026-11-16T18:28:37Z",
+  "at_msk": "2026-11-16T21:28:37+03:00",
+  "scope": "SOURCE_ONLY_NO_NATIVE_WRITER_CLAIM",
+  "repo_branch": "feature/nox-v38-synaptic-brain-20261114",
+  "source_preimage_blob": "d5775e8d2204e390f8cbf1095c95134a7968dcf3",
+  "source_blob": "1c9111f3f38043a018bcb4fc430c712696c8d86d",
+  "test_preimage_blob": "2760c96c0c8a56decb1e3ca7dc87c599bda81b95",
+  "test_blob": "4819ad91f870bb38e015a80c4adba94c5bbddb7a",
+  "source_commit": "fd1098bc1814491de8397bc93b340154338cdbec",
+  "test_commit": "e966aaebabb180c1f4ab6e6d454bf9b4534cafaf",
+  "CI": {
+    "run_id": 43929013542,
+    "job_id": 133516105609,
+    "result": "SUCCESS",
+    "tests_passed": 43,
+    "tests_failed": 0,
+    "exact_commit": "e966aaebabb180c1f4ab6e6d454bf9b4534cafaf"
+  },
+  "root_cause": "execute_gpu_recovery previously returned NATIVE_OWNER_PROCESS_RECOVERED for a superficial OneHost RUNNING flag without new PID/start_ticks, heartbeat, post-restart useful progress, or second STOP readback, allowing a false restoration PASS.",
+  "patch": "Existing V43 OneHost Resource Brain now fails closed on missing/invalid native PID and start_ticks, missing fresh postrestart heartbeat, owner lease/STOP mismatch, no new successful optimizer update GPU1 or no completed job GPU0, and STOP appearing after readback. No new scheduler/daemon/trainer.",
+  "regression": "43/43 existing V43 source tests PASS including new stale PID, bool/int coercion, zero/old successful updates, GPU0 job, STOP race regressions; native integration not tested.",
+  "tasks": [
+    {
+      "task_id": "S1-08",
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
+      "claim": "SOURCE_SCOPE_ONLY",
+      "source_evidence": "V43 job 133516105609 43/43 PASS; exact source/test blobs verified",
+      "native_evidence": "UNKNOWN owner writer lease, no live recovery performed"
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD_OWNER_STOP_LEASE",
+      "native_evidence": "Prior owner-readonly 2026-11-16T17:54:57Z job 133495640855: STOP + MAINTENANCE present, writer lease unknown; current writer authorization NOT verified"
+    },
+    {
+      "task_id": "S1-04",
+      "status": "HOLD_FRESH_NATIVE_RESOURCES",
+      "native_evidence": "Last snapshot 2026-11-16T17:54:57Z 2xV100 0/0 MiB, 43,158,749,184 B SSD free, 3,366,711,296 B shm free, 19.2 CPU quota, not current values"
+    },
+    {
+      "task_id": "S2-07",
+      "status": "HOLD_SEEKABLE_FULL_MODEL",
+      "native_evidence": "SSD total 183,609,851,904 B < 248,828,477,216 B required GGUF, no rclone remotes, no authorized seekable PC/Drive placement, current shard claims unknown"
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD_NATIVE_MAYA_SSE",
+      "native_evidence": "Maya source/ELF SHA historical, real CUDA inference, original UI routes, RU/ES SSE and TTFT not verified"
+    }
+  ],
+  "WEIGHTS": {
+    "new_successful_optimizer_updates": 0,
+    "model_promoted": false,
+    "new_checkpoint_restore_verified": false,
+    "new_trainable_tensor_sha": null,
+    "trainer_pid_start_ticks": null
+  },
+  "KNOWLEDGE": {
+    "new_hunter_source_s03_write_recall_verified": 0,
+    "new_s03_job_ids": [],
+    "s03_mutated": false
+  },
+  "DISPATCHER_RESOURCES": {
+    "native_writer_claims_new": 0,
+    "native_jobs_new": [],
+    "owner_stop_cleared": false,
+    "downloaded_bytes_new": 0,
+    "deleted_bytes_new": 0,
+    "restarts_new": 0,
+    "installed": false,
+    "past_native_job_id": 133495640855,
+    "last_native_sample_at_utc": "2026-11-16T17:54:57Z"
+  },
+  "rollback": "At source only, git revert exact commits fd1098bc... and e966aaeb... after checking current blobs; no live rollback required. For eventual deployment use same owner STOP/lease, verified checkpoint/offsite restore, and native process readback.",
+  "next_ready": "First fresh owner-approved OneHost READ_ONLY STOP/lease/PID+start_ticks and independent restore; then verified external seekable 248828477216 B plus reserve, one shard claim, Maya inference and owner original chat E2E. Do not clear OWNER_STOP."
+}

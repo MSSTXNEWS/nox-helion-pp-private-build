@@ -1,0 +1,128 @@
+name: NOX V70 ONEPASS 3 cold files RAM to encrypted offsite in one run
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v70-onepass-cold-ram-offsite.yml, nox_runpod/teacher_mesh/v70/onepass_cold_offload.py]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Explicit owner approval for original NOX OneHost only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-60509551-onepass-cold-offsite
+  cancel-in-progress: false
+jobs:
+  onepass:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Gate ONEPASS with offline no-loss security tests
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v70/onepass_cold_offload.py
+          python -m unittest discover -s nox_runpod/teacher_mesh/v70/tests -p test_onepass.py -v
+      - name: Install official age encryption package
+        run: |
+          set -euo pipefail
+          if ! command -v age >/dev/null; then sudo apt-get update -qq && sudo apt-get install -qq -y age; fi
+          age --version
+      - name: ONEPASS read 3 cold archives via volatile Vast RAM and encrypt owner-side
+        run: |
+          set -euo pipefail
+          python -m nox_runpod.teacher_mesh.v70.onepass_cold_offload
+      - name: Cryptographic receipt and 6 exact source chunks
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          data=json.loads(Path('NOX_V70_COLD_3_ENCRYPTED_RECEIPT.json').read_text())
+          index=json.loads(Path('NOX_V70_PARTS_INDEX.json').read_text())
+          assert data['schema']=='NOX_V70_COLD_ONEPASS_OFFSITE_RECEIPT_V1'
+          assert data['transferred_file_count']==3
+          assert data['source_total_bytes']==415521256
+          assert data['temporary_test_key_restore_all_file_sha_verified'] is True
+          assert data['source_disk_files_deleted'] is False
+          assert data['active_resonance_s03_main_model_untouched'] is True
+          assert index['part_count']==6
+          assert index['ciphertext_sha256']==data['ciphertext_sha256']
+          for x in index['parts']:
+              p=Path('split')/f"part{x['index']:02d}"/x['name']
+              assert hashlib.sha256(p.read_bytes()).hexdigest()==x['sha256']
+              assert p.stat().st_size==x['bytes']
+          print('NOX_V70_SIX_PARTS_AND_ALL_FILE_SHA=PASS')
+          print('NOX_V70_ONEPASS_SOURCE_FILES_DELETED=false')
+          PY
+      - name: Encrypted ciphertext part 01
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V70_OWNER_CIPHER_PART_01_20261114
+          path: split/part01/*
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Encrypted ciphertext part 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V70_OWNER_CIPHER_PART_02_20261114
+          path: split/part02/*
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Encrypted ciphertext part 03
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V70_OWNER_CIPHER_PART_03_20261114
+          path: split/part03/*
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Encrypted ciphertext part 04
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V70_OWNER_CIPHER_PART_04_20261114
+          path: split/part04/*
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Encrypted ciphertext part 05
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V70_OWNER_CIPHER_PART_05_20261114
+          path: split/part05/*
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Encrypted ciphertext part 06
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V70_OWNER_CIPHER_PART_06_20261114
+          path: split/part06/*
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Mandatory final temporary SSH-key cleanup audit
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Truthful deployment boundary
+        if: success()
+        run: |
+          echo 'NOX_V70_ONEPASS_RUNNER_OFFSITE_PASS=true'
+          echo 'NOX_DRIVE_NOT_WRITTEN_BY_GITHUB_RUNNER=true'
+          echo 'USER_PC_NOT_ACCESSED=true'
+          echo 'VAST_COLD_SOURCE_NOT_DELETED=true'
+          echo 'NOX_PRIME_AND_S03_UNCHANGED=true'

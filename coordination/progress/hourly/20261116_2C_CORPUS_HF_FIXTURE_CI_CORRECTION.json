@@ -1,0 +1,15 @@
+{
+  "schema": "NOX_2C_SOURCE_TEST_CORRECTION",
+  "instructions_version": "0.0.6",
+  "slot": "2C",
+  "error_id": "NOX-P1-2C-LEGACY-CORPUS-FIXTURE-MISSING-HF-LINEAGE-20261116",
+  "head_before": "874b7b753b7457ed697004b2b13351215c72ef78",
+  "head_after": "COMMIT_WITH_RECEIPT",
+  "failed_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43819048092",
+  "observed": "V28 tests 36/36 PASS; corpus_gate 10/12 passed (6/6 new tests); 2 legacy tests failed because earlier adapter_recipe enforced immutable HF base revision/config/tokenizer/manifest, while old fixture supplied none",
+  "root_cause": "Outdated legacy test fixture incompatible with stricter real HF identity preflight; code must not relax this preflight.",
+  "correction": "Supply explicit syntactically valid fixture base_revision/architecture/config/tokenizer/manifest SHA fields; still synthetic and not native provenance.",
+  "lesson": "Test the full existing source CI before reporting pass. Correct fixtures for stronger safety gates instead of weakening producer requirements.",
+  "native_changed": false,
+  "next_action": "Rerun exact SHA V28 source CI and read back branch/blob; owner-native Hunter/S03 remains HOLD."
+}

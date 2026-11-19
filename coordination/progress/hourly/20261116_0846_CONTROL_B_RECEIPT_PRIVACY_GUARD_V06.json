@@ -1,0 +1,77 @@
+{
+  "schema": "NOX_CONTROL_B_V06_PROGRESS_RECEIPT",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-16",
+  "observed_at_local": "2026-11-16T08:46:21+03:00",
+  "scope": "EXISTING_ORIGINAL_WEB29_AND_WEIGHTS_ONLY",
+  "source_patch": {
+    "initial_commit": "c25a8b3eba9b484389245555140257b3c6809c14",
+    "regression_commit": "54a44def1c89017637ac65c704f4a265e70c1f65",
+    "file": "nox-control/owner_native_inspect.py",
+    "tests": "nox-control/test_owner_native_inspect_receipt_privacy.py",
+    "bug": "owner-native inspector printed raw owner_maintenance and owner_components receipts, and owner task result; these can contain owner-private S03 content and task payloads",
+    "change": "bounded status-only projections, file/no-follow validation, duplicate/nonfinite JSON fail-closed, raw task result withheld",
+    "isolated_regression_tests_passed": 6,
+    "isolated_regression_tests_total": 6,
+    "source_readback_verified": true,
+    "exact_full_source_CI": "NOT_VERIFIED; CircleCI Pipeline status=error",
+    "native_deployment": false
+  },
+  "five_results": [
+    {
+      "task": "CLEANUP_GATE",
+      "state": "HOLD",
+      "reason": "active NOX36 current.gguf symlink, DeepSeek full model not deployed, remote Drive auth and independent offsite restore unverified",
+      "deleted_bytes": 0
+    },
+    {
+      "task": "AUTOMATIONS",
+      "state": "DONE_READ_ONLY",
+      "result": "12/12 existing 1A-3D enabled; two controllers enabled; no schedule changes; completion of every native task not inferred"
+    },
+    {
+      "task": "ONEHOST",
+      "state": "HISTORICAL_NATIVE_OBSERVED",
+      "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43808405786",
+      "observed_utc": "2026-11-16T05:10:45Z",
+      "http_8080_8081_8082": 200,
+      "train_service": "EXITED rc3, owned TRAIN_HOLD present",
+      "fresh_native_in_this_run": false
+    },
+    {
+      "task": "DISPATCHER_AND_S03",
+      "state": "PARTIAL_NATIVE_OBSERVED",
+      "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43808069968",
+      "completed_review_receipts": 3,
+      "live_s03_recall_this_run": false,
+      "three_current_worker_pids_verified": false
+    },
+    {
+      "task": "WEIGHTS_AND_SOURCE_PATCH",
+      "state": "DONE_SOURCE_PATCH_NATIVE_HOLD",
+      "historical_successful_qwen_optimizer_updates": 6,
+      "checkpoint6_sha256": "bbe6ff24861fdcf33d28eba089edba583406ffbb9184c68e5a43d305a619b293",
+      "new_optimizer_updates_this_run": 0,
+      "main_chat_switched": false
+    }
+  ],
+  "drive_metadata_readback": {
+    "starter_parts": 4,
+    "starter_missing": 0,
+    "starter_part_bytes": 331718151,
+    "training_wheelhouse_parts": 39,
+    "training_missing": 0,
+    "training_bytes": 3831295823,
+    "remote_file_sha256_verified": false,
+    "server_rclone_oauth_verified": false
+  },
+  "constraints": {
+    "deepseek_full_model_usable": false,
+    "current_model_sha256_whole_file_verified": false,
+    "active_chat_model_last_observed": "nox36-mix_final_pref-Q4_K_M.gguf",
+    "new_model_serving_verified": false,
+    "independent_checkpoint_restore_verified": false,
+    "deleted_files": 0
+  },
+  "next_single_action": "Owner-approved exact-HEAD read-only V51 on original OneHost: fetch new bounded components + train Supervisor/STOP/lease/checkpoint and S03 recall; independent restore plus correct owner scope required before child training or serving swap."
+}

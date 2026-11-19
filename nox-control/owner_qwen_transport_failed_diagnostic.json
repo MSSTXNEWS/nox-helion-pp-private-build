@@ -1,0 +1,228 @@
+{
+  "activation": {
+    "active": false,
+    "bootstrap_pending": false,
+    "deadline": 1794826621.7792664,
+    "permit_sha256": null,
+    "reason": "HOLD_QWEN_REVISION_BOOTSTRAP_EXPIRED"
+  },
+  "boot_id": "9c0ecc02-85c1-452b-b8ae-521e9a11fd03",
+  "boot_seconds": 1619836.668811784,
+  "chat_health": {
+    "8080": 200,
+    "8081": 200,
+    "8082": 200
+  },
+  "chat_model_identity": {
+    "pid": 7637,
+    "start_ticks": "149189867"
+  },
+  "checkpoint_payload_bytes_read": 0,
+  "elapsed_seconds": 0.387,
+  "execution_revision": {
+    "receipt_sha256": "c6f983a9704d21a6330234ef937bde6c2cc5bf12305820eb0cfba80a89022e0c",
+    "request": "6913811534",
+    "source_sha": "c09a784a1842638cda0107bc8c67f1d92758557c"
+  },
+  "files_written": 0,
+  "finalize_receipt": {
+    "finished_at": 1794826050.0344577,
+    "optimizer_permission_issued": false,
+    "present": true,
+    "sha256": "2ca874ea7977b56489579ea4ef110061e3c9f96cd55369c945587a40de7e84f7",
+    "started_at": 1794825598.8059433,
+    "state": "BOOTSTRAP_LOADING_PENDING",
+    "trainer": {
+      "process_identity": null,
+      "service": {
+        "pid": null,
+        "state": "BACKOFF"
+      }
+    }
+  },
+  "flags": {
+    "OWNER_MAINTENANCE.flag": {
+      "present": false
+    },
+    "TRAIN_HOLD.flag": {
+      "bytes": 54,
+      "mtime_ns": 1794826048705130196,
+      "ownership": "OWNED_CURRENT_WINDOW_FAILURE",
+      "present": true,
+      "sha256": "561f588994d3abf96509b4e29740c82a0507c3f73d0fc9f93da994e5f861d805"
+    },
+    "TRAIN_PAUSE_REQUEST.flag": {
+      "present": false
+    }
+  },
+  "guard": {
+    "bindings": {
+      "admission_sha256": "d74894a67d5a3768f413b4c6c021b0bcb7fe224886ac2308e1c81e5dc4eec913",
+      "config_sha256": "8e1d67afb8c13dac058de8fc3af72bd92916ff4071b7a8f037187f49f6e03c20",
+      "execution_descriptor_sha256": "bfe238dc6492af3123beca1546fc06f502ea19de426fe5a6f2891ee9fbf70d18",
+      "execution_revision": {
+        "receipt_sha256": "c6f983a9704d21a6330234ef937bde6c2cc5bf12305820eb0cfba80a89022e0c",
+        "request": "6913811534",
+        "source_sha": "c09a784a1842638cda0107bc8c67f1d92758557c"
+      },
+      "execution_verifier_sha256": "0dbb06d3384b3436165056ccf4e35bff937fda4f85d96ab2a97ab16a6619998e",
+      "lineage_sha256": "14c92849840ed3ef982a4a443656fdc0f9183ec7967106b42ce8d0719bb25190",
+      "source_sha256": "6f5aaebaf196c6ec5bd2ad434c5633f457019368568d93b7f71efcc0effcf656",
+      "window_admission": {
+        "receipt_sha256": "fa0ed9dd2088a247b2ccc94ad60f9962c0d502121c12bf00e31436c9cf487662",
+        "request": "6908281920",
+        "source_sha": "35931438c591a9bb5a649e851f155c4313f28562"
+      },
+      "wrapper_sha256": "44a87b6cebac28b62320b8bd109010d7b5bacfd4610b2adc9c423a7bc2d7dd6a"
+    },
+    "bindings_sha256": "b9d8185445e2bedd84500285d7ad092c1cd5bb3adaa0ac1ddf8bcdee199c90e0",
+    "config_sha256": "8e1d67afb8c13dac058de8fc3af72bd92916ff4071b7a8f037187f49f6e03c20",
+    "guard_tick_called": false,
+    "policy_state": {
+      "best_holdout_loss": 1.2653611116111279,
+      "evaluation_age_updates": 15,
+      "inhibit": true,
+      "last_evaluation_update": 10,
+      "last_successful_updates": 25,
+      "latched_at": 1794816284.2044637,
+      "reason": "EVALUATION_STALE",
+      "regression_streak": 0
+    },
+    "sampled_at": 1794827106.3857996,
+    "sha256": "4317432c6bba64cd930733fee98ac398ce5e596f226d331aa9878353b961245f",
+    "state": "INHIBITED"
+  },
+  "last_result": {
+    "attempted_steps": 25,
+    "execution_binding_matches_current": false,
+    "holdout_evaluated_successful_total": 10,
+    "independent_holdout_accepted": false,
+    "new_successful_optimizer_steps": 15,
+    "present": true,
+    "process_identity": {
+      "boot_id": "9c0ecc02-85c1-452b-b8ae-521e9a11fd03",
+      "pid": 840493,
+      "start_ticks": 160864614
+    },
+    "reload_verified": true,
+    "sha256": "2b322add6922d9e93eefa3b05fc65a1fa349e3cb129ec273b1f49b482ca2e248",
+    "skipped_steps": 0,
+    "state": "EXISTING_TRAINER_HOLD_OR_PAUSE",
+    "successful_optimizer_steps": 25
+  },
+  "log_diagnostics": [
+    {
+      "exception_types": [],
+      "hold_codes": [
+        "HOLD_MEMFD_TRANSPORT_DEADLINE"
+      ],
+      "last_nonempty_line_terminal_code": "HOLD_MEMFD_TRANSPORT_DEADLINE",
+      "log_bytes": 795768,
+      "may_include_prior_runs": true,
+      "modified_during_current_attempt": true,
+      "mtime_ns": 1794826047769141396,
+      "per_record_process_identity_bound": false,
+      "present": true,
+      "raw_text_exported": false,
+      "safe_events": [
+        {
+          "public_file_bytes": 0,
+          "public_file_total_bytes": 6722759,
+          "state": "PINNED_PUBLIC_BASE_STAGING"
+        },
+        {
+          "public_file_bytes": 6722759,
+          "public_file_total_bytes": 6722759,
+          "state": "PINNED_PUBLIC_BASE_STAGING"
+        },
+        {
+          "public_file_bytes": 4294976078,
+          "public_file_total_bytes": 5368717440,
+          "state": "PINNED_PUBLIC_BASE_STAGING"
+        },
+        {
+          "state": "HOLD_MEMFD_TRANSPORT_DEADLINE"
+        }
+      ],
+      "stream": "stdout",
+      "tail_bytes_read": 65536,
+      "tail_sha256": "fbe862bae8053fbbe9689add63bd3bb254ca374f6c2458e4ced943b24cc47f12",
+      "terminal_codes": [
+        "HOLD_MEMFD_TRANSPORT_DEADLINE"
+      ]
+    },
+    {
+      "exception_types": [],
+      "hold_codes": [],
+      "last_nonempty_line_terminal_code": null,
+      "log_bytes": 7869024,
+      "may_include_prior_runs": true,
+      "modified_during_current_attempt": false,
+      "mtime_ns": 1794816129466507025,
+      "per_record_process_identity_bound": false,
+      "present": true,
+      "raw_text_exported": false,
+      "safe_events": [],
+      "stream": "stderr",
+      "tail_bytes_read": 65536,
+      "tail_sha256": "d41522d6286bb8ee884c990816b9b65f80ea656307b4a5ecf38e50b2c60bb7f2",
+      "terminal_codes": []
+    }
+  ],
+  "observation_complete": true,
+  "observed_at": 1794827107.9307868,
+  "operation_result": {
+    "finished_at": 1794825456.6506858,
+    "optimizer_permission_issued": false,
+    "present": true,
+    "sha256": "206834ae10828483e7d9b3bd4b7d14eb998e3183687bc6cb8628820071af0088",
+    "started_at": 1794824819.8026285,
+    "state": "BOOTSTRAP_LOADING_PENDING",
+    "trainer": {
+      "process_identity": {
+        "boot_id": "9c0ecc02-85c1-452b-b8ae-521e9a11fd03",
+        "pid": 975935,
+        "start_ticks": 161756906
+      },
+      "service": {
+        "pid": 975934,
+        "state": "RUNNING"
+      }
+    }
+  },
+  "primary_failure": {
+    "cause_inferred_from_elapsed_time_only": false,
+    "code": "HOLD_MEMFD_TRANSPORT_DEADLINE",
+    "current_window_time_and_owned_flag_bound": true,
+    "per_record_process_identity_bound": false,
+    "scope": "FINAL_STDOUT_TERMINAL_RECORD_AND_OWNED_WINDOW_FAILURE",
+    "terminal_record_observed": true,
+    "transport_budget_exhaustion_observed": true
+  },
+  "private_training_text_exported": false,
+  "progress": {
+    "attempted_steps": 25,
+    "execution_binding_matches_current": false,
+    "pid": 840493,
+    "present": true,
+    "sha256": "e7a002d05345068caedc6273bc8f2f82b559d042ef189361b2552c50193b0d16",
+    "skipped_steps": 0,
+    "state": "NATIVE_STUDENT_UPDATE_OBSERVED",
+    "successful_optimizer_steps": 25,
+    "time": 1794816283.9358788
+  },
+  "raw_logs_exported": false,
+  "read_only": true,
+  "schema": "NOX_QWEN_TRANSPORT_FAILURE_DIAGNOSTIC_V1",
+  "service_actions": 0,
+  "source_and_origin_pins_verified": true,
+  "state": "DIAGNOSTIC_OBSERVED",
+  "trainer": {
+    "process_identity": null,
+    "service": {
+      "pid": null,
+      "state": "FATAL"
+    }
+  },
+  "utc": "2026-11-16T11:05:07Z"
+}

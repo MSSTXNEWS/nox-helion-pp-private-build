@@ -1,0 +1,50 @@
+name: NOX V64 exact one-patch downloader HF CLI repair (no downloads)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v64-download-path-live-onepatch.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v64-download-path-single-change
+  cancel-in-progress: false
+jobs:
+  single-file-repair:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Mandatory seven source security gates
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v64/download_path_patch.py
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/v64/tests -p 'test_*.py' -v
+      - name: Repair only existing stopped download service script (no downloads)
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v64.download_path_patch
+      - name: Revoke exact temporary SSH key and verify absence
+        if: always()
+        run: |
+          python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Explicit scope of success
+        if: success()
+        run: |
+          echo "V64_DOWNLOAD_SCRIPT_PATH_REPAIRED=true"
+          echo "DOWNLOAD_SERVICE_STARTED=false"
+          echo "TEACHER_MODEL_OR_TRAINER_RESTARTED=false"
+          echo "EXTERNAL_BACKUP_NOT_CLAIMED=true"
+          echo "DISK_20GB_ADMISSION_NOT_CLAIMED=true"

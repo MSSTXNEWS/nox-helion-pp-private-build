@@ -1,0 +1,96 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_1D_OWNER_STOP_GUARD",
+  "instructions_version": "0.0.6",
+  "slot": "1D",
+  "at_utc": "2026-11-16T05:49:00Z",
+  "accepted_head": "c1720666b199271b426eb51a550c5a940047b135",
+  "error_id": "NOX-P0-1D-COLD-EVICTION-IGNORES-OWNER-STOP-20261116",
+  "root_cause": "Current evict_verified had independent restore, SHA and process scan but did not check manual owner STOP at all, including STOP arriving during a full restore.",
+  "fix": "Owner STOP file check before source eviction, after remote restore, and immediately before unlink. Never substitutes actual cleanup lease.",
+  "files": [
+    "nox-control/nox_cold_drive.py",
+    "nox-control/test_nox_cold_drive.py",
+    "coordination/progress/hourly/20261116_0849_AUTO_1D_OWNER_STOP_EVICTION_V06.json"
+  ],
+  "five_tasks": [
+    [
+      "1",
+      "SOURCE_PRIOR_METADATA_ONLY",
+      "Starter 4/4, 331718151 B; wheelhouse 39/39, 3831295823 B; existing Drive IDs; Qwen exact host files and DeepSeek full sharded set require current verified paths; no new server Drive OAuth"
+    ],
+    [
+      "2",
+      "HOLD_NATIVE",
+      "No complete independently verified S03/config/checkpoint/optimizer offsite restore or new capacity/SSD admission"
+    ],
+    [
+      "3",
+      "HOLD_NATIVE",
+      "Downloaded 0 B; no single artifact download claim and 248834257920 B placement for full DeepSeek"
+    ],
+    [
+      "4",
+      "SOURCE_TESTED_CANDIDATE",
+      "Three-phase STOP guard. Exact SHA-backed inactive duplicate cleanup allowlist still []"
+    ],
+    [
+      "5",
+      "HOLD_NATIVE",
+      "Deletion 0 files, measured freed bytes 0; no exclusive native cleanup lease/accepted replacement endpoint/complete restore"
+    ]
+  ],
+  "WEIGHTS": {
+    "status": "HISTORICAL_NATIVE_RECEIPT_NOT_NEW_1D_UPDATE",
+    "source_run": 43806455891,
+    "qwen_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "successful_optimizer_updates": 6,
+    "skipped_steps": 0,
+    "checkpoint_sha256_manifest": "bbe6ff24861fdcf33d28eba089edba583406ffbb9184c68e5a43d305a619b293",
+    "checkpoint_verified_bytes": 519882866,
+    "checkpoint_files": 10,
+    "checkpoint_reload_verified": true,
+    "holdout": "disjoint next-token loss 1.52149 -> 1.30331, 16 examples; not general IQ"
+  },
+  "KNOWLEDGE": {
+    "status": "HOLD",
+    "hunter_verified_source_s03_write_readback_recall": "NOT_CONFIRMED"
+  },
+  "DISPATCHER_RESOURCES": {
+    "status": "HISTORICAL_NATIVE_ONLY",
+    "native_workers_run": 43804648527,
+    "worker_pids": "historically 652465/652466/652467",
+    "current_owner_pid_lease_stop": "NOT_NEWLY_READ",
+    "native_restart": false
+  },
+  "test": {
+    "existing_regressions": 55,
+    "added_owner_stop_regressions": 3,
+    "total_expected": 58,
+    "exact_ci": "SUCCESS_43813443653_58_OF_58",
+    "native_deployed": false
+  },
+  "cleanup": {
+    "exact_allowlist": [],
+    "deleted_files": 0,
+    "freed_bytes": 0,
+    "chat_s03_post_delete": "NOT_APPLICABLE"
+  },
+  "next_step": "Confirm exact GitHub CI; original owner-authorized read-only STOP, Drive server OAuth, allocated capacity, independent S03/optimizer restore and cleanup lease; then only exact proven duplicates or missing DeepSeek parts.",
+  "source_ci_first_run": {
+    "run_id": 43813278606,
+    "status": "RED",
+    "error": "Python syntax error because JS String.replace interpreted literal regex $' in replacement as suffix, producing truncated SHA line and duplicate source. No native impact."
+  },
+  "source_ci_repair": {
+    "state": "SOURCE_TESTED",
+    "exact_code_commit": "f1673c804e1e26baa135e8883f57117e64d712f8",
+    "run_id": 43813443653,
+    "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43813443653",
+    "python_compile": "PASS",
+    "tests_passed": 58,
+    "tests_total": 58,
+    "lesson": "Literal $' in JS String.replace expands suffix; use callback replacement for code; verify source length and Python compile in exact CI. First CI 43813278606 RED, repaired before acceptance."
+  },
+  "final_status": "SOURCE_TESTED_58_OF_58_NATIVE_HOLD",
+  "notion_checkpoint_url": "https://app.notion.com/p/40cacc184a9f81248703e3840d4c2422"
+}

@@ -1,0 +1,62 @@
+name: NOX V94 ONEPASS physically install 16 hash-locked CPU AI accelerators
+on:
+  push:
+    branches: [nox/e2-v94-performance-ai-volta-20261114]
+    paths:
+      - '.github/workflows/nox-e2-v94-install-accel.yml'
+      - 'nox_runpod/teacher_mesh/v94/install_accel_wheels_onepass.py'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-e2-v94-accel-install-onehost-60509551
+  cancel-in-progress: false
+jobs:
+  install:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+      PYTHONPATH: ".:nox_runpod/teacher_mesh/v47:nox_runpod/teacher_mesh/v41"
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Source-lock, native owner secret, safe helper syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "::error::HOLD_NOX2"; exit 2; }
+          python3 -m py_compile nox_runpod/teacher_mesh/v94/install_accel_wheels_onepass.py
+          python3 - <<'PY'
+          import ast
+          from nox_runpod.teacher_mesh.v94 import install_accel_wheels_onepass as x
+          code=x.REMOTE.strip().split("python3 - <<'PYREMOTE'\n",1)[1].rsplit("\nPYREMOTE",1)[0]
+          ast.parse(code)
+          for forbidden in ("pip install torch","pip install flash-attn","systemctl restart","supervisorctl restart","rm -rf /root/nox"):
+              assert forbidden not in code
+          assert code.count("NOX_V94_ACCEL_INSTALL_V1")>=1
+          print("V94_SOURCE_SAFETY=PASS")
+          PY
+      - name: ONE Vast native install with pinned wheel hashes and CPU smoke (no model restart)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v94.install_accel_wheels_onepass
+      - name: Revoke exact temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Scope boundary - no live model switched
+        if: success()
+        run: |
+          echo "NOX_V94_ISOLATED_CPU_TOOLKIT_INSTALLED=true"
+          echo "NOX_V94_PYTORCH_CUDA_MAIN_MODEL_UNCHANGED=true"
+          echo "NOX_V94_NEW_SERVERS_OR_SCHEDULERS=false"
+          echo "NOX_V94_RUNTIME_TOOLKIT_SMOKE_ONLY=true"

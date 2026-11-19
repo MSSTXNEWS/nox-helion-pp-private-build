@@ -1,0 +1,89 @@
+{
+  "schema": "NOX_EXECUTOR2_V108_REAL_TEACHER_AND_FORGE_CORPUS_V1",
+  "observed_utc": "2026-11-14T20:57:06Z",
+  "instance_id": 60509551,
+  "onehost": "EXISTING_NOX_ONEHOST_ONLY",
+  "primary_model": "current.gguf",
+  "physical_receipts": {
+    "teacher_port_inventory": {
+      "run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43639032519",
+      "status": "PASS",
+      "generative_candidates": [
+        "vikhr-nemo-12b 8084/8087",
+        "saiga_nemo_12b 8086/8088"
+      ],
+      "non_generators": [
+        "bge-m3 8082",
+        "Qwen3Guard-Gen-4B 8092/8093"
+      ]
+    },
+    "teacher_s03_lesson": {
+      "run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43639320764",
+      "status": "DISTINCT_LOCAL_TEACHER_S03_LESSON_VERIFIED",
+      "teacher": "Vikhr-Nemo 12B",
+      "port": 8084,
+      "independent_arithmetic_verified": true,
+      "s03_native_recall_verified": true,
+      "user_private_data_sent": false,
+      "new_optimizer_steps": 0,
+      "base_weights_changed": false
+    },
+    "bridge_source_tests": {
+      "run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43639562980",
+      "status": "PASS",
+      "tests_passed": 10,
+      "change": "defer V29.3 route registration until after existing _proxy_completion owner handler is defined"
+    },
+    "bridge_live": {
+      "run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43639650074",
+      "status": "HOLD_ACTIVE_CHAT_OR_HEALTH",
+      "source_changed": false,
+      "existing_proxy_restarted": false,
+      "main_model_changed": false,
+      "ssh_key_detached": true
+    },
+    "training_data": {
+      "run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43640125660",
+      "status": "V47_BASE_WEIGHT_TRAIN_DATA_READY",
+      "private_server_path": "/root/nox/forge/base_train_input_v108",
+      "train_rows": 1906,
+      "holdout_rows": 226,
+      "additional_private_rows_excluded": {
+        "train": 21,
+        "holdout": 1
+      },
+      "train_sha256": "43d5c477f30de71da5b20377e3f0912ecc1bf1423513dca70ea04ac9311970d9",
+      "holdout_sha256": "7ed411b1ed7d2533e99243eee8c8cdfadb0680e6c932874c2fc9db096369790f",
+      "source_v105_unchanged": true,
+      "source_overlap_checked": true,
+      "privacy_approved_for_internal_owner_templates": true,
+      "exported_to_git": false,
+      "disk_free_after_bytes": 16853176320
+    }
+  },
+  "completed_now": [
+    "fixed distinct local teacher routing",
+    "physically verified S03 learning from local generative teacher",
+    "source-tested deferred V29.3 native route registration",
+    "physically produced V47-compatible private train/holdout with independent SHA and secondary privacy exclusion"
+  ],
+  "still_unverified": [
+    "live V29.3 native route binding while user chat is busy",
+    "trainable NOX PRIME base weight checkpoint and owner-key full optimizer restore",
+    "GPU1 exclusive native OneHost lease and measured SM70 FP16 peak",
+    "actual full-base optimizer step, changed weights SHA, checkpoint reload and independent holdout",
+    "native queue R60 job ids and full authenticated browser E2E"
+  ],
+  "safety": {
+    "new_paid_servers": 0,
+    "new_scheduler": 0,
+    "new_primary_models": 0,
+    "active_weights_changed": false,
+    "old_checkpoint_deleted": false,
+    "canonical_s03_modified_by_dataset_conversion": false,
+    "teacher_s03_public_lesson_added": true,
+    "ssh_key_revoke_confirmed": true,
+    "no_consciousness_claim": true
+  },
+  "completion_state": "PARTIAL_PHYSICAL_SUCCESS_REMAINDER_HOLD"
+}

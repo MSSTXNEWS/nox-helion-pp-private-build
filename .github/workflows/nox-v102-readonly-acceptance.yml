@@ -1,0 +1,46 @@
+name: NOX V102 durable S03 separate process and trainer inventory
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - "nox_runpod/teacher_mesh/v102/**"
+      - ".github/workflows/nox-v102-readonly-acceptance.yml"
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v102-60509551-readonly
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Source and remote syntax
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v102/durable_s03_and_train_audit.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v102.durable_s03_and_train_audit import REMOTE
+          compile(REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0],'<remote>','exec')
+          PY
+      - name: Read-only persistence and broad GPU training inventory
+        run: python -m nox_runpod.teacher_mesh.v102.durable_s03_and_train_audit
+      - name: Revoke ephemeral key on success or failure
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

@@ -1,0 +1,40 @@
+name: NOX V122 immutable live WEB V29 audit (on demand; no writes)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v122-readonly-60509551
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Confirm original source audit and full 92-route matrix
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v122/immutable_live_web_audit.py
+          python -m unittest -v nox_runpod.teacher_mesh.v122.test_immutable_live_web_audit
+  native_readonly:
+    needs: source
+    if: ${{ github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Exact no-write native SHA / routes / S03 / STOP audit
+        run: |
+          test -n "$NOX2" || { echo 'HOLD_NOX2'; exit 2; }
+          python -m nox_runpod.teacher_mesh.v122.immutable_live_web_audit
+      - name: Always remove short-lived SSH identity
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

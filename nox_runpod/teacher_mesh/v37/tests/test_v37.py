@@ -87,14 +87,21 @@ class SelfTests(unittest.TestCase):
   self.assertEqual(build_self_report(receipts=receipts,goal_register=[],current_training={})['birth_at'],'2026-11-10')
  def test_selfbuilder_unreviewed(self):
   a=dict(expected_head='a'*40,changed_paths=['nox_runpod/teacher_mesh/x.py'],diff_sha256='b'*64,owner_review_required=False)
-  self.assertEqual(review(a,current_head='a'*40,independent_test_receipt=dict(source_head='a'*40,all_pass=True))['state'],'HOLD')
+  self.assertEqual(review(a,current_head='a'*40,independent_test_receipt=dict(source_head='a'*40,diff_sha256='b'*64,all_pass=True))['state'],'HOLD')
  def test_selfbuilder_path_traversal(self):
   a=dict(expected_head='a'*40,changed_paths=['nox_runpod/teacher_mesh/../../sensitive'],diff_sha256='b'*64,owner_review_required=True)
-  self.assertIn('UNSAFE_PATH',review(a,current_head='a'*40,independent_test_receipt=dict(source_head='a'*40,all_pass=True))['reasons'])
+  self.assertIn('UNSAFE_PATH',review(a,current_head='a'*40,independent_test_receipt=dict(source_head='a'*40,diff_sha256='b'*64,all_pass=True))['reasons'])
  def test_selfbuilder_reviewable_no_auto_merge(self):
   a=dict(expected_head='a'*40,changed_paths=['nox_runpod/teacher_mesh/new.py'],diff_sha256='b'*64,owner_review_required=True)
-  v=review(a,current_head='a'*40,independent_test_receipt=dict(source_head='a'*40,all_pass=True))
+  v=review(a,current_head='a'*40,independent_test_receipt=dict(source_head='a'*40,diff_sha256='b'*64,all_pass=True))
   self.assertEqual(v['state'],'REVIEWABLE_PR_CANDIDATE_NOT_MERGED');self.assertFalse(v['auto_merged'])
+ def test_selfbuilder_requires_tests_for_exact_patch(self):
+  candidate=dict(expected_head='a'*40,changed_paths=['nox_runpod/teacher_mesh/new.py'],diff_sha256='b'*64,owner_review_required=True)
+  for receipt in (None,[],dict(source_head='a'*40,all_pass=True),dict(source_head='a'*40,diff_sha256='c'*64,all_pass=True)):
+   with self.subTest(receipt=receipt):
+    result=review(candidate,current_head='a'*40,independent_test_receipt=receipt)
+    self.assertEqual(result['state'],'HOLD')
+    self.assertFalse(result['auto_merged'])
 class DedupTests(unittest.TestCase):
  def test_verify_sha(self):self.assertEqual(check_job({'sha256':'unverified'},{},[])['state'],'HOLD_SHA_REQUIRED')
  def test_skip_completed(self):

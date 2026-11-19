@@ -1,0 +1,64 @@
+name: NOX V113 owner opt-in local teacher bounded public arithmetic
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v113/**'
+      - '.github/workflows/nox-v113-owner-local-teacher.yml'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v113-60509551-patch
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check code and native string compile
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v113/owner_teacher_math_bridge.py
+          python - <<'PY'
+          import ast
+          from nox_runpod.teacher_mesh.v113.owner_teacher_math_bridge import REMOTE
+          body=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          tree=ast.parse(body);compile(tree,'<v113 native>','exec')
+          vals={n.targets[0].id:n.value.value for n in tree.body if isinstance(n,ast.Assign) and len(n.targets)==1 and isinstance(n.targets[0],ast.Name) and isinstance(n.value,ast.Constant) and isinstance(n.value.value,str)}
+          assert 'HELPER' in vals and 'INJECT' in vals
+          ast.parse(vals['HELPER']);ast.parse('async def x():\n    pass\n'+vals['INJECT'])
+          assert 'HOLD_CHAT_BECAME_BUSY' in REMOTE and 'rollback(old,meta)' in REMOTE
+          print('NOX_V113_CODE_SAFE_COMPILE=true')
+          PY
+  native:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: SHA-gated onehost injection with automatic rollback
+        run: python -m nox_runpod.teacher_mesh.v113.owner_teacher_math_bridge
+      - name: Always revoke temporary key
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

@@ -1,0 +1,94 @@
+{
+  "schema": "NOX_RELAY_CONTROL_APPEND_V10",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_1A",
+  "at_utc": "2026-11-16T19:01:18Z",
+  "at_msk": "2026-11-16T22:01:18+03:00",
+  "task_ids": [
+    {
+      "id": "S2-07",
+      "status": "SOURCE_TESTED",
+      "claim": "GIT_BLOB_CAS_ONLY",
+      "evidence": "Complete-model remaining capacity gate; partial-resume test; no native download"
+    },
+    {
+      "id": "S1-01",
+      "status": "HOLD_NATIVE_API_429",
+      "claim": "NONE",
+      "evidence": "Latest owner-only inspect 43932618696 job 133528758879 hit Vast 429 before guest SSH; no automatic reattach"
+    },
+    {
+      "id": "S1-03",
+      "status": "HOLD_NATIVE_STOP_LEASE",
+      "claim": "NONE",
+      "evidence": "Historical owner STOP and MAINTENANCE at 18:32 UTC; current lease/PID UNKNOWN"
+    },
+    {
+      "id": "S1-07",
+      "status": "HOLD_INDEPENDENT_RESTORE",
+      "claim": "NONE",
+      "evidence": "No independent S03/Genesis/optimizer/scaler/RNG restore accepted"
+    },
+    {
+      "id": "S3-04",
+      "status": "HOLD_MAYA_ORIGINAL_SSE",
+      "claim": "NONE",
+      "evidence": "No full DeepSeek Maya stdout→existing owner SSE RU/ES or S03 recall"
+    }
+  ],
+  "cause": "Prior DeepSeek download admission compared free space with current shard and minimum total volume size, not all other missing GGUF bytes. A large but nearly full disk could admit one shard then permanently strand a 248.83GB model.",
+  "fix": "Existing nox-control/deepseek_owner_range_v10.py now accounts for ALL PINNED_FILE_FACTS remaining bytes, sparse unallocated .part extents, rejects ambiguous duplicate final+part and insufficient full-model space before Range HTTP.",
+  "source_preimage_blob": "fcf1755bbd807115059d543bcbb8d2cb17f69b2e",
+  "source_commit": "90dc0a99a1c78784ced7deff145bf77ca55d66bc",
+  "source_blob": "8f0feb2ced2520790bf134ed2f3e12cd5fd90eca",
+  "test_preimage_blob": "17b231a309067a936ac5fcdb2376632b7e0f6ba0",
+  "test_commit": "175e48e8fd3d9839b20ecb444bcd43e43da85b4d",
+  "test_blob": "7526e9ffe632c84ef95b8232612ee008d2a2114f",
+  "ci": {
+    "run": 43934865410,
+    "job": 133536689000,
+    "result": "SUCCESS",
+    "deepseek_tests": 62,
+    "maya_source_tests": 4,
+    "maya_preflight_tests": 36,
+    "total": 102
+  },
+  "old_native_readonly": {
+    "time_utc": "2026-11-16T18:32:35Z",
+    "owner_stop": "PRESENT",
+    "owner_maintenance": "PRESENT",
+    "supervisor_critical_stopped": 5,
+    "listener_8081": "ABSENT",
+    "vram_mib": [
+      0,
+      0
+    ],
+    "ssd_free_bytes": 43158712320,
+    "writer_lease": "UNKNOWN"
+  },
+  "latest_native_attempt": {
+    "time_utc": "2026-11-16T18:48:08Z",
+    "run": 43932618696,
+    "job": 133528758879,
+    "result": "HOLD_VAST_API_HTTP_429_BEFORE_GUEST_SSH"
+  },
+  "weights": {
+    "successful_optimizer_updates_new": 0,
+    "independent_checkpoint_optimizer_scaler_rng_restore": false,
+    "new_deepseek_model_promoted": false
+  },
+  "knowledge": {
+    "hunter_s03_recall_new": 0,
+    "s03_native_jobs_new": []
+  },
+  "dispatcher_resources": {
+    "owner_writer_lease": "UNKNOWN",
+    "native_pids_new": [],
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0,
+    "production_changes": 0
+  },
+  "rollback": "Use GitHub exact per-file CAS against the two prior blob SHAs only after checking latest HEAD; no native rollback because nothing was installed.",
+  "next": "After Vast API cooldown, original owner-auth READ_ONLY STOP/lease/PID/SSD/storage quota and independent S03+checkpoint restore; obtain seekable >=248834257920 B plus reserve before any DeepSeek Range, Maya→original Resonance E2E. Do not reattach keys non-idempotently."
+}

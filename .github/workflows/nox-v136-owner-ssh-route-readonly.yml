@@ -1,0 +1,52 @@
+name: NOX V136 user supplied Vast SSH routes DNS and TCP read-only
+on:
+  pull_request:
+    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+    paths: ['.github/workflows/nox-v136-owner-ssh-route-readonly.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.event_name == 'pull_request' && github.actor == 'MSSTXNEWS' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Probe both explicitly provided SSH hosts; no login, secret, or server changes
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python - <<'PY'
+          import socket,json,time
+          endpoints=[('ssh9.vast.ai',26623,'VAST_SSH_PROXY'),('166.113.48.41',11234,'VAST_DIRECT')]
+          receipts=[]
+          for host,port,label in endpoints:
+              item={'name':label,'port':port,'tcp_connected':False,'ssh_banner':False,'dns_ok':False}
+              try:
+                  resolved=socket.getaddrinfo(host,port,type=socket.SOCK_STREAM)
+                  item['dns_ok']=True
+              except OSError as e:
+                  item['error_code']='HOLD_DNS_'+type(e).__name__
+                  receipts.append(item)
+                  continue
+              for addr in resolved[:3]:
+                  start=time.monotonic()
+                  try:
+                      with socket.socket(addr[0],socket.SOCK_STREAM) as s:
+                          s.settimeout(5)
+                          s.connect(addr[4])
+                          item['tcp_connected']=True
+                          s.settimeout(2)
+                          banner=s.recv(120)
+                          item['ssh_banner']=banner.startswith(b'SSH-2.0-')
+                          item['rtt_ms']=round((time.monotonic()-start)*1000)
+                          break
+                  except OSError as e:
+                      item['error_code']='HOLD_TCP_'+type(e).__name__
+              receipts.append(item)
+          print('NOX_V136_USER_SSH_READONLY='+json.dumps(receipts,separators=(',',':'),sort_keys=True))
+          print('NOX_V136_NO_AUTH_OR_WRITE=true')
+          print('NOX_V136_NATIVE_SSH_AUTHENTICATED=false')
+          print('NOX_V136_NATIVE_COMMAND_EXECUTED=false')
+          print('NOX_V136_SSH_LISTENER_REACHABLE='+str(any(x['ssh_banner'] for x in receipts)).lower())
+          PY

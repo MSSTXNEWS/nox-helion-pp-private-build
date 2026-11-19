@@ -1,0 +1,84 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3B_V172",
+  "instructions_version": "0.0.6",
+  "slot": "3B",
+  "at_utc": "2026-11-16T11:43:00Z",
+  "at_msk": "2026-11-16T14:43:00+03:00",
+  "fix": "AbortSignal now bounds HTTP non-2xx JSON error-body parsing on model stream, owner dialog create, S03 readback and rename; no global STOP.",
+  "source_path": "coordination/onepass/nox-v135-resonance-owner-bridge.js",
+  "source_blob_before": "6511e9efa942009a615464fca88c60237e941046",
+  "source_blob_after": "79cb44ea6051447facba1713cb787a0e5310bd9b",
+  "test_path": "coordination/onepass/test_v135_resonance_owner_bridge.cjs",
+  "test_blob_before": "92945ba9cab4835d9989f4fd79e8d033e56a305e",
+  "test_blob_after": "ef15ec68091f4c72bb378c9d0619defb374f84ce",
+  "preflight": {
+    "source_syntax": "PASS",
+    "test_syntax": "PASS",
+    "abort_pending_error_body": "PASS",
+    "abort_listener_cleanup": "PASS",
+    "source_bytes": 19080,
+    "under_20k": true,
+    "ci": "PENDING"
+  },
+  "tasks": [
+    {
+      "number": 1,
+      "status": "HOLD_NATIVE_AUTH_MODEL",
+      "proof": "Historical owner-auth original routes reported, no fresh owner-only active model manifest SHA/tool schema in this run"
+    },
+    {
+      "number": 2,
+      "status": "SOURCE_PRESERVED_LIVE_HOLD",
+      "proof": "Earlier genuine model delta/first_visible_token_ms logic unchanged; native browser RU/ES latency not measured"
+    },
+    {
+      "number": 3,
+      "status": "SOURCE_PATCHED_LIVE_HOLD",
+      "proof": "Non-2xx S03 history error-body parsing can now be aborted; no false history_persisted"
+    },
+    {
+      "number": 4,
+      "status": "SOURCE_PATCHED_LIVE_HOLD",
+      "proof": "Same scoped abort for native stream and dialog-create error bodies, without global STOP; three new Node regression cases added"
+    },
+    {
+      "number": 5,
+      "status": "HOLD_NATIVE_RU_ES_BENCHMARK",
+      "proof": "No fresh authenticated browser TTFT/decode TPS p50/p95; fixed before/after benchmark still needed"
+    }
+  ],
+  "WEIGHTS": {
+    "status": "HISTORICAL_ONLY_CURRENT_HOLD",
+    "historical_qwen_successful_optimizer_updates": 25,
+    "new_confirmed_this_run": 0,
+    "current_pid": null,
+    "new_loss": null,
+    "checkpoint25_independent_restore": null,
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/26003eb274ab1a5c7d480b6594b2396ac91c7d93/coordination/progress/hourly/2026-11-16T14/3D.json"
+  },
+  "KNOWLEDGE": {
+    "status": "HOLD_NO_NEW_HUNTER_SOURCE_S03_RECALL",
+    "new_native_jobids": [],
+    "validated_source": null,
+    "verified_recall": false,
+    "training_candidate_verified": false
+  },
+  "DISPATCHER+RESOURCES": {
+    "status": "HOLD_FRESH_NATIVE_PID_LEASE_AND_GPU",
+    "last_native_reference": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43846952110",
+    "fresh_worker_pids": null,
+    "owner_stop": null,
+    "writer_lease": null,
+    "gpu0": null,
+    "gpu1": null,
+    "ram": null,
+    "ssd": null,
+    "restart_attempts": 0,
+    "downloads_bytes": 0,
+    "deleted_bytes": 0
+  },
+  "native_deploy": false,
+  "server_model_changed": false,
+  "genesis_s03_web29_d02_14worlds_changed": false,
+  "next": "Reconcile source CI at this SHA, then original owner-auth browser SSE/STOP/S03 RU/ES p50/p95 after fresh STOP/lease/preimage/offsite restore; current abort fix is SOURCE not LIVE."
+}

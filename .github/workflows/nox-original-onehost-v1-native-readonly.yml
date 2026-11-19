@@ -1,0 +1,78 @@
+name: NOX original OneHost v1 owner-authorized native readback
+on:
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: "Owner authorized read-only existing Vast #60509551, no installs"
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v51-vast60509551-temp-ssh
+  cancel-in-progress: false
+jobs:
+  owner-native-readonly:
+    if: "${{ github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && github.actor == 'MSSTXNEWS' && github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.ref == 'refs/heads/feature/nox-v38-synaptic-brain-20261114' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Validate exact existing V51 host pin, commands and official owner v1 URL
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
+          import inspect
+          source=inspect.getsource(ssh)
+          remote=ssh.REMOTE
+          assert ssh.INSTANCE==60509551
+          assert 'SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc' in source
+          assert 'StrictHostKeyChecking=yes' in source
+          assert 'NATIVE_READ_ONLY_COMPLETE=true' in remote
+          assert all(part not in remote for part in ('rm -rf','pip install','systemctl restart','kill -9'))
+          print('NOX_V1_NATIVE_READ_ONLY_SOURCE_GATE=PASS')
+          PY
+      - name: Authenticate original instance on v1 and use established V51 temporary SSH (read only)
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
+          import sys
+          # Only change the URL for THIS runner. No source file or OneHost mutation.
+          ssh.LIST_API='https://console.vast.ai/api/v1/instances'
+          good=False
+          try:
+              good=ssh.probe()
+          except Exception as exc:
+              msg=str(exc)
+              print('NOX_NATIVE_PROBE='+msg if msg.startswith('HOLD_') and len(msg)<110 else 'NOX_NATIVE_PROBE=HOLD_EXCEPTION')
+          finally:
+              try:
+                  cleanup=ssh.cleanup()
+                  good=bool(good and cleanup)
+              except Exception:
+                  good=False
+                  print('NOX_NATIVE_TEMP_SSH_CLEANUP=HOLD_FAILED')
+          print('NOX_VAST_V1_ORIGINAL_SSH_READONLY='+('PASS' if good else 'HOLD'))
+          print('NOX_RUNNER_SECRETS_EXPORTED=false')
+          print('NOX_MODEL_S03_PRODUCTION_MUTATION=false')
+          sys.exit(0 if good else 2)
+          PY
+      - name: Mandatory emergency cleanup without other remote operations
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
+          try: ok=ssh.cleanup()
+          except Exception: ok=False
+          print('NOX_EMERGENCY_TEMP_KEY_CLEANUP='+('PASS' if ok else 'HOLD'))
+          raise SystemExit(0 if ok else 2)
+          PY

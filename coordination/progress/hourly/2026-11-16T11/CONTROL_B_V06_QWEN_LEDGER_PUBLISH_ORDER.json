@@ -1,0 +1,68 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_CONTROL_B_V06",
+  "instructions_version": "0.0.6",
+  "at_utc": "2026-11-16T11:41:42Z",
+  "at_msk": "2026-11-16T14:41:42+03:00",
+  "scope": "Existing WEB29/D02/14 worlds and own weights only; original OneHost #60509551",
+  "source_commit": "7d0bd6408fe9992e3a1ead5e61d9b0e56529090c",
+  "changed_paths": [
+    "nox-control/qwen_student_training_entry.py",
+    "nox-control/test_qwen_eval_cadence.py"
+  ],
+  "source_blobs": {
+    "trainer": "492b5bff519f2d15ae5565fb799804a67ae0deb6",
+    "tests": "9fec0d111bf60b2dd3ffffb1a1fdb147a8071a24"
+  },
+  "root_cause": "Qwen save_checkpoint previously published latest_checkpoint.json before durably updating owner_checkpoints.json; an owner-ledger error after rename could make an unindexed checkpoint appear as the latest accepted checkpoint.",
+  "fix": "Validate owner ledger before writing a new checkpoint; persist owner_checkpoints.json before latest_checkpoint.json, so a ledger-write failure retains the old published pointer and unique new checkpoint bytes; no automatic delete.",
+  "source_verification": {
+    "workflow_run": 43859623179,
+    "workflow_job": 133272698633,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43859623179",
+    "conclusion": "SUCCESS_SOURCE_ONLY",
+    "suites": [
+      7,
+      16,
+      8,
+      12
+    ],
+    "total_tests_passed": 43,
+    "new_regressions": 3,
+    "exact_commit": "7d0bd6408fe9992e3a1ead5e61d9b0e56529090c",
+    "model_gpu_and_native_not_exercised": true
+  },
+  "cleanup": {
+    "state": "HOLD_NEW_MODEL_NOT_DEPLOYED",
+    "deleted_files": 0,
+    "freed_bytes": 0,
+    "reason": "Only historically confirmed active NOX36; no accepted DeepSeek live switch, independent restore, current STOP and cleanup lease."
+  },
+  "weights": {
+    "active_chat_last_observed": "NOX36 via current.gguf symlink; live full GGUF SHA still UNVERIFIED",
+    "deepseek_full_weights": "NOT_VERIFIED_INSTALLED_OR_SERVING",
+    "qwen": "Historical checkpoint25/25 optimizer updates, no new native steps this run",
+    "native_resume": false,
+    "offsite_restore": "UNVERIFIED",
+    "server_drive_oauth": "UNVERIFIED_REMOTES_EMPTY_LAST_INSPECTED",
+    "bytes_downloaded_this_run": 0
+  },
+  "web": {
+    "original_web29_preserved": true,
+    "live_sse_stop_s03_recall_this_run": "NOT_EXECUTED",
+    "new_web_deploy": false
+  },
+  "automation": {
+    "active_slots": 12,
+    "controllers": 2,
+    "schedules_changed": false,
+    "duplicate_jobs_created": false
+  },
+  "native": {
+    "commands_executed": false,
+    "training_started": false,
+    "processes_restarted": 0,
+    "pids_observed_this_run": null
+  },
+  "next_first_fail": "Owner-native read-only STOP/lease/Supervisor/GPU1/optimizer/checkpoint25/offsite restore and canonical WEB29 S03 recall; only then admit one fenced reversible migration and bounded trainer resume.",
+  "status": "SOURCE_TESTED_NATIVE_HOLD"
+}

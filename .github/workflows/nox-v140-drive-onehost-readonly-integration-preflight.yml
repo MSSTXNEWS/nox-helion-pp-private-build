@@ -1,0 +1,116 @@
+name: NOX V140 source Drive to original OneHost owner WEB integration read-only preflight
+on:
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX V140 read-only native preflight only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v51-vast60509551-temp-ssh
+  cancel-in-progress: false
+jobs:
+  owner-web-preflight:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && github.actor == 'MSSTXNEWS' && github.ref == 'refs/heads/feature/nox-v38-synaptic-brain-20261114' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Check only existing Drive remote, frozen source, owner HTTP script path and live native route
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
+          ssh.LIST_API='https://console.vast.ai/api/v1/instances/?owner=me'
+          ssh.REMOTE=r"""
+          set -euo pipefail
+          cd /root/nox/scripts
+          /root/nox/venv/bin/python - <<'PYREMOTE'
+          import hashlib,html.parser,http.cookiejar,json,os,shutil,subprocess,sys,urllib.request,urllib.error
+          from pathlib import Path
+          print('NOX_NATIVE_V51_SSH_EXECUTED=true')
+          print('NATIVE_V140_WEB_DRIVE_PREFLIGHT=STARTED')
+          base=Path('/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site')
+          for n in ('pc/resonance.html','chat.html','nox-v135-resonance-owner-bridge.js',
+                    'nox-v137-owner-self-status.js'):
+              f=base/n
+              present=f.is_file() and not f.is_symlink()
+              digest=hashlib.sha256(f.read_bytes()).hexdigest() if present and f.stat().st_size<=250000 else None
+              print('NATIVE_V140_FILE_'+n.replace('/','_').replace('.','_')+'='+json.dumps({
+                  'exists':present,'sha256':digest},sort_keys=True))
+          print('NATIVE_V140_RCLONE_BIN_PRESENT='+str(shutil.which('rclone') is not None).lower())
+          conf=Path('/root/.config/rclone/rclone.conf')
+          print('NATIVE_V140_RCLONE_CONFIG_PRESENT='+str(conf.is_file() and not conf.is_symlink()).lower())
+          if shutil.which('rclone'):
+              p=subprocess.run(['rclone','listremotes'],capture_output=True,text=True,timeout=6)
+              names=[x.strip().lower() for x in p.stdout.splitlines() if x.strip().endswith(':')]
+              print('NATIVE_V140_RCLONE_LIST_RC='+str(p.returncode))
+              print('NATIVE_V140_RCLONE_REMOTE_COUNT='+str(len(names)))
+              print('NATIVE_V140_RCLONE_DRIVE_NAME_PRESENT='+str(any('drive' in n or 'gdoc' in n for n in names)).lower())
+          candidates=[
+             Path('/root/nox/NOX_TOOLS/WEB_STAGING_V135'),
+             Path('/root/nox/NOX_TOOLS/WEB_STAGING_V140'),
+             Path('/root/nox/incoming_t800u'),
+          ]
+          for i,p in enumerate(candidates):
+              if p.is_dir() and not p.is_symlink():
+                  found=sum(1 for z in p.glob('*V140*') if z.is_file())
+                  print('NATIVE_V140_STAGE_'+str(i)+'='+json.dumps({'present':True,'v140_files_top_level':found}))
+              else:
+                  print('NATIVE_V140_STAGE_'+str(i)+'='+json.dumps({'present':False}))
+          import chat_proxy
+          password=chat_proxy._read_chat_password()
+          if not isinstance(password,str) or len(password)<6:
+              print('NATIVE_V140_OWNER_LOGIN=HOLD_NO_OWNER_CREDENTIAL')
+          else:
+              jar=http.cookiejar.CookieJar();opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+              def request(path,method='GET',data=None):
+                  body=None if data is None else json.dumps(data).encode()
+                  req=urllib.request.Request('http://127.0.0.1:8080'+path,
+                          method=method,data=body,headers={'Content-Type':'application/json'})
+                  try:return opener.open(req,timeout=7)
+                  except urllib.error.HTTPError as e:return e
+              login=request('/chat/login','POST',{'password':password});password=None
+              good=login.status==200 and len(list(jar))>0
+              print('NATIVE_V140_OWNER_LOGIN='+('PASS' if good else 'HOLD_HTTP_'+str(login.status)))
+              if good:
+                  pages=[('RESONANCE','/nox-web-v29/pc/resonance.html'),
+                         ('V135','/nox-web-v29/nox-v135-resonance-owner-bridge.js'),
+                         ('V137','/nox-web-v29/nox-v137-owner-self-status.js'),
+                         ('NATIVE_OWNER_DYNAMIC','/nox-web-v29/native-owner.js')]
+                  for label,path in pages:
+                      res=request(path)
+                      content=res.read(190000) if res.status==200 else b''
+                      print('NATIVE_V140_AUTH_'+label+'_HTTP='+str(res.status))
+                      if label=='RESONANCE' and res.status==200:
+                          txt=content.decode('utf-8','replace')
+                          print('NATIVE_V140_AUTH_RESONANCE_INJECTS_V135='+str('nox-v135-resonance-owner-bridge.js' in txt).lower())
+                          print('NATIVE_V140_AUTH_RESONANCE_INJECTS_V137='+str('nox-v137-owner-self-status.js' in txt).lower())
+                          print('NATIVE_V140_AUTH_RESONANCE_HTML_SHA='+hashlib.sha256(content).hexdigest())
+                  request('/chat/logout','POST',{})
+          print('NATIVE_V140_NO_MODEL_S03_GPU_MUTATION=true')
+          print('NATIVE_READ_ONLY_COMPLETE=true')
+          PYREMOTE
+          """
+          good=False
+          try:good=ssh.probe()
+          except Exception as e:
+              msg=str(e)
+              print('NOX_V140_NATIVE_HOLD='+msg if msg.startswith('HOLD_') and len(msg)<90 else 'NOX_V140_NATIVE_HOLD=HOLD_TRANSPORT')
+          finally:
+              try:good=bool(good and ssh.cleanup())
+              except Exception:good=False
+          print('NOX_V140_OWNER_PREFLIGHT='+('PASS' if good else 'HOLD'))
+          raise SystemExit(0 if good else 2)
+          PY
+      - name: Mandatory temporary SSH key cleanup
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

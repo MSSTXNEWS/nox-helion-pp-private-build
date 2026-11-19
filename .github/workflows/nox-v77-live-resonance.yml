@@ -1,0 +1,52 @@
+name: NOX V77 ONEPASS live Resonance self-model and S03 correction
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v77-live-resonance.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v77-single-production-proxy-change
+  cancel-in-progress: false
+jobs:
+  onepass:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compile trusted exact patch and verify limited scope
+        run: |
+          python3 -m py_compile nox_runpod/teacher_mesh/v77/live_resonance_onepatch.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('nox_runpod/teacher_mesh/v77/live_resonance_onepatch.py').read_text()
+          assert "41afb337bbcd4ef12820838d0a551e925a13f8908bd40383b2c94e8cfe2c9825" in p
+          assert "HOLD_ACTIVE_CHAT" in p and "HOLD_BACKUP_CONFLICT" in p
+          assert "supervisorctl','restart',SERVICE" in p
+          assert "s03_database_changed=False" in p
+          print('NOX_V77_EXACT_SOURCE_SAFETY=PASS')
+          PY
+      - name: Apply one live proxy patch with automatic rollback on failure
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v77.live_resonance_onepatch
+      - name: Mandatory exact SSH key revoke
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Boundary
+        if: success()
+        run: |
+          echo 'NOX_EXISTING_MAIN_GGUF_UNCHANGED=true'
+          echo 'NOX_SINGLE_EXISTING_CHAT_PROXY_PATCHED=true'
+          echo 'NOX_ONEHOST_S03_SAFETY_PRESERVED=true'

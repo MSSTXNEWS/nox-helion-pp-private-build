@@ -1,0 +1,30 @@
+{
+  "schema": "NOX_WEB_V29_3_ZIP_OFFLINE_AUDIT_V1",
+  "audit_date": "2026-11-14",
+  "source_archive": "NOX_HELION_WEB_V29_3_FROZEN_20261113.zip",
+  "source_drive": "https://drive.google.com/file/d/1mRWUd7zwHNdJqTGelX7o0uSRSoNXyh01/view",
+  "sha256": "166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0",
+  "archive_bytes": 85218272,
+  "file_entries": 1089,
+  "unique_top_level_js_api_routes": 92,
+  "source_chat_js_sha256": "d9fa29e0fa726502adc6e83ea344adf13b8a2354acd3610b3de96ec378e942ce",
+  "source_checks": {
+    "zip_crc": "PASS",
+    "sha256": "PASS",
+    "native_owner_switch": "PRESENT",
+    "delta_rendering": "PRESENT",
+    "s03_commit_receipt_required": "PRESENT",
+    "dialog_id_sent_if_present": "PRESENT",
+    "dialog_id_receipt_match_required": "PRESENT"
+  },
+  "cross_version_blocker": {
+    "name": "V29_DIALOG_ID_V105_BRIDGE_CONTRACT",
+    "frontend": "V29 sends dialog_id for native workspace dialogs, then requires receipt.dialog_id to match",
+    "backend": "V105 native_v29_chat_bridge.py rejects nonempty dialog_id with 409 HOLD_DIALOG_SCOPE_NOT_BOUND",
+    "resolution_required": "Integrate and verify owner-scoped dialog identity and S03 readback in the EXISTING OneHost; do not bypass scope checks or fake a receipt",
+    "status": "HOLD"
+  },
+  "live_verified": false,
+  "live_e2e_verified": false,
+  "release_allowed": false
+}

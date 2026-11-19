@@ -1,0 +1,110 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3A_PATCH_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "3A",
+  "recorded_at_utc": "2026-11-16T12:15:45Z",
+  "status": "SOURCE_TESTED_NATIVE_HOLD",
+  "scope": "ORIGINAL_WEB29_3A_MENU_CATALOG_HUB",
+  "source_head_at_review": "66d8f6996495ca0d183fe373a32ccff1f09d4001",
+  "input_archive": {
+    "name": "NOX_WEB29_3A_3D_UPSTREAM_SYNC_V06_20261116.zip",
+    "sha256": "81736985a47d8d53b63ebd5c6fa503c6699ee33ce83e2454c5b1f50f2756333a",
+    "members": 1214
+  },
+  "output_archive": {
+    "name": "NOX_WEB29_3A_NAV_SAFE_RECOVERY_V06_20261116.zip",
+    "sha256": "d5603047763b9abfe03973e61fbb00e7b0c0f2acde9187c70f200f055bde9ea6",
+    "bytes": 84230364,
+    "members": 1214,
+    "unchanged_byte_identical": 1212,
+    "changed_paths": [
+      "site/pc/v25/nox-shell-v25.js",
+      "site/pc/hub.html"
+    ]
+  },
+  "patch": {
+    "format": "unified_diff_base64_utf8",
+    "base64": "LS0tIGEvc2l0ZS9wYy92MjUvbm94LXNoZWxsLXYyNS5qcworKysgYi9zaXRlL3BjL3YyNS9ub3gtc2hlbGwtdjI1LmpzCkBAIC00MCw2ICs0MCwxMCBAQAogICBjb25zdCBzdmcgPSAoaykgPT4gYDxzdmcgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgYXJpYS1oaWRkZW49InRydWUiPiR7UFtrXSB8fCBQLm1lbnV9PC9zdmc+YDsKICAgY29uc3QgZXNjID0gKHMpID0+IFN0cmluZyhzID8/ICcnKS5yZXBsYWNlKC9bJjw+IiddL2csIGMgPT4gKHsgJyYnOiAnJmFtcDsnLCAnPCc6ICcmbHQ7JywgJz4nOiAnJmd0OycsICciJzogJyZxdW90OycsICInIjogJyYjMzk7JyB9W2NdKSk7CiAgIGNvbnN0IFNUID0geyBSRUFEWTogJ9GA0LDQsdC+0YLQsNC10YInLCBQQVJUSUFMOiAn0YfQsNGB0YLQuNGH0L3QvicsIEhPTEQ6ICdIT0xEJyB9OworICAvLyBUaGUgY2F0YWxvZ3VlIGlzIGRhdGEsIG5ldmVyIGV4ZWN1dGFibGUgbmF2aWdhdGlvbiBvciByYXcgSFRNTCBhdHRyaWJ1dGVzLgorICAvLyBJbnZhbGlkIG9yIHVuZXhwZWN0ZWQgb3duZXIgY2F0YWxvZ3VlIGVudHJpZXMgZmFpbCBjbG9zZWQgdG8gdGhlIGV4aXN0aW5nIEhPTEQgbWVudS4KKyAgY29uc3QgU0FGRV9JRCA9IC9eW0EtWmEtejAtOV1bQS1aYS16MC05Ll8tXXswLDc5fSQvOworICBjb25zdCBTQUZFX0hSRUYgPSAvXlwvKD8hXC8pW0EtWmEtejAtOS5ffiUvPyM9JjotXSokLzsKICAgbGV0IElBID0gW107CiAgIGxldCBpYVJlcXVlc3QgPSBudWxsOwogICBhc3luYyBmdW5jdGlvbiBsb2FkSUEoKSB7CkBAIC02MSwxMCArNjUsMTMgQEAKICAgICAgICAgICBjbGVhclRpbWVvdXQodGltZW91dCk7CiAgICAgICAgIH0KICAgICAgICAgaWYgKGRhdGE/LnNjaGVtYSAhPT0gJ25veC5pYS52MjUnIHx8ICFBcnJheS5pc0FycmF5KGRhdGEudGlsZXMpIHx8Ci0gICAgICAgICAgICAhZGF0YS50aWxlcy5sZW5ndGggfHwgIWRhdGEudGlsZXMuZXZlcnkodCA9PgotICAgICAgICAgICAgICB0ICYmIHR5cGVvZiB0LmlkID09PSAnc3RyaW5nJyAmJiB0eXBlb2YgdC50aXRsZSA9PT0gJ3N0cmluZycgJiYKLSAgICAgICAgICAgICAgQXJyYXkuaXNBcnJheSh0Lml0ZW1zKSAmJiB0Lml0ZW1zLmV2ZXJ5KHggPT4KLSAgICAgICAgICAgICAgICB4ICYmIHR5cGVvZiB4LnRpdGxlID09PSAnc3RyaW5nJyAmJiB0eXBlb2YgeC5yb3V0ZUlkID09PSAnc3RyaW5nJykpKSB7CisgICAgICAgICAgICAhZGF0YS50aWxlcy5sZW5ndGggfHwgZGF0YS50aWxlcy5sZW5ndGggPiAyMCB8fCAhZGF0YS50aWxlcy5ldmVyeSh0ID0+CisgICAgICAgICAgICAgIHQgJiYgdHlwZW9mIHQuaWQgPT09ICdzdHJpbmcnICYmIFNBRkVfSUQudGVzdCh0LmlkKSAmJgorICAgICAgICAgICAgICB0eXBlb2YgdC50aXRsZSA9PT0gJ3N0cmluZycgJiYgQXJyYXkuaXNBcnJheSh0Lml0ZW1zKSAmJgorICAgICAgICAgICAgICB0Lml0ZW1zLmxlbmd0aCA8PSAxMjggJiYgdC5pdGVtcy5ldmVyeSh4ID0+CisgICAgICAgICAgICAgICAgeCAmJiB0eXBlb2YgeC50aXRsZSA9PT0gJ3N0cmluZycgJiYgdHlwZW9mIHgucm91dGVJZCA9PT0gJ3N0cmluZycgJiYKKyAgICAgICAgICAgICAgICBTQUZFX0lELnRlc3QoeC5yb3V0ZUlkKSAmJiBPYmplY3QuaGFzT3duKFNULCB4LmF2YWlsYWJpbGl0eSkgJiYKKyAgICAgICAgICAgICAgICAoeC5ocmVmID09IG51bGwgfHwgeC5ocmVmID09PSAnJyB8fCAodHlwZW9mIHguaHJlZiA9PT0gJ3N0cmluZycgJiYgU0FGRV9IUkVGLnRlc3QoeC5ocmVmKSkpKSkpIHsKICAgICAgICAgICB0aHJvdyBuZXcgRXJyb3IoJ0lBIGludmFsaWQgY2F0YWxvZ3VlJyk7CiAgICAgICAgIH0KICAgICAgICAgSUEgPSBkYXRhLnRpbGVzOwotLS0gYS9zaXRlL3BjL2h1Yi5odG1sCisrKyBiL3NpdGUvcGMvaHViLmh0bWwKQEAgLTMyLDkgKzMyLDI0IEBACiAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3N0YXRlJykudGV4dENvbnRlbnQgPSAnSE9MRCDCtyDQvdC10YIg0L/QvtC00YLQstC10YDQttC00ZHQvdC90L7Qs9C+INC60LDRgtCw0LvQvtCz0LAnOwogICAgIGNvbnN0IGVtcHR5ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2VtcHR5Jyk7CiAgICAgZW1wdHkuaGlkZGVuID0gZmFsc2U7Ci0gICAgZW1wdHkudGV4dENvbnRlbnQgPSAn0J/RgNC+0LLQtdGA0YzRgtC1INGB0L7QtdC00LjQvdC10L3QuNC1INC4INC/0L7QstGC0L7RgNC90L4g0L7RgtC60YDQvtC50YLQtSDRgdGC0YDQsNC90LjRhtGDINGH0LXRgNC10Lcg0LzQtdC90Y4uJzsKKyAgICBlbXB0eS50ZXh0Q29udGVudCA9ICfQmtCw0YLQsNC70L7QsyDQvdC10LTQvtGB0YLRg9C/0LXQvS4g0J/QvtCy0YLQvtGA0L3QsNGPINC30LDQs9GA0YPQt9C60LAg0L3QtSDQuNC30LzQtdC90LjRgiDRgdGC0YDQsNC90LjRhtGDINC40LvQuCDQtNCw0L3QvdGL0LUgTk9YLic7CiAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2ZpbHRlcicpLmRpc2FibGVkID0gdHJ1ZTsKLSAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FyZHMnKS5pbm5lckhUTUwgPSAnPGEgY2xhc3M9Im4yNS1idG4iIGhyZWY9Ii4uL3Byb2dyZXNzLmh0bWwiPtCg0LDQt9Cy0LjRgtC40LUgTk9YPC9hPic7CisgICAgY29uc3QgY2FyZHMgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FyZHMnKTsKKyAgICBjYXJkcy5pbm5lckhUTUwgPSAnPGEgY2xhc3M9Im4yNS1idG4iIGhyZWY9Ii4uL3Byb2dyZXNzLmh0bWwiPtCg0LDQt9Cy0LjRgtC40LUgTk9YPC9hPiAnICsKKyAgICAgICc8YnV0dG9uIGNsYXNzPSJuMjUtYnRuIiBpZD0icmV0cnlDYXRhbG9nIiB0eXBlPSJidXR0b24iPtCf0L7QstGC0L7RgNC40YLRjCDQt9Cw0LPRgNGD0LfQutGDPC9idXR0b24+JzsKKyAgICBjb25zdCByZXRyeSA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXRyeUNhdGFsb2cnKTsKKyAgICByZXRyeS5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsIGFzeW5jICgpID0+IHsKKyAgICAgIHJldHJ5LmRpc2FibGVkID0gdHJ1ZTsKKyAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzdGF0ZScpLnRleHRDb250ZW50ID0gJ9Cf0YDQvtCy0LXRgNC60LAg0LrQsNGC0LDQu9C+0LPQsOKApic7CisgICAgICBjb25zdCByZWNvdmVyZWQgPSBTPy5sb2FkSUEgPyBhd2FpdCBTLmxvYWRJQSgpIDogbnVsbDsKKyAgICAgIGlmIChBcnJheS5pc0FycmF5KHJlY292ZXJlZCkgJiYgcmVjb3ZlcmVkLmxlbmd0aCkgeworICAgICAgICAvLyBSZXN0b3JlIHRoZSBleGlzdGluZyBodWIgcm91dGU7IHJldGFpbiBxdWVyeSBhbmQgZGVlcC1saW5rIGhhc2guCisgICAgICAgIGxvY2F0aW9uLnJlbG9hZCgpOworICAgICAgfSBlbHNlIHsKKyAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3N0YXRlJykudGV4dENvbnRlbnQgPSAnSE9MRCDCtyDQutCw0YLQsNC70L7QsyDQv9C+LdC/0YDQtdC20L3QtdC80YMg0L3QtdC00L7RgdGC0YPQv9C10L0nOworICAgICAgICByZXRyeS5kaXNhYmxlZCA9IGZhbHNlOworICAgICAgfQorICAgIH0pOwogICAgIHJldHVybjsKICAgfQogICBjb25zdCB0ID0gSUEuZmluZCh4ID0+IHguaWQgPT09IHFzLmdldCgncycpKSB8fCBJQVswXTsK",
+    "sha256": "5c751ba95effc35b518bb564258bcc8c8a7271fb29cd58260b322abdded665ed",
+    "bytes": 3684
+  },
+  "preimages": {
+    "site/pc/v25/nox-shell-v25.js": "710a5af39c7ce7326b6593a8e85fd5710f29f33465021250ee7fe610782a438e",
+    "site/pc/hub.html": "2743ee9082ad2fc26836a49c27ae9f5726ae170c2e94a2d9287ff5cd8ee9d7d8"
+  },
+  "postimages": {
+    "site/pc/v25/nox-shell-v25.js": "acc12c5a866149efe57b26063406b61abe1370c1638c661cd78f65fa6f985897",
+    "site/pc/hub.html": "db1d5ca411c69927f58e2781f51c16279cea3ff6dbe52f90174db755d4714f3a"
+  },
+  "five_tasks": [
+    {
+      "n": 1,
+      "status": "DONE_SOURCE",
+      "evidence": "Latest available primary+3A+3D accepted source candidate selected by SHA and 14h receipt, not version suffix"
+    },
+    {
+      "n": 2,
+      "status": "DONE_SOURCE_RELATIVE",
+      "evidence": "1214 original paths retained, 1212 byte-identical; no original D02/14-world/Resonance/media paths modified. Full primary 512 cinematic lock hashes not independently compared in this run"
+    },
+    {
+      "n": 3,
+      "status": "DONE_SOURCE",
+      "evidence": "Original V25 menu rejects malformed routeId/ids, unsafe href schemes and oversized/invalid catalog; all eight legitimate tiles retained; HUB allows in-place retry after HOLD without replacing shell"
+    },
+    {
+      "n": 4,
+      "status": "HOLD_NATIVE",
+      "evidence": "Exact source candidate staged; no authenticated current OneHost preimage, owner STOP/lease, offsite independently restore-tested rollback. No server/weights/S03 mutation"
+    },
+    {
+      "n": 5,
+      "status": "DONE_SOURCE_HOLD_LIVE",
+      "evidence": "Node VM 11 cases incl malicious routes, Chromium offline HUB retry + navigation fallback, JS syntax, ZIP CRC, path-level SHA delta PASS. Browser HTTP navigation blocked (ERR_BLOCKED_BY_ADMINISTRATOR); no native auth SSE/S03/STOP E2E"
+    }
+  ],
+  "relay_control": [
+    {
+      "kind": "WEIGHTS",
+      "status": "HOLD_FRESH_NATIVE",
+      "student": "Qwen3.5-9B",
+      "historical_successful_updates": 25,
+      "historical_checkpoint": "checkpoint25",
+      "new_successful_updates": 0,
+      "current_pid": null,
+      "optimizer_restore": null,
+      "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43828903713"
+    },
+    {
+      "kind": "KNOWLEDGE",
+      "status": "HOLD",
+      "new_hunter_s03_recall_cycles": 0,
+      "verified_source": null,
+      "s03_readback": null
+    },
+    {
+      "kind": "DISPATCHER+RESOURCES",
+      "status": "HOLD_FRESH_NATIVE",
+      "historical_owner_readonly": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43846952110",
+      "historical_dispatcher_pid": 945279,
+      "current_three_pid": null,
+      "current_gpu_vram_cpu_ram_ssd": null,
+      "stop": null,
+      "lease": null,
+      "restarts": 0,
+      "downloads_bytes": 0,
+      "deleted_bytes": 0
+    }
+  ],
+  "cleanup": {
+    "status": "HOLD_NO_VERIFIED_REPLACEMENT_RESTORE",
+    "deleted_bytes": 0
+  },
+  "next_action": "Authorized current OneHost WEB29 preimage/STOP/writer lease plus independent rollback; apply exact two-path patch only if SHA matches, then auth browser HOME/MENU/HUB/Resonance/Development and S03/STOP; preserve no-loss.",
+  "source_sha_correction": {
+    "reason": "Final allow-empty-HOLD-href compatibility adjustment changed JS SHA after preliminary hash capture; exact git apply/reverse and SHA of final patch reverified",
+    "verified": "EXACT_APPLY_AND_ROLLBACK_CHECK_PASS",
+    "previous_incorrect_sha": "7df1261fbb0191c5559683ccd4176e49a73ddea629e7c50ffb43e5635fe2cb74",
+    "correct_sha": "acc12c5a866149efe57b26063406b61abe1370c1638c661cd78f65fa6f985897"
+  }
+}

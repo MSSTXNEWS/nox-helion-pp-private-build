@@ -124,12 +124,41 @@ class HuntDirector:
         return {"level":level,"score":score,"hours_since_verified_learning":round(hours,2),
                 "literal_emotion":False}
 
-    def _guard_side_effect(self, scope, policy):
+    @staticmethod
+    def _gpu_admission_live(state, policy):
+        """Recheck current owner capacity; native OneHost owns atomic fencing."""
+        gpu=state.get("gpu")
+        if (state.get("trainer_running") is not False or not isinstance(gpu,dict)
+                or gpu.get("chat_gpu_busy") is not False
+                or gpu.get("telemetry_verified") is not True
+                or gpu.get("gpu_owner")!="NOX"):
+            return False
+        if gpu.get("local_windows_gpu") is True:
+            samples=gpu.get("samples_hotspot_ge70")
+            if (gpu.get("hotspot_valid") is not True
+                    or gpu.get("power_sensor_valid") is not True
+                    or gpu.get("safe70_active") is not True
+                    or type(samples) is not int or not 0<=samples<3):
+                return False
+        metrics=(gpu.get("free_disk_gb"),gpu.get("free_vram_mb"),
+                 policy.get("min_free_disk_gb",25),
+                 policy.get("min_free_vram_mb",2048))
+        if any(type(x) not in (int,float) or not math.isfinite(x) or x<0
+               for x in metrics):
+            return False
+        disk,vram,min_disk,min_vram=metrics
+        return disk>=min_disk and vram>=min_vram
+
+    def _guard_side_effect(self, scope, policy, *, gpu_side_effect=False):
         if not self._stop_ok():return False
         try:
             head=self.c.source_head()
             current=self.c.signed_policy(scope)
-            return head==policy["source_head"] and current==policy
+            fresh=self._state(scope)
+            return (head==policy["source_head"] and current==policy
+                    and fresh is not None and fresh.get("chat_busy") is False
+                    and (not gpu_side_effect
+                         or self._gpu_admission_live(fresh,policy)))
         except Exception:return False
 
     def _claim(self, scope, action, key, policy):
@@ -164,6 +193,10 @@ class HuntDirector:
         if state.get("chat_busy") is True:
             return {"schema":SCHEMA,"state":"CHAT_PRIORITY_IDLE_DEFER",
                     "training_weight_updates_verified":0,"worms_are_os_processes":False}
+        # Missing/malformed chat activity is not equivalent to an idle chat.
+        # Research/weights callbacks must not compete with an unknown foreground.
+        if state.get("chat_busy") is not False:
+            return self._hold("CHAT_PRIORITY_STATE_UNVERIFIED")
         knowledge=self.hunger(state.get("last_verified_learning_utc"),now=now,
                               gap_score=state.get("verified_gap_score"))
         if knowledge["score"] is None:return self._hold("HUNGER_INPUTS_UNVERIFIED")
@@ -201,6 +234,11 @@ class HuntDirector:
         if state.get("trainer_running") is True or gpu.get("chat_gpu_busy") is True:
             response["gpu"]="BUSY_NO_CONCURRENT_TRAINER"
             return response
+        # Exact booleans only. Missing process ownership/readback cannot mean
+        # 'false' and must never admit another model download/trainer job.
+        if state.get("trainer_running") is not False or gpu.get("chat_gpu_busy") is not False:
+            response["gpu"]="HOLD_TRAINER_OR_CHAT_ACTIVITY_UNVERIFIED"
+            return response
         if gpu.get("telemetry_verified") is not True or gpu.get("gpu_owner")!="NOX":
             response["gpu"]="HOLD_DEVICE_OWNERSHIP_OR_TELEMETRY"
             return response
@@ -211,10 +249,16 @@ class HuntDirector:
                     gpu.get("safe70_active") is not True):
                 response["gpu"]="HOLD_SAFE70_SENSOR_OR_THERMAL"
                 return response
-        if (type(gpu.get("free_disk_gb")) not in (int,float)
-                or gpu["free_disk_gb"]<policy.get("min_free_disk_gb",25)
-                or type(gpu.get("free_vram_mb")) not in (int,float)
-                or gpu["free_vram_mb"]<policy.get("min_free_vram_mb",2048)):
+        free_disk=gpu.get("free_disk_gb")
+        free_vram=gpu.get("free_vram_mb")
+        min_disk=policy.get("min_free_disk_gb",25)
+        min_vram=policy.get("min_free_vram_mb",2048)
+        # NaN comparisons are always false, so unchecked NaN used to bypass
+        # resource admission. Reject non-finite, negative and boolean values
+        # on BOTH measured resources and owner-signed minimums.
+        if (any(type(x) not in (int,float) or not math.isfinite(x) or x<0
+                for x in (free_disk,free_vram,min_disk,min_vram))
+                or free_disk<min_disk or free_vram<min_vram):
             response["gpu"]="HOLD_DISK_OR_VRAM_BUDGET"
             return response
         if policy.get("allow_autonomous_model_download") is True:
@@ -223,17 +267,17 @@ class HuntDirector:
             if isinstance(candidate,dict) and self._eligible_model(candidate,policy):
                 key="model-"+candidate["model_id"]+"@"+candidate["revision"]
                 if self._claim(scope,"model_download",key,policy):
-                    if not self._guard_side_effect(scope,policy):return self._hold("STOP_BEFORE_MODEL_DOWNLOAD")
+                    if not self._guard_side_effect(scope,policy,gpu_side_effect=True):return self._hold("STOP_BEFORE_MODEL_DOWNLOAD")
                     try:download=self.c.stage_model_existing(scope,dict(candidate,staging_only=True))
                     except Exception:download=None
                     response["model_download"]=(
                         "VERIFIED_STAGING_ONLY" if isinstance(download,dict)
                         and download.get("sha256_verified") is True
-                        and isinstance(download.get("bytes"),int)
+                        and type(download.get("bytes")) is int
                         and 0<download["bytes"]<=candidate["max_bytes"] and
                         isinstance(download.get("sha256"),str)
                         and SHA_RE.fullmatch(download["sha256"]) and
-                        self._guard_side_effect(scope,policy)
+                        self._guard_side_effect(scope,policy,gpu_side_effect=True)
                         else "HOLD_DOWNLOAD_NOT_VERIFIED")
         # A model download alone is NOT learning. Only call the installed
         # trainer if a separate vetted training dataset & holdout exist.
@@ -243,7 +287,7 @@ class HuntDirector:
             if isinstance(train,dict) and self._eligible_train(train,state,policy):
                 key="train-"+train["dataset_sha256"]+"@"+train["student_sha256"]
                 if self._claim(scope,"gpu_train",key,policy):
-                    if not self._guard_side_effect(scope,policy):return self._hold("STOP_BEFORE_TRAIN")
+                    if not self._guard_side_effect(scope,policy,gpu_side_effect=True):return self._hold("STOP_BEFORE_TRAIN")
                     try:started=self.c.launch_existing_trainer(scope,dict(train,
                         staging_only=True,no_auto_promotion=True,fail_closed_stop=True))
                     except Exception:started=None
@@ -252,26 +296,39 @@ class HuntDirector:
                         if isinstance(started,dict)
                         and started.get("accepted_by_existing_trainer") is True
                         and isinstance(started.get("job_id"),str) and len(started["job_id"])>=8
-                        and self._guard_side_effect(scope,policy)
+                        and self._guard_side_effect(scope,policy,gpu_side_effect=True)
                         else "HOLD_TRAINER_NOT_ACCEPTED_OR_REVOKED")
         return response
 
     @staticmethod
     def _eligible_model(candidate,policy):
+        # Native-owner policy shape is part of admission. A string allowlist
+        # previously allowed substring membership; malformed budgets could
+        # raise TypeError and abort the existing HuntDirector tick.
+        allowed=policy.get("allowed_model_ids")
+        max_bytes=policy.get("max_model_bytes",8_000_000_000)
+        if (not isinstance(allowed,list)
+                or any(not isinstance(x,str) or not ID_RE.fullmatch(x) for x in allowed)
+                or type(max_bytes) is not int or max_bytes<1000):
+            return False
+        license_id=candidate.get("license_id")
         return (candidate.get("type")=="frozen_teacher"
            and isinstance(candidate.get("model_id"),str)
            and bool(ID_RE.fullmatch(candidate["model_id"]))
-           and candidate["model_id"] in policy.get("allowed_model_ids",[])
+           and candidate["model_id"] in allowed
            and isinstance(candidate.get("revision"),str)
            and bool(REV_RE.fullmatch(candidate["revision"]))
            and candidate.get("license_verified_by_owner") is True
            and candidate.get("training_rights_verified") is True
-           and bool(LICENSE_RE.fullmatch(candidate.get("license_id","")))
+           and isinstance(license_id,str) and bool(LICENSE_RE.fullmatch(license_id))
            and type(candidate.get("max_bytes")) is int
-           and 1000<=candidate["max_bytes"]<=policy.get("max_model_bytes",8_000_000_000)
+           and 1000<=candidate["max_bytes"]<=max_bytes
            and candidate.get("source_origin")=="trusted_model_registry")
     @staticmethod
     def _eligible_train(train,state,policy):
+        max_steps=policy.get("max_optimizer_steps_per_job",100)
+        if type(max_steps) is not int or max_steps<1:
+            return False
         return (train.get("training_rights_verified") is True
             and train.get("holdout_independent") is True
             and train.get("dataset_reviewed") is True
@@ -282,4 +339,4 @@ class HuntDirector:
             and isinstance(train.get("dataset_sha256"),str)
             and bool(SHA_RE.fullmatch(train["dataset_sha256"]))
             and type(train.get("optimizer_steps_budget")) is int
-            and 1<=train["optimizer_steps_budget"]<=policy.get("max_optimizer_steps_per_job",100))
+            and 1<=train["optimizer_steps_budget"]<=max_steps)

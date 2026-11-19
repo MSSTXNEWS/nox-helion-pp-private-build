@@ -1,0 +1,48 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2A_TRL_SIGNATURE_V1",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2A",
+  "at_utc": "2026-11-16T10:43:24Z",
+  "at_msk": "2026-11-16T13:43:24+03:00",
+  "head_before": "75a5f2ee1eda894f49b620cf8fad2362eb3b508e",
+  "head_after": "COMMIT_CARRYING_RECEIPT",
+  "task_outcomes": [
+    "1 HOLD live GGUF SHA/tokenizer/PID binding not freshly owner-authenticated; historical NOX36 on 8081",
+    "2 PRIOR NATIVE verified Qwen3.5-9B revision c202236235762e1c871ad0ccb60c8ee5ba337b9a (16 files / 19329393661 bytes), new on-host full readback HOLD, no redownload",
+    "3 SOURCE PRESERVED Qwen9B own optimizer/adapter lineage, legacy 35B route historical only",
+    "4 SOURCE PATCH: actual pinned TRL SFTConfig constructor signature inspection without model loads, explicit safe-true omission vs unsupported kwargs; new six synthetic regressions, native signature HOLD",
+    "5 HOLD current checkpoint25 owner STOP/lease and independent offsite restore, no candidate merge or promotion"
+  ],
+  "WEIGHTS": {
+    "historical_successful_optimizer_updates": 25,
+    "updates_by_2a": 0,
+    "checkpoint": "checkpoint25 historical",
+    "offsite_restore": "HOLD",
+    "native_trainer": "FATAL_LAST_OBSERVED"
+  },
+  "KNOWLEDGE": {
+    "new_hunter_s03_recall": "HOLD",
+    "new_s03_writes": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "historical_owner_native": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43846952110",
+    "last_dispatcher_pid": 945279,
+    "gpu0_used_mib": 21562,
+    "gpu1_used_mib": 474,
+    "ssd_free_bytes": 16922308608,
+    "stop_lease": "UNKNOWN",
+    "active_three_worker_pids": "UNKNOWN",
+    "downloads_bytes": 0,
+    "restarts": 0,
+    "deleted_bytes": 0
+  },
+  "tests": {
+    "existing_hf_synthetic": 13,
+    "new_sftconfig_synthetic": 6,
+    "exact_ci": "PENDING",
+    "native": "NOT_RUN"
+  },
+  "root_cause": "Original read-only native inventory listed TRL version but not actual installed SFTConfig constructor signature; prior legacy save_safetensors failure could not be checked against current environment.",
+  "lesson": "Version strings are not API admission; signature readback is not constructor execution, model installation or weight training.",
+  "next_action": "Exact-CAS CI then owner-authorized read-only pinned Python signature and GGUF PID/SHA, Qwen checkpoint25/STOP/lease/offsite proof; one existing trainer only."
+}

@@ -1,0 +1,1178 @@
+{
+  "instructions_version": "0.0.6",
+  "date": "2026-11-16",
+  "instance_id": 60509551,
+  "scope": "existing NOX OneHost and ready WEB Resonance only",
+  "policy": {
+    "workers": 6,
+    "workers_are": "Six configured dispatcher executors with atomic unique claims; this is configuration, not six running LLMs. Dispatcher and executor services were stopped in the 13:40 reset snapshot.",
+    "chat_priority": true,
+    "target_sustained_utilization_percent": [
+      80,
+      85
+    ],
+    "target_peak_utilization_percent": 95,
+    "no_fake_load": true,
+    "one_active_chat_model": true,
+    "combined_training": [
+      "LoRA skill acquisition",
+      "validated merge into matching base",
+      "periodic full-parameter distillation",
+      "measured inference quantization"
+    ],
+    "latest_owner_LoRA_permission_supersedes_older_no_LoRA_text": true,
+    "quantization_lossless_guarantee": false,
+    "no_new_backend": true,
+    "no_windows_exe": true,
+    "no_blind_torch_upgrade": true,
+    "training_state_and_S03_protected": true,
+    "chatgpt_agents_including_coordinator": 4,
+    "nox_chat_and_coordinator_roles": 1,
+    "total_roles": 11,
+    "resource_quota": {
+      "cpu_cores": 19.2,
+      "memory_max_bytes": 194065203200
+    },
+    "modes": [
+      "NORMAL",
+      "TASK_BOOST"
+    ],
+    "training_in_boost": "collect verified work experiences; model optimizer paused for resource-intensive integration",
+    "model_merge": "exact compatible base and evaluated adapters only; heterogeneous teacher knowledge through validated distillation",
+    "new_visual_request": true,
+    "total_roles_scope": "Eleven conceptual roles: six configured native executors, four ChatGPT collaborators, and one chat/coordinator role; not eleven loaded or running models.",
+    "runtime_targets_are_not_current_admission": true
+  },
+  "download_state_this_run": "SELECTED_MEDIA_HISTORICALLY_VERIFIED_CURRENT_NOX_SERVICES_STOPPED",
+  "components": [
+    {
+      "name": "rclone",
+      "priority": "P0",
+      "state": "PC_DEFERRED_CONNECTOR_BACKUPS_VERIFIED_NATIVE_DRIVE_OAUTH_UNCONFIGURED",
+      "source": "https://rclone.org/install/",
+      "use": "Owner-deferred PC bridge; Drive connector has verified selected backups. Native Drive OAuth and an autonomous upload remote remain unconfigured.",
+      "id": "component-1",
+      "owner_executor": "nox-agent-05",
+      "decision": "PC_DEFERRED; VERIFIED_CONNECTOR_COPIES_DO_NOT_CONFIGURE_NATIVE_RCLONE"
+    },
+    {
+      "name": "PyTorch CUDA SM70",
+      "priority": "P0",
+      "state": "HISTORICAL_NATIVE_INSTALL_VERIFIED_NOT_RECHECKED_AFTER_RESET",
+      "observed_earlier": "2.6.0+cu124 with sm_70",
+      "source": "https://pytorch.org/get-started/previous-versions/",
+      "use": "Real FP16 CUDA smoke and existing engine benchmark before any replacement",
+      "id": "component-2",
+      "owner_executor": "nox-agent-02",
+      "package": "torch",
+      "installed_version": "2.6.0+cu124",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE",
+      "version_observation_scope": "Original native inventory; installed_version is retained history, not a fresh post-reset environment check."
+    },
+    {
+      "name": "DeepSpeed",
+      "priority": "P0",
+      "state": "HISTORICAL_NATIVE_INSTALL_VERIFIED_NOT_RECHECKED_AFTER_RESET",
+      "observed_earlier": "0.20.0",
+      "source": "https://www.deepspeed.ai/tutorials/zero-offload/",
+      "use": "Verify built CPUAdam/optimizer paths, compare ZeRO/offload against measured baseline",
+      "id": "component-3",
+      "owner_executor": "nox-agent-03",
+      "package": "deepspeed",
+      "installed_version": "0.20.0",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE",
+      "version_observation_scope": "Original native inventory; installed_version is retained history, not a fresh post-reset environment check."
+    },
+    {
+      "name": "Transformers/Accelerate/Datasets/Safetensors",
+      "priority": "P0",
+      "state": "HISTORICAL_NATIVE_INSTALL_VERIFIED_NOT_RECHECKED_AFTER_RESET",
+      "source": "https://huggingface.co/docs/transformers/installation",
+      "use": "Reuse installed environment; freeze exact versions and wheel hashes before staged changes",
+      "id": "component-4",
+      "owner_executor": "nox-agent-04",
+      "package": "transformers",
+      "installed_version": "5.23.0",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE",
+      "version_observation_scope": "Original native inventory; installed_version is retained history, not a fresh post-reset environment check."
+    },
+    {
+      "name": "PEFT LoRA and merge",
+      "priority": "P0",
+      "state": "HISTORICAL_NATIVE_INSTALL_VERIFIED_NOT_RECHECKED_AFTER_RESET",
+      "source": "https://huggingface.co/docs/peft/main/package_reference/lora",
+      "use": "Train only against the exact student revision and tokenizer; merge only after holdout and checkpoint restoration",
+      "id": "component-5",
+      "owner_executor": "nox-agent-05",
+      "package": "peft",
+      "installed_version": "0.21.3",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE",
+      "version_observation_scope": "Original native inventory; installed_version is retained history, not a fresh post-reset environment check."
+    },
+    {
+      "name": "bitsandbytes 8-bit optimizer or NF4/FP4",
+      "priority": "P0",
+      "state": "HISTORICAL_NATIVE_INSTALL_VERIFIED_NOT_RECHECKED_AFTER_RESET",
+      "source": "https://huggingface.co/docs/bitsandbytes/main/installation",
+      "use": "Linux CUDA12 build including sm70; LLM.int8 requires CC7.5 and is not the V100 path",
+      "id": "component-6",
+      "owner_executor": "nox-agent-06",
+      "package": "bitsandbytes",
+      "installed_version": "0.50.2",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE",
+      "version_observation_scope": "Original native inventory; installed_version is retained history, not a fresh post-reset environment check."
+    },
+    {
+      "name": "existing llama.cpp CUDA inference",
+      "priority": "P0",
+      "state": "STOPPED_OLD_MAIN_GGUF_REMOVED_NEW_MAIN_NOT_LIVE",
+      "source": "https://github.com/ggml-org/llama.cpp",
+      "use": "Prompt cache, supported KV formats, batching, thread counts and actual SSE TTFT/tokens per second; inspect existing PIDs before stopping anything",
+      "id": "component-7",
+      "owner_executor": "nox-agent-03",
+      "decision": "CURRENT_RESET_HOLD; HISTORICAL_INFERENCE_MEASUREMENTS_ONLY",
+      "acceptance": {
+        "first_turn_total_ms": 4479,
+        "history_turn_total_ms": 760,
+        "workers_turn_first_ms": 592,
+        "browser_visual_qa": "HISTORICAL_STREAM_ONLY_ACCEPTED_FULL_UI_NOT_ACCEPTED",
+        "observation_scope": "Historical pre-reset measurements; not current latency, health, or model availability.",
+        "historical_stream_evidence_ref": "coalesced_normal_browser_43856493341",
+        "current_evidence_ref": "parallel_owner_model_reset_6918022617"
+      }
+    },
+    {
+      "name": "PyTorch data pipeline",
+      "priority": "P0",
+      "state": "CONFIGURATION_REQUIRES_NATIVE_BENCHMARK",
+      "source": "https://docs.pytorch.org/docs/2.6/data.html",
+      "use": "Pinned buffers, persistent workers, bounded prefetch, tokenization caching, length bucketing and gradient accumulation",
+      "id": "component-8",
+      "owner_executor": "nox-agent-02"
+    },
+    {
+      "name": "psutil and nvidia-ml-py",
+      "priority": "P0",
+      "state": "HISTORICAL_NATIVE_INSTALL_VERIFIED_NOT_RECHECKED_AFTER_RESET",
+      "source": "https://pypi.org/project/nvidia-ml-py/",
+      "use": "Existing GPU Resource Brain telemetry; cgroup RAM, STOP, restart backoff, no competing scheduler",
+      "id": "component-9",
+      "owner_executor": "nox-agent-03",
+      "package": "psutil",
+      "installed_version": "7.2.2",
+      "decision": "REUSE_EXISTING_AND_INTEGRATE",
+      "version_observation_scope": "Original native inventory; installed_version is retained history, not a fresh post-reset environment check."
+    },
+    {
+      "name": "S03 semantic retrieval",
+      "priority": "P1",
+      "state": "S03_SEMANTIC_RECALL_HISTORICALLY_VERIFIED_EMBEDDING_SERVICE_STOPPED_BGE_GGUF_REMOVED",
+      "source": "https://github.com/asg017/sqlite-vec",
+      "use": "One S03 database; inspect actual schema, index the same records with the existing BGE service and verify retrieval quality; do not label FTS as semantic retrieval",
+      "id": "component-10",
+      "owner_executor": "nox-agent-04",
+      "decision": "PRESERVE_S03_AND_LOCAL_BACKUP; CURRENT_RECALL_NOT_VERIFIED",
+      "historical_evidence_ref": "s03_activation",
+      "current_evidence_ref": "parallel_owner_model_reset_6918022617"
+    },
+    {
+      "name": "C01-C08/M0-M7/Reflection/Self-model",
+      "priority": "P1",
+      "state": "EXISTING_NOX_RUNTIME_WIRING_NOT_DOWNLOADABLE_CONSCIOUSNESS",
+      "source": "coordination/NOX_PRIME_SIX_RELAY_20261115.md",
+      "use": "Grounded facts, provenance, bounded context and real conversation tests; a package install is not proof of intelligence or consciousness",
+      "id": "component-11",
+      "owner_executor": "nox-agent-05",
+      "decision": "INTEGRATE_EXISTING_SOURCE_AND_VERIFY_LIVE",
+      "current_runtime_state": "STOPPED_IN_RESET_SNAPSHOT; EXISTING_MODULES_ARE_NOT_RUNNING_MODEL_COUNTS"
+    },
+    {
+      "name": "third-party adapters and new teacher weights",
+      "priority": "P3",
+      "state": "NOT_SELECTED_UNTIL_EXACT_STUDENT_AND_LICENSE_VERIFIED",
+      "source": "https://huggingface.co/models?library=peft",
+      "use": "No random consciousness/emotion adapters. Verify architecture, base revision, tokenizer, license, holdout and actual measured benefit before acquiring large files",
+      "id": "component-12",
+      "owner_executor": "nox-agent-06",
+      "decision": "DO_NOT_DUPLICATE_EXISTING_TEACHERS_OR_MERGE_INCOMPATIBLE_WEIGHTS"
+    },
+    {
+      "id": "work-experience-learning",
+      "name": "Verified work experience and error corrections",
+      "priority": "P0",
+      "owner_executor": "nox-agent-02",
+      "state": "HISTORICAL_REVIEWED_RUNTIME_AND_CORPUS_PRESENT_CURRENT_DISPATCHER_STOPPED",
+      "decision": "QUARANTINE_UNVERIFIED_FAILURES_AND_MENTOR_ADVICE",
+      "source": "nox-control/owner_dispatcher_mentor.py",
+      "use": "Claim-bound receipts and verified train/holdout examples; optimizer changes require separate training evidence",
+      "historical_evidence_ref": "six_worker_claims",
+      "current_evidence_ref": "parallel_owner_model_reset_6918022617"
+    },
+    {
+      "id": "nox-image-engine",
+      "name": "NOX image / SDXL-Lightning 4 step",
+      "priority": "P1",
+      "owner_executor": "nox-agent-06",
+      "state": "HISTORICAL_NATIVE_SHA_AND_GENERATION_VERIFIED_CURRENT_SERVICE_STOPPED",
+      "source": "https://huggingface.co/ByteDance/SDXL-Lightning",
+      "license": "openrail++",
+      "workflow": "sdxl_lightning_4step",
+      "artifact_ids": [
+        "media-sdxl-lightning-4step"
+      ],
+      "use": "Loopback ComfyUI through existing authenticated NOX media queue; actual decoded PNG required",
+      "historical_evidence_ref": "media_acceptance",
+      "current_evidence_ref": "parallel_owner_model_reset_6918022617"
+    },
+    {
+      "id": "nox-video-engine",
+      "name": "NOX video / Wan2.1 T2V 1.3B",
+      "priority": "P1",
+      "owner_executor": "nox-agent-06",
+      "state": "HISTORICAL_NATIVE_SHA_AND_GENERATION_VERIFIED_CURRENT_SERVICE_STOPPED",
+      "source": "https://huggingface.co/Comfy-Org/Wan-2.1",
+      "license": "apache-2.0",
+      "workflow": "wan21_t2v_13b",
+      "artifact_ids": [
+        "media-wan21-13b",
+        "media-umt5-scaled",
+        "media-wan-vae"
+      ],
+      "use": "FP16 compute on V100, scaled FP8 text-encoder storage with non-FP8 fallback; decoded multi-frame WEBM required",
+      "historical_evidence_ref": "media_acceptance",
+      "current_evidence_ref": "parallel_owner_model_reset_6918022617"
+    },
+    {
+      "id": "senior-model-gateway",
+      "name": "Bounded senior adviser gateway",
+      "priority": "P1",
+      "owner_executor": "nox-agent-01",
+      "state": "REVIEWED_SOURCE_AVAILABLE_CURRENT_DISPATCHER_AND_LOCAL_CHAT_STOPPED",
+      "source": "nox-control/owner_senior_gateway.py",
+      "use": "One verified adviser works; a council requires 2+ actual replies; no private S03 text or secrets sent; advice is evaluated before application",
+      "current_external_adviser_access_verified": false,
+      "current_evidence_ref": "parallel_owner_model_reset_6918022617"
+    },
+    {
+      "id": "pc-warm-storage",
+      "name": "PC / Drive warm weights and verified backups",
+      "priority": "P0",
+      "owner_executor": "nox-agent-05",
+      "state": "PC_DEFERRED_DRIVE_CONNECTOR_SELECTED_BACKUPS_VERIFIED_NEW_QWEN_EXPORTS_NOT_RUN",
+      "source": "nox-control/NOX_CONNECT_PC.ps1",
+      "use": "Continue with owner-selected Drive and server RAM. RAM is a cache, not a backup. PC/EXE work is deferred; CP6 and CP55 manual export packages have not been dispatched."
+    },
+    {
+      "id": "owner-proactive-reports",
+      "name": "Durable owner event outbox",
+      "priority": "P1",
+      "owner_executor": "nox-agent-02",
+      "state": "HISTORICAL_API_UI_SOURCE_AVAILABLE_CURRENT_PROXY_AND_DISPATCHER_STOPPED",
+      "source": "nox-control/owner_event_outbox.py",
+      "use": "Persist reports without an open browser and replay them on reconnect; external push channel not configured",
+      "current_evidence_ref": "parallel_owner_model_reset_6918022617"
+    }
+  ],
+  "storage_layout": {
+    "SSD": {
+      "keep": [
+        "active GGUF",
+        "exact active training base",
+        "current resumable optimizer checkpoint",
+        "S03 and dialog history",
+        "code and small configuration"
+      ],
+      "evict_after_verified_copies": [
+        "inactive old GGUFs",
+        "inactive teacher files",
+        "superseded compatible checkpoints",
+        "large archived source weights"
+      ],
+      "list_scope": "Retention categories, not a claim that an active GGUF or the public Qwen base is currently resident on SSD.",
+      "free_bytes_last_observed": 43158982656,
+      "free_observed_at_utc": "2026-11-16T13:54:56Z",
+      "evidence_ref": "post_reset_state_observer_6918392509",
+      "previous_free_observation": {
+        "free_bytes": 43158958080,
+        "observed_at_utc": "2026-11-16T13:40:24Z",
+        "evidence_ref": "parallel_owner_model_reset_6918022617"
+      },
+      "total_bytes_last_observed": 183609851904,
+      "free_bytes_scope": "SAMPLED_F_BAVAIL; NOT_EXCLUSIVE_RECLAIM_ATTRIBUTION_OR_DOWNLOAD_ADMISSION"
+    },
+    "RAM": {
+      "use": [
+        "admitted selected media cache",
+        "one requested warm weight object at a time"
+      ],
+      "reserve_bytes": 3221225472,
+      "cgroup_headroom_reserve_bytes": 17179869184,
+      "backup": false,
+      "all_73GB_HF_base_fits_current_tmpfs": false,
+      "current_residency_state": "UNKNOWN_AFTER_RESET",
+      "current_free_bytes": null,
+      "current_cgroup_headroom_bytes": 133721800704,
+      "historical_qwen_public_base_memfd_bytes": 19329393661,
+      "historical_qwen_public_base_members": 16,
+      "qwen_keeper_created": false,
+      "qwen_process_exit_invalidates_residency_claim": true,
+      "legacy_full_base_fit_field_scope": "Historical assessment of the old 35B base; the 13:54:56 snapshot measures current tmpfs free capacity, but weight residency remains unmeasured after reset.",
+      "current_free_bytes_scope": "Physical MemAvailable was not measured; cgroup headroom and tmpfs free are separate telemetry.",
+      "tmpfs_free_bytes": 3366731776,
+      "tmpfs_total_bytes": 50465865728,
+      "resource_observed_at_utc": "2026-11-16T13:54:56Z",
+      "resource_evidence_ref": "post_reset_state_observer_6918392509",
+      "cgroup_memory_current_bytes": 60343402496,
+      "cgroup_memory_max_bytes": 194065203200,
+      "cgroup_swap_current_bytes": 0,
+      "cgroup_swap_max_bytes": 0,
+      "resource_measurement_scope": "SAMPLED_CGROUP_AND_TMPFS; NOT_PHYSICAL_MEMAVAILABLE_WEIGHT_RESIDENCY_OR_LOAD_ADMISSION"
+    },
+    "PC": {
+      "use": [
+        "Deferred PC bridge and EXE; not a prerequisite for unrelated work"
+      ],
+      "state": "DEFERRED_BY_OWNER"
+    },
+    "Google_Drive": {
+      "use": [
+        "Verified selected durable copies through the existing Drive connector",
+        "Manual encrypted CP6/CP55 export preparation; no new archive or Drive copy yet"
+      ],
+      "state": "CONNECTOR_SELECTED_BACKUPS_VERIFIED_NATIVE_OAUTH_UNCONFIGURED",
+      "native_oauth_configured": false,
+      "native_remotes_last_observed": [],
+      "native_remote_observation_scope": "Historical native inventory; no OAuth or remote configuration was performed by this update.",
+      "verified_backups": [
+        {
+          "scope": "BUILDER3030",
+          "bytes": 306787336,
+          "sha256": "3030a2623b279ec0586bbdf403cf7ee13a32bd0fe2bf5094538d59b7c854ddb9",
+          "complete_drive_download_and_sha_verified": true,
+          "verified_at_utc": "2026-11-16T06:21:04Z",
+          "evidence_ref": "builder_drive_refetch"
+        },
+        {
+          "scope": "HISTORICAL_35B_ZERO_UPDATE_CHECKPOINT5_NOT_QWEN9B",
+          "bytes": 2103985,
+          "archive_sha256": "96256ea6679ef1b72d7cfd39fb86fa84920e3e74ceeffa1a524cf3cd90c742c2",
+          "original_member_files_verified": 9,
+          "saved_successful_optimizer_steps": 0,
+          "evidence_ref": "checkpoint5_drive_backup"
+        }
+      ],
+      "prepared_not_exported": [
+        {
+          "scope": "QWEN6",
+          "branch": "owner/qwen6-drive-20261116-123818",
+          "source_commit": "6d57d5f6fd8e3103769051703685d2537300365a",
+          "native_dispatched": false,
+          "github_artifact_created": false,
+          "drive_copy_verified": false,
+          "evidence_ref": "qwen6_manual_backup_registration_123818"
+        },
+        {
+          "scope": "QWEN55",
+          "branch": "owner/qwen55-drive-20261116-132704",
+          "source_commit": "29266f576f998c0458890b5ed0c9d566ad3c6d85",
+          "native_dispatched": false,
+          "github_artifact_created": false,
+          "drive_copy_verified": false,
+          "evidence_ref": "qwen55_manual_source_release_132704"
+        }
+      ],
+      "current_export_blockers": [
+        "GLOBAL_STOP",
+        "OWNER_MAINTENANCE",
+        "STOPPED_EXECUTION_CONTEXT",
+        "GITHUB_BROWSER_SIGNED_OUT",
+        "STALE_QUALITY_GUARD_HEARTBEAT"
+      ]
+    },
+    "eviction": "This reconciliation grants no deletion or cleanup permission. Preserve existing object-specific verified-copy and admission gates; PC connection is owner-deferred.",
+    "warm_rehydration": "HISTORICAL_DRIVE_ADAPTER_READBACK_AND_HERMES_RAM_MIGRATION_VERIFIED; CURRENT_RESIDENCY_AND_NEW_HYDRATION_UNOBSERVED_AFTER_RESET"
+  },
+  "schema_version": 3,
+  "native_inventory_source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43778292660",
+  "installed_package_versions": {
+    "torch": "2.6.0+cu124",
+    "transformers": "5.23.0",
+    "accelerate": "1.15.0",
+    "datasets": "5.2.0",
+    "safetensors": "0.8.0",
+    "peft": "0.21.3",
+    "bitsandbytes": "0.50.2",
+    "trl": "1.18.0",
+    "deepspeed": "0.20.0",
+    "psutil": "7.2.2",
+    "nvidia-ml-py": "13.615.71",
+    "sqlite-vec": null,
+    "playwright": null,
+    "pytest": null,
+    "ruff": null
+  },
+  "native_tasks": [
+    {
+      "executor_preference": "nox-agent-01",
+      "task": "owner.training_stack",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    },
+    {
+      "executor_preference": "nox-agent-02",
+      "task": "owner.dispatcher",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    },
+    {
+      "executor_preference": "nox-agent-03",
+      "task": "owner.chat",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    },
+    {
+      "executor_preference": "nox-agent-04",
+      "task": "owner.memory",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    },
+    {
+      "executor_preference": "nox-agent-05",
+      "task": "owner.storage",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    },
+    {
+      "executor_preference": "nox-agent-06",
+      "task": "owner.downloads",
+      "claim": "atomic; any idle executor can claim the next ready unique task"
+    }
+  ],
+  "large_download_admission": {
+    "disk_free_bytes_at_inspection": 43158982656,
+    "shm_free_bytes_at_inspection": 3366731776,
+    "full_new_models_fit_not_verified": true,
+    "no_deletion_before_two_verified_copies": true,
+    "selected_media_bytes": 16766066457,
+    "historical_inspection": {
+      "observed_in_manifest_at_utc": "2026-11-16T00:27:18.076985+00:00",
+      "disk_free_bytes": 15729852416,
+      "shm_free_bytes": 20749209600
+    },
+    "observed_at_utc": "2026-11-16T13:54:56Z",
+    "evidence_ref": "post_reset_state_observer_6918392509",
+    "current_admission_state": "BLOCKED_BY_GLOBAL_STOP_AND_OWNER_MAINTENANCE; SAMPLED_RESOURCES_ARE_NOT_ADMISSION",
+    "new_download_admitted": false
+  },
+  "updated_at": "2026-11-16T13:57:14.036477+00:00",
+  "evidence": {
+    "inventory_run": 43778292660,
+    "chat_acceptance_run": 43779355450,
+    "pc_helper_install_run": 43778550498,
+    "media_repair_source": "e88dc6f974f33552336143e553c0a0d0cd1ce7ce",
+    "media_repair_run": 43780220533,
+    "browser_acceptance": "HISTORICAL_STREAM_ONLY_ACCEPTED_FULL_UI_NOT_ACCEPTED_CURRENT_SERVICES_STOPPED",
+    "original_entries_scope": "Historical references retained from the original00:27 manifest; newer named evidence supersedes current-state implications.",
+    "media_acceptance": {
+      "request": "6904718718",
+      "source_commit": "4cfc1fc8fcab16a70d1c637ef4593ef2fc496f8a",
+      "run_id": "43785897512",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43785897512",
+      "component_state": "GENERATED_DECODED_AND_GPU_RELEASED",
+      "receipt_sha256": "f224353628c1aef7ac5ff70c9d74a0f4a1b82569bccb70ab59faf234bdbe4fdb",
+      "overall_run_caveat": "Native acceptance succeeded; the action footer was missing. Overall action success is not used as the component proof."
+    },
+    "drive_ram": {
+      "request": "6904561962",
+      "source_commit": "c50d31886158173280cc6fc31784fc74695f4aeb",
+      "run_id": "43784759314",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43784759314",
+      "component_state": "RAM_FILES_SHA_VERIFIED_NOT_MERGED",
+      "manifest_sha256": "73b8fa9336faabad2c2b1d197d6751d79b065158c7f0700e46155f371b74c816"
+    },
+    "s03_activation": {
+      "request": "6905063285",
+      "source_commit": "432b6195e7a8e3e56b32b9abcfd258dfc21465ec",
+      "run_id": "43788323697",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43788323697",
+      "component_state": "LIVE_SHARED_SEMANTIC_MEMORY_AND_NATIVE_INDEX_VERIFIED",
+      "receipt_sha256": "22b5e72e80a62c29ac4bf1f730adc102e86aaf43a59d3fa69d6fe4f6717e5d86",
+      "overall_run_caveat": "S03 component acceptance succeeded; the separate browser check failed."
+    },
+    "six_worker_claims": {
+      "run_id": "43781970809",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43781970809",
+      "scope": "Six configured native dispatcher executors and real task claims; not six LLM instances, six asserted OS processes, or a maximum-throughput benchmark."
+    },
+    "checkpoint5_drive_backup": {
+      "component_state": "DRIVE_DOWNLOAD_AND_NINE_FILES_SHA_VERIFIED",
+      "url": "https://drive.google.com/file/d/1uaPIhS3Aa0Nln-ADVc1CK09L5rIj3n3W/view",
+      "bytes": 2103985,
+      "archive_sha256": "96256ea6679ef1b72d7cfd39fb86fa84920e3e74ceeffa1a524cf3cd90c742c2",
+      "full_drive_redownload_and_nine_file_sha256_verified": true,
+      "evidence_origin": "Root verified the downloaded Drive archive and every original member hash.",
+      "scope": "Historical 35B zero-update checkpoint5: seven checkpoint files, lineage and receipt only."
+    },
+    "storage_actual_43826684202": {
+      "request": "6910606701",
+      "source_commit": "dd96921a5d3b4c3b11a8060600df7e25d68dd309",
+      "run_id": "43826684202",
+      "job_id": "133162075659",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43826684202",
+      "state": "BUILDER_COLD_AND_HERMES_WARM_VERIFIED",
+      "native_phase_receipt_sha256": {
+        "builder": "393b5f1a2f5e8cc0dd4e2222612f1be2eaf9eb1050468f64f16f2d71b46e4e65",
+        "hermes": "a077de91c374efc8cb735ecaad244e005d9a9a40fa002254952df5cf8776e7bb"
+      }
+    },
+    "qwen_initial_observation": {
+      "request": "6907438597",
+      "source_commit_prefix": "0a2be8",
+      "run_id": "43805087031",
+      "job_id": "133093894266",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43805087031",
+      "component_state": "STUDENT_UPDATES_CHECKPOINTED_RESTART_ACCEPTANCE_REQUIRED",
+      "manifest_sha256": "96aed3c5512a6d60da0a1370ae086ab248f226a6e68f7ab3f42dc9b15dc838e9"
+    },
+    "qwen_six_acceptance": {
+      "run_id": "43806455891",
+      "job_id": "133098251492",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43806455891",
+      "component_state": "STUDENT_RESTART_AND_UPDATES_VERIFIED",
+      "checkpoint_manifest_sha256": "bbe6ff24861fdcf33d28eba089edba583406ffbb9184c68e5a43d305a619b293",
+      "acceptance_sha256": "2076f7050169692e0333747d07abb5c290b429c1b30d56fd55928fc215edfc00"
+    },
+    "held_media_v2_accepted_43848406357": {
+      "state": "HELD_TRAINER_IMAGE_AND_OWNER_DELIVERY_VERIFIED",
+      "request": "6913759334",
+      "source_commit": "70e59235fe84097ac269a74acb3eeb16d43675a8",
+      "run_id": "43848406357",
+      "job_id": "133234382797",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43848406357",
+      "lossless_projection_sha256": "db361c2c0938b34ddad019d42323d1a44df926285fe372f589738af3b863bb13",
+      "native_result_receipt_sha256": "66267099b5be8d6b2c879c5accc3319f353b53a05b3babed512e726d6ef2cfd0"
+    },
+    "coalesced_normal_browser_43856493341": {
+      "request": "6914923603",
+      "source_commit": "dfa77182bb9e049b66b05945010262139bf9f43f",
+      "workflow_run": "43856493341",
+      "job": "133261979204",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43856493341",
+      "observed_at_utc": "2026-11-16T11:19:31.490430+00:00",
+      "receipt_bytes": 58387,
+      "receipt_sha256": "84266e29858ba85fe8473bc9fe3925d6ebb8b1b5d3d044a5294390e5897c10e2",
+      "scope": "EXACT_LOADED02D6_BODY_BEFORE_POST_AND_AT_FINISH; NORMAL_STREAM_PREFIXES_NUMERIC40_S03; NO_FULL_UI"
+    },
+    "successor_sealed_memfd_metadata_6917014364": {
+      "request": "6917014364",
+      "workflow_run_id": "43870988656",
+      "job_id": "133311794284",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43870988656",
+      "receipt_sha256": "9525d5a43f3a9b50c85328ec5ad6fd818c99476d66380cc5890465dd3fcaa41c",
+      "receipt_bytes": 26546,
+      "scope": "HISTORICAL_CURRENT_PID_16_SEALED_PUBLIC_MEMFD_METADATA; NO_PAYLOAD_READ_OR_KEEPER",
+      "observed_at_utc": "2026-11-16T12:56:26.196130+00:00"
+    },
+    "successor_cp55_full_after_exit_6917363502": {
+      "request": "6917363502",
+      "source_commit": "8f553d3e56ab7699c52d4e098e5fd69f6d515298",
+      "workflow_run_id": "43873382205",
+      "job_id": "133320049346",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43873382205",
+      "receipt_sha256": "c55c3cd66a5660c7c970bb67d725074be5ef14b9dec4c67ed926f1b8718b33c7",
+      "receipt_bytes": 8029,
+      "observed_at_utc": "2026-11-16T13:12:07.354666+00:00",
+      "scope": "HISTORICAL_ADMITTED_WRITER_SAVED_UPDATES_AND_FULL_CHECKPOINT_FILE_SHA_AFTER_EXIT",
+      "canonical_memory_url": "https://www.notion.so/40cacc184a9f81248703e3840d4c2422"
+    },
+    "parallel_owner_model_reset_6918022617": {
+      "request": "6918022617",
+      "source_commit": "a923a7d7ccdf46001cc9b7ac6bd08fe0639dc596",
+      "workflow_run_id": "43877715577",
+      "job_id": "133335015919",
+      "observed_at_utc": "2026-11-16T13:40:24Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43877715577",
+      "receipt_bytes": 3679,
+      "receipt_sha256": "472952b946474054951a97d3f9a2e419b729cad57a12f2c69f0d7d407851ff1a",
+      "scope": "EXTERNAL_OWNER_RESET; SERVICES_STOPPED_OLD_WEIGHT_FILES_REMOVED_LOCAL_S03_BACKUP; NO_NEW_CHAT_OR_POST_RESET_CP55_REHASH"
+    },
+    "qwen6_manual_backup_registration_123818": {
+      "registration_commit": "9bc380ae624fa692964488afc07d708cb9513e8c",
+      "registration_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/9bc380ae624fa692964488afc07d708cb9513e8c",
+      "prepared_commit": "6d57d5f6fd8e3103769051703685d2537300365a",
+      "prepared_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/6d57d5f6fd8e3103769051703685d2537300365a",
+      "scope": "OWNER_VERIFIED_SOURCE_READBACK; MANUAL_WORKFLOW_NOT_DISPATCHED; NO_EXPORT_OR_DRIVE_COPY"
+    },
+    "qwen55_manual_source_release_132704": {
+      "prepared_commit": "29266f576f998c0458890b5ed0c9d566ad3c6d85",
+      "prepared_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/29266f576f998c0458890b5ed0c9d566ad3c6d85",
+      "registration_commit": "9f4387534c31bcb28f43689e8e5e3329f0310173",
+      "registration_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/9f4387534c31bcb28f43689e8e5e3329f0310173",
+      "scope": "COORDINATOR_VERIFIED_SOURCE_READBACK8_PLUS1;26_PLUS17_PACKAGING_TESTS; NO_NATIVE_EXPORT_OR_DRIVE_COPY"
+    },
+    "builder_drive_refetch": {
+      "schema": "NOX_BUILDER_DRIVE_REFETCH_PUBLIC_PROOF_V1",
+      "source_path": "nox-control/owner_builder_drive_public_proof.json",
+      "source_raw_sha256": "46888f4bd3dfdf5d89fbe3ff8c24afd07918091e5867c8be663ccb82b76b112e",
+      "canonical_proof_sha256": "51099ab51197ef614141eed6256737a04289e45a252b7d32f5130d8b3a55965c",
+      "verified_at_utc": "2026-11-16T06:21:04Z",
+      "combined_bytes": 306787336,
+      "combined_sha256": "3030a2623b279ec0586bbdf403cf7ee13a32bd0fe2bf5094538d59b7c854ddb9",
+      "complete_drive_download_and_sha_verified": true
+    },
+    "post_reset_observer_pre_native_429_6918330839": {
+      "request": "6918330839",
+      "source_commit": "df0a3bf315598f91a7112d6974ba2dccc5352316",
+      "workflow_run_id": "43879850355",
+      "job_id": "133342508103",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43879850355",
+      "finished_at_utc": "2026-11-16T13:51:49Z",
+      "state": "HOLD_VAST_API_HTTP_429",
+      "scope": "PRE_NATIVE_PROVIDER_FAILURE; NO_NEW_RAM_FLAGS_MODEL_OR_CHECKPOINT_OBSERVATION",
+      "native_payload_executed": false
+    },
+    "post_reset_state_observer_6918392509": {
+      "request": "6918392509",
+      "source_commit": "df0a3bf315598f91a7112d6974ba2dccc5352316",
+      "workflow_run_id": "43880277767",
+      "job_id": "133344017500",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43880277767",
+      "observed_at_utc": "2026-11-16T13:54:56Z",
+      "receipt_sha256": "ccfe63704c322f58babbff78b179efa18771e221e4d3cb817181b713139b0748",
+      "receipt_bytes": 22106,
+      "state": "METADATA_OBSERVATION_COMPLETE",
+      "scope": "READ_ONLY_CURRENT_SERVICES_FLAGS_CGROUP_TMPFS_SSD_CP55_METADATA; NO_TENSOR_PAYLOAD_READ_OR_WEIGHT_RESIDENCY_OR_RESUME_PERMISSION",
+      "all_read_records_stable_through_end": true,
+      "tensor_payload_bytes_read": 0,
+      "files_written": 0,
+      "service_control_actions": 0,
+      "training_actions": 0,
+      "application_posts": 0
+    }
+  },
+  "artifacts": [
+    {
+      "kind": "image",
+      "role": "checkpoint",
+      "subdir": "checkpoints",
+      "repo": "ByteDance/SDXL-Lightning",
+      "revision": "c9a24f48e1c025556787b0c58dd67a091ece2e44",
+      "source_path": "sdxl_lightning_4step.safetensors",
+      "filename": "sdxl_lightning_4step.safetensors",
+      "bytes": 6938040682,
+      "sha256": "e0d996ee0013e79d9d3561f50fcafb9a17e3ff07b780358e3b66d67932c4d490",
+      "license": "openrail++",
+      "workflow": "sdxl_lightning_4step",
+      "id": "media-sdxl-lightning-4step",
+      "source": "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/c9a24f48e1c025556787b0c58dd67a091ece2e44/sdxl_lightning_4step.safetensors",
+      "state": "HISTORICAL_NATIVE_FULL_SHA_VERIFIED_CURRENT_RESIDENCY_UNOBSERVED",
+      "selected": true,
+      "preferred_tier": "RAM_CACHE",
+      "fallback_tier": "SSD_IF_ADMITTED",
+      "cold_tiers": [
+        "OWNER_PC",
+        "OWNER_GOOGLE_DRIVE"
+      ],
+      "download_max_parallel": 3,
+      "last_verified_placement": "RAM_TMPFS_BEFORE_RESET",
+      "historical_evidence_ref": "media_acceptance",
+      "current_service_state": "STOPPED",
+      "current_residency_verified": false,
+      "current_evidence_ref": "parallel_owner_model_reset_6918022617"
+    },
+    {
+      "kind": "video",
+      "role": "unet",
+      "subdir": "diffusion_models",
+      "repo": "Comfy-Org/Wan-2.1",
+      "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+      "source_path": "split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors",
+      "filename": "wan2.1_t2v_1.3B_fp16.safetensors",
+      "bytes": 2838303560,
+      "sha256": "be531024cd9018cb5b48c40cfbb6a6191645b1c792eb8bf4f8c1c6e10f924dc5",
+      "license": "apache-2.0",
+      "workflow": "wan21_t2v_13b",
+      "id": "media-wan21-13b",
+      "source": "https://huggingface.co/Comfy-Org/Wan-2.1/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors",
+      "state": "HISTORICAL_NATIVE_FULL_SHA_VERIFIED_CURRENT_RESIDENCY_UNOBSERVED",
+      "selected": true,
+      "preferred_tier": "RAM_CACHE",
+      "fallback_tier": "SSD_IF_ADMITTED",
+      "cold_tiers": [
+        "OWNER_PC",
+        "OWNER_GOOGLE_DRIVE"
+      ],
+      "download_max_parallel": 3,
+      "last_verified_placement": "RAM_TMPFS_BEFORE_RESET",
+      "historical_evidence_ref": "media_acceptance",
+      "current_service_state": "STOPPED",
+      "current_residency_verified": false,
+      "current_evidence_ref": "parallel_owner_model_reset_6918022617"
+    },
+    {
+      "kind": "video",
+      "role": "clip",
+      "subdir": "text_encoders",
+      "repo": "Comfy-Org/Wan-2.1",
+      "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+      "source_path": "split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "bytes": 6735906897,
+      "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+      "license": "apache-2.0",
+      "workflow": "wan21_t2v_13b",
+      "id": "media-umt5-scaled",
+      "source": "https://huggingface.co/Comfy-Org/Wan-2.1/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "state": "HISTORICAL_NATIVE_FULL_SHA_VERIFIED_CURRENT_RESIDENCY_UNOBSERVED",
+      "selected": true,
+      "preferred_tier": "RAM_CACHE",
+      "fallback_tier": "SSD_IF_ADMITTED",
+      "cold_tiers": [
+        "OWNER_PC",
+        "OWNER_GOOGLE_DRIVE"
+      ],
+      "download_max_parallel": 3,
+      "last_verified_placement": "RAM_TMPFS_BEFORE_RESET",
+      "historical_evidence_ref": "media_acceptance",
+      "current_service_state": "STOPPED",
+      "current_residency_verified": false,
+      "current_evidence_ref": "parallel_owner_model_reset_6918022617"
+    },
+    {
+      "kind": "video",
+      "role": "vae",
+      "subdir": "vae",
+      "repo": "Comfy-Org/Wan-2.1",
+      "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+      "source_path": "split_files/vae/wan_2.1_vae.safetensors",
+      "filename": "wan_2.1_vae.safetensors",
+      "bytes": 253815318,
+      "sha256": "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b",
+      "license": "apache-2.0",
+      "workflow": "wan21_t2v_13b",
+      "id": "media-wan-vae",
+      "source": "https://huggingface.co/Comfy-Org/Wan-2.1/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/vae/wan_2.1_vae.safetensors",
+      "state": "HISTORICAL_NATIVE_FULL_SHA_VERIFIED_CURRENT_RESIDENCY_UNOBSERVED",
+      "selected": true,
+      "preferred_tier": "RAM_CACHE",
+      "fallback_tier": "SSD_IF_ADMITTED",
+      "cold_tiers": [
+        "OWNER_PC",
+        "OWNER_GOOGLE_DRIVE"
+      ],
+      "download_max_parallel": 3,
+      "last_verified_placement": "RAM_TMPFS_BEFORE_RESET",
+      "historical_evidence_ref": "media_acceptance",
+      "current_service_state": "STOPPED",
+      "current_residency_verified": false,
+      "current_evidence_ref": "parallel_owner_model_reset_6918022617"
+    }
+  ],
+  "selected_asset_bytes": 16766066457,
+  "optional_unselected_candidates": [
+    {
+      "id": "flux2-klein-4b",
+      "reason": "Separate challenger only after baseline quality/latency and storage admission; not a missing required download",
+      "selected": false,
+      "installed_or_complete_claimed": false
+    },
+    {
+      "id": "wan22-ti2v-5b",
+      "reason": "Larger optional challenger, not required for selected Wan2.1 integration",
+      "selected": false,
+      "installed_or_complete_claimed": false
+    }
+  ],
+  "current_brain": {
+    "state": "STOPPED_OLD_GGUF_REMOVED_NEW_MAIN_NOT_LIVE",
+    "file": "nox36-mix_final_pref-Q4_K_M.gguf",
+    "bytes": 21836629568,
+    "architecture": "qwen35moe",
+    "gpu": 0,
+    "slots": 6,
+    "total_context_tokens": 196608,
+    "slot_context_tokens": 32768,
+    "kv_cache": "Q8",
+    "model_format": "Q4_K_M",
+    "hash_or_lineage_does_not_prove_all_adapters_merged": true,
+    "historical_configuration_scope": "File identity, architecture, slots, context and quantization below describe the removed previous main model, not a live successor.",
+    "sha256": "32ac309e494655b55f817b56dd4f62d5ac8cf7c152d61037f100eef120f80e66",
+    "old_model_file_removed": true,
+    "old_chat_pid_present": false,
+    "new_main_model_live_verified": false,
+    "evidence_ref": "parallel_owner_model_reset_6918022617"
+  },
+  "training": {
+    "state": "FATAL_QUALITY_HOLD_CP55_HISTORICALLY_FULLY_VERIFIED_NOW_GLOBAL_STOP",
+    "gpu": 1,
+    "approach": "NF4 exact-base LoRA with FP32 trainable adapters and FP16 AMP on SM70",
+    "smoke_steps_required": 5,
+    "continuation_target_steps": 1000,
+    "verified_new_optimizer_steps": 30,
+    "same_optimizer_lineage_required": true,
+    "checkpoint_artifacts": [
+      "README.md",
+      "adapter_config.json",
+      "adapter_model.safetensors",
+      "lineage.json",
+      "optimizer.pt",
+      "python_rng.json",
+      "rng_state.pt",
+      "scaler.pt",
+      "scheduler.pt",
+      "student_state.json"
+    ],
+    "merged_promotion": "EXACT_BASE_AND_EVALUATION_REQUIRED",
+    "teachers_distilled": 0,
+    "smoke_steps_required_scope": "Historical initial five-update prerequisite; accepted checkpoint6 superseded this smoke gate.",
+    "continuation_target_scope": "1000 is a bounded cap, not an optimum or completed run.",
+    "verified_new_optimizer_steps_scope": "Thirty saved updates after successor anchor25; proven at13:12, before the13:40 reset.",
+    "verified_successful_optimizer_steps": 55,
+    "verified_attempted_steps": 55,
+    "verified_skipped_steps": 0,
+    "checkpoint_artifacts_scope": "Ten hash-verified CP55 payload files plus a separate manifest; full SHA proof precedes the external reset.",
+    "model_id": "Qwen/Qwen3.5-9B",
+    "model_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "latest_checkpoint": {
+      "directory": "checkpoint-u00000055-a00000055-g01794833901774705882",
+      "manifest_sha256": "458310555dc0a2a5e4e7b3fa127e7a642bb1d5651aa2393777c50f0c6c4e1a65",
+      "pointer_sha256": "192d07c459c7ad7c89d30d2803fea574e1bc407d37ad755c1f61294748d4ece0",
+      "student_state_sha256": "ca349563443f14cf02e6333cf7a593bf59b68a20ba1160e5388edb130f3fb2f8",
+      "verified_bytes": 519936310,
+      "verified_files": 10,
+      "successful_total": 55,
+      "attempted_total": 55,
+      "skipped_total": 0,
+      "evaluated_successful_total": 55,
+      "full_payload_sha256_verified": true,
+      "proof_evidence_ref": "successor_cp55_full_after_exit_6917363502",
+      "full_proof_observed_at_utc": "2026-11-16T13:12:07.354666Z",
+      "post_reset_payload_reverified": false,
+      "post_reset_metadata_verified": true,
+      "post_reset_metadata_evidence_ref": "post_reset_state_observer_6918392509",
+      "post_reset_metadata_observed_at_utc": "2026-11-16T13:54:56Z",
+      "post_reset_metadata_matches_historical_fullproof": true
+    },
+    "accepted_checkpoint": {
+      "successful_optimizer_steps": 6,
+      "manifest_sha256": "bbe6ff24861fdcf33d28eba089edba583406ffbb9184c68e5a43d305a619b293",
+      "certificate_sha256": "2076f7050169692e0333747d07abb5c290b429c1b30d56fd55928fc215edfc00",
+      "evidence_ref": "qwen_six_acceptance",
+      "is_latest_checkpoint": false,
+      "does_not_certify_checkpoint55_quality": true
+    },
+    "quality": {
+      "last_verified_guard_state": "INHIBITED",
+      "reason": "HOLDOUT_REGRESSION",
+      "consecutive_distinct_regressions": 2,
+      "regression_pause_threshold": 2,
+      "evaluated_successful_steps": 55,
+      "holdout_examples": 16,
+      "last_holdout_loss": 1.3216557949781418,
+      "best_observed_holdout_loss": 1.2216252349317074,
+      "latest_is_best": false,
+      "accepted6_best_and_latest55_are_distinct": true,
+      "checkpoint55_promoted_or_merged": false,
+      "general_intelligence_improvement_proven": false,
+      "evidence_ref": "successor_cp55_full_after_exit_6917363502",
+      "current_guard_heartbeat_verified_after_reset": false,
+      "guard_metadata_observed_at_utc": "2026-11-16T13:54:56Z",
+      "guard_metadata_evidence_ref": "post_reset_state_observer_6918392509",
+      "guard_raw_sha256": "4203158d92f34093183fc4ff742d5415fcbb71b410498cfa45909cb15cbe2692",
+      "guard_sample_age_seconds": 1189.418,
+      "guard_fresh_within_30_seconds": false,
+      "recorded_policy_remains_inhibited": true
+    },
+    "corpus": {
+      "training_tokenized_examples": 119,
+      "holdout_examples": 16,
+      "disjoint_train_and_holdout": true,
+      "contents_exported_by_manifest": false
+    },
+    "execution_binding": {
+      "admission_sha256": "a461be9ccedcac461ba87dcd88f89c970ee2eefd4b29159ec6a8e3f51bdc852a",
+      "descriptor_sha256": "5b4080bd36f24f24e8d166dbcc786a383e192842c15d763128be451458f523c4",
+      "execution_revision": {
+        "receipt_sha256": "ad3a760fac2eb56445a8e60dd19fe842ebc3d17dd26ea105485c0631fdf7ce86",
+        "request": "6916464880",
+        "source_sha": "7029c77906b512faaa9fd4b8290b122ee8c8f1f6"
+      },
+      "origin_lineage_sha256": "14c92849840ed3ef982a4a443656fdc0f9183ec7967106b42ce8d0719bb25190",
+      "runtime_entry_sha256": "0982a4ab5e28d1217d5f4ee02d13a8a349cd53c27824dcbb3b5d93ed60042d03",
+      "schema": "NOX_QWEN_EXECUTION_BINDING_V1",
+      "verifier_sha256": "d3b2905c568d088cde2d8267f02f9e913f9fe1d3e46f590992c3a7fcb138ae14"
+    },
+    "scheduler": {
+      "state": "HISTORICAL_INSTALLED_SUCCESSOR_WITH_REAL_PERIODIC_EVALUATIONS",
+      "separate_clock": "last_evaluation_finished",
+      "due": "GOAL_OR_300_SECONDS_OR_10_SUCCESSFUL_UPDATES",
+      "guard_stale_limit_successful_updates": 15,
+      "runtime_source_sha256": "0982a4ab5e28d1217d5f4ee02d13a8a349cd53c27824dcbb3b5d93ed60042d03",
+      "no_quality_threshold_lowering": true
+    },
+    "retention": {
+      "reviewed_source": "nox-control/qwen_student_training_entry_successor.py",
+      "policy": "LATEST_TWO_PLUS_BEST_PLUS_ACCEPTED6_PLUS_BOTH_PROVENANCE25_ANCHORS",
+      "best_retention_source_and_focused_tests_verified": true,
+      "best_payload_full_sha_rechecked_by_cp55_proof": false,
+      "post_reset_inventory_reverified": false
+    },
+    "optimizer_permission_currently_active": false,
+    "resume_authorized_by_manifest": false,
+    "training_running": false,
+    "service_state": "FATAL",
+    "current_runtime_evidence_ref": "post_reset_state_observer_6918392509",
+    "weights_promoted_into_chat": false
+  },
+  "native_tasks_scope": "Configured task routes retained for reconciliation; execution is stopped under global STOP and OWNER_MAINTENANCE.",
+  "selected_asset_bytes_scope": "Exactly the four selected media payloads; excludes Qwen public base, Hermes, adapters and checkpoints.",
+  "installed_package_versions_observation": {
+    "scope": "HISTORICAL_NATIVE_INVENTORY_RETAINED_UNCHANGED",
+    "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43778292660",
+    "current_versions_rechecked": false,
+    "null_means_not_verified_in_that_inventory": true
+  },
+  "additional_selected_assets": [
+    {
+      "id": "qwen35-9b-public-base",
+      "name": "Qwen/Qwen3.5-9B",
+      "role": "SEPARATE_TRAINING_STUDENT_BASE",
+      "selected": true,
+      "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+      "manifest_sha256": "2275fc88370ca8ba409a791819e13c8ab7d4e38cce4576a13170b05bcb8b839b",
+      "files": 16,
+      "bytes": 19329393661,
+      "state": "HISTORICAL_FULL_LOAD_AND_PINNED_FILES_VERIFIED_TRAINER_NOW_EXITED",
+      "last_verified_storage": "PROCESS_OWNED_SEALED_MEMFD",
+      "current_ram_residency_verified": false,
+      "persistent_keeper_created": false,
+      "durable_backup": false,
+      "evidence_refs": [
+        "qwen_initial_observation",
+        "successor_sealed_memfd_metadata_6917014364",
+        "successor_cp55_full_after_exit_6917363502"
+      ],
+      "selection_scope": "Existing selected role or historical adapter; not new download admission."
+    },
+    {
+      "id": "hermes-3-llama31-8b-q4km",
+      "name": "Hermes-3-Llama-3.1-8B.Q4_K_M.gguf",
+      "role": "EXISTING_TEACHER_CANDIDATE_NOT_MAIN_CHAT",
+      "selected": true,
+      "repo": "NousResearch/Hermes-3-Llama-3.1-8B-GGUF",
+      "revision": "ad1d6b27c4ebc45cdb43e10871324742d771e1c4",
+      "bytes": 4920733824,
+      "sha256": "d4403ce5a6e930f4c2509456388c20d633a15ff08dd52ef3b142ff1810ec3553",
+      "state": "HISTORICAL_FULL_SHA_RAM_MIGRATION_VERIFIED_CURRENT_SERVICE_STOPPED",
+      "last_verified_storage": "RAM_TMPFS_WITH_PINNED_HYDRATION",
+      "current_residency_verified": false,
+      "reset_deletion_was_held": true,
+      "not_a_durable_backup": true,
+      "evidence_refs": [
+        "storage_actual_43826684202",
+        "parallel_owner_model_reset_6918022617"
+      ],
+      "selection_scope": "Existing selected role or historical adapter; not new download admission."
+    },
+    {
+      "id": "bge-m3-q4km",
+      "name": "bge-m3-Q4_K_M.gguf",
+      "role": "EXISTING_SEMANTIC_EMBEDDING_MODEL",
+      "selected": true,
+      "bytes": 437778496,
+      "sha256": "6d39681b26c61279ac1f82db35a04a05009e94c415b51c858ff571489a82fc06",
+      "state": "REMOVED_BY_EXTERNAL_MODEL_UPDATE_EMBEDDING_SERVICE_STOPPED",
+      "historical_semantic_recall_verified": true,
+      "current_recall_verified": false,
+      "replacement_download_or_live_model_verified": false,
+      "evidence_refs": [
+        "s03_activation",
+        "parallel_owner_model_reset_6918022617"
+      ],
+      "selection_scope": "Existing selected role or historical adapter; not new download admission."
+    },
+    {
+      "id": "historical-adapter-builder",
+      "name": "t724u_builder_best_holdout.safetensors",
+      "role": "builder",
+      "selected": true,
+      "bytes": 306787336,
+      "sha256": "3030a2623b279ec0586bbdf403cf7ee13a32bd0fe2bf5094538d59b7c854ddb9",
+      "state": "HISTORICAL_DRIVE_READBACK_AND_NATIVE_SHA_VERIFIED_NOT_MERGED",
+      "last_verified_storage": "COLD_ON_SSD",
+      "current_ram_residency_verified": false,
+      "post_reset_storage_reverified": false,
+      "merged_into_main_chat": false,
+      "accepted_qwen_training_lineage": false,
+      "evidence_ref": "storage_actual_43826684202",
+      "selection_scope": "Existing selected role or historical adapter; not new download admission."
+    },
+    {
+      "id": "historical-adapter-core_self",
+      "name": "t724u_core_self_final.safetensors",
+      "role": "core_self",
+      "selected": true,
+      "bytes": 306787336,
+      "sha256": "e5e98c7e2969aaf2f2fdda38c5814a8764c0e607265c141096e5e673b648f476",
+      "state": "HISTORICAL_DRIVE_READBACK_AND_NATIVE_SHA_VERIFIED_NOT_MERGED",
+      "last_verified_storage": "RAM_TMPFS",
+      "current_ram_residency_verified": false,
+      "post_reset_storage_reverified": false,
+      "merged_into_main_chat": false,
+      "accepted_qwen_training_lineage": false,
+      "evidence_ref": "drive_ram",
+      "selection_scope": "Existing selected role or historical adapter; not new download admission."
+    },
+    {
+      "id": "historical-adapter-intellect",
+      "name": "t724u_intellect_best_holdout.safetensors",
+      "role": "intellect",
+      "selected": true,
+      "bytes": 306787336,
+      "sha256": "9e76a6bf88bff25b0b7efdf34032c72dbd7044def371be21e540319307f846b6",
+      "state": "HISTORICAL_DRIVE_READBACK_AND_NATIVE_SHA_VERIFIED_NOT_MERGED",
+      "last_verified_storage": "RAM_TMPFS",
+      "current_ram_residency_verified": false,
+      "post_reset_storage_reverified": false,
+      "merged_into_main_chat": false,
+      "accepted_qwen_training_lineage": false,
+      "evidence_ref": "drive_ram",
+      "selection_scope": "Existing selected role or historical adapter; not new download admission."
+    }
+  ],
+  "additional_selected_assets_scope": "Separate from selected_asset_bytes and the four media artifact IDs; historical selected objects do not imply current residency or readiness to load.",
+  "current_runtime": {
+    "evidence_ref": "post_reset_state_observer_6918392509",
+    "observed_at_utc": "2026-11-16T13:54:56Z",
+    "main_chat_service": "STOPPED",
+    "main_chat_pid": null,
+    "proxy_service": "STOPPED",
+    "dispatcher_service": "STOPPED",
+    "media_service": "STOPPED",
+    "trainer_service": "FATAL",
+    "trainer_pid": null,
+    "active_chat_verified": false,
+    "new_main_model_accepted": false,
+    "current_health_200_verified": false,
+    "global_stop_active": true,
+    "maintenance_active": true,
+    "guard_heartbeat_currently_verified": false,
+    "resume_or_restart_authorized_by_this_record": false,
+    "embedding_service": "STOPPED",
+    "downloads_service": "STOPPED",
+    "teacher_service": "STOPPED",
+    "configured_workers": 6,
+    "worker_service_group_state": "STOPPED",
+    "running_llm_count_not_inferred_from_roles": true,
+    "observation_scope": "FRESH_READ_ONLY_SERVICE_FLAGS_CHECKPOINT_METADATA_AND_RESOURCE_SNAPSHOT_UNDER_STOP",
+    "cgroup_headroom_currently_measured": true,
+    "weight_ram_residency_measured": false,
+    "physical_memory_available_measured": false,
+    "service_counts": {
+      "STOPPED": 27,
+      "FATAL": 1
+    },
+    "services_observed": 28,
+    "health_observations": [
+      {
+        "port": 8080,
+        "http_status": null,
+        "error_type": "ConnectionRefusedError"
+      },
+      {
+        "port": 8081,
+        "http_status": null,
+        "error_type": "ConnectionRefusedError"
+      },
+      {
+        "port": 8082,
+        "http_status": null,
+        "error_type": "ConnectionRefusedError"
+      }
+    ],
+    "flags": {
+      "OWNER_MAINTENANCE": {
+        "state": "PRESENT",
+        "bytes": 30,
+        "sha256": "395020b6190f7175de8b1d3b53614a0e155dc0e5d96fad877af2995abd0868f7",
+        "known_format": "OWNER_MODEL_UPDATE",
+        "owner_request": "6917926683",
+        "mode_octal": "0600"
+      },
+      "OWNER_STOP": {
+        "state": "PRESENT",
+        "bytes": 30,
+        "sha256": "395020b6190f7175de8b1d3b53614a0e155dc0e5d96fad877af2995abd0868f7",
+        "known_format": "OWNER_MODEL_UPDATE",
+        "owner_request": "6917926683",
+        "mode_octal": "0600"
+      },
+      "TRAIN_HOLD": {
+        "state": "PRESENT",
+        "bytes": 54,
+        "sha256": "f5a62613348f1e4516a45dee4ee5eeb791fa9e6ca0c36f10be4414f3f5079866",
+        "known_format": "QWEN_WINDOW_FAILURE",
+        "owner_request": "6916464880",
+        "mode_octal": "0600"
+      },
+      "TRAIN_PAUSE": {
+        "state": "PRESENT",
+        "bytes": 195,
+        "sha256": "8316e6c12b6a8f53c60d3126fcc421542110e0e9e48848df205ac2c7eaff5aec",
+        "known_format": "QWEN_GUARD_PAUSE",
+        "owner_request": null,
+        "mode_octal": "0600"
+      }
+    },
+    "flags_same_fd_and_named_identity_verified": true
+  },
+  "historical_media_acceptance": {
+    "state": "IMAGE_AND_SHORT_VIDEO_GENERATED_DECODED_AND_OWNER_DELIVERED",
+    "image": {
+      "format": "PNG",
+      "width": 512,
+      "height": 512,
+      "bytes": 291929,
+      "sha256": "996e8f1aa156c82768ad3496508440be1a2c96a49fb285943904f12c79295ac2",
+      "decode_verified": true
+    },
+    "video": {
+      "format": "WEBM",
+      "width": 256,
+      "height": 256,
+      "distinct_frames": 9,
+      "fps": 8,
+      "bytes": 29349,
+      "sha256": "8f00e2b96cb170342af8a7cbd65d9ed938849c0a7dd7172d0f9c9dc56d86b135",
+      "decode_verified": true
+    },
+    "evidence_ref": "media_acceptance",
+    "quality_scope": "Bounded synthetic generation and decode checks; longer video and production quality are not accepted by this smoke test.",
+    "current_service_available": false,
+    "latest_image_smoke": {
+      "observed_at_utc": "2026-11-16T10:24:26.864766Z",
+      "width": 256,
+      "height": 256,
+      "bytes": 93304,
+      "sha256": "6a83eb143270f75787eb52e129d5ab5000c9a446fb2dc8ad7c043dd502efc5f5",
+      "decoded_and_owner_delivered": true,
+      "evidence_ref": "held_media_v2_accepted_43848406357"
+    }
+  },
+  "snapshot": {
+    "schema": "NOX_DOWNLOAD_RECONCILIATION_SNAPSHOT_V1",
+    "observed_at_utc": "2026-11-16T13:54:56Z",
+    "scope": "REPOSITORY_ONLY_RECONCILIATION_OF_VERIFIED_HISTORY_AND_CURRENT_RESET_STATE",
+    "native_configuration_changed": false,
+    "native_manifest_deployed_by_this_edit": false,
+    "native_manifest_historical_sha256": "7ce1b32c3e007fefa5b8c96aca34bd8ca10d97cce15968100e40b29685c091f9",
+    "native_manifest_current_bytes_rechecked": false,
+    "new_download_or_deletion_authorized": false,
+    "current_snapshot_evidence_ref": "post_reset_state_observer_6918392509",
+    "readiness_source_path": "coordination/NOX_CURRENT_READINESS_20261116.json",
+    "readiness_source_sha256": "074ba940ee3baf3c53659da22181205e0f4e6116c0278f8a082d969b9367ea8b",
+    "readiness_used_as_curated_history_not_current_ram_proof": true,
+    "remote_preimage_blob_sha": "c75888d844b23d95d56802bf3dad0c89eae6ce0b",
+    "remote_preimage_sha256": "7ce1b32c3e007fefa5b8c96aca34bd8ca10d97cce15968100e40b29685c091f9",
+    "last_refresh_attempt_evidence_ref": "post_reset_state_observer_6918392509",
+    "last_refresh_attempt_provided_new_native_state": true,
+    "reset_history_evidence_ref": "parallel_owner_model_reset_6918022617",
+    "historical_readiness_input_sha256": "b6101519872b81868607410f4a97275b3f95b1e71058fe53d8d40d2bca5d171d",
+    "readiness_source_binding_scope": "Exact companion readiness JSON in this repository publication; curated historical evidence and current observation are explicitly separated."
+  }
+}

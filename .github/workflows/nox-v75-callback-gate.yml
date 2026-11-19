@@ -1,0 +1,37 @@
+name: NOX V75 live OneHost callback and safe-restart readiness
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v75-callback-gate.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v75-onehost-native-gate
+  cancel-in-progress: false
+jobs:
+  read:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Source syntax
+        run: python3 -m py_compile nox_runpod/teacher_mesh/v75/onehost_callback_gate.py
+      - name: Inspect already staged modules and real chat owner
+        run: python3 -m nox_runpod.teacher_mesh.v75.onehost_callback_gate
+      - name: Revoke ephemeral SSH identity
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: No live mutation
+        if: success()
+        run: echo 'NOX_V75_READONLY_ONLY=true'

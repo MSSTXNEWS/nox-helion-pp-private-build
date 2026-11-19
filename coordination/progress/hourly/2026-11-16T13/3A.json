@@ -1,0 +1,127 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3A_RELAY_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "3A",
+  "at_utc": "2026-11-16T10:35:17.004Z",
+  "scope": "SOURCE_PATCH_REBASE_OFFLINE_CHROMIUM;NATIVE_DEPLOY_HOLD",
+  "root_cause": "Latest accepted 3A+3D merged ZIP reverted the earlier 3A fail-closed guards in site/pc/hub.html and site/pc/menu.html. HUB dereferenced undefined t.title when IA JSON fetch returned HTTP 503 or invalid tiles; MENU threw if shell script failed.",
+  "accepted_original_web29_main_sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
+  "accepted_combined_before_3d_sha256": "17964a1316ef321b3d5b776f254e17730865e1657bffbecd1f1897b19f4f4167",
+  "accepted_latest_3d_sha256": "3733dbe4068b1c71263d315f5fb9323fcd1ac0b3ef434a27a3a45b18207fa921",
+  "latest_3d_reconstruction_sha256_verified": true,
+  "latest_3d_css_git_blob": "1e55b7ad84c4d05d91350d4c75f2f436c53895bc",
+  "source_output": {
+    "zip_name": "NOX_WEB29_3A_3D_FAILCLOSED_REBASED_V06_20261116.zip",
+    "sha256": "860584c4e69f19a6c73903bb73bacc930f384aaab6ed0acc98b9e2f85a002d27",
+    "bytes": 84229601,
+    "members": 1214,
+    "changed_exact_paths": [
+      "site/pc/hub.html",
+      "site/pc/menu.html"
+    ],
+    "preimage_sha256": {
+      "site/pc/hub.html": "4a5d8e59e6b63764cfb05656becca922fc4b8cd6b4285c2c8f74da3df099ce8d",
+      "site/pc/menu.html": "62b9704f7418953d1746c7f6ca652a6221c3529f9f8e3c0ed79fe3b93752cf96"
+    },
+    "postimage_sha256": {
+      "site/pc/hub.html": "2743ee9082ad2fc26836a49c27ae9f5726ae170c2e94a2d9287ff5cd8ee9d7d8",
+      "site/pc/menu.html": "6e3b721c4179e05dcf15a2ba75b9d771c76da9f3b71650f2ad92011ca79c5369"
+    }
+  },
+  "tests": {
+    "chromium_offline_dom": "PASS 7/7, including expected RED on previous broken HUB",
+    "browser_http": "HOLD_ERR_BLOCKED_BY_ADMINISTRATOR",
+    "javascript_node_syntax": "PASS HUB/MENU",
+    "zip_crc": "PASS_1214",
+    "original_member_paths": "PASS_1214",
+    "all_other_members_bytes_identical": true,
+    "original_shader_orbit_sha_lock": "PASS_4",
+    "active_chat_s03_stop_code_changed": false,
+    "full_512_visual_assets_native_verified": false
+  },
+  "five_tasks": [
+    {
+      "n": 1,
+      "status": "DONE_SOURCE",
+      "proof": "Latest accepted 3D CSS byte-for-byte reconstructed with pinned SHA and merged with latest 3A preimage"
+    },
+    {
+      "n": 2,
+      "status": "DONE_SOURCE",
+      "proof": "All 1214 current paths retained; four primary D02/orbit source locks validated; all 1212 unrelated member bytes unchanged"
+    },
+    {
+      "n": 3,
+      "status": "DONE_SOURCE",
+      "proof": "Restored HUB fail-closed behavior on IA HTTP 503/invalid catalogue, added Menu shell-missing static fallback, Development route preserved"
+    },
+    {
+      "n": 4,
+      "status": "HOLD_NATIVE",
+      "reason": "No current owner authenticated WEB29 preimage/STOP/native writer lease and independently verified rollback. No live staging or deploy attempted"
+    },
+    {
+      "n": 5,
+      "status": "DONE_SOURCE_HOLD_LIVE",
+      "proof": "Chromium offline DOM 7/7 incl baseline RED; JS syntax, ZIP CRC, exact source preimages and source-lock checks PASS; owner browser E2E unavailable"
+    }
+  ],
+  "relay_control": [
+    {
+      "kind": "WEIGHTS",
+      "status": "HISTORICAL_25_SUCCESSFUL_QWEN_UPDATES;HOLD_CURRENT_TRAIN_PID_AND_RESTORE",
+      "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43828903713",
+      "student": "Qwen3.5-9B",
+      "checkpoint25_manifest_sha256": "ba101a2c7125e352cfd17319d8ff8b228b6b43ef9490c99788928c4275fc2dbf",
+      "supervisor_last_observed": "FATAL;EVALUATION_STALE",
+      "new_successful_updates_this_slot": 0,
+      "new_checkpoint_restore_verified": false
+    },
+    {
+      "kind": "KNOWLEDGE",
+      "status": "HOLD_NO_NEW_HUNTER_SOURCE_S03_RECALL",
+      "new_native_jobs": 0,
+      "source_evidence": null,
+      "s03_write_readback": null,
+      "weights_updates_from_s03": 0
+    },
+    {
+      "kind": "DISPATCHER+RESOURCES",
+      "status": "LATEST_READ_ONLY_OBSERVATION_NOT_CURRENT_3A",
+      "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43846952110",
+      "observed_at_utc": "2026-11-16T10:14:55Z",
+      "dispatcher_pid_at_observation": 945279,
+      "priority_pid": 498221,
+      "chat_llama_pid": 7637,
+      "cpu_quota_cores": 19.2,
+      "ram_current_bytes": 87904964608,
+      "ram_max_bytes": 194065203200,
+      "gpu0_used_mib": 21562,
+      "gpu1_used_mib": 474,
+      "gpu0_temp_c": 19,
+      "gpu1_temp_c": 21,
+      "ssd_free_bytes": 16922308608,
+      "shm_free_bytes": 3366703104,
+      "three_worker_pids_current": null,
+      "owner_STOP_current": null,
+      "writer_lease_current": null,
+      "downloads_new_bytes": 0,
+      "restarts": 0
+    }
+  ],
+  "clean_up": {
+    "status": "HOLD_NOT_ELIGIBLE",
+    "bytes_deleted": 0,
+    "freed_bytes": 0
+  },
+  "mutations": {
+    "production_files": 0,
+    "server_restarts": 0,
+    "training_updates": 0,
+    "new_backend": 0,
+    "model_switch": false,
+    "S03_modified": false,
+    "schedules_changed": false
+  },
+  "next_action": "On original owner-only OneHost obtain serving WEB29 exact preimages, STOP/lease, independent rollback and 512 cinematic lock inventory; then stage only this two-file delta atop latest accepted 3D, authenticated HTTP HOME/MENU/Resonance/Development and S03/STOP/latency tests. No model swap or old weight cleanup before eligibility."
+}

@@ -1,0 +1,48 @@
+name: NOX V52 native OneHost/S03/WEB read-only audit
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - ".github/workflows/nox-v52-native-onehost-inspect.yml"
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v52-vast60509551-nox-native-inventory
+  cancel-in-progress: false
+jobs:
+  native-inspect:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify Python source
+        run: |
+          python3 -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py nox_runpod/teacher_mesh/v52/remote_inspection.py
+      - name: Native inspect existing NOX without altering weights or services
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v52.remote_inspection
+      - name: Mandatory temporary SSH key cleanup
+        if: always()
+        run: |
+          python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Source/run acceptance boundaries
+        if: success()
+        run: |
+          echo "NATIVE_SERVER_READ_ONLY_PROBE=PASS"
+          echo "S03_RESTART_NOT_TESTED=true"
+          echo "NOX_QUEUE_READBACK_NOT_TESTED=true"
+          echo "NOX_PRODUCTION_UNCHANGED=true"

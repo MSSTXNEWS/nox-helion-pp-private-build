@@ -1,0 +1,41 @@
+name: NOX V97 latest full WEB compatibility to existing Vast OneHost
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths: [.github/workflows/nox-v97-latest-web-audit.yml]
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions: {contents: read}
+concurrency:
+  group: nox-v97-web-source-gate
+  cancel-in-progress: false
+jobs:
+  native:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compile remote and runner
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v97/latest_web_compat_audit.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v97.latest_web_compat_audit import REMOTE
+          compile(REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0],'<nox-v97-native>','exec')
+          print('NOX_V97_SOURCE_SYNTAX_PASS=true')
+          PY
+      - name: Compare full WEB V29.3 with actual NOX frontend/backend
+        run: python3 -m nox_runpod.teacher_mesh.v97.latest_web_compat_audit
+      - name: Revoke exact ephemeral SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

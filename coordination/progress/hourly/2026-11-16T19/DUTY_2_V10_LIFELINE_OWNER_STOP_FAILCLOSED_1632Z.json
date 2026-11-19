@@ -1,0 +1,101 @@
+{
+  "schema": "NOX_RELAY_V10",
+  "instructions_version": "0.0.6",
+  "slot": "DUTY_2",
+  "task_id": "S1-06_LIFELINE_OWNER_STOP_ALIAS_V10",
+  "at_utc": "2026-11-16T16:33:40.959Z",
+  "at_msk": "2026-11-16T19:33:40.959+03:00",
+  "scope": "SOURCE_ONLY_ORIGINAL_ONEHOST_NO_NATIVE_ACTIONS",
+  "instance": 60509551,
+  "repo_branch": "feature/nox-v38-synaptic-brain-20261114",
+  "root_cause": "Existing original nox_native_lifeline.stopped() omitted two canonical /root/nox/state STOP aliases recognized by owner_native_inspect, and Path.exists()/is_symlink() could treat inaccessible STOP as missing; may admit bounded Supervisor start during deliberate manual STOP.",
+  "source_changes": {
+    "code_commit": "edc6676e02861900fd48fce2c00664ff09c14e0f",
+    "code_blob": "62bcabf1bdee47dc7a0e65a658cd89d56cff32bb",
+    "test_commit": "b5c1915fd2c67532ff3630b0bc66d4c594d464ec",
+    "test_blob": "aa2149c6da5e652cc1710b8e187fab3a0c77f742",
+    "ci_run": 43908519380,
+    "ci_job": 133443765986,
+    "ci_result": "SUCCESS_SOURCE_ONLY",
+    "lifeline_tests": 23,
+    "new_regressions": 2,
+    "exact_ci_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43908519380"
+  },
+  "remediation": "Respect canonical state STOP and STOP.flag, use os.lstat fail-closed on unreadable owner flag; leave existing repair retries/STOP/maintenance/lease policies unchanged; verified both new tests PASS.",
+  "tasks": [
+    {
+      "id": "S1-06",
+      "status": "SOURCE_TESTED",
+      "native": "HOLD_INSTALL_WRITER_LEASE",
+      "evidence": "23/23 lifeline tests PASS on exact test SHA; old code path protected"
+    },
+    {
+      "id": "S1-01",
+      "status": "LIVE_VERIFIED_READ_ONLY",
+      "evidence": "Current owner read-only job 133443213794 16:31:59Z STOP, five Supervisor STOPPED, no :8081 socket; not writer lease."
+    },
+    {
+      "id": "S1-03",
+      "status": "HOLD_OWNER_WRITER_LEASE",
+      "evidence": "Current owner STOP/lease and 3 native worker PIDs unverified"
+    },
+    {
+      "id": "S1-07",
+      "status": "HOLD_OFFSITE_RESTORE",
+      "evidence": "No independently restored S03/Genesis/checkpoint optimizer/scaler/RNG"
+    },
+    {
+      "id": "S2-07",
+      "status": "HOLD_SEEKABLE_STORAGE",
+      "evidence": "Current 16:31:59Z total SSD 183609851904 / free 43158827008 B; unique DeepSeek 248834257920 B; server rclone remotes empty, no seekable placement."
+    }
+  ],
+  "last_native": {
+    "as_of_utc": "2026-11-16T16:31:59Z",
+    "run_id": 43887943803,
+    "latest_attempt_job_id": 133443213794,
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803/job/133443213794",
+    "manual_STOP": "PRESENT_/root/nox/STOP",
+    "OWNER_MAINTENANCE": "PRESENT",
+    "TRAIN_HOLD": "PRESENT",
+    "TRAIN_PAUSE_REQUEST": "PRESENT",
+    "critical_supervisor": "5_STOPPED",
+    "listener_8081": "NO_SOCKET_INODE",
+    "gpu0_used_mib": 0,
+    "gpu1_used_mib": 0,
+    "ssd_total_bytes": 183609851904,
+    "ssd_free_bytes": 43158827008,
+    "shm_free_bytes": 3366711296,
+    "cgroup_memory_current_bytes": 60384092160,
+    "cgroup_memory_max_bytes": 194065203200,
+    "cpu_quota_cores": 19.2,
+    "server_rclone_remotes": 0,
+    "writer_lease": "UNKNOWN_NO_OWNER_CAS_READBACK",
+    "s03_memory_file": "/root/nox/kb/knowledge.sqlite",
+    "s03_recall": "UNKNOWN_NOT_PROBED",
+    "owner_native_inspection": true,
+    "owner_write_admission": false
+  },
+  "weights": {
+    "new_optimizer_updates_verified": 0,
+    "new_checkpoint_verified": false,
+    "model_cutover_verified": false,
+    "deepseek_complete_verified": false
+  },
+  "knowledge": {
+    "new_hunter_S03_recall_verified": 0
+  },
+  "dispatcher_resources": {
+    "new_server_PIDs": null,
+    "new_claim_jobIDs": [],
+    "server_restarts": 0,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "freed_bytes": 0,
+    "STOP_cleared": false
+  },
+  "cleanup": "HOLD_NEW_MODEL_NOT_DEPLOYED",
+  "rollback": "Git CAS revert only code/test commits against their exact preimages; no OneHost rollback because no native deployment.",
+  "next_first_ready": "Owner-authorized current STOP/lease, independently-restorable checkpoint/S03 and seekable random-access storage with quota/reserve, then one owner Range claim+SHA, Maya sm70 inference, existing Resonance SSE/S03 E2E.",
+  "latest_native_refresh_utc": "2026-11-16T16:39:10.754Z"
+}

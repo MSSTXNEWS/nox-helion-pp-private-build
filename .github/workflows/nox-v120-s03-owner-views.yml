@@ -1,0 +1,61 @@
+name: NOX V120 authenticated native S03 history and fact read views
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v120/**'
+      - '.github/workflows/nox-v120-s03-owner-views.yml'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Manual only, after current live SHA and source/DB restore verification'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-60509551-v120-s03-patch
+  cancel-in-progress: false
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile native sources and safety assertions
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v120/s03_owner_memory_views.py nox_runpod/teacher_mesh/v120/upgrade_owner_s03_views.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v120.upgrade_owner_s03_views import REMOTE_TEMPLATE
+          src=REMOTE_TEMPLATE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(src,'<v120 native>','exec')
+          assert all(key in src for key in ('HOLD_NATIVE_SOURCE_SHA','HOLD_CHAT_BECAME_BUSY',
+                                            'HOLD_ANONYMOUS_ACCESS','revert(previous,meta)'))
+          print('NOX_V120_SOURCE_COMPILE=PASS')
+          PY
+  native:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}
+    needs: syntax
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install owner-scoped S03 read-only API without new DB
+        run: python -m nox_runpod.teacher_mesh.v120.upgrade_owner_s03_views
+      - name: Mandatory revocation of temporary SSH key
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

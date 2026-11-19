@@ -1,0 +1,49 @@
+name: NOX V63 classify service failure causes (native read-only)
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - .github/workflows/nox-v63-service-failures-readonly.yml
+      - nox_runpod/teacher_mesh/v63/service_failure_evidence.py
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v63-dependency-failures-readonly
+  cancel-in-progress: false
+jobs:
+  root-cause:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Syntax-check diagnostics
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v63/service_failure_evidence.py
+      - name: Read native code imports and classify logs; never restart services
+        run: |
+          set -euo pipefail
+          python3 -m nox_runpod.teacher_mesh.v63.service_failure_evidence
+      - name: Remove exact temporary SSH key
+        if: always()
+        run: |
+          python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: No production writes
+        if: success()
+        run: |
+          echo "NOX_SERVICE_RESTARTS=0"
+          echo "NOX_DOWNLOADS_TRIGGERED=false"
+          echo "NOX_NATIVE_ROOT_CAUSES_INSPECTED=true"

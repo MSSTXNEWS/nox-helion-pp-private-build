@@ -1,0 +1,123 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3B_V170",
+  "instructions_version": "0.0.6",
+  "slot": "3B",
+  "at_utc": "2026-11-16T08:50:06Z",
+  "head_before": "737c169050e05b415248dad5179edbd1088eb83d",
+  "previous": "coordination/progress/hourly/20261116_1025_3B_V169_DIALOG_CLICK_SAFE.json",
+  "problem": "Without Intl.Segmenter, original browser SSE bridge buffered all native deltas until terminal done, despite safe ASCII prefix and no need to delay first visible text.",
+  "fix": "Emit provably safe ASCII native prefix with one-character lookahead; do not split uncertain combining or ZWJ grapheme across native deltas. Original modern grapheme path unchanged.",
+  "source_blobs": [
+    {
+      "path": "coordination/onepass/nox-v135-resonance-owner-bridge.js",
+      "before": "2d7fd90519cf2a5cbeab28d48fa490fb67991b4e",
+      "after": "CURRENT_SOURCE_BLOB_2d7fd90519cf2a5cbeab28d48fa490fb67991b4e"
+    },
+    {
+      "path": "coordination/onepass/test_v135_resonance_owner_bridge.cjs",
+      "before": "32f738229c5329273252535b8e687de4937e5958",
+      "after": "7376eb8ea8b1358f5cc12c32bba357a90e46b613"
+    }
+  ],
+  "tests": "FINAL EXACT SHA GitHub CI PASS for V135 and V139 at 3B final commit ba020f8b683433f2f2d0a3509f9e8c6e73d89f03. V135 43835651459 and 43835641411 SUCCESS; V139 43835652036 SUCCESS. Prior failing source size/patch context fixed without weakening 20KB gate.",
+  "tasks": [
+    {
+      "n": 1,
+      "state": "DONE_NATIVE_READ_ONLY_PARTIAL",
+      "proof": "Owner-auth pinned SSH run 43833674167: original health 8080/8081/8082=200, /root/nox/models/current.gguf resolves nox36-mix_final_pref-Q4_K_M.gguf 21836629568 bytes; exact model SHA and browser owner cookie E2E unproven"
+    },
+    {
+      "n": 2,
+      "state": "DONE_SOURCE_TESTED_NATIVE_HOLD",
+      "proof": "Legacy real native ASCII prefix before terminal done; V135 exact-source CI SUCCESS, native original browser E2E still HOLD"
+    },
+    {
+      "n": 3,
+      "state": "SOURCE_TESTED_NATIVE_HOLD",
+      "proof": "Exact exchange_id history S03 verification remains unchanged; new V170 fixture checks final S03"
+    },
+    {
+      "n": 4,
+      "state": "SOURCE_TESTED_NATIVE_HOLD",
+      "proof": "Per-request AbortSignal and no global STOP left untouched"
+    },
+    {
+      "n": 5,
+      "state": "HOLD_NATIVE_RU_ES_METRICS",
+      "proof": "Original browser RU/ES p50/p95 unavailable, source regression is not native latency benchmark"
+    }
+  ],
+  "WEIGHTS": {
+    "state": "HOLD_NEW_STEP_PROOF",
+    "native_inspect": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43833674167",
+    "historical_verified_qwen_successful_updates": 8,
+    "new_verified_updates_this_3B": 0,
+    "old_35b_training_status_step": 5,
+    "old_35b_loss": null,
+    "active_qwen_successful_updates_current": null,
+    "checkpoint_current_restore_verified": false
+  },
+  "KNOWLEDGE": {
+    "state": "HOLD_HUNTER_S03_RECALL",
+    "new_hunter_e2e_jobs": 0,
+    "original_s03_file_bytes": 49020928,
+    "recall_live_verified": false
+  },
+  "DISPATCHER+RESOURCES": {
+    "state": "PARTIAL_NATIVE_READ_ONLY",
+    "at_utc": "2026-11-16T08:50:03Z",
+    "dispatcher_pid": 876007,
+    "priority_scheduler_pid": 498221,
+    "cpu_quota_cores": 19.2,
+    "cgroup_ram_current_bytes": 97116225536,
+    "cgroup_ram_limit_bytes": 194065203200,
+    "gpu0_used_mib": 21562,
+    "gpu1_used_mib": 882,
+    "gpu0_temperature_c": 19,
+    "gpu1_temperature_c": 21,
+    "ssd_free_bytes": 16924516352,
+    "shm_free_bytes": 3366682624,
+    "worker_three_pids_fresh_verified": false,
+    "writer_lease_current": null,
+    "actual_model_resolved": "nox36-mix_final_pref-Q4_K_M.gguf",
+    "original_health_8080_8081_8082": 200,
+    "cleanup_ephemeral_ssh_verified": true,
+    "restarted_by_3B": false,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0
+  },
+  "scope": "SOURCE_ONLY_NOT_DEPLOYED",
+  "native_commands_write_count": 0,
+  "original_web_changed": false,
+  "weights_switched": false,
+  "next": "Complete exact SHA CI, then bound original owner-auth live browser SSE/STOP/S03 and RU/ES p50/p95 under source pin/lease/rollback; do not promote from source tests.",
+  "first_ci_failure": {
+    "run_id": 43835090607,
+    "reason": "HOLD_OWNER_BRIDGE_BOUNDS",
+    "size_before": 20439,
+    "max_allowed": 20000,
+    "action": "Remove only redundant comments, retain fixed 20000 byte staging ceiling",
+    "size_after": 18548
+  },
+  "ci_progress": {
+    "v135_success": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43835368110",
+    "v139_context_error": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43835368191",
+    "fixed_patch_context": true,
+    "source_bytes": 18855
+  },
+  "current_source_sha": "ba020f8b683433f2f2d0a3509f9e8c6e73d89f03",
+  "final_acceptance": {
+    "scope": "SOURCE_ONLY",
+    "v135_runs": [
+      "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43835651459",
+      "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43835641411"
+    ],
+    "v139_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43835652036",
+    "v135": "SUCCESS",
+    "v139": "SUCCESS",
+    "native_web_deployed": false,
+    "first_token_latency_ms_native": null,
+    "ru_es_p50_p95_native": null,
+    "owner_ssh_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43833674167"
+  }
+}

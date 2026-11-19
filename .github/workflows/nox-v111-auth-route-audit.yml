@@ -1,0 +1,47 @@
+name: NOX V111 live owner cookie and V29 read only audit
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v111/**'
+      - '.github/workflows/nox-v111-auth-route-audit.yml'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved original NOX OneHost access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-v111-60509551-readonly
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check runner and remote code syntax
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v111/owner_route_audit.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v111.owner_route_audit import REMOTE
+          code=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(code,'<native route inspector>','exec')
+          PY
+      - name: Physical read only inspection
+        run: python -m nox_runpod.teacher_mesh.v111.owner_route_audit
+      - name: Always revoke ephemeral SSH key
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

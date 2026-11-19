@@ -1,0 +1,65 @@
+name: NOX V112 gated real V29 + existing S03 native OneHost install
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - '.github/workflows/nox-v112-native-deploy.yml'
+      - 'nox_runpod/teacher_mesh/v112/native_install_v112.py'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Owner-approved existing OneHost native access only'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+permissions:
+  contents: read
+concurrency:
+  group: nox-native-proxy-patch-60509551
+  cancel-in-progress: false
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Install pinned fixture-testing dependencies only on the runner
+        run: python -m pip install -q fastapi==0.128.2 httpx==0.28.1
+      - name: Validate full bridge, the exact remote native script and all fixture tests
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py
+          python -m py_compile nox_runpod/teacher_mesh/v112/native_install_v112.py
+          python -m py_compile nox_runpod/teacher_mesh/v112/tests/test_native_bridge.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v112.native_install_v112 import REMOTE_TEMPLATE
+          embedded=REMOTE_TEMPLATE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(embedded,'<v112 remote native upgrade>','exec')
+          for v in ('HOLD_PINNED_SOURCE_CHANGED','HOLD_ACTIVE_OR_UNHEALTHY_ONEHOST',
+                    'HOLD_EXISTING_S03_ADDITIVE_MIGRATION','HOLD_OWNER_AUTH_OR_STOP',
+                    'rollback(old,meta)','authorized_browser_e2e_verified=False'):
+              assert v in REMOTE_TEMPLATE,v
+          print('NOX_V112_NATIVE_INSTALLER_SOURCE=PASS')
+          PY
+          python -m unittest discover -s nox_runpod/teacher_mesh/v112/tests -p 'test_*.py' -v
+  native:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}
+    needs: regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Upgrade one existing OneHost bridge only after native source/auth/idle gates
+        run: python -m nox_runpod.teacher_mesh.v112.native_install_v112
+      - name: Always revoke the temporary Vast SSH identity
+        if: always()
+        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

@@ -1,0 +1,82 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_1A",
+  "at_utc": "2026-11-16T17:09:37.162Z",
+  "at_msk": "2026-11-16T20:09:37.163+03:00",
+  "source_head_preimage": "1f7acc8fb39762d31dfbd69540ec9fce990a7249",
+  "task_ids": [
+    {
+      "id": "S1-07",
+      "status": "SOURCE_PATCH_CI_PENDING_NATIVE_HOLD",
+      "reason": "Owner Qwen6 encrypted backup exact auth-prefix pin drift after additive read-only Vast instance-state logging; old pin fails 1/17 tests; changed only pinned digest after code diff showed additive public-state display. Independent restore not attempted."
+    },
+    {
+      "id": "S1-01",
+      "status": "PRIOR_NATIVE_READ_ONLY",
+      "reason": "Last source-linked V51 owner read-only at 2026-11-16T16:48:21Z; no new native job this slot."
+    },
+    {
+      "id": "S1-03",
+      "status": "HOLD_NATIVE_LEASE",
+      "reason": "Manual OWNER_MODEL_UPDATE STOP/MAINTENANCE last present; writer lease unknown."
+    },
+    {
+      "id": "S2-07",
+      "status": "HOLD_SEEKABLE_STORAGE",
+      "reason": "DeepSeek requires 248834257920 unique bytes + reserve, internal SSD 183609851904 total, 43158790144 free (last native)."
+    },
+    {
+      "id": "S3-04",
+      "status": "HOLD_UNLOADED_ENGINE",
+      "reason": "Maya+full DeepSeek not mounted in original Resonance; no full SSE/STOP/ACL/S03 E2E."
+    }
+  ],
+  "source": {
+    "file": "nox-control/owner_qwen6_backup_runner.py",
+    "old_auth_prefix_sha256": "a7ecbac3748bffa23bade4370491132a0f29be1b02cb4b8da3e0cc506da48e31",
+    "new_auth_prefix_sha256": "095508ea245b95ac9d1623c5919de551a5c67ec47e2f561a4b3eafad800d6728",
+    "old_file_pin_references": 1,
+    "security_review": "Run-native AST prefix diff vs original runner creation commit c1720666b1 confirmed ONLY read-only public-state print added before payload; SSH fingerprint/API/host auth branch identical; pinned exact prefix SHA revalidated, no auth bypass",
+    "regression": "Existing TransportScopeTests.test_current_auth_prefix_is_exact_and_stops_before_payload (17-test suite) failed with HOLD_QWEN6_BACKUP_AUTH_PREFIX_PIN at job 133461558164; re-run post-commit CI pending.",
+    "rollback": "Per-file Git blob CAS restore exact preimage; no native installation"
+  },
+  "native": {
+    "instance": 60509551,
+    "provenance_job_id": 133453659138,
+    "observed_at_utc": "2026-11-16T16:48:21Z",
+    "owner_stop": "PRESENT_PRIOR",
+    "owner_maintenance": "PRESENT_PRIOR",
+    "writer_lease": "UNKNOWN",
+    "supervisor_critical": "5_STOPPED_PRIOR",
+    "listener_8081": "ABSENT_PRIOR",
+    "gpu_vram_mib_prior": [
+      0,
+      0
+    ],
+    "ssd_total_bytes_prior": 183609851904,
+    "ssd_free_bytes_prior": 43158790144,
+    "pids": null,
+    "new_native_job_ids": [],
+    "optimizer_updates": 0,
+    "checkpoint_restore_verified": false,
+    "s03_hunter_recall": 0,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0
+  },
+  "WEIGHTS": {
+    "successful_optimizer_updates_new": 0,
+    "offsite_restore_verified": false
+  },
+  "KNOWLEDGE": {
+    "hunter_s03_recall_new": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "native_jobs_new": 0,
+    "writer_lease": "UNKNOWN",
+    "model_promoted": false,
+    "manual_stop_cleared": false
+  },
+  "next_ready": "Await SOURCE CI then independent owner-approved encrypted backup restore and verified seekable storage + STOP/lease, then single original DeepSeek claim; no legacy Qwen training."
+}

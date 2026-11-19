@@ -1,0 +1,117 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3D_RELAY_RECEIPT_V9",
+  "instructions_version": "0.0.6",
+  "slot": "3D",
+  "recorded_at_utc": "2026-11-16T11:19:14.029Z",
+  "recorded_at_msk": "2026-11-16T14:19:14.029+03:00",
+  "source_head_before": "0105fa76872cf96732fb4f1d3de06b77e34bdf3a",
+  "source_head_at_receipt": "a06c6a039ebccd6eaa754914624ab5477beca47b",
+  "source_kind": "SOURCE_PATCH_AND_REAL_OFFLINE_CHROMIUM_ONLY;NATIVE_ONEHOST_E2E_HOLD",
+  "primary_web_archive": {
+    "identity": "NOX_HELION_WEB29_MAIN_20261116.zip",
+    "sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
+    "latest_locally_inspected_prior_candidate": "NOX_WEB29_3D_SHORT_DESKTOP_GRID_V06_SOURCE_CANDIDATE_20261116.zip",
+    "prior_candidate_sha256": "3733dbe4068b1c71263d315f5fb9323fcd1ac0b3ef434a27a3a45b18207fa921",
+    "prior_candidate_bytes": 84228801,
+    "members": 1214,
+    "crc": "PASS",
+    "source_lock_d02_orbits_four_of_four": "PASS",
+    "new_zip_created": false
+  },
+  "css": {
+    "path": "coordination/onepass/web29_3d_20261116/site/nox-cinematic-accessibility-3d.css",
+    "blob_sha_before": "8f9fe785d74eccba2b30fe247de750698b11857c",
+    "blob_sha_after": "3a4514e05948cf2f886d9dcd27027ad67d154c35",
+    "commit": "57c2c6bf2a38bfe2048223c1ccf17b28700d5d3c",
+    "stage_source_pin_commit": "f6c0a9e732388264b342000d8d6a9a42f3ba4d51",
+    "node_regression_source_commit": "fe2041cee2c421e6b1b917375c6accbe9e44dc3d",
+    "source_readback": "PASS",
+    "changes": "Bound 761-1199x400-419px layout/telemetry/message pane; adjust 960-1199 compact track; bound 1200-1399x400-600px height without changing cinematic assets, Motion/STOP or S03."
+  },
+  "tasks": [
+    {
+      "number": 1,
+      "status": "DONE_SOURCE_PRESERVATION",
+      "evidence": "Prior candidate ZIP 1214 members CRC PASS; original D02 shader and 14 orbit SHA256 each match four manifest locks; no original cinematic source edited."
+    },
+    {
+      "number": 2,
+      "status": "SOURCE_PRESERVED",
+      "evidence": "Original Motion.js/STOP idle loader remains byte-identical; no new animations or code in token pipeline."
+    },
+    {
+      "number": 3,
+      "status": "DONE_SOURCE_PATCH",
+      "evidence": "CSS compact landscape fix for 400-419px tablet and 400-600px desktop; separate source pin/test updated via GitHub CAS."
+    },
+    {
+      "number": 4,
+      "status": "DONE_OFFLINE_CHROMIUM_HOLD_NATIVE",
+      "evidence": "Local /usr/bin/chromium Playwright rendered archived original HTML/9 stylesheets with new override: 15 viewports checked, eight critical constraints passed; 800x400 document height 590->400, 1024x400 600->400, 1200x400 440->400, 1200x480 485->480, 1200x600 605->600. Source-only HTML has JS disabled; no live SSE, p50/p95, authenticated owner route or native S03 proof."
+    },
+    {
+      "number": 5,
+      "status": "SOURCE_INTEGRATED_IN_PR_HOLD_ONEHOST",
+      "evidence": "CSS, exact staged blob pin and Node regression checks written/read back. Native deploy, owner preimage lease, backup and rollback not demonstrated."
+    }
+  ],
+  "offline_browser": {
+    "engine": "Chromium headless /usr/bin/chromium via Playwright",
+    "scope": "ORIGINAL_ARCHIVE_HTML_INLINED_CSS_JS_DISABLED",
+    "viewports_checked": 15,
+    "critical_pass": 8,
+    "keyboard_focus": "PASS 15/15 textarea #prompt",
+    "horizontal_overflow_in_critical": "NONE",
+    "live_ttft_p50_ms": null,
+    "live_ttft_p95_ms": null,
+    "genuine_stream_stop_s03": null,
+    "known_unsupported_claims": [
+      "No claim of live frontend deploy or performance gains in model inference",
+      "No claim of exact contemporary original 512 protected asset manifest revalidation beyond prior four source locks"
+    ]
+  },
+  "WEIGHTS": {
+    "status": "HOLD_FRESH_NATIVE",
+    "training_student": "Qwen3.5-9B",
+    "primary_candidate": "DeepSeek-V4.1-Flash-1017 IQ2_XXS",
+    "historical_successful_optimizer_updates": 25,
+    "checkpoint": "checkpoint25",
+    "latest_source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43828903713",
+    "new_successful_optimizer_updates_this_slot": 0,
+    "current_pid": null,
+    "current_loss": null,
+    "current_heartbeat": null,
+    "current_skipped_nan_overflow": null,
+    "checkpoint_optimizer_scaler_rng_reload_current": null,
+    "offsite_restore_proven": false,
+    "reason": "3D work was source-only; fresh native writer/STOP/resource/optimizer readback not obtained; no trainer restart"
+  },
+  "KNOWLEDGE": {
+    "status": "HOLD_HUNTER_TO_S03_RECALL",
+    "new_hunter_job_ids": [],
+    "new_native_full_cycles": 0,
+    "verified_s03_write_recall_current": null,
+    "reason": "No new authenticated Hunter→licensed source→S03 write→readback/recall evidence"
+  },
+  "DISPATCHER+RESOURCES": {
+    "status": "HOLD_FRESH_NATIVE",
+    "historical_dispatcher_pid_from_previous_3D_receipt": 876007,
+    "observed_at_utc": "2026-11-16T08:50:03Z",
+    "current_dispatcher_pid": null,
+    "current_three_worker_pids": null,
+    "current_gpu_vram_temperatures_cpu_ram_ssd_shm_io": null,
+    "current_owner_stop": null,
+    "current_lease": null,
+    "downloads_bytes_this_slot": 0,
+    "restarts_this_slot": 0,
+    "deleted_bytes": 0,
+    "source_only_github_ci": "SOME_GENERIC_PR_CHECKS_SUCCESS_NOT_3D_NATIVE"
+  },
+  "cleanup": {
+    "state": "HOLD_NOT_ELIGIBLE",
+    "deleted_files": 0,
+    "freed_bytes": 0,
+    "reason": "No verified new live model replacement/offsite restore/single cleanup lease."
+  },
+  "next_action": "Read latest accepted WEB29 live preimage, STOP/owner writer lease, independent rollback on original OneHost; stage existing 3D CSS with exact pinned blob; browser-auth SSE/STOP/S03/visual and TTFT p50/p95. Independently refresh training/checkpoint/Hunter/dispatcher receipts before any restart or cleanup."
+}

@@ -1,0 +1,39 @@
+name: NOX V49 existing-OneHost outbound bridge source CI
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/nox-v38-synaptic-brain-20261114
+    paths:
+      - "nox_runpod/teacher_mesh/v49/**"
+      - "coordination/bridge/**"
+      - ".github/workflows/nox-v49-bridge-ci.yml"
+permissions:
+  contents: read
+concurrency:
+  group: nox-v49-bridge-source-ci
+  cancel-in-progress: false
+jobs:
+  offline-bridge-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax compile
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v49/onehost_bridge.py
+          python -m py_compile nox_runpod/teacher_mesh/v49/github_https.py
+      - name: Security integration tests (fake native ports only)
+        run: |
+          python -m unittest discover -s nox_runpod/teacher_mesh/v49/tests -p "test_*.py" -v
+      - name: Source only, no deployment
+        run: |
+          echo "SOURCE_CI_ONLY=true"
+          echo "VAST_LIVE_EXECUTION=false"
+          echo "ONEHOST_NATIVE_QUEUE_VERIFIED=false"
+          echo "BRIDGE_LIVE_ACTIVATED=false"
