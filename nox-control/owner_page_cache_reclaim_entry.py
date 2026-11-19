@@ -139,7 +139,9 @@ def execute(request, source):
         if spec is None or spec.loader is None:
             raise RuntimeError('HOLD_PAGE_CACHE_HELPER_LOAD')
         storage = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(storage)
+        # Execute the pinned bytes without creating a bytecode cache in the
+        # private staging directory. Keep __file__ for the helper self-check.
+        exec(compile(helper_raw, str(staged), 'exec', dont_inherit=True), storage.__dict__)
 
         # Validate resources before auditing; the helper rechecks under its lease.
         resource_headroom(storage)
