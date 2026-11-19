@@ -1,43 +1,42 @@
 #!/usr/bin/env python3
-"""Read only fixed advisor key-presence booleans via the owner native inspector."""
+"""Read-only provider presence with an authenticated local Supervisor peer."""
+import http.client
 import base64
 import json
 import tempfile
 import os
 from pathlib import Path
-import re
+import socket
 import stat
-import subprocess
+import struct
+from xml.parsers.expat import ExpatError
+import xmlrpc.client
 
 
 KEYS = {'openrouter': b'OPENROUTER_API_KEY', 'groq': b'GROQ_API_KEY',
         'gemini': b'GEMINI_API_KEY'}
-SERVICES = ('nox-proxy', 'nox-dispatcher-t855u')
-CONTROL = (Path('/usr/bin/supervisorctl'), Path('/usr/local/bin/supervisorctl'))
-SUPERVISOR_CONFIG = Path('/etc/supervisor/supervisord.conf')
+SOCKET = Path('/run/supervisor.sock')
+EXPECTED = {
+    'nox-proxy': (850982, 190571793, (b'/root/nox/scripts/chat_proxy.py',)),
+    'nox-dispatcher-t855u': (762906, None, (
+        b'/root/nox/scripts/owner_subagent_dispatcher.py',
+    )),
+}
 
 
-def present(value):
-    return isinstance(value, bytes) and bool(value.strip()) and b'\r' not in value and b'\n' not in value
+def present(raw):
+    return isinstance(raw, bytes) and bool(raw.strip()) and b'\r' not in raw and b'\n' not in raw
 
 
 def project_environment(data):
     result = dict.fromkeys(KEYS, False)
-    reverse = {name: provider for provider, name in KEYS.items()}
+    names = {name: provider for provider, name in KEYS.items()}
     for entry in data.split(b'\0'):
         name, separator, value = entry.partition(b'=')
-        if separator and name in reverse:
-            result[reverse[name]] = result[reverse[name]] or present(value)
+        if separator and name in names:
+            key = names[name]
+            result[key] = result[key] or present(value)
     return result
-
-
-def is_trusted_regular(path, *, executable=False):
-    try:
-        info = path.lstat()
-    except OSError:
-        return False
-    return (stat.S_ISREG(info.st_mode) and info.st_uid == 0 and not info.st_mode & 0o022
-            and (not executable or bool(info.st_mode & 0o111)))
 
 
 def read_proc(pid, name, limit):
@@ -51,49 +50,112 @@ def read_proc(pid, name, limit):
 
 
 def process_identity(pid):
-    data = read_proc(pid, 'stat', 4096)
-    fields = data.rsplit(b')', 1)[1].split()
-    return fields[19]
+    fields = read_proc(pid, 'stat', 4096).rpartition(b') ')[2].split()
+    if len(fields) < 20 or fields[0] in (b'Z', b'X'):
+        raise ValueError('PROCESS_NOT_LIVE')
+    return int(fields[19]), int(fields[1]), int(fields[2])
 
 
-def supervisor_pid(command, name):
-    if command is None or not is_trusted_regular(SUPERVISOR_CONFIG):
-        return None
+def supervisor_process(pid):
+    args = read_proc(pid, 'cmdline', 16384).split(b'\0')
+    return any(arg.rsplit(b'/', 1)[-1] == b'supervisord' for arg in args[:2])
+
+
+def socket_identity():
+    directory = SOCKET.parent.lstat()
+    endpoint = SOCKET.lstat()
+    if (not stat.S_ISDIR(directory.st_mode) or directory.st_uid or directory.st_mode & 0o022
+            or not stat.S_ISSOCK(endpoint.st_mode) or endpoint.st_uid or endpoint.st_gid
+            or endpoint.st_nlink != 1 or stat.S_IMODE(endpoint.st_mode) != 0o700):
+        raise ValueError('UNVERIFIED_SUPERVISOR_SOCKET')
+    return endpoint.st_dev, endpoint.st_ino
+
+
+class UnixHTTP(http.client.HTTPConnection):
+    def __init__(self):
+        super().__init__('localhost', timeout=2)
+        self.peer = None
+
+    def connect(self):
+        channel = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            channel.settimeout(self.timeout)
+            channel.connect(str(SOCKET))
+            pid, uid, gid = struct.unpack('3i', channel.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
+            if uid != 0 or gid != 0 or pid <= 1 or not supervisor_process(pid):
+                raise ValueError('UNVERIFIED_SUPERVISOR_PEER')
+            self.peer = pid
+            self.sock = channel
+        except BaseException:
+            channel.close()
+            raise
+
+
+def supervisor_read(name):
+    if name not in EXPECTED:
+        raise ValueError('SUPERVISOR_SERVICE_SCOPE')
+    generation = socket_identity()
+    http = UnixHTTP()
     try:
-        result = subprocess.run([str(command), '-c', str(SUPERVISOR_CONFIG), 'pid', name],
-                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                                env={'PATH': '/usr/bin:/bin', 'LC_ALL': 'C'},
-                                stdin=subprocess.DEVNULL, timeout=2, check=False)
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    value = result.stdout.strip()
-    if result.returncode or re.fullmatch(rb'[1-9][0-9]{0,8}', value) is None:
-        return None
-    return int(value)
+        raw = xmlrpc.client.dumps((name,), methodname='supervisor.getProcessInfo')
+        http.request('POST', '/RPC2', raw, {'Content-Type': 'text/xml', 'Connection': 'close'})
+        response = http.getresponse()
+        body = response.read(65537)
+        if response.status != 200 or not 0 < len(body) <= 65536 or socket_identity() != generation:
+            raise ValueError('SUPERVISOR_RESPONSE_SCOPE')
+        values, _ = xmlrpc.client.loads(body)
+        if len(values) != 1 or not isinstance(values[0], dict):
+            raise ValueError('SUPERVISOR_RESPONSE_FORMAT')
+        item = values[0]
+        pid = item.get('pid')
+        if (item.get('name') != name or item.get('group') != name or item.get('statename') != 'RUNNING'
+                or type(pid) is not int or pid <= 1):
+            raise ValueError('SUPERVISOR_SERVICE_NOT_RUNNING')
+        return pid, http.peer
+    finally:
+        http.close()
 
 
-def service_projection(command, name):
-    scope = {'program': name, 'trusted_config_present': is_trusted_regular(
-        SUPERVISOR_CONFIG.parent / 'conf.d' / (name + '.conf')), 'state': 'UNOBSERVED',
-        'keys_present': dict.fromkeys(KEYS, None)}
-    pid = supervisor_pid(command, name)
-    if pid is None:
-        return scope
+PROBE_ERRORS = (OSError, ValueError, IndexError, http.client.HTTPException,
+                xmlrpc.client.Error, ExpatError)
+
+
+def service_projection(name):
+    report = {'program': name, 'state': 'UNOBSERVED', 'keys_present': dict.fromkeys(KEYS, None)}
+    signature = None
+    try:
+        pid, supervisor_pid = supervisor_read(name)
+        basis = 'SUPERVISOR_RPC_PEER_PROCESS_MATCH'
+    except PROBE_ERRORS:
+        pid, start, paths = EXPECTED[name]
+        try:
+            signature = process_identity(pid)
+            supervisor_pid = signature[1]
+            args = read_proc(pid, 'cmdline', 16384).split(b'\0')
+            if (start is not None and signature[0] != start or not supervisor_process(supervisor_pid)
+                    or not any(args.count(path) == 1 for path in paths)):
+                return report
+        except PROBE_ERRORS:
+            return report
+        basis = 'PINNED_PROCESS_EXECUTABLE_MATCH'
     try:
         before = process_identity(pid)
+        if before[1:] != (supervisor_pid, pid) or signature is not None and before != signature:
+            return report
         keys = project_environment(read_proc(pid, 'environ', 131072))
-        if process_identity(pid) != before or supervisor_pid(command, name) != pid:
-            return dict(scope, state='PROCESS_REPLACED_DURING_READ')
-    except (OSError, ValueError, IndexError):
-        return dict(scope, state='ENV_READ_UNAVAILABLE')
-    return dict(scope, state='PRESENCE_ONLY', keys_present=keys)
+        if (before != process_identity(pid) or signature is None
+                and supervisor_read(name) != (pid, supervisor_pid)):
+            return dict(report, state='PROCESS_REPLACED_DURING_READ')
+    except PROBE_ERRORS:
+        return dict(report, state='ENV_READ_UNAVAILABLE')
+    return dict(report, state='EXEC_ENV_PRESENCE_ONLY', binding=basis, keys_present=keys)
 
 
 def main():
-    control = next((path for path in CONTROL if is_trusted_regular(path, executable=True)), None)
-    row = {'schema': 'NOX_ADVISOR_PROVIDER_READINESS_V1',
+    row = {'schema': 'NOX_ADVISOR_PROVIDER_READINESS_V2',
            'probe_keys_present': {provider: present(os.environb.get(key)) for provider, key in KEYS.items()},
-           'services': [service_projection(control, name) for name in SERVICES],
+           'services': [service_projection(name) for name in EXPECTED],
+           'configured_bundle_secret_file_names': False,
            'key_values_reported': False, 'provider_contacted': False,
            'account_or_quota_verified': False}
     with tempfile.TemporaryDirectory(prefix='nox-readiness-') as directory:
