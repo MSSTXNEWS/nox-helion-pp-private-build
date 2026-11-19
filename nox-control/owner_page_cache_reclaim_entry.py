@@ -177,7 +177,7 @@ def execute(request, source):
         def guarded_fadvise(fd, offset, length, advice):
             if stop_seen[0] or stop_present():
                 stop_seen[0] = True
-                raise storage.StorageHold('HOLD_PAGE_CACHE_STOP_PRESENT')
+                raise RuntimeError('HOLD_PAGE_CACHE_STOP_PRESENT')
             return original_fadvise(fd, offset, length, advice)
 
         storage.os.posix_fadvise = guarded_fadvise
