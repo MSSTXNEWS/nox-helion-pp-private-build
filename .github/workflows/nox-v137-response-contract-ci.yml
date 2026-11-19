@@ -1,0 +1,23 @@
+name: NOX V137 S03 response contract focused source test
+on:
+  pull_request:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - "nox_runpod/teacher_mesh/v137/owner_response_contract.py"
+      - "nox_runpod/teacher_mesh/v137/tests/test_owner_response_contract.py"
+      - ".github/workflows/nox-v137-response-contract-ci.yml"
+permissions:
+  contents: read
+jobs:
+  v137-response-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run exact V137 response-contract unit module
+        run: PYTHONPATH=. python3 -m unittest -v nox_runpod.teacher_mesh.v137.tests.test_owner_response_contract

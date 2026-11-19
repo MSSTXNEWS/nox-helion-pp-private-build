@@ -69,8 +69,10 @@ def build_owner_response_contract(
     if not all(isinstance(session.get(k), str) and session.get(k)
                for k in ("tenant", "principal", "chat_id")):
         return {"state": "HOLD_NATIVE_SESSION_INVALID"}
+    if len(retrieved_s03) > 40:
+        return {"state": "HOLD_S03_HIT_LIMIT"}
     facts = []
-    for row in retrieved_s03[:40]:
+    for row in retrieved_s03:
         if not isinstance(row, Mapping) or row.get("verified") is not True:
             continue
         if not _scope_ok(row, session, native_cross_chat_sources):
@@ -79,18 +81,18 @@ def build_owner_response_contract(
         sha = row.get("sha256")
         text = row.get("content")
         if (not isinstance(uri, str) or not uri.startswith(_LOCAL_SOURCE)
-                or len(uri) > 180 or not isinstance(sha, str)
-                or not _SHA.fullmatch(sha)
+                or not isinstance(sha, str) or not _SHA.fullmatch(sha)
                 or not isinstance(text, str) or not text.strip()):
-            continue
-        # Drop likely secret-bearing lines; only host-scoped source facts.
-        if _SECRET.search(text[:320]):
-            continue
-        facts.append({"content": text.strip()[:240],
+            return {"state": "HOLD_S03_PROVENANCE_INVALID"}
+        if len(uri) > 180:
+            return {"state": "HOLD_S03_PROVENANCE_TOO_LARGE"}
+        # Never pass a secret-bearing record to the model. Hold the whole
+        # response so the verified memory set is not silently made incomplete.
+        if _SECRET.search(text):
+            return {"state": "HOLD_S03_REDACTION_REQUIRED"}
+        facts.append({"content": text,
                       "source_uri": uri, "source_sha256": sha,
                       "type": "UNTRUSTED_EVIDENCE_ONLY"})
-        if len(facts) >= 6:
-            break
     services = []
     for s in observations.get("service_observation", {}).get("services", [])[:60]:
         if not isinstance(s, Mapping):
@@ -112,11 +114,6 @@ def build_owner_response_contract(
     trusted_policy = "\n".join(_POLICY.values())
     evidence_json = json.dumps(data, ensure_ascii=False, sort_keys=True,
                                separators=(",", ":"), allow_nan=False)
-    while len(trusted_policy) + len(evidence_json) > max_chars and facts:
-        facts.pop()
-        data["s03_memory_used"] = bool(facts)
-        evidence_json = json.dumps(data, ensure_ascii=False, sort_keys=True,
-                                   separators=(",", ":"), allow_nan=False)
     if len(trusted_policy) + len(evidence_json) > max_chars:
         # Trim peripheral process observations, never invent memory hits.
         data["native_services"] = services[:3]
