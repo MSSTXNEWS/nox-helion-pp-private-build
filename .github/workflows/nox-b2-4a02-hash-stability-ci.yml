@@ -23,8 +23,8 @@ jobs:
       - name: Verify pinned owner and regression source Git blobs
         shell: bash
         run: |
-          test "$(git hash-object nox-control/owner_training_resume.py)" = "3ca4a068fb4bd3e7827f6ebafba755bb24503bcf"
-          test "$(git hash-object nox-control/tests/test_owner_training_resume_step_type_b2.py)" = "b1de86d331efcebc46cda330eba04d7dcb07bbbb"
+          test "$(git hash-object nox-control/owner_training_resume.py)" = "c88f8df48de8d16cd0a5b69ea2ba2c67c1e2bf57"
+          test "$(git hash-object nox-control/tests/test_owner_training_resume_step_type_b2.py)" = "147c6e5feff84db0c765bda3773196ee3e41412e"
       - name: Syntax and bounded non-native checkpoint regression
         run: |
           python -B -m py_compile nox-control/owner_training_resume.py nox-control/tests/test_owner_training_resume_step_type_b2.py
