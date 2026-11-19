@@ -13,6 +13,7 @@ import heapq
 import json
 import math
 import re
+import time
 from collections import deque
 from collections.abc import Mapping
 
@@ -23,10 +24,85 @@ ID = re.compile(r'^[A-Za-z0-9._:-]{1,128}$')
 SHA = re.compile(r'^[a-f0-9]{64}$')
 MAX_PAGE = 256
 MAX_PAGE_BYTES = 256 * 1024
+QUEUE_IDS = ('Q1_RUNTIME_CHAT', 'Q2_MEMORY_KNOWLEDGE',
+             'Q3_TRAINING_WEIGHTS', 'Q4_INTEGRATION_ACCEPTANCE')
+TERMINAL = frozenset(('done', 'completed', 'failed', 'cancelled', 'canceled'))
+BOUNDED_CPU_SCHEMA = 'NOX_BOUNDED_CPU_BUDGET_V1'
+BOUNDED_CPU_HANDLERS = frozenset(('owner_native_typed_leaf', 'owner_native_project_work'))
+MIB = 1024 * 1024
+BOUNDED_CPU_HEADROOM = 2 * 1024 * MIB
 
 
 class AutoHold(ValueError):
     """Fail closed without changing existing work."""
+
+
+def bounded_cpu_decision(budget, *, memory_ratio=None, cpu_pressure=None, now=None):
+    """Validate bounded cgroup admission; cache reclaim is only estimated.
+
+    This pure decision never cleans files or requests kernel reclaim. It
+    subtracts only measured inactive file cache outside shmem, reserves three
+    bounded workers, and requires two GiB of projected cgroup headroom.
+    """
+    required = {'schema', 'source', 'instance_id', 'observed_at', 'worker_slots',
+                'current_bytes', 'max_bytes', 'inactive_file_bytes', 'file_bytes',
+                'shmem_bytes', 'sandbox_limit_bytes', 'planner_reserve_bytes',
+                'minimum_headroom_bytes', 'memory_psi_some_avg10',
+                'memory_psi_full_avg10', 'cpu_pressure'}
+    if (not isinstance(budget, Mapping) or set(budget) != required
+            or budget['schema'] != BOUNDED_CPU_SCHEMA or budget['source'] != 'cgroup_v2'
+            or budget['instance_id'] != 60509551):
+        raise AutoHold('HOLD_BOUNDED_CPU_BUDGET_SCHEMA')
+    integer_fields = ('worker_slots', 'current_bytes', 'max_bytes', 'inactive_file_bytes',
+                      'file_bytes', 'shmem_bytes', 'sandbox_limit_bytes',
+                      'planner_reserve_bytes', 'minimum_headroom_bytes')
+    if (any(type(budget[key]) is not int or not 0 <= budget[key] < 2**63 for key in integer_fields)
+            or budget['max_bytes'] <= 0 or budget['shmem_bytes'] > budget['file_bytes']
+            or budget['worker_slots'] != 3 or budget['planner_reserve_bytes'] != 128*MIB
+            or budget['minimum_headroom_bytes'] != BOUNDED_CPU_HEADROOM
+            or not 96*MIB <= budget['sandbox_limit_bytes'] <= 512*MIB
+            or budget['sandbox_limit_bytes'] % MIB):
+        raise AutoHold('HOLD_BOUNDED_CPU_BUDGET_BYTES')
+    numeric = ('observed_at', 'memory_psi_some_avg10', 'memory_psi_full_avg10', 'cpu_pressure')
+    if any(type(budget[key]) not in (int, float) or not math.isfinite(budget[key])
+           or budget[key] < 0 for key in numeric):
+        raise AutoHold('HOLD_BOUNDED_CPU_BUDGET_PRESSURE')
+    current, maximum = budget['current_bytes'], budget['max_bytes']
+    reclaimable = min(budget['inactive_file_bytes'], budget['file_bytes']-budget['shmem_bytes'], current)
+    effective = current-reclaimable
+    reserved = 3*(max(256*MIB, budget['sandbox_limit_bytes'])+128*MIB)
+    projected = effective+reserved
+    result = {'reclaimable_bytes':reclaimable, 'effective_bytes':effective,
+              'reserved_bytes':reserved, 'projected_bytes':projected,
+              'headroom_bytes':maximum-projected, 'raw_memory_ratio':current/maximum,
+              'effective_memory_ratio':effective/maximum, 'projected_memory_ratio':projected/maximum}
+    if memory_ratio is not None and (type(memory_ratio) not in (int, float)
+            or not math.isfinite(memory_ratio)
+            or not math.isclose(memory_ratio, result['projected_memory_ratio'], rel_tol=0, abs_tol=1e-12)):
+        raise AutoHold('HOLD_BOUNDED_CPU_RATIO_MISMATCH')
+    if cpu_pressure is not None and (type(cpu_pressure) not in (int, float)
+            or not math.isfinite(cpu_pressure) or cpu_pressure != budget['cpu_pressure']):
+        raise AutoHold('HOLD_BOUNDED_CPU_PRESSURE_MISMATCH')
+    now = time.time() if now is None else now
+    if type(now) not in (int, float) or not math.isfinite(now):
+        raise AutoHold('HOLD_BOUNDED_CPU_CLOCK')
+    age = now-budget['observed_at']
+    reason = ('HOLD_BOUNDED_CPU_STALE_SNAPSHOT' if not 0 <= age <= 5 else
+              'HOLD_BOUNDED_CPU_MEMORY_PRESSURE' if max(budget['memory_psi_some_avg10'], budget['memory_psi_full_avg10']) >= 1 else
+              'HOLD_BOUNDED_CPU_CPU_PRESSURE' if budget['cpu_pressure'] >= 50 else
+              'HOLD_BOUNDED_CPU_HEADROOM' if result['headroom_bytes'] < BOUNDED_CPU_HEADROOM else None)
+    return {**result, 'eligible':reason is None, 'reason':reason}
+
+
+def bounded_cpu_task(task):
+    return (isinstance(task, Mapping) and task.get('handler') in BOUNDED_CPU_HANDLERS
+            and task.get('resource', 'CPU_LIGHT') == 'CPU_LIGHT'
+            and 'resource_demand' not in task and task.get('promotion_candidate_sha256') is None)
+
+
+def _in_flight(state):
+    """Treat every non-explicit terminal queue state as still reserved."""
+    return not (isinstance(state, str) and state.casefold() in TERMINAL)
 
 
 def fingerprint(obj):
