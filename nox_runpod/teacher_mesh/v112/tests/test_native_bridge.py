@@ -3,20 +3,24 @@ import asyncio
 import hashlib
 import httpx
 import json
+import os
 import sqlite3
 import sys
 import tempfile
 import threading
+import time
 import types
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.testclient import TestClient
 
 from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
-    _sse_delta, _timestamp, ensure_dialog_schema, register_native_v29_chat,
+    _sse_delta, _timestamp, ensure_dialog_schema, owner_admission_readback,
+    owner_quiesce_admission, owner_resume_admission, register_native_v29_chat,
 )
 
 class V112Tests(unittest.TestCase):
@@ -34,6 +38,8 @@ class V112Tests(unittest.TestCase):
         self.addCleanup(lambda:sys.modules.pop('s03_memory',None) if previous is None
                         else sys.modules.__setitem__('s03_memory',previous))
         self.site=folder/'site'
+        self.admission_state=folder/'admission-state'
+        self.admission_state.mkdir(mode=0o700)
         self.site.mkdir()
         (self.site/'index.html').write_text('<html><head></head><body>NOX</body></html>')
         (self.site/'chat.html').write_text('<html><head></head><body>Резонанс</body></html>')
@@ -50,6 +56,8 @@ class V112Tests(unittest.TestCase):
         self.bulk_sse=''
         self.block_native=False
         self.native_started=threading.Event()
+        self.stream_entered=None
+        self.stream_release=None
         async def native(payload):
             self.calls.append(payload)
             q=payload['messages'][-1]['content']
@@ -59,6 +67,9 @@ class V112Tests(unittest.TestCase):
                     self.native_started.set()
                     await asyncio.Event().wait()
                     yield 'unreachable'
+                if self.stream_entered is not None and self.stream_release is not None:
+                    self.stream_entered.set()
+                    await asyncio.to_thread(self.stream_release.wait,8)
                 if self.bulk_sse=='coalesced':
                     # Two individually valid 160 KB SSE comment frames in
                     # ONE network read: aggregate >300 KB is not oversize.
@@ -120,7 +131,8 @@ class V112Tests(unittest.TestCase):
           '_unauthorized':lambda:JSONResponse({'error':'AUTH'},status_code=401),
           '_proxy_completion':native,
           'nox_status':old_status,
-        },site_dir=self.site)
+        },site_dir=self.site,_admission_state_dir=self.admission_state,
+          _admission_owner_uid=os.getuid())
         self.client=TestClient(self.app)
         self.addCleanup(self.client.close)
         self.cookie={'owner':'yes'}
@@ -206,6 +218,128 @@ class V112Tests(unittest.TestCase):
             r=(self.client.post(url,json={}) if method=='post' else self.client.get(url))
             self.assertEqual(r.status_code,401,url)
         self.assertEqual(self.calls,[])
+
+    def test_durable_global_fence_rejects_new_chat_and_other_admissions(self):
+        store=self.app.state._nox_v112_admission_store
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _AdmissionStore
+        # A second app worker's independently created store sees the same durable fence.
+        other_worker_store=_AdmissionStore(self.admission_state,owner_uid=os.getuid())
+        epoch=other_worker_store.set_fence('7015284458')
+        chat=self.client.post('/api/nox/chat/stream',cookies=self.cookie,json={})
+        status=self.client.get('/api/nox/status',cookies=self.cookie)
+        self.assertEqual(chat.status_code,503,chat.text)
+        self.assertEqual(chat.json()['reason'],'HOLD_ADMISSION_FENCED')
+        self.assertEqual(status.status_code,503,status.text)
+        self.assertEqual(status.json()['reason'],'HOLD_ADMISSION_FENCED')
+        self.assertEqual(self.calls,[])
+        with self.assertRaisesRegex(RuntimeError,'HOLD_ADMISSION_OWNER_REQUIRED'):
+            owner_admission_readback('7015284458',_store=store)
+        with mock.patch('nox_runpod.teacher_mesh.v112.native_v29_full_bridge.os.geteuid',
+                        return_value=0):
+            receipt=owner_admission_readback('7015284458',_store=store)
+            with self.assertRaisesRegex(RuntimeError,'HOLD_ADMISSION_FENCE_OWNED'):
+                owner_admission_readback('7015284459',_store=store)
+        self.assertTrue(receipt['fence_active'])
+        self.assertEqual(receipt['fence_epoch'],epoch)
+        self.assertEqual(receipt['in_flight_count'],0)
+        self.assertEqual(receipt['active_stream_count'],0)
+        self.assertEqual(receipt['status'],'QUIESCED')
+        # Owner STOP remains an authenticated control path and does not create an admission.
+        stop=self.client.post('/api/nox/stop',cookies=self.cookie,json={})
+        self.assertEqual(stop.status_code,409)
+
+    def test_quiesce_waits_for_stream_drain_and_retains_fence_on_timeout(self):
+        store=self.app.state._nox_v112_admission_store
+        self.stream_entered=threading.Event()
+        self.stream_release=threading.Event()
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Fence drain','confirmed':True}).json()['dialog_id']
+        stream_result={}
+        stream_thread=threading.Thread(target=lambda:stream_result.setdefault('response',
+            self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                json={'message':'hold generation until released','dialog_id':dialog})),daemon=True)
+        stream_thread.start()
+        self.assertTrue(self.stream_entered.wait(3),'stream never entered its pinned upstream fixture')
+        quiesce_result={}
+        def quiesce():
+            with mock.patch('nox_runpod.teacher_mesh.v112.native_v29_full_bridge.os.geteuid',
+                            return_value=0):
+                try:
+                    quiesce_result['receipt']=owner_quiesce_admission(
+                        '7015284459',timeout_seconds=4,_store=store)
+                except Exception as exc:
+                    quiesce_result['error']=exc
+        quiesce_thread=threading.Thread(target=quiesce,daemon=True)
+        quiesce_thread.start()
+        deadline=time.monotonic()+2
+        snapshot=None
+        while time.monotonic()<deadline:
+            snapshot=store.snapshot('7015284459')
+            if snapshot['fence_active'] and snapshot['in_flight_count']:
+                break
+            time.sleep(.02)
+        self.assertIsNotNone(snapshot)
+        self.assertTrue(snapshot['fence_active'],
+            f'snapshot={snapshot},quiesce={quiesce_result},alive={quiesce_thread.is_alive()}')
+        self.assertEqual(snapshot['in_flight_count'],1)
+        self.assertEqual(snapshot['active_stream_count'],1)
+        blocked=self.client.get('/api/nox/status',cookies=self.cookie)
+        self.assertEqual(blocked.status_code,503,blocked.text)
+        self.assertTrue(quiesce_thread.is_alive(),'quiesce returned before the stream drained')
+        self.stream_release.set()
+        stream_thread.join(5); quiesce_thread.join(5)
+        self.assertFalse(stream_thread.is_alive())
+        self.assertFalse(quiesce_thread.is_alive())
+        self.assertNotIn('error',quiesce_result,repr(quiesce_result.get('error')))
+        receipt=quiesce_result['receipt']
+        self.assertEqual(receipt['status'],'QUIESCED')
+        self.assertEqual(receipt['zero_readbacks'],2)
+        self.assertEqual(receipt['in_flight_count'],0)
+        self.assertEqual(receipt['active_stream_count'],0)
+        self.assertEqual(stream_result['response'].status_code,200)
+        independent=owner_admission_readback
+        with mock.patch('nox_runpod.teacher_mesh.v112.native_v29_full_bridge.os.geteuid',
+                        return_value=0):
+            readback=independent('7015284459',_store=store)
+            resumed=owner_resume_admission('7015284459',receipt['fence_epoch'],_store=store)
+        self.assertEqual(readback['status'],'QUIESCED')
+        self.assertFalse(resumed['fence_active'])
+        self.assertEqual(resumed['status'],'OPEN')
+
+    def test_corrupt_or_symlink_state_fails_closed(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import ADMISSION_FILE
+        (self.admission_state/ADMISSION_FILE).symlink_to('/etc/passwd')
+        response=self.client.get('/api/nox/status',cookies=self.cookie)
+        self.assertEqual(response.status_code,503,response.text)
+        self.assertEqual(response.json()['reason'],'HOLD_ADMISSION_STATE_UNAVAILABLE')
+        self.assertEqual(self.calls,[])
+
+    def test_stream_lease_write_failure_aborts_before_native_generation(self):
+        store=self.app.state._nox_v112_admission_store
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Lease write failure','confirmed':True}).json()['dialog_id']
+        with mock.patch.object(store,'mark_stream',side_effect=OSError('fixture state write failure')):
+            response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                json={'message':'must not reach native model','dialog_id':dialog})
+        self.assertEqual(response.status_code,503,response.text)
+        self.assertEqual(response.json()['reason'],'HOLD_ADMISSION_STATE_UNAVAILABLE')
+        self.assertEqual(self.calls,[],'native completion must not start after stream admission state failed')
+
+    def test_quiesce_timeout_keeps_fence_until_exact_owner_resume(self):
+        store=self.app.state._nox_v112_admission_store
+        token=store.admit()
+        with mock.patch('nox_runpod.teacher_mesh.v112.native_v29_full_bridge.os.geteuid',
+                        return_value=0):
+            with self.assertRaisesRegex(RuntimeError,'HOLD_ADMISSION_DRAIN_TIMEOUT'):
+                owner_quiesce_admission('7015284460',timeout_seconds=.15,_store=store)
+            store.release(token)
+            receipt=owner_admission_readback('7015284460',_store=store)
+            with self.assertRaisesRegex(RuntimeError,'HOLD_ADMISSION_FENCE_CHANGED'):
+                owner_resume_admission('7015284460','0'*32,_store=store)
+            opened=owner_resume_admission('7015284460',receipt['fence_epoch'],_store=store)
+        self.assertTrue(receipt['fence_active'])
+        self.assertEqual(receipt['in_flight_count'],0)
+        self.assertEqual(opened['status'],'OPEN')
 
     def test_source_status_is_augmented_not_faked(self):
         r=self.client.get('/api/nox/status',cookies=self.cookie)
