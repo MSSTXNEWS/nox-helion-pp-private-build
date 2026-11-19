@@ -1,0 +1,78 @@
+name: NOX Reflex boot exception diagnosis (owner read-only)
+on:
+  push:
+    branches: [repair/nox-reflex-bootfix-20261119]
+    paths: ['.github/workflows/nox-reflex-boot-diagnose.yml']
+permissions: {contents: read}
+concurrency:
+  group: nox-reflex-bootdiag-60509551
+  cancel-in-progress: false
+jobs:
+  diagnose:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Pinned Vast owner read-only log metadata and current health
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
+          ssh.REMOTE=r"""
+          set -euo pipefail
+          python3 - <<'PYREMOTE'
+          import subprocess,re,json,hashlib,time
+          from pathlib import Path
+          root=Path('/root/nox')
+          print('NOX_NATIVE_V51_SSH_EXECUTED=true')
+          def cmd(args):
+              try:
+                  p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=8)
+                  return p.returncode,p.stdout
+              except Exception:return 99,''
+          rc,s=cmd(['supervisorctl','status','nox-dispatcher-t855u'])
+          m=re.search(r'\b(RUNNING|STOPPED|BACKOFF|FATAL|EXITED)\b',s)
+          print('NATIVE_REFLEX_CURRENT_DIRECTOR='+(m.group(1) if m else 'UNKNOWN'))
+          for stream in ('stderr','stdout'):
+              rc,raw=cmd(['supervisorctl','tail','nox-dispatcher-t855u',stream])
+              raw=raw[-16000:]
+              print('NATIVE_REFLEX_LOG_'+stream.upper()+'_AVAILABLE='+str(rc==0 and bool(raw)).lower())
+              results=[]
+              for line in raw.splitlines():
+                  # Only recognized exception class or known native HOLD codes; redact all other content.
+                  hold=re.search(r'HOLD_[A-Z0-9_]{4,95}',line)
+                  issue=re.search(r'\b(?:NameError|ImportError|ModuleNotFoundError|TypeError|KeyError|RuntimeError|AttributeError|ValueError|SyntaxError|FileNotFoundError|PermissionError|OSError|UnboundLocalError|RecursionError)\b',line)
+                  if hold or issue:
+                      results.append('HOLD:'+hold.group() if hold else 'EXC:'+issue.group())
+                  if line.startswith('  File "') and '/root/nox/scripts/' in line:
+                      path=re.search(r'/root/nox/scripts/([A-Za-z0-9_.-]+\.py)',line)
+                      lineno=re.search(r'line ([0-9]{1,5})',line)
+                      if path:
+                          results.append('FRAME:'+path.group(1)+':'+(lineno.group(1) if lineno else '?'))
+              print('NATIVE_REFLEX_LOG_'+stream.upper()+'_FAULTS='+json.dumps(results[-22:]))
+          try:
+              raw=(root/'status/agents_t856u.json').read_bytes()
+              status=json.loads(raw)
+              native=status.get('native_subexecutors') or {}
+              print('NATIVE_REFLEX_DIRECTOR_STATUS_SHA='+hashlib.sha256(raw).hexdigest())
+              print('NATIVE_REFLEX_WORKER_COUNT='+str(len(native.get('workers') or [])))
+              print('NATIVE_REFLEX_SYSTEMIC_STATE='+str((native.get('systemic_relay') or {}).get('state','UNKNOWN'))[:110])
+              print('NATIVE_REFLEX_READBACK_PID_MATCH='+str(native.get('director',{}).get('pid')==int(re.search(r'pid\s+([0-9]+)',s).group(1)) if re.search(r'pid\s+([0-9]+)',s) else False).lower())
+          except Exception:
+              print('NATIVE_REFLEX_STATUS=UNAVAILABLE')
+          print('NATIVE_READ_ONLY_COMPLETE=true')
+          PYREMOTE
+          """
+          try:
+              assert ssh.probe()
+              print('NOX_BOOT_DIAG=PASS_READ_ONLY')
+          finally:
+              assert ssh.cleanup()
+          PY
+      - name: Always detach only this temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
