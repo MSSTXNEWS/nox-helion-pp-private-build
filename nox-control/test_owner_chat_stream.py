@@ -180,7 +180,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     frame(calls=[{'index':0,'id':'call_status',
                                   'type':'function','function':{
                                       'name':'calculate','arguments':'{}'}}]),
-                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+                    frame(finish='tool_calls'),b'data: [DONE]\n\n'])
                 requests,factory=self.transport([first])
                 native=self.native(result={'ok':bad,'text':'Tool says completed'})
                 payload={'messages':[{'role':'user','content':'Verify status'}]}
@@ -200,9 +200,9 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             frame(calls=[{'index':0,'id':'call_failed',
                           'type':'function','function':{
                               'name':'calculate','arguments':'{}'}}]),
-            frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+            frame(finish='tool_calls'),b'data: [DONE]\n\n'])
         second=Chunks([frame('Failure reported'),frame(finish='stop'),
-                       b'data: [DONE]\\n\\n'])
+                       b'data: [DONE]\n\n'])
         requests,factory=self.transport([first,second])
         native=self.native(result={'ok':False,'text':'Access denied'})
         payload={'messages':[{'role':'user','content':'Verify status'}]}
