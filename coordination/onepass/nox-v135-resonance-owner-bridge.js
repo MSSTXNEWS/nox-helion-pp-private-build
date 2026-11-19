@@ -155,6 +155,10 @@
           await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
         }
         if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
+        if(doneSeen){
+          if(buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
+          break;
+        }
       }
       buf+=decoder.decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
@@ -174,6 +178,7 @@
     const body=new ReadableStream({
       async start(controller){
         const event=payload=>{
+          if(closed)return;
           if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
             firstVisibleMs=Math.round(performance.now()-started);
           const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
