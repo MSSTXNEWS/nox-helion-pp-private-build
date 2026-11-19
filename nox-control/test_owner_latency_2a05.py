@@ -37,6 +37,11 @@ class NativeLatencyContract(unittest.TestCase):
         for bad in (rows + [fixture(1)], [dict(rows[0], verified_model_sha256='e'*64)]):
             with self.assertRaisesRegex(ValueError, 'HOLD_2A05_'):
                 summarize(bad, model_sha256=M, route_sha256=R)
+        # Python int > 1e308 must fail closed; math.isfinite(int) overflows.
+        huge = fixture(21)
+        huge['stream']['native_first_ms'] = 10 ** 401
+        with self.assertRaisesRegex(ValueError, 'HOLD_2A05_BAD_LATENCY'):
+            summarize([huge], model_sha256=M, route_sha256=R)
 
 
 if __name__ == '__main__':
