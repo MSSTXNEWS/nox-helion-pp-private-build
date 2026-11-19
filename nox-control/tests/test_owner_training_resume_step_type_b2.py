@@ -232,6 +232,48 @@ class CheckpointStepProvenance(unittest.TestCase):
                     verifier(helper)
 
 
+    def test_resource_admission_cgroup_v2_unlimited_cpu_quota(self):
+        # 'max PERIOD' is a valid cgroup v2 cpu.max state, not a parse error.
+        # No host cgroup/lease/GPU/model access or native training is performed.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            verifier = load_pinned_verifier(root)["resource_admission"]
+            sources = {
+                "/sys/fs/cgroup/cpu.max": "max 100000",
+                "/sys/fs/cgroup/memory.max": "194065203200",
+                "/sys/fs/cgroup/memory.current": "188662734848",
+                str(root / "train_cpu_max.env"): "TRAIN_CPU_MAX=64GiB\\n",
+            }
+            cpu_calls = []
+
+            def fake_read_text(path, *args, **kwargs):
+                return sources[str(path)]
+
+            def budget(mem_max, mem_current, quota_cpus, affinity_cpus):
+                cpu_calls.append((quota_cpus, affinity_cpus))
+                return {"train_cpu_gib": 64}
+
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "STOPPED"},
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 30000}]},
+                resource_budget=budget,
+                health=lambda: {"8080": 200},
+            )
+            with (mock.patch.object(Path, "read_text", autospec=True,
+                                    side_effect=fake_read_text),
+                  mock.patch("os.sched_getaffinity", return_value={0, 1, 2, 3})):
+                self.assertEqual(verifier(helper)["budget"]["configured_train_cpu_gib"], 64)
+                self.assertEqual(cpu_calls[-1], (4, 4))
+                sources["/sys/fs/cgroup/cpu.max"] = "400000 100000"
+                verifier(helper)
+                self.assertEqual(cpu_calls[-1], (4, 4))
+                for invalid in ("max 0", "0 100000", "bogus 100000",
+                                "max", "max 100000 extra", "max -1"):
+                    with self.subTest(cpu_max=invalid):
+                        sources["/sys/fs/cgroup/cpu.max"] = invalid
+                        with self.assertRaisesRegex(RuntimeError, "HOLD_CGROUP_CPU_QUOTA"):
+                            verifier(helper)
+
     def test_checkpoint_hash_rejects_regular_file_growth_during_read(self):
         # The old EOF-loop silently hashed appended bytes, making an unstable
         # checkpoint appear to be a valid signed snapshot.
