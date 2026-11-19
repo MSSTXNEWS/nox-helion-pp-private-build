@@ -95,7 +95,7 @@ def process_state(service):
     lines = run.stdout.decode('utf-8', 'replace').strip().splitlines()
     # supervisorctl right-pads service names with spaces. Match columns, not
     # a literal single-space prefix, and pin the actual reported PID.
-    match = (re.fullmatch(re.escape(service) + r'\\s+RUNNING\\s+pid\\s+([0-9]{1,10}),.*',
+    match = (re.fullmatch(re.escape(service) + r'\s+RUNNING\s+pid\s+([0-9]{1,10}),.*',
                         lines[0]) if len(lines) == 1 else None)
     if run.returncode != 0 or match is None:
         fail('SERVICE_NOT_RUNNING_' + service.upper().replace('-','_'))
