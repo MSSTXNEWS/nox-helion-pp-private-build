@@ -641,5 +641,38 @@ class RefillEligibilityTests(unittest.TestCase):
             producer.validate_manifest(changed)
 
 
+    def test_readonly_refill_review_rejects_unorderable_mission_ids(self):
+        from unittest.mock import patch
+        import owner_systemic_refill_producer as diagnostic
+
+        registry = {'parents': {}, 'total_original_ids': 295,
+                    'source_registry_sha256': {}}
+        review = {'reviewed_mission_ids': ['a', 'b']}
+        with (patch.object(diagnostic, 'strict_parent_registry', return_value=registry),
+              patch.object(diagnostic, 'eligibility_ledger', return_value=[]),
+              patch.object(diagnostic, 'proposal_predicate_diff', return_value=[]),
+              patch.object(diagnostic, '_validate_refill_request'),
+              patch.object(diagnostic, '_validate_proposal_request'),
+              patch.object(diagnostic, 'immutable_verifier_sha256', return_value='b' * 64),
+              patch.object(diagnostic, 'special_candidate_gaps', return_value=[])):
+            def predicate(missions):
+                report = diagnostic.build_report(
+                    {}, 'a' * 64, {'request_id': 'request'}, 'c' * 64,
+                    {'missions': missions}, 'd' * 64, {'roots': {}}, 'e' * 64,
+                    {}, 'f' * 64, review, '0' * 64, {}, {})
+                self.assertEqual(report['native_jobs_created'], 0)
+                self.assertFalse(report['executable_taskpack_emitted'])
+                self.assertEqual(report['state'], 'HOLD_NO_REVIEWED_TASKPACK')
+                return next(row for row in report['review_predicates']
+                            if row['predicate'] == 'reviewed_mission_ids')
+
+            for corrupt in ([{'mission_id': 'a'}, {'mission_id': None}],
+                            [{'mission_id': []}], ['not-an-object'], None):
+                with self.subTest(missions=corrupt):
+                    self.assertFalse(predicate(corrupt)['passed'])
+            self.assertTrue(predicate([
+                {'mission_id': 'b'}, {'mission_id': 'a'}])['passed'])
+
+
 if __name__ == "__main__":
     unittest.main()
