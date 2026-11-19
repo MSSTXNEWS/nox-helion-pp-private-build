@@ -405,7 +405,12 @@ def _sidecar_refs(document, task_id, spec_sha256):
 
 
 def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source_hash, source_blob):
+    scope_document = document.get('scope')
+    if not isinstance(scope_document, dict):
+        raise ValueError('SCOPE_MISSING')
     criteria = document.get('criteria')
+    if not isinstance(criteria, dict):
+        criteria = scope_document.get('criteria')
     criterion = criteria.get(task_id) if isinstance(criteria, dict) else None
     if not isinstance(criterion, dict):
         raise ValueError('CRITERION_RECORD_MISSING')
@@ -435,17 +440,19 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
         record_spec = record_criterion.get('spec_sha256')
     if record_spec != spec_sha256:
         raise ValueError('RECORD_SPEC_SHA_MISMATCH')
-    scope = criterion.get('acceptance_scope')
-    if scope is None:
-        scope = record.get('acceptance_scope')
-    if not isinstance(scope, str) or not scope.strip():
+
+    acceptance_scope = (criterion.get('acceptance_scope')
+                        or record.get('acceptance_scope')
+                        or binding.get('scope_limit'))
+    if not isinstance(acceptance_scope, str) or not acceptance_scope.strip():
         raise ValueError('ACCEPTANCE_SCOPE_MISSING')
     if (criterion.get('acceptance_scope') is not None
             and record.get('acceptance_scope') is not None
             and criterion['acceptance_scope'] != record['acceptance_scope']):
         raise ValueError('ACCEPTANCE_SCOPE_MISMATCH')
     evidence_pointer = record.get('evidence_pointer')
-    if criterion.get('evidence_pointer') is not None and criterion.get('evidence_pointer') != evidence_pointer:
+    if (criterion.get('evidence_pointer') is not None
+            and criterion.get('evidence_pointer') != evidence_pointer):
         raise ValueError('CRITERION_EVIDENCE_POINTER_MISMATCH')
     evidence = _pointer_value(document, evidence_pointer)
     if not isinstance(evidence, dict) or not evidence:
@@ -515,6 +522,10 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
         transfer = audit.get('transfer_bundle')
         if not all(isinstance(row, dict) for row in (pinned, host, remote, transfer)):
             raise ValueError('AUDIT_PROVENANCE_BINDING_MISSING')
+        census_pointer = evidence.get('process_census_pointer')
+        if census_pointer != '#/process_census':
+            raise ValueError('PROCESS_CENSUS_POINTER_MISMATCH')
+        census_for_hash = _pointer_value(document, census_pointer)
         if (record.get('audit_pin_commit_sha') != pinned.get('audit_pin_commit_sha')
                 or record.get('source_head_sha') != audit_workflow.get('run_head_sha')
                 or source_blobs.get('workflow') != audit_workflow.get('workflow_file_blob_sha')
@@ -522,8 +533,8 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
                 or source_blobs.get('operator_source') != pinned.get('operator_source_blob_sha')
                 or source_blobs.get('audit_source') != pinned.get('audit_source_blob_sha')
                 or source_blobs.get('transfer_bundle') != transfer.get('sha256')
-                or source_blobs.get('process_rows') != _pointer_value(document, '#/process_census').get('process_rows_sha256')
-                or not host.get('host_pin_verified')
+                or source_blobs.get('process_rows') != census_for_hash.get('process_rows_sha256')
+                or host.get('host_pin_verified') is not True
                 or not transfer.get('request_and_source_binding_verified')
                 or not transfer.get('reassembly_verified')
                 or remote.get('remote_exit_code') != 0):
@@ -549,7 +560,8 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
         reference = None
         for snapshot in snapshots:
             rows = snapshot.get('rows') if isinstance(snapshot, dict) else None
-            if (snapshot.get('nvidia_smi_rc') != 0 or not isinstance(rows, list) or len(rows) != 2):
+            if (not isinstance(snapshot, dict) or snapshot.get('nvidia_smi_rc') != 0
+                    or not isinstance(rows, list) or len(rows) != 2):
                 raise ValueError('GPU_INVENTORY_SNAPSHOT_INVALID')
             identity = []
             for gpu in rows:
@@ -564,14 +576,29 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
             if reference is not None and identity != reference:
                 raise ValueError('GPU_IDENTITIES_NOT_STABLE')
             reference = identity
-        if (not inventory.get('computed_checks', {}).get('distinct_uuid_count') == 2
-                or inventory.get('computed_checks', {}).get('stable_uuids_across_snapshots') is not True
-                or not _hex_digest(evidence.get('inventory_sha256'))):
+        checks = inventory.get('computed_checks')
+        if (not isinstance(checks, dict)
+                or checks.get('distinct_uuid_count') != 2
+                or checks.get('stable_uuids_across_snapshots') is not True
+                or checks.get('all_nvidia_smi_calls_successful') is not True
+                or checks.get('positive_free_memory_both_devices') is not True
+                or not _hex_digest(evidence.get('inventory_sha256'))
+                or record_workflow.get('inventory_sha256') != evidence.get('inventory_sha256')
+                or record_workflow.get('pinned_source_sha') != evidence.get('pinned_source_sha')
+                or binding.get('pinned_source_sha') != evidence.get('pinned_source_sha')
+                or evidence.get('request_id') != owner_id):
             raise ValueError('GPU_INVENTORY_CHECKS_INVALID')
+        conclusion = record_workflow.get('conclusion')
+        result_status = evidence.get('workflow_run_conclusion')
+        if conclusion != 'success' or result_status != 'success':
+            raise ValueError('GPU_WORKFLOW_STATUS_NOT_SUCCESS')
     elif task_id == '6V14-02':
-        if scope != 'POINT_IN_TIME_PROCESS_SET_ENUMERATION_AND_CORE_IDENTITY_ONLY':
+        if acceptance_scope != 'POINT_IN_TIME_PROCESS_SET_ENUMERATION_AND_CORE_IDENTITY_ONLY':
             raise ValueError('PROCESS_CENSUS_SCOPE_UNSUPPORTED')
-        census = evidence.get('process_census')
+        census_pointer = evidence.get('process_census_pointer')
+        if census_pointer != '#/process_census':
+            raise ValueError('PROCESS_CENSUS_POINTER_MISMATCH')
+        census = _pointer_value(document, census_pointer)
         if not isinstance(census, dict):
             raise ValueError('PROCESS_CENSUS_EVIDENCE_MISSING')
         count = census.get('observed_row_count')
@@ -586,26 +613,31 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
                 or not _positive_int(count)
                 or not _hex_digest(census.get('process_rows_sha256'))):
             raise ValueError('PROCESS_CENSUS_CORE_CRITERION_NOT_MET')
-        if (evidence.get('overall_audit') != 'HOLD'
+        remote = audit.get('remote_execution')
+        if (not isinstance(remote, dict)
+                or evidence.get('overall_audit') != 'HOLD'
                 or document.get('overall_audit') != 'HOLD'
-                or audit.get('remote_execution', {}).get('workflow_result') != 'HOLD_AUDIT_CENSUS_INCOMPLETE'):
+                or remote.get('workflow_result') != 'HOLD_AUDIT_CENSUS_INCOMPLETE'):
             raise ValueError('PROCESS_CENSUS_OVERALL_STATUS_MISMATCH')
-        if evidence.get('process_census_pointer') != '#/process_census':
-            raise ValueError('PROCESS_CENSUS_POINTER_MISMATCH')
+        conclusion = audit_workflow.get('job_conclusion')
+        result_status = remote.get('workflow_result')
+        if conclusion != 'failure' or result_status != 'HOLD_AUDIT_CENSUS_INCOMPLETE':
+            raise ValueError('PROCESS_CENSUS_WORKFLOW_STATUS_MISMATCH')
     else:
         raise ValueError('TASK_ACCEPTANCE_VARIANT_UNSUPPORTED')
 
-    conclusion = record_workflow.get('conclusion', audit_workflow.get('job_conclusion'))
-    result_status = evidence.get('workflow_run_conclusion', audit.get('remote_execution', {}).get('workflow_result'))
-    if task_id == '2V14-12' and (conclusion != 'success' or result_status != 'success'):
-        raise ValueError('GPU_WORKFLOW_STATUS_NOT_SUCCESS')
-    if task_id == '6V14-02' and not (conclusion == 'failure' and result_status == 'HOLD_AUDIT_CENSUS_INCOMPLETE'):
-        raise ValueError('PROCESS_CENSUS_WORKFLOW_STATUS_MISMATCH')
+    if (criterion.get('acceptance_increment') not in (None, 0)
+            or record.get('acceptance_increment') not in (None, 0)
+            or record.get('original_all295_ledger_updated') not in (None, False)):
+        raise ValueError('ORIGINAL_LEDGER_MUTATION_CLAIM')
+    if task_id == '6V14-02' and document.get('overall_audit') != 'HOLD':
+        raise ValueError('PROCESS_CENSUS_OVERALL_STATUS_MISMATCH')
     return {
         'task_id': task_id,
-        'title': criterion.get('title') or record.get('title') or scope.get('task_criterion', {}).get('task_title'),
+        'title': criterion.get('title') or record.get('title') or
+                 scope_document.get('task_criterion', {}).get('task_title'),
         'result': 'ACCEPTED',
-        'acceptance_scope': scope,
+        'acceptance_scope': acceptance_scope,
         'acceptance_pointer': pointer,
         'evidence_pointer': evidence_pointer,
         'run_binding_pointer': '#/criteria/%s/acceptance_binding' % task_id,
@@ -718,14 +750,17 @@ def supplemental_acceptance(directory, existing_receipt_count):
             if not isinstance(declared, list) or not declared:
                 raise ValueError('ADDENDUM_TASK_IDS_MISSING')
             accepted_claims = set()
+            scope_document = document.get('scope')
             criteria = document.get('criteria')
+            if not isinstance(criteria, dict) and isinstance(scope_document, dict):
+                criteria = scope_document.get('criteria')
             if isinstance(criteria, dict):
-                accepted_claims.update(task_id for task_id, row in criteria.items()
-                                       if isinstance(row, dict) and row.get('addendum_assessment') == 'ACCEPTED')
-            assessment = document.get('criterion_assessment')
-            if isinstance(assessment, dict) and assessment.get('accepted') is True:
-                for task_id in declared:
-                    accepted_claims.add(task_id)
+                accepted_claims.update(
+                    task_id for task_id, row in criteria.items()
+                    if isinstance(row, dict)
+                    and row.get('addendum_assessment') == 'ACCEPTED'
+                    and row.get('result', 'ACCEPTED') == 'ACCEPTED'
+                )
             for task_id in sorted(set(declared)):
                 if task_id not in accepted_claims:
                     continue
@@ -734,12 +769,11 @@ def supplemental_acceptance(directory, existing_receipt_count):
                         raise ValueError('TASK_ID_NOT_IN_FROZEN_295')
                     spec_sha = manifest_rows[task_id]
                     _sidecar_refs(document, task_id, spec_sha)
-                    if isinstance(criteria, dict) and task_id in criteria:
-                        item = _validate_record_sidecar(document, task_id, spec_sha, source_path, source_hash, git_blob_sha(raw))
-                    else:
-                        item = _validate_criterion_assessment_sidecar(
-                            document, task_id, spec_sha, source_path, source_hash
-                        )
+                    if not isinstance(criteria, dict) or task_id not in criteria:
+                        raise ValueError('SUPPORTED_ACCEPTANCE_BINDING_MISSING')
+                    item = _validate_record_sidecar(
+                        document, task_id, spec_sha, source_path, source_hash, git_blob_sha(raw)
+                    )
                     items.append(item)
                 except (KeyError, TypeError, ValueError, AttributeError) as exc:
                     excluded.append({'path': source_path, 'task_id': task_id, 'reason': str(exc)})
