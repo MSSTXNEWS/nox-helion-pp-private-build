@@ -55,6 +55,14 @@ def require_same_origin_target(response, requested_path, exact_path=True):
         raise RuntimeError('HOLD_CHAT_RESPONSE_REDIRECT')
 
 
+def require_exact_asset_target(response, requested_path_and_query):
+    """Inspect the same cache/versioned asset URL that the browser requested."""
+    requested = urllib.parse.urlsplit(requested_path_and_query)
+    require_same_origin_target(response, requested.path)
+    if urllib.parse.urlsplit(response.url).query != requested.query:
+        raise RuntimeError('HOLD_RESONANCE_ASSET_QUERY_MISMATCH')
+
+
 def require_not_html_asset(response, sample):
     """HTTP 200 SPA/login HTML at a JS/CSS path is not a usable Resonance asset."""
     headers = getattr(response, 'headers', None)
@@ -307,9 +315,11 @@ def main():
                 for resource in resources[:35]:
                     target=urllib.parse.urljoin(BASE+path,resource)
                     if urllib.parse.urlparse(target).netloc!=urllib.parse.urlparse(BASE).netloc:continue
-                    local=urllib.parse.urlparse(target).path
-                    with request(client,local) as asset:
-                        require_same_origin_target(asset, local)
+                    target_parts=urllib.parse.urlsplit(target)
+                    local=target_parts.path
+                    asset_request=local + ('?' + target_parts.query if target_parts.query else '')
+                    with request(client,asset_request) as asset:
+                        require_exact_asset_target(asset,asset_request)
                         sample = asset.read(512)
                         if asset.status == 200 and local.lower().endswith(('.js', '.mjs', '.css')):
                             require_not_html_asset(asset, sample)
