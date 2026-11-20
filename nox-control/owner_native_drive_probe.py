@@ -282,6 +282,62 @@ def dispatcher_surface(source=DISPATCHER, runner=subprocess.run):
     return result
 
 
+
+# Fixed, private candidate locations from earlier NOX revisions. Do not search
+# the home directory, reveal config values, print tokens, or use an env override.
+ALTERNATE_CONFIGS = {
+    "NOX_AUTH_PRIVATE": Path("/root/nox/ops/drive-auth/private/rclone.conf"),
+    "NOX_AUTH_DIR": Path("/root/nox/ops/drive-auth/rclone.conf"),
+    "NOX_CONFIG": Path("/root/nox/config/rclone.conf"),
+    "NOX_RECONNECT_STATE": Path("/var/lib/nox-drive-reconnect/rclone.conf"),
+    "ROOT_GCLOUD": Path("/root/.config/gcloud/application_default_credentials.json"),
+}
+
+
+def probe_alternative_auth_configs(candidates=ALTERNATE_CONFIGS):
+    """Metadata-only inventory; never copy, print or emit credential contents."""
+    import configparser
+    findings = {}
+    for label, path in candidates.items():
+        if not isinstance(label, str) or not isinstance(path, Path) or not path.is_absolute():
+            continue
+        if not all(c.isupper() or c.isdigit() or c == "_" for c in label):
+            continue
+        state = "ABSENT"
+        try:
+            if path.is_symlink() or any(p.is_symlink() for p in path.parents):
+                state = "UNSAFE_PATH"
+            elif path.is_file():
+                info = path.stat()
+                if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid()
+                        or info.st_nlink != 1 or info.st_mode & 0o077
+                        or not 0 < info.st_size <= 131072):
+                    state = "UNSAFE_FILE"
+                elif path.suffix == ".json":
+                    # Google ADC is NOT equivalent to Drive OAuth on a private root.
+                    # Presence only, no claim that the object has Drive permissions.
+                    state = "ADC_FILE_PRESENT_UNVERIFIED"
+                else:
+                    cp = configparser.RawConfigParser(interpolation=None)
+                    cp.read_string(path.read_text(encoding="utf-8"))
+                    if not cp.has_section("noxdrive"):
+                        state = "NO_PINNED_REMOTE"
+                    elif cp.get("noxdrive", "root_folder_id", fallback="") != EXPECTED_ROOT:
+                        state = "WRONG_ROOT"
+                    elif cp.get("noxdrive", "type", fallback="") != "drive":
+                        state = "WRONG_BACKEND"
+                    else:
+                        names = ("token", "service_account_file", "service_account_credentials")
+                        exists = any(cp.get("noxdrive", name, fallback="").strip() for name in names)
+                        state = "PINNED_AUTH_CANDIDATE" if exists else "PINNED_NO_AUTH"
+            elif path.exists():
+                state = "UNSAFE_TYPE"
+        except (OSError, UnicodeError, ValueError, configparser.Error):
+            state = "UNREADABLE"
+        findings[label] = state
+    return findings
+
+
 def config_candidates():
     specified = os.environ.get("RCLONE_CONFIG", "")
     if specified:
@@ -346,6 +402,7 @@ def probe():
               "approved_root_id": EXPECTED_ROOT, "config_state": config_state,
               "root_pinned": False, "read_access": False, "write_access": "NOT_TESTED"}
     result["dispatcher_surface"] = dispatcher_surface()
+    result["alternative_auth_configs"] = probe_alternative_auth_configs()
     if cfg is None:
         result["state"] = "NOT_CONNECTED"
         return result
