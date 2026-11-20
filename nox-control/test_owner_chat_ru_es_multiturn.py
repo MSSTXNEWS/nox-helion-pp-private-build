@@ -1085,6 +1085,26 @@ async function check(chunks, status=200) {
         self.assertLess(caller.index("report['critical_requestfailed_count']):"),
                         caller.index("multiturn_browser_acceptance_verified"))
 
+    def test_ru_es_extra_blocked_native_posts_invalidate_browser_acceptance(self):
+        """Two admitted POSTs alone cannot hide a third/alternate blocked attempt."""
+        healthy = [{'status': 200, 'resource_type': 'script'},
+                   {'status': 404, 'resource_type': 'image'}]
+        self.assertTrue(clean_two_turn_browser_runtime([], healthy, 0, 0, 0))
+        for count in (1, 2, -1, None, True, False, "0", 0.0):
+            with self.subTest(blocked_native_attempts=repr(count)):
+                self.assertFalse(clean_two_turn_browser_runtime([], healthy, 0, 0, count))
+        caller = inspect.getsource(browser_run)
+        self.assertIn("blocked['non_qa_generation'] + blocked['alternate_native_chat_route']", caller)
+        self.assertIn("blocked['non_qa_generation']+=1", caller)
+        self.assertIn("blocked['alternate_native_chat_route']+=1", caller)
+        self.assertLess(
+            caller.index("blocked['non_qa_generation'] + blocked['alternate_native_chat_route']"),
+            caller.index("report['multiturn_browser_acceptance_verified']=True"))
+        # External assets and blocked legacy/unscoped history are separate
+        # privacy counters, not themselves proof of extra native POSTs.
+        self.assertNotIn("blocked['external_origin'] +", caller)
+        self.assertNotIn("blocked['legacy_unscoped_history'] +", caller)
+
     def test_ru_es_four_turn_history_needs_independent_canonical_s03(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         transcript = rows(es)
