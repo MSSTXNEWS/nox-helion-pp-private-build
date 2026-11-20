@@ -45,7 +45,7 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
     if(o.cacheEvent)c.emit('Network.requestServedFromCache',{requestId});
     const dataTime=Object.hasOwn(o,'dataTimestamp')?o.dataTimestamp:timestamp+.01;
     if(missing&&i===1)c.emit('Network.dataReceived',{requestId,timestamp:dataTime});
-    else for(const chunk of chunks)c.emit('Network.dataReceived',{requestId,timestamp:dataTime,data:chunk.toString('base64')});
+    else for(const [index,chunk] of chunks.entries())c.emit('Network.dataReceived',{requestId,timestamp:Array.isArray(o.chunkTimestamps)?o.chunkTimestamps[index]:dataTime,data:chunk.toString('base64')});
     if(o.extraBeforeFinish)emitExtra();
     c.emit('Network.loadingFinished',{requestId,timestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02});
     await new Promise(r=>setImmediate(r));
@@ -279,4 +279,29 @@ test('nonfinite numbers anywhere in JSON SSE payload fail closed before DONE',as
   const valid=await run(false,[Buffer.from(inject('{"usage":{"total_tokens":42,"nested":[0.05,-3,1e12]}}'))]);
   assert.equal(valid.cdp_consistent,true);
   assert.equal(valid.ttft_sse_verified,true);
+});
+
+
+test('first-visible TTFT ignores zero-width, controls and isolated marks before real RU/ES/emoji text',async()=>{
+  const delta=text=>'data: '+JSON.stringify({choices:[{delta:{content:text}}]})+'\n\n';
+  const terminal='data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n';
+  const invisible='\u200B\u200E\uFEFF\u00AD\u0000\t\u0301\uFE0F';
+  const invisibleWire=delta(invisible)+terminal;
+  const invisibleOnly=await run(false,[Buffer.from(invisibleWire,'utf8')]);
+  assert.equal(invisibleOnly.cdp_consistent,true,'unambiguous SSE body bytes still match');
+  assert.equal(invisibleOnly.ttft_sse_verified,false,'invisible-only content cannot certify first-visible TTFT');
+  assert.equal(invisibleOnly.turns[1].ttft_ms,null);
+  const visible='Привет, ¡Hola! 🧠';
+  const chunks=[delta(invisible),delta(visible),terminal].map(s=>Buffer.from(s,'utf8'));
+  const admitted=await run(false,chunks,null,null,{chunkTimestamps:[101.010,101.015,101.018]});
+  assert.equal(admitted.cdp_consistent,true);
+  assert.equal(admitted.ttft_sse_verified,true);
+  assert.equal(admitted.turns[1].first_network_byte_ms,5);
+  assert.equal(admitted.turns[1].ttft_ms,15,'first printable RU/ES/emoji delta, not first invisible delta');
+  assert.equal(admitted.turns[1].sse_done_ms,18);
+  for(const printable of ['Русский','Español','🧠','!','7']){
+    const sample=await run(false,[Buffer.from(delta(invisible)+delta(printable)+terminal)]);
+    assert.equal(sample.ttft_sse_verified,true,printable);
+  }
+  assert.doesNotMatch(JSON.stringify(admitted),/Привет|Hola|secret/);
 });

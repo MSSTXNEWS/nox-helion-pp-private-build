@@ -82,6 +82,10 @@ function eventData(record){
   if(['ping','heartbeat','keepalive'].includes(eventName)&&Object.keys(obj).length===0)return {ignored:true};
   return {invalid:true};
 }
+// TTFT needs printable answer text, not just JavaScript /\S/.
+// Invisible format/control/whitespace/isolated combining marks cannot
+// prove first-visible text. This proxy does not attest browser paint.
+const hasPrintableAnswerText=text=>/[\p{L}\p{N}\p{P}\p{S}]/u.test(text);
 export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={}){
   if(!/^ws:\/\/(localhost|127\.0\.0\.1):\d+\//.test(ws||''))throw Error('LOCAL_CDP_ONLY');
   if(!Number.isInteger(count)||count<1||count>6)throw Error('BAD_COUNT');
@@ -121,7 +125,7 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       if(Object.hasOwn(event,'text')){
         if(x.finishStop&&event.text.length>0){x.missing=true;return;}
         x.visibleText+=event.text;
-        if(/\S/u.test(event.text)&&x.ttft===null&&ms!==null){x.ttft=ms;x.ttftAt=timestamp;}
+        if(hasPrintableAnswerText(event.text)&&x.ttft===null&&ms!==null){x.ttft=ms;x.ttftAt=timestamp;}
       }
       if(event?.done){
         if(x.done!==null||ms===null||!x.finishStop){x.missing=true;return;}
