@@ -8,6 +8,7 @@ Requires Python playwright + installed Chromium.
 """
 from __future__ import annotations
 
+import os
 import tempfile
 import threading
 import uuid
@@ -75,7 +76,7 @@ def main():
         database = f"nox-b1-regression-{uuid.uuid4().hex}"
         try:
             with sync_playwright() as pw:
-                browser = pw.chromium.launch(headless=True)
+                browser = pw.chromium.launch(headless=True, executable_path=os.environ.get('NOX_B1_CHROME'))
                 context = browser.new_context()
                 page = context.new_page()
                 page.goto(url, wait_until="load")
