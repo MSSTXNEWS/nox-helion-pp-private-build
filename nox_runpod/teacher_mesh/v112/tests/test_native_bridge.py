@@ -663,6 +663,33 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(bad.status_code,409)
         self.assertEqual(len(self.calls),before)
 
+    def test_dialog_bound_next_turn_ignores_untrusted_browser_history_limits(self):
+        # Exact owner-dialog receipts, not a stale browser cache, determine
+        # second-turn context. No-dialog callers retain strict history limits.
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Контекст после перезагрузки','confirmed':True}).json()['dialog_id']
+        question='Первый вопрос: память NOX.'
+        answer='Respuesta exacta: recuerdo NOX.'
+        self.assertTrue(_save_exchange(dialog,question,answer,'first-stored-pair'))
+        stale=[{'role':'assistant','content':'stale browser history'}]*25
+        second=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Второй ход: продолжай.',
+                  'history':stale})
+        self.assertEqual(second.status_code,200,second.text)
+        self.assertEqual(self.calls[-1]['messages'],[
+            {'role':'user','content':question},
+            {'role':'assistant','content':answer},
+            {'role':'user','content':'Второй ход: продолжай.'}])
+        final=json.loads(second.text.splitlines()[-1])
+        self.assertEqual(final['type'],'done')
+        self.assertFalse(final['s03_integrated'])
+        self.assertTrue(final['owner_dialog_saved'])
+        no_dialog=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'Новый разговор без dialog_id','history':stale})
+        self.assertEqual(no_dialog.status_code,422)
+        self.assertEqual(no_dialog.json(),{'error':'HOLD_HISTORY_LIMIT'})
+
     def test_dialog_inference_uses_durable_thread_not_browser_history(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
         created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
