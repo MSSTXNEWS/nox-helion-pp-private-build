@@ -868,14 +868,20 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(proof.status_code,200,proof.text)
         self.assertEqual(proof.json()['messages'][0]['content'],'Другой уникальный вопрос')
 
-    def test_no_dialog_legacy_caller_keeps_existing_s03_readback_behavior(self):
+    def test_no_dialog_legacy_match_never_claims_canonical_s03_receipt(self):
+        # The fixture writes a matching row but supplies no trusted native
+        # S03 writer receipt; substring evidence must not become DONE/ACCEPTED.
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
             json={'message':'legacy no-dialog prompt'})
         self.assertEqual(r.status_code,200,r.text[:200])
         frames=[json.loads(line) for line in r.text.splitlines() if line.strip()]
         done=frames[-1]
         self.assertEqual(done['type'],'done')
-        self.assertTrue(done['saved']);self.assertTrue(done['s03_integrated'])
+        self.assertFalse(done['saved'])
+        self.assertFalse(done['s03_integrated'])
+        self.assertFalse(done['canonical_s03_receipt_verified'])
+        self.assertTrue(done['legacy_s03_row_observed'])
+        self.assertEqual(done['store_scope'],'LEGACY_S03_SUBSTRING_ONLY')
         self.assertIsNone(done['dialog_id'])
         self.assertEqual(done['exchange_id'],'fixture-memory-0001')
         self.assertNotIn('receipt_id',done)
