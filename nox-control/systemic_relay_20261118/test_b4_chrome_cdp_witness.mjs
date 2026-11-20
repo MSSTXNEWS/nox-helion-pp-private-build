@@ -10,17 +10,29 @@ class Stub {
     if(cmd==='Network.streamResourceContent')return {};
     if(cmd==='Network.getResponseBody')return {body:this.bodies.get(p.requestId).toString('base64'),base64Encoded:true};return {};}
 }
-async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondTurn=null,encoding=null){const c=new Stub();return capture({ws:'ws://127.0.0.1:9333/fake',makeSession:async()=>c,timeoutMs:2000,onReady:async()=>{
+async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondTurn=null,encoding=null,options={}){const c=new Stub();return capture({ws:'ws://127.0.0.1:9333/fake',makeSession:async()=>c,timeoutMs:2000,onReady:async()=>{
   setTimeout(async()=>{for(let i=0;i<2;i++){
     const requestId=String(i+1),timestamp=100+i;
     const chunks=i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):[Buffer.from(body)];
     const captured=Buffer.concat(chunks);
     c.bodies.set(requestId,i===1&&responseBodyForSecondTurn!==null?Buffer.from(responseBodyForSecondTurn):captured);
+    const o=i===1?options:{};
     c.emit('Network.requestWillBeSent',{requestId,timestamp,request:{method:'POST',url:'http://localhost/api/nox/chat',postData:'{"secret":"'+i+'"}'}});
-    c.emit('Network.responseReceived',{requestId,timestamp:timestamp+.005,response:{status:200,mimeType:'text/event-stream',headers:i===1&&encoding?{'Content-Encoding':encoding}:{}}});
+    const emitExtra=()=>c.emit('Network.responseReceivedExtraInfo',{requestId,statusCode:o.extraStatus??200,headers:o.extraHeaders??{}});
+    if(o.extraBefore)emitExtra();
+    const response={status:200,mimeType:'text/event-stream',headers:i===1&&encoding?{'Content-Encoding':encoding}:{}};
+    for(const key of ['fromDiskCache','fromServiceWorker','fromPrefetchCache','fromEarlyHints','cacheStorageCacheName','serviceWorkerResponseSource','serviceWorkerRouterInfo']){
+      if(o[key]!==undefined)response[key]=o[key];
+    }
+    const responseEvent={requestId,timestamp:timestamp+.005,response,hasExtraInfo:o.hasExtraInfo===true};
+    if(o.omitHasExtraInfo)delete responseEvent.hasExtraInfo;
+    c.emit('Network.responseReceived',responseEvent);
+    if(o.extraAfter)emitExtra();
     await new Promise(r=>setImmediate(r));
+    if(o.cacheEvent)c.emit('Network.requestServedFromCache',{requestId});
     if(missing&&i===1)c.emit('Network.dataReceived',{requestId,timestamp:timestamp+.01});
     else for(const chunk of chunks)c.emit('Network.dataReceived',{requestId,timestamp:timestamp+.01,data:chunk.toString('base64')});
+    if(o.extraBeforeFinish)emitExtra();
     c.emit('Network.loadingFinished',{requestId,timestamp:timestamp+.02});
     await new Promise(r=>setImmediate(r));
   }},10);
@@ -76,4 +88,40 @@ test('independent decoded CDP body detects missing, duplicated, reordered, alter
   assert.equal(encoded.cdp_consistent,false);assert.equal(encoded.ttft_sse_verified,false);
   assert.equal(encoded.turns[1].cdp_decoded_body_matches_stream,false);
   assert.doesNotMatch(JSON.stringify(normal),/Hello|secret/);
+});
+
+test('early/late ExtraInfo, HTTP2 headers and cache metadata fence SSE acceptance',async()=>{
+  // HTTP/2/QUIC may omit headersText; normalized Headers object suffices.
+  for(const flags of [
+    {hasExtraInfo:true,extraBefore:true,extraHeaders:{':status':'200','content-encoding':'identity'}},
+    {hasExtraInfo:true,extraAfter:true,extraHeaders:{'Content-Encoding':'identity'}},
+    {hasExtraInfo:true,extraBeforeFinish:true,extraHeaders:{}},
+  ]){
+    const x=await run(false,null,null,null,flags);
+    assert.equal(x.cdp_consistent,true,JSON.stringify(flags));
+    assert.equal(x.ttft_sse_verified,true,JSON.stringify(flags));
+  }
+  for(const flags of [
+    {hasExtraInfo:true}, // expected late headers absent
+    {omitHasExtraInfo:true}, // unproven metadata contract
+    {hasExtraInfo:true,extraAfter:true,extraStatus:304}, // cached 200 alias
+    {hasExtraInfo:true,extraBefore:true,extraHeaders:{'Content-Encoding':'gzip'}},
+    {hasExtraInfo:true,extraBeforeFinish:true,extraHeaders:{'content-encoding':'br'}},
+    {hasExtraInfo:true,extraAfter:true,extraHeaders:{'Content-Encoding':'identity, gzip'}},
+    {hasExtraInfo:true,extraBefore:true,extraAfter:true}, // duplicate ExtraInfo
+    {extraAfter:true}, // contradictory extra when hasExtraInfo=false
+    {cacheEvent:true},
+    {fromDiskCache:true},
+    {fromServiceWorker:true},
+    {fromPrefetchCache:true},
+    {fromEarlyHints:true},
+    {cacheStorageCacheName:'unexpected-cache'},
+    {serviceWorkerResponseSource:'network'},
+    {serviceWorkerRouterInfo:{matchedSourceType:'network'}},
+  ]){
+    const x=await run(false,null,null,null,flags);
+    assert.equal(x.cdp_consistent,false,JSON.stringify(flags));
+    assert.equal(x.ttft_sse_verified,false,JSON.stringify(flags));
+    assert.equal(x.turns[1].ttft_ms,null,JSON.stringify(flags));
+  }
 });

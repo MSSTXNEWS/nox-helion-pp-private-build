@@ -18,6 +18,17 @@ export class Cdp {
   on(fn){this.listener=fn;}
   close(){this.ws?.close();}
 }
+// CDP Headers are normalized even for HTTP/2; headersText may be absent.
+function ambiguousEncoding(headers){
+  if(!headers||typeof headers!=='object'||Array.isArray(headers))return true;
+  const entries=Object.entries(headers).filter(([k])=>k.toLowerCase()==='content-encoding');
+  return entries.length>1||entries.some(([,v])=>typeof v!=='string'||v.split(',').some(x=>x.trim().toLowerCase()!=='identity'));
+}
+function cacheProvenance(r){
+  return Boolean(r?.fromDiskCache||r?.fromServiceWorker||r?.fromPrefetchCache||
+    r?.fromEarlyHints||r?.cacheStorageCacheName||r?.serviceWorkerResponseSource||
+    r?.serviceWorkerRouterInfo?.matchedSourceType||r?.serviceWorkerRouterInfo?.actualSourceType);
+}
 function eventData(record){const x=record.split(/\r?\n/).filter(y=>y.startsWith('data:')).map(y=>y.slice(5).trimStart()).join('\n');
   if(x==='[DONE]')return {done:true};
   try{const t=JSON.parse(x)?.choices?.[0]?.delta?.content;return typeof t==='string'?{text:t}:null;}catch{return null;}}
@@ -48,7 +59,7 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       let path;try{path=new URL(p.request.url).pathname;}catch{return;}
       if(p.request.method!=='POST'||!paths.has(path))return;
       if(active.has(p.requestId)){no(Error('DUPLICATE_CDP_ID'));return;}
-      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,first:null,ttft:null,done:null,close:null,streaming:false,missing:false,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false};
+      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,first:null,ttft:null,done:null,close:null,streaming:false,missing:false,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0};
       active.set(p.requestId,x);
       const record=s=>{if(typeof s==='string')x.request=hash(Buffer.from(s));};
       if(typeof p.request.postData==='string')record(p.request.postData);
@@ -56,11 +67,22 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       return;
     }
     const x=active.get(p.requestId);if(!x)return;
+    if(method==='Network.requestServedFromCache'){x.missing=true;return;}
+    // ExtraInfo can precede OR follow responseReceived; cached 200 can hide a 304.
+    if(method==='Network.responseReceivedExtraInfo'){
+      x.extraSeen++;
+      if(x.extraSeen!==1||x.extraExpected===false||p.statusCode!==200||
+         ambiguousEncoding(p.headers)){x.missing=true;x.encoded=true;}
+      return;
+    }
     if(method==='Network.responseReceived'){
       x.status=p.response?.status;x.mime=p.response?.mimeType;x.first=Math.round((p.timestamp-x.start)*1000);
-      // Compressed or ambiguous resource representations must not be compared as equivalent.
-      const encoding=Object.entries(p.response?.headers||{}).find(([k])=>k.toLowerCase()==='content-encoding')?.[1];
-      if(encoding && String(encoding).trim().toLowerCase()!=='identity'){x.encoded=true;x.missing=true;}
+      // Chrome signals whether ExtraInfo will arrive; unknown means a HOLD.
+      x.extraExpected=typeof p.hasExtraInfo==='boolean'?p.hasExtraInfo:null;
+      if(x.extraExpected===null||(x.extraExpected===false&&x.extraSeen!==0)||
+         cacheProvenance(p.response)||ambiguousEncoding(p.response?.headers)){
+        x.missing=true;x.encoded=true;
+      }
       c.send('Network.streamResourceContent',{requestId:p.requestId}).then(v=>{
         if(v.bufferedData)x.missing=true;
         x.streaming=true;
@@ -75,7 +97,9 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       x.close=Math.round((p.timestamp-x.start)*1000);
       if(method==='Network.loadingFailed')x.missing=true;
       // A final incomplete UTF-8 code point or unclosed SSE event is NOT a clean stream.
-      if(!x.streaming)x.missing=true;
+      if(!x.streaming||x.extraExpected===null||
+         (x.extraExpected===true&&x.extraSeen!==1)||
+         (x.extraExpected===false&&x.extraSeen!==0))x.missing=true;
       try{x.partial+=x.decoder.decode();}catch{x.missing=true;}
       if(x.partial.length!==0)x.missing=true;
       x.streamDigest=x.streamHasher.digest('hex');

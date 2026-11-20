@@ -25,3 +25,9 @@ jobs:
           python -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_b4_paired_benchmark_receipts.py' -v
           echo 'NOX_B4_SOURCE_TESTED_ONLY=true'
           echo 'NOX_B4_NATIVE_ACCEPTED=0'
+      - name: One focused offline B4 Chromium CDP SSE reliability suite
+        run: |
+          set -euo pipefail
+          node --version
+          node --test nox-control/systemic_relay_20261118/test_b4_chrome_cdp_witness.mjs
+          echo 'NOX_B4_CDP_SOURCE_TESTED_ONLY=true'
