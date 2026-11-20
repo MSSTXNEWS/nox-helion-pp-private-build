@@ -1,0 +1,551 @@
+name: NOX owner maintenance - explicit command only
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+concurrency:
+  group: nox-v51-vast60509551-temp-ssh
+  cancel-in-progress: false
+jobs:
+  owner-maintenance:
+    # Reserve standalone native actions for the canonical route; keep memfd_audit legacy.
+    if: >-
+      github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
+      github.actor == 'MSSTXNEWS' &&
+      github.event.sender.id == 340718567 &&
+      github.event.comment.user.id == 340718567 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.issue.number == 256 &&
+      startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
+      !contains(github.event.comment.body, ' inspect') &&
+      !contains(github.event.comment.body, ' audit') &&
+      !contains(github.event.comment.body, ' source_attest') &&
+      !contains(github.event.comment.body, ' gpu_inventory') &&
+      !contains(github.event.comment.body, ' browser_qa') &&
+      !contains(github.event.comment.body, ' refill_snapshot ') &&
+      !contains(github.event.comment.body, ' source_export ') &&
+      !contains(github.event.comment.body, ' page_cache_reclaim')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validate exact manual request without credentials or shell interpolation
+        id: request
+        run: |
+          python3 - <<'PY'
+          import json,os,re
+          e=json.load(open(os.environ['GITHUB_EVENT_PATH']))
+          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|emergency_stop_preflight|emergency_stop|deploy|backup|drive_probe|drive_reconnect_install|memfd_audit)',e['comment']['body'])
+          assert m, 'Invalid bounded maintenance command'
+          assert e['comment']['user']['id']==340718567 and e['sender']['id']==340718567
+          assert e['repository']['owner']['id']==340718567 and e['issue']['number']==256
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write('sha='+m[1]+'\naction='+m[2]+'\n')
+          PY
+      - name: Checkout main owner approval guard
+        if: steps.request.outputs.action == 'emergency_stop' || steps.request.outputs.action == 'emergency_stop_preflight'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          path: guard
+          persist-credentials: false
+      - name: Run main approved-source guard
+        if: steps.request.outputs.action == 'emergency_stop' || steps.request.outputs.action == 'emergency_stop_preflight'
+        id: approved
+        working-directory: guard
+        run: python3 -B nox-control/owner_native_inspect_comment_guard.py
+      - name: Match approved action and immutable source pin
+        if: steps.request.outputs.action == 'emergency_stop' || steps.request.outputs.action == 'emergency_stop_preflight'
+        env:
+          REQUEST_ACTION: ${{ steps.request.outputs.action }}
+          REQUEST_SHA: ${{ steps.request.outputs.sha }}
+          APPROVED_ACTION: ${{ steps.approved.outputs.action }}
+          APPROVED_SHA: ${{ steps.approved.outputs.source_sha }}
+        run: |
+          python3 - <<'PY'
+          import os
+          if os.environ['APPROVED_ACTION'] != os.environ['REQUEST_ACTION']:
+              raise SystemExit('HOLD_APPROVED_ACTION_MISMATCH')
+          if os.environ['APPROVED_SHA'] != os.environ['REQUEST_SHA']:
+              raise SystemExit('HOLD_APPROVED_SOURCE_MISMATCH')
+          PY
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.request.outputs.sha }}
+          persist-credentials: false
+      - name: Validate exact reviewed checkout SHA before credentials
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+        run: |
+          python3 - <<'PY'
+          import os,re,subprocess
+          sha=os.environ['NOX_PINNED_SOURCE_SHA']
+          if not re.fullmatch(r'[0-9a-f]{40}',sha): raise SystemExit('HOLD_SOURCE_PIN')
+          if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:
+              raise SystemExit('HOLD_CHECKOUT_MISMATCH')
+          PY
+      - name: Validate reviewed checkout syntax before credentials
+        env:
+          NOX_ACTION: ${{ steps.request.outputs.action }}
+        run: |
+          python3 - <<'PY'
+          import os,py_compile
+          from pathlib import Path
+          a=os.environ['NOX_ACTION']
+          assert a in ('audit','inspect','stage','repair','lifeline','emergency_stop','emergency_stop_preflight','deploy','backup','drive_probe','drive_reconnect_install','memfd_audit')
+          py_compile.compile('nox-control/owner_native_operator.py',doraise=True)
+          if a=='backup':
+              for name in ('owner_cp55_cipher','owner_cp55_scope','owner_cp55_native','owner_cp55_runner','auth_prefix_reuse'):
+                  py_compile.compile('nox-control/'+name+'.py',doraise=True)
+          elif a=='memfd_audit':
+              py_compile.compile('nox-control/owner_native_memfd_audit.py',doraise=True)
+          else:
+              source=('nox-control/owner_native_lifeline_observer.py' if a=='lifeline'
+                      else 'nox-control/owner_native_'+a+'.py')
+              py_compile.compile(source,doraise=True)
+          PY
+      - name: Validate encrypted backup dependency before credentials
+        if: steps.request.outputs.action == 'backup'
+        run: |
+          if ! /usr/bin/python3 -c 'import cryptography'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq python3-cryptography
+          fi
+          /usr/bin/python3 -m unittest discover -s nox-control -p test_owner_cp55_cipher.py -v
+      - name: Execute only this owner-approved original-instance operation
+        id: execute
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+          NOX_ACTION: ${{ steps.request.outputs.action }}
+        run: |
+          if [ "$NOX_ACTION" = "backup" ]; then
+            /usr/bin/python3 nox-control/owner_cp55_runner.py
+          else
+            python3 nox-control/owner_native_operator.py "$NOX_ACTION"
+          fi
+      - name: Always detach only this run temporary public key
+        if: >-
+          always() &&
+          (steps.execute.outcome == 'failure' ||
+           steps.execute.outcome == 'cancelled')
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Upload authenticated encrypted part 000
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part000') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_000
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part000
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 001
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part001') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_001
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part001
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 002
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part002') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_002
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part002
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 003
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part003') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_003
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part003
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 004
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part004') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_004
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part004
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 005
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part005') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_005
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part005
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 006
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part006') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_006
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part006
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 007
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part007') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_007
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part007
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 008
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part008') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_008
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part008
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 009
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part009') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_009
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part009
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 010
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part010') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_010
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part010
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 011
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part011') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_011
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part011
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 012
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part012') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_012
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part012
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 013
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part013') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_013
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part013
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 014
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part014') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_014
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part014
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 015
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part015') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_015
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part015
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 016
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part016') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_016
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part016
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 017
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part017') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_017
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part017
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 018
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part018') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_018
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part018
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 019
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part019') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_019
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part019
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 020
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part020') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_020
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part020
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 021
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part021') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_021
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part021
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 022
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part022') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_022
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part022
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 023
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part023') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_023
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part023
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 024
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part024') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_024
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part024
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload authenticated encrypted part 025
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != '' && hashFiles('artifacts/cp55-s03-cipher/cp55-s03.cipher.part025') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_PART_025
+          path: artifacts/cp55-s03-cipher/cp55-s03.cipher.part025
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload ciphertext-only receipts
+        if: success() && steps.request.outputs.action == 'backup' && hashFiles('artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_CP55_S03_${{ github.run_id }}_RECEIPTS
+          path: |
+            artifacts/cp55-s03-cipher/CIPHER_PARTS.json
+            artifacts/cp55-s03-cipher/EXPORT_VERIFIED.json
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+  owner-browser-qa:
+    # This route accepts exactly one owner-approved action; all other commands fail closed.
+    if: >-
+      github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
+      github.actor == 'MSSTXNEWS' &&
+      github.event.sender.id == 340718567 &&
+      github.event.comment.user.id == 340718567 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.issue.number == 256 &&
+      startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
+      endsWith(github.event.comment.body, ' browser_qa')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validate exact browser_qa owner request before credentials
+        id: request
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          event=json.load(open(os.environ['GITHUB_EVENT_PATH']))
+          body=event.get('comment',{}).get('body','')
+          match=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) browser_qa',body)
+          assert match, 'Invalid exact browser_qa owner command'
+          assert event.get('comment',{}).get('user',{}).get('id')==340718567
+          assert event.get('comment',{}).get('author_association')=='OWNER'
+          assert event.get('sender',{}).get('id')==340718567
+          assert event.get('repository',{}).get('owner',{}).get('id')==340718567
+          assert event.get('repository',{}).get('full_name')=='MSSTXNEWS/nox-helion-pp-private-build'
+          assert event.get('issue',{}).get('number')==256
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write('sha='+match[1]+'\naction=browser_qa\n')
+          PY
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.request.outputs.sha }}
+          persist-credentials: false
+      - name: Validate exact owner-approved checkout SHA
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, re, subprocess
+          sha=os.environ['NOX_PINNED_SOURCE_SHA']
+          if not re.fullmatch(r'[0-9a-f]{40}',sha):
+              raise SystemExit('HOLD_SOURCE_PIN')
+          if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:
+              raise SystemExit('HOLD_CHECKOUT_MISMATCH')
+          PY
+      - name: Validate only the browser_qa source bundle before credentials
+        run: |
+          python3 - <<'PY'
+          import ast, hashlib
+          from pathlib import Path
+          sources={
+              'owner_chat_browser_qa.py':'nox-control/owner_chat_browser_qa.py',
+              'owner_chat_browser_transport_qa.py':'nox-control/owner_chat_browser_transport_qa.py',
+              'owner_chat_browser_release_qa.py':'nox-control/owner_chat_browser_release_qa.py',
+              'owner_chat_stream_only_qa.py':'nox-control/owner_chat_stream_only_qa.py',
+          }
+          entry=Path('nox-control/owner_browser_stream_only_entry.py')
+          tree=ast.parse(entry.read_text(encoding='utf-8'),filename=str(entry))
+          node=next(n.value for n in tree.body
+                    if isinstance(n,ast.Assign)
+                    and any(isinstance(target,ast.Name) and target.id=='PINS' for target in n.targets))
+          pins=ast.literal_eval(node)
+          if set(pins)!=set(sources):
+              raise SystemExit('HOLD_BROWSER_BUNDLE_SCOPE')
+          for name,path in sources.items():
+              raw=Path(path).read_bytes()
+              compile(raw,path,'exec')
+              if not isinstance(pins.get(name),str) or hashlib.sha256(raw).hexdigest()!=pins[name]:
+                  raise SystemExit('HOLD_BROWSER_BUNDLE_PIN')
+          compile(Path('nox-control/owner_native_operator.py').read_bytes(),
+                  'nox-control/owner_native_operator.py','exec')
+          PY
+      - name: Execute only browser_qa for this owner request
+        id: execute
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+        run: python3 nox-control/owner_native_operator.py browser_qa
+      - name: Always detach only this run temporary public key
+        if: >-
+          always() &&
+          (steps.execute.outcome == 'failure' ||
+           steps.execute.outcome == 'cancelled')
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+  owner-page-cache-reclaim:
+    # One exact, separately gated owner command, bound to an immutable reviewed source commit.
+    if: >-
+      github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
+      github.actor == 'MSSTXNEWS' &&
+      github.event.sender.id == 340718567 &&
+      github.event.comment.user.id == 340718567 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.issue.number == 256 &&
+      startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
+      endsWith(github.event.comment.body, ' page_cache_reclaim')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Validate exact owner source pin before checkout
+        id: request
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          event=json.load(open(os.environ['GITHUB_EVENT_PATH']))
+          body=event.get('comment',{}).get('body','')
+          match=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) page_cache_reclaim',body)
+          if not match or match[1] != '515e9b719067669686205ee6098f866b39f3759d':
+              raise SystemExit('HOLD_PAGE_CACHE_APPROVED_SOURCE')
+          if (event.get('comment',{}).get('user',{}).get('id') != 340718567
+                  or event.get('comment',{}).get('author_association') != 'OWNER'
+                  or event.get('sender',{}).get('id') != 340718567
+                  or event.get('repository',{}).get('owner',{}).get('id') != 340718567
+                  or event.get('repository',{}).get('full_name') != 'MSSTXNEWS/nox-helion-pp-private-build'
+                  or event.get('issue',{}).get('number') != 256):
+              raise SystemExit('HOLD_PAGE_CACHE_OWNER_CONTEXT')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write('sha='+match[1]+'\n')
+          PY
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.request.outputs.sha }}
+          persist-credentials: false
+      - name: Verify exact source, helper blob, and syntax before credentials
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, subprocess
+          from pathlib import Path
+          source='515e9b719067669686205ee6098f866b39f3759d'
+          helper_commit='5fb2c3d91b3c9a241c8b20168d3f674ae13727eb'
+          helper_blob='08ada5def3e96761498a3840445459ee3d672742'
+          if os.environ.get('NOX_PINNED_SOURCE_SHA') != source:
+              raise SystemExit('HOLD_PAGE_CACHE_SOURCE_PIN')
+          if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip() != source:
+              raise SystemExit('HOLD_PAGE_CACHE_CHECKOUT_MISMATCH')
+          raw=Path('nox-control/owner_storage_reclaim.py').read_bytes()
+          blob=hashlib.sha1(b'blob '+str(len(raw)).encode('ascii')+b'\0'+raw).hexdigest()
+          if blob != helper_blob:
+              raise SystemExit('HOLD_PAGE_CACHE_HELPER_BLOB')
+          entry=Path('nox-control/owner_page_cache_reclaim_entry.py').read_text(encoding='utf-8')
+          operator=Path('nox-control/owner_native_operator.py').read_text(encoding='utf-8')
+          for marker in ("HELPER_SOURCE_COMMIT = '"+helper_commit+"'", "HELPER_BLOB_SHA = '"+helper_blob+"'"):
+              if marker not in entry:
+                  raise SystemExit('HOLD_PAGE_CACHE_ENTRY_PINS')
+          for marker in ("PAGE_CACHE_RECLAIM_HELPER_SOURCE_COMMIT='"+helper_commit+"'", "PAGE_CACHE_RECLAIM_HELPER_BLOB_SHA='"+helper_blob+"'"):
+              if marker not in operator:
+                  raise SystemExit('HOLD_PAGE_CACHE_OPERATOR_PINS')
+          for path in ('nox-control/owner_storage_reclaim.py',
+                       'nox-control/owner_page_cache_reclaim_entry.py',
+                       'nox-control/owner_native_operator.py'):
+              compile(Path(path).read_bytes(),path,'exec')
+          PY
+      - name: Execute only page_cache_reclaim for this owner request
+        id: execute
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+        run: python3 nox-control/owner_native_operator.py page_cache_reclaim
+      - name: Detach only this run's temporary public key after a failed or cancelled execute
+        if: >-
+          always() &&
+          (steps.execute.outcome == 'failure' ||
+           steps.execute.outcome == 'cancelled')
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
