@@ -1673,7 +1673,7 @@ class MediaEvidenceTests(unittest.TestCase):
             output = Path(root) / 'verified.png'
             output.write_bytes(b'ok')
             runtime = types.SimpleNamespace(
-                ACTIVE={'QUEUED', 'RUNNING'}, TERMINAL={'COMPLETED', 'FAILED'},
+                ACTIVE={'QUEUED', 'RUNNING'}, TERMINAL={'COMPLETED', 'FAILED', 'CANCELLED'},
                 load_job=lambda identifier: receipt,
                 configuration=lambda: {},
                 output_path=lambda *args: output)
@@ -1687,6 +1687,16 @@ class MediaEvidenceTests(unittest.TestCase):
                 verified = evidence.media_job(job_id)
                 self.assertIs(verified['ok'], True)
                 self.assertIn('/api/ui/media/jobs/', verified['text'])
+                # A native terminal failure, or merely queued/running work,
+                # must not certify successful output even if its receipt has
+                # a stale generation_verified flag and matching output bytes.
+                for state in ('FAILED', 'CANCELLED', 'QUEUED', 'RUNNING'):
+                    receipt['state'] = state
+                    with self.subTest(state=state):
+                        unready = evidence.media_job(job_id)
+                        self.assertIs(unready['ok'], False)
+                        self.assertEqual(unready['state'], state)
+                        self.assertNotIn('Генерация и проверка файла завершены', unready['text'])
 
 
 if __name__=='__main__':unittest.main()
