@@ -990,7 +990,7 @@ class PairedReceiptTests(unittest.TestCase):
                    {"role": "user", "content": "hola"}]
         requests = [
             {"model": "same-model", "messages": history},
-            {"model": "same-model", "messages": history +
+            {"model": "same-model", "messages": copy.deepcopy(history) +
              [{"role": "assistant", "content": "hola"},
               {"role": "user", "content": "sigue"}]},
         ]
