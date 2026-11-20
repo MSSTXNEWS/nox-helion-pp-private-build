@@ -38,8 +38,13 @@ class SafeCgroupReclaimTests(unittest.TestCase):
         with patch.object(reclaim,'stopped',return_value=False), \
              patch.object(Path,'exists',return_value=True):
             reclaim.check(observed)
+            # Emergency admission is limited to cold-cache-dominated cgroups;
+            # 64 MiB free is accepted only when STOP/PSI/OOM and cold reserve pass.
+            reclaim.check(dict(observed,raw=64*reclaim.MIB))
             for row,reason in [
                 (dict(observed,raw=4), 'MEMORY_ADMISSION'),
+                (dict(observed,raw=31*reclaim.MIB), 'MEMORY_ADMISSION'),
+                (dict(observed,cold_lower_bound=11*reclaim.GIB), 'MEMORY_ADMISSION'),
                 (dict(observed,cold_lower_bound=0), 'MEMORY_ADMISSION'),
                 (dict(observed,psi={'some':0.12,'full':0.0}), 'PRESSURE'),
                 (dict(observed,events={'oom':1,'oom_kill':0}), 'OOM'),
