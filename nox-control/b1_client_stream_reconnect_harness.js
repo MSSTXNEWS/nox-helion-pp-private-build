@@ -21,8 +21,14 @@
     // Convert callback rejection into a value before racing it against abort.
     // If it rejects after cancellation, it is still observed and cannot become
     // an unhandled rejection after the caller has returned STOPPED.
-    const settled=Promise.resolve().then(callback).then(
-      ()=>({kind:'settled'}),
+    const skipped={};
+    const settled=Promise.resolve().then(()=>{
+      // STOP can run in an already queued microtask between frame parsing and
+      // this callback microtask; never start UI work after cancellation.
+      if(signal.aborted) return skipped;
+      return callback();
+    }).then(
+      value=>value===skipped?{kind:'aborted'}:{kind:'settled'},
       error=>({kind:'rejected',error})
     );
     const aborted=new Promise(resolve=>{
