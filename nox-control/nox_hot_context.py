@@ -92,12 +92,17 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
     # Final prompt ordering remains S03 before chronological dialogue.
     included=[]
     omitted=[]
+    # History must be a contiguous recent suffix. Skipping an over-budget
+    # newer turn and then showing older turns creates a misleading dialog.
+    # Keep immutable references for every omitted turn; never truncate text.
+    gap=False
     for turn in reversed(conversation):
         msg={"role":turn["role"],"content":turn["content"]}
-        if (len(included)<recent_turns and
+        if (not gap and len(included)<recent_turns and
             count(messages+[msg]+included[::-1]+protected[-1:])<=token_budget):
             included.append(msg)
         else:
+            gap=True
             omitted.append({"id":turn["id"],"sha256":hashlib.sha256(turn["content"].encode()).hexdigest(),
                             "role":turn["role"]})
     recent_messages=included[::-1]
