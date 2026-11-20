@@ -27,14 +27,18 @@ class LegacyRequiredMemory(unittest.TestCase):
         self.assertEqual(result['cores']['C02']['hit_count'], 1)
         self.assertGreaterEqual(result['elapsed_ms'], 60)
 
-    def test_memory_kept_under_context_pressure(self):
-        b = self._p(lambda s, p, l: [record(text='Реальное воспоминание с источником ' + 'ж' * 200) for i in range(8)])
-        result = b.pulse(S, 'Вспомни дату', deep=True)
-        self.assertEqual(result['state'], 'READY_FOR_ONE_NOX_MODEL')
-        data = json.loads(result['context_json'])
-        self.assertEqual(data['C02']['signals']['state'], 'OBSERVED')
-        self.assertGreater(data['C02']['signals']['hit_count'], 0)
-        self.assertIn('s03://owner/memory/verified', result['context_json'])
+    def test_memory_context_pressure_holds_before_model_without_truncation(self):
+        # No-loss memory policy: never turn an over-budget evidence set into an
+        # apparently complete answer by silently shortening S03 records.
+        rows = [record(text='Реальное воспоминание с источником ' + 'ж' * 360 + str(i))
+                for i in range(8)]
+        b = self._p(lambda s, p, l: rows)
+        model_calls = []
+        events = list(b.stream(S, 'Вспомни все восемь записей',
+                               lambda p, m: model_calls.append(True) or iter(['FAKE ANSWER']),
+                               deep=True))
+        self.assertEqual(events[-1], {'type': 'hold', 'state': 'HOLD_CONTEXT_TOO_LARGE'})
+        self.assertEqual(model_calls, [])
 
     def test_cross_chat_requires_trusted_grant(self):
         foreign = [record(chat='other-chat')]
