@@ -173,6 +173,17 @@ def allowed_qa_stream_url(request_url, origin):
             and target.username is None and target.password is None)
 
 
+
+def native_chat_route_candidate(path):
+    """Fence alternate same-origin chat endpoints before any native POST.
+
+    Only the exact preserved-model SSE route may reach the one/two-turn
+    browser owner-admission gate; other chat endpoints are not harmless reads.
+    """
+    return (isinstance(path, str) and
+            (path == '/api/nox/chat' or path.startswith('/api/nox/chat/')
+             or path.startswith('/api/nox/chat%')))
+
 def exact_native_post_fence(snapshot, admitted, expected):
     """Require observed browser POSTs AND owner route admission to agree exactly.
 
@@ -978,7 +989,10 @@ async def browser_run(report, directory, available):
                     if identifier!=[did]:
                         blocked['non_qa_dialog_history']+=1
                         return await route.abort()
-                if url.path=='/api/nox/chat/stream':
+                if native_chat_route_candidate(url.path):
+                    if url.path != '/api/nox/chat/stream':
+                        blocked['alternate_native_chat_route']+=1
+                        return await route.abort()
                     try:
                         body=request.post_data_json
                         own=(request.method=='POST' and allowed_qa_stream_url(request.url, origin)

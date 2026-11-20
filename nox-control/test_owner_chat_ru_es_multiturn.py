@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock
 from owner_chat_browser_qa import (
     allowed_qa_request,
     allowed_qa_stream_url,
+    native_chat_route_candidate,
     canonical_s03_proof_valid,
     click_send,
     firstturn_history_valid,
@@ -635,6 +636,26 @@ async function check(chunks, status=200) {
             {'role': 'user', 'content': spanish},
             {'role': 'assistant', 'content': expected_second},
         ], first_prompt, first_answer, spanish, expected_second))
+
+    def test_alternate_native_chat_wire_cannot_bypass_ru_es_post_fence(self):
+        # All recognized native chat aliases must HOLD before the network.
+        self.assertTrue(native_chat_route_candidate('/api/nox/chat/stream'))
+        for path in ('/api/nox/chat', '/api/nox/chat/',
+                     '/api/nox/chat/completions',
+                     '/api/nox/chat/stream/', '/api/nox/chat/stream-v2',
+                     '/api/nox/chat%2Fstream', '/api/nox/chat%5cstream'):
+            with self.subTest(path=path):
+                self.assertTrue(native_chat_route_candidate(path))
+                self.assertNotEqual(path, '/api/nox/chat/stream')
+        for path in ('/api/nox/chatter', '/api/ui/memory/dialogs/history',
+                     '/api/nox/status', '/chat/session', None):
+            self.assertFalse(native_chat_route_candidate(path))
+        guard = inspect.getsource(browser_run)
+        self.assertIn('if native_chat_route_candidate(url.path):', guard)
+        self.assertIn("blocked['alternate_native_chat_route']+=1", guard)
+        self.assertIn("if url.path != '/api/nox/chat/stream':", guard)
+        self.assertIn('allowed_qa_stream_url(request.url, origin)', guard)
+        self.assertIn('allowed_qa_request(', guard)
 
     def test_stream_url_query_cannot_override_native_model_or_history(self):
         # The browser's real route is a plain path. JSON-body admission alone
