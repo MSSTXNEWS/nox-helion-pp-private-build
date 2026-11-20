@@ -90,7 +90,13 @@
         tx=db.transaction(STORE,'readwrite',{durability:'strict'});
         tx.oncomplete=()=>{if (!done) {done=true;resolve(result);}};
         tx.onabort=fail;
-        tx.onerror=()=>{error='HOLD_ACK_TX';};
+        tx.onerror=()=>{
+          // IndexedDB request errors bubble to the transaction before abort.
+          // Keep the specific collision cause set by add.onerror, rather
+          // than masking it as a generic transaction failure in Chromium.
+          if (error!=='HOLD_ACK_EVENT_COLLISION' && error!=='HOLD_ACK_CONFLICT')
+            error='HOLD_ACK_TX';
+        };
         const req=tx.objectStore(STORE).get([p.conversation_id,p.exchange_id]);
         req.onerror=()=>{error='HOLD_ACK_TX';try {tx.abort();}catch (_) {}};
         req.onsuccess=()=>{
