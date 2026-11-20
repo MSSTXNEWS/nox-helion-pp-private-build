@@ -162,6 +162,28 @@ class TestProbe(unittest.TestCase):
             self.assertEqual(sorted(p.name for p in existing.iterdir()),
                              ['b3_frame_report.json'])
 
+    def test_same_url_spa_target_disappears_mid_frames(self):
+        # A SPA can replace the UI without changing the URL or hash. Losing
+        # the visible target *during* the 90-frame measurement must HOLD.
+        fixture = (
+            '<main id="resonance">Original NOX panel</main>'
+            '<script>'
+            'const raf = requestAnimationFrame.bind(window);'
+            'let sampled=0;'
+            'window.requestAnimationFrame=(callback)=>{'
+            '  if (++sampled === 12) document.querySelector("#resonance").remove();'
+            '  return raf(callback);'
+            '};'
+            '</script>'
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            out = pathlib.Path(temp) / 'removed_during_sampling'
+            with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_SELECTOR_DISAPPEARED'):
+                measure('http://127.0.0.1:8765/resonance.html', str(out),
+                        chromium='/usr/bin/chromium', fixture_html=fixture,
+                        expected_selector='#resonance')
+            self.assertFalse((out / 'b3_frame_report.json').exists())
+
     def test_headless_real_chromium_mock_site(self):
         with tempfile.TemporaryDirectory() as tmp:
             evidence_dir = pathlib.Path(tmp) / 'first_probe'
