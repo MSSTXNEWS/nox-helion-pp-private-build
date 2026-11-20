@@ -28,6 +28,14 @@
     const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(cursor));
     return Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join('');
   }
+  // Hash a canonical signed receipt AFTER its signature/owner/S03 verifier.
+  // A digest detects divergent local fields but is NOT a substitute for an
+  // authenticated GET: local IndexedDB is writable by the browser origin.
+  function signedProofPayload(receipt) {
+    return JSON.stringify([receipt.version,receipt.state,receipt.conversation_id,
+      receipt.exchange_id,receipt.event_id,receipt.cursor_digest,receipt.ack_id,
+      receipt.server_cas,receipt.s03_sha256,receipt.signature]);
+  }
   function dbOpen(indexedDB,name) {
     return new Promise((resolve,reject)=>{
       let req,settled=false;
@@ -126,7 +134,8 @@
         if(prev&&(prev.event_id!==s.event_id||prev.cursor_digest!==proof))
           return {error:'HOLD_CROSSTAB_CONFLICT'};
         if(prev){
-          if(prev.state==='ACKED') return {value:Object.freeze({status:'ALREADY_ACKED'}),
+          if(prev.state==='ACKED') return {value:Object.freeze({
+            status:'ALREADY_ACKED',authority:'LOCAL_DEDUP_ONLY'}),
             ...(prev.server_cas?{owner_cas:prev.server_cas}:{})};
           if(prev.state==='SENDING') return {error:'HOLD_CROSSTAB_ACK_UNCERTAIN'};
           if(prev.state!=='RESERVED') return {error:'HOLD_CROSSTAB_STATE'};
@@ -170,34 +179,22 @@
           cursor_digest:prev.cursor_digest,token:prev.token,
           generation:prev.generation,server_cas:prev.server_cas,
           server_ack_id:prev.server_ack_id,
-          verified_s03_sha256:prev.verified_s03_sha256}):null
+          verified_s03_sha256:prev.verified_s03_sha256,
+          receipt_proof_sha256:prev.receipt_proof_sha256}):null
       }));
       if(!current) hold('HOLD_CROSSTAB_NOT_SENDING');
       if(current.event_id!==s.event_id||current.cursor_digest!==proof)
         hold('HOLD_CROSSTAB_CONFLICT');
-      if(current.state==='ACKED')
-        return mutate(db,k,prev=>{
-          // Recheck the exact ACKED row in a new readwrite transaction.
-          // An old snapshot must never authorize an unrelated/new state.
-          if(!prev||prev.state!=='ACKED'||prev.token!==current.token||
-             prev.generation!==current.generation||
-             prev.event_id!==current.event_id||
-             prev.cursor_digest!==current.cursor_digest||
-             prev.server_ack_id!==current.server_ack_id||
-             prev.server_cas!==current.server_cas||
-             prev.verified_s03_sha256!==current.verified_s03_sha256)
-            return {error:'HOLD_CROSSTAB_ACKED_STALE'};
-          // Only canonical independently verified ACKs may use this path;
-          // local confirm() alone does not prove a signed server receipt.
-          if(typeof prev.server_ack_id!=='string'||!ID.test(prev.server_ack_id)||
-             typeof prev.server_cas!=='string'||!ID.test(prev.server_cas)||
-             typeof prev.verified_s03_sha256!=='string'||
-             !HEX.test(prev.verified_s03_sha256))
-            return {error:'HOLD_CROSSTAB_ACKED_UNVERIFIED'};
-          return {value:Object.freeze({status:'ALREADY_ACKED'}),
-            owner_cas:prev.server_cas};
-        });
-      if(current.state!=='SENDING')
+      // Never infer authenticated canonical ACK from an editable local row.
+      // An already-ACKED row must be bound to the same independently
+      // verified signed server receipt on EVERY canonical reconciliation.
+      if(current.state==='ACKED'&&(
+         typeof current.server_ack_id!=='string'||!ID.test(current.server_ack_id)||
+         typeof current.server_cas!=='string'||!ID.test(current.server_cas)||
+         typeof current.verified_s03_sha256!=='string'||!HEX.test(current.verified_s03_sha256)||
+         typeof current.receipt_proof_sha256!=='string'||!HEX.test(current.receipt_proof_sha256)))
+        hold('HOLD_CROSSTAB_ACKED_UNVERIFIED');
+      if(current.state!=='SENDING'&&current.state!=='ACKED')
         hold('HOLD_CROSSTAB_NOT_SENDING');
       const expected=Object.freeze({conversation_id:s.conversation_id,
         exchange_id:s.exchange_id,event_id:s.event_id,cursor_digest:proof});
@@ -225,6 +222,7 @@
       try{accepted=await verifyCanonicalAck(receipt,expected);}
       catch(_){hold('HOLD_CROSSTAB_RECEIPT_UNVERIFIED');}
       if(accepted!==true) hold('HOLD_CROSSTAB_RECEIPT_UNVERIFIED');
+      const proofDigest=await digest(signedProofPayload(receipt));
       live();
       // Atomic CAS against the exact pre-verification SENDING generation.
       // A failed commit remains SENDING and is never interpreted as success.
@@ -235,20 +233,30 @@
           // Another tab completed while our independent verifier awaited.
           // Treat inconsistent signed receipts / changed lease as a conflict,
           // not as proof that THIS receipt was already committed.
+          if(current.state==='ACKED'&&(
+             prev.token!==current.token||prev.generation!==current.generation||
+             prev.server_ack_id!==current.server_ack_id||
+             prev.server_cas!==current.server_cas||
+             prev.verified_s03_sha256!==current.verified_s03_sha256||
+             prev.receipt_proof_sha256!==current.receipt_proof_sha256))
+            return {error:'HOLD_CROSSTAB_ACKED_STALE'};
           if(prev.token!==current.token||
              prev.generation!==current.generation||
              prev.server_ack_id!==receipt.ack_id||
              prev.server_cas!==receipt.server_cas||
-             prev.verified_s03_sha256!==receipt.s03_sha256)
+             prev.verified_s03_sha256!==receipt.s03_sha256||
+             prev.receipt_proof_sha256!==proofDigest)
             return {error:'HOLD_CROSSTAB_ACKED_PROOF_CONFLICT'};
           return {value:Object.freeze({status:'ALREADY_ACKED'}),
             owner_cas:prev.server_cas};
         }
+        if(current.state==='ACKED') return {error:'HOLD_CROSSTAB_ACKED_STALE'};
         if(prev.state!=='SENDING'||prev.token!==current.token||
            prev.generation!==current.generation)
           return {error:'HOLD_CROSSTAB_RECONCILE_FENCED'};
         return {write:{...prev,state:'ACKED',server_ack_id:receipt.ack_id,
-          server_cas:receipt.server_cas,verified_s03_sha256:receipt.s03_sha256},
+          server_cas:receipt.server_cas,verified_s03_sha256:receipt.s03_sha256,
+          receipt_proof_sha256:proofDigest},
           value:Object.freeze({status:'ACKED_RECOVERED',ack_id:receipt.ack_id}),
           owner_cas:receipt.server_cas};
       });
