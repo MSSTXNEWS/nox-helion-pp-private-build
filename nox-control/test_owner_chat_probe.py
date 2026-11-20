@@ -442,6 +442,51 @@ class ProbeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_FIRST_TURN_NOT_ACCEPTED'):
             probe.require_durable_result(False, True, 'FIRST_TURN')
 
+    def test_third_turn_owner_witness_uses_live_executor_count(self):
+        """A truthful 3-worker owner must not be rejected by a stale 6-worker assertion."""
+        for count in (3, 6):
+            observed = {'schema': 'NOX_OWNER_EXECUTORS_V1', 'state': 'OBSERVED',
+                        'configured': count,
+                        'workers': [{'id': f'worker-{i}'} for i in range(count)]}
+            with self.subTest(observed=count):
+                self.assertEqual(probe.observed_owner_executor_count(observed), count)
+                answer = f'У NOX настроено {count} исполнителя + NOX.'
+                self.assertTrue(probe.answer_matches_observed_executor_count(answer, count))
+                self.assertFalse(probe.answer_matches_observed_executor_count(
+                    'У NOX настроено 6 исполнителей + NOX.' if count == 3 else
+                    'У NOX настроено 3 исполнителя + NOX.', count))
+
+        healthy = {'schema': 'NOX_OWNER_EXECUTORS_V1', 'state': 'OBSERVED',
+                   'configured': 3, 'workers': [{'id': 'a'}, {'id': 'b'}, {'id': 'c'}]}
+        poisoned = [
+            dict(healthy, state='UNKNOWN'),
+            dict(healthy, schema='NOX_OWNER_EXECUTORS_V0'),
+            dict(healthy, configured=6),
+            dict(healthy, configured=True),
+            dict(healthy, configured=0),
+            dict(healthy, configured=65),
+            dict(healthy, workers=[{'id': 'a'}, {'id': 'a'}, {'id': 'c'}]),
+            dict(healthy, workers=[{'id': 'a'}, {'id': 'b'}, {'id': ''}]),
+            dict(healthy, workers=[{'id': 'a'}, {'id': 'b'}, {}]),
+            dict(healthy, workers=[{'id': 'a'}, {'id': 'b'}, {'id': False}]),
+            dict(healthy, workers=[{'id': 'a'}, {'id': 'b'}, {'id': []}]),
+            dict(healthy, workers=[{'id': 'a'}, {'id': 'b'}, None]),
+            {},
+        ]
+        for state in poisoned:
+            with self.subTest(state=state):
+                self.assertIsNone(probe.observed_owner_executor_count(state))
+        for answer in ('У NOX настроено 6 исполнителей + NOX',
+                       'У NOX 13 исполнителей', '3 исполнителя + NOX, 6 исполнителей + NOX',
+                       '3 исполнителя без NOX', '', None):
+            with self.subTest(answer=answer):
+                self.assertFalse(probe.answer_matches_observed_executor_count(answer, 3))
+        source = path.read_text()
+        self.assertIn('configured=observed_owner_executor_count(fresh)', source)
+        self.assertIn('phrase=answer_matches_observed_executor_count(text, configured)', source)
+        self.assertNotIn("fresh.get('configured')==6", source)
+        self.assertIn("'verified_observed_executor_count':bool(count and phrase and third_durable)", source)
+
     def test_executor_third_turn_requires_three_durable_pairs_and_owner_truth(self):
         turns = [('first', '323'), ('second', '323'), ('executor?', '6 executors + NOX')]
         rows = [{'role': role, 'content': content} for role, content in (
