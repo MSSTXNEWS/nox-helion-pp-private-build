@@ -236,6 +236,27 @@ class HunterURLSafetyTests(unittest.TestCase):
                 self.assertEqual(saved, "URLError: str")
                 self.assertNotIn(canary, saved)
 
+    def test_http_304_rechecks_cached_body_against_current_size_budget(self):
+        # A smaller later max_bytes must not be bypassed by a 304 cached body.
+        source = hunter._validate_source({
+            "id": "cached", "kind": "rss", "url": "https://example.org/feed",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        cached = {"body": b"x" * 2048, "etag": "v1",
+                  "last_modified": None, "content_type": "application/rss+xml"}
+        not_modified = HTTPError(source["url"], 304, "Not Modified", {}, None)
+        with patch.object(hunter, "build_opener") as opener:
+            opener.return_value.open.side_effect = not_modified
+            with self.assertRaisesRegex(hunter.HunterError, "cached response exceeds max_bytes"):
+                hunter._fetch(source, cached, max_bytes=1024)
+            body, etag, modified, content_type, reused = hunter._fetch(
+                source, cached, max_bytes=2048)
+        self.assertEqual(body, cached["body"])
+        self.assertEqual(etag, "v1")
+        self.assertIsNone(modified)
+        self.assertEqual(content_type, "application/rss+xml")
+        self.assertTrue(reused)
+
     def test_cli_returns_structured_config_error_without_network(self):
         with tempfile.TemporaryDirectory() as tmp:
             config = Path(tmp) / "sources.json"
