@@ -48,23 +48,49 @@
       container.appendChild(el);
       return el;
     }
+    // Concurrent render callbacks may otherwise commit in completion order,
+    // which silently reorders SSE tokens. Serialize each exchange independently;
+    // STOP releases hung precommit waits and fences every queued DOM mutation.
+    const deltaTails=new Map();
     async function onDelta(raw,delta,signal){
       const s=scope(raw);
       if(!signal||typeof signal.aborted!=='boolean'||
          typeof signal.addEventListener!=='function'||
          typeof delta!=='string') hold('HOLD_B1_UI_DELTA_CONTRACT');
       if(signal.aborted) return false;
-      // Allow deferred layout/render work, but never perform any DOM/state
-      // mutation until checking the actual signal AFTER that await.
-      await beforeCommit('delta',s);
-      if(signal.aborted) return false;
-      let el=find(s);
-      // A terminal projection is immutable; a late delta cannot reopen it.
-      if(el&&el.dataset.noxB1State==='terminal') return false;
-      if(!el) el=create(s);
-      // textContent, never innerHTML: arbitrary model text cannot inject DOM.
-      el.textContent+=delta;
-      return true;
+      const k=s.conversation_id+'\u0000'+s.exchange_id;
+      const previous=deltaTails.get(k)||Promise.resolve();
+      const job=previous.catch(()=>{}).then(async()=>{
+        if(signal.aborted) return false;
+        let onAbort;
+        let outcome;
+        try{
+          outcome=await Promise.race([
+            Promise.resolve().then(()=>beforeCommit('delta',s))
+              .then(()=>({ready:true}),()=>({failed:true})),
+            new Promise(resolve=>{
+              onAbort=()=>resolve({aborted:true});
+              signal.addEventListener('abort',onAbort,{once:true});
+              if(signal.aborted) onAbort();
+            })
+          ]);
+        }finally{
+          if(onAbort) signal.removeEventListener('abort',onAbort);
+        }
+        if(outcome.aborted||signal.aborted) return false;
+        if(outcome.failed) hold('HOLD_B1_UI_PRECOMMIT');
+        let el=find(s);
+        // A terminal projection is immutable; a late delta cannot reopen it.
+        if(el&&el.dataset.noxB1State==='terminal') return false;
+        if(!el) el=create(s);
+        // textContent, never innerHTML: arbitrary model text cannot inject DOM.
+        el.textContent+=delta;
+        return true;
+      });
+      deltaTails.set(k,job);
+      const release=()=>{if(deltaTails.get(k)===job) deltaTails.delete(k);};
+      job.then(release,release);
+      return job;
     }
     async function upsertTerminal(raw,eventId){
       const s=scope(raw);
