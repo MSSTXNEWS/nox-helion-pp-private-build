@@ -1,6 +1,6 @@
 import importlib.util,json,tempfile,unittest,datetime
 from pathlib import Path
-root=Path(__file__).resolve().parents[1]/'tools'/'nox_self_improve'
+root=Path(__file__).resolve().parent
 def load(name):
  spec=importlib.util.spec_from_file_location(name,root/(name+'.py')); m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 journal=load('journal');watch=load('relay_watchdog');reconcile=load('ingest_native_queue')
