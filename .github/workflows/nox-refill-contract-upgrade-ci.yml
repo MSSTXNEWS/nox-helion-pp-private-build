@@ -28,7 +28,7 @@ jobs:
           assert "owner_refill_runtime_contract_upgrade_entry.py" in op
           assert "SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('owner_systemic_refill.py', 'continuous_transaction_helpers.py')" in op
           assert "08b230ae02d0be832df68df53750c356a88b0c803f31562d9e8859697679437b" in entry
-          assert "46d25dea55b290749ebd6bc5df5a202c0f029ff90ea3e54c3849801834db9a29" in entry
+          assert "01101f81e0b76e54a53f0f6c2734082ef164ae32b39832c6d74b154a809084e5" in entry
           source=root/'systemic_relay_20261118/runtime/owner_systemic_refill.py'
           spec=importlib.util.spec_from_file_location('nox_refill_contract',source)
           module=importlib.util.module_from_spec(spec)
