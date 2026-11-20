@@ -1,0 +1,24 @@
+[Unit]
+Description=NOX Google Drive auto-refresh and bounded connection health
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+WorkingDirectory=/root/nox
+ExecStart=/usr/bin/python3 -B /root/nox/ops/drive-auth/nox_drive_reconnect.py --config /root/.config/rclone/rclone.conf --state-dir /var/lib/nox-drive-reconnect
+StateDirectory=nox-drive-reconnect
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=-/root/.config/rclone /var/lib/nox-drive-reconnect
+TimeoutStartSec=45

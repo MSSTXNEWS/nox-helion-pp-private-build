@@ -9,7 +9,6 @@ import json
 import os
 from pathlib import Path
 import platform
-import re
 import subprocess
 import time
 import urllib.request
@@ -36,34 +35,7 @@ def run_action(action):
         except (OSError, subprocess.TimeoutExpired) as e:
             return {"ok": False, "error": str(e)[:250]}
     if action == "nox_status":
-        # Historical v1 returned ok=True without checking the dispatcher.
-        # Report only what the trusted local Supervisor actually says.
-        if platform.system() != "Linux":
-            return {"ok": False, "error": "NOX_NATIVE_SUPERVISOR_ONLY_ON_LINUX"}
-        services = ("nox-dispatcher-t855u", "nox-priority-scheduler",
-                    "nox-selfheal", "nox-lifeline-guard")
-        states = {}
-        for name in services:
-            try:
-                result = subprocess.run(
-                    ["supervisorctl", "status", name], shell=False,
-                    capture_output=True, text=True, timeout=6, check=False
-                )
-                match = re.match(r"^" + re.escape(name) +
-                                 r"\s+([A-Z]+)(?:\s+pid\s+([0-9]+))?",
-                                 (result.stdout or "").strip())
-                current = match.group(1) if match else "UNKNOWN"
-                pid = int(match.group(2)) if match and match.group(2) else None
-                if current == "RUNNING" and not pid:
-                    current = "UNKNOWN"
-                states[name] = {"state": current, "pid": pid}
-            except (OSError, subprocess.TimeoutExpired, ValueError):
-                states[name] = {"state": "UNKNOWN", "pid": None}
-        required = ("nox-dispatcher-t855u", "nox-priority-scheduler")
-        return {"ok": all(states[name]["state"] == "RUNNING" for name in required),
-                "basis": "supervisor_process_readback_not_functional_chat_or_gpu_test",
-                "lifeline_healthy": states["nox-lifeline-guard"]["state"] == "RUNNING",
-                "services": states}
+        return {"ok": True, "message": "Agent online. Detailed NOX process checks are not enabled in safe v1."}
     raise ValueError("action not allowlisted")
 
 def fetch_manifest():

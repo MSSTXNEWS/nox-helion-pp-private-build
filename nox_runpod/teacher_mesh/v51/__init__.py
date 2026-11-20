@@ -1,1 +1,1 @@
-"""NOX V51 ephemeral per-instance Vast control admission (no persistent SSH credentials)."""
+"""V51 compatibility helpers used by the pinned owner command."""

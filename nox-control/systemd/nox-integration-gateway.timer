@@ -1,0 +1,11 @@
+[Unit]
+Description=NOX integration gateway health probe every 10 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+Persistent=true
+Unit=nox-integration-gateway.service
+
+[Install]
+WantedBy=timers.target

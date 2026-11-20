@@ -27,11 +27,11 @@ PINS = {
     'owner_chat_browser_qa.py': '9530c6e71274bbbca997f0aea07a26c988cfd536ed1aa1ba4067753827ac56f9',
     'owner_chat_browser_transport_qa.py': '360c155642ccdb43f39acf7b493068d3d2ac906bfd761c60d8c5ee51d48507fe',
     'owner_chat_browser_release_qa.py': 'eaa8af0e229c9ce0a730b7b472f8b9b8a1018fbd5cf7b8518890342d9d7047cb',
-    'owner_chat_stream_only_qa.py': '20107d12ece5bf0575abf5603674534b80b253c8708164da4b30cc3c371bacd6',
+    'owner_chat_stream_only_qa.py': '2d61491b01c4f23ac12020a0fb6ac1292dd35e4c6155fe2abe5402acdac8f90d',
 }
 ENV_SPEC = {'schema': 'NOX_OWNER_BROWSER_ENV_V1', 'playwright': '1.65.2',
             'base_python': '/root/nox/venv/bin/python', 'torch_modified': False}
-PREFIX = 'NOX_MAINT_REPAIR='
+PREFIX = 'NOX_MAINT_BROWSER_QA='
 
 
 def require(ok, code):
@@ -130,7 +130,7 @@ def owner_context():
 
 def stop_present():
     paths = [ROOT / name for name in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP', 'state/STOP')]
-    paths.append(Path('/workspace/NOX_STOP'))
+    paths.extend((Path('/workspace/NOX_STOP'), ROOT / 'state' / 'OWNER_MAINTENANCE.flag'))
     return any(path.exists() or path.is_symlink() for path in paths)
 
 
@@ -191,27 +191,150 @@ def run_child(python, program, request, source):
     require(len(rows) == 1 and isinstance(rows[0].get('data'), dict), 'CHILD_RESULT')
     row = rows[0]; value = row['data']
     if row['kind'] == 'browser_stream_only_receipt':
-        require(value.get('schema') == 'NOX_OWNER_BROWSER_STREAM_ONLY_QA_V1'
+        records = value.get('native_terminal_done_records')
+        records_shape = (isinstance(records, list) and len(records) in (0, 2)
+                         and all(isinstance(item, dict)
+                                 and set(item) == {'saved', 's03_integrated', 'dialog_id_matches'}
+                                 and type(item.get('saved')) is bool
+                                 and type(item.get('s03_integrated')) is bool
+                                 and type(item.get('dialog_id_matches')) is bool
+                                 for item in records))
+        require(value.get('schema') == 'NOX_OWNER_BROWSER_STREAM_ONLY_QA_V2'
                 and value.get('request') == request and value.get('source_sha') == source
                 and value.get('full_browser_qa_promoted') is False
-                and value.get('upstream_model_inference_verified') is False, 'CHILD_SCOPE')
+                and value.get('upstream_model_inference_verified') is False
+                and value.get('two_turn_mode') is True
+                and value.get('maximum_new_dialogs') == 1
+                and value.get('maximum_native_posts') == 2
+                and type(value.get('first_turn_terminal_sse_verified')) is bool
+                and type(value.get('authenticated_s03_history_readback_verified')) is bool
+                and value.get('canonical_s03_receipt_verified') is False
+                and value.get('canonical_s03_receipt_provider_present') is False
+                and type(value.get('owner_authenticated_history_readback_gets')) is int
+                and value.get('owner_authenticated_history_readback_gets') in (0, 1)
+                and type(value.get('native_posts_admitted')) is int
+                and 0 <= value.get('native_posts_admitted') <= 2
+                and type(value.get('both_terminal_sse_done_records_saved_s03_integrated')) is bool
+                and type(value.get('same_dialog_id')) is bool
+                and records_shape, 'CHILD_SCOPE')
     if proc.returncode == 0:
-        require(row['kind'] == 'browser_stream_only_receipt' and value.get('state') == 'STREAM_ONLY_ACCEPTED'
-                and value.get('stream_only_acceptance_verified') is True, 'CHILD_ACCEPTANCE')
+        records = value['native_terminal_done_records']
+        require(row['kind'] == 'browser_stream_only_receipt'
+                and value.get('state') == 'STREAM_ONLY_ACCEPTED'
+                and value.get('stream_only_acceptance_verified') is True
+                and value.get('native_posts_admitted') == 2
+                and value.get('first_turn_terminal_sse_verified') is True
+                and value.get('both_terminal_sse_done_records_saved_s03_integrated') is True
+                and value.get('same_dialog_id') is True
+                and len(records) == 2
+                and all(item['saved'] is True and item['s03_integrated'] is True
+                        and item['dialog_id_matches'] is True for item in records)
+                and value.get('authenticated_s03_history_readback_verified') is True
+                and value.get('owner_authenticated_history_readback_gets') == 1
+                and value.get('canonical_s03_receipt_verified') is False
+                and value.get('owner_auth_verified') ==
+                    {'anonymous_status': 401, 'login_status': 200, 'session_status': 200},
+                'CHILD_ACCEPTANCE')
     emit(row['kind'], value)
     return 0 if proc.returncode == 0 else 2
 
 
+
+def _checked_install(args, env, hold_code, timeout_sec=180):
+    """Only fixed argv, fixed version, private QA area; never use shell."""
+    try:
+        result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                env=env, timeout=timeout_sec, check=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RuntimeError('HOLD_BROWSER_BOOTSTRAP_' + hold_code) from exc
+    require(result.returncode == 0, 'BOOTSTRAP_' + hold_code)
+
+
+def ensure_runtime(request):
+    """Repair a missing *isolated QA* venv, not the production UI/model/S03.
+
+    No existing private QA directory is deleted. An incomplete old QA area is
+    preserved under a request-scoped backup before atomic promotion. Failures
+    restore it and remove only this attempt's temporary build.
+    """
+    try:
+        return existing_runtime(), False
+    except FileNotFoundError:
+        pass
+    # No repair of a mismatched/symlinked/foreign-owner runtime: those are holds.
+    resource_budget()
+    plain_directory(ROOT)
+    base = Path(ENV_SPEC['base_python'])
+    require(base.is_file() and os.access(base, os.X_OK), 'BOOTSTRAP_BASE_PYTHON')
+    request = str(request)
+    require(bool(re.fullmatch(r'[0-9]{1,24}', request)), 'BOOTSTRAP_REQUEST')
+    staging = Path(tempfile.mkdtemp(prefix='.nox-browserqa-', dir=str(ROOT)))
+    backup = ROOT / ('browser_qa.previous.' + request)
+    require(not backup.exists() and not backup.is_symlink(), 'BOOTSTRAP_BACKUP_COLLISION')
+    os.chmod(staging, 0o700)
+    original_moved = False
+    promoted = False
+    try:
+        venv = staging / 'venv'
+        # The checkout's Python is reused, but all packages/browser files go
+        # to private new paths. Do not upgrade torch/NOX environment.
+        sys_env = {
+            'PATH': os.environ.get('PATH', '/usr/bin:/bin'),
+            'LANG': 'C.UTF-8', 'HOME': str(staging),
+            'PIP_NO_INPUT': '1', 'PIP_DISABLE_PIP_VERSION_CHECK': '1',
+            'PYTHONNOUSERSITE': '1',
+            'PLAYWRIGHT_BROWSERS_PATH': str(staging / 'browsers'),
+        }
+        _checked_install([str(base), '-m', 'venv', '--copies', str(venv)],
+                         sys_env, 'VENV', 90)
+        child = venv / 'bin/python'
+        require(child.is_file() and os.access(child, os.X_OK), 'BOOTSTRAP_PYTHON')
+        _checked_install([
+            str(child), '-m', 'pip', 'install', '--no-cache-dir',
+            '--only-binary=:all:', 'playwright==1.65.2'],
+            sys_env, 'PIP', 200)
+        _checked_install([str(child), '-m', 'playwright', 'install', 'chromium'],
+                         sys_env, 'CHROMIUM', 260)
+        _checked_install([str(child), '-I', '-B', '-c',
+                          "import importlib.metadata as m; assert m.version('playwright')=='1.65.2'"],
+                         sys_env, 'VERSION', 20)
+        marker = staging / 'owner-environment.json'
+        raw = json.dumps(ENV_SPEC, sort_keys=True, separators=(',', ':')).encode()
+        fd = os.open(marker, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        try:
+            os.write(fd, raw); os.fsync(fd)
+        finally:
+            os.close(fd)
+        require(shutil.disk_usage(ROOT).free >= 7 * 1024**3, 'BOOTSTRAP_DISK_RESERVE')
+        require(not stop_present(), 'OWNER_STOP')
+        if AREA.exists() or AREA.is_symlink():
+            # No unknown symlink, world-writable or foreign-owned backup.
+            plain_directory(AREA, private=True)
+            AREA.rename(backup)
+            original_moved = True
+        staging.rename(AREA)
+        promoted = True
+        python = existing_runtime()
+        return python, True
+    except Exception:
+        if original_moved and not promoted and backup.exists():
+            backup.rename(AREA)
+        raise
+    finally:
+        if staging.exists() and staging.is_dir() and not staging.is_symlink():
+            shutil.rmtree(staging)
+
 def main():
     blobs = sources(); program = child_program(blobs)
     compile(program, '<stream-only-child>', 'exec')
-    request, source = owner_context(); python = existing_runtime(); resources = resource_budget()
+    request, source = owner_context(); resources = resource_budget(); python, bootstrap_performed = ensure_runtime(request)
     emit('browser_stream_only_sources', {'source_pins': PINS,
         'composed_child_sha256': hashlib.sha256(program).hexdigest(), 'existing_runtime_only': True,
-        'production_ui_changed': False, 'full_qa_scope_unchanged': True, 'resources_before_launch': resources})
+        'production_ui_changed': False, 'full_qa_scope_unchanged': True, 'resources_before_launch': resources,
+        'isolated_runtime_bootstrapped': bootstrap_performed})
     rc = run_child(python, program, request, source)
     if rc == 0:
-        print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
+        print('NOX_MAINT_BROWSER_QA_COMPLETE=true', flush=True)
     return rc
 
 

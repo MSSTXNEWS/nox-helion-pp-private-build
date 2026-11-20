@@ -1,0 +1,11 @@
+[Unit]
+Description=NOX Drive periodic reconnect with internal backoff
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+Persistent=true
+Unit=nox-drive-reconnect.service
+
+[Install]
+WantedBy=timers.target

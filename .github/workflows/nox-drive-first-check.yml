@@ -1,0 +1,37 @@
+name: NOX Drive-first chunked weight transfer
+on:
+  push:
+    branches: [feat/nox-drive-first-chunker-20261120, fix/nox-drive-first-auto-overlay-20261120, main]
+    paths:
+      - 'nox-control/nox_drive_first.py'
+      - 'nox-control/test_nox_drive_first.py'
+      - 'nox-control/owner_native_drive_reconnect_install.py'
+      - 'nox-control/test_owner_native_drive_reconnect_install.py'
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/NOX_DRIVE_FIRST.md'
+      - '.github/workflows/nox-drive-first-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: One focused source verification (no OAuth or Vast secrets)
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/nox_drive_first.py nox-control/test_nox_drive_first.py nox-control/owner_native_drive_reconnect_install.py
+          python3 -m unittest discover -s nox-control -p test_nox_drive_first.py -v
+          python3 -m unittest discover -s nox-control -p test_owner_native_drive_reconnect_install.py -v
+          python3 - <<'PY'
+          from pathlib import Path
+          op=Path('nox-control/owner_native_operator.py').read_text()
+          assert "elif action == 'drive_reconnect_install':" in op
+          assert "'nox-control/nox_drive_first.py'," in op
+          assert 'nox_drive_first.py' in Path('nox-control/owner_native_drive_reconnect_install.py').read_text()
+          print('DRIVE_FIRST_SOURCE_VERIFIED__NOT_GOOGLE_AUTH_OR_NATIVE_INSTALL')
+          PY

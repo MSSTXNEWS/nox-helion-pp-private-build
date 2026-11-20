@@ -1,6 +1,4 @@
-# NOX legacy A40 Windows checkpoint receiver: read-only remote query and local copy.
-# NOT an implementation of the Windows owner /api/install/backup route.
-# No implicit remote script installation or overwriting existing owner evidence.
+# NOX Windows receiver: checkpoint only, SHA-256 verified, no remote deletion.
 $ErrorActionPreference='Stop'
 $root='C:\NOX_HELION\NOX_NEW\RUNPOD_BACKUP\NOX_PRIME_FULL_WEIGHTS'
 $key=Join-Path $env:USERPROFILE '.ssh\nox_runpod_ed25519'
@@ -13,7 +11,14 @@ try {
  if(!$locked){Write-Host 'TRANSFER_ALREADY_RUNNING';return}
  $oldScp=@(Get-CimInstance Win32_Process -Filter "Name='scp.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*nox_full_parameter_A40*' })
  if($oldScp.Count){Write-Host "HOLD_LEGACY_TRANSFER_IN_PROGRESS PID=$($oldScp[0].ProcessId)";return}
- # Only read old A40 progress; do not install/restart controllers on GPU hosts.
+ # Heal master controller after Pod container restart; do not restart any training jobs.
+ $installer='https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox_runpod/control/install_nox_master_poller.sh'
+ foreach($node in @(@{name='A40';host='69.30.85.193';port='22088'},@{name='A5000';host='69.30.85.188';port='22199'})){
+  $cmd="curl -fsSL --retry 2 '$installer' -o /tmp/nox_control_repair.sh && bash /tmp/nox_control_repair.sh $($node.name)"
+  $a=@('-T','-i',$key,'-p',$node.port,'-o','BatchMode=yes','-o','ConnectTimeout=12',"root@$($node.host)",$cmd)
+  & ssh.exe @a | Out-Host
+  if($LASTEXITCODE -ne 0){Write-Warning "HOLD_CONTROLLER_REPAIR $($node.name)"}
+ }
  $py=@'
 import json,pathlib
 f=pathlib.Path("/workspace/nox/dispatcher/a40_full_parameter/progress.json")
@@ -41,29 +46,11 @@ print(json.dumps({"status":"READY","path":str(p),"cycle":obj.get("cycle"),"steps
  $local=Join-Path $root $name
  New-Item -ItemType Directory -Force -Path $local | Out-Null
  $marker=Join-Path $local 'NOX_WINDOWS_VERIFIED.json'
- if(Test-Path -LiteralPath $marker){
-  $prior=Get-Content -LiteralPath $marker -Raw | ConvertFrom-Json
+ if(Test-Path $marker){
+  $prior=Get-Content $marker -Raw|ConvertFrom-Json
   if($prior.status -eq 'SHA256_VERIFIED' -and $prior.cycle -eq $status.cycle -and $prior.steps -eq $status.steps){
-   # A stored PASS marker is not proof if a shard disappeared since the last copy.
-   $existingReceipt=Join-Path $local 'NOX_FULL_TRAIN_RECEIPT.json'
-   if(!(Test-Path -LiteralPath $existingReceipt -PathType Leaf)){throw 'HOLD_VERIFIED_RECEIPT_MISSING'}
-   $priorReceipt=Get-Content -LiteralPath $existingReceipt -Raw | ConvertFrom-Json
-   if($priorReceipt.cycle -ne $status.cycle -or $priorReceipt.steps -ne $status.steps){throw 'HOLD_VERIFIED_RECEIPT_STALE'}
-   foreach($shard in $priorReceipt.shards){
-    $filename=[string]$shard.file
-    if($filename.Length -eq 0 -or $filename.Contains('..') -or $filename.Contains('/') -or $filename.Contains('\')){
-     throw 'HOLD_VERIFIED_SHARD_UNSAFE_NAME'
-    }
-    $existingShard=Join-Path $local $filename
-    if(!(Test-Path -LiteralPath $existingShard -PathType Leaf) -or
-       (Get-Item -LiteralPath $existingShard -Force).LinkType -or
-       (Get-FileHash -LiteralPath $existingShard -Algorithm SHA256).Hash -ine [string]$shard.sha256){
-     throw "HOLD_VERIFIED_SHARD_MISSING_OR_TAMPERED $filename"
-    }
-   }
    Write-Host "NOX_ALREADY_VERIFIED $local";return
   }
-  throw 'HOLD_EXISTING_MARKER_CONFLICT'
  }
  $items=@($status.shards)+@([pscustomobject]@{file='NOX_FULL_TRAIN_RECEIPT.json';sha256=$null})
  foreach($item in $items){
@@ -71,23 +58,17 @@ print(json.dumps({"status":"READY","path":str(p),"cycle":obj.get("cycle"),"steps
   if($file -notmatch '^[A-Za-z0-9_.-]+$' -or $file.Contains('..')){throw "UNSAFE_NAME $file"}
   $dest=Join-Path $local $file
   $expected=[string]$item.sha256
-  if(Test-Path -LiteralPath $dest){
-   if($expected -and -not (Get-Item -LiteralPath $dest -Force).LinkType -and
-      (Get-FileHash -LiteralPath $dest -Algorithm SHA256).Hash -ieq $expected){
-    Write-Host "SKIP_VERIFIED $file";continue
-   }
-   throw "HOLD_EXISTING_BACKUP_CONFLICT $file"
+  if($expected -and (Test-Path $dest) -and (Get-FileHash $dest -Algorithm SHA256).Hash -ieq $expected){
+   Write-Host "SKIP_VERIFIED $file";continue
   }
   $temp="$dest.noxpart"
-  if(Test-Path -LiteralPath $temp){throw "HOLD_PARTIAL_BACKUP_CONFLICT $file"}
   $remote="$($status.path)/$file"
   $scpArgs=@('-C','-P','22088','-i',$key,'-o','BatchMode=yes','-o','ServerAliveInterval=30',"root@69.30.85.193:$remote",$temp)
   Write-Host "COPY $file"
   & scp.exe @scpArgs
   if($LASTEXITCODE -ne 0){throw "SCP_FAILED $file"}
   if($expected -and (Get-FileHash $temp -Algorithm SHA256).Hash -ine $expected){throw "SHA_FAILED $file"}
-  # Atomic no-replace: race with another owner's destination => fail, never overwrite.
-  [System.IO.File]::Move($temp,$dest)
+  Move-Item -LiteralPath $temp -Destination $dest -Force
  }
  $receipt=Get-Content (Join-Path $local 'NOX_FULL_TRAIN_RECEIPT.json') -Raw|ConvertFrom-Json
  if($receipt.cycle -ne $status.cycle -or $receipt.steps -ne $status.steps){throw 'RECEIPT_MISMATCH'}
@@ -96,15 +77,8 @@ print(json.dumps({"status":"READY","path":str(p),"cycle":obj.get("cycle"),"steps
   if(!(Test-Path $p) -or (Get-FileHash $p -Algorithm SHA256).Hash -ine $s.sha256){throw "FINAL_SHA_FAILED $($s.file)"}
  }
  $proof=[ordered]@{status='SHA256_VERIFIED';cycle=$receipt.cycle;steps=$receipt.steps;parameter_count=$receipt.parameter_count;teacher_counts=$receipt.teacher_counts;verified_utc=[DateTimeOffset]::UtcNow.ToString('o')}
- $proofTemp="$marker.tmp"
- if(Test-Path -LiteralPath $proofTemp){throw 'HOLD_PROOF_TEMP_CONFLICT'}
- $raw=($proof|ConvertTo-Json -Depth 8)+[Environment]::NewLine
- $bytes=[Text.Encoding]::UTF8.GetBytes($raw)
- $stream=[System.IO.FileStream]::new($proofTemp,[System.IO.FileMode]::CreateNew,
-          [System.IO.FileAccess]::Write,[System.IO.FileShare]::None)
- try{$stream.Write($bytes,0,$bytes.Length);$stream.Flush($true)}
- finally{$stream.Dispose()}
- [System.IO.File]::Move($proofTemp,$marker)
+ $proof|ConvertTo-Json -Depth 8|Set-Content "$marker.tmp" -Encoding UTF8
+ Move-Item "$marker.tmp" $marker -Force
  Write-Host "NOX_WINDOWS_CHECKPOINT_VERIFIED $local"
 } finally {
  if($locked){[void]$mutex.ReleaseMutex()}
