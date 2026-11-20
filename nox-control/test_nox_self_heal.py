@@ -1,6 +1,8 @@
 """NOX self-heal safe behavior regression checks."""
 import importlib.util
 import json
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import tempfile
 import unittest
@@ -27,6 +29,31 @@ class SafeRepairTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             healer.policy_validate({"schema_version":1,"services":[{"unit":"nox-main.service",
                                   "health_url":"http://example.com/ping"}]})
+    def test_healthy_loopback_does_not_follow_redirect(self):
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == "/redirect":
+                    self.send_response(302)
+                    self.send_header("Location", "/healthy")
+                else:
+                    self.send_response(200)
+                self.end_headers()
+            def log_message(self, *args):
+                pass
+
+        with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server:
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                base = "http://127.0.0.1:" + str(server.server_port)
+                with patch.object(healer.subprocess, "run") as run:
+                    run.return_value.returncode = 0
+                    self.assertTrue(healer.alive("nox-dispatcher.service", base + "/healthy"))
+                    self.assertFalse(healer.alive("nox-dispatcher.service", base + "/redirect"))
+            finally:
+                server.shutdown()
+                thread.join(timeout=4)
+
     def test_stop_blocks_restart(self):
         with tempfile.TemporaryDirectory() as t:
             stop=Path(t)/"STOP"
