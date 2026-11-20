@@ -93,5 +93,24 @@ class FullOptimizerRecovery(unittest.TestCase):
         self.assertNotIn("save_only_model=True",source)
 
 
+    def test_written_checkpoint_receipt_binds_exact_step_and_optimizer_state(self):
+        proof=trainer._verify_written_checkpoint(self.out,5)
+        self.assertEqual(proof["path"],str(self.checkpoint))
+        self.assertEqual(proof["global_step"],5)
+        self.assertRegex(proof["tree_sha256"],r"^[0-9a-f]{64}$")
+
+        wrong=self.out/"checkpoint-6"
+        (wrong/"global_step6").mkdir(parents=True)
+        (wrong/"trainer_state.json").write_text(json.dumps({"global_step":5}))
+        (wrong/"global_step6"/"zero_pp_rank_0_mp_rank_00_model_states.pt").write_bytes(b"model")
+        (wrong/"global_step6"/"zero_pp_rank_0_mp_rank_00_optim_states.pt").write_bytes(b"optimizer")
+        with self.assertRaisesRegex(RuntimeError,"HOLD_WRITTEN_CHECKPOINT_STEP_MISMATCH"):
+            trainer._verify_written_checkpoint(self.out,6)
+
+        (self.checkpoint/"global_step5"/"zero_pp_rank_0_mp_rank_00_optim_states.pt").unlink()
+        with self.assertRaisesRegex(RuntimeError,"HOLD_WRITTEN_CHECKPOINT_OPTIMIZER_MISSING"):
+            trainer._verify_written_checkpoint(self.out,5)
+
+
 if __name__=="__main__":
     unittest.main()
