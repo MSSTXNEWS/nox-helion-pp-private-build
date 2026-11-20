@@ -71,14 +71,14 @@ class TestProbe(unittest.TestCase):
             for mode in ('normal', 'reduced')
         ]
         baseline = {
-            'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V4',
+            'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V5',
             'url_sha256': url_identity_sha256('http://127.0.0.1:8765/resonance.html'),
             'chromium_version_sha256': 'c' * 64,
             'sample_js': '90 consecutive real requestAnimationFrame intervals',
             'synthetic_fixture': False, 'expected_selector_checked': True,
             'expected_selector_sha256': evidence_hash('#resonance'), 'landing_url_verified': True,
             'blocked_mutating_requests': 0, 'blocked_model_posts': 0,
-            'blocked_websocket_connections': 0, 'service_workers_blocked': True,
+            'blocked_model_read_requests': 0, 'blocked_websocket_connections': 0, 'service_workers_blocked': True,
             'runs': rows,
         }
         measured = copy.deepcopy(baseline)
@@ -86,7 +86,7 @@ class TestProbe(unittest.TestCase):
         # A functioning-looking screenshot is not evidence that the
         # model/stream route works if this read-only probe had to block it.
         for counter in ('blocked_mutating_requests', 'blocked_model_posts',
-                        'blocked_websocket_connections'):
+                        'blocked_model_read_requests', 'blocked_websocket_connections'):
             for invalid in (1, True, None):
                 unsafe = copy.deepcopy(baseline)
                 unsafe[counter] = invalid
@@ -94,7 +94,7 @@ class TestProbe(unittest.TestCase):
                         ValueError, 'HOLD_BASELINE_LIVE_TRANSPORT_BLOCKED'):
                     compare_baseline(measured, unsafe)
         for counter in ('blocked_mutating_requests', 'blocked_model_posts',
-                        'blocked_websocket_connections'):
+                        'blocked_model_read_requests', 'blocked_websocket_connections'):
             missing = copy.deepcopy(measured)
             missing.pop(counter)
             with self.subTest(missing=counter), self.assertRaisesRegex(
@@ -227,12 +227,15 @@ class TestProbe(unittest.TestCase):
                     '<html><body><main id="resonance" data-session="SECRET_SELECTOR_XYZ">NOX synthetic local page</main>'
                     '<script>fetch("https://example.invalid/api/nox/chat",'
                     '{method:"POST",body:"x"}).catch(()=>{});'
+                    'fetch("https://example.invalid/api/nox/chat/stream?message=unsafe").catch(()=>{});'
+                    'fetch("https://example.invalid/api/nox/chat",{method:"HEAD"}).catch(()=>{});'
                     'try{const ws=new WebSocket("wss://example.invalid/nox/stream");'
                     'ws.onerror=()=>{};}catch(e){}'
                     '</script></body></html>'))
             self.assertEqual(len(result['runs']), 6)
             self.assertEqual(result['blocked_mutating_requests'], 6)
             self.assertEqual(result['blocked_model_posts'], 6)
+            self.assertEqual(result['blocked_model_read_requests'], 12)
             self.assertEqual(result['blocked_websocket_connections'], 6)
             self.assertTrue(result['service_workers_blocked'])
             self.assertEqual(len(result['chromium_version_sha256']), 64)
@@ -254,10 +257,11 @@ class TestProbe(unittest.TestCase):
             self.assertNotIn('SECRET_URL_ABC', report_text)
             self.assertNotIn('SECRET_SELECTOR_XYZ', report_text)
             self.assertNotIn('resonance.html?auth=', report_text)
+            self.assertNotIn('message=unsafe', report_text)
             self.assertEqual(result['url_sha256'], url_identity_sha256(secret_url))
             self.assertEqual(result['expected_selector_sha256'], evidence_hash(secret_selector))
             self.assertEqual(json.loads(report_text)['schema'],
-                'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V4')
+                'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V5')
 
 
 if __name__ == '__main__':
