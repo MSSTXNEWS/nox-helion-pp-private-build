@@ -840,5 +840,69 @@ class CheckpointStepProvenance(unittest.TestCase):
                     self.assertEqual(flag.read_text(encoding="utf-8"), foreign)
 
 
+
+    def test_injected_permission_helper_is_descriptor_bound_and_fail_closed(self):
+        # Extract the literal that is installed into existing controllers.
+        # No native policy, supervisor or training state is touched.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        item = next(node for node in tree.body
+                    if isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name) and
+                            target.id == "PERMISSION_HELPER" for target in node.targets))
+        embedded = ast.literal_eval(item.value)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            state = root / "state"
+            state.mkdir()
+            policy = state / "task_boost_mode.json"
+            valid = {
+                "enabled": True, "mode": "TASK_BOOST",
+                "training_allowed": True,
+                "training_service": "nox-train-volta-t866u",
+            }
+            policy.write_text(json.dumps(valid), encoding="utf-8")
+            scope = {"ROOT": root}
+            exec(compile(embedded, "<isolated-permission-helper>", "exec"), scope)
+            allowed = scope["_nox_owner_training_allowed"]
+            self.assertTrue(allowed())
+
+            policy.write_text(json.dumps({**valid, "training_allowed": False}),
+                              encoding="utf-8")
+            self.assertFalse(allowed())
+            policy.write_text(json.dumps(valid), encoding="utf-8")
+
+            # Only the approved regular pathname is admissible.
+            foreign = root / "other-policy.json"
+            foreign.write_text(json.dumps(valid), encoding="utf-8")
+            policy.unlink()
+            policy.symlink_to(foreign)
+            self.assertFalse(allowed())
+            policy.unlink()
+            os.mkfifo(policy)
+            self.assertFalse(allowed())
+            policy.unlink()
+            policy.write_text("x" * 16001, encoding="utf-8")
+            self.assertFalse(allowed())
+            policy.write_text(json.dumps(valid), encoding="utf-8")
+
+            # Rebind after open, before descriptor read: a stale inode and
+            # replacement symlink cannot authorize this control-plane gate.
+            old_read = os.read
+            previous = root / "original-policy.json"
+            read_count = []
+
+            def swap_during_read(fd, size):
+                read_count.append(size)
+                os.replace(policy, previous)
+                policy.symlink_to(foreign)
+                return old_read(fd, size)
+
+            with mock.patch("os.read", side_effect=swap_during_read):
+                self.assertFalse(allowed())
+            self.assertEqual(read_count, [16001])
+            self.assertTrue(policy.is_symlink())
+            self.assertEqual(json.loads(previous.read_text(encoding="utf-8")), valid)
+
+
 if __name__ == "__main__":
     unittest.main()
