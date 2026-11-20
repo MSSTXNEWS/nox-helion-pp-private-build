@@ -792,6 +792,15 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
     return True
 
 
+def continuation_terminal_state(terminal):
+    """Never label an owner-paused checkpoint as completed solely by step."""
+    if (terminal.get('state') == 'VERIFIED_BOUNDED_ADAPTER_UPDATE'
+            and type(terminal.get('global_step')) is int
+            and terminal['global_step'] == 1000):
+        return 'CONTINUATION_TARGET_1000_COMPLETED'
+    return 'CONTINUATION_CHECKPOINTED_BY_OWNER_PAUSE'
+
+
 def main():
     helper = load_helper()
     request = os.environ.get('NOX_OWNER_REQUEST_ID', '')
@@ -993,8 +1002,7 @@ def main():
                 if terminal['state'] == 'VERIFIED_BOUNDED_ADAPTER_UPDATE' and terminal['global_step'] != 1000:
                     raise RuntimeError('HOLD_CONTINUATION_TARGET_NOT_REACHED')
                 result['continuation_terminal_receipt'] = terminal
-                result['state'] = ('CONTINUATION_TARGET_1000_COMPLETED' if terminal['global_step'] == 1000
-                                   else 'CONTINUATION_CHECKPOINTED_BY_OWNER_PAUSE')
+                result['state'] = continuation_terminal_state(terminal)
                 success = True
         else:
             deadline = time.monotonic()+400; candidate = None; previous_progress = None
