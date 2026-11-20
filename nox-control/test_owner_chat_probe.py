@@ -10,7 +10,51 @@ spec = importlib.util.spec_from_file_location('owner_probe_test', path)
 probe = importlib.util.module_from_spec(spec); spec.loader.exec_module(probe)
 
 
+class SyntheticBoundedReader:
+    """Offline response fixture: expose the bounded readline API of HTTPResponse."""
+    def readline(self, limit):
+        if not hasattr(self, '_line_stream'):
+            self._line_stream = iter(self)
+        try:
+            return next(self._line_stream)[:limit]
+        except StopIteration:
+            return b''
+
+
 class ProbeTests(unittest.TestCase):
+    def test_stream_line_read_is_bounded_before_untrusted_json_parse(self):
+        class Oversize:
+            status = 200
+            def __init__(self): self.closed = False; self.read_sizes = []
+            def close(self): self.closed = True
+            def readline(self, limit):
+                self.read_sizes.append(limit)
+                return b' ' * limit
+
+        oversized = Oversize()
+        with patch.object(probe, 'request', return_value=oversized):
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_BOUNDED_STREAM$'):
+                probe.consume_turn(object(), 'synthetic', '1' * 32)
+        self.assertEqual(oversized.read_sizes, [100001])
+        self.assertTrue(oversized.closed)
+
+        class NoReadline:
+            status = 200
+            def __init__(self): self.closed = False
+            def close(self): self.closed = True
+            def __iter__(self):
+                raise AssertionError('Unsafe fallback iteration must not run')
+
+        missing = NoReadline()
+        with patch.object(probe, 'request', return_value=missing):
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_BOUNDED_READER_UNAVAILABLE$'):
+                probe.consume_turn(object(), 'synthetic', '1' * 32)
+        self.assertTrue(missing.closed)
+        source = path.read_text()
+        self.assertIn('for index,line in enumerate(bounded_stream_lines(response)):', source)
+        self.assertIn('readline(max_line + 1)', source)
+
+
     def test_html_page_snapshot_bounded_closes_on_all_paths(self):
         class Response:
             def __init__(self, status=200, body=b'<html>ok</html>', interrupted=False):
@@ -157,7 +201,7 @@ class ProbeTests(unittest.TestCase):
 
     def test_first_meaningful_delta_is_measured_after_placeholder(self):
         clock = [0.0]
-        class Response:
+        class Response(SyntheticBoundedReader):
             status = 200
             closed = False
             def close(self): self.closed = True
@@ -271,7 +315,7 @@ class ProbeTests(unittest.TestCase):
             {'dialog_id': did, 'messages': rows[:1]}, turns, did))
 
     def test_stream_terminal_done_must_bind_to_requested_dialog(self):
-        class Response:
+        class Response(SyntheticBoundedReader):
             status = 200
             def __init__(self, rows): self.rows = rows; self.closed = False
             def close(self): self.closed = True
@@ -292,7 +336,7 @@ class ProbeTests(unittest.TestCase):
         self.assertTrue(response.closed)
 
     def test_oversize_final_delta_is_rejected_before_done(self):
-        class Response:
+        class Response(SyntheticBoundedReader):
             status = 200
             def __init__(self, amount): self.amount = amount; self.closed = False
             def close(self): self.closed = True
@@ -379,7 +423,7 @@ class ProbeTests(unittest.TestCase):
                         source.index("require_latency_target(follow, 'SECOND_TURN', 5000)"))
 
     def test_nonfinite_ndjson_metadata_must_hold_before_stream_success(self):
-        class Response:
+        class Response(SyntheticBoundedReader):
             status = 200
             def __init__(self, frames):
                 self.frames, self.closed = frames, False
@@ -411,7 +455,7 @@ class ProbeTests(unittest.TestCase):
 
 
     def test_stream_terminal_requires_clean_eof_and_single_done(self):
-        class Response:
+        class Response(SyntheticBoundedReader):
             status = 200
             def __init__(self, frames):
                 self.frames, self.closed = frames, False
@@ -446,7 +490,7 @@ class ProbeTests(unittest.TestCase):
 
 
     def test_truncated_or_error_stream_cannot_pass(self):
-        class Response:
+        class Response(SyntheticBoundedReader):
             status = 200
             def __init__(self, rows): self.rows = rows; self.closed = False
             def close(self): self.closed = True
