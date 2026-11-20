@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import tempfile
 import stat
 import subprocess
 import sys
@@ -330,8 +331,11 @@ def receipt(state, m, stage, dest):
 
 def save_receipt(path, value):
     data = (json.dumps(value, sort_keys=True) + "\n").encode()
-    tmp = path.with_name("." + path.name + ".new")
-    fd = os.open(tmp, os.O_WRONLY | os.O_EXCL | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    # A killed transfer may leave an uncommitted .new file. A per-attempt
+    # private O_EXCL tempfile prevents that orphan from permanently blocking
+    # an otherwise unclaimed TaskID. The final receipt is still create-only.
+    fd, temp_name = tempfile.mkstemp(prefix="." + path.name + ".", suffix=".new", dir=path.parent)
+    tmp = Path(temp_name)
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(data)
