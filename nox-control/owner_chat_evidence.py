@@ -264,7 +264,10 @@ def media_job(job_id):
         text += ' Генерация и проверка файла завершены.\n'+'\n'.join(links)
     elif state == 'COMPLETED':
         text += ' Проверка результата не подтверждена.'
-    return {'ok': True, 'state': state, 'text': text}
+    # A native COMPLETED state without verified output is not a completed
+    # image/video action. Do not promote it to a successful tool envelope.
+    result_verified = state != 'COMPLETED' or job.get('generation_verified') is True
+    return {'ok': result_verified, 'state': state, 'text': text}
 
 
 def media_status_query(text):
