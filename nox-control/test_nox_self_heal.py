@@ -1,6 +1,7 @@
 """NOX self-heal safe behavior regression checks."""
 import importlib.util
 import json
+import subprocess
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -80,6 +81,7 @@ class SafeRepairTests(unittest.TestCase):
             p=self.policy(Path(t)/"STOP")
             with patch.object(healer,"alive",return_value=False), patch.object(healer.subprocess,"run") as run:
                 healer.repair_cycle(p,state)
+                run.return_value.returncode=3
                 result=healer.repair_cycle(p,state,dry_run=True)
                 self.assertEqual(result[0]["action"],"would_restart")
                 run.assert_not_called()
@@ -88,11 +90,43 @@ class SafeRepairTests(unittest.TestCase):
             state=Path(t)/"s.json"
             p=self.policy(Path(t)/"STOP")
             with patch.object(healer,"alive",side_effect=[False,False,True]), patch.object(healer.subprocess,"run") as run, patch.object(healer.time,"sleep"):
-                run.return_value.returncode=0
+                # A failed systemd unit is no longer active; only that state
+                # may enter the legacy guarded restart branch.
+                run.side_effect=lambda args,**kw: subprocess.CompletedProcess(
+                    args, 3 if args[1]=="is-active" else 0)
                 healer.repair_cycle(p,state)
                 result=healer.repair_cycle(p,state)
                 self.assertEqual(result[0]["action"],"restart_verified")
                 self.assertEqual(len(json.loads(state.read_text())["services"]["nox-dispatcher.service"]["attempts"]),1)
+    def test_health_probe_failure_does_not_restart_active_unit(self):
+        # A transient HTTP timeout can make alive() false while systemd still
+        # owns a healthy running process. Never restart it on that evidence.
+        with tempfile.TemporaryDirectory() as t:
+            state=Path(t)/"s.json"
+            p=self.policy(Path(t)/"STOP")
+            p["services"][0]["health_url"]="http://127.0.0.1:18775/health"
+            with patch.object(healer,"alive",return_value=False), patch.object(
+                    healer.subprocess,"run") as run:
+                run.return_value.returncode=0  # systemctl is-active
+                healer.repair_cycle(p,state)
+                result=healer.repair_cycle(p,state)
+                self.assertEqual(result[0]["action"],"needs_owner_investigation")
+                run.assert_called_once_with(
+                    ["systemctl","is-active","--quiet","nox-dispatcher.service"],
+                    shell=False,timeout=8,check=False)
+
+    def test_unknown_systemd_state_does_not_restart(self):
+        with tempfile.TemporaryDirectory() as t:
+            state=Path(t)/"s.json"
+            p=self.policy(Path(t)/"STOP")
+            with patch.object(healer,"alive",return_value=False), patch.object(
+                    healer.subprocess,"run") as run:
+                run.return_value.returncode=4  # unknown unit
+                healer.repair_cycle(p,state)
+                result=healer.repair_cycle(p,state)
+                self.assertEqual(result[0]["action"],"needs_owner_investigation")
+                self.assertEqual(run.call_count,1)
+
     def test_rate_limit(self):
         with tempfile.TemporaryDirectory() as t:
             state=Path(t)/"s.json"
