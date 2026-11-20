@@ -252,6 +252,15 @@ def reject_duplicate_json_keys(pairs):
     return fields
 
 
+def stream_status_is_failure(value):
+    """Fail closed for known failure labels and HTTP failure status values."""
+    if isinstance(value, str):
+        status = value.strip().lower()
+        return status in ('error', 'failed', 'cancelled', 'aborted') or (
+            status.isdecimal() and int(status) >= 400)
+    return type(value) is int and value >= 400
+
+
 def bounded_stream_lines(response, max_line=100000):
     """Bound each network read; iteration can buffer a huge NDJSON line before a length check."""
     readline = getattr(response, 'readline', None)
@@ -292,9 +301,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             # the backend subsequently emits a successful saved=true done.
             if kind not in ('done', 'error') and (
                     frame.get('error') not in (None, '', False)
-                    or (isinstance(frame.get('status'), str)
-                        and frame['status'].strip().lower() in
-                        ('error', 'failed', 'cancelled', 'aborted'))
+                    or stream_status_is_failure(frame.get('status'))
                     or frame.get('success') is False):
                 raise RuntimeError('HOLD_STREAM_PRETERMINAL_FAILURE')
             if not any(event['type']==kind for event in events):events.append({'type':kind,'ms':elapsed})
@@ -311,7 +318,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
                 # Some upstreams report an error *inside* done instead of a
                 # separate type=error event; never trust its success flags.
                 if (frame.get('error') not in (None, '', False)
-                        or frame.get('status') in ('error', 'failed', 'cancelled', 'aborted')
+                        or stream_status_is_failure(frame.get('status'))
                         or frame.get('success') is False):
                     raise RuntimeError('HOLD_STREAM_TERMINAL_FAILURE')
                 if frame.get('dialog_id') != dialog_id:
