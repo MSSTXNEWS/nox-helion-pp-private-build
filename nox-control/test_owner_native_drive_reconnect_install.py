@@ -95,7 +95,7 @@ class InstallContractTests(unittest.TestCase):
         self.assertIn('and row.get("current_task") is None',code)
         self.assertIn('first == second',code)
         self.assertIn('DISPATCHER_RELOADED_THREE_WORKERS',code)
-        self.assertIn("'live_registration_receipt': False",code)
+        self.assertIn('"live_registration_receipt": False',code)
         self.assertIn("'native_dispatcher_handler_registered':False",code)
         self.assertNotIn("supervisorctl restart nox-ds41",code)
 
