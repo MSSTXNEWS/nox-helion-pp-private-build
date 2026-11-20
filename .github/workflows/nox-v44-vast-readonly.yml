@@ -1,0 +1,60 @@
+name: NOX V44 Vast existing-instance read-only handshake
+on:
+  push:
+    branches:
+      - feature/nox-v44-executor2-night-forge-20261114
+    paths:
+      - .github/workflows/nox-v44-vast-readonly.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v44-vast-readonly
+  cancel-in-progress: false
+jobs:
+  instance-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      VAST_SECRET_PRIMARY: ${{ secrets.VAST_API_KEY }}
+      VAST_SECRET_SECONDARY: ${{ secrets.NOX_VAST_API_KEY }}
+      VAST_SECRET_LEGACY: ${{ secrets.VASTAI_API_KEY }}
+    steps:
+      - name: Read-only authenticated Vast instance status; no SSH or billing operations
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, sys, urllib.error, urllib.request
+          key = next((v for k in ('VAST_SECRET_PRIMARY', 'VAST_SECRET_SECONDARY', 'VAST_SECRET_LEGACY')
+                      if (v := os.environ.get(k))), None)
+          if not key:
+              print('HOLD_VAST_API_SECRET_UNAVAILABLE')
+              sys.exit(3)
+          url='https://console.vast.ai/api/v0/instances/60509551'
+          req=urllib.request.Request(url, headers={'Authorization':'Bearer '+key,
+                                                  'Accept':'application/json'},method='GET')
+          try:
+              with urllib.request.urlopen(req,timeout=12) as response:
+                  data=json.load(response)
+          except urllib.error.HTTPError as exc:
+              print('HOLD_VAST_API_HTTP_STATUS',exc.code)
+              sys.exit(4)
+          except (urllib.error.URLError,ValueError,TimeoutError):
+              print('HOLD_VAST_API_UNREACHABLE_OR_INVALID_REPLY')
+              sys.exit(5)
+          instance=data.get('instances',data.get('instance',data)) if isinstance(data,dict) else None
+          if isinstance(instance,list) and len(instance)==1: instance=instance[0]
+          if not isinstance(instance,dict) or str(instance.get('id',''))!='60509551':
+              print('HOLD_VAST_INSTANCE_ID_NOT_VERIFIED')
+              sys.exit(6)
+          status=str(instance.get('actual_status','UNKNOWN'))
+          count=instance.get('num_gpus','UNKNOWN')
+          gpu_name=str(instance.get('gpu_name','UNKNOWN'))
+          # Intentionally no host/port, token, account identity, environment or process list in public CI logs.
+          print('VAST_INSTANCE_ID=60509551', 'STATUS='+status,
+                'GPU_COUNT='+str(count), 'GPU='+gpu_name[:70])
+          if status!='running':
+              print('HOLD_VAST_INSTANCE_NOT_RUNNING_NO_SERVER_ACTION')
+              sys.exit(7)
+          print('VAST_CONTROL_PLANE_READONLY_PASS_NO_SERVER_MUTATION')
+          PY
