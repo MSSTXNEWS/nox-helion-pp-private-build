@@ -1,0 +1,31 @@
+/* V14 AI2 — журнал решений, напоминания, заметка→напоминание */
+.nx2-modal .nw-modal-box{max-width:min(640px,calc(100vw - 24px));width:100%;max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box;overflow-wrap:anywhere}
+.nx2-body{display:grid;gap:10px;min-width:0}
+.nx2-foot{display:flex;justify-content:flex-end;margin-top:12px}
+.nx2-st{margin:0;font-size:.85em;opacity:.8}
+.nx2-hold{margin:0;display:grid;gap:4px;padding:10px 12px;border:1px solid rgba(234,186,119,.45);border-radius:10px;background:rgba(234,186,119,.08)}
+.nx2-hold b{color:#eaba77;letter-spacing:.06em}
+.nx2-lv{display:flex;flex-wrap:wrap;gap:6px;font-size:.8em}
+.nx2-lv span{padding:3px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
+.nx2-list{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.nx2-list li{padding:9px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);min-width:0}
+.nx2-list li p{margin:4px 0 0;font-size:.9em}
+.nx2-list li small{opacity:.7;font-size:.78em}
+.nx2-list li.late{border-color:rgba(255,120,100,.55)}
+.nx2-list li.late small{color:#ff9a88;opacity:1}
+.nx2-row{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;min-width:0}
+.nx2-row>b,.nx2-txt{flex:1 1 180px;min-width:0}
+.nx2-tag{font-style:normal;font-size:.72em;padding:2px 7px;border-radius:999px;border:1px solid rgba(234,186,119,.4);color:#eaba77}
+.nx2-basis{opacity:.75}
+.nx2-done{flex:0 0 auto;min-height:32px;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:inherit;cursor:pointer;font:inherit;font-size:.85em}
+.nx2-done:disabled{opacity:.5;cursor:default}
+.nx2-lbl{font-size:.85em;opacity:.8}
+#nx2NoteIn{width:100%;box-sizing:border-box;min-height:80px;resize:vertical;padding:9px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:inherit;font:inherit}
+.nx2-actions{display:flex;justify-content:flex-end}
+.nx2-res{margin:0;min-height:1.2em;font-size:.9em}
+.nx2-badge{display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,120,100,.6);background:rgba(255,90,70,.16);color:#ffb3a6;font:inherit;font-size:.8em;cursor:pointer}
+.nx2-badge[hidden]{display:none}
+.nx2-badge svg{width:14px;height:14px}
+.nx2-badge.nx2-float{position:fixed;right:12px;top:12px;z-index:60}
+@media (max-width:480px){.nx2-modal .nw-modal-box{padding:14px}.nx2-row{flex-direction:column}.nx2-done{align-self:flex-end}}
+@media (prefers-reduced-motion:reduce){.nx2-modal,.nx2-modal *,.nx2-badge{transition:none!important;animation:none!important}}

@@ -1,0 +1,7 @@
+/* NOX v14 FX: C14 trail, C15 parallax, C16 sound */
+.nxfx-trail{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483000;mix-blend-mode:screen;contain:strict}
+.nxfx-px{will-change:translate;transition:none}
+.nv-row.nxfx-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.nxfx-st{font:10px/1 monospace;letter-spacing:.08em;padding:3px 7px;border-radius:6px;border:1px solid var(--nv-line,rgba(255,255,255,.16));opacity:.55}
+.nxfx-st.on{opacity:1;border-color:var(--nv-acc,#eaba77);color:var(--nv-acc,#eaba77);box-shadow:0 0 10px rgba(var(--glass-accent-rgb,234,186,119),.3)}
+@media (prefers-reduced-motion:reduce){.nxfx-trail{display:none}}

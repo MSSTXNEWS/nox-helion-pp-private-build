@@ -1,0 +1,24 @@
+/* V14.9 «Резонанс» */
+/* C24/C25 */
+.nxr-net,.nxr-sync{display:inline-flex;align-items:center;gap:6px;font-size:11px;white-space:nowrap;opacity:.85;padding:0 4px;font-variant-numeric:tabular-nums}
+.nxr-dot{width:8px;height:8px;border-radius:50%;background:#8a949c;flex:none}
+.nxr-net[data-state=ok] .nxr-dot{background:#4fe08a;box-shadow:0 0 8px #4fe08a}
+.nxr-net[data-state=slow] .nxr-dot{background:#f2c84b;box-shadow:0 0 8px #f2c84b}
+.nxr-net[data-state=down] .nxr-dot{background:#e0554f;box-shadow:0 0 8px #e0554f}
+.nxr-sync{opacity:.6}
+/* C23 */
+.nxr-bartog{min-width:34px;justify-content:center;padding:6px 10px!important}
+html[data-nxr-bar-min] #noxV14Bar{display:none!important}
+.nxr-barmini{position:fixed;left:12px;bottom:12px;z-index:71;width:36px;height:36px;border-radius:50%;border:1px solid var(--nv-acc,#eaba77);background:rgba(var(--glass-rgb,13,22,32),.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#eef2f4;font:14px/1 system-ui,sans-serif;cursor:pointer;display:grid;place-items:center}
+.nxr-barmini[hidden]{display:none!important}
+.nxr-barmini:focus-visible,.nxr-bartog:focus-visible{outline:2px solid var(--nv-acc,#eaba77);outline-offset:2px}
+body.nox-v14-shell>#noxV14Bar{transition:transform .25s ease,opacity .25s ease}
+@media(max-width:760px){html[data-nxr-bar-away] body.nox-v14-shell>#noxV14Bar{transform:translateY(calc(100% + 20px));opacity:0;pointer-events:none}}
+/* C18 */
+.nxr-imp-sep{margin:10px auto;padding:4px 10px;max-width:100%;font-size:11px;letter-spacing:.06em;text-align:center;opacity:.7;border-top:1px dashed rgba(255,255,255,.22);overflow-wrap:anywhere}
+.msg.nxr-imported{opacity:.82;border-style:dashed!important}
+.msg.nxr-imported>div{white-space:pre-wrap;overflow-wrap:anywhere}
+/* C29 */
+.nxr-kbd{position:fixed;z-index:2147483000;pointer-events:none;font:10px/1 ui-monospace,monospace;padding:3px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.3);background:rgba(10,14,20,.88);color:#eef2f4;white-space:nowrap}
+.nxr-kbd[hidden]{display:none}
+@media(prefers-reduced-motion:reduce){body.nox-v14-shell>#noxV14Bar{transition:none}}
