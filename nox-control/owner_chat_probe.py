@@ -79,6 +79,16 @@ def require_exact_asset_target(response, requested_path_and_query):
         raise RuntimeError('HOLD_RESONANCE_ASSET_QUERY_MISMATCH')
 
 
+def require_exact_stream_target(response):
+    """Redirected/cross-origin HTTP 200 must not certify the active chat stream."""
+    actual = urllib.parse.urlsplit(response.url)
+    expected = urllib.parse.urlsplit(BASE)
+    if actual.scheme != expected.scheme or actual.netloc != expected.netloc:
+        raise RuntimeError('HOLD_STREAM_RESPONSE_ORIGIN')
+    if (actual.path != '/api/nox/chat/stream' or actual.query or actual.fragment):
+        raise RuntimeError('HOLD_STREAM_RESPONSE_REDIRECT')
+
+
 def require_not_html_asset(response, sample):
     """HTTP 200 SPA/login HTML at a JS/CSS path is not a usable Resonance asset."""
     headers = getattr(response, 'headers', None)
@@ -234,6 +244,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
         response.close();raise RuntimeError('HOLD_STREAM_HTTP_'+str(response.status))
     events=[];answer='';done=None;first=None;placeholders=0;delta_count=0
     try:
+        require_exact_stream_target(response)
         for index,line in enumerate(bounded_stream_lines(response)):
             if index>2000 or len(line)>100000 or time.monotonic()-started>timeout+5:
                 raise RuntimeError('HOLD_BOUNDED_STREAM')
