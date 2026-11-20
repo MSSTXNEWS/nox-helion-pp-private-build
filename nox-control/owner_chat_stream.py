@@ -434,7 +434,15 @@ async def _run(native,url,payload,user_text):
         name='owner_queue_media_v1' if intent else 'owner_media_job_v1'
         arguments={'kind':intent['kind']} if intent else {'job_id':status_id}
         rec=await asyncio.to_thread(_current.dispatch,name,arguments,user_text,turn)
-        await asyncio.to_thread(native['audit'],'tool_step',name=name,step=1,ok=rec.get('ok'))
+        # The direct media fast path bypasses the normal tool loop. Demand
+        # the same truthful, typed outcome before audit/S03/browser success.
+        # This route has no confirmation continuation, so fail closed on one.
+        if (not isinstance(rec,dict) or type(rec.get('ok')) is not bool
+                or type(rec.get('text')) is not str or not rec['text'].strip()
+                or len(rec['text'])>2000000
+                or ('needs_confirmation' in rec and rec['needs_confirmation'] is not False)):
+            raise StreamFailure('HOLD_MEDIA_RESULT_FIDELITY')
+        await asyncio.to_thread(native['audit'],'tool_step',name=name,step=1,ok=rec['ok'])
         yield 'token',rec['text']
         return
     if _current.download_status_query(user_text):
