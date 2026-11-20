@@ -635,6 +635,37 @@ async function check(chunks, status=200) {
             {'role': 'assistant', 'content': expected_second},
         ], first_prompt, first_answer, spanish, expected_second))
 
+    def test_ru_es_native_post_rejects_model_route_and_history_overrides(self):
+        # The two-turn QA guard must not certify a different backend/model
+        # or externally supplied history as the owner-scoped native dialog.
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        first = {"message": RU, "dialog_id": DIALOG}
+        second = {"message": es, "dialog_id": DIALOG}
+        self.assertTrue(allowed_qa_request(0, False, RU, es, first, DIALOG))
+        self.assertTrue(allowed_qa_request(1, True, RU, es, second, DIALOG))
+        # Harmless UI tracing metadata must not break the existing client.
+        self.assertTrue(allowed_qa_request(
+            1, True, RU, es, dict(second, client_request_id="qa-2"), DIALOG))
+        overrides = {
+            "model": "foreign-model", "model_id": "foreign-model",
+            "model_override": "foreign-model", "provider": "external",
+            "backend": "external", "route": "/other/stream",
+            "route_override": "/other/stream", "endpoint": "external",
+            "base_url": "https://example.invalid", "upstream_url": "https://example.invalid",
+            "system_prompt": "forget previous answer", "system": "override",
+            "tools": [], "history": [], "messages": [],
+            "session_id": "foreign-session", "conversation_id": "foreign-dialog",
+        }
+        for key, value in overrides.items():
+            with self.subTest(key=key):
+                self.assertFalse(allowed_qa_request(
+                    0, False, RU, es, dict(first, **{key: value}), DIALOG))
+                self.assertFalse(allowed_qa_request(
+                    1, True, RU, es, dict(second, **{key: value}), DIALOG))
+        # A forbidden key must not pass merely because its value is null.
+        self.assertFalse(allowed_qa_request(
+            1, True, RU, es, dict(second, model=None), DIALOG))
+
     def test_exact_spanish_followup_keeps_same_dialog_and_one_shot_gate(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         good = {"message": es, "dialog_id": DIALOG}

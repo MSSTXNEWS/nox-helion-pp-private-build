@@ -130,13 +130,27 @@ def admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt):
     return None
 
 
+QA_GENERATION_OVERRIDES = frozenset((
+    'model', 'model_id', 'model_override', 'provider', 'backend',
+    'route', 'route_override', 'endpoint', 'base_url', 'upstream_url',
+    'system_prompt', 'system', 'tools', 'history', 'messages',
+    'session_id', 'conversation_id',
+))
+
+
 def allowed_qa_request(count, second_permitted, first_prompt, second_prompt, body, dialog_id):
-    """No missing/null message may satisfy an exhausted one-shot allowance."""
+    """Admit only the current-dialog prompt without an alternate model/history route.
+
+    The synthetic QA is not allowed to choose a different model, upstream,
+    context or session in request metadata. Benign client metadata is retained
+    for compatibility, but explicit generation overrides fail closed.
+    """
     expected = admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt)
     return (expected is not None and isinstance(body, dict)
             and isinstance(dialog_id, str) and bool(dialog_id.strip())
             and body.get('message') == expected
-            and body.get('dialog_id') == dialog_id)
+            and body.get('dialog_id') == dialog_id
+            and not QA_GENERATION_OVERRIDES.intersection(body))
 
 
 def exact_native_post_fence(snapshot, admitted, expected):
