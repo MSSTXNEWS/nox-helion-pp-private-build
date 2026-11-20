@@ -1891,3 +1891,30 @@ test('V201 hidden and Reduced Motion coalesce native deltas without a main-threa
   assert(counts[0]>counts[2]*6,'Reduced Motion must avoid redundant token dispatches');
   assert(counts[1]<=3&&counts[2]<=3,'each already received native delta is at most one quiet SSE token');
 });
+
+test('V202 visible-to-quiet transition coalesces remaining pieces of same native delta',async()=>{
+  const reply='N'.repeat(1400)+'🧠 español';
+  for(const mode of ['hidden','reduced']){
+    const doc={visibilityState:'visible'};
+    const presentation={document:doc,reduced:false,onPhase:phase=>{
+      if(phase==='speaking'){
+        if(mode==='hidden')doc.visibilityState='hidden';
+        else presentation.reduced=true;
+      }
+    }};
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+      undefined,false,700,undefined,'verified-exchange-01',[],false,false,prompt,
+      undefined,presentation);
+    const out=await events(await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v202-'+mode})}));
+    const tokens=out.filter(e=>e.type==='token');
+    assert(tokens.length<=5,
+      'mid-delta transition must flatten precomputed visible fragments, not flood the main thread');
+    assert.equal(tokens.map(e=>e.t).join(''),reply,'native response remains byte-for-byte complete');
+    assert.equal(out.filter(e=>e.type==='error').length,0);
+    assert.equal(out.filter(e=>e.type==='done').length,1,'S03 receipt remains required');
+    assert.equal(out.find(e=>e.type==='done').model_identity_verified,false);
+    assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+    assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+  }
+});
