@@ -1,59 +1,36 @@
-# NOX HELION — actual offline source verification, not a status-only job.
-# This repository's GitHub Actions continue to provide per-component CI.
-# CircleCI must never be used to bypass owner, STOP, lease, CAS, or live S03 acceptance.
+# NOX HELION B1 source-only acceptance.
+# This job exercises the exact B1 branch inputs and never deploys or contacts OneHost.
 version: 2.1
 
 jobs:
-  owner-command-safety:
+  b1-source-only-chromium:
     docker:
-      - image: cimg/python:3.11
+      - image: cimg/python:3.11-browsers
     resource_class: small
     steps:
       - checkout
       - run:
-          name: Compile immutable owner-command guard and its regressions
+          name: Install pinned Playwright and Chromium
           command: |
             set -eu
-            python -B -m py_compile \
-              nox-control/owner_native_inspect_comment_guard.py \
-              nox-control/test_owner_native_inspect_comment_guard.py
+            python -m pip install --disable-pip-version-check 'playwright==1.56.0'
+            python -m playwright install chromium
       - run:
-          name: Verify authorized actions and reject forged owner requests
+          name: Verify B1 browser harness syntax and Python test files
           command: |
             set -eu
-            python -B -m unittest discover \
-              -s nox-control \
-              -p test_owner_native_inspect_comment_guard.py \
-              -v
-
+            node --check nox-control/b1_client_stream_reconnect_harness.js
+            python -m py_compile \
+              nox-control/test_b1_client_stream_ack_reconnect_2turn.py \
+              nox-control/test_b1_stream_canonical_ack_wiring.py
       - run:
-          name: Verify 6A05 owner telemetry and existing dispatcher admission guards
-          command: |
-            set -eu
-            python -B -m unittest discover \
-              -s nox-control \
-              -p 'test_nox_dispatcher_advisor_*.py' \
-              -v
-
+          name: Run B1 two-turn stream and ACK regression in Chromium
+          command: python nox-control/test_b1_client_stream_ack_reconnect_2turn.py
       - run:
-          name: Verify 3B01 Hunter malformed-source fail-closed contract
-          command: |
-            set -eu
-            PYTHONPATH=nox-control python -B -m unittest discover \
-              -s nox-control \
-              -p test_nox_hunter.py \
-              -v
-
-      - run:
-          name: Verify 2A05 identical-scenario latency baseline
-          command: |
-            set -eu
-            PYTHONPATH=nox-control python -B -m unittest discover \
-              -s nox-control \
-              -p test_owner_latency_2a05.py \
-              -v
+          name: Run B1 hung UI callback and cancellation races in Chromium
+          command: python nox-control/test_b1_stream_canonical_ack_wiring.py
 
 workflows:
-  source-verification:
+  b1-source-verification:
     jobs:
-      - owner-command-safety
+      - b1-source-only-chromium
