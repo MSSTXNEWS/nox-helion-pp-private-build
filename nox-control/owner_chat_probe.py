@@ -163,6 +163,20 @@ def reject_nonfinite_json_constant(_value):
     raise RuntimeError('HOLD_STREAM_NONFINITE_JSON')
 
 
+def bounded_stream_lines(response, max_line=100000):
+    """Bound each network read; iteration can buffer a huge NDJSON line before a length check."""
+    readline = getattr(response, 'readline', None)
+    if not callable(readline):
+        raise RuntimeError('HOLD_STREAM_BOUNDED_READER_UNAVAILABLE')
+    while True:
+        line = readline(max_line + 1)
+        if line == b'':
+            return
+        if not isinstance(line, bytes) or len(line) > max_line:
+            raise RuntimeError('HOLD_BOUNDED_STREAM')
+        yield line
+
+
 def consume_turn(client,prompt,dialog_id,timeout=95):
     started=time.monotonic()
     response=request(client,'/api/nox/chat/stream','POST',
@@ -171,7 +185,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
         response.close();raise RuntimeError('HOLD_STREAM_HTTP_'+str(response.status))
     events=[];answer='';done=None;first=None;placeholders=0;delta_count=0
     try:
-        for index,line in enumerate(response):
+        for index,line in enumerate(bounded_stream_lines(response)):
             if index>2000 or len(line)>100000 or time.monotonic()-started>timeout+5:
                 raise RuntimeError('HOLD_BOUNDED_STREAM')
             if done is not None:raise RuntimeError('HOLD_STREAM_TRAILING_AFTER_DONE')
