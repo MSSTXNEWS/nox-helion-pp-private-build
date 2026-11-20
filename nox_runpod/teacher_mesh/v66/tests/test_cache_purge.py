@@ -50,5 +50,14 @@ class CachePurgeSourceContract(unittest.TestCase):
         self.assertIn("HOLD_NATIVE_PROBE_EXCEPTION",text)
         self.assertIn("NOX_V66_PROBE_ATTEMPT=",text)
 
+    def test_bundled_probe_and_cleanup_transport_match(self):
+        with open(cache_purge.__file__,encoding="utf-8") as stream:
+            helper=stream.read()
+        workflow_path=".github/workflows/nox-v66-live-pip-cache-cleanup.yml"
+        with open(workflow_path,encoding="utf-8") as stream:
+            workflow=stream.read()
+        self.assertIn("from nox_runpod.teacher_mesh.v66 import ephemeral_ssh_probe as ssh",helper)
+        self.assertIn("python3 -m nox_runpod.teacher_mesh.v66.ephemeral_ssh_probe cleanup",workflow)
+
 if __name__=="__main__":
     unittest.main()
