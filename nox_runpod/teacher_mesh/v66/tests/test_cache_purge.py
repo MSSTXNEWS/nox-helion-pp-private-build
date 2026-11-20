@@ -41,5 +41,13 @@ class CachePurgeSourceContract(unittest.TestCase):
                             for x in code.co_consts))
         self.assertIn("NATIVE_PIP_CACHE_CLEANED",repr(code.co_consts))
 
+    def test_prekey_retry_is_bounded_and_never_retries_after_key_track(self):
+        source=cache_purge.__file__
+        with open(source,encoding="utf-8") as stream:
+            text=stream.read()
+        self.assertIn("for attempt in range(1,4)",text)
+        self.assertIn("if ssh.TRACK.exists() or attempt==3",text)
+        self.assertIn("HOLD_NATIVE_PROBE_EXCEPTION",text)
+
 if __name__=="__main__":
     unittest.main()

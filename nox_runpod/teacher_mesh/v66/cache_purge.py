@@ -127,9 +127,22 @@ def main()->int:
     revoked=False
     try:
         with contextlib.redirect_stdout(console):
-            completed=ssh.probe()
+            for attempt in range(1,4):
+                try:
+                    completed=ssh.probe()
+                    break
+                except Exception as exc:
+                    code=str(exc)
+                    safe_code=(code if __import__('re').fullmatch(r'HOLD_[A-Z0-9_]+',code)
+                               else 'HOLD_NATIVE_PROBE_EXCEPTION')
+                    print('NOX_V66_PROBE_ATTEMPT='+str(attempt)+'_RESULT='+safe_code)
+                    # TRACK is written before key attachment. If it exists, an
+                    # attach or remote execution may have started; never retry.
+                    if ssh.TRACK.exists() or attempt==3:
+                        break
+                    time.sleep(4)
     except Exception:
-        print('NOX_V66_CLEANUP=HOLD_REMOTE_SSH')
+        print('NOX_V66_PROBE_ATTEMPT=HOLD_NATIVE_PROBE_EXCEPTION')
     finally:
         try:
             with contextlib.redirect_stdout(console):
