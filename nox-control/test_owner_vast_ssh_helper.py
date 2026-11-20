@@ -175,7 +175,10 @@ class OwnerVastHelperTests(unittest.TestCase):
                 mock.patch.object(probe, "TRACK", runner / "ssh-key-track.json"),
                 mock.patch.object(probe, "api") as request,
             ):
-                self.assertTrue(probe.cleanup())
+                verified, remote_status, local_status = probe.cleanup_with_receipt()
+                self.assertFalse(verified)
+                self.assertEqual(remote_status, "NO_TRACKED_REMOTE_KEY")
+                self.assertEqual(local_status, "REMOVED_AND_VERIFIED")
             request.assert_not_called()
             self.assertFalse(runner.exists())
 
