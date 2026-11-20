@@ -82,9 +82,9 @@
     const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
     if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
     const p=last.get(id);
-    if(p){
+    if(p&&p[0]!==exchangeId){
       const o=data.messages.filter(m=>m&&m.exchange_id===p[0]);
-      if(p[0]===exchangeId||o.length!==2||o[0].role!=='user'||
+      if(o.length!==2||o[0].role!=='user'||
          o[1].role!=='assistant'||o[0].content!==p[1]||
          o[1].content!==p[2])throw Error('HOLD_S03_PRIOR');
     }
