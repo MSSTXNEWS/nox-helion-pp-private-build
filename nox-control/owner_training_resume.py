@@ -927,6 +927,10 @@ def main():
         save(); helper.atomic(POINTER, json.dumps(pointer, indent=2).encode())
 
     def start_once(max_steps):
+        # STOP can be asserted after the earlier resource/flag admission.
+        # Recheck at the last owner-controlled point before starting training.
+        if global_stop():
+            raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
         rc, _ = helper.command(['supervisorctl', 'start', SERVICE], 35)
         status = helper.service_state()
         if status['state'] not in ('RUNNING', 'STARTING'):
