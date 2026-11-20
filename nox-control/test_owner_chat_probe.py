@@ -122,7 +122,7 @@ class ProbeTests(unittest.TestCase):
                     probe.require_same_origin_target(Response(url), '/nox-web-v29/app.js')
         source = path.read_text()
         self.assertIn("page_snapshot(request(client,path), expected_path=path if path != '/' else None)", source)
-        self.assertIn('require_same_origin_target(asset, local)', source)
+        self.assertIn('require_exact_asset_target(asset,asset_request)', source)
 
 
     def test_same_path_html_login_fallback_never_certifies_resonance_asset(self):
@@ -151,6 +151,32 @@ class ProbeTests(unittest.TestCase):
         self.assertIn('require_not_html_asset(asset, sample)', source)
         self.assertIn('sample = asset.read(512)', source)
         self.assertIn("local.lower().endswith(('.js', '.mjs', '.css'))", source)
+
+    def test_resonance_versioned_asset_query_is_preserved_and_pinned(self):
+        class Response:
+            def __init__(self, url):
+                self.url = url
+
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'):
+            local = '/nox-web-v29/pc/resonance.js'
+            requested = local + '?v=29.3&lang=es'
+            self.assertIsNone(probe.require_exact_asset_target(
+                Response('http://127.0.0.1:8080' + requested), requested))
+            for wrong_url, hold in (
+                ('http://127.0.0.1:8080' + local, 'HOLD_RESONANCE_ASSET_QUERY_MISMATCH'),
+                ('http://127.0.0.1:8080' + local + '?v=old&lang=es',
+                 'HOLD_RESONANCE_ASSET_QUERY_MISMATCH'),
+                ('http://127.0.0.1:8080/chat/login?v=29.3&lang=es',
+                 'HOLD_CHAT_RESPONSE_REDIRECT'),
+                ('https://127.0.0.1:8080' + requested, 'HOLD_CHAT_RESPONSE_ORIGIN'),
+            ):
+                with self.subTest(wrong_url=wrong_url):
+                    with self.assertRaisesRegex(RuntimeError, '^' + hold + '$'):
+                        probe.require_exact_asset_target(Response(wrong_url), requested)
+        source = path.read_text()
+        self.assertIn("asset_request=local + ('?' + target_parts.query if target_parts.query else '')", source)
+        self.assertIn('with request(client,asset_request) as asset:', source)
+        self.assertIn('require_exact_asset_target(asset,asset_request)', source)
 
     def test_obj_releases_http_response_on_success_and_hold(self):
         class Response:
