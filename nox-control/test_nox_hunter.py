@@ -5,6 +5,8 @@ No network, S03, model, scheduler, or native worker access.
 import contextlib
 import io
 import json
+import sqlite3
+from unittest.mock import patch
 from pathlib import Path
 import tempfile
 import unittest
@@ -35,6 +37,45 @@ class HunterURLSafetyTests(unittest.TestCase):
                 "kind": [], "allowed_hosts": ["example.org"], "interval_seconds": 3600}
         with self.assertRaises(hunter.HunterError):
             hunter._validate_source(base)
+
+    def test_invalid_candidate_links_are_quarantined_not_attributed_to_feed(self):
+        source = hunter._validate_source({
+            "id": "feed", "kind": "rss", "url": "https://example.org/feed",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        parsed = [
+            {"title": "valid", "url": "/article", "content": "verified-link candidate", "published": "2026-11-20"},
+            {"title": "missing", "url": "", "content": "should not be from feed homepage", "published": ""},
+            {"title": "unsafe", "url": "javascript:alert(1)", "content": "unsafe", "published": ""},
+            {"title": "userinfo", "url": "https://name:password@example.org/post", "content": "unsafe", "published": ""},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "hunter.sqlite"
+            with patch.object(hunter, "_fetch", return_value=(b"stub", None, None, "application/rss+xml", False)), \
+                 patch.object(hunter, "_parse", return_value=parsed):
+                out = hunter.poll_due([source], state, now=1000.0)
+                self.assertEqual(out[0]["added"], 1)
+                self.assertEqual(out[0]["quarantined"], 3)
+                # A second due poll deduplicates; no forged feed-source row.
+                out2 = hunter.poll_due([source], state, now=1100.0)
+                self.assertEqual(out2[0]["added"], 0)
+            with sqlite3.connect(state) as conn:
+                rows = conn.execute("SELECT item_url FROM items ORDER BY item_url").fetchall()
+                rejected = conn.execute("SELECT item_digest, reason FROM item_quarantine").fetchall()
+            self.assertEqual(rows, [("https://example.org/article",)])
+            self.assertEqual(len(rejected), 3)
+            self.assertTrue(all(len(digest) == 64 and reason == "INVALID_ITEM_URL"
+                                for digest, reason in rejected))
+            self.assertFalse(any("password" in repr(row) for row in rejected))
+
+    def test_html_page_uses_its_real_source_url(self):
+        source = hunter._validate_source({
+            "id": "page", "kind": "html_page", "url": "https://example.org/page",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        record = hunter._item_record(source, {"title": "page", "content": "text",
+                                               "url": source["url"], "published": ""}, 1000.0)
+        self.assertEqual(record[1], source["url"])
 
     def test_cli_returns_structured_config_error_without_network(self):
         with tempfile.TemporaryDirectory() as tmp:
