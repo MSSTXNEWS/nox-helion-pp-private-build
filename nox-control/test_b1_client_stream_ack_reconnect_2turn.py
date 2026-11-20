@@ -103,6 +103,8 @@ def attach(page,db):
         window.s2={conversation_id:'b1-stream-dialog',exchange_id:'x2'};
         window.s3={conversation_id:'b1-stream-dialog',exchange_id:'x3'};
         window.deltas=[];window.projections=new Map();
+        window.ackDelayMs=0;window.ackFailOnce=0;
+        window.uiFalseOnce=0;window.uiFailAfterWriteOnce=0;
         window.host=await NOXB1IndexedAckStore.openClientAckHost({
             indexedDB,databaseName:db,
             authorizeEnvelope:async()=>true, // intentionally synthetic!
@@ -118,6 +120,12 @@ def attach(page,db):
                 return r.json();
             },
             ack:async (s,cursor)=>{
+                if(window.ackFailOnce>0){
+                    window.ackFailOnce--;
+                    throw Error('synthetic ACK delivery failure');
+                }
+                if(window.ackDelayMs)
+                    await new Promise(ok=>setTimeout(ok,window.ackDelayMs));
                 const r=await fetch('/ack',{method:'POST',
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({...s,cursor})});
@@ -127,12 +135,21 @@ def attach(page,db):
         const ui={
             onDelta:async(s,value)=>window.deltas.push([s.exchange_id,value]),
             upsertTerminal:async(s,event_id)=>{
-                if(window.projections.has(event_id))return;
-                window.projections.set(event_id,s.exchange_id);
-                const element=document.createElement('div');
-                element.dataset.eventId=event_id;
-                element.textContent='terminal:'+s.exchange_id;
-                document.body.appendChild(element);
+                if(window.uiFalseOnce>0){
+                    window.uiFalseOnce--;
+                    return false; // caller says no durable projection witness
+                }
+                if(!window.projections.has(event_id)){
+                    window.projections.set(event_id,s.exchange_id);
+                    const element=document.createElement('div');
+                    element.dataset.eventId=event_id;
+                    element.textContent='terminal:'+s.exchange_id;
+                    document.body.appendChild(element);
+                }
+                if(window.uiFailAfterWriteOnce>0){
+                    window.uiFailAfterWriteOnce--;
+                    throw Error('synthetic UI failure after partial DOM mutation');
+                }
             }
         };
         window.client=NOXB1StreamReconnect.createClient({
@@ -170,18 +187,37 @@ def main():
                       page.evaluate("()=>window.pending")=="STOPPED")
                 check("first reconnect uses separately readback terminal",
                       page.evaluate("()=>client.reconnect(sc).then(x=>x.safe_to_ack)") is True)
-                page.evaluate("()=>client.reconnect(sc)")
+                page.evaluate("()=>{window.ackDelayMs=35}")
+                page.evaluate("()=>Promise.all([client.reconnect(sc),client.reconnect(sc)])")
+                page.evaluate("()=>{window.ackDelayMs=0}")
+                counts=page.evaluate("()=>fetch('/counts').then(r=>r.json())")
+                check("two simultaneous reconnects issue only one network ACK",
+                      counts["acks"].get("x1",0)==2)
                 check("duplicate reconnect projects one terminal event",
                       page.evaluate("()=>document.querySelectorAll('[data-event-id]').length")==1)
                 check("fresh second turn streams without re-POST of first",
                       page.evaluate("()=>client.begin(s2)")=="STREAM_ENDED_READBACK_REQUIRED")
-                check("second turn durable ACK creates exactly second terminal",
+                page.evaluate("()=>{window.uiFalseOnce=1}")
+                check("explicitly unconfirmed UI projection blocks ACK",
+                      code(page,"client.reconnect(s2)")=="HOLD_STREAM_UI_NOT_CONFIRMED"
+                      and page.evaluate("()=>fetch('/counts').then(r=>r.json())")["acks"].get("x2",0)==0)
+                page.evaluate("()=>{window.uiFailAfterWriteOnce=1}")
+                check("partial UI write then failure blocks ACK",
+                      code(page,"client.reconnect(s2)")=="HOLD_STREAM_UI_PROJECTION"
+                      and page.evaluate("()=>fetch('/counts').then(r=>r.json())")["acks"].get("x2",0)==0)
+                check("readback-only retry ACKs same event once, no second UI",
+                      page.evaluate("()=>client.reconnect(s2).then(x=>x.safe_to_ack)") is True
+                      and page.evaluate("()=>document.querySelectorAll('[data-event-id]').length")==2)
+                page.evaluate("()=>{window.ackFailOnce=1}")
+                check("lost ACK returns HOLD without claiming success",
+                      code(page,"client.reconnect(s2)")=="HOLD_STREAM_ACK_UNCONFIRMED")
+                check("ACK recovery uses same terminal event without new POST",
                       page.evaluate("()=>client.reconnect(s2).then(x=>x.safe_to_ack)") is True
                       and page.evaluate("()=>document.querySelectorAll('[data-event-id]').length")==2)
                 counts=page.evaluate("()=>fetch('/counts').then(r=>r.json())")
-                check("one fake model POST per unique turn, ACKs are independent",
+                check("one fake model POST per unique turn; ACK retry only on readback",
                       counts["posts"]=={"x1":1,"x2":1} and counts["acks"].get("x1",0)==2
-                      and counts["acks"].get("x2",0)==1)
+                      and counts["acks"].get("x2",0)==2)
                 page.evaluate("()=>fetch('/conflict')")
                 check("tampered S03 proof rejects reconnect without extra POST",
                       code(page,"client.reconnect(s2)") in ("HOLD_ACK_CONFLICT","HOLD_CLIENT_ACK_WITNESS","HOLD_CLIENT_CALLBACK_OR_STORE"))
