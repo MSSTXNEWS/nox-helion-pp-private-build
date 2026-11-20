@@ -1,0 +1,39 @@
+name: NOX B3 5A05 exact Chromium source regression
+on:
+  push:
+    branches:
+      - b3/5a05-readonly-browser-frame-probe-20261120
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  b3-frame-probe-exact:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install exact browser test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check 'playwright==1.56.0'
+          python -m playwright install --with-deps chromium
+      - name: Select Playwright-installed Chromium for existing B3 test
+        shell: bash
+        run: |
+          BROWSER="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
+          test -x "$BROWSER"
+          sudo ln -sf "$BROWSER" /usr/bin/chromium
+          test -x /usr/bin/chromium
+      - name: Test exact GitHub source and Chromium fixture (no NOX server writes)
+        shell: bash
+        run: |
+          python -m py_compile coordination/onepass/b3_frame_probe_20261120.py coordination/onepass/test_b3_frame_probe_20261120.py
+          python coordination/onepass/test_b3_frame_probe_20261120.py -v
