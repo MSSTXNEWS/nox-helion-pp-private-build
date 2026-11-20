@@ -1,0 +1,36 @@
+# NOX HELION B1 source-only acceptance.
+# This job exercises the exact B1 branch inputs and never deploys or contacts OneHost.
+version: 2.1
+
+jobs:
+  b1-source-only-chromium:
+    docker:
+      - image: cimg/python:3.11-browsers
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Install pinned Playwright and Chromium
+          command: |
+            set -eu
+            python -m pip install --disable-pip-version-check 'playwright==1.56.0'
+            python -m playwright install chromium
+      - run:
+          name: Verify B1 browser harness syntax and Python test files
+          command: |
+            set -eu
+            node --check nox-control/b1_client_stream_reconnect_harness.js
+            python -m py_compile \
+              nox-control/test_b1_client_stream_ack_reconnect_2turn.py \
+              nox-control/test_b1_stream_canonical_ack_wiring.py
+      - run:
+          name: Run B1 two-turn stream and ACK regression in Chromium
+          command: python nox-control/test_b1_client_stream_ack_reconnect_2turn.py
+      - run:
+          name: Run B1 hung UI callback and cancellation races in Chromium
+          command: python nox-control/test_b1_stream_canonical_ack_wiring.py
+
+workflows:
+  b1-source-verification:
+    jobs:
+      - b1-source-only-chromium
