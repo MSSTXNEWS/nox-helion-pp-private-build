@@ -4,6 +4,9 @@ on:
     branches:
       - b4/paired-quality-latency-gate-20261118
     # Verify the exact branch HEAD also after a base-sync merge; source blobs may be unchanged.
+  pull_request:
+    branches:
+      - repair/nox-continuous-execution-20261118
 permissions:
   contents: read
 jobs:
