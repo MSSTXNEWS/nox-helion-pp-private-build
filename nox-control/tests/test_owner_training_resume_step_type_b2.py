@@ -1036,5 +1036,43 @@ class CheckpointStepProvenance(unittest.TestCase):
                 namespace["patch_permission"](controller, bad_request, bad_sha)
 
 
+    def test_followup_and_continuation_require_original_policy_owner(self):
+        # Isolate source function; no owner entrypoint or trainer process.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        selected = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == "verify_training_policy_owner"]
+        self.assertEqual(len(selected), 1)
+        scope = {"re": re}
+        exec(compile(ast.Module(body=selected, type_ignores=[]), str(SOURCE), "exec"), scope)
+        check = scope["verify_training_policy_owner"]
+        admission = {"request": "6912345678", "source_sha": "a" * 40}
+        policy = {"training_allowed": True, "training_service": "nox-train-volta-t866u",
+                  "training_request": admission["request"],
+                  "training_source_sha": admission["source_sha"]}
+        self.assertTrue(check(policy, admission))
+        for changes in ({"training_request": "6912345679"},
+                        {"training_request": None},
+                        {"training_source_sha": "b" * 40},
+                        {"training_source_sha": None}):
+            with self.subTest(changes=changes):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_TRAINING_POLICY_OWNER_MISMATCH"):
+                    check({**policy, **changes}, admission)
+        for missing in ("training_request", "training_source_sha"):
+            with self.subTest(missing=missing):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_TRAINING_POLICY_OWNER_MISMATCH"):
+                    check({k: v for k, v in policy.items() if k != missing}, admission)
+        for invalid in ({"request": 6912345678, "source_sha": "a" * 40},
+                        {"request": "6912345678", "source_sha": "A" * 40},
+                        {"request": "other", "source_sha": "a" * 40}):
+            with self.assertRaisesRegex(RuntimeError, "HOLD_TRAINING_POLICY_OWNER_MISMATCH"):
+                check(policy, invalid)
+        main_node = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                         and node.name == "main")
+        guarded_calls = [node for node in ast.walk(main_node)
+                         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                         and node.func.id == "verify_training_policy_owner"]
+        self.assertEqual(len(guarded_calls), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
