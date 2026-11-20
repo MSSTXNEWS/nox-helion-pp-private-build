@@ -258,7 +258,16 @@ def _nox_owner_training_allowed():
                        or getattr(_before, key) != getattr(_named, key)
                        for key in _fields)):
             return False
-        _v = _json.loads(_raw)
+        # Duplicate authority keys must not be interpreted last-value-wins.
+        # A verifier and the runtime must agree on one unambiguous policy.
+        def _unique_pairs(pairs):
+            _value = {}
+            for _key, _item in pairs:
+                if _key in _value:
+                    raise ValueError("duplicate owner policy key")
+                _value[_key] = _item
+            return _value
+        _v = _json.loads(_raw, object_pairs_hook=_unique_pairs)
         return (type(_v) is dict and _v.get("enabled") is True
                 and _v.get("mode") == "TASK_BOOST"
                 and _v.get("training_allowed") is True
