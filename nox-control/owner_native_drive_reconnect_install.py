@@ -237,13 +237,13 @@ def _safe_dispatcher_group_stop():
     return False
 
 
-def activate_staged_dispatcher():
+def activate_staged_dispatcher(*, expected_source_sha=STAGED_DISPATCHER_SHA):
     """Safe single restart after two fresh owner/queue/STOP/cgroup checks."""
     source = DISPATCHER_SOURCE
     require(source.is_file() and not source.is_symlink(),
             "ACTIVATION_SOURCE")
     raw = source.read_bytes()
-    require(hashlib.sha256(raw).hexdigest() == STAGED_DISPATCHER_SHA
+    require(hashlib.sha256(raw).hexdigest() == expected_source_sha
             and b"NOX_DRIVE_FIRST_STATIC_V1_START" in raw
             and b"NOX_DRIVE_FIRST_STATIC_V1_END" in raw,
             "ACTIVATION_SOURCE_SHA")
@@ -287,7 +287,7 @@ def activate_staged_dispatcher():
             "OLD_WORKERS_STILL_ALIVE")
     require(not any(os.path.lexists(x) for x in ACTIVATION_STOPS),
             "ACTIVATION_STOP_AFTER_STOP")
-    require(hashlib.sha256(source.read_bytes()).hexdigest() == STAGED_DISPATCHER_SHA,
+    require(hashlib.sha256(source.read_bytes()).hexdigest() == expected_source_sha,
             "ACTIVATION_SOURCE_CHANGED")
     started = subprocess.run(["supervisorctl", "start", DISPATCHER_NAME],
                              capture_output=True, timeout=35, check=False)
@@ -314,7 +314,7 @@ def activate_staged_dispatcher():
                 "live_registration_receipt": False,
                 "new_pid": pid, "old_pid": first["pid"],
                 "serving_pids_preserved": True,
-                "source_sha256": STAGED_DISPATCHER_SHA}
+                "source_sha256": expected_source_sha}
     return {"state": "HOLD_DISPATCHER_WORKER_READBACK",
             "dispatcher_restarted": True,
             "live_registration_receipt": False}
@@ -358,7 +358,7 @@ def install():
         and registry.get('native_handler_registered') is False
         and registry.get('restarted') is False, 'REGISTRY_STAGE_RECEIPT')
     stages['dispatcher_registry_source']=registry['state']
-    activation = activate_staged_dispatcher()
+    activation = activate_staged_dispatcher(expected_source_sha=registry['new_sha256'])
     monitor='MONITOR_NOT_CONFIGURED'
     if SUPERVISOR_DIR.is_dir() and shutil.which('supervisorctl'):
         # Only this new program is updated. Do not restart the dispatcher, chat or S03.

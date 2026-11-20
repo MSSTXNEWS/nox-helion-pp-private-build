@@ -57,6 +57,31 @@ class InstallContractTests(unittest.TestCase):
         self.assertEqual(value["state"], "HOOK_SYNTAX_VALIDATED_ONLY")
         self.assertFalse(value["native_handler_registered"])
 
+    def test_real_native_owner_claim_and_cas_upgrade_contract(self):
+        import inspect
+        from nox_drive_native_binding import stage_native_dispatcher_source
+        source = inspect.getsource(stage_native_dispatcher_source)
+        self.assertIn('task.get("owner_claim")', source)
+        self.assertIn('_row.get("owner_claim")', source)
+        self.assertIn('for _key in ("nonce", "pid", "worker")', source)
+        self.assertIn('state/dispatcher/state.json', source)
+        self.assertIn('UPGRADE_SOURCE_SHA_DRIFT', source)
+        self.assertIn('EXPECTED_PREVIOUS_STAGED_SHA', source)
+        self.assertIn('secure_backup(backups, original)', source)
+        self.assertIn('os.replace(temp, source)', source)
+        self.assertIn('hook_bytes = SHIM.rstrip', source)
+        self.assertIn('source.read_bytes() == changed', source)
+
+    def test_owner_installer_activates_only_new_exact_staged_hash(self):
+        contents = src.read_text()
+        self.assertIn(
+            "activate_staged_dispatcher(expected_source_sha=registry['new_sha256'])",
+            contents)
+        self.assertIn('def activate_staged_dispatcher(*, expected_source_sha=', contents)
+        self.assertIn('== expected_source_sha', contents)
+        self.assertIn('DISPATCHER_RELOADED_THREE_WORKERS', contents)
+        self.assertIn("'native_dispatcher_handler_registered':False", contents)
+
     def test_native_dispatcher_source_is_staged_not_claimed_live(self):
         source=src.read_text()
         import inspect

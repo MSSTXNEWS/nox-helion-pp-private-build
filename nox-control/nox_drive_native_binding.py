@@ -318,6 +318,7 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
     SCHEMA = "NOX_OWNER_DRIVE_REGISTRY_STAGE_V1"
     INSTANCE = 60509551
     EXPECTED_DISPATCHER_SHA = "9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21"
+    EXPECTED_PREVIOUS_STAGED_SHA = "c9d08cbcd6afe91259129a154b31038ebacd50f648e027eac9fa89a2094f5649"
     EXPECTED_BRIDGE_SHA = None  # pass exact bundled SHA from owner installer
     SOURCE = Path("/root/nox/scripts/nox_dispatcher_t855u.py")
     BRIDGE = Path("/root/nox/ops/drive-auth/nox_drive_native_binding.py")
@@ -334,6 +335,8 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
     SHIM = '''# NOX_DRIVE_FIRST_STATIC_V1_START
     def _nox_drive_first_native_handler(task):
         import os as _os
+        import json as _json
+        import stat as _stat
         import shutil as _shutil
         import sys as _sys
         from pathlib import Path as _Path
@@ -342,9 +345,9 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
                 or task.get("handler") != "nox.drive.first.native.v1"
                 or task.get("status") != "running"
                 or not isinstance(task.get("params"), dict)
-                or not isinstance(task.get("claim"), dict)
-                or not isinstance(task["claim"].get("nonce"), str)
-                or len(task["claim"]["nonce"]) < 12):
+                or not isinstance(task.get("owner_claim"), dict)
+                or not isinstance(task["owner_claim"].get("nonce"), str)
+                or len(task["owner_claim"]["nonce"]) < 12):
             raise RuntimeError("HOLD_DRIVE_NATIVE_OWNER_CLAIM")
         _flags = ("/root/nox/STOP", "/root/nox/STOP.flag", "/root/nox/state/STOP",
                   "/root/nox/state/OWNER_MAINTENANCE.flag", "/workspace/NOX_STOP",
@@ -352,11 +355,38 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
         def _stopped():
             return any(_os.path.lexists(p) for p in _flags)
         def _lease_current():
-            return (task.get("status") == "running"
-                    and isinstance(task.get("claim"), dict)
-                    and isinstance(task["claim"].get("nonce"), str)
-                    and len(task["claim"]["nonce"]) >= 12
-                    and not _stopped())
+            if (_stopped() or task.get("status") != "running"
+                    or not isinstance(task.get("id"), str)
+                    or not isinstance(task.get("owner_claim"), dict)):
+                return False
+            try:
+                # Read the same owner's actual persisted native queue.
+                # An old or forged claim cannot execute a Drive transfer.
+                _path = _Path("/root/nox/state/dispatcher/state.json")
+                if _path.is_symlink() or any(_p.is_symlink() for _p in _path.parents):
+                    return False
+                _st = _path.stat()
+                if (_st.st_uid != _os.geteuid() or not _stat.S_ISREG(_st.st_mode)
+                        or _st.st_nlink != 1 or _st.st_mode & 0o022
+                        or not 0 < _st.st_size <= 32 * 1024**2):
+                    return False
+                _raw = _path.read_bytes()
+                if len(_raw) != _st.st_size:
+                    return False
+                _state = _json.loads(_raw)
+                _row = _state.get("tasks", {}).get(task["id"])
+                if not isinstance(_row, dict) or _row.get("status") != "running":
+                    return False
+                _claim = _row.get("owner_claim")
+                _requested = task["owner_claim"]
+                return (isinstance(_claim, dict)
+                        and isinstance(_claim.get("nonce"), str)
+                        and len(_claim["nonce"]) >= 12
+                        and all(_claim.get(_key) == _requested.get(_key)
+                                for _key in ("nonce", "pid", "worker"))
+                        and _row.get("handler") == "nox.drive.first.native.v1")
+            except (OSError, ValueError, TypeError, KeyError, AttributeError):
+                return False
         def _foreground_active():
             try:
                 return _nox_owner_boost_active() is not False
@@ -516,15 +546,38 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
               expected_bridge=EXPECTED_BRIDGE_SHA, service_check=True):
         original, st = private_regular(source, 180000)
         current_hash = digest(original)
-        if START.encode() in original or END.encode() in original:
-            require(START.encode() in original and END.encode() in original
-                    and original.count(START.encode()) == 1
-                    and original.count(END.encode()) == 1, "PARTIAL_PATCH")
-            return {"state": "ALREADY_STAGED_NOT_LIVE", "new_sha256": current_hash,
-                    "native_handler_registered": False, "restarted": False}
-        require(current_hash == expected_dispatcher, "DISPATCHER_SHA_DRIFT")
         payload, _ = private_regular(bridge, 100000)
         require(digest(payload) == expected_bridge, "BRIDGE_SHA_DRIFT")
+        hook_bytes = SHIM.rstrip("\n").encode("utf-8")
+        upgrading = False
+        if START.encode() in original or END.encode() in original:
+            require(original.count(START.encode()) == 1
+                    and original.count(END.encode()) == 1,
+                    "PARTIAL_PATCH")
+            begin = original.index(START.encode())
+            finish = original.index(END.encode(), begin) + len(END)
+            current_hook = original[begin:finish]
+            if current_hook == hook_bytes:
+                return {"state": "ALREADY_STAGED_NOT_LIVE",
+                        "new_sha256": current_hash, "native_handler_registered": False,
+                        "restarted": False, "owner_claim_contract": True}
+            # Only the known exact former dispatcher source may be upgraded.
+            # Do not replace any newer/foreign source or another agent's patch.
+            require(current_hash == EXPECTED_PREVIOUS_STAGED_SHA,
+                    "UPGRADE_SOURCE_SHA_DRIFT")
+            require(b'task.get("claim")' in current_hook
+                    and b'task.get("owner_claim")' not in current_hook
+                    and b'NOX_DRIVE_FIRST_STATIC_V1_START' in current_hook,
+                    "UPGRADE_HOOK_PREIMAGE")
+            changed = original[:begin] + hook_bytes + original[finish:]
+            upgrading = True
+        else:
+            require(current_hash == expected_dispatcher, "DISPATCHER_SHA_DRIFT")
+            changed = make_patched(original)
+        require(changed != original and changed.count(START.encode()) == 1
+                and changed.count(END.encode()) == 1,
+                "UPGRADE_OUTPUT")
+        compile(changed, "nox_dispatcher_t855u.py", "exec")
         if service_check:
             try:
                 run = subprocess.run(["supervisorctl", "status", "nox-dispatcher-t855u"],
@@ -533,11 +586,9 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
                         "SERVICE_NOT_RUNNING")
             except (OSError, subprocess.TimeoutExpired):
                 raise Hold("HOLD_DRIVE_REGISTRY_SERVICE_UNVERIFIED") from None
-        changed = make_patched(original)
         backup_sha, backup_created = secure_backup(backups, original)
         require(backup_sha == current_hash, "BACKUP_MISMATCH")
         require(not any(os.path.lexists(path) for path in STOP), "STOP_CHANGED")
-        # Exact preimage compare immediately before replace. Do not alter a newer source.
         reread, _ = private_regular(source, 180000)
         require(reread == original, "PREIMAGE_CHANGED")
         temp = source.with_name("." + source.name + ".drive-stage")
@@ -562,14 +613,16 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
             "new_sha256": digest(changed),
             "backup_sha256": backup_sha,
             "backup_created": backup_created,
+            "owner_claim_contract": True,
+            "upgraded_static_hook": upgrading,
             "native_handler_registered": False,
             "restarted": False,
             "google_oauth_updated": False,
             "model_or_s03_modified": False,
             "weights_modified": False,
         }
-    
-    
+
+
     # Pure syntax validation for focused CI; never reads or modifies Vast.
     if hook_syntax_only is True:
         compile("HANDLERS = {}\\n".replace("\\n", "\n") + SHIM,
