@@ -878,7 +878,11 @@ def worker_readback(helper, fresh_after=0):
                 or not task['id'].strip()):
             raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
         claimed.append(task['id'])
-    if (snapshot_mtime < max(fresh_after, time.time()-90)
+    # A far-future file timestamp is not evidence of a current native owner.
+    # Without an upper bound, stale worker IDs can remain 'fresh' indefinitely.
+    now = time.time()
+    if (snapshot_mtime < max(fresh_after, now-90)
+            or snapshot_mtime > now + 5
             or type(value.get('n')) is not int or value['n'] != NATIVE_WORKER_CAP
             or len(rows) != NATIVE_WORKER_CAP
             or any(type(worker_id) is not str or not worker_id.strip()

@@ -1419,6 +1419,14 @@ class NativeThreeWorkerCap(unittest.TestCase):
                     check(helper)
             finally:
                 scope["read_json"] = real_reader
+            # A clock-skewed or deliberately future-dated census must not
+            # be accepted forever just because its mtime exceeds now-90s.
+            future = __import__("time").time() + 3600
+            os.utime(target, (future, future))
+            with self.assertRaisesRegex(RuntimeError, "HOLD_NATIVE_WORKER_CAP_READBACK"):
+                check(helper)
+            write_workers(workers)
+            self.assertEqual(check(helper)["busy_count"], 1)
             for invalid_rows, n in (
                 (workers + [{"id": "w4", "current_task": None},
                             {"id": "w5", "current_task": None},
