@@ -39,16 +39,41 @@ def assess(snapshot):
         workers = native.get("workers")
         state = native.get("admission_state")
         if (state == "NATIVE_QUEUE_REVIEWED_CATALOG_EXHAUSTED"
-                and native.get("jobs_started") == 0 and isinstance(workers, list)
-                and workers and all(isinstance(w,dict)
-                                    and w.get("state") == "RUNNING"
-                                    and w.get("current_task") is None for w in workers)):
-            add("IDLE_NATIVE_CATALOG_EXHAUSTED", "urgent",
-                "Keep healthy workers running. Publish one current exact TaskID through the existing owner/CAS reviewed publisher; a relay manifest is not executable. Do not duplicate old or terminal tasks.")
+                and type(native.get("jobs_started")) is int
+                and native["jobs_started"] == 0
+                and isinstance(workers, list) and 0 < len(workers) <= 3
+                and all(isinstance(w, dict)
+                        and w.get("state") == "RUNNING"
+                        and w.get("current_task") is None for w in workers)):
+            # Original 6A02: idle workers are *not* an owner lease, task claim,
+            # atomic registry snapshot, or sufficient resource admission.
+            headroom = native.get("resource_headroom_bytes")
+            reviewable = (
+                native.get("maintenance_busy") is False
+                and native.get("active_claims") is False
+                and type(headroom) is int and headroom >= 2*1024**3
+                and native.get("owner_lease_cas_verified") is True
+                and native.get("immutable_task_source_verified") is True
+            )
+            if reviewable:
+                add("NATIVE_REFILL_OWNER_REVIEW_REQUIRED", "review",
+                    "Candidate only: revalidate current STOP, owner lease/CAS, exact "
+                    "TaskID dedup, resource floor and pinned source at the native "
+                    "publisher immediately before ONE action. This advice is not admission.")
+            else:
+                add("NATIVE_REFILL_OWNER_HOLD", "hold",
+                    "Idle workers/catalog exhaustion do not authorize publication. "
+                    "Await fresh owner lease/CAS, immutable source, zero active claims, "
+                    "explicit maintenance clearance and >=2 GiB raw cgroup headroom; "
+                    "do not duplicate queues or overwrite a pending run.")
         if native.get("maintenance_busy") is True or native.get("active_claims") is True:
             add("NATIVE_OWNER_LEASE_BUSY", "hold",
                 "Do not cancel/replace a live claim or force a second publisher. Reconcile the existing owner lease and exact TaskID receipt, then retry once on new owner state.")
-        if type(native.get("resource_headroom_bytes")) is int and native["resource_headroom_bytes"] < 2*1024**3:
+        headroom = native.get("resource_headroom_bytes")
+        if type(headroom) is not int or headroom < 0:
+            add("NATIVE_CGROUP_MEMORY_UNVERIFIED", "hold",
+                "No verified raw cgroup headroom; deny extra native admission until current owner evidence.")
+        elif headroom < 2*1024**3:
             add("NATIVE_CGROUP_MEMORY_PRESSURE", "urgent",
                 "Keep the serving model, S03 and STOP intact. Native CPU work only with fresh low-memory admission; defer extra model/worker/RAM staging until measured headroom recovers.")
     if onehost.get("healthy") is not True:
