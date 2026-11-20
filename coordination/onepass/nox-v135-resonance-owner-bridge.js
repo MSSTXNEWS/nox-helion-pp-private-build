@@ -9,6 +9,7 @@
   const enc=new TextEncoder();
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
+  const last=new Map();
   const segmenter=typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function'
     ?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
   function livePieces(text) {
@@ -80,10 +81,19 @@
   async function checkHistory(id,prompt,answer,exchangeId,signal) {
     const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
     if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
+    const p=last.get(id);
+    if(p){
+      const o=data.messages.filter(m=>m&&m.exchange_id===p[0]);
+      if(p[0]===exchangeId||o.length!==2||o[0].role!=='user'||
+         o[1].role!=='assistant'||o[0].content!==p[1]||
+         o[1].content!==p[2])throw Error('HOLD_S03_PRIOR');
+    }
     const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
     if(pair.length!==2||pair[0].role!=='user'||pair[1].role!=='assistant'||
        pair[0].content!==prompt||pair[1].content!==answer)
       throw Error('HOLD_DIALOG_HISTORY_READBACK');
+    last.set(id,[exchangeId,prompt,answer]);
+    if(last.size>32)last.delete(last.keys().next().value);
   }
   function accepted(done,id) {
     return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
@@ -199,47 +209,47 @@
           const emitPieces=async t=>{
             const parts=livePieces(t);
             for(let index=0;index<parts.length;index++){
-              if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-              event({type:'token',t:parts[index]});
-              if(index<parts.length-1&&waits<2&&
-                 (typeof document==='undefined'||document.visibilityState!=='hidden')&&
-                 !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches&&waits++<2){
-                await new Promise(resolve=>{
-                  let settled=false,frameId,timerId;
-                  const visibility=()=>{if(document.visibilityState==='hidden')finish();};
-                  const finish=()=>{
-                    if(settled)return;
-                    settled=true;
-                    if(typeof document!=='undefined')document.removeEventListener?.('visibilitychange',visibility);
-                    nativeSignal.removeEventListener('abort',finish);
-                    if(frameId!==undefined&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
-                    if(timerId!==undefined&&typeof clearTimeout==='function')clearTimeout(timerId);
-                    resolve();
-                  };
-                  if(typeof document!=='undefined'){document.addEventListener?.('visibilitychange',visibility);visibility();}
-                  if(!settled){nativeSignal.addEventListener('abort',finish,{once:true});if(nativeSignal.aborted)finish();}else return;
-                  if(typeof requestAnimationFrame==='function'){
-                    frameId=requestAnimationFrame(finish);
-                    if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
-                  }
-                  if(typeof setTimeout==='function'){
-                    timerId=setTimeout(finish,18);
-                    if(settled&&typeof clearTimeout==='function')clearTimeout(timerId);
-                  } else if(typeof requestAnimationFrame!=='function')finish();
-                });
-              }
+      if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+      event({type:'token',t:parts[index]});
+      if(index<parts.length-1&&waits<2&&
+      (typeof document==='undefined'||document.visibilityState!=='hidden')&&
+      !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches&&waits++<2){
+      await new Promise(resolve=>{
+      let settled=false,frameId,timerId;
+      const visibility=()=>{if(document.visibilityState==='hidden')finish();};
+      const finish=()=>{
+      if(settled)return;
+      settled=true;
+      if(typeof document!=='undefined')document.removeEventListener?.('visibilitychange',visibility);
+      nativeSignal.removeEventListener('abort',finish);
+      if(frameId!==undefined&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
+      if(timerId!==undefined&&typeof clearTimeout==='function')clearTimeout(timerId);
+      resolve();
+      };
+      if(typeof document!=='undefined'){document.addEventListener?.('visibilitychange',visibility);visibility();}
+      if(!settled){nativeSignal.addEventListener('abort',finish,{once:true});if(nativeSignal.aborted)finish();}else return;
+      if(typeof requestAnimationFrame==='function'){
+      frameId=requestAnimationFrame(finish);
+      if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
+      }
+      if(typeof setTimeout==='function'){
+      timerId=setTimeout(finish,18);
+      if(settled&&typeof clearTimeout==='function')clearTimeout(timerId);
+      } else if(typeof requestAnimationFrame!=='function')finish();
+      });
+      }
             }
           };
           const {answer,receipt}=await consume(upstream,async t=>{
             trailing+=t;
             if(!segmenter){
-              const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u4e00-\u9fff\uac00-\ud7af\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
-              if(ascii){
-                const safe=ascii[0].slice(0,-1);
-                trailing=trailing.slice(safe.length);
-                await emitPieces(safe);
-              }
-              return;
+      const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u4e00-\u9fff\uac00-\ud7af\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
+      if(ascii){
+      const safe=ascii[0].slice(0,-1);
+      trailing=trailing.slice(safe.length);
+      await emitPieces(safe);
+      }
+      return;
             }
             const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
             trailing=glyphs.pop()||'';
