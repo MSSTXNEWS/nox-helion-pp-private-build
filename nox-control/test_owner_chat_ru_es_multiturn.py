@@ -185,6 +185,13 @@ async function check(chunks, status=200) {
     {type:'meta',status:' 429 '},
     {type:'extension',phase:' Cancelled '},
     {type:'done',status:'504',saved:true,s03_integrated:true,dialog_id:'synthetic'},
+    // Structured HTTP failures must never be cleared by a later DONE.
+    {type:'meta',code:503},
+    {type:'delta',text:'hola',status_code:' 503 '},
+    {type:'status',status:{code:502}},
+    {type:'extension',httpStatus:429},
+    {type:'meta',status:{statusCode:' 504 '}},
+    {type:'done',statusCode:503,saved:true,s03_integrated:true,dialog_id:'synthetic'},
   ];
   for (const poison of statusFrames) {
     const payload = Buffer.from([deltaFrame,JSON.stringify(poison),doneFrame].join('\n')+'\n','utf8');
@@ -194,7 +201,8 @@ async function check(chunks, status=200) {
   }
   const cleanStatus = Buffer.from([
     deltaFrame, '{"type":"delta","text":"mundo","state":"running"}',
-    '{"type":"status","state":"running"}',doneFrame
+    '{"type":"status","state":"running","status":{"code":200}}',
+    '{"type":"delta","text":"bien","status_code":"200"}',doneFrame
   ].join('\n')+'\n','utf8');
   const permitted = await check([cleanStatus]);
   assert.equal(permitted.nativeStreamComplete,true,'running status remains compatible');
