@@ -23,7 +23,7 @@
     return Object.freeze({conversation_id:s.conversation_id,exchange_id:s.exchange_id});
   }
   const key=s=>s.conversation_id+'\u0000'+s.exchange_id;
-  function createClient({transport,host,bridge,ui,timeoutMs=120000}={}){
+  function createClient({transport,host,bridge,ui,ackGate=null,timeoutMs=120000}={}){
     if(!transport||!host||!bridge||!ui||
        typeof transport.post!=='function'||
        typeof transport.readback!=='function'||
@@ -32,6 +32,8 @@
        typeof bridge.acceptTerminal!=='function'||
        typeof ui.onDelta!=='function'||
        typeof ui.upsertTerminal!=='function'||
+       (ackGate && (typeof ackGate.reserve!=='function'||
+         typeof ackGate.beginSend!=='function'||typeof ackGate.confirm!=='function'))||
        !Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>600000)
       hold('HOLD_STREAM_HOST_CONTRACT');
     const started=new Set(),active=new Map(),reconnecting=new Map();
@@ -111,9 +113,25 @@
       try{projected=await ui.upsertTerminal(s,witness.projection_event_id);}
       catch(_){hold('HOLD_STREAM_UI_PROJECTION');}
       if(projected===false) hold('HOLD_STREAM_UI_NOT_CONFIRMED');
+      // Origin-local, cross-tab durable fence is opt-in. RESERVE and SENDING
+      // must commit in IndexedDB BEFORE network ACK. An uncertain ACK is never
+      // sent again after reload; recovery requires an independent server receipt.
+      let grant=null;
+      if(ackGate){
+        try{
+          grant=await ackGate.reserve(s,witness.projection_event_id,witness.ack_cursor);
+          if(grant.status==='ALREADY_ACKED') return witness;
+          if(grant.status!=='RESERVED') hold('HOLD_STREAM_ACK_GATE');
+          await ackGate.beginSend(grant);
+        }catch(err){
+          if(err&&typeof err.code==='string') throw err;
+          hold('HOLD_STREAM_ACK_GATE');
+        }
+      }
       try{
         const acked=await transport.ack(s,witness.ack_cursor);
         if(acked===false) hold('HOLD_STREAM_ACK_UNCONFIRMED');
+        if(ackGate) await ackGate.confirm(grant);
       }catch(_){hold('HOLD_STREAM_ACK_UNCONFIRMED');}
       return witness;
     }
