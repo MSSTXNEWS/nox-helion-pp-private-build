@@ -113,6 +113,37 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     self.assertNotIn('_agent_final',payload)
                     self.assertEqual(self.dispatched,[])
 
+    async def test_unconfirmed_direct_tool_or_media_never_certifies_s03(self):
+        # A failed action can report its real reason in the live stream,
+        # but a browser DONE or _agent_final would falsely certify success.
+        native=self.native(result={'ok':False,'text':'Действие не подтверждено'})
+        native['_direct_admin_calls']=lambda text:[
+            {'name':'run_admin','arguments':{'action':'status'}}]
+        payload={'messages':[{'role':'user','content':'Status'}]}
+        with patch.object(stream.httpx,'AsyncClient',
+                          side_effect=AssertionError('no model POST')):
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Status',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertIn('Действие не подтверждено',wire)
+        self.assertIn('HOLD_TOOL_RESULT_UNCONFIRMED',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertNotIn('_agent_final',payload)
+        self.assertEqual(self.dispatched,[('run_admin',{'action':'status'})])
+
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Нарисуй лису в лесу'}]}
+        with patch.object(stream._current,'dispatch',return_value={
+                'ok':False,'text':'Очередь не подтверждена'}), patch.object(
+                stream.httpx,'AsyncClient',side_effect=AssertionError('no model POST')):
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Нарисуй лису в лесу',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertIn('Очередь не подтверждена',wire)
+        self.assertIn('HOLD_MEDIA_RESULT_UNCONFIRMED',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertNotIn('_agent_final',payload)
+
     async def test_invalid_utf8_on_wire_cannot_certify_browser_or_s03(self):
         # HTTPX aiter_text() silently replaces malformed UTF-8 with U+FFFD;
         # an allegedly finished answer must not certify corrupted model bytes.
