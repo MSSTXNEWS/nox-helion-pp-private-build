@@ -81,13 +81,15 @@ class SafeRepairTests(unittest.TestCase):
             p=self.policy(Path(t)/"STOP")
             with patch.object(healer,"alive",return_value=False), patch.object(healer.subprocess,"run") as run:
                 healer.repair_cycle(p,state)
-                run.return_value.returncode=3
+                run.side_effect=[
+                    subprocess.CompletedProcess(["systemctl","is-failed"],0,stdout="failed\n"),
+                    subprocess.CompletedProcess(["systemctl","show"],0,stdout="0\n"),
+                ]
                 result=healer.repair_cycle(p,state,dry_run=True)
                 self.assertEqual(result[0]["action"],"would_restart")
-                # Dry-run may inspect systemd, but must not issue restart.
-                run.assert_called_once_with(
-                    ["systemctl","is-active","--quiet","nox-dispatcher.service"],
-                    shell=False,timeout=8,check=False)
+                # Dry-run requires both failed-unit and zero-MainPID readbacks.
+                self.assertEqual([c.args[0][1] for c in run.call_args_list],
+                                 ["is-failed","show"])
     def test_restart_verified_only_after_live_probe(self):
         with tempfile.TemporaryDirectory() as t:
             state=Path(t)/"s.json"
@@ -95,8 +97,13 @@ class SafeRepairTests(unittest.TestCase):
             with patch.object(healer,"alive",side_effect=[False,False,True]), patch.object(healer.subprocess,"run") as run, patch.object(healer.time,"sleep"):
                 # A failed systemd unit is no longer active; only that state
                 # may enter the legacy guarded restart branch.
-                run.side_effect=lambda args,**kw: subprocess.CompletedProcess(
-                    args, 3 if args[1]=="is-active" else 0)
+                def systemd(args, **kw):
+                    if args[1] == "is-failed":
+                        return subprocess.CompletedProcess(args, 0, stdout="failed\n")
+                    if args[1] == "show":
+                        return subprocess.CompletedProcess(args, 0, stdout="0\n")
+                    return subprocess.CompletedProcess(args, 0)
+                run.side_effect=systemd
                 healer.repair_cycle(p,state)
                 result=healer.repair_cycle(p,state)
                 self.assertEqual(result[0]["action"],"restart_verified")
@@ -115,8 +122,8 @@ class SafeRepairTests(unittest.TestCase):
                 result=healer.repair_cycle(p,state)
                 self.assertEqual(result[0]["action"],"needs_owner_investigation")
                 run.assert_called_once_with(
-                    ["systemctl","is-active","--quiet","nox-dispatcher.service"],
-                    shell=False,timeout=8,check=False)
+                    ["systemctl","is-failed","nox-dispatcher.service"],
+                    shell=False,timeout=8,check=False,capture_output=True,text=True)
 
     def test_unknown_systemd_state_does_not_restart(self):
         with tempfile.TemporaryDirectory() as t:
@@ -129,6 +136,21 @@ class SafeRepairTests(unittest.TestCase):
                 result=healer.repair_cycle(p,state)
                 self.assertEqual(result[0]["action"],"needs_owner_investigation")
                 self.assertEqual(run.call_count,1)
+
+    def test_systemd_failed_with_live_main_pid_does_not_restart(self):
+        with tempfile.TemporaryDirectory() as t:
+            state=Path(t)/"s.json"
+            p=self.policy(Path(t)/"STOP")
+            with patch.object(healer,"alive",return_value=False), patch.object(healer.subprocess,"run") as run:
+                run.side_effect=[
+                    subprocess.CompletedProcess(["systemctl","is-failed"],0,stdout="failed\n"),
+                    subprocess.CompletedProcess(["systemctl","show"],0,stdout="7142\n"),
+                ]
+                healer.repair_cycle(p,state)
+                result=healer.repair_cycle(p,state)
+                self.assertEqual(result[0]["action"],"needs_owner_investigation")
+                self.assertEqual([c.args[0][1] for c in run.call_args_list],
+                                 ["is-failed","show"])
 
     def test_rate_limit(self):
         with tempfile.TemporaryDirectory() as t:
