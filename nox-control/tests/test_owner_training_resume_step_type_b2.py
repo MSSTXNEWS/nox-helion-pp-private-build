@@ -792,6 +792,34 @@ class CheckpointStepProvenance(unittest.TestCase):
 
 
 
+    def test_failed_supervisor_start_cannot_claim_existing_running_service(self):
+        # A stale RUNNING status cannot legitimize a failed start command.
+        # This is AST-isolated; no native service or persistent flag is touched.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        main = next(node for node in tree.body
+                    if isinstance(node, ast.FunctionDef) and node.name == "main")
+        start = next(node for node in main.body
+                     if isinstance(node, ast.FunctionDef) and node.name == "start_once")
+        starts, evidence = [], []
+        helper = types.SimpleNamespace(
+            command=lambda argv, timeout: (starts.append(argv) or (7, "already running")),
+            service_state=lambda: {"state": "RUNNING", "pid": 123},
+        )
+        namespace = {
+            "helper": helper, "global_stop": lambda: False, "SERVICE": "nox-train-volta-t866u",
+            "result": {"training_started": False},
+            "prove_training": lambda _: {"pid": 123},
+            "step": lambda kind, data: evidence.append((kind, data)),
+        }
+        exec(compile(ast.Module(body=[start], type_ignores=[]), str(SOURCE), "exec"),
+             namespace)
+        with self.assertRaisesRegex(RuntimeError, "HOLD_SINGLE_TRAINER_START_FAILED"):
+            namespace["start_once"](5)
+        self.assertEqual(starts, [["supervisorctl", "start", "nox-train-volta-t866u"]])
+        self.assertFalse(namespace["result"]["training_started"])
+        self.assertEqual(evidence, [])
+
+
     def test_owned_flag_requires_source_token_boundary_before_release(self):
         # An owner prefix ending in a hash must not match a longer, foreign
         # source token. This test does not rename, release or touch live flags.
