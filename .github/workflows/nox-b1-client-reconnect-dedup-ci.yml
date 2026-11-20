@@ -1,0 +1,19 @@
+name: NOX B1 isolated client reconnect dedup source checks
+on:
+  pull_request:
+    paths:
+      - nox-control/b1_client_reconnect_dedup_bridge.js
+      - nox-control/test_b1_client_reconnect_dedup_bridge.cjs
+      - .github/workflows/nox-b1-client-reconnect-dedup-ci.yml
+  workflow_dispatch:
+jobs:
+  source-only-client-reconnect-dedup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - name: Node syntax plus nine focused reconnect no-replay regressions
+        run: |
+          node --check nox-control/b1_client_reconnect_dedup_bridge.js
+          node --test nox-control/test_b1_client_reconnect_dedup_bridge.cjs
