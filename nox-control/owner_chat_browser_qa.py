@@ -170,6 +170,22 @@ def native_terminal_stream_valid(snapshot):
                     ('saved', 's03_integrated', 'dialog_matches')))
 
 
+def readback_evidence(saved, native_equal, two_turn_mode):
+    """Keep browser dialog-history evidence separate from trusted canonical S03.
+
+    In RU/ES multi-turn, /api/ui/memory/dialogs/history proves only that
+    history matches the observed browser answer. It is NOT an independent
+    canonical S03 writer receipt/readback. Preserve the legacy one-turn
+    s03_readback_verified reporting contract without promoting it to a
+    multi-turn persistence proof.
+    """
+    dialog_ok = saved is True and native_equal is True
+    return {
+        'dialog_history_readback_verified': dialog_ok,
+        's03_readback_verified': dialog_ok and two_turn_mode is not True,
+    }
+
+
 def distinct_explicit_message_ids(rows):
     """Optional row IDs must not claim multiple distinct turns with one identity.
 
@@ -1070,7 +1086,8 @@ async def browser_run(report, directory, available):
                 # assistant message after stream and dialog-history equality.
                 expected_first=public
                 expected_second=','.join(reversed(public.split(',')))
-            report.update(stream=final,s03_readback_verified=bool(saved and native_equal),
+            report.update(stream=final,
+                          **readback_evidence(saved, native_equal, report.get('two_turn_mode') is True),
                           actual_native_model_stream_verified=bool(final['native_calls']==1 and all(final['done'].values())),
                           answer_sha256=digest(answer.encode()),answer_characters=len(answer),
                           synthetic_number_sequence_pass=first_numeric_pass,

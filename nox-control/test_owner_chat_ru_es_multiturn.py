@@ -5,6 +5,7 @@ multiturn canonical-S03 HOLD remains mandatory until real writer/readback wiring
 """
 import asyncio
 import hashlib
+import inspect
 import json
 import shutil
 import subprocess
@@ -26,6 +27,8 @@ from owner_chat_browser_qa import (
     multiturn_history_valid,
     multiturn_transcript_sha256,
     native_terminal_stream_valid,
+    readback_evidence,
+    browser_run,
     OBSERVER_JS,
 )
 
@@ -63,6 +66,28 @@ def s03_proof(transcript):
 
 
 class OwnerRuEsContinuity(unittest.TestCase):
+    def test_two_turn_dialog_history_cannot_claim_canonical_s03_readback(self):
+        # Even a perfect first-turn browser/history match is NOT a trusted
+        # writer receipt plus an independently verified canonical S03 read.
+        self.assertEqual(
+            readback_evidence(True, True, True),
+            {'dialog_history_readback_verified': True,
+             's03_readback_verified': False})
+        self.assertEqual(
+            readback_evidence(True, True, False),
+            {'dialog_history_readback_verified': True,
+             's03_readback_verified': True})
+        for saved, native in ((False, True), (True, False),
+                              (None, True), (True, None),
+                              (1, True), (True, 'true')):
+            with self.subTest(saved=repr(saved), native=repr(native)):
+                evidence = readback_evidence(saved, native, True)
+                self.assertFalse(evidence['dialog_history_readback_verified'])
+                self.assertFalse(evidence['s03_readback_verified'])
+        # Verify this helper is actually used by the production browser
+        # reporting path, rather than being an unconnected test-only helper.
+        self.assertIn('**readback_evidence(saved, native_equal,', inspect.getsource(browser_run))
+
     def test_native_ndjson_rejects_truncated_utf8_eof_after_done(self):
         """Actual JS observer must flush fatal UTF-8 state at clean stream EOF.
 
