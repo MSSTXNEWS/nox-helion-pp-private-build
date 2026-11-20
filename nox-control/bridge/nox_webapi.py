@@ -19,6 +19,8 @@ WEBROOT = "/opt/nox-web"
 M = {"t": 0, "gpu": [], "cpu": None, "ram": None, "disk": None}
 SRC = {}
 CANCEL = set()
+# Increment-only broadcast STOP epoch: a new request cannot clear an older stream's STOP.
+CANCEL_ALL_EPOCH = 0
 _lock = None
 _lock_mini = None
 _cpu_prev = [None]
@@ -457,15 +459,24 @@ def install(app, B):
     @app.post("/api/chat/stop")
     @app.post("/api/nox/stop")
     async def a_stop(request: Request):
+        global CANCEL_ALL_EPOCH
         try:
             b = await request.json()
         except Exception:
             b = {}
-        CANCEL.add(str(b.get("request_id", "*")))
+        target = str(b.get("request_id", "*"))
+        if target == "*":
+            # Broadcast only to requests that already existed. Never clear
+            # another in-flight request's STOP when a newer stream begins.
+            CANCEL_ALL_EPOCH += 1
+        else:
+            CANCEL.add(target)
         return {"status": "STOPPING"}
 
     @app.post("/api/chat")
     async def a_chat(request: Request):
+        # Capture before body parsing: STOP during request admission is binding.
+        request_stop_epoch = CANCEL_ALL_EPOCH
         b = await request.json()
         rid = str(b.get("request_id") or "")
         msgs_in = [m for m in (b.get("messages") or []) if m.get("role") in ("user", "assistant")]
@@ -488,10 +499,20 @@ def install(app, B):
         async def gen():
             t0, n, shown = time.time(), 0, 0
             full = ""
-            CANCEL.discard(rid); CANCEL.discard("*")
             yield fr(message={"role": "assistant", "content": ""}, done=False, nox_status="слушаю тебя…",
                      request_receipt={"status": "RECEIVED", "request_id": rid, "native_admission_verified": False})
             async with (_lock_mini if mini else _lock):
+                if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                    CANCEL.discard(rid)
+                    yield fr(message={"role": "assistant", "content": ""}, done=True,
+                             done_reason="stopped",
+                             completion_receipt={"status": "STOPPED", "request_id": rid,
+                                                 "upstream_done": False},
+                             memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                   "s03_readback_verified": False},
+                             memory_history={"status": "SKIPPED", "reason": "USER_STOP",
+                                             "s03_readback_verified": False})
+                    return
                 yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "think", "text": "вопрос получен"})
                 mem = ""
                 if use_mem:
@@ -541,7 +562,7 @@ def install(app, B):
                             if r.status_code != 200:
                                 raise RuntimeError("UPSTREAM_HTTP_NON_200")
                             async for line in r.aiter_lines():
-                                if rid in CANCEL or "*" in CANCEL:
+                                if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
                                     break
                                 if not line.startswith("data:"):
                                     continue
@@ -590,11 +611,11 @@ def install(app, B):
                     B.log("web_stream_error %s" % err)
                 if not mini:
                     B.LAST_CHAT["t"] = time.time()
-                stopped = rid in CANCEL or "*" in CANCEL
+                stopped = rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch
                 # Incomplete HTTP streams must never yield successful DONE or S03 writes.
                 if not stopped and (err or upstream_failure or not upstream_done or not full.strip()):
                     B.log("web_stream_incomplete " + (err or upstream_failure or "MISSING_DONE_OR_EMPTY"))
-                    CANCEL.discard(rid); CANCEL.discard("*")
+                    CANCEL.discard(rid)
                     yield json.dumps({"status": "HOLD", "reason": "MODEL_STREAM_INCOMPLETE",
                                       "error": "ответ модели не завершён — можно повторить запрос",
                                       "request_id": rid, "done": False,
@@ -626,7 +647,7 @@ def install(app, B):
                         hist = {"status": "HOLD", "reason": "S03: " + type(e).__name__}
                     if B.SOUL and not mini:
                         B.SOUL.log_turn(user, full.strip())
-                CANCEL.discard(rid); CANCEL.discard("*")
+                CANCEL.discard(rid)
                 yield fr(message={"role": "assistant", "content": ""}, done=True, done_reason="stop" if not stopped else "stopped",
                          completion_receipt={"status": "STOPPED" if stopped else "GENERATED",
                                              "request_id": rid, "upstream_done": bool(upstream_done and not stopped)},
