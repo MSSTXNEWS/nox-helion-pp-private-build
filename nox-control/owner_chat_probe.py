@@ -288,6 +288,15 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             kind=frame.get('type');elapsed=round((time.monotonic()-started)*1000)
             if kind not in ('preparing','start','started','delta','done','error','status','meta'):
                 raise RuntimeError('HOLD_STREAM_FRAME_TYPE')
+            # A preterminal failure must poison the entire stream, even if
+            # the backend subsequently emits a successful saved=true done.
+            if kind not in ('done', 'error') and (
+                    frame.get('error') not in (None, '', False)
+                    or (isinstance(frame.get('status'), str)
+                        and frame['status'].strip().lower() in
+                        ('error', 'failed', 'cancelled', 'aborted'))
+                    or frame.get('success') is False):
+                raise RuntimeError('HOLD_STREAM_PRETERMINAL_FAILURE')
             if not any(event['type']==kind for event in events):events.append({'type':kind,'ms':elapsed})
             if kind=='delta':
                 text=frame.get('text','')
