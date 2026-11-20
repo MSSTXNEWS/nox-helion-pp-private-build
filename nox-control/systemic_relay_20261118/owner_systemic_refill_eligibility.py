@@ -223,12 +223,15 @@ def proposal_predicate_diff(proposals, registry, roots, request, previous):
     previous_sha = request.get('previous_manifest_sha256') if isinstance(request, dict) else None
     # A malformed predecessor must never be interpreted as an empty history.
     # Otherwise a corrupt reviewed manifest can crash or make older work look new.
-    previous_missions = previous.get('missions', []) if isinstance(previous, dict) else []
+    previous_missions = previous.get('missions') if isinstance(previous, dict) else None
     if not isinstance(previous_missions, list) or any(
             not isinstance(m, dict)
             or type(m.get('mission_id')) is not str
+            or not m['mission_id'].strip()
             or type(m.get('revision')) is not int
+            or m['revision'] < 0
             or type(m.get('parent_task_id')) is not str
+            or not m['parent_task_id'].strip()
             for m in previous_missions):
         return [{'parent_task_id': None, 'predicates': [
             _predicate('previous_missions_valid', True, False, False,
@@ -271,9 +274,8 @@ def proposal_predicate_diff(proposals, registry, roots, request, previous):
             modules if isinstance(modules,list) else None,
             context_paths if context_strings else None,
             editable if editable_strings else None)
-        old_missions = {(m.get('mission_id'), m.get('revision'))
-                        for m in previous.get('missions', []) if isinstance(m, dict)} \
-                       if isinstance(previous, dict) else set()
+        old_missions = {(m['mission_id'], m['revision'])
+                        for m in previous_missions}
         current_key = (mission.get('mission_id'), mission.get('revision'))
         current_key_safe = (type(current_key[0]) is str
                             and type(current_key[1]) is int)
