@@ -15,6 +15,27 @@
     constructor(code){super(code);this.code=code;this.name='HoldStream';}
   }
   const hold=code=>{throw new HoldStream(code);};
+  function awaitUiCallback(callback,signal){
+    if(signal.aborted) return Promise.resolve(false);
+    let onAbort;
+    // Convert callback rejection into a value before racing it against abort.
+    // If it rejects after cancellation, it is still observed and cannot become
+    // an unhandled rejection after the caller has returned STOPPED.
+    const settled=Promise.resolve().then(callback).then(
+      ()=>({kind:'settled'}),
+      error=>({kind:'rejected',error})
+    );
+    const aborted=new Promise(resolve=>{
+      onAbort=()=>resolve({kind:'aborted'});
+      if(signal.aborted) onAbort();
+      else signal.addEventListener('abort',onAbort,{once:true});
+    });
+    return Promise.race([settled,aborted]).then(outcome=>{
+      if(signal.aborted||outcome.kind==='aborted') return false;
+      if(outcome.kind==='rejected') throw outcome.error;
+      return true;
+    }).finally(()=>signal.removeEventListener('abort',onAbort));
+  }
   function snap(s){
     if(!s||typeof s!=='object'||Array.isArray(s)||
        typeof s.conversation_id!=='string'||!ID.test(s.conversation_id)||
@@ -90,8 +111,9 @@
               // UI handlers that await MUST check this signal immediately
               // before their actual DOM/state commit; this caller cannot undo
               // a UI effect already committed by an uncooperative adapter.
-              await ui.onDelta(s,data,ctrl.signal);
-              if(ctrl.signal.aborted) return stopped();
+              const completed=await awaitUiCallback(
+                ()=>ui.onDelta(s,data,ctrl.signal),ctrl.signal);
+              if(!completed||ctrl.signal.aborted) return stopped();
             }
             // Terminal SSE frames are deliberately NOT sufficient to ACK;
             // only a separately authenticated durable readback is accepted.
