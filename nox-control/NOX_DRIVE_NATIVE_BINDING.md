@@ -63,3 +63,9 @@ References:
 - [Source and owner guide](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/main/nox-control/NOX_DRIVE_FIRST.md)
 - [rclone chunker](https://rclone.org/chunker/)
 - [rclone Google Drive](https://rclone.org/drive/)
+
+## Live-host integration correction (owner probe 2026-11-20)
+
+Owner-authenticated [Vast runtime proof #44642611063](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44642611063) shows dispatcher source SHA-256 `9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21`, with 21 literal `HANDLERS` registrations, no `register_handler()` function, no hot reload function, and `run_one` as the task execution entry. Therefore `register_to_existing_dispatcher(register_handler,...)` is a generic contract and **cannot** activate this live version; do not fabricate a callback to claim registration.
+
+Owner should integrate a Drive handler by a reviewed, exact-SHA patch to the installed dispatcher registry, after matching its actual `run_one` task/result shape and current owner/CAS/resource safety. A source patch, installer SUCCESS and static AST read are NOT live handler acceptance. Google OAuth on Vast remains absent (`CONFIG_MISSING`) and is not provided by the ChatGPT Drive connector. The 384 MiB raw cgroup transport threshold is not met in latest live probe. Do not forcibly restart the running model, proxy, S03 or native workers to bypass these blockers.
