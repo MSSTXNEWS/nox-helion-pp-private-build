@@ -1,10 +1,14 @@
 """NOX web adapter: делает веб-сборку «Резонанс» рабочей поверх умного моста (ядро, память S03, эмоции остаются на пути ответа).
 Подключается из nox_bridge.py: WEB.install(app, bridge_module). Слушает тот же 127.0.0.1:8091.
 Без выдумок: нет измерения -> null / HOLD. Токен доступа: если есть /root/nox/state/web_token, он обязателен."""
-import asyncio, hashlib, json, os, shutil, subprocess, threading, time
+import asyncio, hashlib, json, os, re, shutil, subprocess, threading, time
 import httpx
 from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
+try:
+    import nox_wow as W
+except Exception:
+    W = None
 
 TAG = "nox-helion:latest"
 ST = "/root/nox/state"
@@ -311,27 +315,87 @@ def install(app, B):
                  "confidence": None} for f in _jl(FACTS, limit)]
         rows += [{"kind": "dialog_turn", "t": t.get("t"), "key": None, "content": (t.get("u", "")[:160] + " → " + t.get("a", "")[:160]), "provenance": "S03:dialog",
                   "confidence": None} for t in _jl(ST + "/turns.jsonl", limit)]
+        if W:
+            for sl in W.tail(W.F["sleep"], limit):
+                rows += [{"kind": "sleep_fact", "t": sl.get("t"), "key": None, "content": f, "provenance": "SLEEP", "confidence": None,
+                          "lora_after": sl.get("lora_after")} for f in sl.get("facts", [])]
         rows.sort(key=lambda r: r.get("t") or 0, reverse=True)
         return {"status": "OK", "facts": rows[:limit], "note": "confidence не измеряется (null = Н/Д)"}
 
     @app.get("/api/nox/unknown")
-    async def a_unknown():
-        items = [{"t": j.get("t"), "question": j.get("question"), "learn": j.get("learn")} for j in _jl(ST + "/self_journal.jsonl", 30) if j.get("question") or j.get("learn")]
-        return {"status": "OK", "items": list(reversed(items)), "note": "голод знаний: вопросы и темы из самоанализа NOX"}
+    async def a_unknown(limit: int = 40):
+        items = W.unknown_items(max(1, min(limit, 100))) if W else []
+        return {"status": "OK", "items": items, "open": sum(1 for i in items if i.get("status") == "open"), "note": "голод знаний: «не знаю», низкая уверенность, сомнения скептика, вопросы самоанализа"}
 
     @app.get("/api/nox/decisions")
-    async def a_decisions():
-        items = [{"t": j.get("t"), "weak": j.get("weak"), "improve": j.get("improve")} for j in _jl(ST + "/self_journal.jsonl", 30) if j.get("weak") or j.get("improve")]
-        return {"status": "OK", "decisions": list(reversed(items)), "level": "L3: предложения, сам не применяет"}
+    async def a_decisions(limit: int = 40):
+        rows = W.decisions_items(max(1, min(limit, 100))) if W else []
+        return {"status": "OK", "decisions": rows, "levels": W.LEVELS if W else {}, "level": "L1 стиль сам с журналом; L2/L3 только предложения"}
 
     @app.get("/api/nox/changes")
-    async def a_changes(since: int = 0):
-        facts = [f for f in _jl(FACTS, 200) if (f.get("t") or 0) > since]
-        jr = [j for j in _jl(ST + "/self_journal.jsonl", 200) if (j.get("t") or 0) > since]
-        fb = [f for f in _jl(ST + "/feedback.jsonl", 500) if (f.get("t") or 0) > since]
-        tr = [t for t in _jl(ST + "/turns.jsonl", 500) if (t.get("t") or 0) > since]
-        return {"status": "OK", "since": since, "now": int(time.time()), "new_facts": facts[-20:], "new_journal": jr[-10:],
-                "feedback": {"up": sum(1 for f in fb if f.get("v") == 1), "down": sum(1 for f in fb if f.get("v") != 1)}, "new_turns": len(tr)}
+    async def a_changes(since: int = 0, mark: int = 0):
+        out = W.changes(since, bool(mark)) if W else {}
+        out["status"] = "OK"
+        return out
+
+    @app.get("/api/nox/personality")
+    async def a_personality():
+        return {"status": "OK", "levels": W.LEVELS, "style": W.style_profile(), "drift_log": W.tail(W.F["drift"], 30)[::-1], "limit": "L1 не чаще 1 раза в сутки; L0 не меняется"}
+
+    @app.get("/api/nox/lora/candidates")
+    async def a_lora():
+        rows = W.lora_candidates()
+        return {"status": "OK", "rule": "только факты старше 7 дней; советники - 2+ независимых; решает Создатель", "candidates": rows, "count": len(rows)}
+
+    @app.post("/api/nox/sleep/run")
+    async def a_sleep(request: Request):
+        async def a1(m, n): return await B.ask(m, n, slot=1)
+        async with _lock_mini:
+            rec = await W.sleep_once(a1, B.remember_fact)
+        return {"status": "OK" if rec else "SKIP", "sleep": rec, "reason": None if rec else "мало новых разговоров"}
+
+    @app.get("/api/nox/sleep")
+    async def a_sleep_log():
+        return {"status": "OK", "sleeps": W.tail(W.F["sleep"], 20)[::-1]}
+
+    @app.api_route("/api/nox/notes", methods=["GET", "POST"])
+    async def a_notes(request: Request):
+        if request.method == "POST":
+            b = await request.json()
+            txt = str(b.get("text", "")).strip()
+            if not txt:
+                return JSONResponse({"status": "HOLD", "reason": "пустая заметка"}, status_code=400)
+            due = b.get("due") or W.parse_due(txt)
+            return {"status": "OK", "note": W.add_note(txt, b.get("page", ""), due if b.get("remind", True) else None)}
+        return {"status": "OK", "notes": W.tail(W.F["notes"], 50)[::-1]}
+
+    @app.get("/api/nox/reminders")
+    async def a_reminders(due: int = 0):
+        return {"status": "OK", "now": int(time.time()), "reminders": W.reminders(bool(due))}
+
+    @app.post("/api/nox/reminders/done")
+    async def a_rem_done(request: Request):
+        b = await request.json()
+        return {"status": "OK", "done": W.done_reminder(b.get("id", ""))}
+
+    @app.post("/api/nox/feedback")
+    async def a_feedback(request: Request):
+        b = await request.json()
+        try:
+            with open(ST + "/feedback.jsonl", "a", encoding="utf-8") as f:
+                f.write(json.dumps({"t": int(time.time()), "q": str(b.get("q", ""))[:400], "a": str(b.get("a", ""))[:900], "v": 1 if b.get("v") in (1, "up", True) else -1, "request_id": str(b.get("request_id", ""))}, ensure_ascii=False) + "\n")
+            return {"status": "OK"}
+        except Exception as e:
+            return JSONResponse({"status": "HOLD", "reason": type(e).__name__}, status_code=500)
+
+    @app.get("/api/nox/kto/export")
+    async def a_kto():
+        rows = W.kto_export()
+        return {"status": "OK", "format": "KTO {prompt, completion, label}", "count": len(rows), "rows": rows[-500:]}
+
+    @app.get("/api/nox/regress")
+    async def a_regress():
+        return {"status": "OK", "result": W.jread(W.F["regress"], None)}
 
     @app.post("/api/chat/stop")
     @app.post("/api/nox/stop")
@@ -352,6 +416,10 @@ def install(app, B):
         use_mem = b.get("use_memory", True) is not False
         npred = int((b.get("options") or {}).get("num_predict") or 700)
         mini = b.get("mini") is True
+        opts = b.get("options") or {}
+        mode = str(opts.get("mode") or b.get("mode") or "auto")
+        eph = b.get("ephemeral") is True
+        if mode == "fast": npred = min(npred, 300)
         if mini:
             use_mem, npred = False, min(npred, 400)
 
@@ -361,7 +429,7 @@ def install(app, B):
             return json.dumps(d, ensure_ascii=False) + "\n"
 
         async def gen():
-            t0, n = time.time(), 0
+            t0, n, shown = time.time(), 0, 0
             full = ""
             CANCEL.discard(rid); CANCEL.discard("*")
             yield fr(message={"role": "assistant", "content": ""}, done=False, nox_status="слушаю тебя…")
@@ -376,18 +444,35 @@ def install(app, B):
                 srcs = []
                 for i, l in enumerate(lines[:8]):
                     SRC[str(i + 1)] = l
-                    srcs.append({"id": i + 1, "source": "S03", "category": "memory", "text": l[:300]})
+                    srcs.append(dict({"id": i + 1, "source": "S03", "category": "memory", "text": l[:300]}, **(W.provenance(l) if W else {})))
                 yield fr(message={"role": "assistant", "content": ""}, done=False, nox_sources=srcs, memory_reason=("найдено %d фрагм." % len(lines)) if lines else "в памяти ничего близкого", nox_status="чувствую…",
                          nox_event={"step": "memory", "text": ("найдено %d фрагм. памяти" % len(lines)) if lines else ("память не использовалась" if not use_mem else "в памяти ничего близкого")})
+                extra, plan, rem = "", [], None
+                if W and not eph:
+                    try: rem = W.maybe_reminder(user, "mini" if mini else "chat")
+                    except Exception: rem = None
+                    if rem:
+                        hh = time.strftime("%d.%m %H:%M", time.gmtime(rem["reminder"]["due"] + 3 * 3600))
+                        extra += "[Напоминание создано на %s МСК: подтверди коротко.]" % hh
+                        yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "reminder", "text": "напоминание на " + hh + " МСК", "reminder": rem["reminder"]})
+                if W and not mini:
+                    if W.wants_plan(user, mode):
+                        yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "разбиваю задачу на шаги"})
+                        try: plan = await W.make_plan(lambda m, n: B.ask(m, n, slot=1), user)
+                        except Exception: plan = []
+                        if plan:
+                            extra += "[План (следуй по порядку, нумеруй шаги): " + "; ".join("%d) %s" % (i + 1, x) for i, x in enumerate(plan)) + "]"
+                            yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "план: %d шагов" % len(plan), "plan": plan})
+                    extra += W.mode_hint(mode)
                 yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "think", "text": "формулирую ответ"})
                 if mini:
                     last = msgs_in[-1]["content"] if msgs_in else user
                     mm = [{"role": "system", "content": B.IDENTITY + B.STATIC_RULES},
-                          {"role": "user", "content": "[Режим мини-помощника: ответ не длиннее 4 предложений, без строки «Уверенность»]\n" + str(last)[:3000]}]
+                          {"role": "user", "content": "[Режим мини-помощника: ответ не длиннее 4 предложений, без строки «Уверенность»]" + extra + "\n" + str(last)[:3000]}]
                 else:
                     vol = await asyncio.to_thread(B.self_vol, user)
-                    mm = B.build_msgs(msgs_in, user, mem, vol)
-                body = {"messages": mm, "max_tokens": max(64, min(npred, 900, (400 if mini else B.adapt_tokens(user, 900)))), "temperature": 0.6, "id_slot": 1 if mini else 0, "cache_prompt": True, "n_keep": B.NKEEP, "stream": True,
+                    mm = B.build_msgs(msgs_in, user, mem, vol, "\n" + extra if extra else "")
+                body = {"messages": mm, "max_tokens": max(64, min(npred, 900, (400 if mini else (900 if mode == "thoughtful" else B.adapt_tokens(user, 900))))), "temperature": 0.4 if mode == "thoughtful" else 0.6, "id_slot": 1 if mini else 0, "cache_prompt": True, "n_keep": B.NKEEP, "stream": True,
                         "chat_template_kwargs": {"enable_thinking": False}}
                 err = None
                 try:
@@ -409,6 +494,11 @@ def install(app, B):
                                     full += t
                                     n += 1
                                     yield fr(message={"role": "assistant", "content": t}, done=False)
+                                    if plan and "\n" in t:
+                                        k = len(re.findall(r"(?m)^\s*(?:Шаг\s*)?\d+[.)]", full))
+                                        if k > shown and k <= len(plan):
+                                            shown = k
+                                            yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "шаг %d/%d: %s" % (k, len(plan), plan[k - 1]), "index": k, "total": len(plan)})
                 except Exception as e:
                     err = type(e).__name__
                     B.log("web_stream_error %s" % err)
@@ -419,7 +509,18 @@ def install(app, B):
                     return
                 hist = {"status": "HOLD", "reason": "ответ пуст или остановлен"}
                 stopped = rid in CANCEL or "*" in CANCEL
-                if full.strip() and not stopped:
+                sk = None
+                if W and not mini and not stopped and full.strip() and mode != "fast" and (mode == "thoughtful" or W.is_factual(user)):
+                    yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": "проверяю факты (скептик)"})
+                    sk = await W.skeptic(lambda m, n_: B.ask(m, n_, slot=1), user, full, record=not eph)
+                    if sk.get("ok") is False:
+                        add = "\n\n⚠ Скептик: " + sk["doubt"]
+                        full += add
+                        yield fr(message={"role": "assistant", "content": add}, done=False)
+                    yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": ("сомнение: " + sk["doubt"]) if sk.get("ok") is False else "проверка пройдена" if sk.get("ok") else "проверка недоступна", "ok": sk.get("ok")})
+                if eph:
+                    hist = {"status": "SKIPPED", "reason": "ephemeral"}
+                elif full.strip() and not stopped:
                     try:
                         import s03_memory as S
                         await asyncio.to_thread(S.persist_turn, ("[mini] " + user) if mini else user, full.strip())
@@ -430,7 +531,7 @@ def install(app, B):
                         B.SOUL.log_turn(user, full.strip())
                 CANCEL.discard(rid); CANCEL.discard("*")
                 yield fr(message={"role": "assistant", "content": ""}, done=True, done_reason="stop" if not stopped else "stopped",
-                         digest=hashlib.sha256(full.encode()).hexdigest(), frames=n, memory_history=hist,
+                         digest=hashlib.sha256(full.encode()).hexdigest(), frames=n, memory_history=hist, nox_mode=mode, skeptic=sk, plan=plan or None,
                          total_duration=int((time.time() - t0) * 1e9), eval_count=n)
 
         return StreamingResponse(gen(), media_type="application/x-ndjson", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
