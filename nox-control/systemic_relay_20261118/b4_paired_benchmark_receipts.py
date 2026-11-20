@@ -871,3 +871,99 @@ def verify_two_turn_http_trace_envelope(turns, capture, http_exchanges,
         "s03_durable_verified": False,
         "one_model_post_per_turn_verified": False,
     }
+def verify_cdp_receipt_against_http_trace(
+        turns, capture, http_exchanges, expected_target_path, cdp_receipt):
+    """Strict *offline* consistency of CDP and independently supplied SSE/HTTP.
+
+    CDP's getResponseBody is a decoded body digest, NOT raw TCP bytes.
+    Only matching the exact uncompressed OpenAI SSE payload is supported.
+    CDP and HTTP clocks are compared as elapsed offsets, not assumed to
+    share an absolute epoch. This does not authenticate either collector,
+    prove a single upstream model POST, or establish S03 durability.
+    """
+    envelope = verify_two_turn_http_trace_envelope(
+        turns, capture, http_exchanges, expected_target_path)
+    _require(type(cdp_receipt) is dict and
+             cdp_receipt.get("schema") == "nox-b4-cdp-v1" and
+             type(cdp_receipt.get("turns")) is list and
+             len(cdp_receipt["turns"]) == 2,
+             "SSE_CDP_RECEIPT_SCHEMA")
+    _require(cdp_receipt.get("cdp_consistent") is True and
+             cdp_receipt.get("ttft_sse_verified") is True,
+             "SSE_CDP_UNMEASURED")
+    # Neither a CDP connection nor a local fixture is trusted remote evidence.
+    # Refuse a fabricated truthy claim rather than silently upgrading trust.
+    for flag in ("browser_authenticated", "remote_attested",
+                 "native_verified", "canonical_s03_verified",
+                 "one_model_post_per_turn_verified", "tcp_wire_verified"):
+        _require(cdp_receipt.get(flag) is False, "SSE_CDP_TRUST_FLAG")
+    ids = set()
+    metadata = []
+    for ordinal, (cdp, network, source) in enumerate(
+            zip(cdp_receipt["turns"], http_exchanges,
+                capture["turns"]), 1):
+        _require(type(cdp) is dict and
+                 type(cdp.get("turn")) is int and
+                 cdp["turn"] == ordinal and
+                 type(cdp.get("cdp_request_id")) is str and
+                 1 <= len(cdp["cdp_request_id"]) <= 160 and
+                 cdp["cdp_request_id"] not in ids and
+                 cdp["cdp_request_id"] == network["network_event_id"],
+                 "SSE_CDP_EVENT_ID")
+        ids.add(cdp["cdp_request_id"])
+        _require(type(cdp.get("status")) is int and
+                 cdp["status"] == 200 and
+                 cdp.get("mime") == "text/event-stream",
+                 "SSE_CDP_HTTP_RESPONSE")
+        _require(cdp.get("stream_timing_complete") is True,
+                 "SSE_CDP_UNMEASURED")
+        wire = source["wire_witness"]
+        _require(cdp.get("request_sha256") ==
+                 network["request_body_sha256"] and
+                 cdp.get("cdp_decoded_body_sha256") ==
+                 wire["raw_wire_sha256"] and
+                 cdp.get("cdp_decoded_body_sha256") ==
+                 network["response_wire_sha256"],
+                 "SSE_CDP_DIGEST_MISMATCH")
+        first = cdp.get("first_network_byte_ms")
+        ttft = cdp.get("ttft_ms")
+        done = cdp.get("sse_done_ms")
+        closed = cdp.get("close_ms")
+        _require(all(_integer(v, 86_400_000) for v in
+                     (first, ttft, done, closed)),
+                 "SSE_CDP_TIMING_SCHEMA")
+        # All four CDP measurements are from requestWillBeSent's timestamp;
+        # Python SSE chunks must independently agree on first visible delta
+        # and [DONE], not just a response header or a buffered body.
+        _require(first <= ttft <= done <= closed and
+                 first == network["response_first_byte_monotonic_ms"] -
+                          network["request_sent_monotonic_ms"] and
+                 ttft == wire["first_text_ms"] and
+                 done == wire["completion_ms"] and
+                 closed == network["response_closed_monotonic_ms"] -
+                           network["request_sent_monotonic_ms"] and
+                 closed >= wire["last_byte_ms"],
+                 "SSE_CDP_TIMING_MISMATCH")
+        metadata.append({
+            "turn_number": ordinal, "cdp_request_id": cdp["cdp_request_id"],
+            "request_sha256": cdp["request_sha256"],
+            "decoded_sse_sha256": cdp["cdp_decoded_body_sha256"],
+            "first_network_byte_ms": first, "ttft_ms": ttft,
+            "sse_done_ms": done, "close_ms": closed,
+        })
+    digest = hashlib.sha256(json.dumps(
+        metadata, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")).hexdigest()
+    return {
+        "schema": "NOX_B4_CDP_SSE_CROSSCHECK_V1",
+        "state": "UNAUTHENTICATED_OFFLINE_CDP_HTTP_SOURCE_CONSISTENT_ONLY",
+        "http_trace_metadata_sha256": envelope["trace_metadata_sha256"],
+        "cdp_metadata_sha256": digest,
+        "turns_checked": len(metadata),
+        "browser_authenticated": False,
+        "independent_network_trace_verified": False,
+        "native_verified": False,
+        "s03_durable_verified": False,
+        "one_model_post_per_turn_verified": False,
+        "promotion_authorized": False,
+    }

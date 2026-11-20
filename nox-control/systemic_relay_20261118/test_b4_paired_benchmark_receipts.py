@@ -1132,4 +1132,114 @@ class PairedReceiptTests(unittest.TestCase):
             verify_two_turn_http_trace_envelope(
                 turns, capture, trace, "//fake/../nox/chat")
 
+
+
+class CdpReceiptCrosscheckTests(unittest.TestCase):
+    def test_strict_cdp_vs_http_and_real_sse_parser_synthetic(self):
+        frame = lambda word: (
+            b'data: {"choices":[{"delta":{"content":"' + word +
+            b'"},"finish_reason":null}]}\n\n')
+        stop = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        done = b'data: [DONE]\n\n'
+        turns = []
+        for n, exchange, word in ((1, "ex1", b"hola"),
+                                  (2, "ex2", b"listo")):
+            turns.append({
+                "turn_number": n, "dialog_id": "same-dialog",
+                "exchange_id": exchange, "route_sha256": "a" * 64,
+                "model_sha256": "b" * 64,
+                "timed_chunks": [(5, frame(word)), (9, stop), (11, done)]})
+        prefix = [{"role": "system", "content": "smoke"},
+                  {"role": "user", "content": "hola"}]
+        requests = [
+            {"model": "same-model", "messages": prefix},
+            {"model": "same-model", "messages": copy.deepcopy(prefix) + [
+                {"role": "assistant", "content": "hola"},
+                {"role": "user", "content": "sigue"}]},
+        ]
+        for turn, request in zip(turns, requests):
+            turn["posted_request_body"] = json.dumps(
+                request, separators=(",", ":")).encode()
+        capture = measure_two_turn_openai_sse_capture(turns)
+        network, cdp_turns = [], []
+        for i, turn in enumerate(turns):
+            wire = capture["turns"][i]["wire_witness"]
+            sent = 1000 * (i + 1)
+            req_sha = hashlib.sha256(
+                turn["posted_request_body"]).hexdigest()
+            event_id = "network-" + str(i + 1)
+            network.append({
+                "turn_number": i + 1, "exchange_id": turn["exchange_id"],
+                "network_event_id": event_id, "method": "POST",
+                "target_path": "/nox/chat",
+                "request_content_type": "application/json",
+                "response_content_type": "text/event-stream",
+                "response_status": 200,
+                "request_body_sha256": req_sha,
+                "response_wire_sha256": wire["raw_wire_sha256"],
+                "response_timed_trace_sha256": wire["timed_trace_sha256"],
+                "request_sent_monotonic_ms": sent,
+                "response_first_byte_monotonic_ms": sent + 3,
+                "response_closed_monotonic_ms": sent + 16,
+            })
+            cdp_turns.append({
+                "turn": i + 1, "cdp_request_id": event_id,
+                "request_sha256": req_sha,
+                "cdp_decoded_body_sha256": wire["raw_wire_sha256"],
+                "status": 200, "mime": "text/event-stream",
+                "first_network_byte_ms": 3, "ttft_ms": 5,
+                "sse_done_ms": 11, "close_ms": 16,
+                "stream_timing_complete": True,
+            })
+        cdp = {
+            "schema": "nox-b4-cdp-v1", "cdp_consistent": True,
+            "ttft_sse_verified": True,
+            "browser_authenticated": False, "remote_attested": False,
+            "native_verified": False, "canonical_s03_verified": False,
+            "one_model_post_per_turn_verified": False,
+            "tcp_wire_verified": False, "turns": cdp_turns,
+        }
+        verify = lambda receipt: verify_cdp_receipt_against_http_trace(
+            turns, capture, network, "/nox/chat", receipt)
+        result = verify(cdp)
+        self.assertEqual(result["turns_checked"], 2)
+        self.assertEqual(len(result["cdp_metadata_sha256"]), 64)
+        self.assertFalse(result["browser_authenticated"])
+        self.assertFalse(result["native_verified"])
+        self.assertFalse(result["promotion_authorized"])
+        for field, value, error in [
+            ("stream_timing_complete", False, "SSE_CDP_UNMEASURED"),
+            ("status", 503, "SSE_CDP_HTTP_RESPONSE"),
+            ("mime", "application/json", "SSE_CDP_HTTP_RESPONSE"),
+            ("request_sha256", "f" * 64, "SSE_CDP_DIGEST_MISMATCH"),
+            ("cdp_decoded_body_sha256", "f" * 64,
+             "SSE_CDP_DIGEST_MISMATCH"),
+            ("first_network_byte_ms", 4, "SSE_CDP_TIMING_MISMATCH"),
+            ("ttft_ms", 4, "SSE_CDP_TIMING_MISMATCH"),
+            ("sse_done_ms", 10, "SSE_CDP_TIMING_MISMATCH"),
+            ("close_ms", 15, "SSE_CDP_TIMING_MISMATCH"),
+            ("cdp_request_id", "network-1", "SSE_CDP_EVENT_ID"),
+            ("ttft_ms", True, "SSE_CDP_TIMING_SCHEMA"),
+            ("sse_done_ms", None, "SSE_CDP_TIMING_SCHEMA"),
+        ]:
+            with self.subTest(field=field, value=value):
+                bad = copy.deepcopy(cdp)
+                bad["turns"][1][field] = value
+                with self.assertRaisesRegex(ReceiptHold, error):
+                    verify(bad)
+        for field, value, error in [
+            ("ttft_sse_verified", False, "SSE_CDP_UNMEASURED"),
+            ("cdp_consistent", False, "SSE_CDP_UNMEASURED"),
+            ("remote_attested", True, "SSE_CDP_TRUST_FLAG"),
+            ("native_verified", True, "SSE_CDP_TRUST_FLAG"),
+        ]:
+            with self.subTest(field=field):
+                bad = copy.deepcopy(cdp)
+                bad[field] = value
+                with self.assertRaisesRegex(ReceiptHold, error):
+                    verify(bad)
+        with self.assertRaisesRegex(ReceiptHold, "SSE_CDP_RECEIPT_SCHEMA"):
+            verify({"schema": "nox-b4-cdp-v1", "turns": []})
+
+
 if __name__ == '__main__': unittest.main()
