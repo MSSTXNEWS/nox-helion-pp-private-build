@@ -1058,5 +1058,49 @@ class ProbeTests(unittest.TestCase):
         self.assertTrue(healthy.closed)
 
 
+
+    def test_owner_readbacks_bind_exact_origin_path_and_query(self):
+        """Do not certify third-turn owner/S03 evidence from redirected HTTP 200 JSON."""
+        class Response:
+            status = 200
+            def __init__(self, url):
+                self.url, self.closed = url, False
+            def read(self, limit):
+                return b'{"ok":true}'
+            def close(self):
+                self.closed = True
+
+        base = 'http://127.0.0.1:8080'
+        path_request = '/api/ui/memory/dialogs/history?dialog_id=' + '1' * 32 + '&limit=8'
+        with patch.object(probe, 'BASE', base):
+            valid = Response(base + path_request)
+            with patch.object(probe, 'request', return_value=valid):
+                self.assertEqual(probe.owner_readback_json(object(), path_request), {'ok': True})
+            self.assertTrue(valid.closed)
+
+            wrong_urls = (
+                base + '/chat/login',
+                base + '/api/ui/memory/dialogs/history?dialog_id=' + '2' * 32 + '&limit=8',
+                base + '/api/ui/memory/dialogs/history?dialog_id=' + '1' * 32 + '&limit=6',
+                base + path_request + '#fragment',
+                'https://127.0.0.1:8080' + path_request,
+                'http://127.0.0.1:8081' + path_request,
+                'http://evil.example' + path_request,
+                '',
+            )
+            for wrong in wrong_urls:
+                response = Response(wrong)
+                with self.subTest(url=wrong), patch.object(probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, '^HOLD_OWNER_READBACK_RESPONSE_ROUTE$'):
+                        probe.owner_readback_json(object(), path_request)
+                self.assertTrue(response.closed)
+
+        source = path.read_text()
+        self.assertEqual(source.count("owner_readback_json(client,'/api/ui/memory/dialogs/history?dialog_id='+did"), 3)
+        self.assertEqual(source.count("owner_readback_json(client,'/api/ui/executors')"), 2)
+        self.assertNotIn("third_history=obj(request(client,", source)
+
+
+
 if __name__ == '__main__':
     unittest.main()
