@@ -60,7 +60,8 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   const window={NOX_NATIVE_OWNER:owner,fetch:old};
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
   const context={window,location,URL,Request,Response,ReadableStream,
-    TextDecoder,TextEncoder,AbortController,performance,console,requestAnimationFrame:raf};
+    TextDecoder,TextEncoder,AbortController,performance,console,
+    ...(typeof raf==='function'?{requestAnimationFrame:raf}:raf)};
   if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
   vm.runInNewContext(JS,context,{filename:file});
   return {fetch:(...args)=>window.fetch(...args),calls,window};
@@ -77,6 +78,38 @@ async function events(response){
   }
   return seen;
 }
+test('5A05 SSE pacing clears the losing callback and preserves the Unicode stream',async()=>{
+  const reply='Ж'.repeat(360)+'🧠 español';
+  for(const winner of ['frame','timer']){
+    let nextId=0,cancelledFrames=0,cancelledTimers=0;
+    const frames=new Map(),timers=new Map();
+    const queue=(pending,kind,callback)=>{
+      const handle=nextId++;
+      pending.set(handle,callback);
+      if(kind===winner)queueMicrotask(()=>{
+        if(pending.delete(handle))callback();
+      });
+      return handle;
+    };
+    const scheduler={
+      requestAnimationFrame(callback){return queue(frames,'frame',callback);},
+      cancelAnimationFrame(handle){if(frames.delete(handle))cancelledFrames++;},
+      setTimeout(callback){return queue(timers,'timer',callback);},
+      clearTimeout(handle){if(timers.delete(handle))cancelledTimers++;}
+    };
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,scheduler);
+    const response=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'5a05-'+winner})});
+    const stream=await events(response);
+    assert.equal(stream.filter(event=>event.type==='token').map(event=>event.t).join(''),reply);
+    assert.equal(stream.at(-1).type,'done');
+    assert.equal(stream.at(-1).history_persisted,true);
+    assert.equal(frames.size,0);
+    assert.equal(timers.size,0);
+    assert(winner==='frame'?cancelledTimers>0:cancelledFrames>0);
+    assert.equal(f.calls.filter(call=>call.path==='/api/nox/chat/stream').length,1);
+  }
+});
 test('native V24 main Resonance streams tokens, only after S03 readback reports done',async()=>{
   const f=fake();
   const r=await f.fetch('/api/nox/chat',{method:'POST',
