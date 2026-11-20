@@ -63,6 +63,66 @@ def s03_proof(transcript):
 
 
 class OwnerRuEsContinuity(unittest.TestCase):
+    def test_native_ndjson_rejects_truncated_utf8_eof_after_done(self):
+        """Actual JS observer must flush fatal UTF-8 state at clean stream EOF.
+
+        Without decoder.decode() at EOF, a dangling leading byte after DONE
+        vanishes silently and the clone reports native_stream_complete=True.
+        """
+        if not shutil.which("node"):
+            self.skipTest("Node required for byte-stream observer regression")
+        driver = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const observer = fs.readFileSync(0, 'utf8');
+async function check(chunks) {
+  let index = 0;
+  const reader = {
+    read: async () => index < chunks.length
+      ? {done: false, value: Uint8Array.from(chunks[index++])}
+      : {done: true},
+    cancel: async () => {}
+  };
+  const response = {
+    body: {getReader: () => reader},
+    clone() { return this; }
+  };
+  const win = {fetch: async () => response};
+  class Canvas { getContext() { return null; } }
+  const env = {
+    window: win, HTMLCanvasElement: Canvas, TextDecoder, URL,
+    Request: class Request {}, performance: {now: () => 25},
+    location: {origin: 'http://qa.invalid', href: 'http://qa.invalid/'},
+    document: {querySelectorAll: () => [], getElementById: () => null},
+    addEventListener: () => {}, requestAnimationFrame: () => {}
+  };
+  vm.runInNewContext(observer, env);
+  await win.fetch('http://qa.invalid/api/nox/chat/stream', {method:'POST'});
+  await new Promise(resolve => setTimeout(resolve, 15));
+  return win.__NOX_BROWSER_QA;
+}
+(async () => {
+  const complete = Buffer.from('{"type":"delta","text":"ñ"}\\n{"type":"done","saved":true,"s03_integrated":true,"dialog_id":"synthetic"}\\n'.replaceAll('\\n', '\n'),'utf8');
+  const needle = Buffer.from('ñ','utf8');
+  const at = complete.indexOf(needle);
+  assert.ok(at > 0);
+  const split = await check([complete.subarray(0,at+1),complete.subarray(at+1)]);
+  assert.equal(split.nativeStreamComplete,true,'split valid UTF-8 must pass');
+  assert.equal(split.error,null);
+  assert.equal(split.nativeTerminalCount,1);
+  const dangling = await check([complete,Buffer.from([0xc3])]);
+  assert.equal(dangling.nativeStreamComplete,false,'dangling UTF-8 must HOLD');
+  assert.equal(dangling.error,'HOLD_QA_STREAM_OBSERVER');
+})().catch(error => {console.error(error);process.exitCode=1;});
+"""
+        result = subprocess.run(
+            ["node", "-e", driver],
+            input=OBSERVER_JS.replace('__CONFIG__', '{"did":"synthetic"}'),
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            timeout=15, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr[:1000])
+
     def test_native_stream_done_is_not_terminal_until_clean_eof_for_each_turn(self):
         complete = {"native_stream_complete": True, "native_terminal_count": 1,
                     "done": {"saved": True, "s03_integrated": True,

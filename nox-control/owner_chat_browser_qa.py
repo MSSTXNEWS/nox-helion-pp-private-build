@@ -553,10 +553,10 @@ OBSERVER_JS = r"""
  const fetch0=window.fetch.bind(window);
  async function observe(response){
    if(!response.body){q.error='HOLD_NO_NATIVE_RESPONSE_BODY';return;}
-   const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',sawEof=false;
+   const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});let buffer='',sawEof=false;
    try{
      for(let count=0;count<2048;count++){
-       const part=await reader.read();if(part.done){sawEof=true;break;}
+       const part=await reader.read();if(part.done){buffer+=decoder.decode();sawEof=true;break;}
        q.nativeBytes+=part.value.length;
        if(q.nativeBytes>65536)throw Error('HOLD_QA_STREAM_LIMIT');
        buffer+=decoder.decode(part.value,{stream:true});
