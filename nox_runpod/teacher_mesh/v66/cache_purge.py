@@ -4,7 +4,7 @@ Never touches S03, models, checkpoints, HF cache, /tmp, /root/nox, or PC.
 Owner authorized server cleanup; native STOP and active pip protections.
 """
 from __future__ import annotations
-from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
+from nox_runpod.teacher_mesh.v66 import ephemeral_ssh_probe as ssh
 import time
 _old_api=ssh.api
 def _delay_api(method,path,key,data=None):
