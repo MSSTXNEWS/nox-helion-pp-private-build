@@ -184,7 +184,9 @@ class DriveNativeTests(unittest.TestCase):
         self.assertNotIn(HANDLER_KIND, kinds)
         registered=bind_static_native_handlers(
             kinds, callbacks, owner_authorized=lambda:True,
-            cancel_for_task=lambda task:SimpleNamespace(cancelled=False))
+            cancel_for_task=lambda task:SimpleNamespace(cancelled=False),
+            config=self.cfg, state=self.st,
+            manifest_root=self.root, ssd=self.ssd)
         self.assertEqual(registered["state"], "STATIC_REGISTRY_BOUND_IN_PROCESS")
         self.assertFalse(registered["native_execution_verified"])
         self.assertIn(HANDLER_KIND, kinds)
