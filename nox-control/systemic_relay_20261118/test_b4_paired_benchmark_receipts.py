@@ -2,7 +2,9 @@ import copy
 import hashlib
 import json
 import unittest
-from b4_paired_benchmark_receipts import ReceiptHold, compare_paired, measure_openai_sse_wire
+from b4_paired_benchmark_receipts import (ReceiptHold, compare_paired,
+                                          measure_openai_sse_wire,
+                                          measure_two_turn_openai_sse_capture)
 
 H = "a" * 64
 
@@ -920,5 +922,52 @@ class PairedReceiptTests(unittest.TestCase):
         untyped["outcomes"][0]["sse_wire_witness"]["last_byte_ms"] = True
         self.assertEqual(compare_paired(baseline, untyped)["reason"],
                          "SSE_WITNESS_LAST_BYTE_MISMATCH")
+
+
+    def test_two_turn_offline_sse_capture_fail_closed(self):
+        # Real wire bytes with two separately measured streams; fixture is
+        # offline only and cannot prove a browser POST or canonical S03 rows.
+        visible = (b'data: {"choices":[{"delta":{"content":"listo"},'
+                   b'"finish_reason":null}]}\n\n')
+        finish = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        done = b'data: [DONE]\n\n'
+        def turn(number, exchange, at):
+            return {"turn_number": number, "dialog_id": "dialog-1",
+                    "exchange_id": exchange, "route_sha256": "a" * 64,
+                    "model_sha256": "b" * 64,
+                    "timed_chunks": [(at, visible), (at + 2, finish),
+                                     (at + 4, done)]}
+        pair = [turn(1, "exchange-1", 5), turn(2, "exchange-2", 9)]
+        good = measure_two_turn_openai_sse_capture(pair)
+        self.assertEqual([x["first_text_ms"] for x in good["turns"]], [5, 9])
+        self.assertEqual([x["completion_ms"] for x in good["turns"]], [9, 13])
+        self.assertEqual(good["state"], "OFFLINE_SOURCE_TRACE_CONSISTENT_ONLY")
+        self.assertFalse(good["browser_authenticated"])
+        self.assertFalse(good["native_verified"])
+        self.assertFalse(good["s03_durable_verified"])
+        self.assertFalse(good["one_model_post_per_turn_verified"])
+        tamper = [
+            (lambda t: t.pop(), "SSE_TWO_TURN_COUNT"),
+            (lambda t: t[1].update(turn_number=1), "SSE_TWO_TURN_ORDER"),
+            (lambda t: t[1].update(exchange_id="exchange-1"),
+             "SSE_TWO_TURN_EXCHANGE"),
+            (lambda t: t[1].update(dialog_id="dialog-2"),
+             "SSE_TWO_TURN_IDENTITY_DRIFT"),
+            (lambda t: t[1].update(route_sha256="c" * 64),
+             "SSE_TWO_TURN_IDENTITY_DRIFT"),
+            (lambda t: t[1].update(model_sha256="c" * 64),
+             "SSE_TWO_TURN_IDENTITY_DRIFT"),
+            (lambda t: t[1].update(model_sha256="wrong"),
+             "SSE_TWO_TURN_PINS"),
+            (lambda t: t[1].update(timed_chunks=[
+                (9, visible), (11, finish), (13, b"data: [DONE]\n")]),
+             "SSE_TWO_TURN_NOT_CLEAN"),
+        ]
+        for corrupt, reason in tamper:
+            item = copy.deepcopy(pair)
+            corrupt(item)
+            with self.subTest(reason=reason):
+                with self.assertRaisesRegex(ReceiptHold, reason):
+                    measure_two_turn_openai_sse_capture(item)
 
 if __name__ == '__main__': unittest.main()

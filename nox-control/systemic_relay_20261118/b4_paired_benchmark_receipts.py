@@ -618,3 +618,67 @@ def measure_openai_sse_wire(timed_chunks):
         "native_verified": False,
         "s03_durable_verified": False,
     }
+
+
+def measure_two_turn_openai_sse_capture(turns):
+    """Offline read-only SAME-DIALOG two-turn SSE consistency gate.
+
+    Each turn must carry a distinct exchange ID and ordinal (1,2), identical
+    declared dialog/route/model pins, plus raw monotonic timed SSE chunks.
+    These caller-declared pins are NOT host/browser authentication. This helper
+    NEVER sends model POSTs, reads S03, or makes a native acceptance claim.
+    """
+    _require(type(turns) is list and len(turns) == 2, "SSE_TWO_TURN_COUNT")
+    identity = None
+    exchanges = set()
+    results = []
+    for ordinal, item in enumerate(turns, 1):
+        _require(type(item) is dict, "SSE_TWO_TURN_SCHEMA")
+        _require(type(item.get("turn_number")) is int and
+                 item["turn_number"] == ordinal, "SSE_TWO_TURN_ORDER")
+        dialog = item.get("dialog_id")
+        exchange = item.get("exchange_id")
+        _require(type(dialog) is str and 1 <= len(dialog) <= 160,
+                 "SSE_TWO_TURN_DIALOG")
+        _require(type(exchange) is str and 1 <= len(exchange) <= 160
+                 and exchange not in exchanges, "SSE_TWO_TURN_EXCHANGE")
+        exchanges.add(exchange)
+        route = item.get("route_sha256")
+        model = item.get("model_sha256")
+        _require(type(route) is str and SHA.fullmatch(route) and
+                 type(model) is str and SHA.fullmatch(model),
+                 "SSE_TWO_TURN_PINS")
+        declared = (dialog, route, model)
+        if identity is None:
+            identity = declared
+        _require(identity == declared, "SSE_TWO_TURN_IDENTITY_DRIFT")
+        chunks = item.get("timed_chunks")
+        _require(type(chunks) is list and 1 <= len(chunks) <= 4096,
+                 "SSE_TWO_TURN_CHUNKS")
+        witness = measure_openai_sse_wire(chunks)
+        _require(witness["wire_completed_normally"] is True and
+                 _integer(witness["first_text_ms"], 86_400_000) and
+                 _integer(witness["completion_ms"], 86_400_000) and
+                 _integer(witness["last_byte_ms"], 86_400_000) and
+                 witness["first_text_ms"] <= witness["completion_ms"] <=
+                 witness["last_byte_ms"], "SSE_TWO_TURN_NOT_CLEAN")
+        results.append({
+            "turn_number": ordinal,
+            "exchange_id": exchange,
+            "first_text_ms": witness["first_text_ms"],
+            "completion_ms": witness["completion_ms"],
+            "last_byte_ms": witness["last_byte_ms"],
+            "wire_witness": witness,
+        })
+    return {
+        "schema": "NOX_B4_TWO_TURN_OFFLINE_SSE_V1",
+        "state": "OFFLINE_SOURCE_TRACE_CONSISTENT_ONLY",
+        "dialog_id": identity[0],
+        "declared_route_sha256": identity[1],
+        "declared_model_sha256": identity[2],
+        "turns": results,
+        "browser_authenticated": False,
+        "native_verified": False,
+        "s03_durable_verified": False,
+        "one_model_post_per_turn_verified": False,
+    }
