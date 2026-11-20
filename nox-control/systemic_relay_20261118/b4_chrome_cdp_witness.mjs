@@ -29,9 +29,40 @@ function cacheProvenance(r){
     r?.fromEarlyHints||r?.cacheStorageCacheName||r?.serviceWorkerResponseSource||
     r?.serviceWorkerRouterInfo?.matchedSourceType||r?.serviceWorkerRouterInfo?.actualSourceType);
 }
-function eventData(record){const x=record.split(/\r?\n/).filter(y=>y.startsWith('data:')).map(y=>y.slice(5).trimStart()).join('\n');
-  if(x==='[DONE]')return {done:true};
-  try{const t=JSON.parse(x)?.choices?.[0]?.delta?.content;return typeof t==='string'?{text:t}:null;}catch{return null;}}
+// Fail closed on malformed or explicit error SSE before a later valid [DONE].
+function eventData(record){
+  const data=[];let eventName=null;
+  for(const line of record.split(/\r?\n/)){
+    if(line===''||line.startsWith(':'))continue; // SSE comments are heartbeats, not JSON
+    if(line.startsWith('event:')){
+      if(eventName!==null)return {invalid:true};
+      eventName=line.slice(6).trim();continue;
+    }
+    if(line.startsWith('data:')){data.push(line.slice(5).replace(/^ /,''));continue;}
+    if(line.startsWith('id:')||line.startsWith('retry:'))continue;
+    return {invalid:true};
+  }
+  if(eventName==='error')return {invalid:true};
+  if(!data.length)return eventName===null||['ping','heartbeat','keepalive'].includes(eventName)?{ignored:true}:{invalid:true};
+  const payload=data.join('\n');
+  if(payload==='[DONE]')return eventName===null||eventName==='message'?{done:true}:{invalid:true};
+  if(eventName!==null&&!['message','usage','ping','heartbeat','keepalive'].includes(eventName))return {invalid:true};
+  let obj;try{obj=JSON.parse(payload);}catch{return {invalid:true};}
+  if(!obj||typeof obj!=='object'||Array.isArray(obj)||Object.hasOwn(obj,'error'))return {invalid:true};
+  const usage=obj.usage&&typeof obj.usage==='object'&&!Array.isArray(obj.usage);
+  if(Array.isArray(obj.choices)){
+    if(obj.choices.length===0)return usage?{ignored:true}:{invalid:true};
+    const first=obj.choices[0];
+    if(!first||typeof first!=='object'||Array.isArray(first))return {invalid:true};
+    const delta=first.delta;
+    if(!delta||typeof delta!=='object'||Array.isArray(delta))return {invalid:true};
+    if(Object.hasOwn(delta,'content')&&delta.content!==null&&typeof delta.content!=='string')return {invalid:true};
+    return typeof delta.content==='string'?{text:delta.content}:{ignored:true};
+  }
+  if(usage)return {ignored:true};
+  if(['ping','heartbeat','keepalive'].includes(eventName)&&Object.keys(obj).length===0)return {ignored:true};
+  return {invalid:true};
+}
 export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={}){
   if(!/^ws:\/\/(localhost|127\.0\.0\.1):\d+\//.test(ws||''))throw Error('LOCAL_CDP_ONLY');
   if(!Number.isInteger(count)||count<1||count>6)throw Error('BAD_COUNT');
@@ -63,7 +94,8 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       // Preserve decoded-body digest checks but never promote an invalid SSE stream.
       if(x.done!==null&&data.trim()!==''){x.missing=true;return;}
       const event=eventData(data),ms=millis(x,timestamp);
-      if(event&&Object.hasOwn(event,'text')){
+      if(!event||event.invalid){x.missing=true;return;}
+      if(Object.hasOwn(event,'text')){
         x.visibleText+=event.text;
         if(/\S/u.test(event.text)&&x.ttft===null&&ms!==null){x.ttft=ms;x.ttftAt=timestamp;}
       }

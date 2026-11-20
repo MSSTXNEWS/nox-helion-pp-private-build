@@ -169,3 +169,40 @@ test('duplicate terminal and post-DONE frames fail closed, including split chunk
     assert.equal(output.turns[1].visible_text_sha256,null);
   }
 });
+
+test('malformed JSON and explicit SSE errors before DONE invalidate measured TTFT; valid heartbeat/usage allowed',async()=>{
+  const permitted=[
+    ': keepalive\\n\\n',
+    'event: ping\\n\\n',
+    'data: {"choices":[],"usage":{"completion_tokens":2}}\\n\\n',
+    'data: {"choices":[{"delta":{"reasoning_content":"thinking"}}]}\\n\\n',
+    'event: usage\\ndata: {"usage":{"completion_tokens":1}}\\n\\n'
+  ].map(s=>s.replaceAll('\\n','\n'));
+  for(const fragment of permitted){
+    const x=await run(false,[Buffer.from(fragment+body)]);
+    assert.equal(x.cdp_consistent,true,fragment);
+    assert.equal(x.ttft_sse_verified,true,fragment);
+  }
+  const invalid=[
+    'event: error\\ndata: {"error":{"message":"upstream failed"}}\\n\\n',
+    'event: error\\n\\n',
+    'data: {"error":{"message":"model error"}}\\n\\n',
+    'data: not-json\\n\\n',
+    'data: []\\n\\n',
+    'data: {"unknown":true}\\n\\n',
+    'data: {"choices":[]}\\n\\n',
+    'data: {"choices":[{"delta":{"content":2}}]}\\n\\n',
+    'data: {"choices":[{"delta":null}]}\\n\\n',
+    'event: unexpected\\ndata: {"choices":[{"delta":{"content":"text"}}]}\\n\\n'
+  ].map(s=>s.replaceAll('\\n','\n'));
+  for(const fragment of invalid){
+    const altered=Buffer.from(body.replace('data: [DONE]',fragment+'data: [DONE]'));
+    const split=Math.min(altered.length-1,Buffer.byteLength(body)-6);
+    const x=await run(false,[altered.subarray(0,split),altered.subarray(split)]);
+    assert.equal(x.cdp_consistent,false,fragment);
+    assert.equal(x.ttft_sse_verified,false,fragment);
+    assert.equal(x.turns[1].ttft_ms,null,fragment);
+    assert.equal(x.turns[1].sse_done_ms,null,fragment);
+    assert.equal(x.turns[1].visible_text_sha256,null,fragment);
+  }
+});
