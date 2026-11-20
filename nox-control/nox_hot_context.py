@@ -64,7 +64,7 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
                    "S03_REVISION")
             status=item["status"]
             successor=item["superseded_by"]
-            _guard(status in {"ACTIVE","SUPERSEDED","REVOKED"}, "S03_STATUS")
+            _guard(isinstance(status, str) and status in {"ACTIVE","SUPERSEDED","REVOKED"}, "S03_STATUS")
             if status == "ACTIVE":
                 _guard(item["revision"] == current_s03_revision and successor is None,
                        "S03_REVISION")
