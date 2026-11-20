@@ -34,7 +34,7 @@
        typeof ui.upsertTerminal!=='function'||
        !Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>600000)
       hold('HOLD_STREAM_HOST_CONTRACT');
-    const started=new Set(),active=new Map();
+    const started=new Set(),active=new Map(),reconnecting=new Map();
     async function begin(raw){
       const s=snap(raw),k=key(s);
       if(started.has(k)) hold('HOLD_STREAM_NO_REPOST');
@@ -90,9 +90,10 @@
       ctrl.abort();
       return true;
     }
-    async function reconnect(raw){
-      const s=snap(raw);
-      if(active.has(key(s))) hold('HOLD_STREAM_ACTIVE_POST');
+    // One in-flight GET/readback + UI projection + ACK per exchange per tab.
+    // Coalesce concurrent reconnect calls; after a failure, allow readback-only
+    // recovery. NEVER start another model POST for an uncertain exchange.
+    async function reconnectOnce(s){
       let packet,witness;
       try{
         packet=await transport.readback(s); // GET or equivalent, NEVER POST model
@@ -104,12 +105,28 @@
       if(witness.safe_to_ack!==true||witness.model_post!==false||
          witness.exchange_id!==s.exchange_id||witness.conversation_id!==s.conversation_id)
         hold('HOLD_STREAM_UNSAFE_WITNESS');
+      // ACK must follow a *successful* idempotent UI projection. A partially
+      // written UI may throw; retry must use the same event_id without POST.
+      let projected;
+      try{projected=await ui.upsertTerminal(s,witness.projection_event_id);}
+      catch(_){hold('HOLD_STREAM_UI_PROJECTION');}
+      if(projected===false) hold('HOLD_STREAM_UI_NOT_CONFIRMED');
       try{
-        // Idempotent event_id projection, also after reload. Caller owns UI.
-        await ui.upsertTerminal(s,witness.projection_event_id);
-        await transport.ack(s,witness.ack_cursor);
-      }catch(_){hold('HOLD_STREAM_PROJECTION_OR_ACK');}
+        const acked=await transport.ack(s,witness.ack_cursor);
+        if(acked===false) hold('HOLD_STREAM_ACK_UNCONFIRMED');
+      }catch(_){hold('HOLD_STREAM_ACK_UNCONFIRMED');}
       return witness;
+    }
+    function reconnect(raw){
+      const s=snap(raw),k=key(s);
+      if(active.has(k)) hold('HOLD_STREAM_ACTIVE_POST');
+      const pending=reconnecting.get(k);
+      if(pending) return pending;
+      const attempt=reconnectOnce(s);
+      reconnecting.set(k,attempt);
+      const clear=()=>{if(reconnecting.get(k)===attempt) reconnecting.delete(k);};
+      attempt.then(clear,clear);
+      return attempt;
     }
     return Object.freeze({begin,stop,reconnect});
   }
