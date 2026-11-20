@@ -53,6 +53,8 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
     groups = {}
     seen_ids = set()
     seen_content = {}
+    # Origin+goal is a global provenance identity, independent of RU/ES and domain.
+    seen_origin_goals = {}
     duplicate_count = 0
     count = 0
     for row in records:
@@ -75,6 +77,11 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
         if not goal or not origin or not _norm(row["text"]):
             raise SplitHold("HOLD_EMPTY_NORMALIZED_FIELD")
         group = (row["lang"], row["domain"], origin, goal)
+        origin_goal = (origin, goal)
+        stratum = (row["lang"], row["domain"])
+        owner_stratum = seen_origin_goals.setdefault(origin_goal, stratum)
+        if owner_stratum != stratum:
+            raise SplitHold("HOLD_CROSS_STRATUM_ORIGIN_GOAL")
         fingerprint = _digest(_norm(row["text"]))
         prior = seen_content.get(fingerprint)
         if prior is not None:
