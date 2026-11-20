@@ -23,7 +23,8 @@
     return Object.freeze({conversation_id:s.conversation_id,exchange_id:s.exchange_id});
   }
   const key=s=>s.conversation_id+'\u0000'+s.exchange_id;
-  function createClient({transport,host,bridge,ui,ackGate=null,timeoutMs=120000}={}){
+  function createClient({transport,host,bridge,ui,ackGate=null,timeoutMs=120000,
+    canonicalFreshnessMs=30000}={}){
     if(!transport||!host||!bridge||!ui||
        typeof transport.post!=='function'||
        typeof transport.readback!=='function'||
@@ -36,8 +37,11 @@
          typeof ackGate.beginSend!=='function'||typeof ackGate.confirm!=='function'||
          typeof ackGate.requireCanonicalAck!=='function'||
          typeof transport.readCanonicalAck!=='function'||
-         typeof host.verifyCanonicalAck!=='function'))||
-       !Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>600000)
+         typeof host.verifyCanonicalAck!=='function'||
+         typeof host.verifyFreshCanonicalAck!=='function'))||
+       !Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>600000||
+       !Number.isSafeInteger(canonicalFreshnessMs)||
+       canonicalFreshnessMs<1000||canonicalFreshnessMs>60000)
       hold('HOLD_STREAM_HOST_CONTRACT');
     const started=new Set(),active=new Map(),reconnecting=new Map();
     async function begin(raw){
@@ -124,16 +128,49 @@
       // verifier may elevate this source projection to canonical completion.
       // Synthetic callback=true in a test is NOT independent native evidence.
       async function canonicalCompletion(){
-        let ack;
+        // A previously signed ACK is not proof of a NEW canonical read. Require
+        // a per-GET cryptographic challenge echoed in a short-lived server
+        // attestation, and an independently trusted verifier that checks the
+        // signature BINDING the nonce + validity interval to that ACK.
+        if(!globalThis.crypto||typeof globalThis.crypto.randomUUID!=='function')
+          hold('HOLD_STREAM_FRESHNESS_CRYPTO');
+        const challenge=Object.freeze({
+          request_nonce:globalThis.crypto.randomUUID(),
+          requested_at_ms:Date.now(),freshness_ms:canonicalFreshnessMs
+        });
+        let ack,freshVerified=false;
         try {
           ack=await ackGate.requireCanonicalAck(s,witness.projection_event_id,
             witness.ack_cursor,
-            expected=>transport.readCanonicalAck(s,expected),
+            async expected=>{
+              // readCanonicalAck MUST be a no-store, authenticated GET. It
+              // MUST forward the challenge to the server; never a model POST.
+              const receipt=await transport.readCanonicalAck(s,expected,challenge);
+              const now=Date.now();
+              if(!receipt||typeof receipt!=='object'||Array.isArray(receipt)||
+                 receipt.request_nonce!==challenge.request_nonce||
+                 !Number.isSafeInteger(receipt.issued_at_ms)||
+                 !Number.isSafeInteger(receipt.expires_at_ms)||
+                 receipt.issued_at_ms<challenge.requested_at_ms-5000||
+                 receipt.issued_at_ms>now+5000||
+                 receipt.expires_at_ms<=now||
+                 receipt.expires_at_ms-receipt.issued_at_ms>canonicalFreshnessMs)
+                hold('HOLD_STREAM_RECEIPT_FRESHNESS');
+              // This callback MUST cryptographically attest the nonce,
+              // timestamps, ACK scope, owner CAS and S03. A plain true
+              // callback is acceptable ONLY in isolated synthetic tests.
+              const trusted=await host.verifyFreshCanonicalAck(
+                receipt,expected,s,challenge);
+              if(trusted!==true) hold('HOLD_STREAM_FRESHNESS_UNVERIFIED');
+              freshVerified=true;
+              return receipt;
+            },
             (receipt,expected)=>host.verifyCanonicalAck(receipt,expected,s));
         }catch(err){
           if(err&&typeof err.code==='string') throw err;
           hold('HOLD_STREAM_CANONICAL_ACK');
         }
+        if(!freshVerified) hold('HOLD_STREAM_FRESHNESS_UNVERIFIED');
         if(!ack||ack.status!=='CANONICAL_ACK_CONFIRMED'||
            ack.authority!=='VERIFIER_CALLBACK_APPROVED'||
            typeof ack.ack_id!=='string'||!ID.test(ack.ack_id))
