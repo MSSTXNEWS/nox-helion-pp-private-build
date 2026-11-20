@@ -471,7 +471,7 @@ def install(app, B):
         if b.get("scope", "generation") != "generation":
             return JSONResponse({"status": "HOLD", "reason": "STOP_WRONG_SCOPE"}, status_code=409)
         target = b.get("request_id", "*")
-        if not isinstance(target, str) or re.fullmatch(r"(?:\\*|[A-Za-z0-9._:-]{1,128})", target) is None:
+        if not isinstance(target, str) or re.fullmatch(r"(?:[*]|[A-Za-z0-9._:-]{1,128})", target) is None:
             return JSONResponse({"status": "HOLD", "reason": "STOP_INVALID_REQUEST_ID"}, status_code=400)
         if target == "*":
             # A broadcast applies only to previously admitted requests.
