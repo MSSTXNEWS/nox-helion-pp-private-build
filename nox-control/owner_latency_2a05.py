@@ -38,9 +38,14 @@ def pct(values: list[float], percentage: float) -> float:
     return round(ordered[max(0, math.ceil(percentage * len(ordered) / 100) - 1)], 3)
 
 
-def summarize(receipts: list[dict], *, model_sha256: str, route_sha256: str) -> dict:
+def summarize(receipts: list[dict], *, model_sha256: str, route_sha256: str,
+              scenario_sha256: str) -> dict:
     require(bool(SHA.fullmatch(model_sha256)) and bool(SHA.fullmatch(route_sha256)),
             'PIN_REQUIRED')
+    # A latency comparison without a fixed owner-verified scenario is invalid:
+    # identical model/route pins cannot rule out different task complexity.
+    require(type(scenario_sha256) is str and bool(SHA.fullmatch(scenario_sha256)),
+            'SCENARIO_PIN_REQUIRED')
     require(type(receipts) is list and len(receipts) <= 1000, 'RECEIPT_COUNT')
     seen: set[str] = set()
     values = {name: [] for name in FIELDS}
@@ -60,6 +65,8 @@ def summarize(receipts: list[dict], *, model_sha256: str, route_sha256: str) -> 
         require(row.get('verified_model_sha256') == model_sha256
                 and row.get('verified_route_sha256') == route_sha256,
                 'MODEL_OR_ROUTE_MISMATCH')
+        require(row.get('verified_scenario_sha256') == scenario_sha256,
+                'SCENARIO_MISMATCH')
         sid = row.get('request')
         src = row.get('source_sha')
         asset = row.get('served_asset_sha256')
@@ -85,6 +92,7 @@ def summarize(receipts: list[dict], *, model_sha256: str, route_sha256: str) -> 
             'state': 'SOURCE_BASELINE_READY_NOT_NATIVE_ACCEPTED' if n >= MIN_RUNS
                      else 'HOLD_2A05_INSUFFICIENT_IDENTICAL_SAMPLES',
             'minimum_runs': MIN_RUNS, 'identity_verified_by_owner_required': True,
+            'scenario_verified_by_owner_required': True,
             'canonical_s03_acceptance_claimed': False,
             'original295_accepted_increment': 0,
             'latency_ms': {name: ({'p50': pct(series, 50), 'p95': pct(series, 95)}
@@ -97,12 +105,15 @@ def main() -> int:
     ap.add_argument('json_file', type=Path, help='private JSON array of QA receipts')
     ap.add_argument('--model-sha256', required=True)
     ap.add_argument('--route-sha256', required=True)
+    ap.add_argument('--scenario-sha256', required=True,
+                    help='owner-verified SHA-256 of one fixed latency test scenario')
     args = ap.parse_args()
     require(args.json_file.is_file() and args.json_file.stat().st_size <= 5_000_000,
             'INPUT_SIZE')
     raw = args.json_file.read_text(encoding='utf-8')
     result = summarize(json.loads(raw), model_sha256=args.model_sha256,
-                       route_sha256=args.route_sha256)
+                       route_sha256=args.route_sha256,
+                       scenario_sha256=args.scenario_sha256)
     print(json.dumps(result, sort_keys=True, separators=(',', ':')))
     return 0 if result['state'] == 'SOURCE_BASELINE_READY_NOT_NATIVE_ACCEPTED' else 2
 

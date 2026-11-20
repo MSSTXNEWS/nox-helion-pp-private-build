@@ -6,6 +6,7 @@ M = 'a' * 64
 R = 'b' * 64
 S = 'c' * 64
 A = 'd' * 64
+Z = 'e' * 64
 
 
 def fixture(i):
@@ -16,6 +17,7 @@ def fixture(i):
         'authenticated_s03_history_readback_verified': True,
         'first_turn_terminal_sse_verified': True,
         'verified_model_sha256': M, 'verified_route_sha256': R,
+        'verified_scenario_sha256': Z,
         'request': str(i), 'source_sha': S, 'served_asset_sha256': A,
         'stream': {'native_first_ms': i * 10, 'ui_first_ms': i * 20},
         'elapsed_turn_ms': i * 100, 'multiturn_second_elapsed_ms': i * 200,
@@ -26,22 +28,30 @@ def fixture(i):
 class NativeLatencyContract(unittest.TestCase):
     def test_quantiles_and_fail_closed(self):
         rows = [fixture(i) for i in range(1, 21)]
-        v = summarize(rows, model_sha256=M, route_sha256=R)
+        v = summarize(rows, model_sha256=M, route_sha256=R, scenario_sha256=Z)
         self.assertEqual(v['state'], 'SOURCE_BASELINE_READY_NOT_NATIVE_ACCEPTED')
         self.assertEqual(v['latency_ms']['ttft_ms'], {'p50': 100.0, 'p95': 190.0})
         self.assertEqual(v['latency_ms']['second_turn_ms'], {'p50': 2000.0, 'p95': 3800.0})
         self.assertNotIn('must-never-be-echoed', repr(v))
         self.assertEqual(v['original295_accepted_increment'], 0)
         self.assertIsNone(summarize(rows[:19], model_sha256=M,
-                                    route_sha256=R)['latency_ms']['ttft_ms'])
-        for bad in (rows + [fixture(1)], [dict(rows[0], verified_model_sha256='e'*64)]):
+                                    route_sha256=R, scenario_sha256=Z)['latency_ms']['ttft_ms'])
+        for bad in (rows + [fixture(1)], [dict(rows[0], verified_model_sha256='f'*64)],
+                    [dict(rows[0], verified_scenario_sha256='f'*64)],
+                    [dict(rows[0], verified_scenario_sha256=None)]):
             with self.assertRaisesRegex(ValueError, 'HOLD_2A05_'):
-                summarize(bad, model_sha256=M, route_sha256=R)
+                summarize(bad, model_sha256=M, route_sha256=R, scenario_sha256=Z)
         # Python int > 1e308 must fail closed; math.isfinite(int) overflows.
         huge = fixture(21)
         huge['stream']['native_first_ms'] = 10 ** 401
         with self.assertRaisesRegex(ValueError, 'HOLD_2A05_BAD_LATENCY'):
-            summarize([huge], model_sha256=M, route_sha256=R)
+            summarize([huge], model_sha256=M, route_sha256=R, scenario_sha256=Z)
+
+    def test_invalid_scenario_pin_is_hold(self):
+        for pin in ('', '0' * 63, 'A' * 64, None):
+            with self.assertRaisesRegex(ValueError, 'HOLD_2A05_SCENARIO_PIN_REQUIRED'):
+                summarize([fixture(1)], model_sha256=M, route_sha256=R,
+                          scenario_sha256=pin)
 
 
 if __name__ == '__main__':
