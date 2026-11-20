@@ -978,7 +978,7 @@ async def json_response(response, limit=200000):
 async def capture_private_screenshot(page, report, directory, name, masks, content,
                                      timeout_errors=(TimeoutError,)):
     """Defer only capture timeouts; all privacy and file guards stay mandatory."""
-    if name not in ('empty', 'completed'):
+    if name not in ('empty', 'completed', 'second_turn'):
         raise RuntimeError('HOLD_SCREENSHOT_SCOPE')
     if stop_present():
         raise RuntimeError('HOLD_OWNER_STOP')
@@ -1010,8 +1010,10 @@ async def capture_private_screenshot(page, report, directory, name, masks, conte
 
 def require_screenshot_captures(report):
     captures = report.get('screenshot_captures', [])
-    complete = (len(captures)==2
-                and {row.get('stage') for row in captures}=={'empty','completed'}
+    expected = ({'empty','completed','second_turn'}
+                if report.get('two_turn_mode') is True else {'empty','completed'})
+    complete = (len(captures)==len(expected)
+                and {row.get('stage') for row in captures}==expected
                 and all(row.get('state')=='CAPTURED' for row in captures))
     report['screenshot_capture_verified'] = complete
     if not complete:
@@ -1380,9 +1382,22 @@ async def browser_run(report, directory, available):
                         and second_progressive and second_stop
                         and second_public==expected_second):
                     raise RuntimeError('HOLD_MULTITURN_BROWSER')
+                # A real two-turn browser/SSE/history PASS remains measurable
+                # even while the independent canonical S03 proof is unwired.
+                # Neither this flag nor a screenshot grants native ACCEPTED.
+                report['browser_stage']='QA_SECOND_TURN_PRIVATE_SCREENSHOT'
+                second_capture=await capture_private_screenshot(
+                    page,report,directory,'second_turn',
+                    [page.locator(selector) for selector in SENSITIVE_MASKS],
+                    'VERIFIED_PUBLIC_NUMERIC_QA_SECOND_TURN',
+                    (TimeoutError,PlaywrightTimeoutError))
+                if not second_capture:
+                    raise RuntimeError('HOLD_MULTITURN_SCREENSHOT_CAPTURE_PENDING')
+                require_screenshot_captures(report)
+                report['multiturn_second_screenshot_verified']=True
+                report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:
                     raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
-                report['multiturn_browser_acceptance_verified']=True
         finally:
             report['network']=network
             report['console_counts']=dict(console)
