@@ -162,6 +162,44 @@ class HunterURLSafetyTests(unittest.TestCase):
             self.assertEqual(len(rejected), 2)
             self.assertTrue(all(len(row[0]) == 64 for row in rejected))
 
+    def test_crossref_malformed_date_parts_preserve_healthy_siblings(self):
+        # Bad Crossref dates must not roll back the entire read-only feed.
+        # A string cannot be converted into a fake character-by-character date.
+        source = hunter._validate_source({
+            "id": "crossref", "kind": "crossref",
+            "url": "https://api.crossref.org/works",
+            "allowed_hosts": ["api.crossref.org"], "interval_seconds": 60,
+        })
+        rows = [
+            {"DOI": "10.1234/valid", "title": ["good"], "URL": "https://doi.org/10.1234/valid",
+             "published-online": {"date-parts": [[2026, 11, 20]]}},
+            {"DOI": "10.1234/scalar", "title": ["scalar-date"],
+             "URL": "https://doi.org/10.1234/scalar",
+             "published-online": {"date-parts": [2026]}},
+            {"DOI": "10.1234/string", "title": ["string-date"],
+             "URL": "https://doi.org/10.1234/string",
+             "published-online": {"date-parts": ["2026-11-20"]}},
+            {"DOI": "10.1234/invalid-month", "title": ["invalid-month"],
+             "URL": "https://doi.org/10.1234/invalid-month",
+             "published-online": {"date-parts": [[2026, 99, 20]]}},
+        ]
+        body = json.dumps({"message": {"items": rows}}).encode("utf-8")
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "state.sqlite"
+            with patch.object(hunter, "_fetch", return_value=(body, None, None,
+                                                               "application/json", False)):
+                result = hunter.poll_due([source], state, now=1000.0)
+            self.assertEqual(result[0]["status"], "polled")
+            self.assertEqual(result[0]["added"], 4)
+            with sqlite3.connect(state) as conn:
+                found = conn.execute("SELECT title,published FROM items ORDER BY title").fetchall()
+            self.assertEqual(found, [
+                ("good", "2026-11-20"),
+                ("invalid-month", ""),
+                ("scalar-date", ""),
+                ("string-date", ""),
+            ])
+
     def test_html_page_uses_its_real_source_url(self):
         source = hunter._validate_source({
             "id": "page", "kind": "html_page", "url": "https://example.org/page",
