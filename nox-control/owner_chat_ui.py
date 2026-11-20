@@ -2,6 +2,7 @@
 from __future__ import annotations
 import asyncio,json,os,re,stat,time
 from pathlib import Path
+from html.parser import HTMLParser
 from fastapi import Request
 from fastapi.responses import JSONResponse,RedirectResponse
 from fastapi.routing import APIRoute
@@ -10,6 +11,38 @@ ROOT=Path('/root/nox')
 DEST='/nox-web-v29/pc/resonance.html'
 PAGES={'pc/resonance.html','pc/v22/resonance.template.html'}
 BUILD='NOX_OWNER_LIVE_RESONANCE_20261116'
+
+
+class _LiveOwnerAssetScanner(HTMLParser):
+    """Only executable, non-inert HTML tags can satisfy owner asset checks."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.inert_depth=0
+        self.has_build=False
+        self.scripts=set()
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ('template', 'noscript'):
+            self.inert_depth+=1
+            return
+        if self.inert_depth:
+            return
+        attributes=dict(attrs)
+        if tag=='meta' and attributes.get('name','').lower()=='nox-live-build':
+            self.has_build=True
+        if tag=='script':
+            kind=attributes.get('type') or ''
+            if kind.strip().lower() not in ('', 'text/javascript', 'application/javascript', 'module'):
+                return
+            url=attributes.get('src')
+            if isinstance(url,str) and re.fullmatch(
+                r'/nox-web-v29/[A-Za-z0-9_.-]+\.js(?:\?[^"\'<>\s]*)?',url
+            ):
+                self.scripts.add(url.split('?',1)[0])
+
+    def handle_endtag(self, tag):
+        if tag in ('template', 'noscript') and self.inert_depth:
+            self.inert_depth-=1
 
 def decorate_html(raw,path):
     if path.lstrip('/') not in PAGES:return raw
@@ -26,18 +59,16 @@ def decorate_html(raw,path):
             return tag[:-len(end)]+' data-n25-css="1"'+end
         return tag
     raw=re.sub(r'<link\b[^>]*>',shell_css,raw,flags=re.I)
-    # A single stale marker does not prove that all live owner handlers exist.
-    # Check each actual script tag: preserve already-mounted scripts and restore
-    # only missing pieces. This is idempotent for partially decorated archives.
-    # Comments in retained archives are not live <meta> or <script> elements.
-    # Inspect a non-comment view but preserve the exact original HTML bytes.
-    active_markup=re.sub(r'<!--.*?(?:-->|$)', '', raw, flags=re.S)
+    # An archived <template>, <noscript>, commented tag or non-executable
+    # <script type=application/json> cannot load the required live owner JS.
+    # Inspect active HTML tags without rewriting any original archive bytes.
+    scanner=_LiveOwnerAssetScanner()
+    scanner.feed(raw)
     extra=''
-    if not re.search(r'<meta\b[^>]*\bname\s*=\s*(["\'])nox-live-build\1',active_markup,re.I):
+    if not scanner.has_build:
         extra='\n<meta name="nox-live-build" content="'+BUILD+'">\n'
     for name in ('nox-v135-resonance-owner-bridge.js','nox-v137-owner-self-status.js','owner-chat-ui.js','owner-presence.js'):
-        if re.search(r'<script\b[^>]*\bsrc\s*=\s*(["\'])/nox-web-v29/'
-                     +re.escape(name)+r'(?:\?[^"\']*)?\1',active_markup,re.I):
+        if '/nox-web-v29/'+name in scanner.scripts:
             continue
         extra+='<script defer src="/nox-web-v29/'+name+'" data-nox-live-owner="1"></script>\n'
     return raw.replace('</head>',extra+'</head>',1) if extra else raw
