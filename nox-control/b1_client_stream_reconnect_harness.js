@@ -164,7 +164,9 @@
       try{
         const acked=await transport.ack(s,witness.ack_cursor);
         if(acked===false) hold('HOLD_STREAM_ACK_UNCONFIRMED');
-        if(ackGate) await ackGate.confirm(grant);
+        // Leave IndexedDB SENDING until a signed canonical GET proves ACKED.
+        // A local confirm() would create ACKED without a server proof digest
+        // and permanently block requireCanonicalAck() as unverified.
       }catch(_){hold('HOLD_STREAM_ACK_UNCONFIRMED');}
       return ackGate?canonicalCompletion():witness;
     }
