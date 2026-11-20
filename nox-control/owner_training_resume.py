@@ -1229,7 +1229,10 @@ def main():
                         result['state'] = 'FIVE_STEPS_VERIFIED_OWNER_PAUSE_RETAINED'; success = True
                     else:
                         # Keep initial and continuation wrapper backups distinct.
-                        helper.atomic(backups/'first_five_wrapper.sh', WRAPPER.read_bytes())
+                        # Bind the five-step wrapper backup to the original admitted bytes.
+                        # The earlier source sweep cannot authorize a later raw pathname read.
+                        helper.atomic(backups/'first_five_wrapper.sh',
+                                      stable_backup_bytes(WRAPPER, expected[WRAPPER]))
                         data = helper.wrapper_source(request, 1000, True).encode()
                         helper.atomic(WRAPPER, data); os.chmod(WRAPPER, 0o755)
                         expected[WRAPPER] = hashlib.sha256(data).hexdigest()

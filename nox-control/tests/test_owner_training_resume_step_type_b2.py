@@ -1120,5 +1120,49 @@ class CheckpointStepProvenance(unittest.TestCase):
         self.assertIn("backup(path, old)", ast.unparse(nested["install"]))
 
 
+
+    def test_continuation_wrapper_backup_rejects_foreign_or_rebound_preimage(self):
+        """Execute the real continuation backup AST, not a duplicate mock algorithm."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        main = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                    and n.name == "main")
+        matching = [n for n in ast.walk(main)
+                    if isinstance(n, ast.Call)
+                    and isinstance(n.func, ast.Attribute)
+                    and n.func.attr == "atomic" and len(n.args) == 2
+                    and ast.unparse(n.args[0]) == "backups / 'first_five_wrapper.sh'"]
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(ast.unparse(matching[0].args[1]),
+                         "stable_backup_bytes(WRAPPER, expected[WRAPPER])")
+        backup_fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                         and n.name == "stable_backup_bytes")
+        scope = {"Path": Path, "os": os, "stat": stat, "re": re, "hashlib": hashlib}
+        exec(compile(ast.Module(body=[backup_fn], type_ignores=[]), str(SOURCE), "exec"), scope)
+        code = compile(ast.fix_missing_locations(
+            ast.Expression(body=copy.deepcopy(matching[0]))), str(SOURCE), "eval")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            wrapper = root / "first_five_wrapper.sh"
+            foreign = root / "foreign.sh"
+            original = b"#!/bin/sh\\necho original\\n"
+            wrapper.write_bytes(original)
+            foreign.write_bytes(b"#!/bin/sh\\necho foreign\\n")
+            writes = []
+            class AtomicRecorder:
+                def atomic(self, path, data):
+                    writes.append((path, data))
+            scope.update(helper=AtomicRecorder(), WRAPPER=wrapper, backups=root,
+                         expected={wrapper: hashlib.sha256(original).hexdigest()})
+            eval(code, scope)
+            self.assertEqual(writes, [(root / "first_five_wrapper.sh", original)])
+            wrapper.write_bytes(foreign.read_bytes())
+            with self.assertRaisesRegex(RuntimeError, "HOLD_BACKUP_PREIMAGE_MISMATCH"):
+                eval(code, scope)
+            wrapper.unlink()
+            wrapper.symlink_to(foreign)
+            with self.assertRaisesRegex(RuntimeError, "HOLD_BACKUP_SOURCE_CHANGED"):
+                eval(code, scope)
+            self.assertEqual(len(writes), 1)
+
 if __name__ == "__main__":
     unittest.main()
