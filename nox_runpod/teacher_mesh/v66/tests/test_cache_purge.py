@@ -59,5 +59,13 @@ class CachePurgeSourceContract(unittest.TestCase):
         self.assertIn("from nox_runpod.teacher_mesh.v66 import ephemeral_ssh_probe as ssh",helper)
         self.assertIn("python3 -m nox_runpod.teacher_mesh.v66.ephemeral_ssh_probe cleanup",workflow)
 
+    def test_untrusted_cache_receipt_exposes_only_safe_path_state(self):
+        with open(cache_purge.__file__,encoding="utf-8") as stream:
+            source=stream.read()
+        for marker in ("safe_path_state","path_state=path_state",
+                       "resolved_matches=resolved_matches","workspace_free_bytes=free_bytes",
+                       "'kind':'SYMLINK'","'uid':st.st_uid"):
+            self.assertIn(marker,source)
+
 if __name__=="__main__":
     unittest.main()

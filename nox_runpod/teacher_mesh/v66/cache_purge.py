@@ -33,17 +33,34 @@ def report(state,**kw):
     raise SystemExit(0)
 if any(Path(p).exists() for p in STOP_PATHS):
     report('HOLD_GLOBAL_STOP_SIGNAL',purged=False)
+root=Path('/root')
+base=Path('/root/.cache')
+def safe_path_state(path):
+    try:
+        st=path.lstat()
+    except FileNotFoundError:
+        return {'kind':'MISSING','uid':None}
+    except OSError:
+        return {'kind':'UNREADABLE','uid':None}
+    kind=('DIRECTORY' if stat.S_ISDIR(st.st_mode) else 'SYMLINK' if stat.S_ISLNK(st.st_mode)
+          else 'REGULAR_FILE' if stat.S_ISREG(st.st_mode) else 'OTHER')
+    return {'kind':kind,'uid':st.st_uid}
+path_state={'root':safe_path_state(root),'cache_parent':safe_path_state(base),
+            'pip_cache':safe_path_state(CACHE)}
 try:
-    root=Path('/root')
-    base=Path('/root/.cache')
-    if (root.is_symlink() or base.is_symlink() or CACHE.is_symlink()
-        or not root.is_dir() or not base.is_dir() or not CACHE.is_dir()
-        or CACHE.resolve(strict=True)!=CACHE):
-        report('HOLD_CACHE_NOT_TRUSTED',purged=False)
-    if CACHE.stat().st_uid!=0 or base.stat().st_uid!=0:
-        report('HOLD_CACHE_OWNERSHIP',purged=False)
-except OSError:
-    report('HOLD_CACHE_STAT',purged=False)
+    resolved_matches=(CACHE.resolve(strict=True)==CACHE)
+except (OSError,RuntimeError):
+    resolved_matches=False
+path_trusted=(all(path_state[name]['kind']=='DIRECTORY' for name in path_state)
+              and all(path_state[name]['uid']==0 for name in path_state)
+              and resolved_matches)
+if not path_trusted:
+    try:
+        free_bytes=shutil.disk_usage('/workspace').free
+    except OSError:
+        free_bytes=None
+    report('HOLD_CACHE_NOT_TRUSTED',purged=False,path_state=path_state,
+           resolved_matches=resolved_matches,workspace_free_bytes=free_bytes)
 busy=[]
 open_cache_fds=0
 for name in os.listdir('/proc'):
