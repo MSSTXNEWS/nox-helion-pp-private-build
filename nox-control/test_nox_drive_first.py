@@ -175,7 +175,7 @@ class DriveFirstTests(unittest.TestCase):
         receipt=self.state/"drive-task-001.json"
         receipt.write_text("original signed receipt")
         receipt.chmod(0o600)
-        with patch.object(m,"stop_clear"),patch.object(m,"cgroup_admit"),\\
+        with patch.object(m,"stop_clear"),patch.object(m,"cgroup_admit"),\
              patch.object(m,"run_rclone") as remote:
             with self.assertRaisesRegex(m.Hold,"RECEIPT_ALREADY_EXISTS"):
                 m.execute(self.asset,self.conf,self.state)
