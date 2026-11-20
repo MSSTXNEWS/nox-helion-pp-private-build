@@ -302,7 +302,7 @@ def bind_static_native_handlers(handlers, worker_bindings, *,
 
 # This is intentionally invoked ONLY by the existing authenticated, SHA-pinned
 # drive_reconnect_install transaction. It never restarts a running service.
-def stage_native_dispatcher_source(*, expected_bridge_sha):
+def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=False):
     """Stage an exact dispatcher registry patch on disk; never claim live activation."""
     if not isinstance(expected_bridge_sha, str) or not SHA.fullmatch(expected_bridge_sha):
         raise Hold("HOLD_DRIVE_NATIVE_STAGE_BUNDLE_SHA")
@@ -407,7 +407,10 @@ def stage_native_dispatcher_source(*, expected_bridge_sha):
     
     
     # SHIM is embedded in a nested scope; remove only indentation from this literal.
-    SHIM = __import__('textwrap').dedent(SHIM)
+    _parts = SHIM.splitlines()
+    # First marker shares its line with the opening quote and is already at
+    # column zero; strip the wrapper indentation only from subsequent lines.
+    SHIM = _parts[0] + "\n" + __import__("textwrap").dedent("\n".join(_parts[1:])) + "\n"
     
     
     class Hold(RuntimeError):
@@ -567,6 +570,11 @@ def stage_native_dispatcher_source(*, expected_bridge_sha):
         }
     
     
+    # Pure syntax validation for focused CI; never reads or modifies Vast.
+    if hook_syntax_only is True:
+        compile("HANDLERS = {}\\n".replace("\\n", "\n") + SHIM,
+                "<NOX_DRIVE_STATIC_HOOK>", "exec")
+        return {"state": "HOOK_SYNTAX_VALIDATED_ONLY", "native_handler_registered": False}
     # Existing owner install has authenticated this event and pinned the Git SHA.
     owner_context()
     return stage(expected_bridge=expected_bridge_sha)
