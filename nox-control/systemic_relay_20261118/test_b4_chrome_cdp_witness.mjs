@@ -296,7 +296,8 @@ test('first-visible TTFT ignores zero-width, controls and isolated marks before 
   const admitted=await run(false,chunks,null,null,{chunkTimestamps:[101.010,101.015,101.018]});
   assert.equal(admitted.cdp_consistent,true);
   assert.equal(admitted.ttft_sse_verified,true);
-  assert.equal(admitted.turns[1].first_network_byte_ms,5);
+  assert.equal(admitted.turns[1].response_headers_received_ms,5);
+  assert.equal(admitted.turns[1].first_cdp_data_chunk_ms,10);
   assert.equal(admitted.turns[1].ttft_ms,15,'first printable RU/ES/emoji delta, not first invisible delta');
   assert.equal(admitted.turns[1].sse_done_ms,18);
   for(const printable of ['Русский','Español','🧠','!','7']){
@@ -337,4 +338,30 @@ test('CDP accepts only one zero-indexed SSE choice for TTFT/completion',async()=
     assert.equal(x.turns[1].ttft_ms,null);
     assert.equal(x.turns[1].sse_done_ms,null);
   }
+});
+
+
+test('response headers and first observed decoded data chunk have distinct monotonic timestamps',async()=>{
+  // responseReceived at +5 ms does not prove bytes arrived at +5 ms.
+  const delayed=await run(false,[Buffer.from(body)],null,null,{dataTimestamp:101.018});
+  assert.equal(delayed.cdp_consistent,true);
+  assert.equal(delayed.ttft_sse_verified,true);
+  assert.equal(delayed.turns[1].response_headers_received_ms,5);
+  assert.equal(delayed.turns[1].first_cdp_data_chunk_ms,18);
+  assert.equal(delayed.turns[1].ttft_ms,18);
+  assert.equal(delayed.turns[1].sse_done_ms,18);
+  assert.equal(Object.hasOwn(delayed.turns[1],'first_network_byte_ms'),false);
+  assert.equal(delayed.tcp_wire_verified,false,'CDP decoded chunks are not TCP raw bytes');
+
+  // Empty CDP chunks cannot supply a first payload witness, even if later bytes arrive.
+  const empty=await run(false,[Buffer.alloc(0),Buffer.from(body)],null,null,
+    {chunkTimestamps:[101.008,101.015]});
+  assert.equal(empty.cdp_consistent,false);
+  assert.equal(empty.ttft_sse_verified,false);
+  assert.equal(empty.turns[1].ttft_ms,null);
+
+  // A payload timestamp before response metadata contradicts the CDP event sequence.
+  const reversed=await run(false,[Buffer.from(body)],null,null,{dataTimestamp:101.003});
+  assert.equal(reversed.cdp_consistent,false);
+  assert.equal(reversed.ttft_sse_verified,false);
 });

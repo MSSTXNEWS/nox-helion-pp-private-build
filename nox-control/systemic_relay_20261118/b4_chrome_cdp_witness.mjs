@@ -141,7 +141,7 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       let path;try{path=new URL(p.request.url).pathname;}catch{return;}
       if(p.request.method!=='POST'||!paths.has(path))return;
       if(active.has(p.requestId)){no(Error('DUPLICATE_CDP_ID'));return;}
-      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,first:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,firstAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
+      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
       active.set(p.requestId,x);
       const record=s=>{if(typeof s==='string')x.request=hash(Buffer.from(s));};
       if(typeof p.request.postData==='string')record(p.request.postData);
@@ -161,7 +161,10 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
     }
     if(method==='Network.responseReceived'){
       x.status=p.response?.status;x.mime=p.response?.mimeType;
-      if(chronological(x,p.timestamp)){x.first=millis(x,p.timestamp);x.firstAt=p.timestamp;}
+      if(chronological(x,p.timestamp)){
+        // responseReceived observes response metadata, not a payload byte.
+        x.responseHeadersMs=millis(x,p.timestamp);x.responseHeadersAt=p.timestamp;
+      }
       // Chrome signals whether ExtraInfo will arrive; unknown means a HOLD.
       x.extraExpected=typeof p.hasExtraInfo==='boolean'?p.hasExtraInfo:null;
       if(x.extraExpected===null||(x.extraExpected===false&&x.extraSeen!==0)||
@@ -175,8 +178,16 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
     }
     if(method==='Network.dataReceived'){
       if(!chronological(x,p.timestamp))return;
-      if(p.data){if(!x.streaming)x.missing=true;observe(x,Buffer.from(p.data,'base64'),p.timestamp);}
-      else x.missing=true;
+      if(p.data){
+        if(!x.streaming)x.missing=true;
+        const chunk=Buffer.from(p.data,'base64');
+        if(chunk.length===0){x.missing=true;return;}
+        // Timestamp of first nonempty CDP-decoded payload chunk; NOT raw TCP first byte.
+        if(x.firstDataAt===null){
+          x.firstDataAt=p.timestamp;x.firstDataMs=millis(x,p.timestamp);
+        }
+        observe(x,chunk,p.timestamp);
+      }else x.missing=true;
     }
     if(method==='Network.loadingFinished'||method==='Network.loadingFailed'){
       if(x.close!==null){x.missing=true;return;}
@@ -220,19 +231,20 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
     // Rejected, missing or timed-out request metadata remains fail-closed.
     const turns=records.map((x,i)=>({turn:i+1,cdp_request_id:x.id,request_sha256:x.request,cdp_decoded_body_sha256:x.response,
       cdp_streamed_body_sha256:x.streamDigest,cdp_decoded_body_matches_stream:x.bodyMatchesStream,
-      status:x.status,mime:x.mime,first_network_byte_ms:x.first,ttft_ms:!x.missing?x.ttft:null,
+      status:x.status,mime:x.mime,response_headers_received_ms:x.responseHeadersMs,
+      first_cdp_data_chunk_ms:x.firstDataMs,ttft_ms:!x.missing?x.ttft:null,
       sse_done_ms:!x.missing?x.done:null,close_ms:x.close,
       visible_text_sha256:!x.missing?hash(Buffer.from(x.visibleText,'utf8')):null,
       stream_timing_complete:!x.missing&&x.streaming&&x.bodyMatchesStream}));
     const unique=new Set(turns.map(x=>x.cdp_request_id)).size===turns.length;
     const valid=unique&&turns.every(x=>x.request_sha256&&x.cdp_decoded_body_sha256&&x.cdp_decoded_body_matches_stream&&x.status===200&&x.mime==='text/event-stream');
     const timed=valid&&turns.every((t,i)=>{
-      const x=records[i],raw=[x.start,x.firstAt,x.ttftAt,x.doneAt,x.closeAt];
-      const ms=[t.first_network_byte_ms,t.ttft_ms,t.sse_done_ms,t.close_ms];
+      const x=records[i],raw=[x.start,x.responseHeadersAt,x.firstDataAt,x.ttftAt,x.doneAt,x.closeAt];
+      const ms=[t.response_headers_received_ms,t.first_cdp_data_chunk_ms,t.ttft_ms,t.sse_done_ms,t.close_ms];
       return t.stream_timing_complete&&raw.every(validTime)&&
-        x.start<=x.firstAt&&x.firstAt<=x.ttftAt&&x.ttftAt<=x.doneAt&&x.doneAt<=x.closeAt&&
+        raw.every((v,j)=>j===0||v>=raw[j-1])&&
         ms.every(v=>Number.isSafeInteger(v)&&v>=0)&&
-        ms[0]<=ms[1]&&ms[1]<=ms[2]&&ms[2]<=ms[3];
+        ms.every((v,j)=>j===0||v>=ms[j-1]);
     });
     return {schema:'nox-b4-cdp-v1',chrome_product:version.product,cdp_consistent:Boolean(valid),ttft_sse_verified:Boolean(timed),
       browser_authenticated:false,remote_attested:false,native_verified:false,canonical_s03_verified:false,one_model_post_per_turn_verified:false,
