@@ -15,7 +15,7 @@ class CachePurgeSourceContract(unittest.TestCase):
     def test_exact_pip_cache_only(self):
         s=self.source()
         self.assertIn("CACHE=Path('/root/.cache/pip')",s)
-        self.assertIn("CACHE.resolve(strict=True)!=CACHE",s)
+        self.assertIn("resolved_matches=(CACHE.resolve(strict=True)==CACHE)",s)
         self.assertIn("HOLD_UNSAFE_CACHE_ENTRY",s)
         self.assertIn("st.st_nlink!=1",s)
 
@@ -64,7 +64,7 @@ class CachePurgeSourceContract(unittest.TestCase):
             source=stream.read()
         for marker in ("safe_path_state","path_state=path_state",
                        "resolved_matches=resolved_matches","workspace_free_bytes=free_bytes",
-                       "'kind':'SYMLINK'","'uid':st.st_uid"):
+                       "stat.S_ISLNK(st.st_mode)","'uid':st.st_uid"):
             self.assertIn(marker,source)
 
 if __name__=="__main__":
