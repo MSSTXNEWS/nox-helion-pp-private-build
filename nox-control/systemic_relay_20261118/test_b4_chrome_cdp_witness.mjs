@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {capture} from './b4_chrome_cdp_witness.mjs';
-const body='data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: [DONE]\n\n';
+const body='data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n';
 class Stub {
   constructor(){this.bodies=new Map();}
   on(fn){this.emit=fn;}
@@ -69,7 +69,7 @@ test('CDP chunk without data cannot prove TTFT or DONE',async()=>{
 test('split UTF-8 and SSE framing are lossless; partial frame/invalid EOF fail closed',async()=>{
   const {createHash}=await import('node:crypto');
   const visible='Привет 🐈';
-  const unicodeBody='data: '+JSON.stringify({choices:[{delta:{content:visible}}]})+'\n\ndata: [DONE]\n\n';
+  const unicodeBody='data: '+JSON.stringify({choices:[{delta:{content:visible}}]})+'\n\ndata: '+JSON.stringify({choices:[{delta:{},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n';
   const raw=Buffer.from(unicodeBody,'utf8'),split=raw.indexOf(Buffer.from('🐈'))+2;
   assert.ok(split>2);
   const ok=await run(false,[raw.subarray(0,split),raw.subarray(split,split+1),raw.subarray(split+1)]);
@@ -236,4 +236,27 @@ test('late asynchronous getRequestPostData ACK is joined; rejected or hanging lo
   assert.equal(stalled.cdp_consistent,false);
   assert.equal(stalled.ttft_sse_verified,false);
   assert.equal(stalled.turns[1].request_sha256,null);
+});
+
+test('CDP [DONE] is verified only after a unique explicit model finish_reason=stop',async()=>{
+  const clean=await run();
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  const malformed=[
+    body.replace('"finish_reason":"stop"','"finish_reason":"length"'),
+    body.replace('"finish_reason":"stop"','"finish_reason":"content_filter"'),
+    body.replace('"finish_reason":"stop"','"finish_reason":"tool_calls"'),
+    body.replace('"finish_reason":"stop"','"finish_reason":null'),
+    body.replace('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\\n\\n',''),
+    body.replace('data: [DONE]','data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\\n\\ndata: [DONE]'),
+    body.replace('data: [DONE]','data: {"choices":[{"delta":{"content":"late"}}]}\\n\\ndata: [DONE]')
+  ];
+  for(const wire of malformed){
+    const actual=await run(false,[Buffer.from(wire)]);
+    assert.equal(actual.cdp_consistent,false,'invalid finish reason cannot be accepted');
+    assert.equal(actual.ttft_sse_verified,false,'[DONE] cannot hide incomplete or repeated model finality');
+    assert.equal(actual.turns[1].ttft_ms,null);
+    assert.equal(actual.turns[1].sse_done_ms,null);
+    assert.equal(actual.turns[1].visible_text_sha256,null);
+  }
 });

@@ -57,7 +57,13 @@ function eventData(record){
     const delta=first.delta;
     if(!delta||typeof delta!=='object'||Array.isArray(delta))return {invalid:true};
     if(Object.hasOwn(delta,'content')&&delta.content!==null&&typeof delta.content!=='string')return {invalid:true};
-    return typeof delta.content==='string'?{text:delta.content}:{ignored:true};
+    // [DONE] is not proof of successful model completion: length/filter/tool
+    // finishes are distinct terminal outcomes and cannot certify TTFT/completion.
+    const finish=first.finish_reason;
+    if(finish!==undefined&&finish!==null&&finish!=='stop')return {invalid:true};
+    if(finish==='stop'&&typeof delta.content==='string'&&delta.content.length>0)return {invalid:true};
+    if(typeof delta.content==='string')return {text:delta.content,stop:finish==='stop'};
+    return finish==='stop'?{stop:true}:{ignored:true};
   }
   if(usage)return {ignored:true};
   if(['ping','heartbeat','keepalive'].includes(eventName)&&Object.keys(obj).length===0)return {ignored:true};
@@ -95,12 +101,17 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       if(x.done!==null&&data.trim()!==''){x.missing=true;return;}
       const event=eventData(data),ms=millis(x,timestamp);
       if(!event||event.invalid){x.missing=true;return;}
+      if(event?.stop){
+        if(x.finishStop||x.done!==null){x.missing=true;return;}
+        x.finishStop=true;
+      }
       if(Object.hasOwn(event,'text')){
+        if(x.finishStop&&event.text.length>0){x.missing=true;return;}
         x.visibleText+=event.text;
         if(/\S/u.test(event.text)&&x.ttft===null&&ms!==null){x.ttft=ms;x.ttftAt=timestamp;}
       }
       if(event?.done){
-        if(x.done!==null||ms===null){x.missing=true;return;}
+        if(x.done!==null||ms===null||!x.finishStop){x.missing=true;return;}
         x.done=ms;x.doneAt=timestamp;
       }}
   };
@@ -109,7 +120,7 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       let path;try{path=new URL(p.request.url).pathname;}catch{return;}
       if(p.request.method!=='POST'||!paths.has(path))return;
       if(active.has(p.requestId)){no(Error('DUPLICATE_CDP_ID'));return;}
-      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,first:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,firstAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null};
+      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,first:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,firstAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
       active.set(p.requestId,x);
       const record=s=>{if(typeof s==='string')x.request=hash(Buffer.from(s));};
       if(typeof p.request.postData==='string')record(p.request.postData);
