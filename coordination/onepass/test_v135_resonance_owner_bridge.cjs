@@ -1868,3 +1868,26 @@ test('V199 two SSE turns on one browser context require four ordered independent
   await scenario(true);
   await scenario(false,true);
 });
+
+test('V201 hidden and Reduced Motion coalesce native deltas without a main-thread SSE burst',async()=>{
+  const reply='Z'.repeat(1020);
+  const counts=[];
+  for(const view of [{hidden:false,reduced:false},{hidden:true},{reduced:true}]){
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+      undefined,false,5,undefined,'verified-exchange-01',[],false,false,prompt,undefined,view);
+    const frames=await events(await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v201-quiet-stream'})}));
+    const tokens=frames.filter(x=>x.type==='token');
+    counts.push(tokens.length);
+    assert(tokens.every(x=>typeof x.t==='string'),'quiet events contain text, not grapheme arrays');
+    assert.equal(tokens.map(x=>x.t).join(''),reply,'no lost, duplicated or altered native text');
+    assert.equal(frames.filter(x=>x.type==='done').length,1,'S03 receipt still gates DONE');
+    assert.equal(frames.filter(x=>x.type==='error').length,0);
+    assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1,
+      'one native model POST per request; never invent tokens or replay');
+    assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+  }
+  assert(counts[0]>counts[1]*6,'hidden document must avoid dozens of redundant token dispatches');
+  assert(counts[0]>counts[2]*6,'Reduced Motion must avoid redundant token dispatches');
+  assert(counts[1]<=3&&counts[2]<=3,'each already received native delta is at most one quiet SSE token');
+});
