@@ -44,6 +44,35 @@ def choose_dir(path):
  if path.is_symlink():return None
  if not path.exists() or not path.is_dir():return None
  return path
+def mapped_sources(pid):
+ """Aggregate virtual model file mappings, without exposing other process paths."""
+ data=raw(Path('/proc')/str(pid)/'maps',16*1024*1024)
+ groups={}
+ for line in data.decode('utf-8','replace').splitlines():
+  parts=line.split(None,5)
+  if len(parts)<6:continue
+  try:
+   start,end=(int(x,16) for x in parts[0].split('-',1))
+   need(0<=start<end,'MAP_RANGE')
+  except (ValueError,Hold):
+   continue
+  item=parts[5]
+  deleted=item.endswith(' (deleted)')
+  plain=item[:-10] if deleted else item
+  basename=plain.rsplit('/',1)[-1]
+  if plain.startswith('/root/nox/'):location='NOX_ROOT'
+  elif plain.startswith('/dev/shm/'):location='SHM'
+  elif plain.startswith('/memfd:') or '/memfd:' in plain:location='MEMFD'
+  else:location='OTHER_FILE'
+  if location=='OTHER_FILE' and not basename.lower().endswith(('.gguf','.safetensors','.bin')):continue
+  if not re.fullmatch(r'[A-Za-z0-9._()+ -]{1,180}',basename):basename='REDACTED'
+  key=(location,basename,deleted)
+  row=groups.setdefault(key,{'location':location,'basename':basename,
+        'deleted':deleted,'mapped_virtual_bytes':0,'mapping_count':0})
+  row['mapped_virtual_bytes']+=end-start
+  row['mapping_count']+=1
+ return sorted(groups.values(),key=lambda x:-x['mapped_virtual_bytes'])[:25]
+
 def run():
  global STAGE
  need(re.fullmatch('[0-9]{1,24}',os.getenv('NOX_OWNER_REQUEST_ID','')) is not None,'OWNER_ID')
@@ -94,6 +123,7 @@ def run():
   'disk_free_bytes':free,'models_found':len(files),'files':files,
   'current_aliases':{a:{'target_basename':x['target_basename'],'bytes':x['bytes']}
                      for a,x in aliases.items()},
+  'active_model_mappings':mapped_sources(services['nox-ds41-8098']['pid']),
   'no_s03_model_or_queue_write':True,'no_files_modified':True}
 if __name__=='__main__':
  try:
