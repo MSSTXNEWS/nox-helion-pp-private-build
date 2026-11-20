@@ -34,6 +34,25 @@ class HunterURLSafetyTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(hunter.HunterError):
                 hunter._canonical_url(value)
 
+    def test_idna_aliases_cannot_reach_private_or_local_hosts(self):
+        # Resolver IDNA normalization can turn these into loopback endpoints.
+        for hostname in (
+            "127。0。0。1", "127．0．0．1", "127｡0｡0｡1",
+            "ⅼocalhost", "localhost。", "0x7f．0．0．1",
+        ):
+            with self.subTest(hostname=hostname), self.assertRaises(hunter.HunterError):
+                hunter._canonical_url("https://" + hostname + "/rss")
+
+    def test_unicode_allowlisted_public_domain_uses_exact_ascii_idna(self):
+        source = hunter._validate_source({
+            "id": "idnfeed", "kind": "rss", "url": "https://bücher.example/feed",
+            "allowed_hosts": ["bücher.example"], "interval_seconds": 3600,
+        })
+        self.assertEqual(source["url"], "https://xn--bcher-kva.example/feed")
+        self.assertEqual(source["allowed_hosts"], ["xn--bcher-kva.example"])
+        with self.assertRaises(hunter.HunterError):
+            hunter._validate_url("https://buсher.example/feed", source["allowed_hosts"])
+
     def test_valid_https_and_tracking_dedup_still_work(self):
         value = hunter._canonical_url("https://example.org/rss?utm_source=x&a=1")
         self.assertEqual(value, "https://example.org/rss?a=1")

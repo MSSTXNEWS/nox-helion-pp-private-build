@@ -448,6 +448,11 @@ async def _run(native,url,payload,user_text):
                 or ('needs_confirmation' in rec and rec['needs_confirmation'] is not False)):
             raise StreamFailure('HOLD_MEDIA_RESULT_FIDELITY')
         await asyncio.to_thread(native['audit'],'tool_step',name=name,step=1,ok=rec['ok'])
+        if not rec['ok']:
+            # An unverified media enqueue may be visible to the user, but it
+            # must not become a successful terminal/S03 postflight receipt.
+            yield 'token',rec['text']
+            raise StreamFailure('HOLD_MEDIA_RESULT_UNCONFIRMED')
         yield 'token',rec['text']
         return
     if _current.download_status_query(user_text):
@@ -475,9 +480,27 @@ async def _run(native,url,payload,user_text):
         # Missing model remains a legacy server/pool selection, unchanged.
         explicit_model='model' in req
         selected=req['model'] if explicit_model else None
-        prepared=native['prepare_payload'](req,cache=True)
+        # Pool caching may not remove or rewrite any S03/persona/chat turn.
+        # Snapshot before calling the optimizer: it may mutate its input in
+        # place. Give it an isolated JSON copy, never the caller's live list.
+        try:
+            context_wire=json.dumps(req['messages'],sort_keys=True,
+                                    ensure_ascii=False,allow_nan=False,
+                                    separators=(',',':')).encode('utf-8','strict')
+        except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
+            raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
+        prepared=native['prepare_payload'](
+            dict(req,messages=json.loads(context_wire)),cache=True)
         if not isinstance(prepared,dict):
             raise StreamFailure('HOLD_MODEL_IDENTITY')
+        try:
+            after_wire=json.dumps(prepared['messages'],sort_keys=True,
+                                  ensure_ascii=False,allow_nan=False,
+                                  separators=(',',':')).encode('utf-8','strict')
+        except (KeyError,TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
+            raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
+        if after_wire!=context_wire:
+            raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY')
         if explicit_model and (type(selected) is not str or
                                not 0<len(selected.strip())<=200 or
                                type(prepared.get('model')) is not str or
@@ -540,6 +563,11 @@ async def _run(native,url,payload,user_text):
                         return
                     if final_command:
                         if not text.strip():raise StreamFailure('HOLD_TOOL_EMPTY')
+                        if rec['ok'] is not True:
+                            # Show the actual failure without claiming [DONE]
+                            # or making the S03 postflight mark it successful.
+                            yield 'token',text
+                            raise StreamFailure('HOLD_TOOL_RESULT_UNCONFIRMED')
                         yield 'token',text
                         return
                     # Tool evidence is part of the complete conversation. Never
