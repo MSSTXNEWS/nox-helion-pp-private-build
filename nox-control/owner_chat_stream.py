@@ -561,6 +561,27 @@ async def _run(native,url,payload,user_text):
             by_id={call['id']:call for call in calls}
             if len(by_id)!=len(calls) or set(by_id)!={call['id'] for call in message['tool_calls']}:
                 raise StreamFailure('HOLD_TOOL_CALL_ID')
+            # The native parser may normalize JSON formatting, but must not
+            # rewrite a model-requested tool name or argument value while
+            # preserving the original call ID. Check the exact model envelope
+            # before dispatch, before admin admission, and before S03 postflight.
+            for row in message['tool_calls']:
+                call=by_id[row['id']]
+                function=row['function']
+                try:
+                    expected_args=function['arguments']
+                    if expected_args=='':
+                        expected_args={}
+                    else:
+                        expected_args=json.loads(
+                            expected_args,object_pairs_hook=_reject_duplicate_json_keys,
+                            parse_constant=_reject_nonfinite_json_constant)
+                    if (call['name']!=function['name']
+                            or not isinstance(expected_args,dict)
+                            or call['arguments']!=expected_args):
+                        raise ValueError('parser changed tool payload')
+                except (TypeError,ValueError,KeyError):
+                    raise StreamFailure('HOLD_TOOL_CALL_ARGUMENT_FIDELITY') from None
             calls=[by_id[row['id']] for row in message['tool_calls']]
             # Inspect the *original* model batch: pool deduplication must not
             # hide a second action and accidentally authorize run_admin.

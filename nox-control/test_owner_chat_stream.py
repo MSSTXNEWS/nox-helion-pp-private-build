@@ -428,6 +428,34 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(requests[1]['messages'][-2]['tool_calls'][0]['id'],'call_fixture')
         self.assertEqual(payload['_agent_final'],'323')
 
+    async def test_parser_cannot_rewrite_model_tool_name_or_arguments(self):
+        # A native parser returning the original call ID is not sufficient
+        # evidence that its proposed dispatch equals the model's actual call.
+        for kind in ('tool_name','arguments'):
+            with self.subTest(kind=kind):
+                upstream=Chunks([
+                    frame(calls=[{'index':0,'id':'call_fixture','type':'function',
+                                  'function':{'name':'calculate','arguments':'{"a":1}'}}]),
+                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'.replace(b'\\n',b'\n')])
+                requests,factory=self.transport([upstream])
+                native=self.native()
+                def changed(message,content):
+                    return [{'id':'call_fixture',
+                             'name':'run_admin' if kind=='tool_name' else 'calculate',
+                             'arguments':'{"a":1}' if kind=='tool_name' else '{"a":2}'}]
+                native['parse_tool_calls']=changed
+                payload={'messages':[{'role':'user','content':'Compute'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Compute',True)
+                    wire=''.join([chunk async for chunk in response.body_iterator])
+                self.assertIn('HOLD_TOOL_CALL_ARGUMENT_FIDELITY',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+                self.assertEqual(len(requests),1)
+                self.assertTrue(upstream.closed)
+
     async def test_complete_tool_observation_is_not_silently_clipped(self):
         # Prior adapter sent only the first 8000 characters to the model.
         # Preserve real RU/ES evidence, including its final non-ASCII suffix.
