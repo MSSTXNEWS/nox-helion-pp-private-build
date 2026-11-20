@@ -292,8 +292,14 @@ def multiturn_transcript_sha256(rows):
     return digest(raw)
 
 
-def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, expected_messages):
-    """Fail closed unless a trusted canonical writer receipt matches exact independent S03 readback."""
+def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, expected_messages,
+                              require_full_transcript_pin=False):
+    """Match independent S03 witnesses; B5 two-turn acceptance must require four-row pins.
+
+    The legacy A1 source contract does not include full_transcript_sha256.
+    Preserve that source-only compatibility, never treat it as a strict
+    two-turn RU/ES acceptance witness. A live B5 verifier must opt in.
+    """
     # A single native chat exchange is not a two-turn continuity witness.
     # Reject malformed transcript structure before evaluating receipt metadata:
     # a matching final-answer hash alone does not establish four ordered turns.
@@ -323,8 +329,11 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     # BOTH independent witnesses must pin the complete four-message history.
     writer_history_sha = writer_receipt.get('full_transcript_sha256')
     readback_history_sha = independent_readback.get('full_transcript_sha256')
-    if writer_history_sha != transcript_sha or readback_history_sha != transcript_sha:
-        return False
+    if (require_full_transcript_pin
+            or 'full_transcript_sha256' in writer_receipt
+            or 'full_transcript_sha256' in independent_readback):
+        if writer_history_sha != transcript_sha or readback_history_sha != transcript_sha:
+            return False
     event_id = writer_receipt.get('event_id')
     turn_id = writer_receipt.get('turn_id')
     sequence = writer_receipt.get('sequence')

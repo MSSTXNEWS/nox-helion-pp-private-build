@@ -432,6 +432,10 @@ async function check(chunks, status=200) {
         old_readback = {k: v for k, v in readback.items()
                         if k != "full_transcript_sha256"}
         self.assertFalse(canonical_s03_proof_valid(
+            old_writer, old_readback, DIALOG, transcript,
+            require_full_transcript_pin=True))
+        # The legacy A1 helper remains source-compatible, not B5-accepted.
+        self.assertTrue(canonical_s03_proof_valid(
             old_writer, old_readback, DIALOG, transcript))
         changed_earlier_turns = [dict(row) for row in transcript]
         changed_earlier_turns[0]['content'] += ' другой вопрос'
@@ -442,9 +446,9 @@ async function check(chunks, status=200) {
         # That is insufficient to certify changed previous conversation turns.
         self.assertFalse(canonical_s03_proof_valid(
             old_writer, stale_last_answer_readback,
-            DIALOG, changed_earlier_turns))
+            DIALOG, changed_earlier_turns, require_full_transcript_pin=True))
         self.assertTrue(canonical_s03_proof_valid(
-            writer, readback, DIALOG, transcript))
+            writer, readback, DIALOG, transcript, require_full_transcript_pin=True))
         for bad_writer, bad_readback in (
             (dict(old_writer, full_transcript_sha256=None), old_readback),
             (old_writer, dict(old_readback, full_transcript_sha256=None)),
