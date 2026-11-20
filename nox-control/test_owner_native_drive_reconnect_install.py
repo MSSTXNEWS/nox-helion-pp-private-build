@@ -60,7 +60,7 @@ class InstallContractTests(unittest.TestCase):
         self.assertIn("stages['dispatcher_registry_source']=registry['state']",source)
         self.assertIn("'dispatcher_source_staged':True",source)
         self.assertIn("'native_dispatcher_handler_registered':False",source)
-        self.assertIn("'restarted': False",implementation)
+        self.assertIn('"restarted": False',implementation)
         self.assertIn('SOURCE_STAGED_NOT_LIVE',implementation)
         self.assertIn('HOLD_DRIVE_NATIVE_NO_VERIFIED_RECEIPT',implementation)
         self.assertIn('owner_context()',implementation)
