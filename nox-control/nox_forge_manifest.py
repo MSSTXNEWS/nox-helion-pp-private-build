@@ -358,7 +358,10 @@ def main(argv: list[str] | None = None) -> int:
         raw = path.read_bytes()
         if len(raw) > MAX_INPUT_BYTES:
             raise ForgeError("input must be a non-symlink regular file no larger than 8 MiB")
-        result = build_manifest(json.loads(raw.decode("utf-8"),\n            object_pairs_hook=_unique_json_fields,\n            parse_constant=_reject_nonfinite_json_constant))
+        result = build_manifest(json.loads(
+            raw.decode("utf-8"),
+            object_pairs_hook=_unique_json_fields,
+            parse_constant=_reject_nonfinite_json_constant))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, ForgeError) as exc:
         print(json.dumps({"status": "HOLD", "error": f"{type(exc).__name__}: {str(exc)[:300]}"}), file=sys.stderr)
         return 2
