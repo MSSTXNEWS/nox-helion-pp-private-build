@@ -1,0 +1,124 @@
+{
+  "schema": "NOX_I49_CPU_CHECKPOINT_COMPARISON_RECEIPT_V1",
+  "task_id": "I-49",
+  "created_at": "2026-11-19",
+  "authorization_and_scope": {
+    "pair_and_tensor_selection": "Selected during this run under current owner authorization; no pre-existing allowlist is asserted.",
+    "training_started": false,
+    "drive_written": false,
+    "server_written": false,
+    "comparison_scope": "One shared adapter tensor; CPU-only Safetensors header and selected payload-byte comparison."
+  },
+  "sources": [
+    {
+      "label": "before",
+      "folder_name": "understanding_pref_checkpoint-105",
+      "drive_folder_id": "1PNX-lRLaKVTRPakDOOqctF_rUoPvOu59",
+      "model": "Qwen3.6-35B-A3B",
+      "adapter": "LoRA",
+      "rank": 64,
+      "join_expected_bytes": 306787336,
+      "join_expected_assembled_sha256": "924d05894749d2107629549d9d95ca4e5538d33c2eac351d0c0c26919ccbb7a2",
+      "assembled_local_bytes": 306787336,
+      "assembled_local_sha256": "924d05894749d2107629549d9d95ca4e5538d33c2eac351d0c0c26919ccbb7a2",
+      "sha256sums_manifest_bytes": 1158,
+      "sha256sums_manifest_sha256": "0852c1181534439cc51f241aa091d76cc7fc1c48f3d8a39332c5362192207f9d",
+      "parts": [
+        {
+          "name": "adapter_model.safetensors.part00",
+          "bytes": 94371840,
+          "sha256": "cf674abd7ec2ed10e721c782af60d174249b636457197b0f29f531437e97c786"
+        },
+        {
+          "name": "adapter_model.safetensors.part01",
+          "bytes": 94371840,
+          "sha256": "b8b525602bd6a7715b9e99e0138d29d61d5a9346495dd849ff458c1f4211a841"
+        },
+        {
+          "name": "adapter_model.safetensors.part02",
+          "bytes": 94371840,
+          "sha256": "56abdf64238fe068566524542b9ccb79e7328b91e52058bc1453b836160ff2b2"
+        },
+        {
+          "name": "adapter_model.safetensors.part03",
+          "bytes": 23671816,
+          "sha256": "465ea191c1fb49fc87bdaf3bf5bf132560d5da7149cb17ccdc606480745f66f3"
+        }
+      ]
+    },
+    {
+      "label": "after",
+      "folder_name": "mix_final_sft_checkpoint-383",
+      "drive_folder_id": "1CG_ALzrWsZLyrtuGxvNp4ajyZGfgh6nH",
+      "model": "Qwen3.6-35B-A3B",
+      "adapter": "LoRA",
+      "rank": 64,
+      "join_expected_bytes": 306787336,
+      "join_expected_assembled_sha256": "8c32c5979470018bd260421b7ace2ef681e3c7f0e3dc978b6fecfdd98c25bcd1",
+      "assembled_local_bytes": 306787336,
+      "assembled_local_sha256": "8c32c5979470018bd260421b7ace2ef681e3c7f0e3dc978b6fecfdd98c25bcd1",
+      "sha256sums_manifest_bytes": 574,
+      "sha256sums_manifest_sha256": "bb207cd70ea65fc0145d435c135078c39f1a786df8338ea12df3b7c6e729e42a",
+      "parts": [
+        {
+          "name": "adapter_model.safetensors.part00",
+          "bytes": 94371840,
+          "sha256": "12b4e1238a196d7f191a24189d46f7b06d851901a5939f6b06d5ae751b749e5d"
+        },
+        {
+          "name": "adapter_model.safetensors.part01",
+          "bytes": 94371840,
+          "sha256": "d461643370740cdf13c540a577af88de92b3ee04e6136ffac445358f75231b41"
+        },
+        {
+          "name": "adapter_model.safetensors.part02",
+          "bytes": 94371840,
+          "sha256": "3fc4afbf2da4eb716148b235fd28ac8f7fd4030da63fe43daea93651660c054c"
+        },
+        {
+          "name": "adapter_model.safetensors.part03",
+          "bytes": 23671816,
+          "sha256": "7c1296113c0d26a57d4c5c75e765dfe71e2998beb4c9e60b052cb88749b9e044"
+        }
+      ]
+    }
+  ],
+  "comparator": {
+    "source_repository": "s-grouptwet/nox-helion-pp-private-build",
+    "source_path": "handoff/20261117/nox-v15-kit/execution/role4/tensor_delta.py",
+    "revision": "e10c80f64e3fd88298be2776c58d03939e6e71f6",
+    "source_sha256": "a1917cfda4fd012b92332a8b3513fb1ad3e4694050f254d38b3a88f803cfb867",
+    "execution": "CPU-only, hashes selected tensor byte range in chunks; does not load the full model or start training."
+  },
+  "comparison": {
+    "schema": "NOX_FORGE_TENSOR_DELTA_V1",
+    "status": "SELECTED_CHANGE_OBSERVED",
+    "scope": "container_headers_and_selected_tensor_bytes",
+    "training_started": false,
+    "tensors": [
+      {
+        "name": "base_model.model.model.language_model.layers.0.linear_attn.in_proj_qkv.lora_A.weight",
+        "dtype": "F32",
+        "shape": [
+          64,
+          2048
+        ],
+        "bytes": 524288,
+        "before_sha256": "8f156397d7705748bc36e18d7658b0fbe5edac3592903a75714e6e0b05907812",
+        "after_sha256": "b6170f7d3462c8ed0fef0f33c2f6c722d1be99609902ded09086fb3883e6470a",
+        "changed": true
+      }
+    ],
+    "issues": [],
+    "before": {
+      "file_bytes": 306787336,
+      "header_sha256": "bc82355e484852e73d9f966989bc59abcbca85bcf661c70a1d64f0c60d59f727",
+      "tensor_bytes_hashed": 524288
+    },
+    "after": {
+      "file_bytes": 306787336,
+      "header_sha256": "bc82355e484852e73d9f966989bc59abcbca85bcf661c70a1d64f0c60d59f727",
+      "tensor_bytes_hashed": 524288
+    }
+  }
+}

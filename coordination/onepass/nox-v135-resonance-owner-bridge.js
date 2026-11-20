@@ -104,9 +104,23 @@
     try{return await Promise.race([reader.read(),aborted]);}
     finally{signal.removeEventListener('abort',onAbort);}
   }
+  // JSON permits escaped lone UTF-16 surrogates even when the wire bytes
+  // are valid UTF-8. Never certify those decoded non-scalar strings as text.
+  function validUnicodeScalars(value) {
+    if(typeof value!=='string')return true;
+    for(const glyph of value){
+      const cp=glyph.codePointAt(0);
+      if(cp>=0xd800&&cp<=0xdfff)return false;
+    }
+    return true;
+  }
   async function consume(response,emit,signal) {
     if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
-    const reader=response.body.getReader(),decoder=new TextDecoder();
+    const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
+    const decode=(bytes,options)=>{
+      try{return decoder.decode(bytes,options);}
+      catch{throw Error('HOLD_NATIVE_FRAME_UTF8');}
+    };
     let buf='',answer='',done=null,doneSeen=false,startSeen=false,preparingSeen=false;
     let nativeModel='UNKNOWN';
     const line=async str=>{
@@ -114,6 +128,8 @@
       let e;
       try{e=JSON.parse(str);}catch{throw Error('HOLD_NATIVE_FRAME_JSON');}
       if(!e||typeof e!=='object'||Array.isArray(e))throw Error('HOLD_NATIVE_FRAME_TYPE');
+      if(![e.type,e.text,e.model,e.exchange_id,e.stream_mode,e.error]
+          .every(validUnicodeScalars))throw Error('HOLD_NATIVE_FRAME_UNICODE');
       if(doneSeen){
         if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
         throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
@@ -148,7 +164,7 @@
         if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
         const chunk=await readNativeOrAbort(reader,signal);
         if(chunk.done)break;
-        buf+=decoder.decode(chunk.value,{stream:true});
+        buf+=decode(chunk.value,{stream:true});
         // Cap unfinished NDJSON frames, not combined chunks.
         let j;while((j=buf.indexOf('\n'))>=0){
           if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
@@ -160,7 +176,7 @@
           break;
         }
       }
-      buf+=decoder.decode();
+      buf+=decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
       if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
       return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};
@@ -202,16 +218,18 @@
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
               event({type:'token',t:parts[index]});
-              // Bound visual pacing to 8 actual frames per incoming native chunk.
-              // This never invents text or changes upstream TTFT.
               if(index<Math.min(parts.length-1,7)){
-                // Browsers with suspended rAF (including headless/hidden tabs)
-                // must still finish and verify S03. At most 18ms per slice.
                 await new Promise(resolve=>{
-                  let settled=false;
-                  const finish=()=>{if(!settled){settled=true;resolve();}};
-                  if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);
-                  if(typeof setTimeout==='function')setTimeout(finish,18);
+                  let settled=false,frame,timer;
+                  const finish=()=>{
+                    if(settled)return;
+                    settled=true;
+                    if(frame!==undefined)globalThis.cancelAnimationFrame?.(frame);
+                    if(timer!==undefined)globalThis.clearTimeout?.(timer);
+                    resolve();
+                  };
+                  if(typeof requestAnimationFrame==='function')frame=requestAnimationFrame(finish);
+                  if(!settled&&typeof setTimeout==='function')timer=setTimeout(finish,18);
                   else if(typeof requestAnimationFrame!=='function')finish();
                 });
               }

@@ -60,7 +60,8 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   const window={NOX_NATIVE_OWNER:owner,fetch:old};
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
   const context={window,location,URL,Request,Response,ReadableStream,
-    TextDecoder,TextEncoder,AbortController,performance,console,requestAnimationFrame:raf};
+    TextDecoder,TextEncoder,AbortController,performance,console,
+    ...(typeof raf==='function'?{requestAnimationFrame:raf}:raf)};
   if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
   vm.runInNewContext(JS,context,{filename:file});
   return {fetch:(...args)=>window.fetch(...args),calls,window};
@@ -77,6 +78,38 @@ async function events(response){
   }
   return seen;
 }
+test('5A05 SSE pacing clears the losing callback and preserves the Unicode stream',async()=>{
+  const reply='Ж'.repeat(360)+'🧠 español';
+  for(const winner of ['frame','timer']){
+    let nextId=0,cancelledFrames=0,cancelledTimers=0;
+    const frames=new Map(),timers=new Map();
+    const queue=(pending,kind,callback)=>{
+      const handle=nextId++;
+      pending.set(handle,callback);
+      if(kind===winner)queueMicrotask(()=>{
+        if(pending.delete(handle))callback();
+      });
+      return handle;
+    };
+    const scheduler={
+      requestAnimationFrame(callback){return queue(frames,'frame',callback);},
+      cancelAnimationFrame(handle){if(frames.delete(handle))cancelledFrames++;},
+      setTimeout(callback){return queue(timers,'timer',callback);},
+      clearTimeout(handle){if(timers.delete(handle))cancelledTimers++;}
+    };
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,scheduler);
+    const response=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'5a05-'+winner})});
+    const stream=await events(response);
+    assert.equal(stream.filter(event=>event.type==='token').map(event=>event.t).join(''),reply);
+    assert.equal(stream.at(-1).type,'done');
+    assert.equal(stream.at(-1).history_persisted,true);
+    assert.equal(frames.size,0);
+    assert.equal(timers.size,0);
+    assert(winner==='frame'?cancelledTimers>0:cancelledFrames>0);
+    assert.equal(f.calls.filter(call=>call.path==='/api/nox/chat/stream').length,1);
+  }
+});
 test('native V24 main Resonance streams tokens, only after S03 readback reports done',async()=>{
   const f=fake();
   const r=await f.fetch('/api/nox/chat',{method:'POST',
@@ -94,6 +127,105 @@ test('native V24 main Resonance streams tokens, only after S03 readback reports 
   assert.equal(list.filter(e=>e.type==='error').length,0);
   assert(f.calls.some(e=>e.path==='/api/nox/chat/stream'));
   assert(f.calls.some(e=>e.path.includes('/api/ui/memory/dialogs/history')));
+});
+
+test('owner bridge preserves UTF-8 split across chunks and rejects corrupted native text',async()=>{
+  const text='Sí, Ж🙂';
+  const exchange='verified-utf8-exchange';
+  const frame=data=>Buffer.from(JSON.stringify(data)+'\n');
+  const beginning=[frame({type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'}),frame({type:'start'})];
+  const done=frame({type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:exchange});
+  async function run(chunks){
+    let historyReads=0;
+    const window={NOX_NATIVE_OWNER:true,fetch:async path=>{
+      if(path==='/api/nox/chat/stream')return new Response(new ReadableStream({start(controller){
+        for(const chunk of chunks)controller.enqueue(chunk);
+        controller.close();
+      }}));
+      if(path.startsWith('/api/ui/memory/dialogs/history?')){
+        historyReads++;
+        return Response.json({status:'READY',dialog_id:id,messages:[
+          {role:'user',exchange_id:exchange,content:prompt},
+          {role:'assistant',exchange_id:exchange,content:text}
+        ]});
+      }
+      assert.fail(`unexpected owner route ${path}`);
+    }};
+    const pathname='/nox-web-v29/pc/resonance.html';
+    const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window,location,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,Intl,setTimeout});
+    const response=await window.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'utf8-regression'})});
+    const seen=await events(response);
+    return {seen,historyReads};
+  }
+
+  const delta=frame({type:'delta',text});
+  const emojiOffset=delta.indexOf(Buffer.from('🙂'));
+  assert(emojiOffset>0);
+  const good=await run([...beginning,delta.subarray(0,emojiOffset+2),delta.subarray(emojiOffset+2),done]);
+  assert.equal(good.seen.filter(row=>row.type==='token').map(row=>row.t).join(''),text);
+  assert.equal(good.seen.filter(row=>row.type==='done').length,1);
+  assert.equal(good.historyReads,1);
+
+  const corrupted=Buffer.from(delta);
+  corrupted[emojiOffset+1]=0xff;
+  for(const chunks of [[corrupted,done],[delta.subarray(0,emojiOffset+2)]]){
+    const rejected=await run([...beginning,...chunks]);
+    assert.equal(rejected.seen.find(row=>row.type==='error')?.error,'HOLD_NATIVE_FRAME_UTF8');
+    assert(!rejected.seen.some(row=>row.type==='token'||row.type==='done'));
+    assert.equal(rejected.historyReads,0);
+  }
+});
+test('V175 JSON-escaped lone UTF-16 surrogates never certify browser/S03',async()=>{
+  const exchange='v175-scalar-exchange';
+  for(const half of ['\ud800','\udfff']){
+    for(const [part,field] of [['start','model'],['delta','text'],['done','exchange_id']]){
+      for(const streamed of [false,true]){
+        let readbacks=0;
+        const frames=[
+          {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+          {type:'start',model:'NOX HELION'},
+          {type:'delta',text:'Ответ'},
+          {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:exchange}
+        ];
+        frames.find(x=>x.type===part)[field]=part==='delta'?half:'broken-'+half;
+        const upstream=async path=>{
+          const u=new URL(String(path),'https://nox.local');
+          if(u.pathname==='/api/ui/memory/dialogs/create')return Response.json({dialog_id:id});
+          if(u.pathname==='/api/nox/chat/stream')return new Response(new ReadableStream({
+            start(c){
+              c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
+              c.close();
+            }
+          }));
+          if(u.pathname==='/api/ui/memory/dialogs/history'){
+            readbacks++;
+            return Response.json({status:'READY',dialog_id:id,messages:[]});
+          }
+          assert.fail('unexpected owner route '+u.pathname);
+        };
+        const w={NOX_NATIVE_OWNER:true,fetch:upstream};
+        const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
+          href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+        vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+          TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+        const request=streamed?{message:prompt,dialog_id:id,request_id:'v175'}:{message:prompt};
+        const response=await w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify(request)});
+        if(streamed){
+          const rows=await events(response);
+          assert.equal(rows.find(x=>x.type==='error')?.error,'HOLD_NATIVE_FRAME_UNICODE');
+          assert.equal(rows.filter(x=>x.type==='done').length,0);
+          if(part==='delta')assert.equal(rows.filter(x=>x.type==='token').length,0);
+        }else{
+          assert.equal(response.status,503);
+          assert.equal((await response.json()).error,'HOLD_NATIVE_FRAME_UNICODE');
+        }
+        assert.equal(readbacks,0,'invalid decoded scalar must not initiate S03 history acceptance');
+      }
+    }
+  }
 });
 test('native V24 fails closed on unverified S03 receipt, no false done',async()=>{
   const f=fake(true,'/nox-web-v29/pc/resonance.html',true);

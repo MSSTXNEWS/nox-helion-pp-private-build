@@ -6,6 +6,7 @@ or persistence store is introduced here; chat_proxy retains its S03 postflight.
 from __future__ import annotations
 
 import asyncio
+import codecs
 from contextlib import aclosing
 from datetime import datetime,timezone
 import json
@@ -50,6 +51,16 @@ def _executor_status_reply(user_text,path=None):
     unknown=('Сейчас не могу подтвердить число и занятость исполнителей: '
              'свежий корректный статус диспетчера недоступен. '
              'NOX — отдельный координатор и чат; неподтверждённые цифры не привожу.')
+    # Preserve the already-source-tested MODEL_UPDATE fence in this successor.
+    # Source: c4e628c4ce81b75cc055e53a6e18d5388f1065e6.
+    try:
+        from owner_chat_ui import owner_maintenance_gate
+        maintenance=owner_maintenance_gate()
+    except Exception:
+        return unknown
+    if maintenance!='ABSENT':
+        return ('Сейчас выполняется MODEL_UPDATE; статус исполнителей временно недоступен.'
+                if maintenance=='PRESENT' else unknown)
     target=Path(path) if path is not None else EXECUTOR_STATUS
     try:
         # O_NOFOLLOW rejects symlinks; O_NONBLOCK prevents a FIFO from
@@ -78,6 +89,7 @@ def _executor_status_reply(user_text,path=None):
                 if task is not None:return unknown
             else:return unknown
             ids.append(name)
+        if owner_maintenance_gate()!='ABSENT':return unknown
         observed=datetime.fromtimestamp(meta.st_mtime,timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
         return (f'Сейчас у диспетчера настроено {n} исполнителей: занято {busy}, свободно {n-busy}. '
                 f'NOX — отдельный координатор и чат (1). Схема: {n} исполнителей + NOX.\n'
@@ -86,37 +98,155 @@ def _executor_status_reply(user_text,path=None):
         return unknown
 
 
+async def _bounded_sse_lines(response):
+    """Bound partial SSE fields before a newline; httpx.aiter_lines() does not.
+
+    Preserve CR, LF, CRLF (including split CRLF) and UTF-8 chunk boundaries.
+    No buffering of untrusted unterminated model output beyond 300k chars.
+    """
+    pending=''
+    after_cr=False
+    # Un-sized chunks preserve immediate first-token delivery. Fixed-size
+    # HTTPX text chunking can wait for 8 KiB and stall a live SSE response.
+    # HTTPX aiter_text() uses replacement decoding for malformed UTF-8:
+    # that silently turns corrupt model bytes into apparently valid tokens.
+    # Preserve all split-codepoint boundaries, but never certify damaged text.
+    decoder=codecs.getincrementaldecoder('utf-8')('strict')
+    async for raw in response.aiter_bytes():
+        try:
+            chunk=decoder.decode(raw)
+        except UnicodeDecodeError:
+            raise StreamFailure('HOLD_MODEL_SSE_INVALID') from None
+        for offset in range(0,len(chunk),8192):
+            for part in re.split(r'(\r\n|\r|\n)',chunk[offset:offset+8192]):
+                if part in ('\r\n','\r','\n'):
+                    if part=='\n' and after_cr:
+                        after_cr=False
+                        continue
+                    yield pending
+                    pending=''
+                    after_cr=(part=='\r')
+                elif part:
+                    after_cr=False
+                    pending+=part
+                    if len(pending)>300000:
+                        raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+    try:
+        decoder.decode(b'',final=True)
+    except UnicodeDecodeError:
+        raise StreamFailure('HOLD_MODEL_SSE_INVALID') from None
+    if pending:
+        yield pending
+
+
+def _reject_duplicate_json_keys(pairs):
+    """Reject ambiguous model/tool JSON before dispatch or S03 certification."""
+    result={}
+    for key,value in pairs:
+        if key in result:
+            raise ValueError('duplicate JSON key')
+        result[key]=value
+    return result
+
+
+def _reject_nonfinite_json_constant(value):
+    """JSON does not permit NaN or Infinity in SSE or tool arguments."""
+    raise ValueError('non-finite JSON constant')
+
+
+def _reject_lone_surrogates(value):
+    """Reject non-scalar Unicode before publishing an SSE token or tool call."""
+    if any(0xD800 <= ord(char) <= 0xDFFF for char in value):
+        raise ValueError('unpaired UTF-16 surrogate')
+
+
 async def _model_events(client, url, payload):
     """Forward content immediately; assemble function-call arguments privately."""
-    request=dict(payload,model='maya',stream=True,cache_prompt=True)
+    # The native OneHost request is authoritative about its selected model.
+    # Never substitute a different model for an explicitly selected one.
+    request=dict(payload,stream=True,cache_prompt=True)
+    if 'model' in request:
+        model=request['model']
+        if type(model) is not str or not 0<len(model.strip())<=200:
+            raise StreamFailure('HOLD_MODEL_IDENTITY')
+    else:
+        # Preserve the pre-existing alias for legacy callers without a model.
+        request['model']='maya'
     text=[];calls={};finished=None;complete=False;size=0
     async with client.stream('POST',url,json=request,timeout=180.0) as response:
         if response.status_code!=200:
             raise StreamFailure('HOLD_MODEL_HTTP')
-        async for line in response.aiter_lines():
-            if not line or line.startswith(':'):
+        # A data: line is a field, not an event; dispatch only on a blank line.
+        # Preserve valid multi-line JSON without allowing unbounded frames.
+        parts=[]
+        frame_size=0
+        record_size=0
+        frame_lines=0
+        first_line=True
+        async for line in _bounded_sse_lines(response):
+            # WHATWG SSE decoding ignores one leading UTF-8 BOM, and only
+            # at the start of the stream. Do not erase later payload bytes.
+            if first_line:
+                first_line=False
+                if line.startswith('\ufeff'):
+                    line=line[1:]
+            if line:
+                # A legal stream may send keepalives, but an unbounded single
+                # record of comments/ids can otherwise starve chat indefinitely.
+                frame_lines+=1
+                # Comments and id/retry/event metadata also consume memory and
+                # parsing time. Cap aggregate record bytes, not only data:.
+                record_size+=len(line)+1
+                if frame_lines>1024 or len(line)>300000 or record_size>300000:
+                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+            else:
+                # Each empty line ends one SSE record (including keepalives).
+                frame_lines=0
+                record_size=0
+            if line=='':
+                if not parts:
+                    continue
+                wire='\n'.join(parts).strip()
+                parts=[]
+                frame_size=0
+            elif line.startswith(':'):
                 continue
-            # SSE permits bounded metadata before the data field. Common
-            # OpenAI-compatible proxies emit event: message and id: per chunk.
-            # Other event types (including error) fail closed, not as tokens.
-            if line.startswith('event:'):
-                if line[6:].strip()!='message':
+            elif line.startswith('event:') or line=='event':
+                if line!='event' and line[6:].strip()!='message':
                     raise StreamFailure('HOLD_MODEL_SSE_EVENT')
                 continue
-            if line.startswith('id:'):
+            elif line.startswith('id:') or line=='id':
                 if len(line)>256 or '\x00' in line:
                     raise StreamFailure('HOLD_MODEL_SSE_FRAME')
                 continue
-            if not line.startswith('data:'):
+            elif line.startswith('retry:') or line=='retry':
+                # A provider may supply SSE reconnection advice. This adapter
+                # never reconnects model POSTs (no risk of duplicate tool use).
+                # Ignore the bounded metadata while retaining event framing.
+                if len(line)>256:
+                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+                continue
+            elif line.startswith('data:') or line=='data':
+                # WHATWG: a field without ':' has an empty value. A bare
+                # `data` is still a data field, not an unknown SSE command.
+                value=line[5:] if line!='data' else ''
+                if value.startswith(' '):
+                    value=value[1:]
+                frame_size+=len(value)+1
+                if frame_size>300000:
+                    raise StreamFailure('HOLD_MODEL_SSE_SIZE')
+                parts.append(value)
+                continue
+            else:
                 raise StreamFailure('HOLD_MODEL_SSE_FRAME')
-            wire=line[5:].strip()
             if wire=='[DONE]':
                 complete=True
                 break
             if len(wire)>300000:
                 raise StreamFailure('HOLD_MODEL_SSE_SIZE')
             try:
-                doc=json.loads(wire)
+                doc=json.loads(wire,object_pairs_hook=_reject_duplicate_json_keys,
+                               parse_constant=_reject_nonfinite_json_constant)
                 if not isinstance(doc,dict) or doc.get('error'):
                     raise ValueError('error')
                 choices=doc.get('choices')
@@ -125,7 +255,8 @@ async def _model_events(client, url, payload):
                 if not isinstance(choices,list) or len(choices)!=1:
                     raise ValueError('choices')
                 choice=choices[0]
-                delta=choice.get('delta') or {}
+                delta=choice.get('delta')
+                if delta is None:delta={}
                 if not isinstance(delta,dict):
                     raise ValueError('delta')
                 # A valid terminal choice closes the model's content/tool delta.
@@ -140,7 +271,9 @@ async def _model_events(client, url, payload):
                 part=delta.get('content')
                 if part is not None and not isinstance(part,str):
                     raise ValueError('content')
-                fragments=delta.get('tool_calls') or []
+                if part is not None:_reject_lone_surrogates(part)
+                fragments=delta.get('tool_calls')
+                if fragments is None:fragments=[]
                 if not isinstance(fragments,list):
                     raise ValueError('calls')
                 if already_finished and (reason is not None or part or fragments):
@@ -163,17 +296,22 @@ async def _model_events(client, url, payload):
                         value=fragment.get(field)
                         if value is not None:
                             if not isinstance(value,str):raise ValueError(field)
+                            _reject_lone_surrogates(value)
                             call[field]+=value
                             # Model-supplied SSE identifiers are untrusted. A long ID
                             # must never reach the native tool dispatcher or S03.
                             if len(call[field])>160:
                                 raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
-                    function=fragment.get('function') or {}
+                    function=fragment.get('function')
+                    # Only missing/null is a legal id-only continuation. Reject
+                    # falsey non-objects instead of silently treating them as {}.
+                    if function is None:function={}
                     if not isinstance(function,dict):raise ValueError('function')
                     for field in ('name','arguments'):
                         value=function.get(field)
                         if value is not None:
                             if not isinstance(value,str):raise ValueError(field)
+                            _reject_lone_surrogates(value)
                             call['function'][field]+=value
                     if len(call['function']['arguments'])>100000 or len(call['function']['name'])>200:
                         raise StreamFailure('HOLD_TOOL_CALL_SIZE')
@@ -198,6 +336,27 @@ async def _model_events(client, url, payload):
     yield 'message',message
 
 
+def _native_json_value(value):
+    """Reject Python-to-JSON shape changes before passing tool arguments.
+
+    json.dumps accepts integer keys and tuples by silently converting them to
+    JSON strings/arrays. A pre-parsed native tool call must mean exactly what
+    was supplied rather than dispatching with an invented argument shape.
+    """
+    if type(value) is dict:
+        for key,item in value.items():
+            if type(key) is not str:
+                raise ValueError('non-string tool argument key')
+            _native_json_value(item)
+    elif type(value) is list:
+        for item in value:
+            _native_json_value(item)
+    elif value is None or type(value) in (str,int,float,bool):
+        return
+    else:
+        raise ValueError('non-JSON tool argument value')
+
+
 def _normal_calls(rows,step):
     if not isinstance(rows,list) or len(rows)>8:
         raise StreamFailure('HOLD_TOOL_CALL_COUNT')
@@ -205,11 +364,25 @@ def _normal_calls(rows,step):
     for index,row in enumerate(rows):
         if not isinstance(row,dict) or not isinstance(row.get('name'),str):
             raise StreamFailure('HOLD_TOOL_CALL_SHAPE')
-        args=row.get('arguments') or {}
+        args=row.get('arguments')
+        # Missing/null or a blank native argument string means no arguments.
+        # Falsey non-objects ([], false, 0) must never become {} and dispatch.
+        if args is None or (isinstance(args,str) and not args):args={}
         if isinstance(args,str):
-            try:args=json.loads(args)
+            try:args=json.loads(args,object_pairs_hook=_reject_duplicate_json_keys,
+                                parse_constant=_reject_nonfinite_json_constant)
             except ValueError:raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         if not isinstance(args,dict):raise StreamFailure('HOLD_TOOL_ARGUMENTS')
+        # JSON string arguments were parsed strictly above, but pre-parsed
+        # heuristic/deterministic dicts and nested JSON escapes may still
+        # contain NaN, Infinity or lone UTF-16 surrogates. Validate the exact
+        # object before a native tool can see it.
+        try:
+            _native_json_value(args)
+            encoded=json.dumps(args,ensure_ascii=False,allow_nan=False).encode('utf-8','strict')
+            if len(encoded)>100000:raise ValueError('oversized tool arguments')
+        except (UnicodeError,TypeError,ValueError,RecursionError):
+            raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         # Native parser / deterministic routes share the same bounded ID rule.
         call_id=row.get('id')
         if call_id is not None and (not isinstance(call_id,str) or not 1<=len(call_id)<=160):
@@ -217,6 +390,12 @@ def _normal_calls(rows,step):
         result.append({'id':call_id or f'owner_call_{step}_{index}',
                        'name':row['name'],'arguments':args})
     return result
+
+
+def _refuse_multi_admin_batch(calls):
+    """A model/tool batch must not silently execute one admin action and drop the rest."""
+    if len(calls)>1 and any(call['name']=='run_admin' for call in calls):
+        raise StreamFailure('HOLD_DIRECT_ADMIN_MULTIPLE_ACTIONS')
 
 
 def _assistant_tools(calls,content=''):
@@ -231,6 +410,12 @@ async def _run(native,url,payload,user_text):
     if executor_reply is not None:
         yield 'token',executor_reply
         return
+    # Do not silently execute only the first action from a multi-action
+    # administrator turn. Gate before S03 augmentation and model/route admission.
+    calls=native['_direct_admin_calls'](user_text or '') or []
+    if len(calls)>1:
+        raise StreamFailure('HOLD_DIRECT_ADMIN_MULTIPLE_ACTIONS')
+    direct=bool(calls)
     turn={}
     intent=_current.explicit_media_request(user_text)
     status_id=_current.media_status_query(user_text)
@@ -260,26 +445,39 @@ async def _run(native,url,payload,user_text):
     template.setdefault('enable_thinking',False)
     req['chat_template_kwargs']=template
     if native.get('_POOL'):
-        req=native['prepare_payload'](req,cache=True)
+        # The pool may optimize caching, but cannot silently substitute the
+        # request's explicitly selected model before the actual OneHost POST.
+        # Missing model remains a legacy server/pool selection, unchanged.
+        explicit_model='model' in req
+        selected=req['model'] if explicit_model else None
+        prepared=native['prepare_payload'](req,cache=True)
+        if not isinstance(prepared,dict):
+            raise StreamFailure('HOLD_MODEL_IDENTITY')
+        if explicit_model and (type(selected) is not str or
+                               not 0<len(selected.strip())<=200 or
+                               type(prepared.get('model')) is not str or
+                               prepared['model']!=selected):
+            raise StreamFailure('HOLD_MODEL_IDENTITY')
+        req=prepared
         req['tools']=native_tools
     steps=0
     # Resolve existing deterministic routes before any model text is shown.
     # Never reinterpret already-streamed prose as an executable command.
-    calls=native['_direct_admin_calls'](user_text or '') or []
-    direct=bool(calls)
-    if direct:calls=calls[:1]
     if not calls and native.get('_POOL'):
         deterministic=native['try_deterministic'](user_text or '')
         if deterministic and deterministic.get('name')=='clock' and deterministic.get('text'):
             yield 'token',str(deterministic['text'])
             return
         if deterministic and deterministic.get('tool'):
+            # Preserve raw provider arguments for _normal_calls validation.
+            # Falsey non-dicts must HOLD, never be reinterpreted as {}.
             calls=[{'name':deterministic['tool'],
-                    'arguments':deterministic.get('arguments') or {}}]
+                    'arguments':deterministic.get('arguments')}]
             direct=True
     if not calls:
         calls=native['heuristic_tools'](user_text or '') or []
     calls=_normal_calls(calls,steps)
+    _refuse_multi_admin_batch(calls)
     if calls:messages.append(_assistant_tools(calls))
     async with httpx.AsyncClient(timeout=180.0,trust_env=False) as client:
         while True:
@@ -292,9 +490,17 @@ async def _run(native,url,payload,user_text):
                     if rec is None:
                         rec=await asyncio.to_thread(native['dispatch'],call['name'],call['arguments'])
                     if not isinstance(rec,dict):raise StreamFailure('HOLD_TOOL_RESULT')
+                    # A supplied tool success flag must be an actual boolean.
+                    # Invalid truth evidence cannot reach audit or the model.
+                    if 'ok' in rec and type(rec['ok']) is not bool:
+                        raise StreamFailure('HOLD_TOOL_RESULT_OK')
+                    if 'needs_confirmation' in rec and type(rec['needs_confirmation']) is not bool:
+                        raise StreamFailure('HOLD_TOOL_RESULT_CONFIRMATION')
                     await asyncio.to_thread(native['audit'],'tool_step',name=call['name'],
                                             step=steps,ok=rec.get('ok'))
-                    text=rec.get('text') or ''
+                    # Present tool-result text is evidence: never coalesce a
+                    # falsey non-string value to an empty model-visible result.
+                    text=rec['text'] if 'text' in rec else ''
                     if not isinstance(text,str):raise StreamFailure('HOLD_TOOL_RESULT')
                     if rec.get('ok') is False and not rec.get('needs_confirmation'):
                         text='Инструмент не подтвердил выполнение действия. '+text
@@ -308,8 +514,14 @@ async def _run(native,url,payload,user_text):
                         if not text.strip():raise StreamFailure('HOLD_TOOL_EMPTY')
                         yield 'token',text
                         return
+                    # Tool evidence is part of the complete conversation. Never
+                    # silently replace it with an 8k-character prefix; without
+                    # proven context capacity, fail closed rather than fabricate
+                    # a shortened observation for the model/S03 record.
+                    if len(text)>2000000:
+                        raise StreamFailure('HOLD_TOOL_RESULT_FULL_CONTEXT')
                     messages.append({'role':'tool','tool_call_id':call['id'],
-                                     'name':call['name'],'content':text[:8000]})
+                                     'name':call['name'],'content':text})
             calls=[]
             model_request=dict(req,messages=messages,cache_prompt=True)
             if steps>=int(native.get('MAX_STEPS',8)):
@@ -339,8 +551,12 @@ async def _run(native,url,payload,user_text):
             if len(by_id)!=len(calls) or set(by_id)!={call['id'] for call in message['tool_calls']}:
                 raise StreamFailure('HOLD_TOOL_CALL_ID')
             calls=[by_id[row['id']] for row in message['tool_calls']]
+            # Inspect the *original* model batch: pool deduplication must not
+            # hide a second action and accidentally authorize run_admin.
+            _refuse_multi_admin_batch(calls)
             if native.get('_POOL'):calls=native['dedup_calls'](calls)
             if not calls:raise StreamFailure('HOLD_TOOL_PARSE')
+            _refuse_multi_admin_batch(calls)
             messages.append(_assistant_tools(calls,message['content']))
 
 
@@ -365,7 +581,11 @@ def install(native):
                 payload['_agent_final']=final
                 yield native['_sse']('',finish='stop')
                 yield 'data: [DONE]\n\n'
-            except asyncio.CancelledError:
+            except (asyncio.CancelledError, GeneratorExit):
+                # A client may close the SSE stream after the finish chunk but
+                # before [DONE]. Never leave a postflight-ready answer behind
+                # for a response the browser did not fully consume.
+                payload.pop('_agent_final',None)
                 raise
             except Exception as error:
                 payload.pop('_agent_final',None)

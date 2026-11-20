@@ -1,0 +1,46 @@
+name: NOX A1 1A01 isolated admin guard source check
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_chat_stream.py'
+      - 'nox-control/test_owner_chat_stream.py'
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
+      - '.github/workflows/nox-a1-1a01-admin-guard-focused.yml'
+permissions: {contents: read}
+jobs:
+  focused-source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify only 1A01 premodel ambiguous-admin HOLD source
+        run: |
+          set -euo pipefail
+          python3 -m pip install -q "httpx==0.28.1" "fastapi==0.128.2"
+          python3 -m py_compile nox-control/owner_chat_stream.py nox-control/test_owner_chat_stream.py
+          PYTHONPATH=nox-control python3 -m unittest -v test_owner_chat_stream.StreamTests.test_direct_admin_multiple_actions_holds_before_model_or_dispatch \
+            test_owner_chat_stream.StreamTests.test_model_admin_batch_never_partly_executes_or_certifies_s03 \
+            test_owner_chat_stream.StreamTests.test_falsey_non_object_tool_arguments_hold_before_model_and_dispatch \
+            test_owner_chat_stream.StreamTests.test_falsey_malformed_model_delta_or_tool_calls_cannot_certify_s03 \
+            test_owner_chat_stream.StreamTests.test_falsey_model_tool_function_fragment_holds_before_dispatch \
+            test_owner_chat_stream.StreamTests.test_disconnect_after_finish_before_done_clears_final \
+            test_owner_chat_stream.StreamTests.test_duplicate_sse_and_tool_argument_json_keys_hold_before_dispatch \
+            test_owner_chat_stream.StreamTests.test_nonfinite_json_constants_hold_before_dispatch_and_s03 \
+            test_owner_chat_stream.StreamTests.test_nested_invalid_tool_arguments_hold_before_dispatch \
+            test_owner_chat_stream.StreamTests.test_invalid_utf8_on_wire_cannot_certify_browser_or_s03 \
+            test_owner_chat_stream.StreamTests.test_lone_utf16_surrogate_rejected_before_browser_and_s03 \
+            test_owner_chat_stream.StreamTests.test_deterministic_falsey_arguments_never_bypass_call_guard
+          echo 'NOX_A1_SOURCE_ONLY=true'
+          echo 'NOX_A1_NATIVE_ACCEPTANCE=false'
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: V175 strict browser NDJSON Unicode receipt gate
+        run: |
+          set -euo pipefail
+          node --test --test-name-pattern='V175 JSON-escaped lone UTF-16' coordination/onepass/test_v135_resonance_owner_bridge.cjs
+          echo 'NOX_A1_V175_SOURCE_ONLY=true'
+          echo 'NOX_A1_V175_NATIVE_ACCEPTANCE=false'

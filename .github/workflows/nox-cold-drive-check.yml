@@ -1,0 +1,35 @@
+name: NOX cold storage module check
+on:
+  push:
+    branches: [main, fix/nox-2a02-cold-transfer-bounds-20261119, fix/nox-2a02-atomic-tmpfs-publish-20261120]
+    paths:
+      - 'nox-control/nox_cold_drive.py'
+      - '.github/workflows/nox-cold-drive-check.yml'
+      - 'nox-control/test_nox_cold_stream.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and CLI validation (no external credentials)
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/nox_cold_drive.py
+          python3 nox-control/nox_cold_drive.py --help
+          python3 nox-control/nox_cold_drive.py upload --help
+          python3 nox-control/nox_cold_drive.py load --help
+          python3 -m unittest discover -s nox-control -p test_nox_cold_stream.py -v
+      - name: Verify protected source rejection
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/nox_cold_ci/s03
+          printf 'DO-NOT-DELETE' > /tmp/nox_cold_ci/s03/test.safetensors
+          if python3 nox-control/nox_cold_drive.py upload --file /tmp/nox_cold_ci/s03/test.safetensors --remote test:NOX_COLD ; then
+            echo '::error::Protected S03 was not rejected'
+            exit 1
+          fi
+          test -f /tmp/nox_cold_ci/s03/test.safetensors

@@ -1,0 +1,143 @@
+{
+  "schema": "NOX_NATIVE_EVIDENCE_ADDENDUM_V1",
+  "instructions_version": "0.0.6",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "Record the observed owner-authenticated native chat subreceipt while keeping the enclosing edge-gated workflow outcome separate.",
+  "scope": {
+    "task_ids": [
+      "1V14-01"
+    ],
+    "task_registry": {
+      "path": "nox-control/four_queue_20261118/work_tasks.json",
+      "source_ref": "c4683943fe17368ab2086f6ae7ff27ad21732ef7",
+      "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f"
+    },
+    "immutable_295_manifest": {
+      "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+      "source_ref": "c4683943fe17368ab2086f6ae7ff27ad21732ef7",
+      "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb"
+    },
+    "relay_manifest": {
+      "path": "coordination/NOX_RELAY35_20261119.json",
+      "source_ref": "2f1fc84e2bf6a1ff7729cc5f2104bb683d5ee980",
+      "rank": 3
+    },
+    "receipts": {
+      "path": "nox-control/four_queue_20261118/work_receipts.json",
+      "source_ref": "c4683943fe17368ab2086f6ae7ff27ad21732ef7",
+      "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338"
+    },
+    "criteria": {
+      "1V14-01": {
+        "title": "Восстановить рабочий endpoint единого чата NOX.",
+        "required_evidence": "native",
+        "spec_sha256": "b81b6722acc7775a93d8ee8288f9330a95d3d97076cdb55b4f6fbc75f2bc768d",
+        "prior_receipt": {
+          "state": "blocked",
+          "scope": "source_only",
+          "recorded_status": "HOLD_NATIVE_OR_DEPENDENCY"
+        },
+        "native_binding_before_addendum": "UNBOUND_PENDING_NATIVE_CATALOG",
+        "addendum_assessment": "ACCEPTED",
+        "acceptance_binding": {
+          "evidence_pointer": "#/evidence/native_endpoint/chat_subreceipt",
+          "corroboration_pointer": "#/evidence/https_edge",
+          "workflow_run_id": 44590818738,
+          "job_id": 135796020570,
+          "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44590818738",
+          "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44590818738/job/135796020570",
+          "captured_at_utc": "2026-11-19T18:45:20.851Z",
+          "criterion_satisfied": "The embedded owner-authenticated native chat subreceipt returned HTTP 200 with 215 substantive deltas and terminal done, matching the exact saved owner-dialog pair on the pinned loopback proxy. This supports only the pinned native working-endpoint criterion; public HTTPS authenticated streaming is not established.",
+          "scope_limit": "Native loopback chat endpoint only. The separate edge receipt verifies URL/tunnel continuity only; public HTTPS authenticated streaming and multi-turn recall are not established. Other original tasks remain outside this addendum."
+        }
+      }
+    },
+    "mutation_boundary": "Evidence-only addendum. The immutable registry, original work receipts, and native queue rows retain their historical records."
+  },
+  "evidence": {
+    "kind": "owner_authenticated_native_chat_subreceipt_and_separate_edge_continuity",
+    "native_endpoint": {
+      "workflow_run_id": 44590818738,
+      "job_id": 135796020570,
+      "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44590818738/job/135796020570",
+      "job_conclusion": "failure",
+      "authorized_comment_id": 7018554233,
+      "host_instance_id": 60509551,
+      "source_ref": "084addf6ce5e8f3d07cf21f4991ff22eb37d4eab",
+      "verifier_path": "nox-control/owner_live_stream_smoke_oneshot.py",
+      "installed_chat_proxy_sha256": "54b1932c3e408c91c3086de994eb9b85709d65066746b5ca520582829ab94d89",
+      "authenticated": true,
+      "method": "POST",
+      "endpoint": "http://127.0.0.1:8080/api/nox/chat/stream",
+      "http_status": 200,
+      "terminal_done": true,
+      "delta_count": 215,
+      "response_chars": 725,
+      "elapsed_ms": 61810,
+      "owner_dialog_pair_exact": true,
+      "model_loads": 0,
+      "service_restarts": 0,
+      "native_source_writes": 0,
+      "raw_content_exported": false,
+      "workflow_status": "HOLD_NATIVE_PAYLOAD_INCOMPLETE",
+      "workflow_remote_exit_code": 2,
+      "workflow_hold": "HOLD_WEB_EDGE_TUNNEL_RECEIPT",
+      "chat_subreceipt_status": "LIVE_STREAM_OWNER_DIALOG_VERIFIED",
+      "chat_subreceipt_scope": "The authenticated chat request passed its own subreceipt: HTTP 200, substantive deltas, terminal done, and exact saved owner-dialog pair. The enclosing compound repair job failed because the independent web-edge tunnel gate did not pass in that run.",
+      "chat_subreceipt": {
+        "kind": "chat_policy_live_smoke",
+        "status": "LIVE_STREAM_OWNER_DIALOG_VERIFIED",
+        "operation_conclusion": "success",
+        "workflow_run_id": 44590818738,
+        "job_id": 135796020570,
+        "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44590818738/job/135796020570",
+        "source_ref": "084addf6ce5e8f3d07cf21f4991ff22eb37d4eab",
+        "installed_chat_proxy_sha256": "54b1932c3e408c91c3086de994eb9b85709d65066746b5ca520582829ab94d89",
+        "authenticated": true,
+        "method": "POST",
+        "endpoint": "http://127.0.0.1:8080/api/nox/chat/stream",
+        "http_status": 200,
+        "substantive_deltas": true,
+        "delta_count": 215,
+        "response_chars": 725,
+        "terminal_done": true,
+        "owner_dialog_pair_exact": true,
+        "elapsed_ms": 61810,
+        "model_loads": 0,
+        "service_restarts": 0,
+        "native_source_writes": 0,
+        "raw_content_exported": false,
+        "scope_limit": "Loopback native endpoint response only; no public HTTPS authenticated-stream verification and no multi-turn memory acceptance."
+      }
+    },
+    "https_edge": {
+      "workflow_run_id": 44591678615,
+      "job_id": 135799028783,
+      "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44591678615/job/135799028783",
+      "job_conclusion": "success",
+      "authorized_comment_id": 7018701044,
+      "scope": "edge_only",
+      "same_https_chat_url": true,
+      "same_tunnel_process": true,
+      "prior_https_chat_ready": true,
+      "repair_complete": true,
+      "source_ref": "6aeec1c8adddc937e8e158c917753b0aeb77351a",
+      "observed_at_utc": "2026-11-19T18:49:06.870Z",
+      "authenticated_https_stream_observed": false,
+      "repair_complete_scope": "Edge-only operation completion; does not mean an authenticated public HTTPS chat stream was verified."
+    },
+    "independent_s03_corroboration": {
+      "scope": "separate earlier single live answer",
+      "live_job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44589039939/job/135789980852",
+      "sqlite_readback_job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44592459262/job/135801783615",
+      "canonical_s03_write_verified": true,
+      "segment": "M1",
+      "exact_matches": 1,
+      "answer_sha256": "13d4daf0713273858d46332185eb4fea6fefac44ea3884e4bf2aa2a99a5e9318",
+      "item_sha256": "29ae0cef920db4c84d1a3c575e544ea1a9d12e8f34a252a36b34096b8cd0de77",
+      "sqlite_readback_model_requests": 0,
+      "sqlite_readback_host_writes": 0
+    }
+  }
+}

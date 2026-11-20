@@ -1,0 +1,374 @@
+name: NOX owner-authenticated inspect and encrypted S03 source export
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/owner_native_inspect_comment_guard.py'
+      - 'nox-control/test_owner_native_inspect_comment_guard.py'
+      - 'nox-control/owner_secret_staging.py'
+      - 'nox-control/test_owner_secret_staging.py'
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_native_emergency_stop.py'
+      - 'nox-control/test_owner_native_emergency_stop_fence.py'
+      - 'nox-control/owner_native_emergency_stop_preflight.py'
+      - 'nox-control/test_owner_native_emergency_stop_preflight.py'
+      - 'nox-control/test_owner_native_operator_secret_env.py'
+      - 'nox-control/owner_browser_stream_only_entry.py'
+      - 'nox-control/owner_chat_stream_only_qa.py'
+      - 'nox-control/owner_chat_browser_qa.py'
+      - 'nox-control/owner_chat_browser_transport_qa.py'
+      - 'nox-control/owner_chat_browser_release_qa.py'
+      - 'nox-control/test_owner_chat_stream_only_qa.py'
+      - 'nox-control/test_owner_native_operator_browser_qa.py'
+      - '.github/workflows/nox-owner-native-inspect.yml'
+      - '.github/workflows/nox-owner-maintenance-command.yml'
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nox-owner-inspect-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  source:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Install crypto dependency for encrypted-envelope tests
+        run: "python -m pip install --disable-pip-version-check --only-binary=:all: cryptography"
+      - name: Parse owner workflow YAML files
+        run: |
+          ruby -e 'require "yaml"; ARGV.each { |path| YAML.parse_file(path); puts "#{path}: YAML parsed" }' \
+            .github/workflows/nox-owner-native-inspect.yml \
+            .github/workflows/nox-owner-maintenance-command.yml
+      - name: Compile guard and run offline authorization tests
+        run: |
+          set -euo pipefail
+          python -B -m py_compile \
+            nox-control/owner_native_inspect_comment_guard.py \
+            nox-control/test_owner_native_inspect_comment_guard.py \
+            nox-control/owner_secret_staging.py \
+            nox-control/test_owner_secret_staging.py \
+            nox-control/owner_native_operator.py \
+            nox-control/owner_native_emergency_stop.py \
+            nox-control/test_owner_native_emergency_stop_fence.py \
+            nox-control/owner_native_emergency_stop_preflight.py \
+            nox-control/test_owner_native_emergency_stop_preflight.py \
+            nox-control/test_owner_native_operator_secret_env.py \
+            nox-control/owner_browser_stream_only_entry.py \
+            nox-control/owner_chat_stream_only_qa.py \
+            nox-control/test_owner_chat_stream_only_qa.py \
+            nox-control/test_owner_native_operator_browser_qa.py
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_native_inspect_comment_guard.py \
+            -v
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_secret_staging.py \
+            -v
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_native_emergency_stop_fence.py \
+            -v
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_native_emergency_stop_preflight.py \
+            -v
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_native_operator_secret_env.py \
+            -v
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_chat_stream_only_qa.py \
+            -v
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_native_operator_browser_qa.py \
+            -v
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 845c76d44676d56157125e729db81b45e006cf92
+          path: source-export
+          persist-credentials: false
+      - name: Compile and test exact pinned S03 export source, provider manifest, and secret-gated operator
+        working-directory: source-export
+        run: |
+          set -euo pipefail
+          python -B -m py_compile \
+            nox-control/owner_native_operator.py \
+            nox-control/owner_chat_s03_source_export.py \
+            nox-control/test_owner_chat_s03_source_export.py \
+            nox_runpod/__init__.py \
+            nox_runpod/teacher_mesh/__init__.py \
+            nox_runpod/teacher_mesh/v51/__init__.py \
+            nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_chat_s03_source_export.py \
+            -v
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ad76f877bb1df29d360b5c885217024e4773725f
+          path: mapped-memory-source
+          persist-credentials: false
+      - name: Test exact read-only mapped-memory attribution source
+        working-directory: mapped-memory-source
+        run: |
+          set -euo pipefail
+          python -B -m unittest discover -s nox-control -p test_owner_native_mapped_memory_attribution.py -v
+          python -B -m unittest discover -s nox-control -p test_owner_native_inspect_cgroup_pin.py -v
+
+  owner-inspect:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
+      github.event.issue.number == 256 &&
+      github.event.comment.user.id == 340718567 &&
+      github.event.sender.id == 340718567 &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
+      (endsWith(github.event.comment.body, ' inspect') ||
+       endsWith(github.event.comment.body, ' audit') ||
+       endsWith(github.event.comment.body, ' source_attest') ||
+       endsWith(github.event.comment.body, ' gpu_inventory') ||
+       endsWith(github.event.comment.body, ' browser_qa') ||
+       contains(github.event.comment.body, ' refill_snapshot ') ||
+       contains(github.event.comment.body, ' source_export '))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Validate exact owner command before source checkout or secrets
+        id: owner-command
+        run: python -B nox-control/owner_native_inspect_comment_guard.py
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: success()
+        with:
+          ref: ${{ steps.owner-command.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+      - name: Recheck pinned inspect command without credentials
+        if: success() && steps.owner-command.outputs.action == 'inspect'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          PYTHONPATH: nox-control
+        run: |
+          python -B - <<'PY'
+          from owner_native_operator import authorize_event
+          authorize_event('inspect')
+          print('NOX_OWNER_INSPECT_SOURCE_AUTH=PASS')
+          PY
+      - name: Recheck pinned audit command without credentials
+        if: success() && steps.owner-command.outputs.action == 'audit'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          PYTHONPATH: nox-control
+        run: |
+          python -B - <<'PY'
+          from owner_native_operator import authorize_event
+          authorize_event('audit')
+          print('NOX_OWNER_AUDIT_SOURCE_AUTH=PASS')
+          PY
+      - name: Run the fixed read-only inspect action
+        if: success() && steps.owner-command.outputs.action == 'inspect'
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+        run: python -B nox-control/owner_native_operator.py inspect
+      - name: Run the fixed read-only audit action
+        if: success() && steps.owner-command.outputs.action == 'audit'
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+        run: python -B nox-control/owner_native_operator.py audit
+      - name: Recheck pinned source-attest command without credentials
+        if: success() && steps.owner-command.outputs.action == 'source_attest'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          PYTHONPATH: nox-control
+        run: |
+          python -B - <<'PY'
+          from owner_native_operator import authorize_event
+          authorize_event('source_attest')
+          print('NOX_OWNER_SOURCE_ATTEST_SOURCE_AUTH=PASS')
+          PY
+      - name: Recheck pinned GPU inventory command without credentials
+        if: success() && steps.owner-command.outputs.action == 'gpu_inventory'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          PYTHONPATH: nox-control
+        run: |
+          python -B - <<'PY'
+          from owner_native_operator import authorize_event
+          authorize_event('gpu_inventory')
+          print('NOX_OWNER_GPU_INVENTORY_SOURCE_AUTH=PASS')
+          PY
+      - name: Run the fixed read-only source-attest action
+        if: success() && steps.owner-command.outputs.action == 'source_attest'
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+        run: python -B nox-control/owner_native_operator.py source_attest
+
+      - name: Run the fixed read-only GPU inventory action
+        if: success() && steps.owner-command.outputs.action == 'gpu_inventory'
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+        run: python -B nox-control/owner_native_operator.py gpu_inventory
+      - name: Recheck pinned one-stream browser QA command without credentials
+        if: success() && steps.owner-command.outputs.action == 'browser_qa'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          PYTHONPATH: nox-control
+        run: |
+          python -B - <<'PY'
+          from owner_native_operator import authorize_event
+          authorize_event('browser_qa')
+          print('NOX_OWNER_BROWSER_QA_SOURCE_AUTH=PASS')
+          PY
+      - name: Run the fixed owner one-stream browser QA
+        if: success() && steps.owner-command.outputs.action == 'browser_qa'
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+        run: python -B nox-control/owner_native_operator.py browser_qa
+      - name: Recheck exact refill snapshot command before credentials
+        if: success() && steps.owner-command.outputs.action == 'refill_snapshot'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          NOX_REFILL_SNAPSHOT_RECIPIENT: ${{ steps.owner-command.outputs.export_key_b64 }}
+          PYTHONPATH: nox-control
+        run: |
+          if ! /usr/bin/python3 -c 'import cryptography'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq python3-cryptography
+          fi
+          /usr/bin/python3 -B - <<'PY'
+          import os
+          from owner_native_operator import authorize_event, _load_action_payload
+          authorize_event('refill_snapshot', os.environ['NOX_REFILL_SNAPSHOT_RECIPIENT'])
+          compile(_load_action_payload('refill_snapshot'), '<refill_snapshot>', 'exec')
+          print('NOX_OWNER_REFILL_SNAPSHOT_SOURCE_AUTH=PASS')
+          PY
+          /usr/bin/python3 -B nox-control/test_owner_refill_snapshot_transport.py
+          /usr/bin/python3 -B nox-control/systemic_relay_20261118/test_owner_systemic_refill_snapshot.py
+      - name: Run the fixed read-only refill snapshot action
+        if: success() && steps.owner-command.outputs.action == 'refill_snapshot'
+        id: refill-snapshot
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          NOX_REFILL_SNAPSHOT_RECIPIENT: ${{ steps.owner-command.outputs.export_key_b64 }}
+        run: /usr/bin/python3 -B nox-control/owner_native_operator.py refill_snapshot
+      - name: Always detach only the refill snapshot temporary public key
+        if: >-
+          always() &&
+          (steps.refill-snapshot.outcome == 'success' ||
+           steps.refill-snapshot.outcome == 'failure' ||
+           steps.refill-snapshot.outcome == 'cancelled')
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: /usr/bin/python3 -B -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Upload only the encrypted refill snapshot
+        if: success() && steps.owner-command.outputs.action == 'refill_snapshot'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_REFILL_SNAPSHOT_${{ github.run_id }}
+          path: ${{ runner.temp }}/nox-refill-snapshot.enc
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+      - name: Recheck exact pinned #415 source-export command before credentials
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          NOX_OWNER_EXPORT_KEY_B64: ${{ steps.owner-command.outputs.export_key_b64 }}
+          PYTHONPATH: nox-control
+        run: |
+          python -B - <<'PY'
+          import os
+          from owner_native_operator import authorize_event
+          authorize_event('source_export', os.environ.get('NOX_OWNER_EXPORT_KEY_B64'))
+          print('NOX_OWNER_SOURCE_EXPORT_SOURCE_AUTH=PASS')
+          PY
+      - name: Install crypto dependency before #415 owner credential staging
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        run: "python -m pip install --disable-pip-version-check --only-binary=:all: cryptography"
+      - name: Compile and test exact pinned #415 encrypted export source before credentials
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        working-directory: source
+        run: |
+          set -euo pipefail
+          python -B -m py_compile \
+            nox-control/owner_native_operator.py \
+            nox-control/owner_chat_s03_source_export.py \
+            nox-control/test_owner_chat_s03_source_export.py
+          python -B nox-control/test_owner_chat_s03_source_export.py
+      - name: Stage NOX2 only after #415 authorization, dependency, and import checks
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX2_FILE: ${{ runner.temp }}/nox2-s03-${{ github.run_id }}-${{ github.run_attempt }}
+        run: python -B nox-control/owner_secret_staging.py
+      - name: Run the exact pinned #415 encrypted source-export action
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        working-directory: source
+        env:
+          NOX2_FILE: ${{ runner.temp }}/nox2-s03-${{ github.run_id }}-${{ github.run_attempt }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          NOX_OWNER_EXPORT_KEY_B64: ${{ steps.owner-command.outputs.export_key_b64 }}
+        run: python -B nox-control/owner_native_operator.py source_export "$NOX_OWNER_EXPORT_KEY_B64"
+      - name: Remove staged #415 owner credential
+        if: always() && steps.owner-command.outputs.action == 'source_export'
+        env:
+          NOX2_FILE: ${{ runner.temp }}/nox2-s03-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          rm -f -- "$NOX2_FILE"
+          unset NOX2_FILE
+          echo "NOX_OWNER_CREDENTIAL_CLEANUP=COMPLETE"
+      - name: Upload only the encrypted S03 source-export artifact
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_S03_SOURCE_EXPORT_${{ github.run_id }}
+          path: source/artifacts/nox-s03-source-export.enc
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error

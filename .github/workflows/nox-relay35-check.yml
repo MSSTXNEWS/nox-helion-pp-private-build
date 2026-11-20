@@ -1,0 +1,126 @@
+name: NOX Relay35 canonical scope check
+on:
+  push:
+    branches: [coord/nox-relay35-20261119]
+    paths:
+      - 'coordination/NOX_RELAY35_20261119.json'
+      - 'coordination/NOX_RELAY35_RUNBOOK.md'
+      - '.github/workflows/nox-relay35-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'coordination/NOX_RELAY35_20261119.json'
+      - 'coordination/NOX_RELAY35_RUNBOOK.md'
+      - '.github/workflows/nox-relay35-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify bounded scope and immutable source provenance
+        run: |
+          python3 - <<'PY'
+          import collections
+          import hashlib
+          import json
+          import re
+          import subprocess
+
+          d = json.load(open('coordination/NOX_RELAY35_20261119.json', encoding='utf-8'))
+          assert d['schema'] == 'NOX_RELAY35_CANONICAL_PROPOSAL_V1'
+          assert d['instructions_version'] == '0.0.6'
+          assert d['source_registry_total'] == 295
+          assert d['role'].startswith('NON_EXECUTABLE_HANDOFF')
+          tasks = d['tasks']
+          # Frozen ordered Relay35 wave from main manifest blob 3b1f24c6d17cb5404cf4d0d0e0cb561a35870f40.
+          expected_task_order = [
+              ('1A03', 1),
+              ('1A01', 2),
+              ('1V14-01', 3),
+              ('6B04', 4),
+              ('6A02', 5),
+              ('0V14-02', 6),
+              ('1A04', 7),
+              ('1A02', 8),
+              ('6A05', 9),
+              ('6V14-01', 10),
+              ('0A03', 11),
+              ('0A01', 12),
+              ('5V14-01', 13),
+              ('0B05', 14),
+              ('1V14-06', 15),
+              ('3A02', 16),
+              ('6V14-04', 17),
+              ('3A05', 18),
+              ('2V14-03', 19),
+              ('2A02', 20),
+              ('2A03', 21),
+              ('3A01', 22),
+              ('3A03', 23),
+              ('6B01', 24),
+              ('6A03', 25),
+              ('6A04', 26),
+              ('2A05', 27),
+              ('2A01', 28),
+              ('3A04', 29),
+              ('3B01', 30),
+              ('4A02', 31),
+              ('3B02', 32),
+              ('3B03', 33),
+              ('4B01', 34),
+              ('4B04', 35),
+          ]
+          assert all(type(task['rank']) is int for task in tasks)
+          assert [(task['task_id'], task['rank']) for task in tasks] == expected_task_order
+          assert len(tasks) == 35 and len({t['task_id'] for t in tasks}) == 35
+          assert [t['rank'] for t in tasks] == list(range(1, 36))
+          lanes = [f'A{i}' for i in range(7)]
+          assert dict(collections.Counter(t['seed_lane'] for t in tasks)) == {x: 5 for x in lanes}
+          assert all(t['seed_lane'] == lanes[i % 7] for i, t in enumerate(tasks))
+          assert all(re.fullmatch(r'[0-9a-f]{64}', t['spec_sha256']) for t in tasks)
+          assert all(t['original_acceptance_added'] is False and t['execution_state'] == 'PLANNED_NOT_NATIVE_CLAIMED' for t in tasks)
+
+          # Pin the allowlisted registry location and immutable commit/blob. Never
+          # fetch a path or ref supplied by an untrusted manifest without validation.
+          source_repository = d['source_repository']
+          assert source_repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+          source_ref = d['source_ref']
+          source_path = d['source_registry_path']
+          assert source_ref == 'c4683943fe17368ab2086f6ae7ff27ad21732ef7'
+          assert source_path == 'nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json'
+          source_blob = subprocess.check_output(
+              ['git', 'rev-parse', f'{source_ref}:{source_path}'], text=True
+          ).strip()
+          assert source_blob == d['source_registry_blob_sha'] == 'f5c45dc8919b1b800e89a421676a3627e75fb3bb'
+          registry = json.loads(subprocess.check_output(
+              ['git', 'show', f'{source_ref}:{source_path}'], text=True
+          ))
+          assert registry['total_original_ids'] == 295
+          originals = registry['tasks']
+          assert len(originals) == 295 and len({t['task_id'] for t in originals}) == 295
+          original_by_id = {t['task_id']: t for t in originals}
+          for task in tasks:
+              original = original_by_id[task['task_id']]
+              spec = original['spec']
+              spec_sha = hashlib.sha256(json.dumps(
+                  spec, ensure_ascii=False, sort_keys=True, separators=(',', ':'),
+                  allow_nan=False
+              ).encode('utf-8')).hexdigest()
+              assert spec['id'] == task['task_id']
+              assert spec_sha == original['spec_sha256'] == task['spec_sha256']
+              assert task['title'] == spec['title']
+              assert task['queue_id'] == original['queue_id']
+              assert task['original_priority'] == original['routing_source']['priority']
+              assert task['required_evidence'] == original['routing_source']['required_evidence']
+              assert task['original_execution_binding'] == original['execution_binding']['state']
+              assert task['prior_receipt_state'] == original['prior_receipt_state']
+
+          print('RELAY35_PROVENANCE_PASS count=35 source_registry=295 original_acceptance_delta=0')
+          PY

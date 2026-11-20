@@ -1,6 +1,7 @@
 """Concrete stream-only regressions. No native browser, service or model calls."""
 import asyncio
 import base64
+from collections import Counter
 import hashlib
 import json
 import os
@@ -43,6 +44,63 @@ def observation(prefixes):
 
 
 class ScopeTests(unittest.TestCase):
+    def test_missing_prepost_auth_lease_stop_resources_or_served_sha_blocks_model_post(self):
+        base = {'owner_authenticated': True, 'lease_held': True, 'stop_clear': True,
+                'resources': {'disk_free_bytes': 8 * 1024 ** 3, 'cgroup_headroom_bytes': 5 * 1024 ** 3},
+                'served_asset_sha256': scope.SERVED_BRIDGE_SHA256}
+        variants = [
+            ('owner_authenticated', False, 'PREPOST_OWNER_AUTH'),
+            ('lease_held', False, 'PREPOST_OWNER_LEASE'),
+            ('stop_clear', False, 'PREPOST_OWNER_STOP'),
+            ('resources', {'disk_free_bytes': 6 * 1024 ** 3, 'cgroup_headroom_bytes': 5 * 1024 ** 3}, 'PREPOST_DISK_RESERVE'),
+            ('resources', {'disk_free_bytes': 8 * 1024 ** 3, 'cgroup_headroom_bytes': 3 * 1024 ** 3}, 'PREPOST_RAM_RESERVE'),
+            ('served_asset_sha256', None, 'PREPOST_SERVED_ASSET_SHA'),
+            ('served_asset_sha256', '0' * 64, 'PREPOST_SERVED_ASSET_SHA'),
+        ]
+        for field, value, hold in variants:
+            with self.subTest(field=field, value=value):
+                observed = dict(base, **{field: value})
+                model_posts = []
+                def submit_once():
+                    scope.pre_post_admission(**observed)
+                    model_posts.append('POST')
+                with self.assertRaisesRegex(RuntimeError, hold):
+                    submit_once()
+                self.assertEqual(model_posts, [])
+
+    def test_route_boundary_rechecks_stop_after_prepost_and_blocks_forwarding(self):
+        observed = {'owner_authenticated': True, 'lease_held': True, 'stop_clear': True,
+            'resources': {'disk_free_bytes': 8 * 1024 ** 3, 'cgroup_headroom_bytes': 5 * 1024 ** 3},
+            'served_asset_sha256': scope.SERVED_BRIDGE_SHA256}
+        scope.pre_post_admission(**observed)
+        stop = {'present': False}
+        report = {}
+        blocked = Counter()
+        route = types.SimpleNamespace(abort=AsyncMock(return_value='ABORTED'),
+                                      continue_=AsyncMock(return_value='CONTINUED'))
+        stop['present'] = True  # STOP appears after pre-post admission, before route forwarding.
+        result = asyncio.run(scope.final_route_post_gate(lambda: stop['present'], report, blocked, route))
+        self.assertEqual(result, 'ABORTED')
+        route.abort.assert_awaited_once()
+        route.continue_.assert_not_awaited()
+        self.assertEqual(report['native_post_route_gate'], {
+            'state': 'HOLD', 'reason': 'HOLD_OWNER_STOP', 'request_forwarded': False})
+        self.assertEqual(blocked['owner_stop_before_native_post'], 1)
+
+    def test_prepost_gate_is_compiled_before_single_send_click(self):
+        core, _, _, _ = installed()
+        constants = core.browser_run.__code__.co_consts
+        joined = '\n'.join(value for value in constants if isinstance(value, str))
+        names = core.browser_run.__code__.co_names
+        self.assertIn('_nox_pre_post_admission', names)
+        self.assertIn('_nox_served_bridge_sha256', names)
+        import dis
+        instructions = list(dis.get_instructions(core.browser_run))
+        gate_offset = next(item.offset for item in instructions if item.opname in ('LOAD_GLOBAL', 'LOAD_NAME') and item.argval == '_nox_pre_post_admission')
+        send_offset = next(item.offset for item in instructions if item.opname == 'LOAD_CONST' and item.argval == 'QA_SEND_CLICK')
+        self.assertLess(gate_offset, send_offset)
+        self.assertIn('PREPOST_SERVED_ASSET_SHA', scope.pre_post_admission.__code__.co_consts)
+
     def test_exact_compilation_skips_layout_stages_without_altering_frozen_gate(self):
         core, _, _, original_gate = installed()
         self.assertIs(core.progressive_stream_valid, original_gate)
@@ -58,12 +116,36 @@ class ScopeTests(unittest.TestCase):
         guard = next(value for value in core.browser_run.__code__.co_consts
                      if isinstance(value, types.CodeType) and value.co_name == 'guard')
         self.assertIn('native_admitted', guard.co_freevars)
+        # PR415 introduced a second turn to the general harness; stream-only must
+        # remain one admitted POST even when the core supports multiturn.
+        self.assertIn('allowed_qa_request', guard.co_names)
+        self.assertIn('_nox_final_route_post_gate', guard.co_names)
+        self.assertIn(False, guard.co_consts)
+        self.assertIn('continue_', scope.final_route_post_gate.__code__.co_names)
+        self.assertIn('abort', scope.final_route_post_gate.__code__.co_names)
         self.assertIn('duplicate_qa_generation', guard.co_consts)
         self.assertIn('answer_normalized_characters:normalize(q.answer).length', core.SNAPSHOT_JS)
         self.assertIn("window.matchMedia('(prefers-reduced-motion: reduce)').matches", core.SNAPSHOT_JS)
         self.assertIn('reduce', core.browser_run.__code__.co_consts)
         self.assertIn('HOLD_STREAM_ONLY_MOTION_PREFERENCE_NOT_APPLIED', core.browser_run.__code__.co_consts)
         self.assertEqual(core.EXPECTED, ','.join(map(str, range(1, 41))))
+
+    def test_two_turn_challenge_uses_the_first_answer_without_leaking_it(self):
+        core, _, _, _ = installed()
+        with patch.object(scope.secrets, 'SystemRandom') as random:
+            random.return_value.shuffle.side_effect = lambda numbers: numbers.reverse()
+            prompt, follow_up, first, second = core._nox_dialogue_challenge('fixtureqa')
+        self.assertEqual(first, ','.join(map(str, range(40, 0, -1))))
+        self.assertNotEqual(second, '10,9,8,7,6,5,4,3,2,1')
+        self.assertEqual(second, ','.join(first.split(',')[-10:][::-1]))
+        self.assertTrue(prompt.endswith(first))
+        self.assertTrue(follow_up.startswith('[NOX UI QA fixtureqa]'))
+        self.assertFalse(any(character.isdigit() for character in follow_up))
+        code = core.browser_run.__code__
+        self.assertIn('_nox_dialogue_challenge', code.co_names)
+        self.assertIn('first_expected', code.co_varnames)
+        self.assertIn('second_expected', code.co_varnames)
+        self.assertNotIn('10,9,8,7,6,5,4,3,2,1', code.co_consts)
 
     def test_stream_only_dialog_click_is_single_fresh_pointer_gated(self):
         core, _, _, _ = installed()
@@ -234,7 +316,15 @@ class EntryTests(unittest.TestCase):
         value = {'schema': scope.SCHEMA, 'request': '123', 'source_sha': 'a' * 40,
             'state': 'HOLD', 'reason': 'HOLD_PROGRESSIVE_STREAM_NOT_OBSERVED',
             'stream_only_acceptance_verified': False, 'full_browser_qa_promoted': False,
-            'upstream_model_inference_verified': False}
+            'upstream_model_inference_verified': False, 'two_turn_mode': True,
+            'maximum_new_dialogs': 1, 'maximum_native_posts': 2,
+            'first_turn_terminal_sse_verified': False,
+            'authenticated_s03_history_readback_verified': False,
+            'canonical_s03_receipt_verified': False,
+            'canonical_s03_receipt_provider_present': False,
+            'owner_authenticated_history_readback_gets': 0, 'native_posts_admitted': 0,
+            'both_terminal_sse_done_records_saved_s03_integrated': False,
+            'same_dialog_id': False, 'native_terminal_done_records': []}
         def launch(argv, **kwargs):
             kwargs['stdout'].write((entry.PREFIX + json.dumps({'kind': 'browser_stream_only_receipt', 'data': value}) + '\n').encode())
             kwargs['stderr'].write(b'private cookie and password')
