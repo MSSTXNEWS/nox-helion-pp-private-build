@@ -272,8 +272,20 @@ def _crossref_items(body: bytes) -> list[dict[str, str]]:
         url = str(record.get("URL") or (f"https://doi.org/{doi}" if doi else "")).strip()
         abstract = _plain(str(record.get("abstract") or ""))
         date = record.get("published-print") or record.get("published-online") or record.get("created") or {}
-        date_parts = date.get("date-parts", [[]]) if isinstance(date, dict) else [[]]
-        published = "-".join(str(part) for part in date_parts[0]) if date_parts and date_parts[0] else ""
+        date_parts = date.get("date-parts") if isinstance(date, dict) else None
+        published = ""
+        # Crossref data is external: some records contain a scalar date-parts
+        # element or even a string. Never manufacture a date by iterating its
+        # characters, and never abort healthy sibling records on malformed
+        # publication metadata. An unknown date remains explicitly empty.
+        if isinstance(date_parts, list) and date_parts and isinstance(date_parts[0], list):
+            parts = date_parts[0]
+            if (1 <= len(parts) <= 3
+                    and all(type(part) is int for part in parts)
+                    and 1 <= parts[0] <= 9999
+                    and (len(parts) < 2 or 1 <= parts[1] <= 12)
+                    and (len(parts) < 3 or 1 <= parts[2] <= 31)):
+                published = "-".join(str(part) for part in parts)
         if title or url:
             items.append({"title": title, "url": url, "content": abstract, "published": published})
     return items
