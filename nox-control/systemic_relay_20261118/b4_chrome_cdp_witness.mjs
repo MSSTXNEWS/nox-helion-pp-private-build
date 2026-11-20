@@ -213,8 +213,10 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
         if(typeof v.body!=='string'){x.missing=true;return;}
         // Base64 bytes or UTF-8 text are the only unambiguous CDP decoded-body forms here.
         if(typeof v.base64Encoded!=='boolean'){x.missing=true;return;}
-        if(v.base64Encoded && (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(v.body))){x.missing=true;return;}
-        const body=v.base64Encoded?Buffer.from(v.body,'base64'):Buffer.from(v.body,'utf8');
+        // getResponseBody is a separate integrity witness: reject padding-bit aliases
+        // which Buffer.from(..., 'base64') silently decodes to the same bytes.
+        const body=v.base64Encoded?decodeCanonicalCdpData(v.body):Buffer.from(v.body,'utf8');
+        if(!body){x.missing=true;return;}
         x.response=hash(body);
         x.bodyMatchesStream=!x.missing&&!x.encoded&&x.bytes===body.length&&x.streamDigest===x.response;
         if(!x.bodyMatchesStream)x.missing=true;
