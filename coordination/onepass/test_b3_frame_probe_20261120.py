@@ -209,7 +209,8 @@ class TestProbe(unittest.TestCase):
             self.assertEqual(result['blocked_model_posts'], 6)
             self.assertEqual(result['blocked_websocket_connections'], 6)
             self.assertTrue(result['service_workers_blocked'])
-            self.assertRegex(result['chromium_version_sha256'], r'^[a-f0-9]{64}
+            self.assertEqual(len(result['chromium_version_sha256']), 64)
+            self.assertTrue(all(ch in '0123456789abcdef' for ch in result['chromium_version_sha256']))
             self.assertFalse(result['native_s03_verified'])
             self.assertTrue(result['synthetic_fixture'])
             self.assertTrue(all(r['renderer_resource_sha256'] is None for r in result['runs']))
