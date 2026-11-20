@@ -1226,5 +1226,77 @@ class CheckpointStepProvenance(unittest.TestCase):
         self.assertEqual(proofs, [])
         self.assertEqual(steps, [])
 
+    def test_initial_controller_render_and_install_pin_original_preimage(self):
+        """Exercise actual controller render/installer AST without native execution."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        main = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                    and n.name == "main")
+        assignments = [n for n in ast.walk(main) if isinstance(n, ast.Assign)
+                       and any(isinstance(t, ast.Name) and t.id == "changed"
+                               for t in n.targets)]
+        self.assertEqual(len(assignments), 1)
+        self.assertIn("stable_backup_bytes(path, expected[path]).decode('utf-8')",
+                      ast.unparse(assignments[0].value))
+        backups = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+                   and n.name == "stable_backup_bytes"]
+        self.assertEqual(len(backups), 1)
+        installer = next(n for n in main.body if isinstance(n, ast.FunctionDef)
+                         and n.name == "install")
+        self.assertIn("old != expected[path]", ast.unparse(installer))
+        self.assertIn("backup(path, expected[path])", ast.unparse(installer))
+        scope = {"Path": Path, "os": os, "stat": stat, "hashlib": hashlib, "re": re}
+        exec(compile(ast.Module(body=backups, type_ignores=[]),
+                     str(SOURCE), "exec"), scope)
+        render = compile(ast.fix_missing_locations(
+            ast.Expression(body=copy.deepcopy(assignments[0].value))),
+            str(SOURCE), "eval")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            control = root / "owner_controller.py"
+            foreign = root / "foreign.py"
+            original = b"original pinned controller source"
+            foreign.write_bytes(b"foreign controller source")
+            control.write_bytes(original)
+            pin = hashlib.sha256(original).hexdigest()
+            scope.update(CONTROLS=[control], expected={control: pin},
+                         request="1", source="a" * 40,
+                         patch_permission=lambda raw, *_: "patched:" + raw)
+            self.assertEqual(eval(render, scope),
+                             {control: b"patched:original pinned controller source"})
+            control.write_bytes(foreign.read_bytes())
+            with self.assertRaisesRegex(RuntimeError, "HOLD_BACKUP_PREIMAGE_MISMATCH"):
+                eval(render, scope)
+            control.unlink()
+            control.symlink_to(foreign)
+            with self.assertRaisesRegex(RuntimeError, "HOLD_BACKUP_SOURCE_CHANGED"):
+                eval(render, scope)
+            control.unlink()
+            control.write_bytes(original)
+
+            backups_seen, installs_seen, steps = [], [], []
+            class Recorder:
+                def atomic(self, path, data):
+                    installs_seen.append((path, data))
+                    path.write_bytes(data)
+            scope.update(helper=Recorder(),
+                         file_sha=lambda path: hashlib.sha256(path.read_bytes()).hexdigest(),
+                         backup=lambda path, sha: backups_seen.append((path, sha)),
+                         step=lambda kind, data: steps.append(kind))
+            exec(compile(ast.Module(body=[installer], type_ignores=[]),
+                         str(SOURCE), "exec"), scope)
+            install = scope["install"]
+            control.write_bytes(foreign.read_bytes())
+            with self.assertRaisesRegex(RuntimeError, "HOLD_INSTALLED_TRAINING_SOURCE_CHANGED"):
+                install(control, b"patched")
+            self.assertEqual(backups_seen, [])
+            self.assertEqual(installs_seen, [])
+            control.write_bytes(original)
+            install(control, b"patched")
+            self.assertEqual(backups_seen, [(control, pin)])
+            self.assertEqual(installs_seen, [(control, b"patched")])
+            self.assertEqual(steps, ["source_installed"])
+            self.assertEqual(scope["expected"][control],
+                             hashlib.sha256(b"patched").hexdigest())
+
 if __name__ == "__main__":
     unittest.main()

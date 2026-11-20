@@ -1006,7 +1006,9 @@ def main():
 
     def install(path, data):
         old = file_sha(path)
-        backup(path, old); helper.atomic(path, data); os.chmod(path, 0o755)
+        if old != expected[path]:
+            raise RuntimeError('HOLD_INSTALLED_TRAINING_SOURCE_CHANGED')
+        backup(path, expected[path]); helper.atomic(path, data); os.chmod(path, 0o755)
         expected[path] = hashlib.sha256(data).hexdigest()
         step('source_installed', {'path': str(path), 'before': old, 'after': expected[path]})
 
@@ -1141,7 +1143,15 @@ def main():
             if OUTPUT.exists():
                 raise RuntimeError('HOLD_EXISTING_HYBRID_OUTPUT_INSPECT_FIRST')
             admission = resource_admission(helper); step('native_resource_admission', admission)
-            changed = {path: patch_permission(path.read_text(), request, source, path.name == 'nox_selfheal.py').encode() for path in CONTROLS}
+            # Render only the exact, stable source preimage already admitted above.
+            # A later pathname read must not silently rebound to foreign code.
+            changed = {
+                path: patch_permission(
+                    stable_backup_bytes(path, expected[path]).decode('utf-8'),
+                    request, source, path.name == 'nox_selfheal.py'
+                ).encode('utf-8')
+                for path in CONTROLS
+            }
             # Maintenance gates new claims; let already claimed CPU jobs finish.
             deadline = time.monotonic()+45
             while worker_readback(helper)['busy_count'] and time.monotonic() < deadline:
