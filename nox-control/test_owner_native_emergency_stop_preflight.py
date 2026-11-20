@@ -77,6 +77,20 @@ class EndpointPreflightTests(unittest.TestCase):
         self.assertEqual(receipt["process_signals"], 0)
         self.assertFalse(receipt["raw_config_values_included"])
 
+    def test_nonallowlisted_include_glob_denies_full_endpoint_attestation(self):
+        # A correct UNIX endpoint must not certify an unreviewed program set.
+        original = self.main.read_text(encoding="utf-8")
+        expected = f"files={self.include_dir}/*.conf"
+        self.assertEqual(original.count(expected), 1)
+        self.main.write_text(original.replace(expected, "files=/tmp/unreviewed/*.conf"),
+                             encoding="utf-8")
+        receipt = P.inspect_configuration()
+        self.assertFalse(receipt["include_glob_matches_fixed_scope"])
+        self.assertFalse(receipt["endpoint"]["endpoint_config_predicates_all_pass"])
+        self.assertEqual(receipt["host_writes"], 0)
+        self.assertEqual(receipt["supervisor_rpc_calls"], 0)
+        self.assertEqual(receipt["process_signals"], 0)
+
     def test_mismatched_endpoint_is_reported_without_approving_or_mutating(self):
         self.write_config("unix:///run/other.sock")
         receipt = P.inspect_configuration()
