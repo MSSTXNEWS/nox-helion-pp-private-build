@@ -475,9 +475,12 @@ def install(app, B):
                 body = {"messages": mm, "max_tokens": max(64, min(npred, 900, (400 if mini else (900 if mode == "thoughtful" else B.adapt_tokens(user, 900))))), "temperature": 0.4 if mode == "thoughtful" else 0.6, "id_slot": 1 if mini else 0, "cache_prompt": True, "n_keep": B.NKEEP, "stream": True,
                         "chat_template_kwargs": {"enable_thinking": False}}
                 err = None
+                upstream_done = False
                 try:
                     if True:
                         async with B.hc().stream("POST", B.MODEL, json=body) as r:
+                            if r.status_code != 200:
+                                raise RuntimeError("UPSTREAM_HTTP_NON_200")
                             async for line in r.aiter_lines():
                                 if rid in CANCEL or "*" in CANCEL:
                                     break
@@ -485,6 +488,7 @@ def install(app, B):
                                     continue
                                 d = line[5:].strip()
                                 if d == "[DONE]":
+                                    upstream_done = True
                                     break
                                 try:
                                     t = json.loads(d)["choices"][0].get("delta", {}).get("content") or ""
@@ -504,11 +508,18 @@ def install(app, B):
                     B.log("web_stream_error %s" % err)
                 if not mini:
                     B.LAST_CHAT["t"] = time.time()
-                if err and not full:
-                    yield json.dumps({"error": "модель не ответила: " + err, "request_id": rid}, ensure_ascii=False) + "\n"
+                stopped = rid in CANCEL or "*" in CANCEL
+                # Incomplete HTTP streams must never yield successful DONE or S03 writes.
+                if not stopped and (err or not upstream_done or not full.strip()):
+                    B.log("web_stream_incomplete " + (err or "MISSING_DONE_OR_EMPTY"))
+                    CANCEL.discard(rid); CANCEL.discard("*")
+                    yield json.dumps({"status": "HOLD", "reason": "MODEL_STREAM_INCOMPLETE",
+                                      "error": "ответ модели не завершён — можно повторить запрос",
+                                      "request_id": rid, "done": False,
+                                      "memory_history": {"status": "HOLD", "reason": "UPSTREAM_NOT_COMPLETE"}},
+                                     ensure_ascii=False) + "\n"
                     return
                 hist = {"status": "HOLD", "reason": "ответ пуст или остановлен"}
-                stopped = rid in CANCEL or "*" in CANCEL
                 sk = None
                 if W and not mini and not stopped and full.strip() and mode != "fast" and (mode == "thoughtful" or W.is_factual(user)):
                     yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": "проверяю факты (скептик)"})
