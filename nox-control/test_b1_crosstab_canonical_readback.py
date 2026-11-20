@@ -154,7 +154,8 @@ def main():
                     let entered;
                     const verifierStarted=new Promise(resolve=>{entered=resolve;});
                     const pending=fresh.reconcileSignedAck(
-                      scope,'a'.repeat(64),'cursor1',read('x1'),
+                      scope,'a'.repeat(64),'cursor1',
+                      async ()=>{const response=await fetch('/canonical/x1',{method:'GET',cache:'no-store'});if(!response.ok)throw Error('ACK_MISSING');return response.json();},
                       async ()=>{entered();await new Promise(r=>setTimeout(r,85));return true;}
                     );
                     await verifierStarted;
