@@ -47,12 +47,22 @@ def remember(user, answer):
 async def ask(messages, max_tokens):
     max_tokens = min(max_tokens, 700)
     async with httpx.AsyncClient(timeout=170) as c:
-        r = await c.post(MODEL, json={"messages": messages, "max_tokens": max_tokens, "temperature": 0.6, "id_slot": 0, "cache_prompt": True})
-        if r.status_code >= 400:
-            log("upstream %s %s" % (r.status_code, r.text[:300].replace("\n"," ")))
-            r.raise_for_status()
-        m = r.json()["choices"][0]["message"]
-        return (m.get("content") or "").strip()
+        for attempt in (1, 2):
+            body = {"messages": messages, "max_tokens": max_tokens, "temperature": 0.6, "id_slot": 0, "cache_prompt": True,
+                    "chat_template_kwargs": {"enable_thinking": False}}
+            r = await c.post(MODEL, json=body)
+            if r.status_code >= 400:
+                log("upstream %s %s" % (r.status_code, r.text[:300].replace("\n", " ")))
+                r.raise_for_status()
+            ch = r.json()["choices"][0]
+            m = ch["message"]
+            txt = (m.get("content") or "").strip()
+            if txt:
+                return txt
+            log("empty_answer finish=%s keys=%s reasoning_len=%d attempt=%d" % (ch.get("finish_reason"), list(m.keys()), len(m.get("reasoning_content") or ""), attempt))
+            max_tokens = min(max_tokens * 2, 700)
+        rc = (m.get("reasoning_content") or "").strip()
+        return rc[-600:] if rc else ""
 
 async def smart(history, max_tokens=1500):
     user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
