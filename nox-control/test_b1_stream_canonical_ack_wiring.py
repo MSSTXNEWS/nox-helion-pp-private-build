@@ -234,6 +234,93 @@ def main():
                       and counts["acks"]=={"x1":1,"x2":1})
                 check("two unique UI event projections",
                       page.evaluate("()=>document.querySelectorAll('[data-event-id]').length")==2)
+                # STOP while a reader is pending: even a non-cooperative reader
+                # that resolves a buffered delta AFTER abort must never reach UI.
+                page.evaluate("""()=>{
+                  const mk=(post,onDelta,timeout=1000)=>NOXB1StreamReconnect.createClient({
+                    transport:{...transport,post},host,bridge,
+                    ui:{...ui,onDelta},timeoutMs:timeout
+                  });
+                  window.lateReadEvents=[];
+                  window.lateReadClient=mk(async()=>({ok:true,body:{getReader:()=>({
+                    read:()=>new Promise(resolve=>{
+                      window.releaseLateRead=()=>resolve({done:false,value:
+                        new TextEncoder().encode('event: delta\n'+'data: late-after-stop\n\n')});
+                    })
+                  })}}),async(_s,d)=>lateReadEvents.push(d));
+                  window.lateReadTask=lateReadClient.begin({
+                    conversation_id:'dialog',exchange_id:'late-read'});
+                }""")
+                page.wait_for_function("typeof releaseLateRead==='function'",timeout=5000)
+                check("STOP active while reader pending",page.evaluate("""()=>{
+                  return lateReadClient.stop({conversation_id:'dialog',
+                    exchange_id:'late-read'});
+                }""") is True)
+                page.evaluate("()=>releaseLateRead()")
+                check("buffered delta after STOP dropped before UI",
+                      page.evaluate("()=>lateReadTask")=="STOPPED" and
+                      page.evaluate("()=>lateReadEvents.length")==0)
+
+                # Response object can resolve after AbortController STOP, too.
+                page.evaluate("""()=>{
+                  window.latePostEvents=[];
+                  window.latePostClient=NOXB1StreamReconnect.createClient({
+                    transport:{...transport,post:()=>new Promise(resolve=>{
+                      window.releaseLatePost=()=>resolve({ok:true,body:{
+                        getReader:()=>({read:async()=>({done:false,value:
+                          new TextEncoder().encode('event: delta\ndata: late-post\n\n')})})
+                      }});
+                    })},
+                    host,bridge,ui:{...ui,onDelta:async(_s,d)=>latePostEvents.push(d)},
+                    timeoutMs:1000
+                  });
+                  window.latePostTask=latePostClient.begin({
+                    conversation_id:'dialog',exchange_id:'late-post'});
+                }""")
+                page.wait_for_function("typeof releaseLatePost==='function'",timeout=5000)
+                check("STOP active while POST response pending",
+                      page.evaluate("""()=>latePostClient.stop({
+                        conversation_id:'dialog',exchange_id:'late-post'})""") is True)
+                page.evaluate("()=>releaseLatePost()")
+                check("late POST response cannot project buffered delta",
+                      page.evaluate("()=>latePostTask")=="STOPPED" and
+                      page.evaluate("()=>latePostEvents.length")==0)
+
+                # A frame with two deltas must not emit its second frame when
+                # STOP happens inside an awaited UI callback. The UI adapter
+                # must check the passed AbortSignal before its DOM commit.
+                page.evaluate("""()=>{
+                  window.invokedUI=[];window.committedUI=[];window.signalProvided=false;
+                  window.lateUIClient=NOXB1StreamReconnect.createClient({
+                    transport:{...transport,post:async()=>({ok:true,body:{
+                      getReader:()=>({read:async()=>({done:false,value:
+                        new TextEncoder().encode(
+                          'event: delta\ndata: first\n\n'+
+                          'event: delta\ndata: second\n\n')})})
+                    }})},
+                    host,bridge,
+                    ui:{...ui,onDelta:async(_s,d,signal)=>{
+                      invokedUI.push(d);signalProvided=!!signal;
+                      if(d==='first')await new Promise(resolve=>window.releaseUI=resolve);
+                      if(!signal.aborted)committedUI.push(d);
+                    }},
+                    timeoutMs:1000
+                  });
+                  window.lateUITask=lateUIClient.begin({
+                    conversation_id:'dialog',exchange_id:'late-ui'});
+                }""")
+                page.wait_for_function("typeof releaseUI==='function'",timeout=5000)
+                check("STOP accepted inside pending UI callback",
+                      page.evaluate("""()=>lateUIClient.stop({
+                        conversation_id:'dialog',exchange_id:'late-ui'})""") is True)
+                page.evaluate("()=>releaseUI()")
+                check("UI AbortSignal fences delayed commit and second delta",
+                      page.evaluate("()=>lateUITask")=="STOPPED" and
+                      page.evaluate("()=>signalProvided") is True and
+                      page.evaluate("()=>invokedUI") == ["first"] and
+                      page.evaluate("()=>committedUI")==[])
+                check("late STOP tests did not post model or ACK",
+                      page.evaluate("()=>fetch('/counts').then(r=>r.json())")==counts)
                 page.evaluate("()=>gate.close()");page.close()
                 nextpage=ctx.new_page();nextpage.goto(url);attach(nextpage,db)
                 check("reload uses canonical GET not duplicate POST/ACK",
