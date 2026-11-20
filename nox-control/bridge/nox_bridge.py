@@ -1,6 +1,6 @@
 """NOX умный чат-мост: память S03 + личность NOX + самопроверка -> модель :8098.
 Слушает только 127.0.0.1:8091. Старый прокси не трогает."""
-import json, sys, time, traceback
+import json, sys, time, traceback, hashlib, threading, asyncio
 sys.path.insert(0, "/root/nox/scripts")
 import httpx, uvicorn
 from fastapi import FastAPI, Request
@@ -89,10 +89,20 @@ def self_vol(user):
 def self_block(user):
     return "\n\n" + self_vol(user) + STATIC_RULES
 
+NKEEP = int((len(IDENTITY) + len(STATIC_RULES)) / 2.3)
+_LONG = ("подробн", "объясни", "напиши", "код", "план", "распиши", "сравни", "разбери", "статью", "текст", "список", "инструкц")
+
+def adapt_tokens(user, cap=700):
+    """Короткий вопрос — короткий лимит (меньше хвостовой задержки); развёрнутый — полный."""
+    s = (user or "").lower()
+    if len(s) > 300 or any(w in s for w in _LONG):
+        return cap
+    return 300 if len(s) < 60 else 520
+
 def build_msgs(history, user, mem, vol):
     """Стабильная часть (личность+правила) идёт первой и кэшируется llama.cpp; всё, что меняется каждый ход
     (память, тело, эмоции), добавляется в самый конец последнего вопроса, чтобы префикс истории не ломал кэш."""
-    hist = [{"role": m["role"], "content": str(m.get("content", ""))[:3500]} for m in history if m.get("role") in ("user", "assistant")][-6:]
+    hist = [{"role": m["role"], "content": str(m.get("content", ""))[:(900 if m["role"] == "assistant" else 1500)]} for m in history if m.get("role") in ("user", "assistant")][-6:]
     ctx = "[Контекст для NOX, не цитируй дословно]\n" + ("Память: " + mem[:500] + "\n" if mem else "") + vol + "\n\n[Вопрос Создателя]\n"
     if hist and hist[-1]["role"] == "user":
         hist[-1]["content"] = ctx + hist[-1]["content"]
@@ -108,36 +118,79 @@ except Exception as _e:
 LAST_CHAT = {"t": 0.0}
 app = FastAPI()
 
+_HC = None
+def hc():
+    """Общий http-клиент с keep-alive: не пересоздаём соединение к модели на каждый запрос."""
+    global _HC
+    if _HC is None:
+        _HC = httpx.AsyncClient(timeout=httpx.Timeout(600, connect=10), limits=httpx.Limits(max_keepalive_connections=8, keepalive_expiry=120))
+    return _HC
+
 def log(m):
     try:
         open(LOG, "a", encoding="utf-8").write(time.strftime("%F %T ") + str(m) + "\n")
     except Exception:
         pass
 
+_RC = {}
+_RC_LOCK = threading.Lock()
+_TRIVIAL = ("привет", "здравств", "спасибо", "благодар", "пока", "доброе", "добрый", "ок", "окей", "да", "нет", "ага")
+
+def _trivial(t):
+    s = (t or "").strip().lower()
+    return len(s) < 14 and "?" not in s and any(s.startswith(w) for w in _TRIVIAL)
+
+def trim_mem(out):
+    """top-k строк памяти и жёсткий бюджет символов: меньше токенов в промпте, быстрее чтение."""
+    keep, tot = [], 0
+    for l in [x.strip() for x in out.splitlines() if len(x.strip()) >= 12][:6]:
+        l = l[:240]
+        if tot + len(l) > 520:
+            break
+        keep.append(l); tot += len(l) + 1
+    return "\n".join(keep)
+
 def memory_block(text):
+    if _trivial(text):
+        return ""
+    key = hashlib.md5((text or "").strip().lower().encode("utf-8", "ignore")).hexdigest()
+    now = time.time()
+    with _RC_LOCK:
+        h = _RC.get(key)
+        if h and now - h[0] < 180:
+            return h[1]
     try:
         import s03_memory as M
         res = M.recall(text)
         out = M.format_for_prompt(res)
-        return out if isinstance(out, str) else ""
+        out = trim_mem(out) if isinstance(out, str) else ""
     except Exception as e:
         log("recall_error %s %s" % (type(e).__name__, str(e)[:120]))
         return ""
+    with _RC_LOCK:
+        _RC[key] = (now, out)
+        if len(_RC) > 128:
+            for k in sorted(_RC, key=lambda k: _RC[k][0])[:32]:
+                _RC.pop(k, None)
+    return out
 
 def remember(user, answer):
     try:
         import s03_memory as M
         M.persist_turn(user, answer)
+        with _RC_LOCK:
+            _RC.clear()
     except Exception as e:
         log("persist_error %s %s" % (type(e).__name__, str(e)[:120]))
 
 async def ask(messages, max_tokens, slot=0):
     max_tokens = min(max_tokens, 700)
-    async with httpx.AsyncClient(timeout=170) as c:
+    c = hc()
+    if True:
         for attempt in (1, 2):
-            body = {"messages": messages, "max_tokens": max_tokens, "temperature": 0.6, "id_slot": slot, "cache_prompt": True,
+            body = {"messages": messages, "max_tokens": max_tokens, "temperature": 0.6, "id_slot": slot, "cache_prompt": True, "n_keep": NKEEP,
                     "chat_template_kwargs": {"enable_thinking": False}}
-            r = await c.post(MODEL, json=body)
+            r = await c.post(MODEL, json=body, timeout=170)
             if r.status_code >= 400:
                 log("upstream %s %s" % (r.status_code, r.text[:300].replace("\n", " ")))
                 r.raise_for_status()
@@ -155,13 +208,13 @@ async def smart(history, max_tokens=1500):
     user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
     mem = memory_block(user)
     msgs = build_msgs(history, user, mem, self_vol(user))
-    ans = await ask(msgs, max_tokens)
+    ans = await ask(msgs, min(max_tokens, adapt_tokens(user)))
     # самопроверка (1V14-18): короткий проход, исправляет явные ошибки/выдумки
     if len(ans) > 200:
         chk = [{"role": "system", "content": "Ты строгий редактор. Проверь ответ на выдумки и противоречия. Если всё верно — верни его без изменений. Если нет — верни исправленный ответ. Только текст ответа."},
                {"role": "user", "content": "Вопрос: " + user + "\n\nОтвет:\n" + ans}]
         try:
-            fixed = await ask(chk, max_tokens)
+            fixed = await ask(chk, max_tokens, slot=1)
             if fixed:
                 ans = fixed
         except Exception as e:
@@ -195,20 +248,22 @@ def _sse(o):
 async def stream_chat(history):
     user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
     yield _sse({"type": "status", "text": "слушаю тебя…"})
-    mem = memory_block(user)
+    mem_t = asyncio.create_task(asyncio.to_thread(memory_block, user))
+    vol_t = asyncio.create_task(asyncio.to_thread(self_vol, user))
+    mem = await mem_t
     n = mem.count("\n") + 1 if mem else 0
     yield _sse({"type": "status", "text": ("вспоминаю: нашёл %d фрагм. памяти" % n) if mem else "вспоминаю: в памяти ничего близкого"})
-    vol = self_vol(user)
+    vol = await vol_t
     st = affect_update("")
     yield _sse({"type": "status", "text": "чувствую: " + affect_words(st)})
     msgs = build_msgs(history, user, mem, vol)
     yield _sse({"type": "status", "text": "формулирую ответ…"})
     full = ""
-    body = {"messages": msgs, "max_tokens": 700, "temperature": 0.6, "id_slot": 0, "cache_prompt": True, "stream": True,
+    body = {"messages": msgs, "max_tokens": adapt_tokens(user), "temperature": 0.6, "id_slot": 0, "cache_prompt": True, "n_keep": NKEEP, "stream": True,
             "chat_template_kwargs": {"enable_thinking": False}}
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(600, connect=10)) as c:
-            async with c.stream("POST", MODEL, json=body) as r:
+        if True:
+            async with hc().stream("POST", MODEL, json=body) as r:
                 async for line in r.aiter_lines():
                     if not line.startswith("data:"): continue
                     d = line[5:].strip()
@@ -282,10 +337,23 @@ async def _reflect_loop():
         except Exception as e:
             log("reflect_error %s" % type(e).__name__)
 
+def rotate_logs(limit=4 * 1024 * 1024):
+    for p in (LOG,):
+        try:
+            if os.path.getsize(p) > limit:
+                os.replace(p, p + ".1")
+        except Exception:
+            pass
+
+async def _rotate_loop():
+    while True:
+        rotate_logs()
+        await asyncio.sleep(1800)
+
 @app.on_event("startup")
 async def _startup():
-    import asyncio
     asyncio.create_task(_reflect_loop())
+    asyncio.create_task(_rotate_loop())
 
 @app.get("/soul")
 async def soul():
@@ -299,4 +367,4 @@ except Exception as _e:
     log("webapi_off %s %s" % (type(_e).__name__, str(_e)[:200]))
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8091, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=8091, log_level="warning", timeout_keep_alive=120, backlog=128)
