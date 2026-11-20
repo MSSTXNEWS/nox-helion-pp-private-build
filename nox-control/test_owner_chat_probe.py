@@ -1012,5 +1012,52 @@ class ProbeTests(unittest.TestCase):
 
 
 
+    def test_nested_status_error_and_false_success_poison_stream(self):
+        """A structured upstream failure cannot be masked by a later saved DONE."""
+        did = '1' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        delta = {'type': 'delta', 'text': '323'}
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        bad = (
+            {'status': {'error': 'upstream_timeout'}},
+            {'status': {'error': {'message': 'provider failure'}}},
+            {'status': {'success': False}},
+            {'status': {'error': ' ', 'success': True}},
+        )
+        for flags in bad:
+            for placement in ('preterminal', 'terminal'):
+                frames = ([dict({'type': 'status'}, **flags), delta, done]
+                          if placement == 'preterminal'
+                          else [delta, dict(done, **flags)])
+                expected = ('HOLD_STREAM_PRETERMINAL_FAILURE'
+                            if placement == 'preterminal'
+                            else 'HOLD_STREAM_TERMINAL_FAILURE')
+                response = Response(frames)
+                with self.subTest(flags=flags, placement=placement), patch.object(
+                        probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, '^' + expected + '    unittest.main()
+):
+                        probe.consume_turn(object(), 'synthetic', did)
+                self.assertTrue(response.closed)
+
+        healthy = Response([
+            {'type': 'status', 'status': {'error': None, 'success': True, 'code': 200}},
+            delta, dict(done, status={'error': '', 'success': True, 'code': 200}),
+        ])
+        with patch.object(probe, 'request', return_value=healthy):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+        self.assertTrue(healthy.closed)
+
+
 if __name__ == '__main__':
     unittest.main()
