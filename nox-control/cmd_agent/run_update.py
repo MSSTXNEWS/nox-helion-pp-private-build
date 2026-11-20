@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
-REMOTE = "curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/bridge/chat_test.py -o /opt/chat_test.py && /root/nox/venv/bin/python /opt/chat_test.py </dev/null"
+REMOTE = "curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/bridge/chat_test.py -o /opt/chat_test.py && (nohup /root/nox/venv/bin/python /opt/chat_test.py </dev/null >/opt/chat_test.out 2>&1 &) ; sleep 1; echo started"
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,

@@ -2,7 +2,7 @@
 import json, urllib.request, sys
 def ask(msgs):
     req = urllib.request.Request("http://127.0.0.1:8091/v1/chat/completions",
-        data=json.dumps({"messages": msgs, "max_tokens": 700}).encode(), headers={"Content-Type": "application/json"})
+        data=json.dumps({"messages": msgs, "max_tokens": 350}).encode(), headers={"Content-Type": "application/json"})
     try:
         r = json.loads(urllib.request.urlopen(req, timeout=200).read())
         return r["choices"][0]["message"]["content"], r.get("memory_used")
