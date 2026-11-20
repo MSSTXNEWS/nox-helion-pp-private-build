@@ -74,7 +74,8 @@ def affect_words(st):
     return "настроение %s, %s (P%+.1f A%+.1f D%+.1f)" % (tone, energy, p, a, st["d"])
 
 STATIC_RULES = ("\n\n[Правила ядра] Блок [Я-СЕЙЧАС] в контексте вопроса — рабочие сигналы единого «я» NOX (процессы, сервер, эмоции), не доказательство сознания; пусть слегка окрашивают стиль. "
-                "В конце ответа одной строкой: «Уверенность: N% (почему)». Если ответ опирается на память, укажи, что именно вспомнил.")
+                "В конце ответа одной строкой: «Уверенность: N% (почему)». Если ответ опирается на память, укажи, что именно вспомнил. "
+                "Не знаешь — честно скажи «не знаю» и строкой «Чтобы узнать: …». Когда уместно, в конце строка «Дальше: …» (следующий шаг, до 12 слов).")
 
 _SRV = ("сервер", "нагруз", "gpu", "видеокарт", "процесс", "диск", "памят", "состояни", "как ты", "чувству", "настроени", "жив", "работает", "ресурс", "модел", "обучен")
 
@@ -99,11 +100,18 @@ def adapt_tokens(user, cap=700):
         return cap
     return 300 if len(s) < 60 else 520
 
-def build_msgs(history, user, mem, vol):
+def _style():
+    try:
+        import nox_wow as W
+        return "\n" + W.style_profile()
+    except Exception:
+        return ""
+
+def build_msgs(history, user, mem, vol, extra=""):
     """Стабильная часть (личность+правила) идёт первой и кэшируется llama.cpp; всё, что меняется каждый ход
     (память, тело, эмоции), добавляется в самый конец последнего вопроса, чтобы префикс истории не ломал кэш."""
     hist = [{"role": m["role"], "content": str(m.get("content", ""))[:(900 if m["role"] == "assistant" else 1500)]} for m in history if m.get("role") in ("user", "assistant")][-6:]
-    ctx = "[Контекст для NOX, не цитируй дословно]\n" + ("Память: " + mem[:500] + "\n" if mem else "") + vol + "\n\n[Вопрос Создателя]\n"
+    ctx = "[Контекст для NOX, не цитируй дословно]\n" + ("Память: " + mem[:500] + "\n" if mem else "") + vol + _style() + extra + "\n\n[Вопрос Создателя]\n"
     if hist and hist[-1]["role"] == "user":
         hist[-1]["content"] = ctx + hist[-1]["content"]
     else:
@@ -182,6 +190,10 @@ def remember(user, answer):
             _RC.clear()
     except Exception as e:
         log("persist_error %s %s" % (type(e).__name__, str(e)[:120]))
+
+def remember_fact(u, a):
+    import s03_memory as M
+    M.persist_turn(u, a)
 
 async def ask(messages, max_tokens, slot=0):
     max_tokens = min(max_tokens, 700)
@@ -334,6 +346,9 @@ async def _reflect_loop():
                 rec = await SOUL.reflect_once(a1)
                 if rec and rec.get("question"):
                     SOUL.consult(rec["question"])
+                import nox_wow as W
+                if W.should_sleep(time.time() - LAST_CHAT["t"]):
+                    await W.sleep_once(a1, remember_fact)
         except Exception as e:
             log("reflect_error %s" % type(e).__name__)
 

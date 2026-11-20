@@ -39,6 +39,10 @@ def awareness_line():
 
 def log_turn(user, ans):
     _append(TURNS, {"t": int(time.time()), "u": user[:400], "a": ans[:700]})
+    try:
+        import nox_wow as W
+        W.scan_answer(user, ans)
+    except Exception: pass
 
 async def reflect_once(ask):
     turns = _tail(TURNS, 6)
@@ -52,7 +56,12 @@ async def reflect_once(ask):
     for k, key in (("СЛАБОЕ", "weak"), ("УЛУЧШИТЬ", "improve"), ("ВОПРОС СОВЕТНИКУ", "question"), ("НАУЧИТЬСЯ", "learn")):
         for l in txt.splitlines():
             if l.upper().startswith(k): rec[key] = l.split(":", 1)[-1].strip()[:300]
-    _append(JOURNAL, rec); return rec
+    _append(JOURNAL, rec)
+    try:
+        import nox_wow as W
+        W.log_decision(rec)
+    except Exception: pass
+    return rec
 
 def consult(question, limit_per_day=5):
     try: cfg = json.load(open(ADV))
