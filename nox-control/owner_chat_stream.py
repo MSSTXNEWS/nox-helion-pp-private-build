@@ -162,7 +162,16 @@ def _reject_lone_surrogates(value):
 
 async def _model_events(client, url, payload):
     """Forward content immediately; assemble function-call arguments privately."""
-    request=dict(payload,model='maya',stream=True,cache_prompt=True)
+    # The native OneHost request is authoritative about its selected model.
+    # Never substitute a different model for an explicitly selected one.
+    request=dict(payload,stream=True,cache_prompt=True)
+    if 'model' in request:
+        model=request['model']
+        if type(model) is not str or not 0<len(model.strip())<=200:
+            raise StreamFailure('HOLD_MODEL_IDENTITY')
+    else:
+        # Preserve the pre-existing alias for legacy callers without a model.
+        request['model']='maya'
     text=[];calls={};finished=None;complete=False;size=0
     async with client.stream('POST',url,json=request,timeout=180.0) as response:
         if response.status_code!=200:
@@ -436,7 +445,20 @@ async def _run(native,url,payload,user_text):
     template.setdefault('enable_thinking',False)
     req['chat_template_kwargs']=template
     if native.get('_POOL'):
-        req=native['prepare_payload'](req,cache=True)
+        # The pool may optimize caching, but cannot silently substitute the
+        # request's explicitly selected model before the actual OneHost POST.
+        # Missing model remains a legacy server/pool selection, unchanged.
+        explicit_model='model' in req
+        selected=req['model'] if explicit_model else None
+        prepared=native['prepare_payload'](req,cache=True)
+        if not isinstance(prepared,dict):
+            raise StreamFailure('HOLD_MODEL_IDENTITY')
+        if explicit_model and (type(selected) is not str or
+                               not 0<len(selected.strip())<=200 or
+                               type(prepared.get('model')) is not str or
+                               prepared['model']!=selected):
+            raise StreamFailure('HOLD_MODEL_IDENTITY')
+        req=prepared
         req['tools']=native_tools
     steps=0
     # Resolve existing deterministic routes before any model text is shown.
