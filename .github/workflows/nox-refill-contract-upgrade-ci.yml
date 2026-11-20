@@ -1,0 +1,41 @@
+name: NOX P0 REFILL one-module live-upgrade contract
+on:
+  push:
+    branches: [repair/refill-contract-live-upgrade-20261120]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Compile exact owner repair and current REFILL contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B -m py_compile \
+            nox-control/systemic_relay_20261118/owner_refill_runtime_contract_upgrade_entry.py \
+            nox-control/owner_native_operator.py \
+            nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import importlib.util
+          root=Path('nox-control')
+          op=(root/'owner_native_operator.py').read_text()
+          entry=(root/'systemic_relay_20261118/owner_refill_runtime_contract_upgrade_entry.py').read_text()
+          assert "owner_refill_runtime_contract_upgrade_entry.py" in op
+          assert "SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('owner_systemic_refill.py', 'continuous_transaction_helpers.py')" in op
+          assert "08b230ae02d0be832df68df53750c356a88b0c803f31562d9e8859697679437b" in entry
+          assert "46d25dea55b290749ebd6bc5df5a202c0f029ff90ea3e54c3849801834db9a29" in entry
+          source=root/'systemic_relay_20261118/runtime/owner_systemic_refill.py'
+          spec=importlib.util.spec_from_file_location('nox_refill_contract',source)
+          module=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          assert callable(module.acceptance_mapping_valid)
+          assert callable(module.select_next)
+          assert callable(module.validate_manifest)
+          assert 'original_task_states' in source.read_text()
+          print('NOX_REFILL_CONTRACT_SOURCE=PASS; physical install not claimed')
+          PY
