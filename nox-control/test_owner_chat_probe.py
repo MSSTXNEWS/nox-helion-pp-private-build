@@ -808,5 +808,41 @@ class ProbeTests(unittest.TestCase):
         self.assertTrue(accepted.closed)
 
 
+    def test_preterminal_failure_cannot_be_laundered_by_saved_done(self):
+        """A failed status/meta/delta must poison a later success terminal."""
+        did = '1' * 32
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(row).encode() + b'\\n' for row in self.frames)
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        bad = (
+            {'type': 'status', 'status': 'failed'},
+            {'type': 'status', 'status': ' ABORTED '},
+            {'type': 'meta', 'error': {'code': 'provider_failure'}},
+            {'type': 'started', 'success': False},
+            {'type': 'delta', 'text': '323', 'error': 'timeout'},
+        )
+        for frame in bad:
+            response = Response([frame, {'type': 'delta', 'text': '323'}, done])
+            with self.subTest(frame=frame), patch.object(probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_PRETERMINAL_FAILURE
+    unittest.main()
+):
+                    probe.consume_turn(object(), 'synthetic', did)
+            self.assertTrue(response.closed)
+        healthy = Response([{'type': 'status', 'status': 'running', 'success': True},
+                            {'type': 'delta', 'text': '323'}, done])
+        with patch.object(probe, 'request', return_value=healthy):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+        self.assertTrue(healthy.closed)
+
+
 if __name__ == '__main__':
     unittest.main()
