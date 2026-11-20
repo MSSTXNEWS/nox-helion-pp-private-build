@@ -1038,8 +1038,9 @@ async function check(chunks, status=200) {
             with self.subTest(page_errors=page_errors, network=network):
                 self.assertFalse(clean_two_turn_browser_runtime(page_errors, network))
         caller = inspect.getsource(browser_run)
-        fence = "if not clean_two_turn_browser_runtime(page_errors, network):"
+        fence = "if not clean_two_turn_browser_runtime("
         self.assertIn(fence, caller)
+        self.assertIn("page_errors, network, report[\'network_response_overflow_count\']", caller)
         self.assertLess(caller.index(fence),
                         caller.index("report['multiturn_browser_acceptance_verified']=True"))
         self.assertLess(caller.index(fence),
