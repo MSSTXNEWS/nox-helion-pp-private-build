@@ -298,6 +298,13 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
                     if first is None:first=elapsed
                 else:placeholders+=1
             elif kind=='done':
+                # A terminal frame carrying a failure cannot certify saved history.
+                # Some upstreams report an error *inside* done instead of a
+                # separate type=error event; never trust its success flags.
+                if (frame.get('error') not in (None, '', False)
+                        or frame.get('status') in ('error', 'failed', 'cancelled', 'aborted')
+                        or frame.get('success') is False):
+                    raise RuntimeError('HOLD_STREAM_TERMINAL_FAILURE')
                 if frame.get('dialog_id') != dialog_id:
                     raise RuntimeError('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH')
                 done=frame  # Require clean EOF after exactly one terminal frame.
