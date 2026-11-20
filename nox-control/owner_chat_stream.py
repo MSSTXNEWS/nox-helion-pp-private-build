@@ -464,7 +464,8 @@ async def _run(native,url,payload,user_text):
         if (not isinstance(rec,dict) or type(rec.get('ok')) is not bool
                 or type(rec.get('text')) is not str or not rec['text'].strip()
                 or len(rec['text'])>2000000
-                or ('needs_confirmation' in rec and rec['needs_confirmation'] is not False)):
+                or ('needs_confirmation' in rec and rec['needs_confirmation'] is not False)
+                or ('error' in rec and rec.get('ok') is True)):
             raise StreamFailure('HOLD_MEDIA_RESULT_FIDELITY')
         await asyncio.to_thread(native['audit'],'tool_step',name=name,step=1,ok=rec['ok'])
         if not rec['ok']:
@@ -570,6 +571,10 @@ async def _run(native,url,payload,user_text):
                     if rec is None:
                         rec=await asyncio.to_thread(native['dispatch'],call['name'],call['arguments'])
                     if not isinstance(rec,dict):raise StreamFailure('HOLD_TOOL_RESULT')
+                    # A contradictory provider envelope cannot certify a tool
+                    # success even if the error value is falsey or null.
+                    if rec.get('ok') is True and 'error' in rec:
+                        raise StreamFailure('HOLD_TOOL_RESULT_ERROR_CONFLICT')
                     # A direct command result is the final user-visible
                     # outcome, not a model observation. Missing "ok" is NOT
                     # evidence of success and must never certify S03/DONE.
