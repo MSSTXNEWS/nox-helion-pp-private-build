@@ -113,25 +113,72 @@ CONTROLLER_SERVICES = {
 STOPPED = ('STOPPED', 'EXITED', 'FATAL')
 
 
-def read_json(path, limit=4_000_000):
+def read_json(path, limit=4_000_000, expected_sha256=None):
+    """Bounded descriptor read: an untrusted state path cannot be swapped to a symlink."""
     path = Path(path)
-    if path.is_symlink() or not path.is_file() or path.stat().st_size > limit:
+    if type(limit) is not int or limit < 0:
         raise RuntimeError('HOLD_BOUNDED_STATE_READ')
-    value = json.loads(path.read_text())
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError as exc:
+        raise RuntimeError('HOLD_BOUNDED_STATE_READ') from exc
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > limit:
+            raise RuntimeError('HOLD_BOUNDED_STATE_READ')
+        with os.fdopen(fd, 'rb') as stream:
+            fd = -1
+            raw = stream.read(limit + 1)
+        if len(raw) > limit:
+            raise RuntimeError('HOLD_BOUNDED_STATE_READ')
+    finally:
+        if fd >= 0:
+            os.close(fd)
+    # Bind the parsed trainer state to the exact bytes hashed in the checkpoint receipt.
+    # A writer may replace or modify the inode after the earlier file_sha() sweep.
+    if expected_sha256 is not None:
+        if (not isinstance(expected_sha256, str)
+                or not re.fullmatch('[0-9a-f]{64}', expected_sha256)
+                or hashlib.sha256(raw).hexdigest() != expected_sha256):
+            raise RuntimeError('HOLD_PAUSED_CHECKPOINT_HASH')
+    # Refuse ambiguous or nonstandard JSON even when its byte hash is valid.
+    # Different parsers can otherwise disagree about an optimizer step.
+    def unique_object(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise RuntimeError('HOLD_DUPLICATE_STATE_KEY')
+            value[key] = item
+        return value
+
+    def finite_json_constant(token):
+        raise RuntimeError('HOLD_NONFINITE_STATE_JSON')
+
+    value = json.loads(raw, object_pairs_hook=unique_object,
+                       parse_constant=finite_json_constant)
     if not isinstance(value, dict):
         raise RuntimeError('HOLD_STATE_OBJECT_REQUIRED')
     return value
 
 
 def file_sha(path):
-    path = Path(path)
-    if path.is_symlink() or not path.is_file():
-        raise RuntimeError('HOLD_SOURCE_PATH')
-    digest = hashlib.sha256()
-    with path.open('rb') as stream:
-        for block in iter(lambda: stream.read(8 * 1024 * 1024), b''):
-            digest.update(block)
-    return digest.hexdigest()
+    """Hash an opened regular-file descriptor, not a separately checked path."""
+    try:
+        fd = os.open(Path(path), os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError as exc:
+        raise RuntimeError('HOLD_SOURCE_PATH') from exc
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise RuntimeError('HOLD_SOURCE_PATH')
+        digest = hashlib.sha256()
+        with os.fdopen(fd, 'rb') as stream:
+            fd = -1
+            for block in iter(lambda: stream.read(8 * 1024 * 1024), b''):
+                digest.update(block)
+        return digest.hexdigest()
+    finally:
+        if fd >= 0:
+            os.close(fd)
 
 
 def load_helper():
@@ -635,7 +682,8 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
     if (result.get('state') not in allowed_states or result.get('native_sha256') != NATIVE_SHA
             or type(step) is not int or not 1 <= step <= max_step
             or type(result.get('successful_optimizer_steps')) is not int
-            or result['successful_optimizer_steps'] < 1 or result.get('adapter_delta_verified') is not True
+            or not 1 <= result['successful_optimizer_steps'] <= step
+            or result.get('adapter_delta_verified') is not True
             or type(result.get('loss')) not in (int, float) or not math.isfinite(result['loss'])):
         raise RuntimeError('HOLD_PAUSED_OPTIMIZER_RECEIPT')
     before, after = result.get('before_tensor_sha256'), result.get('after_tensor_sha256')
@@ -643,13 +691,18 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
         raise RuntimeError('HOLD_PAUSED_ADAPTER_DELTA')
     checkpoint = result.get('checkpoint', {})
     path = OUTPUT/('checkpoint-'+str(step))
+    if not isinstance(checkpoint, dict):
+        raise RuntimeError('HOLD_PAUSED_CHECKPOINT_SCOPE')
     hashes = checkpoint.get('files_sha256', {})
-    if (checkpoint.get('path') != str(path) or checkpoint.get('global_step') != step
-            or path.is_symlink() or set(hashes) != set(helper.CHECKPOINT_NAMES)):
+    if (checkpoint.get('path') != str(path) or type(checkpoint.get('global_step')) is not int
+            or checkpoint['global_step'] != step or not isinstance(hashes, dict)
+            or path.is_symlink() or any(parent.is_symlink() for parent in path.parents)
+            or set(hashes) != set(helper.CHECKPOINT_NAMES)):
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_SCOPE')
     if any(file_sha(path/name) != hashes[name] for name in helper.CHECKPOINT_NAMES):
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_HASH')
-    if read_json(path/'trainer_state.json').get('global_step') != step:
+    state = read_json(path/'trainer_state.json', expected_sha256=hashes['trainer_state.json'])
+    if type(state.get('global_step')) is not int or state['global_step'] != step:
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_STEP')
     return True
 
