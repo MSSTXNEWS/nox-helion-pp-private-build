@@ -1009,9 +1009,14 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                     if legacy_proof is None:
                         yield _jsonl({'type':'error','error':'HOLD_S03_COMMIT_NOT_VERIFIED'})
                         return
-                    yield _jsonl({'type':'done','model':'NOX HELION','saved':True,
-                                  's03_integrated':True,'dialog_id':None,
+                    # A recent text/substring match is NOT a fenced S03 writer
+                    # receipt; do not promote it to saved/canonical acceptance.
+                    yield _jsonl({'type':'done','model':'NOX HELION','saved':False,
+                                  's03_integrated':False,'dialog_id':None,
                                   'exchange_id':legacy_proof['record_id'],
+                                  'store_scope':'LEGACY_S03_SUBSTRING_ONLY',
+                                  'legacy_s03_row_observed':True,
+                                  'canonical_s03_receipt_verified':False,
                                   'stream_mode':'NATIVE_TOKEN_STREAM'})
                     return
                 saved=await asyncio.to_thread(_save_exchange,dialog_id,question,answer,exchange_id,
