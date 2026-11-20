@@ -15,8 +15,8 @@ jobs:
           command: |
             set -eu
             git rev-parse HEAD
-            test "$(git hash-object nox-control/owner_training_resume.py)" = "bd056938878d4becb01ec9fe38412e868643e1da"
-            test "$(git hash-object nox-control/tests/test_owner_training_resume_step_type_b2.py)" = "cdcd4007c550b22a1c6b825a47decd18420e36b0"
+            test "$(git hash-object nox-control/owner_training_resume.py)" = "3afeca7650eb0107f165fcda616cae8539a61acd"
+            test "$(git hash-object nox-control/tests/test_owner_training_resume_step_type_b2.py)" = "416e363bf8647b136d7fa095d0228fcfe5cdfe4c"
       - run:
           name: Compile and run bounded non-native checkpoint regression
           command: |
