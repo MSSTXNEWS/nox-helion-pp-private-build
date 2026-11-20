@@ -309,6 +309,17 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             'placeholder_delta_count':placeholders,'delta_count':delta_count,
             'stream_total_ms':round((time.monotonic()-started)*1000)}
 
+def admitted_consume_turn(client, prompt, dialog_id, timeout=95):
+    """Re-admit RAM immediately before EVERY synthetic model-stream POST.
+
+    An earlier turn can consume cgroup headroom before the next turn; the
+    one-time check before dialog creation does not authorize all later POSTs.
+    This is not a replacement for native owner/CAS, STOP, VRAM or lease gates.
+    """
+    require_cgroup_probe_headroom()
+    return consume_turn(client, prompt, dialog_id, timeout=timeout)
+
+
 def sources():
     for rel in ('scripts/agent_loop.py','scripts/slim_chat_t885u.py','scripts/understanding/hook.py','scripts/understanding_hook.py'):
         path=ROOT/rel
@@ -454,7 +465,7 @@ def main():
         dialog=obj(request(client,'/api/ui/memory/dialogs/create','POST',{'title':'NOX QA '+marker,'confirmed':True}))
         did=dialog.get('dialog_id')
         if not isinstance(did,str) or not re.fullmatch('[a-f0-9]{32}',did):raise RuntimeError('HOLD_DIALOG_CREATE')
-        turn=consume_turn(client,prompt,did);answer=turn['answer'];receipt=turn['done']
+        turn=admitted_consume_turn(client,prompt,did);answer=turn['answer'];receipt=turn['done']
         history=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6'))
         saved=bool(receipt and receipt.get('saved') is True and receipt.get('s03_integrated') is True
                    and scoped_history_matches_turns(history, [(prompt, answer)], did))
@@ -469,7 +480,7 @@ def main():
         require_latency_target(turn, 'FIRST_TURN', 8000)
         if os.environ.get('NOX_PROBE_SECOND_TURN')=='1':
             followup='Какое число ты только что получил? Ответь только этим числом.'
-            follow=consume_turn(client,followup,did);answer2=follow['answer'];done=follow['done']
+            follow=admitted_consume_turn(client,followup,did);answer2=follow['answer'];done=follow['done']
             stored=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6'))
             passed=bool(done and done.get('saved') is True and done.get('s03_integrated') is True
                         and scoped_history_matches_turns(stored, [(prompt, answer), (followup, answer2)], did))
@@ -482,7 +493,7 @@ def main():
             require_latency_target(follow, 'SECOND_TURN', 5000)
             require_executor_turn_budget(time.monotonic()-probe_started)
             question='Сколько сейчас исполнителей и агентов у NOX?'
-            turn3=consume_turn(client,question,did,timeout=30)
+            turn3=admitted_consume_turn(client,question,did,timeout=30)
             text=turn3['answer'];end=turn3['done']
             fresh=obj(request(client,'/api/ui/executors'))
             rows=fresh.get('workers',[])
