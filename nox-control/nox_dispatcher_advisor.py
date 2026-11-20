@@ -95,8 +95,10 @@ def assess(snapshot):
                     "GPU utilization alone cannot justify more work: require fresh "
                     "VRAM, CPU, I/O and chat latency measurements. Admit no GPU job.")
             elif onehost["chat_waiting"] or onehost["chat_p95_ms"] >= onehost["chat_budget_ms"]:
-                add("GPU_CHAT_PRIORITY", "hold",
-                    "Chat latency or an active chat request takes priority; no GPU spare allocation.")
+                # CHAT_PRIORITY was already emitted for a waiting chat above.
+                if not onehost["chat_waiting"]:
+                    add("GPU_CHAT_PRIORITY", "hold",
+                        "Chat latency at its budget takes priority; no GPU spare allocation.")
             elif host["cpu_busy_pct"] >= 85 or host["io_wait_pct"] >= 10:
                 add("GPU_HOST_PIPELINE_PRESSURE", "hold",
                     "Host CPU/I/O pressure blocks further GPU work despite low compute utilization.")
