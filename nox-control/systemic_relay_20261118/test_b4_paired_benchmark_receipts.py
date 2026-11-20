@@ -6,7 +6,8 @@ from b4_paired_benchmark_receipts import (ReceiptHold, compare_paired,
                                           measure_openai_sse_wire,
                                           measure_two_turn_openai_sse_capture,
                                           verify_two_turn_openai_posted_history,
-                                          verify_two_turn_http_trace_envelope)
+                                          verify_two_turn_http_trace_envelope,
+                                          verify_cdp_receipt_against_http_trace)
 
 H = "a" * 64
 
