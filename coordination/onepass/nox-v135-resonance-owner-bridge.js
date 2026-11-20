@@ -126,7 +126,6 @@
         answer+=e.text;await emit(e.text);
       } else if(e.type==='done') {
         if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-        
         doneSeen=true;done=e;
       } else if(e.type==='start') {
         if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
@@ -162,7 +161,7 @@
       buf+=decoder.decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
       if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
-      if(done.native_model_label&&done.native_model_label!==nativeModel)throw Error('HOLD_MODEL_LABEL_CONFLICT');
+      if('native_model_label'in done&&done.native_model_label!==nativeModel)throw Error('HOLD_MODEL_LABEL_CONFLICT');
       return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};
     }finally{
       try{Promise.resolve(reader.cancel('STREAM_CLOSED')).catch(()=>{});}catch{}
