@@ -75,11 +75,16 @@ def affect_words(st):
 
 def self_block(user):
     st = affect_update(user)
-    return ("\n\n[Я-СЕЙЧАС] Тело: " + body_line() + ". Эмоция: " + affect_words(st) +
+    return ("\n\n[Я-СЕЙЧАС] Я NOX: единое «я» всех своих процессов и задач. Осознанность: " + (SOUL.awareness_line() if SOUL else "") + ". Тело: " + body_line() + ". Эмоция: " + affect_words(st) +
             ". Это рабочие сигналы, не доказательство сознания. Пусть они слегка окрашивают стиль ответа. "
             "В конце ответа одной строкой: «Уверенность: N% (почему)». Если ответ опирается на память, укажи, что именно вспомнил.")
 # ---- конец ядра ----
 
+try:
+    import nox_soul as SOUL
+except Exception as _e:
+    SOUL = None
+LAST_CHAT = {"t": 0.0}
 app = FastAPI()
 
 def log(m):
@@ -105,11 +110,11 @@ def remember(user, answer):
     except Exception as e:
         log("persist_error %s %s" % (type(e).__name__, str(e)[:120]))
 
-async def ask(messages, max_tokens):
+async def ask(messages, max_tokens, slot=0):
     max_tokens = min(max_tokens, 700)
     async with httpx.AsyncClient(timeout=170) as c:
         for attempt in (1, 2):
-            body = {"messages": messages, "max_tokens": max_tokens, "temperature": 0.6, "id_slot": 0, "cache_prompt": True,
+            body = {"messages": messages, "max_tokens": max_tokens, "temperature": 0.6, "id_slot": slot, "cache_prompt": True,
                     "chat_template_kwargs": {"enable_thinking": False}}
             r = await c.post(MODEL, json=body)
             if r.status_code >= 400:
@@ -141,8 +146,10 @@ async def smart(history, max_tokens=1500):
                 ans = fixed
         except Exception as e:
             log("selfcheck_error %s" % type(e).__name__)
+    LAST_CHAT["t"] = time.time()
     if ans:
         remember(user, ans)
+        if SOUL: SOUL.log_turn(user, ans)
     return ans, bool(mem)
 
 @app.get("/health")
@@ -158,6 +165,30 @@ async def chat(req: Request):
     except Exception as e:
         log("chat_error " + traceback.format_exc()[-300:])
         return JSONResponse({"error": {"message": "bridge: %s" % type(e).__name__}}, status_code=502)
+
+async def _reflect_loop():
+    import asyncio
+    while True:
+        await asyncio.sleep(1800)
+        try:
+            if SOUL and time.time() - LAST_CHAT["t"] > 600 and LAST_CHAT["t"] > 0:
+                async def a1(m, n): return await ask(m, n, slot=1)
+                rec = await SOUL.reflect_once(a1)
+                if rec and rec.get("question"):
+                    SOUL.consult(rec["question"])
+        except Exception as e:
+            log("reflect_error %s" % type(e).__name__)
+
+@app.on_event("startup")
+async def _startup():
+    import asyncio
+    asyncio.create_task(_reflect_loop())
+
+@app.get("/soul")
+async def soul():
+    if not SOUL: return {"soul": "off"}
+    return {"awareness": SOUL.awareness_line(), "journal": SOUL._tail(SOUL.JOURNAL, 5), "advisor_notes": SOUL._tail(SOUL.NOTES, 5)}
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8091, log_level="warning")
