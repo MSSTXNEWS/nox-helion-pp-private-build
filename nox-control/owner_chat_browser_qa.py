@@ -366,6 +366,14 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     transcript_sha = multiturn_transcript_sha256(expected_messages)
     if transcript_sha is None:
         return False
+    # Text/digest equality alone cannot establish four distinct persisted S03
+    # records. Strict B5 acceptance requires independently readable row IDs.
+    # The legacy A1 source helper and browser-history compatibility stay intact.
+    if require_full_transcript_pin:
+        row_ids = [row.get('message_id') for row in expected_messages]
+        if (any(not isinstance(value, str) or not value.strip() for value in row_ids)
+                or len({value.strip() for value in row_ids}) != len(expected_messages)):
+            return False
     if (not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict)
             or writer_receipt is independent_readback):
         return False

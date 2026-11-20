@@ -427,7 +427,8 @@ async function check(chunks, status=200) {
     def test_s03_unpinned_legacy_witness_cannot_certify_four_turns(self):
         # Neither omitted nor explicitly null history pins can prove two turns.
         # Old last-answer-only receipts may match after earlier turns changed.
-        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        transcript = [dict(row, message_id=f"s03-{i}") for i, row in enumerate(
+            rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es")))]
         writer, readback = s03_proof(transcript)
         old_writer = {k: v for k, v in writer.items()
                       if k != "full_transcript_sha256"}
@@ -465,6 +466,38 @@ async function check(chunks, status=200) {
                               readback_pin=repr(bad_readback.get("full_transcript_sha256"))):
                 self.assertFalse(canonical_s03_proof_valid(
                     bad_writer, bad_readback, DIALOG, transcript))
+
+    def test_strict_s03_requires_four_distinct_persisted_message_identities(self):
+        # Exact four role/text bytes and full SHA pins still cannot certify that
+        # S03 read four individually identified durable messages.
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        self.assertFalse(canonical_s03_proof_valid(
+            writer, readback, DIALOG, transcript, require_full_transcript_pin=True))
+
+        identified = [dict(row, message_id=f"s03-{i}") for i, row in enumerate(transcript)]
+        writer, readback = s03_proof(identified)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, identified, require_full_transcript_pin=True))
+        for invalid in (None, "", " ", 42, True):
+            with self.subTest(missing_or_malformed=repr(invalid)):
+                changed = [dict(row) for row in identified]
+                changed[2]["message_id"] = invalid
+                a, b = s03_proof(changed)
+                self.assertFalse(canonical_s03_proof_valid(
+                    a, b, DIALOG, changed, require_full_transcript_pin=True))
+        for missing in range(4):
+            changed = [dict(row) for row in identified]
+            del changed[missing]["message_id"]
+            a, b = s03_proof(changed)
+            self.assertFalse(canonical_s03_proof_valid(
+                a, b, DIALOG, changed, require_full_transcript_pin=True))
+        whitespace_collision = [dict(row) for row in identified]
+        whitespace_collision[1]["message_id"] = "s03-0 "
+        a, b = s03_proof(whitespace_collision)
+        self.assertFalse(canonical_s03_proof_valid(
+            a, b, DIALOG, whitespace_collision, require_full_transcript_pin=True))
 
     def test_s03_optional_writer_answer_digest_must_agree_with_fourth_turn(self):
         # A writer may optionally expose its own final-answer digest. If it
