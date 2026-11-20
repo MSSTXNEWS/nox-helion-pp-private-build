@@ -108,6 +108,9 @@ class ProbeTests(unittest.TestCase):
                 {"kind": "owner_native_project_work", "entry": "claim_native_job"}
             ])
             self.assertEqual(res["worker_registry_lookups"], ["HANDLERS_GET"])
+            self.assertIn("worker_loop", res["host_handler_contracts"])
+            self.assertEqual(res["host_handler_contracts"]["worker_loop"]["calls"], ["get"])
+            self.assertIn("owner_native_project_work", [x["kind"] for x in res["registered_literal_handlers"]])
             self.assertFalse(res["drive_kind_declared"])
             self.assertFalse(res["live_process_verified"])
             self.assertEqual(res["native_handler_registered"], "UNVERIFIED")
