@@ -238,6 +238,7 @@ PERMISSION_HELPER = '''
 # NOX_OWNER_SINGLE_TRAINER_PERMISSION_V1
 def _nox_owner_training_allowed():
     import json as _json
+    import math as _math
     import os as _os
     import stat as _stat
     _p = ROOT / "state/task_boost_mode.json"
@@ -267,7 +268,19 @@ def _nox_owner_training_allowed():
                     raise ValueError("duplicate owner policy key")
                 _value[_key] = _item
             return _value
-        _v = _json.loads(_raw, object_pairs_hook=_unique_pairs)
+        # Python's permissive JSON decoder accepts NaN/Infinity and can
+        # overflow a standards-compliant exponent (1e999) to infinity.
+        # Do not authorize a policy that the canonical state reader rejects.
+        def _finite_constant(_token):
+            raise ValueError("nonfinite owner policy constant")
+        def _finite_float(_token):
+            _number = float(_token)
+            if not _math.isfinite(_number):
+                raise ValueError("nonfinite owner policy float")
+            return _number
+        _v = _json.loads(_raw, object_pairs_hook=_unique_pairs,
+                         parse_constant=_finite_constant,
+                         parse_float=_finite_float)
         return (type(_v) is dict and _v.get("enabled") is True
                 and _v.get("mode") == "TASK_BOOST"
                 and _v.get("training_allowed") is True
