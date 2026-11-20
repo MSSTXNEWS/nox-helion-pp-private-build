@@ -68,6 +68,51 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_pool_preserves_full_context_before_inference(self):
+        # The pool may cache or batch, never delete persona/previous turns or
+        # change source text (including RU/ES and astral Unicode). Even an
+        # in-place mutation must not alter the caller's S03 postflight input.
+        history=[
+            {'role':'system','content':'PersonaID: original'},
+            {'role':'user','content':'Помни: синий блокнот 🌍'},
+            {'role':'assistant','content':'Sí, recuerdo el cuaderno azul.'},
+            {'role':'user','content':'Say ready'},
+        ]
+        for change in ('unchanged','drop_oldest','edit_history','mutate_in_place'):
+            with self.subTest(change=change):
+                native=self.native()
+                native['_POOL']=True
+                native['try_deterministic']=lambda _:None
+                def prepare(req,cache):
+                    if change=='drop_oldest':
+                        return dict(req,messages=req['messages'][1:])
+                    if change=='edit_history':
+                        req['messages'][1]['content']='silently rewritten'
+                    if change=='mutate_in_place':
+                        req['messages'].pop(0)
+                    return req
+                native['prepare_payload']=prepare
+                payload={'model':'nox-existing','messages':json.loads(json.dumps(history))}
+                valid=change=='unchanged'
+                streams=[Chunks([frame('ready'),frame(finish='stop'),
+                                 b'data: [DONE]\\n\\n'])] if valid else []
+                requests,factory=self.transport(streams)
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Say ready',True)
+                    wire=''.join([piece async for piece in response.body_iterator])
+                self.assertEqual(payload['messages'],history)
+                self.assertEqual(len(requests),1 if valid else 0)
+                if valid:
+                    self.assertEqual(requests[0]['messages'],history)
+                    self.assertIn('[DONE]',wire)
+                    self.assertEqual(payload['_agent_final'],'ready')
+                else:
+                    self.assertIn('HOLD_MODEL_CONTEXT_FIDELITY',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+                    self.assertEqual(self.dispatched,[])
+
     async def test_invalid_utf8_on_wire_cannot_certify_browser_or_s03(self):
         # HTTPX aiter_text() silently replaces malformed UTF-8 with U+FFFD;
         # an allegedly finished answer must not certify corrupted model bytes.
