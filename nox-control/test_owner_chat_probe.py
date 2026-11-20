@@ -554,18 +554,37 @@ class ProbeTests(unittest.TestCase):
 
     def test_slots_read_only_current_model_port_and_fail_closed_schema(self):
         class SlotsResponse:
-            def __init__(self, rows, status=200):
-                self.status, self.rows, self.closed = status, rows, False
+            def __init__(self, rows, status=200, url='http://127.0.0.1:8098/slots'):
+                self.status, self.rows, self.closed, self.url = status, rows, False, url
+                self.read_called = False
             def __enter__(self): return self
             def close(self): self.closed = True
             def __exit__(self, *unused): self.close()
-            def read(self, limit): return json.dumps(self.rows).encode()
+            def read(self, limit):
+                self.read_called = True
+                return json.dumps(self.rows).encode()
         good = SlotsResponse([{'is_processing': False}, {'processing': True}])
         with patch.object(probe, 'request', return_value=good) as http:
             self.assertEqual(probe.model_slots_state(object()), {'count': 2, 'busy': 1})
         self.assertEqual(http.call_args.args[1], '/slots')
         self.assertEqual(http.call_args.kwargs['base'], 'http://127.0.0.1:8098')
         self.assertTrue(good.closed)
+        # A 200 from a redirected login, different model port, or altered /slots
+        # must not be mistaken for the idle model's state or allow inference.
+        for target in ('http://127.0.0.1:8098/login',
+                       'http://127.0.0.1:8098/slots?model=other',
+                       'http://127.0.0.1:8098/slots#fragment',
+                       'http://127.0.0.1:8080/slots',
+                       'http://elsewhere.example/slots',
+                       'https://127.0.0.1:8098/slots'):
+            poisoned = SlotsResponse([{'is_processing': False}], url=target)
+            with self.subTest(target=target), patch.object(
+                    probe, 'request', return_value=poisoned) as http:
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_SLOTS_ENDPOINT_UNAVAILABLE$'):
+                    probe.model_slots_state(object())
+                http.assert_called_once()
+            self.assertFalse(poisoned.read_called)
+            self.assertTrue(poisoned.closed)
         both = SlotsResponse([{'is_processing': False, 'processing': False},
                               {'is_processing': True, 'processing': True}])
         with patch.object(probe, 'request', return_value=both):
