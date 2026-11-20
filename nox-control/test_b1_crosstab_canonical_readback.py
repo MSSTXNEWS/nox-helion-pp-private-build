@@ -176,6 +176,74 @@ def main():
                       clash["winner"]=="ACKED_RECOVERED" and clash["stillAcked"]=="ALREADY_ACKED")
                 check("stale concurrent verifier cannot accept contradictory ACKED proof",
                       clash["late"]=="HOLD_CROSSTAB_ACKED_PROOF_CONFLICT")
+
+                # Already ACKED is only a local replay fence: canonical
+                # reconciliation MUST re-fetch and verify the signed receipt.
+                check("ACKED reread requires canonical GET",
+                      trial(a,"gate.reconcileSignedAck(s1,a,'cursor1',read('missing'),verify)")=="HOLD_CROSSTAB_READBACK")
+                check("ACKED rejects invalid fresh signature verifier",
+                      trial(a,"gate.reconcileSignedAck(s1,a,'cursor1',read('x1'),()=>false)")=="HOLD_CROSSTAB_RECEIPT_UNVERIFIED")
+                check("ACKED bound to exact signed receipt after revalidation",
+                      a.evaluate("()=>gate.reconcileSignedAck(s1,a,'cursor1',read('x1'),verify)")["status"]=="ALREADY_ACKED")
+                check("alternate signed receipt bytes cannot reuse ACKED projection",
+                      trial(a,"gate.reconcileSignedAck(s1,a,'cursor1',async x=>({...await read('x1')(x),signature:'alternate-signature'}),async()=>true)")=="HOLD_CROSSTAB_ACKED_PROOF_CONFLICT")
+                integrity=a.evaluate("""async dbName => {
+                  const gate2=await NOXB1CrossTabAckLease.createGate({
+                    indexedDB,databaseName:dbName,ttlMs:300
+                  });
+                  const scope={conversation_id:'dialog',exchange_id:'x1'},
+                    event='a'.repeat(64);
+                  async function edit(field,value) {
+                    return new Promise((resolve,reject)=>{
+                      const request=indexedDB.open(dbName,1);
+                      request.onerror=()=>reject(Error('db open failed'));
+                      request.onsuccess=()=>{
+                        const db=request.result,tx=db.transaction('ack_fences','readwrite');
+                        tx.oncomplete=()=>{db.close();resolve();};
+                        tx.onabort=()=>{db.close();reject(Error('db mutate failed'));};
+                        const store=tx.objectStore('ack_fences');
+                        const row=store.get(['dialog','x1']);
+                        row.onsuccess=()=>{
+                          const updated=row.result;updated[field]=value;
+                          store.put(updated);
+                        };
+                      };
+                    });
+                  }
+                  try {
+                    const grant=await gate2.reserve(scope,event,'cursor1');
+                    await gate2.beginSend(grant);
+                    await gate2.reconcileSignedAck(scope,event,'cursor1',read('x1'),verify);
+                    const initial=await new Promise((resolve,reject)=>{
+                      const req=indexedDB.open(dbName,1);
+                      req.onerror=()=>reject(Error('db open failed'));
+                      req.onsuccess=()=>{
+                        const database=req.result;
+                        const tx=database.transaction('ack_fences','readonly');
+                        const get=tx.objectStore('ack_fences').get(['dialog','x1']);
+                        get.onsuccess=()=>{resolve(get.result);database.close();};
+                        get.onerror=()=>reject(Error('db read failed'));
+                      };
+                    });
+                    await edit('server_ack_id','ack-spoofed');
+                    let spoof='ACCEPTED';
+                    try{await gate2.reconcileSignedAck(scope,event,'cursor1',read('x1'),verify);}
+                    catch(error){spoof=error.code;}
+                    await edit('server_ack_id','ack-x1');
+                    await edit('receipt_proof_sha256','f'.repeat(64));
+                    let digest='ACCEPTED';
+                    try{await gate2.reconcileSignedAck(scope,event,'cursor1',read('x1'),verify);}
+                    catch(error){digest=error.code;}
+                    return {initial,spoof,digest};
+                  } finally {gate2.close();}
+                }""",db+"-ack-digest-integrity")
+                check("verified ACKED stores SHA256 of signed server receipt",
+                      isinstance(integrity["initial"].get("receipt_proof_sha256"),str)
+                      and len(integrity["initial"]["receipt_proof_sha256"])==64)
+                check("edited local ACKED metadata cannot masquerade as canonical receipt",
+                      integrity["spoof"]=="HOLD_CROSSTAB_ACKED_PROOF_CONFLICT")
+                check("edited local ACKED proof digest is rejected",
+                      integrity["digest"]=="HOLD_CROSSTAB_ACKED_PROOF_CONFLICT")
                 a.reload();a.add_script_tag(path=str(SOURCE))
                 a.evaluate("""async db=>{
                     window.s1={conversation_id:'dialog',exchange_id:'x1'};
