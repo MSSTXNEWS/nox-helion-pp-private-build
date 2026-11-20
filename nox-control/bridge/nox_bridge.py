@@ -38,17 +38,20 @@ def remember(user, answer):
         log("persist_error %s %s" % (type(e).__name__, str(e)[:120]))
 
 async def ask(messages, max_tokens):
+    max_tokens = min(max_tokens, 700)
     async with httpx.AsyncClient(timeout=170) as c:
         r = await c.post(MODEL, json={"messages": messages, "max_tokens": max_tokens, "temperature": 0.6})
-        r.raise_for_status()
+        if r.status_code >= 400:
+            log("upstream %s %s" % (r.status_code, r.text[:300].replace("\n"," ")))
+            r.raise_for_status()
         m = r.json()["choices"][0]["message"]
         return (m.get("content") or "").strip()
 
 async def smart(history, max_tokens=1500):
     user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
     mem = memory_block(user)
-    sys_msg = IDENTITY + ("\n\nТвоя память:\n" + mem[:3000] if mem else "")
-    msgs = [{"role": "system", "content": sys_msg}] + [m for m in history if m.get("role") != "system"][-12:]
+    sys_msg = IDENTITY + ("\n\nТвоя память:\n" + mem[:1200] if mem else "")
+    msgs = [{"role": "system", "content": sys_msg}] + [{"role": m["role"], "content": str(m.get("content",""))[:3500]} for m in history if m.get("role") != "system"][-6:]
     ans = await ask(msgs, max_tokens)
     # самопроверка (1V14-18): короткий проход, исправляет явные ошибки/выдумки
     if len(ans) > 200:
