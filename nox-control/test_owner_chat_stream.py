@@ -78,8 +78,8 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     'delta':{'content':'unverified output'},
                     'finish_reason':'stop'}]}
                 streams=[Chunks([
-                    ('data: '+json.dumps(doc)+'\\n\\n').encode(),
-                    b'data: [DONE]\\n\\n'])]
+                    ('data: '+json.dumps(doc)+'\n\n').encode(),
+                    b'data: [DONE]\n\n'])]
                 requests,factory=self.transport(streams)
                 payload={'messages':[{'role':'user','content':'Say ready'}]}
                 with factory:
@@ -94,7 +94,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         # A normal terminal with no error key must retain its fast path.
         native=self.native()
         streams=[Chunks([frame('verified'),frame(finish='stop'),
-                         b'data: [DONE]\\n\\n'])]
+                         b'data: [DONE]\n\n'])]
         requests,factory=self.transport(streams)
         payload={'messages':[{'role':'user','content':'Say ready'}]}
         with factory:
