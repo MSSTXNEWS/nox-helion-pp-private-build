@@ -131,10 +131,75 @@
         return {write:{...prev,state:target},value:target};
       });
     }
+    // A SENDING ACK is uncertain forever unless an independent, authenticated
+    // canonical server readback proves it committed. Neither callback may POST
+    // to the model or re-send an ACK. The caller MUST use a GET-only source and
+    // a distinct signature + owner/CAS + S03 verifier (never ()=>true in prod).
+    async function reconcileSignedAck(raw,event,cursor,readCanonicalAck,verifyCanonicalAck) {
+      live();
+      if(typeof readCanonicalAck!=='function'||typeof verifyCanonicalAck!=='function')
+        hold('HOLD_CROSSTAB_VERIFY_CONTRACT');
+      const s=snapshot(raw,event,cursor),proof=await digest(s.cursor);
+      live();
+      const k=[s.conversation_id,s.exchange_id];
+      const current=await mutate(db,k,prev=>({
+        value:prev?Object.freeze({state:prev.state,event_id:prev.event_id,
+          cursor_digest:prev.cursor_digest,token:prev.token,
+          generation:prev.generation}):null
+      }));
+      if(!current) hold('HOLD_CROSSTAB_NOT_SENDING');
+      if(current.event_id!==s.event_id||current.cursor_digest!==proof)
+        hold('HOLD_CROSSTAB_CONFLICT');
+      if(current.state==='ACKED')
+        return Object.freeze({status:'ALREADY_ACKED'});
+      if(current.state!=='SENDING')
+        hold('HOLD_CROSSTAB_NOT_SENDING');
+      const expected=Object.freeze({conversation_id:s.conversation_id,
+        exchange_id:s.exchange_id,event_id:s.event_id,cursor_digest:proof});
+      let rawReceipt;
+      try{rawReceipt=await readCanonicalAck(expected);}
+      catch(_){hold('HOLD_CROSSTAB_READBACK');}
+      if(!rawReceipt||typeof rawReceipt!=='object'||Array.isArray(rawReceipt)||
+         rawReceipt.version!==1||rawReceipt.state!=='ACKED'||
+         rawReceipt.conversation_id!==s.conversation_id||
+         rawReceipt.exchange_id!==s.exchange_id||
+         rawReceipt.event_id!==s.event_id||
+         rawReceipt.cursor_digest!==proof||
+         typeof rawReceipt.ack_id!=='string'||!ID.test(rawReceipt.ack_id)||
+         typeof rawReceipt.server_cas!=='string'||!ID.test(rawReceipt.server_cas)||
+         typeof rawReceipt.s03_sha256!=='string'||!HEX.test(rawReceipt.s03_sha256)||
+         typeof rawReceipt.signature!=='string'||!CURSOR.test(rawReceipt.signature))
+        hold('HOLD_CROSSTAB_RECEIPT_MISMATCH');
+      // Snapshot primitives BEFORE async signature verification (TOCTOU safe).
+      const receipt=Object.freeze({
+        version:1,state:'ACKED',...expected,ack_id:rawReceipt.ack_id,
+        server_cas:rawReceipt.server_cas,s03_sha256:rawReceipt.s03_sha256,
+        signature:rawReceipt.signature
+      });
+      let accepted;
+      try{accepted=await verifyCanonicalAck(receipt,expected);}
+      catch(_){hold('HOLD_CROSSTAB_RECEIPT_UNVERIFIED');}
+      if(accepted!==true) hold('HOLD_CROSSTAB_RECEIPT_UNVERIFIED');
+      live();
+      // Atomic CAS against the exact pre-verification SENDING generation.
+      // A failed commit remains SENDING and is never interpreted as success.
+      return mutate(db,k,prev=>{
+        if(!prev||prev.event_id!==s.event_id||prev.cursor_digest!==proof)
+          return {error:'HOLD_CROSSTAB_CONFLICT'};
+        if(prev.state==='ACKED') return {value:Object.freeze({status:'ALREADY_ACKED'})};
+        if(prev.state!=='SENDING'||prev.token!==current.token||
+           prev.generation!==current.generation)
+          return {error:'HOLD_CROSSTAB_RECONCILE_FENCED'};
+        return {write:{...prev,state:'ACKED',server_ack_id:receipt.ack_id,
+          server_cas:receipt.server_cas,verified_s03_sha256:receipt.s03_sha256},
+          value:Object.freeze({status:'ACKED_RECOVERED',ack_id:receipt.ack_id})};
+      });
+    }
     return Object.freeze({
       reserve,
       beginSend:grant=>transition(grant,'RESERVED','SENDING'),
       confirm:grant=>transition(grant,'SENDING','ACKED'),
+      reconcileSignedAck,
       // Unknown delivery never releases the SENDING record.
       close:()=>{if(!closed){closed=true;db.close();}}
     });
