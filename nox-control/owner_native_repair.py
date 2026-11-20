@@ -7,6 +7,7 @@ from contextlib import ExitStack
 import hashlib
 import json
 import os
+from pathlib import Path
 import re
 import signal
 import stat
@@ -42,16 +43,23 @@ def destination_snapshot(parent_fd, name):
     return {'state': state, 'available_bytes': disk.f_bavail * disk.f_frsize}
 
 
-def observe(probe, deadline):
+def observe(probe, deadline, step=None):
+    if step is None:
+        step = [None]
+    step[0] = 'load_proc_probe'
     helper = probe.proc_helper()
+    step[0] = 'initial_guard'
     probe.tick(deadline)
+    step[0] = 'open_ssd_parent'
     destination_fd = probe.open_plain(probe.SSD.parent)
     try:
+        step[0] = 'ssd_statvfs'
         target = destination_snapshot(destination_fd, probe.SSD.name)
         report = {'destination': target, 'expected_bytes': probe.SIZE,
                   'warm_content_read_bytes': 0, 'hash_verified': False,
                   'host_mutations': False, 'migration_authorized': False}
         try:
+            step[0] = 'open_warm_file'
             warm_fd = probe.open_plain(probe.WARM)
         except FileNotFoundError:
             return {**report, 'state': 'WARM_PATH_NOT_FOUND'}
@@ -66,10 +74,12 @@ def observe(probe, deadline):
             def visible_pids():
                 return sorted(int(item.name) for item in helper.PROC.iterdir() if item.name.isdigit())
             pids_before = visible_pids()
+            step[0] = 'proc_usage'
             evidence = probe.process_refs(helper, before, warm_fd, deadline)
             probe.tick(deadline)
             same_pids = pids_before == visible_pids() and len(pids_before) == evidence['pids_seen']
             with ExitStack() as stack:
+                step[0] = 'final_identity'
                 warm_again = probe.open_plain(probe.WARM)
                 stack.callback(os.close, warm_again)
                 target_again = probe.open_plain(probe.SSD.parent)
@@ -94,6 +104,35 @@ def observe(probe, deadline):
         os.close(destination_fd)
 
 
+def leaf_metadata(path, known_target):
+    try:
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode):
+            target = path.readlink()
+            return {'state': 'SYMLINK', 'expected_target': target == known_target}
+        if stat.S_ISREG(info.st_mode):
+            return {'state': 'REGULAR', 'bytes': info.st_size, 'allocated_bytes': info.st_blocks * 512}
+        return {'state': 'OTHER'}
+    except FileNotFoundError:
+        return {'state': 'ABSENT'}
+    except OSError as error:
+        return {'state': 'UNAVAILABLE', 'errno': error.errno}
+
+
+def quick_metadata(probe):
+    view = {
+        'warm': leaf_metadata(probe.WARM, probe.SSD),
+        'cold': leaf_metadata(probe.SSD, probe.WARM),
+    }
+    for name, path in (('cold_parent', probe.SSD.parent), ('nox_root', Path('/root/nox'))):
+        try:
+            disk = os.statvfs(path)
+            view[name] = {'available_bytes': disk.f_bavail * disk.f_frsize}
+        except OSError as error:
+            view[name] = {'errno': error.errno}
+    return view
+
+
 def main():
     request, source = (os.environ.get(key, '') for key in
                        ('NOX_OWNER_REQUEST_ID', 'NOX_OWNER_SOURCE_SHA'))
@@ -105,15 +144,25 @@ def main():
         raise TimeoutError()
     previous = signal.signal(signal.SIGALRM, expired)
     signal.setitimer(signal.ITIMER_REAL, SECONDS)
+    step = ['load_pinned_helpers']
+    metadata = None
     try:
-        result = observe(historical_probe(), time.monotonic() + SECONDS - 1)
-    except (OSError, RuntimeError, ValueError):
+        probe = historical_probe()
+        step[0] = 'collect_quick_metadata'
+        metadata = quick_metadata(probe)
+        result = observe(probe, time.monotonic() + SECONDS - 1, step)
+    except (OSError, RuntimeError, ValueError, AttributeError, KeyError, TypeError) as error:
         result = {'state': 'HOLD_HERMES_COLD_OBSERVATION', 'host_mutations': False,
-                  'migration_authorized': False}
+                  'migration_authorized': False, 'stage': step[0],
+                  'error_class': type(error).__name__}
+        if isinstance(error, OSError):
+            result['errno'] = error.errno
+        elif isinstance(error, RuntimeError) and re.fullmatch(r'HOLD_[A-Z_]{1,80}', str(error)):
+            result['reason'] = str(error)
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, previous)
-    result.update(schema=SCHEMA, request=request, source_sha=source)
+    result.update(schema=SCHEMA, request=request, source_sha=source, metadata_only=metadata)
     print('NOX_MAINT_REPAIR=' + json.dumps({'kind': 'hermes_cold_preflight', 'data': result},
                                          separators=(',', ':')), flush=True)
     print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
