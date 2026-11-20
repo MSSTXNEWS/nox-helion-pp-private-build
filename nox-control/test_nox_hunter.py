@@ -20,6 +20,12 @@ class HunterURLSafetyTests(unittest.TestCase):
             "https://[bad/rss",           # urlsplit raises ValueError
             "https://example.org:bad/rss", # .port raises ValueError
             "https://example.org:99999/rss",
+            "https://localhost./rss",
+            "https://127.0.0.1./rss",
+            "https://10.10.10.10./rss",
+            "https://0177.0.0.1/rss",
+            "https://2130706433/rss",
+            "https://0x7f000001/rss",
             "https://@example.org/rss",    # empty userinfo is still forbidden
             "https://example.org/rs\nss", # urllib otherwise strips LF
             "https://example.org/rs\tss",
@@ -31,6 +37,10 @@ class HunterURLSafetyTests(unittest.TestCase):
     def test_valid_https_and_tracking_dedup_still_work(self):
         value = hunter._canonical_url("https://example.org/rss?utm_source=x&a=1")
         self.assertEqual(value, "https://example.org/rss?a=1")
+        self.assertEqual(
+            hunter._canonical_url("https://EXAMPLE.ORG./rss?utm_source=x&a=1"),
+            "https://example.org/rss?a=1",
+        )
 
     def test_unhashable_source_kind_is_typed_hold(self):
         base = {"id": "feed", "url": "https://example.org/rss",
