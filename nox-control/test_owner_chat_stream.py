@@ -68,6 +68,41 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_falsey_model_error_envelopes_cannot_certify_s03(self):
+        # Some providers emit error:{} or error:false alongside a normal
+        # choices shape. Presence of an error is a failure, not a truth test.
+        for marker in ({}, [], False, None, ''):
+            with self.subTest(error_marker=repr(marker)):
+                native=self.native()
+                doc={'error':marker,'choices':[{
+                    'delta':{'content':'unverified output'},
+                    'finish_reason':'stop'}]}
+                streams=[Chunks([
+                    ('data: '+json.dumps(doc)+'\n\n').encode(),
+                    b'data: [DONE]\n\n'])]
+                requests,factory=self.transport(streams)
+                payload={'messages':[{'role':'user','content':'Say ready'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Say ready',False)
+                self.assertEqual(len(requests),1)
+                self.assertEqual(response.status_code,502)
+                self.assertEqual(json.loads(response.body)['error']['code'],
+                                 'HOLD_MODEL_SSE_INVALID')
+                self.assertNotIn('_agent_final',payload)
+
+        # A normal terminal with no error key must retain its fast path.
+        native=self.native()
+        streams=[Chunks([frame('verified'),frame(finish='stop'),
+                         b'data: [DONE]\n\n'])]
+        requests,factory=self.transport(streams)
+        payload={'messages':[{'role':'user','content':'Say ready'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Say ready',False)
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(payload['_agent_final'],'verified')
+
     async def test_direct_tool_identities_fail_closed_before_native_dispatch(self):
         # The model parser already checks IDs; direct heuristic calls enter at
         # _normal_calls and must not execute twice under the same S03 identity.

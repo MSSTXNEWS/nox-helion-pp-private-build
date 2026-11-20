@@ -262,7 +262,10 @@ async def _model_events(client, url, payload):
             try:
                 doc=json.loads(wire,object_pairs_hook=_reject_duplicate_json_keys,
                                parse_constant=_reject_nonfinite_json_constant)
-                if not isinstance(doc,dict) or doc.get('error'):
+                # Any explicit error field signals provider failure, even when its
+                # value is {}, [], false or null. Reject before showing tokens
+                # or certifying a successful S03 terminal.
+                if not isinstance(doc,dict) or 'error' in doc:
                     raise ValueError('error')
                 choices=doc.get('choices')
                 if choices==[] and isinstance(doc.get('usage'),dict):
