@@ -1,0 +1,23 @@
+name: NOX A4 bridge SSE completion source check
+on:
+  pull_request:
+    paths:
+      - 'nox-control/bridge/nox_bridge.py'
+      - 'nox-control/bridge/test_bridge_stream_integrity.py'
+      - '.github/workflows/nox-a4-bridge-stream-integrity.yml'
+permissions: {contents: read}
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: One offline SSE completion + S03 no-false-success regression
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/bridge/nox_bridge.py nox-control/bridge/test_bridge_stream_integrity.py
+          python3 -m unittest discover -s nox-control/bridge -p test_bridge_stream_integrity.py -v
+          echo 'SOURCE_ONLY=true NATIVE_ACCEPTED=false'

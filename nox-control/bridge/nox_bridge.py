@@ -183,13 +183,16 @@ def memory_block(text):
     return out
 
 def remember(user, answer):
+    """Attempt S03 write. True is a returned write, NOT verified readback."""
     try:
         import s03_memory as M
         M.persist_turn(user, answer)
         with _RC_LOCK:
             _RC.clear()
+        return True
     except Exception as e:
         log("persist_error %s %s" % (type(e).__name__, str(e)[:120]))
+        return False
 
 def remember_fact(u, a):
     import s03_memory as M
@@ -258,6 +261,7 @@ def _sse(o):
     return "data: " + json.dumps(o, ensure_ascii=False) + "\n\n"
 
 async def stream_chat(history):
+    """Only a complete upstream generation can become a completed S03 turn."""
     user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
     yield _sse({"type": "status", "text": "слушаю тебя…"})
     mem_t = asyncio.create_task(asyncio.to_thread(memory_block, user))
@@ -271,28 +275,68 @@ async def stream_chat(history):
     msgs = build_msgs(history, user, mem, vol)
     yield _sse({"type": "status", "text": "формулирую ответ…"})
     full = ""
+    received_done = False
+    finish_stop = False
     body = {"messages": msgs, "max_tokens": adapt_tokens(user), "temperature": 0.6, "id_slot": 0, "cache_prompt": True, "n_keep": NKEEP, "stream": True,
             "chat_template_kwargs": {"enable_thinking": False}}
     try:
-        if True:
-            async with hc().stream("POST", MODEL, json=body) as r:
-                async for line in r.aiter_lines():
-                    if not line.startswith("data:"): continue
-                    d = line[5:].strip()
-                    if d == "[DONE]": break
-                    try: t = json.loads(d)["choices"][0].get("delta", {}).get("content") or ""
-                    except Exception: t = ""
-                    if t:
-                        full += t
-                        yield _sse({"type": "token", "text": t})
-    except Exception as e:
-        log("stream_error %s" % type(e).__name__)
-        yield _sse({"type": "error", "text": "модель не ответила: %s" % type(e).__name__})
+        async with hc().stream("POST", MODEL, json=body) as r:
+            if r.status_code != 200:
+                raise ValueError("UPSTREAM_HTTP_STATUS")
+            async for line in r.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                raw = line[5:].strip()
+                if raw == "[DONE]":
+                    received_done = True
+                    break
+                try:
+                    payload = json.loads(raw)
+                    if not isinstance(payload, dict) or payload.get("error"):
+                        raise ValueError("UPSTREAM_ERROR_FRAME")
+                    choices = payload["choices"]
+                    if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+                        raise ValueError("UPSTREAM_CHOICES_INVALID")
+                    choice = choices[0]
+                    finish = choice.get("finish_reason")
+                    if finish is not None:
+                        if finish != "stop" or finish_stop:
+                            raise ValueError("UPSTREAM_FINISH_INVALID")
+                        finish_stop = True
+                    delta = choice.get("delta")
+                    if not isinstance(delta, dict):
+                        raise ValueError("UPSTREAM_DELTA_INVALID")
+                    token = delta.get("content") or ""
+                    if not isinstance(token, str) or any(0xD800 <= ord(ch) <= 0xDFFF for ch in token):
+                        raise ValueError("UPSTREAM_TOKEN_INVALID")
+                    if finish_stop and token:
+                        raise ValueError("UPSTREAM_TOKEN_AFTER_FINISH")
+                    if len(full) + len(token) > 4000000:
+                        raise ValueError("UPSTREAM_TEXT_LIMIT")
+                except (ValueError, KeyError, TypeError, IndexError) as exc:
+                    raise ValueError("UPSTREAM_FRAME_INVALID") from exc
+                if token:
+                    full += token
+                    yield _sse({"type": "token", "text": token})
+    except Exception as exc:
+        log("stream_error %s" % type(exc).__name__)
+        yield _sse({"type": "error", "reason": "UPSTREAM_STREAM_ERROR",
+                    "generation_complete": False, "s03_readback_verified": False,
+                    "text": "Ответ модели прерван; неполный текст не сохранён"})
+        return
+    if not (received_done and finish_stop and full.strip()):
+        yield _sse({"type": "error", "reason": "UPSTREAM_NOT_COMPLETE",
+                    "generation_complete": False, "s03_readback_verified": False,
+                    "text": "Ответ модели не завершён; память не изменена"})
+        return
     LAST_CHAT["t"] = time.time()
-    if full.strip():
-        remember(user, full.strip())
-        if SOUL: SOUL.log_turn(user, full.strip())
-    yield _sse({"type": "done"})
+    write_returned = remember(user, full.strip())
+    if SOUL:
+        SOUL.log_turn(user, full.strip())
+    # A successful persist_turn() is not an independent S03 readback.
+    yield _sse({"type": "done", "generation_complete": True,
+                "memory_write_receipt": {"status": "WRITE_RETURNED_UNVERIFIED" if write_returned else "HOLD",
+                                         "s03_readback_verified": False}})
 
 @app.post("/v1/chat/stream")
 async def chat_stream(req: Request):
@@ -321,13 +365,15 @@ button{padding:0 16px;border-radius:10px;border:0;background:#4b6bff;color:#fff;
 const log=document.getElementById('log'),hist=[];
 function add(c,t){const d=document.createElement('div');d.className='m '+c;d.textContent=t;log.appendChild(d);log.scrollTop=1e9;return d}
 document.getElementById('f').onsubmit=async e=>{e.preventDefault();const i=document.getElementById('i'),q=i.value.trim();if(!q)return;i.value='';
-add('u',q);hist.push({role:'user',content:q});const st=add('s','…'),box=add('n','');let full='';
+add('u',q);hist.push({role:'user',content:q});const st=add('s','…'),box=add('n','');let full='',complete=false;
 try{const r=await fetch('/v1/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:hist.slice(-6)})});
+if(!r.ok||!r.body)throw Error('upstream');
 const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
 while(true){const{value,done}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});let k;
 while((k=buf.indexOf('\\n\\n'))>=0){const ln=buf.slice(0,k);buf=buf.slice(k+2);if(!ln.startsWith('data:'))continue;const o=JSON.parse(ln.slice(5));
 if(o.type=='status')st.textContent=o.text;else if(o.type=='token'){full+=o.text;box.textContent=full;st.textContent='';log.scrollTop=1e9}
-else if(o.type=='error')st.textContent=o.text}}}catch(x){st.textContent='ошибка связи'}
+else if(o.type=='error')st.textContent=o.text;else if(o.type=='done')complete=o.generation_complete===true}}}catch(x){st.textContent='ошибка связи'}
+if(!complete){if(!st.textContent)st.textContent='Ответ прерван; неполный текст не добавлен в историю';return}
 hist.push({role:'assistant',content:full});const fb=add('f','');
 ['👍','👎'].forEach((s,j)=>{const b=document.createElement('button');b.textContent=s;b.onclick=()=>{fetch('/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:q,a:full,v:j?-1:1})});fb.remove()};fb.appendChild(b)})}
 </script>"""
