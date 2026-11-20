@@ -246,7 +246,8 @@ def readback_evidence(saved, native_equal, two_turn_mode):
 
 
 def clean_two_turn_browser_runtime(page_errors, network, overflow_count=0,
-                                   critical_requestfailed_count=0):
+                                   critical_requestfailed_count=0,
+                                   blocked_native_attempts=0):
     """No browser-only RU/ES PASS with page JS errors or broken JS/CSS.
 
     The overall browser_run historically checked these conditions only after
@@ -255,12 +256,16 @@ def clean_two_turn_browser_runtime(page_errors, network, overflow_count=0,
     Failed image assets are not critical JS/CSS failures. A bounded response
     log is insufficient when additional unobserved responses may hide failures.
     Request failures without HTTP responses are also fatal for scripts/styles.
+    Any attempted extra/alternate native generation, even if aborted by the
+    owner route guard, invalidates the claimed exactly-two-POST browser result.
     """
     if (not isinstance(page_errors, list) or page_errors
             or not isinstance(network, list)
             or type(overflow_count) is not int or overflow_count != 0
             or type(critical_requestfailed_count) is not int
-            or critical_requestfailed_count != 0):
+            or critical_requestfailed_count != 0
+            or type(blocked_native_attempts) is not int
+            or blocked_native_attempts != 0):
         return False
     for item in network:
         if not isinstance(item, dict):
@@ -1448,7 +1453,8 @@ async def browser_run(report, directory, available):
                 report['multiturn_second_screenshot_verified']=True
                 if not clean_two_turn_browser_runtime(
                         page_errors, network, report['network_response_overflow_count'],
-                        report['critical_requestfailed_count']):
+                        report['critical_requestfailed_count'],
+                        blocked['non_qa_generation'] + blocked['alternate_native_chat_route']):
                     raise RuntimeError('HOLD_BROWSER_JAVASCRIPT_OR_RESOURCE_ERRORS')
                 report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:
