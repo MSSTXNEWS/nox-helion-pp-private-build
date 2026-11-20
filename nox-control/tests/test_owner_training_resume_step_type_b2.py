@@ -1463,5 +1463,52 @@ class NativeThreeWorkerCap(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "HOLD_DISPATCHER_NOT_RUNNING"):
                 check(helper)
 
+
+class NativeDrainStopFence(unittest.TestCase):
+    def test_stop_latched_during_worker_drain_blocks_controller_mutation(self):
+        """Execute the real main() drain AST: STOP can arrive mid-drain."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        main = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == "main")
+        waits = [node for node in ast.walk(main)
+                 if isinstance(node, ast.While)
+                 and "worker_readback(helper)" in ast.unparse(node.test)]
+        self.assertEqual(len(waits), 1)
+        drain = waits[0]
+        blocks = [node.body for node in ast.walk(main)
+                  if isinstance(getattr(node, "body", None), list)
+                  and drain in node.body]
+        self.assertEqual(len(blocks), 1)
+        block = blocks[0]
+        index = block.index(drain)
+        self.assertIn("global_stop()", ast.unparse(drain.body[0]))
+        self.assertIn("global_stop()", ast.unparse(block[index + 2]))
+        self.assertIn("stop_controller", ast.unparse(block[index + 3]))
+        selected = ast.fix_missing_locations(ast.Module(
+            body=copy.deepcopy(block[index:index + 3]), type_ignores=[]))
+        code = compile(selected, str(SOURCE), "exec")
+
+        def attempt(busy_poll_values, stop_values):
+            polls, stops, sleeps = iter(busy_poll_values), iter(stop_values), []
+            scope = {
+                "helper": object(), "deadline": 100,
+                "worker_readback": lambda _helper: {"busy_count": next(polls)},
+                "global_stop": lambda: next(stops),
+                "time": types.SimpleNamespace(monotonic=lambda: 0,
+                                               sleep=lambda n: sleeps.append(n)),
+            }
+            exec(code, scope)
+            return sleeps
+
+        # STOP observed during an existing busy worker's drain.
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GLOBAL_STOP_REMAINS"):
+            attempt([1], [True])
+        # STOP asserted just as the last busy worker becomes idle.
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GLOBAL_STOP_REMAINS"):
+            attempt([1, 0, 0], [False, True])
+        # No STOP: original drain is unchanged and reaches controller phase.
+        self.assertEqual(attempt([1, 0, 0], [False, False]), [2])
+
+
 if __name__ == "__main__":
     unittest.main()
