@@ -6,6 +6,7 @@ def g(p, data=None, t=20):
         r = urllib.request.urlopen(req, timeout=t); return r.status, r.read()[:140].decode("utf8", "replace").replace("\n", " ")
     except Exception as e:
         return "ERR", type(e).__name__ + " " + str(e)[:80]
+import time as _t; _t.sleep(60)  # дать прогреву отработать
 for p in ["/health", "/", "/soul", "/api/health", "/api/nox/status", "/api/status", "/api/nox/system/processes", "/api/nox/training/status", "/api/nox/memory/facts?limit=3", "/api/nox/unknown", "/api/nox/decisions", "/api/nox/changes?since=0"]:
     print("GET", p, *g(p)); 
 print("POST /feedback", *g("/feedback", {"q": "t", "a": "t", "v": 1}))
@@ -37,6 +38,7 @@ def chat(path, body, label):
         print(label, "ERR", type(e).__name__, str(e)[:120])
 chat("/api/chat", {"request_id": "t1", "model": "nox-helion:latest", "messages": [{"role": "user", "content": "Привет! Кто ты? Ответь в двух предложениях."}], "options": {"num_predict": 200}}, "api/chat#1")
 chat("/api/chat", {"request_id": "t2", "model": "nox-helion:latest", "messages": [{"role": "user", "content": "Привет! Кто ты? Ответь в двух предложениях."}, {"role": "assistant", "content": "Я NOX."}, {"role": "user", "content": "А что ты помнишь про свой проект?"}], "options": {"num_predict": 200}}, "api/chat#2(cache)")
+chat("/api/chat", {"request_id": "t4", "model": "nox-helion:latest", "messages": [{"role": "user", "content": "Как твоё состояние и сервера?"}], "options": {"num_predict": 120}}, "api/chat#3 (server q)")
 chat("/api/chat", {"request_id": "t3", "mini": True, "persona": "mini", "messages": [{"role": "user", "content": "[Контекст: страница «Память»] что здесь можно сделать?"}], "options": {"num_predict": 300}}, "api/chat mini")
 chat("/v1/chat/stream", {"messages": [{"role": "user", "content": "Скажи одним предложением, как дела."}]}, "v1/chat/stream")
 print("DONE")
