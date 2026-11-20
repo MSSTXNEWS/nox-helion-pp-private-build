@@ -641,5 +641,114 @@ class RefillEligibilityTests(unittest.TestCase):
             producer.validate_manifest(changed)
 
 
+    def test_readonly_refill_review_rejects_unorderable_mission_ids(self):
+        from unittest.mock import patch
+        import owner_systemic_refill_producer as diagnostic
+
+        registry = {'parents': {}, 'total_original_ids': 295,
+                    'source_registry_sha256': {}}
+        review = {'reviewed_mission_ids': ['a', 'b']}
+        with (patch.object(diagnostic, 'strict_parent_registry', return_value=registry),
+              patch.object(diagnostic, 'eligibility_ledger', return_value=[]),
+              patch.object(diagnostic, '_validate_refill_request'),
+              patch.object(diagnostic, '_validate_proposal_request'),
+              patch.object(diagnostic, 'immutable_verifier_sha256', return_value='b' * 64),
+              patch.object(diagnostic, 'special_candidate_gaps', return_value=[])):
+            def predicate(missions):
+                report = diagnostic.build_report(
+                    {}, 'a' * 64, {'request_id': 'request'}, 'c' * 64,
+                    {'missions': missions}, 'd' * 64, {'roots': {}}, 'e' * 64,
+                    {}, 'f' * 64, review, '0' * 64, {}, {})
+                self.assertEqual(report['native_jobs_created'], 0)
+                self.assertFalse(report['executable_taskpack_emitted'])
+                self.assertEqual(report['state'], 'HOLD_NO_REVIEWED_TASKPACK')
+                return next(row for row in report['review_predicates']
+                            if row['predicate'] == 'reviewed_mission_ids')
+
+            for corrupt in ([{'mission_id': 'a'}, {'mission_id': None}],
+                            [{'mission_id': []}], ['not-an-object'], None):
+                with self.subTest(missions=corrupt):
+                    row = predicate(corrupt)
+                    self.assertFalse(row['passed'])
+            self.assertTrue(predicate([
+                {'mission_id': 'b'}, {'mission_id': 'a'}])['passed'])
+
+
+    def test_readonly_refill_review_holds_on_nonobject_documents(self):
+        from unittest.mock import patch
+        import owner_systemic_refill_producer as diagnostic
+
+        registry = {'parents': {}, 'total_original_ids': 295,
+                    'source_registry_sha256': {}}
+        inputs = {
+            'refill_request': {'request_id': 'a' * 64},
+            'proposal': {'missions': []},
+            'census': {'roots': {}},
+            'review': {'reviewed_mission_ids': []},
+        }
+        with (patch.object(diagnostic, 'strict_parent_registry', return_value=registry),
+              patch.object(diagnostic, 'eligibility_ledger', return_value=[]),
+              patch.object(diagnostic, '_validate_refill_request'),
+              patch.object(diagnostic, '_validate_proposal_request'),
+              patch.object(diagnostic, 'immutable_verifier_sha256', return_value='b' * 64),
+              patch.object(diagnostic, 'special_candidate_gaps', return_value=[])):
+            def run(documents):
+                report = diagnostic.build_report(
+                    {}, '1' * 64, documents['refill_request'], '2' * 64,
+                    documents['proposal'], '3' * 64, documents['census'], '4' * 64,
+                    {}, '5' * 64, documents['review'], '6' * 64, {}, {})
+                self.assertFalse(report['native_publish_performed'])
+                self.assertEqual(report['native_jobs_created'], 0)
+                self.assertEqual(report['original_task_acceptance_added'], 0)
+                return report
+
+            control = run(inputs)
+            shape = next(row for row in control['refill_request_predicates']
+                         if row['predicate'] == 'input_document_objects')
+            self.assertTrue(shape['passed'])
+            for key in inputs:
+                with self.subTest(document=key):
+                    malformed = dict(inputs, **{key: None})
+                    report = run(malformed)
+                    self.assertEqual(report['state'], 'HOLD_NO_REVIEWED_TASKPACK')
+                    shape = next(row for row in report['refill_request_predicates']
+                                 if row['predicate'] == 'input_document_objects')
+                    self.assertFalse(shape['passed'])
+                    name = {'census': 'source_census',
+                            'review': 'owner_review'}.get(key, key)
+                    self.assertFalse(shape['actual'][name])
+
+
+    def test_readonly_refill_nested_corruption_returns_hold_not_exception(self):
+        from unittest.mock import patch
+        import owner_systemic_refill_producer as diagnostic
+        registry = {'parents': {}, 'total_original_ids': 295,
+                    'source_registry_sha256': {}}
+        with patch.object(diagnostic, 'strict_parent_registry', return_value=registry):
+            previous = {'missions': []}
+            review = {'reviewed_mission_ids': []}
+            examples = (
+                ({'outcomes': None, 'original_task_states': []}, {'roots': {}}),
+                ({'outcomes': [{'task_id': []}], 'original_task_states': []}, {'roots': {}}),
+                ({'outcomes': [], 'original_task_states': [{'task_id': []}]}, {'roots': {}}),
+                ({'outcomes': [], 'original_task_states': []}, {'roots': []}),
+            )
+            for request_fields, census in examples:
+                with self.subTest(request=request_fields, census=census):
+                    request = dict({'request_id': 'a' * 64}, **request_fields)
+                    report = diagnostic.build_report(
+                        previous, '1'*64, request, '2'*64,
+                        {'missions': []}, '3'*64, census, '4'*64,
+                        {}, '5'*64, review, '6'*64, {}, {})
+                    self.assertEqual(report['state'], 'HOLD_NO_REVIEWED_TASKPACK')
+                    self.assertEqual(report['native_jobs_created'], 0)
+                    self.assertFalse(report['native_publish_performed'])
+                    self.assertEqual(report['original_task_acceptance_added'], 0)
+                    if not isinstance(census['roots'], dict):
+                        p = next(x for x in report['refill_request_predicates']
+                                 if x['predicate'] == 'source_census_roots_object')
+                        self.assertFalse(p['passed'])
+
+
 if __name__ == "__main__":
     unittest.main()

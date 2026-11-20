@@ -42,11 +42,52 @@ def _input_docs(source_root):
 def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
                  proposal_sha, census, census_sha, disposition, disposition_sha,
                  review, review_sha, source_documents, source_raw_sha256):
+    # Reject malformed JSON document roots before their fields are inspected. A
+    # broken review or census is HOLD evidence, never permission to publish.
+    doc_shapes = {
+        'refill_request': isinstance(refill_request, dict),
+        'proposal': isinstance(proposal, dict),
+        'source_census': isinstance(census, dict),
+        'owner_review': isinstance(review, dict),
+    }
+    refill_request = refill_request if doc_shapes['refill_request'] else {}
+    proposal = proposal if doc_shapes['proposal'] else {}
+    census = census if doc_shapes['source_census'] else {}
+    review = review if doc_shapes['owner_review'] else {}
     registry = strict_parent_registry(disposition,source_documents,source_raw_sha256)
-    ledger = eligibility_ledger(registry,previous,refill_request)
-    diffs = proposal_predicate_diff(proposal.get('missions'),registry,
-        census.get('roots',{}),refill_request,previous)
-    request_validation = []
+    # This is a diagnostic read, so malformed nested request rows must yield
+    # a HOLD report rather than crash the eligibility projection before the
+    # strict owner/request validator reports the original invalid document.
+    projection_request = dict(refill_request)
+    for key in ('outcomes', 'original_task_states'):
+        rows = refill_request.get(key)
+        projection_request[key] = [row for row in rows
+                                   if isinstance(row, dict) and type(row.get('task_id')) is str] \
+                                  if isinstance(rows, list) else []
+    ledger = eligibility_ledger(registry,previous,projection_request)
+    missions = proposal.get('missions') if isinstance(proposal, dict) else None
+    reviewed_ids_expected = None
+    if isinstance(missions, list) and all(
+            isinstance(m, dict) and type(m.get('mission_id')) is str for m in missions):
+        reviewed_ids_expected = sorted(m['mission_id'] for m in missions)
+        diffs = proposal_predicate_diff(missions,registry,
+            census.get('roots',{}),projection_request,previous)
+    else:
+        # Malformed proposals must produce HOLD evidence, never crash the reviewer.
+        diffs = [{'parent_task_id': None, 'all_passed': False,
+                  'predicates': [_check('mission_ids_well_formed', True, False, False,
+                                        'proposal.missions[].mission_id')],
+                  'native_publish_performed': False, 'original_task_accepted': False}]
+    census_roots = census.get('roots')
+    roots_valid = isinstance(census_roots, dict)
+    # Preserve the invalid raw census for exact owner/immutable checks. Use a
+    # harmless projection only to render source-gap evidence.
+    safe_census = census if roots_valid else dict(census, roots={})
+    request_validation = [_check('source_census_roots_object', True,
+        roots_valid, roots_valid, 'source_census.roots must be a mapping'),
+        _check('input_document_objects',
+        {name: True for name in doc_shapes}, doc_shapes, all(doc_shapes.values()),
+        'refill_request/proposal/source_census/owner_review must each be a JSON object')]
     try:
         _validate_refill_request(refill_request,previous,previous_sha)
         request_validation.append(_check('refill_request_binding',True,True,True))
@@ -84,11 +125,12 @@ def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
                type(review.get('native_readback_sha256')) is str
                and SHA.fullmatch(review['native_readback_sha256']),
                'fresh owner-authenticated native readback SHA'),
-        _check('reviewed_mission_ids',sorted(m.get('mission_id') for m in proposal.get('missions',[])
-               if isinstance(m,dict)),review.get('reviewed_mission_ids'),
-               review.get('reviewed_mission_ids') == sorted(m.get('mission_id')
-               for m in proposal.get('missions',[]) if isinstance(m,dict)),
-               'reviewed_mission_ids exactly matching proposed missions'),
+        _check('reviewed_mission_ids',reviewed_ids_expected,
+               review.get('reviewed_mission_ids'),
+               reviewed_ids_expected is not None
+               and type(review.get('reviewed_mission_ids')) is list
+               and review.get('reviewed_mission_ids') == reviewed_ids_expected,
+               'reviewed_mission_ids must match sorted string mission IDs exactly'),
     ]
     try:
         existing_verifier = immutable_verifier_sha256(proposal.get('missions',[]),
@@ -119,7 +161,7 @@ def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
         'structural_source_candidate_count':len(structural),
         'structural_source_candidates':[row['task_id'] for row in structural],
         'task_eligibility_ledger':ledger,
-        'highlighted_candidate_gaps':special_candidate_gaps(registry,census,census_sha),
+        'highlighted_candidate_gaps':special_candidate_gaps(registry,safe_census,census_sha),
         'publisher_requirements':['OWNER_REVIEWED_EXACT_REQUEST_AND_PROPOSAL',
             'EXACT_CURRENT_CONFIG_CAS','EXISTING_NATIVE_OWNER_LEASE',
             'CURRENT_ORIGINAL_TASK_STATE_READBACK_MATCH','ALL_OLD_TASKS_AND_CLAIMS_PRESERVED',
