@@ -128,7 +128,7 @@ def perform():
     require(not lock.is_symlink(),'OWNER_LOCK_SYMLINK')
     fd=os.open(lock,os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC)
     try:
-        try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        try:fcntl.flock(fd,fcntl.LOCK_SH|fcntl.LOCK_NB)
         except BlockingIOError:raise Hold('HOLD_NOX_COLD_FILE_OWNER_BUSY') from None
         STAGE='PRECONDITIONS'
         pins=processes();initial=snapshot();guard(initial)
