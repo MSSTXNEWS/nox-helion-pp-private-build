@@ -40,7 +40,7 @@ def remember(user, answer):
 async def ask(messages, max_tokens):
     max_tokens = min(max_tokens, 700)
     async with httpx.AsyncClient(timeout=170) as c:
-        r = await c.post(MODEL, json={"messages": messages, "max_tokens": max_tokens, "temperature": 0.6})
+        r = await c.post(MODEL, json={"messages": messages, "max_tokens": max_tokens, "temperature": 0.6, "id_slot": 0, "cache_prompt": True})
         if r.status_code >= 400:
             log("upstream %s %s" % (r.status_code, r.text[:300].replace("\n"," ")))
             r.raise_for_status()
