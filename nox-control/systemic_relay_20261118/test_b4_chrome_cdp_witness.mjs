@@ -45,7 +45,11 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
     if(o.cacheEvent)c.emit('Network.requestServedFromCache',{requestId});
     const dataTime=Object.hasOwn(o,'dataTimestamp')?o.dataTimestamp:timestamp+.01;
     if(missing&&i===1)c.emit('Network.dataReceived',{requestId,timestamp:dataTime});
-    else for(const [index,chunk] of chunks.entries())c.emit('Network.dataReceived',{requestId,timestamp:Array.isArray(o.chunkTimestamps)?o.chunkTimestamps[index]:dataTime,data:chunk.toString('base64')});
+    else for(const [index,chunk] of chunks.entries()){
+      const encoded=chunk.toString('base64');
+      const data=i===1&&typeof o.dataBase64Mutator==='function'?o.dataBase64Mutator(encoded,index):encoded;
+      c.emit('Network.dataReceived',{requestId,timestamp:Array.isArray(o.chunkTimestamps)?o.chunkTimestamps[index]:dataTime,data});
+    }
     if(o.extraBeforeFinish)emitExtra();
     c.emit('Network.loadingFinished',{requestId,timestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02});
     await new Promise(r=>setImmediate(r));
@@ -364,4 +368,34 @@ test('response headers and first observed decoded data chunk have distinct monot
   const reversed=await run(false,[Buffer.from(body)],null,null,{dataTimestamp:101.003});
   assert.equal(reversed.cdp_consistent,false);
   assert.equal(reversed.ttft_sse_verified,false);
+});
+
+
+test('Network.dataReceived requires canonical base64 before counting bytes, TTFT or digest',async()=>{
+  // Padded and unpadded canonical pieces still allow a valid stream.
+  const ok=await run(false,[Buffer.from(body.slice(0,-1)),Buffer.from(body.slice(-1))]);
+  assert.equal(ok.cdp_consistent,true);
+  assert.equal(ok.ttft_sse_verified,true);
+  const invalid=[
+    s=>'!'+s,             // Buffer.from normally ignores invalid prefix
+    s=>s+'\n',            // Buffer.from normally ignores whitespace
+    s=>s+'=',              // Excess padding
+    s=>' '+s,              // Leading whitespace
+    s=>s+'??'              // Invalid suffix
+  ];
+  for(const mutate of invalid){
+    const result=await run(false,[Buffer.from(body)],null,null,{dataBase64Mutator:mutate});
+    assert.equal(result.cdp_consistent,false,'noncanonical bytes may not match response body');
+    assert.equal(result.ttft_sse_verified,false,'noncanonical data cannot certify TTFT');
+    assert.equal(result.turns[1].first_cdp_data_chunk_ms,null);
+    assert.equal(result.turns[1].ttft_ms,null);
+    assert.equal(result.turns[1].visible_text_sha256,null);
+  }
+  // Nonzero unused padding bits: both Cg== and Ch== permissively decode LF,
+  // but only Cg== is canonical and admissible CDP data.
+  const padBits=await run(false,[Buffer.from(body.slice(0,-1)),Buffer.from(body.slice(-1))],null,null,
+    {dataBase64Mutator:(s,index)=>index===1?'Ch==':s});
+  assert.equal(padBits.cdp_consistent,false);
+  assert.equal(padBits.ttft_sse_verified,false);
+  assert.equal(padBits.turns[1].visible_text_sha256,null);
 });
