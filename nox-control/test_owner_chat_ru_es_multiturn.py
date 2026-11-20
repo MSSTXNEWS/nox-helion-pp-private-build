@@ -167,6 +167,28 @@ async function check(chunks) {
                 timeout=12, check=False)
             self.assertEqual(check.returncode, 0, check.stderr[:500])
 
+    def test_native_done_requires_explicit_true_persistence_and_session_flags(self):
+        """Terminal EOF alone cannot certify saved S03 or same RU-ES dialog."""
+        complete = {
+            "native_stream_complete": True, "native_terminal_count": 1,
+            "error": None,
+            "done": {"saved": True, "s03_integrated": True,
+                     "dialog_matches": True},
+        }
+        self.assertTrue(native_terminal_stream_valid(complete))
+        for done in ({}, {"saved": True},
+                     {"saved": True, "s03_integrated": True},
+                     {"saved": True, "s03_integrated": True,
+                      "dialog_matches": False},
+                     {"saved": 1, "s03_integrated": True,
+                      "dialog_matches": True},
+                     {"saved": True, "s03_integrated": "true",
+                      "dialog_matches": True},
+                     {"saved": True, "s03_integrated": True,
+                      "dialog_matches": None}):
+            with self.subTest(done=done):
+                self.assertFalse(native_terminal_stream_valid(dict(complete, done=done)))
+
     def test_canonical_s03_four_rows_are_bound_to_own_dialog(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         legacy = rows(es)

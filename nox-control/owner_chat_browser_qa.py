@@ -163,7 +163,11 @@ def native_terminal_stream_valid(snapshot):
             and type(snapshot.get('native_terminal_count')) is int
             and snapshot['native_terminal_count'] == 1
             and snapshot.get('error') is None
-            and isinstance(snapshot.get('done'), dict))
+            and isinstance(snapshot.get('done'), dict)
+            # Empty/partial DONE would vacuously satisfy all(done.values())
+            # in the caller yet cannot prove S03 saved and same session.
+            and all(snapshot['done'].get(flag) is True for flag in
+                    ('saved', 's03_integrated', 'dialog_matches')))
 
 
 def distinct_explicit_message_ids(rows):
