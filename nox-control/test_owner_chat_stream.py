@@ -480,11 +480,11 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 first=Chunks([
                     frame(calls=[{'index':0,'id':'call_fixture','type':'function',
                                   'function':{'name':'calculate','arguments':'{"a":1}'}}]),
-                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+                    frame(finish='tool_calls'),b'data: [DONE]\n\n'])
                 streams=[first]
                 if kind=='unchanged':
                     streams.append(Chunks([frame('ready'),frame(finish='stop'),
-                                           b'data: [DONE]\\n\\n']))
+                                           b'data: [DONE]\n\n']))
                 requests,factory=self.transport(streams)
                 payload={'messages':[{'role':'user','content':'Compute'}]}
                 with factory:
