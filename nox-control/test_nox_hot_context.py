@@ -122,6 +122,28 @@ class HotContextTests(unittest.TestCase):
         self.assertTrue(out["current_user_preserved"])
         self.assertFalse(out["native_installed"])
 
+    def test_history_is_contiguous_when_middle_turn_exceeds_budget(self):
+        old={"id":"old","role":"user","content":"outdated nearby instruction"}
+        oversized={"id":"middle","role":"assistant","content":"X"*6000}
+        latest={"id":"latest","role":"user","content":"Now answer about the current topic"}
+        out=call(conversation=[old,oversized,latest],verified_s03=[],
+                 token_budget=512,recent_turns=8)
+        # The immediately preceding user turn fits. Never show an older turn
+        # when the newer middle turn was omitted; references retain both.
+        self.assertEqual(out["messages"][-2],
+                         {"role":"user","content":latest["content"]})
+        self.assertEqual([x["id"] for x in out["omitted_turns"]],
+                         ["old","middle"])
+        self.assertTrue(out["requires_existing_history_retriever"])
+        self.assertFalse(out["native_installed"])
+        # If even the newest turn is too large, include no older dialogue.
+        second=call(conversation=[old,oversized],verified_s03=[],
+                    token_budget=512,recent_turns=8)
+        self.assertEqual(second["messages"][-1]["content"],
+                         "Respond to this user question")
+        self.assertEqual([x["id"] for x in second["omitted_turns"]],
+                         ["old","middle"])
+
     def test_too_large_protected_context_holds_not_truncates_persona(self):
         with self.assertRaisesRegex(m.ContextHold,"CORE_TOO_LARGE"):
             call(persona="identity"*10000)
