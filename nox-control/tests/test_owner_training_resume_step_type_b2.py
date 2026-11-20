@@ -859,6 +859,8 @@ class CheckpointStepProvenance(unittest.TestCase):
                 "enabled": True, "mode": "TASK_BOOST",
                 "training_allowed": True,
                 "training_service": "nox-train-volta-t866u",
+                "training_request": "__NOX_OWNER_REQUEST_ID__",
+                "training_source_sha": "__NOX_OWNER_SOURCE_SHA__",
             }
             policy.write_text(json.dumps(valid), encoding="utf-8")
             scope = {"ROOT": root}
@@ -920,7 +922,9 @@ class CheckpointStepProvenance(unittest.TestCase):
             policy = state / "task_boost_mode.json"
             valid = {"enabled": True, "mode": "TASK_BOOST",
                      "training_allowed": True,
-                     "training_service": "nox-train-volta-t866u"}
+                     "training_service": "nox-train-volta-t866u",
+                      "training_request": "__NOX_OWNER_REQUEST_ID__",
+                      "training_source_sha": "__NOX_OWNER_SOURCE_SHA__"}
             scope = {"ROOT": root}
             exec(compile(embedded, "<isolated-permission-helper>", "exec"), scope)
             allowed = scope["_nox_owner_training_allowed"]
@@ -957,7 +961,9 @@ class CheckpointStepProvenance(unittest.TestCase):
             policy = root / "state/task_boost_mode.json"
             valid = {"enabled": True, "mode": "TASK_BOOST",
                      "training_allowed": True,
-                     "training_service": "nox-train-volta-t866u"}
+                     "training_service": "nox-train-volta-t866u",
+                      "training_request": "__NOX_OWNER_REQUEST_ID__",
+                      "training_source_sha": "__NOX_OWNER_SOURCE_SHA__"}
             scope = {"ROOT": root}
             exec(compile(embedded, "<isolated-permission-helper>", "exec"), scope)
             allowed = scope["_nox_owner_training_allowed"]
@@ -971,6 +977,63 @@ class CheckpointStepProvenance(unittest.TestCase):
             policy.write_text(json.dumps({**valid, "telemetry": 0.25}),
                               encoding="utf-8")
             self.assertTrue(allowed())
+
+
+    def test_installed_permission_binds_original_owner_request_and_source(self):
+        # Patch an isolated controller fixture, never touching Supervisor/NOX.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        required = {"replace_once", "bound_permission_helper", "patch_permission"}
+        nodes = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+                 and node.name in required]
+        self.assertEqual({node.name for node in nodes}, required)
+        literal = next(node for node in tree.body if isinstance(node, ast.Assign)
+                       and any(isinstance(t, ast.Name) and t.id == "PERMISSION_HELPER"
+                               for t in node.targets))
+        namespace = {"re": re, "PERMISSION_HELPER": ast.literal_eval(literal.value)}
+        exec(compile(ast.Module(body=nodes, type_ignores=[]),
+                     str(SOURCE), "exec"), namespace)
+        controller = (
+            '# NOX_OWNER_ADMISSION_GUARD_V1\n'
+            'def _nox_owner_task_admitted(task):\n'
+            '    return False\n'
+            'def sv_start(name):\n'
+            '    if _nox_owner_boost_active() and name in ("nox-train-volta-t866u","nox-train-worm-t811u",\n'
+            '            "nox-offload-t850u","nox-downloads-t802u","nox-watch-swap-t845u","nox-agent-architect-t859u","nox-agent-tuner-t858u"):\n'
+            '        return False\n'
+        )
+        request_id, source_sha = "6912345678", "a" * 40
+        rendered = namespace["patch_permission"](controller, request_id, source_sha)
+        self.assertNotIn("__NOX_OWNER_REQUEST_ID__", rendered)
+        self.assertNotIn("__NOX_OWNER_SOURCE_SHA__", rendered)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "state").mkdir()
+            policy = root / "state/task_boost_mode.json"
+            installed = {"ROOT": root}
+            exec(compile(rendered, "<isolated-controller>", "exec"), installed)
+            allowed = installed["_nox_owner_training_allowed"]
+            valid = {
+                "enabled": True, "mode": "TASK_BOOST", "training_allowed": True,
+                "training_service": "nox-train-volta-t866u",
+                "training_request": request_id, "training_source_sha": source_sha,
+            }
+            policy.write_text(json.dumps(valid), encoding="utf-8")
+            self.assertTrue(allowed())
+            for change in ({"training_request": "6912345679"},
+                           {"training_request": ""},
+                           {"training_request": None},
+                           {"training_source_sha": "b" * 40},
+                           {"training_source_sha": ""}):
+                policy.write_text(json.dumps({**valid, **change}), encoding="utf-8")
+                self.assertFalse(allowed())
+            for missing in ("training_request", "training_source_sha"):
+                policy.write_text(json.dumps({k: v for k, v in valid.items()
+                                              if k != missing}), encoding="utf-8")
+                self.assertFalse(allowed())
+        for bad_request, bad_sha in (("abc", source_sha), ("", source_sha),
+                                     (request_id, "A" * 40), (request_id, "bad")):
+            with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_REQUEST_CONTEXT"):
+                namespace["patch_permission"](controller, bad_request, bad_sha)
 
 
 if __name__ == "__main__":

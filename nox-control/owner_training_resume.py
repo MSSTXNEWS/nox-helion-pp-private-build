@@ -284,7 +284,9 @@ def _nox_owner_training_allowed():
         return (type(_v) is dict and _v.get("enabled") is True
                 and _v.get("mode") == "TASK_BOOST"
                 and _v.get("training_allowed") is True
-                and _v.get("training_service") == "nox-train-volta-t866u")
+                and _v.get("training_service") == "nox-train-volta-t866u"
+                and _v.get("training_request") == "__NOX_OWNER_REQUEST_ID__"
+                and _v.get("training_source_sha") == "__NOX_OWNER_SOURCE_SHA__")
     except (ValueError, OSError, UnicodeError, TypeError, AttributeError):
         return False
     finally:
@@ -299,11 +301,25 @@ def replace_once(source, before, after):
     return source.replace(before, after, 1)
 
 
-def patch_permission(source, selfheal=False):
+def bound_permission_helper(request_id, source_sha):
+    """Bind controller permission to the exact reviewed owner request/source."""
+    if (type(request_id) is not str or not re.fullmatch('[0-9]+', request_id)
+            or type(source_sha) is not str
+            or not re.fullmatch('[0-9a-f]{40}', source_sha)):
+        raise RuntimeError('HOLD_OWNER_REQUEST_CONTEXT')
+    rendered = PERMISSION_HELPER.replace('"__NOX_OWNER_REQUEST_ID__"', repr(request_id))
+    rendered = rendered.replace('"__NOX_OWNER_SOURCE_SHA__"', repr(source_sha))
+    if '__NOX_OWNER_REQUEST_ID__' in rendered or '__NOX_OWNER_SOURCE_SHA__' in rendered:
+        raise RuntimeError('HOLD_OWNER_PERMISSION_BINDING')
+    compile(rendered, '<bound-owner-permission>', 'exec')
+    return rendered
+
+
+def patch_permission(source, request_id, source_sha, selfheal=False):
     if source.count('NOX_OWNER_ADMISSION_GUARD_V1') != 1 or 'NOX_OWNER_SINGLE_TRAINER_PERMISSION_V1' in source:
         raise RuntimeError('HOLD_DEPLOYED_GUARD_VERSION')
     source = replace_once(source, 'def _nox_owner_task_admitted(task):\n',
-                          PERMISSION_HELPER + 'def _nox_owner_task_admitted(task):\n')
+                          bound_permission_helper(request_id, source_sha) + 'def _nox_owner_task_admitted(task):\n')
     source = replace_once(source,
         '    if _nox_owner_boost_active() and name in ("nox-train-volta-t866u","nox-train-worm-t811u",\n',
         '    if (_nox_owner_boost_active()\n'
@@ -1059,7 +1075,7 @@ def main():
             if OUTPUT.exists():
                 raise RuntimeError('HOLD_EXISTING_HYBRID_OUTPUT_INSPECT_FIRST')
             admission = resource_admission(helper); step('native_resource_admission', admission)
-            changed = {path: patch_permission(path.read_text(), path.name == 'nox_selfheal.py').encode() for path in CONTROLS}
+            changed = {path: patch_permission(path.read_text(), request, source, path.name == 'nox_selfheal.py').encode() for path in CONTROLS}
             # Maintenance gates new claims; let already claimed CPU jobs finish.
             deadline = time.monotonic()+45
             while worker_readback(helper)['busy_count'] and time.monotonic() < deadline:
