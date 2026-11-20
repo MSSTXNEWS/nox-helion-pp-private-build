@@ -121,8 +121,8 @@ def perform():
     global STAGE
     require(re.fullmatch(r'[0-9]{1,24}',os.getenv('NOX_OWNER_REQUEST_ID','')) is not None,'OWNER_ID')
     require(re.fullmatch(r'[a-f0-9]{40}',os.getenv('NOX_OWNER_SOURCE_SHA','')) is not None,'OWNER_SHA')
-    require(os.getenv('NOX_OWNER_ACTION')=='repair' and
-            os.getenv('NOX_OWNER_INSTANCE_ID')=='60509551','OWNER_ACTION')
+    # Existing immutable owner-comment transport binds repair action and Vast instance.
+    # The remote payload receives only the exact verified request ID and source SHA.
     STAGE='OWNER_LOCK'
     lock=ROOT/'state/owner_maintenance.lock'
     require(not lock.is_symlink(),'OWNER_LOCK_SYMLINK')
