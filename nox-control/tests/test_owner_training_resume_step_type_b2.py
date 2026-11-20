@@ -904,5 +904,42 @@ class CheckpointStepProvenance(unittest.TestCase):
             self.assertEqual(json.loads(previous.read_text(encoding="utf-8")), valid)
 
 
+    def test_permission_helper_rejects_duplicate_authority_keys(self):
+        # Strict parser: a valid owner policy succeeds, while last-value-wins
+        # duplicates must not authorize a training service.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        item = next(node for node in tree.body
+                    if isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name) and
+                            target.id == "PERMISSION_HELPER" for target in node.targets))
+        embedded = ast.literal_eval(item.value)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            state = root / "state"
+            state.mkdir()
+            policy = state / "task_boost_mode.json"
+            valid = {"enabled": True, "mode": "TASK_BOOST",
+                     "training_allowed": True,
+                     "training_service": "nox-train-volta-t866u"}
+            scope = {"ROOT": root}
+            exec(compile(embedded, "<isolated-permission-helper>", "exec"), scope)
+            allowed = scope["_nox_owner_training_allowed"]
+            policy.write_text(json.dumps(valid), encoding="utf-8")
+            self.assertTrue(allowed())
+            for ambiguous in (
+                '{"enabled":false,"enabled":true,"mode":"TASK_BOOST",'
+                '"training_allowed":true,"training_service":"nox-train-volta-t866u"}',
+                '{"enabled":true,"mode":"TASK_BOOST","training_allowed":false,'
+                '"training_allowed":true,"training_service":"nox-train-volta-t866u"}',
+                '{"enabled":true,"mode":"TASK_BOOST","training_allowed":true,'
+                '"training_service":"other","training_service":"nox-train-volta-t866u"}',
+            ):
+                with self.subTest(ambiguous=ambiguous):
+                    policy.write_text(ambiguous, encoding="utf-8")
+                    self.assertFalse(allowed())
+            policy.write_text(json.dumps(valid), encoding="utf-8")
+            self.assertTrue(allowed())
+
+
 if __name__ == "__main__":
     unittest.main()
