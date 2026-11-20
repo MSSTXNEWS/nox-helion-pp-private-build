@@ -53,9 +53,33 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def pinned_served_html_hash(expected, html):
+    """Compare real HTTP document bytes with an owner-verifier-pinned SHA-256.
+
+    A build meta tag only identifies itself, not the served artifact. The pin
+    must be read independently from the owner's immutable install receipt.
+    """
+    if not isinstance(expected, str) or re.fullmatch(r'[0-9a-f]{64}', expected) is None:
+        raise RuntimeError('HOLD_SERVED_HTML_SHA256_PIN_MISSING')
+    if not isinstance(html, bytes) or not html:
+        raise RuntimeError('HOLD_SERVED_HTML_BYTES_UNVERIFIED')
+    if len(html) > 8 * 1024 * 1024:
+        raise RuntimeError('HOLD_SERVED_HTML_BYTES_LIMIT')
+    observed = digest(html)
+    if observed != expected:
+        raise RuntimeError('HOLD_SERVED_HTML_SHA256_MISMATCH')
+    return observed
+
+
 def safe_error(exc):
     text = str(exc)
     return text if re.fullmatch(r'HOLD_[A-Z0-9_]{1,100}', text) else type(exc).__name__
+
+
+def post_admission_hold_reason(exc):
+    """Keep exact bounded admission HOLDs, including foreground/slot contention."""
+    reason = safe_error(exc)
+    return reason if reason.startswith('HOLD_') else None
 
 
 def safe_route(url):
@@ -87,12 +111,63 @@ def admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt):
     return None
 
 
-def allowed_qa_request(count, second_permitted, first_prompt, second_prompt, body, dialog_id):
-    """No missing/null message may satisfy an exhausted one-shot allowance."""
+def allowed_qa_request(count, second_permitted, first_prompt, second_prompt, body, dialog_id,
+                       owner_stopped=False):
+    """A live STOP vetoes every native POST even after an earlier idle-slot check."""
     expected = admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt)
-    return (expected is not None and isinstance(body, dict)
+    return (owner_stopped is False and expected is not None and isinstance(body, dict)
             and body.get('message') == expected
             and body.get('dialog_id') == dialog_id)
+
+
+# These known action endpoints must not be invoked by the QA page even via
+# GET or HEAD. Only context.request (outside browser routing) owns fixture setup
+# and cleanup. Keep ordinary same-origin read/static requests unchanged.
+BROWSER_READ_MUTATORS = frozenset((
+    '/api/nox/stop', '/chat/logout', '/chat/login',
+    '/api/ui/memory/dialogs/create',
+))
+
+
+# Only owner-observed read APIs are permitted during acceptance. An unknown
+# same-origin GET is not automatically safe: it may be a legacy action route.
+# Leave UI/document/static GETs alone; escaped path aliases HOLD, not normalize.
+BROWSER_READ_API = frozenset((
+    '/api/nox/status', '/api/nox/chat/stream',
+    '/api/ui/executors', '/api/ui/memory/dialogs',
+    '/api/ui/memory/dialogs/history', '/api/nox/self/observations',
+    '/chat/session',
+))
+
+
+def browser_route_method_allowed(method, path):
+    """Permit only one owner-scoped write and exact known API reads."""
+    # Reject noncanonical browser URL paths before proxy/server routing.
+    # A GET to an unscoped endpoint can itself be a write (legacy APIs).
+    if (not isinstance(path, str) or not path.startswith('/')
+            or '%' in path or '\\' in path or '\x00' in path
+            or '//' in path
+            or any(part in ('.', '..') for part in path.split('/'))):
+        return False
+    if method == 'POST':
+        return path == '/api/nox/chat/stream'
+    if method not in ('GET', 'HEAD') or path in BROWSER_READ_MUTATORS:
+        return False
+    if path in ('/api', '/nox') or path.startswith(('/api/', '/chat/', '/nox/')):
+        return path in BROWSER_READ_API
+    # Even outside /api, legacy GET handlers may mutate state. Allow only
+    # audited read/static routes; unknown same-origin paths must HOLD.
+    return safe_route(path) != '[OTHER_ROUTE]'
+
+
+def fresh_qa_post_admission(count, second_permitted, first_prompt, second_prompt,
+                            body, dialog_id):
+    """A resource preflight is stale until re-read at the physical POST boundary."""
+    if not allowed_qa_request(count, second_permitted, first_prompt, second_prompt,
+                              body, dialog_id, owner_stopped=stop_present()):
+        return False
+    budget()  # Re-check cgroup memory, disk and STOP immediately before POST.
+    return not stop_present()
 
 
 def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, second_answer):
@@ -133,6 +208,19 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     return bool(expected_hash and independent_readback.get('full_answer_sha256') == expected_hash)
 
 
+def native_stream_envelope_valid(value):
+    """A terminal/saved flag is not accepted before a clean wire EOF."""
+    return (isinstance(value, dict)
+            and value.get('native_closed') is True
+            and type(value.get('native_terminals')) is int
+            and value['native_terminals'] == 1
+            and value.get('error') is None
+            and isinstance(value.get('done'), dict)
+            and value['done'].get('saved') is True
+            and value['done'].get('s03_integrated') is True
+            and value['done'].get('dialog_matches') is True)
+
+
 def progressive_stream_valid(value):
     """Require growing visible prefixes while the real native stream is open."""
     if not isinstance(value, dict):
@@ -168,6 +256,13 @@ def stop_present():
     return any((ROOT/path).exists() for path in ('STOP','STOP.flag','stop.flag','.stop','program/STOP','state/STOP'))
 
 
+# The owner-pinned runtime model service listens on 8098, not the stale
+# 8081 slot endpoint. This is a read-only local admission probe, not a
+# change to the existing proxy/serving/model route. An unsupported /slots
+# response must HOLD rather than silently authorize a browser model POST.
+MODEL_SLOTS_URL = 'http://127.0.0.1:8098/slots'
+
+
 def idle_slots():
     opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
     deadline=time.monotonic()+12
@@ -177,11 +272,18 @@ def idle_slots():
         remaining=deadline-time.monotonic()
         if remaining<=0:
             raise RuntimeError('HOLD_FOREGROUND_CHAT_BUSY')
-        with opener.open('http://127.0.0.1:8081/slots',timeout=min(4,remaining)) as response:
-            raw=response.read(100001)
+        try:
+            with opener.open(MODEL_SLOTS_URL,timeout=min(4,remaining)) as response:
+                raw=response.read(100001)
+        except (OSError, TimeoutError):
+            # Connection refusal, timeout, HTTP error: never interpret as idle.
+            raise RuntimeError('HOLD_SLOTS_ENDPOINT_UNAVAILABLE') from None
         if len(raw)>100000:
             raise RuntimeError('HOLD_SLOTS_RESPONSE_LIMIT')
-        slots=json.loads(raw)
+        try:
+            slots=json.loads(raw)
+        except (ValueError, UnicodeDecodeError, TypeError):
+            raise RuntimeError('HOLD_SLOTS_STATE_UNVERIFIED') from None
         if not isinstance(slots,list) or not 1<=len(slots)<=64:
             raise RuntimeError('HOLD_SLOTS_STATE_UNVERIFIED')
         busy=[]
@@ -257,7 +359,7 @@ OBSERVER_JS = r"""
  'use strict';
  const cfg=__CONFIG__;
  const q=window.__NOX_BROWSER_QA={started:null,nativeFirst:null,nativeDone:null,
-   nativeDeltas:0,nativeBytes:0,answer:'',done:null,error:null,nativeCalls:0,
+   nativeDeltas:0,nativeBytes:0,nativeClosed:false,nativeTerminals:0,answer:'',done:null,error:null,nativeCalls:0,
    uiFirst:null,uiBeforeDone:false,uiLengths:[],uiPrefixLengthsBeforeDone:[],uiBody:null,
    uiVisible:false,uiMaxTokenSpans:0,contexts:[],draws:0,
    stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0};
@@ -342,10 +444,11 @@ OBSERVER_JS = r"""
  const fetch0=window.fetch.bind(window);
  async function observe(response){
    if(!response.body){q.error='HOLD_NO_NATIVE_RESPONSE_BODY';return;}
-   const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
+   const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
+   let buffer='',reachedEof=false;
    try{
      for(let count=0;count<2048;count++){
-       const part=await reader.read();if(part.done)break;
+       const part=await reader.read();if(part.done){reachedEof=true;break;}
        q.nativeBytes+=part.value.length;
        if(q.nativeBytes>65536)throw Error('HOLD_QA_STREAM_LIMIT');
        buffer+=decoder.decode(part.value,{stream:true});
@@ -354,6 +457,9 @@ OBSERVER_JS = r"""
          const line=buffer.slice(0,end);buffer=buffer.slice(end+1);
          if(!line.trim())continue;
          const frame=JSON.parse(line);
+         // A terminal event never proves completion until the physical body
+         // reaches EOF. Any non-empty frame after it invalidates the stream.
+         if(q.done!==null)throw Error('HOLD_QA_STREAM_AFTER_DONE');
          if(frame.type==='delta'){
            if(typeof frame.text!=='string'||q.answer.length+frame.text.length>4096)throw Error('HOLD_QA_ANSWER_LIMIT');
            q.answer+=frame.text;q.nativeDeltas++;
@@ -362,12 +468,20 @@ OBSERVER_JS = r"""
            // may precede this clone's frame; retry on the next real paint.
            queueUi();
          }else if(frame.type==='done'){
+           q.nativeTerminals++;
            q.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,
                    dialog_matches:frame.dialog_id===cfg.did};
            q.nativeDone=performance.now()-q.started;
          }else if(frame.type==='error'){q.error='HOLD_NATIVE_STREAM_ERROR';}
        }
      }
+     // A capped loop, truncated JSONL tail, invalid UTF-8, or missing
+     // terminal must HOLD; a 'done' frame by itself is not a wire receipt.
+     if(!reachedEof)throw Error('HOLD_QA_STREAM_CHUNK_LIMIT');
+     buffer+=decoder.decode();
+     if(buffer.trim())throw Error('HOLD_QA_STREAM_PARTIAL_FRAME');
+     if(q.nativeTerminals!==1)throw Error('HOLD_QA_STREAM_TERMINAL_MISSING');
+     q.nativeClosed=true;
    }catch(e){q.error=/^HOLD_[A-Z_]+$/.test(e.message)?e.message:'HOLD_QA_STREAM_OBSERVER';}
    finally{try{await reader.cancel();}catch{}}
  }
@@ -379,7 +493,8 @@ OBSERVER_JS = r"""
      if(q.nativeCalls===2){
        // Independent second POST measurement without clearing cumulative calls.
        q.nativeFirst=null;q.nativeDone=null;q.nativeDeltas=0;q.nativeBytes=0;
-       q.answer='';q.done=null;q.error=null;q.uiFirst=null;q.uiBeforeDone=false;
+       q.answer='';q.done=null;q.error=null;q.nativeClosed=false;q.nativeTerminals=0;
+        q.uiFirst=null;q.uiBeforeDone=false;
        q.uiLengths=[];q.uiPrefixLengthsBeforeDone=[];q.uiBody=null;
        q.uiVisible=false;q.uiMaxTokenSpans=0;q.stopSamples=0;
        q.stopVisibleSamples=0;q.stopOccludedSamples=0;
@@ -414,6 +529,7 @@ SNAPSHOT_JS = r"""() => {
  }).slice(0,8);
  return {native_first_ms:q.nativeFirst,native_done_ms:q.nativeDone,native_delta_count:q.nativeDeltas,
    native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,error:q.error,
+   native_closed:q.nativeClosed,native_terminals:q.nativeTerminals,
    ui_first_ms:q.uiFirst,ui_before_native_done:q.uiBeforeDone,ui_lengths:q.uiLengths,
    ui_prefix_lengths_before_done:q.uiPrefixLengthsBeforeDone,ui_body_visible:q.uiVisible,
    ui_token_span_peak:q.uiMaxTokenSpans,
@@ -520,10 +636,18 @@ def composer_layout_valid(value, opened):
                for key in ('present','visible','fully_in_view','pointer_hit_own_control')) for name in ('prompt','send'))
 
 
+RESPONSIVE_LAYOUT_CASES = ((1440,1000,False),(1440,1000,True),
+    (320,720,True),(390,844,True),(800,480,True),(1024,768,True),
+    (1280,720,True),(1440,1000,True))
+
+
 async def check_report_layout(page,report):
-    """Exercise real layout at two viewport sizes; generate with both panels open."""
+    """Check real composer hit targets at mobile, tablet and desktop widths.
+
+    Restore the original desktop viewport before the model/browser stream.
+    """
     cases=[];report['report_layout_cases']=cases
-    for width,height,opened in ((1440,1000,False),(1440,1000,True),(1280,720,True),(1440,1000,True)):
+    for width,height,opened in RESPONSIVE_LAYOUT_CASES:
         await page.set_viewport_size({'width':width,'height':height})
         await page.evaluate("""async opened=>{
           for(const node of document.querySelectorAll('.nox-owner-reports'))node.open=opened;
@@ -532,7 +656,12 @@ async def check_report_layout(page,report):
         }""",opened)
         value=await page.evaluate(COMPOSER_JS)
         cases.append({'opened':opened,'viewport_width':width,'viewport_height':height,'geometry':value})
-        if not composer_layout_valid(value,opened):
+        # A passing mobile hit-test is meaningless if Chromium kept a stale
+        # desktop layout viewport after set_viewport_size. Check actual dimensions.
+        if (type(value) is not dict or type(value.get('viewport_width')) is not int
+                or type(value.get('viewport_height')) is not int
+                or value['viewport_width'] != width or value['viewport_height'] != height
+                or not composer_layout_valid(value,opened)):
             raise RuntimeError('HOLD_QA_REPORTS_COMPOSER_LAYOUT')
     report['report_scroll_verified']=await page.evaluate("""()=>{
       const node=document.querySelector('.nox-owner-status-stack');if(!node)return false;
@@ -544,11 +673,58 @@ async def check_report_layout(page,report):
         raise RuntimeError('HOLD_QA_REPORTS_SCROLL')
 
 
+async def verify_saved_browser_refresh(page, report, title, answer, html_pin):
+    """Require a real authenticated page reload to render the saved answer.
+
+    Never call the form or native model here. A cached in-memory streamed answer
+    before reload is not a persistence proof; a reload without the exact served
+    HTML pin is not a trusted browser acceptance.
+    """
+    if not isinstance(answer, str) or not answer:
+        raise RuntimeError('HOLD_QA_REFRESH_EXPECTED_ANSWER')
+    response = await page.reload(wait_until='domcontentloaded', timeout=20000)
+    if (response is None or response.status != 200
+            or urllib.parse.urlsplit(page.url).path != PAGE):
+        raise RuntimeError('HOLD_QA_REFRESH_ROUTE')
+    try:
+        html = await response.body()
+    except Exception:
+        raise RuntimeError('HOLD_SERVED_HTML_BYTES_UNVERIFIED') from None
+    pinned_served_html_hash(html_pin, html)
+    await page.wait_for_function(
+        "window.__NOX_OWNER_LIVE_UI===true && !!document.querySelector('#prompt')",
+        timeout=15000)
+    item = page.locator('#nativeChats button[role="listitem"]').filter(
+        has=page.get_by_text(title, exact=True))
+    if await item.count() != 1:
+        raise RuntimeError('HOLD_QA_REFRESH_DIALOG_MISSING')
+    if await item.first.get_attribute('aria-current') != 'true':
+        if await page.evaluate(
+                "document.getElementById('v24Rail')?.dataset.collapsed==='true'"):
+            await page.locator('[data-action="toggle-rail"]').first.click(timeout=3500)
+        await item.first.click(timeout=3500)
+    await page.wait_for_function("""expected => {
+        const normalize = text => text.replace(/\s+/g,'');
+        const bodies = [...document.querySelectorAll('#messages .v24-msg.nox .body')];
+        const last = bodies.at(-1);
+        return !!last && !!last.getClientRects().length
+          && typeof last.innerText === 'string'
+          && normalize(last.innerText) === normalize(expected);
+    }""", arg=answer, timeout=15000)
+    observer = await page.evaluate(SNAPSHOT_JS)
+    if not isinstance(observer, dict) or observer.get('native_calls') != 0:
+        raise RuntimeError('HOLD_QA_REFRESH_DUPLICATE_NATIVE_POST')
+    report['browser_refresh_persisted']=True
+
 async def click_send(page, report, expected_before=0):
     """Physical send, with the same fresh hit gate as the dialog selection."""
     target=page.locator('#chatForm [type=submit]')
     detail={'before':await target.evaluate(CONTROL_JS)}
     report['qa_send_control' if expected_before==0 else 'qa_second_send_control']=detail
+    # The resource/STOP preflight can become stale during responsive layout
+    # checks and DOM filling. Never press Send after a newer owner STOP.
+    if stop_present():
+        raise RuntimeError('HOLD_OWNER_STOP')
     try:
         await target.click(timeout=3500)
     except Exception as exc:
@@ -560,12 +736,12 @@ async def click_send(page, report, expected_before=0):
             # Observe that real request; never submit a duplicate generation.
             detail['native_request_already_started']=True
             return
-        control=await target.evaluate(CONTROL_JS)
-        detail['after_wait']=control
-        if calls!=expected_before or not await target.is_enabled() or not control['in_view'] or not control['pointer_hit_own_button']:
-            raise RuntimeError('HOLD_QA_SEND_POINTER_OR_STATE') from None
-        await page.mouse.click(control['x'],control['y'])
-        detail['physical_pointer_click']=True
+        # A Playwright click exception is ambiguous: the click may already
+        # have reached the form even when the JS observer has not counted its
+        # POST yet. A second physical click would violate one-shot admission.
+        # Fail closed and preserve the first attempt for independent readback.
+        detail['native_request_unobserved_after_click_error']=calls==expected_before
+        raise RuntimeError('HOLD_QA_SEND_CLICK_DELIVERY_UNKNOWN') from None
 
 
 async def json_response(response, limit=200000):
@@ -622,6 +798,13 @@ def require_screenshot_captures(report):
 
 async def browser_run(report, directory, available):
     from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+    # No source-only build marker may substitute for a fresh owner-pinned
+    # immutable served HTML digest. Missing admission pin must HOLD before
+    # browser session fixture setup or any native model POST.
+    expected_html_sha256 = os.environ.get('NOX_OWNER_EXPECTED_SERVED_HTML_SHA256')
+    if not isinstance(expected_html_sha256, str) or re.fullmatch(
+            r'[0-9a-f]{64}', expected_html_sha256) is None:
+        raise RuntimeError('HOLD_SERVED_HTML_SHA256_PIN_MISSING')
     base=local_base()
     origin=urllib.parse.urlsplit(base).netloc
     token=secrets.token_hex(6).translate(str.maketrans('0123456789','ghijklmnop'))
@@ -682,6 +865,9 @@ async def browser_run(report, directory, available):
                 if url.scheme not in ('http','https') or url.netloc!=origin:
                     blocked['external_origin']+=1
                     return await route.abort()
+                if not browser_route_method_allowed(request.method, url.path):
+                    blocked['unscoped_browser_write']+=1
+                    return await route.abort()
                 if url.path=='/api/nox/history':
                     blocked['legacy_unscoped_history']+=1
                     return await route.abort()
@@ -693,8 +879,13 @@ async def browser_run(report, directory, available):
                 if url.path=='/api/nox/chat/stream':
                     try:
                         body=request.post_data_json
-                        own=(request.method=='POST' and allowed_qa_request(
+                        own=(request.method=='POST' and fresh_qa_post_admission(
                              stream_admitted,second_permitted,prompt,second_prompt,body,did))
+                    except RuntimeError as exc:
+                        reason=post_admission_hold_reason(exc)
+                        if reason is not None:
+                            report['qa_post_admission_hold']=reason
+                        own=False
                     except Exception:
                         own=False
                     if not own:
@@ -731,6 +922,13 @@ async def browser_run(report, directory, available):
             response=await page.goto(base+'/',wait_until='domcontentloaded',timeout=20000)
             if response is None or response.status!=200 or urllib.parse.urlsplit(page.url).path!=PAGE:
                 raise RuntimeError('HOLD_GRAPHICAL_OWNER_ROUTE')
+            try:
+                served_html_bytes=await response.body()
+            except Exception:
+                raise RuntimeError('HOLD_SERVED_HTML_BYTES_UNVERIFIED') from None
+            report['served_html_sha256']=pinned_served_html_hash(
+                expected_html_sha256,served_html_bytes)
+            report['served_html_sha256_verified']=True
             await page.wait_for_function("window.__NOX_OWNER_LIVE_UI===true && !!document.querySelector('#prompt')",timeout=15000)
             await page.wait_for_timeout(1200)
             before=await page.evaluate(SNAPSHOT_JS)
@@ -805,13 +1003,17 @@ async def browser_run(report, directory, available):
             while time.monotonic()-started<85:
                 if stop_present():
                     raise RuntimeError('HOLD_OWNER_STOP')
+                if report.get('qa_post_admission_hold'):
+                    raise RuntimeError(report['qa_post_admission_hold'])
                 final=await page.evaluate(SNAPSHOT_JS)
                 if final and final.get('error'):
                     raise RuntimeError(final['error'])
-                if final and final.get('done') and final.get('dom_answer_matches_native'):
+                if (final and native_stream_envelope_valid(final)
+                        and final.get('dom_answer_matches_native')):
                     break
                 await page.wait_for_timeout(120)
-            if not final or not final.get('done') or not final.get('dom_answer_matches_native'):
+            if (not native_stream_envelope_valid(final)
+                    or not final.get('dom_answer_matches_native')):
                 raise RuntimeError('HOLD_REAL_STREAM_NOT_RENDERED')
             # V135 performs its own real S03 readback after native done; wait for
             # the original submit button to be usable again before final proof.
@@ -846,7 +1048,8 @@ async def browser_run(report, directory, available):
                 'VERIFIED_PUBLIC_NUMERIC_QA' if public==EXPECTED and saved else 'MASKED_QA_MESSAGES',
                 (TimeoutError,PlaywrightTimeoutError))
             core=(report['webgl_visible'] and report['canvas_animation_observed']
-                  and all(final['done'].values()) and saved and native_equal
+                  and native_stream_envelope_valid(final) and all(final['done'].values())
+                   and saved and native_equal
                   and final['executor_chips']==6 and final['photo_button'] and final['video_button'])
             if not core:
                 raise RuntimeError('HOLD_GRAPHICAL_ACCEPTANCE_INCOMPLETE')
@@ -854,6 +1057,10 @@ async def browser_run(report, directory, available):
                 raise RuntimeError('HOLD_PROGRESSIVE_STREAM_NOT_OBSERVED')
             if public!=EXPECTED:
                 raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')
+            if report.get('two_turn_mode') is not True:
+                report['browser_stage']='QA_REFRESH_PERSISTED_ANSWER'
+                await verify_saved_browser_refresh(
+                    page, report, title, answer, expected_html_sha256)
             if report.get('two_turn_mode') is True:
                 # The owner-scoped second request is allowed only after a full
                 # first-turn browser/S03 proof. Never replay an ambiguous POST.
@@ -872,15 +1079,19 @@ async def browser_run(report, directory, available):
                 while time.monotonic()-second_started<85:
                     if stop_present():
                         raise RuntimeError('HOLD_OWNER_STOP')
+                    if report.get('qa_post_admission_hold'):
+                        raise RuntimeError(report['qa_post_admission_hold'])
                     second_final=await page.evaluate(SNAPSHOT_JS)
                     if second_final and second_final.get('error'):
                         raise RuntimeError(second_final['error'])
                     if (second_final and second_final.get('native_calls')==2
-                            and second_final.get('done') and second_final.get('dom_answer_matches_native')):
+                            and native_stream_envelope_valid(second_final)
+                            and second_final.get('dom_answer_matches_native')):
                         break
                     await page.wait_for_timeout(120)
                 if (not second_final or second_final.get('native_calls')!=2
-                        or not second_final.get('done') or not second_final.get('dom_answer_matches_native')):
+                        or not native_stream_envelope_valid(second_final)
+                         or not second_final.get('dom_answer_matches_native')):
                     raise RuntimeError('HOLD_SECOND_TURN_STREAM_NOT_RENDERED')
                 await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
                 second_history=await json_response(await context.request.get(
@@ -898,7 +1109,7 @@ async def browser_run(report, directory, available):
                 canonical_s03_verified=False
                 second_public=public_numeric_answer(second_answer)
                 second_progressive=progressive_stream_valid(second_final)
-                second_done=all(second_final['done'].values())
+                second_done=native_stream_envelope_valid(second_final) and all(second_final['done'].values())
                 second_stop=bool(second_final.get('stop_samples',0)>0
                     and second_final.get('stop_samples')==second_final.get('stop_visible_samples')
                     and second_final.get('stop_occluded_samples')==0)
@@ -917,6 +1128,11 @@ async def browser_run(report, directory, available):
                         and second_progressive and second_stop
                         and second_public=='10,9,8,7,6,5,4,3,2,1'):
                     raise RuntimeError('HOLD_MULTITURN_BROWSER')
+                # Even when canonical S03 is still HOLD, observe whether a
+                # real browser reload restores the second saved message.
+                report['browser_stage']='QA_SECOND_TURN_REFRESH'
+                await verify_saved_browser_refresh(
+                    page, report, title, second_answer, expected_html_sha256)
                 if not canonical_s03_verified:
                     raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
                 if stream_admitted!=2:

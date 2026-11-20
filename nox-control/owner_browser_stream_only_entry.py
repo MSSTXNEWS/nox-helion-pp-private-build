@@ -24,10 +24,10 @@ except NameError:
 ROOT = Path('/root/nox')
 AREA = ROOT / 'browser_qa'
 PINS = {
-    'owner_chat_browser_qa.py': '9530c6e71274bbbca997f0aea07a26c988cfd536ed1aa1ba4067753827ac56f9',
-    'owner_chat_browser_transport_qa.py': '360c155642ccdb43f39acf7b493068d3d2ac906bfd761c60d8c5ee51d48507fe',
-    'owner_chat_browser_release_qa.py': 'eaa8af0e229c9ce0a730b7b472f8b9b8a1018fbd5cf7b8518890342d9d7047cb',
-    'owner_chat_stream_only_qa.py': '2d61491b01c4f23ac12020a0fb6ac1292dd35e4c6155fe2abe5402acdac8f90d',
+    'owner_chat_browser_qa.py': 'eef0ee5a4bb30141e52171d637586dcbcf104d447578d760632072128adc301a',
+    'owner_chat_browser_transport_qa.py': '37689bd3234d076508da7532e6b7387cb98a50f1f6c8c00510c476d57e515c15',
+    'owner_chat_browser_release_qa.py': 'cff0e24ecd965a6d9c27d07bf44775b3d572f6fde95c43add2dbd5e74b47dd1b',
+    'owner_chat_stream_only_qa.py': '8940411ed627f931922786410edd547bdaae8eae3bf43153b83e2b85a9d0fd55',
 }
 ENV_SPEC = {'schema': 'NOX_OWNER_BROWSER_ENV_V1', 'playwright': '1.65.2',
             'base_python': '/root/nox/venv/bin/python', 'torch_modified': False}
@@ -136,9 +136,16 @@ def stop_present():
 
 def child_environment(request, source):
     env = {key: os.environ[key] for key in ('PATH', 'LANG', 'LC_ALL', 'LD_LIBRARY_PATH') if key in os.environ}
+    # The served HTML digest must come from the authenticated owner/install
+    # context. Never synthesize it from the page, source bundle or build tag.
+    served_pin = os.environ.get('NOX_OWNER_EXPECTED_SERVED_HTML_SHA256')
+    require(isinstance(served_pin, str)
+            and re.fullmatch(r'[0-9a-f]{64}', served_pin) is not None,
+            'SERVED_HTML_SHA256_PIN_MISSING')
     env.update(CUDA_VISIBLE_DEVICES='', PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1',
                PLAYWRIGHT_BROWSERS_PATH=str(AREA / 'browsers'),
-               NOX_OWNER_REQUEST_ID=request, NOX_OWNER_SOURCE_SHA=source)
+               NOX_OWNER_REQUEST_ID=request, NOX_OWNER_SOURCE_SHA=source,
+               NOX_OWNER_EXPECTED_SERVED_HTML_SHA256=served_pin)
     return env
 
 
@@ -155,6 +162,9 @@ def resource_budget():
 
 
 def run_child(python, program, request, source):
+    # Bootstrap may consume RAM/disk after the original admission. Recheck
+    # immediately before spawning the disposable browser child.
+    resource_budget()
     require(not stop_present(), 'OWNER_STOP')
     with tempfile.TemporaryFile() as output, tempfile.TemporaryFile() as errors:
         proc = subprocess.Popen([str(python), '-I', '-B', '-'], stdin=subprocess.PIPE, stdout=output, stderr=errors,
@@ -272,6 +282,9 @@ def ensure_runtime(request):
     backup = ROOT / ('browser_qa.previous.' + request)
     require(not backup.exists() and not backup.is_symlink(), 'BOOTSTRAP_BACKUP_COLLISION')
     os.chmod(staging, 0o700)
+    # A failed promotion may only remove the directory created by this attempt.
+    staged_info = staging.stat(follow_symlinks=False)
+    staged_identity = (staged_info.st_dev, staged_info.st_ino)
     original_moved = False
     promoted = False
     try:
@@ -317,12 +330,23 @@ def ensure_runtime(request):
         python = existing_runtime()
         return python, True
     except Exception:
+        if promoted:
+            # A failed post-promotion runtime validation must not strand the
+            # previous QA runtime in backup or leave an unverified candidate live.
+            current = AREA.stat(follow_symlinks=False)
+            require((current.st_dev, current.st_ino) == staged_identity
+                    and not staging.exists() and not staging.is_symlink(),
+                    'BOOTSTRAP_ROLLBACK_IDENTITY')
+            AREA.rename(staging)
+            promoted = False
         if original_moved and not promoted and backup.exists():
             backup.rename(AREA)
         raise
     finally:
         if staging.exists() and staging.is_dir() and not staging.is_symlink():
-            shutil.rmtree(staging)
+            current = staging.stat(follow_symlinks=False)
+            if (current.st_dev, current.st_ino) == staged_identity:
+                shutil.rmtree(staging)
 
 def main():
     blobs = sources(); program = child_program(blobs)
