@@ -116,7 +116,7 @@ STOPPED = ('STOPPED', 'EXITED', 'FATAL')
 NATIVE_WORKER_CAP = 3
 
 
-def read_json(path, limit=4_000_000, expected_sha256=None):
+def read_json(path, limit=4_000_000, expected_sha256=None, include_mtime=False):
     """Bounded descriptor read: an untrusted state path cannot be swapped to a symlink."""
     path = Path(path)
     if type(limit) is not int or limit < 0:
@@ -184,7 +184,9 @@ def read_json(path, limit=4_000_000, expected_sha256=None):
                        parse_float=finite_json_float)
     if not isinstance(value, dict):
         raise RuntimeError('HOLD_STATE_OBJECT_REQUIRED')
-    return value
+    # Freshness must be evaluated against this verified descriptor snapshot,
+    # never a pathname that can be rebound after the JSON read.
+    return (value, info.st_mtime) if include_mtime else value
 
 
 def file_sha(path):
@@ -856,7 +858,7 @@ def resource_admission(helper):
 
 def worker_readback(helper, fresh_after=0):
     path = ROOT/'status/agents_t856u.json'
-    value = read_json(path)
+    value, snapshot_mtime = read_json(path, include_mtime=True)
     rows = value.get('workers', [])
     # A historical six-worker BOOST receipt is not a fresh native-worker census.
     # The pinned six-lane handoff observes exactly three physical workers; a
@@ -876,7 +878,7 @@ def worker_readback(helper, fresh_after=0):
                 or not task['id'].strip()):
             raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
         claimed.append(task['id'])
-    if (path.stat().st_mtime < max(fresh_after, time.time()-90)
+    if (snapshot_mtime < max(fresh_after, time.time()-90)
             or type(value.get('n')) is not int or value['n'] != NATIVE_WORKER_CAP
             or len(rows) != NATIVE_WORKER_CAP
             or any(type(worker_id) is not str or not worker_id.strip()
@@ -889,7 +891,7 @@ def worker_readback(helper, fresh_after=0):
         raise RuntimeError('HOLD_DISPATCHER_NOT_RUNNING')
     return {'workers': NATIVE_WORKER_CAP, 'worker_ids': ids,
             'busy_count': len(claimed), 'claimed_task_ids': claimed,
-            'dispatcher_pid': service['pid'], 'mtime': path.stat().st_mtime}
+            'dispatcher_pid': service['pid'], 'mtime': snapshot_mtime}
 
 
 def stop_controller(helper, name, script):

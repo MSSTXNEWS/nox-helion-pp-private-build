@@ -1379,10 +1379,14 @@ class NativeThreeWorkerCap(unittest.TestCase):
             status = root / "status"
             status.mkdir()
             target = status / "agents_t856u.json"
+            # Execute the real protected descriptor reader with the native gate.
+            reader = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+                      and node.name == "read_json"]
+            self.assertEqual(len(reader), 1)
             scope = {"Path": Path, "ROOT": root, "NATIVE_WORKER_CAP": 3,
-                     "time": __import__("time"),
-                     "read_json": lambda path: json.loads(path.read_text(encoding="utf-8"))}
-            exec(compile(ast.Module(body=nodes, type_ignores=[]),
+                     "time": __import__("time"), "os": os, "stat": stat,
+                     "hashlib": hashlib, "json": json, "math": math, "re": re}
+            exec(compile(ast.Module(body=reader + nodes, type_ignores=[]),
                          str(SOURCE), "exec"), scope)
             active = {"state": "RUNNING", "pid": 1234}
             helper = types.SimpleNamespace(service_state=lambda name: active)
@@ -1399,6 +1403,22 @@ class NativeThreeWorkerCap(unittest.TestCase):
             self.assertEqual(proof["workers"], 3)
             self.assertEqual(proof["worker_ids"], ["w1", "w2", "w3"])
             self.assertEqual(proof["claimed_task_ids"], ["job-1"])
+            self.assertAlmostEqual(proof["mtime"], target.stat().st_mtime)
+            # Rebinding/freshening the pathname after the original read must
+            # not launder a stale native-worker snapshot into current proof.
+            real_reader = scope["read_json"]
+            def refresh_path_after_read(path, **kwargs):
+                snapshot = real_reader(path, **kwargs)
+                os.utime(path, None)
+                return snapshot
+            scope["read_json"] = refresh_path_after_read
+            past = __import__("time").time() - 300
+            os.utime(target, (past, past))
+            try:
+                with self.assertRaisesRegex(RuntimeError, "HOLD_NATIVE_WORKER_CAP_READBACK"):
+                    check(helper)
+            finally:
+                scope["read_json"] = real_reader
             for invalid_rows, n in (
                 (workers + [{"id": "w4", "current_task": None},
                             {"id": "w5", "current_task": None},
