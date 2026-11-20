@@ -1621,7 +1621,7 @@ test('V189 paint budget short-circuits repeated matchMedia lookups after two wai
   f.window.matchMedia=()=>{queries++;return {matches:false};};
   const out=await events(await f.fetch('/api/nox/chat',{method:'POST',
     body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v189-media-shortcircuit'})}));
-  assert.equal(queries,2,'query reduced-motion only while visible frame budget remains');
+  assert.equal(queries,1,'cache one live MediaQueryList per request, not per visual slice');
   assert.equal(out.filter(e=>e.type==='token').map(e=>e.t).join(''),reply);
   assert.equal(out.filter(e=>e.type==='done').length,1);
   assert.equal(out.filter(e=>e.type==='error').length,0);
