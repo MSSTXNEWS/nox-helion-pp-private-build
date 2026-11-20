@@ -44,7 +44,10 @@
     return saved && typeof saved === 'object' && saved.durable === true &&
       FIELDS.every(f => saved[f] === p[f]) && saved.readback_only === true;
   }
-  function dbOpen(idb, name) {
+  function quotaCode(err, fallback) {
+    return err && err.name === 'QuotaExceededError' ? 'HOLD_ACK_QUOTA' : fallback;
+  }
+  function dbOpen(idb, name, onLost) {
     return new Promise((resolve,reject) => {
       let request, settled=false;
       const fail=code => {if (!settled) {settled=true; reject(new HoldIndexedAck(code));}};
@@ -62,6 +65,7 @@
         request.onerror=()=>fail('HOLD_ACK_DB_OPEN');
         request.onsuccess=()=>{
           const db=request.result;
+          if (settled) {db.close();return;}
           try {
             if (!db.objectStoreNames.contains(STORE)) hold('HOLD_ACK_SCHEMA');
             const tx=db.transaction(STORE,'readonly');
@@ -73,7 +77,10 @@
             const ix=s.index('event_id');
             if (ix.unique!==true || ix.keyPath!=='event_id')
               hold('HOLD_ACK_SCHEMA');
-            db.onversionchange=()=>db.close();
+            // A schema upgrade revokes this host, even if the connection
+            // closes cleanly. Do not accept another terminal on the stale DB.
+            db.onversionchange=()=>{onLost('HOLD_ACK_VERSIONCHANGE');db.close();};
+            db.onclose=()=>onLost('HOLD_ACK_DB_CLOSED');
             if (!settled) {settled=true; resolve(db);}
           } catch (_) {db.close();fail('HOLD_ACK_SCHEMA');}
         };
@@ -89,16 +96,14 @@
         // The unique event index also prevents event_id aliasing across turns.
         tx=db.transaction(STORE,'readwrite',{durability:'strict'});
         tx.oncomplete=()=>{if (!done) {done=true;resolve(result);}};
-        tx.onabort=fail;
+        tx.onabort=()=>{error=quotaCode(tx.error,error);fail();};
         tx.onerror=()=>{
-          // IndexedDB request errors bubble to the transaction before abort.
-          // Keep the specific collision cause set by add.onerror, rather
-          // than masking it as a generic transaction failure in Chromium.
-          if (error!=='HOLD_ACK_EVENT_COLLISION' && error!=='HOLD_ACK_CONFLICT')
-            error='HOLD_ACK_TX';
+          // IDB request errors bubble. Retain the specific request failure.
+          if (!['HOLD_ACK_EVENT_COLLISION','HOLD_ACK_CONFLICT','HOLD_ACK_QUOTA'].includes(error))
+            error=quotaCode(tx.error,'HOLD_ACK_TX');
         };
         const req=tx.objectStore(STORE).get([p.conversation_id,p.exchange_id]);
-        req.onerror=()=>{error='HOLD_ACK_TX';try {tx.abort();}catch (_) {}};
+        req.onerror=()=>{error=quotaCode(req.error,'HOLD_ACK_TX');try {tx.abort();}catch (_) {}};
         req.onsuccess=()=>{
           try {
             const previous=req.result;
@@ -109,11 +114,15 @@
               result='ALREADY_COMMITTED';
             } else {
               const add=tx.objectStore(STORE).add({...p,durable:true});
-              add.onerror=()=>{error='HOLD_ACK_EVENT_COLLISION';};
+              add.onerror=()=>{
+                error=quotaCode(add.error,
+                  add.error && add.error.name==='ConstraintError' ?
+                  'HOLD_ACK_EVENT_COLLISION' : 'HOLD_ACK_TX');
+              };
             }
-          } catch (_) {error='HOLD_ACK_TX';try {tx.abort();}catch (_) {}}
+          } catch (err) {error=quotaCode(err,'HOLD_ACK_TX');try {tx.abort();}catch (_) {}}
         };
-      } catch (_) {error='HOLD_ACK_TX';fail();}
+      } catch (err) {error=quotaCode(err,'HOLD_ACK_TX');fail();}
     });
   }
   function read(db,conversation_id,exchange_id) {
@@ -145,9 +154,12 @@
         typeof freshPermit!=='function')
       hold('HOLD_ACK_HOST_CONTRACT');
     const name=str(databaseName, /^[A-Za-z0-9._:-]{1,100}$/, 'HOLD_ACK_DB_NAME');
-    const db=await dbOpen(indexedDB,name);
-    let closed=false;
-    function live() {if (closed) hold('HOLD_ACK_CLOSED');}
+    let closed=false, invalidated=null;
+    const db=await dbOpen(indexedDB,name,code=>{if (!invalidated) invalidated=code;});
+    function live() {
+      if (invalidated) hold(invalidated);
+      if (closed) hold('HOLD_ACK_CLOSED');
+    }
     return Object.freeze({
       authorizeEnvelope:async p=>{live();return authorizeEnvelope(p);},
       freshPermit:async p=>{live();return freshPermit(p);},
