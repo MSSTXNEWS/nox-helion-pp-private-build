@@ -61,6 +61,20 @@ class GpuSourceEvidenceTests(unittest.TestCase):
         s=snapshot(); s["onehost"]["chat_metrics_age_sec"]=40
         self.assertEqual(codes(s), ["GPU_RESIDUAL_UNVERIFIED"])
 
+    def test_missing_or_invalid_utilization_fails_closed(self):
+        values=(None, -1, True, "15", 101, float("nan"),
+                float("inf"), 10**500)
+        for value in values:
+            with self.subTest(value=str(value)[:35]):
+                s=snapshot(); s["gpu"]["utilization_pct"]=value
+                self.assertEqual(codes(s), ["GPU_UTILIZATION_UNVERIFIED"])
+        s=snapshot(); s["gpu"].pop("utilization_pct")
+        self.assertEqual(codes(s), ["GPU_UTILIZATION_UNVERIFIED"])
+
+    def test_high_valid_utilization_is_not_admission(self):
+        s=snapshot(); s["gpu"]["utilization_pct"]=100
+        self.assertEqual(codes(s), ["NO_UNVERIFIED_TUNING"])
+
 
 if __name__ == "__main__":
     unittest.main()
