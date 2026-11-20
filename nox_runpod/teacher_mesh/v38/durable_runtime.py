@@ -245,7 +245,13 @@ class DurableTurn:
             ui_replace_supported:bool=False)->Iterator[dict]:
         try:
             session.validate()
-            self._append(session,turn_id,0,'user_message',{'text':prompt[:8000]})
+            # The model must never receive a longer prompt than the durable S03
+            # user message. Silent [:8000] clipping poisons future dialog recall.
+            # Preserve the exact accepted text, including RU/ES Unicode and
+            # leading/trailing whitespace, in the original native S03 writer.
+            if type(prompt) is not str or not prompt or len(prompt)>8000:
+                raise ValueError('HOLD_INPUT')
+            self._append(session,turn_id,0,'user_message',{'text':prompt})
         except Exception as e:
             yield {'type':'hold','state':str(e) if isinstance(e,RuntimeError) else 'HOLD_INPUT'};return
         seq=1;answer='';pending='';last_flush=time.monotonic()
