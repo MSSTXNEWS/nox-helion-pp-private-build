@@ -1021,7 +1021,7 @@ class ProbeTests(unittest.TestCase):
             def __init__(self, frames):
                 self.frames, self.closed = frames, False
             def __iter__(self):
-                return iter(json.dumps(frame).encode() + b'\\n' for frame in self.frames)
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
             def close(self):
                 self.closed = True
 
