@@ -214,6 +214,55 @@ def main():
             e=>e.dataset.noxB1Exchange===s2.exchange_id);
           return entered&&next===true&&nodes.length===1&&nodes[0].textContent==='NEXT';
         }"""))
+        check("STOP releases hung terminal precommit without late DOM write and permits GET-only retry",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'terminal-hung-stop'};
+          let release,entered=false,calls=0;
+          const pending=new Promise(r=>release=r);
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container:chat,
+            terminalTimeoutMs:1000,
+            beforeCommit:async kind=>{
+              if(kind==='terminal'&&++calls===1){entered=true;await pending;}
+            }});
+          const ctrl=new AbortController();
+          const attempt=ui.upsertTerminal(s,'event-stop',ctrl.signal);
+          for(let i=0;i<20&&!entered;i++) await Promise.resolve();
+          if(!entered)return false;
+          ctrl.abort();
+          const result=await Promise.race([
+            attempt,new Promise(r=>setTimeout(()=>r('HUNG'),250))
+          ]);
+          release();
+          await new Promise(r=>setTimeout(r,0));
+          const nodes=()=>Array.from(chat.children).filter(
+            x=>x.dataset.noxB1Exchange===s.exchange_id);
+          if(result!==false||nodes().length!==0)return false;
+          const retry=await ui.upsertTerminal(s,'event-stop',new AbortController().signal);
+          return retry===true&&nodes().length===1&&
+            nodes()[0].dataset.noxB1EventId==='event-stop'&&calls===2;
+        }"""))
+        check("terminal UI precommit timeout fences late completion and allows retry",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'terminal-hung-timeout'};
+          let release,calls=0;
+          const pending=new Promise(r=>release=r);
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container:chat,
+            terminalTimeoutMs:30,
+            beforeCommit:async kind=>{
+              if(kind==='terminal'&&++calls===1) await pending;
+            }});
+          let timedOut=false;
+          try{await ui.upsertTerminal(s,'event-timeout');}
+          catch(e){timedOut=e.code==='HOLD_B1_UI_TERMINAL_TIMEOUT';}
+          release();
+          await new Promise(r=>setTimeout(r,0));
+          const nodes=()=>Array.from(chat.children).filter(
+            x=>x.dataset.noxB1Exchange===s.exchange_id);
+          if(!timedOut||nodes().length!==0)return false;
+          const retry=await ui.upsertTerminal(s,'event-timeout');
+          return retry===true&&nodes().length===1&&
+            nodes()[0].dataset.noxB1State==='terminal'&&calls===2;
+        }"""))
         browser.close()
     print(f"B1 source-only real Chromium: {len(checks)}/{len(checks)} PASS")
     for name, _ in checks:
