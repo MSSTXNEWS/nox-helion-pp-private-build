@@ -163,6 +163,16 @@ def reject_nonfinite_json_constant(_value):
     raise RuntimeError('HOLD_STREAM_NONFINITE_JSON')
 
 
+def reject_duplicate_json_keys(pairs):
+    """Reject ambiguous NDJSON fields instead of accepting Python's last-key-wins result."""
+    fields = {}
+    for key, value in pairs:
+        if key in fields:
+            raise RuntimeError('HOLD_STREAM_DUPLICATE_JSON_KEY')
+        fields[key] = value
+    return fields
+
+
 def bounded_stream_lines(response, max_line=100000):
     """Bound each network read; iteration can buffer a huge NDJSON line before a length check."""
     readline = getattr(response, 'readline', None)
@@ -191,7 +201,8 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             if done is not None:raise RuntimeError('HOLD_STREAM_TRAILING_AFTER_DONE')
             if not isinstance(line, bytes) or not line.endswith(b'\n'):
                 raise RuntimeError('HOLD_STREAM_MISSING_NEWLINE')
-            frame=json.loads(line, parse_constant=reject_nonfinite_json_constant)
+            frame=json.loads(line, parse_constant=reject_nonfinite_json_constant,
+                             object_pairs_hook=reject_duplicate_json_keys)
             if not isinstance(frame,dict):raise RuntimeError('HOLD_STREAM_FRAME_SCHEMA')
             kind=frame.get('type');elapsed=round((time.monotonic()-started)*1000)
             if kind not in ('preparing','start','started','delta','done','error','status','meta'):
