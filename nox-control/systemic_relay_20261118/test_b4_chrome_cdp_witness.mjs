@@ -437,12 +437,12 @@ test('Network.getResponseBody rejects unpaired UTF-16 surrogates before lossy UT
   assert.equal(ok.ttft_sse_verified,true);
   assert.equal(ok.turns[1].cdp_decoded_body_matches_stream,true);
   // Buffer.from replaces either lone surrogate with U+FFFD (same bytes as legitimate replacement character).
-  for(const bad of ['\\uD800','\\uDC00']){
-    const poisonedWire=body.replace('Hello','\\uFFFD');
+  for(const bad of ['\uD800','\uDC00']){
+    const poisonedWire=body.replace('Hello','\uFFFD');
     const valid=await run(false,[Buffer.from(poisonedWire,'utf8')],null,null,{responseBodyTextMutator:s=>s});
     assert.equal(valid.cdp_consistent,true,'a genuine U+FFFD in decoded text remains legal');
     const poisoned=await run(false,[Buffer.from(poisonedWire,'utf8')],null,null,{
-      responseBodyTextMutator:(s,id)=>id==='2'?s.replace('\\uFFFD',bad):s
+      responseBodyTextMutator:(s,id)=>id==='2'?s.replace('\uFFFD',bad):s
     });
     assert.equal(poisoned.cdp_consistent,false,'lossy text must not witness the bytes');
     assert.equal(poisoned.ttft_sse_verified,false);
