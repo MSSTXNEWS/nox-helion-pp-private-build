@@ -68,6 +68,36 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_direct_tool_identities_fail_closed_before_native_dispatch(self):
+        # The model parser already checks IDs; direct heuristic calls enter at
+        # _normal_calls and must not execute twice under the same S03 identity.
+        cases=[
+            ([{'id':'reused','name':'calculate','arguments':{}},
+              {'id':'reused','name':'calculate','arguments':{}}],
+             'HOLD_TOOL_CALL_ID'),
+            ([{'name':'calculate','arguments':{}},
+              {'id':'owner_call_0_0','name':'calculate','arguments':{}}],
+             'HOLD_TOOL_CALL_ID'),
+            ([{'id':'valid','name':'','arguments':{}}],
+             'HOLD_TOOL_CALL_SHAPE'),
+            ([{'id':'valid','name':'calculate\nadmin','arguments':{}}],
+             'HOLD_TOOL_CALL_SHAPE'),
+            ([{'id':'bad\nreceipt','name':'calculate','arguments':{}}],
+             'HOLD_TOOL_CALL_ID_SIZE'),
+        ]
+        for rows,expected in cases:
+            with self.subTest(expected=expected,rows=rows):
+                native=self.native(heuristic=rows)
+                payload={'messages':[{'role':'user','content':'calculate'}]}
+                with patch.object(stream.httpx,'AsyncClient',
+                                  side_effect=AssertionError('no model POST permitted')):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'calculate',False)
+                self.assertEqual(response.status_code,502)
+                self.assertEqual(json.loads(response.body)['error']['code'],expected)
+                self.assertEqual(self.dispatched,[])
+                self.assertNotIn('_agent_final',payload)
+
     async def test_nonstream_reports_exact_hold_without_certifying_s03(self):
         # The ordinary JSON route must retain a known pre-model rejection,
         # just as the SSE route does, without a model request or S03 PASS.
