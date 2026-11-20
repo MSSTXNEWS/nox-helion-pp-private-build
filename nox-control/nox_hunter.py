@@ -64,6 +64,12 @@ def _canonical_url(value: str) -> str:
     # discard embedded control characters. Neither may become a source URL.
     if not isinstance(value, str) or not value or any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
         raise HunterError("source URL must be printable text")
+    # JSON may legally decode lone surrogates; they are not valid URL text
+    # and would otherwise crash UTF-8 hashing/HTTP operations downstream.
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise HunterError("source URL contains invalid Unicode") from exc
     try:
         parts = urlsplit(value.strip())
         host = parts.hostname
@@ -399,7 +405,11 @@ def _item_record(source: dict[str, Any], item: dict[str, str], now: float) -> tu
     # Item links remain references only; they are never fetched. Unsafe links
     # go into the candidate quarantine, not verified items or S03.
     item_url = _canonical_url(raw_url)
-    digest = hashlib.sha256((title + "\n" + content).encode("utf-8")).hexdigest()
+    try:
+        digest = hashlib.sha256((title + "\n" + content).encode("utf-8")).hexdigest()
+    except UnicodeEncodeError as exc:
+        # One malformed JSON feed item must not roll back healthy items.
+        raise HunterError("item contains invalid Unicode") from exc
     return (source["id"], item_url, digest, title, content, str(item.get("published", "")), now)
 
 
@@ -424,8 +434,8 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
                 # No raw untrusted URL/text in the quarantine receipt: an
                 # opaque digest preserves dedup and avoids credential leaks.
                 digest = hashlib.sha256(json.dumps(
-                    item, sort_keys=True, ensure_ascii=False,
-                ).encode("utf-8")).hexdigest()
+                    item, sort_keys=True, ensure_ascii=True,
+                ).encode("ascii")).hexdigest()
                 conn.execute(
                     "INSERT OR IGNORE INTO item_quarantine "
                     "(source_id,item_digest,reason,first_seen_at) VALUES(?,?,?,?)",
