@@ -109,11 +109,13 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       let path;try{path=new URL(p.request.url).pathname;}catch{return;}
       if(p.request.method!=='POST'||!paths.has(path))return;
       if(active.has(p.requestId)){no(Error('DUPLICATE_CDP_ID'));return;}
-      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,first:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,firstAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0};
+      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,first:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,firstAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null};
       active.set(p.requestId,x);
       const record=s=>{if(typeof s==='string')x.request=hash(Buffer.from(s));};
       if(typeof p.request.postData==='string')record(p.request.postData);
-      else c.send('Network.getRequestPostData',{requestId:p.requestId}).then(v=>record(v.postData)).catch(()=>{});
+      else x.requestLookupPending=Promise.resolve()
+        .then(()=>c.send('Network.getRequestPostData',{requestId:p.requestId}))
+        .then(v=>record(v?.postData)).catch(()=>{});
       return;
     }
     const x=active.get(p.requestId);if(!x)return;
@@ -171,6 +173,19 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
     await c.send('Network.enable');const version=await c.send('Browser.getVersion');
     if(onReady)await onReady(c);
     const records=await completion;
+    // Response-body completion can beat the asynchronous request-data CDP ACK.
+    // Wait only for already-issued metadata queries, never replay the model POST.
+    const requestLookups=records.map(x=>x.requestLookupPending).filter(Boolean);
+    if(requestLookups.length){
+      let guard;
+      try{
+        await Promise.race([
+          Promise.allSettled(requestLookups),
+          new Promise(resolve=>{guard=setTimeout(resolve,750);})
+        ]);
+      }finally{clearTimeout(guard);}
+    }
+    // Rejected, missing or timed-out request metadata remains fail-closed.
     const turns=records.map((x,i)=>({turn:i+1,cdp_request_id:x.id,request_sha256:x.request,cdp_decoded_body_sha256:x.response,
       cdp_streamed_body_sha256:x.streamDigest,cdp_decoded_body_matches_stream:x.bodyMatchesStream,
       status:x.status,mime:x.mime,first_network_byte_ms:x.first,ttft_ms:!x.missing?x.ttft:null,

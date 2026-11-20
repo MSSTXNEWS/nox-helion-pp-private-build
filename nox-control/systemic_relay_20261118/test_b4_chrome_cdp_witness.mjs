@@ -10,13 +10,26 @@ class Stub {
     if(cmd==='Network.streamResourceContent')return {};
     if(cmd==='Network.getResponseBody')return {body:this.bodies.get(p.requestId).toString('base64'),base64Encoded:true};return {};}
 }
-async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondTurn=null,encoding=null,options={}){const c=new Stub();return capture({ws:'ws://127.0.0.1:9333/fake',makeSession:async()=>c,timeoutMs:2000,onReady:async()=>{
+async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondTurn=null,encoding=null,options={}){const c=new Stub();
+  if(options.postDataMode){
+    const normalSend=c.send.bind(c);
+    c.send=(cmd,p={})=>{
+      if(cmd!=='Network.getRequestPostData')return normalSend(cmd,p);
+      if(options.postDataMode==='late')return new Promise(resolve=>setTimeout(
+        ()=>resolve({postData:'{"fallback":'+JSON.stringify(p.requestId)+'}'}),35));
+      if(options.postDataMode==='reject')return Promise.reject(Error('POST_DATA_UNAVAILABLE'));
+      if(options.postDataMode==='hang')return new Promise(()=>{});
+      return normalSend(cmd,p);
+    };
+  }
+  return capture({ws:'ws://127.0.0.1:9333/fake',makeSession:async()=>c,timeoutMs:2000,onReady:async()=>{
   setTimeout(async()=>{for(let i=0;i<2;i++){
     const requestId=String(i+1),o=i===1?options:{},timestamp=Object.hasOwn(o,'requestTimestamp')?o.requestTimestamp:100+i;
     const chunks=i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):[Buffer.from(body)];
     const captured=Buffer.concat(chunks);
     c.bodies.set(requestId,i===1&&responseBodyForSecondTurn!==null?Buffer.from(responseBodyForSecondTurn):captured);
-    c.emit('Network.requestWillBeSent',{requestId,timestamp,request:{method:'POST',url:'http://localhost/api/nox/chat',postData:'{"secret":"'+i+'"}'}});
+    c.emit('Network.requestWillBeSent',{requestId,timestamp,request:{method:'POST',url:'http://localhost/api/nox/chat',
+      ...(i===1&&o.postDataMode?{}:{postData:'{"secret":"'+i+'"}'})}});
     const emitExtra=()=>c.emit('Network.responseReceivedExtraInfo',{requestId,statusCode:o.extraStatus??200,headers:o.extraHeaders??{}});
     if(o.extraBefore)emitExtra();
     const response={status:200,mimeType:'text/event-stream',headers:i===1&&encoding?{'Content-Encoding':encoding}:{}};
@@ -205,4 +218,22 @@ test('malformed JSON and explicit SSE errors before DONE invalidate measured TTF
     assert.equal(x.turns[1].sse_done_ms,null,fragment);
     assert.equal(x.turns[1].visible_text_sha256,null,fragment);
   }
+});
+
+test('late asynchronous getRequestPostData ACK is joined; rejected or hanging lookup fails closed',async()=>{
+  const late=await run(false,null,null,null,{postDataMode:'late'});
+  assert.equal(late.cdp_consistent,true,'late ACK before bounded deadline must bind request');
+  assert.equal(late.ttft_sse_verified,true);
+  assert.match(late.turns[1].request_sha256,/^[a-f0-9]{64}$/);
+  assert.notEqual(late.turns[0].request_sha256,late.turns[1].request_sha256);
+  const rejected=await run(false,null,null,null,{postDataMode:'reject'});
+  assert.equal(rejected.cdp_consistent,false);
+  assert.equal(rejected.ttft_sse_verified,false);
+  assert.equal(rejected.turns[1].request_sha256,null);
+  const began=Date.now();
+  const stalled=await run(false,null,null,null,{postDataMode:'hang'});
+  assert.ok(Date.now()-began<1800,'fallback must not hang capture forever');
+  assert.equal(stalled.cdp_consistent,false);
+  assert.equal(stalled.ttft_sse_verified,false);
+  assert.equal(stalled.turns[1].request_sha256,null);
 });
