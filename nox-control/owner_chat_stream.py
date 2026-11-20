@@ -68,7 +68,11 @@ def _executor_status_reply(user_text,path=None):
         fd=os.open(target,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
         with os.fdopen(fd,'rb') as source:
             meta=os.fstat(source.fileno())
-            if not stat.S_ISREG(meta.st_mode) or not 0<meta.st_size<=750000:return unknown
+            # A fresh JSON file is not authoritative if other principals
+            # can alter it. Require an owner-created status snapshot.
+            if (not stat.S_ISREG(meta.st_mode) or meta.st_uid != os.geteuid()
+                    or meta.st_mode & 0o022 or not 0<meta.st_size<=750000):
+                return unknown
             age=time.time()-meta.st_mtime
             if not 0<=age<=45:return unknown
             raw=source.read(750001)
