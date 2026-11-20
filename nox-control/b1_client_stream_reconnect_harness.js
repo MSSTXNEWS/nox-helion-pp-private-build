@@ -33,7 +33,10 @@
        typeof ui.onDelta!=='function'||
        typeof ui.upsertTerminal!=='function'||
        (ackGate && (typeof ackGate.reserve!=='function'||
-         typeof ackGate.beginSend!=='function'||typeof ackGate.confirm!=='function'))||
+         typeof ackGate.beginSend!=='function'||typeof ackGate.confirm!=='function'||
+         typeof ackGate.requireCanonicalAck!=='function'||
+         typeof transport.readCanonicalAck!=='function'||
+         typeof host.verifyCanonicalAck!=='function'))||
        !Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>600000)
       hold('HOLD_STREAM_HOST_CONTRACT');
     const started=new Set(),active=new Map(),reconnecting=new Map();
@@ -116,14 +119,44 @@
       // Origin-local, cross-tab durable fence is opt-in. RESERVE and SENDING
       // must commit in IndexedDB BEFORE network ACK. An uncertain ACK is never
       // sent again after reload; recovery requires an independent server receipt.
+      // LOCAL_DEDUP_ONLY and a successful network ACK are never server proof.
+      // Only a fresh GET + externally trusted native owner/signature/S03
+      // verifier may elevate this source projection to canonical completion.
+      // Synthetic callback=true in a test is NOT independent native evidence.
+      async function canonicalCompletion(){
+        let ack;
+        try {
+          ack=await ackGate.requireCanonicalAck(s,witness.projection_event_id,
+            witness.ack_cursor,
+            expected=>transport.readCanonicalAck(s,expected),
+            (receipt,expected)=>host.verifyCanonicalAck(receipt,expected,s));
+        }catch(err){
+          if(err&&typeof err.code==='string') throw err;
+          hold('HOLD_STREAM_CANONICAL_ACK');
+        }
+        if(!ack||ack.status!=='CANONICAL_ACK_CONFIRMED'||
+           ack.authority!=='VERIFIER_CALLBACK_APPROVED'||
+           typeof ack.ack_id!=='string'||!ID.test(ack.ack_id))
+          hold('HOLD_STREAM_CANONICAL_ACK');
+        return Object.freeze({...witness,canonical_ack_status:ack.status,
+          canonical_ack_id:ack.ack_id});
+      }
       let grant=null;
       if(ackGate){
         try{
           grant=await ackGate.reserve(s,witness.projection_event_id,witness.ack_cursor);
-          if(grant.status==='ALREADY_ACKED') return witness;
-          if(grant.status!=='RESERVED') hold('HOLD_STREAM_ACK_GATE');
-          await ackGate.beginSend(grant);
         }catch(err){
+          // An uncertain SENDING ACK must NEVER be retransmitted: GET-only
+          // readback, with the original event/cursor and CAS proof.
+          if(err&&err.code==='HOLD_CROSSTAB_ACK_UNCERTAIN')
+            return canonicalCompletion();
+          if(err&&typeof err.code==='string') throw err;
+          hold('HOLD_STREAM_ACK_GATE');
+        }
+        if(grant.status==='ALREADY_ACKED') return canonicalCompletion();
+        if(grant.status!=='RESERVED') hold('HOLD_STREAM_ACK_GATE');
+        try{await ackGate.beginSend(grant);}
+        catch(err){
           if(err&&typeof err.code==='string') throw err;
           hold('HOLD_STREAM_ACK_GATE');
         }
@@ -131,9 +164,11 @@
       try{
         const acked=await transport.ack(s,witness.ack_cursor);
         if(acked===false) hold('HOLD_STREAM_ACK_UNCONFIRMED');
-        if(ackGate) await ackGate.confirm(grant);
+        // Leave IndexedDB SENDING until a signed canonical GET proves ACKED.
+        // A local confirm() would create ACKED without a server proof digest
+        // and permanently block requireCanonicalAck() as unverified.
       }catch(_){hold('HOLD_STREAM_ACK_UNCONFIRMED');}
-      return witness;
+      return ackGate?canonicalCompletion():witness;
     }
     function reconnect(raw){
       const s=snap(raw),k=key(s);
