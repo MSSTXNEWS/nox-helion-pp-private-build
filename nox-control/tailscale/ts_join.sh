@@ -2,6 +2,7 @@
 # Подключает сервер NOX к частной сети Tailscale (userspace, без TUN). Ключ приходит через stdin и не печатается.
 read -r K
 [ -z "$K" ] && { echo "NO_KEY: добавь секрет TS_AUTHKEY в GitHub и запусти ещё раз"; exit 0; }
+echo "key_len=${#K} prefix=${K:0:10}"
 V=1.78.1
 if [ ! -x /opt/tailscale/tailscale ]; then
   mkdir -p /opt/tailscale && cd /opt/tailscale
