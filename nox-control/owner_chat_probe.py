@@ -45,10 +45,21 @@ def obj(response,limit=100000):
     finally:
         response.close()
 
-def page_snapshot(response, limit=200000):
+def require_same_origin_target(response, requested_path, exact_path=True):
+    """A redirected login/foreign page must never count as healthy UI or JS."""
+    actual = urllib.parse.urlsplit(response.url)
+    expected = urllib.parse.urlsplit(BASE)
+    if actual.scheme != expected.scheme or actual.netloc != expected.netloc:
+        raise RuntimeError('HOLD_CHAT_RESPONSE_ORIGIN')
+    if exact_path and actual.path != requested_path:
+        raise RuntimeError('HOLD_CHAT_RESPONSE_REDIRECT')
+
+
+def page_snapshot(response, limit=200000, expected_path=None):
     """Read a complete bounded owner HTML page and always close its socket."""
     try:
         status = response.status
+        require_same_origin_target(response, expected_path, expected_path is not None)
         path = urllib.parse.urlparse(response.url).path
         raw = response.read(limit + 1)
         if len(raw) > limit:
@@ -248,7 +259,7 @@ def main():
         report={'schema':'NOX_OWNER_CHAT_LATENCY_V1','private_data_exported':False,'paths':[],
                 'nonloopback_peer':BASE!='http://127.0.0.1:8080','assets':[]}
         for path in ('/','/chat','/nox-web-v29/chat.html','/nox-web-v29/pc/resonance.html'):
-            t=time.monotonic();status,final_path,raw=page_snapshot(request(client,path))
+            t=time.monotonic();status,final_path,raw=page_snapshot(request(client,path), expected_path=path if path != '/' else None)
             text=raw.decode(errors='replace');title=re.search(r'<title[^>]*>(.*?)</title>',text,re.S|re.I)
             report['paths'].append({'path':path,'status':status,'final_path':final_path,'ms':round((time.monotonic()-t)*1000),
                 'sha256':digest(raw),'title':title[1][:150] if title else None,'scripts':re.findall(r'<script[^>]+src=[\"\']([^\"\']+)',text)[:30]})
@@ -259,7 +270,9 @@ def main():
                     target=urllib.parse.urljoin(BASE+path,resource)
                     if urllib.parse.urlparse(target).netloc!=urllib.parse.urlparse(BASE).netloc:continue
                     local=urllib.parse.urlparse(target).path
-                    with request(client,local) as asset:report['assets'].append({'path':local,'status':asset.status,'bytes_sampled':len(asset.read(100))})
+                    with request(client,local) as asset:
+                        require_same_origin_target(asset, local)
+                        report['assets'].append({'path':local,'status':asset.status,'bytes_sampled':len(asset.read(100))})
         unauth=urllib.request.build_opener(urllib.request.ProxyHandler({}))
         report['anonymous_http']={}
         for path in ('/api/nox/status','/api/ui/executors','/api/ui/events'):
