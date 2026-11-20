@@ -880,7 +880,8 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         if not isinstance(data,dict):
             return JSONResponse({'error':'INVALID_BODY'},status_code=400)
         question=data.get('message')
-        if not isinstance(question,str) or not 1<=len(question.strip())<=8000:
+        if (not isinstance(question,str) or not 1<=len(question)<=8000
+                or not question.strip()):
             return JSONResponse({'error':'INVALID_MESSAGE'},status_code=422)
         dialog_id=data.get('dialog_id')
         if dialog_id=='':
