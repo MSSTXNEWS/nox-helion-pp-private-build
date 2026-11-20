@@ -807,7 +807,7 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual(result['answer'], '323')
         self.assertTrue(accepted.closed)
 
-def test_preterminal_failure_cannot_be_laundered_by_saved_done(self):
+    def test_preterminal_failure_cannot_be_laundered_by_saved_done(self):
         """A failed status/meta/delta must poison a later success terminal."""
         did = '1' * 32
         class Response(SyntheticBoundedReader):
