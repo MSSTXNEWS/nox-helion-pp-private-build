@@ -187,6 +187,29 @@ def main():
                       a.evaluate("()=>gate.reconcileSignedAck(s1,a,'cursor1',read('x1'),verify)")["status"]=="ALREADY_ACKED")
                 check("alternate signed receipt bytes cannot reuse ACKED projection",
                       trial(a,"gate.reconcileSignedAck(s1,a,'cursor1',async x=>({...await read('x1')(x),signature:'alternate-signature'}),async()=>true)")=="HOLD_CROSSTAB_ACKED_PROOF_CONFLICT")
+                # A source-local replay fence can suppress duplicate network ACKs,
+                # but only the explicit GET-verified API can report completion.
+                local=b.evaluate("()=>gate.reserve(s1,a,'cursor1')")
+                check("local ACKED is not signed server delivery",
+                      local["status"]=="ALREADY_ACKED" and
+                      local["authority"]=="LOCAL_DEDUP_ONLY" and
+                      "ack_id" not in local)
+                check("certified resume requires a fresh canonical GET",
+                      trial(b,"gate.requireCanonicalAck(s1,a,'cursor1',read('missing'),verify)")=="HOLD_CROSSTAB_READBACK")
+                check("certified resume rejects altered signed receipt",
+                      trial(b,"gate.requireCanonicalAck(s1,a,'cursor1',read('forged'),verify)")=="HOLD_CROSSTAB_RECEIPT_UNVERIFIED")
+                check("certified resume rejects false independent verifier",
+                      trial(b,"gate.requireCanonicalAck(s1,a,'cursor1',read('x1'),()=>false)")=="HOLD_CROSSTAB_RECEIPT_UNVERIFIED")
+                certified=b.evaluate("()=>gate.requireCanonicalAck(s1,a,'cursor1',read('x1'),verify)")
+                check("certified resume returns distinct canonical-only status",
+                      certified=={"status":"CANONICAL_ACK_CONFIRMED",
+                        "authority":"VERIFIER_CALLBACK_APPROVED","ack_id":"ack-x1"})
+                turn2=b.evaluate("()=>gate.requireCanonicalAck(s2,b,'cursor2',read('x2'),verify)")
+                check("second turn has distinct independently verified ACK",
+                      turn2["status"]=="CANONICAL_ACK_CONFIRMED" and
+                      turn2["ack_id"]=="ack-x2")
+                check("unrelated cursor cannot impersonate verified completion",
+                      trial(b,"gate.requireCanonicalAck(s2,b,'wrong-cursor',read('x2'),verify)")=="HOLD_CROSSTAB_CONFLICT")
                 integrity=a.evaluate("""async dbName => {
                   const gate2=await NOXB1CrossTabAckLease.createGate({
                     indexedDB,databaseName:dbName,ttlMs:300

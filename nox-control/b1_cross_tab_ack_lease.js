@@ -247,7 +247,8 @@
              prev.verified_s03_sha256!==receipt.s03_sha256||
              prev.receipt_proof_sha256!==proofDigest)
             return {error:'HOLD_CROSSTAB_ACKED_PROOF_CONFLICT'};
-          return {value:Object.freeze({status:'ALREADY_ACKED'}),
+          return {value:Object.freeze({status:'ALREADY_ACKED',
+            authority:'VERIFIER_CALLBACK_APPROVED',ack_id:receipt.ack_id}),
             owner_cas:prev.server_cas};
         }
         if(current.state==='ACKED') return {error:'HOLD_CROSSTAB_ACKED_STALE'};
@@ -257,9 +258,24 @@
         return {write:{...prev,state:'ACKED',server_ack_id:receipt.ack_id,
           server_cas:receipt.server_cas,verified_s03_sha256:receipt.s03_sha256,
           receipt_proof_sha256:proofDigest},
-          value:Object.freeze({status:'ACKED_RECOVERED',ack_id:receipt.ack_id}),
+          value:Object.freeze({status:'ACKED_RECOVERED',ack_id:receipt.ack_id,
+            authority:'VERIFIER_CALLBACK_APPROVED'}),
           owner_cas:receipt.server_cas};
       });
+    }
+    // The only B1 API that can elevate a LOCAL_DEDUP_ONLY ACK replay fence to
+    // a verified completion signal. No reservation, ACK retransmission or POST.
+    // The caller must supply an authenticated GET and an independent, trusted
+    // server signature/owner-CAS/S03 verifier; a test callback is NOT native proof.
+    async function requireCanonicalAck(raw,event,cursor,readCanonicalAck,verifyCanonicalAck) {
+      const result=await reconcileSignedAck(raw,event,cursor,
+        readCanonicalAck,verifyCanonicalAck);
+      if(!result||!['ACKED_RECOVERED','ALREADY_ACKED'].includes(result.status)||
+         result.authority!=='VERIFIER_CALLBACK_APPROVED'||
+         typeof result.ack_id!=='string'||!ID.test(result.ack_id))
+        hold('HOLD_CROSSTAB_REVALIDATION_REQUIRED');
+      return Object.freeze({status:'CANONICAL_ACK_CONFIRMED',
+        authority:'VERIFIER_CALLBACK_APPROVED',ack_id:result.ack_id});
     }
     // Called only when a trusted native/server owner-revocation signal is
     // observed; irrevocable local fail-closed tombstone for that server CAS.
@@ -281,6 +297,7 @@
       beginSend:grant=>transition(grant,'RESERVED','SENDING'),
       confirm:grant=>transition(grant,'SENDING','ACKED'),
       reconcileSignedAck,
+      requireCanonicalAck,
       // Unknown delivery never releases the SENDING record.
       close:()=>{if(!closed){closed=true;db.close();}}
     });
