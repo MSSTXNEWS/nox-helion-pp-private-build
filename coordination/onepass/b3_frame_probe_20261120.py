@@ -274,6 +274,11 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                         filename = f'b3_{width}x{height}_{mode}.png'
                         path = out / filename
                         await page.screenshot(path=str(path), full_page=False)
+                        # A same-URL SPA can replace Resonance with a login/error
+                        # view during 90 rAF samples. Require the actual UI target
+                        # to remain visible in the final screenshot state.
+                        if expected_selector and not await page.locator(expected_selector).first.is_visible():
+                            raise ValueError('HOLD_LIVE_SELECTOR_DISAPPEARED')
                         if fixture_html is None:
                             require_landing_url(url, page.url)
                             result['landing_url_verified'] = True
