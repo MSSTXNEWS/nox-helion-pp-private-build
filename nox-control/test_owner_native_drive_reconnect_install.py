@@ -50,6 +50,13 @@ class InstallContractTests(unittest.TestCase):
         self.assertIn("private_dir(STATE/'cache/warm-ssd',create=True)", content)
 
 
+    def test_real_static_hook_syntax_compiles_without_owner_or_filesystem_access(self):
+        from nox_drive_native_binding import stage_native_dispatcher_source
+        value=stage_native_dispatcher_source(
+            expected_bridge_sha="0"*64, hook_syntax_only=True)
+        self.assertEqual(value["state"], "HOOK_SYNTAX_VALIDATED_ONLY")
+        self.assertFalse(value["native_handler_registered"])
+
     def test_native_dispatcher_source_is_staged_not_claimed_live(self):
         source=src.read_text()
         import inspect
