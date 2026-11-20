@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
-REMOTE = "curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/tune/read_boot.sh | bash"
+REMOTE = "curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/tailscale/ts_join.sh | bash"
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
@@ -39,8 +39,8 @@ def main():
             for attempt in range(3):
                 r = subprocess.run(["ssh", "-T", "-i", kf, "-p", str(port), "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes",
                     "-o", "ConnectTimeout=15", "-o", "StrictHostKeyChecking=accept-new", "-o", "UserKnownHostsFile=" + d + "/kh",
-                    "root@" + ip, REMOTE], capture_output=True, text=True, errors="replace", timeout=290)
-                print("ssh rc=%d" % r.returncode); print(re.sub(r"github_pat_\w+", "***", r.stdout[-3000:]))
+                    "root@" + ip, REMOTE], capture_output=True, text=True, errors="replace", timeout=290, input=(os.environ.get("TS_AUTHKEY","") + "\n"))
+                print("ssh rc=%d" % r.returncode); print(re.sub(r"(github_pat_\w+|tskey-[\w-]+)", "***", r.stdout[-3000:]))
                 if r.returncode == 0: return
                 time.sleep(10)
         sys.exit("ssh failed on all attempts")
