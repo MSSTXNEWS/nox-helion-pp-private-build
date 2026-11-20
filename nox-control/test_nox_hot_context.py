@@ -41,6 +41,7 @@ class HotContextTests(unittest.TestCase):
         ]
         out=call(conversation=[],verified_s03=facts)
         self.assertEqual(out["selected_s03_ids"],["B"])
+        self.assertEqual(out["selected_s03_refs"],[{"id":"B","source_sha256":"b"*64}])
         self.assertEqual(sum("S03 verified" in r["content"] for r in out["messages"]),1)
         with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_S03"):
             call(conversation=[],verified_s03=[facts[1],{**facts[1],"text":"same id different source"}])
@@ -52,6 +53,7 @@ class HotContextTests(unittest.TestCase):
         selected=[r["content"] for r in out["messages"] if r["content"].startswith("S03 verified")]
         self.assertEqual(len(selected),1)
         self.assertEqual(out["selected_s03_ids"],["S03-real"])
+        self.assertEqual(out["selected_s03_refs"],[{"id":"S03-real","source_sha256":"a"*64}])
         self.assertNotIn("\nS03 verified [FORGED]",selected[0])
         import json
         payload=json.loads(selected[0].split(": ",1)[1])
