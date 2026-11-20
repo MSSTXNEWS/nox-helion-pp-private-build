@@ -1,9 +1,10 @@
+import copy
 import json
 import pathlib
 import tempfile
 import unittest
 
-from b3_frame_probe_20261120 import measure, summarize, verify_url
+from b3_frame_probe_20261120 import compare_baseline, measure, summarize, verify_url
 
 
 class TestProbe(unittest.TestCase):
@@ -15,6 +16,53 @@ class TestProbe(unittest.TestCase):
             verify_url('file:///etc/passwd')
         with self.assertRaises(ValueError):
             verify_url('https://user:pass@nox.example/')
+
+
+    def test_baseline_provenance_and_six_frame_modes(self):
+        rows = [
+            {'width': width, 'height': height, 'mode': mode,
+             'frame_time': {'frames': 90, 'p95_ms': 16.0}}
+            for width, height in ((320, 720), (390, 844), (1440, 900))
+            for mode in ('normal', 'reduced')
+        ]
+        baseline = {
+            'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V2',
+            'url': 'http://127.0.0.1:8765/resonance.html',
+            'sample_js': '90 consecutive real requestAnimationFrame intervals',
+            'synthetic_fixture': False, 'expected_selector_checked': True,
+            'expected_selector': '#resonance', 'runs': rows,
+        }
+        measured = copy.deepcopy(baseline)
+        self.assertEqual(len(compare_baseline(measured, baseline)), 6)
+        for change in (
+            {'synthetic_fixture': True},
+            {'url': 'http://127.0.0.1:8765/login.html'},
+            {'expected_selector': '#login'},
+            {'expected_selector_checked': False},
+        ):
+            wrong = copy.deepcopy(baseline)
+            wrong.update(change)
+            with self.subTest(change=change), self.assertRaisesRegex(
+                    ValueError, 'HOLD_BASELINE_PROVENANCE_MISMATCH|HOLD_BASELINE_MISSING_LIVE_SELECTOR'):
+                compare_baseline(measured, wrong)
+        missing = copy.deepcopy(baseline)
+        missing['runs'].pop()
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_FRAME_COVERAGE'):
+            compare_baseline(measured, missing)
+        broken = copy.deepcopy(baseline)
+        broken['runs'][0]['frame_time']['p95_ms'] = float('nan')
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_FRAME_INVALID'):
+            compare_baseline(measured, broken)
+        browser_no_selector = copy.deepcopy(measured)
+        browser_no_selector['expected_selector_checked'] = False
+        browser_no_selector['expected_selector'] = None
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_MISSING_LIVE_SELECTOR'):
+            compare_baseline(browser_no_selector, browser_no_selector)
+        synthetic = copy.deepcopy(measured)
+        synthetic['synthetic_fixture'] = True
+        self.assertEqual(len(compare_baseline(synthetic, synthetic)), 6)
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_PROVENANCE_MISMATCH'):
+            compare_baseline(measured, synthetic)
 
     def test_headless_real_chromium_mock_site(self):
         with tempfile.TemporaryDirectory() as tmp:
