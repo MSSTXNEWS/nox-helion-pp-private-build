@@ -1082,7 +1082,7 @@ async function check(chunks, status=200) {
                         caller.index("multiturn_browser_acceptance_verified"))
         self.assertLess(caller.index("report['critical_requestfailed_count']+=1"),
                         caller.index("multiturn_browser_acceptance_verified"))
-        self.assertLess(caller.index("report['critical_requestfailed_count']):"),
+        self.assertLess(caller.index("report['critical_requestfailed_count'],"),
                         caller.index("multiturn_browser_acceptance_verified"))
 
     def test_ru_es_extra_blocked_native_posts_invalidate_browser_acceptance(self):
