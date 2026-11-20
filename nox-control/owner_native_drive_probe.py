@@ -145,7 +145,7 @@ def dispatcher_surface(source=DISPATCHER, runner=subprocess.run):
         # This lets the integration choose a real task shape without revealing
         # body source, literals, credentials, user content or filesystem paths.
         tracked = (
-            "worker_loop", "h_owner_order", "h_exec_plan", "h_ensure_offload",
+            "worker_loop", "run_one", "h_owner_order", "h_exec_plan", "h_ensure_offload",
             "owner_claim_ready", "_nox_owner_task_admitted", "ingest_owner_orders",
             "_nox_owner_admission_reason",
         )
