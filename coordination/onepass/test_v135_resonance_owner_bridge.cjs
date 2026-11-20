@@ -1789,3 +1789,79 @@ test('V198 Request init.body preserves pre-aborted signal on legacy create and r
     assert.equal(f.calls.length,0,'pre-aborted Request must not call native legacy endpoint');
   }
 });
+
+test('V199 two SSE turns on one browser context require four ordered independent S03 fixture rows',async()=>{
+  const cases=[
+    {message:'Помни моё имя NOX 🧠',reply:'Запомнил имя NOX 🧠',exchange:'v199-exchange-01'},
+    {message:'¿Recuerdas mi nombre?',reply:'Sí, recuerdo NOX 🧠',exchange:'v199-exchange-02'}
+  ];
+  async function scenario(tamperSecond){
+    const ledger=[],posts=[],reads=[];
+    const native=async(path,opts={})=>{
+      const url=new URL(String(path),'https://nox.local');
+      if(url.pathname==='/api/nox/chat/stream'){
+        const sent=JSON.parse(opts.body),item=cases[posts.length];
+        assert(item,'no duplicate or replayed native inference');
+        assert.equal(opts.method,'POST');
+        assert.equal(opts.credentials,'same-origin');
+        assert.equal(sent.dialog_id,id,'second request must keep first dialog ID');
+        assert.equal(sent.message,item.message);
+        assert.deepEqual(sent.history,[],'backend owns canonical context; browser invents none');
+        posts.push(sent);
+        ledger.push({role:'user',exchange_id:item.exchange,content:item.message});
+        ledger.push({role:'assistant',exchange_id:item.exchange,
+          content:tamperSecond&&posts.length===2?'WRONG_PERSISTED_REPLY':item.reply});
+        const ndjson=[
+          {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+          {type:'start',model:'NOX HELION'},
+          {type:'delta',text:item.reply.slice(0,6)},
+          {type:'delta',text:item.reply.slice(6)},
+          {type:'done',saved:true,s03_integrated:true,dialog_id:id,
+            exchange_id:item.exchange,native_model_label:'NOX HELION'}
+        ].map(x=>JSON.stringify(x)).join('\n')+'\n';
+        return new Response(ndjson,{headers:{'Content-Type':'application/x-ndjson'}});
+      }
+      if(url.pathname==='/api/ui/memory/dialogs/history'){
+        assert.equal(url.searchParams.get('dialog_id'),id);
+        reads.push(ledger.map(row=>({...row})));
+        return Response.json({status:'READY',dialog_id:id,messages:ledger});
+      }
+      return new Response('NOT_NATIVE_ROUTE',{status:404});
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:native};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextEncoder,TextDecoder,AbortController,performance,console},{filename:file});
+    for(let i=0;i<cases.length;i++){
+      const item=cases[i];
+      const frames=await events(await w.fetch('/api/nox/chat',{method:'POST',
+        body:JSON.stringify({message:item.message,dialog_id:id,request_id:'v199-'+i})}));
+      assert.equal(frames.filter(x=>x.type==='token').map(x=>x.t).join(''),item.reply);
+      const done=frames.filter(x=>x.type==='done');
+      if(tamperSecond&&i===1){
+        assert.equal(done.length,0,'wrong second persisted row must not look accepted');
+        assert.match(frames.find(x=>x.type==='error').error,/HOLD_DIALOG_HISTORY_READBACK/);
+      }else{
+        assert.equal(done.length,1,'every verified exchange needs own durable terminal');
+        assert.equal(done[0].exchange_id,item.exchange);
+        assert.equal(done[0].dialog_id,id);
+        assert.equal(done[0].model_identity_verified,false,
+          'fixture labels cannot attest installed tokenizer or weights');
+        assert.equal(frames.filter(x=>x.type==='error').length,0);
+      }
+    }
+    assert.equal(posts.length,2,'exactly one model POST per turn');
+    assert.equal(reads.length,2,'independent S03 readback after each terminal');
+    assert.deepEqual(reads.map(snapshot=>snapshot.length),[2,4]);
+    assert.deepEqual(ledger.map(row=>row.role),['user','assistant','user','assistant']);
+    assert.deepEqual(ledger.map(row=>row.exchange_id),
+      ['v199-exchange-01','v199-exchange-01','v199-exchange-02','v199-exchange-02']);
+    assert.equal(new Set(ledger.map(row=>row.exchange_id)).size,2);
+    return {ledger,reads};
+  }
+  const valid=await scenario(false);
+  assert.deepEqual(valid.ledger.map(row=>row.content),
+    [cases[0].message,cases[0].reply,cases[1].message,cases[1].reply]);
+  await scenario(true);
+});
