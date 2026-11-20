@@ -1209,9 +1209,16 @@ def main():
             # Maintenance gates new claims; let already claimed CPU jobs finish.
             deadline = time.monotonic()+45
             while worker_readback(helper)['busy_count'] and time.monotonic() < deadline:
+                # STOP may latch while existing native claims drain; never
+                # perform maintenance after a newly asserted global STOP.
+                if global_stop():
+                    raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
                 time.sleep(2)
             if worker_readback(helper)['busy_count']:
                 raise RuntimeError('HOLD_DISPATCHER_BUSY_DRAIN_REQUIRED')
+            # Also fence STOP asserted exactly as the final worker goes idle.
+            if global_stop():
+                raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
             for name, script in CONTROLLER_SERVICES.items():
                 stop_controller(helper, name, script); controllers_stopped.append(name)
             for path, data in changed.items():
