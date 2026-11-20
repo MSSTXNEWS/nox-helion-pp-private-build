@@ -71,8 +71,9 @@ class TestProbe(unittest.TestCase):
             for mode in ('normal', 'reduced')
         ]
         baseline = {
-            'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V3',
+            'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V4',
             'url_sha256': url_identity_sha256('http://127.0.0.1:8765/resonance.html'),
+            'chromium_version_sha256': 'c' * 64,
             'sample_js': '90 consecutive real requestAnimationFrame intervals',
             'synthetic_fixture': False, 'expected_selector_checked': True,
             'expected_selector_sha256': evidence_hash('#resonance'), 'landing_url_verified': True,
@@ -86,12 +87,17 @@ class TestProbe(unittest.TestCase):
             {'expected_selector_sha256': evidence_hash('#login')},
             {'expected_selector_checked': False},
             {'landing_url_verified': False},
+            {'chromium_version_sha256': 'd' * 64},
         ):
             wrong = copy.deepcopy(baseline)
             wrong.update(change)
             with self.subTest(change=change), self.assertRaisesRegex(
                     ValueError, 'HOLD_BASELINE_PROVENANCE_MISMATCH|HOLD_BASELINE_MISSING_LIVE_SELECTOR|HOLD_BASELINE_LANDING_URL_UNVERIFIED'):
                 compare_baseline(measured, wrong)
+        missing_engine = copy.deepcopy(baseline)
+        missing_engine['chromium_version_sha256'] = None
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_BROWSER_ENGINE_MISSING'):
+            compare_baseline(missing_engine, missing_engine)
         landing_changed = copy.deepcopy(baseline)
         landing_changed['runs'][0]['landing_url_sha256'] = url_identity_sha256('http://127.0.0.1:8765/login.html')
         with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_LANDING_HASH_MISMATCH'):
@@ -203,6 +209,7 @@ class TestProbe(unittest.TestCase):
             self.assertEqual(result['blocked_model_posts'], 6)
             self.assertEqual(result['blocked_websocket_connections'], 6)
             self.assertTrue(result['service_workers_blocked'])
+            self.assertRegex(result['chromium_version_sha256'], r'^[a-f0-9]{64}
             self.assertFalse(result['native_s03_verified'])
             self.assertTrue(result['synthetic_fixture'])
             self.assertTrue(all(r['renderer_resource_sha256'] is None for r in result['runs']))
@@ -223,7 +230,33 @@ class TestProbe(unittest.TestCase):
             self.assertEqual(result['url_sha256'], url_identity_sha256(secret_url))
             self.assertEqual(result['expected_selector_sha256'], evidence_hash(secret_selector))
             self.assertEqual(json.loads(report_text)['schema'],
-                'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V3')
+                'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V4')
+
+
+if __name__ == '__main__':
+    unittest.main()
+)
+            self.assertFalse(result['native_s03_verified'])
+            self.assertTrue(result['synthetic_fixture'])
+            self.assertTrue(all(r['renderer_resource_sha256'] is None for r in result['runs']))
+            self.assertTrue(result['expected_selector_checked'])
+            self.assertFalse(result['landing_url_verified'])
+            self.assertFalse(result['installed_model_identity_verified'])
+            self.assertEqual({r['width'] for r in result['runs']}, {320, 390, 1440})
+            self.assertEqual({r['mode'] for r in result['runs']}, {'normal', 'reduced'})
+            for row in result['runs']:
+                self.assertEqual(row['frame_time']['frames'], 90)
+                contents = (evidence_dir / row['screenshot']).read_bytes()
+                self.assertEqual(contents[:8], b'\x89PNG\r\n\x1a\n')
+                self.assertGreater(len(contents), 200)
+            report_text = (evidence_dir / 'b3_frame_report.json').read_text()
+            self.assertNotIn('SECRET_URL_ABC', report_text)
+            self.assertNotIn('SECRET_SELECTOR_XYZ', report_text)
+            self.assertNotIn('resonance.html?auth=', report_text)
+            self.assertEqual(result['url_sha256'], url_identity_sha256(secret_url))
+            self.assertEqual(result['expected_selector_sha256'], evidence_hash(secret_selector))
+            self.assertEqual(json.loads(report_text)['schema'],
+                'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V4')
 
 
 if __name__ == '__main__':
