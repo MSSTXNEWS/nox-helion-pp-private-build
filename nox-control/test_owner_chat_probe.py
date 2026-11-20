@@ -406,7 +406,7 @@ class ProbeTests(unittest.TestCase):
             ('assistant', '323'), ('user', 'third'), ('assistant', 'six'))]
         good = {'dialog_id': did, 'messages': messages}
         self.assertTrue(probe.scoped_history_matches_turns(good, turns, did))
-        self.assertTrue(probe.scoped_history_matches_turns({'messages': messages}, turns, did))
+        self.assertFalse(probe.scoped_history_matches_turns({'messages': messages}, turns, did))
         tagged = [dict(row, dialog_id=did) for row in messages]
         self.assertTrue(probe.scoped_history_matches_turns({'dialog_id': did, 'messages': tagged}, turns, did))
         corrupted = [
