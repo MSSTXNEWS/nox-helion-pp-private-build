@@ -39,7 +39,8 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(raw)
     def do_GET(self):
         u = urlparse(self.path)
-        x = parse_qs(u.query).get("exchange_id", [""])[0]
+        query = parse_qs(u.query)
+        x = query.get("exchange_id", [""])[0]
         if u.path == "/counts":
             with self.server.state.lock:
                 return self.reply(200, {"posts":dict(self.server.state.posts),
@@ -59,13 +60,18 @@ class Handler(SimpleHTTPRequestHandler):
             if x not in ("x1","x2") or not acked:
                 return self.reply(404, {"error":"no durable ACK"})
             cursor = "cursor1" if x=="x1" else "cursor2"
+            nonce = query.get("request_nonce", [""])[0]
+            now_ms = int(time.time()*1000)
             return self.reply(200, {
+                "request_nonce":nonce,"issued_at_ms":now_ms,
+                "expires_at_ms":now_ms+10000,
                 "version":1,"state":"ACKED","conversation_id":"dialog",
                 "exchange_id":x,"event_id":("a" if x=="x1" else "b")*64,
                 "cursor_digest":hashlib.sha256(cursor.encode()).hexdigest(),
                 "ack_id":"ack-"+x,"server_cas":"cas-"+x,
                 "s03_sha256":"c"*64,
-                "signature":"forged-fixture" if tamper else "synthetic-fixture-signature"})
+                "signature":"forged-fixture" if tamper else
+                    "synthetic-fixture-signature-"+nonce.replace("-", "")})
         if u.path == "/tamper":
             with self.server.state.lock: self.server.state.tamper = True
             return self.reply(200, {"tamper":True})
@@ -124,9 +130,17 @@ def attach(page, name):
             return (await r.json()).committed?{durable:true}:null;
           },
           verifyCanonicalAck:async(receipt,expected,scope)=>
-            receipt.signature==='synthetic-fixture-signature' &&
+            receipt.signature.startsWith('synthetic-fixture-signature-') &&
             receipt.server_cas==='cas-'+scope.exchange_id &&
             receipt.s03_sha256==='c'.repeat(64) &&
+            expected.exchange_id===scope.exchange_id,
+          // SYNTHETIC ONLY. Production MUST verify server signature over the
+          // challenge nonce, timestamp bounds, canonical ACK and owner/S03.
+          verifyFreshCanonicalAck:async(receipt,expected,scope,challenge)=>
+            receipt.request_nonce===challenge.request_nonce &&
+            receipt.signature==='synthetic-fixture-signature-'+
+              challenge.request_nonce.replaceAll('-','') &&
+            receipt.exchange_id===scope.exchange_id &&
             expected.exchange_id===scope.exchange_id
         };
         window.transport={
@@ -138,8 +152,9 @@ def attach(page, name):
             if(!r.ok)throw Error('no readback');
             return r.json();
           },
-          readCanonicalAck:async (s,expected)=>{
-            const r=await fetch('/canonical?exchange_id='+encodeURIComponent(s.exchange_id),
+          readCanonicalAck:async (s,expected,challenge)=>{
+            const r=await fetch('/canonical?exchange_id='+encodeURIComponent(s.exchange_id)+
+              '&request_nonce='+encodeURIComponent(challenge.request_nonce),
               {method:'GET',cache:'no-store'});
             if(!r.ok)throw Error('canonical ACK missing');
             return r.json();
@@ -223,6 +238,27 @@ def main():
                       nextpage.evaluate("()=>client.reconnect(s1)")["canonical_ack_status"]=="CANONICAL_ACK_CONFIRMED")
                 check("known committed first turn cannot rePOST after reload",
                       evaluate(nextpage,"client.begin(s1)")=="HOLD_STREAM_RECONNECT_ONLY")
+                # Captured signed ACK from a prior GET must NOT satisfy a
+                # different challenge. Test this before permanent tamper.
+                nextpage.evaluate("""()=>{
+                  window.freshRead=transport.readCanonicalAck;
+                  transport.readCanonicalAck=(s,e,ch)=>
+                    freshRead(s,e,{...ch,request_nonce:'captured-replay'});
+                }""")
+                check("replayed signed ACK GET nonce is rejected",
+                      evaluate(nextpage,"client.reconnect(s1)")=="HOLD_CROSSTAB_READBACK")
+                nextpage.evaluate("()=>{transport.readCanonicalAck=freshRead}")
+                nextpage.evaluate("""()=>{
+                  window.freshRead=transport.readCanonicalAck;
+                  transport.readCanonicalAck=async(s,e,ch)=>{
+                    const p=await freshRead(s,e,ch);
+                    return {...p,issued_at_ms:Date.now()-80000,
+                      expires_at_ms:Date.now()-70000};
+                  };
+                }""")
+                check("expired canonical ACK GET fails closed",
+                      evaluate(nextpage,"client.reconnect(s1)")=="HOLD_CROSSTAB_READBACK")
+                nextpage.evaluate("()=>{transport.readCanonicalAck=freshRead}")
                 nextpage.evaluate("()=>fetch('/tamper')")
                 check("forged canonical receipt fails closed",
                       evaluate(nextpage,"client.reconnect(s1)")=="HOLD_CROSSTAB_RECEIPT_UNVERIFIED")
