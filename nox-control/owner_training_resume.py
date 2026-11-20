@@ -224,6 +224,43 @@ def file_sha(path):
             os.close(fd)
 
 
+
+def stable_backup_bytes(path, expected_sha256=None, max_bytes=64 * 1024 * 1024):
+    """Back up only a single stable named regular-file preimage, never a swapped link."""
+    path = Path(path)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError as exc:
+        raise RuntimeError('HOLD_BACKUP_SOURCE_CHANGED') from exc
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or not 0 <= before.st_size <= max_bytes:
+            raise RuntimeError('HOLD_BACKUP_SOURCE_CHANGED')
+        with os.fdopen(fd, 'rb') as stream:
+            fd = -1
+            raw = stream.read(before.st_size + 1)
+            after = os.fstat(stream.fileno())
+        try:
+            named = os.stat(path, follow_symlinks=False)
+        except OSError as exc:
+            raise RuntimeError('HOLD_BACKUP_SOURCE_CHANGED') from exc
+        fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+        if (len(raw) != before.st_size
+                or any(getattr(before, key) != getattr(after, key)
+                       or getattr(before, key) != getattr(named, key)
+                       for key in fields)):
+            raise RuntimeError('HOLD_BACKUP_SOURCE_CHANGED')
+        if (expected_sha256 is not None
+                and (type(expected_sha256) is not str
+                     or not re.fullmatch('[0-9a-f]{64}', expected_sha256)
+                     or hashlib.sha256(raw).hexdigest() != expected_sha256)):
+            raise RuntimeError('HOLD_BACKUP_PREIMAGE_MISMATCH')
+        return raw
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
+
 def load_helper():
     data = base64.b64decode(BUNDLE.get('owner_native_repair.py', ''), validate=True)
     if hashlib.sha256(data).hexdigest() != HELPER_SHA:
@@ -960,15 +997,16 @@ def main():
         result['steps'].append({'kind': kind, 'data': data, 'time': time.time()})
         save(); helper.emit(kind, data)
 
-    def backup(path):
+    def backup(path, expected_sha256=None):
         destination = backups/str(path).lstrip('/')
         if destination.exists() or path.is_symlink():
             raise RuntimeError('HOLD_SOURCE_BACKUP_COLLISION')
-        helper.atomic(destination, path.read_bytes())
+        data = stable_backup_bytes(path, expected_sha256)
+        helper.atomic(destination, data)
 
     def install(path, data):
         old = file_sha(path)
-        backup(path); helper.atomic(path, data); os.chmod(path, 0o755)
+        backup(path, old); helper.atomic(path, data); os.chmod(path, 0o755)
         expected[path] = hashlib.sha256(data).hexdigest()
         step('source_installed', {'path': str(path), 'before': old, 'after': expected[path]})
 
@@ -1103,7 +1141,7 @@ def main():
             install(WRAPPER, helper.wrapper_source(request).encode())
             if helper.command(['bash', '-n', str(WRAPPER)])[0]:
                 raise RuntimeError('HOLD_WRAPPER_SYNTAX')
-            backup(POLICY)
+            backup(POLICY, file_sha(POLICY))
             policy.update(training_allowed=True, training_service=SERVICE,
                           training_request=request, training_source_sha=source,
                           training_gpu=1, training_planned_steps=1000,
