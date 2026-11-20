@@ -76,7 +76,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const observer = fs.readFileSync(0, 'utf8');
-async function check(chunks) {
+async function check(chunks, status=200) {
   let index = 0;
   const reader = {
     read: async () => index < chunks.length
@@ -85,6 +85,7 @@ async function check(chunks) {
     cancel: async () => {}
   };
   const response = {
+    status,
     body: {getReader: () => reader},
     clone() { return this; }
   };
@@ -111,6 +112,14 @@ async function check(chunks) {
   assert.equal(split.nativeStreamComplete,true,'split valid UTF-8 must pass');
   assert.equal(split.error,null);
   assert.equal(split.nativeTerminalCount,1);
+  // A syntactically valid DONE in a native HTTP error response is NOT a
+  // successful model turn and cannot certify S03 persistence.
+  for (const status of [401, 403, 500, 503]) {
+    const rejected = await check([complete], status);
+    assert.equal(rejected.nativeStreamComplete,false,'non-200 must HOLD');
+    assert.equal(rejected.error,'HOLD_QA_NATIVE_HTTP_STATUS');
+    assert.equal(rejected.nativeTerminalCount,0);
+  }
   const dangling = await check([complete,Buffer.from([0xc3])]);
   assert.equal(dangling.nativeStreamComplete,false,'dangling UTF-8 must HOLD');
   assert.equal(dangling.error,'HOLD_QA_STREAM_OBSERVER');

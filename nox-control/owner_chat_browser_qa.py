@@ -556,6 +556,7 @@ OBSERVER_JS = r"""
  addEventListener('DOMContentLoaded',watch,{once:true});
  const fetch0=window.fetch.bind(window);
  async function observe(response){
+   if(response.status!==200){q.error='HOLD_QA_NATIVE_HTTP_STATUS';return;}
    if(!response.body){q.error='HOLD_NO_NATIVE_RESPONSE_BODY';return;}
    const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});let buffer='',sawEof=false;
    try{
