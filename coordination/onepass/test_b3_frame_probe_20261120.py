@@ -5,10 +5,23 @@ import pathlib
 import tempfile
 import unittest
 
-from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url
+from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity
 
 
 class TestProbe(unittest.TestCase):
+    def test_renderer_resource_identity_fail_closed(self):
+        a = renderer_resource_identity([('script', 'const NOX = true;')],
+                                       [('stylesheet', 'https://nox.invalid/res.css', b'body{}')])
+        b = renderer_resource_identity([('script', 'const NOX = true;')],
+                                       [('stylesheet', 'https://nox.invalid/res.css', b'body{opacity:0}')])
+        self.assertRegex(a['sha256'], r'^[a-f0-9]{64}$')
+        self.assertEqual(a['count'], 2)
+        self.assertNotEqual(a['sha256'], b['sha256'])
+        with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_RENDER_RESOURCES_MISSING'):
+            renderer_resource_identity([], [])
+        with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_RENDER_RESOURCE_INVALID'):
+            renderer_resource_identity([], [('stylesheet', 'x', 'not bytes')])
+
     def test_source_contract(self):
         self.assertEqual(summarize([16.0] * 90)['p95_ms'], 16.0)
         with self.assertRaises(ValueError):
@@ -50,7 +63,8 @@ class TestProbe(unittest.TestCase):
     def test_baseline_provenance_and_six_frame_modes(self):
         rows = [
             {'width': width, 'height': height, 'mode': mode,
-             'frame_time': {'frames': 90, 'p95_ms': 16.0}}
+             'frame_time': {'frames': 90, 'p95_ms': 16.0},
+             'renderer_resource_sha256': 'a' * 64, 'renderer_resource_count': 2}
             for width, height in ((320, 720), (390, 844), (1440, 900))
             for mode in ('normal', 'reduced')
         ]
@@ -76,6 +90,18 @@ class TestProbe(unittest.TestCase):
             with self.subTest(change=change), self.assertRaisesRegex(
                     ValueError, 'HOLD_BASELINE_PROVENANCE_MISMATCH|HOLD_BASELINE_MISSING_LIVE_SELECTOR|HOLD_BASELINE_LANDING_URL_UNVERIFIED'):
                 compare_baseline(measured, wrong)
+        drift = copy.deepcopy(baseline)
+        drift['runs'][0]['renderer_resource_sha256'] = 'b' * 64
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_RENDER_IDENTITY_DRIFT'):
+            compare_baseline(measured, drift)
+        absent = copy.deepcopy(baseline)
+        absent['runs'][0].pop('renderer_resource_sha256')
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_RENDER_IDENTITY_MISSING'):
+            compare_baseline(measured, absent)
+        changed_count = copy.deepcopy(baseline)
+        changed_count['runs'][0]['renderer_resource_count'] = 1
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_RENDER_IDENTITY_DRIFT'):
+            compare_baseline(measured, changed_count)
         missing = copy.deepcopy(baseline)
         missing['runs'].pop()
         with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_FRAME_COVERAGE'):
@@ -114,6 +140,7 @@ class TestProbe(unittest.TestCase):
             self.assertTrue(result['service_workers_blocked'])
             self.assertFalse(result['native_s03_verified'])
             self.assertTrue(result['synthetic_fixture'])
+            self.assertTrue(all(r['renderer_resource_sha256'] is None for r in result['runs']))
             self.assertTrue(result['expected_selector_checked'])
             self.assertFalse(result['landing_url_verified'])
             self.assertFalse(result['installed_model_identity_verified'])
