@@ -9,6 +9,18 @@ import json
 import math
 from pathlib import Path
 
+
+def _finite_nonnegative(value):
+    # Owner telemetry may contain JSON booleans, NaN/Infinity, or strings.
+    # They must never authorize progress or crash read-only diagnostics.
+    if type(value) not in (int, float) or value < 0:
+        return False
+    try:
+        return math.isfinite(value)
+    except (OverflowError, ValueError):
+        return False
+
+
 def assess(snapshot):
     issues = []
     def add(code, urgency, advice, question=None):
@@ -81,13 +93,21 @@ def assess(snapshot):
     if s03.get("readback_verified") is not True:
         add("S03_NOT_VERIFIED", "hold", "Do not claim persistent memory; verify SQLite integrity and restart readback.")
     temp = gpu.get("temperature_c")
-    if isinstance(temp, (int, float)) and not isinstance(temp, bool) and temp >= 70:
+    if "temperature_c" in gpu and not _finite_nonnegative(temp):
+        add("GPU_THERMAL_READING_INVALID", "safety",
+            "Invalid GPU temperature measurement; refuse new training until an authenticated sensor readback.")
+    elif _finite_nonnegative(temp) and temp >= 70:
         add("GPU_THERMAL_LIMIT", "safety", "Hold new training admission; use existing host SAFE70 and sensor policy.")
     if gpu.get("temperature_sensor_valid") is not True:
         add("GPU_SENSOR_MISSING", "safety", "Do not train until trusted thermal telemetry is restored.")
-    if disk.get("free_gib") is None or not isinstance(disk.get("free_gib"), (int,float)):
+    free_gib = disk.get("free_gib")
+    reserve_gib = disk.get("checkpoint_reserve_gib", 10)
+    if free_gib is None:
         add("DISK_UNKNOWN", "hold", "Inspect free disk and checkpoint reserve before training.")
-    elif disk["free_gib"] < max(5, float(disk.get("checkpoint_reserve_gib", 10))):
+    elif not _finite_nonnegative(free_gib) or not _finite_nonnegative(reserve_gib):
+        add("DISK_TELEMETRY_UNVERIFIED", "hold",
+            "Non-finite, negative or wrongly typed disk/reserve telemetry; no downloads or training admission.")
+    elif free_gib < max(5, reserve_gib):
         add("DISK_CHECKPOINT_RESERVE", "urgent", "Pause new downloads and training admission; preserve existing weights, S03 and checkpoints.")
     if trainer.get("running") is True and trainer.get("checkpoint_recent") is not True:
         add("TRAIN_CHECKPOINT_STALE", "urgent", "Inspect trainer heartbeat and checkpoint write/readback; avoid blind restart.")
