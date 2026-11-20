@@ -45,18 +45,23 @@ def _now() -> float:
 
 
 def _canonical_url(value: str) -> str:
-    parts = urlsplit(value.strip())
-    if parts.scheme.lower() != "https" or not parts.hostname:
-        raise HunterError("URL must use HTTPS and include a host")
-    if parts.username or parts.password:
-        raise HunterError("credentials in URLs are forbidden")
-    host = parts.hostname.lower()
-    if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
-        raise HunterError("local hostnames are forbidden")
+    # urllib may raise ValueError for malformed brackets/ports and may silently
+    # discard embedded control characters. Neither may become a source URL.
+    if not isinstance(value, str) or not value or any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
+        raise HunterError("source URL must be printable text")
     try:
+        parts = urlsplit(value.strip())
+        host = parts.hostname
         port = parts.port
     except ValueError as exc:
-        raise HunterError("invalid HTTPS port") from exc
+        raise HunterError("malformed HTTPS URL") from exc
+    if parts.scheme.lower() != "https" or not host:
+        raise HunterError("URL must use HTTPS and include a host")
+    if "@" in parts.netloc:
+        raise HunterError("credentials in URLs are forbidden")
+    host = host.lower()
+    if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
+        raise HunterError("local hostnames are forbidden")
     if port not in (None, 443):
         raise HunterError("non-default HTTPS ports are forbidden")
     try:
@@ -94,7 +99,7 @@ def _validate_source(raw: Any) -> dict[str, Any]:
     interval = raw.get("interval_seconds")
     if not isinstance(source_id, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,79}", source_id):
         raise HunterError("source id must use 1-80 safe characters")
-    if kind not in KINDS:
+    if not isinstance(kind, str) or kind not in KINDS:
         raise HunterError("unsupported source kind")
     if not isinstance(allowed_hosts, list) or not allowed_hosts or any(not isinstance(h, str) or not h for h in allowed_hosts):
         raise HunterError("allowed_hosts must be a non-empty list of exact host names")
