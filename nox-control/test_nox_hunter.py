@@ -7,6 +7,7 @@ import io
 import json
 import sqlite3
 from unittest.mock import patch
+from urllib.error import HTTPError, URLError
 from pathlib import Path
 import tempfile
 import unittest
@@ -105,6 +106,33 @@ class HunterURLSafetyTests(unittest.TestCase):
         record = hunter._item_record(source, {"title": "page", "content": "text",
                                                "url": source["url"], "published": ""}, 1000.0)
         self.assertEqual(record[1], source["url"])
+
+    def test_http_error_receipts_redact_urls_and_query_credentials(self):
+        canary = "SENSITIVE_QUERY_CANARY_DO_NOT_STORE"
+        endpoint = "https://example.org/feed?token=" + canary
+        source = hunter._validate_source({
+            "id": "sensitive", "kind": "rss", "url": endpoint,
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "state.sqlite"
+            failures = [
+                (HTTPError(endpoint, 401, "denied " + canary, {}, None),
+                 "HTTPError: status=401"),
+                (URLError("connection failed for " + endpoint),
+                 "URLError: str"),
+            ]
+            for step, (raised, expected) in enumerate(failures):
+                with patch.object(hunter, "_fetch", side_effect=raised):
+                    result = hunter.poll_due([source], db, now=1000.0 + step * 600)
+                self.assertEqual(result[0]["status"], "error")
+                self.assertEqual(result[0]["error"], expected)
+                self.assertNotIn(canary, json.dumps(result))
+            with sqlite3.connect(db) as conn:
+                saved = conn.execute("SELECT last_error FROM source_state WHERE source_id=?",
+                                     ("sensitive",)).fetchone()[0]
+                self.assertEqual(saved, "URLError: str")
+                self.assertNotIn(canary, saved)
 
     def test_cli_returns_structured_config_error_without_network(self):
         with tempfile.TemporaryDirectory() as tmp:
