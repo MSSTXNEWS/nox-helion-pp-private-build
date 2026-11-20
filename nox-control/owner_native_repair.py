@@ -21,6 +21,19 @@ PREFLIGHT = 'owner_hermes_ram_preflight.py'
 PREFLIGHT_SHA = '6b1b0393101d485a12c2b0019095f2aa655c931385645ac655b88f916e154a10'
 SECONDS = 14
 SCHEMA = 'NOX_HERMES_COLD_PREFLIGHT_V1'
+OLD_WEIGHTS = {
+    'hermes': 'Hermes-3-Llama-3.1-8B.Q4_K_M.gguf',
+    'dolphin': 'Dolphin3.0-Llama3.1-8B-Q4_K_M.gguf',
+    'deep_hermes': 'NousResearch_DeepHermes-3-Llama-3-8B-Preview-Q4_K_M.gguf',
+    'qwen25_coder': 'Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf',
+    'saiga': 'saiga_nemo_12b.Q4_K_M.gguf',
+    'vikhr': 'vikhr-nemo-12b-instruct-r-21-09-24-q4_k_m.gguf',
+}
+WEIGHT_ROOTS = {
+    'tmpfs': Path('/dev/shm/nox_t802u/teachers'),
+    'offload': Path('/root/nox/offload_shm_t888u/teachers'),
+    'models': Path('/root/nox/models/teachers'),
+}
 
 
 def historical_probe():
@@ -133,6 +146,27 @@ def quick_metadata(probe):
     return view
 
 
+def old_teacher_metadata(roots):
+    rows = []
+    for label, path in roots.items():
+        try:
+            resolved = path.resolve(strict=True)
+        except FileNotFoundError:
+            rows.append({'location': label, 'state': 'ABSENT'})
+            continue
+        except (OSError, RuntimeError):
+            rows.append({'location': label, 'state': 'UNAVAILABLE'})
+            continue
+        if resolved not in roots.values():
+            rows.append({'location': label, 'state': 'UNEXPECTED_PATH'})
+            continue
+        files = {}
+        for model, filename in OLD_WEIGHTS.items():
+            files[model] = leaf_metadata(resolved / filename, roots['tmpfs'] / filename)
+        rows.append({'location': label, 'state': 'OBSERVED', 'files': files})
+    return rows
+
+
 def main():
     request, source = (os.environ.get(key, '') for key in
                        ('NOX_OWNER_REQUEST_ID', 'NOX_OWNER_SOURCE_SHA'))
@@ -146,10 +180,13 @@ def main():
     signal.setitimer(signal.ITIMER_REAL, SECONDS)
     step = ['load_pinned_helpers']
     metadata = None
+    teacher_metadata = None
     try:
         probe = historical_probe()
         step[0] = 'collect_quick_metadata'
         metadata = quick_metadata(probe)
+        step[0] = 'collect_old_teacher_metadata'
+        teacher_metadata = old_teacher_metadata(WEIGHT_ROOTS)
         result = observe(probe, time.monotonic() + SECONDS - 1, step)
     except (OSError, RuntimeError, ValueError, AttributeError, KeyError, TypeError) as error:
         result = {'state': 'HOLD_HERMES_COLD_OBSERVATION', 'host_mutations': False,
@@ -162,7 +199,8 @@ def main():
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, previous)
-    result.update(schema=SCHEMA, request=request, source_sha=source, metadata_only=metadata)
+    result.update(schema=SCHEMA, request=request, source_sha=source,
+                  metadata_only=metadata, old_teachers_metadata=teacher_metadata)
     print('NOX_MAINT_REPAIR=' + json.dumps({'kind': 'hermes_cold_preflight', 'data': result},
                                          separators=(',', ':')), flush=True)
     print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
