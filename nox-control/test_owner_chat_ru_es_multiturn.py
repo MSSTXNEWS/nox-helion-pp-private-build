@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock
 
 from owner_chat_browser_qa import (
     allowed_qa_request,
+    allowed_qa_stream_url,
     canonical_s03_proof_valid,
     click_send,
     firstturn_history_valid,
@@ -634,6 +635,33 @@ async function check(chunks, status=200) {
             {'role': 'user', 'content': spanish},
             {'role': 'assistant', 'content': expected_second},
         ], first_prompt, first_answer, spanish, expected_second))
+
+    def test_stream_url_query_cannot_override_native_model_or_history(self):
+        # The browser's real route is a plain path. JSON-body admission alone
+        # is insufficient if the request URL carries alternate query metadata.
+        origin = 'owner.example:18775'
+        endpoint = 'https://' + origin + '/api/nox/chat/stream'
+        self.assertTrue(allowed_qa_stream_url(endpoint, origin))
+        self.assertTrue(allowed_qa_stream_url('http://' + origin + '/api/nox/chat/stream', origin))
+        for url in (
+            endpoint + '?model=foreign-model',
+            endpoint + '?history=%5B%5D',
+            endpoint + '?dialog_id=other',
+            endpoint + '?client_request_id=qa-2',
+            endpoint + '#override',
+            endpoint + '/extra',
+            endpoint.replace('owner.example', 'other.example'),
+            endpoint.replace(':18775', ':9999'),
+            endpoint.replace('https:', 'ftp:'),
+        ):
+            with self.subTest(url=url):
+                self.assertFalse(allowed_qa_stream_url(url, origin))
+        self.assertFalse(allowed_qa_stream_url(None, origin))
+        self.assertFalse(allowed_qa_stream_url(endpoint, None))
+        # Regression must cover wiring in the live Playwright route rather
+        # than validating an unreferenced helper.
+        self.assertIn('allowed_qa_stream_url(request.url, origin)',
+                      inspect.getsource(browser_run))
 
     def test_ru_es_native_post_rejects_model_route_and_history_overrides(self):
         # The two-turn QA guard must not certify a different backend/model

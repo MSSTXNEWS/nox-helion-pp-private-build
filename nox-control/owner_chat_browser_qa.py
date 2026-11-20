@@ -153,6 +153,26 @@ def allowed_qa_request(count, second_permitted, first_prompt, second_prompt, bod
             and not QA_GENERATION_OVERRIDES.intersection(body))
 
 
+def allowed_qa_stream_url(request_url, origin):
+    """Certify the exact existing OneHost streaming endpoint, not query overrides.
+
+    The browser QA must not accept a native POST whose URL adds alternate
+    routing/model/history arguments outside the already checked JSON body.
+    This validates the request; it never submits another POST.
+    """
+    if not isinstance(request_url, str) or not isinstance(origin, str):
+        return False
+    try:
+        target = urllib.parse.urlsplit(request_url)
+    except ValueError:
+        return False
+    return (target.scheme in ('http', 'https')
+            and target.netloc == origin
+            and target.path == '/api/nox/chat/stream'
+            and not target.query and not target.fragment
+            and target.username is None and target.password is None)
+
+
 def exact_native_post_fence(snapshot, admitted, expected):
     """Require observed browser POSTs AND owner route admission to agree exactly.
 
@@ -961,7 +981,8 @@ async def browser_run(report, directory, available):
                 if url.path=='/api/nox/chat/stream':
                     try:
                         body=request.post_data_json
-                        own=(request.method=='POST' and allowed_qa_request(
+                        own=(request.method=='POST' and allowed_qa_stream_url(request.url, origin)
+                             and allowed_qa_request(
                              stream_admitted,second_permitted,prompt,second_prompt,body,did))
                     except Exception:
                         own=False
