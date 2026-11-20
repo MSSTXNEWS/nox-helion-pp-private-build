@@ -330,6 +330,23 @@ def build_manifest(data: Any) -> dict[str, Any]:
     return result
 
 
+
+def _unique_json_fields(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Reject duplicate fields at every nesting depth, including authorization receipts."""
+    output = {}
+    for key, value in pairs:
+        if key in output:
+            # Do not echo untrusted keys; they can themselves contain credentials.
+            raise ForgeError("duplicate JSON field in FORGE input")
+        output[key] = value
+    return output
+
+
+def _reject_nonfinite_json_constant(_value: str) -> Any:
+    """NaN/Infinity are not JSON and must not enter a provenance manifest."""
+    raise ForgeError("nonfinite JSON constant in FORGE input")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate one metadata-only FORGE 4B01 manifest.")
     parser.add_argument("--input", required=True, help="JSON input using nox.forge.input.v1")
@@ -341,7 +358,7 @@ def main(argv: list[str] | None = None) -> int:
         raw = path.read_bytes()
         if len(raw) > MAX_INPUT_BYTES:
             raise ForgeError("input must be a non-symlink regular file no larger than 8 MiB")
-        result = build_manifest(json.loads(raw.decode("utf-8")))
+        result = build_manifest(json.loads(raw.decode("utf-8"),\n            object_pairs_hook=_unique_json_fields,\n            parse_constant=_reject_nonfinite_json_constant))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, ForgeError) as exc:
         print(json.dumps({"status": "HOLD", "error": f"{type(exc).__name__}: {str(exc)[:300]}"}), file=sys.stderr)
         return 2
