@@ -151,6 +151,18 @@ def compare_baseline(current, prior):
         deltas[key] = round(now_p95 - p95, 3)
     return deltas
 
+async def sample_frames(page, timeout_seconds=15.0):
+    """Bound frame sampling so a suspended rAF cannot hang the B3 browser probe.
+
+    A timed-out sample is never promoted to frame evidence. The caller closes
+    the browser context in its existing finally block.
+    """
+    try:
+        return await asyncio.wait_for(page.evaluate(SAMPLE_JS), timeout=timeout_seconds)
+    except asyncio.TimeoutError as exc:
+        raise ValueError('HOLD_FRAME_SAMPLE_TIMEOUT') from exc
+
+
 async def _measure_async(url, output, chromium, baseline, fixture_html, expected_selector):
     from playwright.async_api import async_playwright
     verify_url(url)
@@ -237,7 +249,7 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                         await page.wait_for_timeout(350)
                         if fixture_html is None:
                             require_landing_url(url, page.url)
-                        frame_samples = await page.evaluate(SAMPLE_JS)
+                        frame_samples = await sample_frames(page)
                         mode = 'reduced' if reduced else 'normal'
                         filename = f'b3_{width}x{height}_{mode}.png'
                         path = out / filename
