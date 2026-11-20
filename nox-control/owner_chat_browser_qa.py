@@ -245,6 +245,27 @@ def readback_evidence(saved, native_equal, two_turn_mode):
     }
 
 
+def clean_two_turn_browser_runtime(page_errors, network):
+    """No browser-only RU/ES PASS with page JS errors or broken JS/CSS.
+
+    The overall browser_run historically checked these conditions only after
+    returning. Canonical S03 HOLD prevents that return in two-turn mode, so
+    recheck captured observations before any partial browser PASS.
+    Failed image assets are not critical JS/CSS failures.
+    """
+    if (not isinstance(page_errors, list) or page_errors
+            or not isinstance(network, list)):
+        return False
+    for item in network:
+        if not isinstance(item, dict):
+            return False
+        if item.get('resource_type') in ('script', 'stylesheet'):
+            status = item.get('status')
+            if type(status) is not int or not 200 <= status < 400:
+                return False
+    return True
+
+
 def distinct_explicit_message_ids(rows):
     """Optional row IDs must not claim multiple distinct turns with one identity.
 
@@ -1407,6 +1428,8 @@ async def browser_run(report, directory, available):
                     raise RuntimeError('HOLD_MULTITURN_SCREENSHOT_CAPTURE_PENDING')
                 require_screenshot_captures(report)
                 report['multiturn_second_screenshot_verified']=True
+                if not clean_two_turn_browser_runtime(page_errors, network):
+                    raise RuntimeError('HOLD_BROWSER_JAVASCRIPT_OR_RESOURCE_ERRORS')
                 report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:
                     raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')

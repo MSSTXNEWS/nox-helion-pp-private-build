@@ -33,6 +33,7 @@ from owner_chat_browser_qa import (
     multiturn_transcript_sha256,
     native_terminal_stream_valid,
     readback_evidence,
+    clean_two_turn_browser_runtime,
     browser_run,
     require_screenshot_captures,
     OBSERVER_JS,
@@ -1017,6 +1018,32 @@ async function check(chunks, status=200) {
         self.assertLess(source.index("multiturn_browser_acceptance_verified"),
                         source.index("HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK"))
         self.assertIn("canonical_s03_verified=False", source)
+
+    def test_ru_es_browser_pass_fences_js_and_critical_static_failures_before_s03_hold(self):
+        """Partial two-turn browser PASS is not valid with JS or failed JS/CSS."""
+        healthy = [{'path': '/nox.js', 'status': 200, 'resource_type': 'script'},
+                   {'path': '/nox.css', 'status': 304, 'resource_type': 'stylesheet'},
+                   {'path': '/missing-image', 'status': 404, 'resource_type': 'image'}]
+        self.assertTrue(clean_two_turn_browser_runtime([], healthy))
+        self.assertTrue(clean_two_turn_browser_runtime([], []))
+        rejected = [
+            ([{'category': 'TypeError'}], healthy),
+            ([], healthy + [{'status': 404, 'resource_type': 'script'}]),
+            ([], healthy + [{'status': 503, 'resource_type': 'stylesheet'}]),
+            ([], healthy + [{'status': None, 'resource_type': 'script'}]),
+            ([], healthy + [{'status': True, 'resource_type': 'script'}]),
+            (None, healthy), ([], None), ([], [None])
+        ]
+        for page_errors, network in rejected:
+            with self.subTest(page_errors=page_errors, network=network):
+                self.assertFalse(clean_two_turn_browser_runtime(page_errors, network))
+        caller = inspect.getsource(browser_run)
+        fence = "if not clean_two_turn_browser_runtime(page_errors, network):"
+        self.assertIn(fence, caller)
+        self.assertLess(caller.index(fence),
+                        caller.index("report['multiturn_browser_acceptance_verified']=True"))
+        self.assertLess(caller.index(fence),
+                        caller.index("HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK"))
 
     def test_ru_es_four_turn_history_needs_independent_canonical_s03(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
