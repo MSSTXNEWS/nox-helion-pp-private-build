@@ -460,18 +460,28 @@ def install(app, B):
     @app.post("/api/nox/stop")
     async def a_stop(request: Request):
         global CANCEL_ALL_EPOCH
+        # Malformed input must never escalate into an implicit broadcast STOP.
+        # This API is generation-only: media/task/OWNER STOP have separate fences.
         try:
             b = await request.json()
         except Exception:
-            b = {}
-        target = str(b.get("request_id", "*"))
+            return JSONResponse({"status": "HOLD", "reason": "STOP_INVALID_JSON"}, status_code=400)
+        if not isinstance(b, dict):
+            return JSONResponse({"status": "HOLD", "reason": "STOP_INVALID_BODY"}, status_code=400)
+        if b.get("scope", "generation") != "generation":
+            return JSONResponse({"status": "HOLD", "reason": "STOP_WRONG_SCOPE"}, status_code=409)
+        target = b.get("request_id", "*")
+        if not isinstance(target, str) or re.fullmatch(r"(?:\\*|[A-Za-z0-9._:-]{1,128})", target) is None:
+            return JSONResponse({"status": "HOLD", "reason": "STOP_INVALID_REQUEST_ID"}, status_code=400)
         if target == "*":
-            # Broadcast only to requests that already existed. Never clear
-            # another in-flight request's STOP when a newer stream begins.
+            # A broadcast applies only to previously admitted requests.
             CANCEL_ALL_EPOCH += 1
         else:
             CANCEL.add(target)
-        return {"status": "STOPPING"}
+        # Signal queued is not evidence that generation actually stopped.
+        return {"status": "STOPPING", "scope": "generation",
+                "target_request_id": target, "stop_confirmed": False,
+                "media_stopped": False, "task_cancelled": False, "owner_stop": False}
 
     @app.post("/api/chat")
     async def a_chat(request: Request):
