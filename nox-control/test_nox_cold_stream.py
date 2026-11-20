@@ -116,6 +116,21 @@ class ColdStreamingTests(unittest.TestCase):
             partial.unlink()
             self.assertEqual(dest.read_bytes(), b"verified new model")
 
+    def test_legacy_evict_requires_owner_governor_before_any_transfer(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            src = root / "model.gguf"
+            src.write_bytes(b"protected-weights")
+            args = SimpleNamespace(file=str(src), remote="noxdrive:NOX_COLD",
+                                   active_manifest=None, receipt_dir=str(root / "receipts"), evict=True)
+            with patch.object(cold, "command") as copy, patch.object(cold, "verify_remote_stream") as readback:
+                with self.assertRaisesRegex(RuntimeError, "HOLD_LEGACY_EVICT_NEEDS_OWNER_TWO_COPY_FD_MMAP_LEASE"):
+                    cold.upload(args)
+            copy.assert_not_called()
+            readback.assert_not_called()
+            self.assertEqual(src.read_bytes(), b"protected-weights")
+            self.assertFalse((root / "receipts").exists())
+
     def test_verified_upload_preserves_source_by_default(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
