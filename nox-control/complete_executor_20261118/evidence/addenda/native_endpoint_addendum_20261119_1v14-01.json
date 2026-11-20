@@ -41,22 +41,22 @@
         "native_binding_before_addendum": "UNBOUND_PENDING_NATIVE_CATALOG",
         "addendum_assessment": "ACCEPTED",
         "acceptance_binding": {
-          "evidence_pointer": "#/evidence/native_endpoint",
+          "evidence_pointer": "#/evidence/native_endpoint/chat_subreceipt",
           "corroboration_pointer": "#/evidence/https_edge",
           "workflow_run_id": 44590818738,
           "job_id": 135796020570,
           "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44590818738",
           "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44590818738/job/135796020570",
           "captured_at_utc": "2026-11-19T18:45:20.851Z",
-          "criterion_satisfied": "On the installed source-pinned NOX proxy, an authenticated owner request returned HTTP 200 from the existing POST /api/nox/chat/stream, emitted substantive response deltas and a terminal done frame, and matched its saved owner-dialog user and assistant messages. A separate edge maintenance run confirmed the same HTTPS chat URL and tunnel process.",
-          "scope_limit": "Native loopback API plus separately verified HTTPS edge continuity. Public HTTPS authenticated streaming, multi-turn recall, and acceptance of other original tasks remain outside this addendum."
+          "criterion_satisfied": "The embedded owner-authenticated native chat subreceipt returned HTTP 200 with 215 substantive deltas and terminal done, matching the exact saved owner-dialog pair on the pinned loopback proxy. This supports only the pinned native working-endpoint criterion; public HTTPS authenticated streaming is not established.",
+          "scope_limit": "Native loopback chat endpoint only. The separate edge receipt verifies URL/tunnel continuity only; public HTTPS authenticated streaming and multi-turn recall are not established. Other original tasks remain outside this addendum."
         }
       }
     },
     "mutation_boundary": "Evidence-only addendum. The immutable registry, original work receipts, and native queue rows retain their historical records."
   },
   "evidence": {
-    "kind": "owner_authenticated_native_chat_and_separate_edge_confirmation",
+    "kind": "owner_authenticated_native_chat_subreceipt_and_separate_edge_continuity",
     "native_endpoint": {
       "workflow_run_id": 44590818738,
       "job_id": 135796020570,
@@ -84,7 +84,32 @@
       "workflow_remote_exit_code": 2,
       "workflow_hold": "HOLD_WEB_EDGE_TUNNEL_RECEIPT",
       "chat_subreceipt_status": "LIVE_STREAM_OWNER_DIALOG_VERIFIED",
-      "chat_subreceipt_scope": "The authenticated chat request passed its own subreceipt: HTTP 200, substantive deltas, terminal done, and exact saved owner-dialog pair. The enclosing compound repair job failed because the independent web-edge tunnel gate did not pass in that run."
+      "chat_subreceipt_scope": "The authenticated chat request passed its own subreceipt: HTTP 200, substantive deltas, terminal done, and exact saved owner-dialog pair. The enclosing compound repair job failed because the independent web-edge tunnel gate did not pass in that run.",
+      "chat_subreceipt": {
+        "kind": "chat_policy_live_smoke",
+        "status": "LIVE_STREAM_OWNER_DIALOG_VERIFIED",
+        "operation_conclusion": "success",
+        "workflow_run_id": 44590818738,
+        "job_id": 135796020570,
+        "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44590818738/job/135796020570",
+        "source_ref": "084addf6ce5e8f3d07cf21f4991ff22eb37d4eab",
+        "installed_chat_proxy_sha256": "54b1932c3e408c91c3086de994eb9b85709d65066746b5ca520582829ab94d89",
+        "authenticated": true,
+        "method": "POST",
+        "endpoint": "http://127.0.0.1:8080/api/nox/chat/stream",
+        "http_status": 200,
+        "substantive_deltas": true,
+        "delta_count": 215,
+        "response_chars": 725,
+        "terminal_done": true,
+        "owner_dialog_pair_exact": true,
+        "elapsed_ms": 61810,
+        "model_loads": 0,
+        "service_restarts": 0,
+        "native_source_writes": 0,
+        "raw_content_exported": false,
+        "scope_limit": "Loopback native endpoint response only; no public HTTPS authenticated-stream verification and no multi-turn memory acceptance."
+      }
     },
     "https_edge": {
       "workflow_run_id": 44591678615,
