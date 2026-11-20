@@ -72,8 +72,19 @@ def _executor_status_reply(user_text,path=None):
             age=time.time()-meta.st_mtime
             if not 0<=age<=45:return unknown
             raw=source.read(750001)
-            if len(raw)>750000:return unknown
-        doc=json.loads(raw)
+            if len(raw)!=meta.st_size or len(raw)>750000:return unknown
+            # Detect in-place modifications even when the JSON stays valid.
+            after=os.fstat(source.fileno())
+            identity=lambda st:(st.st_dev,st.st_ino,st.st_mode,st.st_size,
+                                st.st_mtime_ns,st.st_ctime_ns)
+            if identity(after)!=identity(meta):return unknown
+        # A rename after open must not certify an obsolete descriptor.
+        if identity(os.stat(target,follow_symlinks=False))!=identity(meta):return unknown
+        # JSON defaults accept duplicate keys and nonfinite constants.
+        # Neither is trustworthy native status evidence.
+        doc=json.loads(raw.decode('utf-8','strict'),
+                       object_pairs_hook=_reject_duplicate_json_keys,
+                       parse_constant=_reject_nonfinite_json_constant)
         if not isinstance(doc,dict):return unknown
         rows=doc.get('workers');n=doc.get('n')
         if type(n) is not int or not 1<=n<=64 or not isinstance(rows,list) or len(rows)!=n:return unknown

@@ -955,6 +955,44 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             path.unlink();path.symlink_to(Path(folder)/'absent')
             self.assertIn('не могу подтвердить',stream._executor_status_reply('Сколько агентов?',path))
 
+    def test_executor_snapshot_rejects_ambiguous_json_and_inplace_rewrite(self):
+        # A well-formed but ambiguous status file must not advertise workers.
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'agents.json'
+            original={'n':1,'workers':[{
+                'id':'nox-agent-01','status':'idle','current_task':None}]}
+            question='Сколько агентов сейчас?'
+            invalid=(
+                '{"n":0,"n":1,"workers":[{"id":"nox-agent-01",'
+                '"status":"idle","current_task":null}]}',
+                '{"n":1,"workers":[{"id":"nox-agent-01",'
+                '"status":"idle","current_task":null}],"probe":NaN}',
+            )
+            with patch.object(ui,'owner_maintenance_gate',return_value='ABSENT'):
+                path.write_text(json.dumps(original),encoding='utf-8')
+                self.assertIn('настроено 1',stream._executor_status_reply(question,path))
+                for value in invalid:
+                    path.write_text(value,encoding='utf-8')
+                    answer=stream._executor_status_reply(question,path)
+                    self.assertIn('не могу подтвердить',answer)
+                    self.assertNotIn('настроено',answer)
+                path.write_text(json.dumps(original),encoding='utf-8')
+                real_fstat=os.fstat
+                first=[True]
+                def overwrite_after_initial_snapshot(fd):
+                    result=real_fstat(fd)
+                    if first[0]:
+                        first[0]=False
+                        path.write_text(json.dumps({
+                            'n':1,'workers':[{'id':'nox-agent-01',
+                            'status':'busy','current_task':{'id':'fake'}}]}),
+                            encoding='utf-8')
+                    return result
+                with patch.object(stream.os,'fstat',side_effect=overwrite_after_initial_snapshot):
+                    answer=stream._executor_status_reply(question,path)
+                self.assertIn('не могу подтвердить',answer)
+                self.assertNotIn('настроено',answer)
+
     async def test_nested_invalid_tool_arguments_hold_before_dispatch(self):
         # Strict json.loads(parse_constant=...) misses 1e999 -> Infinity,
         # and JSON-escaped surrogates only become invalid after json.loads.
