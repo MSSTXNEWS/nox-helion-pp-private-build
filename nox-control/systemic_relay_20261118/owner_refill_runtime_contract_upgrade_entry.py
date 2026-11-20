@@ -64,7 +64,7 @@ def protected(h):
     for name in names:
         p = subprocess.run(["supervisorctl", "status", name],
                            capture_output=True, text=True, timeout=8)
-        match = re.fullmatch(re.escape(name) + r"\\s+RUNNING\\s+pid\\s+([0-9]+),.*",
+        match = re.fullmatch(re.escape(name) + r"\s+RUNNING\s+pid\s+([0-9]+),.*",
                              p.stdout.strip())
         hold(p.returncode == 0 and match is not None, "PROTECTED_" + name.replace("-", "_"))
         ident = h.process_identity(int(match[1]))
@@ -166,7 +166,7 @@ def run():
         backup.mkdir(parents=True, mode=0o700)
         h.atomic(backup / "owner_systemic_refill.py", before[REFILL], 0o600)
         h.atomic(backup / "owner_native_subagents.json", before[CONFIG], 0o600)
-        h.atomic(backup / "queue_sha256.txt", (queue_sha + "\\n").encode(), 0o600)
+        h.atomic(backup / "queue_sha256.txt", (queue_sha + "\n").encode(), 0o600)
         hold(protected(h) == protected_before and h.stop_clear(ROOT), "SERVICE_CHANGED")
         hold(assert_idle(h) == queue_sha, "QUEUE_CHANGED")
         h.preimages(ROOT, EXPECTED)
