@@ -245,7 +245,7 @@ def main():
                   window.lateReadClient=mk(async()=>({ok:true,body:{getReader:()=>({
                     read:()=>new Promise(resolve=>{
                       window.releaseLateRead=()=>resolve({done:false,value:
-                        new TextEncoder().encode('event: delta\n'+'data: late-after-stop\n\n')});
+                        new TextEncoder().encode('event: delta\\n'+'data: late-after-stop\\n\\n')});
                     })
                   })}}),async(_s,d)=>lateReadEvents.push(d));
                   window.lateReadTask=lateReadClient.begin({
@@ -268,7 +268,7 @@ def main():
                     transport:{...transport,post:()=>new Promise(resolve=>{
                       window.releaseLatePost=()=>resolve({ok:true,body:{
                         getReader:()=>({read:async()=>({done:false,value:
-                          new TextEncoder().encode('event: delta\ndata: late-post\n\n')})})
+                          new TextEncoder().encode('event: delta\\ndata: late-post\\n\\n')})})
                       }});
                     })},
                     host,bridge,ui:{...ui,onDelta:async(_s,d)=>latePostEvents.push(d)},
@@ -295,8 +295,8 @@ def main():
                     transport:{...transport,post:async()=>({ok:true,body:{
                       getReader:()=>({read:async()=>({done:false,value:
                         new TextEncoder().encode(
-                          'event: delta\ndata: first\n\n'+
-                          'event: delta\ndata: second\n\n')})})
+                          'event: delta\\ndata: first\\n\\n'+
+                          'event: delta\\ndata: second\\n\\n')})})
                     }})},
                     host,bridge,
                     ui:{...ui,onDelta:async(_s,d,signal)=>{
