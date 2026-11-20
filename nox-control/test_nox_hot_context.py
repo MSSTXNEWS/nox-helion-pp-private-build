@@ -148,6 +148,26 @@ class HotContextTests(unittest.TestCase):
         with self.assertRaisesRegex(m.ContextHold,"CORE_TOO_LARGE"):
             call(persona="identity"*10000)
 
+    def test_non_scalar_unicode_holds_before_tokenization_or_history_hash(self):
+        # A lone surrogate can enter through JSON escapes or legacy SQLite.
+        # It must cause an explicit HOLD, not UnicodeEncodeError during SHA.
+        bad="\ud800"
+        for field in ("persona","system","current_user"):
+            with self.subTest(field=field), self.assertRaisesRegex(
+                    m.ContextHold,"HOLD_CONTEXT_"):
+                call(conversation=[],verified_s03=[],**{field:"safe"+bad})
+        turn={"id":"turn-1","role":"assistant","content":"old "+bad}
+        with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_TURN"):
+            call(conversation=[turn],verified_s03=[])
+        with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_TURN"):
+            call(conversation=[{**turn,"id":"bad"+bad,"content":"valid"}],verified_s03=[])
+        memory={"id":"memory","source_sha256":"a"*64,"text":"fact "+bad}
+        with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_S03"):
+            call(conversation=[],verified_s03=[memory])
+        valid=call(conversation=[{"id":"u1","role":"user","content":"¡Hola! 🌍"}],
+                   verified_s03=[],token_budget=512)
+        self.assertIn("¡Hola! 🌍",[x["content"] for x in valid["messages"]])
+
     def test_real_tokenizer_required(self):
         with self.assertRaisesRegex(m.ContextHold,"TOKENIZER_REQUIRED"):
             call(token_counter=None)
