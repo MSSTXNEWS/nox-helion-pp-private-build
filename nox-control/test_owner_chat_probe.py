@@ -464,6 +464,41 @@ class ProbeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_FIRST_TURN_NOT_ACCEPTED'):
             probe.require_durable_result(False, True, 'FIRST_TURN')
 
+    def test_history_row_ids_cannot_represent_multiple_distinct_turns(self):
+        """Row-ID collisions cannot certify distinct saved messages; this is not S03 proof."""
+        did = 'a' * 32
+        turns = [('first', '323'), ('followup', '323'), ('third', '3 plus NOX')]
+        rows = [
+            {'role': role, 'content': content}
+            for role, content in (
+                ('user', 'first'), ('assistant', '323'),
+                ('user', 'followup'), ('assistant', '323'),
+                ('user', 'third'), ('assistant', '3 plus NOX'))
+        ]
+        self.assertTrue(probe.scoped_history_matches_turns(
+            {'dialog_id': did, 'messages': rows}, turns, did))
+        for key in ('id', 'message_id', 's03_id'):
+            tagged = [dict(row, **{key: 'row-' + str(i)}) for i, row in enumerate(rows)]
+            self.assertTrue(probe.scoped_history_matches_turns(
+                {'dialog_id': did, 'messages': tagged}, turns, did))
+            corruptions = (
+                [*tagged[:1], dict(tagged[1], **{key: tagged[0][key]}), *tagged[2:]],
+                [dict(tagged[0], **{key: False}), *tagged[1:]],
+                [dict(tagged[0], **{key: None}), *tagged[1:]],
+                [dict(tagged[0], **{key: []}), *tagged[1:]],
+                [dict(tagged[0], **{key: ''}), *tagged[1:]],
+                [dict(tagged[0], **{key: ' ' * 4}), *tagged[1:]],
+                [dict(tagged[0], **{key: 'x' * 129}), *tagged[1:]],
+            )
+            for poisoned in corruptions:
+                with self.subTest(key=key, poisoned=poisoned[0].get(key)):
+                    history = {'dialog_id': did, 'messages': poisoned}
+                    self.assertFalse(probe.scoped_history_matches_turns(history, turns, did))
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED'):
+                        probe.require_executor_witness(
+                            {'saved': True, 's03_integrated': True},
+                            history, turns, True, True, did)
+
     def test_third_turn_owner_witness_uses_live_executor_count(self):
         """A truthful 3-worker owner must not be rejected by a stale 6-worker assertion."""
         for count in (3, 6):
