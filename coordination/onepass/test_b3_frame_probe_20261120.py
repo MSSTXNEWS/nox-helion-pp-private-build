@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import json
 import inspect
@@ -5,7 +6,7 @@ import pathlib
 import tempfile
 import unittest
 
-from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity
+from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames
 
 
 class TestProbe(unittest.TestCase):
@@ -121,6 +122,23 @@ class TestProbe(unittest.TestCase):
         self.assertEqual(len(compare_baseline(synthetic, synthetic)), 6)
         with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_PROVENANCE_MISMATCH'):
             compare_baseline(measured, synthetic)
+
+    def test_stalled_raf_fails_closed_without_frame_evidence(self):
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+                    await page.goto('about:blank')
+                    await page.evaluate('() => { window.requestAnimationFrame = () => 1; }')
+                    with self.assertRaisesRegex(ValueError, 'HOLD_FRAME_SAMPLE_TIMEOUT'):
+                        await sample_frames(page, timeout_seconds=0.15)
+                finally:
+                    await browser.close()
+
+        asyncio.run(run())
 
     def test_headless_real_chromium_mock_site(self):
         with tempfile.TemporaryDirectory() as tmp:
