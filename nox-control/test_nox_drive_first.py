@@ -10,6 +10,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+# Synthetic fixture: the real private Drive folder ID is never included in this test.
+TEST_COLD_ROOT = "NOX_TEST_COLD_ROOT_20261120"
+
 SPEC=importlib.util.spec_from_file_location("nox_drive_first",Path(__file__).with_name("nox_drive_first.py"))
 m=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(m)
 
@@ -44,6 +47,10 @@ class DriveFirstTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
+        root_pin = patch.object(m, "APPROVED_COLD_ROOT_SHA256",
+                                hashlib.sha256(TEST_COLD_ROOT.encode()).hexdigest())
+        root_pin.start()
+        self.addCleanup(root_pin.stop)
         self.root=Path(self.tmp.name)
         self.conf=self.root/"rclone.conf"
         self.state=self.root/"state"
@@ -61,7 +68,7 @@ class DriveFirstTests(unittest.TestCase):
         p.chmod(0o600)
         return p,hashlib.sha256(raw).hexdigest()
 
-    def configure(self,*,remote=m.DEST_ROOT,chunk="1Gi",root=m.ROOT_ID):
+    def configure(self,*,remote=m.DEST_ROOT,chunk="1Gi",root=TEST_COLD_ROOT):
         self.conf.write_text("[noxdrive]\ntype = drive\nroot_folder_id = "+root+
             '\ntoken = {"refresh_token":"TEST_ONLY"}\n'+
             "[noxchunks]\ntype = chunker\nremote = "+remote+
@@ -70,7 +77,7 @@ class DriveFirstTests(unittest.TestCase):
 
     def test_auto_chunker_created_after_google_auth_only(self):
         self.conf.write_text('[noxdrive]\ntype = drive\nroot_folder_id = '+
-                             m.ROOT_ID+'\ntoken = {"refresh_token":"TEST_ONLY"}\n')
+                             TEST_COLD_ROOT+'\ntoken = {"refresh_token":"TEST_ONLY"}\n')
         self.conf.chmod(0o600)
         called=[]
         def create(args, config, **kw):
@@ -91,7 +98,7 @@ class DriveFirstTests(unittest.TestCase):
 
     def test_auto_chunker_cannot_bypass_google_auth(self):
         self.conf.write_text('[noxdrive]\ntype = drive\nroot_folder_id = '+
-                             m.ROOT_ID+'\n')
+                             TEST_COLD_ROOT+'\n')
         self.conf.chmod(0o600)
         with patch.object(m,"run_rclone") as upload:
             with self.assertRaisesRegex(m.Hold,"GOOGLE_AUTH_REQUIRED"):
