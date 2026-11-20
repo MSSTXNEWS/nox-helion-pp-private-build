@@ -792,5 +792,25 @@ class CheckpointStepProvenance(unittest.TestCase):
 
 
 
+    def test_owned_flag_requires_source_token_boundary_before_release(self):
+        # An owner prefix ending in a hash must not match a longer, foreign
+        # source token. This test does not rename, release or touch live flags.
+        with tempfile.TemporaryDirectory() as folder:
+            flag = Path(folder) / "TRAIN_HOLD.flag"
+            prefix = "OWNER_REQUESTED_TRAINING_HALT request=3 source=" + "a" * 40
+            owned = load_pinned_verifier(Path(folder))["owned_flag"]
+            for valid in (prefix + "\n", prefix + " reason=owner_confirmed\n"):
+                flag.write_text(valid, encoding="utf-8")
+                self.assertIsNone(owned(flag, prefix))
+            for foreign in (prefix + "f\n", prefix + "_different_owner\n",
+                            prefix + "\tappended_without_approved_boundary\n"):
+                with self.subTest(foreign=foreign):
+                    flag.write_text(foreign, encoding="utf-8")
+                    with self.assertRaisesRegex(RuntimeError,
+                                                "HOLD_CURRENT_OWNER_FLAG_CHANGED"):
+                        owned(flag, prefix)
+                    self.assertEqual(flag.read_text(encoding="utf-8"), foreign)
+
+
 if __name__ == "__main__":
     unittest.main()
