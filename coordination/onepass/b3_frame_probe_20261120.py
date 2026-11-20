@@ -169,7 +169,12 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
     if fixture_html is None and not expected_selector:
         raise ValueError('HOLD_LIVE_SELECTOR_REQUIRED')
     out = pathlib.Path(output)
-    out.mkdir(parents=True, exist_ok=True)
+    # Evidence is single-use. A failed later run must never leave an older
+    # success report or mixed screenshots at the same output path.
+    try:
+        out.mkdir(parents=True, exist_ok=False)
+    except FileExistsError as exc:
+        raise ValueError('HOLD_EVIDENCE_DIRECTORY_REUSED') from exc
     result = {
         'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V2',
         'scope': 'browser-only; not model/weights/tokenizer/S03 acceptance',
