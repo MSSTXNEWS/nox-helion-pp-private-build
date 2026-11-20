@@ -1,7 +1,7 @@
 """NOX web adapter: делает веб-сборку «Резонанс» рабочей поверх умного моста (ядро, память S03, эмоции остаются на пути ответа).
 Подключается из nox_bridge.py: WEB.install(app, bridge_module). Слушает тот же 127.0.0.1:8091.
 Без выдумок: нет измерения -> null / HOLD. Токен доступа: если есть /root/nox/state/web_token, он обязателен."""
-import asyncio, hashlib, json, os, re, shutil, subprocess, threading, time
+import asyncio, hashlib, json, math, os, re, shutil, subprocess, threading, time
 import httpx
 from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
@@ -91,6 +91,26 @@ def _sampler(B):
         time.sleep(8)
 
 
+def _gpu_utilization_percent(samples):
+    """Unknown per-GPU utilization is NOT zero or free GPU capacity (6A04)."""
+    if not isinstance(samples, list) or not samples:
+        return None
+    values = []
+    for sample in samples:
+        if not isinstance(sample, dict):
+            return None
+        value = sample.get("util")
+        if type(value) not in (int, float):
+            return None
+        try:
+            if not 0 <= value <= 100 or not math.isfinite(value):
+                return None
+        except (OverflowError, ValueError):
+            return None
+        values.append(float(value))
+    return round(sum(values) / len(values), 1)
+
+
 def _status_flat():
     g = M["gpu"]
     ru, rt = M["ram"] or (None, None)
@@ -102,7 +122,7 @@ def _status_flat():
         "source": "nox-bridge:/proc+nvidia-smi", "gpu_source": "nvidia-smi", "fresh": bool(fresh),
         "cpu_percent": M["cpu"], "ram_percent": round(100 * ru / rt, 1) if ru and rt else None,
         "ram_used_gb": round(ru, 1) if ru else None, "ram_total_gb": round(rt, 1) if rt else None,
-        "gpu_percent": round(sum(x["util"] or 0 for x in g) / len(g), 1) if g else None,
+        "gpu_percent": _gpu_utilization_percent(g),
         "vram_used_gb": round(sum(x["mem_used_gib"] for x in g), 1) if g else None,
         "vram_total_gb": round(sum(x["mem_total_gib"] for x in g), 1) if g else None,
         "gpu_temperature_c": max((x["temp_c"] or 0 for x in g), default=None) if g else None,

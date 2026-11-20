@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'nox-control/nox_dispatcher_advisor.py'
+      - 'nox-control/bridge/nox_webapi.py'
+      - 'nox-control/test_nox_web_gpu_status_6a04.py'
       - 'nox-control/test_nox_dispatcher_advisor_6a04.py'
       - '.github/workflows/nox-a4-6a04-util-regression.yml'
 permissions:
@@ -18,4 +20,4 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - name: One focused source regression
-        run: python3 -B -m unittest discover -s nox-control -p 'test_nox_dispatcher_advisor_6a04.py' -q
+        run: python3 -B -m unittest discover -s nox-control -p 'test_*6a04.py' -q
