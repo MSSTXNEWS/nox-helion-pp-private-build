@@ -137,6 +137,34 @@ class ProbeTests(unittest.TestCase):
             self.assertIsNone(result["source_sha256"])
 
 
+
+    def test_alternate_private_oauth_candidate_is_reported_without_leaking_token(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "rclone.conf"
+            p.write_text("[noxdrive]\ntype = drive\nroot_folder_id = "+
+                         mod.EXPECTED_ROOT+"\ntoken = NEVER_EXPOSE_TOKEN\n")
+            p.chmod(0o600)
+            results = mod.probe_alternative_auth_configs({"TEST": p})
+            self.assertEqual(results, {"TEST": "PINNED_AUTH_CANDIDATE"})
+            self.assertNotIn("NEVER_EXPOSE_TOKEN", repr(results))
+
+    def test_alternate_rejects_wrong_root_symlink_and_weak_modes(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "rclone.conf"
+            path.write_text("[noxdrive]\ntype = drive\nroot_folder_id = other\n"
+                            "token = SECRET\n")
+            path.chmod(0o600)
+            self.assertEqual(mod.probe_alternative_auth_configs({"WRONG": path})["WRONG"],
+                             "WRONG_ROOT")
+            path.chmod(0o644)
+            self.assertEqual(mod.probe_alternative_auth_configs({"WEAK": path})["WEAK"],
+                             "UNSAFE_FILE")
+            link=Path(d)/"config-link"
+            link.symlink_to(path)
+            self.assertEqual(mod.probe_alternative_auth_configs({"LINK": link})["LINK"],
+                             "UNSAFE_PATH")
+
+
     def test_runner_no_file_content_or_credentials(self):
         def runner(args, **kwargs):
             self.assertNotIn("secret", repr(args))
