@@ -838,6 +838,19 @@ def verify_policy(value):
         raise RuntimeError('HOLD_NATIVE_BOOST_POLICY_CHANGED')
 
 
+def verify_training_policy_owner(policy, admission):
+    """Require owner-lineage identity on follow-up and continuation."""
+    if (type(policy) is not dict or type(admission) is not dict
+            or type(admission.get('request')) is not str
+            or not re.fullmatch('[0-9]+', admission['request'])
+            or type(admission.get('source_sha')) is not str
+            or not re.fullmatch('[0-9a-f]{40}', admission['source_sha'])
+            or policy.get('training_request') != admission['request']
+            or policy.get('training_source_sha') != admission['source_sha']):
+        raise RuntimeError('HOLD_TRAINING_POLICY_OWNER_MISMATCH')
+    return True
+
+
 def owned_flag(path, prefix):
     """Verify an owned STOP flag through one bounded, pathname-stable descriptor."""
     path = Path(path)
@@ -1028,6 +1041,7 @@ def main():
                     or not str(pointer.get('request', '')).isdigit()
                     or not re.fullmatch('[0-9a-f]{40}', pointer.get('source_sha', ''))):
                 raise RuntimeError('HOLD_PREVIOUS_TRAINING_ADMISSION')
+            verify_training_policy_owner(policy, pointer)
             previous = read_json(STATE/('owner_maintenance_'+pointer['request']+'.json'))
             if (previous.get('schema') != SCHEMA or previous.get('source_sha') != pointer['source_sha']
                     or previous.get('admission') != pointer or policy.get('training_allowed') is not True
@@ -1167,6 +1181,7 @@ def main():
                     current_policy = read_json(POLICY, 16000); verify_policy(current_policy)
                     if current_policy.get('training_allowed') is not True or current_policy.get('training_service') != SERVICE:
                         raise RuntimeError('HOLD_NEW_TRAINING_POLICY')
+                    verify_training_policy_owner(current_policy, pointer)
                     for path, sha in expected.items():
                         if file_sha(path) != sha:
                             raise RuntimeError('HOLD_SOURCE_CHANGED_DURING_TRAINING')
