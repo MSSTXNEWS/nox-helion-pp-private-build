@@ -19,7 +19,8 @@ from unittest import mock
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "owner_training_resume.py"
-FN_NAMES = {"read_json", "file_sha", "verify_paused_result", "resource_admission"}
+FN_NAMES = {"read_json", "file_sha", "verify_paused_result", "resource_admission",
+            "continuation_terminal_state"}
 
 
 def load_pinned_verifier(output):
@@ -124,6 +125,28 @@ class CheckpointStepProvenance(unittest.TestCase):
             redirected_check = load_pinned_verifier(alias)["verify_paused_result"]
             with self.assertRaisesRegex(RuntimeError, "HOLD_PAUSED_CHECKPOINT_SCOPE"):
                 redirected_check(helper, redirected)
+
+
+    def test_owner_pause_at_target_never_claims_completed_continuation(self):
+        # A verified 1000-step owner STOP is a checkpoint, not proof that the
+        # native continuation emitted VERIFIED_BOUNDED_ADAPTER_UPDATE.
+        classify = load_pinned_verifier(Path("/tmp"))["continuation_terminal_state"]
+        paused = {"state": "CHECKPOINTED_OWNER_STOP", "global_step": 1000}
+        done = {"state": "VERIFIED_BOUNDED_ADAPTER_UPDATE", "global_step": 1000}
+        self.assertEqual(classify(paused), "CONTINUATION_CHECKPOINTED_BY_OWNER_PAUSE")
+        self.assertEqual(classify(done), "CONTINUATION_TARGET_1000_COMPLETED")
+        self.assertEqual(classify({**done, "global_step": 999}),
+                         "CONTINUATION_CHECKPOINTED_BY_OWNER_PAUSE")
+        self.assertEqual(classify({**done, "global_step": True}),
+                         "CONTINUATION_CHECKPOINTED_BY_OWNER_PAUSE")
+        # Protect against a correct but unused helper: real main() must call it.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        main = next(n for n in tree.body
+                    if isinstance(n, ast.FunctionDef) and n.name == "main")
+        self.assertTrue(any(isinstance(n, ast.Call)
+                            and isinstance(n.func, ast.Name)
+                            and n.func.id == "continuation_terminal_state"
+                            for n in ast.walk(main)))
 
 
     def test_initial_checkpoint_rejects_optimizer_step_underreport(self):
