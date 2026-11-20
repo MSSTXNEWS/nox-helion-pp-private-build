@@ -1662,4 +1662,31 @@ class TransformTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await scope['auth_mw'](request,next_call),401)
 
 
+
+class MediaEvidenceTests(unittest.TestCase):
+    def test_unverified_native_completed_media_never_claims_tool_success(self):
+        import owner_chat_evidence as evidence
+        job_id = 'a' * 32
+        receipt = {'owner': 'native-owner', 'state': 'COMPLETED',
+                   'generation_verified': False, 'outputs': []}
+        with tempfile.TemporaryDirectory() as root:
+            output = Path(root) / 'verified.png'
+            output.write_bytes(b'ok')
+            runtime = types.SimpleNamespace(
+                ACTIVE={'QUEUED', 'RUNNING'}, TERMINAL={'COMPLETED', 'FAILED'},
+                load_job=lambda identifier: receipt,
+                configuration=lambda: {},
+                output_path=lambda *args: output)
+            with patch.object(evidence, '_module', return_value=runtime):
+                result = evidence.media_job(job_id)
+                self.assertIs(result['ok'], False)
+                self.assertEqual(result['state'], 'COMPLETED')
+                self.assertIn('не подтверждена', result['text'])
+                receipt['generation_verified'] = True
+                receipt['outputs'] = [{'bytes': 2}]
+                verified = evidence.media_job(job_id)
+                self.assertIs(verified['ok'], True)
+                self.assertIn('/api/ui/media/jobs/', verified['text'])
+
+
 if __name__=='__main__':unittest.main()
