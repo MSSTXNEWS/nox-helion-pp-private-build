@@ -59,7 +59,11 @@ def _canonical_url(value: str) -> str:
         raise HunterError("URL must use HTTPS and include a host")
     if "@" in parts.netloc:
         raise HunterError("credentials in URLs are forbidden")
-    host = host.lower()
+    # Normalize a terminal DNS dot BEFORE local-name and numeric-address checks.
+    # Otherwise localhost. / 127.0.0.1. can bypass the usual private-host fence.
+    host = host.lower().rstrip(".")
+    if not host:
+        raise HunterError("source URL must include a nonempty host")
     if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
         raise HunterError("local hostnames are forbidden")
     if port not in (None, 443):
@@ -70,6 +74,10 @@ def _canonical_url(value: str) -> str:
         ip = None
     if ip is not None and not ip.is_global:
         raise HunterError("non-public IP URLs are forbidden")
+    # Some resolvers accept shortened, octal-like or hex IPv4 host spellings.
+    # They must not bypass ipaddress's strict syntax checks.
+    if ip is None and re.fullmatch(r"(?:0x[0-9a-f]+|[0-9]+)(?:\\.(?:0x[0-9a-f]+|[0-9]+))*", host):
+        raise HunterError("ambiguous numeric host is forbidden")
     path = parts.path or "/"
     query = [
         (key, val) for key, val in parse_qsl(parts.query, keep_blank_values=True)
