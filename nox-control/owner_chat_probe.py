@@ -360,6 +360,29 @@ def model_slots_state(client):
     return {'count': len(slots), 'busy': busy}
 
 
+def require_cgroup_probe_headroom(
+        limit_path=Path('/sys/fs/cgroup/memory.max'),
+        current_path=Path('/sys/fs/cgroup/memory.current'),
+        minimum_bytes=2 * 1024 ** 3):
+    """Fail closed before synthetic dialog/chat writes when NOX cgroup RAM is too low.
+
+    This read-only cgroup-v2 check is only one admission fence. It does not
+    replace the independent native owner/CAS, STOP, lease, VRAM and rollback gates.
+    """
+    try:
+        raw_limit = limit_path.read_text().strip()
+        raw_current = current_path.read_text().strip()
+        if not raw_limit.isdecimal() or not raw_current.isdecimal():
+            raise ValueError('unbounded or malformed cgroup counters')
+        limit = int(raw_limit)
+        current = int(raw_current)
+    except (OSError, ValueError, TypeError, OverflowError) as exc:
+        raise RuntimeError('HOLD_CHAT_PROBE_CGROUP_RAM_ADMISSION') from exc
+    if limit <= 0 or current > limit or limit - current < minimum_bytes:
+        raise RuntimeError('HOLD_CHAT_PROBE_CGROUP_RAM_ADMISSION')
+    return limit - current
+
+
 def main():
     global BASE
     if os.environ.get('NOX_PROBE_NONLOOPBACK','1')=='1':BASE=nonloopback_base()
@@ -423,6 +446,7 @@ def main():
                 or any(page['status']!=200 for page in report['paths'])):
             raise RuntimeError('HOLD_RESONANCE_ASSET_HTTP')
         if report['slots']['busy']:raise RuntimeError('HOLD_CHAT_BUSY_FOR_SYNTHETIC_PROBE')
+        require_cgroup_probe_headroom()  # Before ANY synthetic dialog-create/chat POST.
         # Single-turn diagnostics must not be reported as completed multi-turn acceptance.
         require_multiturn_requested(os.environ.get('NOX_PROBE_SECOND_TURN'))
         marker='nox_latency_'+secrets.token_hex(5)
