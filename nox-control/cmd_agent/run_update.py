@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
-REMOTE = "supervisorctl restart nox-proxy nox-web29-18775; sleep 20; supervisorctl status nox-proxy nox-web29-18775 nox-cmd-agent; for p in 8080 18775 8098; do echo $p $(curl -s -m 8 -o /dev/null -w %{http_code} http://127.0.0.1:$p/); done; free -m | sed -n 2p"
+REMOTE = "echo aW1wb3J0IGpzb24sdXJsbGliLnJlcXVlc3QKZD1qc29uLmR1bXBzKHsibWVzc2FnZXMiOlt7InJvbGUiOiJ1c2VyIiwiY29udGVudCI6ItCh0LrQsNC20Lgg0L7QtNC90LjQvCDQv9GA0LXQtNC70L7QttC10L3QuNC10LwsINC60YLQviDRgtGLLiJ9XSwibWF4X3Rva2VucyI6NjB9KS5lbmNvZGUoKQpyPXVybGxpYi5yZXF1ZXN0LlJlcXVlc3QoImh0dHA6Ly8xMjcuMC4wLjE6ODA5OC92MS9jaGF0L2NvbXBsZXRpb25zIixkLHsiQ29udGVudC1UeXBlIjoiYXBwbGljYXRpb24vanNvbiJ9KQp0cnk6CiAgICBwcmludCh1cmxsaWIucmVxdWVzdC51cmxvcGVuKHIsdGltZW91dD05MCkucmVhZCgpLmRlY29kZSgpWzo3MDBdKQpleGNlcHQgRXhjZXB0aW9uIGFzIGU6IHByaW50KCJFUlIiLGUpCg== | base64 -d | python3"
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
