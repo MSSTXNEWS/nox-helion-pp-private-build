@@ -1,0 +1,58 @@
+name: NOX V125 original S03 remember signature and OneHost source read-only
+on:
+  push:
+    branches: [nox/e2-v125-owner-s03-facts-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v125-s03-contract-probe.yml'
+      - 'nox_runpod/teacher_mesh/v125/inspect_s03_contract.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v125-original-s03-readonly-60509551
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Real source syntax and strict no-write contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v125/inspect_s03_contract.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v125.inspect_s03_contract import REMOTE
+          p=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(p,'<nox-v125-existing-s03>','exec')
+          for label in ('mode=ro','PRAGMA query_only=ON','PRAGMA quick_check',
+                        'inspect.signature(fn)', 'NATIVE_READ_ONLY_COMPLETE=true'):
+              assert label in p,label
+          for unsafe in ('optimizer.step(', 'supervisorctl\',\'restart',
+                         'save_pretrained(', 'sqlite3.connect(str(root)'):
+              assert unsafe not in p,unsafe
+          print('NOX_V125_S03_READONLY_SOURCE=PASS')
+          PY
+  native-audit:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Bound existing authorized API credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "HOLD_NOX2"; exit 2; }
+      - name: Actual readonly native S03 schema + model/source SHA
+        run: python3 -m nox_runpod.teacher_mesh.v125.inspect_s03_contract
+      - name: Always revoke ephemeral key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

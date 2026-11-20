@@ -1,0 +1,57 @@
+name: NOX V125 SHA-pinned original S03 fact module staging - no live activation
+on:
+  push:
+    branches: [nox/e2-v125-owner-s03-facts-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v125-stage-existing-host.yml'
+      - 'nox_runpod/teacher_mesh/v125/stage_fact_source.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v125-source-stage-no-restart
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify stage and source syntax, no native restart
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v125/stage_fact_source.py
+          python -m py_compile nox_runpod/teacher_mesh/v125/owner_fact_write.py
+          python - <<'PY'
+          from nox_runpod.teacher_mesh.v125.stage_fact_source import REMOTE_TEMPLATE
+          py=REMOTE_TEMPLATE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(py,'<V125 native staging>','exec')
+          assert "fact_api_activated':False" in py
+          assert "service_restarted':False" in py
+          assert "HOLD_EXISTING_ONEHOST_DRIFT" in py
+          assert "HOLD_MODULE_BYTES_OR_SHA" in py
+          assert "NEW_SOURCE_STAGED_SHA_VERIFIED" in py
+          assert "supervisorctl" not in py
+          print('NOX_V125_STAGE_SOURCE_TEST=PASS')
+          PY
+  physical-stage:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Verify existing authorized Vast owner API
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "HOLD_NOX2"; exit 2; }
+      - name: Upload only SHA-pinned Python source to existing OneHost
+        run: python3 -m nox_runpod.teacher_mesh.v125.stage_fact_source
+      - name: Revoke temporary instance SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

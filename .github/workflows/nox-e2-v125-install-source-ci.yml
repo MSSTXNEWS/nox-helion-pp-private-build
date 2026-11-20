@@ -1,0 +1,34 @@
+name: NOX V125 original S03 owner fact route installer safety
+on:
+  push:
+    branches: [nox/e2-v125-owner-s03-facts-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v125-install-source-ci.yml'
+      - 'nox_runpod/teacher_mesh/v125/install_fact_route.py'
+      - 'nox_runpod/teacher_mesh/v125/test_install_fact_route.py'
+      - 'nox_runpod/teacher_mesh/v125/owner_fact_native_e2e.py'
+      - 'nox_runpod/teacher_mesh/v125/test_owner_fact_native_e2e.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Source syntax, original S03 schema, rollback and owner ACL tests
+        run: |
+          set -euo pipefail
+          python -m pip install -q fastapi==0.128.2 httpx==0.28.1
+          python -m py_compile nox_runpod/teacher_mesh/v125/install_fact_route.py
+          python -m unittest -v \
+            nox_runpod.teacher_mesh.v125.test_install_fact_route \
+            nox_runpod.teacher_mesh.v125.test_owner_fact_native_e2e \
+            nox_runpod.teacher_mesh.v125.test_owner_fact_write
+          echo 'NOX_V125_INSTALL_SOURCE_ONLY_PASS=true'
+          echo 'NOX_V125_NATIVE_INSTALL_TESTED=false'
+          echo 'NOX_V125_WEIGHTS_CHANGED=false'

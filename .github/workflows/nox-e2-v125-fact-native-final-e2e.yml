@@ -1,0 +1,52 @@
+name: NOX V125 final original S03 owner fact idempotent readback (no restart)
+# Final schema-correct proof: original S03 checksum via V120 history, source content SHA via S03 metadata.
+# Existing synthetic QA row is reused; retry only Vast GET 429, never writes.
+on:
+  push:
+    branches: [nox/e2-v125-owner-s03-facts-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v125-fact-native-final-e2e.yml'
+  workflow_dispatch:
+    inputs:
+      allow_owner_e2e:
+        type: choice
+        description: 'Read original S03 and repeat only synthetic NOX QA fact using official owner session'
+        options: ['NO','YES']
+        default: 'NO'
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: nox-v125-owner-original-s03-qa-only
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compile idempotent existing QA script and source SHA semantics
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v125/owner_fact_native_e2e.py
+          python3 -m unittest -v nox_runpod.teacher_mesh.v125.test_owner_fact_native_e2e
+          echo 'NOX_V125_FINAL_E2E_SOURCE=PASS'
+  native-e2e:
+    needs: source
+    if: ${{ (github.event_name == 'push' && github.actor == 'MSSTXNEWS') || (github.event_name == 'workflow_dispatch' && inputs.allow_owner_e2e == 'YES' && github.actor == 'MSSTXNEWS') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Require owner-authorized existing NOX2 connection
+        run: |
+          test -n "$NOX2" || { echo 'HOLD_NOX2'; exit 2; }
+      - name: Real signed owner cookie, reused synthetic fact, original S03 SHA/meta/history and no restart
+        run: python3 -m nox_runpod.teacher_mesh.v125.owner_fact_native_e2e
+      - name: Always detach temporary SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

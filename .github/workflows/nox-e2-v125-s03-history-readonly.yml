@@ -1,0 +1,50 @@
+name: NOX V125 QA-only original S03 history reconciliation
+on:
+  push:
+    branches: [nox/e2-v125-owner-s03-facts-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v125-s03-history-readonly.yml'
+      - 'nox_runpod/teacher_mesh/v125/audit_fact_history.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v125-s03-qa-only-history-readonly
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Test read-only S03 query and no private export
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v125/audit_fact_history.py
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v125.audit_fact_history import REMOTE
+          source=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit('\nPYREMOTE',1)[0]
+          compile(source,'<NOX_V125_READONLY_QA>','exec')
+          assert all(n in source for n in ('mode=ro','PRAGMA query_only=ON','PRAGMA quick_check',
+            'NATIVE_V125_QA_DIFF','private_data_exported=False','native_writes=False'))
+          assert not any(n in source for n in ('supervisorctl','torch.save(','optimizer.step(','print(content)','print(password)'))
+          print('NOX_V125_READONLY_QA_SOURCE=PASS')
+          PY
+  native:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Existing authorized NOX2 only
+        run: |
+          test -n "$NOX2" || { echo 'HOLD_NOX2'; exit 2; }
+      - name: Compare original synthetic S03 row against owner authenticated history
+        run: python3 -m nox_runpod.teacher_mesh.v125.audit_fact_history
+      - name: Always revoke ephemeral SSH identity
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup

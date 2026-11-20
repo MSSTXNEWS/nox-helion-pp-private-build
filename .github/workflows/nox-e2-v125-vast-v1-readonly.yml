@@ -1,0 +1,44 @@
+name: NOX Vast.ai current API v1 owner-instance existence check
+# One read-only official console/cloud endpoint fallback after HTTP 404, no SSH keys or changes.
+on:
+  push:
+    branches: [nox/e2-v125-owner-s03-facts-20261115]
+    paths:
+      - '.github/workflows/nox-e2-v125-vast-v1-readonly.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Read-only exact owner-instance inventory source and safe output
+        run: |
+          python3 -m py_compile nox_runpod/teacher_mesh/v125/vast_owner_inventory.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('nox_runpod/teacher_mesh/v125/vast_owner_inventory.py').read_text()
+          assert '/api/v1/instances' in s
+          assert 'EXPECTED=60509551' in s
+          assert 'credentials_exported' in s
+          assert 'method="GET"' in s
+          assert not any(n in s for n in ('method="DELETE"','method="POST"', 'method="PUT"', 'print(key)','os.system('))
+          print('NOX_VAST_V1_READONLY_SOURCE=PASS')
+          PY
+  inventory:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Use existing authorized NOX2 for nonmutating account-only inventory
+        run: |
+          test -n "$NOX2" || { echo 'HOLD_NOX2'; exit 2; }
+      - name: Read only active account instance presence under current Vast v1
+        run: python3 -m nox_runpod.teacher_mesh.v125.vast_owner_inventory
