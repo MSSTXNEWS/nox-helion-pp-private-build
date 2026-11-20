@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
-REMOTE = 'tail -20 /root/nox/logs/tune3.log | cut -c1-300'
+REMOTE = 'df -h / /root /dev/shm 2>/dev/null | cut -c1-90; echo ---; du -xk --max-depth=2 /root 2>/dev/null | sort -rn | head -28 | awk \'{printf "%.1fG %s\\n",$1/1048576,$2}\'; echo ---; du -xk --max-depth=1 /var /opt /tmp /home 2>/dev/null | sort -rn | head -8 | awk \'{printf "%.1fG %s\\n",$1/1048576,$2}\''
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
