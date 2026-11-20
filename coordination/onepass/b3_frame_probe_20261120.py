@@ -100,13 +100,16 @@ def compare_baseline(current, prior):
     A matching browser URL is not a native/S03 identity proof. This is
     source-level frame evidence only; baseline files are not signed.
     """
-    signature = ('schema', 'url_sha256', 'sample_js', 'synthetic_fixture',
+    signature = ('schema', 'url_sha256', 'chromium_version_sha256', 'sample_js', 'synthetic_fixture',
                  'expected_selector_checked', 'expected_selector_sha256',
                  'landing_url_verified')
     if any(current.get(key) != prior.get(key) for key in signature):
         raise ValueError('HOLD_BASELINE_PROVENANCE_MISMATCH')
     if not isinstance(current.get('url_sha256'), str) or len(current['url_sha256']) != 64 or any(c not in '0123456789abcdef' for c in current['url_sha256']):
         raise ValueError('HOLD_BASELINE_TARGET_URL_HASH_MISSING')
+    engine = current.get('chromium_version_sha256')
+    if not isinstance(engine, str) or len(engine) != 64 or any(c not in '0123456789abcdef' for c in engine):
+        raise ValueError('HOLD_BASELINE_BROWSER_ENGINE_MISSING')
     if not current.get('synthetic_fixture'):
         if not current.get('expected_selector_checked') or not current.get('expected_selector_sha256'):
             raise ValueError('HOLD_BASELINE_MISSING_LIVE_SELECTOR')
@@ -191,9 +194,10 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
     except FileExistsError as exc:
         raise ValueError('HOLD_EVIDENCE_DIRECTORY_REUSED') from exc
     result = {
-        'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V3',
+        'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V4',
         'scope': 'browser-only; not model/weights/tokenizer/S03 acceptance',
-        'url_sha256': url_identity_sha256(url), 'time_utc': datetime.now(timezone.utc).isoformat(),
+        'url_sha256': url_identity_sha256(url), 'chromium_version_sha256': None,
+        'time_utc': datetime.now(timezone.utc).isoformat(),
         'sample_js': '90 consecutive real requestAnimationFrame intervals',
         'runs': [], 'blocked_mutating_requests': 0, 'blocked_model_posts': 0,
         'blocked_websocket_connections': 0,
@@ -210,6 +214,7 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
         if chromium:
             launch['executable_path'] = chromium
         browser = await pw.chromium.launch(**launch)
+        result['chromium_version_sha256'] = evidence_hash(browser.version)
         try:
             for width, height in SIZES:
                 for reduced in (False, True):
