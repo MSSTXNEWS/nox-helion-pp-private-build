@@ -191,6 +191,19 @@ class DriveFirstTests(unittest.TestCase):
         self.assertEqual(receipt.read_bytes(),before)
         self.assertFalse((self.state/".drive-task-001.json.new").exists())
 
+    def test_orphaned_staging_receipt_does_not_block_unclaimed_task(self):
+        receipt=self.state/"drive-task-001.json"
+        orphan=self.state/".drive-task-001.json.new"
+        orphan.write_bytes(b"orphan from terminated previous attempt")
+        m.save_receipt(receipt,{"state":"VERIFIED_IN_DRIVE","task_id":"task-001"})
+        self.assertTrue(receipt.is_file())
+        self.assertEqual(orphan.read_bytes(),b"orphan from terminated previous attempt")
+        self.assertEqual(len(list(self.state.glob(".drive-task-001.json.*.new"))),0)
+        before=receipt.read_bytes()
+        with self.assertRaisesRegex(m.Hold,"RECEIPT_ALREADY_EXISTS"):
+            m.save_receipt(receipt,{"state":"DIFFERENT"})
+        self.assertEqual(receipt.read_bytes(),before)
+
     def test_stream_direct_http_into_rclone_with_exact_size_no_spool(self):
         self.configure()
         target="noxchunks:STAGING/task-001-test.gguf"
