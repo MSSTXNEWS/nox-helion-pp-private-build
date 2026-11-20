@@ -1,7 +1,7 @@
 name: NOX Drive-first chunked weight transfer
 on:
   push:
-    branches: [feat/nox-drive-first-chunker-20261120, fix/nox-drive-first-auto-overlay-20261120, fix/a5-drive-first-receipt-noclobber-20261120, main]
+    branches: [feat/nox-drive-first-chunker-20261120, fix/nox-drive-first-auto-overlay-20261120, main]
     paths:
       - 'nox-control/nox_drive_first.py'
       - 'nox-control/test_nox_drive_first.py'
