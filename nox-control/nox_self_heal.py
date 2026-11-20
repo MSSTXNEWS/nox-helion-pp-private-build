@@ -87,6 +87,21 @@ def alive(service, health_url=None):
     except (OSError, ValueError, TimeoutError):
         return False
 
+def _unit_confirmed_inactive(service):
+    """Only an explicitly inactive/failed unit can enter legacy restart logic.
+
+    A failed HTTP health check is not evidence the actual service process has
+    stopped. Unknown/transient systemctl results also cannot authorize a
+    restart of a potentially healthy OneHost or native dispatcher.
+    """
+    try:
+        status = subprocess.run(["systemctl", "is-active", "--quiet", service],
+                                shell=False, timeout=8, check=False)
+        return status.returncode == 3
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
 def repair_cycle(policy, state_path, dry_run=False):
     state = load(state_path)
     services = state.setdefault("services", {})
@@ -112,6 +127,8 @@ def repair_cycle(policy, state_path, dry_run=False):
                 action = "needs_owner_investigation"
             elif entry["attempts"] and now - entry["attempts"][-1] < max(60, int(policy.get("cooldown_seconds", 900))):
                 action = "cooldown"
+            elif not _unit_confirmed_inactive(unit):
+                action = "needs_owner_investigation"
             elif dry_run:
                 action = "would_restart"
             elif stop.exists():
