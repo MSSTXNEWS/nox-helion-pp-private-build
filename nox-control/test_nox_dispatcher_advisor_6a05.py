@@ -30,14 +30,14 @@ class ReliableOwnerTelemetryTests(unittest.TestCase):
         self.assertEqual(codes(snapshot()), ["NO_UNVERIFIED_TUNING"])
 
     def test_invalid_disk_free_space_never_passes_as_capacity(self):
-        for invalid in (True, False, "25", float("nan"), float("inf"), -1, [], {}):
+        for invalid in (True, False, "25", float("nan"), float("inf"), -1, 10**400, [], {}):
             with self.subTest(free=repr(invalid)):
                 s = snapshot()
                 s["disk"]["free_gib"] = invalid
                 self.assertIn("DISK_TELEMETRY_UNVERIFIED", codes(s))
 
     def test_invalid_checkpoint_reserve_never_throws(self):
-        for invalid in (True, "missing", float("nan"), float("-inf"), -1, [], {}):
+        for invalid in (True, "missing", float("nan"), float("-inf"), -1, 10**400, [], {}):
             with self.subTest(reserve=repr(invalid)):
                 s = snapshot()
                 s["disk"]["checkpoint_reserve_gib"] = invalid
@@ -52,7 +52,7 @@ class ReliableOwnerTelemetryTests(unittest.TestCase):
         self.assertIn("DISK_CHECKPOINT_RESERVE", codes(s))
 
     def test_invalid_temperature_is_safety_hold(self):
-        for invalid in (True, "58", float("nan"), float("inf"), -1, [], {}):
+        for invalid in (True, "58", float("nan"), float("inf"), -1, 10**400, [], {}):
             with self.subTest(temperature=repr(invalid)):
                 s = snapshot()
                 s["gpu"]["temperature_c"] = invalid
