@@ -742,6 +742,33 @@ async function check(chunks, status=200) {
         self.assertIn('allowed_qa_stream_url(request.url, origin)', guard)
         self.assertIn('allowed_qa_request(', guard)
 
+    def test_encoded_earlier_chat_segments_cannot_escape_native_post_accounting(self):
+        # urlsplit.path is still encoded; a reverse proxy can decode earlier
+        # segments before routing. Such aliases must hit the abort path,
+        # never bypass the exact one-POST-per-turn /api/nox/chat/stream gate.
+        aliases = (
+            '/api/nox/%63hat/stream',
+            '/api/%6eox/chat/stream',
+            '/%61pi/nox/chat/stream',
+            '/%2Fapi/nox/chat/stream',
+            '/api/nox/%2563hat/stream',
+            '/api/nox/chat%2Fstream',
+            '/api/nox/%63hat/completions',
+        )
+        for path in aliases:
+            with self.subTest(path=path):
+                self.assertTrue(native_chat_route_candidate(path))
+                self.assertNotEqual(path, '/api/nox/chat/stream')
+        for ordinary in ('/api/nox/%63hatter', '/api/%6eox/status',
+                         '/api/ui/memory/dialogs/history',
+                         '/nox-web-v29/pc/owner-chat-ui.js'):
+            with self.subTest(ordinary=ordinary):
+                self.assertFalse(native_chat_route_candidate(ordinary))
+        guard = inspect.getsource(browser_run)
+        self.assertIn('if native_chat_route_candidate(url.path):', guard)
+        self.assertIn("if url.path != '/api/nox/chat/stream':", guard)
+        self.assertIn("blocked['alternate_native_chat_route']+=1", guard)
+
     def test_stream_url_query_cannot_override_native_model_or_history(self):
         # The browser's real route is a plain path. JSON-body admission alone
         # is insufficient if the request URL carries alternate query metadata.

@@ -175,14 +175,24 @@ def allowed_qa_stream_url(request_url, origin):
 
 
 def native_chat_route_candidate(path):
-    """Fence alternate same-origin chat endpoints before any native POST.
+    """Fence encoded aliases before uncounted same-origin native POSTs.
 
-    Only the exact preserved-model SSE route may reach the one/two-turn
-    browser owner-admission gate; other chat endpoints are not harmless reads.
+    The owner browser's allowlist must see a chat request even when an
+    upstream URL decoder turns an earlier encoded segment into /api/nox/chat.
+    Only the original raw /api/nox/chat/stream route is admitted later; an
+    encoded alias is always aborted, never silently treated as a UI asset.
     """
-    return (isinstance(path, str) and
-            (path == '/api/nox/chat' or path.startswith('/api/nox/chat/')
-             or path.startswith('/api/nox/chat%')))
+    if not isinstance(path, str):
+        return False
+    for _ in range(3):
+        if (path == '/api/nox/chat' or path.startswith('/api/nox/chat/')
+                or path.startswith('/api/nox/chat%')):
+            return True
+        decoded = urllib.parse.unquote(path)
+        if decoded == path:
+            break
+        path = decoded
+    return False
 
 def exact_native_post_fence(snapshot, admitted, expected):
     """Require observed browser POSTs AND owner route admission to agree exactly.
