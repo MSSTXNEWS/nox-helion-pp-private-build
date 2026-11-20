@@ -144,7 +144,17 @@ class RefillEligibilityTests(unittest.TestCase):
         _,_,_,registry = exact_registry()
         mission = {"parent_task_id": "I-39"}
         malformed = (
+            None,
+            [],
+            {},
+            {"other": "value"},
             {"missions": {"mission_id": "cache_fill_ttl"}},
+            {"missions": [{"mission_id": "", "revision": 1,
+                            "parent_task_id": "I-39"}]},
+            {"missions": [{"mission_id": "cache_fill_ttl", "revision": -1,
+                            "parent_task_id": "I-39"}]},
+            {"missions": [{"mission_id": "cache_fill_ttl", "revision": 1,
+                            "parent_task_id": ""}]},
             {"missions": [{"mission_id": [], "revision": 1, "parent_task_id": "I-39"}]},
             {"missions": [{"mission_id": "cache_fill_ttl", "revision": [],
                             "parent_task_id": "I-39"}]},
