@@ -26,6 +26,15 @@ jobs:
               -p test_owner_native_inspect_comment_guard.py \
               -v
 
+      - run:
+          name: Verify 6A05 owner telemetry and existing dispatcher admission guards
+          command: |
+            set -eu
+            python -B -m unittest discover \
+              -s nox-control \
+              -p 'test_nox_dispatcher_advisor_*.py' \
+              -v
+
 workflows:
   source-verification:
     jobs:
