@@ -1,0 +1,346 @@
+{
+  "schema": "NOX_WOW_TOP30_HANDOFF_V1",
+  "instructions_version": "0.0.6",
+  "created_on": "2026-11-20",
+  "role": "NON_EXECUTABLE_HANDOFF_ONLY__DO_NOT_INJECT_AS_NATIVE_TASKPACK",
+  "source_repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "source_ref": "0c2228b88cffcb489c1d1f055dabf9aa2ac8d7c9",
+  "source_registry_path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+  "source_registry_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+  "source_registry_total": 295,
+  "selection_basis": "Owner ideas NOX_CANON_89_IDEAS_RESONANCE (94 rows) mapped to registry TaskIDs, intelligence themes weighted, plus foundation gates. Top-30 touches 55% of all ideas and 75% of intelligence-theme ideas; demand is spread over 137 tasks, so this is not a strict 80/20.",
+  "policy": {
+    "claim": "Take the highest-ranked eligible TaskID by group order; these are planning hints, NOT claims. Obtain existing dispatcher owner/CAS lease, immutable source, STOP and resource admission before any native execution. At most three physical native workers.",
+    "completion": "Never mark an original TaskID ACCEPTED without an independent original-specific native acceptance receipt. Source PASS, PR merge, RUNNING, scheduling and claim are not ACCEPTED.",
+    "safety": "STOP and SAFE70 stay independent of task content and of model output. No secrets, tokens or personal data in source or receipts: the repository is public.",
+    "dependency": "1A02 waits for 1A03 (reserve list)."
+  },
+  "group_order": [
+    "FOUNDATION",
+    "MEMORY",
+    "REASONING",
+    "PERSONALITY_AND_PRESENCE",
+    "KNOWLEDGE_AND_CURIOSITY",
+    "VOICE_AND_DEMO"
+  ],
+  "groups": {
+    "FOUNDATION": [
+      {
+        "task_id": "1V14-01",
+        "priority": "P0",
+        "queue": "Q1_RUNTIME_CHAT",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "b81b6722acc7775a93d8ee8288f9330a95d3d97076cdb55b4f6fbc75f2bc768d",
+        "title": "Восстановить рабочий endpoint единого чата NOX."
+      },
+      {
+        "task_id": "6V14-01",
+        "priority": "P0",
+        "queue": "Q1_RUNTIME_CHAT",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "955f4e1445af77b2eb0b4db17ac3997d9536934e29dbc946a6310fdb316d42d2",
+        "title": "Восстановить существующий диспетчер OneHost."
+      },
+      {
+        "task_id": "5V14-01",
+        "priority": "P0",
+        "queue": "Q4_INTEGRATION_ACCEPTANCE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "72704ef0ea7f4e2136de1b25d1ff49f910202a37744f008d41d481fbaa14cbd4",
+        "title": "Восстановить единую исходную WEB-сборку."
+      },
+      {
+        "task_id": "1A01",
+        "priority": "P0",
+        "queue": "Q1_RUNTIME_CHAT",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "e0bc3244e0a176baa7fc02827c364d15b37bd56cdd93223f6d3d869264377b3e",
+        "title": "Оставить один поток реальных токенов в исходном «Резонансе». Показывать отдельно принятый ввод, ожидание, ответы и подтверждённое завершение."
+      },
+      {
+        "task_id": "1V14-06",
+        "priority": "P0",
+        "queue": "Q1_RUNTIME_CHAT",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "a58c4daf058accd255c52c28f3685bf38656f906a9cb14dda178cc3f2c0e6008",
+        "title": "Добавить STOP текущей генерации без остановки сервера."
+      },
+      {
+        "task_id": "6A04",
+        "priority": "P1",
+        "queue": "Q1_RUNTIME_CHAT",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "2d25fc73b6785841fed20aac53cbbc5b9dde2c823a3ac88c2b4fc3f6855330ca",
+        "title": "Отделить полезную GPU-загрузку, VRAM и CPU/I/O. Чат задаёт допустимую задержку, «черви» занимают только измеренный остаток до 85%."
+      }
+    ],
+    "MEMORY": [
+      {
+        "task_id": "3A02",
+        "priority": "P1",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "REVIEWED_SCOPED_SOURCE_PLAN_READY",
+        "spec_sha256": "69304203abfe875fca340cb8ae1d2d342efc4b15274fc9432b4aadc9e90b64cc",
+        "title": "Подключить существующую S03 и сегменты M0–M7: контекст, эпизоды, знания, хронология, навыки, PersonaID, эмоциональная значимость, биография."
+      },
+      {
+        "task_id": "3A03",
+        "priority": "P1",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "REVIEWED_SCOPED_SOURCE_PLAN_READY",
+        "spec_sha256": "ce345a200eb785f3938cfe687351896c87c0664f24b4b0dd86fc8660306aed6a",
+        "title": "FAST — scoped SQLite FTS и WarmS03Cache по origin/PersonaID/ревизии. BGE и rerank используют остаток бюджета либо фоновую очередь. Изменение и отзыв доступа инвалидируют кэш. Извлекать с временным приоритетом. Дать пользователю открыть источник, исправить или закрепить память."
+      },
+      {
+        "task_id": "3V14-06",
+        "priority": "P2",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "60e26f639aac5252bac6eec706f4f22e24de0e79a14523b882a68fefcc506f5a",
+        "title": "Восстановить память текущего рабочего контекста."
+      },
+      {
+        "task_id": "3V14-13",
+        "priority": "P2",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "a39b2aec78068162bd5faef53d3e241b299385a62d2de105e757faf1e02de815",
+        "title": "Различать подтверждённые факты, гипотезы и ошибки."
+      },
+      {
+        "task_id": "3V14-17",
+        "priority": "P2",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "c10e432359c79e68f54600c280ac2bb650edbd0fbcfb9ad568ca410d61a5ca29",
+        "title": "Восстановить память инструментов и освоенных навыков."
+      },
+      {
+        "task_id": "I-51",
+        "priority": "P3",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "fb06f400d2ae2902fd619a279c1865a352cd06f06203d9ce0151cfaffb316185",
+        "title": "Память с машиной времени"
+      },
+      {
+        "task_id": "3V14-16",
+        "priority": "P2",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "06e5408178cea0e2ce1427ab720f57316c366afdf6bea7e83a8caece12c02ecd",
+        "title": "Создать автобиографическую память развития NOX."
+      }
+    ],
+    "REASONING": [
+      {
+        "task_id": "1V14-14",
+        "priority": "P2",
+        "queue": "Q1_RUNTIME_CHAT",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "64405877532ddcf15a29eac058967a3a944859a0b8752a55673cccc8ffed637c",
+        "title": "Подключить многошаговое планирование сложных запросов."
+      },
+      {
+        "task_id": "1V14-18",
+        "priority": "P2",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "e6a302f6d173873cc885449b39b69c720e1391fadb66566a9c8192b55fe67223",
+        "title": "Реализовать проверку собственных выводов перед ответом."
+      },
+      {
+        "task_id": "1V14-19",
+        "priority": "P2",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "719ed28270b50d5dba4732cc76426977923bd2d8b35558b93deb087e06d01451",
+        "title": "Научить NOX замечать противоречия в собственных действиях."
+      },
+      {
+        "task_id": "I-53",
+        "priority": "P3",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "83f25e80a19e9567751a8fc5a28d84742a5b795fbd743ae3b0a74669a7bec055",
+        "title": "NOX опровергает своё вчерашнее решение"
+      },
+      {
+        "task_id": "I-61",
+        "priority": "P3",
+        "queue": "Q1_RUNTIME_CHAT",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "fb2b28d22002e5eb6bfe41bca38fc5bf968f94c998e00895b9ae6817db5869de",
+        "title": "Перемотка поручения и пробный ход"
+      },
+      {
+        "task_id": "1V14-11",
+        "priority": "P2",
+        "queue": "Q1_RUNTIME_CHAT",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "92a760187d17f7c1d6ad21d0bc041e9013262f42ff59b4ac9d538079e40a55c8",
+        "title": "Научить NOX автоматически выбирать режим сложности."
+      }
+    ],
+    "PERSONALITY_AND_PRESENCE": [
+      {
+        "task_id": "I-06",
+        "priority": "P3",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "4b271dab0cad3b7818d19f6d44b5cb16cecba20c3f2d40e2d2e5ad0b33ecadf9",
+        "title": "Устойчивая личность NOX"
+      },
+      {
+        "task_id": "3A04",
+        "priority": "P1",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "a315692ac5162d6b9a1883cd12b2ce013ce26876dbfd03be08d45c7b1e0e377a",
+        "title": "Реальный self-model: список разрешённых способностей, активные задачи, версия весов, доступность внешних сервисов, данные Genesis и последние ошибки."
+      },
+      {
+        "task_id": "3A01",
+        "priority": "P1",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "1965af50c0377dd9e81f0e944fe046322ba704218fa045b40542ecd8ec822e3d",
+        "title": "Подключить существующие C01–C08 к каждому действительному запросу: C01 восприятие, C02 S03, C03 самопонимание, C04 эмоции, C05 личность, C06 рассуждение, C07 навыки и учителя, C08 действия и «черви»."
+      },
+      {
+        "task_id": "1V14-22",
+        "priority": "P2",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "387c53e74bd8ab604c1d50f10e3256ce7cd8aa0d9097d3d16eb74e405f6cbf07",
+        "title": "Создать естественную эмоциональную выразительность."
+      },
+      {
+        "task_id": "1V14-24",
+        "priority": "P2",
+        "queue": "Q1_RUNTIME_CHAT",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "bfe0d337a279f9d1b4c60bbd09fb7f8254d524c90e853ffd2e520fe3cabcd192",
+        "title": "Реализовать непрерывное присутствие NOX в чате без навязчивого спама."
+      }
+    ],
+    "KNOWLEDGE_AND_CURIOSITY": [
+      {
+        "task_id": "4V14-23",
+        "priority": "P2",
+        "queue": "Q4_INTEGRATION_ACCEPTANCE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "2ac1e1c53acb88c1a5c960441213a4411a772bcf313126aba1ae2280f5bc8a38",
+        "title": "Реализовать автономные исследовательские и экспериментальные задачи."
+      },
+      {
+        "task_id": "3B01",
+        "priority": "P1",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "03c40945a9f4bc2d9c5b7621aa9421df5eb9077445d20a97b4ab50d1bdf344c7",
+        "title": "Hunter непрерывно наблюдает источники: релизы GitHub, официальные RSS/Atom, changelog, arXiv/Crossref, страницы в разрешённых каталогах. HTTP-кэш, дедуп по URL+контенту, расписание по частоте обновления."
+      },
+      {
+        "task_id": "3B02",
+        "priority": "P1",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "8dfdd2968f7e76b4deb7e35eafe94f14816ffbe31a7737574af28c6bbd5b5f23",
+        "title": "Извлечение и проверка → карантин кандидата → факт с URL/датой/цитируемым основанием → S03 → точное чтение по вопросу. Изменения и противоречия показывать в хронологии."
+      },
+      {
+        "task_id": "I-56",
+        "priority": "P3",
+        "queue": "Q2_MEMORY_KNOWLEDGE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "1bc83a66d451aa3d48bb61e4adbd82664df88ed168a7314eae795a0c30db7be6",
+        "title": "Навык из одного видимого действия"
+      }
+    ],
+    "VOICE_AND_DEMO": [
+      {
+        "task_id": "1V14-20",
+        "priority": "P2",
+        "queue": "Q1_RUNTIME_CHAT",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "5964822b02d8aa68ab66b3690f602011b013ae0547ebf0f2247b95491af39a75",
+        "title": "Поддержать голосовые диалоги RU/ES с прерыванием."
+      },
+      {
+        "task_id": "0B05",
+        "priority": "P0",
+        "queue": "Q4_INTEGRATION_ACCEPTANCE",
+        "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+        "spec_sha256": "a39c327460094e41e4fa3ed61235be1c508e86141ecec312e47e5a24dd4d1ed3",
+        "title": "Первая видимая демонстрация одного живого сценария — уточнение голосом, память со ссылкой, фоновое выполнение, перезапуск браузера, возвращённый отредактированный артефакт."
+      }
+    ]
+  },
+  "reserve": [
+    {
+      "task_id": "2A05",
+      "priority": "P1",
+      "queue": "Q1_RUNTIME_CHAT",
+      "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+      "spec_sha256": "015880f5021502a3023b019bcaa68931be063cea3590fcae0e16a6925890bee2",
+      "title": "Снять в одинаковом сценарии базовое p50/p95 по этапам. Последовательно подобрать размер окна, KV-кэш, batching и процессоры offload."
+    },
+    {
+      "task_id": "1V14-08",
+      "priority": "P2",
+      "queue": "Q1_RUNTIME_CHAT",
+      "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+      "spec_sha256": "5a1ea1aee4802e5f7cce5373693514c16415d68d688878a04fed4dc16d5278ac",
+      "title": "Создать режим FAST для простого разговора."
+    },
+    {
+      "task_id": "1A03",
+      "priority": "P0",
+      "queue": "Q1_RUNTIME_CHAT",
+      "execution_binding": "MODEL_SOURCE_CHALLENGE_READY",
+      "spec_sha256": "edc2a3c899c5be9b41d80406fcf18bcb29b4608deaebe7910baf9b09029b4e46",
+      "title": "Восстанавливать активное поручение по серверному ID и номеру события, сверять целиком актуальный снимок после разрыва. Поток текста сохраняет порядок и Unicode."
+    },
+    {
+      "task_id": "1A02",
+      "priority": "P0",
+      "queue": "Q1_RUNTIME_CHAT",
+      "execution_binding": "DEFERRED_UNTIL_ACTUAL_1A03_MODEL_POSTIMAGE",
+      "spec_sha256": "36a30b70beba7b7fe2931a6551c83a0e2eb03700c155abe59d0f8dfc02f70bb8",
+      "title": "Стабильные conversation_id, exchange_id, client request ID и дедупликация повторной отправки. Обрабатывать ответ именно по exchange_id при параллельных ходах."
+    },
+    {
+      "task_id": "1A04",
+      "priority": "P0",
+      "queue": "Q1_RUNTIME_CHAT",
+      "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+      "spec_sha256": "2885f9a8f9ea1223bd720168718954d247050e1208bf0dba4573245c500ed57a",
+      "title": "Развести STOP генерации, STOP медиа, отмену поручения и аварийный OWNER STOP. В интерфейсе показывать фактический результат команды."
+    },
+    {
+      "task_id": "6A05",
+      "priority": "P0",
+      "queue": "Q1_RUNTIME_CHAT",
+      "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+      "spec_sha256": "aa811ce240664a53b2abddd04647310e6cf6558e37cbf86e6186acddf94b24f3",
+      "title": "Достоверные причины блокировки, retry с задержкой и ограничением, контроль I/O, VRAM и прогресса. Одна телеметрия статуса, PID и активной работы."
+    },
+    {
+      "task_id": "3V14-10",
+      "priority": "P2",
+      "queue": "Q2_MEMORY_KNOWLEDGE",
+      "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+      "spec_sha256": "a171ae33a4700e2fbfad172911fda5d7e5ce916627817fbecbed8cb976f182b2",
+      "title": "Настроить гибридный семантический и точный поиск."
+    },
+    {
+      "task_id": "4V14-13",
+      "priority": "P2",
+      "queue": "Q2_MEMORY_KNOWLEDGE",
+      "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+      "spec_sha256": "7c8c36795aa84514f72249b5dfda79f5f67600823b29379848d3bea834a7fc2e",
+      "title": "Подключить поиск новых научных работ и технологий."
+    }
+  ]
+}
