@@ -263,6 +263,42 @@ def main():
           return retry===true&&nodes().length===1&&
             nodes()[0].dataset.noxB1State==='terminal'&&calls===2;
         }"""))
+        check("fresh reconnect signal reprojects aborted pending terminal without duplicate turn",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'terminal-stop-reconnect'};
+          const stopped=new AbortController();
+          const fresh=new AbortController();
+          let entered=false,release,calls=0;
+          const hung=new Promise(resolve=>release=resolve);
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container:chat,
+            terminalTimeoutMs:1000,
+            beforeCommit:async kind=>{
+              if(kind==='terminal'&&++calls===1){entered=true;await hung;}
+            }});
+          const first=ui.upsertTerminal(s,'canonical-reconnect-id',stopped.signal);
+          for(let i=0;i<30&&!entered;i++) await new Promise(r=>setTimeout(r,0));
+          if(!entered)return false;
+          stopped.abort();
+          const second=ui.upsertTerminal(s,'canonical-reconnect-id',fresh.signal);
+          let conflict=false;
+          try{ui.upsertTerminal(s,'evil-other-id',fresh.signal);}
+          catch(e){conflict=e.code==='HOLD_B1_UI_CONFLICTING_TERMINAL';}
+          const results=await Promise.race([
+            Promise.all([first,second]),
+            new Promise(r=>setTimeout(()=>r('HUNG'),250))
+          ]);
+          if(!Array.isArray(results)||results[0]!==false||results[1]!==true)
+            return false;
+          release();
+          await new Promise(r=>setTimeout(r,0));
+          const rows=Array.from(chat.children).filter(
+            x=>x.dataset.noxB1Exchange===s.exchange_id);
+          const third=await ui.upsertTerminal(s,'canonical-reconnect-id',fresh.signal);
+          return conflict&&third===true&&calls===2&&rows.length===1&&
+            rows[0].dataset.noxB1State==='terminal'&&
+            rows[0].dataset.noxB1EventId==='canonical-reconnect-id'&&
+            rows[0].textContent==='';
+        }"""))
         browser.close()
     print(f"B1 source-only real Chromium: {len(checks)}/{len(checks)} PASS")
     for name, _ in checks:
