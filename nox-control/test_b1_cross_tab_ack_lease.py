@@ -41,7 +41,9 @@ class Handler(SimpleHTTPRequestHandler):
                 "cursor_digest":hashlib.sha256(b"synthetic_cursor5").hexdigest(),
                 "ack_id":"ack-x5","server_cas":"cas-x5",
                 "s03_sha256":"c"*64,
-                "signature":"synthetic-fixture-signature-"+nonce.replace("-","")}
+                "signature":"synthetic-fixture-signature",
+                "freshness_signature":"synthetic-freshness-"+
+                    nonce.replace("-","")+"-"+str(now_ms)+"-"+str(now_ms+10000)}
             payload=json.dumps(proof).encode()
             self.send_response(200);self.send_header("Content-Type","application/json")
             self.send_header("Content-Length",str(len(payload)));self.end_headers()
@@ -129,14 +131,15 @@ def main():
                       const host={readCommitted:async()=>null,
                         // Synthetic verifier only; cannot authenticate native S03.
                         verifyCanonicalAck:async receipt=>
-                          receipt.signature.startsWith('synthetic-fixture-signature-') &&
+                          receipt.signature==='synthetic-fixture-signature' &&
                           receipt.server_cas==='cas-x5' &&
                           receipt.s03_sha256==='c'.repeat(64),
                         // Synthetic nonce signature witness, NOT native cryptography.
                         verifyFreshCanonicalAck:async(receipt,expected,scope,challenge)=>
                           receipt.request_nonce===challenge.request_nonce &&
-                          receipt.signature==='synthetic-fixture-signature-'+
-                            challenge.request_nonce.replaceAll('-','') &&
+                          receipt.freshness_signature==='synthetic-freshness-'+
+                            challenge.request_nonce.replaceAll('-','')+'-'+
+                            receipt.issued_at_ms+'-'+receipt.expires_at_ms &&
                           receipt.exchange_id===scope.exchange_id};
                       const transport={
                         post:async()=>{throw Error('UNEXPECTED_MODEL_POST')},
