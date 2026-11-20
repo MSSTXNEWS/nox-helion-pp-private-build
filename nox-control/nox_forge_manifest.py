@@ -97,16 +97,22 @@ def _sha(value: Any, field: str) -> str:
 
 def _reference(value: Any, field: str) -> str:
     raw = _text(value, field, 2048)
-    parts = urlsplit(raw)
-    if parts.scheme.lower() != "https" or not parts.hostname or parts.username or parts.password:
-        raise ForgeError(f"{field} must be HTTPS without credentials")
+    # urlsplit(), hostname and port can all raise ValueError for an invalid
+    # IPv6 authority or malformed port. Convert them to a typed HOLD error
+    # rather than letting untrusted provenance crash the CLI.
     try:
+        parts = urlsplit(raw)
+        hostname = parts.hostname
+        username = parts.username
+        password = parts.password
         port = parts.port
     except ValueError as exc:
-        raise ForgeError(f"{field} has an invalid port") from exc
+        raise ForgeError(f"{field} has an invalid URL authority") from exc
+    if parts.scheme.lower() != "https" or not hostname or username is not None or password is not None:
+        raise ForgeError(f"{field} must be HTTPS without credentials")
     if port not in (None, 443):
         raise ForgeError(f"{field} may not use a non-default HTTPS port")
-    host = parts.hostname.lower()
+    host = hostname.lower()
     if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
         raise ForgeError(f"{field} may not point to a local host")
     try:

@@ -1,0 +1,30 @@
+name: NOX A5 4B01 FORGE authority regression
+on:
+  push:
+    branches: [a5/4b01-forge-url-failclosed-20261120]
+    paths:
+      - 'nox-control/nox_forge_manifest.py'
+      - 'nox-control/test_nox_forge_manifest.py'
+      - '.github/workflows/nox-a5-4b01-forge-source-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/nox_forge_manifest.py'
+      - 'nox-control/test_nox_forge_manifest.py'
+      - '.github/workflows/nox-a5-4b01-forge-source-check.yml'
+permissions:
+  contents: read
+jobs:
+  focused-4b01:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run precise FORGE URL authority regression
+        run: |
+          set -euo pipefail
+          PYTHONPATH=nox-control python3 -m unittest -v test_nox_forge_manifest
+          echo 'NOX_4B01_SOURCE_ONLY=true'
+          echo 'NOX_4B01_NATIVE_ACCEPTANCE=false'
