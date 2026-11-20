@@ -1,0 +1,51 @@
+{
+  "schema": "NOX_CINEMA_ASSIST_SOURCE_ARCHIVES_V1",
+  "created_date": "2026-11-18",
+  "files": [
+    {
+      "file": "WhisperLiveKit-source.zip",
+      "bytes": 18348414,
+      "sha256": "9b9e757d5fe86f43e2a4a4b88dbf1c0d5111ff3a310ff0b8439c2265d28bb131",
+      "license": "Apache-2.0",
+      "repository": "https://github.com/QuentinFuxa/WhisperLiveKit",
+      "download_url": "https://codeload.github.com/QuentinFuxa/WhisperLiveKit/legacy.zip/refs/heads/main",
+      "role": "Streaming ASR server; open source code archive."
+    },
+    {
+      "file": "SimulStreaming-source.zip",
+      "bytes": 901090,
+      "sha256": "0058d08e83247476020281c0514aea529e5a6b5d2da34c14f97bf2914185f0d5",
+      "license": "MIT",
+      "repository": "https://github.com/ufal/SimulStreaming",
+      "download_url": "https://codeload.github.com/ufal/SimulStreaming/legacy.zip/refs/heads/main",
+      "role": "Whisper simultaneous streaming policy; source only."
+    },
+    {
+      "file": "Coqui-TTS-source.zip",
+      "bytes": 22158822,
+      "sha256": "cf1332cbf5f5b901b96fa52077dd30570a6f45cd899bca7609d2d0c75a8c37a7",
+      "license": "MPL-2.0",
+      "repository": "https://github.com/coqui-ai/TTS",
+      "download_url": "https://codeload.github.com/coqui-ai/TTS/legacy.zip/refs/heads/dev",
+      "role": "TTS software; XTTS weights have a separate non-commercial license."
+    },
+    {
+      "file": "OpenVoice-source.zip",
+      "bytes": 3206857,
+      "sha256": "4c92f9c5d0283c6a6b50eea9a31d7106f4b71290a0accd3fd09952f39e2a9210",
+      "license": "MIT",
+      "repository": "https://github.com/myshell-ai/OpenVoice",
+      "download_url": "https://codeload.github.com/myshell-ai/OpenVoice/legacy.zip/refs/heads/main",
+      "role": "Voice conversion research; Russian requires a separate Russian base TTS."
+    },
+    {
+      "file": "Demucs-source.zip",
+      "bytes": 1273238,
+      "sha256": "09e470aa676c28eab17ff09590e84710eb07a5b4a87380af9c81473d79bc2fa4",
+      "license": "MIT",
+      "repository": "https://github.com/facebookresearch/demucs",
+      "download_url": "https://codeload.github.com/facebookresearch/demucs/legacy.zip/refs/heads/main",
+      "role": "Research only; music separation is not the selected film-dialogue engine."
+    }
+  ]
+}
