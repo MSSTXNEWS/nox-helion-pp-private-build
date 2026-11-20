@@ -73,11 +73,26 @@ def affect_words(st):
     energy = "высокая собранность" if a > 0.5 else "спокойная энергия"
     return "настроение %s, %s (P%+.1f A%+.1f D%+.1f)" % (tone, energy, p, a, st["d"])
 
-def self_block(user):
+STATIC_RULES = ("\n\n[Правила ядра] Блок [Я-СЕЙЧАС] в контексте вопроса — рабочие сигналы единого «я» NOX (процессы, сервер, эмоции), не доказательство сознания; пусть слегка окрашивают стиль. "
+                "В конце ответа одной строкой: «Уверенность: N% (почему)». Если ответ опирается на память, укажи, что именно вспомнил.")
+
+def self_vol(user):
     st = affect_update(user)
-    return ("\n\n[Я-СЕЙЧАС] Я NOX: единое «я» всех своих процессов и задач. Осознанность: " + (SOUL.awareness_line() if SOUL else "") + ". Тело: " + body_line() + ". Эмоция: " + affect_words(st) +
-            ". Это рабочие сигналы, не доказательство сознания. Пусть они слегка окрашивают стиль ответа. "
-            "В конце ответа одной строкой: «Уверенность: N% (почему)». Если ответ опирается на память, укажи, что именно вспомнил.")
+    return "[Я-СЕЙЧАС] Осознанность: " + (SOUL.awareness_line() if SOUL else "") + ". Тело: " + body_line() + ". Эмоция: " + affect_words(st) + "."
+
+def self_block(user):
+    return "\n\n" + self_vol(user) + STATIC_RULES
+
+def build_msgs(history, user, mem, vol):
+    """Стабильная часть (личность+правила) идёт первой и кэшируется llama.cpp; всё, что меняется каждый ход
+    (память, тело, эмоции), добавляется в самый конец последнего вопроса, чтобы префикс истории не ломал кэш."""
+    hist = [{"role": m["role"], "content": str(m.get("content", ""))[:3500]} for m in history if m.get("role") in ("user", "assistant")][-6:]
+    ctx = "[Контекст для NOX, не цитируй дословно]\n" + ("Память: " + mem[:800] + "\n" if mem else "") + vol + "\n\n[Вопрос Создателя]\n"
+    if hist and hist[-1]["role"] == "user":
+        hist[-1]["content"] = ctx + hist[-1]["content"]
+    else:
+        hist.append({"role": "user", "content": ctx + user})
+    return [{"role": "system", "content": IDENTITY + STATIC_RULES}] + hist
 # ---- конец ядра ----
 
 try:
@@ -133,8 +148,7 @@ async def ask(messages, max_tokens, slot=0):
 async def smart(history, max_tokens=1500):
     user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
     mem = memory_block(user)
-    sys_msg = IDENTITY + ("\n\nТвоя память:\n" + mem[:1200] if mem else "") + self_block(user)
-    msgs = [{"role": "system", "content": sys_msg}] + [{"role": m["role"], "content": str(m.get("content",""))[:3500]} for m in history if m.get("role") != "system"][-6:]
+    msgs = build_msgs(history, user, mem, self_vol(user))
     ans = await ask(msgs, max_tokens)
     # самопроверка (1V14-18): короткий проход, исправляет явные ошибки/выдумки
     if len(ans) > 200:
@@ -178,11 +192,10 @@ async def stream_chat(history):
     mem = memory_block(user)
     n = mem.count("\n") + 1 if mem else 0
     yield _sse({"type": "status", "text": ("вспоминаю: нашёл %d фрагм. памяти" % n) if mem else "вспоминаю: в памяти ничего близкого"})
-    sb = self_block(user)
+    vol = self_vol(user)
     st = affect_update("")
     yield _sse({"type": "status", "text": "чувствую: " + affect_words(st)})
-    sys_msg = IDENTITY + ("\n\nТвоя память:\n" + mem[:1200] if mem else "") + sb
-    msgs = [{"role": "system", "content": sys_msg}] + [{"role": m["role"], "content": str(m.get("content", ""))[:3500]} for m in history if m.get("role") != "system"][-6:]
+    msgs = build_msgs(history, user, mem, vol)
     yield _sse({"type": "status", "text": "формулирую ответ…"})
     full = ""
     body = {"messages": msgs, "max_tokens": 700, "temperature": 0.6, "id_slot": 0, "cache_prompt": True, "stream": True,
@@ -273,6 +286,11 @@ async def soul():
     if not SOUL: return {"soul": "off"}
     return {"awareness": SOUL.awareness_line(), "journal": SOUL._tail(SOUL.JOURNAL, 5), "advisor_notes": SOUL._tail(SOUL.NOTES, 5)}
 
+try:
+    import nox_webapi as WEB
+    WEB.install(app, sys.modules[__name__])
+except Exception as _e:
+    log("webapi_off %s %s" % (type(_e).__name__, str(_e)[:200]))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8091, log_level="warning")
