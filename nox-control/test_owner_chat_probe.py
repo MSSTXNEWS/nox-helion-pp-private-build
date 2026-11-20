@@ -12,6 +12,7 @@ probe = importlib.util.module_from_spec(spec); spec.loader.exec_module(probe)
 
 class SyntheticBoundedReader:
     """Offline response fixture: expose the bounded readline API of HTTPResponse."""
+    url = 'http://127.0.0.1:8080/api/nox/chat/stream'
     def readline(self, limit):
         if not hasattr(self, '_line_stream'):
             self._line_stream = iter(self)
@@ -22,9 +23,43 @@ class SyntheticBoundedReader:
 
 
 class ProbeTests(unittest.TestCase):
+    def test_chat_stream_final_url_cannot_redirect_or_switch_model_route(self):
+        class Response:
+            status = 200
+            def __init__(self, url):
+                self.url = url
+                self.closed = False
+                self.read_called = False
+            def close(self):
+                self.closed = True
+            def readline(self, limit):
+                self.read_called = True
+                raise AssertionError('Untrusted endpoint must not be parsed')
+
+        route = 'http://127.0.0.1:8080/api/nox/chat/stream'
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'):
+            self.assertIsNone(probe.require_exact_stream_target(Response(route)))
+            for target, hold in (
+                ('http://127.0.0.1:8080/chat/login', 'HOLD_STREAM_RESPONSE_REDIRECT'),
+                (route + '?model=other', 'HOLD_STREAM_RESPONSE_REDIRECT'),
+                ('http://127.0.0.1:8080/api/nox/chat', 'HOLD_STREAM_RESPONSE_REDIRECT'),
+                ('http://other.example/api/nox/chat/stream', 'HOLD_STREAM_RESPONSE_ORIGIN'),
+                ('https://127.0.0.1:8080/api/nox/chat/stream', 'HOLD_STREAM_RESPONSE_ORIGIN'),
+            ):
+                response = Response(target)
+                with self.subTest(target=target), patch.object(probe, 'request', return_value=response) as http:
+                    with self.assertRaisesRegex(RuntimeError, '^' + hold + '$'):
+                        probe.consume_turn(object(), 'synthetic', '1' * 32)
+                    http.assert_called_once()
+                self.assertFalse(response.read_called)
+                self.assertTrue(response.closed)
+        source = path.read_text()
+        self.assertIn('require_exact_stream_target(response)', source)
+
     def test_stream_line_read_is_bounded_before_untrusted_json_parse(self):
         class Oversize:
             status = 200
+            url = 'http://127.0.0.1:8080/api/nox/chat/stream'
             def __init__(self): self.closed = False; self.read_sizes = []
             def close(self): self.closed = True
             def readline(self, limit):
@@ -40,6 +75,7 @@ class ProbeTests(unittest.TestCase):
 
         class NoReadline:
             status = 200
+            url = 'http://127.0.0.1:8080/api/nox/chat/stream'
             def __init__(self): self.closed = False
             def close(self): self.closed = True
             def __iter__(self):
