@@ -210,6 +210,37 @@ class ProbeTests(unittest.TestCase):
             probe.obj(interrupted)
         self.assertTrue(interrupted.closed)
 
+    def test_owner_rest_json_readback_strict_evidence_and_socket_close(self):
+        class Response:
+            status = 200
+            def __init__(self, payload):
+                self.payload = payload
+                self.closed = False
+            def read(self, limit):
+                return self.payload[:limit]
+            def close(self):
+                self.closed = True
+
+        invalid = (
+            (b'{"native_p02_bound":false,"native_p02_bound":true}',
+             'HOLD_OWNER_JSON_DUPLICATE_KEY'),
+            (b'{"workers":[{"id":"a","id":"b"}]}',
+             'HOLD_OWNER_JSON_DUPLICATE_KEY'),
+            (b'{"configured":NaN}', 'HOLD_OWNER_JSON_NONFINITE'),
+            (b'{"events":[{"delay":Infinity}]}', 'HOLD_OWNER_JSON_NONFINITE'),
+            (b'{"value":-Infinity}', 'HOLD_OWNER_JSON_NONFINITE'),
+        )
+        for payload, hold in invalid:
+            with self.subTest(payload=payload):
+                response = Response(payload)
+                with self.assertRaisesRegex(RuntimeError, '^' + hold + '$'):
+                    probe.obj(response)
+                self.assertTrue(response.closed)
+        good = Response(b'{"native_p02_bound":true,"workers":[{"id":"a"}],"delay":1.5}')
+        self.assertEqual(probe.obj(good),
+                         {'native_p02_bound': True, 'workers': [{'id': 'a'}], 'delay': 1.5})
+        self.assertTrue(good.closed)
+
     def test_placeholders_and_invisible_unicode_do_not_count_as_visible_output(self):
         for text in ('', ' ', '\n', '...', '…\n', '. … .', '\u200b', '\u200d',
                      '\u2060', '\ufe0f', '\u034f', '\x00', '\u2028',
