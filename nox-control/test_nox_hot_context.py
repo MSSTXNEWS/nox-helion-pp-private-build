@@ -108,6 +108,29 @@ class HotContextTests(unittest.TestCase):
         with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_S03_REVISION"):
             call(conversation=[],verified_s03=[item],owner_persona_id="alice")
 
+    def test_supersession_link_must_resolve_to_current_active_fact(self):
+        revision = "e"*64
+        old = {"id":"old","source_sha256":"a"*64,"text":"obsolete fact",
+               "persona_id":"owner-01","revision":"d"*64,
+               "status":"SUPERSEDED","superseded_by":"new"}
+        current = {"id":"new","source_sha256":"b"*64,"text":"replacement fact",
+                   "persona_id":"owner-01","revision":revision,
+                   "status":"ACTIVE","superseded_by":None}
+        args = dict(conversation=[],token_budget=2048,
+                    owner_persona_id="owner-01",current_s03_revision=revision)
+        result = call(verified_s03=[old,current],**args)
+        self.assertEqual(result["selected_s03_ids"],["new"])
+        self.assertEqual(result["historical_s03_refs"][0]["superseded_by"],"new")
+        invalid_sets = (
+            [old],
+            [old,{**current,"status":"REVOKED"}],
+            [old,{**current,"status":"SUPERSEDED","superseded_by":"old"}],
+        )
+        for facts in invalid_sets:
+            with self.subTest(facts=[x["status"] for x in facts]):
+                with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_S03_SUPERSESSION"):
+                    call(verified_s03=facts,**args)
+
     def test_recent_dialogue_survives_competing_large_s03_fact(self):
         # A large old memory fits alone but must not evict the latest real turn.
         current={"id":"latest-assistant","role":"assistant",
