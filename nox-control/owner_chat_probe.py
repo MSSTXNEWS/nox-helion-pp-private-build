@@ -111,6 +111,26 @@ def require_exact_stream_target(response):
         raise RuntimeError('HOLD_STREAM_RESPONSE_REDIRECT')
 
 
+def require_exact_owner_readback_target(response, requested_path):
+    """A redirected owner API/history 200 is not evidence for the requested endpoint."""
+    expected = urllib.parse.urlsplit(BASE + requested_path)
+    actual = urllib.parse.urlsplit(getattr(response, 'url', ''))
+    if (actual.scheme, actual.netloc, actual.path, actual.query, actual.fragment) != (
+            expected.scheme, expected.netloc, expected.path, expected.query, expected.fragment):
+        raise RuntimeError('HOLD_OWNER_READBACK_RESPONSE_ROUTE')
+
+
+def owner_readback_json(client, requested_path):
+    """Bind read-only owner JSON to its exact path and close on both PASS and HOLD."""
+    response = request(client, requested_path)
+    try:
+        require_exact_owner_readback_target(response, requested_path)
+    except Exception:
+        response.close()
+        raise
+    return obj(response)
+
+
 def require_not_html_asset(response, sample):
     """HTTP 200 SPA/login HTML at a JS/CSS path is not a usable Resonance asset."""
     headers = getattr(response, 'headers', None)
@@ -534,10 +554,10 @@ def main():
             with request(unauth,path) as response:report['anonymous_http'][path]=response.status
         if report['nonloopback_peer']:
             if set(report['anonymous_http'].values())!={401}:raise RuntimeError('HOLD_ANONYMOUS_OWNER_SCOPE')
-            status=obj(request(client,'/api/nox/status'))
+            status=owner_readback_json(client,'/api/nox/status')
             report['owner_status_bound']=status.get('native_p02_bound') is True
-            executors=obj(request(client,'/api/ui/executors'))
-            event_status=obj(request(client,'/api/ui/events?limit=1'))
+            executors=owner_readback_json(client,'/api/ui/executors')
+            event_status=owner_readback_json(client,'/api/ui/events?limit=1')
             report['owner_events_access']=event_status.get('schema')=='NOX_OWNER_EVENTS_V1' and isinstance(event_status.get('events'),list)
             rows=executors.get('workers',[])
             report['owner_executors_access']=bool(executors.get('schema')=='NOX_OWNER_EXECUTORS_V1' and isinstance(rows,list))
@@ -562,7 +582,7 @@ def main():
         did=dialog.get('dialog_id')
         if not isinstance(did,str) or not re.fullmatch('[a-f0-9]{32}',did):raise RuntimeError('HOLD_DIALOG_CREATE')
         turn=admitted_consume_turn(client,prompt,did);answer=turn['answer'];receipt=turn['done']
-        history=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6'))
+        history=owner_readback_json(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6')
         saved=bool(receipt and receipt.get('saved') is True and receipt.get('s03_integrated') is True
                    and scoped_history_matches_turns(history, [(prompt, answer)], did))
         first=turn['first_meaningful_delta_ms']
@@ -577,7 +597,7 @@ def main():
         if os.environ.get('NOX_PROBE_SECOND_TURN')=='1':
             followup='Какое число ты только что получил? Ответь только этим числом.'
             follow=admitted_consume_turn(client,followup,did);answer2=follow['answer'];done=follow['done']
-            stored=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6'))
+            stored=owner_readback_json(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6')
             passed=bool(done and done.get('saved') is True and done.get('s03_integrated') is True
                         and scoped_history_matches_turns(stored, [(prompt, answer), (followup, answer2)], did))
             emit('chat_history_followup',{'history_model_pass':passed,'client_history_empty':True,
@@ -591,11 +611,11 @@ def main():
             question='Сколько сейчас исполнителей и агентов у NOX?'
             turn3=admitted_consume_turn(client,question,did,timeout=30)
             text=turn3['answer'];end=turn3['done']
-            fresh=obj(request(client,'/api/ui/executors'))
+            fresh=owner_readback_json(client,'/api/ui/executors')
             configured=observed_owner_executor_count(fresh)
             count=configured is not None
             phrase=answer_matches_observed_executor_count(text, configured)
-            third_history=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=8'))
+            third_history=owner_readback_json(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=8')
             expected_three=[(prompt,answer),(followup,answer2),(question,text)]
             third_durable=(isinstance(end,dict) and end.get('saved') is True
                            and end.get('s03_integrated') is True
