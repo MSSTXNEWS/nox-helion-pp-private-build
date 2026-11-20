@@ -58,5 +58,63 @@ class ForgeUrlAuthorityTests(unittest.TestCase):
         self.assertIn("ForgeError", receipt["error"])
 
 
+
+class ForgeContentDedupeTests(unittest.TestCase):
+    def test_cross_source_duplicate_digest_fails_closed(self):
+        sha = "0" * 64
+        timestamp = "2026-11-20T11:00:00Z"
+
+        def source(sid):
+            return {
+                "source_id": sid,
+                "origin_kind": "VERIFIED_KNOWLEDGE",
+                "source_url": f"https://example.org/{sid}",
+                "source_sha256": sha,
+                "license_id": "MIT",
+                "license_url": "https://example.org/license",
+                "license_sha256": sha,
+                "permission_status": "ALLOWED",
+                "permission_receipt": {
+                    "url": "https://example.org/evidence",
+                    "sha256": sha,
+                    "observed_at": timestamp,
+                },
+            }
+
+        def example(eid, sid, digest):
+            return {
+                "example_id": eid,
+                "source_id": sid,
+                "source_record_id": f"record-{eid}",
+                "content_sha256": digest,
+                "captured_at": timestamp,
+            }
+
+        payload = {
+            "schema": forge.INPUT_SCHEMA,
+            "manifest_id": "dedupe-content",
+            "created_at": timestamp,
+            "task": {
+                "id": forge.TASK_ID,
+                "spec_sha256": forge.TASK_SPEC_SHA256,
+                "registry_blob_sha": forge.SOURCE_REGISTRY_BLOB_SHA,
+            },
+            "sources": [source("s1"), source("s2")],
+            "examples": [example("e1", "s1", "1" * 64),
+                         example("e2", "s2", "1" * 64)],
+        }
+        with self.assertRaisesRegex(forge.ForgeError, "duplicate candidate content"):
+            forge.build_manifest(payload)
+
+        # Distinct claimed content hashes remain allowed; each source
+        # contributes one candidate, without claiming bytes were checked.
+        payload["examples"][1]["content_sha256"] = "2" * 64
+        result = forge.build_manifest(payload)
+        self.assertEqual(len(result["candidate_examples"]), 2)
+        self.assertEqual([row["share_numerator"] for row in result["source_shares"]], [1, 1])
+        self.assertFalse(result["integrity_scope"]["content_hashes_verified"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
