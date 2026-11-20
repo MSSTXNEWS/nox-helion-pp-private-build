@@ -1,10 +1,11 @@
 import copy
 import json
+import inspect
 import pathlib
 import tempfile
 import unittest
 
-from b3_frame_probe_20261120 import compare_baseline, measure, summarize, verify_url, require_landing_url
+from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url
 
 
 class TestProbe(unittest.TestCase):
@@ -18,6 +19,12 @@ class TestProbe(unittest.TestCase):
             verify_url('https://user:pass@nox.example/')
         live = 'http://127.0.0.1:8765/resonance.html'
         self.assertEqual(require_landing_url(live, live), live)
+        spa = live + '#/resonance'
+        self.assertEqual(require_landing_url(spa, spa), spa)
+        with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_LANDING_URL_MISMATCH'):
+            require_landing_url(spa, live + '#/login')
+        with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_LANDING_URL_MISMATCH'):
+            require_landing_url(spa, live)
         for redirect in (
             'http://127.0.0.1:8765/login.html',
             'http://127.0.0.1:8765/resonance.html?session=other',
@@ -32,6 +39,13 @@ class TestProbe(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_SELECTOR_REQUIRED'):
                 measure(live, temp, chromium='/usr/bin/chromium')
 
+
+    def test_post_screenshot_spa_route_fence_wired(self):
+        code = inspect.getsource(_measure_async)
+        self.assertGreater(code.rfind('require_landing_url(url, page.url)'),
+                           code.index('await page.screenshot('))
+        self.assertLess(code.rfind('require_landing_url(url, page.url)'),
+                        code.index("result['landing_url_verified'] = True"))
 
     def test_baseline_provenance_and_six_frame_modes(self):
         rows = [
