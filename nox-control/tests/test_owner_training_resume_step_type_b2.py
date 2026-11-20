@@ -603,5 +603,42 @@ class CheckpointStepProvenance(unittest.TestCase):
             self.assertEqual((root / "old-state.json").read_bytes(), original)
 
 
+    def test_train_cpu_env_rejects_extra_directives_after_valid_cap(self):
+        # Previous MULTILINE findall accepted an approved first line
+        # despite trailing shell/env directives that the trainer could load.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            admit = load_pinned_verifier(root)["resource_admission"]
+            sources = {
+                "/sys/fs/cgroup/cpu.max": "400000 100000",
+                "/sys/fs/cgroup/memory.max": "194065203200",
+                "/sys/fs/cgroup/memory.current": "188662734848",
+                str(root / "train_cpu_max.env"): "TRAIN_CPU_MAX=64GiB\n",
+            }
+            def fake_read_text(path, *args, **kwargs):
+                return sources[str(path)]
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "STOPPED"},
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 30000}]},
+                resource_budget=lambda *args: {"train_cpu_gib": 64},
+                health=lambda: {"8080": 200},
+            )
+            with (mock.patch.object(Path, "read_text", autospec=True,
+                                    side_effect=fake_read_text),
+                  mock.patch("os.sched_getaffinity", return_value={0, 1, 2, 3})):
+                self.assertEqual(admit(helper)["budget"]["configured_train_cpu_gib"], 64)
+                for invalid in (
+                    "TRAIN_CPU_MAX=64GiB\nEXTRA=1\n",
+                    "TRAIN_CPU_MAX=64GiB\n# innocent-looking appended comment\n",
+                    "TRAIN_CPU_MAX=64GiB\nexport TRAIN_CPU_MAX=1GiB\n",
+                    "TRAIN_CPU_MAX=64GiB\nTRAIN_CPU_MAX=64GiB\n",
+                    "TRAIN_CPU_MAX=64GiB\n\n",
+                ):
+                    with self.subTest(contents=invalid):
+                        sources[str(root / "train_cpu_max.env")] = invalid
+                        with self.assertRaisesRegex(RuntimeError, "HOLD_INSTALLED_TRAIN_CPU_LIMIT"):
+                            admit(helper)
+
+
 if __name__ == "__main__":
     unittest.main()
