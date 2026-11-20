@@ -36,8 +36,22 @@ def _ram():
     for cur, mx in (("/sys/fs/cgroup/memory.current", "/sys/fs/cgroup/memory.max"),
                     ("/sys/fs/cgroup/memory/memory.usage_in_bytes", "/sys/fs/cgroup/memory/memory.limit_in_bytes")):
         c, m = _read(cur), _read(mx)
-        if c and m and m.isdigit() and int(m) < (1 << 50):
-            return int(c) / 2**30, int(m) / 2**30
+        if c is None and m is None:
+            continue
+        # "max" and huge v1 sentinel limits mean the cgroup is unlimited.
+        if m == "max":
+            continue
+        # A declared finite cgroup limit outranks host /proc/meminfo. A bad
+        # usage sample must be unknown, not silently replaced with host RAM.
+        if not (c is not None and m is not None and
+                c.isascii() and c.isdecimal() and
+                m.isascii() and m.isdecimal()):
+            return None, None
+        used, limit = int(c), int(m)
+        if limit < (1 << 50):
+            if limit <= 0 or used > limit:
+                return None, None
+            return used / 2**30, limit / 2**30
     try:
         mi = dict(l.split(":") for l in open("/proc/meminfo").read().splitlines() if ":" in l)
         tot = int(mi["MemTotal"].split()[0]) / 1048576
@@ -142,8 +156,8 @@ def _status_flat():
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(M["t"])) if M["t"] else None,
         "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(M["t"])) if M["t"] else None,
         "source": "nox-bridge:/proc+nvidia-smi", "gpu_source": "nvidia-smi", "fresh": bool(fresh),
-        "cpu_percent": M["cpu"], "ram_percent": round(100 * ru / rt, 1) if ru and rt else None,
-        "ram_used_gb": round(ru, 1) if ru else None, "ram_total_gb": round(rt, 1) if rt else None,
+        "cpu_percent": M["cpu"], "ram_percent": round(100 * ru / rt, 1) if ru is not None and rt else None,
+        "ram_used_gb": round(ru, 1) if ru is not None else None, "ram_total_gb": round(rt, 1) if rt is not None else None,
         "gpu_percent": _gpu_utilization_percent(g),
         "vram_used_gb": round(sum(x["mem_used_gib"] for x in g), 1) if g else None,
         "vram_total_gb": round(sum(x["mem_total_gib"] for x in g), 1) if g else None,
@@ -151,7 +165,7 @@ def _status_flat():
         # nvidia-smi query here measures GPU core temperature, NOT hot-spot.
         "gpu_hotspot_c": None,
         "gpu_power_w": round(sum(powers), 0) if powers is not None else None,
-        "cpu_temperature_c": None, "disk_free_gib": round(df, 1) if df else None, "disk_total_gib": round(dt, 1) if dt else None,
+        "cpu_temperature_c": None, "disk_free_gib": round(df, 1) if df is not None else None, "disk_total_gib": round(dt, 1) if dt is not None else None,
         "gpus": g,
     }
 
