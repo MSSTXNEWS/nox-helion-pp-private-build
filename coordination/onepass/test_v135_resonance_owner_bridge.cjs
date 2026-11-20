@@ -1354,3 +1354,48 @@ test('V173 legacy RU ES first meaningful delta precedes delayed native done, S03
     assert.equal(f.calls.some(x=>x.path==='/api/nox/stop'),false);
   }
 });
+
+
+test('V176 ignores no delayed frame after done and withholds S03 acceptance until EOF',async()=>{
+  const encoder=new TextEncoder();
+  const frame=value=>JSON.stringify(value)+'\n';
+  const start=frame({type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'})+
+    frame({type:'start',model:'NOX HELION'})+
+    frame({type:'delta',text:'Ответ'})+
+    frame({type:'done',saved:true,s03_integrated:true,dialog_id:id,
+      exchange_id:'v176-owner-exchange'});
+  const late=frame({type:'delta',text:'UNAUTHORIZED_TRAILING_TOKEN'});
+  let historyReads=0,pulls=0;
+  const upstream=async path=>{
+    const endpoint=new URL(String(path),'https://nox.local').pathname;
+    if(endpoint==='/api/nox/chat/stream'){
+      const stream=new ReadableStream({async pull(controller){
+        if(pulls++===0){controller.enqueue(encoder.encode(start));return;}
+        await new Promise(resolve=>setTimeout(resolve,12));
+        controller.enqueue(encoder.encode(late));
+        controller.close();
+      }});
+      return new Response(stream,{headers:{'content-type':'application/x-ndjson'}});
+    }
+    if(endpoint==='/api/ui/memory/dialogs/history'){
+      historyReads++;
+      return Response.json({status:'READY',dialog_id:id,messages:[
+        {role:'user',exchange_id:'v176-owner-exchange',content:prompt},
+        {role:'assistant',exchange_id:'v176-owner-exchange',content:'Ответ'}
+      ]});
+    }
+    assert.fail('unexpected owner route '+endpoint);
+  };
+  const window={NOX_NATIVE_OWNER:true,fetch:upstream};
+  const location={pathname:'/nox-web-v29/pc/resonance.html',
+    origin:'https://nox.local',href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+  vm.runInNewContext(JS,{window,location,URL,Request,Response,ReadableStream,
+    TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+  const response=await window.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v176-later-chunk'})});
+  const observed=await events(response);
+  assert.equal(observed.find(x=>x.type==='error')?.error,'HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
+  assert.equal(observed.filter(x=>x.type==='done').length,0);
+  assert.equal(historyReads,0,'S03 history cannot certify a nonterminal transport');
+  assert.equal(pulls,2,'native response must be read through its second network chunk');
+});
