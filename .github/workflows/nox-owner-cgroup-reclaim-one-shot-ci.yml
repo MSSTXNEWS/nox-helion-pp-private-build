@@ -2,6 +2,7 @@ name: NOX one-shot cgroup cache reclaim guard
 on:
   pull_request:
     paths:
+      - "nox-control/owner_atomic_qwen3_32b_stage.py"
       - "nox-control/owner_memory_map_census_oneshot.py"
       - "nox-control/owner_cold_file_cache_oneshot.py"
       - "nox-control/owner_safe_cgroup_reclaim_oneshot.py"
@@ -23,5 +24,5 @@ jobs:
           python-version: "3.11"
       - name: Compile exact one-shot entry and run offline safety fixture
         run: |
-          python -B -m py_compile nox-control/owner_memory_map_census_oneshot.py nox-control/owner_cold_file_cache_oneshot.py nox-control/owner_safe_cgroup_reclaim_oneshot.py nox-control/test_owner_safe_cgroup_reclaim_oneshot.py nox-control/owner_native_operator.py
+          python -B -m py_compile nox-control/owner_atomic_qwen3_32b_stage.py nox-control/owner_memory_map_census_oneshot.py nox-control/owner_cold_file_cache_oneshot.py nox-control/owner_safe_cgroup_reclaim_oneshot.py nox-control/test_owner_safe_cgroup_reclaim_oneshot.py nox-control/owner_native_operator.py
           python -B nox-control/test_owner_safe_cgroup_reclaim_oneshot.py -v
