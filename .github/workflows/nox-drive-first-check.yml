@@ -10,6 +10,12 @@ on:
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/NOX_DRIVE_FIRST.md'
       - '.github/workflows/nox-drive-first-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/nox_drive_first.py'
+      - 'nox-control/test_nox_drive_first.py'
+      - '.github/workflows/nox-drive-first-check.yml'
   workflow_dispatch:
 permissions:
   contents: read
