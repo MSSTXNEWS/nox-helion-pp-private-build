@@ -20,10 +20,18 @@ class TestProbe(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             result = measure('http://127.0.0.1:8765/resonance.html', tmp,
                 chromium='/usr/bin/chromium', expected_selector='#resonance',
-                fixture_html='<html><body><main id="resonance">NOX synthetic local page</main></body></html>')
+                fixture_html=(
+                    '<html><body><main id="resonance">NOX synthetic local page</main>'
+                    '<script>fetch("https://example.invalid/api/nox/chat",'
+                    '{method:"POST",body:"x"}).catch(()=>{});'
+                    'try{const ws=new WebSocket("wss://example.invalid/nox/stream");'
+                    'ws.onerror=()=>{};}catch(e){}'
+                    '</script></body></html>'))
             self.assertEqual(len(result['runs']), 6)
-            self.assertEqual(result['blocked_mutating_requests'], 0)
-            self.assertEqual(result['blocked_model_posts'], 0)
+            self.assertEqual(result['blocked_mutating_requests'], 6)
+            self.assertEqual(result['blocked_model_posts'], 6)
+            self.assertEqual(result['blocked_websocket_connections'], 6)
+            self.assertTrue(result['service_workers_blocked'])
             self.assertFalse(result['native_s03_verified'])
             self.assertTrue(result['synthetic_fixture'])
             self.assertTrue(result['expected_selector_checked'])
@@ -36,7 +44,7 @@ class TestProbe(unittest.TestCase):
                 self.assertEqual(contents[:8], b'\x89PNG\r\n\x1a\n')
                 self.assertGreater(len(contents), 200)
             self.assertEqual(json.loads((pathlib.Path(tmp) / 'b3_frame_report.json').read_text())['schema'],
-                'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V1')
+                'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V2')
 
 
 if __name__ == '__main__':
