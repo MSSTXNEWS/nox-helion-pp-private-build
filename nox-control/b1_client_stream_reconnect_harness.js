@@ -47,14 +47,10 @@
     async function begin(raw){
       const s=snap(raw),k=key(s);
       if(started.has(k)) hold('HOLD_STREAM_NO_REPOST');
-      // A prior confirmed exchange is reconnect/readback-only, even after reload.
-      let previous;
-      try{previous=await host.readCommitted(s.conversation_id,s.exchange_id);}
-      catch(_){hold('HOLD_STREAM_STORAGE');}
-      if(previous) hold('HOLD_STREAM_RECONNECT_ONLY');
-      // Incomplete/unwitnessed exchange after reload MUST NOT be re-POSTed.
-      // Only the caller's server-side idempotent exchange ledger can decide
-      // whether a genuinely new exchange is safe to start.
+      // Claim the exchange SYNCHRONOUSLY before the first await. Previously two
+      // simultaneous begin() calls could both pass started.has() while the
+      // host's readCommitted() promise was pending, causing two model POSTs.
+      // A failed/unknown preflight also retains the local no-repost fence.
       started.add(k);
       const ctrl=new AbortController();
       active.set(k,ctrl);
@@ -62,6 +58,29 @@
       const stopped=()=>timedOut?'STOPPED_TIMEOUT':'STOPPED';
       const timer=setTimeout(()=>{timedOut=true;ctrl.abort();},timeoutMs);
       try{
+        // STOP and timeout must interrupt a hung preflight, not merely an SSE
+        // stream. This remains a read-only probe; no local claim is native CAS.
+        let onAbort;
+        let preflight;
+        try{
+          preflight=await Promise.race([
+            Promise.resolve().then(()=>host.readCommitted(
+              s.conversation_id,s.exchange_id))
+              .then(previous=>({previous}),()=>({storageError:true})),
+            new Promise(resolve=>{
+              onAbort=()=>resolve({aborted:true});
+              ctrl.signal.addEventListener('abort',onAbort,{once:true});
+              if(ctrl.signal.aborted) onAbort();
+            })
+          ]);
+        }finally{
+          if(onAbort) ctrl.signal.removeEventListener('abort',onAbort);
+        }
+        if(preflight.aborted||ctrl.signal.aborted) return stopped();
+        if(preflight.storageError) hold('HOLD_STREAM_STORAGE');
+        if(preflight.previous) hold('HOLD_STREAM_RECONNECT_ONLY');
+        // The host must ALSO enforce durable exchange idempotency across
+        // tabs, reloads and devices. Never re-POST an ambiguous exchange.
         const res=await transport.post(s,ctrl.signal);
         // A fetch/mock may resolve AFTER abort. Its body and buffered delta
         // are not authorized to reach UI once STOP or timeout has fired.
