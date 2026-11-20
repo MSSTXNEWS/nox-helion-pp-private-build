@@ -934,6 +934,10 @@ def main():
         if global_stop():
             raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
         rc, _ = helper.command(['supervisorctl', 'start', SERVICE], 35)
+        # RUNNING may describe an older service, not this failed start.
+        # A nonzero supervisor exit cannot establish a fresh native launch.
+        if rc != 0:
+            raise RuntimeError('HOLD_SINGLE_TRAINER_START_FAILED')
         status = helper.service_state()
         if status['state'] not in ('RUNNING', 'STARTING'):
             raise RuntimeError('HOLD_SINGLE_TRAINER_START_FAILED')
