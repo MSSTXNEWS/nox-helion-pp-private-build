@@ -257,6 +257,33 @@ def distinct_explicit_message_ids(rows):
 
 
 
+def owner_session_cookie_pin(cookies):
+    """In-memory identity of signed owner cookies; never log any cookie data.
+
+    Prefer server-issued HttpOnly cookies; benign JavaScript UI preferences
+    cannot rotate the owner identity. Fallback to all initial cookies only if
+    the server does not mark any cookie HttpOnly. Fail closed on malformed data.
+    """
+    if not isinstance(cookies, list) or not cookies:
+        return None
+    signed = [row for row in cookies
+              if isinstance(row, dict) and row.get('httpOnly') is True]
+    selected = signed if signed else cookies
+    identity = []
+    for cookie in selected:
+        if not isinstance(cookie, dict):
+            return None
+        fields = tuple(cookie.get(key) for key in ('name', 'domain', 'path', 'value'))
+        if any(not isinstance(field, str) or not field for field in fields):
+            return None
+        identity.append(fields)
+    if len(set(fields[:3] for fields in identity)) != len(identity):
+        return None
+    raw = json.dumps(sorted(identity), ensure_ascii=False,
+                     separators=(',', ':'), allow_nan=False).encode('utf-8')
+    return digest(raw)
+
+
 def verified_two_turn_firstturn_ids(rows):
     """Allow second POST only after two distinct, stable first-turn row IDs.
 
@@ -1013,6 +1040,9 @@ async def browser_run(report, directory, available):
             session=await context.request.get(base+'/chat/session',max_redirects=0,timeout=6000)
             if session.status!=200:
                 raise RuntimeError('HOLD_SIGNED_OWNER_SESSION')
+            owner_session_pin=owner_session_cookie_pin(await context.cookies(base))
+            if owner_session_pin is None:
+                raise RuntimeError('HOLD_OWNER_SESSION_COOKIE_IDENTITY')
             report['actual_native_backend']=True
             created=await json_response(await context.request.post(base+'/api/ui/memory/dialogs/create',
                 data={'title':title,'confirmed':True},max_redirects=0,timeout=8000))
@@ -1228,6 +1258,15 @@ async def browser_run(report, directory, available):
                 if firstturn_id_snapshot is None:
                     raise RuntimeError('HOLD_MULTITURN_FIRSTTURN_IDS_NOT_PERSISTED')
                 report['multiturn_firstturn_ids_verified']=True
+                # Read-only signed session check after turn 1, before allowing
+                # the Spanish POST. Cookie identity stays private in memory.
+                signed_again=await context.request.get(
+                    base+'/chat/session',max_redirects=0,timeout=6000)
+                if (signed_again.status!=200
+                        or owner_session_cookie_pin(
+                            await context.cookies(base))!=owner_session_pin):
+                    raise RuntimeError('HOLD_MULTITURN_OWNER_SESSION_CHANGED')
+                report['multiturn_owner_session_continuity_verified']=True
                 second_permitted=True
                 if stop_present():
                     raise RuntimeError('HOLD_OWNER_STOP')

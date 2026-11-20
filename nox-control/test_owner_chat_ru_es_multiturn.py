@@ -21,6 +21,7 @@ from owner_chat_browser_qa import (
     firstturn_history_valid,
     firstturn_prefix_identity_valid,
     verified_two_turn_firstturn_ids,
+    owner_session_cookie_pin,
     empty_dialog_history_valid,
     exact_native_post_fence,
     multiturn_followup_prompt,
@@ -345,6 +346,37 @@ async function check(chunks, status=200) {
         self.assertLess(
             caller.index('firstturn_id_snapshot=verified_two_turn_firstturn_ids(rows)'),
             caller.index('second_permitted=True'))
+
+    def test_presecond_owner_session_cookie_pin_rejects_rotation(self):
+        # Login 200 is insufficient if a different authenticated browser
+        # session replaces the first-turn cookie before the Spanish POST.
+        original = [dict(name='nox_owner', domain='owner.example', path='/',
+                         value='signed-session-1', httpOnly=True)]
+        pin = owner_session_cookie_pin(original)
+        self.assertIsInstance(pin, str)
+        self.assertEqual(len(pin), 64)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        self.assertEqual(owner_session_cookie_pin([ui, *original]), pin)
+        for changed in (
+            [],
+            [dict(original[0], value='signed-session-2')],
+            [dict(original[0], name='other-owner')],
+            [dict(original[0], path='/other')],
+            [dict(original[0], value='')],
+            [dict(original[0]), dict(original[0])],
+        ):
+            with self.subTest(case=repr(changed)[:60]):
+                self.assertNotEqual(owner_session_cookie_pin(changed), pin)
+        self.assertIsNone(owner_session_cookie_pin([]))
+        self.assertIsNone(owner_session_cookie_pin(None))
+        caller = inspect.getsource(browser_run)
+        self.assertIn("signed_again=await context.request.get(", caller)
+        self.assertIn("HOLD_MULTITURN_OWNER_SESSION_CHANGED", caller)
+        self.assertLess(caller.index("owner_session_pin=owner_session_cookie_pin("),
+                        caller.index("firstturn_id_snapshot=verified_two_turn_firstturn_ids(rows)"))
+        self.assertLess(caller.index("HOLD_MULTITURN_OWNER_SESSION_CHANGED"),
+                        caller.index("second_permitted=True"))
 
     def test_two_turn_native_post_accounting_fences_before_s03_proof(self):
         for turn in (1, 2):
