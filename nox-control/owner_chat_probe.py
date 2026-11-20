@@ -41,9 +41,25 @@ def obj(response,limit=100000):
         if response.status!=200:raise RuntimeError('HOLD_HTTP_'+str(response.status))
         raw=response.read(limit+1)
         if len(raw)>limit:raise RuntimeError('HOLD_RESPONSE_LIMIT')
-        return json.loads(raw)
+        return json.loads(raw, parse_constant=reject_owner_nonfinite_json_constant,
+                          object_pairs_hook=reject_owner_duplicate_json_keys)
     finally:
         response.close()
+
+
+def reject_owner_nonfinite_json_constant(_value):
+    """Do not certify owner APIs carrying nonstandard JSON constants."""
+    raise RuntimeError('HOLD_OWNER_JSON_NONFINITE')
+
+
+def reject_owner_duplicate_json_keys(pairs):
+    """Fail closed on ambiguous owner status/history keys at any nesting level."""
+    fields = {}
+    for key, value in pairs:
+        if key in fields:
+            raise RuntimeError('HOLD_OWNER_JSON_DUPLICATE_KEY')
+        fields[key] = value
+    return fields
 
 def require_same_origin_target(response, requested_path, exact_path=True):
     """A redirected login/foreign page must never count as healthy UI or JS."""
