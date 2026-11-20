@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
-REMOTE = 'tr \'\\0\' \'\\n\' < /proc/1/environ | grep -E \'^(PUBLIC_IPADDR|VAST_TCP_PORT_22)=\' | sed \'s/^/TUNNEL /\'; echo ---CHAT; curl -s -m 100 -N -X POST http://127.0.0.1:8091/api/chat -H \'Content-Type: application/json\' -d \'{"messages":[{"role":"user","content":"Ответь одним словом: готов?"}],"options":{"num_predict":12},"ephemeral":true}\' -w \'\\nTOTAL=%{time_total}s TTFB=%{time_starttransfer}s\\n\' | tail -c 700; echo ---; supervisorctl status 2>&1 | head -12'
+REMOTE = 'supervisorctl restart nox-ds41-8098 2>&1 | tail -1; for i in $(seq 1 45); do c=$(curl -s -m 4 -o /dev/null -w \'%{http_code}\' http://127.0.0.1:8098/health); [ "$c" = 200 ] && break; sleep 5; done; echo health=$c after=$((i*5))s; curl -s -m 60 -N -X POST http://127.0.0.1:8091/api/chat -H \'Content-Type: application/json\' -d \'{"messages":[{"role":"user","content":"Ответь одним словом: готов?"}],"options":{"num_predict":8},"ephemeral":true}\' -w \'\\nTOTAL=%{time_total}s\\n\' | tail -c 300; echo ---; supervisorctl status nox-ds41-8098 nox-bridge 2>&1; curl -s -o /dev/null -w \'web=%{http_code}\\n\' http://127.0.0.1:8091/web/'
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
