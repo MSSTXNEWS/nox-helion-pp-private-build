@@ -1074,5 +1074,51 @@ class CheckpointStepProvenance(unittest.TestCase):
         self.assertEqual(len(guarded_calls), 2)
 
 
+
+    def test_backup_descriptor_binds_exact_original_source_bytes(self):
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        selected = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == "stable_backup_bytes"]
+        self.assertEqual(len(selected), 1)
+        scope = {"Path": Path, "os": os, "stat": stat,
+                 "hashlib": hashlib, "re": re}
+        exec(compile(ast.Module(body=selected, type_ignores=[]), str(SOURCE), "exec"), scope)
+        stable = scope["stable_backup_bytes"]
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            owned = root / "original.py"
+            foreign = root / "foreign.py"
+            owned.write_bytes(b"original verified owner source")
+            foreign.write_bytes(b"unrelated source; must never be backed up")
+            expected = hashlib.sha256(owned.read_bytes()).hexdigest()
+            self.assertEqual(stable(owned, expected), owned.read_bytes())
+            with self.assertRaisesRegex(RuntimeError, "HOLD_BACKUP_PREIMAGE_MISMATCH"):
+                stable(owned, "f" * 64)
+            with self.assertRaisesRegex(RuntimeError, "HOLD_BACKUP_SOURCE_CHANGED"):
+                stable(owned, expected, max_bytes=5)
+            moved = root / "moved-original.py"
+            original_stat = os.stat
+            def replace_during_read(path, *args, **kwargs):
+                if Path(path) == owned:
+                    os.replace(owned, moved)
+                    owned.symlink_to(foreign)
+                return original_stat(path, *args, **kwargs)
+            with mock.patch("os.stat", side_effect=replace_during_read):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_BACKUP_SOURCE_CHANGED"):
+                    stable(owned, expected)
+            self.assertEqual(moved.read_bytes(), b"original verified owner source")
+            self.assertTrue(owned.is_symlink())
+            with self.assertRaisesRegex(RuntimeError, "HOLD_BACKUP_SOURCE_CHANGED"):
+                stable(owned, expected)
+        # The production backup closure must pass this verified descriptor
+        # snapshot to atomic backup, and install must bind the preimage hash.
+        main = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == "main")
+        nested = {node.name: node for node in main.body
+                  if isinstance(node, ast.FunctionDef)}
+        self.assertIn("stable_backup_bytes(", ast.unparse(nested["backup"]))
+        self.assertIn("backup(path, old)", ast.unparse(nested["install"]))
+
+
 if __name__ == "__main__":
     unittest.main()
