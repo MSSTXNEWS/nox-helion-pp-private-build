@@ -6,7 +6,7 @@ import pathlib
 import tempfile
 import unittest
 
-from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames
+from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames, evidence_hash, url_identity_sha256
 
 
 class TestProbe(unittest.TestCase):
@@ -65,24 +65,25 @@ class TestProbe(unittest.TestCase):
         rows = [
             {'width': width, 'height': height, 'mode': mode,
              'frame_time': {'frames': 90, 'p95_ms': 16.0},
-             'renderer_resource_sha256': 'a' * 64, 'renderer_resource_count': 2}
+             'renderer_resource_sha256': 'a' * 64, 'renderer_resource_count': 2,
+             'landing_url_sha256': url_identity_sha256('http://127.0.0.1:8765/resonance.html')}
             for width, height in ((320, 720), (390, 844), (1440, 900))
             for mode in ('normal', 'reduced')
         ]
         baseline = {
-            'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V2',
-            'url': 'http://127.0.0.1:8765/resonance.html',
+            'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V3',
+            'url_sha256': url_identity_sha256('http://127.0.0.1:8765/resonance.html'),
             'sample_js': '90 consecutive real requestAnimationFrame intervals',
             'synthetic_fixture': False, 'expected_selector_checked': True,
-            'expected_selector': '#resonance', 'landing_url_verified': True,
+            'expected_selector_sha256': evidence_hash('#resonance'), 'landing_url_verified': True,
             'runs': rows,
         }
         measured = copy.deepcopy(baseline)
         self.assertEqual(len(compare_baseline(measured, baseline)), 6)
         for change in (
             {'synthetic_fixture': True},
-            {'url': 'http://127.0.0.1:8765/login.html'},
-            {'expected_selector': '#login'},
+            {'url_sha256': url_identity_sha256('http://127.0.0.1:8765/login.html')},
+            {'expected_selector_sha256': evidence_hash('#login')},
             {'expected_selector_checked': False},
             {'landing_url_verified': False},
         ):
@@ -91,6 +92,10 @@ class TestProbe(unittest.TestCase):
             with self.subTest(change=change), self.assertRaisesRegex(
                     ValueError, 'HOLD_BASELINE_PROVENANCE_MISMATCH|HOLD_BASELINE_MISSING_LIVE_SELECTOR|HOLD_BASELINE_LANDING_URL_UNVERIFIED'):
                 compare_baseline(measured, wrong)
+        landing_changed = copy.deepcopy(baseline)
+        landing_changed['runs'][0]['landing_url_sha256'] = url_identity_sha256('http://127.0.0.1:8765/login.html')
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_LANDING_HASH_MISMATCH'):
+            compare_baseline(measured, landing_changed)
         drift = copy.deepcopy(baseline)
         drift['runs'][0]['renderer_resource_sha256'] = 'b' * 64
         with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_RENDER_IDENTITY_DRIFT'):
@@ -160,10 +165,12 @@ class TestProbe(unittest.TestCase):
     def test_headless_real_chromium_mock_site(self):
         with tempfile.TemporaryDirectory() as tmp:
             evidence_dir = pathlib.Path(tmp) / 'first_probe'
-            result = measure('http://127.0.0.1:8765/resonance.html', str(evidence_dir),
-                chromium='/usr/bin/chromium', expected_selector='#resonance',
+            secret_url = 'http://127.0.0.1:8765/resonance.html?auth=SECRET_URL_ABC#/resonance'
+            secret_selector = '#resonance[data-session="SECRET_SELECTOR_XYZ"]'
+            result = measure(secret_url, str(evidence_dir),
+                chromium='/usr/bin/chromium', expected_selector=secret_selector,
                 fixture_html=(
-                    '<html><body><main id="resonance">NOX synthetic local page</main>'
+                    '<html><body><main id="resonance" data-session="SECRET_SELECTOR_XYZ">NOX synthetic local page</main>'
                     '<script>fetch("https://example.invalid/api/nox/chat",'
                     '{method:"POST",body:"x"}).catch(()=>{});'
                     'try{const ws=new WebSocket("wss://example.invalid/nox/stream");'
@@ -187,8 +194,14 @@ class TestProbe(unittest.TestCase):
                 contents = (evidence_dir / row['screenshot']).read_bytes()
                 self.assertEqual(contents[:8], b'\x89PNG\r\n\x1a\n')
                 self.assertGreater(len(contents), 200)
-            self.assertEqual(json.loads((evidence_dir / 'b3_frame_report.json').read_text())['schema'],
-                'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V2')
+            report_text = (evidence_dir / 'b3_frame_report.json').read_text()
+            self.assertNotIn('SECRET_URL_ABC', report_text)
+            self.assertNotIn('SECRET_SELECTOR_XYZ', report_text)
+            self.assertNotIn('resonance.html?auth=', report_text)
+            self.assertEqual(result['url_sha256'], url_identity_sha256(secret_url))
+            self.assertEqual(result['expected_selector_sha256'], evidence_hash(secret_selector))
+            self.assertEqual(json.loads(report_text)['schema'],
+                'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V3')
 
 
 if __name__ == '__main__':
