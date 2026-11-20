@@ -1,0 +1,25 @@
+name: NOX Hunter 3B02 source regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/nox_hunter.py'
+      - 'nox-control/test_nox_hunter.py'
+      - '.github/workflows/nox-hunter-source-check.yml'
+permissions:
+  contents: read
+jobs:
+  focused-3b02:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify offline quarantine without S03 or network
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/nox_hunter.py nox-control/test_nox_hunter.py
+          PYTHONPATH=nox-control python3 -m unittest -v test_nox_hunter
+          echo 'NOX_3B02_SOURCE_ONLY=true'
+          echo 'NOX_3B02_NATIVE_ACCEPTANCE=false'

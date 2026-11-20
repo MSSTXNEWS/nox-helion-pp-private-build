@@ -306,6 +306,15 @@ def _init_db(conn: sqlite3.Connection) -> None:
             PRIMARY KEY (source_id, item_url, content_sha256)
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS item_quarantine (
+            source_id TEXT NOT NULL,
+            item_digest TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            first_seen_at REAL NOT NULL,
+            PRIMARY KEY (source_id, item_digest)
+        )
+    """)
     conn.commit()
 
 
@@ -358,12 +367,17 @@ def _fetch(source: dict[str, Any], cached: sqlite3.Row | None, max_bytes: int) -
 def _item_record(source: dict[str, Any], item: dict[str, str], now: float) -> tuple[str, str, str, str, str, str, float]:
     title = " ".join(str(item.get("title", "")).split())
     content = " ".join(str(item.get("content", "")).split())
-    raw_url = urljoin(source["url"], str(item.get("url") or source["url"]).strip())
-    try:
-        # Item links are stored as references only and are never fetched.
-        item_url = _canonical_url(raw_url)
-    except HunterError:
-        item_url = source["url"]
+    link = item.get("url")
+    # A feed entry without a real link, or with an unsafe link, is NOT
+    # evidence from the feed homepage. Never fabricate that attribution.
+    if not isinstance(link, str) or not link.strip():
+        if source["kind"] != "html_page":
+            raise HunterError("item URL missing; cannot attribute candidate")
+        link = source["url"]
+    raw_url = urljoin(source["url"], link.strip())
+    # Item links remain references only; they are never fetched. Unsafe links
+    # go into the candidate quarantine, not verified items or S03.
+    item_url = _canonical_url(raw_url)
     digest = hashlib.sha256((title + "\n" + content).encode("utf-8")).hexdigest()
     return (source["id"], item_url, digest, title, content, str(item.get("published", "")), now)
 
@@ -381,8 +395,23 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
         body, etag, modified, content_type, not_modified = _fetch(source, cached, max_bytes)
         parsed = _parse(source, body)
         inserted = 0
+        quarantined = 0
         for item in parsed:
-            record = _item_record(source, item, now)
+            try:
+                record = _item_record(source, item, now)
+            except HunterError:
+                # No raw untrusted URL/text in the quarantine receipt: an
+                # opaque digest preserves dedup and avoids credential leaks.
+                digest = hashlib.sha256(json.dumps(
+                    item, sort_keys=True, ensure_ascii=False,
+                ).encode("utf-8")).hexdigest()
+                conn.execute(
+                    "INSERT OR IGNORE INTO item_quarantine "
+                    "(source_id,item_digest,reason,first_seen_at) VALUES(?,?,?,?)",
+                    (source["id"], digest, "INVALID_ITEM_URL", now),
+                )
+                quarantined += 1
+                continue
             cursor = conn.execute(
                 "INSERT OR IGNORE INTO items "
                 "(source_id,item_url,content_sha256,title,content,published,first_seen_at) "
@@ -410,6 +439,7 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
             "status": "not_modified" if not_modified else "polled",
             "items_seen": len(parsed),
             "added": inserted,
+            "quarantined": quarantined,
             "next_poll_at": next_poll,
         }
     except (HTTPError, URLError, TimeoutError, OSError, ValueError, ET.ParseError) as exc:
