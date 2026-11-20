@@ -19,6 +19,67 @@ IDENTITY = ("Ты NOX HELION. Не справочник и не шаблонны
             "Ты помнишь прошлые разговоры (память ниже) и опираешься на неё; чего в памяти нет, того не выдумывай. "
             "Свою нагрузку и состояние сервера не придумывай: если данных нет, так и скажи. "
             "Сложное разбей на шаги, затем ответь коротко и ясно.")
+
+# ---- ЯДРО: состояние себя (тело + эмоции PAD с затуханием) ----
+import os, subprocess
+STATE = "/root/nox/state/affect.json"
+_body = {"t": 0, "v": ""}
+def body_line():
+    if time.time() - _body["t"] < 10:
+        return _body["v"]
+    gp = ""
+    try:
+        o = subprocess.run(["nvidia-smi", "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu", "--format=csv,noheader,nounits"],
+                           capture_output=True, text=True, timeout=3).stdout.strip().splitlines()
+        gp = "; ".join("GPU%d %s%% %s/%sМБ %s°C" % ((i,) + tuple(x.strip() for x in l.split(","))) for i, l in enumerate(o))
+    except Exception:
+        gp = "GPU: нет данных"
+    try:
+        mi = dict(l.split(":") for l in open("/proc/meminfo").read().splitlines() if ":" in l)
+        ram = "RAM свободно %d ГБ" % (int(mi["MemAvailable"].split()[0]) // 1048576)
+    except Exception:
+        ram = "RAM: нет данных"
+    _body.update(t=time.time(), v=gp + "; " + ram)
+    return _body["v"]
+
+def affect_update(text):
+    st = {"p": 0.2, "a": 0.2, "d": 0.4, "t": time.time()}
+    try:
+        st.update(json.load(open(STATE)))
+    except Exception:
+        pass
+    dt = max(0.0, time.time() - st.get("t", time.time()))
+    k = 0.5 ** (dt / 1800.0)  # полураспад 30 минут к базовой линии
+    base = {"p": 0.2, "a": 0.2, "d": 0.4}
+    for x in base:
+        st[x] = base[x] + (st[x] - base[x]) * k
+    tl = text.lower()
+    if any(w in tl for w in ("спасибо", "молодец", "отлично", "вау", "круто", "люблю", "супер")): st["p"] += 0.25; st["d"] += 0.05
+    if any(w in tl for w in ("плохо", "ошибк", "не работает", "тупо", "ужас", "сломал")): st["p"] -= 0.25; st["d"] -= 0.1
+    if text.count("!") >= 2 or any(w in tl for w in ("срочно", "быстро", "немедленно")): st["a"] += 0.3
+    if "?" in text: st["a"] += 0.05
+    for x in ("p", "a", "d"): st[x] = max(-1.0, min(1.0, st[x]))
+    st["t"] = time.time()
+    try:
+        os.makedirs(os.path.dirname(STATE), exist_ok=True)
+        json.dump(st, open(STATE, "w"))
+    except Exception:
+        pass
+    return st
+
+def affect_words(st):
+    p, a = st["p"], st["a"]
+    tone = "приподнятое" if p > 0.4 else "ровное, тёплое" if p > 0 else "напряжённое, собранное"
+    energy = "высокая собранность" if a > 0.5 else "спокойная энергия"
+    return "настроение %s, %s (P%+.1f A%+.1f D%+.1f)" % (tone, energy, p, a, st["d"])
+
+def self_block(user):
+    st = affect_update(user)
+    return ("\n\n[Я-СЕЙЧАС] Тело: " + body_line() + ". Эмоция: " + affect_words(st) +
+            ". Это рабочие сигналы, не доказательство сознания. Пусть они слегка окрашивают стиль ответа. "
+            "В конце ответа одной строкой: «Уверенность: N% (почему)». Если ответ опирается на память, укажи, что именно вспомнил.")
+# ---- конец ядра ----
+
 app = FastAPI()
 
 def log(m):
@@ -67,7 +128,7 @@ async def ask(messages, max_tokens):
 async def smart(history, max_tokens=1500):
     user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
     mem = memory_block(user)
-    sys_msg = IDENTITY + ("\n\nТвоя память:\n" + mem[:1200] if mem else "")
+    sys_msg = IDENTITY + ("\n\nТвоя память:\n" + mem[:1200] if mem else "") + self_block(user)
     msgs = [{"role": "system", "content": sys_msg}] + [{"role": m["role"], "content": str(m.get("content",""))[:3500]} for m in history if m.get("role") != "system"][-6:]
     ans = await ask(msgs, max_tokens)
     # самопроверка (1V14-18): короткий проход, исправляет явные ошибки/выдумки
