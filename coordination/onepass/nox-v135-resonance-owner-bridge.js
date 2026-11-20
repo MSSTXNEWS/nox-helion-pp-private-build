@@ -206,37 +206,37 @@
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
           let trailing='',waits=0;
+          const moving=()=> (typeof document==='undefined'||document.visibilityState!=='hidden')&&
+            !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
           const emitPieces=async t=>{
-            const parts=livePieces(t);
+            const parts=moving()?livePieces(t):[Array.isArray(t)?t.join(''):t];
             for(let index=0;index<parts.length;index++){
       if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
       event({type:'token',t:parts[index]});
-      if(index<parts.length-1&&waits<2&&
-      (typeof document==='undefined'||document.visibilityState!=='hidden')&&
-      !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches&&waits++<2){
-      await new Promise(resolve=>{
-      let settled=false,frameId,timerId;
-      const visibility=()=>{if(document.visibilityState==='hidden')finish();};
-      const finish=()=>{
-      if(settled)return;
-      settled=true;
-      if(typeof document!=='undefined')document.removeEventListener?.('visibilitychange',visibility);
-      nativeSignal.removeEventListener('abort',finish);
-      if(frameId!==undefined&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
-      if(timerId!==undefined&&typeof clearTimeout==='function')clearTimeout(timerId);
-      resolve();
-      };
-      if(typeof document!=='undefined'){document.addEventListener?.('visibilitychange',visibility);visibility();}
-      if(!settled){nativeSignal.addEventListener('abort',finish,{once:true});if(nativeSignal.aborted)finish();}else return;
-      if(typeof requestAnimationFrame==='function'){
-      frameId=requestAnimationFrame(finish);
-      if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
-      }
-      if(typeof setTimeout==='function'){
-      timerId=setTimeout(finish,18);
-      if(settled&&typeof clearTimeout==='function')clearTimeout(timerId);
-      } else if(typeof requestAnimationFrame!=='function')finish();
-      });
+      if(index<parts.length-1&&waits<2&&moving()&&waits++<2){
+  await new Promise(resolve=>{
+  let settled=false,frameId,timerId;
+  const visibility=()=>{if(document.visibilityState==='hidden')finish();};
+  const finish=()=>{
+  if(settled)return;
+  settled=true;
+  if(typeof document!=='undefined')document.removeEventListener?.('visibilitychange',visibility);
+  nativeSignal.removeEventListener('abort',finish);
+  if(frameId!==undefined&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
+  if(timerId!==undefined&&typeof clearTimeout==='function')clearTimeout(timerId);
+  resolve();
+  };
+  if(typeof document!=='undefined'){document.addEventListener?.('visibilitychange',visibility);visibility();}
+  if(!settled){nativeSignal.addEventListener('abort',finish,{once:true});if(nativeSignal.aborted)finish();}else return;
+  if(typeof requestAnimationFrame==='function'){
+  frameId=requestAnimationFrame(finish);
+  if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
+  }
+  if(typeof setTimeout==='function'){
+  timerId=setTimeout(finish,18);
+  if(settled&&typeof clearTimeout==='function')clearTimeout(timerId);
+  } else if(typeof requestAnimationFrame!=='function')finish();
+  });
       }
             }
           };
