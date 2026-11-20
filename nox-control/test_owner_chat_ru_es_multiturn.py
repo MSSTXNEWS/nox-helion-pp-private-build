@@ -422,17 +422,29 @@ async function check(chunks, status=200) {
         self.assertFalse(canonical_s03_proof_valid(
             writer, forged_readback, DIALOG, forged))
 
-    def test_s03_explicit_null_history_pin_cannot_downgrade_to_legacy(self):
-        # Missing BOTH digests is the pre-fingerprint legacy contract;
-        # an explicit null must not silently opt into that compatibility path.
+    def test_s03_unpinned_legacy_witness_cannot_certify_four_turns(self):
+        # Neither omitted nor explicitly null history pins can prove two turns.
+        # Old last-answer-only receipts may match after earlier turns changed.
         transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
         writer, readback = s03_proof(transcript)
         old_writer = {k: v for k, v in writer.items()
                       if k != "full_transcript_sha256"}
         old_readback = {k: v for k, v in readback.items()
                         if k != "full_transcript_sha256"}
-        self.assertTrue(canonical_s03_proof_valid(
+        self.assertFalse(canonical_s03_proof_valid(
             old_writer, old_readback, DIALOG, transcript))
+        changed_earlier_turns = [dict(row) for row in transcript]
+        changed_earlier_turns[0]['content'] += ' другой вопрос'
+        changed_earlier_turns[1]['content'] = '3,8,1,9,5,10,6,4,2,7'
+        stale_last_answer_readback = dict(
+            old_readback, messages=changed_earlier_turns)
+        # Both receipts still agree on event, dialog, sequence, final answer.
+        # That is insufficient to certify changed previous conversation turns.
+        self.assertFalse(canonical_s03_proof_valid(
+            old_writer, stale_last_answer_readback,
+            DIALOG, changed_earlier_turns))
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, transcript))
         for bad_writer, bad_readback in (
             (dict(old_writer, full_transcript_sha256=None), old_readback),
             (old_writer, dict(old_readback, full_transcript_sha256=None)),

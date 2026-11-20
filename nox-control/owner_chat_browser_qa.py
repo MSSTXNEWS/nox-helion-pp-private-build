@@ -318,18 +318,13 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     if (not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict)
             or writer_receipt is independent_readback):
         return False
-    # A1's existing receipt shape predates the full-history fingerprint.
-    # When either witness supplies a history pin, require BOTH exact pins.
-    # Legacy unsigned witness shapes remain source-compatible, but still
-    # cannot satisfy native acceptance without actual trusted S03 I/O.
+    # A legacy writer/readback with only the last-answer SHA can match a
+    # stale event even when the earlier RU/ES turns changed. In two-turn mode
+    # BOTH independent witnesses must pin the complete four-message history.
     writer_history_sha = writer_receipt.get('full_transcript_sha256')
     readback_history_sha = independent_readback.get('full_transcript_sha256')
-    # A present-but-null digest is malformed, not a legacy omitted pin.
-    # Compatibility applies only when BOTH witness fields are absent.
-    if ('full_transcript_sha256' in writer_receipt
-            or 'full_transcript_sha256' in independent_readback):
-        if writer_history_sha != transcript_sha or readback_history_sha != transcript_sha:
-            return False
+    if writer_history_sha != transcript_sha or readback_history_sha != transcript_sha:
+        return False
     event_id = writer_receipt.get('event_id')
     turn_id = writer_receipt.get('turn_id')
     sequence = writer_receipt.get('sequence')
