@@ -66,7 +66,23 @@ def autoclean(args):
     if os.path.exists(FLAG): os.remove(FLAG)
     return "autoclean DISABLED"
 
+def disk_top(a):
+    return run(["bash", "-c", "du -xh --max-depth=2 /root /workspace /var /opt 2>/dev/null | sort -rh | head -30"], 110)
+
+def update(a):
+    sha = str(a.get("sha", ""))
+    if not (len(sha) == 40 and all(c in "0123456789abcdef" for c in sha)): return "REFUSED: bad sha"
+    url = "https://raw.githubusercontent.com/%s/%s/nox-control/cmd_agent/nox_cmd_agent.py" % (REPO, sha)
+    code = urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "nox-cmd-agent"}), timeout=30).read()
+    open("/opt/nox-cmd/agent.py.new", "wb").write(code)
+    import py_compile; py_compile.compile("/opt/nox-cmd/agent.py.new", doraise=True)
+    os.replace("/opt/nox-cmd/agent.py.new", "/opt/nox-cmd/agent.py")
+    import threading; threading.Timer(3, lambda: os._exit(0)).start()
+    return "updated to %s, restarting via supervisor" % sha[:7]
+
 ACTIONS = {
+    "disk_top": disk_top,
+    "update": update,
     "ram_status": lambda a: ram_status(),
     "cache_clean": lambda a: clean_caches(bool(a.get("force_drop"))),
     "nox_status": lambda a: nox_status(),
@@ -83,9 +99,9 @@ def post(text):
     if not (TOKEN and ISSUE): print(text); return
     req = urllib.request.Request("https://api.github.com/repos/%s/issues/%s/comments" % (REPO, ISSUE),
         data=json.dumps({"body": text[:60000]}).encode(), method="POST",
-        headers={"Authorization": "Bearer " + TOKEN, "Accept": "application/vnd.github+json", "User-Agent": "nox-cmd-agent"})
+        headers={"Authorization": "Bearer " + TOKEN, "Accept": "application/vnd.github+json", "Content-Type": "application/json", "User-Agent": "nox-cmd-agent"})
     try: urllib.request.urlopen(req, timeout=20)
-    except Exception as e: print("post failed", type(e).__name__)
+    except Exception as e: print("post failed", type(e).__name__, getattr(e, "code", ""))
 
 def load_state():
     try: return json.load(open(STATE))
