@@ -23,6 +23,8 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       if(cmd!=='Network.getRequestPostData')return normalSend(cmd,p);
       if(options.postDataMode==='late')return new Promise(resolve=>setTimeout(
         ()=>resolve({postData:'{"fallback":'+JSON.stringify(p.requestId)+'}'}),35));
+      if(options.postDataMode==='lateCustom')return new Promise(resolve=>setTimeout(
+        ()=>resolve({postData:options.postDataText}),35));
       if(options.postDataMode==='reject')return Promise.reject(Error('POST_DATA_UNAVAILABLE'));
       if(options.postDataMode==='hang')return new Promise(()=>{});
       return normalSend(cmd,p);
@@ -35,7 +37,7 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
     const captured=Buffer.concat(chunks);
     c.bodies.set(requestId,i===1&&responseBodyForSecondTurn!==null?Buffer.from(responseBodyForSecondTurn):captured);
     c.emit('Network.requestWillBeSent',{requestId,timestamp,request:{method:'POST',url:'http://localhost/api/nox/chat',
-      ...(i===1&&o.postDataMode?{}:{postData:'{"secret":"'+i+'"}'})}});
+      ...(i===1&&o.postDataMode?{}:{postData:i===1&&Object.hasOwn(o,'postDataText')?o.postDataText:'{"secret":"'+i+'"}'})}});
     const emitExtra=()=>c.emit('Network.responseReceivedExtraInfo',{requestId,statusCode:o.extraStatus??200,headers:o.extraHeaders??{}});
     if(o.extraBefore)emitExtra();
     const response={status:200,mimeType:'text/event-stream',headers:i===1&&encoding?{'Content-Encoding':encoding}:{}};
@@ -449,5 +451,36 @@ test('Network.getResponseBody rejects unpaired UTF-16 surrogates before lossy UT
     assert.equal(poisoned.turns[1].cdp_decoded_body_sha256,null);
     assert.equal(poisoned.turns[1].ttft_ms,null);
     assert.equal(poisoned.turns[1].sse_done_ms,null);
+  }
+});
+
+test('direct and delayed CDP POST digests reject lossy UTF-16 while preserving valid RU ES emoji',async()=>{
+  const {createHash}=await import('node:crypto');
+  const digest=s=>createHash('sha256').update(Buffer.from(s,'utf8')).digest('hex');
+  const good='{"message":"Привет, mañana 🐈"}';
+  const genuineReplacement='{"message":"\uFFFD"}';
+  for(const postDataText of [good,genuineReplacement]){
+    for(const mode of ['direct','lateCustom']){
+      const opts={postDataText,...(mode==='lateCustom'?{postDataMode:mode}:{})};
+      const x=await run(false,null,null,null,opts);
+      assert.equal(x.cdp_consistent,true,mode);
+      assert.equal(x.ttft_sse_verified,true,mode);
+      assert.equal(x.turns[1].request_sha256,digest(postDataText),mode);
+      assert.doesNotMatch(JSON.stringify(x),/Привет|mañana|secret/);
+    }
+  }
+  for(const invalidUnit of ['\uD800','\uDC00']){
+    const lossy='{"message":"'+invalidUnit+'"}';
+    assert.equal(digest(lossy),digest(genuineReplacement),
+      'unpaired surrogate hashes to same bytes as genuine replacement under permissive encoding');
+    for(const mode of ['direct','lateCustom']){
+      const opts={postDataText:lossy,...(mode==='lateCustom'?{postDataMode:mode}:{})};
+      const x=await run(false,null,null,null,opts);
+      assert.equal(x.cdp_consistent,false,mode);
+      assert.equal(x.ttft_sse_verified,false,mode);
+      assert.equal(x.turns[1].request_sha256,null,mode);
+      assert.equal(x.turns[1].ttft_ms,null,mode);
+      assert.equal(x.turns[1].sse_done_ms,null,mode);
+    }
   }
 });
