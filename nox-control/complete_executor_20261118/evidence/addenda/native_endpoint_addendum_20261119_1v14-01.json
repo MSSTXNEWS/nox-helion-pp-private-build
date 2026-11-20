@@ -61,7 +61,7 @@
       "workflow_run_id": 44590818738,
       "job_id": 135796020570,
       "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44590818738/job/135796020570",
-      "job_conclusion": "success",
+      "job_conclusion": "failure",
       "authorized_comment_id": 7018554233,
       "host_instance_id": 60509551,
       "source_ref": "084addf6ce5e8f3d07cf21f4991ff22eb37d4eab",
@@ -79,7 +79,12 @@
       "model_loads": 0,
       "service_restarts": 0,
       "native_source_writes": 0,
-      "raw_content_exported": false
+      "raw_content_exported": false,
+      "workflow_status": "HOLD_NATIVE_PAYLOAD_INCOMPLETE",
+      "workflow_remote_exit_code": 2,
+      "workflow_hold": "HOLD_WEB_EDGE_TUNNEL_RECEIPT",
+      "chat_subreceipt_status": "LIVE_STREAM_OWNER_DIALOG_VERIFIED",
+      "chat_subreceipt_scope": "The authenticated chat request passed its own subreceipt: HTTP 200, substantive deltas, terminal done, and exact saved owner-dialog pair. The enclosing compound repair job failed because the independent web-edge tunnel gate did not pass in that run."
     },
     "https_edge": {
       "workflow_run_id": 44591678615,
