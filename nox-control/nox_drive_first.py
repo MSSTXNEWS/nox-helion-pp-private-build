@@ -337,7 +337,17 @@ def save_receipt(path, value):
             f.write(data)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, path)
+        # A prior task receipt is immutable; a reused TaskID must not replace
+        # evidence from a different source SHA or authorization epoch.
+        try:
+            os.link(tmp, path, follow_symlinks=False)
+        except FileExistsError:
+            raise Hold("HOLD_DRIVE_FIRST_RECEIPT_ALREADY_EXISTS") from None
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
     finally:
         tmp.unlink(missing_ok=True)
 
@@ -358,6 +368,10 @@ def execute(m, config, state):
                 fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
                 raise Hold("HOLD_DRIVE_FIRST_BUSY")
+            # Replay is not a new transfer: refuse a TaskID with any existing
+            # receipt before touching the Google Drive transport.
+            receipt_path = state / ("drive-" + m["task_id"] + ".json")
+            require(not os.path.lexists(receipt_path), "RECEIPT_ALREADY_EXISTS")
             # Exercise the pinned Google Drive root, never enumerate/print files.
             run_rclone(["lsf", "noxdrive:", "--max-depth", "1", "--retries", "1",
                         "--low-level-retries", "1"], config, timeout=30)
@@ -384,7 +398,7 @@ def execute(m, config, state):
                 require(source.stat().st_size == m["size"] and
                         sha_file(source) == m["sha256"], "SOURCE_CHANGED_AFTER_UPLOAD")
             value = receipt("VERIFIED_IN_DRIVE", m, stage, final)
-            save_receipt(state / ("drive-" + m["task_id"] + ".json"), value)
+            save_receipt(receipt_path, value)
             return {"schema": SCHEMA, "state": "VERIFIED_IN_DRIVE",
                     "task_id": m["task_id"], "readback_verified": True,
                     "source_deleted": False}
