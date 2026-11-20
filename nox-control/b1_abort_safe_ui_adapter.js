@@ -22,11 +22,13 @@
       hold('HOLD_B1_UI_SCOPE');
     return {conversation_id:s.conversation_id,exchange_id:s.exchange_id};
   }
-  function createUiAdapter({container,beforeCommit=()=>Promise.resolve()}={}){
+  function createUiAdapter({container,beforeCommit=()=>Promise.resolve(),terminalTimeoutMs=30000}={}){
     if(!container||container.nodeType!==1||
        !container.ownerDocument||
        typeof container.ownerDocument.createElement!=='function'||
-       typeof beforeCommit!=='function') hold('HOLD_B1_UI_CONTRACT');
+       typeof beforeCommit!=='function'||
+       !Number.isSafeInteger(terminalTimeoutMs)||terminalTimeoutMs<1||terminalTimeoutMs>120000)
+      hold('HOLD_B1_UI_CONTRACT');
     // Search existing direct children, not only memory, so adapter recreation
     // after reload/reattachment does not duplicate an already-present turn.
     function find(s){
@@ -97,10 +99,17 @@
       job.then(release,release);
       return job;
     }
-    function upsertTerminal(raw,eventId){
+    // The SSE caller may pass the exchange STOP signal. Legacy callers still
+    // have a finite precommit timeout and cannot commit after it has expired.
+    function upsertTerminal(raw,eventId,signal){
       const s=scope(raw);
       if(typeof eventId!=='string'||!ID.test(eventId))
         hold('HOLD_B1_UI_EVENT_ID');
+      if(signal!==undefined&&(!signal||typeof signal.aborted!=='boolean'||
+         typeof signal.addEventListener!=='function'||
+         typeof signal.removeEventListener!=='function'))
+        hold('HOLD_B1_UI_TERMINAL_SIGNAL');
+      if(signal&&signal.aborted) return Promise.resolve(false);
       const k=s.conversation_id+'\u0000'+s.exchange_id;
       const pending=terminalIntents.get(k);
       if(pending){
@@ -110,18 +119,44 @@
       }
       const previous=deltaTails.get(k)||Promise.resolve();
       const job=Promise.resolve().then(async()=>{
-        // A previously accepted delta must finish (or abort) before terminal.
-        // A failed delta blocks ACK via the caller's UI projection gate.
-        await previous;
-        await beforeCommit('terminal',s);
-        let el=find(s);
-        if(el&&el.dataset.noxB1EventId&&el.dataset.noxB1EventId!==eventId)
-          hold('HOLD_B1_UI_CONFLICTING_TERMINAL');
-        if(!el) el=create(s);
-        // Idempotent per exchange, including repeat readback or adapter reset.
-        el.dataset.noxB1EventId=eventId;
-        el.dataset.noxB1State='terminal';
-        return true;
+        let closed=false, onAbort, timer=null;
+        const cancellation=new Promise(resolve=>{
+          onAbort=()=>{closed=true;resolve({kind:'aborted'});};
+          if(signal){
+            signal.addEventListener('abort',onAbort,{once:true});
+            if(signal.aborted) onAbort();
+          }
+          timer=setTimeout(()=>{
+            closed=true;
+            resolve({kind:'timeout'});
+          },terminalTimeoutMs);
+        });
+        const projection=(async()=>{
+          // Earlier queued deltas drain first. Abort also interrupts a hung
+          // pending delta without waiting for its precommit to resolve.
+          await previous;
+          if(closed||(signal&&signal.aborted)) return {kind:'aborted'};
+          await beforeCommit('terminal',s);
+          // No asynchronous gap between this fence and the DOM mutation.
+          if(closed||(signal&&signal.aborted)) return {kind:'aborted'};
+          let el=find(s);
+          if(el&&el.dataset.noxB1EventId&&el.dataset.noxB1EventId!==eventId)
+            hold('HOLD_B1_UI_CONFLICTING_TERMINAL');
+          if(!el) el=create(s);
+          el.dataset.noxB1EventId=eventId;
+          el.dataset.noxB1State='terminal';
+          return {kind:'done'};
+        })().catch(error=>({kind:'error',error}));
+        try{
+          const outcome=await Promise.race([projection,cancellation]);
+          if(outcome.kind==='timeout') hold('HOLD_B1_UI_TERMINAL_TIMEOUT');
+          if(outcome.kind==='error') throw outcome.error;
+          return outcome.kind==='done';
+        }finally{
+          closed=true;
+          if(timer!==null) clearTimeout(timer);
+          if(signal&&onAbort) signal.removeEventListener('abort',onAbort);
+        }
       });
       const intent={eventId,promise:job};
       terminalIntents.set(k,intent);
