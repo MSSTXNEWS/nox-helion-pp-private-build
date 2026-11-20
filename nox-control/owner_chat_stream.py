@@ -584,9 +584,20 @@ async def _run(native,url,payload,user_text):
                         expected_args=json.loads(
                             expected_args,object_pairs_hook=_reject_duplicate_json_keys,
                             parse_constant=_reject_nonfinite_json_constant)
+                    # Python equality treats True == 1 and 1 == 1.0. A
+                    # native parser must not change JSON scalar types while
+                    # keeping the same call ID: this changes tool semantics.
+                    # Canonical JSON preserves scalar types but ignores harmless
+                    # object-key ordering and JSON escape formatting.
+                    expected_wire=json.dumps(expected_args,sort_keys=True,
+                                             ensure_ascii=False,allow_nan=False,
+                                             separators=(',',':'))
+                    actual_wire=json.dumps(call['arguments'],sort_keys=True,
+                                           ensure_ascii=False,allow_nan=False,
+                                           separators=(',',':'))
                     if (call['name']!=function['name']
                             or not isinstance(expected_args,dict)
-                            or call['arguments']!=expected_args):
+                            or actual_wire!=expected_wire):
                         raise ValueError('parser changed tool payload')
                 except (TypeError,ValueError,KeyError):
                     raise StreamFailure('HOLD_TOOL_CALL_ARGUMENT_FIDELITY') from None
