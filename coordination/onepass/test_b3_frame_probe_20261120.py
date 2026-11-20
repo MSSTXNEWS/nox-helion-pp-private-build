@@ -140,9 +140,27 @@ class TestProbe(unittest.TestCase):
 
         asyncio.run(run())
 
+    def test_reused_output_refused_before_browser_or_network(self):
+        # A prior success report must remain intact; a new measurement may not
+        # overwrite its PNGs then fail and leave misleading old/new evidence.
+        with tempfile.TemporaryDirectory() as root:
+            existing = pathlib.Path(root) / 'prior'
+            existing.mkdir()
+            stale = existing / 'b3_frame_report.json'
+            stale.write_text('prior-success', encoding='utf8')
+            with self.assertRaisesRegex(ValueError, 'HOLD_EVIDENCE_DIRECTORY_REUSED'):
+                measure('http://127.0.0.1:8765/resonance.html', str(existing),
+                        chromium='/definitely/missing/chromium',
+                        fixture_html='<main id="resonance">synthetic</main>',
+                        expected_selector='#resonance')
+            self.assertEqual(stale.read_text(encoding='utf8'), 'prior-success')
+            self.assertEqual(sorted(p.name for p in existing.iterdir()),
+                             ['b3_frame_report.json'])
+
     def test_headless_real_chromium_mock_site(self):
         with tempfile.TemporaryDirectory() as tmp:
-            result = measure('http://127.0.0.1:8765/resonance.html', tmp,
+            evidence_dir = pathlib.Path(tmp) / 'first_probe'
+            result = measure('http://127.0.0.1:8765/resonance.html', str(evidence_dir),
                 chromium='/usr/bin/chromium', expected_selector='#resonance',
                 fixture_html=(
                     '<html><body><main id="resonance">NOX synthetic local page</main>'
@@ -166,10 +184,10 @@ class TestProbe(unittest.TestCase):
             self.assertEqual({r['mode'] for r in result['runs']}, {'normal', 'reduced'})
             for row in result['runs']:
                 self.assertEqual(row['frame_time']['frames'], 90)
-                contents = (pathlib.Path(tmp) / row['screenshot']).read_bytes()
+                contents = (evidence_dir / row['screenshot']).read_bytes()
                 self.assertEqual(contents[:8], b'\x89PNG\r\n\x1a\n')
                 self.assertGreater(len(contents), 200)
-            self.assertEqual(json.loads((pathlib.Path(tmp) / 'b3_frame_report.json').read_text())['schema'],
+            self.assertEqual(json.loads((evidence_dir / 'b3_frame_report.json').read_text())['schema'],
                 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V2')
 
 
