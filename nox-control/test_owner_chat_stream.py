@@ -852,8 +852,8 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     {'name':'run_admin','arguments':{'action':'status'}}]
                 payload={'messages':[{'role':'user','content':'Direct owner command'}]}
                 with (patch.object(stream._current,'dispatch',return_value=None),
-                      patch.object(stream.httpx,'AsyncClient',
-                                   side_effect=AssertionError('no model'))):
+                      patch.object(stream.httpx.AsyncClient,'stream',
+                                   side_effect=AssertionError('no model POST'))):
                     response=await native['owner_completion'](
                         'http://native/model',payload,'Direct owner command',True)
                     wire=''.join([part async for part in response.body_iterator])
