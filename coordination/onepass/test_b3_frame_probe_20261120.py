@@ -83,6 +83,26 @@ class TestProbe(unittest.TestCase):
         }
         measured = copy.deepcopy(baseline)
         self.assertEqual(len(compare_baseline(measured, baseline)), 6)
+        # Both files may carry the same malformed 'synthetic' value. Before
+        # this fence the truthy string "false" bypassed every live guard.
+        for malformed in ('false', 'true', 0, 1, None):
+            bad = copy.deepcopy(baseline)
+            bad['synthetic_fixture'] = malformed
+            with self.subTest(fixture=malformed), self.assertRaisesRegex(
+                    ValueError, 'HOLD_BASELINE_FIXTURE_FLAG_INVALID'):
+                compare_baseline(bad, bad)
+        for malformed in ('true', 'false', 0, 1, None):
+            bad = copy.deepcopy(baseline)
+            bad['expected_selector_checked'] = malformed
+            with self.subTest(selector=malformed), self.assertRaisesRegex(
+                    ValueError, 'HOLD_BASELINE_SELECTOR_FLAG_INVALID'):
+                compare_baseline(bad, bad)
+        for malformed in ('not-sha256', 'G' * 64, None):
+            bad = copy.deepcopy(baseline)
+            bad['expected_selector_sha256'] = malformed
+            with self.subTest(selector_hash=malformed), self.assertRaisesRegex(
+                    ValueError, 'HOLD_BASELINE_MISSING_LIVE_SELECTOR'):
+                compare_baseline(bad, bad)
         # A functioning-looking screenshot is not evidence that the
         # model/stream route works if this read-only probe had to block it.
         for counter in ('blocked_mutating_requests', 'blocked_model_posts',
