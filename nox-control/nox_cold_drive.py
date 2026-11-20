@@ -8,6 +8,7 @@ import argparse
 import base64
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from contextlib import contextmanager
+from datetime import datetime, timezone
 import hashlib
 import json
 import math
@@ -25,6 +26,13 @@ import tempfile
 import time
 
 GIB = 1024 ** 3
+MIB = 1024 ** 2
+PRIORITY_STATE = Path('/root/nox/state/priority')
+NATIVE_CGROUP = Path('/sys/fs/cgroup')
+BACKGROUND_RAM_FLOOR = 512 * MIB
+BACKGROUND_HASH_RATE = 32 * MIB
+BACKGROUND_RCLONE_LIMITS = ('--bwlimit', '8M', '--buffer-size', '1M',
+                           '--drive-chunk-size', '4M')
 BLOCKED_PARTS = {'s03', 'checkpoint', 'checkpoints', 'optimizer', 'training', 'sqlite', 'database', 'db', 'genesis',
                  'lora', 'qlora', 'adapter', 'adapters', 'runs_owner_hybrid'}
 ALLOWED_SUFFIX = {'.safetensors', '.gguf', '.bin', '.pt', '.pth'}
@@ -66,6 +74,74 @@ def assert_owner_stop_clear():
         raise RuntimeError('HOLD_OWNER_STOP')
     if maintenance:
         raise RuntimeError('HOLD_OWNER_MODEL_UPDATE')
+
+
+def background_storage_checkpoint():
+    """Read the serving arbiter's state and the container's resource budget."""
+    assert_owner_stop_clear()
+    try:
+        active = read_priority_value('CHAT_ACTIVE')
+        mode = read_priority_value('MODE')
+        if active == '1' or mode == 'ACTIVE':
+            raise RuntimeError('HOLD_BACKGROUND_OWNER_CHAT_ACTIVE')
+        if active != '0' or mode != 'IDLE':
+            raise ValueError
+        last = datetime.fromisoformat(read_priority_value('LAST_OWNER_CHAT'))
+        idle_minutes = int(read_priority_value('IDLE_MINUTES'))
+        if last.tzinfo is None or not 1 <= idle_minutes <= 60:
+            raise ValueError
+    except (OSError, ValueError):
+        raise RuntimeError('HOLD_BACKGROUND_PRIORITY_UNAVAILABLE') from None
+    if (datetime.now(timezone.utc) - last).total_seconds() < idle_minutes * 60:
+        raise RuntimeError('HOLD_BACKGROUND_OWNER_CHAT_RECENT')
+
+    try:
+        limit = int((NATIVE_CGROUP / 'memory.max').read_text().strip())
+        current = int((NATIVE_CGROUP / 'memory.current').read_text().strip())
+        if not 0 <= current <= limit:
+            raise ValueError
+        pressure = []
+        for meter in ('memory.pressure', 'io.pressure'):
+            parser = re.search(r'^full avg10=([0-9]+(?:\.[0-9]+)?)\s',
+                               (NATIVE_CGROUP / meter).read_text(), re.MULTILINE)
+            if parser is None:
+                raise ValueError
+            pressure.append(float(parser.group(1)))
+    except (OSError, ValueError):
+        raise RuntimeError('HOLD_BACKGROUND_RESOURCE_UNAVAILABLE') from None
+    if limit - current < BACKGROUND_RAM_FLOOR:
+        raise RuntimeError('HOLD_BACKGROUND_RAM_HEADROOM')
+    if pressure[0] > 0 or pressure[1] >= 1:
+        raise RuntimeError('HOLD_BACKGROUND_PRESSURE')
+
+
+def read_priority_value(name):
+    path = plain_path(PRIORITY_STATE / name)
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= 128:
+            raise ValueError
+        data = os.read(fd, 129)
+        if len(data) != info.st_size:
+            raise ValueError
+        return data.decode('ascii').strip()
+    finally:
+        os.close(fd)
+
+
+def poll_checkpoint(checkpoint):
+    """Recheck controls at most five times per second inside byte loops."""
+    next_check = 0.0
+
+    def poll():
+        nonlocal next_check
+        now = time.monotonic()
+        if now >= next_check:
+            checkpoint()
+            next_check = now + 0.2
+
+    return poll
 
 
 def plain_path(value, must_exist=True):
@@ -116,11 +192,22 @@ def identity(p):
     return [s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns]
 
 
-def sha256(path):
+def sha256(path, checkpoint=None):
     h = hashlib.sha256()
+    poll = poll_checkpoint(checkpoint) if checkpoint else None
+    read_started = time.monotonic()
     with open(path, 'rb') as f:
-        for chunk in iter(lambda: f.read(4 * 1024 * 1024), b''):
+        for chunk in iter(lambda: f.read(MIB if checkpoint else 4 * MIB), b''):
+            if poll:
+                poll()
             h.update(chunk)
+            if poll:
+                remaining = len(chunk) / BACKGROUND_HASH_RATE - (time.monotonic() - read_started)
+                if remaining > 0:
+                    time.sleep(remaining)
+                read_started = time.monotonic()
+    if checkpoint:
+        checkpoint()
     return h.hexdigest()
 
 
@@ -132,20 +219,21 @@ def assert_remote(value):
     return value.rstrip('/')
 
 
-def command(args, timeout=3600):
+def command(args, timeout=3600, checkpoint=None):
     """Cooperatively cancel only our exact rclone child on owner STOP or timeout.
 
     Background transfers must not continue consuming I/O after a manual STOP.
     No native trainer/dispatcher process IDs are inferred or signalled here.
     """
-    assert_owner_stop_clear()
+    checkpoint = checkpoint or assert_owner_stop_clear
+    checkpoint()
     deadline = time.monotonic() + timeout
     # Provider stderr can disclose signed URLs or credentials: never capture it.
     proc = subprocess.Popen(args, stdin=subprocess.DEVNULL,
                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     try:
         while True:
-            assert_owner_stop_clear()
+            checkpoint()
             left = deadline - time.monotonic()
             if left <= 0:
                 raise RuntimeError('HOLD_TRANSFER_TIMEOUT')
@@ -154,7 +242,7 @@ def command(args, timeout=3600):
                 break
             except subprocess.TimeoutExpired:
                 continue
-        assert_owner_stop_clear()
+        checkpoint()
         if proc.returncode != 0:
             raise RuntimeError('HOLD_RCLONE_EXIT_' + str(proc.returncode))
         return output
@@ -170,7 +258,7 @@ def command(args, timeout=3600):
             proc.stdout.close()
 
 
-def stream_sha256(remote, size, timeout=3600):
+def stream_sha256(remote, size, timeout=3600, *, checkpoint=None, limits=()):
     """Hash complete remote bytes without disk spool; STOP is live throughout.
 
     This is the existing offsite *readback* used to issue a source receipt.
@@ -183,17 +271,19 @@ def stream_sha256(remote, size, timeout=3600):
         raise ValueError('HOLD_READBACK_SIZE')
     if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
         raise ValueError('HOLD_READBACK_TIMEOUT')
-    assert_owner_stop_clear()
+    poll = poll_checkpoint(checkpoint) if checkpoint else assert_owner_stop_clear
+    checkpoint = checkpoint or assert_owner_stop_clear
+    checkpoint()
     digest, count = hashlib.sha256(), 0
     deadline = time.monotonic() + timeout
     p = subprocess.Popen(
-        ['rclone', 'cat', remote, '--retries', '2', '--low-level-retries', '2'],
+        ['rclone', 'cat', remote, '--retries', '2', '--low-level-retries', '2', *limits],
         stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     try:
         with selectors.DefaultSelector() as sel:
             sel.register(p.stdout, selectors.EVENT_READ)
             while sel.get_map():
-                assert_owner_stop_clear()
+                poll()
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     raise RuntimeError('HOLD_READBACK_TIMEOUT')
@@ -207,7 +297,7 @@ def stream_sha256(remote, size, timeout=3600):
                             raise RuntimeError('HOLD_READBACK_OVERSIZE')
                         digest.update(chunk)
         while p.poll() is None:
-            assert_owner_stop_clear()
+            poll()
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise RuntimeError('HOLD_READBACK_TIMEOUT')
@@ -215,7 +305,7 @@ def stream_sha256(remote, size, timeout=3600):
                 p.wait(timeout=min(0.2, remaining))
             except subprocess.TimeoutExpired:
                 pass
-        assert_owner_stop_clear()
+        checkpoint()
         if p.returncode != 0 or count != size:
             raise RuntimeError('HOLD_READBACK_INCOMPLETE')
         return digest.hexdigest()
@@ -400,19 +490,47 @@ def maintenance_lock(root):
         os.close(fd)
 
 
+@contextmanager
+def background_transfer_slot(enabled):
+    if not enabled:
+        yield
+        return
+    background_storage_checkpoint()
+    with maintenance_lock(PRIORITY_STATE):
+        yield
+
+
 def copy_verified(job):
     src = assert_model(job['source'])
-    before, digest = identity(src), sha256(src)
+    background = job.get('background', False)
+    if background:
+        background_storage_checkpoint()
+        if any('engram' in segment.lower() or segment.lower().startswith('deepseek-v4.1')
+               for segment in src.parts):
+            raise ValueError('HOLD_BACKGROUND_SERVING_MODEL')
+        assert_not_open(src)
+    before = identity(src)
+    digest = sha256(src, background_storage_checkpoint) if background else sha256(src)
     expected = job.get('sha256')
     if expected is not None and (not SHA.fullmatch(expected) or digest != expected):
         raise ValueError('HOLD_SOURCE_SHA_MISMATCH')
     dest = assert_remote(job['remote']) + '/' + digest + '/' + src.name
-    command(['rclone','copyto',str(src),dest,'--immutable','--retries','3',
-             '--transfers','1','--checkers','1','--multi-thread-streams','1'], job['timeout'])
-    if stream_sha256(dest, before[2], job['timeout']) != digest:
+    args = ['rclone','copyto',str(src),dest,'--immutable','--retries','3',
+            '--transfers','1','--checkers','1','--multi-thread-streams','1']
+    if background:
+        command([*args, *BACKGROUND_RCLONE_LIMITS], job['timeout'], background_storage_checkpoint)
+        remote_digest = stream_sha256(dest, before[2], job['timeout'],
+                                      checkpoint=background_storage_checkpoint,
+                                      limits=BACKGROUND_RCLONE_LIMITS)
+    else:
+        command(args, job['timeout'])
+        remote_digest = stream_sha256(dest, before[2], job['timeout'])
+    if remote_digest != digest:
         raise RuntimeError('HOLD_REMOTE_SHA_MISMATCH')
     if assert_model(src) != src or identity(src) != before:
         raise RuntimeError('HOLD_SOURCE_CHANGED_DURING_TRANSFER')
+    if background:
+        background_storage_checkpoint()
     rid = hashlib.sha256(str(src).encode()).hexdigest()[:16] + '-' + digest
     dest_receipt = Path(job['receipt_dir'])/(rid+'.json')
     row = {'schema_version':2,'source':str(src),'destination':dest,'size':before[2],
@@ -544,19 +662,23 @@ def evict_verified(row, active_manifest, restore_test_dir=None, timeout=3600):
 
 
 def upload(a):
+    if a.background and a.evict:
+        raise ValueError('HOLD_BACKGROUND_EVICTION_FORBIDDEN')
     if a.evict and not a.active_manifest:
         raise ValueError('HOLD_ACTIVE_MANIFEST_REQUIRED')
     if a.evict and not a.restore_test_dir:
         raise RuntimeError('HOLD_INDEPENDENT_RESTORE_REQUIRED')
-    with maintenance_lock(a.receipt_dir):
+    with background_transfer_slot(a.background), maintenance_lock(a.receipt_dir):
         row=copy_verified({'source':a.file,'remote':a.remote,'receipt_dir':a.receipt_dir,
-                           'timeout':a.timeout,'sha256':a.sha256})
+                           'timeout':a.timeout,'sha256':a.sha256,'background':a.background})
         if a.evict:
             evict_verified(row,a.active_manifest,a.restore_test_dir,a.timeout)
         print(json.dumps(row,ensure_ascii=False))
 
 
 def batch(a):
+    if a.background and a.evict:
+        raise ValueError('HOLD_BACKGROUND_EVICTION_FORBIDDEN')
     p=plain_path(a.manifest)
     if p.stat().st_size > 1024*1024:
         raise ValueError('HOLD_BATCH_TOO_LARGE')
@@ -568,22 +690,33 @@ def batch(a):
         if not isinstance(row,dict) or set(row)!={'path','sha256'} or not SHA.fullmatch(str(row['sha256'])):
             raise ValueError('HOLD_BATCH_FILE_SCHEMA')
         jobs.append({'source':str(assert_model(row['path'])),'sha256':row['sha256'],
-                     'remote':assert_remote(a.remote),'receipt_dir':a.receipt_dir,'timeout':a.timeout})
+                     'remote':assert_remote(a.remote),'receipt_dir':a.receipt_dir,'timeout':a.timeout,
+                     'background':a.background})
     if len({j['source'] for j in jobs}) != len(jobs):
         raise ValueError('HOLD_DUPLICATE_BATCH_SOURCE')
     if a.evict and not a.active_manifest:
         raise ValueError('HOLD_ACTIVE_MANIFEST_REQUIRED')
     if a.evict and not a.restore_test_dir:
         raise RuntimeError('HOLD_INDEPENDENT_RESTORE_REQUIRED')
-    with maintenance_lock(a.receipt_dir):
+    with background_transfer_slot(a.background), maintenance_lock(a.receipt_dir):
         done, errors = [], []
-        with ProcessPoolExecutor(max_workers=a.workers, mp_context=multiprocessing.get_context('spawn')) as pool:
-            pending={pool.submit(copy_verified,j):j for j in jobs}
-            for future in as_completed(pending):
+        if a.background:
+            for job in jobs:
                 try:
-                    done.append(future.result())
+                    done.append(copy_verified(job))
                 except Exception as ex:
-                    errors.append({'source':pending[future]['source'],'error':type(ex).__name__})
+                    code = str(ex)
+                    errors.append({'source':job['source'],
+                                   'error':code if re.fullmatch(r'HOLD_[A-Z0-9_]+', code) else type(ex).__name__})
+                    break
+        else:
+            with ProcessPoolExecutor(max_workers=a.workers, mp_context=multiprocessing.get_context('spawn')) as pool:
+                pending={pool.submit(copy_verified,j):j for j in jobs}
+                for future in as_completed(pending):
+                    try:
+                        done.append(future.result())
+                    except Exception as ex:
+                        errors.append({'source':pending[future]['source'],'error':type(ex).__name__})
         summary={'requested':len(jobs),'copies_verified':len(done),'errors':errors,
                  'sources_deleted':0,'receipts':[r['receipt'] for r in done]}
         atomic_json(Path(a.receipt_dir)/'last-batch.json',summary)
@@ -866,6 +999,8 @@ def parser():
         q.add_argument('--remote',required=True)
         q.add_argument('--receipt-dir',default='./cold_receipts')
         q.add_argument('--active-manifest'); q.add_argument('--evict',action='store_true')
+        q.add_argument('--background',action='store_true',
+                       help='Use the owner chat arbiter and one constrained transfer; keep source files')
         q.add_argument('--restore-test-dir', help='Independent filesystem for full offsite restore (required for eviction)')
         q.add_argument('--timeout',type=int,default=3600)
         if name=='upload':
