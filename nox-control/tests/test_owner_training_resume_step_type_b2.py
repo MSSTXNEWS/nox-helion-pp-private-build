@@ -1410,6 +1410,24 @@ class NativeThreeWorkerCap(unittest.TestCase):
                 write_workers(invalid_rows, n)
                 with self.assertRaisesRegex(RuntimeError, "HOLD_NATIVE_WORKER_CAP_READBACK"):
                     check(helper)
+            # Malformed external identifiers must not leak TypeError/KeyError
+            # or be interpreted as a valid 3-worker owner census.
+            for invalid_worker in (
+                {"id": [], "current_task": None},
+                {"id": {"nested": "w1"}, "current_task": None},
+                {"id": "   ", "current_task": None},
+                {"id": True, "current_task": None},
+                {"id": "w1", "current_task": {"id": []}},
+                {"id": "w1", "current_task": {"id": {"task": 1}}},
+                {"id": "w1", "current_task": {}},
+                {"id": "w1", "current_task": {"id": "   "}},
+                {"id": "w1", "current_task": "job-1"},
+            ):
+                with self.subTest(worker=invalid_worker):
+                    write_workers([invalid_worker, workers[1], workers[2]])
+                    with self.assertRaisesRegex(RuntimeError,
+                                                "HOLD_NATIVE_WORKER_CAP_READBACK"):
+                        check(helper)
             write_workers(workers)
             with self.assertRaisesRegex(RuntimeError, "HOLD_NATIVE_WORKER_CAP_READBACK"):
                 check(helper, fresh_after=__import__("time").time() + 120)

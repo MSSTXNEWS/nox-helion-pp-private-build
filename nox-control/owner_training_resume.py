@@ -863,12 +863,24 @@ def worker_readback(helper, fresh_after=0):
     # stale six-worker status must never be accepted as current admission.
     if type(rows) is not list or any(type(row) is not dict for row in rows):
         raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
-    claimed = [row['current_task']['id'] for row in rows if isinstance(row.get('current_task'), dict)]
     ids = [row.get('id') for row in rows]
+    # External JSON IDs can be arrays, objects or booleans; set(ids) would
+    # otherwise raise TypeError, and current_task without id raises KeyError.
+    # Treat ambiguous owner identity as an explicit admission HOLD.
+    claimed = []
+    for row in rows:
+        task = row.get('current_task')
+        if task is None:
+            continue
+        if (type(task) is not dict or type(task.get('id')) is not str
+                or not task['id'].strip()):
+            raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
+        claimed.append(task['id'])
     if (path.stat().st_mtime < max(fresh_after, time.time()-90)
             or type(value.get('n')) is not int or value['n'] != NATIVE_WORKER_CAP
             or len(rows) != NATIVE_WORKER_CAP
-            or any(worker_id is None or worker_id == '' for worker_id in ids)
+            or any(type(worker_id) is not str or not worker_id.strip()
+                   for worker_id in ids)
             or len(set(ids)) != NATIVE_WORKER_CAP
             or len(set(claimed)) != len(claimed)):
         raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
