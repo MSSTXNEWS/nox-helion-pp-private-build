@@ -220,10 +220,16 @@
               event({type:'token',t:parts[index]});
               if(index<Math.min(parts.length-1,7)){
                 await new Promise(resolve=>{
-                  let settled=false;
-                  const finish=()=>{if(!settled){settled=true;resolve();}};
-                  if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);
-                  if(typeof setTimeout==='function')setTimeout(finish,18);
+                  let settled=false,frame,timer;
+                  const finish=()=>{
+                    if(settled)return;
+                    settled=true;
+                    if(frame!==undefined)globalThis.cancelAnimationFrame?.(frame);
+                    if(timer!==undefined)globalThis.clearTimeout?.(timer);
+                    resolve();
+                  };
+                  if(typeof requestAnimationFrame==='function')frame=requestAnimationFrame(finish);
+                  if(!settled&&typeof setTimeout==='function')timer=setTimeout(finish,18);
                   else if(typeof requestAnimationFrame!=='function')finish();
                 });
               }
