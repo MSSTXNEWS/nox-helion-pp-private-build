@@ -1117,7 +1117,7 @@ class CheckpointStepProvenance(unittest.TestCase):
         nested = {node.name: node for node in main.body
                   if isinstance(node, ast.FunctionDef)}
         self.assertIn("stable_backup_bytes(", ast.unparse(nested["backup"]))
-        self.assertIn("backup(path, old)", ast.unparse(nested["install"]))
+        self.assertIn("backup(path, expected[path])", ast.unparse(nested["install"]))
 
 
 
