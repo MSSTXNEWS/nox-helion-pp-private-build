@@ -44,6 +44,43 @@ class ProbeTests(unittest.TestCase):
         self.assertTrue(interrupted.closed)
 
 
+
+    def test_redirect_or_foreign_origin_cannot_certify_chat_page_or_assets(self):
+        class Response:
+            status = 200
+            def __init__(self, url):
+                self.url, self.closed = url, False
+            def read(self, size):
+                return b'<html>login</html>'
+            def close(self):
+                self.closed = True
+
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'):
+            route = '/nox-web-v29/pc/resonance.html'
+            for url, reason in (
+                ('http://127.0.0.1:8080/chat/login', 'HOLD_CHAT_RESPONSE_REDIRECT'),
+                ('http://other.example/nox-web-v29/pc/resonance.html', 'HOLD_CHAT_RESPONSE_ORIGIN'),
+                ('https://127.0.0.1:8080/nox-web-v29/pc/resonance.html', 'HOLD_CHAT_RESPONSE_ORIGIN'),
+            ):
+                response = Response(url)
+                with self.subTest(url=url):
+                    with self.assertRaisesRegex(RuntimeError, '^' + reason + '$'):
+                        probe.page_snapshot(response, expected_path=route)
+                self.assertTrue(response.closed)
+            valid = Response('http://127.0.0.1:8080/nox-web-v29/pc/resonance.html?v=1')
+            self.assertEqual(probe.page_snapshot(valid, expected_path=route)[1], route)
+            self.assertTrue(valid.closed)
+            for url, reason in (
+                ('http://127.0.0.1:8080/chat/login', 'HOLD_CHAT_RESPONSE_REDIRECT'),
+                ('https://external.example/app.js', 'HOLD_CHAT_RESPONSE_ORIGIN'),
+            ):
+                with self.subTest(asset=url), self.assertRaisesRegex(RuntimeError, '^' + reason + '$'):
+                    probe.require_same_origin_target(Response(url), '/nox-web-v29/app.js')
+        source = path.read_text()
+        self.assertIn("page_snapshot(request(client,path), expected_path=path if path != '/' else None)", source)
+        self.assertIn('require_same_origin_target(asset, local)', source)
+
+
     def test_obj_releases_http_response_on_success_and_hold(self):
         class Response:
             def __init__(self, status, payload, read_error=False):
