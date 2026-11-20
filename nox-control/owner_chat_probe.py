@@ -340,6 +340,11 @@ def admitted_consume_turn(client, prompt, dialog_id, timeout=95):
     This is not a replacement for native owner/CAS, STOP, VRAM or lease gates.
     """
     require_cgroup_probe_headroom()
+    # Another owner may take the model slot between synthetic chat turns.
+    # An earlier idle snapshot never authorizes the next non-idempotent POST.
+    slots = model_slots_state(client)
+    if slots['busy']:
+        raise RuntimeError('HOLD_CHAT_BUSY_FOR_SYNTHETIC_PROBE')
     return consume_turn(client, prompt, dialog_id, timeout=timeout)
 
 
