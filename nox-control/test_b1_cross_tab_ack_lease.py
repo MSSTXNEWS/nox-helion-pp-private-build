@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Real Chromium, same-origin two tabs, synthetic ACK transport; NO native NOX."""
 import json
+import hashlib
 import os
 import tempfile
 import threading
@@ -26,6 +27,18 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_response(200);self.send_header("Content-Type","application/json")
         self.end_headers();self.wfile.write(b'{"ok":true}')
     def do_GET(self):
+        if self.path=="/canonical":
+            with self.server.counter_lock: committed=self.server.acks>0
+            if not committed:return self.send_error(404)
+            proof={"version":1,"state":"ACKED","conversation_id":"dialog",
+                "exchange_id":"x5","event_id":"d"*64,
+                "cursor_digest":hashlib.sha256(b"synthetic_cursor5").hexdigest(),
+                "ack_id":"ack-x5","server_cas":"cas-x5",
+                "s03_sha256":"c"*64,"signature":"synthetic-fixture-signature"}
+            payload=json.dumps(proof).encode()
+            self.send_response(200);self.send_header("Content-Type","application/json")
+            self.send_header("Content-Length",str(len(payload)));self.end_headers()
+            return self.wfile.write(payload)
         if self.path=="/counts":
             with self.server.counter_lock:value=self.server.acks
             payload=json.dumps({"acks":value}).encode()
@@ -106,10 +119,20 @@ def main():
                 for tab in (a,b):
                     tab.evaluate("""()=>{
                       window.s5={conversation_id:'dialog',exchange_id:'x5'};
-                      const host={readCommitted:async()=>null};
+                      const host={readCommitted:async()=>null,
+                        // Synthetic verifier only; cannot authenticate native S03.
+                        verifyCanonicalAck:async receipt=>
+                          receipt.signature==='synthetic-fixture-signature' &&
+                          receipt.server_cas==='cas-x5' &&
+                          receipt.s03_sha256==='c'.repeat(64)};
                       const transport={
                         post:async()=>{throw Error('UNEXPECTED_MODEL_POST')},
                         readback:async()=>({synthetic:true}),
+                        readCanonicalAck:async()=>{
+                          const r=await fetch('/canonical',{method:'GET',cache:'no-store'});
+                          if(!r.ok)throw Error('synthetic canonical ACK unavailable');
+                          return r.json();
+                        },
                         ack:async()=>{
                           let r=await fetch('/ack',{method:'POST',body:'{}'});
                           if(!r.ok)throw Error('ACK_FAILED');
