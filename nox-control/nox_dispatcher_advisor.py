@@ -161,7 +161,9 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                 (onehost.get("chat_budget_ms"), 1, 300000),
                 (onehost.get("chat_metrics_age_sec"), 0, 30),
             )
-            known = (all(type(v) in (int,float) and math.isfinite(v) and lo <= v <= hi
+            # Owner telemetry can contain JSON integers too large for
+            # math.isfinite(int); keep those on the existing HOLD path.
+            known = (all(_finite_nonnegative(v) and lo <= v <= hi
                          for v,lo,hi in values)
                      and type(onehost.get("chat_waiting")) is bool)
             if not known or gpu["vram_used_mib"] >= gpu["vram_total_mib"]:

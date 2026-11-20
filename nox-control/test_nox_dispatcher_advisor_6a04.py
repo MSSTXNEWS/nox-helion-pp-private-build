@@ -71,6 +71,24 @@ class GpuSourceEvidenceTests(unittest.TestCase):
         s=snapshot(); s["gpu"].pop("utilization_pct")
         self.assertEqual(codes(s), ["GPU_UTILIZATION_UNVERIFIED"])
 
+    def test_giant_host_and_vram_telemetry_is_a_hold(self):
+        # JSON permits arbitrary-size integers; math.isfinite on them raises
+        # OverflowError. No malformed metric may crash owner telemetry.
+        for section, field in (
+                ("gpu", "vram_used_mib"),
+                ("gpu", "vram_total_mib"),
+                ("gpu", "age_sec"),
+                ("cpu_io", "cpu_busy_pct"),
+                ("cpu_io", "io_wait_pct"),
+                ("cpu_io", "age_sec"),
+                ("onehost", "chat_p95_ms"),
+                ("onehost", "chat_budget_ms"),
+                ("onehost", "chat_metrics_age_sec")):
+            with self.subTest(section=section, field=field):
+                s = snapshot()
+                s[section][field] = 10**500
+                self.assertEqual(codes(s), ["GPU_RESIDUAL_UNVERIFIED"])
+
     def test_high_valid_utilization_is_not_admission(self):
         s=snapshot(); s["gpu"]["utilization_pct"]=100
         self.assertEqual(codes(s), ["NO_UNVERIFIED_TUNING"])
