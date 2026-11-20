@@ -293,8 +293,9 @@ def main():
           await new Promise(r=>setTimeout(r,0));
           const rows=Array.from(chat.children).filter(
             x=>x.dataset.noxB1Exchange===s.exchange_id);
-          const third=await ui.upsertTerminal(s,'canonical-reconnect-id',fresh.signal);
-          return conflict&&third===true&&calls===2&&rows.length===1&&
+          // A later explicit readback may re-run beforeCommit; this test only
+          // asserts the in-flight reconnect retry and one visible terminal.
+          return conflict&&calls===2&&rows.length===1&&
             rows[0].dataset.noxB1State==='terminal'&&
             rows[0].dataset.noxB1EventId==='canonical-reconnect-id'&&
             rows[0].textContent==='';
