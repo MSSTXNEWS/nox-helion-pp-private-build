@@ -115,6 +115,20 @@ def install():
     private_dir(SCRIPTS/'private/drive-tasks',create=True)
     private_dir(STATE/'cache',create=True)
     private_dir(STATE/'cache/warm-ssd',create=True)
+    # Source staging is part of this existing authenticated owner transaction.
+    # The running dispatcher / three native workers are NEVER restarted here.
+    sys.path.insert(0,str(SCRIPTS))
+    try:
+        from nox_drive_native_binding import stage_native_dispatcher_source
+        registry=stage_native_dispatcher_source(
+            expected_bridge_sha=hashlib.sha256(assets['nox_drive_native_binding.py']).hexdigest())
+    except Exception as exc:
+        raise Hold('HOLD_DRIVE_RECONNECT_REGISTRY_STAGE_'+type(exc).__name__.upper()) from None
+    require(isinstance(registry,dict) and registry.get('state') in (
+        'SOURCE_STAGED_NOT_LIVE','ALREADY_STAGED_NOT_LIVE')
+        and registry.get('native_handler_registered') is False
+        and registry.get('restarted') is False, 'REGISTRY_STAGE_RECEIPT')
+    stages['dispatcher_registry_source']=registry['state']
     monitor='MONITOR_NOT_CONFIGURED'
     if SUPERVISOR_DIR.is_dir() and shutil.which('supervisorctl'):
         # Only this new program is updated. Do not restart the dispatcher, chat or S03.
@@ -136,6 +150,9 @@ def install():
             'stages':stages,'drive_first_source_installed':True,
             'native_drive_binding_source_installed':True,
             'native_dispatcher_handler_registered':False,
+            'dispatcher_source_staged':True,
+            'dispatcher_staged_sha256':registry['new_sha256'],
+            'dispatcher_source_backup_sha256':registry.get('backup_sha256'),
             'google_oauth_ready':False,'google_read_connected':False,
             'google_write_tested':False,'active_model_restarted':False,
             'other_services_restarted':False,'s03_modified':False,'weights_modified':False}

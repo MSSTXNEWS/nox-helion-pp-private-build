@@ -49,6 +49,25 @@ class InstallContractTests(unittest.TestCase):
         self.assertIn("private_dir(SCRIPTS/'private/drive-tasks',create=True)", content)
         self.assertIn("private_dir(STATE/'cache/warm-ssd',create=True)", content)
 
+
+    def test_native_dispatcher_source_is_staged_not_claimed_live(self):
+        source=src.read_text()
+        import inspect
+        from nox_drive_native_binding import stage_native_dispatcher_source
+        implementation=inspect.getsource(stage_native_dispatcher_source)
+        self.assertIn('stage_native_dispatcher_source(',source)
+        self.assertIn('expected_bridge_sha=hashlib.sha256',source)
+        self.assertIn("stages['dispatcher_registry_source']=registry['state']",source)
+        self.assertIn("'dispatcher_source_staged':True",source)
+        self.assertIn("'native_dispatcher_handler_registered':False",source)
+        self.assertIn('"restarted": False',implementation)
+        self.assertIn('SOURCE_STAGED_NOT_LIVE',implementation)
+        self.assertIn('HOLD_DRIVE_NATIVE_NO_VERIFIED_RECEIPT',implementation)
+        self.assertIn('owner_context()',implementation)
+        self.assertIn('BACKUPS = Path(',implementation)
+        self.assertNotIn("supervisorctl','restart",implementation)
+        self.assertNotIn("systemctl restart",implementation)
+
     def test_symlink_destination_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             t=Path(d)/'target'
