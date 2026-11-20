@@ -795,13 +795,15 @@ def owned_flag(path, prefix):
             raw = stream.read(4097)
             after = os.fstat(stream.fileno())
             named = os.stat(path, follow_symlinks=False)
+        # A matching hash prefix is not ownership: require a token boundary.
+        identity = prefix.encode('utf-8') if isinstance(prefix, str) else b''
         fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
         if (len(raw) != before.st_size
                 or any(getattr(before, field) != getattr(after, field)
                        or getattr(before, field) != getattr(named, field)
                        for field in fields)
-                or not isinstance(prefix, str) or not prefix
-                or not raw.startswith(prefix.encode('utf-8'))):
+                or not identity or not raw.startswith(identity)
+                or raw[len(identity):len(identity) + 1] not in (b'', b' ', b'\n', b'\r')):
             raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED')
     except (OSError, UnicodeError) as exc:
         raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED') from exc
