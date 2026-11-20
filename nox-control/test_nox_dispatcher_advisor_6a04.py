@@ -43,6 +43,8 @@ class GpuSourceEvidenceTests(unittest.TestCase):
 
     def test_chat_has_priority(self):
         s=snapshot(); s["onehost"]["chat_waiting"]=True
+        self.assertEqual(codes(s), ["CHAT_PRIORITY"])
+        s=snapshot(); s["onehost"]["chat_p95_ms"]=400
         self.assertEqual(codes(s), ["GPU_CHAT_PRIORITY"])
 
     def test_cpu_io_pressure_blocks(self):
