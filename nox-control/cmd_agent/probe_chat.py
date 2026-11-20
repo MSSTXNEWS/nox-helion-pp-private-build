@@ -14,6 +14,6 @@ def call(path, body=None):
         return getattr(e, "code", 0), str(e)[:200]
 for p in ("/api/nox/status", "/v1/models"):
     c, t = call(p); print(p, c, t[:200].replace(key, "***"))
-b = {"model": "nox", "stream": False, "max_tokens": 120,
+b = {"model": "deepseek-v41-flash-iq2xxs", "stream": False, "max_tokens": 120,
      "messages": [{"role": "user", "content": "Кто ты? Ответь одной фразой."}]}
-c, t = call("/v1/chat/completions", b); print("chat", c, t[:600].replace(key, "***"))
+c, t = call("/v1/chat/completions", b); print("chat", c, t[:900].replace(key, "***"))
