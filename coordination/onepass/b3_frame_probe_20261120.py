@@ -10,6 +10,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import math
 import pathlib
 import statistics
 from datetime import datetime, timezone
@@ -49,6 +50,56 @@ def verify_url(url):
     return url
 
 
+
+def compare_baseline(current, prior):
+    """Fail closed if an old screenshot/frame report is not comparable.
+
+    A matching browser URL is not a native/S03 identity proof. This is
+    source-level frame evidence only; baseline files are not signed.
+    """
+    signature = ('schema', 'url', 'sample_js', 'synthetic_fixture',
+                 'expected_selector_checked', 'expected_selector')
+    if any(current.get(key) != prior.get(key) for key in signature):
+        raise ValueError('HOLD_BASELINE_PROVENANCE_MISMATCH')
+    if not current.get('synthetic_fixture') and not current.get('expected_selector_checked'):
+        raise ValueError('HOLD_BASELINE_MISSING_LIVE_SELECTOR')
+    expected = {(width, height, mode) for width, height in SIZES
+                for mode in ('normal', 'reduced')}
+
+    def index(rows):
+        if not isinstance(rows, list) or len(rows) != len(expected):
+            raise ValueError('HOLD_BASELINE_FRAME_COVERAGE')
+        found = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                raise ValueError('HOLD_BASELINE_FRAME_COVERAGE')
+            key = (row.get('width'), row.get('height'), row.get('mode'))
+            if key not in expected or key in found:
+                raise ValueError('HOLD_BASELINE_FRAME_COVERAGE')
+            found[key] = row
+        return found
+
+    old, new = index(prior.get('runs')), index(current.get('runs'))
+    deltas = {}
+    for key in expected:
+        previous = old[key].get('frame_time')
+        measured = new[key].get('frame_time')
+        try:
+            if not isinstance(previous, dict) or not isinstance(measured, dict):
+                raise ValueError()
+            frames = previous['frames']
+            if frames != 90 or frames != measured['frames']:
+                raise ValueError()
+            p95 = float(previous['p95_ms'])
+            now_p95 = float(measured['p95_ms'])
+            if not (math.isfinite(p95) and math.isfinite(now_p95)
+                    and 0 < p95 < 120000 and 0 < now_p95 < 120000):
+                raise ValueError()
+        except (KeyError, TypeError, ValueError, OverflowError) as exc:
+            raise ValueError('HOLD_BASELINE_FRAME_INVALID') from exc
+        deltas[key] = round(now_p95 - p95, 3)
+    return deltas
+
 async def _measure_async(url, output, chromium, baseline, fixture_html, expected_selector):
     from playwright.async_api import async_playwright
     verify_url(url)
@@ -65,6 +116,8 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
         'native_s03_verified': False, 'installed_model_identity_verified': False,
         'synthetic_fixture': fixture_html is not None,
         'expected_selector_checked': expected_selector is not None,
+        'expected_selector': expected_selector,
+        'comparison_admissible': False,
     }
     async with async_playwright() as pw:
         launch = {'headless': True}
@@ -129,13 +182,18 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
         finally:
             await browser.close()
     if baseline:
-        old = json.loads(pathlib.Path(baseline).read_text(encoding='utf8'))
-        previous = {(x['width'], x['height'], x['mode']): x for x in old.get('runs', [])}
+        baseline_path = pathlib.Path(baseline)
+        baseline_bytes = baseline_path.read_bytes()
+        old = json.loads(baseline_bytes.decode('utf8'))
+        deltas = compare_baseline(result, old)
         for row in result['runs']:
-            ref = previous.get((row['width'], row['height'], row['mode']))
-            row['before_after_p95_delta_ms'] = round(
-                row['frame_time']['p95_ms'] - ref['frame_time']['p95_ms'], 3) if ref else None
-        result['baseline_file'] = pathlib.Path(baseline).name
+            key = (row['width'], row['height'], row['mode'])
+            row['before_after_p95_delta_ms'] = deltas[key]
+        result['baseline_file'] = baseline_path.name
+        result['baseline_sha256'] = hashlib.sha256(baseline_bytes).hexdigest()
+        result['comparison_scope'] = ('SYNTHETIC_ONLY' if result['synthetic_fixture']
+                                      else 'LIVE_BROWSER_FRAMES_ONLY_NOT_S03')
+        result['comparison_admissible'] = True
     report = out / 'b3_frame_report.json'
     report.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf8')
     return result
