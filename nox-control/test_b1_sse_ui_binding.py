@@ -204,6 +204,81 @@ def main():
           const result=await c.begin(s);
           return result==='STOPPED_TIMEOUT' && posts===0;
         }'''))
+        # An uncooperative reader can leave read() and even cancel() pending.
+        # STOP must settle promptly without waiting for either operation.
+        check('STOP settles hung SSE reader without another POST or ACK', page.evaluate('''async () => {
+          const s={conversation_id:'reader',exchange_id:'stop-hung'};
+          let posts=0,acks=0,deltas=0;
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({
+              pull(){return new Promise(()=>{})},
+              cancel(){return new Promise(()=>{})}
+            })};
+          },async ack(){acks++;return true}};
+          const host={...opts.host,async readCommitted(){return null}};
+          const ui={async onDelta(){deltas++},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:2000
+          });
+          const pending=c.begin(s);
+          for(let i=0;i<30&&!posts;i++) await new Promise(r=>setTimeout(r,0));
+          if(posts!==1) return false;
+          await new Promise(r=>setTimeout(r,0));
+          const didStop=c.stop(s);
+          const result=await Promise.race([
+            pending,new Promise(r=>setTimeout(()=>r('HUNG'),350))
+          ]);
+          const rejected=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return didStop===true && result==='STOPPED' && rejected &&
+            posts===1 && acks===0 && deltas===0;
+        }'''))
+        check('timeout settles hung SSE reader without model repost', page.evaluate('''async () => {
+          const s={conversation_id:'reader',exchange_id:'timeout-hung'};
+          let posts=0,acks=0;
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({
+              pull(){return new Promise(()=>{})}
+            })};
+          },async ack(){acks++;return true}};
+          const host={...opts.host,async readCommitted(){return null}};
+          const ui={async onDelta(){},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:30
+          });
+          const result=await Promise.race([
+            c.begin(s),new Promise(r=>setTimeout(()=>r('HUNG'),500))
+          ]);
+          return result==='STOPPED_TIMEOUT' && posts===1 && acks===0;
+        }'''))
+        check('late reader resolution after STOP cannot write a delta', page.evaluate('''async () => {
+          const s={conversation_id:'reader',exchange_id:'late-read'};
+          let release,posts=0,deltas=0,acks=0;
+          const reader={
+            read(){return new Promise(r=>{release=r})},
+            cancel(){return Promise.resolve()}
+          };
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:{getReader(){return reader}}};
+          },async ack(){acks++;return true}};
+          const host={...opts.host,async readCommitted(){return null}};
+          const ui={async onDelta(){deltas++},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:2000
+          });
+          const pending=c.begin(s);
+          for(let i=0;i<30&&!release;i++) await new Promise(r=>setTimeout(r,0));
+          if(!release) return false;
+          const didStop=c.stop(s),result=await pending;
+          release({done:false,value:new TextEncoder().encode(
+            'event: delta\\ndata: LATE\\n\\n')});
+          await new Promise(r=>setTimeout(r,0));
+          return didStop===true && result==='STOPPED' &&
+            posts===1 && acks===0 && deltas===0;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
