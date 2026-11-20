@@ -957,6 +957,82 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(stream._executor_status_reply(question))
 
 
+    async def test_model_identity_in_native_request_is_not_replaced_by_legacy_alias(self):
+        # Request identity is a serving contract, not a claim about installed weights.
+        for selected in ('nox-ds41-current', 'nox-confirmed-other', None):
+            with self.subTest(selected=selected):
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Say ready'}]}
+                if selected is not None:payload['model']=selected
+                chunks=Chunks([frame('ready'),frame(finish='stop'),b'data: [DONE]\n\n'])
+                requests,factory=self.transport([chunks])
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Say ready',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(len(requests),1)
+                self.assertEqual(requests[0]['model'],selected if selected is not None else 'maya')
+                self.assertIn('[DONE]',wire)
+                self.assertEqual(payload['_agent_final'],'ready')
+                self.assertTrue(chunks.closed)
+        for malformed in (None, False, 0, [], {}, '', '  '):
+            with self.subTest(malformed=repr(malformed)):
+                native=self.native()
+                payload={'model':malformed,'messages':[{'role':'user','content':'Say ready'}]}
+                requests,factory=self.transport([])
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Say ready',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(requests,[])
+                self.assertIn('HOLD_MODEL_IDENTITY',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+
+
+    async def test_pooled_payload_preserves_explicit_model_before_http(self):
+        # The native pool can rewrite cache settings but must not silently
+        # choose a different model from the one selected for this request.
+        cases=(
+            ('nox-ds41-current','nox-ds41-current',True),
+            ('nox-ds41-current','different-model',False),
+            ('nox-ds41-current',None,False),
+            ('nox-ds41-current','__INPLACE_DROP__',False),
+            (None,'pool-resolved-model',True),
+        )
+        for selected,pooled,allowed in cases:
+            with self.subTest(selected=selected,pooled=pooled):
+                native=self.native()
+                native['_POOL']=True
+                native['try_deterministic']=lambda user:None
+                def prepare(req,cache):
+                    if pooled=='__INPLACE_DROP__':
+                        req.pop('model',None)
+                        return req
+                    return dict(req,model=pooled)
+                native['prepare_payload']=prepare
+                payload={'messages':[{'role':'user','content':'Say ready'}]}
+                if selected is not None:payload['model']=selected
+                streams=[Chunks([frame('ready'),frame(finish='stop'),
+                                 b'data: [DONE]\n\n'])] if allowed else []
+                requests,factory=self.transport(streams)
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Say ready',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                if allowed:
+                    self.assertEqual(len(requests),1)
+                    self.assertEqual(requests[0]['model'],pooled)
+                    self.assertIn('[DONE]',wire)
+                    self.assertEqual(payload['_agent_final'],'ready')
+                else:
+                    self.assertEqual(requests,[])
+                    self.assertIn('HOLD_MODEL_IDENTITY',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+
+
+
 class TransformTests(unittest.IsolatedAsyncioTestCase):
     def test_unknown_native_source_is_rejected(self):
         for transform in (transforms.patch_agent_loop,transforms.patch_slim,transforms.patch_proxy):
