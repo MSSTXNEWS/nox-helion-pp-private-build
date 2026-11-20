@@ -17,5 +17,5 @@ jobs:
       - name: Update NOX command agent over temporary SSH key
         env:
           NOX2: ${{ secrets.NOX2 }}
-          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
+          TS_AUTHKEY: ${{ secrets.NOXXXXX }}
         run: python3 -B nox-control/cmd_agent/run_update.py
