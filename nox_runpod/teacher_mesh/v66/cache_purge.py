@@ -141,6 +141,8 @@ def main()->int:
                     if ssh.TRACK.exists() or attempt==3:
                         break
                     time.sleep(4)
+    except Exception:
+        print('NOX_V66_PROBE_ATTEMPT=HOLD_NATIVE_PROBE_EXCEPTION')
     finally:
         try:
             with contextlib.redirect_stdout(console):
