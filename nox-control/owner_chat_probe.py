@@ -150,6 +150,9 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
         for index,line in enumerate(response):
             if index>2000 or len(line)>100000 or time.monotonic()-started>timeout+5:
                 raise RuntimeError('HOLD_BOUNDED_STREAM')
+            if done is not None:raise RuntimeError('HOLD_STREAM_TRAILING_AFTER_DONE')
+            if not isinstance(line, bytes) or not line.endswith(b'\n'):
+                raise RuntimeError('HOLD_STREAM_MISSING_NEWLINE')
             frame=json.loads(line, parse_constant=reject_nonfinite_json_constant)
             if not isinstance(frame,dict):raise RuntimeError('HOLD_STREAM_FRAME_SCHEMA')
             kind=frame.get('type');elapsed=round((time.monotonic()-started)*1000)
@@ -167,7 +170,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             elif kind=='done':
                 if frame.get('dialog_id') != dialog_id:
                     raise RuntimeError('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH')
-                done=frame;break
+                done=frame  # Require clean EOF after exactly one terminal frame.
             elif kind=='error':raise RuntimeError('HOLD_STREAM_ERROR')
             if len(answer)>10000:raise RuntimeError('HOLD_STREAM_TEXT_LIMIT')
     finally:response.close()
