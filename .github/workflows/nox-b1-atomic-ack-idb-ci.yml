@@ -1,0 +1,20 @@
+name: NOX B1 isolated IndexedDB atomic ACK source check
+on:
+  pull_request:
+    paths:
+      - nox-control/b1_client_ack_indexeddb_store.js
+      - nox-control/test_b1_client_ack_indexeddb_store.cjs
+      - .github/workflows/nox-b1-atomic-ack-idb-ci.yml
+  workflow_dispatch:
+jobs:
+  b1-atomic-ack-idb:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - name: B1 atomic IDB ACK source contract and focused deterministic regression
+        run: |
+          node --check nox-control/b1_client_ack_indexeddb_store.js
+          node --check nox-control/test_b1_client_ack_indexeddb_store.cjs
+          node --test nox-control/test_b1_client_ack_indexeddb_store.cjs
