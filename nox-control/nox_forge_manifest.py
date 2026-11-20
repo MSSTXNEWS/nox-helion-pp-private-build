@@ -283,6 +283,10 @@ def build_manifest(data: Any) -> dict[str, Any]:
         raise ForgeError("example_id values must be unique")
     if len({(item["source_id"], item["source_record_id"]) for item in examples}) != len(examples):
         raise ForgeError("source_record_id values must be unique within each source")
+    # A repeated claimed content digest is one candidate, not two examples:
+    # fail closed until the owner resolves provenance and source-share counts.
+    if len({item["claimed_content_sha256"] for item in examples}) != len(examples):
+        raise ForgeError("duplicate candidate content SHA-256 across sources")
 
     total = len(examples)
     counts = {source_id: 0 for source_id in source_id_set}
