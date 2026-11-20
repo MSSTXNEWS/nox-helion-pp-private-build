@@ -91,8 +91,36 @@
         let buf='';
         while(true){
           if(ctrl.signal.aborted) return stopped();
-          const part=await reader.read();
-          if(ctrl.signal.aborted) return stopped();
+          // reader.read() is not guaranteed to settle when a custom transport
+          // ignores AbortSignal. Race the pending read against STOP/timeout;
+          // never wait for stream completion, cancel(), or an old SSE frame.
+          let onReadAbort;
+          let outcome;
+          try{
+            outcome=await Promise.race([
+              Promise.resolve().then(()=>reader.read())
+                .then(part=>({part}),()=>({readError:true})),
+              new Promise(resolve=>{
+                onReadAbort=()=>resolve({aborted:true});
+                ctrl.signal.addEventListener('abort',onReadAbort,{once:true});
+                if(ctrl.signal.aborted) onReadAbort();
+              })
+            ]);
+          }finally{
+            if(onReadAbort) ctrl.signal.removeEventListener('abort',onReadAbort);
+          }
+          if(outcome.aborted||ctrl.signal.aborted){
+            // Best-effort stream cleanup, deliberately NOT awaited. Some
+            // readers leave cancel() pending forever after network abort.
+            try{
+              const cancellation=reader.cancel();
+              if(cancellation&&typeof cancellation.catch==='function')
+                cancellation.catch(()=>{});
+            }catch(_){}
+            return stopped();
+          }
+          if(outcome.readError) hold('HOLD_STREAM_POST_OR_READ');
+          const part=outcome.part;
           if(part.done) break;
           buf+=decoder.decode(part.value,{stream:true}).replace(/\r\n/g,'\n');
           if(buf.length>65536) hold('HOLD_STREAM_FRAME_TOO_LARGE');
