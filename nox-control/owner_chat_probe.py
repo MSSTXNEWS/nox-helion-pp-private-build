@@ -62,9 +62,9 @@ def require_not_html_asset(response, sample):
     if not isinstance(ctype, str):
         raise RuntimeError('HOLD_RESONANCE_ASSET_HTML_FALLBACK')
     media = ctype.split(';', 1)[0].strip().lower()
-    prefix = sample.lstrip(b'\\xef\\xbb\\xbf \\t\\r\\n')
+    prefix = sample.lstrip(b'\xef\xbb\xbf \t\r\n')
     if (media in ('text/html', 'application/xhtml+xml')
-            or re.match(rb'(?i)^(?:<!doctype\\s+html\\b|<html\\b|<head\\b|<body\\b)', prefix)):
+            or re.match(rb'(?i)^(?:<!doctype\s+html\b|<html\b|<head\b|<body\b)', prefix)):
         raise RuntimeError('HOLD_RESONANCE_ASSET_HTML_FALLBACK')
 
 

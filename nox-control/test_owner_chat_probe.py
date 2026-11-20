@@ -89,7 +89,7 @@ class ProbeTests(unittest.TestCase):
         for mime, body in (
             ('text/html; charset=utf-8', b'console.log("not actually JS")'),
             ('application/xhtml+xml', b'<script>fake</script>'),
-            ('application/javascript', b'\\xef\\xbb\\xbf  <!DOCTYPE html><html>login</html>'),
+            ('application/javascript', b'\xef\xbb\xbf  <!DOCTYPE html><html>login</html>'),
             ('text/css', b'  <html><body>login</body></html>'),
             ('', b'<head><title>login</title></head>'),
         ):
