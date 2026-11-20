@@ -346,6 +346,29 @@ class RequiredMemory(unittest.TestCase):
         self.assertEqual(len(calls),1)
         self.assertEqual(events[-1]['state'],'HOLD_STOP_DURING_STREAM')
 
+    def test_durable_turn_never_persists_a_truncated_user_message(self):
+        from ..durable_runtime import DurableTurn, DurablePorts
+        writes,model_calls=[],[]
+        def append(session,payload):
+            writes.append(payload)
+            return {'verified':True,'durable':True,
+                    'event_id':'durable-'+str(payload['seq'])}
+        brain=self._p(lambda s,p,l:[record()])
+        turn=DurableTurn(brain,DurablePorts(s03_append=append))
+        overlong='🧠'*8001
+        rejected=list(turn.run(S,overlong,'too-long-v38',
+            lambda p,m:model_calls.append(p) or iter(['MUST NOT APPEAR'])))
+        self.assertEqual(rejected,[{'type':'hold','state':'HOLD_INPUT'}])
+        self.assertEqual(writes,[])
+        self.assertEqual(model_calls,[])
+        valid='  Привет 🌍 — ¡Hola!  '
+        accepted=list(turn.run(S,valid,'valid-v38',
+            lambda p,m:model_calls.append(p) or iter(['Ответ NOX.'])))
+        self.assertEqual(writes[0]['kind'],'user_message')
+        self.assertEqual(writes[0]['body']['text'],valid)
+        self.assertEqual(accepted[-1]['type'],'done')
+        self.assertEqual(len(model_calls),1)
+
     def test_first_visible_delta_early_and_durable(self):
         receipts=[]
         def persist(s,p):
