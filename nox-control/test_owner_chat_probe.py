@@ -999,9 +999,7 @@ class ProbeTests(unittest.TestCase):
                 response = Response(frames)
                 with self.subTest(flags=flags, placement=placement), patch.object(
                         probe, 'request', return_value=response):
-                    with self.assertRaisesRegex(RuntimeError, '^' + code + '
-    unittest.main()
-):
+                    with self.assertRaisesRegex(RuntimeError, '^' + code + '$'):
                         probe.consume_turn(object(), 'synthetic', did)
                 self.assertTrue(response.closed)
 
