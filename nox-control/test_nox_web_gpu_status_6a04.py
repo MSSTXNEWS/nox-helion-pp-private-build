@@ -13,8 +13,8 @@ def load_status():
     source = Path(__file__).with_name("bridge").joinpath("nox_webapi.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     keep = [node for node in tree.body if isinstance(node, ast.FunctionDef) and
-            node.name in ("_gpu_utilization_percent", "_status_flat")]
-    assert len(keep) == 2
+            node.name in ("_gpu_utilization_percent", "_verified_gpu_sensor_values", "_status_flat")]
+    assert len(keep) == 3
     ns = {"math": math, "time": time, "M": {
         "t": time.time(), "gpu": [], "cpu": 15, "ram": (5, 12), "disk": (10, 20)
     }}
@@ -42,6 +42,37 @@ class WebGpuStatusTests(unittest.TestCase):
         result = ns["_status_flat"]()
         self.assertIsNone(result["gpu_percent"])
         self.assertEqual(result["vram_used_gb"], 6.0)
+
+    def test_missing_sensors_are_unknown_not_faked_as_zero_or_hotspot(self):
+        ns = load_status()
+        ns["M"]["gpu"] = [sample(10), sample(30)]
+        result = ns["_status_flat"]()
+        self.assertEqual(result["gpu_temperature_c"], 58)
+        self.assertEqual(result["gpu_power_w"], 170)
+        self.assertIsNone(result["gpu_hotspot_c"])  # no hotspot sensor queried
+
+        missing_temp = sample(30)
+        missing_temp["temp_c"] = None
+        ns["M"]["gpu"] = [sample(10), missing_temp]
+        result = ns["_status_flat"]()
+        self.assertIsNone(result["gpu_temperature_c"])
+        self.assertEqual(result["gpu_power_w"], 170)
+        self.assertIsNone(result["gpu_hotspot_c"])
+
+        missing_power = sample(30)
+        missing_power["power_w"] = None
+        ns["M"]["gpu"] = [sample(10), missing_power]
+        result = ns["_status_flat"]()
+        self.assertEqual(result["gpu_temperature_c"], 58)
+        self.assertIsNone(result["gpu_power_w"])
+
+        extreme = sample(30)
+        extreme["power_w"] = 10 ** 500
+        extreme["temp_c"] = float("nan")
+        ns["M"]["gpu"] = [extreme]
+        result = ns["_status_flat"]()
+        self.assertIsNone(result["gpu_temperature_c"])
+        self.assertIsNone(result["gpu_power_w"])
 
     def test_malformed_and_extreme_readings_fail_closed(self):
         ns = load_status()

@@ -111,8 +111,30 @@ def _gpu_utilization_percent(samples):
     return round(sum(values) / len(values), 1)
 
 
+def _verified_gpu_sensor_values(samples, key):
+    """Never substitute zero for a missing/invalid safety-relevant GPU sensor."""
+    if not isinstance(samples, list) or not samples:
+        return None
+    values = []
+    for sample in samples:
+        if not isinstance(sample, dict):
+            return None
+        value = sample.get(key)
+        if type(value) not in (int, float):
+            return None
+        try:
+            if not math.isfinite(value) or value < 0:
+                return None
+            values.append(float(value))
+        except (ValueError, OverflowError):
+            return None
+    return values
+
+
 def _status_flat():
     g = M["gpu"]
+    temperatures = _verified_gpu_sensor_values(g, "temp_c")
+    powers = _verified_gpu_sensor_values(g, "power_w")
     ru, rt = M["ram"] or (None, None)
     df, dt = M["disk"] or (None, None)
     fresh = M["t"] and time.time() - M["t"] < 30
@@ -125,9 +147,10 @@ def _status_flat():
         "gpu_percent": _gpu_utilization_percent(g),
         "vram_used_gb": round(sum(x["mem_used_gib"] for x in g), 1) if g else None,
         "vram_total_gb": round(sum(x["mem_total_gib"] for x in g), 1) if g else None,
-        "gpu_temperature_c": max((x["temp_c"] or 0 for x in g), default=None) if g else None,
-        "gpu_hotspot_c": max((x["temp_c"] or 0 for x in g), default=None) if g else None,
-        "gpu_power_w": round(sum(x["power_w"] or 0 for x in g), 0) if g else None,
+        "gpu_temperature_c": max(temperatures) if temperatures is not None else None,
+        # nvidia-smi query here measures GPU core temperature, NOT hot-spot.
+        "gpu_hotspot_c": None,
+        "gpu_power_w": round(sum(powers), 0) if powers is not None else None,
         "cpu_temperature_c": None, "disk_free_gib": round(df, 1) if df else None, "disk_total_gib": round(dt, 1) if dt else None,
         "gpus": g,
     }
