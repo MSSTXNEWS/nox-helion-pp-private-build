@@ -48,6 +48,7 @@ class FactReceiptTest(unittest.TestCase):
             app = FastAPI()
             W.install(app, bridge)
         self.bridge = bridge
+        self.app = app
         self.endpoint = next(r.endpoint for r in app.routes if r.path == "/api/s03/remember")
 
     def invoke(self, module):
@@ -88,6 +89,65 @@ class FactReceiptTest(unittest.TestCase):
         row = json.loads(res.body)
         self.assertEqual(row["status"], "PARTIAL_HOLD")
         self.assertFalse(row["s03_readback_verified"])
+
+
+    def test_partial_upstream_never_claims_done_or_persists_s03(self):
+        """One endpoint-level check for complete, truncated and HTTP-failed streams."""
+        class Upstream:
+            def __init__(self, complete, status):
+                self.complete, self.status_code = complete, status
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *ignored):
+                return False
+
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"частичный ответ"}}]}'
+                if self.complete:
+                    yield 'data: [DONE]'
+
+        class Client:
+            def __init__(self, complete, status):
+                self.complete, self.status = complete, status
+
+            def stream(self, method, url, json):
+                return Upstream(self.complete, self.status)
+
+        endpoint = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        module = types.ModuleType("s03_memory")
+        writes = []
+        module.persist_turn = lambda *args: writes.append(args)
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT = {"t": 0}
+        body = {"messages": [{"role": "user", "content": "Проверь поток"}],
+                "request_id": "r-test", "mini": True, "use_memory": False}
+
+        async def get_frames():
+            response = await endpoint(Request(body))
+            return [json.loads(part) async for part in response.body_iterator]
+
+        for complete, status, expected_ok in ((False, 200, False),
+                                               (True, 503, False),
+                                               (True, 200, True)):
+            with self.subTest(complete=complete, status=status):
+                writes.clear()
+                bridge.hc = lambda: Client(complete, status)
+                with mock.patch.dict(sys.modules, {"s03_memory": module}), mock.patch.object(W, "W", None):
+                    frames = asyncio.run(get_frames())
+                terminal = [v for v in frames if v.get("done") is True]
+                if expected_ok:
+                    self.assertEqual(len(writes), 1)
+                    self.assertEqual(len(terminal), 1)
+                    self.assertEqual(terminal[0]["memory_history"]["status"], "SAVED")
+                else:
+                    self.assertEqual(writes, [])
+                    self.assertEqual(terminal, [])
+                    self.assertEqual(frames[-1]["status"], "HOLD")
+                    self.assertEqual(frames[-1]["reason"], "MODEL_STREAM_INCOMPLETE")
+                    self.assertFalse(frames[-1]["done"])
 
 
 if __name__ == "__main__":
