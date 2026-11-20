@@ -509,9 +509,13 @@ async def _run(native,url,payload,user_text):
                     if rec is None:
                         rec=await asyncio.to_thread(native['dispatch'],call['name'],call['arguments'])
                     if not isinstance(rec,dict):raise StreamFailure('HOLD_TOOL_RESULT')
-                    # A supplied tool success flag must be an actual boolean.
-                    # Invalid truth evidence cannot reach audit or the model.
-                    if 'ok' in rec and type(rec['ok']) is not bool:
+                    # A direct command result is the final user-visible
+                    # outcome, not a model observation. Missing "ok" is NOT
+                    # evidence of success and must never certify S03/DONE.
+                    final_command=(direct or (call['name']=='run_admin'
+                        and call['arguments'].get('action') in native['DIRECT_ADMIN']))
+                    if (('ok' not in rec and final_command)
+                            or ('ok' in rec and type(rec['ok']) is not bool)):
                         raise StreamFailure('HOLD_TOOL_RESULT_OK')
                     if 'needs_confirmation' in rec and type(rec['needs_confirmation']) is not bool:
                         raise StreamFailure('HOLD_TOOL_RESULT_CONFIRMATION')
@@ -528,8 +532,7 @@ async def _run(native,url,payload,user_text):
                         if not text.strip():raise StreamFailure('HOLD_TOOL_CONFIRMATION')
                         yield 'token',text
                         return
-                    if direct or (call['name']=='run_admin' and
-                                  call['arguments'].get('action') in native['DIRECT_ADMIN']):
+                    if final_command:
                         if not text.strip():raise StreamFailure('HOLD_TOOL_EMPTY')
                         yield 'token',text
                         return
