@@ -48,6 +48,7 @@ class CachePurgeSourceContract(unittest.TestCase):
         self.assertIn("for attempt in range(1,4)",text)
         self.assertIn("if ssh.TRACK.exists() or attempt==3",text)
         self.assertIn("HOLD_NATIVE_PROBE_EXCEPTION",text)
+        self.assertIn("NOX_V66_PROBE_ATTEMPT=",text)
 
 if __name__=="__main__":
     unittest.main()

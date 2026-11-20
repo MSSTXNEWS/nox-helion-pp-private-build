@@ -158,6 +158,8 @@ def main()->int:
                     print(line)
                     receipts.append(x)
             except (TypeError,ValueError):pass
+        elif line.startswith('NOX_V66_PROBE_ATTEMPT=') and len(line)<160:
+            print(line)
         elif line.startswith('TEMP_SSH_CLEANUP='):
             print(line[:120])
     accepted=(completed and revoked and len(receipts)==1 and
