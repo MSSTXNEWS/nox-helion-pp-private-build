@@ -488,7 +488,7 @@ class ProbeTests(unittest.TestCase):
         first_gate = source.index(gate)
         second_gate = source.index(gate, first_gate + 1)
         final_gate = source.rindex(gate)
-        self.assertLess(first_gate, source.index('turn3=consume_turn('))
+        self.assertLess(first_gate, source.index('turn3=admitted_consume_turn('))
         self.assertLess(source.index('require_executor_witness(end,third_history,'), second_gate)
         self.assertLess(second_gate, source.index("emit('chat_recent_timing_after'"))
         self.assertGreater(final_gate, source.index("request(client,'/chat/logout'"))
