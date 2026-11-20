@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Bounded owner-authenticated latency/UI probe; exports synthetic text only."""
-import fcntl, hashlib, http.cookiejar, ipaddress, json, os, re, secrets, socket, struct, sys, time, unicodedata, urllib.error, urllib.parse, urllib.request
+import fcntl, hashlib, http.cookiejar, ipaddress, json, math, os, re, secrets, socket, struct, sys, time, unicodedata, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 
 ROOT=Path('/root/nox')
@@ -42,6 +42,7 @@ def obj(response,limit=100000):
         raw=response.read(limit+1)
         if len(raw)>limit:raise RuntimeError('HOLD_RESPONSE_LIMIT')
         return json.loads(raw, parse_constant=reject_owner_nonfinite_json_constant,
+                          parse_float=reject_owner_nonfinite_json_float,
                           object_pairs_hook=reject_owner_duplicate_json_keys)
     finally:
         response.close()
@@ -50,6 +51,14 @@ def obj(response,limit=100000):
 def reject_owner_nonfinite_json_constant(_value):
     """Do not certify owner APIs carrying nonstandard JSON constants."""
     raise RuntimeError('HOLD_OWNER_JSON_NONFINITE')
+
+
+def reject_owner_nonfinite_json_float(value):
+    """Exponent-overflow JSON floats can silently become Infinity in Python."""
+    number = float(value)
+    if not math.isfinite(number):
+        raise RuntimeError('HOLD_OWNER_JSON_NONFINITE')
+    return number
 
 
 def reject_owner_duplicate_json_keys(pairs):
@@ -212,6 +221,14 @@ def reject_nonfinite_json_constant(_value):
     raise RuntimeError('HOLD_STREAM_NONFINITE_JSON')
 
 
+def reject_nonfinite_json_float(value):
+    """Do not certify an SSE JSON exponent overflow as valid finite metadata."""
+    number = float(value)
+    if not math.isfinite(number):
+        raise RuntimeError('HOLD_STREAM_NONFINITE_JSON')
+    return number
+
+
 def reject_duplicate_json_keys(pairs):
     """Reject ambiguous NDJSON fields instead of accepting Python's last-key-wins result."""
     fields = {}
@@ -252,6 +269,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             if not isinstance(line, bytes) or not line.endswith(b'\n'):
                 raise RuntimeError('HOLD_STREAM_MISSING_NEWLINE')
             frame=json.loads(line, parse_constant=reject_nonfinite_json_constant,
+                             parse_float=reject_nonfinite_json_float,
                              object_pairs_hook=reject_duplicate_json_keys)
             if not isinstance(frame,dict):raise RuntimeError('HOLD_STREAM_FRAME_SCHEMA')
             kind=frame.get('type');elapsed=round((time.monotonic()-started)*1000)
