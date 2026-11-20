@@ -77,10 +77,36 @@ class TestProbe(unittest.TestCase):
             'sample_js': '90 consecutive real requestAnimationFrame intervals',
             'synthetic_fixture': False, 'expected_selector_checked': True,
             'expected_selector_sha256': evidence_hash('#resonance'), 'landing_url_verified': True,
+            'blocked_mutating_requests': 0, 'blocked_model_posts': 0,
+            'blocked_websocket_connections': 0, 'service_workers_blocked': True,
             'runs': rows,
         }
         measured = copy.deepcopy(baseline)
         self.assertEqual(len(compare_baseline(measured, baseline)), 6)
+        # A functioning-looking screenshot is not evidence that the
+        # model/stream route works if this read-only probe had to block it.
+        for counter in ('blocked_mutating_requests', 'blocked_model_posts',
+                        'blocked_websocket_connections'):
+            for invalid in (1, True, None):
+                unsafe = copy.deepcopy(baseline)
+                unsafe[counter] = invalid
+                with self.subTest(counter=counter, invalid=invalid), self.assertRaisesRegex(
+                        ValueError, 'HOLD_BASELINE_LIVE_TRANSPORT_BLOCKED'):
+                    compare_baseline(measured, unsafe)
+        for counter in ('blocked_mutating_requests', 'blocked_model_posts',
+                        'blocked_websocket_connections'):
+            missing = copy.deepcopy(measured)
+            missing.pop(counter)
+            with self.subTest(missing=counter), self.assertRaisesRegex(
+                    ValueError, 'HOLD_BASELINE_LIVE_TRANSPORT_BLOCKED'):
+                compare_baseline(missing, baseline)
+        disabled_guard = copy.deepcopy(baseline)
+        disabled_guard['service_workers_blocked'] = False
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_SERVICE_WORKER_GUARD_MISSING'):
+            compare_baseline(measured, disabled_guard)
+        disabled_guard.pop('service_workers_blocked')
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_SERVICE_WORKER_GUARD_MISSING'):
+            compare_baseline(measured, disabled_guard)
         for change in (
             {'synthetic_fixture': True},
             {'url_sha256': url_identity_sha256('http://127.0.0.1:8765/login.html')},
