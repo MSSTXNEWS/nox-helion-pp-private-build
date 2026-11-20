@@ -12,11 +12,10 @@ class Stub {
 }
 async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondTurn=null,encoding=null,options={}){const c=new Stub();return capture({ws:'ws://127.0.0.1:9333/fake',makeSession:async()=>c,timeoutMs:2000,onReady:async()=>{
   setTimeout(async()=>{for(let i=0;i<2;i++){
-    const requestId=String(i+1),timestamp=100+i;
+    const requestId=String(i+1),o=i===1?options:{},timestamp=Object.hasOwn(o,'requestTimestamp')?o.requestTimestamp:100+i;
     const chunks=i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):[Buffer.from(body)];
     const captured=Buffer.concat(chunks);
     c.bodies.set(requestId,i===1&&responseBodyForSecondTurn!==null?Buffer.from(responseBodyForSecondTurn):captured);
-    const o=i===1?options:{};
     c.emit('Network.requestWillBeSent',{requestId,timestamp,request:{method:'POST',url:'http://localhost/api/nox/chat',postData:'{"secret":"'+i+'"}'}});
     const emitExtra=()=>c.emit('Network.responseReceivedExtraInfo',{requestId,statusCode:o.extraStatus??200,headers:o.extraHeaders??{}});
     if(o.extraBefore)emitExtra();
@@ -24,16 +23,18 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
     for(const key of ['fromDiskCache','fromServiceWorker','fromPrefetchCache','fromEarlyHints','cacheStorageCacheName','serviceWorkerResponseSource','serviceWorkerRouterInfo']){
       if(o[key]!==undefined)response[key]=o[key];
     }
-    const responseEvent={requestId,timestamp:timestamp+.005,response,hasExtraInfo:o.hasExtraInfo===true};
+    const responseTime=Object.hasOwn(o,'responseTimestamp')?o.responseTimestamp:timestamp+.005;
+    const responseEvent={requestId,timestamp:responseTime,response,hasExtraInfo:o.hasExtraInfo===true};
     if(o.omitHasExtraInfo)delete responseEvent.hasExtraInfo;
     c.emit('Network.responseReceived',responseEvent);
     if(o.extraAfter)emitExtra();
     await new Promise(r=>setImmediate(r));
     if(o.cacheEvent)c.emit('Network.requestServedFromCache',{requestId});
-    if(missing&&i===1)c.emit('Network.dataReceived',{requestId,timestamp:timestamp+.01});
-    else for(const chunk of chunks)c.emit('Network.dataReceived',{requestId,timestamp:timestamp+.01,data:chunk.toString('base64')});
+    const dataTime=Object.hasOwn(o,'dataTimestamp')?o.dataTimestamp:timestamp+.01;
+    if(missing&&i===1)c.emit('Network.dataReceived',{requestId,timestamp:dataTime});
+    else for(const chunk of chunks)c.emit('Network.dataReceived',{requestId,timestamp:dataTime,data:chunk.toString('base64')});
     if(o.extraBeforeFinish)emitExtra();
-    c.emit('Network.loadingFinished',{requestId,timestamp:timestamp+.02});
+    c.emit('Network.loadingFinished',{requestId,timestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02});
     await new Promise(r=>setImmediate(r));
   }},10);
 }});}
@@ -123,5 +124,24 @@ test('early/late ExtraInfo, HTTP2 headers and cache metadata fence SSE acceptanc
     assert.equal(x.cdp_consistent,false,JSON.stringify(flags));
     assert.equal(x.ttft_sse_verified,false,JSON.stringify(flags));
     assert.equal(x.turns[1].ttft_ms,null,JSON.stringify(flags));
+  }
+});
+
+test('CDP timestamp admission is finite, nonnegative, monotonic and ordered request→first→visible→DONE→close',async()=>{
+  const valid=await run();
+  assert.equal(valid.cdp_consistent,true);assert.equal(valid.ttft_sse_verified,true);
+  for(const flags of [
+    {requestTimestamp:-1,responseTimestamp:0.005,dataTimestamp:0.01,closeTimestamp:0.02},
+    {requestTimestamp:NaN},{requestTimestamp:Infinity},
+    {responseTimestamp:NaN},{responseTimestamp:Infinity},
+    {responseTimestamp:100.5},
+    {dataTimestamp:101.003},{dataTimestamp:NaN},{dataTimestamp:Infinity},
+    {closeTimestamp:101.009},{closeTimestamp:NaN},{closeTimestamp:Infinity},
+    {responseTimestamp:101.015,dataTimestamp:101.01},
+  ]){
+    const r=await run(false,null,null,null,flags);
+    assert.equal(r.cdp_consistent,false,JSON.stringify(flags),'invalid chronology must fail body validity');
+    assert.equal(r.ttft_sse_verified,false,JSON.stringify(flags),'invalid chronology cannot count as measured latency');
+    assert.equal(r.turns[1].stream_timing_complete,false,JSON.stringify(flags));
   }
 });

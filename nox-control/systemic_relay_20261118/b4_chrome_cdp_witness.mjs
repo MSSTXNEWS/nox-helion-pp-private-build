@@ -38,6 +38,18 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
   const c=await(makeSession?makeSession():new Cdp(ws).open()),active=new Map(),finished=[];
   let yes,no;const completion=new Promise((a,b)=>{yes=a;no=b;});
   const timer=setTimeout(()=>no(Error('CDP_TIMEOUT')),timeoutMs);
+  const validTime=t=>typeof t==='number'&&Number.isFinite(t)&&t>=0;
+  const millis=(x,t)=>{
+    if(!validTime(x.start)||!validTime(t)||t<x.start){x.missing=true;return null;}
+    const delta=(t-x.start)*1000,rounded=Math.round(delta);
+    if(!Number.isSafeInteger(rounded)||rounded<0){x.missing=true;return null;}
+    return rounded;
+  };
+  const chronological=(x,t)=>{
+    if(!validTime(x.start)||!validTime(t)||t<x.start||
+       (x.lastTimestamp!==null&&t<x.lastTimestamp)){x.missing=true;return false;}
+    x.lastTimestamp=t;return true;
+  };
   const observe=(x,buffer,timestamp)=>{
     if(!x.streaming||x.missing)return;
     x.bytes+=buffer.length;if(x.bytes>2_000_000){x.missing=true;return;}
@@ -47,19 +59,19 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
     catch{x.missing=true;return;}
     for(;;){const m=/\r?\n\r?\n/.exec(x.partial);if(!m)break;
       const data=x.partial.slice(0,m.index);x.partial=x.partial.slice(m.index+m[0].length);
-      const event=eventData(data),ms=Math.round((timestamp-x.start)*1000);
+      const event=eventData(data),ms=millis(x,timestamp);
       if(event&&Object.hasOwn(event,'text')){
         x.visibleText+=event.text;
-        if(/\S/u.test(event.text)&&x.ttft===null)x.ttft=ms;
+        if(/\S/u.test(event.text)&&x.ttft===null&&ms!==null){x.ttft=ms;x.ttftAt=timestamp;}
       }
-      if(event?.done&&x.done===null)x.done=ms;}
+      if(event?.done&&x.done===null&&ms!==null){x.done=ms;x.doneAt=timestamp;}}
   };
   c.on((method,p)=>{
     if(method==='Network.requestWillBeSent'){
       let path;try{path=new URL(p.request.url).pathname;}catch{return;}
       if(p.request.method!=='POST'||!paths.has(path))return;
       if(active.has(p.requestId)){no(Error('DUPLICATE_CDP_ID'));return;}
-      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,first:null,ttft:null,done:null,close:null,streaming:false,missing:false,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0};
+      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,first:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,firstAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0};
       active.set(p.requestId,x);
       const record=s=>{if(typeof s==='string')x.request=hash(Buffer.from(s));};
       if(typeof p.request.postData==='string')record(p.request.postData);
@@ -76,7 +88,8 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       return;
     }
     if(method==='Network.responseReceived'){
-      x.status=p.response?.status;x.mime=p.response?.mimeType;x.first=Math.round((p.timestamp-x.start)*1000);
+      x.status=p.response?.status;x.mime=p.response?.mimeType;
+      if(chronological(x,p.timestamp)){x.first=millis(x,p.timestamp);x.firstAt=p.timestamp;}
       // Chrome signals whether ExtraInfo will arrive; unknown means a HOLD.
       x.extraExpected=typeof p.hasExtraInfo==='boolean'?p.hasExtraInfo:null;
       if(x.extraExpected===null||(x.extraExpected===false&&x.extraSeen!==0)||
@@ -89,12 +102,13 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       }).catch(()=>{x.missing=true;});
     }
     if(method==='Network.dataReceived'){
+      if(!chronological(x,p.timestamp))return;
       if(p.data){if(!x.streaming)x.missing=true;observe(x,Buffer.from(p.data,'base64'),p.timestamp);}
       else x.missing=true;
     }
     if(method==='Network.loadingFinished'||method==='Network.loadingFailed'){
       if(x.close!==null){x.missing=true;return;}
-      x.close=Math.round((p.timestamp-x.start)*1000);
+      if(chronological(x,p.timestamp)){x.close=millis(x,p.timestamp);x.closeAt=p.timestamp;}
       if(method==='Network.loadingFailed')x.missing=true;
       // A final incomplete UTF-8 code point or unclosed SSE event is NOT a clean stream.
       if(!x.streaming||x.extraExpected===null||
@@ -127,7 +141,14 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       stream_timing_complete:!x.missing&&x.streaming&&x.bodyMatchesStream}));
     const unique=new Set(turns.map(x=>x.cdp_request_id)).size===turns.length;
     const valid=unique&&turns.every(x=>x.request_sha256&&x.cdp_decoded_body_sha256&&x.cdp_decoded_body_matches_stream&&x.status===200&&x.mime==='text/event-stream');
-    const timed=valid&&turns.every(x=>x.stream_timing_complete&&x.ttft_ms!==null&&x.sse_done_ms!==null&&x.ttft_ms<=x.sse_done_ms&&x.sse_done_ms<=x.close_ms);
+    const timed=valid&&turns.every((t,i)=>{
+      const x=records[i],raw=[x.start,x.firstAt,x.ttftAt,x.doneAt,x.closeAt];
+      const ms=[t.first_network_byte_ms,t.ttft_ms,t.sse_done_ms,t.close_ms];
+      return t.stream_timing_complete&&raw.every(validTime)&&
+        x.start<=x.firstAt&&x.firstAt<=x.ttftAt&&x.ttftAt<=x.doneAt&&x.doneAt<=x.closeAt&&
+        ms.every(v=>Number.isSafeInteger(v)&&v>=0)&&
+        ms[0]<=ms[1]&&ms[1]<=ms[2]&&ms[2]<=ms[3];
+    });
     return {schema:'nox-b4-cdp-v1',chrome_product:version.product,cdp_consistent:Boolean(valid),ttft_sse_verified:Boolean(timed),
       browser_authenticated:false,remote_attested:false,native_verified:false,canonical_s03_verified:false,one_model_post_per_turn_verified:false,
       tcp_wire_verified:false,turns};
