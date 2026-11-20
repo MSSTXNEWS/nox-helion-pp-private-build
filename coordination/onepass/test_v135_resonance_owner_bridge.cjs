@@ -1747,3 +1747,30 @@ test('V196 mismatched native model receipt label fails closed for SSE and JSON',
   assert.equal(r.status,503);
   assert.match((await r.json()).error,/HOLD_MODEL_LABEL_CONFLICT/);
 });
+
+test('V197 explicitly present blank/falsy native model label is HOLD, absent remains compatible',async()=>{
+  for(const label of ['',null,0,false]){
+    let historyReads=0;
+    const args=[true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+      undefined,false,5,()=>{historyReads++;},'verified-exchange-01',
+      [],false,false,prompt,undefined,{receiptModelLabel:label}];
+    const s=fake(...args);
+    const frames=await events(await s.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v197-model-field-present'})}));
+    assert.equal(frames.filter(e=>e.type==='done').length,0,'falsy explicit model must not be accepted');
+    assert.match(frames.find(e=>e.type==='error').error,/HOLD_MODEL_LABEL_CONFLICT/);
+    const j=fake(...args);
+    const r=await j.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify({message:prompt})});
+    assert.equal(r.status,503,'JSON must also fail closed for explicit invalid label');
+    assert.match((await r.json()).error,/HOLD_MODEL_LABEL_CONFLICT/);
+    assert.equal(historyReads,0,'invalid native model label must fail before S03 readback');
+    assert.equal(s.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
+    assert.equal(j.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
+  }
+  const compatible=fake();
+  const frames=await events(await compatible.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v197-absent-optional'})}));
+  assert.equal(frames.filter(e=>e.type==='done').length,1,'truly absent optional label stays supported');
+  assert.equal(frames.at(-1).model_identity_verified,false,
+    'optional label acceptance must not certify installed weights or tokenizer');
+});
