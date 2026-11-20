@@ -726,9 +726,12 @@ OBSERVER_JS = r"""
          const stateValues=['status','state','phase'].map(key=>frame?.[key]);
          const failedState=stateValues.some(value=>typeof value==='string'&&
            ['failed','failure','error','cancelled','canceled','aborted',
-            'rejected','denied','timeout','timed_out'].includes(value.toLowerCase()));
+            'rejected','denied','timeout','timed_out'].includes(value.trim().toLowerCase()));
+         // Native adapters can serialize upstream HTTP codes as strings.
+         // Reject padded failures and string-coded 4xx/5xx on ANY SSE frame.
          const failedHttpStatus=stateValues.some(value=>
-           typeof value==='number'&&Number.isFinite(value)&&value>=400);
+           (typeof value==='number'&&Number.isFinite(value)&&value>=400)||
+           (typeof value==='string'&&/^[4-9][0-9]{2}$/.test(value.trim())));
          // Protocol failures can be attached to delta or extension frames,
          // not just status/meta/start/done. A later DONE cannot clear them.
          const explicitError=(frame?.error!==undefined&&frame.error!==null&&

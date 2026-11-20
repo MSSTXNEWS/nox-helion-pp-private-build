@@ -178,6 +178,12 @@ async function check(chunks, status=200) {
     {type:'delta',text:'hola',status:503},
     {type:'delta',text:'hola',error:{code:'upstream_failed'}},
     {type:'extension',status:'cancelled'},
+    // Provider status codes may be strings, and state strings can be padded.
+    {type:'status',state:' FAILED '},
+    {type:'delta',status:'503',text:'hola'},
+    {type:'meta',status:' 429 '},
+    {type:'extension',phase:' Cancelled '},
+    {type:'done',status:'504',saved:true,s03_integrated:true,dialog_id:'synthetic'},
   ];
   for (const poison of statusFrames) {
     const payload = Buffer.from([deltaFrame,JSON.stringify(poison),doneFrame].join('\n')+'\n','utf8');
