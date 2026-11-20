@@ -729,9 +729,21 @@ OBSERVER_JS = r"""
             'rejected','denied','timeout','timed_out'].includes(value.trim().toLowerCase()));
          // Native adapters can serialize upstream HTTP codes as strings.
          // Reject padded failures and string-coded 4xx/5xx on ANY SSE frame.
-         const failedHttpStatus=stateValues.some(value=>
+         const httpFailureCode=value=>
            (typeof value==='number'&&Number.isFinite(value)&&value>=400)||
-           (typeof value==='string'&&/^[4-9][0-9]{2}$/.test(value.trim())));
+           (typeof value==='string'&&/^[4-9][0-9]{2}$/.test(value.trim()));
+         // A provider can place a 4xx/5xx error code in a structured status
+         // object or a separate code/status_code field, not only status text.
+         // Such failures cannot be hidden by a later apparently valid DONE.
+         const httpKeys=['status','state','phase','code','status_code',
+                         'statusCode','http_status','httpStatus'];
+         const failedHttpStatus=httpKeys.some(key=>{
+           const value=frame?.[key];
+           if(httpFailureCode(value))return true;
+           if(!value||typeof value!=='object'||Array.isArray(value))return false;
+           return ['code','status_code','statusCode','http_status','httpStatus']
+             .some(nested=>httpFailureCode(value[nested]));
+         });
          // Protocol failures can be attached to delta or extension frames,
          // not just status/meta/start/done. A later DONE cannot clear them.
          const explicitError=(frame?.error!==undefined&&frame.error!==null&&
