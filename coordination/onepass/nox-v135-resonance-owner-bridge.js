@@ -209,7 +209,7 @@
           const media=window.matchMedia?.('(prefers-reduced-motion: reduce)');
           const moving=()=> (typeof document==='undefined'||document.visibilityState!=='hidden')&&!media?.matches;
           const emitPieces=async t=>{
-         const parts=moving()?livePieces(t):[t.join?.('')??t];
+         const parts=moving()?livePieces(t):[t];
          for(let index=0;index<parts.length;index++){
    if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
    if(index&&!moving()){event({type:'token',t:parts.slice(index).join('')});break;}
@@ -356,7 +356,7 @@ if(settled&&typeof clearTimeout==='function')clearTimeout(timerId);
     const url=samePath(input);
     if(!url)return nativeFetch(input,init);
     const method=String(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();
-    if(input instanceof Request&&!init?.body){
+    if(input instanceof Request&&init?.body===undefined){
       const bridged=(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search)||
         (url.pathname==='/api/nox/history'&&method==='GET')||
         (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
