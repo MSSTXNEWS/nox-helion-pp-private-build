@@ -166,6 +166,90 @@ async def chat(req: Request):
         log("chat_error " + traceback.format_exc()[-300:])
         return JSONResponse({"error": {"message": "bridge: %s" % type(e).__name__}}, status_code=502)
 
+from fastapi.responses import StreamingResponse
+FEED = "/root/nox/state/feedback.jsonl"
+
+def _sse(o):
+    return "data: " + json.dumps(o, ensure_ascii=False) + "\n\n"
+
+async def stream_chat(history):
+    user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
+    yield _sse({"type": "status", "text": "слушаю тебя…"})
+    mem = memory_block(user)
+    n = mem.count("\n") + 1 if mem else 0
+    yield _sse({"type": "status", "text": ("вспоминаю: нашёл %d фрагм. памяти" % n) if mem else "вспоминаю: в памяти ничего близкого"})
+    sb = self_block(user)
+    st = affect_update("")
+    yield _sse({"type": "status", "text": "чувствую: " + affect_words(st)})
+    sys_msg = IDENTITY + ("\n\nТвоя память:\n" + mem[:1200] if mem else "") + sb
+    msgs = [{"role": "system", "content": sys_msg}] + [{"role": m["role"], "content": str(m.get("content", ""))[:3500]} for m in history if m.get("role") != "system"][-6:]
+    yield _sse({"type": "status", "text": "формулирую ответ…"})
+    full = ""
+    body = {"messages": msgs, "max_tokens": 700, "temperature": 0.6, "id_slot": 0, "cache_prompt": True, "stream": True,
+            "chat_template_kwargs": {"enable_thinking": False}}
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(600, connect=10)) as c:
+            async with c.stream("POST", MODEL, json=body) as r:
+                async for line in r.aiter_lines():
+                    if not line.startswith("data:"): continue
+                    d = line[5:].strip()
+                    if d == "[DONE]": break
+                    try: t = json.loads(d)["choices"][0].get("delta", {}).get("content") or ""
+                    except Exception: t = ""
+                    if t:
+                        full += t
+                        yield _sse({"type": "token", "text": t})
+    except Exception as e:
+        log("stream_error %s" % type(e).__name__)
+        yield _sse({"type": "error", "text": "модель не ответила: %s" % type(e).__name__})
+    LAST_CHAT["t"] = time.time()
+    if full.strip():
+        remember(user, full.strip())
+        if SOUL: SOUL.log_turn(user, full.strip())
+    yield _sse({"type": "done"})
+
+@app.post("/v1/chat/stream")
+async def chat_stream(req: Request):
+    b = await req.json()
+    return StreamingResponse(stream_chat(b.get("messages") or []), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+@app.post("/feedback")
+async def feedback(req: Request):
+    b = await req.json()
+    try:
+        os.makedirs(os.path.dirname(FEED), exist_ok=True)
+        open(FEED, "a").write(json.dumps({"t": int(time.time()), "q": str(b.get("q", ""))[:400], "a": str(b.get("a", ""))[:900], "v": 1 if b.get("v") == 1 else -1}, ensure_ascii=False) + "\n")
+    except Exception: pass
+    return {"ok": True}
+
+UI = """<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>NOX</title>
+<style>body{margin:0;background:#0b0d12;color:#e6e8ee;font:16px system-ui;display:flex;flex-direction:column;height:100vh}
+#log{flex:1;overflow:auto;padding:16px;max-width:760px;width:100%;margin:auto;box-sizing:border-box}
+.m{margin:10px 0;padding:10px 14px;border-radius:12px;white-space:pre-wrap;line-height:1.5}.u{background:#1c2333;margin-left:15%}.n{background:#151a26}
+.s{color:#7e8aa6;font-size:13px;animation:p 1.4s infinite}@keyframes p{50%{opacity:.4}}
+form{display:flex;gap:8px;padding:12px;max-width:760px;width:100%;margin:auto;box-sizing:border-box}
+input{flex:1;padding:12px;border-radius:10px;border:1px solid #2a3350;background:#10141f;color:#e6e8ee;font-size:16px}
+button{padding:0 16px;border-radius:10px;border:0;background:#4b6bff;color:#fff;font-size:16px}.f button{background:none;color:#7e8aa6;padding:2px 8px}</style>
+<div id=log></div><form id=f><input id=i placeholder="Напиши NOX…" autocomplete=off><button>→</button></form>
+<script>
+const log=document.getElementById('log'),hist=[];
+function add(c,t){const d=document.createElement('div');d.className='m '+c;d.textContent=t;log.appendChild(d);log.scrollTop=1e9;return d}
+document.getElementById('f').onsubmit=async e=>{e.preventDefault();const i=document.getElementById('i'),q=i.value.trim();if(!q)return;i.value='';
+add('u',q);hist.push({role:'user',content:q});const st=add('s','…'),box=add('n','');let full='';
+try{const r=await fetch('/v1/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:hist.slice(-6)})});
+const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
+while(true){const{value,done}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});let k;
+while((k=buf.indexOf('\\n\\n'))>=0){const ln=buf.slice(0,k);buf=buf.slice(k+2);if(!ln.startsWith('data:'))continue;const o=JSON.parse(ln.slice(5));
+if(o.type=='status')st.textContent=o.text;else if(o.type=='token'){full+=o.text;box.textContent=full;st.textContent='';log.scrollTop=1e9}
+else if(o.type=='error')st.textContent=o.text}}}catch(x){st.textContent='ошибка связи'}
+hist.push({role:'assistant',content:full});const fb=add('f','');
+['👍','👎'].forEach((s,j)=>{const b=document.createElement('button');b.textContent=s;b.onclick=()=>{fetch('/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:q,a:full,v:j?-1:1})});fb.remove()};fb.appendChild(b)})}
+</script>"""
+
+@app.get("/", response_class=HTMLResponse)
+async def ui():
+    return UI
+
 async def _reflect_loop():
     import asyncio
     while True:
