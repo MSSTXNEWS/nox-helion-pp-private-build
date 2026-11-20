@@ -148,7 +148,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
     async def test_plain_chat_skips_unrelated_status_and_inventory_io(self):
         # Ordinary conversation must start the model stream without blocking on
         # status-file reads or inventory collection; relevant turns retain guards.
-        chunks=Chunks([frame('Hola!'),frame(finish='stop'),b'data: [DONE]\\n\\n'])
+        chunks=Chunks([frame('Hola!'),frame(finish='stop'),b'data: [DONE]\n\n'])
         requests,factory=self.transport([chunks])
         native=self.native()
         payload={'messages':[{'role':'user','content':'Привет'}]}
