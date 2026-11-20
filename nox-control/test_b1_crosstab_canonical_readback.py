@@ -126,6 +126,56 @@ def main():
                 }""",db)
                 check("concurrent reconciliation CAS yields one transition",
                       states==["ACKED_RECOVERED","ALREADY_ACKED"])
+                # ACKED without a canonical signed proof is not equivalent to
+                # independently verified server reconciliation.
+                unverified=a.evaluate("""async dbName => {
+                  const g=await NOXB1CrossTabAckLease.createGate({indexedDB,databaseName:dbName});
+                  const scope={conversation_id:'dialog',exchange_id:'x1'};
+                  try {
+                    const grant=await g.reserve(scope,'a'.repeat(64),'cursor1');
+                    await g.beginSend(grant);
+                    await g.confirm(grant); // local transport ACK, no signed server proof
+                    try {
+                      return await g.reconcileSignedAck(scope,'a'.repeat(64),'cursor1',
+                        async()=>{throw Error('GET_MUST_NOT_RUN');},async()=>false);
+                    } catch(err) {return err.code;}
+                  } finally {g.close();}
+                }""",db+"-local-only")
+                check("local ACKED cannot spoof signed canonical ACK",
+                      unverified=="HOLD_CROSSTAB_ACKED_UNVERIFIED")
+                # Two async verifiers for the same exchange can see distinct
+                # syntactically valid receipts. An already committed receipt
+                # is NOT proof that an independent, conflicting receipt won.
+                clash=a.evaluate("""async dbName => {
+                  const slow=await NOXB1CrossTabAckLease.createGate({indexedDB,databaseName:dbName});
+                  const fast=await NOXB1CrossTabAckLease.createGate({indexedDB,databaseName:dbName});
+                  const scope={conversation_id:'dialog',exchange_id:'x1'};
+                  let started, release;
+                  const entered=new Promise(resolve=>{started=resolve;});
+                  const proceed=new Promise(resolve=>{release=resolve;});
+                  try {
+                    const grant=await slow.reserve(scope,'a'.repeat(64),'cursor1');
+                    await slow.beginSend(grant);
+                    const pending=slow.reconcileSignedAck(scope,'a'.repeat(64),'cursor1',
+                      async expected=>{
+                        const good=await read('x1')(expected);
+                        return {...good,ack_id:'ack-conflict',server_cas:'server-cas-conflict',
+                          s03_sha256:'d'.repeat(64)};
+                      },async()=>{started();await proceed;return true;});
+                    await entered;
+                    const winner=await fast.reconcileSignedAck(scope,'a'.repeat(64),'cursor1',
+                      read('x1'),verify);
+                    release();
+                    let late='UNEXPECTED_ACCEPT';
+                    try {late=(await pending).status;} catch(err){late=err.code;}
+                    return {winner:winner.status,late,
+                      stillAcked:(await fast.reserve(scope,'a'.repeat(64),'cursor1')).status};
+                  } finally {release();slow.close();fast.close();}
+                }""",db+"-conflicting-receipts")
+                check("first canonical receipt commits exactly once",
+                      clash["winner"]=="ACKED_RECOVERED" and clash["stillAcked"]=="ALREADY_ACKED")
+                check("stale concurrent verifier cannot accept contradictory ACKED proof",
+                      clash["late"]=="HOLD_CROSSTAB_ACKED_PROOF_CONFLICT")
                 a.reload();a.add_script_tag(path=str(SOURCE))
                 a.evaluate("""async db=>{
                     window.s1={conversation_id:'dialog',exchange_id:'x1'};
