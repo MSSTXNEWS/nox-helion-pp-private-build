@@ -296,6 +296,7 @@ ALTERNATE_CONFIGS = {
 
 def probe_alternative_auth_configs(candidates=ALTERNATE_CONFIGS):
     """Metadata-only inventory; never copy, print or emit credential contents."""
+    import configparser
     findings = {}
     for label, path in candidates.items():
         if not isinstance(label, str) or not isinstance(path, Path) or not path.is_absolute():
@@ -317,7 +318,6 @@ def probe_alternative_auth_configs(candidates=ALTERNATE_CONFIGS):
                     # Presence only, no claim that the object has Drive permissions.
                     state = "ADC_FILE_PRESENT_UNVERIFIED"
                 else:
-                    import configparser
                     cp = configparser.RawConfigParser(interpolation=None)
                     cp.read_string(path.read_text(encoding="utf-8"))
                     if not cp.has_section("noxdrive"):
