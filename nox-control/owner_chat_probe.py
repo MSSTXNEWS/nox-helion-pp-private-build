@@ -92,6 +92,21 @@ def require_not_html_asset(response, sample):
         raise RuntimeError('HOLD_RESONANCE_ASSET_HTML_FALLBACK')
 
 
+def require_browser_asset_mime(response, path):
+    """A 200 JSON/error response is not an executable JS/CSS asset in the browser."""
+    headers = getattr(response, 'headers', None)
+    ctype = headers.get('Content-Type', '') if headers is not None else ''
+    if not isinstance(ctype, str):
+        raise RuntimeError('HOLD_RESONANCE_ASSET_MIME')
+    media = ctype.split(';', 1)[0].strip().lower()
+    extension = urllib.parse.urlsplit(path).path.lower()
+    expected = ({'text/css'} if extension.endswith('.css') else
+                {'text/javascript', 'application/javascript', 'application/x-javascript'}
+                if extension.endswith(('.js', '.mjs')) else set())
+    if media not in expected:
+        raise RuntimeError('HOLD_RESONANCE_ASSET_MIME')
+
+
 def page_snapshot(response, limit=200000, expected_path=None):
     """Read a complete bounded owner HTML page and always close its socket."""
     try:
@@ -339,6 +354,7 @@ def main():
                         sample = asset.read(512)
                         if asset.status == 200 and local.lower().endswith(('.js', '.mjs', '.css')):
                             require_not_html_asset(asset, sample)
+                            require_browser_asset_mime(asset, local)
                         report['assets'].append({'path':local,'status':asset.status,'bytes_sampled':len(sample)})
         unauth=urllib.request.build_opener(urllib.request.ProxyHandler({}))
         report['anonymous_http']={}
