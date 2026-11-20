@@ -586,7 +586,39 @@ async def _run(native,url,payload,user_text):
             # Inspect the *original* model batch: pool deduplication must not
             # hide a second action and accidentally authorize run_admin.
             _refuse_multi_admin_batch(calls)
-            if native.get('_POOL'):calls=native['dedup_calls'](calls)
+            if native.get('_POOL'):
+                # The parsed model envelope was verified above, but the pool
+                # may edit a call in place while deduplicating. Record a
+                # detached semantic fingerprint before invoking that hook.
+                before_ids=[call['id'] for call in calls]
+                before={
+                    call['id']:(call['name'],json.dumps(
+                        call['arguments'],sort_keys=True,ensure_ascii=False,
+                        allow_nan=False))
+                    for call in calls}
+                reduced=native['dedup_calls'](calls)
+                if not isinstance(reduced,list) or not reduced:
+                    raise StreamFailure('HOLD_TOOL_POOL_FIDELITY')
+                seen=set()
+                selected=[]
+                for call in reduced:
+                    try:
+                        call_id=call['id']
+                        if (type(call_id) is not str or call_id in seen or
+                                call_id not in before):
+                            raise ValueError('new/duplicate call ID')
+                        evidence=(call['name'],json.dumps(
+                            call['arguments'],sort_keys=True,
+                            ensure_ascii=False,allow_nan=False))
+                        if evidence!=before[call_id]:
+                            raise ValueError('pool changed tool call')
+                    except (TypeError,KeyError,ValueError,OverflowError):
+                        raise StreamFailure('HOLD_TOOL_POOL_FIDELITY') from None
+                    seen.add(call_id)
+                    selected.append(call_id)
+                if selected!=[call_id for call_id in before_ids if call_id in seen]:
+                    raise StreamFailure('HOLD_TOOL_POOL_FIDELITY')
+                calls=reduced
             if not calls:raise StreamFailure('HOLD_TOOL_PARSE')
             _refuse_multi_admin_batch(calls)
             messages.append(_assistant_tools(calls,message['content']))
