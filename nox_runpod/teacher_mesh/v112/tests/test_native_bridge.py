@@ -13,7 +13,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.testclient import TestClient
 
 from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
-    _sse_delta, _timestamp, ensure_dialog_schema, register_native_v29_chat,
+    _sse_delta, _timestamp, _validate_s03_request_receipt,
+    ensure_dialog_schema, register_native_v29_chat,
 )
 
 class V112Tests(unittest.TestCase):
@@ -263,6 +264,25 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(response.json()['error'],
                          'HOLD_S03_CANONICAL_WRITER_READBACK_UNAVAILABLE')
         self.assertEqual(self.calls,[])
+
+    def test_s03_request_receipt_requires_owner_scope(self):
+        question='owner scoped question'
+        answer='owner scoped answer'
+        receipt={
+            'schema':'NOX_V112_S03_REQUEST_RECEIPT_V1',
+            'committed':True,'verified':True,
+            'request_id':'request-owner-scope','session_id':'session-owner-scope',
+            'record_id':'record-owner-scope',
+            'sha256':hashlib.sha256(b'record').hexdigest(),
+            'question_sha256':hashlib.sha256(question.encode()).hexdigest(),
+            'answer_sha256':hashlib.sha256(answer.encode()).hexdigest(),
+            'owner_scope':'nox-single-owner',
+        }
+        self.assertIsNotNone(_validate_s03_request_receipt(
+            receipt,'request-owner-scope','session-owner-scope',question,answer))
+        receipt.pop('owner_scope')
+        self.assertIsNone(_validate_s03_request_receipt(
+            receipt,'request-owner-scope','session-owner-scope',question,answer))
 
     def test_stream_s03_and_owner_thread_roundtrip(self):
         create=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,

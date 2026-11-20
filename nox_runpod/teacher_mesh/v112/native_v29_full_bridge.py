@@ -190,9 +190,12 @@ def _validate_s03_request_receipt(receipt,request_id,session_id,question,answer)
     a_sha=hashlib.sha256(answer.encode('utf-8')).hexdigest()
     if receipt.get('question_sha256')!=q_sha or receipt.get('answer_sha256')!=a_sha:
         return None
-    for field in ('owner','owner_scope'):
-        if field in receipt and receipt[field]!=OWNER:
-            return None
+    # The provider must prove the owner scope on both write and readback;
+    # accepting an omitted scope would let an unscoped receipt certify a save.
+    if receipt.get('owner_scope')!=OWNER:
+        return None
+    if 'owner' in receipt and receipt['owner']!=OWNER:
+        return None
     if 'acl' in receipt and receipt['acl'] not in ('owner','owner-only','private'):
         return None
     return {'record_id':record_id,'sha256':record_sha.lower()}
