@@ -684,11 +684,13 @@ def resource_admission(helper):
     except (OSError, ValueError) as exc:
         raise RuntimeError('HOLD_CGROUP_MEMORY_LIMIT') from exc
     budget = helper.resource_budget(memory_limit, memory_current, quota_cpus, affinity_cpus)
-    configured = re.findall(r'^TRAIN_CPU_MAX=([0-9]+)GiB$',
-                            (STATE/'train_cpu_max.env').read_text(), re.MULTILINE)
-    if len(configured) != 1 or not 56 <= int(configured[0]) <= 64:
+    # A line-based regexp can admit extra env assignments or shell commands
+    # after the approved cap. Treat the whole file as one pinned assignment.
+    configured = re.fullmatch(r'TRAIN_CPU_MAX=([0-9]+)GiB\n?',
+                              (STATE/'train_cpu_max.env').read_text())
+    if configured is None or not 56 <= int(configured.group(1)) <= 64:
         raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT')
-    configured_gib = int(configured[0])
+    configured_gib = int(configured.group(1))
     # The native loader uses the installed env cap. A smaller computed budget
     # is an admission refusal, never an implicit change to that loader setting.
     if budget['train_cpu_gib'] < configured_gib:
