@@ -35,6 +35,15 @@ jobs:
               -p 'test_nox_dispatcher_advisor_*.py' \
               -v
 
+      - run:
+          name: Verify 3B01 Hunter malformed-source fail-closed contract
+          command: |
+            set -eu
+            PYTHONPATH=nox-control python -B -m unittest discover \
+              -s nox-control \
+              -p test_nox_hunter.py \
+              -v
+
 workflows:
   source-verification:
     jobs:
