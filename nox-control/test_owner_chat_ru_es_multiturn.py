@@ -114,6 +114,16 @@ async function check(chunks) {
   const dangling = await check([complete,Buffer.from([0xc3])]);
   assert.equal(dangling.nativeStreamComplete,false,'dangling UTF-8 must HOLD');
   assert.equal(dangling.error,'HOLD_QA_STREAM_OBSERVER');
+  // DONE must reject trailing blank frames and partial whitespace fragments.
+  for (const chunks of [
+    [complete, Buffer.from('\\n')],
+    [Buffer.concat([complete,Buffer.from(' \\n')])],
+    [Buffer.concat([complete,Buffer.from(' ')])]
+  ]) {
+    const extra = await check(chunks);
+    assert.equal(extra.nativeStreamComplete,false,'trailing bytes must HOLD');
+    assert.equal(extra.error,'HOLD_QA_TRAILING_AFTER_DONE');
+  }
 })().catch(error => {console.error(error);process.exitCode=1;});
 """
         result = subprocess.run(

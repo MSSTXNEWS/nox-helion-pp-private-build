@@ -563,10 +563,10 @@ OBSERVER_JS = r"""
        let end;
        while((end=buffer.indexOf('\n'))>=0){
          const line=buffer.slice(0,end);buffer=buffer.slice(end+1);
+         // DONE must be the last framed byte, including empty lines.
+         if(q.nativeTerminalCount!==0)throw Error('HOLD_QA_TRAILING_AFTER_DONE');
          if(!line.trim())continue;
          const frame=JSON.parse(line);
-         // A DONE frame is terminal: reject duplicate DONE or trailing data.
-         if(q.nativeTerminalCount!==0)throw Error('HOLD_QA_TRAILING_AFTER_DONE');
          if(frame.type==='delta'){
            if(typeof frame.text!=='string'||q.answer.length+frame.text.length>4096)throw Error('HOLD_QA_ANSWER_LIMIT');
            q.answer+=frame.text;q.nativeDeltas++;
@@ -581,6 +581,10 @@ OBSERVER_JS = r"""
            q.nativeDone=performance.now()-q.started;
          }else if(frame.type==='error'){q.error='HOLD_NATIVE_STREAM_ERROR';}
        }
+       // Reject unterminated data after DONE, too. Incomplete UTF-8 remains
+       // independently fail-closed by fatal decoder.flush at stream EOF.
+       if(q.nativeTerminalCount!==0&&buffer.length)
+         throw Error('HOLD_QA_TRAILING_AFTER_DONE');
      }
      if(!sawEof||buffer.trim()||q.nativeTerminalCount!==1)
        throw Error('HOLD_QA_STREAM_NOT_TERMINAL');
