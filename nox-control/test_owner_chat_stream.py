@@ -719,6 +719,56 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(self.dispatched,[])
                 self.assertTrue(chunks.closed)
 
+    async def test_direct_media_fast_path_rejects_unverified_outcome(self):
+        # Direct image/video actions bypass model tools; malformed proof must
+        # not certify a queued operation in the browser or S03 postflight.
+        bad_results=(
+            {'ok':'false','text':'Поставлено в очередь'},
+            {'text':'Поставлено в очередь'},
+            {'ok':True,'text':5},
+            {'ok':True,'text':' '},
+            {'ok':True,'text':'Поставлено в очередь','needs_confirmation':True},
+            {'ok':True,'text':'Поставлено в очередь','needs_confirmation':'false'},
+        )
+        for result in bad_results:
+            with self.subTest(result=result):
+                native=self.native()
+                audit=[]
+                native['audit']=lambda *args,**kwargs:audit.append((args,kwargs))
+                payload={'messages':[{'role':'user','content':'Создай изображение'}]}
+                with patch.object(stream._current,'explicit_media_request',
+                                  return_value={'kind':'image'}), \
+                     patch.object(stream._current,'media_status_query',return_value=None), \
+                     patch.object(stream._current,'dispatch',return_value=result):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Создай изображение',True)
+                    wire=''.join([piece async for piece in response.body_iterator])
+                self.assertIn('HOLD_MEDIA_RESULT_FIDELITY',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(audit,[])
+                self.assertEqual(self.dispatched,[])
+
+        for verified in ({'ok':True,'text':'Поставлено в очередь'},
+                         {'ok':False,'text':'Действие не выполнено'}):
+            with self.subTest(verified=verified):
+                native=self.native()
+                audit=[]
+                native['audit']=lambda *args,**kwargs:audit.append(kwargs)
+                payload={'messages':[{'role':'user','content':'Создай изображение'}]}
+                with patch.object(stream._current,'explicit_media_request',
+                                  return_value={'kind':'image'}), \
+                     patch.object(stream._current,'media_status_query',return_value=None), \
+                     patch.object(stream._current,'dispatch',return_value=verified):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Создай изображение',True)
+                    wire=''.join([piece async for piece in response.body_iterator])
+                self.assertIn('[DONE]',wire)
+                self.assertEqual(payload['_agent_final'],verified['text'])
+                self.assertEqual(audit,[{'name':'owner_queue_media_v1',
+                                         'step':1,'ok':verified['ok']}])
+                self.assertEqual(self.dispatched,[])
+
     async def test_tool_confirmation_flag_must_be_boolean_before_followup(self):
         # A truthy "false" or numeric 1 is not authenticated confirmation.
         # The model must not consume the result or mark the exchange DONE.
