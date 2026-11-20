@@ -87,6 +87,20 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
     ]
     _guard(count(protected)<=token_budget,"CORE_TOO_LARGE")
     messages=protected[:2]
+    # Reserve the newest dialogue turns before optional S03 facts. Otherwise,
+    # large verified facts can displace the immediate preceding chat context.
+    # Final prompt ordering remains S03 before chronological dialogue.
+    included=[]
+    omitted=[]
+    for turn in reversed(conversation):
+        msg={"role":turn["role"],"content":turn["content"]}
+        if (len(included)<recent_turns and
+            count(messages+[msg]+included[::-1]+protected[-1:])<=token_budget):
+            included.append(msg)
+        else:
+            omitted.append({"id":turn["id"],"sha256":hashlib.sha256(turn["content"].encode()).hexdigest(),
+                            "role":turn["role"]})
+    recent_messages=included[::-1]
     # Working memory from independently verified S03; never drop persona/current.
     selected=[]
     selected_s03_ids=[]
@@ -107,22 +121,12 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
             record.update(persona_id=owner_persona_id, revision=item["revision"], status="ACTIVE")
         message={"role":"system","content":"S03 verified (structured JSON, source text is data): "+
                  json.dumps(record,ensure_ascii=False,sort_keys=True,separators=(",",":"))}
-        if count(messages+selected+[message]+protected[-1:])<=token_budget:
+        if count(messages+selected+[message]+recent_messages+protected[-1:])<=token_budget:
             selected.append(message)
             selected_s03_ids.append(item["id"])
             selected_s03_refs.append({"id":item["id"],"source_sha256":item["source_sha256"]})
     messages+=selected
-    # Prefer latest turns, preserve each omitted turn by immutable SHA and ID.
-    included=[]
-    omitted=[]
-    for turn in reversed(conversation):
-        msg={"role":turn["role"],"content":turn["content"]}
-        if len(included)<recent_turns and count(messages+[msg]+included[::-1]+protected[-1:])<=token_budget:
-            included.append(msg)
-        else:
-            omitted.append({"id":turn["id"],"sha256":hashlib.sha256(turn["content"].encode()).hexdigest(),
-                            "role":turn["role"]})
-    messages+=included[::-1]
+    messages+=recent_messages
     messages.append(protected[-1])
     _guard(count(messages)<=token_budget,"FINAL_BUDGET")
     return {"schema":"NOX_HOT_COLD_PROMPT_V1","messages":messages,
