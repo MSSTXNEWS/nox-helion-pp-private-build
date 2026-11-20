@@ -737,8 +737,11 @@ def install(native):
             if not final.strip():raise StreamFailure('HOLD_MODEL_EMPTY')
             payload['_agent_final']=final
             return JSONResponse(native['_final_json'](final))
-        except Exception:
+        except Exception as error:
             payload.pop('_agent_final',None)
-            return JSONResponse({'error':{'code':'HOLD_OWNER_STREAM_RUNTIME'}},status_code=502)
+            # Non-stream clients must receive the same verified HOLD code as
+            # SSE clients; unknown failures still expose no internal details.
+            code=str(error) if isinstance(error,StreamFailure) else 'HOLD_OWNER_STREAM_RUNTIME'
+            return JSONResponse({'error':{'code':code}},status_code=502)
 
     native['owner_completion']=owner_completion

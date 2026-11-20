@@ -68,6 +68,29 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_nonstream_reports_exact_hold_without_certifying_s03(self):
+        # The ordinary JSON route must retain a known pre-model rejection,
+        # just as the SSE route does, without a model request or S03 PASS.
+        native=self.native()
+        payload={'messages':['invalid history']}
+        with patch.object(stream.httpx,'AsyncClient',
+                          side_effect=AssertionError('model POST forbidden')):
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Say ready',False)
+        self.assertEqual(response.status_code,502)
+        self.assertEqual(json.loads(response.body)['error']['code'],
+                         'HOLD_MODEL_CONTEXT_FIDELITY')
+        self.assertNotIn('_agent_final',payload)
+
+        # Unexpected exceptions must not be leaked into public error bodies.
+        with patch.object(stream,'_run',side_effect=ValueError('private message')):
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Say ready',False)
+        self.assertEqual(response.status_code,502)
+        self.assertEqual(json.loads(response.body)['error']['code'],
+                         'HOLD_OWNER_STREAM_RUNTIME')
+        self.assertNotIn('private message',response.body.decode())
+
     async def test_pool_preserves_full_context_before_inference(self):
         # The pool may cache or batch, never delete persona/previous turns or
         # change source text (including RU/ES and astral Unicode). Even an
