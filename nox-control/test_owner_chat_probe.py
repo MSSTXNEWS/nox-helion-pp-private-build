@@ -152,6 +152,32 @@ class ProbeTests(unittest.TestCase):
         self.assertIn('sample = asset.read(512)', source)
         self.assertIn("local.lower().endswith(('.js', '.mjs', '.css'))", source)
 
+    def test_resonance_asset_mime_rejects_successful_json_error_bodies(self):
+        class Response:
+            def __init__(self, content_type):
+                self.headers = {'Content-Type': content_type}
+
+        for asset, content_type in (
+            ('/nox-web-v29/app.js', 'application/javascript; charset=utf-8'),
+            ('/nox-web-v29/app.mjs?v=2', 'text/javascript'),
+            ('/nox-web-v29/theme.css', 'text/css; charset=UTF-8'),
+        ):
+            with self.subTest(ok=(asset, content_type)):
+                self.assertIsNone(probe.require_browser_asset_mime(Response(content_type), asset))
+        for asset, content_type in (
+            ('/nox-web-v29/app.js', 'application/json'),
+            ('/nox-web-v29/app.mjs', 'text/plain'),
+            ('/nox-web-v29/theme.css', 'application/javascript'),
+            ('/nox-web-v29/theme.css', ''),
+            ('/nox-web-v29/app.js', 'text/html'),
+            ('/nox-web-v29/app.js', 'application/json; charset=utf-8'),
+        ):
+            with self.subTest(hold=(asset, content_type)):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_RESONANCE_ASSET_MIME$'):
+                    probe.require_browser_asset_mime(Response(content_type), asset)
+        source = path.read_text()
+        self.assertIn('require_browser_asset_mime(asset, local)', source)
+
     def test_resonance_versioned_asset_query_is_preserved_and_pinned(self):
         class Response:
             def __init__(self, url):
