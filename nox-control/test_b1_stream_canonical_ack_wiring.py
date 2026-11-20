@@ -70,8 +70,9 @@ class Handler(SimpleHTTPRequestHandler):
                 "cursor_digest":hashlib.sha256(cursor.encode()).hexdigest(),
                 "ack_id":"ack-"+x,"server_cas":"cas-"+x,
                 "s03_sha256":"c"*64,
-                "signature":"forged-fixture" if tamper else
-                    "synthetic-fixture-signature-"+nonce.replace("-", "")})
+                "signature":"forged-fixture" if tamper else "synthetic-fixture-signature",
+                "freshness_signature":"synthetic-freshness-"+
+                    nonce.replace("-","")+"-"+str(now_ms)+"-"+str(now_ms+10000)})
         if u.path == "/tamper":
             with self.server.state.lock: self.server.state.tamper = True
             return self.reply(200, {"tamper":True})
@@ -130,7 +131,7 @@ def attach(page, name):
             return (await r.json()).committed?{durable:true}:null;
           },
           verifyCanonicalAck:async(receipt,expected,scope)=>
-            receipt.signature.startsWith('synthetic-fixture-signature-') &&
+            receipt.signature==='synthetic-fixture-signature' &&
             receipt.server_cas==='cas-'+scope.exchange_id &&
             receipt.s03_sha256==='c'.repeat(64) &&
             expected.exchange_id===scope.exchange_id,
@@ -138,8 +139,9 @@ def attach(page, name):
           // challenge nonce, timestamp bounds, canonical ACK and owner/S03.
           verifyFreshCanonicalAck:async(receipt,expected,scope,challenge)=>
             receipt.request_nonce===challenge.request_nonce &&
-            receipt.signature==='synthetic-fixture-signature-'+
-              challenge.request_nonce.replaceAll('-','') &&
+            receipt.freshness_signature==='synthetic-freshness-'+
+              challenge.request_nonce.replaceAll('-','')+'-'+
+              receipt.issued_at_ms+'-'+receipt.expires_at_ms &&
             receipt.exchange_id===scope.exchange_id &&
             expected.exchange_id===scope.exchange_id
         };
