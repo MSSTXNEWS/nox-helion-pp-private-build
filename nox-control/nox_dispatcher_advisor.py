@@ -6,6 +6,7 @@ Input is locally collected evidence: metrics, queue and trainer receipts.
 import argparse
 import datetime as dt
 import json
+import math
 from pathlib import Path
 
 def assess(snapshot):
@@ -70,9 +71,40 @@ def assess(snapshot):
     if onehost.get("chat_waiting") is True and trainer.get("running") is True:
         add("CHAT_PRIORITY", "optimize", "Request cooperative trainer yield at next safe checkpoint; do not kill process.")
     if trainer.get("running") is True and gpu.get("utilization_pct") is not None:
+        # Original TaskID 6A04: low compute utilization is NOT spare
+        # accelerator capacity without fresh VRAM, host I/O and chat latency.
         util = gpu["utilization_pct"]
-        if isinstance(util, (int,float)) and not isinstance(util,bool) and util < 35:
-            add("LOW_GPU_UTILIZATION", "investigate", "Profile input pipeline, batching and context length; benchmark before tuning.")
+        if type(util) in (int, float) and math.isfinite(util) and 0 <= util < 35:
+            host = snapshot.get("cpu_io")
+            values = (
+                (gpu.get("vram_used_mib"), 0, 1048576),
+                (gpu.get("vram_total_mib"), 1, 1048576),
+                (gpu.get("age_sec"), 0, 30),
+                ((host or {}).get("cpu_busy_pct") if isinstance(host,dict) else None, 0, 100),
+                ((host or {}).get("io_wait_pct") if isinstance(host,dict) else None, 0, 100),
+                ((host or {}).get("age_sec") if isinstance(host,dict) else None, 0, 30),
+                (onehost.get("chat_p95_ms"), 0, 300000),
+                (onehost.get("chat_budget_ms"), 1, 300000),
+                (onehost.get("chat_metrics_age_sec"), 0, 30),
+            )
+            known = (all(type(v) in (int,float) and math.isfinite(v) and lo <= v <= hi
+                         for v,lo,hi in values)
+                     and type(onehost.get("chat_waiting")) is bool)
+            if not known or gpu["vram_used_mib"] >= gpu["vram_total_mib"]:
+                add("GPU_RESIDUAL_UNVERIFIED", "hold",
+                    "GPU utilization alone cannot justify more work: require fresh "
+                    "VRAM, CPU, I/O and chat latency measurements. Admit no GPU job.")
+            elif onehost["chat_waiting"] or onehost["chat_p95_ms"] >= onehost["chat_budget_ms"]:
+                add("GPU_CHAT_PRIORITY", "hold",
+                    "Chat latency or an active chat request takes priority; no GPU spare allocation.")
+            elif host["cpu_busy_pct"] >= 85 or host["io_wait_pct"] >= 10:
+                add("GPU_HOST_PIPELINE_PRESSURE", "hold",
+                    "Host CPU/I/O pressure blocks further GPU work despite low compute utilization.")
+            else:
+                cap = round(85 - util, 2)
+                add("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", "observe",
+                    f"Measured utilization-only upper bound to the 85% limit: {cap} percentage points. "
+                    "VRAM is not a per-job allocation; no admission, trainer restart or new queue authorized.")
     if not issues:
         add("NO_UNVERIFIED_TUNING", "observe", "No changes recommended without measured before/after and readback.")
     return issues
