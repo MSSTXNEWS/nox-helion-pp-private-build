@@ -55,6 +55,19 @@ def require_same_origin_target(response, requested_path, exact_path=True):
         raise RuntimeError('HOLD_CHAT_RESPONSE_REDIRECT')
 
 
+def require_not_html_asset(response, sample):
+    """HTTP 200 SPA/login HTML at a JS/CSS path is not a usable Resonance asset."""
+    headers = getattr(response, 'headers', None)
+    ctype = headers.get('Content-Type', '') if headers is not None else ''
+    if not isinstance(ctype, str):
+        raise RuntimeError('HOLD_RESONANCE_ASSET_HTML_FALLBACK')
+    media = ctype.split(';', 1)[0].strip().lower()
+    prefix = sample.lstrip(b'\\xef\\xbb\\xbf \\t\\r\\n')
+    if (media in ('text/html', 'application/xhtml+xml')
+            or re.match(rb'(?i)^(?:<!doctype\\s+html\\b|<html\\b|<head\\b|<body\\b)', prefix)):
+        raise RuntimeError('HOLD_RESONANCE_ASSET_HTML_FALLBACK')
+
+
 def page_snapshot(response, limit=200000, expected_path=None):
     """Read a complete bounded owner HTML page and always close its socket."""
     try:
@@ -272,7 +285,10 @@ def main():
                     local=urllib.parse.urlparse(target).path
                     with request(client,local) as asset:
                         require_same_origin_target(asset, local)
-                        report['assets'].append({'path':local,'status':asset.status,'bytes_sampled':len(asset.read(100))})
+                        sample = asset.read(512)
+                        if asset.status == 200:
+                            require_not_html_asset(asset, sample)
+                        report['assets'].append({'path':local,'status':asset.status,'bytes_sampled':len(sample)})
         unauth=urllib.request.build_opener(urllib.request.ProxyHandler({}))
         report['anonymous_http']={}
         for path in ('/api/nox/status','/api/ui/executors','/api/ui/events'):

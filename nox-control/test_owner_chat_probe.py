@@ -81,6 +81,32 @@ class ProbeTests(unittest.TestCase):
         self.assertIn('require_same_origin_target(asset, local)', source)
 
 
+    def test_same_path_html_login_fallback_never_certifies_resonance_asset(self):
+        class AssetResponse:
+            def __init__(self, mime):
+                self.headers = {'Content-Type': mime}
+
+        for mime, body in (
+            ('text/html; charset=utf-8', b'console.log("not actually JS")'),
+            ('application/xhtml+xml', b'<script>fake</script>'),
+            ('application/javascript', b'\\xef\\xbb\\xbf  <!DOCTYPE html><html>login</html>'),
+            ('text/css', b'  <html><body>login</body></html>'),
+            ('', b'<head><title>login</title></head>'),
+        ):
+            with self.subTest(mime=mime, body=body):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_RESONANCE_ASSET_HTML_FALLBACK$'):
+                    probe.require_not_html_asset(AssetResponse(mime), body)
+        for mime, body in (
+            ('application/javascript', b'console.log("ready");'),
+            ('text/css; charset=utf-8', b'body { color: inherit; }'),
+            ('', b'export const ready = true;'),
+        ):
+            with self.subTest(mime=mime):
+                self.assertIsNone(probe.require_not_html_asset(AssetResponse(mime), body))
+        source = path.read_text()
+        self.assertIn('require_not_html_asset(asset, sample)', source)
+        self.assertIn('sample = asset.read(512)', source)
+
     def test_obj_releases_http_response_on_success_and_hold(self):
         class Response:
             def __init__(self, status, payload, read_error=False):
