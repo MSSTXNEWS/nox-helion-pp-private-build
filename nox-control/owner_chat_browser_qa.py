@@ -189,6 +189,10 @@ def native_chat_route_candidate(path):
                 or path.startswith('/api/nox/chat%')):
             return True
         decoded = urllib.parse.unquote(path)
+        # Some upstream HTTP routers canonicalize multiple leading slashes.
+        # Treat a newly decoded leading slash as a native-chat candidate too.
+        if decoded.startswith('//'):
+            decoded = '/' + decoded.lstrip('/')
         if decoded == path:
             break
         path = decoded
