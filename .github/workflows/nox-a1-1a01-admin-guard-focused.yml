@@ -17,7 +17,7 @@ jobs:
         with: {persist-credentials: false}
       - uses: actions/setup-python@v5
         with: {python-version: '3.11'}
-      - name: Verify only 1A01 premodel ambiguous-admin HOLD source
+      - name: Verify 1A01 admin and model-tool argument fidelity
         run: |
           set -euo pipefail
           python3 -m pip install -q "httpx==0.28.1" "fastapi==0.128.2"
@@ -31,6 +31,7 @@ jobs:
             test_owner_chat_stream.StreamTests.test_duplicate_sse_and_tool_argument_json_keys_hold_before_dispatch \
             test_owner_chat_stream.StreamTests.test_nonfinite_json_constants_hold_before_dispatch_and_s03 \
             test_owner_chat_stream.StreamTests.test_nested_invalid_tool_arguments_hold_before_dispatch \
+            test_owner_chat_stream.StreamTests.test_parser_cannot_swap_json_scalar_types_before_dispatch \
             test_owner_chat_stream.StreamTests.test_invalid_utf8_on_wire_cannot_certify_browser_or_s03 \
             test_owner_chat_stream.StreamTests.test_lone_utf16_surrogate_rejected_before_browser_and_s03 \
             test_owner_chat_stream.StreamTests.test_deterministic_falsey_arguments_never_bypass_call_guard

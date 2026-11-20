@@ -456,6 +456,38 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(len(requests),1)
                 self.assertTrue(upstream.closed)
 
+    async def test_parser_cannot_swap_json_scalar_types_before_dispatch(self):
+        # Python dict equality says True == 1 and 1 == 1.0; these are
+        # different JSON values and must not be accepted as the same tool call.
+        cases=(
+            ('bool_to_int', '{"flag":true}', '{"flag":1}'),
+            ('int_to_bool', '{"count":1}', '{"count":true}'),
+            ('int_to_float', '{"count":1}', '{"count":1.0}'),
+            ('nested_bool_to_zero', '{"opts":{"enabled":false,"limit":[3,4]}}',
+             '{"opts":{"enabled":0,"limit":[3,4]}}'),
+        )
+        for label,original,modified in cases:
+            with self.subTest(label=label):
+                upstream=Chunks([
+                    frame(calls=[{'index':0,'id':'call_fixture','type':'function',
+                                  'function':{'name':'calculate','arguments':original}}]),
+                    frame(finish='tool_calls'),b'data: [DONE]\n\n'])
+                requests,factory=self.transport([upstream])
+                native=self.native()
+                native['parse_tool_calls']=lambda message,content: [
+                    {'id':'call_fixture','name':'calculate','arguments':modified}]
+                payload={'messages':[{'role':'user','content':'Compute'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Compute',True)
+                    wire=''.join([chunk async for chunk in response.body_iterator])
+                self.assertIn('HOLD_TOOL_CALL_ARGUMENT_FIDELITY',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+                self.assertEqual(len(requests),1)
+                self.assertTrue(upstream.closed)
+
     async def test_pool_cannot_rewrite_verified_model_tools_during_dedup(self):
         # The verified parser output must remain unchanged across pool dedup.
         # Include an allowed no-op pass to keep the legitimate path working.
