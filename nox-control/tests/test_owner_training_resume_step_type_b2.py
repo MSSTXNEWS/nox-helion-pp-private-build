@@ -675,11 +675,11 @@ class CheckpointStepProvenance(unittest.TestCase):
             root = Path(folder)
             cap = load_pinned_verifier(root)["read_installed_train_cpu_cap"]
             env = root / "train_cpu_max.env"
-            env.write_text("TRAIN_CPU_MAX=64GiB\\n", encoding="utf-8")
+            env.write_text("TRAIN_CPU_MAX=64GiB\n", encoding="utf-8")
             self.assertEqual(cap(env), 64)
             env.unlink()
             target = root / "approved.env"
-            target.write_text("TRAIN_CPU_MAX=64GiB\\n", encoding="utf-8")
+            target.write_text("TRAIN_CPU_MAX=64GiB\n", encoding="utf-8")
             env.symlink_to(target)
             with self.assertRaisesRegex(RuntimeError, "HOLD_INSTALLED_TRAIN_CPU_LIMIT"):
                 cap(env)
@@ -688,7 +688,7 @@ class CheckpointStepProvenance(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "HOLD_INSTALLED_TRAIN_CPU_LIMIT"):
                 cap(env)
             env.unlink()
-            env.write_bytes(b"TRAIN_CPU_MAX=64GiB\\nEXTRA=1")
+            env.write_bytes(b"TRAIN_CPU_MAX=64GiB\nEXTRA=1")
             with self.assertRaisesRegex(RuntimeError, "HOLD_INSTALLED_TRAIN_CPU_LIMIT"):
                 cap(env)
 
