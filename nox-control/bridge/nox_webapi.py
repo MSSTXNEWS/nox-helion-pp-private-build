@@ -385,14 +385,14 @@ def install(app, B):
                     mm = [{"role": "system", "content": B.IDENTITY + B.STATIC_RULES},
                           {"role": "user", "content": "[Режим мини-помощника: ответ не длиннее 4 предложений, без строки «Уверенность»]\n" + str(last)[:3000]}]
                 else:
-                    vol = B.self_vol(user)
+                    vol = await asyncio.to_thread(B.self_vol, user)
                     mm = B.build_msgs(msgs_in, user, mem, vol)
-                body = {"messages": mm, "max_tokens": max(64, min(npred, 900)), "temperature": 0.6, "id_slot": 1 if mini else 0, "cache_prompt": True, "stream": True,
+                body = {"messages": mm, "max_tokens": max(64, min(npred, 900, (400 if mini else B.adapt_tokens(user, 900)))), "temperature": 0.6, "id_slot": 1 if mini else 0, "cache_prompt": True, "n_keep": B.NKEEP, "stream": True,
                         "chat_template_kwargs": {"enable_thinking": False}}
                 err = None
                 try:
-                    async with httpx.AsyncClient(timeout=httpx.Timeout(600, connect=10)) as c:
-                        async with c.stream("POST", B.MODEL, json=body) as r:
+                    if True:
+                        async with B.hc().stream("POST", B.MODEL, json=body) as r:
                             async for line in r.aiter_lines():
                                 if rid in CANCEL or "*" in CANCEL:
                                     break
@@ -441,4 +441,24 @@ def install(app, B):
 
     if os.path.isdir(WEBROOT):
         from fastapi.staticfiles import StaticFiles
-        app.mount("/web", StaticFiles(directory=WEBROOT, html=True), name="web")
+        from starlette.middleware.gzip import GZipMiddleware
+        _TXT = (".html", ".css", ".js", ".mjs", ".json", ".svg", ".txt", ".md", ".map")
+        _static = StaticFiles(directory=WEBROOT, html=True)
+        _gz = GZipMiddleware(_static, minimum_size=1024, compresslevel=5)
+
+        async def _web_app(scope, receive, send):
+            if scope["type"] == "http" and scope["path"].lower().endswith(_TXT) or scope["type"] == "http" and scope["path"].endswith("/"):
+                return await _gz(scope, receive, send)
+            return await _static(scope, receive, send)
+        app.mount("/web", _web_app, name="web")
+
+        @app.middleware("http")
+        async def web_cache(request: Request, call_next):
+            resp = await call_next(request)
+            p = request.url.path
+            if p.startswith("/web/"):
+                if p.lower().endswith((".html", "/")):
+                    resp.headers["Cache-Control"] = "no-cache"
+                else:
+                    resp.headers["Cache-Control"] = "public, max-age=86400"
+            return resp
