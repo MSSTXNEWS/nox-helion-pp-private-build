@@ -33,12 +33,16 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
                and isinstance(turn["content"],str), "TURN")
         ids.add(turn["id"])
     s03=[]
+    seen_s03_ids=set()
     for item in verified_s03:
         _guard(isinstance(item,dict) and set(item)=={"id","source_sha256","text"}
-               and isinstance(item["id"],str) and item["id"]
+               and isinstance(item["id"],str) and 1<=len(item["id"])<=128
+               and item["id"].isprintable() and "[" not in item["id"] and "]" not in item["id"]
+               and item["id"] not in seen_s03_ids
                and isinstance(item["text"],str) and item["text"]
                and isinstance(item["source_sha256"],str) and len(item["source_sha256"])==64
                and all(x in "0123456789abcdef" for x in item["source_sha256"]), "S03")
+        seen_s03_ids.add(item["id"])
         s03.append(item)
     def count(messages):
         n=token_counter(messages)
@@ -53,11 +57,13 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
     messages=protected[:2]
     # Working memory from independently verified S03; never drop persona/current.
     selected=[]
+    selected_s03_ids=[]
     for item in s03:
         message={"role":"system","content":"S03 verified ["+item["id"]+
                  "] sha256="+item["source_sha256"]+": "+item["text"]}
         if count(messages+selected+[message]+protected[-1:])<=token_budget:
             selected.append(message)
+            selected_s03_ids.append(item["id"])
     messages+=selected
     # Prefer latest turns, preserve each omitted turn by immutable SHA and ID.
     included=[]
@@ -75,8 +81,7 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
     return {"schema":"NOX_HOT_COLD_PROMPT_V1","messages":messages,
             "token_count":count(messages),"omitted_turns":omitted[::-1],
             "requires_existing_history_retriever":bool(omitted),
-            "selected_s03_ids":[m["id"] for m in s03 if
-                                  any("["+m["id"]+"]" in x["content"] for x in selected)],
+            "selected_s03_ids":selected_s03_ids,
             "persona_preserved":True,"current_user_preserved":True,
             "history_not_deleted":True,
             "native_installed":False}
