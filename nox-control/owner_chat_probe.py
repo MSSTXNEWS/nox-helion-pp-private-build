@@ -261,6 +261,23 @@ def stream_status_is_failure(value):
     return type(value) is int and value >= 400
 
 
+def stream_frame_reports_failure(frame):
+    """Recognize HTTP failures in flat and structured upstream status metadata.
+
+    A downstream saved=true DONE must not erase an earlier 4xx/5xx emitted in
+    a status object or an alternate HTTP status field.
+    """
+    keys = ('code', 'status_code', 'statusCode', 'http_status', 'httpStatus')
+    status = frame.get('status')
+    if stream_status_is_failure(status):
+        return True
+    if isinstance(status, dict) and any(
+            stream_status_is_failure(status.get(key))
+            for key in (*keys, 'status', 'state')):
+        return True
+    return any(stream_status_is_failure(frame.get(key)) for key in keys)
+
+
 def bounded_stream_lines(response, max_line=100000):
     """Bound each network read; iteration can buffer a huge NDJSON line before a length check."""
     readline = getattr(response, 'readline', None)
@@ -301,7 +318,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             # the backend subsequently emits a successful saved=true done.
             if kind not in ('done', 'error') and (
                     frame.get('error') not in (None, '', False)
-                    or stream_status_is_failure(frame.get('status'))
+                    or stream_frame_reports_failure(frame)
                     or frame.get('success') is False):
                 raise RuntimeError('HOLD_STREAM_PRETERMINAL_FAILURE')
             if not any(event['type']==kind for event in events):events.append({'type':kind,'ms':elapsed})
@@ -318,7 +335,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
                 # Some upstreams report an error *inside* done instead of a
                 # separate type=error event; never trust its success flags.
                 if (frame.get('error') not in (None, '', False)
-                        or stream_status_is_failure(frame.get('status'))
+                        or stream_frame_reports_failure(frame)
                         or frame.get('success') is False):
                     raise RuntimeError('HOLD_STREAM_TERMINAL_FAILURE')
                 if frame.get('dialog_id') != dialog_id:
