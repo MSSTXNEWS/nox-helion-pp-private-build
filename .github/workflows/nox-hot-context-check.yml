@@ -1,5 +1,10 @@
 name: NOX hot context check
 on:
+  pull_request:
+    paths:
+      - 'nox-control/nox_hot_context.py'
+      - 'nox-control/test_nox_hot_context.py'
+      - '.github/workflows/nox-hot-context-check.yml'
   push:
     branches: [feat/nox-chat-latency-scope-20261119, a4/3b03-s03-id-provenance-20261120, a4/3b03-s03-body-provenance-20261120]
   workflow_dispatch:
