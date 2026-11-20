@@ -116,5 +116,30 @@ class ForgeContentDedupeTests(unittest.TestCase):
 
 
 
+
+class ForgeJsonIntegrityTests(unittest.TestCase):
+    def test_cli_rejects_nested_duplicate_permission_fields_and_nan(self):
+        # Duplicate permission or provenance keys must not be shadowed by
+        # the last value accepted by ordinary json.loads().
+        invalid = (
+            '{"sources":[{"permission_status":"DENIED","permission_status":"ALLOWED"}]}',
+            '{"permission_receipt":{"sha256":"x","sha256":"y"}}',
+            '{"schema":NaN}',
+            '{"schema":Infinity}',
+        )
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root) / "input.json"
+            for payload in invalid:
+                with self.subTest(payload=payload):
+                    path.write_text(payload, encoding="utf-8")
+                    stderr = io.StringIO()
+                    with contextlib.redirect_stderr(stderr):
+                        rc = forge.main(["--input", str(path)])
+                    self.assertEqual(rc, 2)
+                    receipt = json.loads(stderr.getvalue())
+                    self.assertEqual(receipt["status"], "HOLD")
+                    self.assertIn("ForgeError", receipt["error"])
+
+
 if __name__ == "__main__":
     unittest.main()
