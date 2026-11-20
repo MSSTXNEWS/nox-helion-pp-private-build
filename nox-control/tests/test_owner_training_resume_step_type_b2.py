@@ -1226,6 +1226,69 @@ class CheckpointStepProvenance(unittest.TestCase):
         self.assertEqual(proofs, [])
         self.assertEqual(steps, [])
 
+    def test_existing_followup_waits_for_running_and_verifies_identity(self):
+        # Do not attach an incomplete STARTING trainer as an accepted running one.
+        # Exercise the actual source function without importing its native entrypoint.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        selected = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == "prove_existing_training"]
+        self.assertEqual(len(selected), 1)
+        main = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == "main")
+        calls = [node for node in ast.walk(main) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Name)
+                 and node.func.id == "prove_existing_training"]
+        self.assertEqual(len(calls), 2)  # followup and continuation
+        self.assertIn("identity = prove_existing_training(helper)", ast.unparse(main))
+
+        def scenario(states, stops=(), timeout=False):
+            events, proofs, sleeps = [], [], []
+            state_iter, stop_iter = iter(states), iter(stops)
+            clock = [0.0]
+            def service_state():
+                state = next(state_iter, states[-1])
+                events.append(state)
+                return {"state": state}
+            def global_stop():
+                return next(stop_iter, False)
+            def monotonic():
+                clock[0] += 16.0 if timeout else 0.1
+                return clock[0]
+            namespace = {
+                "helper": types.SimpleNamespace(service_state=service_state),
+                "global_stop": global_stop,
+                "time": types.SimpleNamespace(monotonic=monotonic,
+                                              sleep=lambda delay: sleeps.append(delay)),
+                "prove_training": lambda helper: (
+                    proofs.append(events[-1]) or {"pid": 731}),
+            }
+            exec(compile(ast.Module(body=selected, type_ignores=[]),
+                         str(SOURCE), "exec"), namespace)
+            return namespace["prove_existing_training"], namespace["helper"], proofs, sleeps
+
+        check, service, proofs, sleeps = scenario(["STARTING", "STARTING", "RUNNING"])
+        self.assertEqual(check(service), {"pid": 731})
+        self.assertEqual(proofs, ["RUNNING"])
+        self.assertEqual(sleeps, [0.5, 0.5])
+        check, service, proofs, _ = scenario(["STARTING"], timeout=True)
+        with self.assertRaisesRegex(RuntimeError, "HOLD_EXISTING_TRAINER_START_TIMEOUT"):
+            check(service)
+        self.assertFalse(proofs)
+        check, service, proofs, _ = scenario(["STARTING", "STOPPED"])
+        with self.assertRaisesRegex(RuntimeError, "HOLD_EXISTING_TRAINER_NOT_RUNNING"):
+            check(service)
+        self.assertFalse(proofs)
+        check, service, proofs, _ = scenario(["STARTING", "RUNNING"],
+                                             stops=[False, True])
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GLOBAL_STOP_REMAINS"):
+            check(service)
+        self.assertFalse(proofs)
+        check, service, proofs, _ = scenario(["RUNNING"], stops=[True])
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GLOBAL_STOP_REMAINS"):
+            check(service)
+        self.assertFalse(proofs)
+
+
     def test_initial_controller_render_and_install_pin_original_preimage(self):
         """Exercise actual controller render/installer AST without native execution."""
         tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))

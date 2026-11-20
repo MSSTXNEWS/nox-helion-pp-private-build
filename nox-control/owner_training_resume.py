@@ -715,6 +715,29 @@ def prove_training(helper):
     return helper.public_process(entries[0])
 
 
+def prove_existing_training(helper):
+    """Only accept a previously launched trainer after Supervisor RUNNING and native identity.
+
+    A followup may attach while Supervisor still reports STARTING. This is
+    observation only: never issue another start or mutate the existing process.
+    """
+    status = helper.service_state()
+    if status['state'] == 'STARTING':
+        deadline = time.monotonic() + 15
+    while status['state'] == 'STARTING':
+        if global_stop():
+            raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
+        if time.monotonic() >= deadline:
+            raise RuntimeError('HOLD_EXISTING_TRAINER_START_TIMEOUT')
+        time.sleep(0.5)
+        status = helper.service_state()
+    if global_stop():
+        raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
+    if status['state'] != 'RUNNING':
+        raise RuntimeError('HOLD_EXISTING_TRAINER_NOT_RUNNING')
+    return prove_training(helper)
+
+
 def global_stop():
     return any(path.exists() or path.is_symlink() for path in
                (ROOT/'STOP', ROOT/'STOP.flag', ROOT/'stop.flag', STATE/'STOP'))
@@ -1182,8 +1205,9 @@ def main():
             release_flags(prefix, pause_required=True)
             start_once(5)
         elif helper.service_state()['state'] in ('RUNNING', 'STARTING'):
+            identity = prove_existing_training(helper)
             result['training_started'] = True
-            step('existing_single_training_observed', prove_training(helper))
+            step('existing_single_training_observed', identity)
         elif not (OUTPUT/'owner_last_result.json').is_file():
             raise RuntimeError('HOLD_EXISTING_RUN_TERMINAL_WITHOUT_PROOF')
         # CPU work and media admission continue while observation is read-only.
@@ -1191,7 +1215,7 @@ def main():
         result['state'] = 'BOUNDED_TRAINING_RUNNING_ACCEPTANCE_PENDING'; save()
         if pointer.get('max_steps') == 1000:
             if helper.service_state()['state'] in ('RUNNING', 'STARTING'):
-                result['continuation_process'] = prove_training(helper)
+                result['continuation_process'] = prove_existing_training(helper)
                 result['state'] = 'EXISTING_CONTINUATION_RUNNING'; success = True
             else:
                 terminal = read_json(OUTPUT/'owner_last_result.json')
