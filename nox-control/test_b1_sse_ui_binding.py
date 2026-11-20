@@ -155,6 +155,55 @@ def main():
           catch(e){return e.code==='HOLD_B1_BINDING_TRUSTED_VERIFIER_REQUIRED';}
         }'''))
         check('DOM turn count remains exactly two', page.evaluate('()=>current().length===2'))
+        # Focused preflight race: a second begin must fail BEFORE the first
+        # asynchronous committed-state read resolves, with only one POST.
+        check('concurrent begin precheck sends exactly one model POST', page.evaluate('''async () => {
+          const s={conversation_id:'race',exchange_id:'single'};
+          let release,posts=0;
+          const transport={...opts.transport,async post(){
+            posts++;return {ok:true,body:new ReadableStream({start(c){c.close()}})};
+          }};
+          const host={...opts.host,readCommitted:()=>new Promise(r=>{release=r})};
+          const ui={async onDelta(){},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:2000
+          });
+          const first=c.begin(s);
+          const rejected=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          if(typeof release==='function') release(null);
+          const result=await first;
+          return rejected && result==='STREAM_ENDED_READBACK_REQUIRED' &&
+            posts===1;
+        }'''))
+        check('STOP during pending precheck prevents late POST', page.evaluate('''async () => {
+          const s={conversation_id:'race',exchange_id:'stop-preflight'};
+          let release,posts=0;
+          const host={...opts.host,readCommitted:()=>new Promise(r=>{release=r})};
+          const transport={...opts.transport,async post(){posts++;return null}};
+          const ui={async onDelta(){},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:2000
+          });
+          const pending=c.begin(s);
+          await Promise.resolve();
+          const stopped=c.stop(s);
+          const result=await pending;
+          if(typeof release==='function') release(null);
+          return stopped===true && result==='STOPPED' && posts===0;
+        }'''))
+        check('timeout interrupts hung committed-state precheck', page.evaluate('''async () => {
+          const s={conversation_id:'race',exchange_id:'timeout-preflight'};
+          let posts=0;
+          const host={...opts.host,readCommitted:()=>new Promise(()=>{})};
+          const transport={...opts.transport,async post(){posts++;return null}};
+          const ui={async onDelta(){},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:25
+          });
+          const result=await c.begin(s);
+          return result==='STOPPED_TIMEOUT' && posts===0;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
