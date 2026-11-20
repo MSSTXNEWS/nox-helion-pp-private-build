@@ -64,6 +64,16 @@ def s03_proof(transcript):
         "full_transcript_sha256": multiturn_transcript_sha256(transcript),
         "full_answer_sha256": hashlib.sha256(LAST.encode("utf-8")).hexdigest(),
     }
+    # Test fixtures represent two distinct native witnesses. When the real
+    # writer is wired, both must independently pin the SAME persisted row IDs.
+    if len(transcript) == 4 and all(
+            isinstance(row.get("message_id"), str) for row in transcript):
+        ordered_ids = [row["message_id"] for row in transcript]
+        row_id_sha = hashlib.sha256(json.dumps(
+            ordered_ids, ensure_ascii=False, separators=(",", ":"),
+            allow_nan=False).encode("utf-8")).hexdigest()
+        writer["message_ids_sha256"] = row_id_sha
+        readback["message_ids_sha256"] = row_id_sha
     return writer, readback
 
 
@@ -498,6 +508,48 @@ async function check(chunks, status=200) {
         a, b = s03_proof(whitespace_collision)
         self.assertFalse(canonical_s03_proof_valid(
             a, b, DIALOG, whitespace_collision, require_full_transcript_pin=True))
+
+    def test_strict_s03_writer_and_reader_bind_ordered_persisted_row_ids(self):
+        # Identical four message texts cannot prove the same four durable S03
+        # rows: a later writer may have replaced rows without changing text.
+        identified = [dict(row, message_id=f"durable-{i}")
+                      for i, row in enumerate(rows(multiturn_followup_prompt(
+                          TOKEN, "multiturn_ru_es")))]
+        writer, readback = s03_proof(identified)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, identified,
+            require_full_transcript_pin=True))
+        for missing_side in ("writer", "readback"):
+            with self.subTest(side=missing_side):
+                w, r = dict(writer), dict(readback)
+                (w if missing_side == "writer" else r).pop("message_ids_sha256")
+                self.assertFalse(canonical_s03_proof_valid(
+                    w, r, DIALOG, identified,
+                    require_full_transcript_pin=True))
+        for invalid in (None, "", "0" * 64):
+            with self.subTest(pin=repr(invalid)):
+                self.assertFalse(canonical_s03_proof_valid(
+                    dict(writer, message_ids_sha256=invalid),
+                    readback, DIALOG, identified,
+                    require_full_transcript_pin=True))
+                self.assertFalse(canonical_s03_proof_valid(
+                    writer, dict(readback, message_ids_sha256=invalid),
+                    DIALOG, identified, require_full_transcript_pin=True))
+        replaced = [dict(row) for row in identified]
+        replaced[0]["message_id"] = "replacement-0"
+        self.assertEqual(multiturn_transcript_sha256(replaced),
+                         multiturn_transcript_sha256(identified))
+        stale_writer_readback = dict(
+            readback, messages=replaced, message_ids_sha256=hashlib.sha256(
+                json.dumps([row["message_id"] for row in replaced],
+                           ensure_ascii=False, separators=(",", ":"),
+                           allow_nan=False).encode("utf-8")).hexdigest())
+        self.assertFalse(canonical_s03_proof_valid(
+            writer, stale_writer_readback, DIALOG, replaced,
+            require_full_transcript_pin=True))
+        # The existing A1 helper intentionally keeps its legacy source contract.
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, identified))
 
     def test_s03_optional_writer_answer_digest_must_agree_with_fourth_turn(self):
         # A writer may optionally expose its own final-answer digest. If it

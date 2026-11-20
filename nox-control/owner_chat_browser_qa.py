@@ -377,6 +377,16 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     if (not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict)
             or writer_receipt is independent_readback):
         return False
+    if require_full_transcript_pin:
+        # The role/content fingerprint omits durable row identities. A stale
+        # writer receipt can otherwise match newly replaced rows with the same
+        # text. Both trusted witnesses must pin the same ordered four IDs.
+        identity_sha = digest(json.dumps(
+            row_ids, ensure_ascii=False, separators=(',', ':'),
+            allow_nan=False).encode('utf-8'))
+        if (writer_receipt.get('message_ids_sha256') != identity_sha
+                or independent_readback.get('message_ids_sha256') != identity_sha):
+            return False
     # A legacy writer/readback with only the last-answer SHA can match a
     # stale event even when the earlier RU/ES turns changed. In two-turn mode
     # BOTH independent witnesses must pin the complete four-message history.
