@@ -19,8 +19,8 @@ import subprocess
 
 SCHEMA = "NOX_OWNER_DRIVE_REGISTRY_STAGE_V1"
 INSTANCE = 60509551
-EXPECTED_DISPATCHER_SHA = "9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21"
-EXPECTED_BRIDGE_SHA = "9da7bb548abe4559ca89dab8e979c8ce453e97872cf8958c81d7e9e96e45116a"
+EXPECTED_DISPATCHER_SHA = "c9d08cbcd6afe91259129a154b31038ebacd50f648e027eac9fa89a2094f5649"
+EXPECTED_BRIDGE_SHA = "9916a1ff5be7c8182fdef71d2477ecb50fa7aa1ef6f6d0c79a39b436f4dc22f6"
 SOURCE = Path("/root/nox/scripts/nox_dispatcher_t855u.py")
 BRIDGE = Path("/root/nox/ops/drive-auth/nox_drive_native_binding.py")
 BACKUPS = Path("/root/nox/ops/drive-auth/private/dispatcher-backups")
