@@ -941,5 +941,37 @@ class CheckpointStepProvenance(unittest.TestCase):
             self.assertTrue(allowed())
 
 
+    def test_permission_helper_refuses_nonfinite_json_in_any_policy_field(self):
+        # Python json.loads accepts NaN/Infinity by default and turns 1e999
+        # into float('inf'), while the canonical state reader forbids both.
+        # A malformed owner policy must never authorize the training service.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        item = next(node for node in tree.body
+                    if isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name) and
+                            target.id == "PERMISSION_HELPER" for target in node.targets))
+        embedded = ast.literal_eval(item.value)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "state").mkdir()
+            policy = root / "state/task_boost_mode.json"
+            valid = {"enabled": True, "mode": "TASK_BOOST",
+                     "training_allowed": True,
+                     "training_service": "nox-train-volta-t866u"}
+            scope = {"ROOT": root}
+            exec(compile(embedded, "<isolated-permission-helper>", "exec"), scope)
+            allowed = scope["_nox_owner_training_allowed"]
+            for invalid in ("NaN", "Infinity", "-Infinity", "1e999",
+                            "-1e999", "[0, 1e100000]"):
+                with self.subTest(invalid=invalid):
+                    policy.write_text(
+                        json.dumps(valid)[:-1] + ',"telemetry":' + invalid + '}',
+                        encoding="utf-8")
+                    self.assertFalse(allowed())
+            policy.write_text(json.dumps({**valid, "telemetry": 0.25}),
+                              encoding="utf-8")
+            self.assertTrue(allowed())
+
+
 if __name__ == "__main__":
     unittest.main()
