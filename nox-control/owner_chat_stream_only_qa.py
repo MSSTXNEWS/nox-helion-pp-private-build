@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import stat
 import time
 
@@ -28,6 +29,21 @@ TOTAL_TIMEOUT = 230
 def require(ok, code):
     if not ok:
         raise RuntimeError('HOLD_STREAM_ONLY_' + code)
+
+
+def dialogue_challenge(token):
+    """Keep stream length while making the follow-up depend on the first turn."""
+    numbers = list(range(1, 41))
+    secrets.SystemRandom().shuffle(numbers)
+    if numbers[-10:] == list(range(1, 11)):
+        numbers[-1], numbers[-2] = numbers[-2], numbers[-1]
+    first = ','.join(map(str, numbers))
+    second = ','.join(map(str, reversed(numbers[-10:])))
+    label = '[NOX UI QA ' + token + '] '
+    prompt = label + 'Повтори этот список чисел в том же порядке через запятую. Без пояснений: ' + first
+    follow_up = label + ('Возьми последние десять чисел из своего предыдущего ответа '
+                         'и напиши их в обратном порядке через запятую. Без пояснений.')
+    return prompt, follow_up, first, second
 
 
 def pre_post_admission(*, owner_authenticated, lease_held, stop_clear, resources, served_asset_sha256):
@@ -184,6 +200,9 @@ async def browser_operation(core, report, directory, available):
 
 
 def rewrite_browser(body):
+    body = replace_between(body, "    prompt='[NOX UI QA '+token+",
+        "    second_permitted=False\n",
+        "    prompt,second_prompt,first_expected,second_expected=_nox_dialogue_challenge(token)\n")
     body = replace_once(body,
         "                                         base_url=base,service_workers='block',accept_downloads=False)",
         "                                         base_url=base,service_workers='block',accept_downloads=False,reduced_motion='reduce')")
@@ -277,7 +296,7 @@ def rewrite_browser(body):
         "            if public!=EXPECTED:\n                raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')\n",
         "            if not report['two_proper_prefixes_before_done']:\n"
         "                raise RuntimeError('HOLD_STREAM_ONLY_TWO_PROPER_PREFIXES_NOT_OBSERVED')\n"
-        "            if public!=EXPECTED:\n                raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')\n")
+        "            if public!=first_expected:\n                raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')\n")
     body = replace_once(body,
         "                    report['two_parts_observed']=_nox_two_parts_observed(report['stream_final'])\n",
         "                    report['two_parts_observed']=_nox_two_parts_observed(report['stream_final'])\n"
@@ -321,7 +340,7 @@ def rewrite_browser(body):
                           first_turn_sse_dialog_matches=isinstance(first_done,dict) and first_done.get('dialog_matches') is True,
                           actual_native_model_stream_verified=bool(final.get('native_calls')==1 and first_terminal),
                           answer_sha256=digest(answer.encode()),answer_characters=len(answer),
-                          synthetic_number_sequence_pass=public==EXPECTED,
+                          synthetic_number_sequence_pass=public==first_expected,
                           synthetic_public_numeric_answer=public,
                           progressive_stream_render_verified=progressive_stream_valid(final),
                           elapsed_turn_ms=round((time.monotonic()-started)*1000))
@@ -381,7 +400,7 @@ def rewrite_browser(body):
                               multiturn_second_visible_progressive=second_progressive,
                               multiturn_second_stop_visible=second_stop,
                               multiturn_second_answer_sha256=digest(second_answer.encode()),
-                              multiturn_second_numeric_pass=second_public=='10,9,8,7,6,5,4,3,2,1',
+                              multiturn_second_numeric_pass=second_public==second_expected,
                               multiturn_native_post_count=second_final['native_calls'],
                               multiturn_second_elapsed_ms=round((time.monotonic()-second_started)*1000))
                 if not (terminal_pair_verified and same_dialog_id):
@@ -390,7 +409,7 @@ def rewrite_browser(body):
                     raise RuntimeError('HOLD_AUTHENTICATED_S03_HISTORY_READBACK')
                 if not (second_saved and second_native_equal and second_done
                         and second_progressive and second_stop
-                        and second_public=='10,9,8,7,6,5,4,3,2,1'):
+                        and second_public==second_expected):
                     raise RuntimeError('HOLD_MULTITURN_BROWSER')
 """)
     for forbidden in ('capture_private_screenshot(', 'check_report_layout(', '_nox_responsive_layout(',
@@ -424,6 +443,7 @@ def install(core, raw, transport, transport_raw, release, release_raw):
         '   answer_characters:q.answer.length,answer_normalized_characters:normalize(q.answer).length,')
     core.stop_present = lambda: stop_present(core.ROOT)
     core._nox_stream_only_viewport = lambda page, report: fixed_viewport(core, transport, page, report)
+    core._nox_dialogue_challenge = dialogue_challenge
     core._nox_pre_post_admission = pre_post_admission
     core._nox_final_route_post_gate = lambda report, blocked, route: final_route_post_gate(core.stop_present, report, blocked, route)
     core._nox_served_bridge_sha256 = served_bridge_sha256
