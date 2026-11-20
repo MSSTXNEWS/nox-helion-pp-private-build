@@ -75,6 +75,30 @@ class InstallContractTests(unittest.TestCase):
         self.assertNotIn("supervisorctl','restart",implementation)
         self.assertNotIn("systemctl restart",implementation)
 
+    def test_registry_activation_rejects_unverified_source_before_any_restart(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as d:
+            source=Path(d)/'dispatcher.py'
+            source.write_bytes(b'not an owner-reviewed dispatcher')
+            with (mock.patch.object(m,'DISPATCHER_SOURCE',source),
+                  mock.patch.object(m.subprocess,'run') as sub):
+                with self.assertRaisesRegex(m.Hold,'HOLD_DRIVE_RECONNECT_ACTIVATION_SOURCE_SHA'):
+                    m.activate_staged_dispatcher()
+                sub.assert_not_called()
+
+    def test_guarded_restart_never_weakens_weight_transfer_admission(self):
+        code=src.read_text()
+        self.assertIn('raw_free >= 64 * 1024**2',code)
+        self.assertIn('entries.get("inactive_file", 0) >= 16 * 1024**3',code)
+        self.assertIn('events.get("oom_kill") == 0',code)
+        self.assertIn('abs(time.time() - native["observed_at"]) < 80',code)
+        self.assertIn('and row.get("current_task") is None',code)
+        self.assertIn('first == second',code)
+        self.assertIn('DISPATCHER_RELOADED_THREE_WORKERS',code)
+        self.assertIn("'live_registration_receipt': False",code)
+        self.assertIn("'native_dispatcher_handler_registered':False",code)
+        self.assertNotIn("supervisorctl restart nox-ds41",code)
+
     def test_symlink_destination_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             t=Path(d)/'target'
