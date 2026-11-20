@@ -275,7 +275,10 @@ class OwnerDialogExchangeReadback:
                 'AND receipt_id=? AND lease_epoch=?',
                 (dialog_id,turn_id,receipt_id,lease_epoch)).fetchone()
             if (current is None or current['verified']!=1
-                    or any(current[key]!=record[key] for key in record)):
+                    or any(current[key]!=record[key] for key in (
+                            'receipt_id','dialog_id','turn_id','lease_epoch',
+                            'exchange_id','writer','committed_at','user_sha256',
+                            'assistant_sha256','receipt_sha256'))):
                 return None
             rows=db.execute(
                 'SELECT m.role,m.content,m.exchange_id FROM nox_v29_dialog_messages m '
