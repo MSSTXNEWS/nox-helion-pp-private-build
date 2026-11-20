@@ -168,16 +168,35 @@
       const current=await mutate(db,k,prev=>({
         value:prev?Object.freeze({state:prev.state,event_id:prev.event_id,
           cursor_digest:prev.cursor_digest,token:prev.token,
-          generation:prev.generation,server_cas:prev.server_cas}):null
+          generation:prev.generation,server_cas:prev.server_cas,
+          server_ack_id:prev.server_ack_id,
+          verified_s03_sha256:prev.verified_s03_sha256}):null
       }));
       if(!current) hold('HOLD_CROSSTAB_NOT_SENDING');
       if(current.event_id!==s.event_id||current.cursor_digest!==proof)
         hold('HOLD_CROSSTAB_CONFLICT');
       if(current.state==='ACKED')
-        return mutate(db,k,prev=>({
-          value:Object.freeze({status:'ALREADY_ACKED'}),
-          ...(prev&&prev.server_cas?{owner_cas:prev.server_cas}:{})
-        }));
+        return mutate(db,k,prev=>{
+          // Recheck the exact ACKED row in a new readwrite transaction.
+          // An old snapshot must never authorize an unrelated/new state.
+          if(!prev||prev.state!=='ACKED'||prev.token!==current.token||
+             prev.generation!==current.generation||
+             prev.event_id!==current.event_id||
+             prev.cursor_digest!==current.cursor_digest||
+             prev.server_ack_id!==current.server_ack_id||
+             prev.server_cas!==current.server_cas||
+             prev.verified_s03_sha256!==current.verified_s03_sha256)
+            return {error:'HOLD_CROSSTAB_ACKED_STALE'};
+          // Only canonical independently verified ACKs may use this path;
+          // local confirm() alone does not prove a signed server receipt.
+          if(typeof prev.server_ack_id!=='string'||!ID.test(prev.server_ack_id)||
+             typeof prev.server_cas!=='string'||!ID.test(prev.server_cas)||
+             typeof prev.verified_s03_sha256!=='string'||
+             !HEX.test(prev.verified_s03_sha256))
+            return {error:'HOLD_CROSSTAB_ACKED_UNVERIFIED'};
+          return {value:Object.freeze({status:'ALREADY_ACKED'}),
+            owner_cas:prev.server_cas};
+        });
       if(current.state!=='SENDING')
         hold('HOLD_CROSSTAB_NOT_SENDING');
       const expected=Object.freeze({conversation_id:s.conversation_id,
@@ -212,8 +231,19 @@
       return mutate(db,k,prev=>{
         if(!prev||prev.event_id!==s.event_id||prev.cursor_digest!==proof)
           return {error:'HOLD_CROSSTAB_CONFLICT'};
-        if(prev.state==='ACKED') return {value:Object.freeze({status:'ALREADY_ACKED'}),
-          owner_cas:receipt.server_cas};
+        if(prev.state==='ACKED') {
+          // Another tab completed while our independent verifier awaited.
+          // Treat inconsistent signed receipts / changed lease as a conflict,
+          // not as proof that THIS receipt was already committed.
+          if(prev.token!==current.token||
+             prev.generation!==current.generation||
+             prev.server_ack_id!==receipt.ack_id||
+             prev.server_cas!==receipt.server_cas||
+             prev.verified_s03_sha256!==receipt.s03_sha256)
+            return {error:'HOLD_CROSSTAB_ACKED_PROOF_CONFLICT'};
+          return {value:Object.freeze({status:'ALREADY_ACKED'}),
+            owner_cas:prev.server_cas};
+        }
         if(prev.state!=='SENDING'||prev.token!==current.token||
            prev.generation!==current.generation)
           return {error:'HOLD_CROSSTAB_RECONCILE_FENCED'};
