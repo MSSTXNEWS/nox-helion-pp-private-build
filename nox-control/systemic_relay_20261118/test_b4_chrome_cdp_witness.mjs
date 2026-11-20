@@ -8,9 +8,13 @@ class Stub {
   close(){}
   async send(cmd,p={}){if(cmd==='Browser.getVersion')return {product:'CDP-FIXTURE'};
     if(cmd==='Network.streamResourceContent')return {};
-    if(cmd==='Network.getResponseBody')return {body:this.bodies.get(p.requestId).toString('base64'),base64Encoded:true};return {};}
+    if(cmd==='Network.getResponseBody'){
+      const canonical=this.bodies.get(p.requestId).toString('base64');
+      return {body:typeof this.responseBodyMutator==='function'?this.responseBodyMutator(canonical,p.requestId):canonical,base64Encoded:true};
+    }return {};}
 }
 async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondTurn=null,encoding=null,options={}){const c=new Stub();
+  c.responseBodyMutator=options.responseBodyBase64Mutator;
   if(options.postDataMode){
     const normalSend=c.send.bind(c);
     c.send=(cmd,p={})=>{
@@ -398,4 +402,26 @@ test('Network.dataReceived requires canonical base64 before counting bytes, TTFT
   assert.equal(padBits.cdp_consistent,false);
   assert.equal(padBits.ttft_sse_verified,false);
   assert.equal(padBits.turns[1].visible_text_sha256,null);
+});
+
+
+test('Network.getResponseBody rejects noncanonical base64 padding-bit aliases with identical decoded bytes',async()=>{
+  const canonical=Buffer.from(body,'utf8').toString('base64');
+  assert.match(canonical,/o=$/,'fixture must end in one padded base64 quantum');
+  const alias=canonical.replace(/o=$/,'p=');
+  assert.notEqual(alias,canonical);
+  assert.deepEqual(Buffer.from(alias,'base64'),Buffer.from(canonical,'base64'),
+    'permissive Node decoder maps both encodings to the same original body');
+  const clean=await run();
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  const poisoned=await run(false,null,null,null,{
+    responseBodyBase64Mutator:(data,id)=>id==='2'?alias:data
+  });
+  assert.equal(poisoned.cdp_consistent,false);
+  assert.equal(poisoned.ttft_sse_verified,false);
+  assert.equal(poisoned.turns[1].cdp_decoded_body_sha256,null);
+  assert.equal(poisoned.turns[1].ttft_ms,null);
+  assert.equal(poisoned.turns[1].sse_done_ms,null);
+  assert.equal(poisoned.turns[1].visible_text_sha256,null);
 });
