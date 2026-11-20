@@ -189,6 +189,23 @@ class ProbeTests(unittest.TestCase):
         self.assertGreater(final_gate, source.index("request(client,'/chat/logout'"))
         self.assertLess(final_gate, source.index("print('NOX_MAINT_REPAIR_COMPLETE=true'"))
 
+    def test_scoped_history_requires_explicit_top_level_dialog_id(self):
+        did = '1' * 32
+        rows = [{'role': 'user', 'content': 'question'},
+                {'role': 'assistant', 'content': '323'}]
+        turns = [('question', '323')]
+        self.assertTrue(probe.scoped_history_matches_turns(
+            {'dialog_id': did, 'messages': rows}, turns, did))
+        for invalid in ({'messages': rows},
+                        {'dialog_id': None, 'messages': rows},
+                        {'dialog_id': '', 'messages': rows},
+                        {'dialog_id': '2' * 32, 'messages': rows},
+                        rows):
+            with self.subTest(invalid=invalid):
+                self.assertFalse(probe.scoped_history_matches_turns(invalid, turns, did))
+        self.assertFalse(probe.scoped_history_matches_turns(
+            {'dialog_id': did, 'messages': rows[:1]}, turns, did))
+
     def test_stream_terminal_done_must_bind_to_requested_dialog(self):
         class Response:
             status = 200
