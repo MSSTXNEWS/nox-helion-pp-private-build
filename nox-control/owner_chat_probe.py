@@ -438,7 +438,7 @@ def answer_matches_observed_executor_count(answer, configured):
     mentioned = [int(value) for value in re.findall(
         r'(?<!\d)(\d{1,3})\s+исполнител[а-яё]*\b', answer, re.I)]
     return (bool(mentioned) and all(value == configured for value in mentioned)
-            and re.search(r'\bNOX\b', answer, re.I) is not None)
+            and re.search(r'(?:\+|и)\s*NOX\b', answer, re.I) is not None)
 
 
 def require_cgroup_probe_headroom(
