@@ -421,7 +421,8 @@ def _assistant_tools(calls,content=''):
 
 
 async def _run(native,url,payload,user_text):
-    executor_reply=await asyncio.to_thread(_executor_status_reply,user_text)
+    executor_reply=(await asyncio.to_thread(_executor_status_reply,user_text)
+                    if executor_status_query(user_text) else None)
     if executor_reply is not None:
         yield 'token',executor_reply
         return
@@ -458,7 +459,8 @@ async def _run(native,url,payload,user_text):
         yield 'token',await asyncio.to_thread(_current.inventory_reply)
         return
     messages=[dict(message) for message in payload.get('messages') or []]
-    messages=await asyncio.to_thread(_current.augment_messages,messages,user_text)
+    if _current.relevant_query(user_text):
+        messages=await asyncio.to_thread(_current.augment_messages,messages,user_text)
     native_tools=list(native['TOOLS'])
     if _current.relevant_query(user_text):
         if any((row.get('function') or {}).get('name') in _current.NAMES for row in native_tools):

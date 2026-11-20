@@ -145,6 +145,26 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('[DONE]',wire)
         self.assertNotIn('_agent_final',payload)
 
+    async def test_plain_chat_skips_unrelated_status_and_inventory_io(self):
+        # Ordinary conversation must start the model stream without blocking on
+        # status-file reads or inventory collection; relevant turns retain guards.
+        chunks=Chunks([frame('Hola!'),frame(finish='stop'),b'data: [DONE]\n\n'])
+        requests,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Привет'}]}
+        with (factory,
+              patch.object(stream,'_executor_status_reply',
+                           side_effect=AssertionError('unexpected native status read')),
+              patch.object(stream._current,'augment_messages',
+                           side_effect=AssertionError('unexpected inventory augmentation'))):
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Привет',False)
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(len(requests),1)
+        self.assertEqual(requests[0]['messages'],payload['messages'])
+        self.assertEqual(payload.get('_agent_final'),'Hola!')
+        self.assertTrue(chunks.closed)
+
     async def test_invalid_utf8_on_wire_cannot_certify_browser_or_s03(self):
         # HTTPX aiter_text() silently replaces malformed UTF-8 with U+FFFD;
         # an allegedly finished answer must not certify corrupted model bytes.
