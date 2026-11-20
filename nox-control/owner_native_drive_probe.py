@@ -93,6 +93,60 @@ def dispatcher_surface(source=DISPATCHER, runner=subprocess.run):
                         registries.add(target.id)
         result["candidate_functions"] = sorted(found)[:36]
         result["candidate_registries"] = sorted(registries)[:24]
+        # The deployed dispatcher has a HANDLERS mapping but no public registrar.
+        # Learn only static handler identifiers and function names from its AST,
+        # never string constants that can be URLs, secrets, or task content.
+        registry = []
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+                continue
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if not any(isinstance(t, ast.Name) and t.id == "HANDLERS" for t in targets):
+                continue
+            value = node.value
+            if not isinstance(value, ast.Dict):
+                result["registry_kind"] = type(value).__name__.upper()
+                continue
+            result["registry_kind"] = "DICT_LITERAL"
+            for key, target in zip(value.keys, value.values):
+                if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+                    continue
+                # Strict public handler identifiers only; don't copy arbitrary strings.
+                if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_.:-]{0,95}", key.value):
+                    continue
+                handler_name = (
+                    target.id if isinstance(target, ast.Name)
+                    else target.attr if isinstance(target, ast.Attribute) else "EXPRESSION"
+                )
+                if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", handler_name):
+                    handler_name = "EXPRESSION"
+                registry.append({"kind": key.value, "entry": handler_name})
+        result["registered_literal_handlers"] = registry[:50]
+        result["registry_count_returned"] = len(result["registered_literal_handlers"])
+        result["drive_kind_declared"] = any(
+            item["kind"] == "nox.drive.first.native.v1" for item in registry
+        )
+        worker = next(
+            (node for node in tree.body
+             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+             and node.name == "worker_loop"), None
+        )
+        lookups = set()
+        if worker is not None:
+            for node in ast.walk(worker):
+                if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name):
+                    if node.value.id == "HANDLERS":
+                        lookups.add("HANDLERS_INDEX")
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                    if isinstance(node.func.value, ast.Name) and node.func.value.id == "HANDLERS":
+                        lookups.add("HANDLERS_" + node.func.attr.upper()[:32])
+        result["worker_registry_lookups"] = sorted(lookups)[:10]
+        result["runtime_hot_register_declared"] = bool(
+            any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name in ("register_handler", "register_handlers", "reload_handlers",
+                                  "hot_register", "hot_reload_handlers")
+                for node in ast.walk(tree))
+        )
         result["registration_interface"] = (
             "DECLARED_FUNCTION" if any(item.startswith("register_handler(") for item in found)
             else "NO_EXACT_REGISTER_HANDLER_FOUND"

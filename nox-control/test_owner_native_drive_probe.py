@@ -87,6 +87,10 @@ class ProbeTests(unittest.TestCase):
                 "def claim_native_job(owner_lease, task_id):\n"
                 "    return owner_lease\n"
                 "HANDLER_REGISTRY = {}\n"
+                "HANDLERS = {\"owner_native_project_work\": claim_native_job}\n"
+                "def worker_loop(wid):\n"
+                "    f = HANDLERS.get(\"owner_native_project_work\")\n"
+                "    return f\n"
             )
             src.write_text(private_source, encoding="utf-8")
             res = mod.dispatcher_surface(
@@ -99,6 +103,12 @@ class ProbeTests(unittest.TestCase):
             self.assertEqual(res["registration_interface"], "DECLARED_FUNCTION")
             self.assertIn("register_handler(handler_kind,callback)", res["candidate_functions"])
             self.assertIn("HANDLER_REGISTRY", res["candidate_registries"])
+            self.assertEqual(res["registry_kind"], "DICT_LITERAL")
+            self.assertEqual(res["registered_literal_handlers"], [
+                {"kind": "owner_native_project_work", "entry": "claim_native_job"}
+            ])
+            self.assertEqual(res["worker_registry_lookups"], ["HANDLERS_GET"])
+            self.assertFalse(res["drive_kind_declared"])
             self.assertFalse(res["live_process_verified"])
             self.assertEqual(res["native_handler_registered"], "UNVERIFIED")
             self.assertNotIn("never publish this token", json.dumps(res))
