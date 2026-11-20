@@ -447,6 +447,11 @@ async def _run(native,url,payload,user_text):
                 or ('needs_confirmation' in rec and rec['needs_confirmation'] is not False)):
             raise StreamFailure('HOLD_MEDIA_RESULT_FIDELITY')
         await asyncio.to_thread(native['audit'],'tool_step',name=name,step=1,ok=rec['ok'])
+        if not rec['ok']:
+            # An unverified media enqueue may be visible to the user, but it
+            # must not become a successful terminal/S03 postflight receipt.
+            yield 'token',rec['text']
+            raise StreamFailure('HOLD_MEDIA_RESULT_UNCONFIRMED')
         yield 'token',rec['text']
         return
     if _current.download_status_query(user_text):
@@ -556,6 +561,11 @@ async def _run(native,url,payload,user_text):
                         return
                     if final_command:
                         if not text.strip():raise StreamFailure('HOLD_TOOL_EMPTY')
+                        if rec['ok'] is not True:
+                            # Show the actual failure without claiming [DONE]
+                            # or making the S03 postflight mark it successful.
+                            yield 'token',text
+                            raise StreamFailure('HOLD_TOOL_RESULT_UNCONFIRMED')
                         yield 'token',text
                         return
                     # Tool evidence is part of the complete conversation. Never
