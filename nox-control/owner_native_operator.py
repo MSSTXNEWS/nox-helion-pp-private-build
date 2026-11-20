@@ -208,10 +208,20 @@ def _validate_forward_marker(action,line):
         if marker=='NOX_MAINT_REPAIR_COMPLETE':
             if payload!='true':raise RuntimeError('HOLD_REMOTE_MARKER_VALUE')
             return
-        if marker!='NOX_MAINT_REFLEX_RESTORE':raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
+        if marker not in ('NOX_MAINT_REFLEX_RESTORE','NOX_MAINT_REFILL_CONTRACT'):
+            raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
         try:value=json.loads(payload)
         except (ValueError,TypeError) as exc:raise RuntimeError('HOLD_REMOTE_MARKER_JSON') from exc
         if not isinstance(value,dict):raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
+        if marker=='NOX_MAINT_REFILL_CONTRACT' and (value.get('schema')!='NOX_REFILL_CONTRACT_UPGRADE_V1'
+                or value.get('state') not in ('PREFLIGHT','CONTRACT_MODULE_WRITTEN','CONTRACT_MODULE_RUNNING',
+                    'PHYSICAL_REFILL_CONTRACT_RUNNING','ROLLED_BACK_ORIGINAL_RESTARTED',
+                    'UNMODIFIED_ORIGINAL_RESTARTED','HOLD_UPGRADE_ROLLBACK_NOT_VERIFIED',
+                    'HOLD_UPGRADE_ORIGINAL_RESTART_NOT_VERIFIED')
+                or value.get('original_task_accepted') is not False
+                or value.get('model_restarted') is not False
+                or value.get('s03_changed') is not False):
+            raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
         return
     if action=='lifeline':
         if marker=='NOX_MAINT_LIFELINE_COMPLETE':
