@@ -1169,7 +1169,7 @@ class CheckpointStepProvenance(unittest.TestCase):
         tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
         main = next(n for n in tree.body
                     if isinstance(n, ast.FunctionDef) and n.name == "main")
-        start = next(n for n in main.body
+        start_node = next(n for n in main.body
                      if isinstance(n, ast.FunctionDef) and n.name == "start_once")
         def run(states, stop_sequence=None, fast_timeout=False):
             seen, starts, proofs, waits, steps = [], [], [], [], []
@@ -1198,7 +1198,7 @@ class CheckpointStepProvenance(unittest.TestCase):
                 "prove_training": lambda _: (proofs.append(seen[-1]) or {"pid": 37}),
                 "step": lambda kind, data: steps.append(kind),
             }
-            exec(compile(ast.Module(body=[start], type_ignores=[]),
+            exec(compile(ast.Module(body=[start_node], type_ignores=[]),
                          str(SOURCE), "exec"), namespace)
             return namespace["start_once"], namespace, starts, proofs, waits, steps
         start, ctx, starts, proofs, waits, steps = run(
