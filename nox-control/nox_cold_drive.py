@@ -79,7 +79,7 @@ def upload(a):
     # recoverable copies, owner lease, and current inode/fd/mmap inactivity.
     # Route deletion through the native owner-governed reclaim path instead.
     if a.evict:
-        raise RuntimeError("HOLD_LEGACY_EVICT_NEEDS_OWNER_TWO_COPY_FD_MMAP_LEASE")
+        raise RuntimeError("HOLD_LEGACY_EVICT_NEEDS_OWNER_TWO_COPY_FD_MMAP_LEASE: fresh owner inode/fd/mmap census and two verified recoverable copies required")
     src = assert_model(a.file)
     remote = assert_remote(a.remote)
     if a.active_manifest:
