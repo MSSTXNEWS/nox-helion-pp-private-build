@@ -31,12 +31,30 @@ class ProbeTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             maximum = Path(directory) / 'memory.max'
             current = Path(directory) / 'memory.current'
-            maximum.write_text(str(4 * threshold) + '\n')
-            current.write_text(str(3 * threshold) + '\n')
-            self.assertEqual(probe.require_cgroup_probe_headroom(
-                maximum, current, threshold), threshold)
-            current.write_text(str(3 * threshold + 1) + '\n')
-            with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_CGROUP_RAM_ADMISSION    def test_chat_post_redirect_is_never_replayed_to_a_different_url(self):
+            maximum.write_text(str(4 * threshold))
+            current.write_text(str(3 * threshold))
+            self.assertEqual(
+                probe.require_cgroup_probe_headroom(maximum, current, threshold),
+                threshold)
+            current.write_text(str(3 * threshold + 1))
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_CGROUP_RAM_ADMISSION'):
+                probe.require_cgroup_probe_headroom(maximum, current, threshold)
+            for total, used in (('max', '0'), ('not-a-number', '0'),
+                                ('5', '6'), ('0', '0'), ('20', '-1')):
+                with self.subTest(maximum=total, current=used):
+                    maximum.write_text(total)
+                    current.write_text(used)
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_CGROUP_RAM_ADMISSION'):
+                        probe.require_cgroup_probe_headroom(maximum, current, threshold)
+            current.unlink()
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_CGROUP_RAM_ADMISSION'):
+                probe.require_cgroup_probe_headroom(maximum, current, threshold)
+        source = path.read_text()
+        self.assertLess(
+            source.index('require_cgroup_probe_headroom()  # Before ANY synthetic dialog-create/chat POST.'),
+            source.index("dialog=obj(request(client,'/api/ui/memory/dialogs/create'"))
+
+    def test_chat_post_redirect_is_never_replayed_to_a_different_url(self):
         """A POST must stop at any redirect, before the final URL checks."""
         handler = probe.RejectPostRedirect()
         source_url = 'http://127.0.0.1:8080/api/nox/chat/stream'
