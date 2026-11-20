@@ -50,12 +50,22 @@ def verify_url(url):
     return url
 
 
+def evidence_hash(value):
+    """Persist only a digest, never a possible token or private URL/selector."""
+    return hashlib.sha256(value.encode('utf8')).hexdigest()
+
+
+def url_identity_sha256(url):
+    """Pin the exact origin/path/query/hash route without recording raw URL."""
+    p = urlsplit(verify_url(url))
+    identity = (p.scheme.lower(), p.hostname.lower(), p.port,
+                p.path, p.query, p.fragment)
+    return evidence_hash(json.dumps(identity, separators=(',', ':'), ensure_ascii=True))
+
+
 def require_landing_url(requested, visited):
-    """Reject a login/other-path redirect before attributing browser FPS to NOX."""
-    a, b = urlsplit(verify_url(requested)), urlsplit(verify_url(visited))
-    identity = lambda p: (p.scheme.lower(), p.hostname.lower(), p.port,
-                          p.path, p.query, p.fragment)
-    if identity(a) != identity(b):
+    """Reject login/SPA redirects, using the same identity pinned in reports."""
+    if url_identity_sha256(requested) != url_identity_sha256(visited):
         raise ValueError('HOLD_LIVE_LANDING_URL_MISMATCH')
     return visited
 
@@ -90,13 +100,15 @@ def compare_baseline(current, prior):
     A matching browser URL is not a native/S03 identity proof. This is
     source-level frame evidence only; baseline files are not signed.
     """
-    signature = ('schema', 'url', 'sample_js', 'synthetic_fixture',
-                 'expected_selector_checked', 'expected_selector',
+    signature = ('schema', 'url_sha256', 'sample_js', 'synthetic_fixture',
+                 'expected_selector_checked', 'expected_selector_sha256',
                  'landing_url_verified')
     if any(current.get(key) != prior.get(key) for key in signature):
         raise ValueError('HOLD_BASELINE_PROVENANCE_MISMATCH')
+    if not isinstance(current.get('url_sha256'), str) or len(current['url_sha256']) != 64 or any(c not in '0123456789abcdef' for c in current['url_sha256']):
+        raise ValueError('HOLD_BASELINE_TARGET_URL_HASH_MISSING')
     if not current.get('synthetic_fixture'):
-        if not current.get('expected_selector_checked'):
+        if not current.get('expected_selector_checked') or not current.get('expected_selector_sha256'):
             raise ValueError('HOLD_BASELINE_MISSING_LIVE_SELECTOR')
         if current.get('landing_url_verified') is not True:
             raise ValueError('HOLD_BASELINE_LANDING_URL_UNVERIFIED')
@@ -120,6 +132,9 @@ def compare_baseline(current, prior):
     deltas = {}
     for key in expected:
         if not current.get('synthetic_fixture'):
+            if (old[key].get('landing_url_sha256') != current['url_sha256'] or
+                    new[key].get('landing_url_sha256') != current['url_sha256']):
+                raise ValueError('HOLD_BASELINE_LANDING_HASH_MISMATCH')
             previous_resource = old[key].get('renderer_resource_sha256')
             current_resource = new[key].get('renderer_resource_sha256')
             previous_count = old[key].get('renderer_resource_count')
@@ -176,9 +191,9 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
     except FileExistsError as exc:
         raise ValueError('HOLD_EVIDENCE_DIRECTORY_REUSED') from exc
     result = {
-        'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V2',
+        'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V3',
         'scope': 'browser-only; not model/weights/tokenizer/S03 acceptance',
-        'url': url, 'time_utc': datetime.now(timezone.utc).isoformat(),
+        'url_sha256': url_identity_sha256(url), 'time_utc': datetime.now(timezone.utc).isoformat(),
         'sample_js': '90 consecutive real requestAnimationFrame intervals',
         'runs': [], 'blocked_mutating_requests': 0, 'blocked_model_posts': 0,
         'blocked_websocket_connections': 0,
@@ -186,7 +201,7 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
         'native_s03_verified': False, 'installed_model_identity_verified': False,
         'synthetic_fixture': fixture_html is not None,
         'expected_selector_checked': expected_selector is not None,
-        'expected_selector': expected_selector,
+        'expected_selector_sha256': evidence_hash(expected_selector) if expected_selector else None,
         'landing_url_verified': False,
         'comparison_admissible': False,
     }
@@ -273,7 +288,7 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                             renderer_proof = renderer_resource_identity(inline_assets, network_assets)
                         proof = hashlib.sha256(path.read_bytes()).hexdigest()
                         entry = {'width': width, 'height': height, 'mode': mode,
-                            'landing_url': None if fixture_html is not None else page.url,
+                            'landing_url_sha256': None if fixture_html is not None else url_identity_sha256(page.url),
                             'screenshot': filename, 'screenshot_sha256': proof,
                             'screenshot_bytes': path.stat().st_size,
                             'renderer_resource_sha256': renderer_proof['sha256'] if renderer_proof else None,
@@ -292,7 +307,6 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
         for row in result['runs']:
             key = (row['width'], row['height'], row['mode'])
             row['before_after_p95_delta_ms'] = deltas[key]
-        result['baseline_file'] = baseline_path.name
         result['baseline_sha256'] = hashlib.sha256(baseline_bytes).hexdigest()
         result['comparison_scope'] = ('SYNTHETIC_ONLY' if result['synthetic_fixture']
                                       else 'LIVE_BROWSER_FRAMES_ONLY_NOT_S03')
