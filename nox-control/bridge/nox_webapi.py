@@ -283,18 +283,26 @@ def install(app, B):
         txt = str(b.get("content", "")).strip()[:2000]
         if not txt:
             return JSONResponse({"status": "HOLD", "reason": "пустой факт"}, status_code=400)
+        # The S03 write must succeed before a secondary facts log advertises
+        # the candidate. This is NOT an independent S03 readback/acceptance.
+        try:
+            import s03_memory as S
+            await asyncio.to_thread(S.persist_turn, "[ФАКТ ОТ СОЗДАТЕЛЯ] " + txt, "Принято и запомнено.")
+        except Exception as e:
+            B.log("fact_persist_error %s" % type(e).__name__)
+            return JSONResponse({"status": "HOLD", "reason": "S03_PERSIST_FAILED",
+                                 "saved": False, "s03_readback_verified": False},
+                                status_code=503)
         try:
             with open(FACTS, "a", encoding="utf-8") as f:
                 f.write(json.dumps({"t": int(time.time()), "key": str(b.get("fact_key", ""))[:120], "content": txt, "source": str(b.get("source_ref") or b.get("source", ""))[:200]}, ensure_ascii=False) + "\n")
-            ok = True
-            try:
-                import s03_memory as S
-                await asyncio.to_thread(S.persist_turn, "[ФАКТ ОТ СОЗДАТЕЛЯ] " + txt, "Принято и запомнено.")
-            except Exception as e:
-                B.log("fact_persist_error %s" % type(e).__name__)
-            return {"status": "SAVED", "saved": ok}
+            return {"status": "RECORDED_UNVERIFIED", "saved": True,
+                    "s03_readback_verified": False}
         except Exception as e:
-            return JSONResponse({"status": "HOLD", "reason": str(e)[:100]}, status_code=500)
+            B.log("fact_mirror_error %s" % type(e).__name__)
+            return JSONResponse({"status": "PARTIAL_HOLD", "reason": "FACTS_MIRROR_WRITE_FAILED",
+                                 "saved": False, "s03_readback_verified": False},
+                                status_code=500)
 
     @app.get("/api/nox/memory/facts")
     async def a_facts(limit: int = 20):
