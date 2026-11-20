@@ -1150,6 +1150,11 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             with patch.object(ui,'owner_maintenance_gate',return_value='ABSENT'):
                 path.write_text(json.dumps(original),encoding='utf-8')
                 self.assertIn('настроено 1',stream._executor_status_reply(question,path))
+                # A group/world-writable status file is not trusted evidence.
+                path.chmod(0o666)
+                self.assertIn('не могу подтвердить',stream._executor_status_reply(question,path))
+                path.chmod(0o600)
+                self.assertIn('настроено 1',stream._executor_status_reply(question,path))
                 for value in invalid:
                     path.write_text(value,encoding='utf-8')
                     answer=stream._executor_status_reply(question,path)
