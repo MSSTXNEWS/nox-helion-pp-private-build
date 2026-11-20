@@ -80,7 +80,7 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                 snapshot, owner_snapshot_verifier)
             reviewable = (
                 owner_attested
-                native.get("maintenance_busy") is False
+                and native.get("maintenance_busy") is False
                 and native.get("active_claims") is False
                 and type(headroom) is int and headroom >= 2*1024**3
                 # A previously true lease/source flag is not a current owner
