@@ -280,6 +280,33 @@ class V112Tests(unittest.TestCase):
         self.assertTrue(self.client.get('/api/ui/memory/dialogs/status',cookies=self.cookie)
                         .json()['persistent_threads'])
 
+    def test_independent_readback_ignores_synthetic_locator_flags(self):
+        # 3A02: locate_durable adds synthetic durable/verified flags that are
+        # not columns in the second SQLite SELECT. Independent readback must
+        # compare only stored receipt columns, not crash with IndexError.
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
+            _db, _save_exchange, OwnerDialogExchangeReadback,
+        )
+        created=self.client.post('/api/ui/memory/dialogs/create',
+            cookies=self.cookie,json={'title':'Readback persisted keys','confirmed':True})
+        self.assertEqual(created.status_code,200,created.text)
+        dialog_id=created.json()['dialog_id']
+        ids={'turn_id':'b'*32,'receipt_id':'c'*32,'lease_epoch':'d'*32}
+        self.assertTrue(_save_exchange(dialog_id,'Привет 🌍','¡Recibido!','a'*32,**ids))
+        read=OwnerDialogExchangeReadback(_db).read(dialog_id=dialog_id,**ids)
+        self.assertIsNotNone(read)
+        self.assertTrue(read['durable'])
+        self.assertTrue(read['verified'])
+        self.assertEqual(read['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+        self.assertFalse(read['canonical_s03_verified'])
+        self.assertEqual([m['content'] for m in read['messages']],
+                         ['Привет 🌍','¡Recibido!'])
+        with _db(True) as db:
+            db.execute('DELETE FROM nox_v29_exchange_receipts WHERE receipt_id=?',
+                       (ids['receipt_id'],))
+        self.assertIsNone(OwnerDialogExchangeReadback(_db).read(
+            dialog_id=dialog_id,**ids))
+
     def test_stream_owner_dialog_receipt_and_thread_roundtrip(self):
         create=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
                json={'title':'Привет NOX','confirmed':True})
