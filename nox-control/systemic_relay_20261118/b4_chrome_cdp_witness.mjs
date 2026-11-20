@@ -163,7 +163,14 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       if(active.has(p.requestId)){no(Error('DUPLICATE_CDP_ID'));return;}
       const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
       active.set(p.requestId,x);
-      const record=s=>{if(typeof s==='string')x.request=hash(Buffer.from(s));};
+      const record=s=>{
+        if(typeof s!=='string'){x.missing=true;return;}
+        // CDP POST metadata is UTF-16 text, not authenticated raw request bytes.
+        // Reject unpaired surrogates before assigning a potentially lossy digest.
+        const bytes=encodeWellFormedUtf8(s);
+        if(!bytes){x.missing=true;return;}
+        x.request=hash(bytes);
+      };
       if(typeof p.request.postData==='string')record(p.request.postData);
       else x.requestLookupPending=Promise.resolve()
         .then(()=>c.send('Network.getRequestPostData',{requestId:p.requestId}))
