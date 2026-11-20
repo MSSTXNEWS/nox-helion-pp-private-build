@@ -69,6 +69,45 @@ class HotContextTests(unittest.TestCase):
                     call(conversation=[],verified_s03=[{**fact,"id":forged}])
         self.assertEqual(call(conversation=[],verified_s03=[fact])["selected_s03_ids"],["safe-1"])
 
+
+    def test_owner_scoped_s03_excludes_superseded_and_revoked_from_prompt(self):
+        revision="e"*64
+        base={"persona_id":"owner-01","revision":revision}
+        facts=[
+            dict(base,id="old",source_sha256="a"*64,text="obsolete instruction",
+                 status="SUPERSEDED",superseded_by="replacement"),
+            dict(base,id="replacement",source_sha256="b"*64,text="current owner memory",
+                 status="ACTIVE",superseded_by=None),
+            dict(base,id="revoked",source_sha256="c"*64,text="revoked private memory",
+                 status="REVOKED",superseded_by=None),
+        ]
+        result=call(conversation=[],verified_s03=facts,token_budget=2048,
+                    owner_persona_id="owner-01",current_s03_revision=revision)
+        prompt="\\n".join(row["content"] for row in result["messages"])
+        self.assertIn("current owner memory",prompt)
+        self.assertNotIn("obsolete instruction",prompt)
+        self.assertNotIn("revoked private memory",prompt)
+        self.assertEqual(result["selected_s03_ids"],["replacement"])
+        self.assertEqual([(x["id"],x["status"],x["superseded_by"])
+                          for x in result["historical_s03_refs"]],
+                         [("old","SUPERSEDED","replacement"),("revoked","REVOKED",None)])
+        self.assertTrue(result["owner_scope_supplied_and_matched"])
+        self.assertFalse(result["independent_s03_readback_verified"])
+
+    def test_owner_scoped_s03_rejects_foreign_identity_and_stale_revision(self):
+        item={"id":"current","source_sha256":"a"*64,"text":"value","persona_id":"alice",
+              "revision":"b"*64,"status":"ACTIVE","superseded_by":None}
+        args=dict(conversation=[],verified_s03=[item],owner_persona_id="alice",
+                  current_s03_revision="b"*64)
+        self.assertEqual(call(**args)["selected_s03_ids"],["current"])
+        for change in ({"persona_id":"bob"},{"revision":"c"*64},
+                       {"status":"SUPERSEDED","superseded_by":None},
+                       {"status":"REVOKED","superseded_by":"current"}):
+            with self.subTest(change=change), self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_S03"):
+                call(**{**args,"verified_s03":[{**item,**change}]})
+        with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_S03_REVISION"):
+            call(conversation=[],verified_s03=[item],owner_persona_id="alice")
+
     def test_too_large_protected_context_holds_not_truncates_persona(self):
         with self.assertRaisesRegex(m.ContextHold,"CORE_TOO_LARGE"):
             call(persona="identity"*10000)
