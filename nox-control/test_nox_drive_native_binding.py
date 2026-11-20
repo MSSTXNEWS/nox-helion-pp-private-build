@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from nox_drive_native_binding import (
-    NativeDriveBridge, HANDLER_KIND, capability_descriptor,
+    NativeDriveBridge, HANDLER_KIND, capability_descriptor, bind_static_native_handlers,
 )
 
 
@@ -171,6 +171,53 @@ class DriveNativeTests(unittest.TestCase):
         self.assertEqual(result["state"],"VERIFIED_SSD_STAGE_NOT_GPU_LOADED")
         self.assertEqual(seen[0].mode,"disk")
         self.assertEqual(seen[0].destination,str(self.ssd))
+
+
+    def test_static_live_registry_needs_verified_owner_and_actual_worker_gates(self):
+        callbacks={key:self.binding[key] for key in (
+            "stop_active", "lease_current", "foreground_active", "resource_admission")}
+        kinds={"owner_order":lambda t:None}
+        self.assertEqual(bind_static_native_handlers(
+            kinds, callbacks, owner_authorized=lambda:False,
+            cancel_for_task=lambda task:SimpleNamespace(cancelled=False)
+        )["state"], "HOLD_STATIC_REGISTRY_OWNER")
+        self.assertNotIn(HANDLER_KIND, kinds)
+        registered=bind_static_native_handlers(
+            kinds, callbacks, owner_authorized=lambda:True,
+            cancel_for_task=lambda task:SimpleNamespace(cancelled=False),
+            config=self.cfg, state=self.st,
+            manifest_root=self.root, ssd=self.ssd)
+        self.assertEqual(registered["state"], "STATIC_REGISTRY_BOUND_IN_PROCESS")
+        self.assertFalse(registered["native_execution_verified"])
+        self.assertIn(HANDLER_KIND, kinds)
+        self.assertEqual(bind_static_native_handlers(
+            kinds, callbacks, owner_authorized=lambda:True,
+            cancel_for_task=lambda task:SimpleNamespace(cancelled=False)
+        )["state"], "HOLD_STATIC_REGISTRY_CONFLICT")
+
+        self.submit()
+        native={"handler":HANDLER_KIND, "status":"running", "params":dict(self.queued[-1][1])}
+        with patch("nox_drive_native_binding.drive.execute",
+                   return_value={"state":"VERIFIED_IN_DRIVE",
+                                 "readback_verified":True,"source_deleted":False}):
+            self.assertEqual(kinds[HANDLER_KIND](native)["state"], "VERIFIED_DRIVE_TRANSFER")
+        self.stop=True
+        with patch("nox_drive_native_binding.drive.execute") as execute:
+            self.assertEqual(kinds[HANDLER_KIND](native)["state"], "DEFERRED_OWNER_OR_CHAT")
+            execute.assert_not_called()
+        self.stop=False
+        self.assertEqual(kinds[HANDLER_KIND]({})["state"], "HOLD_NATIVE_TASK_SHAPE")
+
+    def test_worker_only_bridge_can_never_enqueue_or_approve(self):
+        callbacks={key:self.binding[key] for key in (
+            "stop_active", "lease_current", "foreground_active", "resource_admission")}
+        bridge=NativeDriveBridge(callbacks, config=self.cfg, state=self.st,
+                                 manifest_root=self.root, ssd=self.ssd)
+        self.assertFalse(bridge.owner_gate("owner"))
+        self.assertEqual(bridge.propose(actor="owner",task_id=self.task,
+            operation="ingest",manifest=str(self.path),manifest_sha=self.sha,
+            remote_opt_in=True)["state"], "HOLD_OWNER_AUTH_OR_LEASE")
+
 
     def test_host_registration_requires_owner_and_real_callback(self):
         self.assertEqual(self.app.register_to_existing_dispatcher(None,actor="owner")["state"],

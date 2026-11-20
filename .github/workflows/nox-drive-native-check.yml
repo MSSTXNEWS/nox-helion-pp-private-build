@@ -10,6 +10,15 @@ on:
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/NOX_DRIVE_NATIVE_BINDING.md'
       - '.github/workflows/nox-drive-native-check.yml'
+  pull_request:
+    paths:
+      - 'nox-control/nox_drive_native_binding.py'
+      - 'nox-control/test_nox_drive_native_binding.py'
+      - 'nox-control/owner_native_drive_reconnect_install.py'
+      - 'nox-control/test_owner_native_drive_reconnect_install.py'
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/NOX_DRIVE_NATIVE_BINDING.md'
+      - '.github/workflows/nox-drive-native-check.yml'
   workflow_dispatch:
 permissions:
   contents: read
