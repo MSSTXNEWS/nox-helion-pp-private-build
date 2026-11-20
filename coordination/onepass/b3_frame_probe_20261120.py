@@ -120,7 +120,7 @@ def compare_baseline(current, prior):
         # interface became faster. Never compare such live measurements.
         for report in (current, prior):
             for key in ('blocked_mutating_requests', 'blocked_model_posts',
-                        'blocked_websocket_connections'):
+                        'blocked_model_read_requests', 'blocked_websocket_connections'):
                 value = report.get(key)
                 if type(value) is not int or value != 0:
                     raise ValueError('HOLD_BASELINE_LIVE_TRANSPORT_BLOCKED')
@@ -205,13 +205,13 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
     except FileExistsError as exc:
         raise ValueError('HOLD_EVIDENCE_DIRECTORY_REUSED') from exc
     result = {
-        'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V4',
+        'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V5',
         'scope': 'browser-only; not model/weights/tokenizer/S03 acceptance',
         'url_sha256': url_identity_sha256(url), 'chromium_version_sha256': None,
         'time_utc': datetime.now(timezone.utc).isoformat(),
         'sample_js': '90 consecutive real requestAnimationFrame intervals',
         'runs': [], 'blocked_mutating_requests': 0, 'blocked_model_posts': 0,
-        'blocked_websocket_connections': 0,
+        'blocked_model_read_requests': 0, 'blocked_websocket_connections': 0,
         'service_workers_blocked': True,
         'native_s03_verified': False, 'installed_model_identity_verified': False,
         'synthetic_fixture': fixture_html is not None,
@@ -237,9 +237,17 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                         async def guard(route):
                             request = route.request
                             u = urlsplit(request.url)
-                            if request.method not in ('GET', 'HEAD', 'OPTIONS'):
+                            model_path = (u.path == '/api/nox/chat' or
+                                          u.path.startswith('/api/nox/chat/'))
+                            # A GET/HEAD/OPTIONS route is not proof of a read-only
+                            # model endpoint. Never let an opt-in render probe
+                            # inadvertently start inference on a live server.
+                            if model_path and request.method in ('GET', 'HEAD', 'OPTIONS'):
+                                result['blocked_model_read_requests'] += 1
+                                await route.abort('blockedbyclient')
+                            elif request.method not in ('GET', 'HEAD', 'OPTIONS'):
                                 result['blocked_mutating_requests'] += 1
-                                if u.path.startswith('/api/nox/chat'):
+                                if model_path:
                                     result['blocked_model_posts'] += 1
                                 await route.abort('blockedbyclient')
                             else:
@@ -351,6 +359,7 @@ def main():
     args = parser.parse_args()
     result = measure(args.url, args.output, args.chromium, args.baseline, expected_selector=args.expected_selector)
     print(json.dumps({'runs': len(result['runs']), 'blocked_model_posts': result['blocked_model_posts'],
+        'blocked_model_read_requests': result['blocked_model_read_requests'],
         'blocked_mutating_requests': result['blocked_mutating_requests'],
         'blocked_websocket_connections': result['blocked_websocket_connections'],
         'native_s03_verified': False, 'report': str(pathlib.Path(args.output) / 'b3_frame_report.json')}))
