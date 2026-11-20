@@ -149,16 +149,26 @@ class FactReceiptTest(unittest.TestCase):
                 with mock.patch.dict(sys.modules, {"s03_memory": module}), mock.patch.object(W, "W", None):
                     frames = asyncio.run(get_frames())
                 terminal = [v for v in frames if v.get("done") is True]
+                self.assertEqual(frames[0]["request_receipt"]["status"], "RECEIVED")
+                self.assertFalse(frames[0]["request_receipt"]["native_admission_verified"])
                 if expected_ok:
                     self.assertEqual(len(writes), 1)
                     self.assertEqual(len(terminal), 1)
                     self.assertEqual(terminal[0]["memory_history"]["status"], "SAVED")
+                    self.assertFalse(terminal[0]["memory_history"]["s03_readback_verified"])
+                    self.assertEqual(terminal[0]["completion_receipt"]["status"], "GENERATED")
+                    self.assertTrue(terminal[0]["completion_receipt"]["upstream_done"])
+                    self.assertEqual(terminal[0]["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+                    self.assertFalse(terminal[0]["memory_write_receipt"]["s03_readback_verified"])
                 else:
                     self.assertEqual(writes, [])
                     self.assertEqual(terminal, [])
                     self.assertEqual(frames[-1]["status"], "HOLD")
                     self.assertEqual(frames[-1]["reason"], "MODEL_STREAM_INCOMPLETE")
                     self.assertFalse(frames[-1]["done"])
+                    self.assertEqual(frames[-1]["completion_receipt"]["status"], "HOLD")
+                    self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+                    self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
 
 
 if __name__ == "__main__":

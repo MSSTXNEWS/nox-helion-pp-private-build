@@ -475,7 +475,8 @@ def install(app, B):
             t0, n, shown = time.time(), 0, 0
             full = ""
             CANCEL.discard(rid); CANCEL.discard("*")
-            yield fr(message={"role": "assistant", "content": ""}, done=False, nox_status="слушаю тебя…")
+            yield fr(message={"role": "assistant", "content": ""}, done=False, nox_status="слушаю тебя…",
+                     request_receipt={"status": "RECEIVED", "request_id": rid, "native_admission_verified": False})
             async with (_lock_mini if mini else _lock):
                 yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "think", "text": "вопрос получен"})
                 mem = ""
@@ -583,7 +584,11 @@ def install(app, B):
                     yield json.dumps({"status": "HOLD", "reason": "MODEL_STREAM_INCOMPLETE",
                                       "error": "ответ модели не завершён — можно повторить запрос",
                                       "request_id": rid, "done": False,
-                                      "memory_history": {"status": "HOLD", "reason": "UPSTREAM_NOT_COMPLETE"}},
+                                      "memory_history": {"status": "HOLD", "reason": "UPSTREAM_NOT_COMPLETE", "s03_readback_verified": False},
+                                       "completion_receipt": {"status": "HOLD", "request_id": rid,
+                                                              "upstream_done": upstream_done},
+                                       "memory_write_receipt": {"status": "SKIPPED", "request_id": rid,
+                                                                "s03_readback_verified": False}},
                                      ensure_ascii=False) + "\n"
                     return
                 hist = {"status": "HOLD", "reason": "ответ пуст или остановлен"}
@@ -602,13 +607,17 @@ def install(app, B):
                     try:
                         import s03_memory as S
                         await asyncio.to_thread(S.persist_turn, ("[mini] " + user) if mini else user, full.strip())
-                        hist = {"status": "SAVED", "mini": mini}
+                        hist = {"status": "SAVED", "mini": mini, "s03_readback_verified": False}
                     except Exception as e:
                         hist = {"status": "HOLD", "reason": "S03: " + type(e).__name__}
                     if B.SOUL and not mini:
                         B.SOUL.log_turn(user, full.strip())
                 CANCEL.discard(rid); CANCEL.discard("*")
                 yield fr(message={"role": "assistant", "content": ""}, done=True, done_reason="stop" if not stopped else "stopped",
+                         completion_receipt={"status": "STOPPED" if stopped else "GENERATED",
+                                             "request_id": rid, "upstream_done": bool(upstream_done and not stopped)},
+                         memory_write_receipt={"status": "WRITE_RETURNED_UNVERIFIED" if hist["status"] == "SAVED" else hist["status"],
+                                               "request_id": rid, "s03_readback_verified": False},
                          digest=hashlib.sha256(full.encode()).hexdigest(), frames=n, memory_history=hist, nox_mode=mode, skeptic=sk, plan=plan or None,
                          total_duration=int((time.time() - t0) * 1e9), eval_count=n)
 
