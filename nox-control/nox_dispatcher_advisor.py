@@ -138,11 +138,17 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         add("TRAIN_RESUME_CANDIDATE", "review", "Queue verified resume through existing OneHost admission; never launch another scheduler.")
     if onehost.get("chat_waiting") is True and trainer.get("running") is True:
         add("CHAT_PRIORITY", "optimize", "Request cooperative trainer yield at next safe checkpoint; do not kill process.")
-    if trainer.get("running") is True and gpu.get("utilization_pct") is not None:
-        # Original TaskID 6A04: low compute utilization is NOT spare
-        # accelerator capacity without fresh VRAM, host I/O and chat latency.
-        util = gpu["utilization_pct"]
-        if type(util) in (int, float) and math.isfinite(util) and 0 <= util < 35:
+    if trainer.get("running") is True:
+        # Original TaskID 6A04: missing/malformed utilization is a HOLD,
+        # not silent evidence of capacity or an unhandled huge-int overflow.
+        util = gpu.get("utilization_pct")
+        if not _finite_nonnegative(util) or util > 100:
+            add("GPU_UTILIZATION_UNVERIFIED", "hold",
+                "Missing, invalid or out-of-range GPU utilization; do not "
+                "infer spare GPU capacity or admit additional work.")
+        elif util < 35:
+            # Low compute utilization alone is NOT spare accelerator capacity
+            # without fresh VRAM, host I/O and chat latency.
             host = snapshot.get("cpu_io")
             values = (
                 (gpu.get("vram_used_mib"), 0, 1048576),
