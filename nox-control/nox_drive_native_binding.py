@@ -253,7 +253,9 @@ class NativeDriveBridge:
 
 
 def bind_static_native_handlers(handlers, worker_bindings, *,
-                                owner_authorized, cancel_for_task):
+                                owner_authorized, cancel_for_task,
+                                config=drive.CONFIG, state=drive.STATE,
+                                manifest_root=MANIFEST_DIR, ssd=SSD_ROOT):
     """Add one handler to the EXISTING in-process registry at reviewed startup.
 
     Never executes an owner command, creates a queue or claims a live process.
@@ -266,7 +268,8 @@ def bind_static_native_handlers(handlers, worker_bindings, *,
     try:
         if owner_authorized() is not True:
             return {"state": "HOLD_STATIC_REGISTRY_OWNER", "native_execution_verified": False}
-        bridge = NativeDriveBridge(worker_bindings)
+        bridge = NativeDriveBridge(worker_bindings, config=config, state=state,
+                                   manifest_root=manifest_root, ssd=ssd)
     except Exception:
         return {"state": "HOLD_STATIC_REGISTRY_GATES", "native_execution_verified": False}
     if HANDLER_KIND in handlers:
