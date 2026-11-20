@@ -473,9 +473,27 @@ async def _run(native,url,payload,user_text):
         # Missing model remains a legacy server/pool selection, unchanged.
         explicit_model='model' in req
         selected=req['model'] if explicit_model else None
-        prepared=native['prepare_payload'](req,cache=True)
+        # Pool caching may not remove or rewrite any S03/persona/chat turn.
+        # Snapshot before calling the optimizer: it may mutate its input in
+        # place. Give it an isolated JSON copy, never the caller's live list.
+        try:
+            context_wire=json.dumps(req['messages'],sort_keys=True,
+                                    ensure_ascii=False,allow_nan=False,
+                                    separators=(',',':')).encode('utf-8','strict')
+        except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
+            raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
+        prepared=native['prepare_payload'](
+            dict(req,messages=json.loads(context_wire)),cache=True)
         if not isinstance(prepared,dict):
             raise StreamFailure('HOLD_MODEL_IDENTITY')
+        try:
+            after_wire=json.dumps(prepared['messages'],sort_keys=True,
+                                  ensure_ascii=False,allow_nan=False,
+                                  separators=(',',':')).encode('utf-8','strict')
+        except (KeyError,TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
+            raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
+        if after_wire!=context_wire:
+            raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY')
         if explicit_model and (type(selected) is not str or
                                not 0<len(selected.strip())<=200 or
                                type(prepared.get('model')) is not str or
