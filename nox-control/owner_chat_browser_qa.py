@@ -245,7 +245,8 @@ def readback_evidence(saved, native_equal, two_turn_mode):
     }
 
 
-def clean_two_turn_browser_runtime(page_errors, network, overflow_count=0):
+def clean_two_turn_browser_runtime(page_errors, network, overflow_count=0,
+                                   critical_requestfailed_count=0):
     """No browser-only RU/ES PASS with page JS errors or broken JS/CSS.
 
     The overall browser_run historically checked these conditions only after
@@ -253,10 +254,13 @@ def clean_two_turn_browser_runtime(page_errors, network, overflow_count=0):
     recheck captured observations before any partial browser PASS.
     Failed image assets are not critical JS/CSS failures. A bounded response
     log is insufficient when additional unobserved responses may hide failures.
+    Request failures without HTTP responses are also fatal for scripts/styles.
     """
     if (not isinstance(page_errors, list) or page_errors
             or not isinstance(network, list)
-            or type(overflow_count) is not int or overflow_count != 0):
+            or type(overflow_count) is not int or overflow_count != 0
+            or type(critical_requestfailed_count) is not int
+            or critical_requestfailed_count != 0):
         return False
     for item in network:
         if not isinstance(item, dict):
@@ -1073,6 +1077,7 @@ async def browser_run(report, directory, available):
     report.update(nonloopback_auth=True,resources=budget(),synthetic_prompt_sha256=digest(prompt.encode()))
     network=[];console=collections.Counter();page_errors=[];blocked=collections.Counter();did=None
     report['network_response_overflow_count']=0
+    report['critical_requestfailed_count']=0
     sys.path.insert(0,str(ROOT/'scripts'))
     import chat_proxy
     password=chat_proxy._read_chat_password()
@@ -1163,6 +1168,13 @@ async def browser_run(report, directory, available):
                 network.append({'path':safe_route(response.url),'status':response.status,
                                 'resource_type':response.request.resource_type})
 
+            def on_request_failed(request):
+                # Playwright emits this when no HTTP response exists; the
+                # 'response' observer alone cannot witness broken JS/CSS.
+                # Store only an aggregate count, never request URLs or bodies.
+                if request.resource_type in ('script', 'stylesheet'):
+                    report['critical_requestfailed_count']+=1
+
             def on_console(message):
                 if message.type in ('error','warning'):
                     console[message.type]+=1
@@ -1174,6 +1186,7 @@ async def browser_run(report, directory, available):
                     page_errors.append({'category':found[1] if found else 'JAVASCRIPT_EXCEPTION'})
 
             page.on('response',on_response)
+            page.on('requestfailed',on_request_failed)
             page.on('console',on_console)
             page.on('pageerror',on_page_error)
             page.on('dialog',lambda dialog:asyncio.create_task(dialog.dismiss()))
@@ -1434,7 +1447,8 @@ async def browser_run(report, directory, available):
                 require_screenshot_captures(report)
                 report['multiturn_second_screenshot_verified']=True
                 if not clean_two_turn_browser_runtime(
-                        page_errors, network, report['network_response_overflow_count']):
+                        page_errors, network, report['network_response_overflow_count'],
+                        report['critical_requestfailed_count']):
                     raise RuntimeError('HOLD_BROWSER_JAVASCRIPT_OR_RESOURCE_ERRORS')
                 report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:

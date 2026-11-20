@@ -1041,6 +1041,7 @@ async function check(chunks, status=200) {
         fence = "if not clean_two_turn_browser_runtime("
         self.assertIn(fence, caller)
         self.assertIn("page_errors, network, report[\'network_response_overflow_count\']", caller)
+        self.assertIn("report['critical_requestfailed_count']", caller)
         self.assertLess(caller.index(fence),
                         caller.index("report['multiturn_browser_acceptance_verified']=True"))
         self.assertLess(caller.index(fence),
@@ -1060,6 +1061,28 @@ async function check(chunks, status=200) {
         self.assertIn("report['network_response_overflow_count']+=1", caller)
         self.assertIn("page_errors, network, report['network_response_overflow_count']", caller)
         self.assertLess(caller.index("network_response_overflow_count']+=1"),
+                        caller.index("multiturn_browser_acceptance_verified"))
+
+    def test_ru_es_requestfailed_critical_resources_cannot_certify_browser_pass(self):
+        """Critical script/css transport errors can have no HTTP response event."""
+        healthy = [{'status': 200, 'resource_type': 'script'},
+                   {'status': 304, 'resource_type': 'stylesheet'},
+                   {'status': 404, 'resource_type': 'image'}]
+        self.assertTrue(clean_two_turn_browser_runtime([], healthy, 0, 0))
+        self.assertTrue(clean_two_turn_browser_runtime([], [], 0, 0))
+        for count in (1, 2, -1, None, True, False, "0", 0.0):
+            with self.subTest(critical_requestfailed_count=repr(count)):
+                self.assertFalse(clean_two_turn_browser_runtime([], healthy, 0, count))
+        caller = inspect.getsource(browser_run)
+        self.assertIn("page.on('requestfailed',on_request_failed)", caller)
+        self.assertIn("request.resource_type in ('script', 'stylesheet')", caller)
+        self.assertIn("report['critical_requestfailed_count']+=1", caller)
+        self.assertIn("report['critical_requestfailed_count']=0", caller)
+        self.assertLess(caller.index("page.on('requestfailed',on_request_failed)"),
+                        caller.index("multiturn_browser_acceptance_verified"))
+        self.assertLess(caller.index("report['critical_requestfailed_count']+=1"),
+                        caller.index("multiturn_browser_acceptance_verified"))
+        self.assertLess(caller.index("report['critical_requestfailed_count']):"),
                         caller.index("multiturn_browser_acceptance_verified"))
 
     def test_ru_es_four_turn_history_needs_independent_canonical_s03(self):
