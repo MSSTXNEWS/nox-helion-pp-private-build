@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
-REMOTE = "date -u; supervisorctl status nox-cmd-agent; echo ---out; supervisorctl tail nox-cmd-agent stdout | tail -25; echo ---err; supervisorctl tail nox-cmd-agent stderr | tail -25; echo ---state; cat /var/lib/nox/cmd_agent_state.json; echo; grep -c . /etc/nox/cmd_agent.env"
+REMOTE = "free -m; echo ---df; df -h / | tail -1; echo ---du; du -xh --max-depth=2 /root /workspace /var /opt 2>/dev/null | sort -rh | head -30; echo ---ps; ps -eo pid,rss,etime,args --sort=-rss | cut -c1-150 | head -15; echo ---cgroup; cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.current 2>&1 | head -2"
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
