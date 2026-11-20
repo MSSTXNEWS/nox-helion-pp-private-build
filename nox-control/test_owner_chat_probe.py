@@ -1,6 +1,7 @@
 """Check meaningful streaming timing and synthetic-only evidence boundaries."""
 import importlib.util
 import json
+import urllib.request
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -23,6 +24,27 @@ class SyntheticBoundedReader:
 
 
 class ProbeTests(unittest.TestCase):
+    def test_chat_post_redirect_is_never_replayed_to_a_different_url(self):
+        """A POST must stop at any redirect, before the final URL checks."""
+        handler = probe.RejectPostRedirect()
+        source_url = 'http://127.0.0.1:8080/api/nox/chat/stream'
+        foreign_url = 'http://other.example/collect'
+        for code in (301, 302, 303, 307, 308):
+            with self.subTest(code=code):
+                posted = urllib.request.Request(
+                    source_url, data=b'{"message":"synthetic"}', method='POST')
+                self.assertIsNone(handler.redirect_request(
+                    posted, None, code, 'redirect', {}, foreign_url))
+        get = urllib.request.Request(source_url, method='GET')
+        same_origin = 'http://127.0.0.1:8080/login'
+        redirected = handler.redirect_request(
+            get, None, 302, 'redirect', {}, same_origin)
+        self.assertEqual(redirected.get_method(), 'GET')
+        self.assertEqual(redirected.full_url, same_origin)
+        source = path.read_text()
+        self.assertIn('RejectPostRedirect())', source)
+        self.assertEqual(source.count('class RejectPostRedirect('), 1)
+
     def test_chat_stream_final_url_cannot_redirect_or_switch_model_route(self):
         class Response:
             status = 200
