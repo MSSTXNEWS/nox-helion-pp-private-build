@@ -291,6 +291,8 @@ class ProbeTests(unittest.TestCase):
             (b'{"configured":NaN}', 'HOLD_OWNER_JSON_NONFINITE'),
             (b'{"events":[{"delay":Infinity}]}', 'HOLD_OWNER_JSON_NONFINITE'),
             (b'{"value":-Infinity}', 'HOLD_OWNER_JSON_NONFINITE'),
+            (b'{"stats":{"overflow":1e999}}', 'HOLD_OWNER_JSON_NONFINITE'),
+            (b'{"stats":[-1e999]}', 'HOLD_OWNER_JSON_NONFINITE'),
         )
         for payload, hold in invalid:
             with self.subTest(payload=payload):
@@ -298,9 +300,9 @@ class ProbeTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, '^' + hold + '$'):
                     probe.obj(response)
                 self.assertTrue(response.closed)
-        good = Response(b'{"native_p02_bound":true,"workers":[{"id":"a"}],"delay":1.5}')
+        good = Response(b'{"native_p02_bound":true,"workers":[{"id":"a"}],"delay":1.5,"rate":2.5e2}')
         self.assertEqual(probe.obj(good),
-                         {'native_p02_bound': True, 'workers': [{'id': 'a'}], 'delay': 1.5})
+                         {'native_p02_bound': True, 'workers': [{'id': 'a'}], 'delay': 1.5, 'rate': 250.0})
         self.assertTrue(good.closed)
 
     def test_placeholders_and_invisible_unicode_do_not_count_as_visible_output(self):
@@ -560,6 +562,8 @@ class ProbeTests(unittest.TestCase):
             [valid_delta, ('{"type":"done","dialog_id":"' + did +
                            '","saved":true,"s03_integrated":true,"meta":[Infinity]}').encode()],
             [b'{"type":"status","metadata":{"bad":-Infinity}}', valid_delta, valid_done],
+            [b'{"type":"status","metadata":{"bad":1e999}}', valid_delta, valid_done],
+            [b'{"type":"status","metadata":[-1e999]}', valid_delta, valid_done],
         ]
         for frames in invalid_streams:
             response = Response(frames)
@@ -567,7 +571,7 @@ class ProbeTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_NONFINITE_JSON$'):
                     probe.consume_turn(object(), 'synthetic', did)
             self.assertTrue(response.closed)
-        valid = Response([b'{"type":"status","meta":{"ratio":3.5}}', valid_delta, valid_done])
+        valid = Response([b'{"type":"status","meta":{"ratio":3.5,"finite":2.5e2}}', valid_delta, valid_done])
         with patch.object(probe, 'request', return_value=valid):
             self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
         self.assertTrue(valid.closed)
