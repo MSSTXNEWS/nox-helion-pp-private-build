@@ -891,6 +891,9 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             {'nested':{'value':float('nan')}},
             {'nested':[float('inf')]},
             {'nested':{'value':'\ud800'}},
+            {'nested':{7:'coerced integer key'}},
+            {'nested':[{'items':('tuple silently becomes list',)}]},
+            {'nested':{None:'coerced null key'}},
             '{"nested":{"value":"\\udfff"}}',
             '{"nested":{"value":1e999}}',
         )
