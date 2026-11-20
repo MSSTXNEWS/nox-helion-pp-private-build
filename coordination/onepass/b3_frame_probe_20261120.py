@@ -60,6 +60,30 @@ def require_landing_url(requested, visited):
     return visited
 
 
+def renderer_resource_identity(inline, network):
+    """Hash executed/loaded JS+CSS without persisting URLs, source or credentials.
+
+    Network response bytes are taken from passive Playwright response events;
+    this is a browser render provenance fingerprint, NOT model/tokenizer proof.
+    """
+    entries = []
+    for kind, source in inline:
+        if kind not in ('script', 'style') or not isinstance(source, str):
+            raise ValueError('HOLD_LIVE_RENDER_RESOURCE_INVALID')
+        if source:
+            entries.append(('inline', kind, hashlib.sha256(source.encode('utf8')).hexdigest()))
+    for kind, url, body in network:
+        if kind not in ('script', 'stylesheet') or not isinstance(url, str) or not isinstance(body, bytes):
+            raise ValueError('HOLD_LIVE_RENDER_RESOURCE_INVALID')
+        entries.append(('network', kind, hashlib.sha256(url.encode('utf8')).hexdigest(),
+                        hashlib.sha256(body).hexdigest()))
+    if not entries:
+        raise ValueError('HOLD_LIVE_RENDER_RESOURCES_MISSING')
+    serialized = json.dumps(sorted(entries), separators=(',', ':'), ensure_ascii=True)
+    return {'sha256': hashlib.sha256(serialized.encode('ascii')).hexdigest(),
+            'count': len(entries)}
+
+
 def compare_baseline(current, prior):
     """Fail closed if an old screenshot/frame report is not comparable.
 
@@ -95,6 +119,20 @@ def compare_baseline(current, prior):
     old, new = index(prior.get('runs')), index(current.get('runs'))
     deltas = {}
     for key in expected:
+        if not current.get('synthetic_fixture'):
+            previous_resource = old[key].get('renderer_resource_sha256')
+            current_resource = new[key].get('renderer_resource_sha256')
+            previous_count = old[key].get('renderer_resource_count')
+            current_count = new[key].get('renderer_resource_count')
+            if (not isinstance(previous_resource, str) or len(previous_resource) != 64
+                    or not all(ch in '0123456789abcdef' for ch in previous_resource)
+                    or not isinstance(current_resource, str) or len(current_resource) != 64
+                    or not all(ch in '0123456789abcdef' for ch in current_resource)
+                    or type(previous_count) is not int or previous_count < 1
+                    or type(current_count) is not int or current_count < 1):
+                raise ValueError('HOLD_BASELINE_RENDER_IDENTITY_MISSING')
+            if previous_resource != current_resource or previous_count != current_count:
+                raise ValueError('HOLD_BASELINE_RENDER_IDENTITY_DRIFT')
         previous = old[key].get('frame_time')
         measured = new[key].get('frame_time')
         try:
@@ -173,6 +211,20 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                         await context.route_web_socket('**/*', guard_socket)
                         page = await context.new_page()
                         page.set_default_timeout(12000)
+                        network_assets, response_tasks = [], []
+                        async def capture_resource(response):
+                            if response.status >= 400:
+                                raise ValueError('HOLD_LIVE_RENDER_RESOURCE_HTTP')
+                            raw = await response.body()
+                            network_assets.append((response.request.resource_type,
+                                                   response.url, raw))
+
+                        def on_response(response):
+                            if response.request.resource_type in ('script', 'stylesheet'):
+                                response_tasks.append(asyncio.create_task(capture_resource(response)))
+
+                        if fixture_html is None:
+                            page.on('response', on_response)
                         if fixture_html is not None:
                             await page.set_content(fixture_html, wait_until='domcontentloaded')
                         else:
@@ -193,11 +245,22 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                         if fixture_html is None:
                             require_landing_url(url, page.url)
                             result['landing_url_verified'] = True
+                        renderer_proof = None
+                        if fixture_html is None:
+                            if response_tasks:
+                                await asyncio.gather(*response_tasks)
+                            inline_assets = await page.evaluate("""() =>
+                                [...document.querySelectorAll('script:not([src]),style')]
+                                    .map(e => [e.tagName.toLowerCase(), e.textContent || ''])
+                            """)
+                            renderer_proof = renderer_resource_identity(inline_assets, network_assets)
                         proof = hashlib.sha256(path.read_bytes()).hexdigest()
                         entry = {'width': width, 'height': height, 'mode': mode,
                             'landing_url': None if fixture_html is not None else page.url,
                             'screenshot': filename, 'screenshot_sha256': proof,
                             'screenshot_bytes': path.stat().st_size,
+                            'renderer_resource_sha256': renderer_proof['sha256'] if renderer_proof else None,
+                            'renderer_resource_count': renderer_proof['count'] if renderer_proof else 0,
                             'frame_time': summarize(frame_samples)}
                         result['runs'].append(entry)
                     finally:
