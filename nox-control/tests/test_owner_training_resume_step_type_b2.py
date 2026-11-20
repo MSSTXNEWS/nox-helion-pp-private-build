@@ -1459,6 +1459,15 @@ class NativeThreeWorkerCap(unittest.TestCase):
             write_workers(workers)
             with self.assertRaisesRegex(RuntimeError, "HOLD_NATIVE_WORKER_CAP_READBACK"):
                 check(helper, fresh_after=__import__("time").time() + 120)
+            # RUNNING is not enough: only a strictly positive integer PID
+            # can attest an actual dispatcher process in native admission.
+            for invalid_pid in (None, False, True, 0, -3, "1234", 1.5, [], {}):
+                with self.subTest(dispatcher_pid=invalid_pid):
+                    active = {"state": "RUNNING", "pid": invalid_pid}
+                    with self.assertRaisesRegex(RuntimeError, "HOLD_DISPATCHER_IDENTITY"):
+                        check(helper)
+            active = {"state": "RUNNING", "pid": 1234}
+            self.assertEqual(check(helper)["dispatcher_pid"], 1234)
             active = {"state": "STOPPED", "pid": None}
             with self.assertRaisesRegex(RuntimeError, "HOLD_DISPATCHER_NOT_RUNNING"):
                 check(helper)
