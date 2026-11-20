@@ -187,12 +187,43 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         add("NO_UNVERIFIED_TUNING", "observe", "No changes recommended without measured before/after and readback.")
     return issues
 
+def _unique_json_pairs(pairs):
+    """Reject duplicate keys at every depth: later STOP/lease values cannot shadow earlier ones."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate owner telemetry JSON key")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value):
+    """JSON NaN/Infinity are not valid authenticated telemetry."""
+    raise ValueError("nonfinite owner telemetry JSON constant")
+
+
+def _read_snapshot_json(path):
+    try:
+        data = json.loads(
+            Path(path).read_text(encoding="utf8"),
+            object_pairs_hook=_unique_json_pairs,
+            parse_constant=_reject_json_constant,
+        )
+    except (OSError, UnicodeError, ValueError):
+        # Do not create a seemingly trusted advice receipt for ambiguous
+        # STOP, owner lease/CAS or corrupted telemetry.
+        raise SystemExit("HOLD_OWNER_TELEMETRY_JSON_INVALID") from None
+    if not isinstance(data, dict):
+        raise SystemExit("HOLD_OWNER_TELEMETRY_JSON_INVALID")
+    return data
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--snapshot", required=True)
     ap.add_argument("--output", required=True)
     args = ap.parse_args()
-    data = json.loads(Path(args.snapshot).read_text(encoding="utf8"))
+    data = _read_snapshot_json(args.snapshot)
     report = {"schema_version":1,"observed_at":dt.datetime.now(dt.timezone.utc).isoformat(),
               "mode":"read_only", "advice": assess(data)}
     path = Path(args.output)
