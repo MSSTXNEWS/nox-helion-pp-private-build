@@ -92,6 +92,49 @@ def main():
         check("no third turn was inserted",page.evaluate("()=>children().length===2"))
         check("no other browser requests or ACKs are made by adapter",page.evaluate(
             "()=>typeof adapter.post==='undefined'&&typeof adapter.ack==='undefined'"))
+        check("concurrent async UI deltas preserve first-in-first-out text",page.evaluate("""async()=>{
+          const container=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'turn-fifo'};
+          const ctrl=new AbortController();
+          let release,entered=0;
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container,beforeCommit:async()=>{
+            entered++;
+            if(entered===1) await new Promise(resolve=>release=resolve);
+          }});
+          const first=ui.onDelta(s,'A',ctrl.signal);
+          const second=ui.onDelta(s,'B',ctrl.signal);
+          for(let i=0;i<30&&!release;i++) await new Promise(r=>setTimeout(r,0));
+          if(!release||entered!==1) return false;
+          release();
+          const results=await Promise.all([first,second]);
+          const nodes=Array.from(container.children).filter(
+            e=>e.dataset.noxB1Exchange===s.exchange_id);
+          return results.every(Boolean)&&entered===2&&nodes.length===1&&
+            nodes[0].textContent==='AB';
+        }"""))
+        check("STOP unblocks hung first precommit and drops queued deltas",page.evaluate("""async()=>{
+          const container=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'turn-stop-queued'};
+          const ctrl=new AbortController();
+          let entered=0;
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container,beforeCommit:async()=>{
+            entered++;
+            await new Promise(()=>{});
+          }});
+          const first=ui.onDelta(s,'A',ctrl.signal);
+          const second=ui.onDelta(s,'B',ctrl.signal);
+          for(let i=0;i<30&&entered===0;i++) await new Promise(r=>setTimeout(r,0));
+          if(entered!==1) return false;
+          ctrl.abort();
+          const results=await Promise.race([
+            Promise.all([first,second]),
+            new Promise(r=>setTimeout(()=>r('HUNG'),300))
+          ]);
+          return Array.isArray(results)&&results.length===2&&
+            results.every(x=>x===false)&&entered===1&&
+            !Array.from(container.children).some(
+              e=>e.dataset.noxB1Exchange===s.exchange_id);
+        }"""))
         browser.close()
     print(f"B1 source-only real Chromium: {len(checks)}/{len(checks)} PASS")
     for name, _ in checks:
