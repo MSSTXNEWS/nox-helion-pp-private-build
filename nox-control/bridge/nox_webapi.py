@@ -476,6 +476,7 @@ def install(app, B):
                         "chat_template_kwargs": {"enable_thinking": False}}
                 err = None
                 upstream_done = False
+                upstream_failure = None
                 try:
                     if True:
                         async with B.hc().stream("POST", B.MODEL, json=body) as r:
@@ -490,10 +491,33 @@ def install(app, B):
                                 if d == "[DONE]":
                                     upstream_done = True
                                     break
+                                # A model can send [DONE] after a truncated finish or
+                                # an explicit SSE error. Neither is a completed answer.
                                 try:
-                                    t = json.loads(d)["choices"][0].get("delta", {}).get("content") or ""
-                                except Exception:
-                                    t = ""
+                                    event = json.loads(d)
+                                except (TypeError, ValueError):
+                                    upstream_failure = "INVALID_SSE_JSON"
+                                    break
+                                if not isinstance(event, dict) or "error" in event:
+                                    upstream_failure = "UPSTREAM_ERROR_EVENT"
+                                    break
+                                choices = event.get("choices")
+                                if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+                                    upstream_failure = "UPSTREAM_CHOICES_INVALID"
+                                    break
+                                choice = choices[0]
+                                finish_reason = choice.get("finish_reason")
+                                if finish_reason is not None and finish_reason != "stop":
+                                    upstream_failure = "UPSTREAM_NONSTOP_FINISH"
+                                    break
+                                delta = choice.get("delta") or {}
+                                if not isinstance(delta, dict):
+                                    upstream_failure = "UPSTREAM_DELTA_INVALID"
+                                    break
+                                t = delta.get("content") or ""
+                                if not isinstance(t, str):
+                                    upstream_failure = "UPSTREAM_CONTENT_INVALID"
+                                    break
                                 if t:
                                     full += t
                                     n += 1
@@ -510,8 +534,8 @@ def install(app, B):
                     B.LAST_CHAT["t"] = time.time()
                 stopped = rid in CANCEL or "*" in CANCEL
                 # Incomplete HTTP streams must never yield successful DONE or S03 writes.
-                if not stopped and (err or not upstream_done or not full.strip()):
-                    B.log("web_stream_incomplete " + (err or "MISSING_DONE_OR_EMPTY"))
+                if not stopped and (err or upstream_failure or not upstream_done or not full.strip()):
+                    B.log("web_stream_incomplete " + (err or upstream_failure or "MISSING_DONE_OR_EMPTY"))
                     CANCEL.discard(rid); CANCEL.discard("*")
                     yield json.dumps({"status": "HOLD", "reason": "MODEL_STREAM_INCOMPLETE",
                                       "error": "ответ модели не завершён — можно повторить запрос",
