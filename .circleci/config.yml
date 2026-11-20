@@ -1,0 +1,59 @@
+# NOX HELION — actual offline source verification, not a status-only job.
+# This repository's GitHub Actions continue to provide per-component CI.
+# CircleCI must never be used to bypass owner, STOP, lease, CAS, or live S03 acceptance.
+version: 2.1
+
+jobs:
+  owner-command-safety:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Compile immutable owner-command guard and its regressions
+          command: |
+            set -eu
+            python -B -m py_compile \
+              nox-control/owner_native_inspect_comment_guard.py \
+              nox-control/test_owner_native_inspect_comment_guard.py
+      - run:
+          name: Verify authorized actions and reject forged owner requests
+          command: |
+            set -eu
+            python -B -m unittest discover \
+              -s nox-control \
+              -p test_owner_native_inspect_comment_guard.py \
+              -v
+
+      - run:
+          name: Verify 6A05 owner telemetry and existing dispatcher admission guards
+          command: |
+            set -eu
+            python -B -m unittest discover \
+              -s nox-control \
+              -p 'test_nox_dispatcher_advisor_*.py' \
+              -v
+
+      - run:
+          name: Verify 3B01 Hunter malformed-source fail-closed contract
+          command: |
+            set -eu
+            PYTHONPATH=nox-control python -B -m unittest discover \
+              -s nox-control \
+              -p test_nox_hunter.py \
+              -v
+
+      - run:
+          name: Verify 2A05 identical-scenario latency baseline
+          command: |
+            set -eu
+            PYTHONPATH=nox-control python -B -m unittest discover \
+              -s nox-control \
+              -p test_owner_latency_2a05.py \
+              -v
+
+workflows:
+  source-verification:
+    jobs:
+      - owner-command-safety
