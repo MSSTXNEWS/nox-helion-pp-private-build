@@ -83,7 +83,7 @@ class SafeCgroupReclaimTests(unittest.TestCase):
 
     def test_repair_transport_is_narrow_and_not_persistent_default(self):
         self.assertEqual(operator.FILES['repair'],
-                         'nox-control/owner_safe_cgroup_reclaim_oneshot.py')
+                         'nox-control/owner_cold_file_cache_oneshot.py')
         self.assertEqual(operator.repair_bundle_paths('repair',
                          operator.FILES['repair'],('nox-control/unrelated_file.py',)),())
         self.assertNotEqual(operator.FILES['browser_qa'],operator.FILES['repair'])
