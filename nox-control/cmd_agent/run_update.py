@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
-REMOTE = "sed -n 1600,1716p /root/nox/scripts/chat_proxy.py | iconv -f utf-8 -t ascii//TRANSLIT -c | cut -c1-130"
+REMOTE = "grep -cE 'agent_loop_error|t878u_guard_error' /root/nox/logs/proxy.log; grep -E 'agent_loop_error|t878u_guard_error|llm_ms' /root/nox/logs/proxy.log | tail -6 | iconv -f utf-8 -t ascii//TRANSLIT -c | cut -c1-200; echo ---last; tail -4 /root/nox/logs/proxy.log | iconv -f utf-8 -t ascii//TRANSLIT -c | cut -c1-200"
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
