@@ -44,6 +44,26 @@ class FakeChild:
         self.returncode=-9
 
 
+
+class FakeUploadChild(FakeChild):
+    """Pipe-backed rclone stub for nonblocking stdin tests."""
+    def __init__(self):
+        super().__init__()
+        self._reader, writer = os.pipe()
+        self.stdin = os.fdopen(writer, "wb", buffering=0)
+        self.returncode = None
+
+    def poll(self):
+        if self.returncode is None and self.stdin.closed:
+            self.returncode = 0
+        return self.returncode
+
+    def close(self):
+        if not self.stdin.closed:
+            self.stdin.close()
+        os.close(self._reader)
+
+
 class DriveFirstTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory()
@@ -290,7 +310,8 @@ class DriveFirstTests(unittest.TestCase):
     def test_stream_direct_http_into_rclone_with_exact_size_no_spool(self):
         self.configure()
         target="noxchunks:STAGING/task-001-test.gguf"
-        child=FakeChild()
+        child=FakeUploadChild()
+        self.addCleanup(child.close)
         class Opener:
             def open(self,request,timeout):
                 return Response(self.data,self.url,len(self.data))
@@ -307,7 +328,8 @@ class DriveFirstTests(unittest.TestCase):
         self.assertNotIn("copyurl",created[0])
 
     def test_stream_bad_sha_never_returns_success(self):
-        child=FakeChild()
+        child=FakeUploadChild()
+        self.addCleanup(child.close)
         class Opener:
             def open(self,request,timeout):
                 return Response(b"BAD",m.SOURCE_HOSTS.__iter__().__next__() and "https://huggingface.co/test",3)
@@ -317,6 +339,52 @@ class DriveFirstTests(unittest.TestCase):
              patch.object(m,"cgroup_admit"),patch.object(m,"stop_clear"):
             with self.assertRaisesRegex(m.Hold,"SOURCE_SHA"):
                 m.stream_https(wrong,"noxchunks:STAGING/test.gguf",self.conf)
+
+    def test_stream_upload_owner_stop_interrupts_stalled_rclone_pipe(self):
+        # Real fd; a silent child is kept alive, but the writer gets no
+        # readiness notifications and must observe STOP without waiting forever.
+        child=FakeUploadChild()
+        self.addCleanup(child.close)
+        class Opener:
+            def open(self,request,timeout):
+                return Response(b"NOX upload", "https://huggingface.co/test",10)
+        manifest=dict(self.asset,size=10,sha256=hashlib.sha256(b"NOX upload").hexdigest())
+        calls=[0]
+        def owner_stop():
+            calls[0] += 1
+            if calls[0] >= 4:
+                raise m.Hold("HOLD_DRIVE_FIRST_STOP")
+        with patch.object(m.urllib.request,"build_opener",return_value=Opener()),\
+             patch.object(m.subprocess,"Popen",return_value=child),\
+             patch.object(m.select,"select",return_value=([],[],[])),\
+             patch.object(m,"cgroup_admit"),patch.object(m,"stop_clear",side_effect=owner_stop):
+            with self.assertRaisesRegex(m.Hold,"STOP"):
+                m.stream_https(manifest,"noxchunks:STAGING/test.gguf",self.conf)
+        self.assertEqual(child.returncode,-15)
+        self.assertGreaterEqual(calls[0],4)
+
+    def test_stream_upload_partial_write_is_retried_without_duplicate_bytes(self):
+        child=FakeUploadChild()
+        self.addCleanup(child.close)
+        class Opener:
+            def open(self,request,timeout):
+                return Response(b"NOX upload", "https://huggingface.co/test",10)
+        manifest=dict(self.asset,size=10,sha256=hashlib.sha256(b"NOX upload").hexdigest())
+        real_write=os.write
+        write_lengths=[]
+        def split_write(fd,data):
+            amount=min(3,len(data))
+            n=real_write(fd,data[:amount])
+            write_lengths.append(n)
+            return n
+        with patch.object(m.urllib.request,"build_opener",return_value=Opener()),\
+             patch.object(m.subprocess,"Popen",return_value=child),\
+             patch.object(m.os,"write",side_effect=split_write),\
+             patch.object(m,"stop_clear"),patch.object(m,"cgroup_admit"):
+            m.stream_https(manifest,"noxchunks:STAGING/test.gguf",self.conf)
+        self.assertEqual(sum(write_lengths),10)
+        self.assertGreater(len(write_lengths),1)
+        self.assertEqual(os.read(child._reader,20),b"NOX upload")
 
     def test_protected_and_symlink_source_rejected(self):
         root=self.root/"models";root.mkdir()

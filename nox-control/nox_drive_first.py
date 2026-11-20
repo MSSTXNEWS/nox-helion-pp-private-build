@@ -304,6 +304,44 @@ def verify_remote(remote, *, config, size, digest):
             proc.stdout.close()
 
 
+
+def _write_upload_chunk(child, data):
+    """Bound rclone's upload pipe: a wedged child must not mask OWNER STOP."""
+    view = memoryview(data)
+    written = 0
+    last_progress = time.monotonic()
+    while written < len(view):
+        stop_clear()
+        cgroup_admit()
+        require(child.poll() is None, "UPLOAD_DISCONNECTED")
+        require(time.monotonic() - last_progress <= 180, "UPLOAD_STALLED")
+        try:
+            _, writable, _ = select.select([], [child.stdin], [], 1.0)
+        except (OSError, ValueError):
+            raise Hold("HOLD_DRIVE_FIRST_UPLOAD_IO") from None
+        if not writable:
+            continue
+        try:
+            count = os.write(child.stdin.fileno(), view[written:])
+        except BlockingIOError:
+            continue
+        except (OSError, BrokenPipeError):
+            raise Hold("HOLD_DRIVE_FIRST_UPLOAD_DISCONNECTED") from None
+        require(count > 0, "UPLOAD_DISCONNECTED")
+        written += count
+        last_progress = time.monotonic()
+
+
+def _finish_upload(child):
+    """Wait for rclone with one-second OWNER STOP checks, not blocking wait()."""
+    deadline = time.monotonic() + 120
+    while child.poll() is None:
+        stop_clear()
+        require(time.monotonic() < deadline, "STREAM_UPLOAD_TIMEOUT")
+        time.sleep(1)
+    require(child.returncode == 0, "STREAM_UPLOAD")
+
+
 def stream_https(m, target, config):
     """Direct HTTP response -> rclone rcat --size; no complete local spool."""
     opener = urllib.request.build_opener(VerifiedRedirect())
@@ -324,6 +362,10 @@ def stream_https(m, target, config):
                  "--retries", "2", "--low-level-retries", "2"],
                 stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL)
+            try:
+                os.set_blocking(child.stdin.fileno(), False)
+            except (OSError, ValueError):
+                raise Hold("HOLD_DRIVE_FIRST_UPLOAD_IO") from None
             while True:
                 stop_clear()
                 cgroup_admit()
@@ -333,12 +375,9 @@ def stream_https(m, target, config):
                 written += len(data)
                 require(written <= m["size"], "HTTPS_OVERFLOW")
                 h.update(data)
-                try:
-                    child.stdin.write(data)
-                except (BrokenPipeError, OSError):
-                    raise Hold("HOLD_DRIVE_FIRST_UPLOAD_DISCONNECTED") from None
+                _write_upload_chunk(child, data)
             child.stdin.close()
-            require(child.wait(timeout=120) == 0, "STREAM_UPLOAD")
+            _finish_upload(child)
         require(written == m["size"] and h.hexdigest() == m["sha256"],
                 "SOURCE_SHA")
     except (OSError, urllib.error.URLError):
