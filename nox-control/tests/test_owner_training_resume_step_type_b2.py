@@ -20,7 +20,8 @@ from unittest import mock
 
 SOURCE = Path(__file__).resolve().parents[1] / "owner_training_resume.py"
 FN_NAMES = {"read_json", "file_sha", "verify_paused_result", "resource_admission",
-            "continuation_terminal_state", "read_installed_train_cpu_cap"}
+            "continuation_terminal_state", "read_installed_train_cpu_cap",
+            "owned_flag"}
 
 
 def load_pinned_verifier(output):
@@ -627,6 +628,63 @@ class CheckpointStepProvenance(unittest.TestCase):
                     read_json(state, limit=64, expected_sha256=expected_sha)
             self.assertEqual(state.read_bytes(), changed)
             self.assertEqual((root / "old-state.json").read_bytes(), original)
+
+
+    def test_owned_training_hold_flag_is_bound_to_stable_regular_descriptor(self):
+        # The old is_symlink/is_file/stat then read_text sequence allowed an
+        # inode/symlink swap between policy precheck and owner flag read.
+        # No native flag is touched: this is a temporary isolated fixture.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            flag = root / "TRAIN_HOLD.flag"
+            prefix = "OWNER_REQUESTED_TRAINING_HALT request=3 source=abc"
+            flag.write_text(prefix + "\n", encoding="utf-8")
+            verify = load_pinned_verifier(root)["owned_flag"]
+            self.assertIsNone(verify(flag, prefix))
+
+            alias = root / "owner-alias.flag"
+            alias.symlink_to(flag)
+            with self.assertRaisesRegex(RuntimeError, "HOLD_CURRENT_OWNER_FLAG_CHANGED"):
+                verify(alias, prefix)
+            fifo = root / "owner-fifo.flag"
+            os.mkfifo(fifo)
+            with self.assertRaisesRegex(RuntimeError, "HOLD_CURRENT_OWNER_FLAG_CHANGED"):
+                verify(fifo, prefix)
+
+            replacement = root / "replacement.flag"
+            replacement.write_text(prefix + "\n", encoding="utf-8")
+            actual_fdopen = os.fdopen
+
+            class RebindOnOwnerFlagRead:
+                def __init__(self, stream):
+                    self.stream = stream
+                    self.rebound = False
+
+                def __enter__(self):
+                    self.stream.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.stream.__exit__(*args)
+
+                def fileno(self):
+                    return self.stream.fileno()
+
+                def read(self, length):
+                    if not self.rebound:
+                        self.rebound = True
+                        os.replace(flag, root / "old-owner.flag")
+                        flag.symlink_to(replacement)
+                    return self.stream.read(length)
+
+            with mock.patch("os.fdopen", side_effect=lambda fd, mode:
+                            RebindOnOwnerFlagRead(actual_fdopen(fd, mode))):
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_CURRENT_OWNER_FLAG_CHANGED"):
+                    verify(flag, prefix)
+            self.assertTrue(flag.is_symlink())
+            self.assertEqual((root / "old-owner.flag").read_text(),
+                             prefix + "\n")
 
 
     def test_train_cpu_env_rejects_extra_directives_after_valid_cap(self):
