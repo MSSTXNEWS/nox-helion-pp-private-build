@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
-REMOTE = "echo aW1wb3J0IGpzb24sdXJsbGliLnJlcXVlc3QKZD1qc29uLmR1bXBzKHsibWVzc2FnZXMiOlt7InJvbGUiOiJ1c2VyIiwiY29udGVudCI6ItCh0LrQsNC20Lgg0L7QtNC90LjQvCDQv9GA0LXQtNC70L7QttC10L3QuNC10LwsINC60YLQviDRgtGLLiJ9XSwibWF4X3Rva2VucyI6NjB9KS5lbmNvZGUoKQpyPXVybGxpYi5yZXF1ZXN0LlJlcXVlc3QoImh0dHA6Ly8xMjcuMC4wLjE6ODA5OC92MS9jaGF0L2NvbXBsZXRpb25zIixkLHsiQ29udGVudC1UeXBlIjoiYXBwbGljYXRpb24vanNvbiJ9KQp0cnk6CiAgICBwcmludCh1cmxsaWIucmVxdWVzdC51cmxvcGVuKHIsdGltZW91dD05MCkucmVhZCgpLmRlY29kZSgpWzo3MDBdKQpleGNlcHQgRXhjZXB0aW9uIGFzIGU6IHByaW50KCJFUlIiLGUpCg== | base64 -d | python3"
+REMOTE = "sed -n 233,255p /root/nox/scripts/chat_proxy.py | cut -c1-120; echo ---routes; grep -nE '@app\.(get|post)' /root/nox/scripts/chat_proxy.py | cut -c1-100 | head -40; echo ---authfn; sed -n 321,338p /root/nox/scripts/chat_proxy.py | cut -c1-120"
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
