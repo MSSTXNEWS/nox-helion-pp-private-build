@@ -1,0 +1,75 @@
+/* NOX V16 | P02 | FIVE WOW DETAILS | candidate for #1/#6 only.
+   Existing trusted chat only. data-nox-wow-five=on; no downloads or new handlers. */
+.nox-p02-chat[data-nox-wow-five="on"]{
+ --nw-line:rgba(139,213,225,.25);--nw-ink:#e8f7fa;--nw-hi:#8cf1d7;--nw-amber:#ffcf9f
+}
+/* 1 REAL STREAM CIRCUIT - movement is NOT a progress percentage */
+.nox-p02-chat[data-nox-wow-five="on"] .nw-reply{
+ position:relative;border:1px solid var(--nw-line);border-radius:16px;
+ background:rgba(15,28,43,.75);isolation:isolate
+}
+.nox-p02-chat[data-nox-wow-five="on"] .nw-reply:before{
+ content:"";position:absolute;inset:-1px auto auto 12%;height:2px;width:25%;
+ border-radius:3px;background:linear-gradient(90deg,transparent,var(--nw-hi),transparent);
+ opacity:0;pointer-events:none
+}
+.nox-p02-chat[data-nox-wow-five="on"][data-nox-state="streaming"] .nw-reply:before{
+ opacity:1;animation:nw-trace 2.6s ease-in-out infinite alternate
+}
+@keyframes nw-trace{from{transform:translateX(-35%)}to{transform:translateX(225%)}}
+/* 2 MODEL CORE - verified only after real /api/tags lookup */
+.nox-p02-chat[data-nox-wow-five="on"] .nw-model{
+ display:inline-flex;align-items:center;gap:.5em;max-width:100%;
+ padding:.35em .72em;border:1px solid var(--nw-line);border-radius:999px;
+ color:var(--nw-ink);background:rgba(10,24,37,.9);overflow-wrap:anywhere
+}
+.nox-p02-chat[data-nox-wow-five="on"] .nw-model:before{
+ content:"";width:.65em;height:.65em;flex:0 0 .65em;border:1px solid currentColor;
+ border-radius:50%;opacity:.5
+}
+.nox-p02-chat[data-nox-wow-five="on"] .nw-model[data-model-status="verified"]:before{
+ color:var(--nw-hi);opacity:1;box-shadow:0 0 0 3px rgba(140,241,215,.12)
+}
+/* 3 EVIDENCE CONSTELLATION - only real links from RAG */
+.nox-p02-chat[data-nox-wow-five="on"] .nw-evidence{
+ display:flex;flex-wrap:wrap;align-items:center;gap:.4rem
+}
+.nox-p02-chat[data-nox-wow-five="on"] .nw-evidence a{
+ display:inline-flex;max-width:100%;padding:.37em .72em;border:1px solid var(--nw-line);
+ border-radius:9px;background:rgba(70,142,162,.11);color:var(--nw-ink);
+ text-decoration:underline;text-underline-offset:.18em;overflow-wrap:anywhere
+}
+/* 4 VAULT RECEIPT - stored only after committed SHA+stored-ID */
+.nox-p02-chat[data-nox-wow-five="on"] .nw-file{
+ display:inline-flex;gap:.5em;align-items:center;max-width:100%;padding:.4em .7em;
+ border:1px solid var(--nw-line);border-radius:9px;color:var(--nw-ink);
+ background:rgba(36,68,85,.32);overflow-wrap:anywhere
+}
+.nox-p02-chat[data-nox-wow-five="on"] .nw-file:before{
+ content:"";display:block;width:.48em;height:.48em;flex:0 0 .48em;
+ border-radius:50%;background:currentColor;opacity:.4
+}
+.nox-p02-chat[data-nox-wow-five="on"] .nw-file[data-state="stored"]{color:var(--nw-hi)}
+.nox-p02-chat[data-nox-wow-five="on"] .nw-file[data-state="error"]{color:var(--nw-amber)}
+/* 5 COMMAND DOCK - existing functional buttons, no new actions */
+.nox-p02-chat[data-nox-wow-five="on"] .nw-dock{
+ display:flex;flex-wrap:wrap;gap:.4rem;padding:.4rem;border:1px solid var(--nw-line);
+ border-radius:12px;background:rgba(8,18,31,.8)
+}
+.nox-p02-chat[data-nox-wow-five="on"] .nw-dock button{
+ min-height:36px;padding:.4em .75em;border:1px solid transparent;border-radius:8px;
+ font:inherit;color:var(--nw-ink);background:rgba(80,136,155,.18);cursor:pointer
+}
+.nox-p02-chat[data-nox-wow-five="on"] .nw-dock button:disabled{opacity:.4;cursor:default}
+.nox-p02-chat[data-nox-wow-five="on"][data-nox-state="streaming"]
+ .nw-dock [data-action="stop"]:not(:disabled){border-color:var(--nw-amber)}
+.nox-p02-chat[data-nox-wow-five="on"] .nw-evidence a:focus-visible,
+.nox-p02-chat[data-nox-wow-five="on"] .nw-dock button:focus-visible{
+ outline:2px solid var(--nw-hi);outline-offset:2px
+}
+@media(prefers-reduced-motion:reduce){
+ .nox-p02-chat[data-nox-wow-five="on"] .nw-reply:before{animation:none!important}
+}
+.nox-p02-chat[data-nox-wow-five="on"][data-nox-eco="on"] .nw-reply:before{
+ animation:none!important
+}

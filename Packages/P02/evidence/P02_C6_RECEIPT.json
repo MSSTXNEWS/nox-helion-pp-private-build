@@ -1,0 +1,49 @@
+{
+  "schema": "NOX_P02_OWNER_C6_NOLOSS_V1",
+  "owner": 2,
+  "run_id": "NOX-V16-E02-C6-20261028",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "base_main_sha1": "eb46b49fb8a022cefa679afb8606877016808db1",
+  "expected_parent_commit_sha1": "c93210e2f9e68383c5a65225cc5f9fd15d88d424",
+  "status": "PATCH_CANDIDATE_COMPONENT_TESTED_NOT_HOST_INTEGRATED",
+  "test_execution": {
+    "environment": "Python 3.13.5 Linux synthetic SQLite",
+    "total": 65,
+    "passed": 65,
+    "failed": 0,
+    "command": "python -m unittest discover -p 'test_*.py' -q",
+    "compileall": "PASS"
+  },
+  "changes": [
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "action": "update",
+      "pre_sha256": "e859a76a45259917b8675094d90d2aec4108074b081acad8aeb8c8e60a8445ff",
+      "post_sha256": "98b06e6f12c3ec0c9119c96a9539972c6964c0ef3e05e0bd788990c2be437edf",
+      "pre_git_blob_sha1": "b6360efa3979917e80cdc0bb6f6722c4cb3a84e5",
+      "post_git_blob_sha1": "3ac73283371c0237c63962931ffcf683bd314cd9"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_c6_history_order.py",
+      "action": "add",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "4ff2e34e878f4c15244611aedf350088d3fa70afc68fead8266cb63ae654f45c",
+      "post_git_blob_sha1": "c3f22abe2e500f8a8f9ec494a30613e270954f19"
+    },
+    {
+      "path": "Packages/P02/worker-python/C6_HISTORY_HANDOFF.md",
+      "action": "add",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "a50aa8069452ce439db634be29c0ef2178e9f6d68cc0d8b8fc9abc3f9662f243",
+      "post_git_blob_sha1": "4ef4c9b0f7497e37128545c53e620a7b79283ec1"
+    }
+  ],
+  "patch_path": "Packages/P02/evidence/P02_C6.patch",
+  "patch_sha256": "694f6e6d81be3142a2f167cfba754dbac1d4a058b146faee840458f45d45546a",
+  "blockers": [
+    "E06 current full app SourceLock and native host mapping",
+    "SQLite rowid changes possible on VACUUM: permanent sequence migration by #6 only",
+    "E07 same Windows EXE SHA acceptance"
+  ],
+  "release_accepted": false
+}
