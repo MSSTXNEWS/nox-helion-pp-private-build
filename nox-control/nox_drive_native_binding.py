@@ -546,15 +546,38 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
               expected_bridge=EXPECTED_BRIDGE_SHA, service_check=True):
         original, st = private_regular(source, 180000)
         current_hash = digest(original)
-        if START.encode() in original or END.encode() in original:
-            require(START.encode() in original and END.encode() in original
-                    and original.count(START.encode()) == 1
-                    and original.count(END.encode()) == 1, "PARTIAL_PATCH")
-            return {"state": "ALREADY_STAGED_NOT_LIVE", "new_sha256": current_hash,
-                    "native_handler_registered": False, "restarted": False}
-        require(current_hash == expected_dispatcher, "DISPATCHER_SHA_DRIFT")
         payload, _ = private_regular(bridge, 100000)
         require(digest(payload) == expected_bridge, "BRIDGE_SHA_DRIFT")
+        hook_bytes = SHIM.rstrip("\n").encode("utf-8")
+        upgrading = False
+        if START.encode() in original or END.encode() in original:
+            require(original.count(START.encode()) == 1
+                    and original.count(END.encode()) == 1,
+                    "PARTIAL_PATCH")
+            begin = original.index(START.encode())
+            finish = original.index(END.encode(), begin) + len(END)
+            current_hook = original[begin:finish]
+            if current_hook == hook_bytes:
+                return {"state": "ALREADY_STAGED_NOT_LIVE",
+                        "new_sha256": current_hash, "native_handler_registered": False,
+                        "restarted": False, "owner_claim_contract": True}
+            # Only the known exact former dispatcher source may be upgraded.
+            # Do not replace any newer/foreign source or another agent's patch.
+            require(current_hash == EXPECTED_PREVIOUS_STAGED_SHA,
+                    "UPGRADE_SOURCE_SHA_DRIFT")
+            require(b'task.get("claim")' in current_hook
+                    and b'task.get("owner_claim")' not in current_hook
+                    and b'NOX_DRIVE_FIRST_STATIC_V1_START' in current_hook,
+                    "UPGRADE_HOOK_PREIMAGE")
+            changed = original[:begin] + hook_bytes + original[finish:]
+            upgrading = True
+        else:
+            require(current_hash == expected_dispatcher, "DISPATCHER_SHA_DRIFT")
+            changed = make_patched(original)
+        require(changed != original and changed.count(START.encode()) == 1
+                and changed.count(END.encode()) == 1,
+                "UPGRADE_OUTPUT")
+        compile(changed, "nox_dispatcher_t855u.py", "exec")
         if service_check:
             try:
                 run = subprocess.run(["supervisorctl", "status", "nox-dispatcher-t855u"],
@@ -563,11 +586,9 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
                         "SERVICE_NOT_RUNNING")
             except (OSError, subprocess.TimeoutExpired):
                 raise Hold("HOLD_DRIVE_REGISTRY_SERVICE_UNVERIFIED") from None
-        changed = make_patched(original)
         backup_sha, backup_created = secure_backup(backups, original)
         require(backup_sha == current_hash, "BACKUP_MISMATCH")
         require(not any(os.path.lexists(path) for path in STOP), "STOP_CHANGED")
-        # Exact preimage compare immediately before replace. Do not alter a newer source.
         reread, _ = private_regular(source, 180000)
         require(reread == original, "PREIMAGE_CHANGED")
         temp = source.with_name("." + source.name + ".drive-stage")
@@ -592,14 +613,16 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
             "new_sha256": digest(changed),
             "backup_sha256": backup_sha,
             "backup_created": backup_created,
+            "owner_claim_contract": True,
+            "upgraded_static_hook": upgrading,
             "native_handler_registered": False,
             "restarted": False,
             "google_oauth_updated": False,
             "model_or_s03_modified": False,
             "weights_modified": False,
         }
-    
-    
+
+
     # Pure syntax validation for focused CI; never reads or modifies Vast.
     if hook_syntax_only is True:
         compile("HANDLERS = {}\\n".replace("\\n", "\n") + SHIM,
