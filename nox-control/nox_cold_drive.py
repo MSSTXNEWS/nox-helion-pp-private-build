@@ -74,6 +74,12 @@ def assert_remote(remote):
     return remote.rstrip("/")
 
 def upload(a):
+    # Legacy --evict only checked a single remote copy and a short-lived
+    # path list. That is insufficient to prove two independently verified
+    # recoverable copies, owner lease, and current inode/fd/mmap inactivity.
+    # Route deletion through the native owner-governed reclaim path instead.
+    if a.evict:
+        raise RuntimeError("HOLD_LEGACY_EVICT_NEEDS_OWNER_TWO_COPY_FD_MMAP_LEASE: fresh owner inode/fd/mmap census and two verified recoverable copies required")
     src = assert_model(a.file)
     remote = assert_remote(a.remote)
     if a.active_manifest:
@@ -95,29 +101,6 @@ def upload(a):
         out.flush()
         os.fsync(out.fileno())
     print(json.dumps({"receipt": str(receipt_path), **receipt}, ensure_ascii=False))
-    if a.evict:
-        # Require operator supplied manifest generated from live process inspection.
-        if not a.active_manifest:
-            raise RuntimeError("Verified upload complete; eviction requires --active-manifest")
-        # Require current owner-produced active-file evidence for any eviction.
-        manifest_path = Path(os.path.abspath(a.active_manifest))
-        if manifest_path.is_symlink() or not manifest_path.is_file():
-            raise RuntimeError("Eviction requires a regular owner active manifest")
-        st = manifest_path.stat()
-        if st.st_mode & 0o077 or st.st_uid != os.geteuid():
-            raise RuntimeError("Eviction active manifest permissions/owner invalid")
-        manifest = json.loads(manifest_path.read_text())
-        when = manifest.get("checked_at_unix")
-        if type(when) is not int or abs(time.time() - when) > 60:
-            raise RuntimeError("Eviction requires a fresh owner process snapshot")
-        if str(src) in {str(Path(os.path.abspath(x))) for x in manifest.get("active_paths", [])}:
-            raise RuntimeError("Eviction refused: source became active")
-        if src.stat().st_size != size or sha256(src) != digest:
-            raise RuntimeError("Eviction refused: source changed after upload")
-        src.unlink()
-        receipt["source_deleted"] = True
-        receipt_path.write_text(json.dumps(receipt, indent=2))
-        print("EVICTED VERIFIED INACTIVE MODEL:", src)
 
 STOP_FLAGS = (
     Path("/root/nox/STOP"),
