@@ -182,6 +182,44 @@ class DriveFirstTests(unittest.TestCase):
         remote.assert_not_called()
         self.assertEqual(receipt.read_text(),"original signed receipt")
 
+    def test_receipted_task_never_mutates_shared_rclone_overlay(self):
+        # Task receipt is checked under the existing lock, before config
+        # normalization could run "rclone config create".
+        self.configure()
+        receipt=self.state/"drive-task-001.json"
+        receipt.write_text("already accepted offload receipt")
+        receipt.chmod(0o600)
+        with patch.object(m,"stop_clear"),patch.object(m,"cgroup_admit"),\
+             patch.object(m,"ensure_chunker") as overlay,\
+             patch.object(m,"run_rclone") as remote:
+            with self.assertRaisesRegex(m.Hold,"RECEIPT_ALREADY_EXISTS"):
+                m.execute(self.asset,self.conf,self.state)
+        overlay.assert_not_called()
+        remote.assert_not_called()
+        self.assertEqual(receipt.read_text(),"already accepted offload receipt")
+
+    def test_chunker_setup_requires_existing_exclusive_task_lock(self):
+        # An unrelated fd on the same inode cannot acquire a competing lock
+        # while ensure_chunker is called. No network or config write occurs.
+        self.configure()
+        calls=[]
+        def assert_locked(_):
+            probe=m.os.open(self.state/".drive-first.lock",m.os.O_RDWR|m.os.O_NOFOLLOW)
+            try:
+                with self.assertRaises(BlockingIOError):
+                    m.fcntl.flock(probe,m.fcntl.LOCK_EX|m.fcntl.LOCK_NB)
+            finally:
+                m.os.close(probe)
+            calls.append("locked")
+            raise m.Hold("HOLD_TEST_AFTER_LOCK")
+        with patch.object(m,"stop_clear"),patch.object(m,"cgroup_admit"),\
+             patch.object(m,"ensure_chunker",side_effect=assert_locked),\
+             patch.object(m,"run_rclone") as remote:
+            with self.assertRaisesRegex(m.Hold,"TEST_AFTER_LOCK"):
+                m.execute(self.asset,self.conf,self.state)
+        self.assertEqual(calls,["locked"])
+        remote.assert_not_called()
+
     def test_receipt_save_is_atomic_create_only(self):
         receipt=self.state/"drive-task-001.json"
         m.save_receipt(receipt,{"original":True})

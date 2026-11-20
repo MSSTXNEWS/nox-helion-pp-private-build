@@ -359,7 +359,8 @@ def save_receipt(path, value):
 def execute(m, config, state):
     stop_clear()
     cgroup_admit()
-    config = ensure_chunker(config)
+    # Acquire the existing task lock before any shared rclone config mutation.
+    # In particular, an already receipted TaskID must never create a chunker.
     state = private_dir(state)
     lock = os.open(state / ".drive-first.lock",
                    os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
@@ -376,6 +377,9 @@ def execute(m, config, state):
             # receipt before touching the Google Drive transport.
             receipt_path = state / ("drive-" + m["task_id"] + ".json")
             require(not os.path.lexists(receipt_path), "RECEIPT_ALREADY_EXISTS")
+            # The owner-scoped lock also fences the optional rclone overlay
+            # setup. A replay or concurrent worker cannot mutate credentials.
+            config = ensure_chunker(config)
             # Exercise the pinned Google Drive root, never enumerate/print files.
             run_rclone(["lsf", "noxdrive:", "--max-depth", "1", "--retries", "1",
                         "--low-level-retries", "1"], config, timeout=30)
