@@ -286,7 +286,7 @@ def main():
                     with request(client,local) as asset:
                         require_same_origin_target(asset, local)
                         sample = asset.read(512)
-                        if asset.status == 200:
+                        if asset.status == 200 and local.lower().endswith(('.js', '.mjs', '.css')):
                             require_not_html_asset(asset, sample)
                         report['assets'].append({'path':local,'status':asset.status,'bytes_sampled':len(sample)})
         unauth=urllib.request.build_opener(urllib.request.ProxyHandler({}))

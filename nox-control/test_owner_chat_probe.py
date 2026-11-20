@@ -106,6 +106,7 @@ class ProbeTests(unittest.TestCase):
         source = path.read_text()
         self.assertIn('require_not_html_asset(asset, sample)', source)
         self.assertIn('sample = asset.read(512)', source)
+        self.assertIn("local.lower().endswith(('.js', '.mjs', '.css'))", source)
 
     def test_obj_releases_http_response_on_success_and_hold(self):
         class Response:
