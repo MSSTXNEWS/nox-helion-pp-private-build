@@ -636,6 +636,38 @@ def lease_free():
         os.close(fd)
 
 
+def read_installed_train_cpu_cap(path):
+    """Read exactly one approved env assignment from a stable regular file."""
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError as exc:
+        raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT') from exc
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or not 0 < before.st_size <= 64:
+            raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT')
+        with os.fdopen(fd, 'rb') as stream:
+            fd = -1
+            raw = stream.read(65)
+            after = os.fstat(stream.fileno())
+            named = os.stat(path, follow_symlinks=False)
+        fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+        if (len(raw) != before.st_size
+                or any(getattr(before, field) != getattr(after, field)
+                       or getattr(before, field) != getattr(named, field)
+                       for field in fields)):
+            raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT')
+        configured = re.fullmatch(r'TRAIN_CPU_MAX=([0-9]+)GiB\n?', raw.decode('ascii'))
+        if configured is None or not 56 <= int(configured.group(1)) <= 64:
+            raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT')
+        return int(configured.group(1))
+    except (OSError, UnicodeError) as exc:
+        raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT') from exc
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
+
 def resource_admission(helper):
     if global_stop():
         raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
@@ -684,13 +716,10 @@ def resource_admission(helper):
     except (OSError, ValueError) as exc:
         raise RuntimeError('HOLD_CGROUP_MEMORY_LIMIT') from exc
     budget = helper.resource_budget(memory_limit, memory_current, quota_cpus, affinity_cpus)
-    # A line-based regexp can admit extra env assignments or shell commands
-    # after the approved cap. Treat the whole file as one pinned assignment.
-    configured = re.fullmatch(r'TRAIN_CPU_MAX=([0-9]+)GiB\n?',
-                              (STATE/'train_cpu_max.env').read_text())
-    if configured is None or not 56 <= int(configured.group(1)) <= 64:
-        raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT')
-    configured_gib = int(configured.group(1))
+    # A regular-file, pathname-bound, bounded read is required here.
+    # A symlink may be switched before the wrapper sources the env cap;
+    # a FIFO can otherwise block this admission check indefinitely.
+    configured_gib = read_installed_train_cpu_cap(STATE/'train_cpu_max.env')
     # The native loader uses the installed env cap. A smaller computed budget
     # is an admission refusal, never an implicit change to that loader setting.
     if budget['train_cpu_gib'] < configured_gib:
