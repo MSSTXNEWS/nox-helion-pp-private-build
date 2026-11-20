@@ -284,6 +284,13 @@ def owner_session_cookie_pin(cookies):
     return digest(raw)
 
 
+def owner_session_continuity_valid(status, cookies, expected_pin):
+    """Reject a rotated or expired owner session before trusted history reads."""
+    return (type(status) is int and status == 200
+            and isinstance(expected_pin, str) and len(expected_pin) == 64
+            and owner_session_cookie_pin(cookies) == expected_pin)
+
+
 def verified_two_turn_firstturn_ids(rows):
     """Allow second POST only after two distinct, stable first-turn row IDs.
 
@@ -1262,9 +1269,9 @@ async def browser_run(report, directory, available):
                 # the Spanish POST. Cookie identity stays private in memory.
                 signed_again=await context.request.get(
                     base+'/chat/session',max_redirects=0,timeout=6000)
-                if (signed_again.status!=200
-                        or owner_session_cookie_pin(
-                            await context.cookies(base))!=owner_session_pin):
+                if not owner_session_continuity_valid(
+                        signed_again.status, await context.cookies(base),
+                        owner_session_pin):
                     raise RuntimeError('HOLD_MULTITURN_OWNER_SESSION_CHANGED')
                 report['multiturn_owner_session_continuity_verified']=True
                 second_permitted=True
@@ -1294,6 +1301,16 @@ async def browser_run(report, directory, available):
                         or not native_terminal_stream_valid(second_final)):
                     raise RuntimeError('HOLD_SECOND_TURN_STREAM_NOT_RENDERED')
                 await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
+                # A terminal second SSE is not owner-session continuity proof.
+                # The extra read-only GET never repeats native generation.
+                report['browser_stage']='QA_POSTSECOND_SESSION_RECHECK'
+                signed_after_second=await context.request.get(
+                    base+'/chat/session',max_redirects=0,timeout=6000)
+                if not owner_session_continuity_valid(
+                        signed_after_second.status, await context.cookies(base),
+                        owner_session_pin):
+                    raise RuntimeError('HOLD_MULTITURN_OWNER_SESSION_CHANGED')
+                report['multiturn_postsecond_owner_session_verified']=True
                 second_history=await json_response(await context.request.get(
                     base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
                     max_redirects=0,timeout=6000))

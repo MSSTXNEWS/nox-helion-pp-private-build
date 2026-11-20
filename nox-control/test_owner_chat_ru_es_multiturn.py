@@ -22,6 +22,7 @@ from owner_chat_browser_qa import (
     firstturn_prefix_identity_valid,
     verified_two_turn_firstturn_ids,
     owner_session_cookie_pin,
+    owner_session_continuity_valid,
     empty_dialog_history_valid,
     exact_native_post_fence,
     multiturn_followup_prompt,
@@ -377,6 +378,30 @@ async function check(chunks, status=200) {
                         caller.index("firstturn_id_snapshot=verified_two_turn_firstturn_ids(rows)"))
         self.assertLess(caller.index("HOLD_MULTITURN_OWNER_SESSION_CHANGED"),
                         caller.index("second_permitted=True"))
+
+    def test_postsecond_owner_session_pin_precedes_four_row_history_readback(self):
+        owner = [dict(name='nox_owner', domain='owner.example', path='/',
+                      value='original-signed-session', httpOnly=True)]
+        pin = owner_session_cookie_pin(owner)
+        self.assertTrue(owner_session_continuity_valid(200, owner, pin))
+        for status, cookies in (
+            (401, owner), (302, owner), (True, owner), (None, owner),
+            (200, []), (200, [dict(owner[0], value='new-owner-session')]),
+            (200, [dict(owner[0], path='/another')]),
+        ):
+            with self.subTest(status=status, cookies=repr(cookies)[:30]):
+                self.assertFalse(owner_session_continuity_valid(status, cookies, pin))
+        self.assertFalse(owner_session_continuity_valid(200, owner, None))
+        caller = inspect.getsource(browser_run)
+        self.assertEqual(caller.count('owner_session_continuity_valid('), 2)
+        self.assertIn("signed_after_second=await context.request.get(", caller)
+        self.assertIn("multiturn_postsecond_owner_session_verified", caller)
+        self.assertLess(caller.index("signed_after_second=await context.request.get("),
+                        caller.index("second_history=await json_response("))
+        self.assertLess(caller.index("multiturn_postsecond_owner_session_verified"),
+                        caller.index("second_history=await json_response("))
+        self.assertLess(caller.index("signed_after_second=await context.request.get("),
+                        caller.index("multiturn_browser_acceptance_verified"))
 
     def test_two_turn_native_post_accounting_fences_before_s03_proof(self):
         for turn in (1, 2):
