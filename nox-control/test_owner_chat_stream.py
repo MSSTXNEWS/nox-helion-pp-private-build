@@ -841,6 +841,27 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('[DONE]',wire)
 
 
+    async def test_direct_admin_missing_ok_never_reports_success(self):
+        # A direct command exits without a second model turn. A text-only
+        # result must not masquerade as a successful native action or S03.
+        for invalid in ({'text':'Action completed'},
+                        {'ok':None,'text':'Action completed'}):
+            with self.subTest(result=invalid):
+                native=self.native(result=invalid)
+                native['_direct_admin_calls']=lambda _: [
+                    {'name':'run_admin','arguments':{'action':'status'}}]
+                payload={'messages':[{'role':'user','content':'Direct owner command'}]}
+                with (patch.object(stream._current,'dispatch',return_value=None),
+                      patch.object(stream.httpx.AsyncClient,'stream',
+                                   side_effect=AssertionError('no model POST'))):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Direct owner command',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(self.dispatched,[('run_admin',{'action':'status'})])
+                self.assertIn('HOLD_TOOL_RESULT_OK',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+
     async def test_confirmation_stops_before_model_and_preserves_real_marker(self):
         native=self.native([{'name':'run_admin','arguments':{'action':'pause'}}],
                            {'ok':False,'needs_confirmation':True,'text':'Confirm pause'})
