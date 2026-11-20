@@ -85,7 +85,7 @@ def history_matches_turns(messages, turns, dialog_id=None):
 
 def scoped_history_matches_turns(history, turns, dialog_id):
     """Reject a mismatched history session even when its visible rows match."""
-    if not isinstance(history, dict) or history.get('dialog_id', dialog_id) != dialog_id:
+    if not isinstance(history, dict) or history.get('dialog_id') != dialog_id:
         return False
     return history_matches_turns(history.get('messages'), turns, dialog_id)
 
