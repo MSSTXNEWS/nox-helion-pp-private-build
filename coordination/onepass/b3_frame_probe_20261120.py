@@ -50,6 +50,15 @@ def verify_url(url):
     return url
 
 
+def require_landing_url(requested, visited):
+    """Reject a login/other-path redirect before attributing browser FPS to NOX."""
+    a, b = urlsplit(verify_url(requested)), urlsplit(verify_url(visited))
+    identity = lambda p: (p.scheme.lower(), p.hostname.lower(), p.port,
+                          p.path, p.query)
+    if identity(a) != identity(b):
+        raise ValueError('HOLD_LIVE_LANDING_URL_MISMATCH')
+    return visited
+
 
 def compare_baseline(current, prior):
     """Fail closed if an old screenshot/frame report is not comparable.
@@ -58,11 +67,15 @@ def compare_baseline(current, prior):
     source-level frame evidence only; baseline files are not signed.
     """
     signature = ('schema', 'url', 'sample_js', 'synthetic_fixture',
-                 'expected_selector_checked', 'expected_selector')
+                 'expected_selector_checked', 'expected_selector',
+                 'landing_url_verified')
     if any(current.get(key) != prior.get(key) for key in signature):
         raise ValueError('HOLD_BASELINE_PROVENANCE_MISMATCH')
-    if not current.get('synthetic_fixture') and not current.get('expected_selector_checked'):
-        raise ValueError('HOLD_BASELINE_MISSING_LIVE_SELECTOR')
+    if not current.get('synthetic_fixture'):
+        if not current.get('expected_selector_checked'):
+            raise ValueError('HOLD_BASELINE_MISSING_LIVE_SELECTOR')
+        if current.get('landing_url_verified') is not True:
+            raise ValueError('HOLD_BASELINE_LANDING_URL_UNVERIFIED')
     expected = {(width, height, mode) for width, height in SIZES
                 for mode in ('normal', 'reduced')}
 
@@ -103,6 +116,8 @@ def compare_baseline(current, prior):
 async def _measure_async(url, output, chromium, baseline, fixture_html, expected_selector):
     from playwright.async_api import async_playwright
     verify_url(url)
+    if fixture_html is None and not expected_selector:
+        raise ValueError('HOLD_LIVE_SELECTOR_REQUIRED')
     out = pathlib.Path(output)
     out.mkdir(parents=True, exist_ok=True)
     result = {
@@ -117,6 +132,7 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
         'synthetic_fixture': fixture_html is not None,
         'expected_selector_checked': expected_selector is not None,
         'expected_selector': expected_selector,
+        'landing_url_verified': False,
         'comparison_admissible': False,
     }
     async with async_playwright() as pw:
@@ -163,6 +179,8 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                             response = await page.goto(url, wait_until='domcontentloaded', timeout=12000)
                             if not response or response.status >= 400:
                                 raise RuntimeError('HOLD_BROWSER_PAGE_HTTP')
+                            require_landing_url(url, page.url)
+                            result['landing_url_verified'] = True
                         if expected_selector:
                             await page.locator(expected_selector).first.wait_for(state='visible', timeout=12000)
                         await page.wait_for_timeout(350)
@@ -173,6 +191,7 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                         await page.screenshot(path=str(path), full_page=False)
                         proof = hashlib.sha256(path.read_bytes()).hexdigest()
                         entry = {'width': width, 'height': height, 'mode': mode,
+                            'landing_url': None if fixture_html is not None else page.url,
                             'screenshot': filename, 'screenshot_sha256': proof,
                             'screenshot_bytes': path.stat().st_size,
                             'frame_time': summarize(frame_samples)}
