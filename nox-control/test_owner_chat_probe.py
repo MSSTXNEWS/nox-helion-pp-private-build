@@ -781,7 +781,7 @@ class ProbeTests(unittest.TestCase):
                     dict({'type': 'done', 'dialog_id': '1' * 32,
                           'saved': True, 's03_integrated': True}, **self.terminal),
                 ]
-                return iter(json.dumps(row).encode() + b'\\n' for row in frames)
+                return iter(json.dumps(row).encode() + b'\n' for row in frames)
             def close(self):
                 self.closed = True
 
