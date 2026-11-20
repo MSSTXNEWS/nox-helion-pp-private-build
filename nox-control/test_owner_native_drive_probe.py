@@ -116,6 +116,16 @@ class ProbeTests(unittest.TestCase):
             self.assertEqual(res["native_handler_registered"], "UNVERIFIED")
             self.assertNotIn("never publish this token", json.dumps(res))
 
+    def test_staged_source_not_claimed_live_until_process_identity_readback(self):
+        source=path.read_text(encoding="utf-8")
+        self.assertIn("live_process_started_at_unix",source)
+        self.assertIn("process_newer_than_staged_source",source)
+        self.assertIn("static_drive_hook_staged",source)
+        self.assertIn("SC_CLK_TCK",source)
+        self.assertIn("btime ",source)
+        self.assertIn('native_handler_registered": "UNVERIFIED"',source)
+        self.assertNotIn('native_handler_registered": True',source)
+
     def test_dispatcher_surface_rejects_symlink_source(self):
         with tempfile.TemporaryDirectory() as directory:
             original = Path(directory) / "original.py"

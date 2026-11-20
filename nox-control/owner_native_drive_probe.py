@@ -65,6 +65,11 @@ def dispatcher_surface(source=DISPATCHER, runner=subprocess.run):
         tree = ast.parse(raw.decode("utf-8"), filename=source.name)
         result["source_sha256"] = hashlib.sha256(raw).hexdigest()
         result["source_pinned"] = True
+        result["source_mtime_unix"] = stat_source.st_mtime_ns / 1_000_000_000
+        result["static_drive_hook_staged"] = (
+            b"# NOX_DRIVE_FIRST_STATIC_V1_START" in raw
+            and b"# NOX_DRIVE_FIRST_STATIC_V1_END" in raw)
+
         # Report names and argument labels only. Never publish AST literals,
         # code snippets, file paths, process argv or arbitrary object repr.
         prefixes = ("handler", "register", "dispatch", "queue", "claim",
@@ -228,6 +233,25 @@ def dispatcher_surface(source=DISPATCHER, runner=subprocess.run):
                     b"/" + source.name.encode()
                 ) for arg in cmd)
             )
+            # Same-PID code provenance: compare process creation against the
+            # file's mtime, do NOT equate disk staging with live registration.
+            try:
+                proc_stat = (Path("/proc") / str(pid) / "stat").read_text()
+                after_comm = proc_stat.rsplit(")", 1)[1].split()
+                start_ticks = int(after_comm[19])
+                boot = next(int(row.split()[1])
+                            for row in Path("/proc/stat").read_text().splitlines()
+                            if row.startswith("btime "))
+                hz = os.sysconf("SC_CLK_TCK")
+                if 0 < hz < 100000 and 0 <= start_ticks:
+                    started = boot + start_ticks / hz
+                    result["live_process_started_at_unix"] = started
+                    result["process_newer_than_staged_source"] = (
+                        result["live_process_verified"]
+                        and result["static_drive_hook_staged"]
+                        and started >= result["source_mtime_unix"])
+            except (OSError, ValueError, IndexError, KeyError, StopIteration):
+                pass
     except (OSError, ValueError, subprocess.TimeoutExpired):
         pass
     try:
