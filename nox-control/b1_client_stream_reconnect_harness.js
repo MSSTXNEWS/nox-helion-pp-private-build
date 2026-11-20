@@ -81,10 +81,32 @@
         if(preflight.previous) hold('HOLD_STREAM_RECONNECT_ONLY');
         // The host must ALSO enforce durable exchange idempotency across
         // tabs, reloads and devices. Never re-POST an ambiguous exchange.
-        const res=await transport.post(s,ctrl.signal);
-        // A fetch/mock may resolve AFTER abort. Its body and buffered delta
-        // are not authorized to reach UI once STOP or timeout has fired.
-        if(ctrl.signal.aborted) return stopped();
+        // A custom transport may ignore AbortSignal while its POST promise
+        // remains pending forever. Settle begin() on STOP/timeout without
+        // retrying an ambiguous model POST or consuming its late response.
+        let onPostAbort;
+        let postOutcome;
+        try{
+          postOutcome=await Promise.race([
+            Promise.resolve().then(()=>{
+              // STOP may have arrived before the scheduled transport call.
+              if(ctrl.signal.aborted) return null;
+              return transport.post(s,ctrl.signal);
+            }).then(res=>({res}),()=>({postError:true})),
+            new Promise(resolve=>{
+              onPostAbort=()=>resolve({aborted:true});
+              ctrl.signal.addEventListener('abort',onPostAbort,{once:true});
+              if(ctrl.signal.aborted) onPostAbort();
+            })
+          ]);
+        }finally{
+          if(onPostAbort) ctrl.signal.removeEventListener('abort',onPostAbort);
+        }
+        // Recheck after the awaited race: a late transport resolution must
+        // never open an SSE reader, append UI deltas, or send a second ACK.
+        if(postOutcome.aborted||ctrl.signal.aborted) return stopped();
+        if(postOutcome.postError) hold('HOLD_STREAM_POST_OR_READ');
+        const res=postOutcome.res;
         if(!res||res.ok!==true||!res.body||typeof res.body.getReader!=='function')
           hold('HOLD_STREAM_POST_RESPONSE');
         const reader=res.body.getReader(),decoder=new TextDecoder();
