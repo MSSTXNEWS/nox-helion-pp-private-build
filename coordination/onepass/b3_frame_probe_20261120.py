@@ -100,6 +100,13 @@ def compare_baseline(current, prior):
     A matching browser URL is not a native/S03 identity proof. This is
     source-level frame evidence only; baseline files are not signed.
     """
+    for report in (current, prior):
+        # A truthy string such as "false" must not bypass LIVE browser guards.
+        # Check both reports, including when they carry identically forged flags.
+        if not isinstance(report, dict) or type(report.get('synthetic_fixture')) is not bool:
+            raise ValueError('HOLD_BASELINE_FIXTURE_FLAG_INVALID')
+        if type(report.get('expected_selector_checked')) is not bool:
+            raise ValueError('HOLD_BASELINE_SELECTOR_FLAG_INVALID')
     signature = ('schema', 'url_sha256', 'chromium_version_sha256', 'sample_js', 'synthetic_fixture',
                  'expected_selector_checked', 'expected_selector_sha256',
                  'landing_url_verified')
@@ -110,9 +117,13 @@ def compare_baseline(current, prior):
     engine = current.get('chromium_version_sha256')
     if not isinstance(engine, str) or len(engine) != 64 or any(c not in '0123456789abcdef' for c in engine):
         raise ValueError('HOLD_BASELINE_BROWSER_ENGINE_MISSING')
-    if not current.get('synthetic_fixture'):
-        if not current.get('expected_selector_checked') or not current.get('expected_selector_sha256'):
-            raise ValueError('HOLD_BASELINE_MISSING_LIVE_SELECTOR')
+    if current['synthetic_fixture'] is False:
+        for report in (current, prior):
+            selector_hash = report.get('expected_selector_sha256')
+            if (report.get('expected_selector_checked') is not True or
+                    not isinstance(selector_hash, str) or len(selector_hash) != 64 or
+                    any(ch not in '0123456789abcdef' for ch in selector_hash)):
+                raise ValueError('HOLD_BASELINE_MISSING_LIVE_SELECTOR')
         if current.get('landing_url_verified') is not True:
             raise ValueError('HOLD_BASELINE_LANDING_URL_UNVERIFIED')
         # A read-only probe may block attempted chat POSTs or WebSockets.
@@ -145,7 +156,7 @@ def compare_baseline(current, prior):
     old, new = index(prior.get('runs')), index(current.get('runs'))
     deltas = {}
     for key in expected:
-        if not current.get('synthetic_fixture'):
+        if current['synthetic_fixture'] is False:
             if (old[key].get('landing_url_sha256') != current['url_sha256'] or
                     new[key].get('landing_url_sha256') != current['url_sha256']):
                 raise ValueError('HOLD_BASELINE_LANDING_HASH_MISMATCH')
