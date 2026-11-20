@@ -29,6 +29,19 @@ def redact(value):
     value=re.sub(r'(?:hf_|ghp_|github_pat_)[A-Za-z0-9_]{12,}','[REDACTED]',value)
     return re.sub(r'(?im)^([^\n]*(?:password|secret|api_key|access_key|authorization|token)[\w\s]*=\s*)[\"\'][^\"\'\n]{12,}[\"\']',r'\1"[REDACTED]"',value)
 
+class RejectPostRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow an HTTP redirect after issuing a non-idempotent request.
+
+    In particular an HTTP 302 could transform a chat POST into a second request
+    at an unrelated URL *before* the final stream-target fence could run.
+    Keep GET redirect behavior unchanged for explicit final-URL diagnostics.
+    """
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if req.get_method() != 'GET':
+            return None
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def request(client,path,method='GET',data=None,timeout=6,base=None):
     payload=None if data is None else json.dumps(data,ensure_ascii=False).encode()
     req=urllib.request.Request((base or BASE)+path,data=payload,method=method,headers={'Content-Type':'application/json','Accept':'application/json'})
@@ -357,7 +370,7 @@ def main():
     import chat_proxy
     password=chat_proxy._read_chat_password()
     if not isinstance(password,str) or len(password)<6:raise RuntimeError('HOLD_OWNER_CREDENTIAL_UNAVAILABLE')
-    jar=http.cookiejar.CookieJar();client=urllib.request.build_opener(urllib.request.ProxyHandler({}),urllib.request.HTTPCookieProcessor(jar))
+    jar=http.cookiejar.CookieJar();client=urllib.request.build_opener(urllib.request.ProxyHandler({}),urllib.request.HTTPCookieProcessor(jar),RejectPostRedirect())
     login=request(client,'/chat/login','POST',{'password':password});password=None
     if login.status!=200 or not any(True for _ in jar):raise RuntimeError('HOLD_OFFICIAL_LOGIN')
     login.close()
