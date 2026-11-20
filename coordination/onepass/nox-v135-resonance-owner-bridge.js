@@ -207,41 +207,41 @@
           },nativeSignal);
           let trailing='',waits=0;
           const media=window.matchMedia?.('(prefers-reduced-motion: reduce)');
-          const moving=()=> (typeof document==='undefined'||document.visibilityState!=='hidden')&&
-            !media?.matches;
+          const moving=()=> (typeof document==='undefined'||document.visibilityState!=='hidden')&&!media?.matches;
           const emitPieces=async t=>{
-            const parts=moving()?livePieces(t):[Array.isArray(t)?t.join(''):t];
-            for(let index=0;index<parts.length;index++){
-      if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-      event({type:'token',t:parts[index]});
-      if(index<parts.length-1&&waits<2&&moving()&&waits++<2){
- await new Promise(resolve=>{
- let settled=false,frameId,timerId;
- const visibility=()=>{if(document.visibilityState==='hidden')finish();};
- const finish=()=>{
- if(settled)return;
- settled=true;
- if(typeof document!=='undefined')document.removeEventListener?.('visibilitychange',visibility);
- nativeSignal.removeEventListener('abort',finish);
- if(frameId!==undefined&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
- if(timerId!==undefined&&typeof clearTimeout==='function')clearTimeout(timerId);
- resolve();
- };
- if(typeof document!=='undefined'){document.addEventListener?.('visibilitychange',visibility);visibility();}
- if(!settled){nativeSignal.addEventListener('abort',finish,{once:true});if(nativeSignal.aborted)finish();}else return;
- if(typeof requestAnimationFrame==='function'){
- frameId=requestAnimationFrame(finish);
- if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
- }
- if(typeof setTimeout==='function'){
- timerId=setTimeout(finish,18);
- if(settled&&typeof clearTimeout==='function')clearTimeout(timerId);
- } else if(typeof requestAnimationFrame!=='function')finish();
- });
-      }
-            }
-          };
-          const {answer,receipt}=await consume(upstream,async t=>{
+         const parts=moving()?livePieces(t):[t.join?.('')??t];
+         for(let index=0;index<parts.length;index++){
+   if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+   if(index&&!moving()){event({type:'token',t:parts.slice(index).join('')});break;}
+   event({type:'token',t:parts[index]});
+   if(index<parts.length-1&&waits<2&&moving()&&waits++<2){
+await new Promise(resolve=>{
+let settled=false,frameId,timerId;
+const visibility=()=>{if(document.visibilityState==='hidden')finish();};
+const finish=()=>{
+if(settled)return;
+settled=true;
+if(typeof document!=='undefined')document.removeEventListener?.('visibilitychange',visibility);
+nativeSignal.removeEventListener('abort',finish);
+if(frameId!==undefined&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
+if(timerId!==undefined&&typeof clearTimeout==='function')clearTimeout(timerId);
+resolve();
+};
+if(typeof document!=='undefined'){document.addEventListener?.('visibilitychange',visibility);visibility();}
+if(!settled){nativeSignal.addEventListener('abort',finish,{once:true});if(nativeSignal.aborted)finish();}else return;
+if(typeof requestAnimationFrame==='function'){
+frameId=requestAnimationFrame(finish);
+if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
+}
+if(typeof setTimeout==='function'){
+timerId=setTimeout(finish,18);
+if(settled&&typeof clearTimeout==='function')clearTimeout(timerId);
+} else if(typeof requestAnimationFrame!=='function')finish();
+});
+   }
+         }
+       };
+       const {answer,receipt}=await consume(upstream,async t=>{
             trailing+=t;
             if(!segmenter){
       const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u4e00-\u9fff\uac00-\ud7af\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
