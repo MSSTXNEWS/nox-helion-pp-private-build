@@ -168,6 +168,12 @@ def _p95(values):
     return values[math.ceil(.95 * len(values)) - 1]  # nearest rank, every task
 
 
+def _bound_sse_wire_normal(event):
+    """A received [DONE] is not clean EOF if a bound SSE frame remains partial."""
+    witness = event.get("sse_wire_witness")
+    return witness is None or witness["wire_completed_normally"] is True
+
+
 def _within_budget_pass(event, max_task_ms):
     """Chat success requires a visible, durable answer within the exact budget.
 
@@ -177,7 +183,7 @@ def _within_budget_pass(event, max_task_ms):
     return (event["status"] == "PASS" and event["latency_ms"] <= max_task_ms
             and event["first_text_ms"] is not None
             and event["output_tokens"] > 0 and event["history_saved"]
-            and event["background_completed"]
+            and event["background_completed"] and _bound_sse_wire_normal(event)
             and event["sse_terminal_seen"] and event["model_finish_reason"] == "stop")
 
 
@@ -208,7 +214,8 @@ def _metrics(events, max_task_ms):
         "sse_terminal_seen": sum(row["sse_terminal_seen"] for row in rows),
         "sse_terminal_missing": sum(not row["sse_terminal_seen"] for row in rows),
         "sse_normal_completion": sum(row["sse_terminal_seen"] and
-                                     row["model_finish_reason"] == "stop"
+                                     row["model_finish_reason"] == "stop" and
+                                     _bound_sse_wire_normal(row)
                                      for row in rows),
         "over_budget_walltime": sum(row["latency_ms"] > max_task_ms for row in rows),
         "history_saved": sum(row["history_saved"] for row in rows),
@@ -281,7 +288,9 @@ def compare_paired(baseline, candidate):
     # and a longer answer in another. Neither is equivalent generation work.
     sse_finality_changed = [task for task in baseline["declared_task_ids"]
                             if (old[task]["sse_terminal_seen"] != new[task]["sse_terminal_seen"]
-                                or old[task]["model_finish_reason"] != new[task]["model_finish_reason"])]
+                                or old[task]["model_finish_reason"] != new[task]["model_finish_reason"]
+                                or _bound_sse_wire_normal(old[task]) !=
+                                _bound_sse_wire_normal(new[task]))]
     # Report stream reliability independently of PASS; a failed task may still
     # lose its terminal event while the aggregate pass count stays constant.
     sse_terminal_lost = [task for task in baseline["declared_task_ids"]
@@ -291,8 +300,10 @@ def compare_paired(baseline, candidate):
     sse_normal_completion_regressed = [task for task in baseline["declared_task_ids"]
                                        if old[task]["sse_terminal_seen"]
                                        and old[task]["model_finish_reason"] == "stop"
+                                       and _bound_sse_wire_normal(old[task])
                                        and (not new[task]["sse_terminal_seen"] or
-                                            new[task]["model_finish_reason"] != "stop")]
+                                            new[task]["model_finish_reason"] != "stop" or
+                                            not _bound_sse_wire_normal(new[task]))]
     # Dropping durable S03 writes or background work can make TTFT/completion
     # appear faster without any inference gain. Compare those side effects by ID.
     durability_changed = [task for task in baseline["declared_task_ids"]

@@ -733,6 +733,49 @@ class PairedReceiptTests(unittest.TestCase):
                          hashlib.sha256((marks + "Привет, ¡hola! 😀").encode()).hexdigest())
 
 
+
+    def test_bound_post_done_partial_eof_is_failed_chat_not_valid_speedup(self):
+        # [DONE] and stop are insufficient when EOF contains a partial
+        # undelivered next frame. Never score a valid completed turn.
+        frames = [
+            (5, b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":null}]}\n\n'),
+            (8, b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'),
+            (10, b'data: [DONE]\n\n'),
+        ]
+        clean = measure_openai_sse_wire(frames)
+        incomplete = measure_openai_sse_wire(frames + [(18, b'data: {"choices":')])
+        self.assertTrue(clean["wire_completed_normally"])
+        self.assertTrue(incomplete["sse_terminal_seen"])
+        self.assertEqual(incomplete["model_finish_reason"], "stop")
+        self.assertTrue(incomplete["partial_frame_at_eof"])
+        self.assertFalse(incomplete["wire_completed_normally"])
+
+        def bound_run(wire):
+            run = example()
+            run["sse_binding_required"] = True
+            run["declared_task_ids"] = ["t1"]
+            run["outcomes"] = [run["outcomes"][0]]
+            row = run["outcomes"][0]
+            row.update(first_text_ms=5, latency_ms=20,
+                       trace_sha256=wire["timed_trace_sha256"],
+                       sse_wire_witness=wire,
+                       sse_raw_wire_sha256=wire["raw_wire_sha256"],
+                       sse_visible_text_sha256=wire["visible_text_sha256"])
+            return run
+
+        out = compare_paired(bound_run(clean), bound_run(incomplete))
+        self.assertTrue(out["comparable"])
+        self.assertEqual(out["baseline"]["passed"], 1)
+        self.assertEqual(out["candidate"]["passed"], 0)
+        self.assertEqual(out["candidate"]["reported_pass_without_usable_chat"], 1)
+        self.assertEqual(out["candidate"]["sse_normal_completion"], 0)
+        self.assertEqual(out["sse_normal_completion_regressed_task_ids"], ["t1"])
+        self.assertEqual(out["sse_finality_changed_task_ids"], ["t1"])
+        self.assertTrue(out["sse_reliability_regression"])
+        self.assertTrue(out["quality_or_history_regression"])
+        self.assertTrue(out["latency_observed_workload_confounder"])
+        self.assertIsNone(out["p95_latency_delta_ms_same_observed_work"])
+
     def test_strict_sse_witness_binding_prevents_detached_timing_and_finality(self):
         # Synthetic source-only witness, not authenticated browser/S03 proof.
         chunks = [
