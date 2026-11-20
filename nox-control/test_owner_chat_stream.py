@@ -120,8 +120,8 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         native['_direct_admin_calls']=lambda text:[
             {'name':'run_admin','arguments':{'action':'status'}}]
         payload={'messages':[{'role':'user','content':'Status'}]}
-        with patch.object(stream.httpx,'AsyncClient',
-                          side_effect=AssertionError('no model POST')):
+        requests,factory=self.transport([])
+        with factory:
             response=await native['owner_completion'](
                 'http://native/model',payload,'Status',True)
             wire=''.join([part async for part in response.body_iterator])
@@ -130,6 +130,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('[DONE]',wire)
         self.assertNotIn('_agent_final',payload)
         self.assertEqual(self.dispatched,[('run_admin',{'action':'status'})])
+        self.assertEqual(requests,[])
 
         native=self.native()
         payload={'messages':[{'role':'user','content':'Нарисуй лису в лесу'}]}
@@ -871,8 +872,13 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     response=await native['owner_completion'](
                         'http://native/model',payload,'Создай изображение',True)
                     wire=''.join([piece async for piece in response.body_iterator])
-                self.assertIn('[DONE]',wire)
-                self.assertEqual(payload['_agent_final'],verified['text'])
+                if verified['ok']:
+                    self.assertIn('[DONE]',wire)
+                    self.assertEqual(payload['_agent_final'],verified['text'])
+                else:
+                    self.assertIn('HOLD_MEDIA_RESULT_UNCONFIRMED',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
                 self.assertEqual(audit,[{'name':'owner_queue_media_v1',
                                          'step':1,'ok':verified['ok']}])
                 self.assertEqual(self.dispatched,[])
