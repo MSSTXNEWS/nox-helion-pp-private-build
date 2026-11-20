@@ -720,6 +720,21 @@ OBSERVER_JS = r"""
          if(q.nativeTerminalCount!==0)throw Error('HOLD_QA_TRAILING_AFTER_DONE');
          if(!line.trim())continue;
          const frame=JSON.parse(line);
+         // An explicit FAILED/ERROR/CANCELLED status before a later DONE is
+         // never a successful RU->ES turn, even if DONE claims saved=true.
+         // These statuses are protocol metadata, not user response text.
+         const stateValues=['status','state','phase'].map(key=>frame?.[key]);
+         const failedState=stateValues.some(value=>typeof value==='string'&&
+           ['failed','failure','error','cancelled','canceled','aborted',
+            'rejected','denied','timeout','timed_out'].includes(value.toLowerCase()));
+         const failedHttpStatus=stateValues.some(value=>
+           typeof value==='number'&&Number.isFinite(value)&&value>=400);
+         const statusMeta=['status','meta','start','done'].includes(frame?.type);
+         if(frame&&typeof frame==='object'&&
+            (frame.success===false||frame.ok===false||
+             (statusMeta&&(failedState||failedHttpStatus||
+                (frame.error!==undefined&&frame.error!==null&&frame.error!==false&&frame.error!=='')))))
+           throw Error('HOLD_QA_PRETERMINAL_FAILURE_STATUS');
          if(frame.type==='delta'){
            if(typeof frame.text!=='string'||q.answer.length+frame.text.length>4096)throw Error('HOLD_QA_ANSWER_LIMIT');
            q.answer+=frame.text;q.nativeDeltas++;

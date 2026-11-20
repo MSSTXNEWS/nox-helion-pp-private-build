@@ -160,6 +160,32 @@ async function check(chunks, status=200) {
     assert.equal(rejected.error,'HOLD_QA_NATIVE_HTTP_STATUS');
     assert.equal(rejected.nativeTerminalCount,0);
   }
+  // B5 browser observer must not bless a later DONE after an earlier failure
+  // status/meta/start; B0's distinct owner_chat_probe remains untouched.
+  const doneFrame = '{"type":"done","saved":true,"s03_integrated":true,"dialog_id":"synthetic"}';
+  const deltaFrame = '{"type":"delta","text":"hola"}';
+  const statusFrames = [
+    {type:'status',state:'failed'},
+    {type:'status',status:'ERROR'},
+    {type:'meta',success:false},
+    {type:'start',ok:false},
+    {type:'status',phase:'cancelled'},
+    {type:'meta',status:503},
+    {type:'meta',error:{code:'failure'}},
+    {type:'done',saved:true,s03_integrated:true,dialog_id:'synthetic',success:false},
+  ];
+  for (const poison of statusFrames) {
+    const payload = Buffer.from([deltaFrame,JSON.stringify(poison),doneFrame].join('\n')+'\n','utf8');
+    const rejected = await check([payload]);
+    assert.equal(rejected.nativeStreamComplete,false,'failed status cannot be accepted');
+    assert.equal(rejected.error,'HOLD_QA_PRETERMINAL_FAILURE_STATUS');
+  }
+  const cleanStatus = Buffer.from([
+    deltaFrame, '{"type":"status","state":"running"}',doneFrame
+  ].join('\n')+'\n','utf8');
+  const permitted = await check([cleanStatus]);
+  assert.equal(permitted.nativeStreamComplete,true,'running status remains compatible');
+  assert.equal(permitted.error,null);
   const dangling = await check([complete,Buffer.from([0xc3])]);
   assert.equal(dangling.nativeStreamComplete,false,'dangling UTF-8 must HOLD');
   assert.equal(dangling.error,'HOLD_QA_STREAM_OBSERVER');
