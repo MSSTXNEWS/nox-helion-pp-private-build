@@ -256,6 +256,10 @@ def cgroup_process_pin(pid, expected_start_ticks, *, proc_root=None, cgroup_root
             raise CgroupPinHold('PROCESS_IDENTITY_CHANGED')
         target_fd, identity = _open_cgroup(cgroup_root, relative)
         row.update({'cgroup_path': relative, **identity})
+        # Root cgroup cannot be a reclaim target.  Reject before reading
+        # its global (often huge or malformed) process membership.
+        if relative == '/':
+            raise CgroupPinHold('ROOT_NOT_TARGETABLE')
         cgroup_type = _read_at(target_fd, 'cgroup.type', 128,
                                'CGROUP_TYPE').decode('ascii').strip()
         if cgroup_type not in ('domain', 'domain threaded', 'threaded', 'domain invalid'):
@@ -311,8 +315,6 @@ def cgroup_process_pin(pid, expected_start_ticks, *, proc_root=None, cgroup_root
         after_ticks, after_path = _proc_identity(proc_root, pid)
         if after_ticks != expected_start_ticks or after_path != relative:
             raise CgroupPinHold('PROCESS_CHANGED_DURING_SNAPSHOT')
-        if relative == '/':
-            raise CgroupPinHold('ROOT_NOT_TARGETABLE')
         if cgroup_type != 'domain':
             raise CgroupPinHold('CGROUP_NOT_DOMAIN')
         if children:
