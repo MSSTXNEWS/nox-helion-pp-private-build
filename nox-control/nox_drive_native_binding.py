@@ -26,6 +26,8 @@ TASK = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}\Z")
 OPERATIONS = ("offload", "ingest", "restore_ssd")
 CALLBACKS = ("is_owner", "stop_active", "lease_current",
              "foreground_active", "resource_admission", "enqueue")
+WORKER_CALLBACKS = ("stop_active", "lease_current",
+                    "foreground_active", "resource_admission")
 
 
 class Hold(Exception):
@@ -119,7 +121,8 @@ def oauth_present(config=drive.CONFIG):
 class NativeDriveBridge:
     def __init__(self, bindings, *, config=drive.CONFIG, state=drive.STATE,
                  manifest_root=MANIFEST_DIR, ssd=SSD_ROOT):
-        require(isinstance(bindings, dict) and set(bindings) == set(CALLBACKS)
+        require(isinstance(bindings, dict)
+                and set(bindings) in (set(CALLBACKS), set(WORKER_CALLBACKS))
                 and all(callable(v) for v in bindings.values()),
                 "HOST_CALLBACKS")
         self.cb = bindings
@@ -129,6 +132,8 @@ class NativeDriveBridge:
         self.ssd = ssd
 
     def owner_gate(self, actor):
+        if "is_owner" not in self.cb:
+            return False  # A worker-only binding can never authorize proposals.
         try:
             return (self.cb["is_owner"](actor) is True
                     and self.cb["lease_current"]() is True
@@ -164,6 +169,8 @@ class NativeDriveBridge:
         payload["idempotency_key"] = hashlib.sha256(
             json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()
+        if "enqueue" not in self.cb:
+            return {"state": "HOLD_EXISTING_QUEUE", "native_job_started": False}
         try:
             receipt = self.cb["enqueue"](HANDLER_KIND, payload,
                                          payload["idempotency_key"])
@@ -243,3 +250,48 @@ class NativeDriveBridge:
         return {"state": "HOST_REGISTRATION_REQUESTED" if result is True
                  else "HOLD_NATIVE_REGISTRATION",
                 "native_execution_verified": False}
+
+
+def bind_static_native_handlers(handlers, worker_bindings, *,
+                                owner_authorized, cancel_for_task):
+    """Add one handler to the EXISTING in-process registry at reviewed startup.
+
+    Never executes an owner command, creates a queue or claims a live process.
+    Production host must supply its actual auth, lease, chat, resource and
+    cancellation callbacks; mere source installation never calls this helper.
+    """
+    if not isinstance(handlers, dict) or not callable(owner_authorized) or \
+            not callable(cancel_for_task):
+        return {"state": "HOLD_STATIC_REGISTRY_CONTRACT", "native_execution_verified": False}
+    try:
+        if owner_authorized() is not True:
+            return {"state": "HOLD_STATIC_REGISTRY_OWNER", "native_execution_verified": False}
+        bridge = NativeDriveBridge(worker_bindings)
+    except Exception:
+        return {"state": "HOLD_STATIC_REGISTRY_GATES", "native_execution_verified": False}
+    if HANDLER_KIND in handlers:
+        return {"state": "HOLD_STATIC_REGISTRY_CONFLICT", "native_execution_verified": False}
+
+    def drive_handler(native_task):
+        if (not isinstance(native_task, dict)
+                or native_task.get("handler") != HANDLER_KIND
+                or native_task.get("status") not in ("running", "claimed")
+                or not isinstance(native_task.get("params"), dict)):
+            return {"state": "HOLD_NATIVE_TASK_SHAPE", "remote_verified": False}
+        try:
+            cancel = cancel_for_task(native_task)
+        except Exception:
+            return {"state": "HOLD_NATIVE_CANCEL", "remote_verified": False}
+        return bridge.worker(native_task["params"], cancel=cancel)
+
+    handlers[HANDLER_KIND] = drive_handler
+    if handlers.get(HANDLER_KIND) is not drive_handler:
+        return {"state": "HOLD_STATIC_REGISTRY_READBACK", "native_execution_verified": False}
+    return {
+        "state": "STATIC_REGISTRY_BOUND_IN_PROCESS",
+        "handler_kind": HANDLER_KIND,
+        "registered_callback_verified": True,
+        "native_execution_verified": False,
+        "google_connected": False,
+        "original_task_accepted": False,
+    }
