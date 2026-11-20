@@ -145,3 +145,27 @@ test('CDP timestamp admission is finite, nonnegative, monotonic and ordered requ
     assert.equal(r.turns[1].stream_timing_complete,false,JSON.stringify(flags));
   }
 });
+
+test('duplicate terminal and post-DONE frames fail closed, including split chunks',async()=>{
+  // Keep one legitimate split-terminal control and exercise the real capture path.
+  const splitAt=Buffer.byteLength(body)-5;
+  const valid=await run(false,[Buffer.from(body).subarray(0,splitAt),Buffer.from(body).subarray(splitAt)]);
+  assert.equal(valid.cdp_consistent,true);assert.equal(valid.ttft_sse_verified,true);
+  const tails=[
+    'data: [DONE]\\n\\n',
+    'data: {"choices":[{"delta":{"content":"late"}}]}\\n\\n',
+    'data: {"unexpected":true}\\n\\n',
+    'data: malformed-json\\n\\n',
+    ': comment-after-terminal\\n\\n'
+  ].map(s=>s.replaceAll('\\n','\n'));
+  for(const extra of tails){
+    const mutated=Buffer.from(body+extra,'utf8'),split=Buffer.byteLength(body)-2;
+    const output=await run(false,[mutated.subarray(0,split),mutated.subarray(split)]);
+    assert.equal(output.cdp_consistent,false,'post-terminal frame must invalidate digest-bound witness');
+    assert.equal(output.ttft_sse_verified,false,'post-terminal frame must invalidate TTFT evidence');
+    assert.equal(output.turns[1].ttft_ms,null);
+    assert.equal(output.turns[1].sse_done_ms,null);
+    assert.equal(output.turns[1].stream_timing_complete,false);
+    assert.equal(output.turns[1].visible_text_sha256,null);
+  }
+});

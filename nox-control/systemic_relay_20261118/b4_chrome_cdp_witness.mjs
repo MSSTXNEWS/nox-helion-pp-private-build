@@ -59,12 +59,18 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
     catch{x.missing=true;return;}
     for(;;){const m=/\r?\n\r?\n/.exec(x.partial);if(!m)break;
       const data=x.partial.slice(0,m.index);x.partial=x.partial.slice(m.index+m[0].length);
+      // Any frame after the first terminal is ambiguous, even if it is not JSON.
+      // Preserve decoded-body digest checks but never promote an invalid SSE stream.
+      if(x.done!==null&&data.trim()!==''){x.missing=true;return;}
       const event=eventData(data),ms=millis(x,timestamp);
       if(event&&Object.hasOwn(event,'text')){
         x.visibleText+=event.text;
         if(/\S/u.test(event.text)&&x.ttft===null&&ms!==null){x.ttft=ms;x.ttftAt=timestamp;}
       }
-      if(event?.done&&x.done===null&&ms!==null){x.done=ms;x.doneAt=timestamp;}}
+      if(event?.done){
+        if(x.done!==null||ms===null){x.missing=true;return;}
+        x.done=ms;x.doneAt=timestamp;
+      }}
   };
   c.on((method,p)=>{
     if(method==='Network.requestWillBeSent'){
