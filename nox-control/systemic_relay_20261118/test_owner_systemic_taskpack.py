@@ -719,5 +719,36 @@ class RefillEligibilityTests(unittest.TestCase):
                     self.assertFalse(shape['actual'][name])
 
 
+    def test_readonly_refill_nested_corruption_returns_hold_not_exception(self):
+        from unittest.mock import patch
+        import owner_systemic_refill_producer as diagnostic
+        registry = {'parents': {}, 'total_original_ids': 295,
+                    'source_registry_sha256': {}}
+        with patch.object(diagnostic, 'strict_parent_registry', return_value=registry):
+            previous = {'missions': []}
+            review = {'reviewed_mission_ids': []}
+            examples = (
+                ({'outcomes': None, 'original_task_states': []}, {'roots': {}}),
+                ({'outcomes': [{'task_id': []}], 'original_task_states': []}, {'roots': {}}),
+                ({'outcomes': [], 'original_task_states': [{'task_id': []}]}, {'roots': {}}),
+                ({'outcomes': [], 'original_task_states': []}, {'roots': []}),
+            )
+            for request_fields, census in examples:
+                with self.subTest(request=request_fields, census=census):
+                    request = dict({'request_id': 'a' * 64}, **request_fields)
+                    report = diagnostic.build_report(
+                        previous, '1'*64, request, '2'*64,
+                        {'missions': []}, '3'*64, census, '4'*64,
+                        {}, '5'*64, review, '6'*64, {}, {})
+                    self.assertEqual(report['state'], 'HOLD_NO_REVIEWED_TASKPACK')
+                    self.assertEqual(report['native_jobs_created'], 0)
+                    self.assertFalse(report['native_publish_performed'])
+                    self.assertEqual(report['original_task_acceptance_added'], 0)
+                    if not isinstance(census['roots'], dict):
+                        p = next(x for x in report['refill_request_predicates']
+                                 if x['predicate'] == 'source_census_roots_object')
+                        self.assertFalse(p['passed'])
+
+
 if __name__ == "__main__":
     unittest.main()
