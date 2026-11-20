@@ -10,6 +10,7 @@ import uuid
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlparse, parse_qs
 from playwright.sync_api import sync_playwright
 
 HERE=Path(__file__).resolve().parent
@@ -27,14 +28,20 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_response(200);self.send_header("Content-Type","application/json")
         self.end_headers();self.wfile.write(b'{"ok":true}')
     def do_GET(self):
-        if self.path=="/canonical":
+        parsed=urlparse(self.path)
+        if parsed.path=="/canonical":
+            nonce=parse_qs(parsed.query).get("request_nonce",[""])[0]
             with self.server.counter_lock: committed=self.server.acks>0
             if not committed:return self.send_error(404)
-            proof={"version":1,"state":"ACKED","conversation_id":"dialog",
+            now_ms=int(time.time()*1000)
+            proof={"request_nonce":nonce,"issued_at_ms":now_ms,
+                "expires_at_ms":now_ms+10000,
+                "version":1,"state":"ACKED","conversation_id":"dialog",
                 "exchange_id":"x5","event_id":"d"*64,
                 "cursor_digest":hashlib.sha256(b"synthetic_cursor5").hexdigest(),
                 "ack_id":"ack-x5","server_cas":"cas-x5",
-                "s03_sha256":"c"*64,"signature":"synthetic-fixture-signature"}
+                "s03_sha256":"c"*64,
+                "signature":"synthetic-fixture-signature-"+nonce.replace("-","")}
             payload=json.dumps(proof).encode()
             self.send_response(200);self.send_header("Content-Type","application/json")
             self.send_header("Content-Length",str(len(payload)));self.end_headers()
@@ -122,14 +129,22 @@ def main():
                       const host={readCommitted:async()=>null,
                         // Synthetic verifier only; cannot authenticate native S03.
                         verifyCanonicalAck:async receipt=>
-                          receipt.signature==='synthetic-fixture-signature' &&
+                          receipt.signature.startsWith('synthetic-fixture-signature-') &&
                           receipt.server_cas==='cas-x5' &&
-                          receipt.s03_sha256==='c'.repeat(64)};
+                          receipt.s03_sha256==='c'.repeat(64),
+                        // Synthetic nonce signature witness, NOT native cryptography.
+                        verifyFreshCanonicalAck:async(receipt,expected,scope,challenge)=>
+                          receipt.request_nonce===challenge.request_nonce &&
+                          receipt.signature==='synthetic-fixture-signature-'+
+                            challenge.request_nonce.replaceAll('-','') &&
+                          receipt.exchange_id===scope.exchange_id};
                       const transport={
                         post:async()=>{throw Error('UNEXPECTED_MODEL_POST')},
                         readback:async()=>({synthetic:true}),
-                        readCanonicalAck:async()=>{
-                          const r=await fetch('/canonical',{method:'GET',cache:'no-store'});
+                        readCanonicalAck:async(s,expected,challenge)=>{
+                          const r=await fetch('/canonical?request_nonce='+
+                            encodeURIComponent(challenge.request_nonce),
+                            {method:'GET',cache:'no-store'});
                           if(!r.ok)throw Error('synthetic canonical ACK unavailable');
                           return r.json();
                         },
