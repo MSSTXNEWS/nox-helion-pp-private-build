@@ -1336,6 +1336,14 @@ FROZEN_BROWSER_PAGE_DEPENDENCIES={
 }
 SCOPED_REPAIR_BUNDLES[FILES['repair']] = ()
 SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ()
+# Exact one-shot reviewed mission publication only; no change in the base route.
+FILES['repair'] = 'nox-control/systemic_relay_20261118/owner_zip_bounded_refill_entry.py'
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = (
+    'owner_systemic_relay_publish.py','continuous_transaction_helpers.py')
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = (
+    'nox-control/systemic_relay_20261118/owner_systemic_relay_publish.py',
+    'nox-control/continuous_executor_20261118/assets/continuous_transaction_helpers.py')
+
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
