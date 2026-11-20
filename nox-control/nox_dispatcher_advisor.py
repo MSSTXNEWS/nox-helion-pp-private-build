@@ -13,7 +13,12 @@ from pathlib import Path
 def _finite_nonnegative(value):
     # Owner telemetry may contain JSON booleans, NaN/Infinity, or strings.
     # They must never authorize progress or crash read-only diagnostics.
-    return type(value) in (int, float) and math.isfinite(value) and value >= 0
+    if type(value) not in (int, float) or value < 0:
+        return False
+    try:
+        return math.isfinite(value)
+    except (OverflowError, ValueError):
+        return False
 
 
 def assess(snapshot):
