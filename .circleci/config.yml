@@ -27,12 +27,13 @@ jobs:
             node --check nox-control/b1_abort_safe_ui_adapter.js
             node --check nox-control/b1_client_stream_reconnect_harness.js
             node --check nox-control/b1_sse_ui_binding.js
-            python -B -m py_compile nox-control/test_b1_sse_ui_binding.py
+            python -B -m py_compile nox-control/test_b1_sse_ui_binding.py nox-control/test_b1_abort_safe_ui_adapter.py
       - run:
           name: Real Chromium two-turn STOP reconnect no-duplicate source fixture
           command: |
             set -eu
             python nox-control/test_b1_sse_ui_binding.py
+            python nox-control/test_b1_abort_safe_ui_adapter.py
 
 workflows:
   b1-exact-source-verification:
