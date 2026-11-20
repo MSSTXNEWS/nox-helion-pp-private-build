@@ -1,8 +1,11 @@
 #!/bin/bash
 a(){ iconv -f utf-8 -t ascii//TRANSLIT -c | cut -c1-170; }
-echo "== conf"; grep -hE "^(command|environment|autostart)" /etc/supervisor/conf.d/nox-train-qwen9b-t131u.conf | a
-echo "== status json"; head -c 700 /root/nox/state/TRAIN_T131U_STATUS.json | a; echo
-echo "== train script"; S=$(grep -h '^command' /etc/supervisor/conf.d/nox-train-qwen9b-t131u.conf | grep -oE '/root/[^ ]+\.(py|sh)' | head -1); echo $S; grep -nE "CUDA_VISIBLE|device|cuda:|load_in|bnb|4bit|bf16|fp16|r=|lora_alpha|base_model|model_path|MODEL" $S 2>/dev/null | head -14 | a
-echo "== lora/datasets"; ls -la /root/nox/lora 2>/dev/null | head -8 | a; du -sh /root/nox/datasets /root/nox/lora 2>/dev/null
-echo "== lean fallback"; ls /root/nox/models/nox_lean_fallback | head -5; 
-echo "== gpu procs"; nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader
+for P in nox-train-volta-t866u nox-train-qwen9b-t131u nox-selfheal nox-self-learning-loop; do
+  C=$(grep -l "program:$P\]" /etc/supervisor/conf.d/*.conf 2>/dev/null | head -1)
+  echo "=== $P ($C)"; grep -E "^(command|environment|stderr_logfile|stdout_logfile)=" "$C" 2>/dev/null | a | head -4
+  L=$(grep -E "^stderr_logfile=" "$C" 2>/dev/null | cut -d= -f2 | head -1); [ -f "$L" ] && tail -6 "$L" | a
+done
+echo "== train state"; for f in /root/nox/state/TRAIN_T131U_STATUS.json /root/nox/state/TRAIN_T866U_STATUS.json; do [ -f $f ] && { echo $f; head -c 500 $f | a; echo; }; done
+echo "== lora dirs"; ls -la /root/nox/lora 2>/dev/null | head -8 | a; ls /root/nox/models/lora | head -5
+echo "== train scripts"; ls /root/nox/scripts | grep -iE "train|lora|distill|forge" | head -14
+echo "== dense candidate"; ls /root/nox/models/nox_lean_fallback | head -4; du -sh /root/nox/models/nox_lean_fallback
