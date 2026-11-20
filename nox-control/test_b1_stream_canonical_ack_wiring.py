@@ -321,6 +321,146 @@ def main():
                       page.evaluate("()=>committedUI")==[])
                 check("late STOP tests did not post model or ACK",
                       page.evaluate("()=>fetch('/counts').then(r=>r.json())")==counts)
+                # An uncooperative ui.onDelta must not keep begin() pending after
+                # STOP or timeout, and late settlement must not project state.
+                page.evaluate("""()=>{
+                  window.hungStats={};
+                  window.makeHungClient=(exchangeId,onDelta,timeout=1000)=>{
+                    const stats={posts:0,acks:0,terminals:0};
+                    hungStats[exchangeId]=stats;
+                    const client=NOXB1StreamReconnect.createClient({
+                      transport:{
+                        ...transport,
+                        post:async()=>{
+                          stats.posts++;
+                          return {ok:true,body:{getReader:()=>({
+                            read:async()=>({done:false,value:new TextEncoder().encode(
+                              'event: delta\\ndata: first\\n\\n'+
+                              'event: delta\\ndata: second\\n\\n')})
+                          })}};
+                        },
+                        ack:async()=>{stats.acks++;return true;}
+                      },
+                      host,bridge,
+                      ui:{...ui,onDelta,
+                        upsertTerminal:async()=>{stats.terminals++;return true;}},
+                      timeoutMs:timeout
+                    });
+                    return client;
+                  };
+                  window.hungStopInvoked=[];window.hungStopCommitted=[];
+                  window.hungStopEntered=false;
+                  window.hungStopClient=makeHungClient('hung-stop',async(_s,d,signal)=>{
+                    hungStopInvoked.push(d);window.hungStopSignal=signal;
+                    hungStopEntered=true;
+                    await new Promise(()=>{});
+                    if(!signal.aborted)hungStopCommitted.push(d);
+                  });
+                  window.hungStopTask=hungStopClient.begin({
+                    conversation_id:'dialog',exchange_id:'hung-stop'});
+                }""")
+                page.wait_for_function("window.hungStopEntered===true",timeout=5000)
+                check("STOP accepted while ui.onDelta never settles",
+                      page.evaluate("""()=>hungStopClient.stop({
+                        conversation_id:'dialog',exchange_id:'hung-stop'})""") is True)
+                check("STOP promptly unblocks begin despite hung UI callback",
+                      page.evaluate("""()=>Promise.race([hungStopTask,
+                        new Promise(resolve=>setTimeout(()=>resolve('HUNG'),750))])""")
+                      =="STOPPED")
+                check("STOP abort signal and single delta are preserved",
+                      page.evaluate("()=>hungStopSignal.aborted") is True and
+                      page.evaluate("()=>hungStopInvoked")==["first"] and
+                      page.evaluate("()=>hungStopCommitted")==[])
+
+                # The configured timeout must also unblock a callback that
+                # ignores AbortSignal and never settles.
+                page.evaluate("""()=>{
+                  window.hungTimeoutInvoked=[];window.hungTimeoutCommitted=[];
+                  window.hungTimeoutEntered=false;
+                  window.hungTimeoutClient=makeHungClient('hung-timeout',
+                    async(_s,d,signal)=>{
+                      hungTimeoutInvoked.push(d);window.hungTimeoutSignal=signal;
+                      hungTimeoutEntered=true;
+                      await new Promise(()=>{});
+                      if(!signal.aborted)hungTimeoutCommitted.push(d);
+                    },80);
+                  window.hungTimeoutTask=hungTimeoutClient.begin({
+                    conversation_id:'dialog',exchange_id:'hung-timeout'});
+                }""")
+                page.wait_for_function("window.hungTimeoutEntered===true",timeout=5000)
+                check("timeout promptly unblocks begin despite hung UI callback",
+                      page.evaluate("""()=>Promise.race([hungTimeoutTask,
+                        new Promise(resolve=>setTimeout(()=>resolve('HUNG'),1000))])""")
+                      =="STOPPED_TIMEOUT")
+                check("timeout signal fences later frame and commit",
+                      page.evaluate("()=>hungTimeoutSignal.aborted") is True and
+                      page.evaluate("()=>hungTimeoutInvoked")==["first"] and
+                      page.evaluate("()=>hungTimeoutCommitted")==[])
+
+                # A callback released after STOP must see the aborted signal
+                # before its actual UI commit.
+                page.evaluate("""()=>{
+                  window.lateResolveInvoked=[];window.lateResolveCommitted=[];
+                  window.lateResolveEntered=false;
+                  window.lateResolveClient=makeHungClient('late-resolve',
+                    async(_s,d,signal)=>{
+                      lateResolveInvoked.push(d);
+                      if(d==='first'){
+                        lateResolveEntered=true;
+                        await new Promise(resolve=>window.releaseLateResolve=resolve);
+                      }
+                      if(!signal.aborted)lateResolveCommitted.push(d);
+                    });
+                  window.lateResolveTask=lateResolveClient.begin({
+                    conversation_id:'dialog',exchange_id:'late-resolve'});
+                }""")
+                page.wait_for_function("window.lateResolveEntered===true",timeout=5000)
+                check("late-resolve STOP accepted",
+                      page.evaluate("""()=>lateResolveClient.stop({
+                        conversation_id:'dialog',exchange_id:'late-resolve'})""") is True)
+                check("late-resolve callback no longer blocks begin",
+                      page.evaluate("""()=>Promise.race([lateResolveTask,
+                        new Promise(resolve=>setTimeout(()=>resolve('HUNG'),750))])""")
+                      =="STOPPED")
+                page.evaluate("()=>releaseLateResolve()")
+                page.evaluate("()=>new Promise(resolve=>setTimeout(resolve,0))")
+                check("late callback resolution cannot commit or emit next delta",
+                      page.evaluate("()=>lateResolveInvoked")==["first"] and
+                      page.evaluate("()=>lateResolveCommitted")==[])
+
+                # A late rejection after cancellation must stay observed.
+                page.evaluate("""()=>{
+                  window.unhandledHungRejections=0;
+                  window.addEventListener('unhandledrejection',()=>{
+                    window.unhandledHungRejections++;
+                  });
+                  window.lateRejectInvoked=[];window.lateRejectEntered=false;
+                  window.lateRejectClient=makeHungClient('late-reject',
+                    async(_s,d)=>{
+                      lateRejectInvoked.push(d);lateRejectEntered=true;
+                      await new Promise((_resolve,reject)=>{
+                        window.rejectLateCallback=()=>reject(new Error('late UI rejection'));
+                      });
+                    });
+                  window.lateRejectTask=lateRejectClient.begin({
+                    conversation_id:'dialog',exchange_id:'late-reject'});
+                }""")
+                page.wait_for_function("window.lateRejectEntered===true",timeout=5000)
+                check("late-reject STOP accepted",
+                      page.evaluate("""()=>lateRejectClient.stop({
+                        conversation_id:'dialog',exchange_id:'late-reject'})""") is True)
+                check("late rejection cannot replace STOP result",
+                      page.evaluate("""()=>Promise.race([lateRejectTask,
+                        new Promise(resolve=>setTimeout(()=>resolve('HUNG'),750))])""")
+                      =="STOPPED")
+                page.evaluate("()=>rejectLateCallback()")
+                page.evaluate("()=>new Promise(resolve=>setTimeout(resolve,20))")
+                check("late callback rejection is handled without unhandled rejection",
+                      page.evaluate("()=>unhandledHungRejections")==0 and
+                      page.evaluate("()=>lateRejectInvoked")==["first"])
+                check("hung UI callbacks never ACK or create terminal state",
+                      page.evaluate("""()=>Object.values(hungStats).every(x=>
+                        x.posts===1&&x.acks===0&&x.terminals===0)"""))
                 page.evaluate("()=>gate.close()");page.close()
                 nextpage=ctx.new_page();nextpage.goto(url);attach(nextpage,db)
                 check("reload uses canonical GET not duplicate POST/ACK",
