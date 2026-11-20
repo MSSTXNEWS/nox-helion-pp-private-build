@@ -55,7 +55,16 @@ def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
     census = census if doc_shapes['source_census'] else {}
     review = review if doc_shapes['owner_review'] else {}
     registry = strict_parent_registry(disposition,source_documents,source_raw_sha256)
-    ledger = eligibility_ledger(registry,previous,refill_request)
+    # This is a diagnostic read, so malformed nested request rows must yield
+    # a HOLD report rather than crash the eligibility projection before the
+    # strict owner/request validator reports the original invalid document.
+    projection_request = dict(refill_request)
+    for key in ('outcomes', 'original_task_states'):
+        rows = refill_request.get(key)
+        projection_request[key] = [row for row in rows
+                                   if isinstance(row, dict) and type(row.get('task_id')) is str] \
+                                  if isinstance(rows, list) else []
+    ledger = eligibility_ledger(registry,previous,projection_request)
     missions = proposal.get('missions') if isinstance(proposal, dict) else None
     reviewed_ids_expected = None
     if isinstance(missions, list) and all(
@@ -69,7 +78,14 @@ def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
                   'predicates': [_check('mission_ids_well_formed', True, False, False,
                                         'proposal.missions[].mission_id')],
                   'native_publish_performed': False, 'original_task_accepted': False}]
-    request_validation = [_check('input_document_objects',
+    census_roots = census.get('roots')
+    roots_valid = isinstance(census_roots, dict)
+    # Preserve the invalid raw census for exact owner/immutable checks. Use a
+    # harmless projection only to render source-gap evidence.
+    safe_census = census if roots_valid else dict(census, roots={})
+    request_validation = [_check('source_census_roots_object', True,
+        roots_valid, roots_valid, 'source_census.roots must be a mapping'),
+        _check('input_document_objects',
         {name: True for name in doc_shapes}, doc_shapes, all(doc_shapes.values()),
         'refill_request/proposal/source_census/owner_review must each be a JSON object')]
     try:
@@ -145,7 +161,7 @@ def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
         'structural_source_candidate_count':len(structural),
         'structural_source_candidates':[row['task_id'] for row in structural],
         'task_eligibility_ledger':ledger,
-        'highlighted_candidate_gaps':special_candidate_gaps(registry,census,census_sha),
+        'highlighted_candidate_gaps':special_candidate_gaps(registry,safe_census,census_sha),
         'publisher_requirements':['OWNER_REVIEWED_EXACT_REQUEST_AND_PROPOSAL',
             'EXACT_CURRENT_CONFIG_CAS','EXISTING_NATIVE_OWNER_LEASE',
             'CURRENT_ORIGINAL_TASK_STATE_READBACK_MATCH','ALL_OLD_TASKS_AND_CLAIMS_PRESERVED',
