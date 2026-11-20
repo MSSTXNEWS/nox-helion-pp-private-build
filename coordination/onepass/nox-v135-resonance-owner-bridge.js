@@ -171,10 +171,9 @@
           await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
         }
         if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
-        if(doneSeen){
-          if(buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
-          break;
-        }
+        // A native done frame is a provisional receipt until transport EOF.
+        // Continue reading: a later chunk must not be silently discarded.
+        if(doneSeen&&buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
       }
       buf+=decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
