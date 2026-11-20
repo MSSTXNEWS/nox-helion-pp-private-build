@@ -9,7 +9,7 @@ REPO='MSSTXNEWS/nox-helion-pp-private-build'
 OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
-FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'gpu_inventory': 'nox-control/owner_native_gpu_inventory.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
+FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'gpu_inventory': 'nox-control/owner_native_gpu_inventory.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_refill_runtime_contract_upgrade_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
 FILES['refill_snapshot'] = 'nox-control/systemic_relay_20261118/owner_systemic_refill_snapshot.py'
 GPU_INVENTORY_BLOB_SHA='3a3ff33e7709539d5ff6ab6b8614d694a9d2becb'
 GPU_MEMORY_SEMANTICS='nvidia-smi MiB; 0<=total-used-free<=1024 reserved'
@@ -208,10 +208,20 @@ def _validate_forward_marker(action,line):
         if marker=='NOX_MAINT_REPAIR_COMPLETE':
             if payload!='true':raise RuntimeError('HOLD_REMOTE_MARKER_VALUE')
             return
-        if marker!='NOX_MAINT_REFLEX_RESTORE':raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
+        if marker not in ('NOX_MAINT_REFLEX_RESTORE','NOX_MAINT_REFILL_CONTRACT'):
+            raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
         try:value=json.loads(payload)
         except (ValueError,TypeError) as exc:raise RuntimeError('HOLD_REMOTE_MARKER_JSON') from exc
         if not isinstance(value,dict):raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
+        if marker=='NOX_MAINT_REFILL_CONTRACT' and (value.get('schema')!='NOX_REFILL_CONTRACT_UPGRADE_V1'
+                or value.get('state') not in ('PREFLIGHT','CONTRACT_MODULE_WRITTEN','CONTRACT_MODULE_RUNNING',
+                    'PHYSICAL_REFILL_CONTRACT_RUNNING','ROLLED_BACK_ORIGINAL_RESTARTED',
+                    'UNMODIFIED_ORIGINAL_RESTARTED','HOLD_UPGRADE_ROLLBACK_NOT_VERIFIED',
+                    'HOLD_UPGRADE_ORIGINAL_RESTART_NOT_VERIFIED')
+                or value.get('original_task_accepted') is not False
+                or value.get('model_restarted') is not False
+                or value.get('s03_changed') is not False):
+            raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
         return
     if action=='lifeline':
         if marker=='NOX_MAINT_LIFELINE_COMPLETE':
@@ -1270,6 +1280,11 @@ FROZEN_BROWSER_PAGE_DEPENDENCIES={
 }
 SCOPED_REPAIR_BUNDLES[FILES['repair']] = ()
 SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ()
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('owner_systemic_refill.py', 'continuous_transaction_helpers.py')
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = (
+    'nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py',
+    'nox-control/continuous_executor_20261118/assets/continuous_transaction_helpers.py',
+)
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
