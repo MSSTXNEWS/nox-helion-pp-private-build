@@ -52,6 +52,10 @@
     // which silently reorders SSE tokens. Serialize each exchange independently;
     // STOP releases hung precommit waits and fences every queued DOM mutation.
     const deltaTails=new Map();
+    // Reserve a terminal intent synchronously, before any async precommit.
+    // New deltas cannot overtake a verified reconnect terminal, but deltas
+    // queued earlier still drain in FIFO so a partial answer is not lost.
+    const terminalIntents=new Map();
     async function onDelta(raw,delta,signal){
       const s=scope(raw);
       if(!signal||typeof signal.aborted!=='boolean'||
@@ -59,6 +63,7 @@
          typeof delta!=='string') hold('HOLD_B1_UI_DELTA_CONTRACT');
       if(signal.aborted) return false;
       const k=s.conversation_id+'\u0000'+s.exchange_id;
+      if(terminalIntents.has(k)) return false;
       const previous=deltaTails.get(k)||Promise.resolve();
       const job=previous.catch(()=>{}).then(async()=>{
         if(signal.aborted) return false;
@@ -92,19 +97,37 @@
       job.then(release,release);
       return job;
     }
-    async function upsertTerminal(raw,eventId){
+    function upsertTerminal(raw,eventId){
       const s=scope(raw);
       if(typeof eventId!=='string'||!ID.test(eventId))
         hold('HOLD_B1_UI_EVENT_ID');
-      await beforeCommit('terminal',s);
-      let el=find(s);
-      if(el&&el.dataset.noxB1EventId&&el.dataset.noxB1EventId!==eventId)
-        hold('HOLD_B1_UI_CONFLICTING_TERMINAL');
-      if(!el) el=create(s);
-      // Idempotent per exchange, including repeat readback or adapter reset.
-      el.dataset.noxB1EventId=eventId;
-      el.dataset.noxB1State='terminal';
-      return true;
+      const k=s.conversation_id+'\u0000'+s.exchange_id;
+      const pending=terminalIntents.get(k);
+      if(pending){
+        if(pending.eventId!==eventId)
+          hold('HOLD_B1_UI_CONFLICTING_TERMINAL');
+        return pending.promise;
+      }
+      const previous=deltaTails.get(k)||Promise.resolve();
+      const job=Promise.resolve().then(async()=>{
+        // A previously accepted delta must finish (or abort) before terminal.
+        // A failed delta blocks ACK via the caller's UI projection gate.
+        await previous;
+        await beforeCommit('terminal',s);
+        let el=find(s);
+        if(el&&el.dataset.noxB1EventId&&el.dataset.noxB1EventId!==eventId)
+          hold('HOLD_B1_UI_CONFLICTING_TERMINAL');
+        if(!el) el=create(s);
+        // Idempotent per exchange, including repeat readback or adapter reset.
+        el.dataset.noxB1EventId=eventId;
+        el.dataset.noxB1State='terminal';
+        return true;
+      });
+      const intent={eventId,promise:job};
+      terminalIntents.set(k,intent);
+      const release=()=>{if(terminalIntents.get(k)===intent) terminalIntents.delete(k);};
+      job.then(release,release);
+      return job;
     }
     return Object.freeze({onDelta,upsertTerminal});
   }

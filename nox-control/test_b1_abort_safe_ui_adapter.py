@@ -139,6 +139,81 @@ def main():
             !Array.from(container.children).some(
               e=>e.dataset.noxB1Exchange===s.exchange_id);
         }"""))
+        check("terminal reservation drains earlier FIFO delta but rejects later SSE delta", page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'terminal-fifo'};
+          const ctrl=new AbortController();
+          let release;
+          const pending=new Promise(r=>release=r);
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container:chat,
+            beforeCommit:async kind=>{if(kind==='delta') await pending;}});
+          const early=ui.onDelta(s,'BEFORE',ctrl.signal);
+          const terminal=ui.upsertTerminal(s,'canonical-terminal-1');
+          const late=await ui.onDelta(s,' LATE',ctrl.signal);
+          if(late!==false) return false;
+          release();
+          const results=await Promise.all([early,terminal]);
+          const nodes=Array.from(chat.children).filter(
+            e=>e.dataset.noxB1Exchange===s.exchange_id);
+          return results.every(Boolean)&&nodes.length===1&&
+            nodes[0].textContent==='BEFORE'&&nodes[0].dataset.noxB1State==='terminal';
+        }"""))
+        check("concurrent identical terminal readbacks coalesce and conflict holds", page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'terminal-coalesce'};
+          let release,calls=0;
+          const pending=new Promise(r=>release=r);
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container:chat,
+            beforeCommit:async kind=>{if(kind==='terminal'){calls++;await pending;}}});
+          const first=ui.upsertTerminal(s,'canonical-terminal-2');
+          const second=ui.upsertTerminal(s,'canonical-terminal-2');
+          let conflicted=false;
+          try{ui.upsertTerminal(s,'different-terminal');}
+          catch(e){conflicted=e.code==='HOLD_B1_UI_CONFLICTING_TERMINAL';}
+          release();
+          const results=await Promise.all([first,second]);
+          return first===second&&conflicted&&results.every(Boolean)&&calls===1&&
+            Array.from(chat.children).filter(
+              e=>e.dataset.noxB1Exchange===s.exchange_id).length===1;
+        }"""))
+        check("failed terminal precommit releases reservation for safe retry", page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'terminal-retry'};
+          let fail=true;
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container:chat,
+            beforeCommit:async kind=>{if(kind==='terminal'&&fail) throw Error('hold');}});
+          let rejected=false;
+          try{await ui.upsertTerminal(s,'canonical-terminal-3');}
+          catch(_){rejected=true;}
+          if(!rejected) return false;
+          fail=false;
+          const delta=await ui.onDelta(s,'RETRY',new AbortController().signal);
+          const terminal=await ui.upsertTerminal(s,'canonical-terminal-3');
+          const nodes=Array.from(chat.children).filter(
+            e=>e.dataset.noxB1Exchange===s.exchange_id);
+          return delta===true&&terminal===true&&nodes.length===1&&
+            nodes[0].textContent==='RETRY'&&nodes[0].dataset.noxB1State==='terminal';
+        }"""))
+        check("a second exchange progresses while first terminal is pending", page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s1={conversation_id:'dialog',exchange_id:'terminal-wait'};
+          const s2={conversation_id:'dialog',exchange_id:'next-exchange'};
+          let release,entered=false;
+          const pending=new Promise(r=>release=r);
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container:chat,
+            beforeCommit:async(kind,s)=>{
+              if(kind==='terminal'&&s.exchange_id===s1.exchange_id){
+                entered=true;await pending;
+              }
+            }});
+          const terminal=ui.upsertTerminal(s1,'canonical-terminal-4');
+          for(let i=0;i<10&&!entered;i++) await Promise.resolve();
+          const next=await ui.onDelta(s2,'NEXT',new AbortController().signal);
+          release();await terminal;
+          const nodes=Array.from(chat.children).filter(
+            e=>e.dataset.noxB1Exchange===s2.exchange_id);
+          return entered&&next===true&&nodes.length===1&&nodes[0].textContent==='NEXT';
+        }"""))
         browser.close()
     print(f"B1 source-only real Chromium: {len(checks)}/{len(checks)} PASS")
     for name, _ in checks:
