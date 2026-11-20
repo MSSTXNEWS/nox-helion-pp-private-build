@@ -1905,6 +1905,7 @@ test('V202 visible-to-quiet transition coalesces remaining pieces of same native
     const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
       undefined,false,700,undefined,'verified-exchange-01',[],false,false,prompt,
       undefined,presentation);
+    f.window.matchMedia=()=>({get matches(){return presentation.reduced;}});
     const out=await events(await f.fetch('/api/nox/chat',{method:'POST',
       body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v202-'+mode})}));
     const tokens=out.filter(e=>e.type==='token');
