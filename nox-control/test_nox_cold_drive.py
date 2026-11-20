@@ -1,5 +1,6 @@
 """Source-only tests. The rclone fixture is local transport, NOT cloud evidence."""
 import contextlib
+from datetime import datetime, timedelta, timezone
 import hashlib
 import io
 import json
@@ -85,6 +86,94 @@ class ColdTests(unittest.TestCase):
             op.assert_called_once()
     def test_batch_defaults_six_processes(self):
         self.assertEqual(cold.parser().parse_args(['batch','--manifest','m.json','--remote','fixture:cold']).workers,6)
+
+    def background_monitor(self):
+        priority = self.root / 'priority'
+        priority.mkdir()
+        (priority / 'CHAT_ACTIVE').write_text('0\n')
+        (priority / 'MODE').write_text('IDLE\n')
+        (priority / 'LAST_OWNER_CHAT').write_text(
+            (datetime.now(timezone.utc) - timedelta(minutes=5)).strftime('%Y-%m-%dT%H:%M:%S%z'))
+        (priority / 'IDLE_MINUTES').write_text('3\n')
+        cgroup = self.root / 'cgroup'
+        cgroup.mkdir()
+        (cgroup / 'memory.max').write_text(str(4 * cold.GIB))
+        (cgroup / 'memory.current').write_text(str(3 * cold.GIB))
+        for name in ('memory.pressure', 'io.pressure'):
+            (cgroup / name).write_text('full avg10=0.00 avg60=0.00 avg300=0.00 total=0\n')
+        self.enterContext(patch.object(cold, 'PRIORITY_STATE', priority))
+        self.enterContext(patch.object(cold, 'NATIVE_CGROUP', cgroup))
+        return priority, cgroup
+
+    def test_background_gate_holds_before_remote_start_when_ram_is_low(self):
+        _, cgroup = self.background_monitor()
+        (cgroup / 'memory.current').write_text(str(4 * cold.GIB - 50 * cold.MIB))
+        with patch.object(cold, 'command') as command, \
+             self.assertRaisesRegex(RuntimeError, 'HOLD_BACKGROUND_RAM_HEADROOM'):
+            cold.copy_verified({**self.job, 'background': True})
+        command.assert_not_called()
+
+    def test_background_gate_rejects_new_heartbeat_before_mode_switch(self):
+        priority, _ = self.background_monitor()
+        (priority / 'LAST_OWNER_CHAT').write_text(datetime.now(timezone.utc).isoformat())
+        with self.assertRaisesRegex(RuntimeError, 'HOLD_BACKGROUND_OWNER_CHAT_RECENT'):
+            cold.background_storage_checkpoint()
+
+    def test_background_gate_rejects_unreadable_priority_and_pressure(self):
+        priority, cgroup = self.background_monitor()
+        (cgroup / 'io.pressure').write_text('full avg10=1.25 avg60=0.00 avg300=0.00 total=0\n')
+        with self.assertRaisesRegex(RuntimeError, 'HOLD_BACKGROUND_PRESSURE'):
+            cold.background_storage_checkpoint()
+        mode = priority / 'MODE'
+        mode.unlink()
+        os.mkfifo(mode)
+        with self.assertRaisesRegex(RuntimeError, 'HOLD_BACKGROUND_PRIORITY_UNAVAILABLE'):
+            cold.background_storage_checkpoint()
+
+    def test_background_slot_is_exclusive_and_never_evicts(self):
+        self.background_monitor()
+        with cold.background_transfer_slot(True):
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_STORAGE_WRITER_BUSY'):
+                with cold.background_transfer_slot(True):
+                    self.fail('second background slot admitted')
+        a = cold.parser().parse_args(['upload', '--file', str(self.src), '--remote', 'fixture:cold',
+                                      '--background', '--evict'])
+        with self.assertRaisesRegex(ValueError, 'HOLD_BACKGROUND_EVICTION_FORBIDDEN'):
+            cold.upload(a)
+
+    def test_background_copy_yields_at_owner_activity_without_receipt(self):
+        priority, _ = self.background_monitor()
+        marker = self.root / 'copy-started'
+
+        def start_owner_chat():
+            for _ in range(100):
+                if marker.exists():
+                    (priority / 'CHAT_ACTIVE').write_text('1\n')
+                    return
+                time.sleep(0.02)
+
+        watcher = threading.Thread(target=start_owner_chat, daemon=True)
+        started = time.monotonic()
+        with patch.object(cold, 'assert_not_open'), \
+             patch.dict(os.environ, {'TEST_STALL_COPY': '1', 'TEST_COPY_STARTED': str(marker)}), \
+             self.assertRaisesRegex(RuntimeError, 'HOLD_BACKGROUND_OWNER_CHAT_ACTIVE'):
+            watcher.start()
+            cold.copy_verified({**self.job, 'background': True})
+        watcher.join(timeout=2)
+        self.assertTrue(marker.exists())
+        self.assertLess(time.monotonic() - started, 2.8)
+        self.assertTrue(self.src.exists())
+        self.assertFalse(self.receipts.exists())
+
+    def test_background_copy_limits_transport_and_verifies_bytes(self):
+        self.background_monitor()
+        with patch.object(cold, 'assert_not_open'), patch.object(cold, 'command', wraps=cold.command) as copy, \
+             patch.object(cold, 'stream_sha256', wraps=cold.stream_sha256) as verify:
+            row = cold.copy_verified({**self.job, 'background': True})
+        self.assertEqual(tuple(copy.call_args.args[0][-6:]), cold.BACKGROUND_RCLONE_LIMITS)
+        self.assertEqual(verify.call_args.kwargs['limits'], cold.BACKGROUND_RCLONE_LIMITS)
+        self.assertTrue(row['readback_verified'])
+        self.assertFalse(row['source_deleted'])
     def test_more_than_six_rejected(self):
         with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):
             cold.parser().parse_args(['batch','--manifest','m.json','--remote','fixture:cold','--workers','7'])
