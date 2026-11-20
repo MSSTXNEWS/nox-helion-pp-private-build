@@ -376,8 +376,16 @@ def _normal_calls(rows,step):
     if not isinstance(rows,list) or len(rows)>8:
         raise StreamFailure('HOLD_TOOL_CALL_COUNT')
     result=[]
+    seen_ids=set()
     for index,row in enumerate(rows):
-        if not isinstance(row,dict) or not isinstance(row.get('name'),str):
+        if not isinstance(row,dict):
+            raise StreamFailure('HOLD_TOOL_CALL_SHAPE')
+        name=row.get('name')
+        # Heuristic/direct calls never pass through the streamed model parser.
+        # Reject malformed tool identities at their shared native boundary.
+        if (type(name) is not str or not 1<=len(name)<=200 or
+                any(ord(char)<32 or 127<=ord(char)<=159 or
+                    0xD800<=ord(char)<=0xDFFF for char in name)):
             raise StreamFailure('HOLD_TOOL_CALL_SHAPE')
         args=row.get('arguments')
         # Missing/null or a blank native argument string means no arguments.
@@ -400,10 +408,18 @@ def _normal_calls(rows,step):
             raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         # Native parser / deterministic routes share the same bounded ID rule.
         call_id=row.get('id')
-        if call_id is not None and (not isinstance(call_id,str) or not 1<=len(call_id)<=160):
+        if call_id is not None and (type(call_id) is not str or
+                not 1<=len(call_id)<=160 or
+                any(ord(char)<32 or 127<=ord(char)<=159 or
+                    0xD800<=ord(char)<=0xDFFF for char in call_id)):
             raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
-        result.append({'id':call_id or f'owner_call_{step}_{index}',
-                       'name':row['name'],'arguments':args})
+        effective_id=call_id if call_id is not None else f'owner_call_{step}_{index}'
+        # Duplicate native IDs can double-execute a side effect yet give S03
+        # two different results under one tool_call_id. Include generated IDs.
+        if effective_id in seen_ids:
+            raise StreamFailure('HOLD_TOOL_CALL_ID')
+        seen_ids.add(effective_id)
+        result.append({'id':effective_id,'name':name,'arguments':args})
     return result
 
 
