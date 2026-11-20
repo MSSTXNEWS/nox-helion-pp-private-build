@@ -215,6 +215,28 @@ def _reclaimable_restart_admission():
             "psi_some_avg10": float(m.group(1))}
 
 
+def _safe_dispatcher_group_stop():
+    """Never stop a director unless Supervisor also owns its worker group."""
+    import configparser
+    base = Path("/etc/supervisor/conf.d")
+    try:
+        configs = sorted(base.glob("*.conf"))
+        if len(configs) > 120:
+            return False
+        for file in configs:
+            if file.is_symlink() or not file.is_file() or file.stat().st_size > 65536:
+                continue
+            cp = configparser.RawConfigParser(interpolation=None, strict=False)
+            cp.read_string(file.read_text(encoding="utf-8"))
+            section = "program:" + DISPATCHER_NAME
+            if cp.has_section(section):
+                return (cp.getboolean(section, "stopasgroup", fallback=False)
+                        and cp.getboolean(section, "killasgroup", fallback=False))
+    except (OSError, UnicodeError, ValueError, configparser.Error):
+        return False
+    return False
+
+
 def activate_staged_dispatcher():
     """Safe single restart after two fresh owner/queue/STOP/cgroup checks."""
     source = DISPATCHER_SOURCE
@@ -243,6 +265,9 @@ def activate_staged_dispatcher():
                 "live_registration_receipt": False,
                 "raw_free_bytes": admission["raw_free_bytes"],
                 "inactive_file_bytes": admission["inactive_file_bytes"]}
+    if not _safe_dispatcher_group_stop():
+        return {"state": "DEFERRED_GROUP_STOP_UNVERIFIED",
+                "dispatcher_restarted": False, "live_registration_receipt": False}
     time.sleep(1)
     second = _native_idle_sample()
     require(first == second, "ACTIVATION_QUEUE_CHANGED")
@@ -358,6 +383,7 @@ def install():
             'dispatcher_source_staged':True,
             'dispatcher_staged_sha256':registry['new_sha256'],
             'dispatcher_activation':activation,
+            'dispatcher_only_restarted':activation.get('dispatcher_restarted',False),
             'dispatcher_source_reloaded':activation['state'] in (
                 'DISPATCHER_RELOADED_THREE_WORKERS',
                 'SOURCE_LOADED_AFTER_STAGE_INFERRED'),
