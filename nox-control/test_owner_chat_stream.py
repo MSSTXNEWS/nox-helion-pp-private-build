@@ -95,7 +95,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 payload={'model':'nox-existing','messages':json.loads(json.dumps(history))}
                 valid=change=='unchanged'
                 streams=[Chunks([frame('ready'),frame(finish='stop'),
-                                 b'data: [DONE]\\n\\n'])] if valid else []
+                                 b'data: [DONE]\n\n'])] if valid else []
                 requests,factory=self.transport(streams)
                 with factory:
                     response=await native['owner_completion'](
