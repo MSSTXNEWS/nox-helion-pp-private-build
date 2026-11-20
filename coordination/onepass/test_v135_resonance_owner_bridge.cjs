@@ -1919,3 +1919,23 @@ test('V202 visible-to-quiet transition coalesces remaining pieces of same native
     assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
   }
 });
+
+test('V203 explicit empty Request init.body cannot replay a stale native prompt',async()=>{
+  const stale=JSON.stringify({message:prompt,dialog_id:id,request_id:'v203-stale'});
+  for(const [body,expected] of [['',400],[null,422]]){
+    const f=fake();
+    const request=new Request('https://nox.local/api/nox/chat',{method:'POST',body:stale});
+    const response=await f.fetch(request,{method:'POST',body});
+    assert.equal(response.status,expected,'explicit override must be authoritative');
+    const receipt=await response.json();
+    assert.equal(receipt.history_persisted,false);
+    assert.equal(receipt.s03_integrated,false);
+    assert.equal(f.calls.length,0,'never replay original Request body into model/S03');
+  }
+  const f=fake();
+  const request=new Request('https://nox.local/api/nox/chat',{method:'POST',body:stale});
+  const output=await events(await f.fetch(request,{method:'POST'}));
+  assert.equal(output.filter(e=>e.type==='done').length,1,
+    'absent init.body retains legacy Request processing');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+});
