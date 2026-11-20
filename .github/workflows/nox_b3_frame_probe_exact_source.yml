@@ -37,3 +37,39 @@ jobs:
         run: |
           python -m py_compile coordination/onepass/b3_frame_probe_20261120.py coordination/onepass/test_b3_frame_probe_20261120.py
           python coordination/onepass/test_b3_frame_probe_20261120.py -v
+
+  native-reflex-exact-trace:
+    # Independently reproduces the existing mandatory CircleCI source commands.
+    # Diagnostic only: a failing assertion must fail this job, never be hidden.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact B3 branch SHA
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up same Python 3.11 as CircleCI
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile exact CircleCI native-reflex source inputs
+        shell: bash
+        run: |
+          set -eu
+          python -B -m py_compile \
+            nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py \
+            nox-control/systemic_relay_20261118/owner_systemic_relay_publish.py \
+            nox-control/systemic_relay_20261118/test_owner_systemic_taskpack.py \
+            nox-control/owner_native_operator.py \
+            nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py \
+            nox-control/systemic_relay_20261118/test_owner_reflex_taskpack.py \
+            nox-control/owner_memory_governor.py \
+            nox-control/test_owner_memory_governor.py
+      - name: Execute unchanged native-reflex tests; keep full error traceback
+        shell: bash
+        run: |
+          set -eu
+          python -B nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py
+          python -B nox-control/systemic_relay_20261118/test_owner_reflex_taskpack.py
+          python -B nox-control/systemic_relay_20261118/test_owner_systemic_taskpack.py
+          python -B -m unittest discover -s nox-control -p test_owner_memory_governor.py -v
