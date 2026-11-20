@@ -458,6 +458,50 @@ def main():
                 check("late callback rejection is handled without unhandled rejection",
                       page.evaluate("()=>unhandledHungRejections")==0 and
                       page.evaluate("()=>lateRejectInvoked")==["first"])
+                # An already queued STOP can run between read resolution and the
+                # onDelta microtask; the callback must not start afterward.
+                page.evaluate("""()=>{
+                  window.sameTurnInvoked=[];window.sameTurnCommitted=[];
+                  window.sameTurnStopResult=null;
+                  const scope={conversation_id:'dialog',exchange_id:'same-turn-stop'};
+                  const stats={posts:0,acks:0,terminals:0};
+                  hungStats[scope.exchange_id]=stats;
+                  window.sameTurnClient=NOXB1StreamReconnect.createClient({
+                    transport:{
+                      ...transport,
+                      post:async()=>{
+                        stats.posts++;
+                        return {ok:true,body:{getReader:()=>({
+                          read:()=>new Promise(resolve=>{
+                            queueMicrotask(()=>{
+                              resolve({done:false,value:new TextEncoder().encode(
+                                'event: delta\\ndata: first\\n\\n'+
+                                'event: delta\\ndata: second\\n\\n')});
+                              queueMicrotask(()=>{
+                                sameTurnStopResult=sameTurnClient.stop(scope);
+                              });
+                            });
+                          })
+                        })}};
+                      },
+                      ack:async()=>{stats.acks++;return true;}
+                    },
+                    host,bridge,
+                    ui:{...ui,onDelta:async(_s,d,signal)=>{
+                      sameTurnInvoked.push(d);
+                      if(!signal.aborted)sameTurnCommitted.push(d);
+                    },upsertTerminal:async()=>{stats.terminals++;return true;}},
+                    timeoutMs:1000
+                  });
+                  window.sameTurnTask=sameTurnClient.begin(scope);
+                }""")
+                check("queued STOP wins before ui.onDelta callback microtask",
+                      page.evaluate("""()=>Promise.race([sameTurnTask,
+                        new Promise(resolve=>setTimeout(()=>resolve('HUNG'),750))])""")
+                      =="STOPPED" and
+                      page.evaluate("()=>sameTurnStopResult") is True and
+                      page.evaluate("()=>sameTurnInvoked")==[] and
+                      page.evaluate("()=>sameTurnCommitted")==[])
                 check("hung UI callbacks never ACK or create terminal state",
                       page.evaluate("""()=>Object.values(hungStats).every(x=>
                         x.posts===1&&x.acks===0&&x.terminals===0)"""))
