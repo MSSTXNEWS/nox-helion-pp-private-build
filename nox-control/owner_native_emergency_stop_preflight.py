@@ -227,8 +227,9 @@ def inspect_configuration() -> dict:
         "configured_mode_private": bool(mode_int is not None and not mode_int & 0o022),
         "configured_mode_owner_write_set": bool(mode_int is not None and mode_int & 0o200),
         "endpoint_config_predicates_all_pass": bool(
-            socket_path is not None and unix_scheme and no_authority_query_fragment and
-            serverurl_path is not None and socket_path == serverurl_path and
+            include_glob_ok and socket_path is not None and unix_scheme and
+            no_authority_query_fragment and serverurl_path is not None and
+            socket_path == serverurl_path and
             factory_raw == EXPECTED_FACTORY and owner_raw == "root:root" and
             mode_int is not None and not mode_int & 0o022 and mode_int & 0o200),
     }
