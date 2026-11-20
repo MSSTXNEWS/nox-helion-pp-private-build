@@ -111,6 +111,9 @@ CONTROLLER_SERVICES = {
     'nox-selfheal': Path('/root/nox_selfheal.py'),
 }
 STOPPED = ('STOPPED', 'EXITED', 'FATAL')
+# Native owner handoff SIX_LANE_EXECUTION_PIN_20261119 fixes physical cap at 3.
+# Six logical lanes are NOT six native worker processes.
+NATIVE_WORKER_CAP = 3
 
 
 def read_json(path, limit=4_000_000, expected_sha256=None):
@@ -855,14 +858,24 @@ def worker_readback(helper, fresh_after=0):
     path = ROOT/'status/agents_t856u.json'
     value = read_json(path)
     rows = value.get('workers', [])
+    # A historical six-worker BOOST receipt is not a fresh native-worker census.
+    # The pinned six-lane handoff observes exactly three physical workers; a
+    # stale six-worker status must never be accepted as current admission.
+    if type(rows) is not list or any(type(row) is not dict for row in rows):
+        raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
     claimed = [row['current_task']['id'] for row in rows if isinstance(row.get('current_task'), dict)]
-    if (path.stat().st_mtime < max(fresh_after, time.time()-90) or value.get('n') != 6 or len(rows) != 6
-            or len({row.get('id') for row in rows}) != 6 or len(set(claimed)) != len(claimed)):
-        raise RuntimeError('HOLD_SIX_WORKER_READBACK')
+    ids = [row.get('id') for row in rows]
+    if (path.stat().st_mtime < max(fresh_after, time.time()-90)
+            or type(value.get('n')) is not int or value['n'] != NATIVE_WORKER_CAP
+            or len(rows) != NATIVE_WORKER_CAP
+            or any(worker_id is None or worker_id == '' for worker_id in ids)
+            or len(set(ids)) != NATIVE_WORKER_CAP
+            or len(set(claimed)) != len(claimed)):
+        raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
     service = helper.service_state('nox-dispatcher-t855u')
     if service['state'] != 'RUNNING':
         raise RuntimeError('HOLD_DISPATCHER_NOT_RUNNING')
-    return {'workers': 6, 'worker_ids': [row.get('id') for row in rows],
+    return {'workers': NATIVE_WORKER_CAP, 'worker_ids': ids,
             'busy_count': len(claimed), 'claimed_task_ids': claimed,
             'dispatcher_pid': service['pid'], 'mtime': path.stat().st_mtime}
 

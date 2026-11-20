@@ -1361,5 +1361,61 @@ class CheckpointStepProvenance(unittest.TestCase):
             self.assertEqual(scope["expected"][control],
                              hashlib.sha256(b"patched").hexdigest())
 
+
+class NativeThreeWorkerCap(unittest.TestCase):
+    def test_pinned_three_native_workers_do_not_claim_six_logical_lanes(self):
+        """Execute the actual readback AST against fresh native owner fixtures."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        nodes = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+                 and node.name == "worker_readback"]
+        self.assertEqual(len(nodes), 1)
+        cap = [node for node in tree.body if isinstance(node, ast.Assign)
+               and any(isinstance(t, ast.Name) and t.id == "NATIVE_WORKER_CAP"
+                       for t in node.targets)]
+        self.assertEqual(len(cap), 1)
+        self.assertEqual(ast.literal_eval(cap[0].value), 3)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            status = root / "status"
+            status.mkdir()
+            target = status / "agents_t856u.json"
+            scope = {"Path": Path, "ROOT": root, "NATIVE_WORKER_CAP": 3,
+                     "time": __import__("time"),
+                     "read_json": lambda path: json.loads(path.read_text(encoding="utf-8"))}
+            exec(compile(ast.Module(body=nodes, type_ignores=[]),
+                         str(SOURCE), "exec"), scope)
+            active = {"state": "RUNNING", "pid": 1234}
+            helper = types.SimpleNamespace(service_state=lambda name: active)
+            check = scope["worker_readback"]
+
+            def write_workers(rows, n=None):
+                target.write_text(json.dumps({"n": len(rows) if n is None else n,
+                                              "workers": rows}), encoding="utf-8")
+            workers = [{"id": "w1", "current_task": None},
+                       {"id": "w2", "current_task": {"id": "job-1"}},
+                       {"id": "w3", "current_task": None}]
+            write_workers(workers)
+            proof = check(helper)
+            self.assertEqual(proof["workers"], 3)
+            self.assertEqual(proof["worker_ids"], ["w1", "w2", "w3"])
+            self.assertEqual(proof["claimed_task_ids"], ["job-1"])
+            for invalid_rows, n in (
+                (workers + [{"id": "w4", "current_task": None},
+                            {"id": "w5", "current_task": None},
+                            {"id": "w6", "current_task": None}], 6),
+                (workers[:2], 2),
+                ([workers[0], workers[0], workers[2]], 3),
+                (workers, True),
+            ):
+                write_workers(invalid_rows, n)
+                with self.assertRaisesRegex(RuntimeError, "HOLD_NATIVE_WORKER_CAP_READBACK"):
+                    check(helper)
+            write_workers(workers)
+            with self.assertRaisesRegex(RuntimeError, "HOLD_NATIVE_WORKER_CAP_READBACK"):
+                check(helper, fresh_after=__import__("time").time() + 120)
+            active = {"state": "STOPPED", "pid": None}
+            with self.assertRaisesRegex(RuntimeError, "HOLD_DISPATCHER_NOT_RUNNING"):
+                check(helper)
+
 if __name__ == "__main__":
     unittest.main()
