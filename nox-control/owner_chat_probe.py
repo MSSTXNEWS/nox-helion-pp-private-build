@@ -271,10 +271,14 @@ def stream_frame_reports_failure(frame):
     status = frame.get('status')
     if stream_status_is_failure(status):
         return True
-    if isinstance(status, dict) and any(
-            stream_status_is_failure(status.get(key))
-            for key in (*keys, 'status', 'state')):
-        return True
+    if isinstance(status, dict):
+        # A structured status can carry an upstream failure without HTTP code.
+        # Do not let a later saved=true done erase nested error/success=false.
+        if status.get('error') not in (None, '', False) or status.get('success') is False:
+            return True
+        if any(stream_status_is_failure(status.get(key))
+               for key in (*keys, 'status', 'state')):
+            return True
     return any(stream_status_is_failure(frame.get(key)) for key in keys)
 
 
