@@ -141,6 +141,9 @@ def assert_dispatcher_source(raw):
                 and any(isinstance(t, ast.Name) and t.id == "HANDLERS" for t in n.targets)]
     require(len(registry) == 1 and isinstance(registry[0].value, ast.Dict), "REGISTRY_SHAPE")
     require(len(registry[0].value.keys) == 21, "REGISTRY_COUNT")
+    names = [k.value for k in registry[0].value.keys if isinstance(k, ast.Constant)
+             and isinstance(k.value, str)]
+    require(len(names) == 21 and len(set(names)) == 21, "REGISTRY_KEYS")
     require(not any(isinstance(k, ast.Constant) and k.value == HANDLER
                     for k in registry[0].value.keys), "REGISTRY_CONFLICT")
     run_one = [n for n in tree.body
