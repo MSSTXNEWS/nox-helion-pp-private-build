@@ -1774,3 +1774,18 @@ test('V197 explicitly present blank/falsy native model label is HOLD, absent rem
   assert.equal(frames.at(-1).model_identity_verified,false,
     'optional label acceptance must not certify installed weights or tokenizer');
 });
+
+test('V198 Request init.body preserves pre-aborted signal on legacy create and rename',async()=>{
+  for(const [path,body] of [
+    ['/api/nox/dialogs/new',JSON.stringify({title:'V198 stop'})],
+    ['/api/nox/dialog/rename',JSON.stringify({dialog_id:id,title:'V198 stop'})]
+  ]){
+    const signal=new AbortController();signal.abort();
+    const request=new Request('https://nox.local'+path,{method:'POST',body,signal:signal.signal});
+    const f=fake();
+    const response=await f.fetch(request,{method:'POST',body});
+    assert.equal(response.status,503,'legacy STOP must HOLD before any native request');
+    assert.match((await response.json()).error,/STREAM_STOP_REQUESTED/);
+    assert.equal(f.calls.length,0,'pre-aborted Request must not call native legacy endpoint');
+  }
+});
