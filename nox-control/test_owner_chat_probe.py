@@ -960,5 +960,59 @@ class ProbeTests(unittest.TestCase):
         self.assertTrue(healthy.closed)
 
 
+    def test_structured_http_failure_cannot_be_laundered_by_saved_done(self):
+        """Structured 4xx/5xx on any SSE frame poisons the entire stream."""
+        did = '1' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        delta = {'type': 'delta', 'text': '323'}
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        bad = (
+            {'status': {'code': 503}},
+            {'status': {'status_code': '429'}},
+            {'status': {'httpStatus': 502}},
+            {'status': {'state': ' FAILED '}},
+            {'status': {'status': 'aborted'}},
+            {'code': 503},
+            {'status_code': 500},
+            {'statusCode': '502'},
+            {'http_status': '504'},
+            {'httpStatus': 429},
+        )
+        for flags in bad:
+            for placement in ('preterminal', 'terminal'):
+                if placement == 'preterminal':
+                    frames = [dict({'type': 'status'}, **flags), delta, done]
+                    code = 'HOLD_STREAM_PRETERMINAL_FAILURE'
+                else:
+                    frames = [delta, dict(done, **flags)]
+                    code = 'HOLD_STREAM_TERMINAL_FAILURE'
+                response = Response(frames)
+                with self.subTest(flags=flags, placement=placement), patch.object(
+                        probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, '^' + code + '
+    unittest.main()
+):
+                        probe.consume_turn(object(), 'synthetic', did)
+                self.assertTrue(response.closed)
+
+        healthy = Response([{'type': 'status', 'status': {'code': 200}},
+                            {'type': 'meta', 'http_status': '200'},
+                            delta, dict(done, status={'code': 200})])
+        with patch.object(probe, 'request', return_value=healthy):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+        self.assertTrue(healthy.closed)
+
+
+
 if __name__ == '__main__':
     unittest.main()
