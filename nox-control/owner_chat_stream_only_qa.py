@@ -18,9 +18,9 @@ import secrets
 import stat
 import time
 
-BASE_SHA = '9530c6e71274bbbca997f0aea07a26c988cfd536ed1aa1ba4067753827ac56f9'
-TRANSPORT_SHA = '360c155642ccdb43f39acf7b493068d3d2ac906bfd761c60d8c5ee51d48507fe'
-RELEASE_SHA = 'eaa8af0e229c9ce0a730b7b472f8b9b8a1018fbd5cf7b8518890342d9d7047cb'
+BASE_SHA = 'eef0ee5a4bb30141e52171d637586dcbcf104d447578d760632072128adc301a'
+TRANSPORT_SHA = '37689bd3234d076508da7532e6b7387cb98a50f1f6c8c00510c476d57e515c15'
+RELEASE_SHA = 'cff0e24ecd965a6d9c27d07bf44775b3d572f6fde95c43add2dbd5e74b47dd1b'
 SERVED_BRIDGE_SHA256 = 'a7f64a536ac82cd5a1339cd31e63dfbb7dcf4feb34375c5128ec32279863af69'
 SCHEMA = 'NOX_OWNER_BROWSER_STREAM_ONLY_QA_V2'
 TOTAL_TIMEOUT = 230
@@ -217,9 +217,9 @@ def rewrite_browser(body):
     body = replace_once(body, "            async def guard(route):\n",
         "            async def guard(route):\n                nonlocal native_admitted\n")
     body = replace_once(body,
-        "                        own=(request.method=='POST' and allowed_qa_request(\n"
+        "                        own=(request.method=='POST' and fresh_qa_post_admission(\n"
         "                             stream_admitted,second_permitted,prompt,second_prompt,body,did))\n",
-        "                        own=(request.method=='POST' and allowed_qa_request(\n"
+        "                        own=(request.method=='POST' and fresh_qa_post_admission(\n"
         "                             stream_admitted,second_permitted,prompt,second_prompt,body,did))\n")
     body = replace_once(body,
         "                    if not own:\n                        blocked['non_qa_generation']+=1\n                        return await route.abort()\n",
@@ -359,11 +359,13 @@ def rewrite_browser(body):
 """)
     body = replace_once(body,
         """                if (not second_final or second_final.get('native_calls')!=2
-                        or not second_final.get('done') or not second_final.get('dom_answer_matches_native')):
+                        or not native_stream_envelope_valid(second_final)
+                         or not second_final.get('dom_answer_matches_native')):
                     raise RuntimeError('HOLD_SECOND_TURN_STREAM_NOT_RENDERED')""",
         """                if (not second_final or second_final.get('native_calls')!=2
-                        or not second_final.get('done') or not second_final.get('dom_answer_matches_native')
-                        or not _nox_terminal_s03_records_valid(second_final,2)):
+                        or not native_stream_envelope_valid(second_final)
+                         or not second_final.get('dom_answer_matches_native')
+                         or not _nox_terminal_s03_records_valid(second_final,2)):
                     raise RuntimeError('HOLD_SECOND_TURN_STREAM_NOT_RENDERED')""")
     body = replace_between(body,
         "                # This endpoint is dialog-history, not the canonical S03 writer/readback.\n",

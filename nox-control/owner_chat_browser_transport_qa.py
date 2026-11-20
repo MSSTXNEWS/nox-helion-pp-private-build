@@ -17,7 +17,7 @@ import stat
 import time
 import urllib.parse
 
-BASE_SHA='9530c6e71274bbbca997f0aea07a26c988cfd536ed1aa1ba4067753827ac56f9'
+BASE_SHA='eef0ee5a4bb30141e52171d637586dcbcf104d447578d760632072128adc301a'
 # Includes both exact PROXY_CHANGES from installed training binding91df0894.
 PROXY_FUNCTION_SHA='f849432d675eb3732076634b359ebbb6e516c3361ddba441def7f6dc7e355daf'
 STREAM_SHA='5b7bafde0c25fa26d6b8f98dfbb4958f0faa42ee77292da561834a63097a2e8e'
@@ -273,8 +273,8 @@ def install(core,raw):
         "            if route_evidence is not None:report['backend_route_evidence']=route_evidence.finish()\n"
         "            report['network']=network\n")
     observer=core.OBSERVER_JS
-    observer=replace_once(observer,'nativeDeltas:0,nativeBytes:0,answer:',
-        'nativeDeltas:0,nativeBytes:0,nativeResponseAt:null,nativeReadEvents:[],nativeReadCount:0,nativeLastDelta:null,answer:')
+    observer=replace_once(observer,'nativeDeltas:0,nativeBytes:0,nativeClosed:false,nativeTerminals:0,answer:',
+        'nativeDeltas:0,nativeBytes:0,nativeClosed:false,nativeTerminals:0,nativeResponseAt:null,nativeReadEvents:[],nativeReadCount:0,nativeLastDelta:null,answer:')
     observer=replace_once(observer,'       q.nativeBytes+=part.value.length;',
         '       const readEvent={at_ms:performance.now()-q.started,bytes:part.value.length,delta_frames:0,contains_done:false};\n'
         '       q.nativeReadCount++;q.nativeBytes+=part.value.length;')
@@ -285,6 +285,9 @@ def install(core,raw):
     observer=replace_once(observer,"         }else if(frame.type==='error'){q.error='HOLD_NATIVE_STREAM_ERROR';}\n       }\n",
         "         }else if(frame.type==='error'){q.error='HOLD_NATIVE_STREAM_ERROR';}\n       }\n"
         '       if(q.nativeReadEvents.length<96)q.nativeReadEvents.push(readEvent);\n')
+    observer=replace_once(observer,"       q.answer='';q.done=null;q.error=null;q.nativeClosed=false;q.nativeTerminals=0;",
+        "       q.answer='';q.done=null;q.error=null;q.nativeClosed=false;q.nativeTerminals=0;\n"
+        '        q.nativeResponseAt=null;q.nativeReadEvents=[];q.nativeReadCount=0;q.nativeLastDelta=null;')
     observer=replace_once(observer,'   if(own){void observe(response.clone());}',
         '   if(own){q.nativeResponseAt=performance.now()-q.started;void observe(response.clone());}')
     snapshot=replace_once(core.SNAPSHOT_JS,' return {native_first_ms:q.nativeFirst,',

@@ -116,9 +116,9 @@ class ScopeTests(unittest.TestCase):
         guard = next(value for value in core.browser_run.__code__.co_consts
                      if isinstance(value, types.CodeType) and value.co_name == 'guard')
         self.assertIn('native_admitted', guard.co_freevars)
-        # PR415 introduced a second turn to the general harness; stream-only must
-        # remain one admitted POST even when the core supports multiturn.
-        self.assertIn('allowed_qa_request', guard.co_names)
+        # Keep the existing owner-authenticated admission and final STOP fence;
+        # only two authorized synthetic turns may reach the model.
+        self.assertIn('fresh_qa_post_admission', guard.co_names)
         self.assertIn('_nox_final_route_post_gate', guard.co_names)
         self.assertIn(False, guard.co_consts)
         self.assertIn('continue_', scope.final_route_post_gate.__code__.co_names)
@@ -273,6 +273,41 @@ class ViewportTests(unittest.IsolatedAsyncioTestCase):
 
 
 class EntryTests(unittest.TestCase):
+    def test_failed_post_promotion_validation_restores_original_runtime(self):
+        # Simulate the failure after the candidate directory was made live.
+        # No browser, host service, package download or model is used.
+        for had_previous in (True, False):
+            with self.subTest(had_previous=had_previous), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder); area = root / 'browser_qa'
+                if had_previous:
+                    area.mkdir(mode=0o700)
+                    (area / 'original.txt').write_text('keep-existing-runtime')
+                def fake_install(args, env, code, timeout_sec=180):
+                    if code == 'VENV':
+                        child = Path(args[-1]) / 'bin/python'
+                        child.parent.mkdir(parents=True)
+                        child.write_bytes(b'new-candidate')
+                        child.chmod(0o700)
+                fake_spec = dict(entry.ENV_SPEC, base_python=os.path.realpath(os.sys.executable))
+                with patch.object(entry, 'ROOT', root), patch.object(entry, 'AREA', area), \
+                     patch.object(entry, 'ENV_SPEC', fake_spec), \
+                     patch.object(entry, 'resource_budget'), \
+                     patch.object(entry, 'plain_directory'), \
+                     patch.object(entry, '_checked_install', side_effect=fake_install), \
+                     patch.object(entry, 'existing_runtime', side_effect=[
+                         FileNotFoundError('missing-old-runtime'),
+                         RuntimeError('HOLD_POSTPROMOTION_RUNTIME_INVALID')]), \
+                     patch.object(entry.shutil, 'disk_usage',
+                                  return_value=types.SimpleNamespace(free=8 * 1024**3)):
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_POSTPROMOTION_RUNTIME_INVALID'):
+                        entry.ensure_runtime('123')
+                self.assertEqual(sorted(path.name for path in root.iterdir()),
+                                 ['browser_qa'] if had_previous else [])
+                if had_previous:
+                    self.assertEqual((area / 'original.txt').read_text(), 'keep-existing-runtime')
+                else:
+                    self.assertFalse(area.exists())
+
     def test_existing_runtime_validation_cannot_create_or_install_missing_runtime(self):
         with tempfile.TemporaryDirectory() as folder:
             area = Path(folder) / 'browser_qa'; area.mkdir(mode=0o700)
@@ -294,18 +329,49 @@ class EntryTests(unittest.TestCase):
                     entry.existing_runtime()
             self.assertEqual(before, marker.read_bytes())
 
+    def test_child_environment_requires_owner_served_html_pin(self):
+        # The child cannot infer its pin from a response or a source marker.
+        # A missing/invalid owner pin fails before any subprocess or model POST.
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_ONLY_ENTRY_SERVED_HTML_SHA256_PIN_MISSING'):
+                entry.child_environment('123', 'a' * 40)
+        for bad in ('', 'a' * 63, 'A' * 64, 'not-a-sha'):
+            with self.subTest(pin=bad), patch.dict(os.environ, {
+                    'NOX_OWNER_EXPECTED_SERVED_HTML_SHA256': bad}):
+                with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_ONLY_ENTRY_SERVED_HTML_SHA256_PIN_MISSING'):
+                    entry.child_environment('123', 'a' * 40)
+
     def test_child_environment_does_not_forward_owner_secrets_or_debug(self):
         with patch.dict(os.environ, {'PRIVATE_KEY': 'secret', 'DEBUG': 'secret', 'PWDEBUG': '1',
-                                     'NOX_CHAT_PASSWORD': 'private', 'CUDA_VISIBLE_DEVICES': '1'}):
+                                     'NOX_CHAT_PASSWORD': 'private', 'CUDA_VISIBLE_DEVICES': '1',
+                                     'NOX_OWNER_EXPECTED_SERVED_HTML_SHA256': 'f' * 64}):
             value = entry.child_environment('123', 'a' * 40)
         self.assertEqual(value['CUDA_VISIBLE_DEVICES'], '')
+        self.assertEqual(value['NOX_OWNER_EXPECTED_SERVED_HTML_SHA256'], 'f' * 64)
         for key in ('PRIVATE_KEY', 'DEBUG', 'PWDEBUG', 'NOX_CHAT_PASSWORD'):
             self.assertNotIn(key, value)
+
+    def test_resource_drift_after_bootstrap_blocks_child_before_spawn(self):
+        # A freshly installed isolated browser may consume the RAM/disk
+        # reserve previously checked in main(); the final gate must block.
+        with patch.object(entry, 'resource_budget',
+                          side_effect=RuntimeError('HOLD_STREAM_ONLY_ENTRY_RAM_RESERVE')) as budget, \
+             patch.object(entry, 'stop_present') as stop, \
+             patch.object(entry.subprocess, 'Popen') as launch:
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_ONLY_ENTRY_RAM_RESERVE'):
+                entry.run_child(Path('/already/python'), b'program', '123', 'a' * 40)
+        budget.assert_called_once_with()
+        stop.assert_not_called()
+        launch.assert_not_called()
 
     def test_outer_timeout_terminates_only_new_qa_process_group(self):
         process = Mock(pid=234567, returncode=-15)
         process.communicate.side_effect = [subprocess.TimeoutExpired(['private'], 165), (None, None)]
-        with patch.object(entry, 'stop_present', return_value=False), patch.object(entry.subprocess, 'Popen', return_value=process) as popen, patch.object(entry.os, 'killpg') as kill:
+        with patch.dict(os.environ, {'NOX_OWNER_EXPECTED_SERVED_HTML_SHA256': 'f' * 64}), \
+             patch.object(entry, 'resource_budget'), \
+             patch.object(entry, 'stop_present', return_value=False), \
+             patch.object(entry.subprocess, 'Popen', return_value=process) as popen, \
+             patch.object(entry.os, 'killpg') as kill:
             with self.assertRaisesRegex(RuntimeError, 'CHILD_TIMEOUT'):
                 entry.run_child(Path('/already/installed/python'), b'public program', '123', 'a' * 40)
         self.assertTrue(popen.call_args.kwargs['start_new_session'])
@@ -329,7 +395,11 @@ class EntryTests(unittest.TestCase):
             kwargs['stdout'].write((entry.PREFIX + json.dumps({'kind': 'browser_stream_only_receipt', 'data': value}) + '\n').encode())
             kwargs['stderr'].write(b'private cookie and password')
             return Mock(pid=12, returncode=2, communicate=Mock(return_value=(None, None)))
-        with patch.object(entry, 'stop_present', return_value=False), patch.object(entry.subprocess, 'Popen', side_effect=launch), patch.object(entry, 'emit') as emit:
+        with patch.dict(os.environ, {'NOX_OWNER_EXPECTED_SERVED_HTML_SHA256': 'f' * 64}), \
+             patch.object(entry, 'resource_budget'), \
+             patch.object(entry, 'stop_present', return_value=False), \
+             patch.object(entry.subprocess, 'Popen', side_effect=launch), \
+             patch.object(entry, 'emit') as emit:
             self.assertEqual(entry.run_child(Path('/already/python'), b'program', '123', 'a' * 40), 2)
         self.assertNotIn('private', json.dumps(emit.call_args.args))
         self.assertEqual(emit.call_args.args[1]['state'], 'HOLD')
