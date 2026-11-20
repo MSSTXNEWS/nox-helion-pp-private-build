@@ -506,6 +506,33 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(''.join(f['text'] for f in frames if f['type']=='delta'),
                          'Готов. Это проверенный ответ.')
 
+    def test_padded_prompt_over_raw_limit_never_reaches_model_or_poisoned_dialog(self):
+        # Stripping only for the length check admitted arbitrarily huge padded
+        # requests, while the next turn's exact history has an 8000-char limit.
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Raw Unicode input budget','confirmed':True}).json()['dialog_id']
+        before=len(self.calls)
+        for padded in (' '*8001+'x', 'x'+'\u00a0'*8000):
+            rejected=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                json={'message':padded,'dialog_id':dialog})
+            self.assertEqual(rejected.status_code,422,rejected.text[:100])
+            self.assertEqual(rejected.json(),{'error':'INVALID_MESSAGE'})
+            self.assertEqual(len(self.calls),before)
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':dialog}).json()
+        self.assertEqual(history['messages'],[])
+        exact='  Сохрани точный ввод  '
+        good=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':exact,'dialog_id':dialog})
+        self.assertEqual(good.status_code,200,good.text[:200])
+        self.assertEqual(self.calls[-1]['messages'][-1],
+            {'role':'user','content':exact})
+        self.assertEqual(json.loads(good.text.splitlines()[-1])['type'],'done')
+        recovered=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':dialog}).json()
+        self.assertEqual(recovered['messages'][0]['content'],exact)
+        self.assertFalse(recovered['canonical_s03_readback_verified'])
+
     def test_dialog_reply_over_context_limit_never_claims_recoverable_done(self):
         # Previous streaming limit was 2M chars, but the next turn can only
         # restore an <=8000-char message. A >8k reply falsely finished as DONE.
