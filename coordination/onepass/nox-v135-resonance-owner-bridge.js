@@ -169,6 +169,7 @@
   }
   function sseChat(data,signal) {
     let closed=false,phase;const started=performance.now();let firstVisibleMs=null;
+    const canEmit=typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function';
     const upstreamAbort=new AbortController();
     const onAbort=()=>upstreamAbort.abort();
     if(signal?.aborted)upstreamAbort.abort();
@@ -181,7 +182,7 @@
           if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
             firstVisibleMs=Math.round(performance.now()-started);
           const p={meta:'waiting',token:'speaking',done:'idle',error:signal?.aborted?'stopped':'error'}[payload.type];
-          if(p&&p!==phase&&(phase=p)&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+          if(p&&p!==phase&&(phase=p)&&canEmit)
             window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:p}}));
           if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
         };
@@ -267,7 +268,7 @@
       cancel(){
         closed=true;
         upstreamAbort.abort();
-        if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+        if(canEmit)
           window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopped'}}));
         signal?.removeEventListener?.('abort',onAbort);
       }
@@ -366,7 +367,7 @@
     if((url.pathname==='/api/nox/history'&&method==='GET')||
        (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
        (url.pathname==='/api/nox/dialog/rename'&&method==='POST'))
-      return legacyDialogs(url,init);
+      return legacyDialogs(url,{...init,signal:init?.signal||input.signal});
     return nativeFetch(input,init);
   };
 })();
