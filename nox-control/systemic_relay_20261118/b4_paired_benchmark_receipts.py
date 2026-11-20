@@ -682,3 +682,99 @@ def measure_two_turn_openai_sse_capture(turns):
         "s03_durable_verified": False,
         "one_model_post_per_turn_verified": False,
     }
+
+
+def verify_two_turn_openai_posted_history(turns, capture):
+    """Read-only request-history consistency proof for a simple two-turn chat.
+
+    Exact caller-supplied outbound OpenAI JSON request bodies are checked
+    against the independently parsed first SSE response. Nothing is POSTed.
+    This does NOT authenticate the HTTP capture or prove S03 durability.
+    Strict smoke-test profile: turn 2 must extend turn 1 with exactly the
+    assistant's complete visible response and a subsequent user message.
+    """
+    _require(type(turns) is list and len(turns) == 2 and
+             type(capture) is dict and
+             capture.get("schema") == "NOX_B4_TWO_TURN_OFFLINE_SSE_V1" and
+             type(capture.get("turns")) is list and len(capture["turns"]) == 2,
+             "SSE_TWO_TURN_REQUEST_CAPTURE")
+    parsed = []
+    hashes = []
+
+    def _unique_request_object(pairs):
+        obj = {}
+        for key, value in pairs:
+            _require(key not in obj, "SSE_TWO_TURN_REQUEST_DUPLICATE_KEY")
+            obj[key] = value
+        return obj
+
+    def _finite_request_float(raw):
+        number = float(raw)
+        _require(math.isfinite(number), "SSE_TWO_TURN_REQUEST_NONFINITE")
+        return number
+
+    def _reject_request_constant(_):
+        raise ReceiptHold("SSE_TWO_TURN_REQUEST_NONFINITE")
+
+    for idx, turn in enumerate(turns):
+        _require(type(turn) is dict and
+                 type(turn.get("turn_number")) is int and
+                 turn["turn_number"] == idx + 1 and
+                 turn.get("exchange_id") == capture["turns"][idx].get("exchange_id"),
+                 "SSE_TWO_TURN_REQUEST_EXCHANGE")
+        body = turn.get("posted_request_body")
+        _require(type(body) is bytes and 1 <= len(body) <= 1048576,
+                 "SSE_TWO_TURN_REQUEST_BYTES")
+        try:
+            request = json.loads(
+                body.decode("utf-8"), object_pairs_hook=_unique_request_object,
+                parse_float=_finite_request_float,
+                parse_constant=_reject_request_constant)
+        except ReceiptHold:
+            raise
+        except (UnicodeError, ValueError, TypeError) as exc:
+            raise ReceiptHold("SSE_TWO_TURN_REQUEST_JSON") from exc
+        _require(type(request) is dict and
+                 type(request.get("model")) is str and
+                 1 <= len(request["model"]) <= 160 and
+                 type(request.get("messages")) is list and
+                 1 <= len(request["messages"]) <= 256 and
+                 all(type(message) is dict and
+                     type(message.get("role")) is str
+                     for message in request["messages"]),
+                 "SSE_TWO_TURN_REQUEST_SCHEMA")
+        parsed.append(request)
+        hashes.append(hashlib.sha256(body).hexdigest())
+    first, second = parsed
+    _require(first["model"] == second["model"],
+             "SSE_TWO_TURN_REQUEST_MODEL_DRIFT")
+    first_messages, second_messages = first["messages"], second["messages"]
+    _require(len(second_messages) == len(first_messages) + 2 and
+             second_messages[-2].get("role") == "assistant" and
+             second_messages[-1].get("role") == "user" and
+             type(second_messages[-2].get("content")) is str and
+             type(second_messages[-1].get("content")) is str and
+             bool(second_messages[-1]["content"].strip()),
+             "SSE_TWO_TURN_HISTORY_ORDER")
+    _require(second_messages[:len(first_messages)] == first_messages,
+             "SSE_TWO_TURN_HISTORY_PREFIX")
+    witness = capture["turns"][0].get("wire_witness")
+    _require(type(witness) is dict and
+             witness.get("wire_completed_normally") is True and
+             type(witness.get("visible_text_sha256")) is str and
+             SHA.fullmatch(witness["visible_text_sha256"]),
+             "SSE_TWO_TURN_FIRST_WIRE")
+    prior_text_hash = hashlib.sha256(
+        second_messages[-2]["content"].encode("utf-8")).hexdigest()
+    _require(prior_text_hash == witness["visible_text_sha256"],
+             "SSE_TWO_TURN_HISTORY_HASH_MISMATCH")
+    return {
+        "schema": "NOX_B4_TWO_TURN_REQUEST_CONTINUITY_V1",
+        "state": "OFFLINE_REQUEST_AND_SSE_SOURCE_CONSISTENT_ONLY",
+        "posted_request_sha256": hashes,
+        "first_assistant_visible_sha256": prior_text_hash,
+        "browser_authenticated": False,
+        "native_verified": False,
+        "s03_durable_verified": False,
+        "one_model_post_per_turn_verified": False,
+    }

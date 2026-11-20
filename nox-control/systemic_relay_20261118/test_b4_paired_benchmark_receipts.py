@@ -4,7 +4,8 @@ import json
 import unittest
 from b4_paired_benchmark_receipts import (ReceiptHold, compare_paired,
                                           measure_openai_sse_wire,
-                                          measure_two_turn_openai_sse_capture)
+                                          measure_two_turn_openai_sse_capture,
+                                          verify_two_turn_openai_posted_history)
 
 H = "a" * 64
 
@@ -969,5 +970,72 @@ class PairedReceiptTests(unittest.TestCase):
             with self.subTest(reason=reason):
                 with self.assertRaisesRegex(ReceiptHold, reason):
                     measure_two_turn_openai_sse_capture(item)
+
+
+    def test_two_turn_posted_history_binds_first_assistant_sse_text(self):
+        # Real parser, two raw SSE streams and two raw outbound request bodies.
+        # Does not assert browser authentication or independent S03 persistence.
+        frame = lambda content: (b'data: {"choices":[{"delta":{"content":"'
+                                 + content + b'"},"finish_reason":null}]}\n\n')
+        finish = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        done = b'data: [DONE]\n\n'
+        def turn(n, exchange, word):
+            return {"turn_number": n, "dialog_id": "same",
+                    "exchange_id": exchange, "route_sha256": "a" * 64,
+                    "model_sha256": "b" * 64,
+                    "timed_chunks": [(5, frame(word)), (9, finish), (11, done)]}
+        turns = [turn(1, "ex1", b"hola"), turn(2, "ex2", b"listo")]
+        capture = measure_two_turn_openai_sse_capture(turns)
+        history = [{"role": "system", "content": "smoke"},
+                   {"role": "user", "content": "hola"}]
+        requests = [
+            {"model": "same-model", "messages": history},
+            {"model": "same-model", "messages": history +
+             [{"role": "assistant", "content": "hola"},
+              {"role": "user", "content": "sigue"}]},
+        ]
+        def attach(reqs):
+            return [dict(t, posted_request_body=json.dumps(
+                obj, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+                for t, obj in zip(turns, reqs)]
+        valid = verify_two_turn_openai_posted_history(attach(requests), capture)
+        self.assertEqual(valid["state"],
+                         "OFFLINE_REQUEST_AND_SSE_SOURCE_CONSISTENT_ONLY")
+        self.assertEqual(len(valid["posted_request_sha256"]), 2)
+        self.assertEqual(valid["first_assistant_visible_sha256"],
+                         capture["turns"][0]["wire_witness"]["visible_text_sha256"])
+        self.assertFalse(valid["browser_authenticated"])
+        self.assertFalse(valid["native_verified"])
+        self.assertFalse(valid["s03_durable_verified"])
+        self.assertFalse(valid["one_model_post_per_turn_verified"])
+        changes = [
+            (lambda r: r[1].update(model="different"),
+             "SSE_TWO_TURN_REQUEST_MODEL_DRIFT"),
+            (lambda r: r[1]["messages"][0].update(content="different"),
+             "SSE_TWO_TURN_HISTORY_PREFIX"),
+            (lambda r: r[1]["messages"][-2].update(content="fake"),
+             "SSE_TWO_TURN_HISTORY_HASH_MISMATCH"),
+            (lambda r: r[1]["messages"].pop(-2),
+             "SSE_TWO_TURN_HISTORY_ORDER"),
+            (lambda r: r[1]["messages"][-1].update(content=""),
+             "SSE_TWO_TURN_HISTORY_ORDER"),
+        ]
+        for change, code in changes:
+            broken = copy.deepcopy(requests)
+            change(broken)
+            with self.subTest(code=code):
+                with self.assertRaisesRegex(ReceiptHold, code):
+                    verify_two_turn_openai_posted_history(attach(broken), capture)
+        duplicate = attach(requests)
+        duplicate[1]["posted_request_body"] = (
+            b'{"model":"same-model","model":"other","messages":[]}')
+        with self.assertRaisesRegex(ReceiptHold,
+                                    "SSE_TWO_TURN_REQUEST_DUPLICATE_KEY"):
+            verify_two_turn_openai_posted_history(duplicate, capture)
+        wrong_exchange = attach(requests)
+        wrong_exchange[1]["exchange_id"] = "ex1"
+        with self.assertRaisesRegex(ReceiptHold,
+                                    "SSE_TWO_TURN_REQUEST_EXCHANGE"):
+            verify_two_turn_openai_posted_history(wrong_exchange, capture)
 
 if __name__ == '__main__': unittest.main()
