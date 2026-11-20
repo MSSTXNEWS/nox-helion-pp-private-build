@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import re
+import select
 import shutil
 import tempfile
 import stat
@@ -247,22 +248,49 @@ def run_rclone(args, config, *, timeout=8 * 3600, run=subprocess.run):
 
 
 def verify_remote(remote, *, config, size, digest):
-    """Independently stream the logical chunker file; O(1 MiB) RAM."""
+    """Stream logical chunks with bounded idle wait and live STOP checks.
+
+    A blocking pipe.read() used to ignore OWNER STOP indefinitely if rclone
+    stopped producing data. select() polls at 1 second without busy-spinning;
+    the child is terminated on STOP, timeout, or invalid remote bytes.
+    """
     h = hashlib.sha256()
     n = 0
-    proc = subprocess.Popen(["rclone", "--config", str(config), "cat", remote,
-                             "--retries", "2", "--low-level-retries", "2"],
-                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    try:
+        proc = subprocess.Popen(["rclone", "--config", str(config), "cat", remote,
+                                 "--retries", "2", "--low-level-retries", "2"],
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    except OSError:
+        raise Hold("HOLD_DRIVE_FIRST_RCLONE_EXECUTION") from None
+    last_progress = time.monotonic()
     try:
         while True:
             stop_clear()
-            b = proc.stdout.read(BLOCK)
+            require(time.monotonic() - last_progress <= 180, "REMOTE_STALLED")
+            try:
+                ready, _, _ = select.select([proc.stdout], [], [], 1.0)
+            except (OSError, ValueError):
+                raise Hold("HOLD_DRIVE_FIRST_REMOTE_IO") from None
+            if not ready:
+                continue
+            try:
+                b = os.read(proc.stdout.fileno(), BLOCK)
+            except OSError:
+                raise Hold("HOLD_DRIVE_FIRST_REMOTE_IO") from None
             if not b:
                 break
             n += len(b)
             require(n <= size, "REMOTE_SIZE")
             h.update(b)
-        require(proc.wait(timeout=30) == 0 and n == size and
+            last_progress = time.monotonic()
+        # A child can close stdout and delay process exit. Keep STOP responsive
+        # while waiting instead of blocking for 30 seconds in wait().
+        for _ in range(30):
+            stop_clear()
+            if proc.poll() is not None:
+                break
+            time.sleep(1)
+        require(proc.poll() == 0 and n == size and
                 h.hexdigest() == digest, "REMOTE_SHA")
     finally:
         if proc.poll() is None:
