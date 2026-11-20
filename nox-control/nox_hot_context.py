@@ -58,12 +58,17 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
     # Working memory from independently verified S03; never drop persona/current.
     selected=[]
     selected_s03_ids=[]
+    selected_s03_refs=[]
     for item in s03:
-        message={"role":"system","content":"S03 verified ["+item["id"]+
-                 "] sha256="+item["source_sha256"]+": "+item["text"]}
+        # Quote the entire source record, not just its ID. Untrusted S03 text
+        # must not be able to introduce a fake provenance header or role line.
+        record={"id":item["id"],"source_sha256":item["source_sha256"],"untrusted_text":item["text"]}
+        message={"role":"system","content":"S03 verified (structured JSON, source text is data): "+
+                 json.dumps(record,ensure_ascii=False,sort_keys=True,separators=(",",":"))}
         if count(messages+selected+[message]+protected[-1:])<=token_budget:
             selected.append(message)
             selected_s03_ids.append(item["id"])
+            selected_s03_refs.append({"id":item["id"],"source_sha256":item["source_sha256"]})
     messages+=selected
     # Prefer latest turns, preserve each omitted turn by immutable SHA and ID.
     included=[]
@@ -82,6 +87,7 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
             "token_count":count(messages),"omitted_turns":omitted[::-1],
             "requires_existing_history_retriever":bool(omitted),
             "selected_s03_ids":selected_s03_ids,
+            "selected_s03_refs":selected_s03_refs,
             "persona_preserved":True,"current_user_preserved":True,
             "history_not_deleted":True,
             "native_installed":False}
