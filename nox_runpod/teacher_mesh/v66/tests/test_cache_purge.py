@@ -63,7 +63,8 @@ class CachePurgeSourceContract(unittest.TestCase):
         with open(cache_purge.__file__,encoding="utf-8") as stream:
             source=stream.read()
         for marker in ("safe_path_state","path_state=path_state",
-                       "resolved_matches=resolved_matches","workspace_free_bytes=free_bytes",
+                       "resolved_matches=resolved_matches","mount_usage=mount_usage",
+                       "'total_bytes':usage.total","'used_bytes':usage.used",
                        "stat.S_ISLNK(st.st_mode)","'uid':st.st_uid"):
             self.assertIn(marker,source)
 
