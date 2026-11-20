@@ -238,17 +238,38 @@ PERMISSION_HELPER = '''
 # NOX_OWNER_SINGLE_TRAINER_PERMISSION_V1
 def _nox_owner_training_allowed():
     import json as _json
-    _p=ROOT/"state/task_boost_mode.json"
+    import os as _os
+    import stat as _stat
+    _p = ROOT / "state/task_boost_mode.json"
+    _fd = -1
     try:
-        if _p.is_symlink() or _p.stat().st_size>16000: return False
-        _v=_json.loads(_p.read_text())
-        return (_v.get("enabled") is True and _v.get("mode")=="TASK_BOOST"
+        # Authorize exactly the stable regular file named at this path, not
+        # a symlink/fifo rebound between the old is_symlink/stat/read_text.
+        _fd = _os.open(_p, _os.O_RDONLY | _os.O_NOFOLLOW | _os.O_NONBLOCK | _os.O_CLOEXEC)
+        _before = _os.fstat(_fd)
+        if not _stat.S_ISREG(_before.st_mode) or not 0 < _before.st_size <= 16000:
+            return False
+        _raw = _os.read(_fd, 16001)
+        _after = _os.fstat(_fd)
+        _named = _os.stat(_p, follow_symlinks=False)
+        _fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+        if (len(_raw) != _before.st_size
+                or any(getattr(_before, key) != getattr(_after, key)
+                       or getattr(_before, key) != getattr(_named, key)
+                       for key in _fields)):
+            return False
+        _v = _json.loads(_raw)
+        return (type(_v) is dict and _v.get("enabled") is True
+                and _v.get("mode") == "TASK_BOOST"
                 and _v.get("training_allowed") is True
-                and _v.get("training_service")=="nox-train-volta-t866u")
-    except (ValueError,OSError,AttributeError): return False
+                and _v.get("training_service") == "nox-train-volta-t866u")
+    except (ValueError, OSError, UnicodeError, TypeError, AttributeError):
+        return False
+    finally:
+        if _fd >= 0:
+            _os.close(_fd)
 
 '''
-
 
 def replace_once(source, before, after):
     if source.count(before) != 1:
