@@ -55,12 +55,16 @@ path_trusted=(all(path_state[name]['kind']=='DIRECTORY' for name in path_state)
               and all(path_state[name]['uid']==0 for name in path_state)
               and resolved_matches)
 if not path_trusted:
-    try:
-        free_bytes=shutil.disk_usage('/workspace').free
-    except OSError:
-        free_bytes=None
+    mount_usage={}
+    for label,path in (('root_mount','/'),('workspace_mount','/workspace')):
+        try:
+            usage=shutil.disk_usage(path)
+            mount_usage[label]={'total_bytes':usage.total,'used_bytes':usage.used,
+                                'free_bytes':usage.free}
+        except OSError:
+            mount_usage[label]=None
     report('HOLD_CACHE_NOT_TRUSTED',purged=False,path_state=path_state,
-           resolved_matches=resolved_matches,workspace_free_bytes=free_bytes)
+           resolved_matches=resolved_matches,mount_usage=mount_usage)
 busy=[]
 open_cache_fds=0
 for name in os.listdir('/proc'):
