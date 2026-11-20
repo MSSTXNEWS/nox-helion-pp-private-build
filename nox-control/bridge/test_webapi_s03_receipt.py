@@ -171,5 +171,60 @@ class FactReceiptTest(unittest.TestCase):
                     self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
 
 
+    def test_broadcast_stop_survives_new_chat_and_does_not_stop_future_chats(self):
+        """New request must not clear a STOP already sent to an older stream."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *ignored):
+                return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Ответ"}}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def __init__(self, calls):
+                self.calls = calls
+            def stream(self, *args, **kwargs):
+                self.calls.append("MODEL_POST")
+                return Upstream()
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
+        self.bridge.IDENTITY, self.bridge.STATIC_RULES, self.bridge.NKEEP = "", "", 0
+        self.bridge.LAST_CHAT = {"t": 0}
+        calls, writes = [], []
+        self.bridge.hc = lambda: Client(calls)
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+        def body(rid):
+            return Request({"request_id": rid, "mini": True, "use_memory": False,
+                            "messages": [{"role": "user", "content": "Проверь STOP"}]})
+
+        async def scenario():
+            old_response = await chat(body("older"))
+            old_stream = old_response.body_iterator
+            first = json.loads(await old_stream.__anext__())
+            await stop(Request({"request_id": "*"}))
+            # Merely creating and consuming this newer stream used to discard
+            # the global STOP and let the older request reach the model.
+            new_response = await chat(body("newer"))
+            newer = [json.loads(row) async for row in new_response.body_iterator]
+            older = [json.loads(row) async for row in old_stream]
+            return first, newer, older
+
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.object(W, "W", None), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            first, newer, older = asyncio.run(scenario())
+        self.assertEqual(first["request_receipt"]["status"], "RECEIVED")
+        self.assertEqual(older[-1]["completion_receipt"]["status"], "STOPPED")
+        self.assertEqual(older[-1]["memory_write_receipt"]["status"], "SKIPPED")
+        self.assertEqual(newer[-1]["completion_receipt"]["status"], "GENERATED")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(writes), 1)
+
 if __name__ == "__main__":
     unittest.main()
