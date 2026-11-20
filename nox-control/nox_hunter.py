@@ -467,7 +467,18 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
         failures = (state["failures"] + 1) if state and state["fingerprint"] == fingerprint else 1
         delay = _retry_delay(exc, source["interval_seconds"]) if isinstance(exc, (HTTPError, URLError)) else MIN_INTERVAL
         next_poll = now + delay
-        error = f"{type(exc).__name__}: {str(exc)[:300]}"
+        # HTTPError/URLError/OSError messages can include the full source URL
+        # (including private query parameters). Persist only typed diagnostics.
+        if isinstance(exc, HTTPError):
+            error = f"HTTPError: status={exc.code}"
+        elif isinstance(exc, URLError):
+            error = f"URLError: {type(exc.reason).__name__}"
+        elif isinstance(exc, HunterError):
+            error = f"HunterError: {str(exc)[:120]}"
+        elif isinstance(exc, ET.ParseError):
+            error = "ParseError: invalid feed XML"
+        else:
+            error = type(exc).__name__
         conn.execute(
             "INSERT INTO source_state(source_id,fingerprint,next_poll_at,failures,last_error) VALUES(?,?,?,?,?) "
             "ON CONFLICT(source_id) DO UPDATE SET fingerprint=excluded.fingerprint,"
