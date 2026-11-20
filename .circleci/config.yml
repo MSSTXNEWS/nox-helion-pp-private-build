@@ -44,6 +44,15 @@ jobs:
               -p test_nox_hunter.py \
               -v
 
+      - run:
+          name: Verify 2A05 identical-scenario latency baseline
+          command: |
+            set -eu
+            PYTHONPATH=nox-control python -B -m unittest discover \
+              -s nox-control \
+              -p test_owner_latency_2a05.py \
+              -v
+
 workflows:
   source-verification:
     jobs:
