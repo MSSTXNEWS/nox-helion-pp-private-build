@@ -1,0 +1,19 @@
+name: NOX B1 isolated reconnect cursor source checks
+on:
+  pull_request:
+    paths:
+      - nox-control/owner_exchange_reconnect_event_cursor.py
+      - nox-control/test_b1_reconnect_event_cursor.py
+      - .github/workflows/nox-b1-reconnect-cursor-ci.yml
+  workflow_dispatch:
+jobs:
+  source-only-reconnect-cursor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - name: Python compile and six focused source-only regressions
+        run: |
+          python3 -m py_compile nox-control/owner_exchange_reconnect_event_cursor.py nox-control/test_b1_reconnect_event_cursor.py
+          PYTHONPATH=nox-control python3 -m unittest -v test_b1_reconnect_event_cursor.CursorTests
