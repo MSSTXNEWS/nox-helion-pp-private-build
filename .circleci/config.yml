@@ -1,0 +1,30 @@
+# NOX B2 4A02 exact-repository source-only verification.
+# Not a native training admission. Production requires mandatory independent
+# CI, owner/CAS, immutable verifier, STOP/resources, checkpoint and S03 readback.
+version: 2.1
+
+jobs:
+  b2-4a02-exact-source:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Verify exact checked-out 4A02 source and regression Git blobs
+          command: |
+            set -eu
+            git rev-parse HEAD
+            test "$(git hash-object nox-control/owner_training_resume.py)" = "7c0370cbb8f9dc4d9a3fe1d53d583309ed50b173"
+            test "$(git hash-object nox-control/tests/test_owner_training_resume_step_type_b2.py)" = "935c81ae8cc92b9a3548f81ae6970ee131228156"
+      - run:
+          name: Compile and run bounded non-native checkpoint regression
+          command: |
+            set -eu
+            python -B -m py_compile nox-control/owner_training_resume.py nox-control/tests/test_owner_training_resume_step_type_b2.py
+            python -B -m unittest discover -s nox-control/tests -p 'test_owner_training_resume_step_type_b2.py' -v
+
+workflows:
+  b2-4a02-exact-source-verification:
+    jobs:
+      - b2-4a02-exact-source
