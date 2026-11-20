@@ -30,6 +30,8 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
   const observe=(x,buffer,timestamp)=>{
     if(!x.streaming||x.missing)return;
     x.bytes+=buffer.length;if(x.bytes>2_000_000){x.missing=true;return;}
+    // CDP delivers decoded resource data; this is NOT a raw TCP-byte witness.
+    x.streamHasher.update(buffer);
     try{x.partial+=x.decoder.decode(buffer,{stream:true});}
     catch{x.missing=true;return;}
     for(;;){const m=/\r?\n\r?\n/.exec(x.partial);if(!m)break;
@@ -46,7 +48,7 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       let path;try{path=new URL(p.request.url).pathname;}catch{return;}
       if(p.request.method!=='POST'||!paths.has(path))return;
       if(active.has(p.requestId)){no(Error('DUPLICATE_CDP_ID'));return;}
-      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,first:null,ttft:null,done:null,close:null,streaming:false,missing:false,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:''};
+      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,first:null,ttft:null,done:null,close:null,streaming:false,missing:false,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false};
       active.set(p.requestId,x);
       const record=s=>{if(typeof s==='string')x.request=hash(Buffer.from(s));};
       if(typeof p.request.postData==='string')record(p.request.postData);
@@ -56,6 +58,9 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
     const x=active.get(p.requestId);if(!x)return;
     if(method==='Network.responseReceived'){
       x.status=p.response?.status;x.mime=p.response?.mimeType;x.first=Math.round((p.timestamp-x.start)*1000);
+      // Compressed or ambiguous resource representations must not be compared as equivalent.
+      const encoding=Object.entries(p.response?.headers||{}).find(([k])=>k.toLowerCase()==='content-encoding')?.[1];
+      if(encoding && String(encoding).trim().toLowerCase()!=='identity'){x.encoded=true;x.missing=true;}
       c.send('Network.streamResourceContent',{requestId:p.requestId}).then(v=>{
         if(v.bufferedData)x.missing=true;
         x.streaming=true;
@@ -66,15 +71,24 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       else x.missing=true;
     }
     if(method==='Network.loadingFinished'||method==='Network.loadingFailed'){
+      if(x.close!==null){x.missing=true;return;}
       x.close=Math.round((p.timestamp-x.start)*1000);
       if(method==='Network.loadingFailed')x.missing=true;
       // A final incomplete UTF-8 code point or unclosed SSE event is NOT a clean stream.
       if(!x.streaming)x.missing=true;
       try{x.partial+=x.decoder.decode();}catch{x.missing=true;}
       if(x.partial.length!==0)x.missing=true;
+      x.streamDigest=x.streamHasher.digest('hex');
       c.send('Network.getResponseBody',{requestId:p.requestId}).then(v=>{
-        if(typeof v.body==='string')x.response=hash(v.base64Encoded?Buffer.from(v.body,'base64'):Buffer.from(v.body));
-      }).catch(()=>{}).finally(()=>{finished.push(x);if(finished.length>=count)yes(finished);});
+        if(typeof v.body!=='string'){x.missing=true;return;}
+        // Base64 bytes or UTF-8 text are the only unambiguous CDP decoded-body forms here.
+        if(typeof v.base64Encoded!=='boolean'){x.missing=true;return;}
+        if(v.base64Encoded && (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(v.body))){x.missing=true;return;}
+        const body=v.base64Encoded?Buffer.from(v.body,'base64'):Buffer.from(v.body,'utf8');
+        x.response=hash(body);
+        x.bodyMatchesStream=!x.missing&&!x.encoded&&x.bytes===body.length&&x.streamDigest===x.response;
+        if(!x.bodyMatchesStream)x.missing=true;
+      }).catch(()=>{x.missing=true;}).finally(()=>{finished.push(x);if(finished.length>=count)yes(finished);});
     }
   });
   try{
@@ -82,12 +96,13 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
     if(onReady)await onReady(c);
     const records=await completion;
     const turns=records.map((x,i)=>({turn:i+1,cdp_request_id:x.id,request_sha256:x.request,cdp_decoded_body_sha256:x.response,
+      cdp_streamed_body_sha256:x.streamDigest,cdp_decoded_body_matches_stream:x.bodyMatchesStream,
       status:x.status,mime:x.mime,first_network_byte_ms:x.first,ttft_ms:!x.missing?x.ttft:null,
       sse_done_ms:!x.missing?x.done:null,close_ms:x.close,
       visible_text_sha256:!x.missing?hash(Buffer.from(x.visibleText,'utf8')):null,
-      stream_timing_complete:!x.missing&&x.streaming}));
+      stream_timing_complete:!x.missing&&x.streaming&&x.bodyMatchesStream}));
     const unique=new Set(turns.map(x=>x.cdp_request_id)).size===turns.length;
-    const valid=unique&&turns.every(x=>x.request_sha256&&x.cdp_decoded_body_sha256&&x.status===200&&x.mime==='text/event-stream');
+    const valid=unique&&turns.every(x=>x.request_sha256&&x.cdp_decoded_body_sha256&&x.cdp_decoded_body_matches_stream&&x.status===200&&x.mime==='text/event-stream');
     const timed=valid&&turns.every(x=>x.stream_timing_complete&&x.ttft_ms!==null&&x.sse_done_ms!==null&&x.ttft_ms<=x.sse_done_ms&&x.sse_done_ms<=x.close_ms);
     return {schema:'nox-b4-cdp-v1',chrome_product:version.product,cdp_consistent:Boolean(valid),ttft_sse_verified:Boolean(timed),
       browser_authenticated:false,remote_attested:false,native_verified:false,canonical_s03_verified:false,one_model_post_per_turn_verified:false,

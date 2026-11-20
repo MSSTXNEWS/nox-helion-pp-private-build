@@ -3,23 +3,24 @@ import assert from 'node:assert/strict';
 import {capture} from './b4_chrome_cdp_witness.mjs';
 const body='data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: [DONE]\n\n';
 class Stub {
+  constructor(){this.bodies=new Map();}
   on(fn){this.emit=fn;}
   close(){}
-  async send(cmd){if(cmd==='Browser.getVersion')return {product:'CDP-FIXTURE'};
+  async send(cmd,p={}){if(cmd==='Browser.getVersion')return {product:'CDP-FIXTURE'};
     if(cmd==='Network.streamResourceContent')return {};
-    if(cmd==='Network.getResponseBody')return {body};return {};}
+    if(cmd==='Network.getResponseBody')return {body:this.bodies.get(p.requestId).toString('base64'),base64Encoded:true};return {};}
 }
-async function run(missing=false,chunksForSecondTurn=null){const c=new Stub();return capture({ws:'ws://127.0.0.1:9333/fake',makeSession:async()=>c,timeoutMs:2000,onReady:async()=>{
+async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondTurn=null,encoding=null){const c=new Stub();return capture({ws:'ws://127.0.0.1:9333/fake',makeSession:async()=>c,timeoutMs:2000,onReady:async()=>{
   setTimeout(async()=>{for(let i=0;i<2;i++){
     const requestId=String(i+1),timestamp=100+i;
+    const chunks=i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):[Buffer.from(body)];
+    const captured=Buffer.concat(chunks);
+    c.bodies.set(requestId,i===1&&responseBodyForSecondTurn!==null?Buffer.from(responseBodyForSecondTurn):captured);
     c.emit('Network.requestWillBeSent',{requestId,timestamp,request:{method:'POST',url:'http://localhost/api/nox/chat',postData:'{"secret":"'+i+'"}'}});
-    c.emit('Network.responseReceived',{requestId,timestamp:timestamp+.005,response:{status:200,mimeType:'text/event-stream'}});
+    c.emit('Network.responseReceived',{requestId,timestamp:timestamp+.005,response:{status:200,mimeType:'text/event-stream',headers:i===1&&encoding?{'Content-Encoding':encoding}:{}}});
     await new Promise(r=>setImmediate(r));
     if(missing&&i===1)c.emit('Network.dataReceived',{requestId,timestamp:timestamp+.01});
-    else if(i===1&&chunksForSecondTurn){
-      for(const chunk of chunksForSecondTurn)
-        c.emit('Network.dataReceived',{requestId,timestamp:timestamp+.01,data:Buffer.from(chunk).toString('base64')});
-    }else c.emit('Network.dataReceived',{requestId,timestamp:timestamp+.01,data:Buffer.from(body).toString('base64')});
+    else for(const chunk of chunks)c.emit('Network.dataReceived',{requestId,timestamp:timestamp+.01,data:chunk.toString('base64')});
     c.emit('Network.loadingFinished',{requestId,timestamp:timestamp+.02});
     await new Promise(r=>setImmediate(r));
   }},10);
@@ -28,12 +29,14 @@ test('two Chrome-protocol POST events bind distinct digest-only receipts, with S
   const x=await run();assert.equal(x.cdp_consistent,true);assert.equal(x.ttft_sse_verified,true);
   assert.equal(x.turns.length,2);assert.notEqual(x.turns[0].request_sha256,x.turns[1].request_sha256);
   assert.equal(x.turns[0].ttft_ms,10);assert.equal(x.turns[1].sse_done_ms,10);
+  assert.equal(x.turns[1].cdp_decoded_body_matches_stream,true);
+  assert.equal(x.turns[1].cdp_streamed_body_sha256,x.turns[1].cdp_decoded_body_sha256);
   assert.equal(x.native_verified,false);assert.equal(x.browser_authenticated,false);
   assert.equal(x.canonical_s03_verified,false);assert.equal(x.remote_attested,false);
   assert.doesNotMatch(JSON.stringify(x),/secret|Hello/);
 });
 test('CDP chunk without data cannot prove TTFT or DONE',async()=>{
-  const x=await run(true);assert.equal(x.cdp_consistent,true);assert.equal(x.ttft_sse_verified,false);
+  const x=await run(true);assert.equal(x.cdp_consistent,false);assert.equal(x.ttft_sse_verified,false);
   assert.equal(x.turns[1].ttft_ms,null);assert.equal(x.turns[1].sse_done_ms,null);
 });
 
@@ -55,4 +58,22 @@ test('split UTF-8 and SSE framing are lossless; partial frame/invalid EOF fail c
   assert.equal(broken.turns[1].stream_timing_complete,false);
   assert.equal(broken.turns[1].visible_text_sha256,null);
   assert.doesNotMatch(JSON.stringify(ok),/Привет|🐈/);
+});
+test('independent decoded CDP body detects missing, duplicated, reordered, altered chunks and compressed response',async()=>{
+  const chunks=[Buffer.from(body.slice(0,25)),Buffer.from(body.slice(25))];
+  const normal=await run(false,chunks);
+  assert.equal(normal.ttft_sse_verified,true);
+  const missing=await run(false,[chunks[0]],Buffer.from(body));
+  assert.equal(missing.cdp_consistent,false);assert.equal(missing.ttft_sse_verified,false);
+  const duplicated=await run(false,[chunks[0],chunks[0],chunks[1]],Buffer.from(body));
+  assert.equal(duplicated.cdp_consistent,false);assert.equal(duplicated.ttft_sse_verified,false);
+  const reordered=await run(false,[chunks[1],chunks[0]],Buffer.from(body));
+  assert.equal(reordered.cdp_consistent,false);assert.equal(reordered.ttft_sse_verified,false);
+  const mutated=await run(false,[Buffer.from(body.replace('Hello','Hella'))],Buffer.from(body));
+  assert.equal(mutated.cdp_consistent,false);assert.equal(mutated.ttft_sse_verified,false);
+  assert.notEqual(mutated.turns[1].cdp_streamed_body_sha256,mutated.turns[1].cdp_decoded_body_sha256);
+  const encoded=await run(false,[Buffer.from(body)],null,'gzip');
+  assert.equal(encoded.cdp_consistent,false);assert.equal(encoded.ttft_sse_verified,false);
+  assert.equal(encoded.turns[1].cdp_decoded_body_matches_stream,false);
+  assert.doesNotMatch(JSON.stringify(normal),/Hello|secret/);
 });
