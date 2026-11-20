@@ -1,6 +1,14 @@
 /** B4 CDP observer: read-only, digest-only; CDP != authenticated remote attestation. Node 22+. */
 import {createHash} from 'node:crypto';
 const hash=s=>createHash('sha256').update(s).digest('hex');
+// Node's base64 decoder is deliberately permissive, so CDP-observed data
+// must be a strict, canonical representation before counting or timing bytes.
+function decodeCanonicalCdpData(data){
+  if(typeof data!=='string'||!data||
+     !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data))return null;
+  const bytes=Buffer.from(data,'base64');
+  return bytes.length>0&&bytes.toString('base64')===data?bytes:null;
+}
 const paths=new Set(['/api/nox/chat','/api/nox/chat/stream','/nox/chat']);
 export class Cdp {
   constructor(url){this.url=url;this.next=0;this.pending=new Map();}
@@ -180,8 +188,9 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       if(!chronological(x,p.timestamp))return;
       if(p.data){
         if(!x.streaming)x.missing=true;
-        const chunk=Buffer.from(p.data,'base64');
-        if(chunk.length===0){x.missing=true;return;}
+        // Reject noncanonical or empty base64 BEFORE first-data timing/digests.
+        const chunk=decodeCanonicalCdpData(p.data);
+        if(!chunk){x.missing=true;return;}
         // Timestamp of first nonempty CDP-decoded payload chunk; NOT raw TCP first byte.
         if(x.firstDataAt===null){
           x.firstDataAt=p.timestamp;x.firstDataMs=millis(x,p.timestamp);
