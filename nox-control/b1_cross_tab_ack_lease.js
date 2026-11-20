@@ -9,7 +9,7 @@
   else root.NOXB1CrossTabAckLease=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function() {
   'use strict';
-  const STORE='ack_fences', ID=/^[A-Za-z0-9._:-]{1,128}$/;
+  const STORE='ack_fences', OWNER_ROW='~nox-b1-owner-revocation~', ID=/^[A-Za-z0-9._:-]{1,128}$/;
   const HEX=/^[a-f0-9]{64}$/, CURSOR=/^[A-Za-z0-9_-]{1,1200}$/;
   class HoldCrossTab extends Error {
     constructor(code) { super(code); this.name='HoldCrossTab';this.code=code; }
@@ -72,14 +72,36 @@
           try {
             const update=operation(req.result);
             if(update.error){error=update.error;tx.abort();return;}
-            answer=update.value;
-            if(update.write){
-              const put=s.put(update.write);
-              put.onerror=()=>{
-                error=put.error&&put.error.name==='ConstraintError'?
-                  'HOLD_CROSSTAB_EVENT_COLLISION':'HOLD_CROSSTAB_WRITE';
+            // An observed server-CAS revocation and the local ACK projection
+            // serialize through the SAME IndexedDB readwrite transaction.
+            // This cannot substitute for native/server owner verification.
+            const apply=()=>{
+              answer=update.value;
+              if(update.write){
+                const put=s.put(update.write);
+                put.onerror=()=>{
+                  error=put.error&&put.error.name==='ConstraintError'?
+                    'HOLD_CROSSTAB_EVENT_COLLISION':'HOLD_CROSSTAB_WRITE';
+                };
+              }
+            };
+            if(update.owner_cas!==undefined){
+              if(typeof update.owner_cas!=='string'||!ID.test(update.owner_cas)){
+                error='HOLD_CROSSTAB_OWNER_CAS';tx.abort();return;
+              }
+              const fence=s.get([OWNER_ROW,update.owner_cas]);
+              fence.onerror=()=>{error='HOLD_CROSSTAB_OWNER_READ';try{tx.abort();}catch(_){}};
+              fence.onsuccess=()=>{
+                try {
+                  if(fence.result){
+                    error=fence.result.state==='REVOKED'?
+                      'HOLD_CROSSTAB_OWNER_REVOKED':'HOLD_CROSSTAB_OWNER_FENCE';
+                    tx.abort();return;
+                  }
+                  apply();
+                }catch(_){error='HOLD_CROSSTAB_TX';try{tx.abort();}catch(_){}}
               };
-            }
+            } else apply();
           }catch(_){error='HOLD_CROSSTAB_TX';try{tx.abort();}catch(_){}}
         };
       }catch(_){fail();}
@@ -104,7 +126,8 @@
         if(prev&&(prev.event_id!==s.event_id||prev.cursor_digest!==proof))
           return {error:'HOLD_CROSSTAB_CONFLICT'};
         if(prev){
-          if(prev.state==='ACKED') return {value:Object.freeze({status:'ALREADY_ACKED'})};
+          if(prev.state==='ACKED') return {value:Object.freeze({status:'ALREADY_ACKED'}),
+            ...(prev.server_cas?{owner_cas:prev.server_cas}:{})};
           if(prev.state==='SENDING') return {error:'HOLD_CROSSTAB_ACK_UNCERTAIN'};
           if(prev.state!=='RESERVED') return {error:'HOLD_CROSSTAB_STATE'};
           if(now<=prev.expires_at) return {error:'HOLD_CROSSTAB_RESERVED'};
@@ -145,13 +168,16 @@
       const current=await mutate(db,k,prev=>({
         value:prev?Object.freeze({state:prev.state,event_id:prev.event_id,
           cursor_digest:prev.cursor_digest,token:prev.token,
-          generation:prev.generation}):null
+          generation:prev.generation,server_cas:prev.server_cas}):null
       }));
       if(!current) hold('HOLD_CROSSTAB_NOT_SENDING');
       if(current.event_id!==s.event_id||current.cursor_digest!==proof)
         hold('HOLD_CROSSTAB_CONFLICT');
       if(current.state==='ACKED')
-        return Object.freeze({status:'ALREADY_ACKED'});
+        return mutate(db,k,prev=>({
+          value:Object.freeze({status:'ALREADY_ACKED'}),
+          ...(prev&&prev.server_cas?{owner_cas:prev.server_cas}:{})
+        }));
       if(current.state!=='SENDING')
         hold('HOLD_CROSSTAB_NOT_SENDING');
       const expected=Object.freeze({conversation_id:s.conversation_id,
@@ -186,17 +212,34 @@
       return mutate(db,k,prev=>{
         if(!prev||prev.event_id!==s.event_id||prev.cursor_digest!==proof)
           return {error:'HOLD_CROSSTAB_CONFLICT'};
-        if(prev.state==='ACKED') return {value:Object.freeze({status:'ALREADY_ACKED'})};
+        if(prev.state==='ACKED') return {value:Object.freeze({status:'ALREADY_ACKED'}),
+          owner_cas:receipt.server_cas};
         if(prev.state!=='SENDING'||prev.token!==current.token||
            prev.generation!==current.generation)
           return {error:'HOLD_CROSSTAB_RECONCILE_FENCED'};
         return {write:{...prev,state:'ACKED',server_ack_id:receipt.ack_id,
           server_cas:receipt.server_cas,verified_s03_sha256:receipt.s03_sha256},
-          value:Object.freeze({status:'ACKED_RECOVERED',ack_id:receipt.ack_id})};
+          value:Object.freeze({status:'ACKED_RECOVERED',ack_id:receipt.ack_id}),
+          owner_cas:receipt.server_cas};
+      });
+    }
+    // Called only when a trusted native/server owner-revocation signal is
+    // observed; irrevocable local fail-closed tombstone for that server CAS.
+    // A late/unobserved native revocation cannot be inferred from IndexedDB.
+    function noteOwnerRevoked(serverCas) {
+      live();
+      if(typeof serverCas!=='string'||!ID.test(serverCas))
+        hold('HOLD_CROSSTAB_OWNER_CAS');
+      return mutate(db,[OWNER_ROW,serverCas],prev=>{
+        if(prev&&prev.state==='REVOKED') return {value:'ALREADY_REVOKED'};
+        if(prev) return {error:'HOLD_CROSSTAB_OWNER_FENCE'};
+        return {write:{conversation_id:OWNER_ROW,exchange_id:serverCas,
+          state:'REVOKED',recorded_at:Date.now()},value:'REVOKED'};
       });
     }
     return Object.freeze({
       reserve,
+      noteOwnerRevoked,
       beginSend:grant=>transition(grant,'RESERVED','SENDING'),
       confirm:grant=>transition(grant,'SENDING','ACKED'),
       reconcileSignedAck,
