@@ -141,8 +141,25 @@ def _jl(path, n):
         return []
 
 
+def _warm(B):
+    """Прогрев: загрузить S03 и закэшировать стабильный префикс промпта в обоих слотах, чтобы первый ответ не ждал."""
+    time.sleep(25)
+    try:
+        B.memory_block("прогрев")
+    except Exception:
+        pass
+    for slot in (0, 1):
+        try:
+            httpx.post(B.MODEL, json={"messages": [{"role": "system", "content": B.IDENTITY + B.STATIC_RULES}, {"role": "user", "content": "."}],
+                       "max_tokens": 1, "id_slot": slot, "cache_prompt": True, "chat_template_kwargs": {"enable_thinking": False}}, timeout=400)
+            B.log("warm_slot_%d_ok" % slot)
+        except Exception as e:
+            B.log("warm_slot_%d_fail %s" % (slot, type(e).__name__))
+
+
 def install(app, B):
     global _lock, _lock_mini
+    threading.Thread(target=_warm, args=(B,), daemon=True).start()
     _lock = asyncio.Semaphore(1)
     _lock_mini = asyncio.Semaphore(1)
     threading.Thread(target=_sampler, args=(B,), daemon=True).start()
@@ -357,8 +374,8 @@ def install(app, B):
                 yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "think", "text": "формулирую ответ"})
                 if mini:
                     last = msgs_in[-1]["content"] if msgs_in else user
-                    mm = [{"role": "system", "content": B.IDENTITY + " Ты мини-помощник интерфейса: отвечай по-русски, не более 4 предложений, без блока «Уверенность»."},
-                          {"role": "user", "content": str(last)[:3000]}]
+                    mm = [{"role": "system", "content": B.IDENTITY + B.STATIC_RULES},
+                          {"role": "user", "content": "[Режим мини-помощника: ответ не длиннее 4 предложений, без строки «Уверенность»]\n" + str(last)[:3000]}]
                 else:
                     vol = B.self_vol(user)
                     mm = B.build_msgs(msgs_in, user, mem, vol)
