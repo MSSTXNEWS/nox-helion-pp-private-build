@@ -279,6 +279,72 @@ def main():
           return didStop===true && result==='STOPPED' &&
             posts===1 && acks===0 && deltas===0;
         }'''))
+        # A transport may ignore AbortSignal and leave POST pending forever.
+        # STOP must settle the client and a late POST result cannot touch UI.
+        check('STOP settles hung transport POST with no replay or late delta', page.evaluate('''async () => {
+          const s={conversation_id:'post',exchange_id:'stop-hung'};
+          let releasePost,posts=0,acks=0,deltas=0;
+          const transport={...opts.transport,
+            post(){posts++;return new Promise(resolve=>{releasePost=resolve})},
+            async ack(){acks++;return true}};
+          const host={...opts.host,async readCommitted(){return null}};
+          const ui={async onDelta(){deltas++},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:2000
+          });
+          const pending=c.begin(s);
+          for(let i=0;i<30&&!releasePost;i++) await new Promise(r=>setTimeout(r,0));
+          if(posts!==1||!releasePost) return false;
+          const didStop=c.stop(s);
+          const result=await Promise.race([
+            pending,new Promise(r=>setTimeout(()=>r('HUNG'),350))
+          ]);
+          const repost=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          releasePost({ok:true,body:new ReadableStream({start(reader){
+            reader.enqueue(new TextEncoder().encode(
+              'event: delta\\ndata: LATE\\n\\n'));reader.close();
+          }})});
+          await new Promise(r=>setTimeout(r,0));
+          return didStop===true&&result==='STOPPED'&&repost&&
+            posts===1&&acks===0&&deltas===0;
+        }'''))
+        check('timeout settles transport POST ignoring AbortSignal', page.evaluate('''async () => {
+          const s={conversation_id:'post',exchange_id:'timeout-hung'};
+          let posts=0,acks=0;
+          const transport={...opts.transport,
+            post(){posts++;return new Promise(()=>{})},
+            async ack(){acks++;return true}};
+          const host={...opts.host,async readCommitted(){return null}};
+          const ui={async onDelta(){},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:35
+          });
+          const result=await Promise.race([
+            c.begin(s),new Promise(r=>setTimeout(()=>r('HUNG'),450))
+          ]);
+          return result==='STOPPED_TIMEOUT'&&posts===1&&acks===0;
+        }'''))
+        check('late rejected POST after STOP cannot reopen stream', page.evaluate('''async () => {
+          const s={conversation_id:'post',exchange_id:'late-rejection'};
+          let rejectPost,posts=0,deltas=0,acks=0;
+          const transport={...opts.transport,
+            post(){posts++;return new Promise((_,reject)=>{rejectPost=reject})},
+            async ack(){acks++;return true}};
+          const host={...opts.host,async readCommitted(){return null}};
+          const ui={async onDelta(){deltas++},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:2000
+          });
+          const pending=c.begin(s);
+          for(let i=0;i<30&&!rejectPost;i++) await new Promise(r=>setTimeout(r,0));
+          if(!rejectPost) return false;
+          c.stop(s);
+          const result=await pending;
+          rejectPost(Error('late transport failure'));
+          await new Promise(r=>setTimeout(r,0));
+          return result==='STOPPED'&&posts===1&&acks===0&&deltas===0;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
