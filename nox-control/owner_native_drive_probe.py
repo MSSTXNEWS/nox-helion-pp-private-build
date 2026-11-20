@@ -141,6 +141,61 @@ def dispatcher_surface(source=DISPATCHER, runner=subprocess.run):
                     if isinstance(node.func.value, ast.Name) and node.func.value.id == "HANDLERS":
                         lookups.add("HANDLERS_" + node.func.attr.upper()[:32])
         result["worker_registry_lookups"] = sorted(lookups)[:10]
+        # Contract of the *existing* handlers: bounded identifiers only.
+        # This lets the integration choose a real task shape without revealing
+        # body source, literals, credentials, user content or filesystem paths.
+        tracked = (
+            "worker_loop", "h_owner_order", "h_exec_plan", "h_ensure_offload",
+            "owner_claim_ready", "_nox_owner_task_admitted", "ingest_owner_orders",
+            "_nox_owner_admission_reason",
+        )
+        allowed_fields = {
+            "handler", "kind", "task", "task_id", "id", "action", "payload",
+            "params", "status", "state", "done", "error", "result", "job_id",
+            "lease", "owner", "claim", "worker", "role", "manifest",
+            "manifest_sha", "priority", "cancel", "stop", "approved",
+            "sha256", "idempotency_key", "receipt", "success", "reason",
+            "data", "name", "type", "mode", "execute", "path", "inputs",
+        }
+        contracts = {}
+        for fn in ast.walk(tree):
+            if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)) or fn.name not in tracked:
+                continue
+            names, calls, fields, outputs = set(), set(), set(), set()
+            for child in ast.walk(fn):
+                if isinstance(child, ast.Name) and child.id == "HANDLERS":
+                    names.add("HANDLERS")
+                if isinstance(child, ast.Call):
+                    callable_node = child.func
+                    callable_name = (
+                        callable_node.id if isinstance(callable_node, ast.Name)
+                        else callable_node.attr if isinstance(callable_node, ast.Attribute)
+                        else None
+                    )
+                    if callable_name and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", callable_name):
+                        calls.add(callable_name)
+                    if isinstance(callable_node, ast.Attribute) and callable_node.attr == "get" and child.args:
+                        constant = child.args[0]
+                        if isinstance(constant, ast.Constant) and constant.value in allowed_fields:
+                            fields.add(constant.value)
+                if isinstance(child, ast.Subscript):
+                    key = child.slice
+                    if isinstance(key, ast.Constant) and isinstance(key.value, str):
+                        if key.value in allowed_fields:
+                            fields.add(key.value)
+                if isinstance(child, ast.Return) and isinstance(child.value, ast.Dict):
+                    for key in child.value.keys:
+                        if isinstance(key, ast.Constant) and isinstance(key.value, str):
+                            if key.value in allowed_fields:
+                                outputs.add(key.value)
+            contracts[fn.name] = {
+                "calls": sorted(calls)[:24], "fields": sorted(fields),
+                "return_keys": sorted(outputs), "uses_handlers": bool(names),
+            }
+        result["host_handler_contracts"] = contracts
+        result["handler_registry_access_scopes"] = sorted(
+            name for name, info in contracts.items() if info["uses_handlers"]
+        )
         result["runtime_hot_register_declared"] = bool(
             any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
                 and node.name in ("register_handler", "register_handlers", "reload_handlers",
