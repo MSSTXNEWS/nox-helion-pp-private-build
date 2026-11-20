@@ -17,8 +17,14 @@ def assess(snapshot):
         issues.append(item)
     if not isinstance(snapshot, dict):
         raise ValueError("snapshot must be a JSON object")
-    if snapshot.get("stop_active") is True:
+    stop_state = snapshot.get("stop_active")
+    if stop_state is True:
         add("STOP_ACTIVE", "safety", "Keep training and automatic mutations paused.")
+        return issues
+    if stop_state is not False:
+        add("STOP_STATE_UNVERIFIED", "hold",
+            "Do not advise optimization, training or native publication until "
+            "a current authenticated owner STOP reading is explicitly false.")
         return issues
     required = ("onehost", "s03", "trainer", "gpu", "disk")
     missing = [x for x in required if not isinstance(snapshot.get(x), dict)]
