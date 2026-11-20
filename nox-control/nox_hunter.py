@@ -44,6 +44,21 @@ def _now() -> float:
     return time.time()
 
 
+def _idna_host(host: str) -> str:
+    """Compare DNS hosts after the same IDNA mapping used by resolvers.
+
+    Unicode dot variants and compatibility characters can spell numeric or
+    local hosts that pass naive ipaddress / hostname string checks.
+    """
+    try:
+        normalized = host.encode("idna").decode("ascii").lower().rstrip(".")
+    except UnicodeError as exc:
+        raise HunterError("invalid IDNA hostname") from exc
+    if not normalized:
+        raise HunterError("source URL must include a nonempty host")
+    return normalized
+
+
 def _canonical_url(value: str) -> str:
     # urllib may raise ValueError for malformed brackets/ports and may silently
     # discard embedded control characters. Neither may become a source URL.
@@ -61,9 +76,7 @@ def _canonical_url(value: str) -> str:
         raise HunterError("credentials in URLs are forbidden")
     # Normalize a terminal DNS dot BEFORE local-name and numeric-address checks.
     # Otherwise localhost. / 127.0.0.1. can bypass the usual private-host fence.
-    host = host.lower().rstrip(".")
-    if not host:
-        raise HunterError("source URL must include a nonempty host")
+    host = _idna_host(host)
     if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
         raise HunterError("local hostnames are forbidden")
     if port not in (None, 443):
@@ -87,7 +100,7 @@ def _canonical_url(value: str) -> str:
 
 
 def _allowed_host(host: str, allowed_hosts: Iterable[str]) -> bool:
-    return host.lower().rstrip(".") in {str(item).lower().rstrip(".") for item in allowed_hosts}
+    return _idna_host(host) in {_idna_host(str(item)) for item in allowed_hosts}
 
 
 def _validate_url(value: str, allowed_hosts: Iterable[str]) -> str:
@@ -118,7 +131,7 @@ def _validate_source(raw: Any) -> dict[str, Any]:
         "id": source_id,
         "kind": kind,
         "url": url,
-        "allowed_hosts": [h.lower().rstrip(".") for h in allowed_hosts],
+        "allowed_hosts": [_idna_host(h) for h in allowed_hosts],
         "interval_seconds": interval,
     }
 
