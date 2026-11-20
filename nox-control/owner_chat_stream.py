@@ -520,6 +520,14 @@ async def _run(native,url,payload,user_text):
             context_wire=json.dumps(req['messages'],sort_keys=True,
                                     ensure_ascii=False,allow_nan=False,
                                     separators=(',',':')).encode('utf-8','strict')
+            # Cache/pool preparation must not silently disable tools or
+            # turn deliberate fast-response chat into unrequested thinking.
+            # A detached wire snapshot detects in-place nested rewrites too.
+            control_wire=json.dumps({
+                'tool_choice':req['tool_choice'],
+                'chat_template_kwargs':req['chat_template_kwargs']},
+                sort_keys=True,ensure_ascii=False,allow_nan=False,
+                separators=(',',':')).encode('utf-8','strict')
         except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
             raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
         prepared=native['prepare_payload'](
@@ -530,10 +538,17 @@ async def _run(native,url,payload,user_text):
             after_wire=json.dumps(prepared['messages'],sort_keys=True,
                                   ensure_ascii=False,allow_nan=False,
                                   separators=(',',':')).encode('utf-8','strict')
+            after_control_wire=json.dumps({
+                'tool_choice':prepared.get('tool_choice'),
+                'chat_template_kwargs':prepared.get('chat_template_kwargs')},
+                sort_keys=True,ensure_ascii=False,allow_nan=False,
+                separators=(',',':')).encode('utf-8','strict')
         except (KeyError,TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
             raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
         if after_wire!=context_wire:
             raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY')
+        if after_control_wire!=control_wire:
+            raise StreamFailure('HOLD_MODEL_CONTROL_FIDELITY')
         if explicit_model and (type(selected) is not str or
                                not 0<len(selected.strip())<=200 or
                                type(prepared.get('model')) is not str or
