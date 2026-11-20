@@ -54,7 +54,7 @@ def require_landing_url(requested, visited):
     """Reject a login/other-path redirect before attributing browser FPS to NOX."""
     a, b = urlsplit(verify_url(requested)), urlsplit(verify_url(visited))
     identity = lambda p: (p.scheme.lower(), p.hostname.lower(), p.port,
-                          p.path, p.query)
+                          p.path, p.query, p.fragment)
     if identity(a) != identity(b):
         raise ValueError('HOLD_LIVE_LANDING_URL_MISMATCH')
     return visited
@@ -180,15 +180,19 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                             if not response or response.status >= 400:
                                 raise RuntimeError('HOLD_BROWSER_PAGE_HTTP')
                             require_landing_url(url, page.url)
-                            result['landing_url_verified'] = True
                         if expected_selector:
                             await page.locator(expected_selector).first.wait_for(state='visible', timeout=12000)
                         await page.wait_for_timeout(350)
+                        if fixture_html is None:
+                            require_landing_url(url, page.url)
                         frame_samples = await page.evaluate(SAMPLE_JS)
                         mode = 'reduced' if reduced else 'normal'
                         filename = f'b3_{width}x{height}_{mode}.png'
                         path = out / filename
                         await page.screenshot(path=str(path), full_page=False)
+                        if fixture_html is None:
+                            require_landing_url(url, page.url)
+                            result['landing_url_verified'] = True
                         proof = hashlib.sha256(path.read_bytes()).hexdigest()
                         entry = {'width': width, 'height': height, 'mode': mode,
                             'landing_url': None if fixture_html is not None else page.url,
