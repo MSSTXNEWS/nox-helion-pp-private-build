@@ -115,6 +115,15 @@
       if(pending){
         if(pending.eventId!==eventId)
           hold('HOLD_B1_UI_CONFLICTING_TERMINAL');
+        // A reconnect with a fresh STOP signal must not inherit false from
+        // an already-aborted terminal projection. Wait for its reservation to
+        // settle, then project the same server-verified event via GET-only
+        // readback. Never overlap two writers or accept a different event ID.
+        if(signal&&pending.signal&&pending.signal!==signal&&
+           pending.signal.aborted&&!signal.aborted){
+          return pending.promise.then(projected=>
+            projected===true?true:upsertTerminal(s,eventId,signal));
+        }
         return pending.promise;
       }
       const previous=deltaTails.get(k)||Promise.resolve();
@@ -158,7 +167,7 @@
           if(signal&&onAbort) signal.removeEventListener('abort',onAbort);
         }
       });
-      const intent={eventId,promise:job};
+      const intent={eventId,promise:job,signal};
       terminalIntents.set(k,intent);
       const release=()=>{if(terminalIntents.get(k)===intent) terminalIntents.delete(k);};
       job.then(release,release);
