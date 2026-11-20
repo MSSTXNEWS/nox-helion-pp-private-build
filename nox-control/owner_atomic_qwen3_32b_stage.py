@@ -16,7 +16,7 @@ URL='https://huggingface.co/Qwen/Qwen3-32B-GGUF/resolve/main/'+FILENAME
 SHA256='efd971561896866f0e910cce52761ca77b1b138090c7f15fe284676d57d1f689'
 MAX_FILE=24_000_000_000
 MIN_FILE=18_000_000_000
-RESERVE_DISK=12*1024**3
+RESERVE_DISK=10*1024**3
 MIN_FREE_RAM=32*1024**2
 CGROUP=Path('/sys/fs/cgroup')
 STOP_NAMES=('STOP','STOP.flag','stop.flag','.stop','program/STOP',
@@ -98,7 +98,7 @@ def execute():
             'no_queue_or_s03_write':True,'raw_before':raw_before}
     st=os.statvfs(TARGET_DIR)
     free=st.f_bavail*st.f_frsize
-    need(free>=MAX_FILE+RESERVE_DISK,'DISK_RESERVE')
+    need(free>=MIN_FILE+RESERVE_DISK,'DISK_RESERVE')
     tmp=TARGET_DIR/(FILENAME+'.part.'+request)
     need(not tmp.exists() and not tmp.is_symlink(),'PART_EXISTS')
     STAGE='TRANSFER'
@@ -110,8 +110,13 @@ def execute():
             req=urllib.request.Request(URL,headers={'User-Agent':'NOX-HELION-verified-staging/1.0'})
             with urllib.request.urlopen(req,timeout=40) as stream:
                 need(stream.status==200,'HTTP_STATUS')
+                advertised=stream.headers.get('Content-Length','')
+                if advertised.isdecimal():
+                    expected=int(advertised)
+                    need(MIN_FILE<=expected<=MAX_FILE,'REMOTE_SIZE_BOUND')
+                    need(free>=expected+RESERVE_DISK,'DISK_RESERVE')
                 while True:
-                    need(time.monotonic()-start<650,'TRANSFER_BUDGET')
+                    need(time.monotonic()-start<820,'TRANSFER_BUDGET')
                     chunk=stream.read(1024*1024)
                     if not chunk:break
                     count+=len(chunk)
@@ -123,6 +128,7 @@ def execute():
                         os.posix_fadvise(output.fileno(),0,count,os.POSIX_FADV_DONTNEED)
                         last_check=count
                         resources()
+                        need(os.statvfs(TARGET_DIR).f_bavail*os.statvfs(TARGET_DIR).f_frsize>=RESERVE_DISK,'STREAM_DISK_RESERVE')
                         if count%(512*1024*1024)<32*1024*1024:
                             need(protected()==saved,'SERVICE_CHANGED')
             output.flush();os.fsync(output.fileno())
@@ -159,5 +165,6 @@ if __name__=='__main__':
         if not re.fullmatch(r'HOLD_NOX_QWEN_STAGE_[A-Z0-9_]{1,100}',reason):
             reason='HOLD_NOX_QWEN_STAGE_INTERNAL_'+STAGE+'_'+type(ex).__name__.upper()
         print('NOX_MAINT_QWEN_STAGE='+json.dumps({'state':'HOLD','reason':reason,
-            'active_model_changed':False,'original_task_accepted':False},sort_keys=True),flush=True)
+            'active_model_changed':False,'original_task_accepted':False,
+            'disk_free_bytes':os.statvfs(TARGET_DIR).f_bavail*os.statvfs(TARGET_DIR).f_frsize if TARGET_DIR.is_dir() else None},sort_keys=True),flush=True)
         raise SystemExit(2)
