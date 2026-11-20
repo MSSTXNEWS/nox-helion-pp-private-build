@@ -39,7 +39,7 @@ jobs:
       - name: Always remove temporary SSH key, verify remote absence
         if: always()
         run: |
-          python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+          python3 -m nox_runpod.teacher_mesh.v66.ephemeral_ssh_probe cleanup
       - name: Protected critical files and workflows
         if: success()
         run: |
