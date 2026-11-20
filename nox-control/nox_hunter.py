@@ -399,7 +399,12 @@ def _fetch(source: dict[str, Any], cached: sqlite3.Row | None, max_bytes: int) -
             return body, response.headers.get("ETag"), response.headers.get("Last-Modified"), response.headers.get("Content-Type"), False
     except HTTPError as exc:
         if exc.code == 304 and cached:
-            return bytes(cached["body"]), cached["etag"], cached["last_modified"], cached["content_type"], True
+            # A 304 response reuses a disk blob, bypassing response.read(max_bytes).
+            # Re-check the CURRENT budget: it may be lower than at first fetch.
+            body = bytes(cached["body"])
+            if len(body) > max_bytes:
+                raise HunterError(f"cached response exceeds max_bytes={max_bytes}")
+            return body, cached["etag"], cached["last_modified"], cached["content_type"], True
         raise
 
 
