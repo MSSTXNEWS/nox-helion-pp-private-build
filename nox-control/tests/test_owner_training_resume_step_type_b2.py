@@ -20,7 +20,7 @@ from unittest import mock
 
 SOURCE = Path(__file__).resolve().parents[1] / "owner_training_resume.py"
 FN_NAMES = {"read_json", "file_sha", "verify_paused_result", "resource_admission",
-            "continuation_terminal_state"}
+            "continuation_terminal_state", "read_installed_train_cpu_cap"}
 
 
 def load_pinned_verifier(output):
@@ -361,6 +361,7 @@ class CheckpointStepProvenance(unittest.TestCase):
         # This source-only test never contacts the host or starts training.
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
+            (root / "train_cpu_max.env").write_text("TRAIN_CPU_MAX=64GiB\n", encoding="utf-8")
             verifier = load_pinned_verifier(root)["resource_admission"]
 
             def fake_read_text(path, *args, **kwargs):
@@ -368,7 +369,7 @@ class CheckpointStepProvenance(unittest.TestCase):
                     "/sys/fs/cgroup/cpu.max": "400000 100000",
                     "/sys/fs/cgroup/memory.max": "194065203200",
                     "/sys/fs/cgroup/memory.current": "188662734848",
-                    str(root / "train_cpu_max.env"): "TRAIN_CPU_MAX=64GiB\n",
+
                 }
                 return contents[str(path)]
 
@@ -394,12 +395,13 @@ class CheckpointStepProvenance(unittest.TestCase):
         # No host cgroup/lease/GPU/model access or native training is performed.
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
+            (root / "train_cpu_max.env").write_text("TRAIN_CPU_MAX=64GiB\n", encoding="utf-8")
             verifier = load_pinned_verifier(root)["resource_admission"]
             sources = {
                 "/sys/fs/cgroup/cpu.max": "max 100000",
                 "/sys/fs/cgroup/memory.max": "194065203200",
                 "/sys/fs/cgroup/memory.current": "188662734848",
-                str(root / "train_cpu_max.env"): "TRAIN_CPU_MAX=64GiB\n",
+
             }
             cpu_calls = []
 
@@ -442,13 +444,14 @@ class CheckpointStepProvenance(unittest.TestCase):
         # unbounded nor corrupt usage may be admitted as measured RAM.
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
+            (root / "train_cpu_max.env").write_text("TRAIN_CPU_MAX=64GiB\n", encoding="utf-8")
             verify = load_pinned_verifier(root)["resource_admission"]
             maximum = 194065203200
             sources = {
                 "/sys/fs/cgroup/cpu.max": "400000 100000",
                 "/sys/fs/cgroup/memory.max": str(maximum),
                 "/sys/fs/cgroup/memory.current": "188662734848",
-                str(root / "train_cpu_max.env"): "TRAIN_CPU_MAX=64GiB\n",
+
             }
             admitted_budgets = []
 
@@ -631,12 +634,13 @@ class CheckpointStepProvenance(unittest.TestCase):
         # despite trailing shell/env directives that the trainer could load.
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
+            (root / "train_cpu_max.env").write_text("TRAIN_CPU_MAX=64GiB\n", encoding="utf-8")
             admit = load_pinned_verifier(root)["resource_admission"]
             sources = {
                 "/sys/fs/cgroup/cpu.max": "400000 100000",
                 "/sys/fs/cgroup/memory.max": "194065203200",
                 "/sys/fs/cgroup/memory.current": "188662734848",
-                str(root / "train_cpu_max.env"): "TRAIN_CPU_MAX=64GiB\n",
+
             }
             def fake_read_text(path, *args, **kwargs):
                 return sources[str(path)]
@@ -658,9 +662,35 @@ class CheckpointStepProvenance(unittest.TestCase):
                     "TRAIN_CPU_MAX=64GiB\n\n",
                 ):
                     with self.subTest(contents=invalid):
-                        sources[str(root / "train_cpu_max.env")] = invalid
+                        (root / "train_cpu_max.env").write_text(invalid, encoding="utf-8")
                         with self.assertRaisesRegex(RuntimeError, "HOLD_INSTALLED_TRAIN_CPU_LIMIT"):
                             admit(helper)
+
+
+
+    def test_train_cpu_env_cap_rejects_symlink_fifo_and_non_regular_bytes(self):
+        # An approved target behind a symlink previously passed read_text().
+        # O_NOFOLLOW must fence it; O_NONBLOCK must not hang on a FIFO.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            cap = load_pinned_verifier(root)["read_installed_train_cpu_cap"]
+            env = root / "train_cpu_max.env"
+            env.write_text("TRAIN_CPU_MAX=64GiB\\n", encoding="utf-8")
+            self.assertEqual(cap(env), 64)
+            env.unlink()
+            target = root / "approved.env"
+            target.write_text("TRAIN_CPU_MAX=64GiB\\n", encoding="utf-8")
+            env.symlink_to(target)
+            with self.assertRaisesRegex(RuntimeError, "HOLD_INSTALLED_TRAIN_CPU_LIMIT"):
+                cap(env)
+            env.unlink()
+            os.mkfifo(env)
+            with self.assertRaisesRegex(RuntimeError, "HOLD_INSTALLED_TRAIN_CPU_LIMIT"):
+                cap(env)
+            env.unlink()
+            env.write_bytes(b"TRAIN_CPU_MAX=64GiB\\nEXTRA=1")
+            with self.assertRaisesRegex(RuntimeError, "HOLD_INSTALLED_TRAIN_CPU_LIMIT"):
+                cap(env)
 
 
 if __name__ == "__main__":
