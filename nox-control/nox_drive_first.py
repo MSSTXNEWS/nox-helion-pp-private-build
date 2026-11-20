@@ -24,7 +24,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-ROOT_ID = "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+# SHA-256 of the owner-approved private NOX_NATIVE_COLD_WEIGHTS folder ID.
+# Never publish its raw Drive identifier or silently accept the old integrator root.
+APPROVED_COLD_ROOT_SHA256 = "1484784f97f5134931c66e293f9dcfb5dbf3d96bfb9b04489d17556988cebe9a"
 SCHEMA = "nox.drive.first.v1"
 RECEIPT_SCHEMA = "nox.drive.first.verified.v1"
 CONFIG = Path("/root/.config/rclone/rclone.conf")
@@ -165,6 +167,12 @@ class VerifiedRedirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+def approved_cold_root(root_id):
+    """Pin the private cold folder without exposing its Drive ID in source."""
+    return (type(root_id) is str and bool(re.fullmatch(r"[A-Za-z0-9_-]{20,128}", root_id))
+            and hashlib.sha256(root_id.encode("ascii")).hexdigest() == APPROVED_COLD_ROOT_SHA256)
+
+
 def validate_config(path):
     p = private_file(path, max_bytes=131072)
     cfg = configparser.RawConfigParser(interpolation=None)
@@ -175,7 +183,7 @@ def validate_config(path):
     require(cfg.has_section("noxdrive"), "CONFIG_MISSING_REMOTE")
     get = lambda n, k: cfg.get(n, k, fallback="").strip()
     require(get("noxdrive", "type") == "drive"
-            and get("noxdrive", "root_folder_id") == ROOT_ID
+            and approved_cold_root(get("noxdrive", "root_folder_id"))
             and any(get("noxdrive", v) for v in
                     ("token", "service_account_file", "service_account_credentials")),
             "GOOGLE_AUTH_REQUIRED")
