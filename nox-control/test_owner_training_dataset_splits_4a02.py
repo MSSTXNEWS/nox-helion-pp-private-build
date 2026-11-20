@@ -20,7 +20,7 @@ def rows_fixture():
                     "lang": lang,
                     "domain": domain,
                     "goal": f"goal {number}",
-                    "source_id": f"publisher/{domain}/{number}",
+                    "source_id": f"publisher/{lang}/{domain}/{number}",
                     "text": f"unique {lang} {domain} {number} example",
                     "license": "MIT",
                 })
@@ -64,6 +64,21 @@ class DatasetSplitTests(unittest.TestCase):
         rows[1]["text"] = rows[0]["text"].upper()
         with self.assertRaisesRegex(SplitHold, "HOLD_CROSS_GROUP_DUPLICATE"):
             split_manifest(rows)
+
+    def test_origin_goal_cannot_cross_language_or_domain_partitions(self):
+        for offender_index in (5, -1):  # RU cross-domain; RU to ES
+            with self.subTest(offender_index=offender_index):
+                rows = rows_fixture()
+                rows[offender_index]["source_id"] = (
+                    "  " + rows[0]["source_id"].upper() + " "
+                )
+                rows[offender_index]["goal"] = "  " + rows[0]["goal"].upper() + " "
+                # Different text hash: this checks provenance, not text deduplication.
+                self.assertNotEqual(rows[offender_index]["text"], rows[0]["text"])
+                with self.assertRaisesRegex(
+                    SplitHold, "HOLD_CROSS_STRATUM_ORIGIN_GOAL"
+                ):
+                    split_manifest(rows)
 
     def test_absent_provenance_or_coverage_holds(self):
         rows = rows_fixture()
