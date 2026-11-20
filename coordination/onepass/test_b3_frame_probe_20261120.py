@@ -4,7 +4,7 @@ import pathlib
 import tempfile
 import unittest
 
-from b3_frame_probe_20261120 import compare_baseline, measure, summarize, verify_url
+from b3_frame_probe_20261120 import compare_baseline, measure, summarize, verify_url, require_landing_url
 
 
 class TestProbe(unittest.TestCase):
@@ -16,6 +16,21 @@ class TestProbe(unittest.TestCase):
             verify_url('file:///etc/passwd')
         with self.assertRaises(ValueError):
             verify_url('https://user:pass@nox.example/')
+        live = 'http://127.0.0.1:8765/resonance.html'
+        self.assertEqual(require_landing_url(live, live), live)
+        for redirect in (
+            'http://127.0.0.1:8765/login.html',
+            'http://127.0.0.1:8765/resonance.html?session=other',
+            'https://127.0.0.1:8765/resonance.html',
+            'http://127.0.0.1:9999/resonance.html',
+            'https://example.com/resonance.html',
+        ):
+            with self.subTest(redirect=redirect), self.assertRaisesRegex(
+                    ValueError, 'HOLD_LIVE_LANDING_URL_MISMATCH'):
+                require_landing_url(live, redirect)
+        with tempfile.TemporaryDirectory() as temp:
+            with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_SELECTOR_REQUIRED'):
+                measure(live, temp, chromium='/usr/bin/chromium')
 
 
     def test_baseline_provenance_and_six_frame_modes(self):
@@ -30,7 +45,8 @@ class TestProbe(unittest.TestCase):
             'url': 'http://127.0.0.1:8765/resonance.html',
             'sample_js': '90 consecutive real requestAnimationFrame intervals',
             'synthetic_fixture': False, 'expected_selector_checked': True,
-            'expected_selector': '#resonance', 'runs': rows,
+            'expected_selector': '#resonance', 'landing_url_verified': True,
+            'runs': rows,
         }
         measured = copy.deepcopy(baseline)
         self.assertEqual(len(compare_baseline(measured, baseline)), 6)
@@ -39,11 +55,12 @@ class TestProbe(unittest.TestCase):
             {'url': 'http://127.0.0.1:8765/login.html'},
             {'expected_selector': '#login'},
             {'expected_selector_checked': False},
+            {'landing_url_verified': False},
         ):
             wrong = copy.deepcopy(baseline)
             wrong.update(change)
             with self.subTest(change=change), self.assertRaisesRegex(
-                    ValueError, 'HOLD_BASELINE_PROVENANCE_MISMATCH|HOLD_BASELINE_MISSING_LIVE_SELECTOR'):
+                    ValueError, 'HOLD_BASELINE_PROVENANCE_MISMATCH|HOLD_BASELINE_MISSING_LIVE_SELECTOR|HOLD_BASELINE_LANDING_URL_UNVERIFIED'):
                 compare_baseline(measured, wrong)
         missing = copy.deepcopy(baseline)
         missing['runs'].pop()
@@ -60,6 +77,7 @@ class TestProbe(unittest.TestCase):
             compare_baseline(browser_no_selector, browser_no_selector)
         synthetic = copy.deepcopy(measured)
         synthetic['synthetic_fixture'] = True
+        synthetic['landing_url_verified'] = False
         self.assertEqual(len(compare_baseline(synthetic, synthetic)), 6)
         with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_PROVENANCE_MISMATCH'):
             compare_baseline(measured, synthetic)
@@ -83,6 +101,7 @@ class TestProbe(unittest.TestCase):
             self.assertFalse(result['native_s03_verified'])
             self.assertTrue(result['synthetic_fixture'])
             self.assertTrue(result['expected_selector_checked'])
+            self.assertFalse(result['landing_url_verified'])
             self.assertFalse(result['installed_model_identity_verified'])
             self.assertEqual({r['width'] for r in result['runs']}, {320, 390, 1440})
             self.assertEqual({r['mode'] for r in result['runs']}, {'normal', 'reduced'})
