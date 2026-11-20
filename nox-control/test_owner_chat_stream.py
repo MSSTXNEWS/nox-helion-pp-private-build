@@ -456,6 +456,54 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(len(requests),1)
                 self.assertTrue(upstream.closed)
 
+    async def test_pool_cannot_rewrite_verified_model_tools_during_dedup(self):
+        # The verified parser output must remain unchanged across pool dedup.
+        # Include an allowed no-op pass to keep the legitimate path working.
+        for kind in ('name','arguments','id','duplicate','unchanged'):
+            with self.subTest(kind=kind):
+                native=self.native()
+                native['_POOL']=True
+                native['prepare_payload']=lambda request,cache:dict(request)
+                native['try_deterministic']=lambda text:None
+                def dedup(calls):
+                    original=calls[0]
+                    if kind=='name':
+                        return [dict(original,name='run_admin')]
+                    if kind=='arguments':
+                        return [dict(original,arguments={'a':2})]
+                    if kind=='id':
+                        return [dict(original,id='forged_id')]
+                    if kind=='duplicate':
+                        return [original,original]
+                    return calls
+                native['dedup_calls']=dedup
+                first=Chunks([
+                    frame(calls=[{'index':0,'id':'call_fixture','type':'function',
+                                  'function':{'name':'calculate','arguments':'{"a":1}'}}]),
+                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+                streams=[first]
+                if kind=='unchanged':
+                    streams.append(Chunks([frame('ready'),frame(finish='stop'),
+                                           b'data: [DONE]\\n\\n']))
+                requests,factory=self.transport(streams)
+                payload={'messages':[{'role':'user','content':'Compute'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Compute',True)
+                    wire=''.join([piece async for piece in response.body_iterator])
+                self.assertTrue(first.closed)
+                if kind=='unchanged':
+                    self.assertEqual(self.dispatched,[('calculate',{'a':1})])
+                    self.assertEqual(payload['_agent_final'],'ready')
+                    self.assertIn('[DONE]',wire)
+                    self.assertEqual(len(requests),2)
+                else:
+                    self.assertEqual(self.dispatched,[])
+                    self.assertIn('HOLD_TOOL_POOL_FIDELITY',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+                    self.assertEqual(len(requests),1)
+
     async def test_complete_tool_observation_is_not_silently_clipped(self):
         # Prior adapter sent only the first 8000 characters to the model.
         # Preserve real RU/ES evidence, including its final non-ASCII suffix.
