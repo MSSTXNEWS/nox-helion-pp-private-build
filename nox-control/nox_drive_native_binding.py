@@ -318,6 +318,7 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
     SCHEMA = "NOX_OWNER_DRIVE_REGISTRY_STAGE_V1"
     INSTANCE = 60509551
     EXPECTED_DISPATCHER_SHA = "9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21"
+    EXPECTED_PREVIOUS_STAGED_SHA = "c9d08cbcd6afe91259129a154b31038ebacd50f648e027eac9fa89a2094f5649"
     EXPECTED_BRIDGE_SHA = None  # pass exact bundled SHA from owner installer
     SOURCE = Path("/root/nox/scripts/nox_dispatcher_t855u.py")
     BRIDGE = Path("/root/nox/ops/drive-auth/nox_drive_native_binding.py")
@@ -334,6 +335,8 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
     SHIM = '''# NOX_DRIVE_FIRST_STATIC_V1_START
     def _nox_drive_first_native_handler(task):
         import os as _os
+        import json as _json
+        import stat as _stat
         import shutil as _shutil
         import sys as _sys
         from pathlib import Path as _Path
@@ -342,9 +345,9 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
                 or task.get("handler") != "nox.drive.first.native.v1"
                 or task.get("status") != "running"
                 or not isinstance(task.get("params"), dict)
-                or not isinstance(task.get("claim"), dict)
-                or not isinstance(task["claim"].get("nonce"), str)
-                or len(task["claim"]["nonce"]) < 12):
+                or not isinstance(task.get("owner_claim"), dict)
+                or not isinstance(task["owner_claim"].get("nonce"), str)
+                or len(task["owner_claim"]["nonce"]) < 12):
             raise RuntimeError("HOLD_DRIVE_NATIVE_OWNER_CLAIM")
         _flags = ("/root/nox/STOP", "/root/nox/STOP.flag", "/root/nox/state/STOP",
                   "/root/nox/state/OWNER_MAINTENANCE.flag", "/workspace/NOX_STOP",
@@ -352,11 +355,38 @@ def stage_native_dispatcher_source(*, expected_bridge_sha, hook_syntax_only=Fals
         def _stopped():
             return any(_os.path.lexists(p) for p in _flags)
         def _lease_current():
-            return (task.get("status") == "running"
-                    and isinstance(task.get("claim"), dict)
-                    and isinstance(task["claim"].get("nonce"), str)
-                    and len(task["claim"]["nonce"]) >= 12
-                    and not _stopped())
+            if (_stopped() or task.get("status") != "running"
+                    or not isinstance(task.get("id"), str)
+                    or not isinstance(task.get("owner_claim"), dict)):
+                return False
+            try:
+                # Read the same owner's actual persisted native queue.
+                # An old or forged claim cannot execute a Drive transfer.
+                _path = _Path("/root/nox/state/dispatcher/state.json")
+                if _path.is_symlink() or any(_p.is_symlink() for _p in _path.parents):
+                    return False
+                _st = _path.stat()
+                if (_st.st_uid != _os.geteuid() or not _stat.S_ISREG(_st.st_mode)
+                        or _st.st_nlink != 1 or _st.st_mode & 0o022
+                        or not 0 < _st.st_size <= 32 * 1024**2):
+                    return False
+                _raw = _path.read_bytes()
+                if len(_raw) != _st.st_size:
+                    return False
+                _state = _json.loads(_raw)
+                _row = _state.get("tasks", {}).get(task["id"])
+                if not isinstance(_row, dict) or _row.get("status") != "running":
+                    return False
+                _claim = _row.get("owner_claim")
+                _requested = task["owner_claim"]
+                return (isinstance(_claim, dict)
+                        and isinstance(_claim.get("nonce"), str)
+                        and len(_claim["nonce"]) >= 12
+                        and all(_claim.get(_key) == _requested.get(_key)
+                                for _key in ("nonce", "pid", "worker"))
+                        and _row.get("handler") == "nox.drive.first.native.v1")
+            except (OSError, ValueError, TypeError, KeyError, AttributeError):
+                return False
         def _foreground_active():
             try:
                 return _nox_owner_boost_active() is not False
