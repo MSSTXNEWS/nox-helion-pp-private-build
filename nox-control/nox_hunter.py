@@ -76,7 +76,7 @@ def _canonical_url(value: str) -> str:
         raise HunterError("non-public IP URLs are forbidden")
     # Some resolvers accept shortened, octal-like or hex IPv4 host spellings.
     # They must not bypass ipaddress's strict syntax checks.
-    if ip is None and re.fullmatch(r"(?:0x[0-9a-f]+|[0-9]+)(?:\\.(?:0x[0-9a-f]+|[0-9]+))*", host):
+    if ip is None and re.fullmatch(r"(?:0x[0-9a-f]+|[0-9]+)(?:\.(?:0x[0-9a-f]+|[0-9]+))*", host):
         raise HunterError("ambiguous numeric host is forbidden")
     path = parts.path or "/"
     query = [
