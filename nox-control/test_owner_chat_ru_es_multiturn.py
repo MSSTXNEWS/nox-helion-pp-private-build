@@ -34,6 +34,7 @@ from owner_chat_browser_qa import (
     native_terminal_stream_valid,
     readback_evidence,
     browser_run,
+    require_screenshot_captures,
     OBSERVER_JS,
 )
 
@@ -974,6 +975,40 @@ async function check(chunks, status=200) {
                 missing_scope))
         self.assertFalse(allowed_qa_request(
             1, True, RU, es, valid, "other-dialog"))
+
+    def test_two_turn_browser_receipt_separate_from_unwired_s03(self):
+        """A three-shot browser witness must not imply native S03 acceptance."""
+        captures = [{"stage": "empty", "state": "CAPTURED"},
+                    {"stage": "completed", "state": "CAPTURED"}]
+        single = {"two_turn_mode": False, "screenshot_captures": list(captures)}
+        require_screenshot_captures(single)
+        self.assertTrue(single["screenshot_capture_verified"])
+        incomplete = {"two_turn_mode": True, "screenshot_captures": list(captures)}
+        with self.assertRaisesRegex(RuntimeError, "HOLD_SCREENSHOT_CAPTURE_PENDING"):
+            require_screenshot_captures(incomplete)
+        self.assertFalse(incomplete["screenshot_capture_verified"])
+        for extra in ({"stage": "second_turn", "state": "CAPTURE_TIMEOUT"},
+                      {"stage": "completed", "state": "CAPTURED"}):
+            invalid = {"two_turn_mode": True, "screenshot_captures": captures + [extra]}
+            with self.subTest(extra=extra):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_SCREENSHOT_CAPTURE_PENDING"):
+                    require_screenshot_captures(invalid)
+        complete = {"two_turn_mode": True, "screenshot_captures": captures + [
+            {"stage": "second_turn", "state": "CAPTURED"}]}
+        require_screenshot_captures(complete)
+        self.assertTrue(complete["screenshot_capture_verified"])
+        source = inspect.getsource(browser_run)
+        self.assertIn("QA_SECOND_TURN_PRIVATE_SCREENSHOT", source)
+        self.assertIn("HOLD_MULTITURN_SCREENSHOT_CAPTURE_PENDING", source)
+        self.assertLess(source.index("HOLD_MULTITURN_BROWSER"),
+                        source.index("QA_SECOND_TURN_PRIVATE_SCREENSHOT"))
+        self.assertLess(source.index("QA_SECOND_TURN_PRIVATE_SCREENSHOT"),
+                        source.index("multiturn_browser_acceptance_verified"))
+        self.assertLess(source.index("require_screenshot_captures(report)"),
+                        source.index("multiturn_browser_acceptance_verified"))
+        self.assertLess(source.index("multiturn_browser_acceptance_verified"),
+                        source.index("HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK"))
+        self.assertIn("canonical_s03_verified=False", source)
 
     def test_ru_es_four_turn_history_needs_independent_canonical_s03(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
