@@ -94,8 +94,9 @@ class FactReceiptTest(unittest.TestCase):
     def test_partial_upstream_never_claims_done_or_persists_s03(self):
         """One endpoint-level check for complete, truncated and HTTP-failed streams."""
         class Upstream:
-            def __init__(self, complete, status):
+            def __init__(self, complete, status, finish_reason=None, error_event=False):
                 self.complete, self.status_code = complete, status
+                self.finish_reason, self.error_event = finish_reason, error_event
 
             async def __aenter__(self):
                 return self
@@ -105,15 +106,20 @@ class FactReceiptTest(unittest.TestCase):
 
             async def aiter_lines(self):
                 yield 'data: {"choices":[{"delta":{"content":"частичный ответ"}}]}'
+                if self.finish_reason is not None:
+                    yield 'data: ' + json.dumps({"choices": [{"delta": {}, "finish_reason": self.finish_reason}]})
+                if self.error_event:
+                    yield 'data: {"error":{"message":"upstream worker failed"}}'
                 if self.complete:
                     yield 'data: [DONE]'
 
         class Client:
-            def __init__(self, complete, status):
+            def __init__(self, complete, status, finish_reason=None, error_event=False):
                 self.complete, self.status = complete, status
+                self.finish_reason, self.error_event = finish_reason, error_event
 
             def stream(self, method, url, json):
-                return Upstream(self.complete, self.status)
+                return Upstream(self.complete, self.status, self.finish_reason, self.error_event)
 
         endpoint = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
         module = types.ModuleType("s03_memory")
@@ -129,12 +135,17 @@ class FactReceiptTest(unittest.TestCase):
             response = await endpoint(Request(body))
             return [json.loads(part) async for part in response.body_iterator]
 
-        for complete, status, expected_ok in ((False, 200, False),
-                                               (True, 503, False),
-                                               (True, 200, True)):
-            with self.subTest(complete=complete, status=status):
+        for complete, status, finish_reason, error_event, expected_ok in (
+            (False, 200, None, False, False),
+            (True, 503, None, False, False),
+            (True, 200, "length", False, False),
+            (True, 200, None, True, False),
+            (True, 200, "stop", False, True),
+        ):
+            with self.subTest(complete=complete, status=status,
+                              finish_reason=finish_reason, error_event=error_event):
                 writes.clear()
-                bridge.hc = lambda: Client(complete, status)
+                bridge.hc = lambda: Client(complete, status, finish_reason, error_event)
                 with mock.patch.dict(sys.modules, {"s03_memory": module}), mock.patch.object(W, "W", None):
                     frames = asyncio.run(get_frames())
                 terminal = [v for v in frames if v.get("done") is True]
