@@ -247,9 +247,9 @@ test('CDP [DONE] is verified only after a unique explicit model finish_reason=st
     body.replace('"finish_reason":"stop"','"finish_reason":"content_filter"'),
     body.replace('"finish_reason":"stop"','"finish_reason":"tool_calls"'),
     body.replace('"finish_reason":"stop"','"finish_reason":null'),
-    body.replace('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\\n\\n',''),
-    body.replace('data: [DONE]','data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\\n\\ndata: [DONE]'),
-    body.replace('data: [DONE]','data: {"choices":[{"delta":{"content":"late"}}]}\\n\\ndata: [DONE]')
+    body.replace('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',''),
+    body.replace('data: [DONE]','data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]'),
+    body.replace('data: [DONE]','data: {"choices":[{"delta":{"content":"late"}}]}\n\ndata: [DONE]')
   ];
   for(const wire of malformed){
     const actual=await run(false,[Buffer.from(wire)]);
