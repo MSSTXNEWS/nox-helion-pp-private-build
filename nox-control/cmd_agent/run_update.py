@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
-REMOTE = "curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-deploy-script/nox-control/cmd_agent/deploy_web.sh -o /tmp/deploy_web.sh && bash /tmp/deploy_web.sh 809385353e4555ea81c30353f86992ebab4351a14bafaf0b7d62f86f0f52d4db https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-dist/nox-web.part00 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-dist/nox-web.part01 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-dist/nox-web.part02 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-dist/nox-web.part03 2>&1 | tail -15; echo ---; curl -s -o /dev/null -w 'web=%{http_code}\\n' http://127.0.0.1:8091/web/; curl -s -o /dev/null -w 'idx=%{http_code}\\n' http://127.0.0.1:8091/web/index.html; df -h /opt | tail -1"
+REMOTE = 'tr \'\\0\' \'\\n\' < /proc/1/environ | grep -E \'^(PUBLIC_IPADDR|VAST_TCP_PORT_22)=\' | sed \'s/^/TUNNEL /\'; echo ---CHAT; curl -s -m 100 -N -X POST http://127.0.0.1:8091/api/chat -H \'Content-Type: application/json\' -d \'{"messages":[{"role":"user","content":"Ответь одним словом: готов?"}],"options":{"num_predict":12},"ephemeral":true}\' -w \'\\nTOTAL=%{time_total}s TTFB=%{time_starttransfer}s\\n\' | tail -c 700; echo ---; supervisorctl status 2>&1 | head -12'
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
