@@ -1,0 +1,29 @@
+name: NOX A5 5V14 owner WEB active-asset source check
+on:
+  push:
+    branches: [a5/5v14-inert-owner-assets-20261120]
+    paths:
+      - 'nox-control/owner_chat_ui.py'
+      - 'nox-control/test_owner_chat_ui_5v14.py'
+      - '.github/workflows/nox-a5-5v14-web-source-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/owner_chat_ui.py'
+      - 'nox-control/test_owner_chat_ui_5v14.py'
+      - '.github/workflows/nox-a5-5v14-web-source-check.yml'
+permissions:
+  contents: read
+jobs:
+  focused-5v14:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run one source-only archive regression
+        run: |
+          python3 -m unittest discover -s nox-control -p test_owner_chat_ui_5v14.py -v
+          echo 'NOX_5V14_SOURCE_CHECK=true'
+          echo 'NOX_5V14_NATIVE_ACCEPTANCE=false'
