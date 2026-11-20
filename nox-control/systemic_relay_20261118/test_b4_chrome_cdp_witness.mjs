@@ -305,3 +305,36 @@ test('first-visible TTFT ignores zero-width, controls and isolated marks before 
   }
   assert.doesNotMatch(JSON.stringify(admitted),/Привет|Hola|secret/);
 });
+
+
+test('CDP accepts only one zero-indexed SSE choice for TTFT/completion',async()=>{
+  const wire=choices=>
+    'data: '+JSON.stringify({choices})+'\n\n'+
+    'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'+
+    'data: [DONE]\n\n';
+  for(const validChoice of [
+    {index:0,delta:{content:'Indexed'}},
+    {delta:{content:'Legacy'}}
+  ]){
+    const x=await run(false,[Buffer.from(wire([validChoice]))]);
+    assert.equal(x.cdp_consistent,true);
+    assert.equal(x.ttft_sse_verified,true);
+  }
+  const invalid=[
+    [{index:0,delta:{content:'A'}},{index:1,delta:{content:'B'}}],
+    [{delta:{content:'A'}},{delta:{content:'B'}}],
+    [{index:1,delta:{content:'Wrong'}}],
+    [{index:-1,delta:{content:'Wrong'}}],
+    [{index:'0',delta:{content:'Wrong'}}],
+    [{index:null,delta:{content:'Wrong'}}],
+    [{index:0.5,delta:{content:'Wrong'}}],
+    [{index:true,delta:{content:'Wrong'}}]
+  ];
+  for(const choices of invalid){
+    const x=await run(false,[Buffer.from(wire(choices))]);
+    assert.equal(x.cdp_consistent,false,JSON.stringify(choices));
+    assert.equal(x.ttft_sse_verified,false,JSON.stringify(choices));
+    assert.equal(x.turns[1].ttft_ms,null);
+    assert.equal(x.turns[1].sse_done_ms,null);
+  }
+});

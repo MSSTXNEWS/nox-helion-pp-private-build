@@ -65,8 +65,12 @@ function eventData(record){
   const usage=obj.usage&&typeof obj.usage==='object'&&!Array.isArray(obj.usage);
   if(Array.isArray(obj.choices)){
     if(obj.choices.length===0)return usage?{ignored:true}:{invalid:true};
+    // Only one candidate can certify a one-answer chat stream.
+    if(obj.choices.length!==1)return {invalid:true};
     const first=obj.choices[0];
     if(!first||typeof first!=='object'||Array.isArray(first))return {invalid:true};
+    // Some compatible providers omit index; an explicit index must be zero.
+    if(Object.hasOwn(first,'index')&&first.index!==0)return {invalid:true};
     const delta=first.delta;
     if(!delta||typeof delta!=='object'||Array.isArray(delta))return {invalid:true};
     if(Object.hasOwn(delta,'content')&&delta.content!==null&&typeof delta.content!=='string')return {invalid:true};
