@@ -104,10 +104,11 @@ def cold_files(used):
             dirs[:]=[d for d in dirs if d not in {'state','s03','memory','tmp','proc','sys','dev','node_modules','.git'}
                      and not (Path(dirname)/d).is_symlink()]
             for name in names:
+                if not name.lower().endswith(EXT):continue
                 walked+=1
-                require(walked<=25000,'WALK_BOUND')
+                require(walked<=2000,'MATCHING_FILE_BUDGET')
                 path=Path(dirname)/name
-                if not name.lower().endswith(EXT) or path.is_symlink() or str(path) in used:continue
+                if path.is_symlink() or str(path) in used:continue
                 if any(word in name.lower() for word in ('engram','active','current','live-model')):continue
                 try:s=path.stat(follow_symlinks=False)
                 except OSError:continue
