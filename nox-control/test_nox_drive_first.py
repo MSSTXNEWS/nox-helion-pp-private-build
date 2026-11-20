@@ -170,6 +170,27 @@ class DriveFirstTests(unittest.TestCase):
         private=json.loads((self.state/"drive-task-001.json").read_text())
         self.assertTrue(private["remote_readback_verified"])
 
+    def test_existing_task_receipt_blocks_replay_before_drive_io(self):
+        self.configure()
+        receipt=self.state/"drive-task-001.json"
+        receipt.write_text("original signed receipt")
+        receipt.chmod(0o600)
+        with patch.object(m,"stop_clear"),patch.object(m,"cgroup_admit"),\\
+             patch.object(m,"run_rclone") as remote:
+            with self.assertRaisesRegex(m.Hold,"RECEIPT_ALREADY_EXISTS"):
+                m.execute(self.asset,self.conf,self.state)
+        remote.assert_not_called()
+        self.assertEqual(receipt.read_text(),"original signed receipt")
+
+    def test_receipt_save_is_atomic_create_only(self):
+        receipt=self.state/"drive-task-001.json"
+        m.save_receipt(receipt,{"original":True})
+        before=receipt.read_bytes()
+        with self.assertRaisesRegex(m.Hold,"RECEIPT_ALREADY_EXISTS"):
+            m.save_receipt(receipt,{"original":False})
+        self.assertEqual(receipt.read_bytes(),before)
+        self.assertFalse((self.state/".drive-task-001.json.new").exists())
+
     def test_stream_direct_http_into_rclone_with_exact_size_no_spool(self):
         self.configure()
         target="noxchunks:STAGING/task-001-test.gguf"
