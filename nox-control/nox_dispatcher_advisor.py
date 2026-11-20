@@ -21,7 +21,21 @@ def _finite_nonnegative(value):
         return False
 
 
-def assess(snapshot):
+def _owner_snapshot_attested(snapshot, verifier):
+    """Only an injected, trusted owner-side verifier can attest JSON evidence.
+
+    A JSON 'age', lease or CAS flag alone is never proof of provenance.
+    The command-line advisor deliberately has no verifier and fails closed.
+    """
+    if not callable(verifier):
+        return False
+    try:
+        return verifier(snapshot) is True
+    except Exception:
+        return False
+
+
+def assess(snapshot, *, owner_snapshot_verifier=None):
     issues = []
     def add(code, urgency, advice, question=None):
         item = {"code": code, "urgency": urgency, "advice": advice}
@@ -60,10 +74,19 @@ def assess(snapshot):
             # Original 6A02: idle workers are *not* an owner lease, task claim,
             # atomic registry snapshot, or sufficient resource admission.
             headroom = native.get("resource_headroom_bytes")
+            # The verifier must check this SAME snapshot's owner provenance,
+            # timestamp and lease/CAS; it cannot be supplied through JSON.
+            owner_attested = _owner_snapshot_attested(
+                snapshot, owner_snapshot_verifier)
             reviewable = (
+                owner_attested
                 native.get("maintenance_busy") is False
                 and native.get("active_claims") is False
                 and type(headroom) is int and headroom >= 2*1024**3
+                # A previously true lease/source flag is not a current owner
+                # admission. Require a bounded age from the same snapshot.
+                and type(native.get("owner_evidence_age_sec")) is int
+                and 0 <= native["owner_evidence_age_sec"] <= 30
                 and native.get("owner_lease_cas_verified") is True
                 and native.get("immutable_task_source_verified") is True
             )
@@ -75,7 +98,7 @@ def assess(snapshot):
             else:
                 add("NATIVE_REFILL_OWNER_HOLD", "hold",
                     "Idle workers/catalog exhaustion do not authorize publication. "
-                    "Await fresh owner lease/CAS, immutable source, zero active claims, "
+                    "Await independently attested owner snapshot, age-bounded lease/CAS evidence, immutable source, zero active claims, "
                     "explicit maintenance clearance and >=2 GiB raw cgroup headroom; "
                     "do not duplicate queues or overwrite a pending run.")
         if native.get("maintenance_busy") is True or native.get("active_claims") is True:
