@@ -1164,5 +1164,67 @@ class CheckpointStepProvenance(unittest.TestCase):
                 eval(code, scope)
             self.assertEqual(len(writes), 1)
 
+    def test_start_once_waits_for_running_native_identity_not_starting(self):
+        # Execute the actual nested start_once: no supervisor, GPU or trainer.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        main = next(n for n in tree.body
+                    if isinstance(n, ast.FunctionDef) and n.name == "main")
+        start = next(n for n in main.body
+                     if isinstance(n, ast.FunctionDef) and n.name == "start_once")
+        def run(states, stop_sequence=None, fast_timeout=False):
+            seen, starts, proofs, waits, steps = [], [], [], [], []
+            state_iter = iter(states)
+            stop_iter = iter(stop_sequence or [])
+            def service_state():
+                status = next(state_iter, states[-1])
+                seen.append(status)
+                return {"state": status, "pid": 37}
+            def stopping():
+                return next(stop_iter, False)
+            tick = [0]
+            def monotonic():
+                tick[0] += 16 if fast_timeout else 0.1
+                return tick[0]
+            helper = types.SimpleNamespace(
+                command=lambda args, timeout: (starts.append((args, timeout)) or (0, "")),
+                service_state=service_state,
+            )
+            namespace = {
+                "helper": helper, "global_stop": stopping,
+                "SERVICE": "nox-train-volta-t866u",
+                "result": {"training_started": False},
+                "time": types.SimpleNamespace(monotonic=monotonic,
+                                              sleep=lambda interval: waits.append(interval)),
+                "prove_training": lambda _: (proofs.append(seen[-1]) or {"pid": 37}),
+                "step": lambda kind, data: steps.append(kind),
+            }
+            exec(compile(ast.Module(body=[start], type_ignores=[]),
+                         str(SOURCE), "exec"), namespace)
+            return namespace["start_once"], namespace, starts, proofs, waits, steps
+        start, ctx, starts, proofs, waits, steps = run(
+            ["STARTING", "STARTING", "RUNNING"])
+        start(5)
+        self.assertEqual(len(starts), 1)
+        self.assertEqual(proofs, ["RUNNING"])
+        self.assertEqual(waits, [0.5, 0.5])
+        self.assertEqual(steps, ["single_native_training_started"])
+        self.assertTrue(ctx["result"]["training_started"])
+        start, ctx, starts, proofs, waits, steps = run(
+            ["STARTING"], fast_timeout=True)
+        with self.assertRaisesRegex(RuntimeError, "HOLD_SINGLE_TRAINER_START_TIMEOUT"):
+            start(5)
+        self.assertEqual(len(starts), 1)
+        self.assertEqual(proofs, [])
+        self.assertFalse(ctx["result"]["training_started"])
+        self.assertEqual(steps, [])
+        # A STOP asserted during STARTING must refuse the identity receipt.
+        start, ctx, starts, proofs, waits, steps = run(
+            ["STARTING", "RUNNING"], stop_sequence=[False, False, True])
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GLOBAL_STOP_REMAINS"):
+            start(5)
+        self.assertEqual(len(starts), 1)
+        self.assertEqual(proofs, [])
+        self.assertEqual(steps, [])
+
 if __name__ == "__main__":
     unittest.main()

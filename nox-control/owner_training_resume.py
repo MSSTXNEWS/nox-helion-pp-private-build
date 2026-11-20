@@ -1048,8 +1048,21 @@ def main():
         # A nonzero supervisor exit cannot establish a fresh native launch.
         if rc != 0:
             raise RuntimeError('HOLD_SINGLE_TRAINER_START_FAILED')
+        # Supervisor can report STARTING before the native ENTRY process exists.
+        # A successful start command is not a process identity proof; allow one
+        # bounded transition to RUNNING, without sending a second start command.
+        deadline = time.monotonic() + 15
         status = helper.service_state()
-        if status['state'] not in ('RUNNING', 'STARTING'):
+        while status['state'] == 'STARTING':
+            if global_stop():
+                raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
+            if time.monotonic() >= deadline:
+                raise RuntimeError('HOLD_SINGLE_TRAINER_START_TIMEOUT')
+            time.sleep(0.5)
+            status = helper.service_state()
+        if global_stop():
+            raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
+        if status['state'] != 'RUNNING':
             raise RuntimeError('HOLD_SINGLE_TRAINER_START_FAILED')
         identity = prove_training(helper)
         result['training_started'] = True
