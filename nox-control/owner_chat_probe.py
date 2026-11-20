@@ -403,6 +403,44 @@ def model_slots_state(client):
     return {'count': len(slots), 'busy': busy}
 
 
+def observed_owner_executor_count(snapshot):
+    """Bind the third synthetic answer to CURRENT observed native workers.
+
+    Configured workers are not permanently six; owner observations can be three.
+    Any missing, inconsistent, or duplicate worker identity remains unverified.
+    """
+    if not isinstance(snapshot, dict) or snapshot.get('schema') != 'NOX_OWNER_EXECUTORS_V1':
+        return None
+    configured = snapshot.get('configured')
+    workers = snapshot.get('workers')
+    if (snapshot.get('state') != 'OBSERVED'
+            or type(configured) is not int or not 1 <= configured <= 64
+            or not isinstance(workers, list) or len(workers) != configured):
+        return None
+    identifiers = []
+    for row in workers:
+        if not isinstance(row, dict):
+            return None
+        identity = row.get('id')
+        if (not (isinstance(identity, str) and 0 < len(identity) <= 128)
+                and not (type(identity) is int and identity >= 0)):
+            return None
+        identifiers.append(identity)
+    if len(set(identifiers)) != configured:
+        return None
+    return configured
+
+
+def answer_matches_observed_executor_count(answer, configured):
+    """The model's N executors + NOX claim must match the observed N."""
+    if not isinstance(answer, str) or type(configured) is not int or configured < 1:
+        return False
+    mentioned = [int(value) for value in re.findall(
+        r'(?<!\d)(\d{1,3})\s+исполнител[а-яё]*\b', answer, re.I)]
+    return (bool(mentioned) and all(value == configured for value in mentioned)
+            and re.search(r'\bNOX\b', answer, re.I) is not None)
+
+
 def require_cgroup_probe_headroom(
         limit_path=Path('/sys/fs/cgroup/memory.max'),
         current_path=Path('/sys/fs/cgroup/memory.current'),
@@ -528,18 +566,19 @@ def main():
             turn3=admitted_consume_turn(client,question,did,timeout=30)
             text=turn3['answer'];end=turn3['done']
             fresh=obj(request(client,'/api/ui/executors'))
-            rows=fresh.get('workers',[])
-            count=bool(fresh.get('state')=='OBSERVED' and fresh.get('configured')==6 and isinstance(rows,list) and len(rows)==6
-                       and len({row.get('id') for row in rows if isinstance(row,dict)})==6)
-            phrase=bool(re.search(r'настроено\s+6\s+исполнител',text,re.I)
-                        and re.search(r'6\s+исполнителей\s*\+\s*NOX',text))
+            configured=observed_owner_executor_count(fresh)
+            count=configured is not None
+            phrase=answer_matches_observed_executor_count(text, configured)
             third_history=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=8'))
             expected_three=[(prompt,answer),(followup,answer2),(question,text)]
             third_durable=(isinstance(end,dict) and end.get('saved') is True
                            and end.get('s03_integrated') is True
                            and scoped_history_matches_turns(third_history,expected_three,did))
-            emit('chat_executor_question',{'verified_six_plus_nox':bool(count and phrase and third_durable),
-                'live_api_fresh':count,'native_answer_matches_six_plus_nox':phrase,
+            emit('chat_executor_question',{'verified_six_plus_nox':bool(configured == 6 and phrase and third_durable),
+                'verified_observed_executor_count':bool(count and phrase and third_durable),
+                'observed_configured_count':configured,
+                'live_api_fresh':count,'native_answer_matches_six_plus_nox':bool(configured == 6 and phrase),
+                'native_answer_matches_observed_count':phrase,
                 'saved':end.get('saved') is True,'s03_integrated':end.get('s03_integrated') is True,
                 'three_turn_history_verified':third_durable,
                 'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
