@@ -10,11 +10,13 @@ class Stub {
     if(cmd==='Network.streamResourceContent')return {};
     if(cmd==='Network.getResponseBody'){
       const canonical=this.bodies.get(p.requestId).toString('base64');
+      if(typeof this.responseBodyTextMutator==='function')return {body:this.responseBodyTextMutator(this.bodies.get(p.requestId).toString('utf8'),p.requestId),base64Encoded:false};
       return {body:typeof this.responseBodyMutator==='function'?this.responseBodyMutator(canonical,p.requestId):canonical,base64Encoded:true};
     }return {};}
 }
 async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondTurn=null,encoding=null,options={}){const c=new Stub();
   c.responseBodyMutator=options.responseBodyBase64Mutator;
+  c.responseBodyTextMutator=options.responseBodyTextMutator;
   if(options.postDataMode){
     const normalSend=c.send.bind(c);
     c.send=(cmd,p={})=>{
@@ -424,4 +426,28 @@ test('Network.getResponseBody rejects noncanonical base64 padding-bit aliases wi
   assert.equal(poisoned.turns[1].ttft_ms,null);
   assert.equal(poisoned.turns[1].sse_done_ms,null);
   assert.equal(poisoned.turns[1].visible_text_sha256,null);
+});
+
+
+test('Network.getResponseBody rejects unpaired UTF-16 surrogates before lossy UTF-8 SHA, preserves RU/ES/emoji',async()=>{
+  const visible='Привет, mañana 🐈';
+  const unicodeWire=body.replace('Hello',visible);
+  const ok=await run(false,[Buffer.from(unicodeWire,'utf8')],null,null,{responseBodyTextMutator:s=>s});
+  assert.equal(ok.cdp_consistent,true);
+  assert.equal(ok.ttft_sse_verified,true);
+  assert.equal(ok.turns[1].cdp_decoded_body_matches_stream,true);
+  // Buffer.from replaces either lone surrogate with U+FFFD (same bytes as legitimate replacement character).
+  for(const bad of ['\\uD800','\\uDC00']){
+    const poisonedWire=body.replace('Hello','\\uFFFD');
+    const valid=await run(false,[Buffer.from(poisonedWire,'utf8')],null,null,{responseBodyTextMutator:s=>s});
+    assert.equal(valid.cdp_consistent,true,'a genuine U+FFFD in decoded text remains legal');
+    const poisoned=await run(false,[Buffer.from(poisonedWire,'utf8')],null,null,{
+      responseBodyTextMutator:(s,id)=>id==='2'?s.replace('\\uFFFD',bad):s
+    });
+    assert.equal(poisoned.cdp_consistent,false,'lossy text must not witness the bytes');
+    assert.equal(poisoned.ttft_sse_verified,false);
+    assert.equal(poisoned.turns[1].cdp_decoded_body_sha256,null);
+    assert.equal(poisoned.turns[1].ttft_ms,null);
+    assert.equal(poisoned.turns[1].sse_done_ms,null);
+  }
 });
