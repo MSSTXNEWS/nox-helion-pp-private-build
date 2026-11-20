@@ -457,6 +457,24 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(good["first_text_ms"], 2)
         self.assertEqual(good["completion_ms"], 5)
 
+    def test_sse_wire_nonfinite_exponent_is_not_clean_terminal(self):
+        # CPython accepts syntactically valid JSON exponent overflow as inf.
+        # Even ignored model metadata must not certify a normal SSE answer.
+        prefix = b'{"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]'
+        for numeric in (b'1e999', b'-1e999', b'3.14e999'):
+            with self.subTest(number=numeric):
+                with self.assertRaisesRegex(
+                        ReceiptHold, "SSE_NONFINITE_JSON_NUMBER"):
+                    measure_openai_sse_wire([
+                        (2, b"data: " + prefix + b',"debug":' + numeric + b'}\n\n'),
+                        (5, b"data: [DONE]\n\n")])
+        valid = measure_openai_sse_wire([
+            (2, b"data: " + prefix + b',"debug":1.25e2}\n\n'),
+            (5, b"data: [DONE]\n\n")])
+        self.assertTrue(valid["wire_completed_normally"])
+        self.assertEqual(valid["first_text_ms"], 2)
+        self.assertEqual(valid["completion_ms"], 5)
+
     def test_sse_wire_rejects_duplicate_json_fields_at_every_depth(self):
         # json.loads normally uses last-wins and could invent a normal stop.
         ambiguous = (

@@ -443,6 +443,13 @@ def measure_openai_sse_wire(timed_chunks):
         # them. Even ignored metadata must not turn malformed wire into PASS.
         raise ReceiptHold("SSE_NONFINITE_JSON_CONSTANT")
 
+    def _finite_json_float(number):
+        # JSON exponent notation can overflow a Python float to infinity.
+        # parse_constant does not catch e.g. 1e999 or -1e999.
+        parsed = float(number)
+        _require(math.isfinite(parsed), "SSE_NONFINITE_JSON_NUMBER")
+        return parsed
+
     def dispatch(at_ms):
         nonlocal data_lines, visible_bytes, first_text_ms
         nonlocal terminal_ms, finish_reason, terminal_seen, event_count, usage_seen
@@ -457,7 +464,8 @@ def measure_openai_sse_wire(timed_chunks):
             return
         try:
             obj = json.loads(payload, object_pairs_hook=_unique_json_object,
-                             parse_constant=_reject_nonfinite_json)
+                             parse_constant=_reject_nonfinite_json,
+                             parse_float=_finite_json_float)
         except ReceiptHold:
             raise
         except (ValueError, TypeError) as exc:
