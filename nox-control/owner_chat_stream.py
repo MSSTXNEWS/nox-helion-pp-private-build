@@ -327,6 +327,27 @@ async def _model_events(client, url, payload):
     yield 'message',message
 
 
+def _native_json_value(value):
+    """Reject Python-to-JSON shape changes before passing tool arguments.
+
+    json.dumps accepts integer keys and tuples by silently converting them to
+    JSON strings/arrays. A pre-parsed native tool call must mean exactly what
+    was supplied rather than dispatching with an invented argument shape.
+    """
+    if type(value) is dict:
+        for key,item in value.items():
+            if type(key) is not str:
+                raise ValueError('non-string tool argument key')
+            _native_json_value(item)
+    elif type(value) is list:
+        for item in value:
+            _native_json_value(item)
+    elif value is None or type(value) in (str,int,float,bool):
+        return
+    else:
+        raise ValueError('non-JSON tool argument value')
+
+
 def _normal_calls(rows,step):
     if not isinstance(rows,list) or len(rows)>8:
         raise StreamFailure('HOLD_TOOL_CALL_COUNT')
@@ -348,7 +369,9 @@ def _normal_calls(rows,step):
         # contain NaN, Infinity or lone UTF-16 surrogates. Validate the exact
         # object before a native tool can see it.
         try:
-            json.dumps(args,ensure_ascii=False,allow_nan=False).encode('utf-8','strict')
+            _native_json_value(args)
+            encoded=json.dumps(args,ensure_ascii=False,allow_nan=False).encode('utf-8','strict')
+            if len(encoded)>100000:raise ValueError('oversized tool arguments')
         except (UnicodeError,TypeError,ValueError,RecursionError):
             raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         # Native parser / deterministic routes share the same bounded ID rule.
