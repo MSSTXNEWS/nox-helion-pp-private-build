@@ -81,6 +81,18 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
                 _guard(successor is None, "S03_REVOCATION")
         seen_s03_ids.add(item["id"])
         s03.append(item)
+    if scoped:
+        # Provenance cannot assert a replacement that is missing, revoked, or
+        # itself obsolete. The replacement must be in this exact verified
+        # owner-scoped snapshot and active at the current S03 revision.
+        by_id = {item["id"]: item for item in s03}
+        for item in s03:
+            if item["status"] == "SUPERSEDED":
+                successor = by_id.get(item["superseded_by"])
+                _guard(successor is not None and
+                       successor["status"] == "ACTIVE" and
+                       successor["revision"] == current_s03_revision,
+                       "S03_SUPERSESSION")
     def count(messages):
         n=token_counter(messages)
         _guard(type(n) is int and n>=0, "TOKEN_COUNT")
