@@ -13,6 +13,11 @@ import re
 class ContextHold(ValueError):
     pass
 
+def _scalar_text(value):
+    """Reject lone UTF-16 surrogates before tokenization and SHA readback."""
+    return (isinstance(value, str)
+            and not any(0xD800 <= ord(char) <= 0xDFFF for char in value))
+
 def _guard(cond, code):
     if not cond: raise ContextHold("HOLD_CONTEXT_" + code)
 
@@ -22,9 +27,9 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
     _guard(callable(token_counter), "TOKENIZER_REQUIRED")
     _guard(type(token_budget) is int and token_budget >= 512, "BUDGET")
     _guard(type(recent_turns) is int and 1<=recent_turns<=32, "WINDOW")
-    _guard(isinstance(persona,str) and bool(persona.strip()), "PERSONA")
-    _guard(isinstance(system,str) and bool(system.strip()), "SYSTEM")
-    _guard(isinstance(current_user,str) and bool(current_user.strip()), "CURRENT")
+    _guard(_scalar_text(persona) and bool(persona.strip()), "PERSONA")
+    _guard(_scalar_text(system) and bool(system.strip()), "SYSTEM")
+    _guard(_scalar_text(current_user) and bool(current_user.strip()), "CURRENT")
     _guard(isinstance(conversation,list) and isinstance(verified_s03,list), "HISTORY")
     # Owner scope is opt-in for existing callers; a scoped read cannot silently
     # fall back to older unscoped S03 evidence or a missing revision.
@@ -41,8 +46,8 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
     for turn in conversation:
         _guard(isinstance(turn,dict) and set(turn)=={"id","role","content"}
                and turn["role"] in ("user","assistant")
-               and isinstance(turn["id"],str) and turn["id"] and turn["id"] not in ids
-               and isinstance(turn["content"],str), "TURN")
+               and _scalar_text(turn["id"]) and turn["id"] and turn["id"] not in ids
+               and _scalar_text(turn["content"]), "TURN")
         ids.add(turn["id"])
     s03=[]
     seen_s03_ids=set()
@@ -54,7 +59,7 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
                and isinstance(item["id"],str) and 1<=len(item["id"])<=128
                and item["id"].isprintable() and "[" not in item["id"] and "]" not in item["id"]
                and item["id"] not in seen_s03_ids
-               and isinstance(item["text"],str) and item["text"]
+               and _scalar_text(item["text"]) and item["text"]
                and isinstance(item["source_sha256"],str) and len(item["source_sha256"])==64
                and all(x in "0123456789abcdef" for x in item["source_sha256"]), "S03")
         if scoped:
