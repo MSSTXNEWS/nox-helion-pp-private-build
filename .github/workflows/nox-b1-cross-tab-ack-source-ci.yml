@@ -1,0 +1,38 @@
+name: NOX B1 Chromium isolated cross-tab ACK lease
+
+on:
+  pull_request:
+    paths:
+      - nox-control/b1_cross_tab_ack_lease.js
+      - nox-control/b1_client_stream_reconnect_harness.js
+      - nox-control/test_b1_cross_tab_ack_lease.py
+      - .github/workflows/nox-b1-cross-tab-ack-source-ci.yml
+  workflow_dispatch:
+
+jobs:
+  b1-cross-tab-ack-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+      - name: Setup Playwright and Chromium
+        run: |
+          python -m pip install 'playwright==1.56.0'
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -n "$CHROME_BIN" ]; then
+            echo "NOX_B1_CHROME=$CHROME_BIN" >> "$GITHUB_ENV"
+            "$CHROME_BIN" --version
+          else
+            python -m playwright install chromium
+          fi
+      - name: One focused source-only two-tab real browser check
+        run: |
+          node --check nox-control/b1_cross_tab_ack_lease.js
+          node --check nox-control/b1_client_stream_reconnect_harness.js
+          python -m py_compile nox-control/test_b1_cross_tab_ack_lease.py
+          python nox-control/test_b1_cross_tab_ack_lease.py
