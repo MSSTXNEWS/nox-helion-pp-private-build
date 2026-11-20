@@ -405,12 +405,19 @@ def _item_record(source: dict[str, Any], item: dict[str, str], now: float) -> tu
     # Item links remain references only; they are never fetched. Unsafe links
     # go into the candidate quarantine, not verified items or S03.
     item_url = _canonical_url(raw_url)
+    # Validate every persisted field, not only the text used for dedup.
+    # A malformed JSON escaped surrogate in published_at otherwise reaches
+    # SQLite unchanged, aborting the entire poll after healthy inserts.
+    published = item.get("published", "")
+    if not isinstance(published, str):
+        raise HunterError("item publication date must be text")
     try:
+        (title + "\n" + content + "\n" + published).encode("utf-8")
         digest = hashlib.sha256((title + "\n" + content).encode("utf-8")).hexdigest()
     except UnicodeEncodeError as exc:
-        # One malformed JSON feed item must not roll back healthy items.
+        # Quarantine this item only; never roll back healthy sibling records.
         raise HunterError("item contains invalid Unicode") from exc
-    return (source["id"], item_url, digest, title, content, str(item.get("published", "")), now)
+    return (source["id"], item_url, digest, title, content, published, now)
 
 
 def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_bytes: int) -> dict[str, Any]:

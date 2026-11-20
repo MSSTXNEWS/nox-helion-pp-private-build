@@ -130,6 +130,38 @@ class HunterURLSafetyTests(unittest.TestCase):
             self.assertTrue(all(len(digest) == 64 and reason == "INVALID_ITEM_URL"
                                 for digest, reason in holds))
 
+    def test_invalid_published_unicode_quarantines_only_bad_item(self):
+        # GitHub JSON allows escaped lone surrogates in published_at. These
+        # must never reach SQLite and roll back a healthy sibling entry.
+        bad_date = "2026-" + chr(0xD800)
+        source = hunter._validate_source({
+            "id": "releases", "kind": "github_releases",
+            "url": "https://example.org/releases",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        items = [
+            {"title": "healthy", "content": "valid", "url": "/good",
+             "published": "2026-11-20"},
+            {"title": "broken", "content": "valid", "url": "/bad",
+             "published": bad_date},
+            {"title": "wrong-date-type", "content": "valid", "url": "/bad-type",
+             "published": ["not", "a", "date"]},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "hunter.sqlite"
+            with patch.object(hunter, "_fetch", return_value=(b"json", None, None,
+                                                               "application/json", False)), \
+                 patch.object(hunter, "_parse", return_value=items):
+                result = hunter.poll_due([source], db, now=1000.0)
+            self.assertEqual(result[0]["status"], "polled")
+            self.assertEqual((result[0]["added"], result[0]["quarantined"]), (1, 2))
+            with sqlite3.connect(db) as conn:
+                saved = conn.execute("SELECT title,published FROM items").fetchall()
+                rejected = conn.execute("SELECT item_digest FROM item_quarantine").fetchall()
+            self.assertEqual(saved, [("healthy", "2026-11-20")])
+            self.assertEqual(len(rejected), 2)
+            self.assertTrue(all(len(row[0]) == 64 for row in rejected))
+
     def test_html_page_uses_its_real_source_url(self):
         source = hunter._validate_source({
             "id": "page", "kind": "html_page", "url": "https://example.org/page",
