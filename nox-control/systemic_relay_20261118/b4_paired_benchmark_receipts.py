@@ -778,3 +778,96 @@ def verify_two_turn_openai_posted_history(turns, capture):
         "s03_durable_verified": False,
         "one_model_post_per_turn_verified": False,
     }
+
+
+def verify_two_turn_http_trace_envelope(turns, capture, http_exchanges,
+                                        expected_target_path):
+    """Bind a caller-supplied HTTP trace to two real-parser SSE witnesses.
+
+    Network records must come from a separately audited Chrome/HTTP collector.
+    This OFFLINE routine cannot authenticate the collector or rule out unseen
+    POSTs: it is never production, browser-auth, or S03 acceptance evidence.
+    No bearer headers, cookies, request text, or responses enter the result.
+    """
+    _require(type(expected_target_path) is str and
+             expected_target_path.startswith("/") and
+             not expected_target_path.startswith("//") and
+             "?" not in expected_target_path and
+             "#" not in expected_target_path and
+             ".." not in expected_target_path and
+             len(expected_target_path) <= 256, "SSE_HTTP_TARGET_POLICY")
+    _require(type(http_exchanges) is list and len(http_exchanges) == 2,
+             "SSE_HTTP_TRACE_COUNT")
+    # Reparse the EXACT claimed SSE bytes and requests rather than trusting
+    # caller-supplied hash/timing fields in previously assembled objects.
+    recomputed = measure_two_turn_openai_sse_capture(turns)
+    _require(type(capture) is dict and capture == recomputed,
+             "SSE_HTTP_TRACE_CAPTURE_MISMATCH")
+    continuity = verify_two_turn_openai_posted_history(turns, recomputed)
+    summaries = []
+    previous_closed = None
+    network_ids = set()
+    for idx, (turn, network) in enumerate(zip(turns, http_exchanges)):
+        _require(type(network) is dict, "SSE_HTTP_TRACE_SCHEMA")
+        event_id = network.get("network_event_id")
+        _require(type(event_id) is str and 1 <= len(event_id) <= 160 and
+                 event_id not in network_ids, "SSE_HTTP_TRACE_EVENT_ID")
+        network_ids.add(event_id)
+        _require(type(network.get("turn_number")) is int and
+                 network["turn_number"] == idx + 1 and
+                 network.get("exchange_id") == turn["exchange_id"],
+                 "SSE_HTTP_TRACE_EXCHANGE")
+        _require(network.get("method") == "POST" and
+                 network.get("target_path") == expected_target_path and
+                 network.get("request_content_type") == "application/json",
+                 "SSE_HTTP_TRACE_REQUEST")
+        _require(network.get("response_status") == 200 and
+                 type(network.get("response_status")) is int and
+                 network.get("response_content_type") in
+                 ("text/event-stream", "text/event-stream; charset=utf-8"),
+                 "SSE_HTTP_TRACE_RESPONSE")
+        witness = recomputed["turns"][idx]["wire_witness"]
+        _require(network.get("request_body_sha256") ==
+                 continuity["posted_request_sha256"][idx] and
+                 network.get("response_wire_sha256") ==
+                 witness["raw_wire_sha256"] and
+                 network.get("response_timed_trace_sha256") ==
+                 witness["timed_trace_sha256"],
+                 "SSE_HTTP_TRACE_DIGEST_MISMATCH")
+        sent = network.get("request_sent_monotonic_ms")
+        first_byte = network.get("response_first_byte_monotonic_ms")
+        closed = network.get("response_closed_monotonic_ms")
+        _require(all(_integer(n, 86_400_000) for n in
+                     (sent, first_byte, closed)) and
+                 sent <= first_byte <= sent + witness["first_text_ms"] and
+                 sent + witness["last_byte_ms"] <= closed and
+                 (previous_closed is None or sent > previous_closed),
+                 "SSE_HTTP_TRACE_CLOCK_MISMATCH")
+        previous_closed = closed
+        summaries.append({
+            "turn_number": idx + 1,
+            "exchange_id": turn["exchange_id"],
+            "network_event_id": event_id,
+            "request_body_sha256": continuity["posted_request_sha256"][idx],
+            "response_wire_sha256": witness["raw_wire_sha256"],
+            "response_timed_trace_sha256": witness["timed_trace_sha256"],
+            "request_sent_monotonic_ms": sent,
+            "response_closed_monotonic_ms": closed,
+            "first_visible_ms_from_request": witness["first_text_ms"],
+            "terminal_ms_from_request": witness["completion_ms"],
+            "last_wire_byte_ms_from_request": witness["last_byte_ms"],
+        })
+    digest = hashlib.sha256(json.dumps(
+        summaries, ensure_ascii=False, sort_keys=True,
+        separators=(",", ":")).encode("utf-8")).hexdigest()
+    return {
+        "schema": "NOX_B4_TWO_TURN_HTTP_TRACE_ENVELOPE_V1",
+        "state": "UNAUTHENTICATED_OFFLINE_NETWORK_TRACE_CONSISTENT_ONLY",
+        "trace_metadata_sha256": digest,
+        "turns": summaries,
+        "browser_authenticated": False,
+        "independent_network_trace_verified": False,
+        "native_verified": False,
+        "s03_durable_verified": False,
+        "one_model_post_per_turn_verified": False,
+    }

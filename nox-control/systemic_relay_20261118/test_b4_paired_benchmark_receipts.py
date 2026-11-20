@@ -5,7 +5,8 @@ import unittest
 from b4_paired_benchmark_receipts import (ReceiptHold, compare_paired,
                                           measure_openai_sse_wire,
                                           measure_two_turn_openai_sse_capture,
-                                          verify_two_turn_openai_posted_history)
+                                          verify_two_turn_openai_posted_history,
+                                          verify_two_turn_http_trace_envelope)
 
 H = "a" * 64
 
@@ -1037,5 +1038,98 @@ class PairedReceiptTests(unittest.TestCase):
         with self.assertRaisesRegex(ReceiptHold,
                                     "SSE_TWO_TURN_REQUEST_EXCHANGE"):
             verify_two_turn_openai_posted_history(wrong_exchange, capture)
+
+
+    def test_two_turn_http_trace_binds_request_and_sse_without_auth_claim(self):
+        frame = lambda word: (
+            b'data: {"choices":[{"delta":{"content":"' + word +
+            b'"},"finish_reason":null}]}\n\n')
+        stop = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        done = b'data: [DONE]\n\n'
+        turns = []
+        for n, exchange, word in ((1, "ex1", b"hola"),
+                                  (2, "ex2", b"listo")):
+            turns.append({
+                "turn_number": n, "dialog_id": "same-dialog",
+                "exchange_id": exchange, "route_sha256": "a" * 64,
+                "model_sha256": "b" * 64,
+                "timed_chunks": [(5, frame(word)), (9, stop), (11, done)]})
+        history = [{"role": "system", "content": "smoke"},
+                   {"role": "user", "content": "hola"}]
+        requests = [
+            {"model": "same-model", "messages": history},
+            {"model": "same-model", "messages": copy.deepcopy(history) + [
+                {"role": "assistant", "content": "hola"},
+                {"role": "user", "content": "sigue"}]},
+        ]
+        for turn, request in zip(turns, requests):
+            turn["posted_request_body"] = json.dumps(
+                request, separators=(",", ":")).encode()
+        capture = measure_two_turn_openai_sse_capture(turns)
+        trace = []
+        for idx, turn in enumerate(turns):
+            witness = capture["turns"][idx]["wire_witness"]
+            start = 1000 + 1000 * idx
+            trace.append({
+                "turn_number": idx + 1, "exchange_id": turn["exchange_id"],
+                "network_event_id": "network-" + str(idx + 1),
+                "method": "POST", "target_path": "/nox/chat",
+                "request_content_type": "application/json",
+                "response_content_type": "text/event-stream",
+                "response_status": 200,
+                "request_body_sha256": hashlib.sha256(
+                    turn["posted_request_body"]).hexdigest(),
+                "response_wire_sha256": witness["raw_wire_sha256"],
+                "response_timed_trace_sha256": witness["timed_trace_sha256"],
+                "request_sent_monotonic_ms": start,
+                "response_first_byte_monotonic_ms": start + 3,
+                "response_closed_monotonic_ms": start + 16,
+            })
+        valid = verify_two_turn_http_trace_envelope(
+            turns, capture, trace, "/nox/chat")
+        self.assertEqual(valid["schema"],
+                         "NOX_B4_TWO_TURN_HTTP_TRACE_ENVELOPE_V1")
+        self.assertEqual(len(valid["turns"]), 2)
+        self.assertEqual(len(valid["trace_metadata_sha256"]), 64)
+        self.assertFalse(valid["browser_authenticated"])
+        self.assertFalse(valid["independent_network_trace_verified"])
+        self.assertFalse(valid["native_verified"])
+        self.assertFalse(valid["s03_durable_verified"])
+        self.assertFalse(valid["one_model_post_per_turn_verified"])
+        violations = [
+            ("request_body_sha256", "f" * 64,
+             "SSE_HTTP_TRACE_DIGEST_MISMATCH"),
+            ("response_wire_sha256", "f" * 64,
+             "SSE_HTTP_TRACE_DIGEST_MISMATCH"),
+            ("response_timed_trace_sha256", "f" * 64,
+             "SSE_HTTP_TRACE_DIGEST_MISMATCH"),
+            ("network_event_id", "network-1",
+             "SSE_HTTP_TRACE_EVENT_ID"),
+            ("method", "GET", "SSE_HTTP_TRACE_REQUEST"),
+            ("response_status", 503, "SSE_HTTP_TRACE_RESPONSE"),
+            ("response_content_type", "application/json",
+             "SSE_HTTP_TRACE_RESPONSE"),
+            ("request_sent_monotonic_ms", 1010,
+             "SSE_HTTP_TRACE_CLOCK_MISMATCH"),
+            ("response_closed_monotonic_ms", 2004,
+             "SSE_HTTP_TRACE_CLOCK_MISMATCH"),
+        ]
+        for field, value, reason in violations:
+            broken = copy.deepcopy(trace)
+            broken[1][field] = value
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(ReceiptHold, reason):
+                    verify_two_turn_http_trace_envelope(
+                        turns, capture, broken, "/nox/chat")
+        forged_sse = copy.deepcopy(capture)
+        forged_sse["turns"][0]["first_text_ms"] = 0
+        with self.assertRaisesRegex(
+                ReceiptHold, "SSE_HTTP_TRACE_CAPTURE_MISMATCH"):
+            verify_two_turn_http_trace_envelope(
+                turns, forged_sse, trace, "/nox/chat")
+        with self.assertRaisesRegex(
+                ReceiptHold, "SSE_HTTP_TARGET_POLICY"):
+            verify_two_turn_http_trace_envelope(
+                turns, capture, trace, "//fake/../nox/chat")
 
 if __name__ == '__main__': unittest.main()
