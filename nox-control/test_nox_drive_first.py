@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -248,6 +249,43 @@ class DriveFirstTests(unittest.TestCase):
         with self.assertRaisesRegex(m.Hold,"RECEIPT_ALREADY_EXISTS"):
             m.save_receipt(receipt,{"state":"DIFFERENT"})
         self.assertEqual(receipt.read_bytes(),before)
+
+    def test_remote_sha_readback_streams_normal_bytes(self):
+        # Drive is never contacted; feed a real Linux pipe to the readback.
+        reader, writer = os.pipe()
+        os.write(writer, self.data)
+        os.close(writer)
+        child = FakeChild()
+        child.stdout = os.fdopen(reader, "rb", buffering=0)
+        with patch.object(m.subprocess, "Popen", return_value=child), \
+             patch.object(m, "stop_clear"):
+            m.verify_remote("noxchunks:STAGING/test.gguf", config=self.conf,
+                            size=len(self.data), digest=self.digest)
+        self.assertTrue(child.stdout.closed)
+
+    def test_remote_sha_readback_stop_interrupts_stalled_pipe(self):
+        # A silent rclone must not leave the owner STOP blocked on pipe.read().
+        child = FakeChild()
+        child.returncode = None
+        calls = [0]
+        def owner_stop():
+            calls[0] += 1
+            if calls[0] >= 2:
+                raise m.Hold("HOLD_DRIVE_FIRST_STOP")
+        with patch.object(m.subprocess, "Popen", return_value=child), \
+             patch.object(m.select, "select", return_value=([], [], [])), \
+             patch.object(m, "stop_clear", side_effect=owner_stop):
+            with self.assertRaisesRegex(m.Hold, "STOP"):
+                m.verify_remote("noxchunks:STAGING/test.gguf", config=self.conf,
+                                size=len(self.data), digest=self.digest)
+        self.assertEqual(child.returncode, -15)
+        self.assertTrue(child.stdout.closed)
+
+    def test_remote_sha_readback_fails_closed_if_rclone_missing(self):
+        with patch.object(m.subprocess, "Popen", side_effect=OSError("missing")):
+            with self.assertRaisesRegex(m.Hold, "RCLONE_EXECUTION"):
+                m.verify_remote("noxchunks:STAGING/test.gguf", config=self.conf,
+                                size=len(self.data), digest=self.digest)
 
     def test_stream_direct_http_into_rclone_with_exact_size_no_spool(self):
         self.configure()
