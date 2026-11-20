@@ -893,6 +893,10 @@ def worker_readback(helper, fresh_after=0):
     service = helper.service_state('nox-dispatcher-t855u')
     if service['state'] != 'RUNNING':
         raise RuntimeError('HOLD_DISPATCHER_NOT_RUNNING')
+    # RUNNING alone is not evidence of a live, identified dispatcher.
+    # Supervisor may expose no PID or a malformed value during transitions.
+    if type(service.get('pid')) is not int or service['pid'] <= 0:
+        raise RuntimeError('HOLD_DISPATCHER_IDENTITY')
     return {'workers': NATIVE_WORKER_CAP, 'worker_ids': ids,
             'busy_count': len(claimed), 'claimed_task_ids': claimed,
             'dispatcher_pid': service['pid'], 'mtime': snapshot_mtime}
