@@ -964,6 +964,67 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(self.dispatched,[])
                 self.assertTrue(chunks.closed)
 
+
+    async def test_tool_error_envelopes_never_certify_successful_s03(self):
+        # The explicit error key is authoritative even when its value is
+        # falsey. A result claiming ok=True and error=<anything> is ambiguous.
+        for error in (None, {}, False, {'code':'failed'}):
+            with self.subTest(route='media', error=repr(error)):
+                native=self.native()
+                audit=[]
+                native['audit']=lambda *args,**kwargs:audit.append(kwargs)
+                payload={'messages':[{'role':'user','content':'Создай изображение'}]}
+                with patch.object(stream._current,'explicit_media_request',
+                                  return_value={'kind':'image'}), \
+                     patch.object(stream._current,'media_status_query',
+                                  return_value=None), \
+                     patch.object(stream._current,'dispatch',
+                                  return_value={'ok':True,'error':error,
+                                                'text':'Queued'}):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Создай изображение',False)
+                self.assertEqual(response.status_code,502)
+                self.assertEqual(json.loads(response.body)['error']['code'],
+                                 'HOLD_MEDIA_RESULT_FIDELITY')
+                self.assertEqual(audit,[])
+                self.assertNotIn('_agent_final',payload)
+
+            with self.subTest(route='direct', error=repr(error)):
+                native=self.native(result={'ok':True,'error':error,
+                                           'text':'Action completed'})
+                native['_direct_admin_calls']=lambda _: [{
+                    'name':'run_admin','arguments':{'action':'status'}}]
+                payload={'messages':[{'role':'user','content':'Direct owner command'}]}
+                with patch.object(stream._current,'dispatch',return_value=None), \
+                     patch.object(stream.httpx.AsyncClient,'stream',
+                                  side_effect=AssertionError('no model POST')):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Direct owner command',False)
+                self.assertEqual(response.status_code,502)
+                self.assertEqual(json.loads(response.body)['error']['code'],
+                                 'HOLD_TOOL_RESULT_ERROR_CONFLICT')
+                self.assertNotIn('_agent_final',payload)
+
+            with self.subTest(route='model_tool', error=repr(error)):
+                native=self.native(result={'ok':True,'error':error,
+                                           'text':'False success'})
+                first=Chunks([
+                    frame(calls=[{'index':0,'id':'conflict_id',
+                                  'type':'function','function':{
+                                      'name':'calculate','arguments':'{}'}}]),
+                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'.replace(b'\\n',b'\n')])
+                requests,factory=self.transport([first])
+                payload={'messages':[{'role':'user','content':'Calculate'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Calculate',False)
+                self.assertEqual(response.status_code,502)
+                self.assertEqual(json.loads(response.body)['error']['code'],
+                                 'HOLD_TOOL_RESULT_ERROR_CONFLICT')
+                self.assertEqual(len(requests),1)
+                self.assertNotIn('_agent_final',payload)
+                self.assertTrue(first.closed)
+
     async def test_direct_media_fast_path_rejects_unverified_outcome(self):
         # Direct image/video actions bypass model tools; malformed proof must
         # not certify a queued operation in the browser or S03 postflight.
