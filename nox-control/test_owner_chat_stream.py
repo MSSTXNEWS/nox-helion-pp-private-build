@@ -203,6 +203,31 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('[DONE]',wire)
         self.assertEqual(self.dispatched,[('calculate',{})])
 
+    async def test_tool_confirmation_flag_must_be_boolean_before_followup(self):
+        # A truthy "false" or numeric 1 is not authenticated confirmation.
+        # The model must not consume the result or mark the exchange DONE.
+        for bad in ('false', 'true', 0, 1, None, [], {}):
+            with self.subTest(needs_confirmation=repr(bad)):
+                first=Chunks([
+                    frame(calls=[{'index':0,'id':'call_confirmation',
+                                  'type':'function','function':{
+                                      'name':'calculate','arguments':'{}'}}]),
+                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'.replace(b'\\n',b'\n')])
+                requests,factory=self.transport([first])
+                native=self.native(result={'ok':True,'needs_confirmation':bad,
+                                           'text':'not independently confirmed'})
+                payload={'messages':[{'role':'user','content':'Verify confirmation'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Verify confirmation',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(len(requests),1)
+                self.assertEqual(self.dispatched,[('calculate',{})])
+                self.assertIn('HOLD_TOOL_RESULT_CONFIRMATION',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertTrue(first.closed)
+
     async def test_tool_success_evidence_requires_bool_before_followup(self):
         # A nonboolean 'ok' is neither verified success nor a verified
         # failure. Do not let a model turn certify a fabricated tool result.

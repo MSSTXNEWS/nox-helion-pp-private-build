@@ -359,6 +359,8 @@ async def _run(native,url,payload,user_text):
                     # Invalid truth evidence cannot reach audit or the model.
                     if 'ok' in rec and type(rec['ok']) is not bool:
                         raise StreamFailure('HOLD_TOOL_RESULT_OK')
+                    if 'needs_confirmation' in rec and type(rec['needs_confirmation']) is not bool:
+                        raise StreamFailure('HOLD_TOOL_RESULT_CONFIRMATION')
                     await asyncio.to_thread(native['audit'],'tool_step',name=call['name'],
                                             step=steps,ok=rec.get('ok'))
                     # Present tool-result text is evidence: never coalesce a
