@@ -27,7 +27,7 @@ PINS = {
     'owner_chat_browser_qa.py': '9530c6e71274bbbca997f0aea07a26c988cfd536ed1aa1ba4067753827ac56f9',
     'owner_chat_browser_transport_qa.py': '360c155642ccdb43f39acf7b493068d3d2ac906bfd761c60d8c5ee51d48507fe',
     'owner_chat_browser_release_qa.py': 'eaa8af0e229c9ce0a730b7b472f8b9b8a1018fbd5cf7b8518890342d9d7047cb',
-    'owner_chat_stream_only_qa.py': 'e06e525d15177ad0e58ca91286ba9981728d06921eede46b541644bf0a629af4',
+    'owner_chat_stream_only_qa.py': '2d61491b01c4f23ac12020a0fb6ac1292dd35e4c6155fe2abe5402acdac8f90d',
 }
 ENV_SPEC = {'schema': 'NOX_OWNER_BROWSER_ENV_V1', 'playwright': '1.65.2',
             'base_python': '/root/nox/venv/bin/python', 'torch_modified': False}

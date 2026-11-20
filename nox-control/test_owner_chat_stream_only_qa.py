@@ -130,6 +130,23 @@ class ScopeTests(unittest.TestCase):
         self.assertIn('HOLD_STREAM_ONLY_MOTION_PREFERENCE_NOT_APPLIED', core.browser_run.__code__.co_consts)
         self.assertEqual(core.EXPECTED, ','.join(map(str, range(1, 41))))
 
+    def test_two_turn_challenge_uses_the_first_answer_without_leaking_it(self):
+        core, _, _, _ = installed()
+        with patch.object(scope.secrets, 'SystemRandom') as random:
+            random.return_value.shuffle.side_effect = lambda numbers: numbers.reverse()
+            prompt, follow_up, first, second = core._nox_dialogue_challenge('fixtureqa')
+        self.assertEqual(first, ','.join(map(str, range(40, 0, -1))))
+        self.assertNotEqual(second, '10,9,8,7,6,5,4,3,2,1')
+        self.assertEqual(second, ','.join(first.split(',')[-10:][::-1]))
+        self.assertTrue(prompt.endswith(first))
+        self.assertTrue(follow_up.startswith('[NOX UI QA fixtureqa]'))
+        self.assertFalse(any(character.isdigit() for character in follow_up))
+        code = core.browser_run.__code__
+        self.assertIn('_nox_dialogue_challenge', code.co_names)
+        self.assertIn('first_expected', code.co_varnames)
+        self.assertIn('second_expected', code.co_varnames)
+        self.assertNotIn('10,9,8,7,6,5,4,3,2,1', code.co_consts)
+
     def test_stream_only_dialog_click_is_single_fresh_pointer_gated(self):
         core, _, _, _ = installed()
         code = core.browser_run.__code__
