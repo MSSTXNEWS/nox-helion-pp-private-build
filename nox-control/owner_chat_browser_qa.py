@@ -245,16 +245,18 @@ def readback_evidence(saved, native_equal, two_turn_mode):
     }
 
 
-def clean_two_turn_browser_runtime(page_errors, network):
+def clean_two_turn_browser_runtime(page_errors, network, overflow_count=0):
     """No browser-only RU/ES PASS with page JS errors or broken JS/CSS.
 
     The overall browser_run historically checked these conditions only after
     returning. Canonical S03 HOLD prevents that return in two-turn mode, so
     recheck captured observations before any partial browser PASS.
-    Failed image assets are not critical JS/CSS failures.
+    Failed image assets are not critical JS/CSS failures. A bounded response
+    log is insufficient when additional unobserved responses may hide failures.
     """
     if (not isinstance(page_errors, list) or page_errors
-            or not isinstance(network, list)):
+            or not isinstance(network, list)
+            or type(overflow_count) is not int or overflow_count != 0):
         return False
     for item in network:
         if not isinstance(item, dict):
@@ -1070,6 +1072,7 @@ async def browser_run(report, directory, available):
     stream_admitted=0
     report.update(nonloopback_auth=True,resources=budget(),synthetic_prompt_sha256=digest(prompt.encode()))
     network=[];console=collections.Counter();page_errors=[];blocked=collections.Counter();did=None
+    report['network_response_overflow_count']=0
     sys.path.insert(0,str(ROOT/'scripts'))
     import chat_proxy
     password=chat_proxy._read_chat_password()
@@ -1154,6 +1157,8 @@ async def browser_run(report, directory, available):
 
             def on_response(response):
                 if len(network)>=250:
+                    # The bounded log can no longer prove critical JS/CSS health.
+                    report['network_response_overflow_count']+=1
                     return
                 network.append({'path':safe_route(response.url),'status':response.status,
                                 'resource_type':response.request.resource_type})
@@ -1428,7 +1433,8 @@ async def browser_run(report, directory, available):
                     raise RuntimeError('HOLD_MULTITURN_SCREENSHOT_CAPTURE_PENDING')
                 require_screenshot_captures(report)
                 report['multiturn_second_screenshot_verified']=True
-                if not clean_two_turn_browser_runtime(page_errors, network):
+                if not clean_two_turn_browser_runtime(
+                        page_errors, network, report['network_response_overflow_count']):
                     raise RuntimeError('HOLD_BROWSER_JAVASCRIPT_OR_RESOURCE_ERRORS')
                 report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:

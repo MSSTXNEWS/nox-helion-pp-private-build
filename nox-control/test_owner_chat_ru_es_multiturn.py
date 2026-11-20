@@ -1045,6 +1045,22 @@ async function check(chunks, status=200) {
         self.assertLess(caller.index(fence),
                         caller.index("HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK"))
 
+    def test_ru_es_network_observation_overflow_cannot_certify_browser_pass(self):
+        """A bounded network log cannot certify responses it silently omitted."""
+        seen = [{'path': '/nox.js', 'status': 200, 'resource_type': 'script'}]
+        self.assertTrue(clean_two_turn_browser_runtime([], seen, 0))
+        for dropped in (1, 250, -1, None, True, False, "0", 0.0):
+            with self.subTest(dropped=repr(dropped)):
+                self.assertFalse(clean_two_turn_browser_runtime([], seen, dropped))
+        # Keep reports bounded, but count every omitted response and invalidate
+        # narrow browser-only PASS before the mandatory canonical-S03 HOLD.
+        caller = inspect.getsource(browser_run)
+        self.assertIn("report['network_response_overflow_count']=0", caller)
+        self.assertIn("report['network_response_overflow_count']+=1", caller)
+        self.assertIn("page_errors, network, report['network_response_overflow_count']", caller)
+        self.assertLess(caller.index("network_response_overflow_count']+=1"),
+                        caller.index("multiturn_browser_acceptance_verified"))
+
     def test_ru_es_four_turn_history_needs_independent_canonical_s03(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         transcript = rows(es)
