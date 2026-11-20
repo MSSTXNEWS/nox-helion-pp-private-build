@@ -1,0 +1,99 @@
+{
+ "schema": "nox.owner_delegate_receipts.v1",
+ "date": "2026-11-20",
+ "by": "Claude (по поручению владельца 340718567)",
+ "note": "Это НЕ нативная квитанция диспетчера. Принято только то, что реально проверено. Остальное ждёт диспетчера OneHost.",
+ "tasks": {
+  "1V14-01": {
+   "status": "OWNER_DELEGATE_PARTIAL",
+   "evidence": "после перезапуска nox-proxy:8080 и web29:18775 отвечают 302/auth, модель :8098 жива; полный ответ чата не проверен (нужен пароль)"
+  },
+  "6V14-01": {
+   "status": "NOT_VERIFIED"
+  },
+  "5V14-01": {
+   "status": "NOT_VERIFIED"
+  },
+  "1A01": {
+   "status": "NOT_VERIFIED"
+  },
+  "1V14-06": {
+   "status": "NOT_VERIFIED"
+  },
+  "6A04": {
+   "status": "NOT_VERIFIED"
+  },
+  "3A02": {
+   "status": "NOT_VERIFIED"
+  },
+  "3A03": {
+   "status": "NOT_VERIFIED"
+  },
+  "3V14-06": {
+   "status": "NOT_VERIFIED"
+  },
+  "3V14-13": {
+   "status": "NOT_VERIFIED"
+  },
+  "3V14-17": {
+   "status": "NOT_VERIFIED"
+  },
+  "I-51": {
+   "status": "NOT_VERIFIED"
+  },
+  "3V14-16": {
+   "status": "NOT_VERIFIED"
+  },
+  "1V14-14": {
+   "status": "NOT_VERIFIED"
+  },
+  "1V14-18": {
+   "status": "NOT_VERIFIED"
+  },
+  "1V14-19": {
+   "status": "NOT_VERIFIED"
+  },
+  "I-53": {
+   "status": "NOT_VERIFIED"
+  },
+  "I-61": {
+   "status": "NOT_VERIFIED"
+  },
+  "1V14-11": {
+   "status": "NOT_VERIFIED"
+  },
+  "I-06": {
+   "status": "NOT_VERIFIED"
+  },
+  "3A04": {
+   "status": "NOT_VERIFIED"
+  },
+  "3A01": {
+   "status": "NOT_VERIFIED"
+  },
+  "1V14-22": {
+   "status": "NOT_VERIFIED"
+  },
+  "1V14-24": {
+   "status": "NOT_VERIFIED"
+  },
+  "4V14-23": {
+   "status": "NOT_VERIFIED"
+  },
+  "3B01": {
+   "status": "NOT_VERIFIED"
+  },
+  "3B02": {
+   "status": "NOT_VERIFIED"
+  },
+  "I-56": {
+   "status": "NOT_VERIFIED"
+  },
+  "1V14-20": {
+   "status": "NOT_VERIFIED"
+  },
+  "0B05": {
+   "status": "NOT_VERIFIED"
+  }
+ }
+}
