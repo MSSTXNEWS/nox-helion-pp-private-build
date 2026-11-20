@@ -310,6 +310,16 @@ def compare_paired(baseline, candidate):
                           if old[task]["history_saved"] != new[task]["history_saved"]]
     background_changed = [task for task in baseline["declared_task_ids"]
                           if old[task]["background_completed"] != new[task]["background_completed"]]
+    # Equal token counts do not guarantee the same user-visible answer.
+    # Only SSE-parser-bound output digests are comparable; naked unbound
+    # digests in historical receipts cannot be used as evidence.
+    visible_output_changed = [
+        task for task in baseline["declared_task_ids"]
+        if (("sse_wire_witness" in old[task]) !=
+            ("sse_wire_witness" in new[task]) or
+            ("sse_wire_witness" in old[task] and
+             old[task]["sse_visible_text_sha256"] !=
+             new[task]["sse_visible_text_sha256"]))]
     output_tokens_changed = [task for task in baseline["declared_task_ids"]
                              if old[task]["output_tokens"] != new[task]["output_tokens"]]
     status_changed = [task for task in baseline["declared_task_ids"]
@@ -341,7 +351,8 @@ def compare_paired(baseline, candidate):
     # completion size, terminal status, text coverage, or KV prefill differs.
     # Matching these witnesses still cannot prove identical hidden compute.
     same_observed_work = (not cache_changed and not sse_finality_changed
-                          and not output_tokens_changed and not durability_changed
+                          and not output_tokens_changed and not visible_output_changed
+                          and not durability_changed
                           and not background_changed
                           and not status_changed and old_seen == new_seen)
     return {**answer, "comparable": True, "state": "DESCRIPTIVE_ONLY",
@@ -367,6 +378,8 @@ def compare_paired(baseline, candidate):
             "background_completion_changed_task_ids": background_changed,
             "latency_side_effects_confounder": bool(durability_changed or background_changed),
             "output_tokens_changed_task_ids": output_tokens_changed,
+            "visible_output_changed_task_ids": visible_output_changed,
+            "latency_visible_content_confounder": bool(visible_output_changed),
             "outcome_status_changed_task_ids": status_changed,
             "latency_observed_workload_confounder": not same_observed_work,
             "p95_latency_delta_ms_same_observed_work": (

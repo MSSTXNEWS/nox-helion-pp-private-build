@@ -223,6 +223,54 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertFalse(unmodified["latency_observed_workload_confounder"])
         self.assertEqual(unmodified["p95_latency_delta_ms_same_observed_work"],0)
 
+    def test_changed_strict_sse_visible_answer_blocks_same_work_speedup(self):
+        # Different answers of equal length and token count make speedup N/A.
+        def bound(value):
+            run = example()
+            run["declared_task_ids"] = ["t1"]
+            run["outcomes"] = [run["outcomes"][0]]
+            run["sse_binding_required"] = True
+            chunks = [
+                (5, ("data: " + json.dumps({
+                    "choices": [{"delta": {"content": value},
+                                 "finish_reason": None}]}) + "\n\n").encode()),
+                (8, b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'),
+                (10, b"data: [DONE]\n\n"),
+            ]
+            wire = measure_openai_sse_wire(chunks)
+            row = run["outcomes"][0]
+            row.update(first_text_ms=5, trace_sha256=wire["timed_trace_sha256"],
+                       sse_wire_witness=wire,
+                       sse_raw_wire_sha256=wire["raw_wire_sha256"],
+                       sse_visible_text_sha256=wire["visible_text_sha256"])
+            return run
+
+        b, c = bound("ready"), bound("later")
+        c["outcomes"][0]["latency_ms"] = 15
+        out = compare_paired(b, c)
+        self.assertTrue(out["comparable"])
+        self.assertEqual(out["baseline"]["passed"], 1)
+        self.assertEqual(out["candidate"]["passed"], 1)
+        self.assertEqual(out["output_tokens_changed_task_ids"], [])
+        self.assertEqual(out["visible_output_changed_task_ids"], ["t1"])
+        self.assertTrue(out["latency_visible_content_confounder"])
+        self.assertEqual(out["p95_latency_delta_ms"], -5)
+        self.assertIsNone(out["p95_latency_delta_ms_same_observed_work"])
+        self.assertTrue(out["latency_observed_workload_confounder"])
+        self.assertFalse(out["quality_or_history_regression"])
+
+        same = compare_paired(b, copy.deepcopy(b))
+        self.assertEqual(same["visible_output_changed_task_ids"], [])
+        self.assertFalse(same["latency_visible_content_confounder"])
+        self.assertEqual(same["p95_latency_delta_ms_same_observed_work"], 0)
+        # Historical unbound digest claims are NOT verified SSE content.
+        legacy, legacy2 = example(), example()
+        legacy["outcomes"][0]["sse_visible_text_sha256"] = "b" * 64
+        legacy2["outcomes"][0]["sse_visible_text_sha256"] = "c" * 64
+        old = compare_paired(legacy, legacy2)
+        self.assertTrue(old["comparable"])
+        self.assertEqual(old["visible_output_changed_task_ids"], [])
+
     def test_first_text_regression_and_cache_evidence(self):
         b=example();c=copy.deepcopy(b)
         c["outcomes"][0]["first_text_ms"]=15
