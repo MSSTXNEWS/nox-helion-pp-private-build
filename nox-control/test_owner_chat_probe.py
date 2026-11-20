@@ -769,5 +769,44 @@ class ProbeTests(unittest.TestCase):
             {'saved': True, 's03_integrated': True}, good, turns, True, True, did))
 
 
+    def test_done_frame_with_error_or_failed_status_cannot_certify_stream(self):
+        """Saved=true must not hide an upstream error inside the done frame."""
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, terminal):
+                self.terminal, self.closed = terminal, False
+            def __iter__(self):
+                frames = [
+                    {'type': 'delta', 'text': '323'},
+                    dict({'type': 'done', 'dialog_id': '1' * 32,
+                          'saved': True, 's03_integrated': True}, **self.terminal),
+                ]
+                return iter(json.dumps(row).encode() + b'\\n' for row in frames)
+            def close(self):
+                self.closed = True
+
+        failed = [
+            {'error': 'upstream timeout'},
+            {'error': {'code': 'provider_failure'}},
+            {'status': 'error'},
+            {'status': 'failed'},
+            {'status': 'cancelled'},
+            {'status': 'aborted'},
+            {'success': False},
+        ]
+        for flags in failed:
+            response = Response(flags)
+            with self.subTest(flags=flags), patch.object(probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_TERMINAL_FAILURE$'):
+                    probe.consume_turn(object(), 'synthetic', '1' * 32)
+            self.assertTrue(response.closed)
+
+        accepted = Response({'error': None, 'status': 'completed', 'success': True})
+        with patch.object(probe, 'request', return_value=accepted):
+            result = probe.consume_turn(object(), 'synthetic', '1' * 32)
+        self.assertEqual(result['answer'], '323')
+        self.assertTrue(accepted.closed)
+
+
 if __name__ == '__main__':
     unittest.main()
