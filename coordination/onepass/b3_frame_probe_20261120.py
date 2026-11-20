@@ -115,6 +115,17 @@ def compare_baseline(current, prior):
             raise ValueError('HOLD_BASELINE_MISSING_LIVE_SELECTOR')
         if current.get('landing_url_verified') is not True:
             raise ValueError('HOLD_BASELINE_LANDING_URL_UNVERIFIED')
+        # A read-only probe may block attempted chat POSTs or WebSockets.
+        # Their absence in a screenshot is NOT proof that a usable NOX
+        # interface became faster. Never compare such live measurements.
+        for report in (current, prior):
+            for key in ('blocked_mutating_requests', 'blocked_model_posts',
+                        'blocked_websocket_connections'):
+                value = report.get(key)
+                if type(value) is not int or value != 0:
+                    raise ValueError('HOLD_BASELINE_LIVE_TRANSPORT_BLOCKED')
+            if report.get('service_workers_blocked') is not True:
+                raise ValueError('HOLD_BASELINE_SERVICE_WORKER_GUARD_MISSING')
     expected = {(width, height, mode) for width, height in SIZES
                 for mode in ('normal', 'reduced')}
 
