@@ -133,7 +133,15 @@ def attach(page,db):
             }
         };
         const ui={
-            onDelta:async(s,value)=>window.deltas.push([s.exchange_id,value]),
+            onDelta:async(s,value)=>{
+                window.deltas.push([s.exchange_id,value]);
+                // Deterministic STOP at the first SSE callback, rather than
+                // racing Playwright polling against the 90ms timeout.
+                if(window.stopOnFirstDelta && s.exchange_id==='x1'){
+                    window.stopOnFirstDelta=false;
+                    window.stopAtDeltaResult=window.client.stop(s);
+                }
+            },
             upsertTerminal:async(s,event_id)=>{
                 if(window.uiFalseOnce>0){
                     window.uiFalseOnce--;
@@ -178,11 +186,11 @@ def main():
                 url=f"http://127.0.0.1:{server.server_port}/index.html"
                 db="b1-sse-"+uuid.uuid4().hex
                 page=context.new_page();page.goto(url);attach(page,db)
-                page.evaluate("()=>{window.pending=client.begin(sc);}")
+                page.evaluate("()=>{window.stopOnFirstDelta=true;window.pending=client.begin(sc);}")
                 page.wait_for_function("window.deltas.some(d=>d[0]==='x1')",timeout=5000)
                 check("first turn receives real Chrome streaming delta before STOP",
                       page.evaluate("()=>deltas[0][1]")=="x1-partial")
-                check("STOP aborts active fetch",page.evaluate("()=>client.stop(sc)") is True)
+                check("STOP aborts active fetch",page.evaluate("()=>stopAtDeltaResult") is True)
                 check("aborted first turn cannot be assumed terminal",
                       page.evaluate("()=>window.pending")=="STOPPED")
                 check("first reconnect uses separately readback terminal",

@@ -59,33 +59,48 @@
       const ctrl=new AbortController();
       active.set(k,ctrl);
       let timedOut=false;
+      const stopped=()=>timedOut?'STOPPED_TIMEOUT':'STOPPED';
       const timer=setTimeout(()=>{timedOut=true;ctrl.abort();},timeoutMs);
       try{
         const res=await transport.post(s,ctrl.signal);
+        // A fetch/mock may resolve AFTER abort. Its body and buffered delta
+        // are not authorized to reach UI once STOP or timeout has fired.
+        if(ctrl.signal.aborted) return stopped();
         if(!res||res.ok!==true||!res.body||typeof res.body.getReader!=='function')
           hold('HOLD_STREAM_POST_RESPONSE');
         const reader=res.body.getReader(),decoder=new TextDecoder();
         let buf='';
         while(true){
+          if(ctrl.signal.aborted) return stopped();
           const part=await reader.read();
+          if(ctrl.signal.aborted) return stopped();
           if(part.done) break;
           buf+=decoder.decode(part.value,{stream:true}).replace(/\r\n/g,'\n');
           if(buf.length>65536) hold('HOLD_STREAM_FRAME_TOO_LARGE');
           let e;
           while((e=buf.indexOf('\n\n'))>=0){
+            // One chunk can contain multiple deltas. STOP inside an awaited UI
+            // callback must fence ALL later frames, even in that same chunk.
+            if(ctrl.signal.aborted) return stopped();
             const frame=buf.slice(0,e);
             buf=buf.slice(e+2);
             const event=frame.split('\n').find(l=>l.startsWith('event:'));
             const data=frame.split('\n').filter(l=>l.startsWith('data:')).map(l=>l.slice(5).trim()).join('\n');
-            if(event && event.slice(6).trim()==='delta')
-              await ui.onDelta(s,data);
+            if(event && event.slice(6).trim()==='delta'){
+              // UI handlers that await MUST check this signal immediately
+              // before their actual DOM/state commit; this caller cannot undo
+              // a UI effect already committed by an uncooperative adapter.
+              await ui.onDelta(s,data,ctrl.signal);
+              if(ctrl.signal.aborted) return stopped();
+            }
             // Terminal SSE frames are deliberately NOT sufficient to ACK;
             // only a separately authenticated durable readback is accepted.
           }
         }
+        if(ctrl.signal.aborted) return stopped();
         return 'STREAM_ENDED_READBACK_REQUIRED';
       }catch(err){
-        if(ctrl.signal.aborted) return timedOut?'STOPPED_TIMEOUT':'STOPPED';
+        if(ctrl.signal.aborted) return stopped();
         if(err instanceof HoldStream) throw err;
         hold('HOLD_STREAM_POST_OR_READ');
       }finally{
