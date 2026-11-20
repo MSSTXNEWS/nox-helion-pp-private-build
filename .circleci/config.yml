@@ -1,0 +1,80 @@
+# NOX native repair branch — genuine, offline regression gate.
+# Does not authorize owner/CAS, modify the server, publish queues, or accept a TaskID.
+version: 2.1
+jobs:
+  native-reflex-source:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Compile immutable native reflex selector and tests
+          command: |
+            set -eu
+            python -B -m py_compile \
+              nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py \
+              nox-control/systemic_relay_20261118/owner_systemic_relay_publish.py \
+              nox-control/systemic_relay_20261118/test_owner_systemic_taskpack.py \
+              nox-control/owner_native_operator.py \
+              nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py \
+              nox-control/systemic_relay_20261118/test_owner_reflex_taskpack.py \
+              nox-control/owner_memory_governor.py \
+              nox-control/test_owner_memory_governor.py
+      - run:
+          name: Verify Reflex self-observation and non-replay invariants
+          command: |
+            set -eu
+            python -B nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py
+            python -B nox-control/systemic_relay_20261118/test_owner_reflex_taskpack.py
+            python -B nox-control/systemic_relay_20261118/test_owner_systemic_taskpack.py
+            python -B -m unittest discover -s nox-control -p test_owner_memory_governor.py -v
+  v135-source-stage:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Compile V135 stage builder and tests
+          command: |
+            set -eu
+            python -B -m py_compile \
+              coordination/onepass/v135_resonance_owner_stage.py \
+              coordination/onepass/test_v135_resonance_owner_stage.py
+      - run:
+          name: Verify source-only V135 ZIP and cap-policy fixtures
+          command: |
+            set -eu
+            python -B -m unittest coordination.onepass.test_v135_resonance_owner_stage -v
+  b3-exact-chromium-frame-probe:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Install pinned Playwright and headless Chromium
+          command: |
+            set -eu
+            python -m pip install --disable-pip-version-check 'playwright==1.56.0'
+            python -m playwright install --with-deps chromium
+            BROWSER="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
+            test -x "$BROWSER"
+            sudo ln -sf "$BROWSER" /usr/bin/chromium
+            test -x /usr/bin/chromium
+      - run:
+          name: Compile and execute EXACT B3 Playwright source regressions
+          command: |
+            set -eu
+            python -B -m py_compile coordination/onepass/b3_frame_probe_20261120.py coordination/onepass/test_b3_frame_probe_20261120.py
+            python -B coordination/onepass/test_b3_frame_probe_20261120.py -v
+
+workflows:
+  native-source-verification:
+    jobs:
+      - native-reflex-source
+  v135-source-verification:
+    jobs:
+      - v135-source-stage
+      - b3-exact-chromium-frame-probe
