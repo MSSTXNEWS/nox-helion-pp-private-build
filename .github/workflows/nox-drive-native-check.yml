@@ -8,6 +8,8 @@ on:
       - 'nox-control/owner_native_drive_reconnect_install.py'
       - 'nox-control/test_owner_native_drive_reconnect_install.py'
       - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_native_drive_registry_stage.py'
+      - 'nox-control/test_owner_native_drive_registry_stage.py'
       - 'nox-control/NOX_DRIVE_NATIVE_BINDING.md'
       - '.github/workflows/nox-drive-native-check.yml'
   pull_request:
@@ -17,6 +19,8 @@ on:
       - 'nox-control/owner_native_drive_reconnect_install.py'
       - 'nox-control/test_owner_native_drive_reconnect_install.py'
       - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_native_drive_registry_stage.py'
+      - 'nox-control/test_owner_native_drive_registry_stage.py'
       - 'nox-control/NOX_DRIVE_NATIVE_BINDING.md'
       - '.github/workflows/nox-drive-native-check.yml'
   workflow_dispatch:
@@ -36,6 +40,7 @@ jobs:
           python3 -m py_compile nox-control/nox_drive_native_binding.py nox-control/nox_drive_first.py nox-control/nox_drive_prefetch.py nox-control/test_nox_drive_native_binding.py
           python3 -m unittest discover -s nox-control -p test_nox_drive_native_binding.py -v
           python3 -m unittest discover -s nox-control -p test_owner_native_drive_reconnect_install.py -v
+          python3 -m unittest discover -s nox-control -p test_owner_native_drive_registry_stage.py -v
           python3 - <<'PY'
           from pathlib import Path
           op=Path('nox-control/owner_native_operator.py').read_text()
