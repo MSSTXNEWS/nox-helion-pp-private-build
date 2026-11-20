@@ -1795,7 +1795,7 @@ test('V199 two SSE turns on one browser context require four ordered independent
     {message:'Помни моё имя NOX 🧠',reply:'Запомнил имя NOX 🧠',exchange:'v199-exchange-01'},
     {message:'¿Recuerdas mi nombre?',reply:'Sí, recuerdo NOX 🧠',exchange:'v199-exchange-02'}
   ];
-  async function scenario(tamperSecond){
+  async function scenario(tamperSecond,dropPrior=false){
     const ledger=[],posts=[],reads=[];
     const native=async(path,opts={})=>{
       const url=new URL(String(path),'https://nox.local');
@@ -1823,8 +1823,10 @@ test('V199 two SSE turns on one browser context require four ordered independent
       }
       if(url.pathname==='/api/ui/memory/dialogs/history'){
         assert.equal(url.searchParams.get('dialog_id'),id);
-        reads.push(ledger.map(row=>({...row})));
-        return Response.json({status:'READY',dialog_id:id,messages:ledger});
+        const visible=ledger.map(row=>({...row}));
+        if(dropPrior&&posts.length===2)visible.splice(0,2);
+        reads.push(visible);
+        return Response.json({status:'READY',dialog_id:id,messages:visible});
       }
       return new Response('NOT_NATIVE_ROUTE',{status:404});
     };
@@ -1839,9 +1841,9 @@ test('V199 two SSE turns on one browser context require four ordered independent
         body:JSON.stringify({message:item.message,dialog_id:id,request_id:'v199-'+i})}));
       assert.equal(frames.filter(x=>x.type==='token').map(x=>x.t).join(''),item.reply);
       const done=frames.filter(x=>x.type==='done');
-      if(tamperSecond&&i===1){
+      if((tamperSecond||dropPrior)&&i===1){
         assert.equal(done.length,0,'wrong second persisted row must not look accepted');
-        assert.match(frames.find(x=>x.type==='error').error,/HOLD_DIALOG_HISTORY_READBACK/);
+        assert.match(frames.find(x=>x.type==='error').error,/HOLD_(?:DIALOG_HISTORY_READBACK|S03_PRIOR)/);
       }else{
         assert.equal(done.length,1,'every verified exchange needs own durable terminal');
         assert.equal(done[0].exchange_id,item.exchange);
@@ -1853,7 +1855,7 @@ test('V199 two SSE turns on one browser context require four ordered independent
     }
     assert.equal(posts.length,2,'exactly one model POST per turn');
     assert.equal(reads.length,2,'independent S03 readback after each terminal');
-    assert.deepEqual(reads.map(snapshot=>snapshot.length),[2,4]);
+    assert.deepEqual(reads.map(snapshot=>snapshot.length),dropPrior?[2,2]:[2,4]);
     assert.deepEqual(ledger.map(row=>row.role),['user','assistant','user','assistant']);
     assert.deepEqual(ledger.map(row=>row.exchange_id),
       ['v199-exchange-01','v199-exchange-01','v199-exchange-02','v199-exchange-02']);
@@ -1864,4 +1866,5 @@ test('V199 two SSE turns on one browser context require four ordered independent
   assert.deepEqual(valid.ledger.map(row=>row.content),
     [cases[0].message,cases[0].reply,cases[1].message,cases[1].reply]);
   await scenario(true);
+  await scenario(false,true);
 });
