@@ -366,10 +366,19 @@ def metrics():
         if values:rows.append(dict(values))
     return rows[-35:]
 
+def require_exact_model_slots_target(response):
+    """A redirected /slots JSON must never authorize a new model POST."""
+    actual = urllib.parse.urlsplit(response.url)
+    if (actual.scheme, actual.netloc, actual.path, actual.query, actual.fragment) != (
+            'http', '127.0.0.1:8098', '/slots', '', ''):
+        raise RuntimeError('HOLD_CHAT_SLOTS_RESPONSE_ROUTE')
+
+
 def model_slots_state(client):
     """Read only the active model slots. Unknown/missing state is never idle."""
     try:
         with request(client, '/slots', base='http://127.0.0.1:8098') as response:
+            require_exact_model_slots_target(response)
             slots = obj(response, limit=100000)
     except (OSError, ValueError, RuntimeError) as exc:
         raise RuntimeError('HOLD_CHAT_SLOTS_ENDPOINT_UNAVAILABLE') from exc
