@@ -1,0 +1,34 @@
+name: NOX installed web asset inspector
+
+on:
+  pull_request:
+    paths:
+      - "nox_runpod/teacher_mesh/v77/installed_web_asset_inspector.py"
+      - "nox_runpod/teacher_mesh/v77/test_installed_web_asset_inspector.py"
+      - ".github/workflows/nox-installed-web-assets.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-tests:
+    # Ubuntu 26.04 lacks the previously pinned CPython patch in its tool cache;
+    # keep this CI on the supported 24.04 runner family and pin Python minor.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Verify exact PR head
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Run isolated inspector regressions
+        run: python -m unittest nox_runpod.teacher_mesh.v77.test_installed_web_asset_inspector -v
