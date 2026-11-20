@@ -1563,6 +1563,50 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn('_agent_final',payload)
 
 
+    async def test_pool_cannot_disable_tool_choice_or_reenable_thinking(self):
+        # Caching cannot silently disable all native tools or reenable slow
+        # deliberation. An in-place mutation of a nested template also HOLDS.
+        for change in ('untouched','disable_tools','drop_tool_choice',
+                       'reenable_thinking','drop_thinking'):
+            with self.subTest(change=change):
+                native=self.native()
+                native['_POOL']=True
+                native['try_deterministic']=lambda user:None
+                def prepare(req,cache):
+                    if change=='disable_tools':
+                        req['tool_choice']='none'
+                    elif change=='drop_tool_choice':
+                        req.pop('tool_choice',None)
+                    elif change=='reenable_thinking':
+                        req['chat_template_kwargs']['enable_thinking']=True
+                    elif change=='drop_thinking':
+                        req['chat_template_kwargs'].pop('enable_thinking',None)
+                    return req
+                native['prepare_payload']=prepare
+                payload={'model':'nox-ds41-current',
+                         'messages':[{'role':'user','content':'Say ready'}]}
+                valid=change=='untouched'
+                streams=[Chunks([frame('ready'),frame(finish='stop'),
+                                 b'data: [DONE]\n\n'])] if valid else []
+                requests,factory=self.transport(streams)
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Say ready',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                if valid:
+                    self.assertEqual(len(requests),1)
+                    self.assertEqual(requests[0]['tool_choice'],'auto')
+                    self.assertIs(requests[0]['chat_template_kwargs']['enable_thinking'],False)
+                    self.assertIn('[DONE]',wire)
+                    self.assertEqual(payload['_agent_final'],'ready')
+                else:
+                    self.assertEqual(requests,[])
+                    self.assertIn('HOLD_MODEL_CONTROL_FIDELITY',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+                    self.assertEqual(self.dispatched,[])
+
+
     async def test_pooled_payload_preserves_explicit_model_before_http(self):
         # The native pool can rewrite cache settings but must not silently
         # choose a different model from the one selected for this request.
