@@ -44,13 +44,29 @@ def policy_validate(p):
             raise ValueError("invalid or duplicate NOX unit")
         units.append(name)
         url = svc.get("health_url")
-        if url:
-            parsed = urlsplit(url)
-            if (parsed.scheme != "http" or parsed.hostname not in
-                ("localhost", "127.0.0.1", "::1") or parsed.username or parsed.password
-                or parsed.fragment):
-                raise ValueError("health probes must be unauthenticated loopback HTTP")
+        if url is not None and not _is_loopback_probe(url):
+            raise ValueError("health probes must be unauthenticated loopback HTTP")
     return p
+
+class _DenyProbeRedirect(urllib.request.HTTPRedirectHandler):
+    """A redirected health response cannot prove the pinned local service is healthy."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _is_loopback_probe(url):
+    if not isinstance(url, str) or not url:
+        return False
+    try:
+        parsed = urlsplit(url)
+        _ = parsed.port  # Reject malformed ports before opening the URL.
+    except ValueError:
+        return False
+    return (parsed.scheme == "http" and
+            parsed.hostname in ("localhost", "127.0.0.1", "::1") and
+            parsed.username is None and parsed.password is None and
+            not parsed.fragment)
+
 
 def alive(service, health_url=None):
     try:
@@ -59,7 +75,13 @@ def alive(service, health_url=None):
         if p.returncode:
             return False
         if health_url:
-            with urllib.request.urlopen(health_url, timeout=4) as res:
+            if not _is_loopback_probe(health_url):
+                return False
+            # Never inherit HTTP proxy settings or follow an endpoint redirect
+            # to an unrelated service (or an external host).
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({}), _DenyProbeRedirect())
+            with opener.open(health_url, timeout=4) as res:
                 return 200 <= res.status < 300
         return True
     except (OSError, ValueError, TimeoutError):
