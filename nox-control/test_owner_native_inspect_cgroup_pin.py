@@ -122,8 +122,24 @@ class CgroupPinReceiptTests(unittest.TestCase):
         receipt = self.pin()
         self.assertEqual(receipt['state'], 'HOLD_CGROUP_ROOT_NOT_TARGETABLE')
         self.assertEqual(receipt['cgroup_path'], '/')
-        self.assertTrue(receipt['members_complete'])
+        self.assertFalse(receipt['members_complete'])
+        self.assertIsNone(receipt['member_count'])
+        self.assertIsNone(receipt['pin_sha256'])
         self.assertTrue(receipt['read_only'])
+
+    def test_root_refused_before_malformed_members_are_parsed(self):
+        self.add_proc(101, 1001, cgroup_path='/')
+        (self.cgroups / 'cgroup.procs').write_text('not-a-pid\n')
+        # A root target is forbidden even if membership is incomplete or bad.
+        from unittest.mock import patch
+        with patch.object(INSPECT, '_parse_cgroup_procs',
+                          side_effect=AssertionError('root enumerated members')):
+            receipt = self.pin()
+        self.assertEqual(receipt['state'], 'HOLD_CGROUP_ROOT_NOT_TARGETABLE')
+        self.assertEqual(receipt['cgroup_path'], '/')
+        self.assertFalse(receipt['members_complete'])
+        self.assertEqual(receipt['members'], [])
+        self.assertIsNone(receipt['pin_sha256'])
 
     def test_claimed_process_start_ticks_are_required(self):
         self.add_proc(101, 1002)
