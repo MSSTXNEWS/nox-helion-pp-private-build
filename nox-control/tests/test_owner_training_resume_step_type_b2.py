@@ -751,5 +751,46 @@ class CheckpointStepProvenance(unittest.TestCase):
                 cap(env)
 
 
+
+    def test_start_once_checks_late_global_stop_before_supervisor_start(self):
+        # Pure AST-isolated nested function. No supervisor or real STOP touched.
+        # The former source ran the start command even if STOP was latched
+        # after resource_admission() and release_flags().
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        main = next(n for n in tree.body
+                    if isinstance(n, ast.FunctionDef) and n.name == "main")
+        start = next(n for n in main.body
+                     if isinstance(n, ast.FunctionDef) and n.name == "start_once")
+        starts, receipts = [], []
+        helper = types.SimpleNamespace(
+            command=lambda argv, timeout: (starts.append((argv, timeout)) or (0, "")),
+            service_state=lambda: {"state": "RUNNING", "pid": 1},
+        )
+        context = {
+            "helper": helper, "global_stop": lambda: True,
+            "SERVICE": "nox-train-volta-t866u",
+            "result": {"training_started": False},
+            "prove_training": lambda _: {"pid": 1},
+            "step": lambda kind, data: receipts.append((kind, data)),
+        }
+        exec(compile(ast.Module(body=[start], type_ignores=[]), str(SOURCE), "exec"),
+             context)
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GLOBAL_STOP_REMAINS"):
+            context["start_once"](5)
+        self.assertEqual(starts, [])
+        self.assertEqual(receipts, [])
+        self.assertFalse(context["result"]["training_started"])
+
+        # No change to the owner-admitted path when global STOP is absent.
+        context["global_stop"] = lambda: False
+        context["start_once"](5)
+        self.assertEqual(starts, [
+            (["supervisorctl", "start", "nox-train-volta-t866u"], 35)
+        ])
+        self.assertTrue(context["result"]["training_started"])
+        self.assertEqual(receipts[0][0], "single_native_training_started")
+
+
+
 if __name__ == "__main__":
     unittest.main()
