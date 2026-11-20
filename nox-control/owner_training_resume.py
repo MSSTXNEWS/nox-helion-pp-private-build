@@ -1051,8 +1051,9 @@ def main():
         # Supervisor can report STARTING before the native ENTRY process exists.
         # A successful start command is not a process identity proof; allow one
         # bounded transition to RUNNING, without sending a second start command.
-        deadline = time.monotonic() + 15
         status = helper.service_state()
+        if status['state'] == 'STARTING':
+            deadline = time.monotonic() + 15
         while status['state'] == 'STARTING':
             if global_stop():
                 raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
