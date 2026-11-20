@@ -18,7 +18,14 @@ def main():
         assert valid, name
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, executable_path='/usr/bin/chromium', args=['--no-sandbox'])
+        # CI installs Playwright's pinned Chromium. Local machines may use the
+        # system Chromium when the Playwright-managed binary is absent.
+        # Never substitute JS fixtures: all three scripts below load from this
+        # checked-out repository's exact files.
+        launch = {'headless': True, 'args': ['--no-sandbox']}
+        if not Path(p.chromium.executable_path).is_file() and Path('/usr/bin/chromium').is_file():
+            launch['executable_path'] = '/usr/bin/chromium'
+        browser = p.chromium.launch(**launch)
         page = browser.new_page()
         page.set_content('<main id="chat"></main>')
         for src in ('b1_abort_safe_ui_adapter.js', 'b1_client_stream_reconnect_harness.js', 'b1_sse_ui_binding.js'):
