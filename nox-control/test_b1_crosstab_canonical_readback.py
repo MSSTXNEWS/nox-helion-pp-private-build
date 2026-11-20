@@ -133,6 +133,44 @@ def main():
                 }""", db)
                 check("reloaded browser never sends duplicate terminal",
                       a.evaluate("()=>gate.reserve(s1,'a'.repeat(64),'cursor1')")["status"]=="ALREADY_ACKED")
+                # Revocation tombstone lives in the same IndexedDB store as ACK,
+                # so its serialization with ACK projection is browser-real.
+                check("trusted native owner revocation recorded durably",
+                      a.evaluate("()=>gate.noteOwnerRevoked('server-cas-x1')")=="REVOKED")
+                check("duplicate revocation is harmless and irreversible",
+                      a.evaluate("()=>gate.noteOwnerRevoked('server-cas-x1')")=="ALREADY_REVOKED")
+                check("already-ACKED local replay fails closed after revocation",
+                      trial(a,"gate.reserve(s1,'a'.repeat(64),'cursor1')")=="HOLD_CROSSTAB_OWNER_REVOKED")
+                check("unrelated second-turn CAS remains usable",
+                      b.evaluate("()=>gate.reserve(s2,b,'cursor2')")["status"]=="ALREADY_ACKED")
+                race=a.evaluate("""async dbName=>{
+                  const fresh=await NOXB1CrossTabAckLease.createGate({
+                    indexedDB,databaseName:dbName,ttlMs:300
+                  });
+                  const scope={conversation_id:'dialog',exchange_id:'x1'};
+                  try {
+                    const grant=await fresh.reserve(scope,'a'.repeat(64),'cursor1');
+                    await fresh.beginSend(grant);
+                    let entered;
+                    const verifierStarted=new Promise(resolve=>{entered=resolve;});
+                    const pending=fresh.reconcileSignedAck(
+                      scope,'a'.repeat(64),'cursor1',read('x1'),
+                      async ()=>{entered();await new Promise(r=>setTimeout(r,85));return true;}
+                    );
+                    await verifierStarted;
+                    await fresh.noteOwnerRevoked('server-cas-x1');
+                    let outcome='UNEXPECTED_ACCEPT';
+                    try {await pending;} catch(e){outcome=e.code;}
+                    let pendingState='UNEXPECTED_RESERVE';
+                    try {await fresh.reserve(scope,'a'.repeat(64),'cursor1');}
+                    catch(e){pendingState=e.code;}
+                    return {outcome,pendingState};
+                  } finally {fresh.close();}
+                }""",db+"-revocation-race")
+                check("owner revoked during async verifier blocks ACK projection",
+                      race["outcome"]=="HOLD_CROSSTAB_OWNER_REVOKED")
+                check("revocation leaves uncertain SENDING fenced, no replay",
+                      race["pendingState"]=="HOLD_CROSSTAB_ACK_UNCERTAIN")
                 with srv.lock: posts,reads=srv.posts,srv.reads
                 check("NO model or ACK POST emitted by recovery",posts==0 and reads>=6)
                 a.evaluate("()=>gate.close()");b.evaluate("()=>gate.close()")
