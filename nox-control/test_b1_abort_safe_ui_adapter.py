@@ -15,7 +15,11 @@ def main():
         if not ok:
             raise AssertionError(name)
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, executable_path="/usr/bin/chromium", args=["--no-sandbox"])
+        # Use CI-pinned Playwright Chromium, with local system fallback.
+        launch = {"headless": True, "args": ["--no-sandbox"]}
+        if not Path(p.chromium.executable_path).is_file() and Path("/usr/bin/chromium").is_file():
+            launch["executable_path"] = "/usr/bin/chromium"
+        browser = p.chromium.launch(**launch)
         page = browser.new_page()
         page.set_content('<main id="chat"></main>')
         page.add_script_tag(path=str(SOURCE))
