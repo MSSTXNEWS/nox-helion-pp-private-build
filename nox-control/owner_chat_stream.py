@@ -458,7 +458,20 @@ async def _run(native,url,payload,user_text):
     if _current.download_status_query(user_text):
         yield 'token',await asyncio.to_thread(_current.inventory_reply)
         return
-    messages=[dict(message) for message in payload.get('messages') or []]
+    # Existing S03 payload also belongs to the request-bound postflight writer.
+    # A shallow dict copy shares nested content and lets the evidence augmenter
+    # corrupt that stored dialogue before the model has answered.
+    try:
+        source_messages=payload.get('messages')
+        if source_messages is None:source_messages=[]
+        if not isinstance(source_messages,list) or any(
+                not isinstance(message,dict) for message in source_messages):
+            raise ValueError('invalid message history')
+        history_wire=json.dumps(source_messages,ensure_ascii=False,
+                                allow_nan=False).encode('utf-8','strict')
+        messages=json.loads(history_wire)
+    except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
+        raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
     if _current.relevant_query(user_text):
         messages=await asyncio.to_thread(_current.augment_messages,messages,user_text)
     native_tools=list(native['TOOLS'])

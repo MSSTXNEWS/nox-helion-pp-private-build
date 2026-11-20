@@ -113,6 +113,34 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     self.assertNotIn('_agent_final',payload)
                     self.assertEqual(self.dispatched,[])
 
+    async def test_s03_history_is_detached_before_evidence_augmentation(self):
+        # Evidence augmentation may enrich nested model content, never mutate
+        # the request-bound S03 history subsequently read by postflight.
+        original=[
+            {'role':'system','content':[{'type':'text','text':'PersonaID: original'}]},
+            {'role':'user','content':'Recuerda mi cuaderno azul 🌍'},
+        ]
+        payload={'messages':json.loads(json.dumps(original))}
+        def augment(messages,user_text):
+            messages[0]['content'][0]['text']+=' | evidence from current turn'
+            return messages
+        native=self.native()
+        requests,factory=self.transport([Chunks([
+            frame('Sí, recuerdo'),frame(finish='stop'),b'data: [DONE]\n\n'
+        ])])
+        with (factory,patch.object(stream._current,'relevant_query',
+                                   return_value=True),
+              patch.object(stream._current,'augment_messages',side_effect=augment)):
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Remember',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertIn('[DONE]',wire)
+        self.assertEqual(payload['_agent_final'],'Sí, recuerdo')
+        self.assertEqual(payload['messages'],original)
+        self.assertEqual(len(requests),1)
+        self.assertEqual(requests[0]['messages'][0]['content'][0]['text'],
+                         'PersonaID: original | evidence from current turn')
+
     async def test_unconfirmed_direct_tool_or_media_never_certifies_s03(self):
         # A failed action can report its real reason in the live stream,
         # but a browser DONE or _agent_final would falsely certify success.
