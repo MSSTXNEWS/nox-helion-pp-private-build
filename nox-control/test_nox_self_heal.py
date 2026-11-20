@@ -84,7 +84,10 @@ class SafeRepairTests(unittest.TestCase):
                 run.return_value.returncode=3
                 result=healer.repair_cycle(p,state,dry_run=True)
                 self.assertEqual(result[0]["action"],"would_restart")
-                run.assert_not_called()
+                # Dry-run may inspect systemd, but must not issue restart.
+                run.assert_called_once_with(
+                    ["systemctl","is-active","--quiet","nox-dispatcher.service"],
+                    shell=False,timeout=8,check=False)
     def test_restart_verified_only_after_live_probe(self):
         with tempfile.TemporaryDirectory() as t:
             state=Path(t)/"s.json"
