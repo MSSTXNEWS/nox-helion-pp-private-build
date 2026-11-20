@@ -729,11 +729,13 @@ OBSERVER_JS = r"""
             'rejected','denied','timeout','timed_out'].includes(value.toLowerCase()));
          const failedHttpStatus=stateValues.some(value=>
            typeof value==='number'&&Number.isFinite(value)&&value>=400);
-         const statusMeta=['status','meta','start','done'].includes(frame?.type);
+         // Protocol failures can be attached to delta or extension frames,
+         // not just status/meta/start/done. A later DONE cannot clear them.
+         const explicitError=(frame?.error!==undefined&&frame.error!==null&&
+                              frame.error!==false&&frame.error!=='');
          if(frame&&typeof frame==='object'&&
             (frame.success===false||frame.ok===false||
-             (statusMeta&&(failedState||failedHttpStatus||
-                (frame.error!==undefined&&frame.error!==null&&frame.error!==false&&frame.error!=='')))))
+             failedState||failedHttpStatus||explicitError))
            throw Error('HOLD_QA_PRETERMINAL_FAILURE_STATUS');
          if(frame.type==='delta'){
            if(typeof frame.text!=='string'||q.answer.length+frame.text.length>4096)throw Error('HOLD_QA_ANSWER_LIMIT');

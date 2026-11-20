@@ -173,6 +173,11 @@ async function check(chunks, status=200) {
     {type:'meta',status:503},
     {type:'meta',error:{code:'failure'}},
     {type:'done',saved:true,s03_integrated:true,dialog_id:'synthetic',success:false},
+    // A failing delta or extension frame cannot be rescued by later DONE.
+    {type:'delta',text:'hola',state:'failed'},
+    {type:'delta',text:'hola',status:503},
+    {type:'delta',text:'hola',error:{code:'upstream_failed'}},
+    {type:'extension',status:'cancelled'},
   ];
   for (const poison of statusFrames) {
     const payload = Buffer.from([deltaFrame,JSON.stringify(poison),doneFrame].join('\n')+'\n','utf8');
@@ -181,7 +186,8 @@ async function check(chunks, status=200) {
     assert.equal(rejected.error,'HOLD_QA_PRETERMINAL_FAILURE_STATUS');
   }
   const cleanStatus = Buffer.from([
-    deltaFrame, '{"type":"status","state":"running"}',doneFrame
+    deltaFrame, '{"type":"delta","text":"mundo","state":"running"}',
+    '{"type":"status","state":"running"}',doneFrame
   ].join('\n')+'\n','utf8');
   const permitted = await check([cleanStatus]);
   assert.equal(permitted.nativeStreamComplete,true,'running status remains compatible');
