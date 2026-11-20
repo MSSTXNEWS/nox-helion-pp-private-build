@@ -80,9 +80,9 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
              'HOLD_TOOL_CALL_ID'),
             ([{'id':'valid','name':'','arguments':{}}],
              'HOLD_TOOL_CALL_SHAPE'),
-            ([{'id':'valid','name':'calculate\\nadmin','arguments':{}}],
+            ([{'id':'valid','name':'calculate\nadmin','arguments':{}}],
              'HOLD_TOOL_CALL_SHAPE'),
-            ([{'id':'bad\\nreceipt','name':'calculate','arguments':{}}],
+            ([{'id':'bad\nreceipt','name':'calculate','arguments':{}}],
              'HOLD_TOOL_CALL_ID_SIZE'),
         ]
         for rows,expected in cases:
