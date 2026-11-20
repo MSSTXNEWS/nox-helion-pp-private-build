@@ -71,7 +71,7 @@ def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
             isinstance(m, dict) and type(m.get('mission_id')) is str for m in missions):
         reviewed_ids_expected = sorted(m['mission_id'] for m in missions)
         diffs = proposal_predicate_diff(missions,registry,
-            census.get('roots',{}),refill_request,previous)
+            census.get('roots',{}),projection_request,previous)
     else:
         # Malformed proposals must produce HOLD evidence, never crash the reviewer.
         diffs = [{'parent_task_id': None, 'all_passed': False,
