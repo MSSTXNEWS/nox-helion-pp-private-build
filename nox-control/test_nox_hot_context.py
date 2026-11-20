@@ -108,6 +108,20 @@ class HotContextTests(unittest.TestCase):
         with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_S03_REVISION"):
             call(conversation=[],verified_s03=[item],owner_persona_id="alice")
 
+    def test_recent_dialogue_survives_competing_large_s03_fact(self):
+        # A large old memory fits alone but must not evict the latest real turn.
+        current={"id":"latest-assistant","role":"assistant",
+                 "content":"The answer depends on the blue notebook. "*15}
+        fact={"id":"bulky","source_sha256":"a"*64,"text":"older verified data "*65}
+        out=call(conversation=[current],verified_s03=[fact],token_budget=512)
+        self.assertEqual(out["omitted_turns"],[])
+        self.assertEqual(out["messages"][-2],
+                         {"role":"assistant","content":current["content"]})
+        self.assertEqual(out["selected_s03_ids"],[])
+        self.assertTrue(out["persona_preserved"])
+        self.assertTrue(out["current_user_preserved"])
+        self.assertFalse(out["native_installed"])
+
     def test_too_large_protected_context_holds_not_truncates_persona(self):
         with self.assertRaisesRegex(m.ContextHold,"CORE_TOO_LARGE"):
             call(persona="identity"*10000)
