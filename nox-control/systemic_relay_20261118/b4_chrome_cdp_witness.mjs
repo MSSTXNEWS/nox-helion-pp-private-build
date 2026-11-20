@@ -29,6 +29,18 @@ function cacheProvenance(r){
     r?.fromEarlyHints||r?.cacheStorageCacheName||r?.serviceWorkerResponseSource||
     r?.serviceWorkerRouterInfo?.matchedSourceType||r?.serviceWorkerRouterInfo?.actualSourceType);
 }
+// JSON.parse can map legal JSON 1e309 / -1e309 into nonfinite JS numbers.
+// Every parsed number must stay finite, including ignored metadata / usage.
+function finiteJsonNumbers(value){
+  const pending=[value];
+  while(pending.length){
+    const v=pending.pop();
+    if(typeof v==='number'&&!Number.isFinite(v))return false;
+    if(v!==null&&typeof v==='object')
+      for(const child of Object.values(v))pending.push(child);
+  }
+  return true;
+}
 // Fail closed on malformed or explicit error SSE before a later valid [DONE].
 function eventData(record){
   const data=[];let eventName=null;
@@ -49,6 +61,7 @@ function eventData(record){
   if(eventName!==null&&!['message','usage','ping','heartbeat','keepalive'].includes(eventName))return {invalid:true};
   let obj;try{obj=JSON.parse(payload);}catch{return {invalid:true};}
   if(!obj||typeof obj!=='object'||Array.isArray(obj)||Object.hasOwn(obj,'error'))return {invalid:true};
+  if(!finiteJsonNumbers(obj))return {invalid:true};
   const usage=obj.usage&&typeof obj.usage==='object'&&!Array.isArray(obj.usage);
   if(Array.isArray(obj.choices)){
     if(obj.choices.length===0)return usage?{ignored:true}:{invalid:true};

@@ -260,3 +260,23 @@ test('CDP [DONE] is verified only after a unique explicit model finish_reason=st
     assert.equal(actual.turns[1].visible_text_sha256,null);
   }
 });
+
+
+test('nonfinite numbers anywhere in JSON SSE payload fail closed before DONE',async()=>{
+  const inject=json=>body.replace('data: [DONE]','data: '+json+'\n\ndata: [DONE]');
+  // These literals parse successfully but become +/-Infinity in JavaScript.
+  const invalid=[
+    '{"usage":{"total_tokens":1e309}}',
+    '{"usage":{"nested":[{"score":-1e309}]}}',
+    '{"choices":[{"delta":{},"metadata":{"score":1e309}}]}'
+  ];
+  for(const json of invalid){
+    const x=await run(false,[Buffer.from(inject(json))]);
+    assert.equal(x.cdp_consistent,false,json);
+    assert.equal(x.ttft_sse_verified,false,json);
+    assert.equal(x.turns[1].stream_timing_complete,false,json);
+  }
+  const valid=await run(false,[Buffer.from(inject('{"usage":{"total_tokens":42,"nested":[0.05,-3,1e12]}}'))]);
+  assert.equal(valid.cdp_consistent,true);
+  assert.equal(valid.ttft_sse_verified,true);
+});
