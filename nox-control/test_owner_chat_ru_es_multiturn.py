@@ -20,6 +20,7 @@ from owner_chat_browser_qa import (
     click_send,
     firstturn_history_valid,
     firstturn_prefix_identity_valid,
+    verified_two_turn_firstturn_ids,
     empty_dialog_history_valid,
     exact_native_post_fence,
     multiturn_followup_prompt,
@@ -316,6 +317,34 @@ async function check(chunks, status=200) {
             ["turn-0", "turn-1"], final_rows))
         self.assertFalse(firstturn_prefix_identity_valid(
             initial_ids, final_rows[:2]))
+
+    def test_second_ru_es_post_needs_two_persisted_firstturn_identities(self):
+        # Matching role/text without two durable identities cannot admit POST 2.
+        first = [
+            {"role": "user", "content": RU, "message_id": "s03-row-01"},
+            {"role": "assistant", "content": FIRST, "message_id": "s03-row-02"},
+        ]
+        self.assertEqual(verified_two_turn_firstturn_ids(first),
+                         ("s03-row-01", "s03-row-02"))
+        for invalid in (
+            [{k: v for k, v in item.items() if k != "message_id"} for item in first],
+            [dict(first[0]), dict(first[1], message_id="s03-row-01")],
+            [dict(first[0]), dict(first[1], message_id=" s03-row-01 ")],
+            [dict(first[0]), dict(first[1], message_id="s03-row-02 ")],
+            [dict(first[0]), dict(first[1], message_id="")],
+            [dict(first[0]), dict(first[1], message_id=None)],
+            [dict(first[0]), dict(first[1], message_id=123)],
+            first[:1],
+            None,
+        ):
+            with self.subTest(rows=repr(invalid)):
+                self.assertIsNone(verified_two_turn_firstturn_ids(invalid))
+        caller = inspect.getsource(browser_run)
+        self.assertIn('firstturn_id_snapshot=verified_two_turn_firstturn_ids(rows)', caller)
+        self.assertIn('HOLD_MULTITURN_FIRSTTURN_IDS_NOT_PERSISTED', caller)
+        self.assertLess(
+            caller.index('firstturn_id_snapshot=verified_two_turn_firstturn_ids(rows)'),
+            caller.index('second_permitted=True'))
 
     def test_two_turn_native_post_accounting_fences_before_s03_proof(self):
         for turn in (1, 2):

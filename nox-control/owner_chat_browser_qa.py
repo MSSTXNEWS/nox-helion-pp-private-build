@@ -257,6 +257,23 @@ def distinct_explicit_message_ids(rows):
 
 
 
+def verified_two_turn_firstturn_ids(rows):
+    """Allow second POST only after two distinct, stable first-turn row IDs.
+
+    A dialog-history text match alone does not establish durable first-turn
+    identity. Legacy history helpers stay compatible; B5 explicitly opts in.
+    """
+    if (not isinstance(rows, list) or len(rows) != 2
+            or not all(isinstance(row, dict) for row in rows)):
+        return None
+    ids = tuple(row.get('message_id') for row in rows)
+    if (any(not isinstance(mid, str) or not mid.strip()
+            or mid != mid.strip() for mid in ids)
+            or ids[0] == ids[1]):
+        return None
+    return ids
+
+
 def firstturn_prefix_identity_valid(firstturn_ids, completed_rows):
     """A second history read must retain the first two persisted message IDs.
 
@@ -1207,8 +1224,10 @@ async def browser_run(report, directory, available):
                 report['browser_stage']='QA_SECOND_TURN_PREP'
                 # Freeze the first persisted identities before the second POST.
                 # Text equivalence alone cannot prove a row was not replaced.
-                firstturn_id_snapshot=tuple(
-                    row['message_id'] if 'message_id' in row else None for row in rows)
+                firstturn_id_snapshot=verified_two_turn_firstturn_ids(rows)
+                if firstturn_id_snapshot is None:
+                    raise RuntimeError('HOLD_MULTITURN_FIRSTTURN_IDS_NOT_PERSISTED')
+                report['multiturn_firstturn_ids_verified']=True
                 second_permitted=True
                 if stop_present():
                     raise RuntimeError('HOLD_OWNER_STOP')
