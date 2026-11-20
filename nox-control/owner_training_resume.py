@@ -780,9 +780,34 @@ def verify_policy(value):
 
 
 def owned_flag(path, prefix):
-    if (path.is_symlink() or not path.is_file() or path.stat().st_size > 4096
-            or not path.read_text().startswith(prefix)):
-        raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED')
+    """Verify an owned STOP flag through one bounded, pathname-stable descriptor."""
+    path = Path(path)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError as exc:
+        raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED') from exc
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or not 0 < before.st_size <= 4096:
+            raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED')
+        with os.fdopen(fd, 'rb') as stream:
+            fd = -1
+            raw = stream.read(4097)
+            after = os.fstat(stream.fileno())
+            named = os.stat(path, follow_symlinks=False)
+        fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+        if (len(raw) != before.st_size
+                or any(getattr(before, field) != getattr(after, field)
+                       or getattr(before, field) != getattr(named, field)
+                       for field in fields)
+                or not isinstance(prefix, str) or not prefix
+                or not raw.startswith(prefix.encode('utf-8'))):
+            raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED')
+    except (OSError, UnicodeError) as exc:
+        raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED') from exc
+    finally:
+        if fd >= 0:
+            os.close(fd)
 
 
 def verify_paused_result(helper, result, max_step=5, allow_completed=False):
