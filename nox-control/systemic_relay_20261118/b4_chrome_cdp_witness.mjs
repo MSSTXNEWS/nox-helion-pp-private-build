@@ -9,6 +9,18 @@ function decodeCanonicalCdpData(data){
   const bytes=Buffer.from(data,'base64');
   return bytes.length>0&&bytes.toString('base64')===data?bytes:null;
 }
+// A CDP text response is a UTF-16 JS string; unpaired surrogates are
+// silently changed to U+FFFD by Buffer.from(...,'utf8'). Never hash lossy text.
+function encodeWellFormedUtf8(text){
+  for(let i=0;i<text.length;i++){
+    const unit=text.charCodeAt(i);
+    if(unit>=0xD800&&unit<=0xDBFF){
+      const next=text.charCodeAt(++i);
+      if(!(next>=0xDC00&&next<=0xDFFF))return null;
+    }else if(unit>=0xDC00&&unit<=0xDFFF)return null;
+  }
+  return Buffer.from(text,'utf8');
+}
 const paths=new Set(['/api/nox/chat','/api/nox/chat/stream','/nox/chat']);
 export class Cdp {
   constructor(url){this.url=url;this.next=0;this.pending=new Map();}
@@ -215,7 +227,7 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
         if(typeof v.base64Encoded!=='boolean'){x.missing=true;return;}
         // getResponseBody is a separate integrity witness: reject padding-bit aliases
         // which Buffer.from(..., 'base64') silently decodes to the same bytes.
-        const body=v.base64Encoded?decodeCanonicalCdpData(v.body):Buffer.from(v.body,'utf8');
+        const body=v.base64Encoded?decodeCanonicalCdpData(v.body):encodeWellFormedUtf8(v.body);
         if(!body){x.missing=true;return;}
         x.response=hash(body);
         x.bodyMatchesStream=!x.missing&&!x.encoded&&x.bytes===body.length&&x.streamDigest===x.response;
