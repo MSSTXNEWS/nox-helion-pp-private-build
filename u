@@ -1,0 +1,1 @@
+curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/94f07f8beee030147c93d399bb349bcf54a6af60/nox-control/cmd_agent/nox_cmd_agent.py -o /opt/nox-cmd/agent.py && supervisorctl restart nox-cmd-agent && echo UPDATED_OK
