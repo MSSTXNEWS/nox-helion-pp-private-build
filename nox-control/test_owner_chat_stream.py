@@ -126,7 +126,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             return messages
         native=self.native()
         requests,factory=self.transport([Chunks([
-            frame('Sí, recuerdo'),frame(finish='stop'),b'data: [DONE]\\n\\n'
+            frame('Sí, recuerdo'),frame(finish='stop'),b'data: [DONE]\n\n'
         ])])
         with (factory,patch.object(stream._current,'relevant_query',
                                    return_value=True),
