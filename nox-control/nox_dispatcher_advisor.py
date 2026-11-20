@@ -135,7 +135,36 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
     if trainer.get("running") is True and trainer.get("checkpoint_recent") is not True:
         add("TRAIN_CHECKPOINT_STALE", "urgent", "Inspect trainer heartbeat and checkpoint write/readback; avoid blind restart.")
     if trainer.get("running") is False and trainer.get("ready_for_resume") is True:
-        add("TRAIN_RESUME_CANDIDATE", "review", "Queue verified resume through existing OneHost admission; never launch another scheduler.")
+        # 0A01: a cached trainer resume flag must not be mistaken for current
+        # owner STOP, S03/checkpoint and resource admission evidence. This
+        # advisor does not schedule or resume training.
+        resume_evidence_ok = (
+            onehost.get("healthy") is True
+            and s03.get("readback_verified") is True
+            and trainer.get("checkpoint_recent") is True
+            and gpu.get("temperature_sensor_valid") is True
+            and _finite_nonnegative(temp) and temp < 70
+            and _finite_nonnegative(free_gib)
+            and _finite_nonnegative(reserve_gib)
+            and free_gib >= max(5, reserve_gib)
+            and isinstance(native, dict)
+            and native.get("maintenance_busy") is False
+            and native.get("active_claims") is False
+            and type(native.get("resource_headroom_bytes")) is int
+            and native["resource_headroom_bytes"] >= 2 * 1024**3
+            and _owner_snapshot_attested(snapshot, owner_snapshot_verifier)
+        )
+        if resume_evidence_ok:
+            add("TRAIN_RESUME_CANDIDATE", "review",
+                "Owner-attested source observation only: recheck STOP, trainer "
+                "lease/CAS, S03, checkpoint and resource admission at the existing "
+                "OneHost immediately before any resume. Never launch another scheduler.")
+        else:
+            add("TRAIN_RESUME_OWNER_HOLD", "hold",
+                "Cached ready_for_resume is not training admission. Require "
+                "independent current owner attestation, verified S03/checkpoint, "
+                "SAFE70 sensor, disk and >=2 GiB cgroup headroom, idle claims and "
+                "maintenance clearance; do not enqueue or resume.")
     if onehost.get("chat_waiting") is True and trainer.get("running") is True:
         add("CHAT_PRIORITY", "optimize", "Request cooperative trainer yield at next safe checkpoint; do not kill process.")
     if trainer.get("running") is True:
