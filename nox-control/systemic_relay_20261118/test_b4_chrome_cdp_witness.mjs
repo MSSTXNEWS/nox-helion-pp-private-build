@@ -1167,6 +1167,44 @@ test('expired first POST metadata guard precedes second POST without hiding vali
 });
 
 
+
+test('first post-DONE SSE error cannot certify the pair or contaminate a valid second turn',async()=>{
+  const control=await run();
+  assert.equal(control.cdp_consistent,true);
+  const firstPostDoneError=body+'event: error\\ndata: {"error":"post-terminal"}\\n\\n'.replaceAll('\\n','\n');
+  // First-turn SSE fault is separate from a missing/expired first POST
+  // metadata ACK; neither may turn the valid second stream into aggregate PASS.
+  for(const extra of [
+    {},
+    {firstPostDataMode:'hang',requestPostDataAckTimeoutMs:40,delaySecondPostMs:90}
+  ]){
+    const observed=await run(false,null,null,null,{...extra,firstBody:firstPostDoneError});
+    assert.equal(observed.cdp_consistent,false);
+    assert.equal(observed.ttft_sse_verified,false);
+    assert.deepEqual(observed.turns.map(x=>x.cdp_request_id),['1','2']);
+    assert.equal(observed.turns[0].stream_timing_complete,false);
+    assert.equal(observed.turns[0].ttft_ms,null);
+    assert.equal(observed.turns[1].request_sha256,control.turns[1].request_sha256);
+    assert.equal(observed.turns[1].cdp_decoded_body_sha256,
+      control.turns[1].cdp_decoded_body_sha256);
+    assert.equal(observed.turns[1].visible_text_sha256,
+      control.turns[1].visible_text_sha256);
+    assert.equal(observed.turns[1].ttft_ms,control.turns[1].ttft_ms);
+    assert.equal(observed.turns[1].sse_done_ms,control.turns[1].sse_done_ms);
+    assert.equal(observed.turns[1].stream_timing_complete,true);
+    assert.doesNotMatch(JSON.stringify(observed),/secret|Hello|post-terminal|data:/);
+  }
+  // A genuine overlapping POST or incomplete first finality is still
+  // a hard seriality violation, not a salvageable diagnostic.
+  await assert.rejects(run(false,null,null,null,{
+    firstBody:firstPostDoneError,overlapPostBeforeFirstClose:true
+  }),/CDP_NON_SERIAL_CHAT_POST/);
+  await assert.rejects(run(false,null,null,null,{
+    firstBody:body.replace('data: [DONE]\\n\\n'.replaceAll('\\n','\n'),'')+
+      'event: error\\ndata: {"error":"post-terminal"}\\n\\n'.replaceAll('\\n','\n')
+  }),/CDP_NON_SERIAL_CHAT_POST/);
+});
+
 test('expired first POST metadata cannot mask another first-stream fault or certify second turn',async()=>{
   const baseline=await run();
   assert.equal(baseline.cdp_consistent,true);
