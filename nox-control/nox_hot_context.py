@@ -136,7 +136,8 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
                # metadata even after the source text has been safely redacted.
                # Current and legacy unscoped facts still require actual text.
                and (bool(item["text"]) or (scoped and
-                    item.get("status") in {"SUPERSEDED", "REVOKED"}))
+                    isinstance(item.get("status"), str) and
+                    item["status"] in {"SUPERSEDED", "REVOKED"}))
                and isinstance(item["source_sha256"],str) and len(item["source_sha256"])==64
                and all(x in "0123456789abcdef" for x in item["source_sha256"]), "S03")
         if scoped:
