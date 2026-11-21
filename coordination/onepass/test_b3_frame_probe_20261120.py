@@ -541,6 +541,7 @@ class TestProbe(unittest.TestCase):
                             if(url==='/api/nox/chat/stream'){
                                 const n=++window.__nativePosts;
                                 if(n===1)await new Promise(resolve=>window.__releaseFirst=resolve);
+                                if(n===3)await new Promise(resolve=>window.__releaseAbort=resolve);
                                 const frames=[
                                     {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
                                     {type:'start',model:'mock'},
@@ -580,18 +581,45 @@ class TestProbe(unittest.TestCase):
                         const atOverlap=window.__nativePosts;
                         window.__releaseFirst();
                         const completed=await (await first).text();
-                        const third=await (await fetch('/api/nox/chat',
+                        const replay=await (await fetch('/api/nox/chat',
                             {method:'POST',body})).text();
-                        return {atOverlap,rejected,completed,third,
-                            posts:window.__nativePosts};
+                        const atReplay=window.__nativePosts;
+                        const nextBody=JSON.stringify({dialog_id:'a'.repeat(32),
+                            message:'hello',request_id:'b3-next'});
+                        const third=await (await fetch('/api/nox/chat',
+                            {method:'POST',body:nextBody})).text();
+                        const abortBody=JSON.stringify({dialog_id:'a'.repeat(32),
+                            message:'hello',request_id:'b3-stop'});
+                        const ac=new AbortController();
+                        const stop=fetch('/api/nox/chat',
+                            {method:'POST',body:abortBody,signal:ac.signal});
+                        for(let n=0;n<100&&!window.__releaseAbort;n++)
+                            await new Promise(resolve=>setTimeout(resolve,3));
+                        if(!window.__releaseAbort)
+                            return {error:'ABORT_NATIVE_NOT_STARTED'};
+                        ac.abort();
+                        const stopped=await (await stop).text();
+                        const afterStop=await (await fetch('/api/nox/chat',
+                            {method:'POST',body:abortBody})).text();
+                        const atStopReplay=window.__nativePosts;
+                        window.__releaseAbort();
+                        return {atOverlap,rejected,completed,replay,atReplay,third,
+                            stopped,afterStop,atStopReplay,posts:window.__nativePosts};
                     }""")
                     self.assertNotIn('error', actual)
                     self.assertEqual(actual['atOverlap'], 1)
                     self.assertIn('HOLD_DIALOG_INFLIGHT', actual['rejected'])
                     self.assertNotIn('"type":"done"', actual['rejected'])
                     self.assertIn('"type":"done"', actual['completed'])
+                    self.assertIn('HOLD_REQUEST_REPLAY', actual['replay'])
+                    self.assertNotIn('"type":"done"', actual['replay'])
+                    self.assertEqual(actual['atReplay'], 1)
                     self.assertIn('"type":"done"', actual['third'])
-                    self.assertEqual(actual['posts'], 2)
+                    self.assertIn('STREAM_STOP_REQUESTED', actual['stopped'])
+                    self.assertNotIn('"type":"done"', actual['stopped'])
+                    self.assertIn('HOLD_REQUEST_REPLAY', actual['afterStop'])
+                    self.assertEqual(actual['atStopReplay'], 3)
+                    self.assertEqual(actual['posts'], 3)
                 finally:
                     await browser.close()
         asyncio.run(run())
