@@ -197,6 +197,25 @@ class HunterURLSafetyTests(unittest.TestCase):
         self.assertEqual(len({item["url"] for item in got}), 5)
         self.assertTrue(all(item["published"] == "" for item in got))
 
+    def test_crossref_nontext_doi_and_url_never_fabricate_links(self):
+        # JSON arrays/objects are not DOI identifiers or URL strings. Do not
+        # turn repr([...]) into a seemingly legitimate doi.org reference.
+        rows = [
+            {"DOI": ["10.1234/fake"], "title": ["Bad DOI"], "URL": None},
+            {"DOI": {"value": "10.1234/fake"}, "title": ["Bad object DOI"], "URL": []},
+            {"DOI": "10.1234/real", "title": ["Valid fallback"], "URL": {}},
+            {"DOI": "10.1234/override", "title": ["Explicit URL"],
+             "URL": "https://doi.org/10.1234/explicit"},
+        ]
+        got = hunter._crossref_items(json.dumps(
+            {"message": {"items": rows}}).encode("utf-8"))
+        self.assertEqual([item["title"] for item in got],
+                         ["Bad DOI", "Bad object DOI", "Valid fallback", "Explicit URL"])
+        self.assertEqual([item["url"] for item in got], [
+            "", "", "https://doi.org/10.1234/real",
+            "https://doi.org/10.1234/explicit",
+        ])
+
     def test_crossref_nontext_abstract_is_not_fabricated(self):
         # Malformed abstract metadata must not become a Python repr presented
         # as an authentic research abstract. Healthy HTML text still survives.
