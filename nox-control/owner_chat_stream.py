@@ -539,7 +539,10 @@ async def _run(native,url,payload,user_text):
         if any((row.get('function') or {}).get('name') in _current.NAMES for row in native_tools):
             raise StreamFailure('HOLD_OWNER_TOOL_NAME_COLLISION')
         native_tools+=_current.tools()
-    req=dict(payload)
+    # The pool's cache/key preparation must see the exact evidence-augmented
+    # context that the model POST will receive. Keep the caller/S03 payload
+    # untouched; otherwise a cache decision can be made for a different turn.
+    req=dict(payload,messages=messages)
     req.pop('_agent_final',None)
     req.update(tools=native_tools,tool_choice='auto',stream=True,cache_prompt=True)
     # Native Qwen3.5 fixture verified this mode: visible tokens start directly.
