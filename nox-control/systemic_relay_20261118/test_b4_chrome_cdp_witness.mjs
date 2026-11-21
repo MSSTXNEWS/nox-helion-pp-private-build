@@ -1323,3 +1323,76 @@ test('second post-DONE error plus failed or invalid network close never certifie
     run(false,[Buffer.from(invalidSecond)],null,null,{omitSecondClose:true}),
     /CDP_TIMEOUT/);
 });
+
+test('late second response-body ACK cannot revive failed or reversed network-close SSE proof',async()=>{
+  const baseline=await run();
+  assert.equal(baseline.cdp_consistent,true);
+  assert.equal(baseline.ttft_sse_verified,true);
+  const first=baseline.turns[0];
+  const firstKeys=['cdp_request_id','request_sha256','cdp_decoded_body_sha256',
+    'cdp_streamed_body_sha256','visible_text_sha256','ttft_ms','sse_done_ms',
+    'stream_timing_complete'];
+  const assertFirst=(observed,label)=>{
+    for(const key of firstKeys)
+      assert.deepEqual(observed.turns[0][key],first[key],label+': first '+key);
+  };
+  // A legitimate second Network.loadingFinished + immediate ACK is the
+  // positive control. Its decoded-body witness MUST remain verifiable.
+  const healthy=await run(false,null,null,null,{responseBodyAckTimeoutMs:40,quiescenceMs:10});
+  assert.equal(healthy.cdp_consistent,true);
+  assert.equal(healthy.ttft_sse_verified,true);
+  assertFirst(healthy,'healthy');
+  assert.equal(healthy.turns[1].cdp_decoded_body_matches_stream,true);
+
+  // In all six crossed cases, a late rejected or resolved ACK is observer
+  // metadata, never a repair for failed/reversed second network finality.
+  // A hung ACK must also fail boundedly without reviving any digest.
+  for(const [closeLabel,closeFlags] of [
+    ['second loadingFailed',{loadingFailed:true}],
+    ['second close before data',{closeTimestamp:101.009}]
+  ]){
+    for(const ackMode of ['late-resolve','late-reject','hang']){
+      const label=closeLabel+' / '+ackMode, settled=[];
+      const flags={...closeFlags,responseBodyAckTimeoutMs:40,quiescenceMs:10,
+        responseBodySettled:(id,kind)=>settled.push([id,kind]),
+        ...(ackMode==='hang'?{responseBodyHang:['2']}:
+          {responseBodyDelay:{'2':200},
+           ...(ackMode==='late-reject'?{responseBodyRejectAfterDelay:['2']}: {})})};
+      const observed=await run(false,null,null,null,flags);
+      const sealed=JSON.stringify(observed);
+      assert.equal(observed.cdp_consistent,false,label);
+      assert.equal(observed.ttft_sse_verified,false,label);
+      assertFirst(observed,label);
+      assert.deepEqual(observed.turns.map(t=>t.cdp_request_id),['1','2'],label);
+      assert.equal(observed.turns[1].request_sha256,baseline.turns[1].request_sha256,label);
+      assert.equal(observed.turns[1].cdp_streamed_body_sha256,
+        baseline.turns[1].cdp_streamed_body_sha256,label);
+      assert.equal(observed.turns[1].cdp_decoded_body_sha256,null,label);
+      assert.equal(observed.turns[1].cdp_decoded_body_matches_stream,false,label);
+      assert.equal(observed.turns[1].visible_text_sha256,null,label);
+      assert.equal(observed.turns[1].ttft_ms,null,label);
+      assert.equal(observed.turns[1].sse_done_ms,null,label);
+      assert.equal(observed.turns[1].sse_done_to_loading_finished_ms,null,label);
+      assert.equal(observed.turns[1].cdp_response_body_ack_latency_ms,null,label);
+      assert.equal(observed.turns[1].stream_timing_complete,false,label);
+      if(ackMode!=='hang'){
+        // The body lookup completes AFTER capture's timeout and final
+        // snapshot, so no unsealed mutable state can leak into the result.
+        await new Promise(resolve=>setTimeout(resolve,215));
+        assert.deepEqual(settled,[['1','resolved'],['2',ackMode==='late-reject'?'rejected':'resolved']],label);
+      }
+      assert.equal(JSON.stringify(observed),sealed,label+' late ACK mutated sealed receipt');
+      assert.doesNotMatch(sealed,/secret|Hello|data:/,label);
+    }
+  }
+  // A correctly closed second stream with a late ACK is also unverified;
+  // the same observer cannot recover PASS by ignoring the ACK guard.
+  const lateControl=await run(false,null,null,null,{
+    responseBodyDelay:{'2':200},responseBodyAckTimeoutMs:40,quiescenceMs:10
+  });
+  assert.equal(lateControl.cdp_consistent,false);
+  assert.equal(lateControl.ttft_sse_verified,false);
+  assertFirst(lateControl,'valid close, late body ACK');
+  assert.equal(lateControl.turns[1].cdp_decoded_body_sha256,null);
+  assert.equal(lateControl.turns[1].ttft_ms,null);
+});
