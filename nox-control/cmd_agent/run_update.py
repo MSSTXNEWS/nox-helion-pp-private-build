@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
-REMOTE = 'curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c65/hourly.sh -o /tmp/c65.sh && bash /tmp/c65.sh 2>&1 | tail -70'
+REMOTE = 'curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-deploy-script/nox-control/cmd_agent/deploy_web.sh -o /tmp/dw.sh && bash /tmp/dw.sh be42e343d5e6780dbd256dee49e7fce0413f3c696e52f4d083364b37465bb1aa https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/8601c3ff196e7488e0da162a5787db36ac24a0c0/nox-web.part00 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/8601c3ff196e7488e0da162a5787db36ac24a0c0/nox-web.part01 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/8601c3ff196e7488e0da162a5787db36ac24a0c0/nox-web.part02 2>&1 | tail -12'
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
