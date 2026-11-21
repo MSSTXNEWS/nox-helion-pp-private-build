@@ -1951,5 +1951,54 @@ class ControllerRestorationReceiptFence(unittest.TestCase):
         self.assertTrue(state["success"])
         self.assertEqual(commands, [])
 
+
+class ChatHealthReadbackSchema(unittest.TestCase):
+    def test_native_chat_health_shape_fails_closed_without_changing_healthy_200(self):
+        """Execute the actual isolated admission; never call real GPU or proxy."""
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "train_cpu_max.env").write_text(
+                "TRAIN_CPU_MAX=64GiB\n", encoding="utf-8")
+            verify = load_pinned_verifier(root)["resource_admission"]
+            sources = {
+                "/sys/fs/cgroup/cpu.max": "400000 100000",
+                "/sys/fs/cgroup/memory.max": "194065203200",
+                "/sys/fs/cgroup/memory.current": "188662734848",
+            }
+            state = [{"8080": 200}]
+
+            def fake_read_text(path, *args, **kwargs):
+                return sources[str(path)]
+
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "STOPPED"},
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 30000}]},
+                resource_budget=lambda *args: {"train_cpu_gib": 64},
+                health=lambda: state[0],
+            )
+            with (mock.patch.object(Path, "read_text", autospec=True,
+                                    side_effect=fake_read_text),
+                  mock.patch("os.sched_getaffinity", return_value={0, 1, 2, 3})):
+                self.assertEqual(
+                    verify(helper)["budget"]["configured_train_cpu_gib"], 64)
+                for invalid in (
+                    None, [], {}, "healthy", 200,
+                    {"8080": True}, {"8080": 200.0}, {"8080": "200"},
+                    {"8080": None}, {"8080": []},
+                    {"8080": {"status": 200}}, {"8080": float("nan")},
+                ):
+                    with self.subTest(health=repr(invalid)):
+                        state[0] = invalid
+                        with self.assertRaisesRegex(
+                                RuntimeError, "HOLD_CHAT_HEALTH_READBACK"):
+                            verify(helper)
+                state[0] = {"8080": 503}
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_CHAT_HEALTH_BEFORE_TRAINING"):
+                    verify(helper)
+                state[0] = {"8080": 200}
+                self.assertEqual(verify(helper)["gpu1"]["index"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

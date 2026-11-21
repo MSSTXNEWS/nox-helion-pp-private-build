@@ -881,7 +881,13 @@ def resource_admission(helper):
     budget['configured_train_cpu_gib'] = configured_gib
     # Owner readback 2026-11-19: existing nox-proxy listens on 8080, not 8081.
     # Fail closed on the serving route's actual /health; never start a new proxy.
-    if helper.health().get('8080') != 200:
+    health_snapshot = helper.health()
+    # A malformed native proxy reply is not proof of a healthy served chat.
+    # In Python, 200.0 == 200: use strict integer shape before the HTTP gate.
+    if (type(health_snapshot) is not dict
+            or type(health_snapshot.get('8080')) is not int):
+        raise RuntimeError('HOLD_CHAT_HEALTH_READBACK')
+    if health_snapshot['8080'] != 200:
         raise RuntimeError('HOLD_CHAT_HEALTH_BEFORE_TRAINING')
     return {'gpu1': gpu1, 'budget': budget}
 
