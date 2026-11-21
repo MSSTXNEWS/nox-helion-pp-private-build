@@ -15,7 +15,8 @@
   }
   function hold(code){ throw new BindingHold(code); }
   function bind({container,transport,host,bridge,ackGate,beforeCommit,
-    timeoutMs,canonicalFreshnessMs}={}){
+    timeoutMs,canonicalFreshnessMs,reconnectReadTimeoutMs,
+    uiProjectionTimeoutMs,ackSendTimeoutMs,canonicalAckTimeoutMs}={}){
     // A UI completion is never a server ACK. Fail closed instead of silently
     // using createClient's deliberately opt-in, local-only ACK fallback.
     if(!ackGate || typeof ackGate.reserve!=='function' ||
@@ -38,6 +39,17 @@
     if(timeoutMs!==undefined) config.timeoutMs=timeoutMs;
     if(canonicalFreshnessMs!==undefined)
       config.canonicalFreshnessMs=canonicalFreshnessMs;
+    // Pass native caller deadlines to the one SSE client enforcing STOP,
+    // reconnect, projection and ACK. Undefined retains the client's defaults.
+    // createClient validates ranges before any network or DOM side effect.
+    if(reconnectReadTimeoutMs!==undefined)
+      config.reconnectReadTimeoutMs=reconnectReadTimeoutMs;
+    if(uiProjectionTimeoutMs!==undefined)
+      config.uiProjectionTimeoutMs=uiProjectionTimeoutMs;
+    if(ackSendTimeoutMs!==undefined)
+      config.ackSendTimeoutMs=ackSendTimeoutMs;
+    if(canonicalAckTimeoutMs!==undefined)
+      config.canonicalAckTimeoutMs=canonicalAckTimeoutMs;
     const client=stream.createClient(config);
     // No direct access to UI terminal promotion or transport. All durable
     // terminal projection goes via authenticated readback in reconnect().
