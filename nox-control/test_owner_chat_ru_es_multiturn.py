@@ -2260,5 +2260,62 @@ async function check(chunks, status=200) {
 
 
 
+    def test_ru_es_reload_css_clip_and_mask_painted_text_in_chromium(self):
+        """Paint-obscured RU/ES history is not visually accepted as readback.
+
+        Browser-only fixture: no live S03, model or serving request.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'paint-row-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda request: posts.append(request.url)
+                        if request.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items){
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body';
+                        body.textContent=row.content;
+                        bubble.append(body);root.append(bubble);
+                    }
+                }""", transcript)
+                check = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(check(), True)
+                # Neither of these alters DOM text, row count or layout box.
+                bubble = page.locator('#messages .v24-msg').nth(1)
+                bubble.evaluate("(n)=>n.style.clipPath='inset(100%)'")
+                self.assertIs(check(), False, 'clipped bubble cannot be accepted')
+                bubble.evaluate("(n)=>n.style.clipPath=''")
+                self.assertIs(check(), True)
+                body = page.locator('#messages .v24-msg .body').nth(2)
+                body.evaluate(
+                    "(n)=>n.style.maskImage='linear-gradient(transparent,transparent)'")
+                self.assertIs(check(), False, 'CSS mask erases painted words')
+                body.evaluate("(n)=>n.style.maskImage=''")
+                self.assertIs(check(), True)
+                mount = page.locator('#messages')
+                mount.evaluate("(n)=>n.style.clipPath='inset(100%)'")
+                self.assertIs(check(), False, 'clipped ancestor cannot pass')
+                mount.evaluate("(n)=>n.style.clipPath=''")
+                self.assertIs(check(), True)
+                self.assertEqual(posts, [], 'readback never triggers inference')
+            finally:
+                browser.close()
+
+
 if __name__ == "__main__":
     unittest.main()
