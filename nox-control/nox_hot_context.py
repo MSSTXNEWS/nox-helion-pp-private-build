@@ -42,12 +42,17 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
         _guard(isinstance(current_s03_revision, str) and
                re.fullmatch(r"[0-9a-f]{64}", current_s03_revision) is not None,
                "S03_REVISION")
+    # A scoped S03 snapshot must not be joined to dialogue from a different
+    # PersonaID. Legacy unscoped calls keep their existing three-field format.
+    expected_turn_fields = {"id","role","content","persona_id"} if scoped else {"id","role","content"}
     ids=set()
     for turn in conversation:
-        _guard(isinstance(turn,dict) and set(turn)=={"id","role","content"}
+        _guard(isinstance(turn,dict) and set(turn)==expected_turn_fields
                and turn["role"] in ("user","assistant")
                and _scalar_text(turn["id"]) and turn["id"] and turn["id"] not in ids
-               and _scalar_text(turn["content"]), "TURN")
+               and _scalar_text(turn["content"]), "TURN_SCOPE" if scoped else "TURN")
+        if scoped:
+            _guard(turn["persona_id"] == owner_persona_id, "TURN_PERSONA")
         ids.add(turn["id"])
     s03=[]
     seen_s03_ids=set()
