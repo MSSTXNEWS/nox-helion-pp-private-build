@@ -1,0 +1,18 @@
+name: NOX selftools package import compatibility
+on:
+  pull_request:
+    paths:
+      - 'nox-control/selftools/__init__.py'
+      - 'nox-control/test_selftools_import_6a05.py'
+      - '.github/workflows/nox-selftools-import-compat.yml'
+permissions: {contents: read}
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python3 -B -m unittest discover -s nox-control -p test_selftools_import_6a05.py -v
