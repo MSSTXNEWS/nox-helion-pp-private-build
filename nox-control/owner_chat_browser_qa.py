@@ -990,13 +990,22 @@ RENDERED_FOURROW_JS = r"""expected => {
   // In this literal numeric QA, any such styling makes visual evidence ambiguous.
   // Fail closed: inspect all descendants, not just the message body root.
   const literalVisual=node=>{
+    // CSS clip paths/masks can erase *painted* words even when DOM text,
+    // checkVisibility and layout geometry still match the persisted history.
+    // Check the message subtree AND its ancestors (including #messages).
+    const paintSafe=style=>
+      style.clipPath==='none'&&(!style.maskImage||style.maskImage==='none');
     const elements=[node,...node.querySelectorAll('*')];
     for(const el of elements){
-      if(getComputedStyle(el).textTransform!=='none')return false;
+      const style=getComputedStyle(el);
+      if(style.textTransform!=='none'||!paintSafe(style))return false;
       for(const pseudo of ['::before','::after']){
         const content=getComputedStyle(el,pseudo).content;
         if(!['none','normal','""',"''"].includes(content))return false;
       }
+    }
+    for(let ancestor=node.parentElement;ancestor;ancestor=ancestor.parentElement){
+      if(!paintSafe(getComputedStyle(ancestor)))return false;
     }
     return true;
   };
