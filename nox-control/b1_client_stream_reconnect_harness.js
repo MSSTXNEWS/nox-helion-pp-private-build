@@ -24,7 +24,8 @@
   }
   const key=s=>s.conversation_id+'\u0000'+s.exchange_id;
   function createClient({transport,host,bridge,ui,ackGate=null,timeoutMs=120000,
-    canonicalFreshnessMs=30000,reconnectReadTimeoutMs=30000}={}){
+    canonicalFreshnessMs=30000,reconnectReadTimeoutMs=30000,
+    ackSendTimeoutMs=30000}={}){
     if(!transport||!host||!bridge||!ui||
        typeof transport.post!=='function'||
        typeof transport.readback!=='function'||
@@ -43,7 +44,9 @@
        !Number.isSafeInteger(canonicalFreshnessMs)||
        canonicalFreshnessMs<1000||canonicalFreshnessMs>60000||
        !Number.isSafeInteger(reconnectReadTimeoutMs)||
-       reconnectReadTimeoutMs<1||reconnectReadTimeoutMs>600000)
+       reconnectReadTimeoutMs<1||reconnectReadTimeoutMs>600000||
+       !Number.isSafeInteger(ackSendTimeoutMs)||
+       ackSendTimeoutMs<1||ackSendTimeoutMs>600000)
       hold('HOLD_STREAM_HOST_CONTRACT');
     const started=new Set(),active=new Map(),reconnecting=new Map();
     async function begin(raw){
@@ -220,12 +223,12 @@
     // forever. Late resolutions have no continuation to UI/ACK after timeout.
     // Both supplied functions MUST be side-effect free: never put model POST,
     // DOM projection or ACK inside either untrusted callback.
-    function boundedRead(thunk,code){
+    function boundedRead(thunk,code,deadlineMs=reconnectReadTimeoutMs){
       let timer;
       return Promise.race([
         Promise.resolve().then(thunk),
         new Promise((_,reject)=>{
-          timer=setTimeout(()=>reject(new HoldStream(code)),reconnectReadTimeoutMs);
+          timer=setTimeout(()=>reject(new HoldStream(code)),deadlineMs);
         })
       ]).finally(()=>clearTimeout(timer));
     }
@@ -331,12 +334,21 @@
         }
       }
       try{
-        const acked=await transport.ack(s,witness.ack_cursor);
+        // ACK may be accepted by the server even if its Promise never
+        // settles. Bound this wait, but DO NOT cancel/retry a potentially
+        // committed ACK: ackGate remains durably SENDING. Subsequent
+        // reconnect uses canonical GET-only verification of that attempt.
+        const acked=await boundedRead(
+          ()=>transport.ack(s,witness.ack_cursor),
+          'HOLD_STREAM_ACK_SEND_TIMEOUT',ackSendTimeoutMs);
         if(acked===false) hold('HOLD_STREAM_ACK_UNCONFIRMED');
         // Leave IndexedDB SENDING until a signed canonical GET proves ACKED.
         // A local confirm() would create ACKED without a server proof digest
         // and permanently block requireCanonicalAck() as unverified.
-      }catch(_){hold('HOLD_STREAM_ACK_UNCONFIRMED');}
+      }catch(err){
+        if(err&&err.code==='HOLD_STREAM_ACK_SEND_TIMEOUT') throw err;
+        hold('HOLD_STREAM_ACK_UNCONFIRMED');
+      }
       return ackGate?canonicalCompletion():witness;
     }
     function reconnect(raw){
