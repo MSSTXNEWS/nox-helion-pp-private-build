@@ -901,6 +901,15 @@ OBSERVER_JS = r"""
 })();
 """
 
+ACTIVE_QA_DIALOG_JS = r"""title => {
+ // Source-only UI selection witness; never return a title, ID or private text.
+ const buttons=[...document.querySelectorAll('#nativeChats button[role="listitem"]')];
+ const selected=buttons.filter(button=>button.getAttribute('aria-current')==='true');
+ return selected.length===1 &&
+   selected[0].querySelector('.t')?.textContent===title &&
+   !!document.getElementById('messages');
+}"""
+
 SNAPSHOT_JS = r"""async () => {
  const q=window.__NOX_BROWSER_QA;if(!q)return null;
  // A per-browser ephemeral secret protects the low-entropy numeric answer
@@ -1437,6 +1446,13 @@ async def browser_run(report, directory, available):
                         owner_session_pin):
                     raise RuntimeError('HOLD_MULTITURN_OWNER_SESSION_CHANGED')
                 report['multiturn_owner_session_continuity_verified']=True
+                # A valid history GET does not prove the browser is still
+                # displaying the same synthetic dialog selected before turn 1.
+                # Never admit the Spanish POST into a changed UI selection.
+                if (urllib.parse.urlsplit(page.url).path!=PAGE
+                        or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
+                    raise RuntimeError('HOLD_MULTITURN_ACTIVE_DIALOG_CHANGED_BEFORE_SECOND_POST')
+                report['multiturn_presecond_active_dialog_verified']=True
                 second_permitted=True
                 if stop_present():
                     raise RuntimeError('HOLD_OWNER_STOP')
@@ -1588,6 +1604,13 @@ async def browser_run(report, directory, available):
                         quiet_snapshot, postread_snapshot, stream_admitted, postread_native_equal):
                     raise RuntimeError('HOLD_MULTITURN_POSTREAD_STREAM_CHANGED')
                 report['multiturn_postread_stream_verified']=True
+                # Re-pin live UI dialog selection after the slow four-row
+                # history read, owner-session check and final stream snapshot.
+                # Do not confuse a valid scoped API read with the shown chat.
+                if (urllib.parse.urlsplit(page.url).path!=PAGE
+                        or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
+                    raise RuntimeError('HOLD_MULTITURN_ACTIVE_DIALOG_CHANGED_BEFORE_ACCEPTANCE')
+                report['multiturn_preaccept_active_dialog_verified']=True
                 report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:
                     raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
