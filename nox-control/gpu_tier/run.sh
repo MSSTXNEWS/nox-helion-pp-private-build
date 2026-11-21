@@ -123,5 +123,10 @@ P
   tail -n 2 /root/nox/logs/glm_server.log | cut -c1-200; nvidia-smi --query-gpu=memory.used --format=csv,noheader; free -g | sed -n 2p
   if [ "$CMD" = glmbench ] && curl -s -m3 localhost:8081/health | grep -q ok; then python3 /root/nox/gpu_tier/bench_glm.py 2>&1 | tail -5; fi
   ;;
+glmlog)
+  L=/root/nox/logs/glm_server.log
+  grep -E "n_layer|n_expert|n_embd |n_ff|n_head|file size|model params|n_ctx_train|arch |expert_used|override|nextn|dsa|indexer" $L | cut -c1-170 | head -24
+  grep -c "buffer type overrides\|overriding" $L; grep -E "assigned|CPU_Mapped|CUDA0 model buffer|offloading" $L | cut -c1-170 | head -8
+  ;;
 *) echo unknown;;
 esac
