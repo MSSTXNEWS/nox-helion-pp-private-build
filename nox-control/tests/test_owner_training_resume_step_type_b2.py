@@ -484,6 +484,58 @@ class CheckpointStepProvenance(unittest.TestCase):
         self.assertIs(degraded["result"]["chat_health_regression"], True)
 
 
+    def test_resource_admission_fails_closed_on_gpu_census_and_supervisor_shape(self):
+        # Exact source function; all probes are synthetic, never a live GPU.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "train_cpu_max.env").write_text(
+                "TRAIN_CPU_MAX=64GiB\n", encoding="utf-8")
+            admit = load_pinned_verifier(root)["resource_admission"]
+            inputs = {
+                "/sys/fs/cgroup/cpu.max": "400000 100000",
+                "/sys/fs/cgroup/memory.max": "194065203200",
+                "/sys/fs/cgroup/memory.current": "188662734848",
+            }
+            def fake_read_text(path, *args, **kwargs):
+                return inputs[str(path)]
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "STOPPED"},
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 30000}]},
+                resource_budget=lambda *args: {"train_cpu_gib": 64},
+                health=lambda: {"8080": 200},
+            )
+            with (mock.patch.object(Path, "read_text", autospec=True,
+                                    side_effect=fake_read_text),
+                  mock.patch("os.sched_getaffinity", return_value={0, 1, 2, 3})):
+                self.assertEqual(admit(helper)["gpu1"]["free_mib"], 30000)
+                for malformed in (None, [], {}, {"state": None},
+                                  {"state": True}, {"state": ["STOPPED"]}):
+                    with self.subTest(supervisor=malformed):
+                        helper.service_state = lambda value=malformed: value
+                        with self.assertRaisesRegex(
+                                RuntimeError, "HOLD_TRAINER_STATE_READBACK"):
+                            admit(helper)
+                helper.service_state = lambda: {"state": "STOPPED"}
+                valid = {"index": 1, "free_mib": 30000}
+                for malformed in (
+                    None, [], {}, {"gpus": None}, {"gpus": {}},
+                    {"gpus": [None]}, {"gpus": []},
+                    {"gpus": [{"index": True, "free_mib": 30000}]},
+                    {"gpus": [{"index": 1, "free_mib": True}]},
+                    {"gpus": [{"index": 1, "free_mib": "30000"}]},
+                    {"gpus": [{"index": 1, "free_mib": -1}]},
+                    {"gpus": [{"index": 0, "free_mib": 30000}]},
+                    {"gpus": [valid, valid]},
+                ):
+                    with self.subTest(gpu=malformed):
+                        helper.gpu = lambda value=malformed: value
+                        with self.assertRaisesRegex(
+                                RuntimeError, "HOLD_GPU1_CENSUS_READBACK"):
+                            admit(helper)
+                helper.gpu = lambda: {"gpus": [{"index": 1, "free_mib": 26000}]}
+                with self.assertRaisesRegex(RuntimeError, "HOLD_GPU1_HEADROOM"):
+                    admit(helper)
+
     def test_resource_admission_requires_actual_proxy_8080_not_legacy_8081(self):
         # Owner-confirmed 2026-11-19: proxy /health=200 on 8080; 8081 closed.
         # This source-only test never contacts the host or starts training.
