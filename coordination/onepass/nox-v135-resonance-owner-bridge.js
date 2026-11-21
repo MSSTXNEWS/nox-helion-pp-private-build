@@ -253,8 +253,7 @@
        }
        return;
      }
-      let lastBoundary=0;
-     for(const part of segmenter.segment(trailing))lastBoundary=part.index;
+     const lastBoundary=segmenter.segment(trailing).containing(trailing.length-1)?.index||0;
      if(lastBoundary>0){
       const safe=trailing.slice(0,lastBoundary);
       trailing=trailing.slice(lastBoundary);
