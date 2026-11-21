@@ -25,6 +25,27 @@ class SyntheticBoundedReader:
 
 
 class ProbeTests(unittest.TestCase):
+    def test_stream_textual_http_failure_status_fences(self):
+        """Fail-closed on 4xx/5xx status lines even with later saved DONE."""
+        failures = ('HTTP/1.1 503 Service Unavailable',
+                    'http/2 502 bad gateway', 'HTTP 500 Internal Server Error',
+                    '503 Service Unavailable', '429 Too Many Requests',
+                    'HTTP/3 599 upstream closed', 'HTTP/1.0 404 Not Found')
+        for value in failures:
+            with self.subTest(failure=value):
+                self.assertTrue(probe.stream_status_is_failure(value))
+                self.assertTrue(probe.stream_frame_reports_failure(
+                    {'type': 'status', 'status': value}))
+                self.assertTrue(probe.stream_frame_reports_failure(
+                    {'type': 'done', 'status': {'http_status': value},
+                     'saved': True, 's03_integrated': True}))
+        for value in ('200 OK', 'HTTP/1.1 200 OK', 'running', 'done',
+                      '500 tokens', '503 apples', 'HTTP/2 204 No Content'):
+            with self.subTest(valid=value):
+                self.assertFalse(probe.stream_status_is_failure(value))
+                self.assertFalse(probe.stream_frame_reports_failure(
+                    {'type': 'status', 'status': value}))
+
     def test_postthird_owner_chat_binding_rechecked_before_complete(self):
         """An earlier owner bind cannot certify the route after all three turns."""
         with patch.object(probe, 'owner_readback_json',
