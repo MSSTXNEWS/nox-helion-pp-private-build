@@ -1891,5 +1891,85 @@ async function check(chunks, status=200) {
 
 
 
+    def test_ru_es_postrender_second_history_readback_fails_closed(self):
+        """A late owner-history edit during DOM render cannot certify RU/ES.
+
+        Synthetic API readback only, not a canonical S03 writer/read receipt.
+        """
+        from types import SimpleNamespace
+        from owner_chat_browser_qa import postrender_owner_history_recheck
+
+        transcript = [
+            dict(row, message_id=f'postrender-history-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        initial = {'dialog_id': DIALOG, 'messages': transcript}
+        expected_sha = multiturn_transcript_sha256(transcript)
+        first_ids = tuple(row['message_id'] for row in transcript[:2])
+
+        async def exercise(mode):
+            # One independent read-only GET after the visible four-row witness.
+            # The server may mutate IDs/text during that browser render wait.
+            payload = json.loads(json.dumps(initial, ensure_ascii=False))
+            if mode == 'changed-text':
+                payload['messages'][3]['content'] = 'different'
+            elif mode == 'replaced-id':
+                payload['messages'][1]['message_id'] = 'different-id'
+            elif mode == 'reordered':
+                payload['messages'][0], payload['messages'][1] = (
+                    payload['messages'][1], payload['messages'][0])
+            elif mode == 'foreign-dialog':
+                payload['dialog_id'] = 'another-owner-dialog'
+            elif mode == 'foreign-row':
+                payload['messages'][2]['dialog_id'] = 'another-owner-dialog'
+
+            async def get(url, **kwargs):
+                self.assertEqual(
+                    url, 'http://127.0.0.1:8765/api/ui/memory/dialogs/history'
+                         '?dialog_id=synthetic-owner-dialog&limit=6')
+                self.assertEqual(kwargs, {'max_redirects': 0, 'timeout': 6000})
+                if mode == 'transport':
+                    raise OSError('synthetic readback offline')
+                raw = b'not-json' if mode == 'invalid-json' else json.dumps(
+                    payload, ensure_ascii=False).encode('utf-8')
+                return SimpleNamespace(
+                    status=401 if mode == 'expired' else 200,
+                    body=AsyncMock(return_value=raw))
+            ctx = SimpleNamespace(request=SimpleNamespace(
+                get=AsyncMock(side_effect=get)))
+            passed = await postrender_owner_history_recheck(
+                ctx, 'http://127.0.0.1:8765', initial,
+                DIALOG, expected_sha, first_ids)
+            ctx.request.get.assert_awaited_once()
+            return passed
+
+        for mode, expected in (
+                ('stable', True), ('changed-text', False),
+                ('replaced-id', False), ('reordered', False),
+                ('foreign-dialog', False), ('foreign-row', False),
+                ('expired', False), ('transport', False),
+                ('invalid-json', False)):
+            with self.subTest(mode=mode):
+                self.assertIs(asyncio.run(exercise(mode)), expected)
+
+        caller = inspect.getsource(browser_run)
+        rendered = caller.index(
+            "report['multiturn_reload_rendered_fourrow_verified']=True")
+        latest_history = caller.index('postrender_owner_history_recheck(', rendered)
+        final_session_dom = caller.index(
+            'postrender_owner_session_dialog_fence(', latest_history)
+        accepted = caller.index(
+            "report['multiturn_browser_acceptance_verified']=True",
+            final_session_dom)
+        self.assertLess(rendered, latest_history)
+        self.assertLess(latest_history, final_session_dom)
+        self.assertLess(final_session_dom, accepted)
+        self.assertIn('HOLD_MULTITURN_RELOAD_POSTRENDER_HISTORY_DRIFT',
+                      caller[rendered:accepted])
+        self.assertNotIn('context.request.post(', caller[rendered:accepted])
+
+
+
 if __name__ == "__main__":
     unittest.main()
