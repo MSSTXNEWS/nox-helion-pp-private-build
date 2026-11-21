@@ -9,6 +9,9 @@
   const enc=new TextEncoder();
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
+  // Last native/S03-backed exchange per dialog in this browser document.
+  // A later turn must not silently lose the preceding verified pair.
+  const verifiedDialogTail=new Map();
   function livePieces(text) {
     const glyphs=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
       ? Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text),part=>part.segment)
@@ -83,6 +86,20 @@
        pair[0].content!==prompt||pair[1].content!==answer||
        pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
       throw Error('HOLD_DIALOG_HISTORY_READBACK');
+    const previous=verifiedDialogTail.get(id);
+    if(previous){
+      if(previous.exchange_id===exchangeId)
+        throw Error('HOLD_DIALOG_EXCHANGE_REPLAY');
+      const prior=data.messages.filter(m=>m&&m.exchange_id===previous.exchange_id);
+      if(prior.length!==2||prior[0].role!=='user'||prior[1].role!=='assistant'||
+         prior[0].content!==previous.prompt||prior[1].content!==previous.answer)
+        throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
+    }
+    // Do not commit a browser-side success marker before the native GET
+    // readback of both the new exchange and its preceding saved pair.
+    if(!verifiedDialogTail.has(id)&&verifiedDialogTail.size>=128)
+      verifiedDialogTail.delete(verifiedDialogTail.keys().next().value);
+    verifiedDialogTail.set(id,{exchange_id:exchangeId,prompt,answer});
   }
   function accepted(done,id) {
     return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
