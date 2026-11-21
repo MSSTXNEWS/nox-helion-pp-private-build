@@ -177,7 +177,24 @@ class HunterURLSafetyTests(unittest.TestCase):
         self.assertEqual(len({item["url"] for item in got}), 5)
         self.assertTrue(all(item["published"] == "" for item in got))
 
-    def test_crossref_nontext_abstract_is_not_fabricated(self):\n        # Malformed abstract metadata must not become a Python repr presented\n        # as an authentic research abstract. Healthy HTML text still survives.\n        rows = [\n            {"DOI": "10.1234/object-abstract", "title": ["Object"],\n             "abstract": {"fabricated": "claim"}},\n            {"DOI": "10.1234/list-abstract", "title": ["List"],\n             "abstract": ["fabricated", "claim"]},\n            {"DOI": "10.1234/real-abstract", "title": ["Real"],\n             "abstract": "<p>Real peer-reviewed abstract</p>"},\n        ]\n        got = hunter._crossref_items(json.dumps({"message": {"items": rows}}).encode("utf-8"))\n        self.assertEqual([item["content"] for item in got],\n                         ["", "", "Real peer-reviewed abstract"])\n        self.assertEqual(len(got), 3)\n        self.assertTrue(all(item["url"].startswith("https://doi.org/") for item in got))\n\n    def test_crossref_malformed_date_parts_preserve_healthy_siblings(self):
+    def test_crossref_nontext_abstract_is_not_fabricated(self):
+        # Malformed abstract metadata must not become a Python repr presented
+        # as an authentic research abstract. Healthy HTML text still survives.
+        rows = [
+            {"DOI": "10.1234/object-abstract", "title": ["Object"],
+             "abstract": {"fabricated": "claim"}},
+            {"DOI": "10.1234/list-abstract", "title": ["List"],
+             "abstract": ["fabricated", "claim"]},
+            {"DOI": "10.1234/real-abstract", "title": ["Real"],
+             "abstract": "<p>Real peer-reviewed abstract</p>"},
+        ]
+        got = hunter._crossref_items(json.dumps({"message": {"items": rows}}).encode("utf-8"))
+        self.assertEqual([item["content"] for item in got],
+                         ["", "", "Real peer-reviewed abstract"])
+        self.assertEqual(len(got), 3)
+        self.assertTrue(all(item["url"].startswith("https://doi.org/") for item in got))
+
+    def test_crossref_malformed_date_parts_preserve_healthy_siblings(self):
         # Bad Crossref dates must not roll back the entire read-only feed.
         # A string cannot be converted into a fake character-by-character date.
         source = hunter._validate_source({
