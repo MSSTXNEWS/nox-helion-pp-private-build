@@ -22,7 +22,8 @@ jobs:
           set -euo pipefail
           python3 -m pip install -q "httpx==0.28.1" "fastapi==0.128.2"
           python3 -m py_compile nox-control/owner_chat_stream.py nox-control/test_owner_chat_stream.py
-          PYTHONPATH=nox-control python3 -m unittest -v test_owner_chat_stream.StreamTests.test_unconfirmed_direct_tool_or_media_never_certifies_s03 \
+          PYTHONPATH=nox-control python3 -m unittest -v test_owner_chat_stream.StreamTests.test_total_answer_limit_across_model_and_tool_cycles \
+test_owner_chat_stream.StreamTests.test_unconfirmed_direct_tool_or_media_never_certifies_s03 \
             test_owner_chat_stream.StreamTests.test_nonstream_reports_exact_hold_without_certifying_s03 \
             test_owner_chat_stream.StreamTests.test_pool_preserves_full_context_before_inference \
             test_owner_chat_stream.StreamTests.test_pool_cannot_rewrite_or_remove_native_tool_schemas \
