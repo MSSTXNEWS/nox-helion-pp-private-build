@@ -493,6 +493,28 @@ def empty_dialog_history_valid(history, dialog_id):
             and history.get('messages') == [])
 
 
+def consistent_explicit_row_session_ids(rows):
+    """A browser history proof cannot combine turns from different sessions.
+
+    Legacy history rows with no session_id remain compatible. If any row
+    supplies that metadata, ALL rows must declare the same exact nonblank
+    session ID; mismatches or partial annotations fail closed. This does NOT
+    replace the authenticated owner-cookie pin or canonical S03 verifier.
+    """
+    if (not isinstance(rows, list) or not rows
+            or not all(isinstance(row, dict) for row in rows)):
+        return False
+    supplied = ['session_id' in row for row in rows]
+    if not any(supplied):
+        return True
+    if not all(supplied):
+        return False
+    values = [row['session_id'] for row in rows]
+    return (all(isinstance(value, str) and bool(value.strip())
+                and value == value.strip() for value in values)
+            and len(set(values)) == 1)
+
+
 def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
     """Require the first persisted turn to belong to the owner QA dialog.
 
@@ -509,6 +531,7 @@ def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
             or not all(isinstance(row, dict) for row in rows)
             or any('dialog_id' in row and row['dialog_id'] != dialog_id for row in rows)
             or not distinct_explicit_message_ids(rows)
+            or not consistent_explicit_row_session_ids(rows)
             or not isinstance(first_answer, str) or not first_answer.strip()):
         return False
     return (rows[0].get('role') == 'user'
@@ -522,7 +545,8 @@ def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, sec
     """Require four exact role/text turns; reject cross-dialog row metadata."""
     if (not isinstance(rows, list) or len(rows) != 4
             or not all(isinstance(row, dict) for row in rows)
-            or not distinct_explicit_message_ids(rows)):
+            or not distinct_explicit_message_ids(rows)
+            or not consistent_explicit_row_session_ids(rows)):
         return False
     # Legacy rows may omit per-message dialog_id. If supplied, a wrong/null
     # identifier must never certify continuity of the current browser session.
