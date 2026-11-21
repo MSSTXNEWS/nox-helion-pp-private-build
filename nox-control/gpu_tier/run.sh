@@ -90,5 +90,38 @@ glmstate)
   pgrep -af "curl|redo|llama" | cut -c1-130 | head -5
   grep -E " E |error|failed|alloc|CUDA|out of memory" /root/nox/logs/glm_server.log | cut -c1-220 | tail -8
   nvidia-smi --query-gpu=memory.used --format=csv,noheader;;
+glmstart|glmbench)
+  mkdir -p /root/nox/gpu_tier; LG=/root/nox/logs
+  cat > /root/nox/gpu_tier/glm_start.sh <<'P'
+#!/bin/bash
+# GLM-5.3 гибрид: внимание+KV+общий эксперт на GPU, маршрутизируемые эксперты в RAM. Только mmap (без --no-mmap/--mlock), KV f16.
+ARGS="$(cat /root/nox/gpu_tier/glm.args 2>/dev/null)"
+pkill -f "port 8081"; sleep 3
+exec setsid /root/nox/llama.cpp/build/bin/llama-server -m /root/nox/glm53/GLM-5.3-UD-Q4_K_XL-00001-of-00011.gguf --host 127.0.0.1 --port 8081 $ARGS >> /root/nox/logs/glm_server.log 2>&1 < /dev/null
+P
+  chmod +x /root/nox/gpu_tier/glm_start.sh
+  cat > /root/nox/gpu_tier/bench_glm.py <<'P'
+import json,time,urllib.request
+def comp(p,n):
+    b={"prompt":p,"n_predict":n,"cache_prompt":False,"temperature":0,"stream":False}
+    t=time.time();r=json.load(urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:8081/completion",json.dumps(b).encode(),{"Content-Type":"application/json"}),timeout=900))
+    tm=r["timings"];return tm["prompt_n"],tm["prompt_per_second"],tm["predicted_n"],tm["predicted_per_second"],time.time()-t
+long=("Сервер обрабатывает запросы пользователей и пишет журнал. "*70)
+print("warm",comp("Привет",8)[3:])
+print("short prefill_n=%d pp=%.1f t/s | decode n=%d tg=%.2f t/s | %.1fs"%comp("Объясни кратко, что такое RAID.",48))
+print("long  prefill_n=%d pp=%.1f t/s | decode n=%d tg=%.2f t/s | %.1fs"%comp(long+" Кратко:",32))
+P
+  if [ "$CMD" = glmstart ]; then
+    GLM_ARGS="$(gh_raw GLM_ARGS 2>/dev/null)"
+    [ -n "$GLM_ARGS" ] || GLM_ARGS='-c 16384 -ngl 99 -ot exps=CPU -t 24 -tb 24 -fa on --parallel 1 -b 512 -ub 256 --jinja --temp 1.0 --top-p 0.95 --min-p 0.01'
+    echo "$GLM_ARGS" > /root/nox/gpu_tier/glm.args; echo "args: $GLM_ARGS"
+    : > /root/nox/logs/glm_server.log
+    nohup setsid /root/nox/gpu_tier/glm_start.sh > /dev/null 2>&1 < /dev/null &
+    sleep 90
+  fi
+  curl -s -m3 localhost:8081/health; echo; grep -E "offload|CUDA0 .*buffer|KV|failed|error" /root/nox/logs/glm_server.log | cut -c1-200 | tail -8
+  tail -n 2 /root/nox/logs/glm_server.log | cut -c1-200; nvidia-smi --query-gpu=memory.used --format=csv,noheader; free -g | sed -n 2p
+  if [ "$CMD" = glmbench ] && curl -s -m3 localhost:8081/health | grep -q ok; then python3 /root/nox/gpu_tier/bench_glm.py 2>&1 | tail -5; fi
+  ;;
 *) echo unknown;;
 esac
