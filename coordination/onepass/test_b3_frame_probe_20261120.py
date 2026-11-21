@@ -1107,6 +1107,10 @@ class TestProbe(unittest.TestCase):
                                     {type:'delta',text:answer},
                                     done
                                 ];
+                                if(mode==='paddedstart')frames[1].model=' existing-model ';
+                                if(mode==='longstart')frames[1].model='x'.repeat(97);
+                                if(mode==='controlstart')frames[1].model='existing-\\nmodel';
+                                if(mode==='blankstart')frames[1].model='  ';
                                 return new Response(frames.map(JSON.stringify).join('\\n')+'\\n',{
                                     status:200
                                 });
@@ -1133,7 +1137,8 @@ class TestProbe(unittest.TestCase):
                     result = await page.evaluate("""async () => {
                         const rows=[];
                         for(const [i,mode] of
-                            ['mismatch','match','absent','malformed'].entries()){
+                            ['mismatch','match','absent','malformed','paddedstart',
+                             'longstart','controlstart','blankstart'].entries()){
                             const postsBefore=window.__posts;
                             const readsBefore=window.__reads;
                             const id=String.fromCharCode(97+i).repeat(32);
@@ -1157,18 +1162,21 @@ class TestProbe(unittest.TestCase):
                         }
                         return rows;
                     }""")
-                    self.assertEqual(len(result), 4)
+                    self.assertEqual(len(result), 8)
                     for row in result:
                         self.assertEqual(row['posts'], 1)
                         # A terminal HOLD can withhold its last carried grapheme;
                         # only accepted streams promise complete visible text.
                         self.assertTrue(('answer:'+row['mode']).startswith(row['tokens']))
-                        if row['mode'] in ('mismatch', 'malformed'):
+                        if row['mode'] in ('mismatch', 'malformed', 'paddedstart',
+                                           'longstart', 'controlstart', 'blankstart'):
                             self.assertEqual(row['reads'], 0)
                             self.assertEqual(row['done'], [])
                             self.assertEqual(len(row['errors']), 1)
-                            self.assertIn('HOLD_NATIVE_MODEL_RECEIPT_DRIFT',
-                                          row['errors'][0]['error'])
+                            expected = ('HOLD_NATIVE_MODEL_START_LABEL'
+                                        if row['mode'].endswith('start') else
+                                        'HOLD_NATIVE_MODEL_RECEIPT_DRIFT')
+                            self.assertIn(expected, row['errors'][0]['error'])
                         else:
                             self.assertEqual(row['tokens'], 'answer:'+row['mode'])
                             self.assertEqual(row['reads'], 1)
