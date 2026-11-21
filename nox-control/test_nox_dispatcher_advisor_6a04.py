@@ -89,6 +89,20 @@ class GpuSourceEvidenceTests(unittest.TestCase):
                 s[section][field] = 10**500
                 self.assertEqual(codes(s), ["GPU_RESIDUAL_UNVERIFIED"])
 
+    def test_low_utilization_with_invalid_thermal_evidence_is_hold(self):
+        for metric, value in (("temperature_sensor_valid", False),
+                              ("temperature_sensor_valid", None),
+                              ("temperature_c", 70),
+                              ("temperature_c", 99),
+                              ("temperature_c", float("nan")),
+                              ("temperature_c", None)):
+            with self.subTest(metric=metric, value=value):
+                s = snapshot()
+                s["gpu"][metric] = value
+                current = codes(s)
+                self.assertIn("GPU_RESIDUAL_THERMAL_HOLD", current)
+                self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", current)
+
     def test_high_valid_utilization_is_not_admission(self):
         s=snapshot(); s["gpu"]["utilization_pct"]=100
         self.assertEqual(codes(s), ["NO_UNVERIFIED_TUNING"])

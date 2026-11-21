@@ -34,6 +34,61 @@ class Request:
 
 
 class FactReceiptTest(unittest.TestCase):
+    def test_0a03_malformed_chat_never_starts_stream_or_memory(self):
+        # Real FastAPI route callback; all cases return before the model/S03
+        # generator is created. No fake successful stream receipt.
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        cases = (
+            (None, "CHAT_INVALID_BODY"),
+            (["not", "a", "dict"], "CHAT_INVALID_BODY"),
+            ({"messages": ["not-a-message"]}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": [{"role": "user", "content": {"unsafe": True}}]}, "CHAT_INVALID_CONTENT"),
+            ({"options": ["wrong-shape"]}, "CHAT_INVALID_OPTIONS"),
+            ({"options": {"num_predict": "nan"}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"options": {"num_predict": -1}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"messages": ""}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": 0}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": False}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": None}, "CHAT_INVALID_MESSAGES"),
+            ({"options": []}, "CHAT_INVALID_OPTIONS"),
+            ({"options": 0}, "CHAT_INVALID_OPTIONS"),
+            ({"options": False}, "CHAT_INVALID_OPTIONS"),
+            ({"options": None}, "CHAT_INVALID_OPTIONS"),
+            ({"options": {"num_predict": 0}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"options": {"num_predict": False}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"options": {"num_predict": None}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"options": {"num_predict": 1.5}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"request_id": {"id": "foreign"}, "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
+            ({"request_id": None, "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
+            ({"request_id": True, "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
+            ({"request_id": "*", "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
+            ({"messages": [{"role": "assistant", "content": "only response"}]}, "CHAT_MISSING_USER"),
+            ({"messages": [{"role": "user", "content": "   "}]}, "CHAT_MISSING_USER"),
+        )
+        for body, code in cases:
+            with self.subTest(body=body):
+                response = asyncio.run(chat(Request(body)))
+                self.assertEqual(response.status_code, 400)
+                payload = json.loads(response.body)
+                self.assertEqual(payload, {"status": "HOLD", "reason": code})
+
+    def test_missing_legacy_request_id_is_unique_and_stop_addressable(self):
+        # A real chat endpoint first frame, without any model POST or S03 write.
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        async def first_frame():
+            response = await chat(Request({"messages": [{"role": "user", "content": "hello"}],
+                                           "mini": True, "use_memory": False}))
+            frame = json.loads(await response.body_iterator.__anext__())
+            await response.body_iterator.aclose()
+            return frame
+        frames = [asyncio.run(first_frame()) for _ in range(2)]
+        ids = [frame["request_id"] for frame in frames]
+        self.assertEqual(len(set(ids)), 2)
+        for frame in frames:
+            self.assertRegex(frame["request_id"], r"^[0-9a-f]{32}$")
+            self.assertEqual(frame["request_receipt"]["request_id"], frame["request_id"])
+            self.assertEqual(frame["request_receipt"]["status"], "RECEIVED")
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -350,6 +405,57 @@ class FactReceiptTest(unittest.TestCase):
                     self.assertEqual(terminal["memory_history"]["status"], "SAVED")
                     self.assertEqual(mirror_calls, [("Запомни ответ", "Ответ")])
                     self.assertTrue(any("soul_secondary_log_error RuntimeError" in e for e in bridge.errors))
+
+    def test_stop_while_s03_write_returns_preserves_receipt_but_no_soul_mirror(self):
+        """A late STOP must not become GENERATED after asynchronous S03 write."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *ignored): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Сохранённый ответ"}}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        rid = "stop-during-s03-write"
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.NKEEP, bridge.LAST_CHAT = 0, {"t": 0}
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Проверь поздний STOP"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        mirrors = []
+        bridge.SOUL = types.SimpleNamespace(log_turn=lambda *args: mirrors.append(args))
+        memory = types.ModuleType("s03_memory")
+        writes = []
+
+        def persist(*args):
+            writes.append(args)
+            # The real endpoint is asynchronously awaiting to_thread here.
+            W.CANCEL.add(rid)
+
+        memory.persist_turn = persist
+
+        async def scenario():
+            response = await chat(Request({
+                "request_id": rid, "mode": "fast", "use_memory": False,
+                "messages": [{"role": "user", "content": "Проверь поздний STOP"}],
+            }))
+            return [json.loads(row) async for row in response.body_iterator]
+
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.object(W, "W", None), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            frames = asyncio.run(scenario())
+        self.assertEqual(len(writes), 1)
+        self.assertEqual(mirrors, [])
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
+        self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+        self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
 
     def test_stop_scope_and_bad_json_cannot_cancel_all(self):
         """Invalid or non-generation commands cannot trigger an implicit broadcast."""

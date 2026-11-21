@@ -136,6 +136,22 @@ class DriveFirstTests(unittest.TestCase):
         with self.assertRaisesRegex(m.Hold,"MANIFEST_APPROVAL"):
             m.load_manifest(file,sha)
 
+    def test_manifest_rejects_shadowed_approval_and_nonfinite_json(self):
+        # Even an exactly SHA-pinned file cannot contain ambiguous approvals.
+        valid=json.dumps(self.asset, separators=(",", ":"))
+        for original, replacement in (
+            ('"approved":true', '"approved":false,"approved":true'),
+            ('"size":'+str(len(self.data)), '"size":NaN,"size":'+str(len(self.data))),
+            ('"source_url":', '"source_url":"https://invalid.example/x","source_url":'),
+        ):
+            self.assertIn(original, valid)
+            raw=valid.replace(original,replacement,1).encode()
+            file=self.root/"owner-manifest.json"
+            file.write_bytes(raw)
+            file.chmod(0o600)
+            with self.subTest(field=original), self.assertRaisesRegex(m.Hold,"MANIFEST_JSON"):
+                m.load_manifest(file,hashlib.sha256(raw).hexdigest())
+
     def test_url_host_approval_no_redirect_to_private_host(self):
         self.assertTrue(m.https_allowed(self.asset["source_url"]))
         for bad in ("http://huggingface.co/a","https://127.0.0.1/x",
@@ -269,6 +285,25 @@ class DriveFirstTests(unittest.TestCase):
         with self.assertRaisesRegex(m.Hold,"RECEIPT_ALREADY_EXISTS"):
             m.save_receipt(receipt,{"state":"DIFFERENT"})
         self.assertEqual(receipt.read_bytes(),before)
+
+    def test_long_rclone_copy_observes_owner_stop_and_terminates_child(self):
+        # A stalled multi-hour copyto must not mask an emergency OWNER STOP.
+        child = FakeChild()
+        child.returncode = None
+        calls = [0]
+        def owner_stop():
+            calls[0] += 1
+            if calls[0] >= 3:
+                raise m.Hold("HOLD_DRIVE_FIRST_STOP")
+        with patch.object(m.shutil, "which", return_value="/usr/bin/rclone"), \
+             patch.object(m.subprocess, "Popen", return_value=child) as spawned, \
+             patch.object(m.time, "sleep"), \
+             patch.object(m, "stop_clear", side_effect=owner_stop):
+            with self.assertRaisesRegex(m.Hold, "STOP"):
+                m.run_rclone(["copyto", "local.gguf", "noxchunks:STAGING/test.gguf"],
+                             self.conf, timeout=120)
+        spawned.assert_called_once()
+        self.assertEqual(child.returncode, -15)
 
     def test_remote_sha_readback_streams_normal_bytes(self):
         # Drive is never contacted; feed a real Linux pipe to the readback.

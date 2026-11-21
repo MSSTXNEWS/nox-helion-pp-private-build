@@ -80,7 +80,7 @@ def chat_handler(reply, stream_tokens=6):
 
 class TestRegistry(unittest.TestCase):
     def test_thirty_tools(self):
-        self.assertEqual(len(R.TOOLS), 30)
+        self.assertEqual(len(R.TOOLS), 31)
         for t in R.TOOLS.values():
             self.assertIn(t["mode"], ("read", "write", "danger"))
             self.assertTrue(t["doc"])
@@ -114,7 +114,7 @@ class TestRegistry(unittest.TestCase):
         self.assertTrue(any(json.loads(l)["tool"] == "repo_read" for l in lines))
 
     def test_cli_describe(self):
-        self.assertEqual(len(R.describe()), 30)
+        self.assertEqual(len(R.describe()), 31)
 
 
 class TestReadTools(unittest.TestCase):
@@ -506,3 +506,67 @@ class TestWriteTools(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestWarmWeights(unittest.TestCase):
+    """warm_weights против настоящего nox_pc_share (Range-докачка, бэкап-PUT, blocked без канала)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("nox_pc_share", os.path.join(os.path.dirname(os.path.dirname(HERE)), "pc_warm", "nox_pc_share.py"))
+        cls.S = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.S)
+        cls.root = tempfile.mkdtemp(prefix="pcshare_")
+        cls.S.MODELS = os.path.join(cls.root, "MODELS")
+        cls.S.BACKUPS = os.path.join(cls.root, "BACKUPS")
+        os.makedirs(os.path.join(cls.S.MODELS, "llm"))
+        os.makedirs(cls.S.BACKUPS, exist_ok=True)
+        cls.payload = os.urandom(3 * 1024 * 1024 + 17)
+        open(os.path.join(cls.S.MODELS, "llm", "m.gguf"), "wb").write(cls.payload)
+        cls.srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), cls.S.H)
+        threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
+        import warm_weights as W
+        cls.W = W
+        W.BASE = "http://127.0.0.1:%d" % cls.srv.server_address[1]
+        W.WARM = os.path.join(TMP, "warm")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.srv.shutdown()
+
+    def test_status_list_pull_resume_evict(self):
+        r = call("warm_weights", {"action": "status"})
+        self.assertTrue(r["pc_link"])
+        self.assertEqual(call("warm_weights", {"action": "list", "path": "llm"})["entries"][0]["name"], "m.gguf")
+        r = call("warm_weights", {"action": "pull", "path": "llm/m.gguf"})  # dry-run по умолчанию
+        self.assertTrue(r["dry_run"])
+        part = os.path.join(self.W.WARM, "m.gguf")
+        os.makedirs(self.W.WARM, exist_ok=True)
+        open(part, "wb").write(self.payload[:1000000])  # имитация обрыва
+        r = call("warm_weights", {"action": "pull", "path": "llm/m.gguf", "dry_run": False})
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(open(part, "rb").read(), self.payload)
+        r = call("warm_weights", {"action": "evict", "path": "m.gguf", "dry_run": False})
+        self.assertFalse(os.path.exists(part))
+
+    def test_path_traversal_denied(self):
+        r = call("warm_weights", {"action": "list", "path": "../x"})
+        self.assertFalse(r.get("ok", False))
+
+    def test_backup_push_only_backups_dir(self):
+        src = w("bk/test_backup.tar", "backup-data")
+        os.environ["NOX_ALLOW_ROOTS"] += os.pathsep + TMP
+        self.W.BACKUP_ROOTS = (TMP,)
+        r = call("warm_weights", {"action": "backup_push", "path": src, "dry_run": False})
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(open(os.path.join(self.S.BACKUPS, "test_backup.tar")).read(), "backup-data")
+
+    def test_blocked_without_link(self):
+        old = self.W.BASE
+        self.W.BASE = "http://127.0.0.1:1"
+        try:
+            r = call("warm_weights", {"action": "list"})
+            self.assertIn("blocked", r)
+        finally:
+            self.W.BASE = old

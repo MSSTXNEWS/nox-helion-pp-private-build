@@ -112,6 +112,33 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                             self.assertNotIn('_agent_final',payload)
 
 
+    async def test_oversized_s03_history_holds_before_second_decode(self):
+        # A history that cannot possibly fit the full native POST must not
+        # be decoded into another large copy under scarce cgroup memory.
+        for streaming in (True, False):
+            with self.subTest(streaming=streaming):
+                native=self.native()
+                history=[{'role':'system','content':'PersonaID: same'},
+                         {'role':'user','content':'🌍' * 100}]
+                payload={'messages':history}
+                with (patch.object(stream,'MODEL_REQUEST_LIMIT',180),
+                      patch.object(stream.json,'loads',
+                                   side_effect=AssertionError('oversized history decoded')),
+                      patch.object(stream.httpx.AsyncClient,'stream',
+                                   side_effect=AssertionError('unexpected model POST'))):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Remember context',streaming)
+                    if streaming:
+                        wire=''.join([part async for part in response.body_iterator])
+                        self.assertIn('HOLD_MODEL_REQUEST_SIZE',wire)
+                        self.assertNotIn('[DONE]',wire)
+                    else:
+                        self.assertEqual(response.status_code,502)
+                        self.assertIn(b'HOLD_MODEL_REQUEST_SIZE',response.body)
+                self.assertEqual(payload['messages'],history)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+
     async def test_oversized_full_model_post_holds_without_dropping_s03(self):
         # Even valid S03 turns can cumulatively exceed the model request cap.
         # Never silently trim a dialogue or POST before the bound is checked.
@@ -957,6 +984,48 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     self.assertNotIn('_agent_final',payload)
                     self.assertEqual(len(requests),1)
 
+    async def test_pool_dedup_cannot_drop_a_distinct_model_tool_action(self):
+        # Pool optimization may collapse identical requests, but cannot hide
+        # a distinct model action and then present an S03-approved answer.
+        for duplicate in (False,True):
+            with self.subTest(duplicate=duplicate):
+                native=self.native()
+                native['_POOL']=True
+                native['prepare_payload']=lambda request,cache:dict(request)
+                native['try_deterministic']=lambda text:None
+                native['dedup_calls']=lambda calls:calls[:1]
+                second_args='{"a":1}' if duplicate else '{"a":2}'
+                first=Chunks([
+                    frame(calls=[
+                        {'index':0,'id':'call_first','type':'function',
+                         'function':{'name':'calculate','arguments':'{"a":1}'}},
+                        {'index':1,'id':'call_second','type':'function',
+                         'function':{'name':'calculate','arguments':second_args}}]),
+                    frame(finish='tool_calls'),b'data: [DONE]\n\n'])
+                streams=[first]
+                if duplicate:
+                    streams.append(Chunks([
+                        frame('one result'),frame(finish='stop'),
+                        b'data: [DONE]\n\n']))
+                requests,factory=self.transport(streams)
+                payload={'messages':[{'role':'user','content':'Calculate two values'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Calculate two values',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertTrue(first.closed)
+                if duplicate:
+                    self.assertEqual(self.dispatched,[('calculate',{'a':1})])
+                    self.assertEqual(payload.get('_agent_final'),'one result')
+                    self.assertIn('[DONE]',wire)
+                    self.assertEqual(len(requests),2)
+                else:
+                    self.assertEqual(self.dispatched,[])
+                    self.assertIn('HOLD_TOOL_POOL_FIDELITY',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+                    self.assertEqual(len(requests),1)
+
     async def test_complete_tool_observation_is_not_silently_clipped(self):
         # Prior adapter sent only the first 8000 characters to the model.
         # Preserve real RU/ES evidence, including its final non-ASCII suffix.
@@ -1228,6 +1297,40 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(audit,[])
                 self.assertNotIn('_agent_final',payload)
                 self.assertEqual(len(self.dispatched),1)
+
+    async def test_multibyte_tool_and_media_outcomes_hold_before_green_audit(self):
+        # A million Cyrillic characters fit the previous character count but
+        # exceed the 2MB UTF-8 wire/S03 cap. No success audit can precede HOLD.
+        for label, outcome in (('utf8_overflow', 'Ж' * 1000001),
+                               ('invalid_unicode', 'broken'+chr(0xD800))):
+            for route in ('direct', 'media'):
+                with self.subTest(label=label, route=route):
+                    native=self.native(result={'ok':True, 'text':outcome})
+                    audited=[]
+                    native['audit']=lambda *a,**k:audited.append(k)
+                    payload={'messages':[{'role':'user','content':'Result fidelity'}]}
+                    if route=='direct':
+                        native['_direct_admin_calls']=lambda _: [
+                            {'name':'run_admin','arguments':{'action':'status'}}]
+                        with patch.object(stream._current,'dispatch',return_value=None):
+                            response=await native['owner_completion'](
+                                'http://native/model',payload,'Result fidelity',False)
+                        expected='HOLD_TOOL_RESULT_FULL_CONTEXT'
+                        self.assertEqual(len(self.dispatched),1)
+                    else:
+                        with (patch.object(stream._current,'explicit_media_request',
+                                           return_value={'kind':'image'}),
+                              patch.object(stream._current,'media_status_query',
+                                           return_value=None),
+                              patch.object(stream._current,'dispatch',
+                                           return_value={'ok':True,'text':outcome})):
+                            response=await native['owner_completion'](
+                                'http://native/model',payload,'Result fidelity',False)
+                        expected='HOLD_MEDIA_RESULT_FIDELITY'
+                    self.assertEqual(response.status_code,502)
+                    self.assertEqual(json.loads(response.body)['error']['code'], expected)
+                    self.assertEqual(audited,[])
+                    self.assertNotIn('_agent_final',payload)
 
     async def test_tool_error_envelopes_never_certify_successful_s03(self):
         # The explicit error key is authoritative even when its value is

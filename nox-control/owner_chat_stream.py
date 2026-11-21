@@ -51,6 +51,22 @@ def _append_final_chunk(chunks, chunk, size):
     return size
 
 
+def _assert_verified_result_bytes(text, hold_code):
+    """Apply the final browser/S03 UTF-8 budget before any green tool audit.
+
+    A result may be fewer than two million Python characters but larger on
+    the wire. It must not be audited as successful before the final encoder
+    rejects it. The same rule applies to direct tools and media fast paths.
+    """
+    if len(text)>FINAL_RESPONSE_LIMIT:
+        raise StreamFailure(hold_code)
+    try:
+        if len(text.encode('utf-8','strict'))>FINAL_RESPONSE_LIMIT:
+            raise StreamFailure(hold_code)
+    except UnicodeError:
+        raise StreamFailure(hold_code) from None
+
+
 EXECUTOR_STATUS=Path('/root/nox/status/agents_t856u.json')
 
 
@@ -521,10 +537,11 @@ async def _run(native,url,payload,user_text):
         # This route has no confirmation continuation, so fail closed on one.
         if (not isinstance(rec,dict) or type(rec.get('ok')) is not bool
                 or type(rec.get('text')) is not str or not rec['text'].strip()
-                or len(rec['text'])>2000000
+
                 or ('needs_confirmation' in rec and rec['needs_confirmation'] is not False)
                 or ('error' in rec and rec.get('ok') is True)):
             raise StreamFailure('HOLD_MEDIA_RESULT_FIDELITY')
+        _assert_verified_result_bytes(rec['text'],'HOLD_MEDIA_RESULT_FIDELITY')
         await asyncio.to_thread(native['audit'],'tool_step',name=name,step=1,ok=rec['ok'])
         if not rec['ok']:
             # An unverified media enqueue may be visible to the user, but it
@@ -547,6 +564,11 @@ async def _run(native,url,payload,user_text):
             raise ValueError('invalid message history')
         history_wire=json.dumps(source_messages,ensure_ascii=False,
                                 allow_nan=False).encode('utf-8','strict')
+        # The native request cannot fit if its history alone exceeds the
+        # model byte budget. HOLD before decoding a second full S03 copy:
+        # low-headroom hosts must not allocate oversized duplicate history.
+        if len(history_wire)>MODEL_REQUEST_LIMIT:
+            raise StreamFailure('HOLD_MODEL_REQUEST_SIZE')
         messages=json.loads(history_wire)
     except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
         raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
@@ -726,8 +748,7 @@ async def _run(native,url,payload,user_text):
                     # confirmations, must fit the same bounded chat/S03 result.
                     # No successful audit or final ACK may certify an oversized
                     # tool observation that can exhaust scarce host memory.
-                    if len(text)>2000000:
-                        raise StreamFailure('HOLD_TOOL_RESULT_FULL_CONTEXT')
+                    _assert_verified_result_bytes(text,'HOLD_TOOL_RESULT_FULL_CONTEXT')
                     await asyncio.to_thread(native['audit'],'tool_step',name=call['name'],
                                             step=steps,
                                             # A confirmation request is NOT a completed
@@ -845,6 +866,15 @@ async def _run(native,url,payload,user_text):
                     selected.append(call_id)
                 if selected!=[call_id for call_id in before_ids if call_id in seen]:
                     raise StreamFailure('HOLD_TOOL_POOL_FIDELITY')
+                # Deduplication may only discard an identical call that is
+                # still represented in the batch. Silently dropping a distinct
+                # tool request changes the model's intended actions while the
+                # browser/S03 could still receive a green final response.
+                if len(seen)<len(before_ids):
+                    retained={before[call_id] for call_id in selected}
+                    if any(before[call_id] not in retained
+                           for call_id in before_ids if call_id not in seen):
+                        raise StreamFailure('HOLD_TOOL_POOL_FIDELITY')
                 calls=reduced
             if not calls:raise StreamFailure('HOLD_TOOL_PARSE')
             _refuse_multi_admin_batch(calls)

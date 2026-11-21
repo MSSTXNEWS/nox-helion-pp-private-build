@@ -117,7 +117,21 @@ def load_manifest(path, expected):
     raw = private_file(path).read_bytes()
     require(hashlib.sha256(raw).hexdigest() == expected, "MANIFEST_CHANGED")
     try:
-        m = json.loads(raw)
+        # Ambiguous owner approval, size or source fields must fail closed.
+        # Default json.loads silently accepts duplicate keys (last value wins).
+        def unique_pairs(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError("duplicate manifest field")
+                result[key] = value
+            return result
+
+        def reject_nonfinite(value):
+            raise ValueError("non-finite manifest constant")
+
+        m = json.loads(raw, object_pairs_hook=unique_pairs,
+                       parse_constant=reject_nonfinite)
     except (ValueError, UnicodeError):
         raise Hold("HOLD_DRIVE_FIRST_MANIFEST_JSON") from None
     require(isinstance(m, dict)
@@ -233,18 +247,37 @@ def safe_local_source(file, roots=LOCAL_ROOTS):
     return p
 
 
-def run_rclone(args, config, *, timeout=8 * 3600, run=subprocess.run):
+def run_rclone(args, config, *, timeout=8 * 3600):
+    """Bound long copyto/moveto jobs by owner STOP, not only wall-clock timeout.
+
+    subprocess.run() blocked for up to eight hours and could not observe a
+    newly asserted STOP. Poll the owned child without shell or captured logs.
+    """
     stop_clear()
     require(bool(shutil.which("rclone")), "RCLONE_MISSING")
     try:
         # Never print subprocess output, command, signed URLs or token-bearing config.
-        proc = run(["rclone", "--config", str(config), *args],
-                   stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                   stderr=subprocess.DEVNULL, check=False, timeout=timeout)
-    except (OSError, subprocess.TimeoutExpired):
+        proc = subprocess.Popen(["rclone", "--config", str(config), *args],
+                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL)
+    except OSError:
         raise Hold("HOLD_DRIVE_FIRST_RCLONE_EXECUTION") from None
-    require(proc.returncode == 0, "RCLONE_FAILED")
-    stop_clear()
+    deadline = time.monotonic() + timeout
+    try:
+        while proc.poll() is None:
+            stop_clear()
+            require(time.monotonic() < deadline, "RCLONE_TIMEOUT")
+            time.sleep(0.5)
+        require(proc.returncode == 0, "RCLONE_FAILED")
+        stop_clear()
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
 
 
 def verify_remote(remote, *, config, size, digest):

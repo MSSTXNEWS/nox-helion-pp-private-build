@@ -9,6 +9,9 @@
   const enc=new TextEncoder();
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
+  // Browser-local at-most-once reservation; native/cross-tab idempotence remains unverified.
+  // Fail closed rather than silently evicting an ID and replaying its model POST.
+  const admittedClientRequests=new Set();
   function livePieces(text) {
     const glyphs=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
       ? Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text),part=>part.segment)
@@ -64,9 +67,33 @@
     status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}
   });
   async function nativeJSON(path,init) {
-    const r=await waitOrAbort(()=>nativeFetch(path,options(init)),init?.signal);
-    if (!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r,init?.signal));
-    return nativeBodyJSON(r,init?.signal);
+    // Read-only history/registry GETs can stall after HTTP headers. Do not
+    // leave the chat in "waiting" forever or retry a possibly executed POST.
+    // One deadline spans both response headers and the complete JSON body.
+    if(init?.signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
+    const readAbort=new AbortController();
+    const onAbort=()=>readAbort.abort();
+    init?.signal?.addEventListener?.('abort',onAbort,{once:true});
+    let timer;
+    const timeout=new Promise((_,reject)=>{
+      timer=setTimeout(()=>{
+        readAbort.abort();
+        reject(Error('HOLD_NATIVE_READBACK_TIMEOUT'));
+      },15000);
+    });
+    try {
+      const operation=async()=>{
+        const r=await waitOrAbort(()=>nativeFetch(path,options({
+          ...init,method:'GET',signal:readAbort.signal
+        })),init?.signal);
+        if(!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r,init?.signal));
+        return nativeBodyJSON(r,init?.signal);
+      };
+      return await Promise.race([operation(),timeout]);
+    }finally{
+      clearTimeout(timer);
+      init?.signal?.removeEventListener?.('abort',onAbort);
+    }
   }
   async function createDialog(title,signal) {
     const r=await nativePost('/api/ui/memory/dialogs/create',{
@@ -227,7 +254,7 @@
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           const id=await dialogId(data,nativeSignal);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-          event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
+          event({type:'meta',dialog_id:id,client_request_id:data.request_id||null,model_label:'UNKNOWN',
             answer_source:'NATIVE_PENDING',model_identity_verified:false});
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
@@ -282,12 +309,13 @@
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           event({type:'done',status:'done',saved:true,s03_integrated:true,
             history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
+            client_request_id:data.request_id||null,
             model_label:receipt.native_model_label||'UNKNOWN',
             model_identity_verified:false,answer_source:'LIVE_NOX',
             first_visible_token_ms:firstVisibleMs,
             seconds:+((performance.now()-started)/1000).toFixed(2)});
         }catch(e){
-          event({type:'error',
+          event({type:'error',client_request_id:data.request_id||null,
             error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
             // HTTP cancellation is confirmed; GPU/native execution is not.
             gpu_stop_verified:false});
@@ -395,6 +423,18 @@
       // Reject decoded lone UTF-16 surrogates before any dialog or S03 write.
       if(!validUnicodeScalars(data.message))
         return Promise.resolve(errorResponse('HOLD_INVALID_MESSAGE_UNICODE',422));
+      if(Object.prototype.hasOwnProperty.call(data,'request_id')){
+        const rid=data.request_id;
+        if(typeof rid!=='string'||!rid.trim()||rid.length>160||
+           !validUnicodeScalars(rid)||/[\x00-\x1f\x7f]/.test(rid))
+          return Promise.resolve(errorResponse('HOLD_INVALID_CLIENT_REQUEST_ID',422));
+        // Reserve synchronously before dialog creation or the model POST.
+        if(admittedClientRequests.has(rid))
+          return Promise.resolve(errorResponse('HOLD_DUPLICATE_CLIENT_REQUEST_ID',409));
+        if(admittedClientRequests.size>=8192)
+          return Promise.resolve(errorResponse('HOLD_CLIENT_REQUEST_IDS_EXHAUSTED',429));
+        admittedClientRequests.add(rid);
+      }
       return typeof data.request_id==='string'||Object.prototype.hasOwnProperty.call(data,'dialog_id')
         ?Promise.resolve(sseChat(data,init?.signal)):jsonChat(data,init?.signal);
     }

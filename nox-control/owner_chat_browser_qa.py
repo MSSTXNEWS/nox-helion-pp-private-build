@@ -103,6 +103,25 @@ def public_numeric_answer(value):
     return re.sub(r'\s+','',value)
 
 
+def qa_scoped_stop_request_id(body, dialog_id):
+    """Only a non-wildcard ID from this exact QA dialog can target cleanup STOP."""
+    if not isinstance(body, dict) or body.get('dialog_id') != dialog_id:
+        return None
+    rid = body.get('request_id')
+    return (rid if type(rid) is str and
+            re.fullmatch(r'[A-Za-z0-9._:-]{1,128}', rid) else None)
+
+
+def qa_scoped_stop_receipt_valid(http_status, receipt, request_id):
+    """HTTP success and exact target are required; a signal is not a stop proof."""
+    return (type(http_status) is int and http_status == 200 and
+            isinstance(receipt, dict) and
+            receipt.get('status') == 'STOPPING' and
+            receipt.get('scope') == 'generation' and
+            receipt.get('target_request_id') == request_id and
+            receipt.get('stop_confirmed') is False)
+
+
 def admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt):
     """A second native POST cannot start before terminal S03; a third never starts."""
     if count == 0:
@@ -834,6 +853,7 @@ async def browser_run(report, directory, available):
                    'те же числа в обратном порядке через запятую. Без пояснений.')
     second_permitted=False
     stream_admitted=0
+    qa_pending_request_id=None
     report.update(nonloopback_auth=True,resources=budget(),synthetic_prompt_sha256=digest(prompt.encode()))
     network=[];console=collections.Counter();page_errors=[];blocked=collections.Counter();did=None
     sys.path.insert(0,str(ROOT/'scripts'))
@@ -879,7 +899,7 @@ async def browser_run(report, directory, available):
             await context.add_init_script(OBSERVER_JS.replace('__CONFIG__',config))
 
             async def guard(route):
-                nonlocal stream_admitted
+                nonlocal stream_admitted, qa_pending_request_id
                 request=route.request
                 url=urllib.parse.urlsplit(request.url)
                 if url.scheme not in ('http','https') or url.netloc!=origin:
@@ -911,6 +931,9 @@ async def browser_run(report, directory, available):
                     if not own:
                         blocked['non_qa_generation']+=1
                         return await route.abort()
+                    # Retain only an explicitly scoped, current QA request ID.
+                    # Without one, cleanup cannot safely invoke generation STOP.
+                    qa_pending_request_id=qa_scoped_stop_request_id(body,did)
                     # Consume admission before any uncertain network delivery:
                     # never retry or double-submit an ambiguous native POST.
                     stream_admitted+=1
@@ -1168,11 +1191,30 @@ async def browser_run(report, directory, available):
                 try:
                     report['composer_final']=await page.evaluate(COMPOSER_JS)
                     report['stream_final']=await page.evaluate(SNAPSHOT_JS)
-                    pending=await page.evaluate('!!window.__NOX_BROWSER_QA?.nativeCalls&&!window.__NOX_BROWSER_QA?.done')
+                    pending=await page.evaluate(
+                        '!!window.__NOX_BROWSER_QA?.nativeCalls'
+                        '&&!window.__NOX_BROWSER_QA?.nativeClosed')
                     if pending:
-                        await context.request.post(base+'/api/nox/stop',data={},max_redirects=0,timeout=4000)
+                        if qa_pending_request_id is None:
+                            report['qa_cleanup_stop_state']='HOLD_QA_SCOPED_STOP_ID_UNAVAILABLE'
+                        else:
+                            # The STOP API rejects {}. Never use wildcard '*':
+                            # another owner's generations must stay untouched.
+                            stop_response=await context.request.post(
+                                base+'/api/nox/stop',
+                                data={'scope':'generation',
+                                      'request_id':qa_pending_request_id},
+                                max_redirects=0,timeout=4000)
+                            stop_receipt=await json_response(stop_response,limit=2048)
+                            if qa_scoped_stop_receipt_valid(
+                                    stop_response.status, stop_receipt,
+                                    qa_pending_request_id):
+                                report['qa_cleanup_stop_state']='SCOPED_STOP_SIGNALLED_NOT_CONFIRMED'
+                            else:
+                                report['qa_cleanup_stop_state']='HOLD_QA_SCOPED_STOP_READBACK'
                 except Exception:
-                    pass
+                    # A failed/ambiguous STOP cannot be silently certified.
+                    report['qa_cleanup_stop_state']='HOLD_QA_SCOPED_STOP_UNVERIFIED'
             try:
                 await context.request.post(base+'/chat/logout',data={},max_redirects=0,timeout=4000)
             except Exception:

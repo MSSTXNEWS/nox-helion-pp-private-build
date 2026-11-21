@@ -181,6 +181,14 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             add("GPU_UTILIZATION_UNVERIFIED", "hold",
                 "Missing, invalid or out-of-range GPU utilization; do not "
                 "infer spare GPU capacity or admit additional work.")
+        elif util < 35 and (gpu.get("temperature_sensor_valid") is not True
+                              or not _finite_nonnegative(temp) or temp >= 70):
+            # A broken or hot sensor must never accompany a "spare GPU" hint.
+            # SAFE70 and active training are owned by the native host; source
+            # advice cannot authorize additional work.
+            add("GPU_RESIDUAL_THERMAL_HOLD", "hold",
+                "GPU thermal evidence is missing, invalid or at SAFE70. "
+                "Do not suggest residual GPU capacity or admit extra work.")
         elif util < 35:
             # Low compute utilization alone is NOT spare accelerator capacity
             # without fresh VRAM, host I/O and chat latency.

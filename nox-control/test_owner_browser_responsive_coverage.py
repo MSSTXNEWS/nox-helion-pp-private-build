@@ -7,7 +7,7 @@ from unittest.mock import patch
 from owner_chat_browser_qa import (COMPOSER_JS, RESPONSIVE_LAYOUT_CASES,
     allowed_qa_request, fresh_qa_post_admission, post_admission_hold_reason,
     browser_route_method_allowed, check_report_layout, click_send, verify_saved_browser_refresh,
-    idle_slots, MODEL_SLOTS_URL, pinned_served_html_hash,
+    idle_slots, MODEL_SLOTS_URL, pinned_served_html_hash, qa_scoped_stop_request_id, qa_scoped_stop_receipt_valid,
     native_stream_envelope_valid, progressive_stream_valid, canonical_s03_proof_valid, OBSERVER_JS, SNAPSHOT_JS)
 
 class FakePage:
@@ -44,6 +44,35 @@ class FakePage:
         if "node.scrollTop=node.scrollHeight" in script:
             return True
         return None
+
+class ScopedQaStopContract(unittest.TestCase):
+    def test_cleanup_never_generates_a_wildcard_or_unrelated_stop(self):
+        did='qa-dialog'
+        self.assertEqual(
+            qa_scoped_stop_request_id({'dialog_id':did,'request_id':'qa-abc.1'},did),
+            'qa-abc.1')
+        for body in ({}, {'dialog_id':did}, {'dialog_id':did,'request_id':'*'},
+                     {'dialog_id':did,'request_id':''},
+                     {'dialog_id':did,'request_id':None},
+                     {'dialog_id':did,'request_id':{'id':'qa'}},
+                     {'dialog_id':'other','request_id':'qa-abc.1'},
+                     {'dialog_id':did,'request_id':'space id'},
+                     {'dialog_id':did,'request_id':'x'*129}):
+            with self.subTest(body=body):
+                self.assertIsNone(qa_scoped_stop_request_id(body,did))
+
+    def test_cleanup_requires_http_200_even_for_stopping_shaped_json(self):
+        rid = 'qa-abc.1'
+        receipt = {'status': 'STOPPING', 'scope': 'generation',
+                   'target_request_id': rid, 'stop_confirmed': False}
+        self.assertTrue(qa_scoped_stop_receipt_valid(200, receipt, rid))
+        for http_status in (400, 409, 500, None, '200'):
+            with self.subTest(http_status=http_status):
+                self.assertFalse(qa_scoped_stop_receipt_valid(http_status, receipt, rid))
+        self.assertFalse(qa_scoped_stop_receipt_valid(200, receipt, 'other'))
+        self.assertFalse(qa_scoped_stop_receipt_valid(
+            200, {**receipt, 'stop_confirmed': True}, rid))
+
 
 class ResponsiveComposerContract(unittest.IsolatedAsyncioTestCase):
     async def test_real_probe_includes_mobile_tablet_desktop_and_restores_desktop(self):

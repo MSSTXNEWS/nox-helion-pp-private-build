@@ -1,7 +1,7 @@
 """NOX web adapter: делает веб-сборку «Резонанс» рабочей поверх умного моста (ядро, память S03, эмоции остаются на пути ответа).
 Подключается из nox_bridge.py: WEB.install(app, bridge_module). Слушает тот же 127.0.0.1:8091.
 Без выдумок: нет измерения -> null / HOLD. Токен доступа: если есть /root/nox/state/web_token, он обязателен."""
-import asyncio, hashlib, json, math, os, re, shutil, subprocess, threading, time
+import asyncio, hashlib, json, math, os, re, secrets, shutil, subprocess, threading, time
 import httpx
 from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
@@ -508,14 +508,49 @@ def install(app, B):
     async def a_chat(request: Request):
         # Capture before body parsing: STOP during request admission is binding.
         request_stop_epoch = CANCEL_ALL_EPOCH
-        b = await request.json()
-        rid = str(b.get("request_id") or "")
-        msgs_in = [m for m in (b.get("messages") or []) if m.get("role") in ("user", "assistant")]
+        # Reject malformed chat input before creating any SSE generator,
+        # model request, S03 write, or request-scoped STOP state.
+        try:
+            b = await request.json()
+        except Exception:
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_JSON"}, status_code=400)
+        if not isinstance(b, dict):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_BODY"}, status_code=400)
+        raw_messages = b.get("messages", [])
+        if not isinstance(raw_messages, list) or any(not isinstance(m, dict) for m in raw_messages):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_MESSAGES"}, status_code=400)
+        if any(m.get("role") in ("user", "assistant") and
+               not isinstance(m.get("content"), str) for m in raw_messages):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_CONTENT"}, status_code=400)
+        opts = b.get("options", {})
+        if not isinstance(opts, dict):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_OPTIONS"}, status_code=400)
+        requested_tokens = opts.get("num_predict", 700)
+        # Missing key may default; an explicitly supplied zero, false,
+        # null, float or other invalid type must never bypass admission.
+        if isinstance(requested_tokens, bool) or not isinstance(requested_tokens, (int, str)):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_NUM_PREDICT"}, status_code=400)
+        try:
+            npred = int(requested_tokens)
+        except (ValueError, TypeError, OverflowError):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_NUM_PREDICT"}, status_code=400)
+        if npred <= 0:
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_NUM_PREDICT"}, status_code=400)
+        # A missing legacy request ID is given a unique, STOP-addressable ID.
+        # Never stringify malformed IDs (dict/bool/number) into shared STOP keys.
+        supplied_id = b.get("request_id")
+        if "request_id" not in b or supplied_id == "":
+            rid = secrets.token_hex(16)
+        elif isinstance(supplied_id, str) and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", supplied_id):
+            rid = supplied_id
+        else:
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_REQUEST_ID"}, status_code=400)
+        msgs_in = [m for m in raw_messages if m.get("role") in ("user", "assistant")]
         user = next((m["content"] for m in reversed(msgs_in) if m["role"] == "user"), "")
+        if not user.strip():
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_MISSING_USER"}, status_code=400)
         use_mem = b.get("use_memory", True) is not False
-        npred = int((b.get("options") or {}).get("num_predict") or 700)
         mini = b.get("mini") is True
-        opts = b.get("options") or {}
         mode = str(opts.get("mode") or b.get("mode") or "auto")
         eph = b.get("ephemeral") is True
         if mode == "fast": npred = min(npred, 300)
@@ -679,10 +714,15 @@ def install(app, B):
                         hist = {"status": "SAVED", "mini": mini, "s03_readback_verified": False}
                     except Exception as e:
                         hist = {"status": "HOLD", "reason": "S03: " + type(e).__name__}
+                    # STOP can arrive while S03 persistence runs in a thread.
+                    # An already-started write cannot be rolled back here; retain
+                    # its unverified receipt, but do not report generated success
+                    # or publish a secondary SOUL mirror after cancellation.
+                    stopped = stopped or rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch
                     # The secondary SOUL mirror must never advertise a chat turn
-                    # whose canonical S03 write failed. A secondary mirror error
-                    # also must not truncate an otherwise completed model stream.
-                    if B.SOUL and not mini and hist["status"] == "SAVED":
+                    # whose canonical S03 write failed or was cancelled. A mirror
+                    # error also must not truncate an otherwise completed stream.
+                    if B.SOUL and not mini and not stopped and hist["status"] == "SAVED":
                         try:
                             B.SOUL.log_turn(user, full.strip())
                         except Exception as e:
