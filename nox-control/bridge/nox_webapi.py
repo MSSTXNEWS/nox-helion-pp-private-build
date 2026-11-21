@@ -148,17 +148,22 @@ def _verified_gpu_sensor_values(samples, key):
 
 
 def _status_flat():
-    g = M["gpu"]
+    # A stale or future-dated sampler observation must never be presented as
+    # live spare GPU/VRAM capacity. Keep its timestamp for diagnostics, but
+    # mask measurements used by admission and status consumers (6A04).
+    sample_at = M["t"]
+    age = time.time() - sample_at if type(sample_at) in (int, float) and math.isfinite(sample_at) else None
+    fresh = age is not None and 0 <= age < 30
+    g = M["gpu"] if fresh else []
     temperatures = _verified_gpu_sensor_values(g, "temp_c")
     powers = _verified_gpu_sensor_values(g, "power_w")
-    ru, rt = M["ram"] or (None, None)
-    df, dt = M["disk"] or (None, None)
-    fresh = M["t"] and time.time() - M["t"] < 30
+    ru, rt = (M["ram"] or (None, None)) if fresh else (None, None)
+    df, dt = (M["disk"] or (None, None)) if fresh else (None, None)
     return {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(M["t"])) if M["t"] else None,
         "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(M["t"])) if M["t"] else None,
         "source": "nox-bridge:/proc+nvidia-smi", "gpu_source": "nvidia-smi", "fresh": bool(fresh),
-        "cpu_percent": M["cpu"], "ram_percent": round(100 * ru / rt, 1) if ru is not None and rt else None,
+        "cpu_percent": M["cpu"] if fresh else None, "ram_percent": round(100 * ru / rt, 1) if ru is not None and rt else None,
         "ram_used_gb": round(ru, 1) if ru is not None else None, "ram_total_gb": round(rt, 1) if rt is not None else None,
         "gpu_percent": _gpu_utilization_percent(g),
         "vram_used_gb": round(sum(x["mem_used_gib"] for x in g), 1) if g else None,
