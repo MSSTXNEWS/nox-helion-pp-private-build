@@ -128,6 +128,42 @@ class CheckpointStepProvenance(unittest.TestCase):
                 redirected_check(helper, redirected)
 
 
+    def test_negative_cross_entropy_loss_denied_even_with_valid_checkpoint_hashes(self):
+        # Signed SHA bytes and a positive optimizer step cannot legitimate a
+        # finite negative cross-entropy loss. No service or trainer is run.
+        with tempfile.TemporaryDirectory() as folder:
+            out = Path(folder)
+            cp = out / "checkpoint-1"
+            cp.mkdir()
+            (cp / "adapter_model.safetensors").write_bytes(b"verified-test-adapter")
+            (cp / "trainer_state.json").write_text(
+                '{"global_step":1}', encoding="utf-8")
+            verifier = load_pinned_verifier(out)
+            names = ("adapter_model.safetensors", "trainer_state.json")
+            hashes = {name: verifier["file_sha"](cp / name) for name in names}
+            receipt = {
+                "global_step": 1, "state": "CHECKPOINTED_OWNER_STOP",
+                "native_sha256": "a" * 64, "successful_optimizer_steps": 1,
+                "adapter_delta_verified": True,
+                "before_tensor_sha256": "b" * 64,
+                "after_tensor_sha256": "c" * 64,
+                "checkpoint": {
+                    "path": str(cp), "global_step": 1,
+                    "files_sha256": hashes,
+                },
+                "loss": 0.5,
+            }
+            check = verifier["verify_paused_result"]
+            helper = types.SimpleNamespace(CHECKPOINT_NAMES=names)
+            self.assertTrue(check(helper, receipt))
+            self.assertTrue(check(helper, {**receipt, "loss": 0.0}))
+            for invalid_loss in (-0.25, -1, -1e-300):
+                with self.subTest(loss=invalid_loss):
+                    with self.assertRaisesRegex(
+                            RuntimeError, "HOLD_PAUSED_OPTIMIZER_RECEIPT"):
+                        check(helper, {**receipt, "loss": invalid_loss})
+
+
     def test_owner_pause_at_target_never_claims_completed_continuation(self):
         # A verified 1000-step owner STOP is a checkpoint, not proof that the
         # native continuation emitted VERIFIED_BOUNDED_ADAPTER_UPDATE.
