@@ -891,7 +891,9 @@ def worker_readback(helper, fresh_after=0):
             or len(set(claimed)) != len(claimed)):
         raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
     service = helper.service_state('nox-dispatcher-t855u')
-    if service['state'] != 'RUNNING':
+    # An incomplete or malformed Supervisor response is not RUNNING proof.
+    # Fail closed before accessing PID; do not leak KeyError/TypeError.
+    if type(service) is not dict or service.get('state') != 'RUNNING':
         raise RuntimeError('HOLD_DISPATCHER_NOT_RUNNING')
     # RUNNING alone is not evidence of a live, identified dispatcher.
     # Supervisor may expose no PID or a malformed value during transitions.
