@@ -66,9 +66,13 @@ class ScopedConversationTests(unittest.TestCase):
                         verified_s03=[{**current, "text": ""}], current_user="Continue.",
                         token_counter=lambda msgs: 10, token_budget=2048,
                         owner_persona_id="persona-A", current_s03_revision=revision)
+        # The legacy unscoped format still refuses empty active text.
         with self.assertRaisesRegex(ContextHold, "HOLD_CONTEXT_S03"):
-            _plan([], scoped=False)
-            # The unscoped format cannot smuggle an empty active fact.
+            plan_prompt(persona="NOX", system="Be precise.", conversation=[],
+                        verified_s03=[{"id": "old", "source_sha256": "b" * 64,
+                                       "text": ""}],
+                        current_user="Continue.", token_counter=lambda msgs: 10,
+                        token_budget=2048)
 
 
 if __name__ == "__main__":
