@@ -285,6 +285,72 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "HOLD")
         self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
 
+    def test_secondary_soul_mirror_is_gated_by_s03_write_and_is_nonfatal(self):
+        """S03 failure must not leak into secondary memory; mirror failure cannot hide DONE."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *ignored): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Ответ"}}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.NKEEP, bridge.LAST_CHAT = 0, {"t": 0}
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Запомни ответ"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        mirror_calls = []
+
+        def mirror(user, answer):
+            mirror_calls.append((user, answer))
+            raise RuntimeError("secondary mirror unavailable")
+
+        bridge.SOUL = types.SimpleNamespace(log_turn=mirror)
+        memory = types.ModuleType("s03_memory")
+
+        async def scenario():
+            response = await chat(Request({
+                "request_id": "s03-secondary-gate", "mode": "fast",
+                "use_memory": False,
+                "messages": [{"role": "user", "content": "Запомни ответ"}],
+            }))
+            return [json.loads(row) async for row in response.body_iterator]
+
+        for fail_s03 in (True, False):
+            with self.subTest(fail_s03=fail_s03):
+                mirror_calls.clear()
+                bridge.errors.clear()
+
+                def persist(*args):
+                    if fail_s03:
+                        raise RuntimeError("S03 unavailable")
+
+                memory.persist_turn = persist
+                with mock.patch.object(W, "CANCEL", set()), \
+                     mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+                     mock.patch.object(W, "W", None), \
+                     mock.patch.dict(sys.modules, {"s03_memory": memory}):
+                    frames = asyncio.run(scenario())
+
+                terminal = frames[-1]
+                self.assertEqual(terminal["completion_receipt"]["status"], "GENERATED")
+                self.assertTrue(terminal["done"])
+                self.assertFalse(terminal["memory_write_receipt"]["s03_readback_verified"])
+                if fail_s03:
+                    self.assertEqual(terminal["memory_history"]["status"], "HOLD")
+                    self.assertEqual(mirror_calls, [])
+                    self.assertFalse(any("soul_secondary_log_error" in e for e in bridge.errors))
+                else:
+                    self.assertEqual(terminal["memory_history"]["status"], "SAVED")
+                    self.assertEqual(mirror_calls, [("Запомни ответ", "Ответ")])
+                    self.assertTrue(any("soul_secondary_log_error RuntimeError" in e for e in bridge.errors))
+
     def test_stop_scope_and_bad_json_cannot_cancel_all(self):
         """Invalid or non-generation commands cannot trigger an implicit broadcast."""
         stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
