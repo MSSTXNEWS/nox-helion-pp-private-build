@@ -144,6 +144,17 @@ def main():
           current()[0].c==='dialog'&&current()[1].c==='dialog' '''))
         check('two model POSTs and two ACKs in total', page.evaluate('''() =>
           metrics.posts===2 && metrics.acks===2 '''))
+        check('ACK-less mounting is rejected before any IO', page.evaluate('''() => {
+          const p=metrics.posts,a=metrics.acks;
+          try{ NOXB1SseUiBinding.bind({...opts,ackGate:null});return false; }
+          catch(e){return e.code==='HOLD_B1_BINDING_CANONICAL_ACK_GATE_REQUIRED'&&
+            metrics.posts===p&&metrics.acks===a;}
+        }'''))
+        check('missing verifier is rejected before any IO', page.evaluate('''() => {
+          try{ NOXB1SseUiBinding.bind({...opts,host:{}});return false; }
+          catch(e){return e.code==='HOLD_B1_BINDING_TRUSTED_VERIFIER_REQUIRED';}
+        }'''))
+        check('DOM turn count remains exactly two', page.evaluate('()=>current().length===2'))
         # A real Chromium caller must be able to select short B1 deadlines;
         # the previous binding silently dropped these values, leaving 30s
         # waits even when a host requested 25ms.
@@ -189,17 +200,6 @@ def main():
           }
           return metrics.posts===beforePosts;
         }'''))
-        check('ACK-less mounting is rejected before any IO', page.evaluate('''() => {
-          const p=metrics.posts,a=metrics.acks;
-          try{ NOXB1SseUiBinding.bind({...opts,ackGate:null});return false; }
-          catch(e){return e.code==='HOLD_B1_BINDING_CANONICAL_ACK_GATE_REQUIRED'&&
-            metrics.posts===p&&metrics.acks===a;}
-        }'''))
-        check('missing verifier is rejected before any IO', page.evaluate('''() => {
-          try{ NOXB1SseUiBinding.bind({...opts,host:{}});return false; }
-          catch(e){return e.code==='HOLD_B1_BINDING_TRUSTED_VERIFIER_REQUIRED';}
-        }'''))
-        check('DOM turn count remains exactly two', page.evaluate('()=>current().length===2'))
         # Focused preflight race: a second begin must fail BEFORE the first
         # asynchronous committed-state read resolves, with only one POST.
         check('concurrent begin precheck sends exactly one model POST', page.evaluate('''async () => {
