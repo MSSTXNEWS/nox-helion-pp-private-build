@@ -920,6 +920,53 @@ class CheckpointStepProvenance(unittest.TestCase):
 
 
 
+    def test_controller_restart_readback_is_bounded_and_fail_closed(self):
+        # Execute only the actual post-maintenance restart loop from main():
+        # no controller, Supervisor, trainer, or server is contacted.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        matches = [node for node in ast.walk(tree) if isinstance(node, ast.For)
+                   and "controllers_stopped.remove(name)" in ast.unparse(node)
+                   and "supervisorctl" in ast.unparse(node)]
+        self.assertEqual(len(matches), 1)
+        code = compile(ast.Module(body=[copy.deepcopy(matches[0])], type_ignores=[]),
+                       "<isolated-restart-loop>", "exec")
+
+        def attempt(status, rc=0):
+            calls = []
+            class FakeHelper:
+                def command(self, args, timeout):
+                    calls.append(("command", args, timeout))
+                    return rc, ""
+                def service_state(self, name):
+                    calls.append(("state", name))
+                    return status
+            scope = {"controllers_stopped": ["owner-controller"], "helper": FakeHelper()}
+            try:
+                exec(code, scope)
+            except RuntimeError as exc:
+                return str(exc), scope["controllers_stopped"], calls
+            return None, scope["controllers_stopped"], calls
+
+        invalid = (None, [], "", 2, False, {}, {"state": None},
+                   {"state": False}, {"state": []}, {"state": "STOPPED"})
+        for snapshot in invalid:
+            with self.subTest(snapshot=snapshot):
+                error, stopped, calls = attempt(snapshot)
+                self.assertEqual(error, "HOLD_CONTROLLER_RESTART")
+                self.assertEqual(stopped, ["owner-controller"])
+                self.assertEqual(calls[0], ("command",
+                    ["supervisorctl", "start", "owner-controller"], 30))
+        for state in ("RUNNING", "STARTING"):
+            with self.subTest(state=state):
+                error, stopped, calls = attempt({"state": state})
+                self.assertIsNone(error)
+                self.assertEqual(stopped, [])
+                self.assertEqual(len(calls), 2)
+        error, stopped, calls = attempt({"state": "RUNNING"}, rc=1)
+        self.assertEqual(error, "HOLD_CONTROLLER_RESTART")
+        self.assertEqual(stopped, ["owner-controller"])
+        self.assertEqual(len(calls), 1)  # nonzero start result is never readback proof
+
     def test_start_once_invalid_supervisor_shape_fails_closed_initial_and_poll(self):
         # Extract the actual nested function; never contact native Supervisor.
         tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
