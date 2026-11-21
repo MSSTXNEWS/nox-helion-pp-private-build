@@ -320,7 +320,11 @@ def stream_status_is_failure(value):
     """Fail closed for known failure labels and HTTP failure status values."""
     if isinstance(value, str):
         status = value.strip().lower()
-        return status in ('error', 'failed', 'cancelled', 'aborted') or (
+        # Upstream may encode a failed stream as a plain status/state label
+        # rather than an HTTP code or an explicit error field. Never let a
+        # later saved=true terminal erase such a preterminal failure.
+        return status in ('error', 'failed', 'failure', 'cancelled', 'canceled',
+                          'aborted', 'timeout', 'timed_out', 'timed-out', 'fatal') or (
             status.isdecimal() and int(status) >= 400)
     return type(value) is int and value >= 400
 
@@ -353,7 +357,9 @@ def stream_frame_reports_failure(frame):
         if any(stream_status_is_failure(status.get(key))
                for key in (*keys, 'status', 'state')):
             return True
-    return any(stream_status_is_failure(frame.get(key)) for key in keys)
+    # A flat state=timeout is equally fatal; nested status.state is checked
+    # above. Do not reject normal progress labels such as running/done/stop.
+    return any(stream_status_is_failure(frame.get(key)) for key in (*keys, 'state'))
 
 
 def bounded_stream_lines(response, max_line=100000):
