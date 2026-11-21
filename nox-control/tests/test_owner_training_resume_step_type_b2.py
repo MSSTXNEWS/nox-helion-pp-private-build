@@ -258,6 +258,91 @@ class CheckpointStepProvenance(unittest.TestCase):
         self.assertEqual(stopped, [["supervisorctl", "stop", name]])
 
 
+    def test_stop_controller_rejects_untyped_config_and_process_identity(self):
+        # Real stop_controller AST, synthetic Supervisor only: no native stop.
+        stop = load_pinned_verifier(Path("/tmp"))["stop_controller"]
+        name = "nox-dispatcher-t855u"
+        script = Path("/root/nox/scripts/nox_dispatcher_t855u.py")
+        valid_config = {"command": "python " + str(script),
+                        "stopasgroup": "false", "killasgroup": "false"}
+        valid_row = {"service": name, "argv": ["python", str(script)], "pgrp": 321}
+
+        def attempt(config, row, census=None):
+            sent, reads = [], []
+            def service_state(_name):
+                return {"state": "STOPPED" if sent else "RUNNING", "pid": 321}
+            def process_table():
+                reads.append("census")
+                return census
+            helper = types.SimpleNamespace(
+                service_state=service_state,
+                program_config=lambda _name: config,
+                process=lambda _pid: row,
+                process_table=process_table,
+                command=lambda argv, timeout: (sent.append(list(argv)) or 0, "ok"))
+            return lambda: stop(helper, name, script), sent, reads
+
+        malformed_config = (
+            None, [], "config", {},
+            {"command": "python " + str(script)},
+            {**valid_config, "command": None},
+            {**valid_config, "command": []},
+            {**valid_config, "command": "python 'unterminated"},
+            {**valid_config, "stopasgroup": True},
+            {**valid_config, "stopasgroup": None},
+            {**valid_config, "stopasgroup": "FALSE"},
+            {**valid_config, "killasgroup": False},
+            {**valid_config, "killasgroup": ""},
+        )
+        for config in malformed_config:
+            with self.subTest(config=repr(config)):
+                run, sent, census_reads = attempt(config, valid_row)
+                with self.assertRaisesRegex(RuntimeError, "HOLD_CONTROLLER_CONFIG_READBACK"):
+                    run()
+                self.assertEqual(sent, [])
+                self.assertEqual(census_reads, [])
+
+        malformed_process = (
+            None, [], "process", {},
+            {"service": name},
+            {"service": name, "argv": str(script)},
+            {"service": name, "argv": ["python", True, str(script)]},
+            {"service": name, "argv": ["python", None, str(script)]},
+            {"service": name, "argv": ("python", str(script))},
+            {"service": "other", "argv": ["python", str(script)]},
+            {"service": name, "argv": ["python", "/tmp/not-the-controller.py"]},
+        )
+        for row in malformed_process:
+            with self.subTest(process=repr(row)):
+                run, sent, census_reads = attempt(valid_config, row)
+                with self.assertRaisesRegex(RuntimeError, "HOLD_CONTROLLER_IDENTITY"):
+                    run()
+                self.assertEqual(sent, [])
+                self.assertEqual(census_reads, [])
+
+        run, sent, reads = attempt(valid_config, valid_row)
+        self.assertIsNone(run())
+        self.assertEqual(sent, [["supervisorctl", "stop", name]])
+        self.assertEqual(reads, [])
+
+        own = {"self": {"pgrp": 321, "state": "S", "service": name}}
+        for flag in ("stopasgroup", "killasgroup"):
+            with self.subTest(group_flag=flag):
+                run, sent, reads = attempt({**valid_config, flag: "true"},
+                                           valid_row, own)
+                self.assertIsNone(run())
+                self.assertEqual(sent, [["supervisorctl", "stop", name]])
+                self.assertEqual(reads, ["census"])
+
+        foreign = {**own, "foreign": {"pgrp": 321, "state": "S",
+                                      "service": "other-controller"}}
+        run, sent, reads = attempt({**valid_config, "stopasgroup": "true"},
+                                   valid_row, foreign)
+        with self.assertRaisesRegex(RuntimeError, "HOLD_CONTROLLER_FOREIGN_PROCESS_GROUP"):
+            run()
+        self.assertEqual(sent, [])
+        self.assertEqual(reads, ["census"])
+
     def test_group_stop_requires_unambiguous_native_census(self):
         # AST-execute actual stop_controller with synthetic process snapshots.
         stop = load_pinned_verifier(Path("/tmp"))["stop_controller"]
