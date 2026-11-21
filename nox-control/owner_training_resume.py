@@ -1563,6 +1563,10 @@ def main():
             result['native_workers_after'] = worker_readback(helper)
         except Exception as exc:
             result['native_workers_readback_error'] = str(exc) if str(exc).startswith('HOLD_') else type(exc).__name__
+            # A failed final three-worker census cannot certify admission even
+            # if earlier optimizer/checkpoint stages reported success.
+            result['state'] = 'HOLD_TRAINING_RESUME'
+            success = False
         # Use the live serving proxy on 8080 for the final receipt too; 8081
         # is a retired endpoint and must not turn healthy serving into failure.
         if (type(result['chat_after']) is not dict
