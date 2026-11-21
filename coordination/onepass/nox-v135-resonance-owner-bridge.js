@@ -366,6 +366,7 @@
  const method=String(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();
  let p;try{p=decodeURIComponent(url.pathname).toLowerCase()}catch{p=url.pathname.toLowerCase()}
  if((p!==url.pathname&&p.startsWith('/api/nox/'))||
+ (url.pathname==='/api/nox/chat/stream')||
  (url.pathname==='/api/nox/chat'&&(url.search||method!=='POST'))||
  (url.pathname==='/api/nox/history'&&method!=='GET')||
  (url.pathname==='/api/nox/dialogs/new'&&method!=='POST')||
