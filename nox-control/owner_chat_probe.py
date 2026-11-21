@@ -131,6 +131,18 @@ def owner_readback_json(client, requested_path):
     return obj(response)
 
 
+def require_postturn_owner_binding(client):
+    """Reconfirm the authenticated native chat binding after the final SSE turn.
+
+    A preflight bind is not evidence that the same owner route stayed bound
+    through three requests. This only READS owner status; no extra model POST.
+    """
+    snapshot = owner_readback_json(client, '/api/nox/status')
+    if not isinstance(snapshot, dict) or snapshot.get('native_p02_bound') is not True:
+        raise RuntimeError('HOLD_POSTTURN_OWNER_CHAT_BINDING')
+    return True
+
+
 def anonymous_owner_scope_status(client, requested_path):
     """A redirected 401 is not proof that the intended owner API is protected."""
     with request(client, requested_path) as response:
@@ -714,6 +726,7 @@ def main():
                 'answer_sha256':digest(text.encode()),'raw_answer_exported':False})
             if not third_durable:raise RuntimeError('HOLD_CHAT_PROBE_POSTQUIET_HISTORY')
             require_executor_witness(end,third_history,expected_three,count,phrase,did)
+            require_postturn_owner_binding(client)  # final owner route continuity, read-only
             # Third inference and durable-history readback also consume the 210 s budget.
             # A passed pre-POST gate alone must never authorize final COMPLETE.
             require_executor_turn_budget(time.monotonic()-probe_started)
