@@ -1611,6 +1611,61 @@ async def browser_run(report, directory, available):
                         or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
                     raise RuntimeError('HOLD_MULTITURN_ACTIVE_DIALOG_CHANGED_BEFORE_ACCEPTANCE')
                 report['multiturn_preaccept_active_dialog_verified']=True
+                # Reload only AFTER the final second-turn SSE fence; a reload
+                # destroys the page-local stream observer and cannot replace it.
+                # It must reveal the same authenticated dialog and four durable
+                # RU/ES rows without issuing another native model request.
+                report['browser_stage']='QA_RELOAD_SAME_DIALOG_FOURROW'
+                if stop_present():
+                    raise RuntimeError('HOLD_OWNER_STOP')
+                reload_response=await page.reload(wait_until='domcontentloaded',timeout=20000)
+                if (reload_response is None or reload_response.status!=200
+                        or urllib.parse.urlsplit(page.url).path!=PAGE):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_OWNER_ROUTE')
+                await page.wait_for_function(
+                    "window.__NOX_OWNER_LIVE_UI===true && !!document.querySelector('#prompt')",
+                    timeout=15000)
+                signed_reload=await context.request.get(
+                    base+'/chat/session',max_redirects=0,timeout=6000)
+                if not owner_session_continuity_valid(
+                        signed_reload.status,await context.cookies(base),owner_session_pin):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_OWNER_SESSION_CHANGED')
+                # A reload often collapses the rail. Reopen that UI only;
+                # never retry an ambiguous dialog click or a native POST.
+                rail=page.locator('#v24Rail')
+                if await rail.count()==1 and await rail.get_attribute('data-collapsed')=='true':
+                    await page.locator('[data-action="toggle-rail"]').first.click(timeout=3500)
+                reloaded_target=page.locator('#nativeChats button[role="listitem"]').filter(
+                    has=page.get_by_text(title,exact=True))
+                if await reloaded_target.count()!=1:
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_DIALOG_NOT_UNIQUE')
+                try:
+                    await reloaded_target.click(timeout=3500)
+                except Exception:
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_DIALOG_CLICK_AMBIGUOUS') from None
+                await page.wait_for_function(
+                    "title=>[...document.querySelectorAll('#nativeChats button[role=listitem]')]."
+                    "filter(b=>b.getAttribute('aria-current')==='true'&&"
+                    "b.querySelector('.t')?.textContent===title).length===1",
+                    arg=title,timeout=7000)
+                if (urllib.parse.urlsplit(page.url).path!=PAGE
+                        or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_ACTIVE_DIALOG_CHANGED')
+                reloaded_history=await json_response(await context.request.get(
+                    base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
+                    max_redirects=0,timeout=6000))
+                if not postquiet_fourrow_history_stable(
+                        postquiet_history,reloaded_history,did,
+                        browser_transcript_sha,firstturn_id_snapshot):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_HISTORY_FOURROW_CHANGED')
+                if (stop_present() or not exact_native_post_fence(
+                        postread_snapshot,stream_admitted,2)
+                        or not clean_two_turn_browser_runtime(
+                            page_errors,network,report['network_response_overflow_count'],
+                            report['critical_requestfailed_count'],
+                            blocked['non_qa_generation']+blocked['alternate_native_chat_route'])):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_RUNTIME_OR_POST')
+                report['multiturn_reload_same_dialog_history_verified']=True
                 report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:
                     raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
