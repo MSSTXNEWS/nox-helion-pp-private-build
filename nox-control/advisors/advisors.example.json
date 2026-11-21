@@ -1,5 +1,22 @@
 [
   {"name": "judge-1", "url": "http://127.0.0.1:8101", "timeout_s": 60, "role": "judge"},
   {"name": "checker-1", "url": "http://127.0.0.1:8102", "timeout_s": 60, "role": "checker"},
-  {"name": "ru-es-1", "url": "http://127.0.0.1:8103", "timeout_s": 60, "role": "ru_es"}
+  {"name": "ru-es-1", "url": "http://127.0.0.1:8103", "timeout_s": 60, "role": "ru_es"},
+
+  {"name": "copilot-cli-free", "kind": "cli", "cli": "copilot", "timeout_s": 120, "retries": 0,
+   "role": "code", "note": "GitHub Copilot CLI Free; owner signs in with GitHub (copilot, /login). Read-only: run without --allow-all-tools."},
+  {"name": "opencode-mimo-v2.5-free", "kind": "openai", "url": "https://opencode.ai/zen/v1",
+   "model": "mimo-v2.5-free", "api_key_env": "OPENCODE_ZEN_API_KEY", "timeout_s": 90, "retries": 2,
+   "role": "code", "note": "OpenCode Zen key from opencode.ai/auth; check the exact model id in GET /zen/v1/models."},
+  {"name": "particle-1-free", "kind": "openai", "url": "https://openrouter.ai/api/v1",
+   "model": "particle-1:free", "api_key_env": "OPENROUTER_API_KEY", "timeout_s": 90, "retries": 2,
+   "daily_limit": 50, "role": "general", "note": "OpenRouter :free = 50 requests/day. Verify slug via GET /api/v1/models."},
+  {"name": "nemotron-3.5-lightning-free", "kind": "openai", "url": "https://openrouter.ai/api/v1",
+   "model": "nvidia/nemotron-3.5-lightning:free", "api_key_env": "OPENROUTER_API_KEY", "timeout_s": 90,
+   "retries": 2, "daily_limit": 50, "role": "general",
+   "note": "Shares the OpenRouter 50/day pool with particle-1-free: keep the two limits summing to <=50 if both are used heavily."},
+  {"name": "gemini-cli-search", "kind": "cli", "cli": "gemini", "timeout_s": 120, "retries": 0,
+   "daily_limit": 1000, "role": "research", "note": "Gemini CLI + Google Search; owner signs in with Google (gemini). 1000 requests/day."},
+  {"name": "searxng-local", "kind": "searxng", "url": "http://127.0.0.1:8888", "timeout_s": 20,
+   "retries": 1, "max_results": 5, "role": "search", "note": "Local SearXNG, install via searxng_install.sh (dry-run by default)."}
 ]
