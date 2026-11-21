@@ -6,8 +6,7 @@ import json, os, re, subprocess, sys, tempfile, time, urllib.request
 ACT = '' if True else open(os.path.join(os.path.dirname(__file__), '..', 'block1', 'ACTION')).read() if os.path.exists(os.path.join(os.path.dirname(__file__), '..', 'block1', 'ACTION')) else ''
 INSTANCE = 60509551  # S2 (США); S1 (Квебек) = 61825960, выбирается маркером #S1 в начале REMOTE
 KEY = os.environ["NOX2"]
-REMOTE = '#S1
-curl -fsSL -H "Accept: application/vnd.github.raw" "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/contents/nox-control/gpu_tier/run.sh?ref=main" -o /tmp/gpu_run.sh && bash /tmp/gpu_run.sh 2>&1 | tail -c 2900'
+REMOTE = '#S1\ncurl -fsSL -H "Accept: application/vnd.github.raw" "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/contents/nox-control/gpu_tier/run.sh?ref=main" -o /tmp/gpu_run.sh && bash /tmp/gpu_run.sh 2>&1 | tail -c 2900'
 
 if 'target=S2' in ACT:
     REMOTE = REMOTE.replace('#S1\n', '', 1)
