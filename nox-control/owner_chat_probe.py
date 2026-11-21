@@ -223,6 +223,25 @@ def scoped_history_matches_turns(history, turns, dialog_id):
     return history_matches_turns(history.get('messages'), turns, dialog_id)
 
 
+
+def stable_postquiet_three_turn_history(client, original, turns, dialog_id):
+    """Re-read six owner-dialog rows after quiescence; never claim canonical S03 proof.
+
+    A single immediate history GET after third-turn DONE can reflect transient
+    or later-replaced rows. Compare the ordered six full rows, including any
+    present row IDs, across two authenticated exact-route GET snapshots.
+    This remains owner-dialog evidence only, NOT independent S03 or browser proof.
+    """
+    if len(turns) != 3 or not scoped_history_matches_turns(original, turns, dialog_id):
+        return False
+    time.sleep(0.5)
+    confirmed = owner_readback_json(
+        client, '/api/ui/memory/dialogs/history?dialog_id=' + dialog_id + '&limit=8')
+    if not scoped_history_matches_turns(confirmed, turns, dialog_id):
+        return False
+    return original['messages'][-6:] == confirmed['messages'][-6:]
+
+
 def require_durable_result(saved, answered, phase):
     """A diagnostic run cannot emit COMPLETE after an unsuccessful chat turn."""
     if not saved or not answered:
@@ -662,7 +681,7 @@ def main():
             expected_three=[(prompt,answer),(followup,answer2),(question,text)]
             third_durable=(isinstance(end,dict) and end.get('saved') is True
                            and end.get('s03_integrated') is True
-                           and scoped_history_matches_turns(third_history,expected_three,did))
+                           and stable_postquiet_three_turn_history(client,third_history,expected_three,did))
             emit('chat_executor_question',{'verified_six_plus_nox':bool(configured == 6 and phrase and third_durable),
                 'verified_observed_executor_count':bool(count and phrase and third_durable),
                 'observed_configured_count':configured,
@@ -672,6 +691,7 @@ def main():
                 'three_turn_history_verified':third_durable,
                 'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
                 'answer_sha256':digest(text.encode()),'raw_answer_exported':False})
+            if not third_durable:raise RuntimeError('HOLD_CHAT_PROBE_POSTQUIET_HISTORY')
             require_executor_witness(end,third_history,expected_three,count,phrase,did)
             # Third inference and durable-history readback also consume the 210 s budget.
             # A passed pre-POST gate alone must never authorize final COMPLETE.
