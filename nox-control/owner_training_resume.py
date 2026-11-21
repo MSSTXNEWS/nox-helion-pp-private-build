@@ -1130,6 +1130,31 @@ def continuation_terminal_state(terminal):
     return 'CONTINUATION_CHECKPOINTED_BY_OWNER_PAUSE'
 
 
+
+def final_observation_snapshots(helper):
+    """Collect final readbacks without losing a durable receipt on one transport failure.
+
+    An unavailable supervisor, proxy, GPU or progress endpoint is a HOLD,
+    never evidence that the native continuation was accepted.
+    """
+    getters = (
+        ('service_after', helper.service_state),
+        ('chat_after', helper.health),
+        ('gpu_after', helper.gpu),
+        ('progress_after', helper.progress),
+    )
+    snapshots, errors = {}, {}
+    for key, readback in getters:
+        try:
+            snapshots[key] = readback()
+        except Exception as exc:
+            snapshots[key] = None
+            code = str(exc)
+            errors[key] = (code if re.fullmatch('HOLD_[A-Z0-9_]+', code)
+                           else type(exc).__name__)
+    return snapshots, errors
+
+
 def main():
     helper = load_helper()
     request = os.environ.get('NOX_OWNER_REQUEST_ID', '')
@@ -1494,10 +1519,15 @@ def main():
                         success = False
             finally:
                 fcntl.flock(fd, fcntl.LOCK_UN); lock_held = False
-        result.update(finished=time.time(), service_after=helper.service_state(),
+        result.update(finished=time.time(),
                       hold_retained=(STATE/'TRAIN_HOLD.flag').exists(),
-                      pause_retained=(STATE/'TRAIN_PAUSE_REQUEST.flag').exists(),
-                      chat_after=helper.health(), gpu_after=helper.gpu(), progress_after=helper.progress())
+                      pause_retained=(STATE/'TRAIN_PAUSE_REQUEST.flag').exists())
+        final_snapshots, final_errors = final_observation_snapshots(helper)
+        result.update(final_snapshots)
+        if final_errors:
+            result['final_readback_errors'] = final_errors
+            result['state'] = 'HOLD_TRAINING_RESUME'
+            success = False
         try:
             result['native_workers_after'] = worker_readback(helper)
         except Exception as exc:
