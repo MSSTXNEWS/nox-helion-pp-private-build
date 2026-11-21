@@ -38,6 +38,24 @@ def pct(values: list[float], percentage: float) -> float:
     return round(ordered[max(0, math.ceil(percentage * len(ordered) / 100) - 1)], 3)
 
 
+def parse_receipts(raw: str) -> object:
+    """Reject ambiguous JSON before trusting any owner receipt field."""
+    def unique_fields(pairs: list[tuple[str, object]]) -> dict:
+        value = {}
+        for key, item in pairs:
+            # json.loads otherwise silently accepts the *last* duplicate key,
+            # making an exported evidence receipt ambiguous on review.
+            require(key not in value, 'DUPLICATE_RECEIPT_FIELD')
+            value[key] = item
+        return value
+
+    def reject_constant(_: str) -> object:
+        raise ValueError('HOLD_2A05_NONFINITE_JSON')
+
+    return json.loads(raw, object_pairs_hook=unique_fields,
+                      parse_constant=reject_constant)
+
+
 def summarize(receipts: list[dict], *, model_sha256: str, route_sha256: str,
               scenario_sha256: str) -> dict:
     # Input can also come from a caller, not only argparse. Malformed model
@@ -114,7 +132,7 @@ def main() -> int:
     require(args.json_file.is_file() and args.json_file.stat().st_size <= 5_000_000,
             'INPUT_SIZE')
     raw = args.json_file.read_text(encoding='utf-8')
-    result = summarize(json.loads(raw), model_sha256=args.model_sha256,
+    result = summarize(parse_receipts(raw), model_sha256=args.model_sha256,
                        route_sha256=args.route_sha256,
                        scenario_sha256=args.scenario_sha256)
     print(json.dumps(result, sort_keys=True, separators=(',', ':')))

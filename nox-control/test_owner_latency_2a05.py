@@ -1,6 +1,6 @@
 """One focused 2A05 receipt-contract regression, no inference or host effects."""
 import unittest
-from owner_latency_2a05 import summarize
+from owner_latency_2a05 import parse_receipts, summarize
 
 M = 'a' * 64
 R = 'b' * 64
@@ -55,6 +55,18 @@ class NativeLatencyContract(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, 'HOLD_2A05_PIN_REQUIRED'):
                         summarize([fixture(1)], model_sha256=model,
                                   route_sha256=route, scenario_sha256=Z)
+
+    def test_duplicate_receipt_keys_cannot_shadow_owner_evidence(self):
+        # Python's default JSON decoder silently takes the last repeated key.
+        for raw in (
+            '[{"state":"HOLD","state":"STREAM_ONLY_ACCEPTED"}]',
+            '[{"stream":{"native_first_ms":1,"native_first_ms":0}}]',
+        ):
+            with self.assertRaisesRegex(ValueError, 'HOLD_2A05_DUPLICATE_RECEIPT_FIELD'):
+                parse_receipts(raw)
+        with self.assertRaisesRegex(ValueError, 'HOLD_2A05_NONFINITE_JSON'):
+            parse_receipts('[{"stream":{"native_first_ms":NaN}}]')
+        self.assertEqual(parse_receipts('[{"state":"HOLD"}]'), [{'state': 'HOLD'}])
 
     def test_invalid_scenario_pin_is_hold(self):
         for pin in ('', '0' * 63, 'A' * 64, None):
