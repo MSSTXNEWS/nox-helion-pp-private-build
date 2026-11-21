@@ -546,10 +546,15 @@ def observed_owner_executor_count(snapshot):
         if not isinstance(row, dict):
             return None
         identity = row.get('id')
-        if (not (isinstance(identity, str) and 0 < len(identity) <= 128)
-                and not (type(identity) is int and identity >= 0)):
+        # Owner APIs may serialize the same worker as 1 or "1" across reads.
+        # Treat whitespace-only and cross-type aliases as untrusted identities.
+        if isinstance(identity, str) and 0 < len(identity) <= 128 and identity.strip():
+            normalized_id = identity.strip()
+        elif type(identity) is int and identity >= 0:
+            normalized_id = str(identity)
+        else:
             return None
-        identifiers.append(identity)
+        identifiers.append(normalized_id)
     if len(set(identifiers)) != configured:
         return None
     return configured

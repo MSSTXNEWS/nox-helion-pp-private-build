@@ -582,6 +582,33 @@ class ProbeTests(unittest.TestCase):
         self.assertNotIn("fresh.get('configured')==6", source)
         self.assertIn("'verified_observed_executor_count':bool(count and phrase and third_durable)", source)
 
+    def test_owner_executor_ids_reject_cross_type_and_whitespace_aliases(self):
+        """The third-turn owner census must prove distinct native workers."""
+        def snapshot(ids):
+            return {'schema': 'NOX_OWNER_EXECUTORS_V1', 'state': 'OBSERVED',
+                    'configured': len(ids), 'workers': [{'id': item} for item in ids]}
+
+        for ids in ((0, 1, 2), ('worker-a', 'worker-b', 'worker-c'),
+                    ('worker-a', 2, 'worker-c')):
+            with self.subTest(valid_ids=ids):
+                self.assertEqual(probe.observed_owner_executor_count(snapshot(ids)), 3)
+
+        invalid = (
+            (1, '1', 'worker-c'),
+            ('worker-a', ' worker-a ', 'worker-c'),
+            (' worker-a', 'worker-a ', 'worker-c'),
+            ('worker-a', '  ', 'worker-c'),
+            ('worker-a', True, 'worker-c'),
+            ('worker-a', -1, 'worker-c'),
+        )
+        for ids in invalid:
+            with self.subTest(invalid_ids=ids):
+                self.assertIsNone(probe.observed_owner_executor_count(snapshot(ids)))
+
+        source = path.read_text()
+        self.assertIn('identifiers.append(normalized_id)', source)
+        self.assertIn("configured=observed_owner_executor_count(fresh)", source)
+
     def test_executor_third_turn_requires_three_durable_pairs_and_owner_truth(self):
         turns = [('first', '323'), ('second', '323'), ('executor?', '6 executors + NOX')]
         rows = [{'role': role, 'content': content} for role, content in (
