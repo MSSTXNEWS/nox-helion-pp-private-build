@@ -320,6 +320,37 @@ def main():
             nodes.length===2 && row('same')?.textContent==='ONE' &&
             row('conflict')?.textContent==='SAFE' && !row('malformed');
         }'''))
+        check('CRLF split between chunks still emits one identified SSE delta', page.evaluate('''async () => {
+          const s={conversation_id:'crlf-boundary',exchange_id:'one'};
+          let posts=0,acks=0;
+          const deltas=[];
+          // Each byte gets its own stream chunk, placing every CR and LF in
+          // different chunks, including the blank line closing the frame.
+          const frame='id: event-123\\r\\nevent: delta\\r\\ndata: SPLIT\\r\\n\\r\\n';
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({start(c){
+              for(const ch of frame) c.enqueue(new TextEncoder().encode(ch));
+              c.close();
+            }})};
+          },async ack(){acks++;return true;}};
+          const ui={
+            async onDelta(scope,content,signal,eventId){
+              if(!signal.aborted) deltas.push([content,eventId]);
+            },
+            async upsertTerminal(){return true;}
+          };
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:5000
+          });
+          const ended=await c.begin(s);
+          const noRepost=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return ended==='STREAM_ENDED_READBACK_REQUIRED' &&
+            noRepost && posts===1 && acks===0 &&
+            deltas.length===1 && deltas[0][0]==='SPLIT' &&
+            deltas[0][1]==='event-123';
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:

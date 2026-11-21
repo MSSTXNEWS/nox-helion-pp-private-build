@@ -122,7 +122,10 @@
           if(outcome.readError) hold('HOLD_STREAM_POST_OR_READ');
           const part=outcome.part;
           if(part.done) break;
-          buf+=decoder.decode(part.value,{stream:true}).replace(/\r\n/g,'\n');
+          // Decode and normalize the WHOLE buffered tail. A network chunk may
+          // end with CR while the next starts with LF: normalizing each chunk
+          // separately leaves CRLF intact and silently drops valid SSE deltas.
+          buf=(buf+decoder.decode(part.value,{stream:true})).replace(/\r\n/g,'\n');
           if(buf.length>65536) hold('HOLD_STREAM_FRAME_TOO_LARGE');
           let e;
           while((e=buf.indexOf('\n\n'))>=0){
