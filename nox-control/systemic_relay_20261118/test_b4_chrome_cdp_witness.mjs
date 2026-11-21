@@ -56,7 +56,8 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
   return capture({ws:'ws://127.0.0.1:9333/fake',expectedChatOrigin:options.expectedChatOrigin??'http://localhost',makeSession:async()=>c,timeoutMs:2000,quiescenceMs:options.quiescenceMs??80,onReady:async()=>{
   setTimeout(async()=>{for(let i=0;i<2;i++){
     const requestId=String(i+1),o=i===1?options:{},timestamp=Object.hasOwn(o,'requestTimestamp')?o.requestTimestamp:100+i;
-    const chunks=i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):[Buffer.from(body)];
+    const chunks=i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):
+      [Buffer.from(i===0&&Object.hasOwn(options,'firstBody')?options.firstBody:body)];
     const captured=Buffer.concat(chunks);
     c.bodies.set(requestId,i===1&&responseBodyForSecondTurn!==null?Buffer.from(responseBodyForSecondTurn):captured);
     const requestUrl=i===1&&o.requestUrl?o.requestUrl:'http://localhost/api/nox/chat';
@@ -104,7 +105,16 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       c.emit('Network.dataReceived',{requestId,timestamp:Array.isArray(o.chunkTimestamps)?o.chunkTimestamps[index]:dataTime,data});
     }
     if(o.extraBeforeFinish)emitExtra();
-    c.emit('Network.loadingFinished',{requestId,timestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02});
+    // Inject an actual second CDP POST before the first loadingFinished,
+    // independently of the logical request timestamp on the normal second.
+    if(i===0&&options.overlapPostBeforeFirstClose)c.emit('Network.requestWillBeSent',{
+      requestId:'overlap-second',timestamp:timestamp+.015,
+      frameId:'fixture-frame',loaderId:'fixture-loader',
+      documentURL:'http://localhost/nox/chat',initiator:{type:'script'},
+      request:{method:'POST',url:'http://localhost/api/nox/chat',postData:'{"overlap":true}'}
+    });
+    if(!(i===0&&options.omitFirstClose))
+      c.emit('Network.loadingFinished',{requestId,timestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02});
     await new Promise(r=>setImmediate(r));
   }},10);
 }});}
@@ -713,4 +723,28 @@ test('post-quiescence document snapshot catches silent frame/loader/target repla
       quiescenceMs:85,postAckEvent:change
     }),expected,'silent post-body change must not certify two turns');
   }
+});
+
+test('multi-turn causal boundary rejects overlapping POSTs, missing terminal and ambiguous ordering',async()=>{
+  // The same model POSTs, CDP stream hashes and response bodies can be valid
+  // individually while the purported turns overlap; they are not a dialogue.
+  const serial=await run(false,null,null,null,{requestTimestamp:100.0201});
+  assert.equal(serial.cdp_consistent,true);
+  assert.equal(serial.ttft_sse_verified,true);
+  assert.deepEqual(serial.turns.map(x=>x.ttft_ms),[10,10]);
+  for(const requestTimestamp of [100.019,100.02]){
+    await assert.rejects(run(false,null,null,null,{requestTimestamp}),
+      /CDP_NON_SERIAL_CHAT_POST/,'second request must start strictly after first close');
+  }
+  await assert.rejects(run(false,null,null,null,{overlapPostBeforeFirstClose:true}),
+    /CDP_NON_SERIAL_CHAT_POST/,'second POST seen before first loadingFinished must fail');
+  await assert.rejects(run(false,null,null,null,{omitFirstClose:true}),
+    /CDP_NON_SERIAL_CHAT_POST/,'unknown first loadingFinished must not certify a second turn');
+  const missingDone=body.replace('data: [DONE]\\n\\n','');
+  await assert.rejects(run(false,null,null,null,{firstBody:missingDone}),
+    /CDP_NON_SERIAL_CHAT_POST/,'stop without explicit terminal [DONE] is not a completed first turn');
+  // Malformed clock evidence remains a HOLD rather than a fake PASS.
+  const malformed=await run(false,null,null,null,{requestTimestamp:NaN});
+  assert.equal(malformed.cdp_consistent,false);
+  assert.equal(malformed.ttft_sse_verified,false);
 });
