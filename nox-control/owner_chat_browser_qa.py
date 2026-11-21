@@ -17,6 +17,7 @@ import importlib.metadata
 import importlib.util
 import ipaddress
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -227,13 +228,19 @@ def progressive_stream_valid(value):
         return False
     lengths = value.get('ui_prefix_lengths_before_done')
     first, done = value.get('ui_first_ms'), value.get('native_done_ms')
+    answer_characters = value.get('answer_characters')
     return (value.get('ui_measurement_kind') == 'CUMULATIVE_VISIBLE_ASSISTANT_BODY'
             and type(value.get('native_delta_count')) is int and value['native_delta_count'] >= 2
             and value.get('ui_before_native_done') is True
             and isinstance(lengths, list) and 2 <= len(lengths) <= 80
             and all(type(n) is int and 3 <= n <= 4096 for n in lengths)
             and all(a < b for a, b in zip(lengths, lengths[1:]))
+            # The reported rendered prefix cannot be longer than the real
+            # native answer. Otherwise two growing UI numbers are false proof.
+            and type(answer_characters) is int and 3 <= answer_characters <= 4096
+            and lengths[-1] <= answer_characters
             and type(first) in (int, float) and type(done) in (int, float)
+            and math.isfinite(first) and math.isfinite(done)
             and 0 <= first < done)
 
 
