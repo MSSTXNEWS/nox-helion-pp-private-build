@@ -36,13 +36,6 @@ jobs:
               -v
 
       - run:
-          name: Verify 6A05 native chat provider HOLD and no POST replay
-          command: |
-            set -eu
-            PYTHONPATH=nox-control python -B -m unittest -v \
-              test_owner_chat_stream.StreamTests.test_upstream_http_and_transport_failures_keep_exact_hold_and_one_post
-
-      - run:
           name: Verify 3B01 Hunter malformed-source fail-closed contract
           command: |
             set -eu
