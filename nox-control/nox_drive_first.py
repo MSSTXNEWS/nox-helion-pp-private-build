@@ -117,7 +117,21 @@ def load_manifest(path, expected):
     raw = private_file(path).read_bytes()
     require(hashlib.sha256(raw).hexdigest() == expected, "MANIFEST_CHANGED")
     try:
-        m = json.loads(raw)
+        # Ambiguous owner approval, size or source fields must fail closed.
+        # Default json.loads silently accepts duplicate keys (last value wins).
+        def unique_pairs(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError("duplicate manifest field")
+                result[key] = value
+            return result
+
+        def reject_nonfinite(value):
+            raise ValueError("non-finite manifest constant")
+
+        m = json.loads(raw, object_pairs_hook=unique_pairs,
+                       parse_constant=reject_nonfinite)
     except (ValueError, UnicodeError):
         raise Hold("HOLD_DRIVE_FIRST_MANIFEST_JSON") from None
     require(isinstance(m, dict)
