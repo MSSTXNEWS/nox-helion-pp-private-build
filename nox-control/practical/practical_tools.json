@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "entry": "practical_tools.py",
+  "cli": "python3 practical_tools.py TOOL --json '{...}'",
+  "result": "{ok:true,...} | {ok:false,blocked,need}",
+  "tools": [
+    {
+      "name": "design_brief",
+      "description": "Бриф дизайна",
+      "required": [
+        "project",
+        "audience",
+        "goal"
+      ],
+      "optional": [
+        "tone",
+        "constraints",
+        "deliverables",
+        "brand",
+        "assets"
+      ]
+    },
+    {
+      "name": "palette_gen",
+      "description": "Палитра из базового цвета + WCAG контраст",
+      "required": [
+        "base"
+      ],
+      "optional": [
+        "scheme"
+      ]
+    },
+    {
+      "name": "css_tokens",
+      "description": "CSS-переменные (цвета, отступы, шрифты)",
+      "required": [
+        "palette"
+      ],
+      "optional": [
+        "space_base",
+        "type_ratio",
+        "type_base_px"
+      ]
+    },
+    {
+      "name": "a11y_check",
+      "description": "Проверка доступности HTML",
+      "required": [
+        "html"
+      ],
+      "optional": []
+    },
+    {
+      "name": "html_lint",
+      "description": "Линт HTML",
+      "required": [
+        "html"
+      ],
+      "optional": []
+    },
+    {
+      "name": "img_optimize_plan",
+      "description": "План оптимизации картинок (не исполняет)",
+      "required": [
+        "paths|dir"
+      ],
+      "optional": [
+        "max_kb",
+        "max_width"
+      ]
+    },
+    {
+      "name": "screenshot_diff_plan",
+      "description": "План сравнения скриншотов (не исполняет)",
+      "required": [
+        "pages"
+      ],
+      "optional": [
+        "viewports",
+        "threshold_pct"
+      ]
+    },
+    {
+      "name": "copy_ru",
+      "description": "Типографика и стиль русского текста",
+      "required": [
+        "text"
+      ],
+      "optional": []
+    },
+    {
+      "name": "task_to_pr",
+      "description": "Текст задачи -> acceptance-карточка",
+      "required": [
+        "text"
+      ],
+      "optional": []
+    },
+    {
+      "name": "changelog_gen",
+      "description": "Changelog из git log",
+      "required": [],
+      "optional": [
+        "repo",
+        "n",
+        "since"
+      ]
+    },
+    {
+      "name": "deploy_checklist",
+      "description": "Чеклист деплоя (не деплоит)",
+      "required": [],
+      "optional": [
+        "kind(web|nox|server)",
+        "extra"
+      ]
+    },
+    {
+      "name": "server_status_summary",
+      "description": "Сводка состояния сервера (read-only)",
+      "required": [],
+      "optional": [
+        "ports",
+        "disk_path"
+      ]
+    },
+    {
+      "name": "advisor_review",
+      "description": "Рецензия ответа советниками NOX",
+      "required": [
+        "task",
+        "acceptance",
+        "answer",
+        "config"
+      ],
+      "optional": []
+    }
+  ]
+}
