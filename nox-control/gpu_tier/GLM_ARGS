@@ -1,1 +1,1 @@
--c 16384 -ot exps=CPU -t 24 -tb 24 -fa on --parallel 1 -b 512 -ub 256 --jinja --temp 1.0 --top-p 0.95 --min-p 0.01
+-c 16384 -ngl 30 -ot exps=CPU -t 24 -tb 24 -fa on --parallel 1 -b 512 -ub 256 --jinja --temp 1.0 --top-p 0.95 --min-p 0.01

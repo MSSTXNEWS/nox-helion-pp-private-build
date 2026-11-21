@@ -120,7 +120,7 @@ P
     sleep 90
   fi
   curl -s -m3 localhost:8081/health; echo; grep -E "offload|CUDA0 .*buffer|KV|failed|error" /root/nox/logs/glm_server.log | cut -c1-200 | tail -8
-  tail -n 2 /root/nox/logs/glm_server.log | cut -c1-200; nvidia-smi --query-gpu=memory.used --format=csv,noheader; free -g | sed -n 2p
+  tail -n 2 /root/nox/logs/glm_server.log | cut -c1-200; nvidia-smi --query-gpu=memory.used --format=csv,noheader; nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader; free -g | sed -n 2p
   if [ "$CMD" = glmbench ] && curl -s -m3 localhost:8081/health | grep -q ok; then python3 /root/nox/gpu_tier/bench_glm.py 2>&1 | tail -5; fi
   ;;
 glmlog)
