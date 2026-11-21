@@ -346,13 +346,20 @@
            // independent verification. Bound the whole trusted wait so a
            // hung GET/verifier cannot pin reconnect forever. ackGate must
            // independently fence late side effects with its durable CAS.
-           ack=await boundedRead(
-             ()=>ackGate.requireCanonicalAck(s,witness.projection_event_id,
+           ack=await boundedGet(
+             lifecycleSignal=>ackGate.requireCanonicalAck(s,witness.projection_event_id,
             witness.ack_cursor,
             async expected=>{
               // readCanonicalAck MUST be a no-store, authenticated GET. It
               // MUST forward the challenge to the server; never a model POST.
-              const receipt=await transport.readCanonicalAck(s,expected,challenge);
+              // The canonical receipt GET must be physically cancellable; a
+              // timed-out or stopped late reply cannot resume gate CAS.
+              if(lifecycleSignal.aborted)
+                hold('HOLD_STREAM_RECONNECT_STOPPED');
+              const receipt=await transport.readCanonicalAck(
+                s,expected,challenge,lifecycleSignal);
+              if(lifecycleSignal.aborted)
+                hold('HOLD_STREAM_RECONNECT_STOPPED');
               const now=Date.now();
               if(!receipt||typeof receipt!=='object'||Array.isArray(receipt)||
                  receipt.request_nonce!==challenge.request_nonce||
@@ -368,11 +375,21 @@
               // callback is acceptable ONLY in isolated synthetic tests.
               const trusted=await host.verifyFreshCanonicalAck(
                 receipt,expected,s,challenge);
+              if(lifecycleSignal.aborted)
+                hold('HOLD_STREAM_RECONNECT_STOPPED');
               if(trusted!==true) hold('HOLD_STREAM_FRESHNESS_UNVERIFIED');
               freshVerified=true;
               return receipt;
             },
-            (receipt,expected)=>host.verifyCanonicalAck(receipt,expected,s)),
+            async (receipt,expected)=>{
+              if(lifecycleSignal.aborted)
+                hold('HOLD_STREAM_RECONNECT_STOPPED');
+              const trusted=await host.verifyCanonicalAck(
+                receipt,expected,s,lifecycleSignal);
+              if(lifecycleSignal.aborted)
+                hold('HOLD_STREAM_RECONNECT_STOPPED');
+              return trusted;
+            },lifecycleSignal),
              'HOLD_STREAM_CANONICAL_ACK_TIMEOUT',canonicalAckTimeoutMs,signal);
         }catch(err){
           if(err&&typeof err.code==='string') throw err;
