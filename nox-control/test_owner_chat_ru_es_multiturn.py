@@ -1349,6 +1349,64 @@ async function check(chunks, status=200) {
 
 
 
+    def test_ru_es_active_dialog_pinned_before_second_post_and_acceptance(self):
+        """Real Chromium switches the visible dialog without touching S03."""
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import ACTIVE_QA_DIALOG_JS
+
+        title = 'NOX Browser QA synthetic'
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                page.set_content(
+                    '<div id="nativeChats">'
+                    '<button role="listitem" aria-current="true">'
+                    '<span class="t">NOX Browser QA synthetic</span></button>'
+                    '<button role="listitem" aria-current="false">'
+                    '<span class="t">Another dialog</span></button></div>'
+                    '<div id="messages"></div>')
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                page.evaluate("""() => {
+                    const b=document.querySelectorAll('#nativeChats button');
+                    b[0].setAttribute('aria-current','false');
+                    b[1].setAttribute('aria-current','true');
+                }""")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.evaluate("""() => {
+                    const b=document.querySelectorAll('#nativeChats button');
+                    b[0].setAttribute('aria-current','true');
+                }""")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.evaluate("""() => {
+                    const b=document.querySelectorAll('#nativeChats button');
+                    b[1].setAttribute('aria-current','false');
+                    b[0].querySelector('.t').textContent='Replaced dialog';
+                }""")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.evaluate("""() => {
+                    document.querySelector('#nativeChats .t').textContent=
+                        'NOX Browser QA synthetic';
+                }""")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                page.evaluate("document.querySelector('#messages').remove()")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+            finally:
+                browser.close()
+        caller = inspect.getsource(browser_run)
+        pre = caller.index("HOLD_MULTITURN_ACTIVE_DIALOG_CHANGED_BEFORE_SECOND_POST")
+        admitted = caller.index('second_permitted=True', pre)
+        final = caller.index("postread_snapshot=await page.evaluate(SNAPSHOT_JS)")
+        preaccept = caller.index("HOLD_MULTITURN_ACTIVE_DIALOG_CHANGED_BEFORE_ACCEPTANCE")
+        accepted = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(pre, admitted)
+        self.assertLess(final, preaccept)
+        self.assertLess(preaccept, accepted)
+        self.assertEqual(caller.count('page.evaluate(ACTIVE_QA_DIALOG_JS,title)'), 2)
+        self.assertIn("urllib.parse.urlsplit(page.url).path!=PAGE", caller)
+        self.assertNotIn("context.request.post(", caller[final:accepted])
+
+
     def test_ru_es_snapshot_webcrypto_real_chromium(self):
         """Real isolated Chromium evaluates the production async snapshot JS.
 
