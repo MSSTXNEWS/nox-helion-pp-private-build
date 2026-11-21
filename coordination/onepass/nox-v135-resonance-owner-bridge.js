@@ -137,7 +137,7 @@
  }
  async function consume(response,emit,signal) {
  if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
- const reader=response.body.getReader(),decoder=new TextDecoder();
+ const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
  let buf='',answer='',done=null,doneSeen=false,startSeen=false,preparingSeen=false;
  let nativeModel='UNKNOWN';
  const line=async str=>{
