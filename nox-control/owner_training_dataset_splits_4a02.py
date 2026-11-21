@@ -55,6 +55,7 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
     seen_content = {}
     # Origin+goal is a global provenance identity, independent of RU/ES and domain.
     seen_origin_goals = {}
+    seen_group_licenses = {}
     duplicate_count = 0
     count = 0
     for row in records:
@@ -82,6 +83,12 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
         owner_stratum = seen_origin_goals.setdefault(origin_goal, stratum)
         if owner_stratum != stratum:
             raise SplitHold("HOLD_CROSS_STRATUM_ORIGIN_GOAL")
+        # Same origin+goal must not silently absorb incompatible license
+        # claims, especially when deduplicating identical content below.
+        license_claim = _norm(row["license"])
+        prior_license = seen_group_licenses.setdefault(group, license_claim)
+        if prior_license != license_claim:
+            raise SplitHold("HOLD_CONFLICTING_GROUP_LICENSE")
         fingerprint = _digest(_norm(row["text"]))
         prior = seen_content.get(fingerprint)
         if prior is not None:
