@@ -10,6 +10,7 @@ crossref, and html_page.
 from __future__ import annotations
 
 import argparse
+from datetime import date as calendar_date
 from email.utils import parsedate_to_datetime
 import hashlib
 from html.parser import HTMLParser
@@ -285,7 +286,18 @@ def _crossref_items(body: bytes) -> list[dict[str, str]]:
                     and 1 <= parts[0] <= 9999
                     and (len(parts) < 2 or 1 <= parts[1] <= 12)
                     and (len(parts) < 3 or 1 <= parts[2] <= 31)):
-                published = "-".join(str(part) for part in parts)
+                # Do not turn impossible Crossref calendar days into trusted
+                # chronological metadata. Partial year/month dates are valid.
+                try:
+                    if len(parts) == 3:
+                        calendar_date(*parts)
+                    published = (
+                        f"{parts[0]:04d}"
+                        + (f"-{parts[1]:02d}" if len(parts) >= 2 else "")
+                        + (f"-{parts[2]:02d}" if len(parts) == 3 else "")
+                    )
+                except ValueError:
+                    published = ""
         if title or url:
             items.append({"title": title, "url": url, "content": abstract, "published": published})
     return items
