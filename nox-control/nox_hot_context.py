@@ -190,6 +190,7 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
                         if item["status"] == "ACTIVE"}
         seen_ids = set()
         selected_by_retrieval = []
+        previous_rank = None
         for row in rows:
             _guard(type(row) is dict and
                    set(row) == {"id", "source_sha256", "first_pass_score"},
@@ -199,6 +200,13 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
                    type(sha) is str and type(score) in (int, float) and
                    0 <= score <= 1 and math.isfinite(score),
                    "RETRIEVAL_PLAN")
+            # Producer's contract is descending score, then ascending ID.
+            # Reject shuffled results before the token budget can favor a
+            # lower-ranked fact; never silently trust caller array order.
+            rank = (-score, ident)
+            _guard(previous_rank is None or previous_rank <= rank,
+                   "RETRIEVAL_ORDER")
+            previous_rank = rank
             exact = active_by_id.get(ident)
             _guard(exact is not None and exact["source_sha256"] == sha and
                    exact["revision"] == current_s03_revision and
