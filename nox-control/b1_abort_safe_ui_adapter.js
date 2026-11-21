@@ -221,6 +221,16 @@
         }
         return pending.promise;
       }
+      // Completed terminal events are already visible. An SSE reconnect
+      // may replay their ID after the original async intent was released.
+      // Avoid repeating beforeCommit (which may be expensive or have UI
+      // side effects) and preserve a single immutable DOM turn.
+      const existing=find(s);
+      if(existing&&existing.dataset.noxB1State==='terminal'){
+        if(existing.dataset.noxB1EventId!==eventId)
+          hold('HOLD_B1_UI_CONFLICTING_TERMINAL');
+        return Promise.resolve(true);
+      }
       const previous=deltaTails.get(k)||Promise.resolve();
       const job=Promise.resolve().then(async()=>{
         let closed=false, onAbort, timer=null;
