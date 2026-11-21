@@ -34,6 +34,38 @@ class Request:
 
 
 class FactReceiptTest(unittest.TestCase):
+    def test_0a03_malformed_chat_never_starts_stream_or_memory(self):
+        # Real FastAPI route callback; all cases return before the model/S03
+        # generator is created. No fake successful stream receipt.
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        cases = (
+            (None, "CHAT_INVALID_BODY"),
+            (["not", "a", "dict"], "CHAT_INVALID_BODY"),
+            ({"messages": ["not-a-message"]}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": [{"role": "user", "content": {"unsafe": True}}]}, "CHAT_INVALID_CONTENT"),
+            ({"options": ["wrong-shape"]}, "CHAT_INVALID_OPTIONS"),
+            ({"options": {"num_predict": "nan"}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"options": {"num_predict": -1}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"messages": ""}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": 0}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": False}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": None}, "CHAT_INVALID_MESSAGES"),
+            ({"options": []}, "CHAT_INVALID_OPTIONS"),
+            ({"options": 0}, "CHAT_INVALID_OPTIONS"),
+            ({"options": False}, "CHAT_INVALID_OPTIONS"),
+            ({"options": None}, "CHAT_INVALID_OPTIONS"),
+            ({"options": {"num_predict": 0}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"options": {"num_predict": False}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"options": {"num_predict": None}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"options": {"num_predict": 1.5}}, "CHAT_INVALID_NUM_PREDICT"),
+        )
+        for body, code in cases:
+            with self.subTest(body=body):
+                response = asyncio.run(chat(Request(body)))
+                self.assertEqual(response.status_code, 400)
+                payload = json.loads(response.body)
+                self.assertEqual(payload, {"status": "HOLD", "reason": code})
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
