@@ -7,7 +7,7 @@ MODE="$(curl -fsSL "$R/MODE" | tr -d '[:space:]')"
 chmod +x /root/nox/scripts/*.sh /root/nox/scripts/lib/*.sh 2>/dev/null
 [ -f /root/nox/nox.env ] || printf 'NOX_SERVER=S1\nNOX_S1_SSH="-p 62281 root@174.88.252.223"\n' > /root/nox/nox.env
 SRV=S1; nvidia-smi -L 2>/dev/null | grep -q V100 && SRV=S2
-cd /root/nox/scripts
+cd /root/nox/scripts; export NOX_SKIP="${NOX_SKIP:-P1-15}"
 echo "MODE=$MODE SRV=$SRV host=$(hostname)"
 case "$MODE" in
   run_dry) NOX_SERVER=$SRV timeout 250 ./run_block1.sh --dry-run 2>&1 | grep -E "===|BLOCKED|FAIL|DRY|ИТОГ" | cut -c1-220 | tail -c 2800;;
