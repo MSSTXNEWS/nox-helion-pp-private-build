@@ -636,6 +636,46 @@ def main():
             posts===0&&acks===1&&projects===2&&
             ids.length===2&&ids[0]===ids[1];
         }'''))
+        check('reconnect timeout aborts real adapter late DOM commit; GET-only retry succeeds', page.evaluate('''async () => {
+          const s={conversation_id:'projection-abort',exchange_id:'late-dom-fence'};
+          const container=document.createElement('main');
+          document.body.appendChild(container);
+          let release,precommits=0,posts=0,reads=0,acks=0;
+          const ui=NOXB1AbortSafeUI.createUiAdapter({
+            container,terminalTimeoutMs:1000,
+            beforeCommit(kind){
+              if(kind==='terminal'&&++precommits===1)
+                return new Promise(resolve=>{release=resolve});
+            }
+          });
+          const transport={...opts.transport,
+            post(){posts++;throw Error('NO_REPOST')},
+            async readback(){reads++;return {...s}},
+            async ack(){acks++;return true}
+          };
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,
+            uiProjectionTimeoutMs:30
+          });
+          const first=await Promise.race([
+            c.reconnect(s).then(()=>null,e=>e.code),
+            new Promise(resolve=>setTimeout(()=>resolve('HUNG'),400))
+          ]);
+          if(first!=='HOLD_STREAM_UI_PROJECTION_TIMEOUT'||
+             typeof release!=='function'||posts!==0||acks!==0||
+             reads!==1||container.children.length!==0)return false;
+          // The old harness returned HOLD but failed to abort the adapter;
+          // settling its late beforeCommit then created a terminal DOM row.
+          release();
+          await new Promise(resolve=>setTimeout(resolve,0));
+          if(container.children.length!==0||acks!==0)return false;
+          const second=await c.reconnect(s);
+          const row=container.firstElementChild;
+          return second.safe_to_ack===true&&posts===0&&acks===1&&
+            reads===2&&precommits===2&&container.children.length===1&&
+            row.dataset.noxB1State==='terminal'&&
+            row.dataset.noxB1EventId==='event-late-dom-fence';
+        }'''))
         check('terminal UI projection requires literal true before any ACK', page.evaluate('''async () => {
           const s={conversation_id:'projection-contract',exchange_id:'strict-confirm'};
           const projections=[undefined,null,false,0,'ok',true];
