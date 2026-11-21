@@ -114,7 +114,8 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       request:{method:'POST',url:'http://localhost/api/nox/chat',postData:'{"overlap":true}'}
     });
     if(!(i===0&&options.omitFirstClose))
-      c.emit('Network.loadingFinished',{requestId,timestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02});
+      c.emit(i===1&&o.loadingFailed?'Network.loadingFailed':'Network.loadingFinished',
+        {requestId,timestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02});
     await new Promise(r=>setImmediate(r));
   }},10);
 }});}
@@ -867,5 +868,40 @@ test('SSE tail-to-stop and tail-to-DONE witness separates delayed terminal chunk
   assert.equal(badClock.ttft_sse_verified,false);
   assert.equal(badClock.turns[1].sse_last_text_to_done_ms,null);
   assert.equal(badClock.turns[1].sse_last_text_to_done_cross_chunk,null);
+  assert.doesNotMatch(JSON.stringify(delayed),/secret|data:/);
+});
+
+test('SSE DONE to CDP loadingFinished measures network-tail, not TCP close',async()=>{
+  const delta='data: {"choices":[{"delta":{"content":"A"}}]}\n\n';
+  const finish='data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n';
+  const done='data: [DONE]\n\n';
+  const delayed=await run(false,[Buffer.from(delta),Buffer.from(finish),Buffer.from(done)],null,null,{
+    chunkTimestamps:[101.010,101.020,101.250],closeTimestamp:101.280
+  });
+  assert.equal(delayed.cdp_consistent,true);
+  assert.equal(delayed.ttft_sse_verified,true);
+  assert.equal(delayed.turns[1].sse_done_to_loading_finished_ms,30);
+  assert.equal(delayed.turns[1].sse_done_to_loading_finished_source,'CDP:Network.loadingFinished');
+  assert.equal(delayed.turns[0].sse_done_to_loading_finished_ms,10);
+  // Distinct from last-visible-text gap: even a textless SSE can have terminal-to-close.
+  const textless=await run(false,[Buffer.from(finish+done)],null,null,{
+    chunkTimestamps:[101.250],closeTimestamp:101.280
+  });
+  assert.equal(textless.cdp_consistent,true);
+  assert.equal(textless.ttft_sse_verified,false);
+  assert.equal(textless.turns[1].sse_last_text_to_done_ms,null);
+  assert.equal(textless.turns[1].sse_done_to_loading_finished_ms,30);
+  const incomplete=await run(false,[Buffer.from(delta+finish)]);
+  assert.equal(incomplete.cdp_consistent,false);
+  assert.equal(incomplete.turns[1].sse_done_to_loading_finished_ms,null);
+  assert.equal(incomplete.turns[1].sse_done_to_loading_finished_source,null);
+  const failed=await run(false,[Buffer.from(delta+finish+done)],null,null,{loadingFailed:true});
+  assert.equal(failed.cdp_consistent,false);
+  assert.equal(failed.turns[1].sse_done_to_loading_finished_ms,null);
+  const reversed=await run(false,[Buffer.from(delta+finish+done)],null,null,{closeTimestamp:101.005});
+  assert.equal(reversed.cdp_consistent,false);
+  assert.equal(reversed.ttft_sse_verified,false);
+  assert.equal(reversed.turns[1].sse_done_to_loading_finished_ms,null);
+  assert.equal(reversed.turns[1].sse_done_to_loading_finished_source,null);
   assert.doesNotMatch(JSON.stringify(delayed),/secret|data:/);
 });
