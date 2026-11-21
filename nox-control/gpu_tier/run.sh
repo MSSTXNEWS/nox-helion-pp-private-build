@@ -1,7 +1,7 @@
 #!/bin/bash
 # gpu_tier: команды из CMD (отдельно от block1). Вывод короткий.
-R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/gpu_tier
-CMD="$(curl -fsSL "$R/CMD?t=$RANDOM" | tr -d '[:space:]')"
+gh_raw(){ curl -fsSL -H "Accept: application/vnd.github.raw" "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/contents/nox-control/gpu_tier/$1?ref=main"; }
+CMD="$(gh_raw CMD | tr -d '[:space:]')"
 echo "CMD=$CMD"
 case "$CMD" in
 recon)
