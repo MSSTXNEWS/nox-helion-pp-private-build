@@ -678,6 +678,25 @@ def observed_owner_executor_count(snapshot):
     return configured
 
 
+def require_postturn_executor_identity(client, witnessed):
+    """Reconfirm exact observed worker set after postquiet third-turn history.
+
+    A stable worker COUNT is not sufficient evidence when identities churn.
+    Owner-only GET, no extra model POST and no native lease.
+    """
+    if observed_owner_executor_count(witnessed) is None:
+        raise RuntimeError('HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT')
+    current = owner_readback_json(client, '/api/ui/executors')
+    if observed_owner_executor_count(current) is None:
+        raise RuntimeError('HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT')
+    def identities(snapshot):
+        return frozenset(str(row['id']).strip() for row in snapshot['workers'])
+    if (witnessed['configured'] != current['configured']
+            or identities(witnessed) != identities(current)):
+        raise RuntimeError('HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT')
+    return True
+
+
 def answer_matches_observed_executor_count(answer, configured):
     """The model's N executors + NOX claim must match the observed N."""
     if not isinstance(answer, str) or type(configured) is not int or configured < 1:
@@ -833,6 +852,7 @@ def main():
             if not third_durable:raise RuntimeError('HOLD_CHAT_PROBE_POSTQUIET_HISTORY')
             require_executor_witness(end,third_history,expected_three,count,phrase,did)
             require_postturn_owner_binding(client)  # final owner route continuity, read-only
+            require_postturn_executor_identity(client, fresh)  # final identity continuity
             # Third inference and durable-history readback also consume the 210 s budget.
             # A passed pre-POST gate alone must never authorize final COMPLETE.
             require_executor_turn_budget(time.monotonic()-probe_started)

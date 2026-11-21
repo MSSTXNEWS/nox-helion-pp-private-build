@@ -25,6 +25,44 @@ class SyntheticBoundedReader:
 
 
 class ProbeTests(unittest.TestCase):
+    def test_postthird_owner_executor_identity_drift_fails_closed(self):
+        """A settled 3-turn history cannot certify stale executor identities."""
+        witness = {'schema': 'NOX_OWNER_EXECUTORS_V1', 'state': 'OBSERVED',
+                   'configured': 2, 'workers': [{'id': 1}, {'id': '2'}]}
+        equivalent = dict(witness, workers=[{'id': ' 2 '}, {'id': '1'}])
+        with patch.object(probe, 'owner_readback_json', return_value=equivalent) as read:
+            self.assertTrue(probe.require_postturn_executor_identity('client', witness))
+            read.assert_called_once_with('client', '/api/ui/executors')
+        poisoned = (
+            dict(witness, workers=[{'id': 1}, {'id': 3}]),
+            dict(witness, workers=[{'id': 1}, {'id': '1'}]),
+            dict(witness, configured=1, workers=[{'id': 1}]),
+            dict(witness, state='UNKNOWN'),
+            dict(witness, workers=[]),
+            {'schema': 'NOX_OWNER_EXECUTORS_V1', 'configured': 2,
+             'workers': [{'id': 1}, {'id': 2}]},
+            None,
+        )
+        for candidate in poisoned:
+            with self.subTest(current=candidate), patch.object(
+                    probe, 'owner_readback_json', return_value=candidate):
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT$'):
+                    probe.require_postturn_executor_identity('client', witness)
+        with patch.object(probe, 'owner_readback_json') as read:
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT'):
+                probe.require_postturn_executor_identity('client', {})
+            read.assert_not_called()
+        with patch.object(probe, 'owner_readback_json',
+                          side_effect=RuntimeError('HOLD_OWNER_READBACK_RESPONSE_ROUTE')):
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_READBACK_RESPONSE_ROUTE'):
+                probe.require_postturn_executor_identity('client', witness)
+        code = path.read_text()
+        self.assertLess(code.index('require_postturn_owner_binding(client)  # final'),
+                        code.index('require_postturn_executor_identity(client, fresh)'))
+        self.assertLess(code.index('require_postturn_executor_identity(client, fresh)'),
+                        code.index("emit('chat_recent_timing_after',metrics())"))
+
     def test_stream_textual_http_failure_status_fences(self):
         """Fail-closed on 4xx/5xx status lines even with later saved DONE."""
         failures = ('HTTP/1.1 503 Service Unavailable',
