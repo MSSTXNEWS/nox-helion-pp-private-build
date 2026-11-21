@@ -28,6 +28,12 @@ class DriveNativeTests(unittest.TestCase):
         self.cfg.write_text('[noxdrive]\ntype = drive\nroot_folder_id = 1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v\n'
                             'token = {"refresh_token":"TEST-ONLY"}\n')
         self.cfg.chmod(0o600)
+        # Test only: the fixture folder must not be an actual owner Drive ID.
+        fixture_root = self.cfg.read_text().split("root_folder_id = ", 1)[1].splitlines()[0]
+        pin = patch("nox_drive_native_binding.drive.approved_cold_root",
+                    side_effect=lambda value: value == fixture_root)
+        pin.start()
+        self.addCleanup(pin.stop)
         self.owner=True
         self.lease=True
         self.stop=False
@@ -91,6 +97,16 @@ class DriveNativeTests(unittest.TestCase):
                             "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v\n")
         self.assertEqual(self.submit()["state"],"HOLD_GOOGLE_OAUTH_REQUIRED")
         self.assertEqual(self.queued,[])
+
+    def test_unapproved_drive_root_is_held_without_enqueuing(self):
+        with patch("nox_drive_native_binding.drive.approved_cold_root", return_value=False):
+            self.assertEqual(self.submit()["state"], "HOLD_GOOGLE_OAUTH_REQUIRED")
+        self.assertEqual(self.queued, [])
+
+    def test_malformed_drive_config_is_held_not_exception(self):
+        self.cfg.write_text("[noxdrive\ntype = drive\n")
+        self.assertEqual(self.submit()["state"], "HOLD_GOOGLE_OAUTH_REQUIRED")
+        self.assertEqual(self.queued, [])
 
     def test_owner_stop_lease_and_opt_in_are_required(self):
         for params in ({"remote_opt_in":False},{"actor":"stranger"}):
