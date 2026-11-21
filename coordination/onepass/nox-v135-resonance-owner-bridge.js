@@ -213,7 +213,7 @@
  let claimedId;
  const body=new ReadableStream({
    async start(controller){
-    const event=payload=>{
+    const event=payload=>{if(closed)return;
     if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
      firstVisibleMs=Math.round(performance.now()-started);
     const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
