@@ -569,6 +569,24 @@ class TestProbe(unittest.TestCase):
                     bridge=(pathlib.Path(__file__).parent /
                             'nox-v135-resonance-owner-bridge.js').read_text('utf8')
                     await page.add_script_tag(content=bridge)
+                    # Malformed request identity must be rejected BEFORE any
+                    # native dialog create or model POST, not downgraded to JSON.
+                    malformed = await page.evaluate("""async () => {
+                        const results=[];
+                        for(const request_id of [null,17,'','   ']){
+                            const r=await fetch('/api/nox/chat',{
+                                method:'POST',
+                                body:JSON.stringify({message:'hello',request_id})
+                            });
+                            results.push({status:r.status,body:await r.text()});
+                        }
+                        return {results,posts:window.__nativePosts};
+                    }""")
+                    self.assertEqual(malformed['posts'], 0)
+                    self.assertEqual(len(malformed['results']), 4)
+                    for case in malformed['results']:
+                        self.assertEqual(case['status'], 422)
+                        self.assertIn('HOLD_REQUEST_ID_SCOPE', case['body'])
                     actual=await page.evaluate("""async () => {
                         const body=JSON.stringify({
                             dialog_id:'a'.repeat(32),message:'hello',request_id:'b3-test'});
