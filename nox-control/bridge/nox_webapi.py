@@ -151,17 +151,31 @@ def _status_flat():
     # A stale or future-dated sampler observation must never be presented as
     # live spare GPU/VRAM capacity. Keep its timestamp for diagnostics, but
     # mask measurements used by admission and status consumers (6A04).
-    sample_at = M["t"]
-    age = time.time() - sample_at if type(sample_at) in (int, float) and math.isfinite(sample_at) else None
+    # Convert once: malformed/overflowing sampler time must not crash status.
+    # bool is deliberately excluded, even though it is an int subclass.
+    raw_sample_at = M.get("t")
+    try:
+        sample_at = float(raw_sample_at) if type(raw_sample_at) in (int, float) else None
+        if sample_at is not None and not math.isfinite(sample_at):
+            sample_at = None
+    except (TypeError, ValueError, OverflowError):
+        sample_at = None
+    age = time.time() - sample_at if sample_at is not None else None
     fresh = age is not None and 0 <= age < 30
+    timestamp = None
+    if sample_at is not None and sample_at > 0:
+        try:
+            timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(sample_at))
+        except (TypeError, ValueError, OverflowError, OSError):
+            pass
     g = M["gpu"] if fresh else []
     temperatures = _verified_gpu_sensor_values(g, "temp_c")
     powers = _verified_gpu_sensor_values(g, "power_w")
     ru, rt = (M["ram"] or (None, None)) if fresh else (None, None)
     df, dt = (M["disk"] or (None, None)) if fresh else (None, None)
     return {
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(M["t"])) if M["t"] else None,
-        "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(M["t"])) if M["t"] else None,
+        "timestamp": timestamp,
+        "timestamp_utc": timestamp,
         "source": "nox-bridge:/proc+nvidia-smi", "gpu_source": "nvidia-smi", "fresh": bool(fresh),
         "cpu_percent": M["cpu"] if fresh else None, "ram_percent": round(100 * ru / rt, 1) if ru is not None and rt else None,
         "ram_used_gb": round(ru, 1) if ru is not None else None, "ram_total_gb": round(rt, 1) if rt is not None else None,
