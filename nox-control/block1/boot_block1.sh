@@ -14,5 +14,6 @@ case "$MODE" in
   run_check) NOX_SERVER=$SRV timeout 250 ./run_block1.sh --check 2>&1 | grep -E "===|PASS|FAIL|BLOCKED|ИТОГ" | cut -c1-220 | tail -c 2800;;
   run) NOX_SERVER=$SRV nohup setsid ./run_block1.sh > /root/nox/logs/block1_run.log 2>&1 < /dev/null & sleep 100; grep -E "===|PASS|FAIL|BLOCKED|ИТОГ" /root/nox/logs/block1_run.log | cut -c1-220 | tail -c 2600;;
   status) grep -E "===|PASS|FAIL|BLOCKED|ИТОГ" /root/nox/logs/block1_run.log | cut -c1-220 | tail -c 2600; echo ---; for f in /root/nox/receipts/*.json; do python3 -I -c 'import json,sys;d=json.load(open(sys.argv[1]));print(d["id"],d["result"],d.get("reason","")[:90])' "$f" 2>/dev/null; done | tail -40;;
+  detail) for i in P1-06 P1-01; do echo "##### $i"; cat /root/nox/receipts/$i.json 2>/dev/null | head -12 | cut -c1-200; tail -n 12 /root/nox/logs/$i.log 2>/dev/null | cut -c1-200; done; pgrep -af "cmake|make|nvcc|llama" | head -5 | cut -c1-150; ls /root/nox/llama.cpp 2>/dev/null | head -3; df -h /root /dev/shm | tail -2;;
   *) echo "unknown mode $MODE";;
 esac
