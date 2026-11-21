@@ -53,11 +53,11 @@
        !Number.isSafeInteger(canonicalAckTimeoutMs)||
        canonicalAckTimeoutMs<1||canonicalAckTimeoutMs>600000)
       hold('HOLD_STREAM_HOST_CONTRACT');
-    const started=new Set(),active=new Map(),reconnecting=new Map(),
+    const started=new Set(),reconnectSeen=new Set(),active=new Map(),reconnecting=new Map(),
       reconnectControllers=new Map();
     async function begin(raw){
       const s=snap(raw),k=key(s);
-      if(started.has(k)) hold('HOLD_STREAM_NO_REPOST');
+      if(started.has(k)||reconnectSeen.has(k)) hold('HOLD_STREAM_NO_REPOST');
       // Claim the exchange SYNCHRONOUSLY before the first await. Previously two
       // simultaneous begin() calls could both pass started.has() while the
       // host's readCommitted() promise was pending, causing two model POSTs.
@@ -415,6 +415,11 @@
       if(active.has(k)) hold('HOLD_STREAM_ACTIVE_POST');
       const pending=reconnecting.get(k);
       if(pending) return pending;
+      // A readback-only reconnect means this exchange may already exist on
+      // the server, even when storage has not committed yet. Fence begin()
+      // synchronously before any GET/await; STOP, timeout or GET failure must
+      // never grant permission for another model POST of this exchange.
+      reconnectSeen.add(k);
       const ctrl=new AbortController();
       const attempt=reconnectOnce(s,ctrl.signal);
       reconnecting.set(k,attempt);
