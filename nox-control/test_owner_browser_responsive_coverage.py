@@ -8,7 +8,7 @@ from owner_chat_browser_qa import (COMPOSER_JS, RESPONSIVE_LAYOUT_CASES,
     allowed_qa_request, fresh_qa_post_admission, post_admission_hold_reason,
     browser_route_method_allowed, check_report_layout, click_send, verify_saved_browser_refresh,
     idle_slots, MODEL_SLOTS_URL, pinned_served_html_hash,
-    native_stream_envelope_valid, progressive_stream_valid, OBSERVER_JS, SNAPSHOT_JS)
+    native_stream_envelope_valid, progressive_stream_valid, canonical_s03_proof_valid, OBSERVER_JS, SNAPSHOT_JS)
 
 class FakePage:
     def __init__(self, bad_width=None, reported_width=None, reported_height=None):
@@ -72,6 +72,37 @@ class ResponsiveComposerContract(unittest.IsolatedAsyncioTestCase):
             await check_report_layout(page,{})
         self.assertIn((320,720),page.views)
 
+
+
+class CanonicalTwoTurnS03EvidenceContract(unittest.TestCase):
+    def test_single_turn_or_broken_roles_cannot_pass_canonical_readback(self):
+        dialog = 'scoped-dialog'
+        rows = [{'role': 'user', 'content': 'First prompt'},
+                {'role': 'assistant', 'content': 'First response'},
+                {'role': 'user', 'content': 'Follow-up'},
+                {'role': 'assistant', 'content': 'Second response'}]
+        receipt = {'source': 'canonical_s03', 'verified': True, 'durable': True,
+                   'event_id': 'event-2', 'turn_id': 'turn-2',
+                   'sequence': 2, 'dialog_id': dialog}
+        def readback(messages):
+            answer = messages[-1].get('content', '') if messages and isinstance(messages[-1], dict) else ''
+            return {'source': 'canonical_s03', 'independent': True,
+                    'event_id': 'event-2', 'turn_id': 'turn-2',
+                    'sequence': 2, 'dialog_id': dialog,
+                    'messages': messages,
+                    'full_answer_sha256': hashlib.sha256(str(answer).encode()).hexdigest()}
+        self.assertTrue(canonical_s03_proof_valid(receipt, readback(rows), dialog, rows))
+        invalid = [
+            rows[-1:],  # Prior code admitted single assistant as canonical two-turn.
+            rows[:2],   # One exchange is not multi-turn.
+            [dict(r) for r in rows[:3]] + [{'role': 'user', 'content': 'Wrong'}],
+            [dict(r) for r in rows[:3]] + [{'role': 'assistant', 'content': ''}],
+            [dict(r) for r in rows[:3]] + [{'role': 'assistant', 'content': 123}],
+            [dict(r) for r in rows[:3]] + [None],
+        ]
+        for case in invalid:
+            with self.subTest(case=repr(case)[-80:]):
+                self.assertFalse(canonical_s03_proof_valid(receipt, readback(case), dialog, case))
 
 
 class ProgressiveStreamEvidenceContract(unittest.TestCase):

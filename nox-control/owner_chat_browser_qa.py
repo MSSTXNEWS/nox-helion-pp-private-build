@@ -185,6 +185,19 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     """Fail closed unless a trusted canonical writer receipt matches exact independent S03 readback."""
     if not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict):
         return False
+    # A matching receipt for a single assistant row is *not* the required
+    # two-turn S03 witness. Verify the full ordered user/assistant pair twice,
+    # before trusting receipt flags or a readback hash supplied alongside it.
+    roles = ('user', 'assistant', 'user', 'assistant')
+    if (not isinstance(dialog_id, str) or not dialog_id
+            or not isinstance(expected_messages, list)
+            or len(expected_messages) != len(roles)
+            or any(not isinstance(row, dict)
+                   or row.get('role') != role
+                   or type(row.get('content')) is not str
+                   or not row['content']
+                   for row, role in zip(expected_messages, roles))):
+        return False
     event_id = writer_receipt.get('event_id')
     turn_id = writer_receipt.get('turn_id')
     sequence = writer_receipt.get('sequence')
