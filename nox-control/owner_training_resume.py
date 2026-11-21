@@ -1276,7 +1276,10 @@ def main():
         # Supervisor readback; reject invalid states before any identity claim.
         def read_start_status():
             status = helper.service_state()
-            if type(status) is not dict or type(status.get('state')) is not str:
+            if (type(status) is not dict
+                    or type(status.get('state')) is not str
+                    or status['state'] not in (
+                        'STARTING', 'RUNNING', 'STOPPED', 'EXITED', 'FATAL')):
                 raise RuntimeError('HOLD_NEW_TRAINER_STATUS_READBACK')
             return status
 
