@@ -1173,6 +1173,51 @@ async function check(chunks, status=200) {
         self.assertLess(session, runtime)
         self.assertLess(runtime, accepted)
 
+    def test_ru_es_postquiet_history_fourrow_identity_and_digest_fence(self):
+        """A clean stream may conceal a rewritten or replaced persisted row."""
+        from owner_chat_browser_qa import postquiet_fourrow_history_stable
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        before = {'dialog_id': DIALOG, 'messages': [
+            dict(row, message_id=f'row-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(es), 1)]}
+        pin = multiturn_transcript_sha256(before['messages'])
+        first_ids = ('row-1', 'row-2')
+        self.assertTrue(postquiet_fourrow_history_stable(
+            before, json.loads(json.dumps(before)), DIALOG, pin, first_ids))
+        for label, mutate in (
+            ('changed_es_answer', lambda h: h['messages'][3].update(content='9,8,7')),
+            ('replaced_last_id', lambda h: h['messages'][3].update(message_id='new-row')),
+            ('replaced_first_id', lambda h: h['messages'][0].update(message_id='new-row')),
+            ('duplicate_id', lambda h: h['messages'][2].update(message_id='row-1')),
+            ('missing_id', lambda h: h['messages'][2].pop('message_id')),
+            ('bad_row_scope', lambda h: h['messages'][1].update(dialog_id='other-dialog')),
+            ('bad_root_scope', lambda h: h.update(dialog_id='other-dialog')),
+            ('dropped_message', lambda h: h['messages'].pop()),
+            ('extra_message', lambda h: h['messages'].append(dict(h['messages'][3]))),
+        ):
+            with self.subTest(mutation=label):
+                later = json.loads(json.dumps(before))
+                mutate(later)
+                self.assertFalse(postquiet_fourrow_history_stable(
+                    before, later, DIALOG, pin, first_ids))
+        self.assertFalse(postquiet_fourrow_history_stable(
+            before, before, DIALOG, '0' * 64, first_ids))
+        self.assertFalse(postquiet_fourrow_history_stable(
+            before, before, DIALOG, pin, ('wrong-1', 'row-2')))
+        self.assertFalse(postquiet_fourrow_history_stable(
+            before, before, DIALOG, pin, first_ids[:1]))
+        caller = inspect.getsource(browser_run)
+        self.assertLess(caller.index("quiet_snapshot=await page.evaluate(SNAPSHOT_JS)"),
+                        caller.index("QA_POSTQUIET_PERSISTED_HISTORY"))
+        self.assertLess(caller.index("QA_POSTQUIET_PERSISTED_HISTORY"),
+                        caller.index("signed_precert=await context.request.get("))
+        self.assertLess(caller.index("postquiet_fourrow_history_stable("),
+                        caller.index("multiturn_browser_acceptance_verified']=True"))
+        self.assertIn('HOLD_MULTITURN_POSTQUIET_HISTORY_CHANGED', caller)
+        self.assertIn("base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6'", caller)
+        self.assertIn('canonical_s03_verified=False', caller)
+
+
     def test_ru_es_four_turn_history_needs_independent_canonical_s03(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         transcript = rows(es)
