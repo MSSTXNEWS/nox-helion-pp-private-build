@@ -858,11 +858,15 @@ def resource_admission(helper):
 
 def worker_readback(helper, fresh_after=0):
     path = ROOT/'status/agents_t856u.json'
-    value, snapshot_mtime = read_json(path, include_mtime=True)
-    # A syntactically valid JSON scalar/list is not a native owner census.
-    # Reject it as an admission HOLD before any mapping access.
-    if type(value) is not dict:
-        raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
+    # The descriptor-bound reader already rejects non-object JSON roots.
+    # Normalize only this known generic HOLD to the native-worker admission
+    # code, so a malformed census has a single owner-specific failure reason.
+    try:
+        value, snapshot_mtime = read_json(path, include_mtime=True)
+    except RuntimeError as exc:
+        if str(exc) != 'HOLD_STATE_OBJECT_REQUIRED':
+            raise
+        raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK') from exc
     rows = value.get('workers', [])
     # A historical six-worker BOOST receipt is not a fresh native-worker census.
     # The pinned six-lane handoff observes exactly three physical workers; a
