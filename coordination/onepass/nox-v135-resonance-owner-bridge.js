@@ -204,6 +204,7 @@
  }
  function sseChat(data,signal) {
  let closed=false;const started=performance.now();let firstVisibleMs=null;
+ let lastNativePhase=null; // Phase transitions, not every token, notify the UI.
  const upstreamAbort=new AbortController();
  const onAbort=()=>upstreamAbort.abort();
  if(signal?.aborted)upstreamAbort.abort();
@@ -216,8 +217,11 @@
     if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
      firstVisibleMs=Math.round(performance.now()-started);
     const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
-    if(phase&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-     window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
+    if(phase&&phase!==lastNativePhase){
+     lastNativePhase=phase;
+     if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+      window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
+    }
     if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
     };
     try {
