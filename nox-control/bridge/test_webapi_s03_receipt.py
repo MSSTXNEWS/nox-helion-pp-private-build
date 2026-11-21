@@ -59,6 +59,7 @@ class FactReceiptTest(unittest.TestCase):
             ({"options": {"num_predict": None}}, "CHAT_INVALID_NUM_PREDICT"),
             ({"options": {"num_predict": 1.5}}, "CHAT_INVALID_NUM_PREDICT"),
             ({"request_id": {"id": "foreign"}, "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
+            ({"request_id": None, "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
             ({"request_id": True, "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
             ({"request_id": "*", "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
             ({"messages": [{"role": "assistant", "content": "only response"}]}, "CHAT_MISSING_USER"),
