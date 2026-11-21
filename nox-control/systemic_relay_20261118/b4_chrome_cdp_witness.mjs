@@ -433,6 +433,30 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       quiescenceReject=null;
     }
     if(fatal)throw fatal;
+    // Lifecycle notifications are not guaranteed to be complete. Independently
+    // read both the main-frame document and page target AFTER the quiet window.
+    // This is an observer-only CDP read: it never replays a model POST.
+    const remainingMs=deadline-Date.now();
+    if(remainingMs<=0)throw Error('CDP_TIMEOUT');
+    let snapshotTimeout;
+    let finalTree,finalTarget;
+    try{
+      [finalTree,finalTarget]=await Promise.race([
+        Promise.all([c.send('Page.getFrameTree'),c.send('Target.getTargetInfo')])
+          .catch(()=>{throw Error('CDP_FINAL_SNAPSHOT_UNAVAILABLE');}),
+        new Promise((_,reject)=>{snapshotTimeout=setTimeout(
+          ()=>reject(Error('CDP_FINAL_SNAPSHOT_TIMEOUT')),Math.min(remainingMs,1000));})
+      ]);
+    }finally{clearTimeout(snapshotTimeout);}
+    if(fatal)throw fatal;
+    const finalFrame=finalTree?.frameTree?.frame,finalInfo=finalTarget?.targetInfo;
+    if(finalInfo?.type!=='page'||finalInfo?.targetId!==expectedTargetId)
+      throw Error('CDP_FINAL_PAGE_TARGET_CHANGED');
+    if(finalFrame?.id!==mainFrameId||finalFrame?.loaderId!==mainLoaderId)
+      throw Error('CDP_FINAL_MAIN_FRAME_CHANGED');
+    if(normalizePageDocumentURL(finalFrame?.url)!==expectedDocumentURL||
+       normalizePageDocumentURL(finalInfo?.url)!==expectedDocumentURL)
+      throw Error('CDP_FINAL_PAGE_DOCUMENT_CHANGED');
     // Rejected, missing or timed-out request metadata remains fail-closed.
     const turns=records.map((x,i)=>({turn:i+1,cdp_request_id:x.id,request_sha256:x.request,cdp_decoded_body_sha256:x.response,
       cdp_streamed_body_sha256:x.streamDigest,cdp_decoded_body_matches_stream:x.bodyMatchesStream,
@@ -452,6 +476,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         ms.every(v=>Number.isSafeInteger(v)&&v>=0)&&
         ms.every((v,j)=>j===0||v>=ms[j-1]);
     });
+    if(fatal)throw fatal;
     return {schema:'nox-b4-cdp-v1',chrome_product:version.product,cdp_consistent:Boolean(valid),ttft_sse_verified:Boolean(timed),
       browser_authenticated:false,remote_attested:false,native_verified:false,canonical_s03_verified:false,one_model_post_per_turn_verified:false,
       tcp_wire_verified:false,turns};
