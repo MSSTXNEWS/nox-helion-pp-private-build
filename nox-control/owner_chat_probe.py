@@ -396,6 +396,18 @@ def stream_status_is_failure(value):
     """Fail closed for known failure labels and HTTP failure status values."""
     if isinstance(value, str):
         status = value.strip().lower()
+        # Textual HTTP status lines are failures too. A subsequent saved=true
+        # terminal must not erase an upstream 4xx/5xx proxy/model response.
+        # Keep untagged model text (for example '500 tokens') out of this fence.
+        if re.match(r'^http(?:/\\d+(?:\\.\\d+)?)?\\s+[45]\\d{2}\\b', status):
+            return True
+        if re.match(r'^[45]\\d{2}\\s+(?:bad request|unauthorized|payment required|'
+                    r'forbidden|not found|method not allowed|not acceptable|'
+                    r'request timeout|conflict|gone|too many requests|'
+                    r'internal server error|not implemented|bad gateway|'
+                    r'service unavailable|gateway timeout|client closed request)\\b',
+                    status):
+            return True
         # Upstream may encode a failed stream as a plain status/state label
         # rather than an HTTP code or an explicit error field. Never let a
         # later saved=true terminal erase such a preterminal failure.
