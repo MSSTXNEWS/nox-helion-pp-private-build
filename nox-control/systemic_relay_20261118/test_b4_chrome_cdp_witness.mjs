@@ -1165,3 +1165,47 @@ test('expired first POST metadata guard precedes second POST without hiding vali
     delaySecondPostMs:90,overlapPostBeforeFirstClose:true
   }),/CDP_NON_SERIAL_CHAT_POST/);
 });
+
+
+test('expired first POST metadata cannot mask another first-stream fault or certify second turn',async()=>{
+  const baseline=await run();
+  assert.equal(baseline.cdp_consistent,true);
+  // A duplicate terminal is a separate FIRST-turn SSE integrity failure.
+  // Its combination with expired POST metadata must not yield aggregate PASS.
+  const duplicatedFirstDone=body+'data: [DONE]\\n\\n'.replaceAll('\\n','\n');
+  const observed=await run(false,null,null,null,{
+    firstBody:duplicatedFirstDone,
+    firstPostDataMode:'hang',requestPostDataAckTimeoutMs:40,
+    delaySecondPostMs:90
+  });
+  assert.equal(observed.cdp_consistent,false);
+  assert.equal(observed.ttft_sse_verified,false);
+  assert.deepEqual(observed.turns.map(t=>t.cdp_request_id),['1','2']);
+  assert.equal(observed.turns[0].request_sha256,null);
+  assert.equal(observed.turns[0].ttft_ms,null);
+  assert.equal(observed.turns[0].stream_timing_complete,false);
+  // The valid serial SECOND SSE is diagnostic only; its clock and digest
+  // remain independent of the first turn's two simultaneous faults.
+  assert.equal(observed.turns[1].request_sha256,baseline.turns[1].request_sha256);
+  assert.equal(observed.turns[1].cdp_decoded_body_sha256,
+    baseline.turns[1].cdp_decoded_body_sha256);
+  assert.equal(observed.turns[1].ttft_ms,baseline.turns[1].ttft_ms);
+  assert.equal(observed.turns[1].sse_done_ms,baseline.turns[1].sse_done_ms);
+  // Absence of the genuine first SSE terminal is never excused by a
+  // coincident expired metadata lookup, despite a later valid second POST.
+  for(const invalidFirst of [
+    body.replace('data: [DONE]\\n\\n'.replaceAll('\\n','\n'),''),
+    body.replace('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\\n\\n'.replaceAll('\\n','\n'),'')
+  ]){
+    await assert.rejects(run(false,null,null,null,{
+      firstBody:invalidFirst,firstPostDataMode:'hang',
+      requestPostDataAckTimeoutMs:40,delaySecondPostMs:90
+    }),/CDP_NON_SERIAL_CHAT_POST/);
+  }
+  await assert.rejects(run(false,null,null,null,{
+    firstBody:duplicatedFirstDone,firstPostDataMode:'hang',
+    requestPostDataAckTimeoutMs:40,delaySecondPostMs:90,
+    overlapPostBeforeFirstClose:true
+  }),/CDP_NON_SERIAL_CHAT_POST/);
+  assert.doesNotMatch(JSON.stringify(observed),/secret|Hello|data:/);
+});
