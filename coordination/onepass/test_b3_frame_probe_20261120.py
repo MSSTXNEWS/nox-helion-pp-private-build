@@ -977,5 +977,122 @@ class TestProbe(unittest.TestCase):
         asyncio.run(run())
 
 
+
+    def test_native_start_done_model_label_consistency_fails_closed(self):
+        """Chromium mocked-native stream: start/done serving label drift cannot emit done."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+
+                    async def fixture(route):
+                        await route.fulfill(
+                            status=200, content_type='text/html',
+                            body='<html><body>B3 serving label fixture</body></html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                    await page.goto(
+                        'http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__posts=0;window.__reads=0;
+                        const history=Object.create(null);
+                        const pack=data=>new Response(JSON.stringify(data),{
+                            status:200,headers:{'Content-Type':'application/json'}
+                        });
+                        window.fetch=async (url,init)=>{
+                            if(url==='/api/nox/chat/stream'){
+                                window.__posts++;
+                                const data=JSON.parse(init.body);
+                                const mode=data.message;
+                                const answer='answer:'+mode;
+                                const exchange='ex-model-'+mode;
+                                history[data.dialog_id]={mode,answer,exchange};
+                                const done={type:'done',saved:true,s03_integrated:true,
+                                    dialog_id:data.dialog_id,exchange_id:exchange};
+                                if(mode==='mismatch')done.model='other-model';
+                                if(mode==='match')done.model='existing-model';
+                                if(mode==='malformed')done.model=42;
+                                const frames=[
+                                    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start',model:'existing-model'},
+                                    {type:'delta',text:answer},
+                                    done
+                                ];
+                                return new Response(frames.map(JSON.stringify).join('\\n')+'\\n',{
+                                    status:200
+                                });
+                            }
+                            if(String(url).startsWith('/api/ui/memory/dialogs/history?')){
+                                window.__reads++;
+                                const id=new URL(url,'http://localhost')
+                                    .searchParams.get('dialog_id');
+                                const row=history[id];
+                                if(!row)throw Error('NO_HISTORY_FOR:'+id);
+                                return pack({status:'READY',dialog_id:id,messages:[
+                                    {role:'user',content:row.mode,
+                                        exchange_id:row.exchange},
+                                    {role:'assistant',content:row.answer,
+                                        exchange_id:row.exchange}
+                                ]});
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE:'+url);
+                        };
+                    }""")
+                    bridge = (pathlib.Path(__file__).parent /
+                              'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    result = await page.evaluate("""async () => {
+                        const rows=[];
+                        for(const [i,mode] of
+                            ['mismatch','match','absent','malformed'].entries()){
+                            const postsBefore=window.__posts;
+                            const readsBefore=window.__reads;
+                            const id=String.fromCharCode(97+i).repeat(32);
+                            const response=await fetch('/api/nox/chat',{
+                                method:'POST',body:JSON.stringify({
+                                    dialog_id:id,request_id:'b3-model-'+mode,
+                                    message:mode
+                                })
+                            });
+                            const raw=await response.text();
+                            const events=raw.split('\\n\\n').filter(Boolean)
+                              .map(row=>JSON.parse(row.replace(/^data: /,'')));
+                            rows.push({
+                                mode,posts:window.__posts-postsBefore,
+                                reads:window.__reads-readsBefore,
+                                done:events.filter(e=>e.type==='done'),
+                                errors:events.filter(e=>e.type==='error'),
+                                tokens:events.filter(e=>e.type==='token')
+                                    .map(e=>e.t).join('')
+                            });
+                        }
+                        return rows;
+                    }""")
+                    self.assertEqual(len(result), 4)
+                    for row in result:
+                        self.assertEqual(row['posts'], 1)
+                        self.assertEqual(row['tokens'], 'answer:'+row['mode'])
+                        if row['mode'] in ('mismatch', 'malformed'):
+                            self.assertEqual(row['reads'], 0)
+                            self.assertEqual(row['done'], [])
+                            self.assertEqual(len(row['errors']), 1)
+                            self.assertIn('HOLD_NATIVE_MODEL_RECEIPT_DRIFT',
+                                          row['errors'][0]['error'])
+                        else:
+                            self.assertEqual(row['reads'], 1)
+                            self.assertEqual(row['errors'], [])
+                            self.assertEqual(len(row['done']), 1)
+                            self.assertEqual(row['done'][0]['model_label'],
+                                             'existing-model')
+                            self.assertIs(row['done'][0]['model_identity_verified'],
+                                          False)
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
 if __name__ == '__main__':
     unittest.main()
