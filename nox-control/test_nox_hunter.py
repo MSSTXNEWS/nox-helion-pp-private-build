@@ -191,6 +191,16 @@ class HunterURLSafetyTests(unittest.TestCase):
             {"DOI": "10.1234/normalized", "title": ["normalized"],
              "URL": "https://doi.org/10.1234/normalized",
              "published-online": {"date-parts": [[2026, 2, 3]]}},
+            {"DOI": "10.1234/created", "title": ["created-only"],
+             "URL": "https://doi.org/10.1234/created",
+             "created": {"date-parts": [[2026, 11, 20]]}},
+            {"DOI": "10.1234/fallback", "title": ["fallback-online"],
+             "URL": "https://doi.org/10.1234/fallback",
+             "published-print": {"date-parts": [[2026, 2, 30]]},
+             "published-online": {"date-parts": [[2026, 1, 5]]}},
+            {"DOI": "10.1234/issued", "title": ["issued-year"],
+             "URL": "https://doi.org/10.1234/issued",
+             "issued": {"date-parts": [[2025]]}},
         ]
         body = json.dumps({"message": {"items": rows}}).encode("utf-8")
         with tempfile.TemporaryDirectory() as tmp:
@@ -199,13 +209,16 @@ class HunterURLSafetyTests(unittest.TestCase):
                                                                "application/json", False)):
                 result = hunter.poll_due([source], state, now=1000.0)
             self.assertEqual(result[0]["status"], "polled")
-            self.assertEqual(result[0]["added"], 7)
+            self.assertEqual(result[0]["added"], 10)
             with sqlite3.connect(state) as conn:
                 found = conn.execute("SELECT title,published FROM items ORDER BY title").fetchall()
             self.assertEqual(found, [
+                ("created-only", ""),
+                ("fallback-online", "2026-01-05"),
                 ("good", "2026-11-20"),
                 ("invalid-day", ""),
                 ("invalid-month", ""),
+                ("issued-year", "2025"),
                 ("leap", "2024-02-29"),
                 ("normalized", "2026-02-03"),
                 ("scalar-date", ""),
