@@ -143,6 +143,18 @@ def require_postturn_owner_binding(client):
     return True
 
 
+def require_preturn_owner_binding(client):
+    """Reconfirm the authenticated native chat route before EACH model POST.
+
+    A startup status snapshot cannot authorize later synthetic generation.
+    Native owner/CAS, STOP, VRAM and resource admission remain separate.
+    """
+    snapshot = owner_readback_json(client, '/api/nox/status')
+    if not isinstance(snapshot, dict) or snapshot.get('native_p02_bound') is not True:
+        raise RuntimeError('HOLD_PRETURN_OWNER_CHAT_BINDING')
+    return True
+
+
 def anonymous_owner_scope_status(client, requested_path):
     """A redirected 401 is not proof that the intended owner API is protected."""
     with request(client, requested_path) as response:
@@ -466,6 +478,8 @@ def admitted_consume_turn(client, prompt, dialog_id, timeout=95):
     slots = model_slots_state(client)
     if slots['busy']:
         raise RuntimeError('HOLD_CHAT_BUSY_FOR_SYNTHETIC_PROBE')
+    # Recheck owner binding immediately before each non-idempotent chat POST.
+    require_preturn_owner_binding(client)
     return consume_turn(client, prompt, dialog_id, timeout=timeout)
 
 
