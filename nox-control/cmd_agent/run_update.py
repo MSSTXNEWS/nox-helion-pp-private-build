@@ -2,7 +2,7 @@
 """One fixed action: temporarily attach a throwaway SSH key to Vast instance 60509551,
 run a fixed read-only telemetry command over SSH, then detach the key.
 No remote downloads or raw training logs. Secret NOX2 is only sent to console.vast.ai."""
-import json, os, re, subprocess, sys, tempfile, time, urllib.request
+import json, os, re, subprocess, sys, tempfile, time, urllib.request, shutil
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
 # A fixed, bounded read-only observer; no mutable network download or remote log tail.
@@ -41,11 +41,15 @@ def main():
     ip = inst["public_ipaddr"]
     ports = [int(m["HostPort"]) for m in inst.get("ports", {}).get("22/tcp", []) if str(m.get("HostPort", "")).isdigit()]
     if inst.get("actual_status") != "running" or not ports: sys.exit("instance not running / no ssh port")
-    d = tempfile.mkdtemp(); kf = d + "/k"
-    subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "nox-update-button", "-f", kf], check=True)
-    pub = open(kf + ".pub").read().strip()
+    d = tempfile.mkdtemp(prefix="nox-observer-"); kf = d + "/k"
+    pub = None
     key_id = None
+    attach_attempted = False
     try:
+        subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "nox-update-button", "-f", kf], check=True)
+        with open(kf + ".pub", encoding="utf-8") as handle:
+            pub = handle.read().strip()
+        attach_attempted = True  # A successful remote attach can outlive a failed API response.
         api("POST", "/instances/%d/ssh/" % INSTANCE, {"ssh_key": pub})
         for _ in range(8):
             rows = api("GET", "/instances/%d/ssh/" % INSTANCE)
@@ -64,8 +68,25 @@ def main():
                 time.sleep(10)
         sys.exit("ssh failed on all attempts")
     finally:
-        if key_id is not None:
-            try: api("DELETE", "/instances/%d/ssh/%s" % (INSTANCE, key_id)); print("temp key detached")
-            except Exception as e: print("DETACH FAILED", type(e).__name__, "- remove 'nox-update-button' key in Vast manually")
+        try:
+            # A delayed key-list update must not leave an attached temporary key
+            # behind just because the first bounded lookup missed its ID.
+            if attach_attempted and key_id is None:
+                rows = api("GET", "/instances/%d/ssh/" % INSTANCE)
+                rows = rows if isinstance(rows, list) else rows.get("ssh_keys", rows.get("keys", []))
+                hits = [r for r in rows if isinstance(r, dict) and pub.split()[1] in json.dumps(r)]
+                if hits:
+                    key_id = hits[0].get("id")
+            if key_id is not None:
+                api("DELETE", "/instances/%d/ssh/%s" % (INSTANCE, key_id))
+                print("temp key detached")
+            elif attach_attempted:
+                print("DETACH UNVERIFIED - remove 'nox-update-button' key in Vast manually")
+        except Exception as e:
+            print("DETACH UNVERIFIED", type(e).__name__, "- remove 'nox-update-button' key in Vast manually")
+        finally:
+            # Delete private key and isolated known_hosts even if SSH/API failed.
+            shutil.rmtree(d)
 
-main()
+if __name__ == "__main__":
+    main()
