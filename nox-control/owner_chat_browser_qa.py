@@ -320,6 +320,7 @@ def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, f
             or re.fullmatch(r'[0-9a-f]{64}', transcript_sha) is None):
         return False
     pinned_ids = None
+    pinned_session = None
     for history in (before, after):
         if 'dialog_id' in history and history['dialog_id'] != dialog_id:
             return False
@@ -329,6 +330,7 @@ def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, f
                 or any('dialog_id' in row and row['dialog_id'] != dialog_id
                        for row in rows)
                 or not firstturn_prefix_identity_valid(firstturn_ids, rows)
+                or not consistent_explicit_row_session_ids(rows)
                 or multiturn_transcript_sha256(rows) != transcript_sha):
             return False
         ids = tuple(row.get('message_id') for row in rows)
@@ -338,6 +340,14 @@ def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, f
             return False
         if pinned_ids is not None and ids != pinned_ids:
             return False
+        # A role/content SHA and four stable row IDs do not pin optional
+        # owner session metadata. A reload/recheck must not silently rotate
+        # all four rows from one session to another with identical text/IDs.
+        # No-session legacy snapshots are allowed only when BOTH are unscoped.
+        session_pin = ('session_id' in rows[0], rows[0].get('session_id'))
+        if pinned_session is not None and session_pin != pinned_session:
+            return False
+        pinned_session = session_pin
         pinned_ids = ids
     return pinned_ids is not None
 
