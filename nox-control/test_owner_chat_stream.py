@@ -1443,7 +1443,12 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             variants=[dict(valid,n=6),dict(valid,n=True),
                       dict(valid,workers=[valid['workers'][0],valid['workers'][0]]),
                       dict(valid,workers=[valid['workers'][0],dict(valid['workers'][1],status='busy')]),
-                      dict(valid,workers=[valid['workers'][0],dict(valid['workers'][1],status='invented')])]
+                      dict(valid,workers=[valid['workers'][0],dict(valid['workers'][1],status='invented')]),
+                      # A duplicated active TaskID is not two independent
+                      # claims, even if both rows are syntactically valid.
+                      dict(valid,workers=[
+                          dict(valid['workers'][0],status='busy',current_task={'id':'Q-17'}),
+                          dict(valid['workers'][1],status='busy',current_task={'id':'Q-17'})])]
             for doc in variants:
                 path.write_text(json.dumps(doc))
                 answer=stream._executor_status_reply('Сколько агентов сейчас?',path)
