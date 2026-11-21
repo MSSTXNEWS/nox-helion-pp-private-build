@@ -953,3 +953,38 @@ test('getResponseBody ACK latency is bounded observer-only monotonic time, never
   }
   assert.doesNotMatch(JSON.stringify(delayed),/secret|Hello/);
 });
+
+test('pending first-turn response-body ACK stays isolated from second SSE and request ID',async()=>{
+  const baseline=await run();
+  const delayed=await run(false,null,null,null,{responseBodyDelay:{'1':110}});
+  assert.equal(delayed.cdp_consistent,true);
+  assert.equal(delayed.ttft_sse_verified,true);
+  assert.deepEqual(delayed.turns.map(t=>t.cdp_request_id),['1','2']);
+  assert.deepEqual(delayed.turns.map(t=>t.request_sha256),baseline.turns.map(t=>t.request_sha256));
+  assert.equal(delayed.turns[0].cdp_previous_turn_body_ack_pending_at_post_start,null);
+  assert.equal(delayed.turns[1].cdp_previous_turn_body_ack_pending_at_post_start,true);
+  assert.equal(baseline.turns[1].cdp_previous_turn_body_ack_pending_at_post_start,false);
+  assert.equal(delayed.turns[1].ttft_ms,baseline.turns[1].ttft_ms);
+  assert.equal(delayed.turns[1].sse_done_ms,baseline.turns[1].sse_done_ms);
+  assert.equal(delayed.turns[1].cdp_decoded_body_sha256,baseline.turns[1].cdp_decoded_body_sha256);
+  assert.ok(delayed.turns[0].cdp_response_body_ack_latency_ms>=75);
+  assert.ok(delayed.turns[1].cdp_response_body_ack_latency_ms<
+    delayed.turns[0].cdp_response_body_ack_latency_ms);
+  // A first-turn ACK that never arrives cannot certify the two-turn capture,
+  // even though the second SSE itself remained independently observed.
+  const stalled=await run(false,null,null,null,{
+    responseBodyHang:['1'],responseBodyAckTimeoutMs:45
+  });
+  assert.equal(stalled.cdp_consistent,false);
+  assert.equal(stalled.ttft_sse_verified,false);
+  assert.equal(stalled.turns[0].cdp_response_body_ack_latency_ms,null);
+  assert.equal(stalled.turns[1].cdp_previous_turn_body_ack_pending_at_post_start,true);
+  assert.equal(stalled.turns[1].cdp_request_id,'2');
+  assert.equal(stalled.turns[1].ttft_ms,baseline.turns[1].ttft_ms);
+  assert.equal(stalled.turns[1].sse_done_ms,baseline.turns[1].sse_done_ms);
+  // Rejection before turn 2 is observed must not be silently reclassified
+  // as a valid pair with only the first ACK missing.
+  await assert.rejects(run(false,null,null,null,{responseBodyReject:['1']}),
+    /CDP_NON_SERIAL_CHAT_POST/);
+  assert.doesNotMatch(JSON.stringify(delayed),/secret|Hello|data:/);
+});
