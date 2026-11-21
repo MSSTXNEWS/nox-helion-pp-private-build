@@ -1386,11 +1386,39 @@ def main():
             helper.atomic(STATE/'TRAIN_HOLD.flag', ('OWNER_TRAINING_RESUME_FAILED request='+request+'\n').encode())
     finally:
         if lock_held:
-            for name in controllers_stopped:
-                if helper.service_state(name)['state'] in ('STOPPED', 'EXITED'):
-                    rc, _ = helper.command(['supervisorctl', 'start', name], 30)
-                    result['steps'].append({'kind': 'controller_restored', 'data': {'name': name, 'rc': rc}, 'time': time.time()})
-            fcntl.flock(fd, fcntl.LOCK_UN); lock_held = False
+            try:
+                for name in controllers_stopped:
+                    try:
+                        before_restore = helper.service_state(name)
+                        # A malformed/future Supervisor state is not evidence
+                        # that this controller is safe or already restored.
+                        if (type(before_restore) is not dict
+                                or before_restore.get('state') not in
+                                ('STOPPED', 'EXITED', 'RUNNING', 'STARTING')):
+                            raise RuntimeError('HOLD_CONTROLLER_RESTORE_READBACK')
+                        if before_restore['state'] in ('STOPPED', 'EXITED'):
+                            rc, _ = helper.command(['supervisorctl', 'start', name], 30)
+                            if rc:
+                                raise RuntimeError('HOLD_CONTROLLER_RESTORE_FAILED')
+                            after_restore = helper.service_state(name)
+                            if (type(after_restore) is not dict
+                                    or after_restore.get('state') not in ('RUNNING', 'STARTING')):
+                                raise RuntimeError('HOLD_CONTROLLER_RESTORE_READBACK')
+                            result['steps'].append({'kind': 'controller_restored',
+                                'data': {'name': name, 'rc': rc}, 'time': time.time()})
+                    except Exception as exc:
+                        # A restoration failure must not mask the owner receipt
+                        # or leave the shared maintenance lock held indefinitely.
+                        reason = str(exc)
+                        if not re.fullmatch('HOLD_[A-Z0-9_]+', reason):
+                            reason = 'HOLD_CONTROLLER_RESTORE_READBACK'
+                        result['steps'].append({'kind': 'controller_restore_hold',
+                            'data': {'name': name, 'error': reason}, 'time': time.time()})
+                        result['restore_error'] = reason
+                        result['state'] = 'HOLD_TRAINING_RESUME'
+                        success = False
+            finally:
+                fcntl.flock(fd, fcntl.LOCK_UN); lock_held = False
         result.update(finished=time.time(), service_after=helper.service_state(),
                       hold_retained=(STATE/'TRAIN_HOLD.flag').exists(),
                       pause_retained=(STATE/'TRAIN_PAUSE_REQUEST.flag').exists(),
