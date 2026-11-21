@@ -926,6 +926,34 @@ ACTIVE_QA_DIALOG_JS = r"""title => {
    !!document.getElementById('messages');
 }"""
 
+RENDERED_FOURROW_JS = r"""expected => {
+  // Compare only in browser memory, return boolean: no private user text/IDs
+  // in shared diagnostics. Owner history pins IDs independently of this DOM.
+  if(!Array.isArray(expected)||expected.length!==4)return false;
+  const mount=document.getElementById('messages');
+  if(!mount)return false;
+  const bubbles=[...mount.querySelectorAll('.v24-msg')];
+  if(bubbles.length!==4)return false;
+  const normalize=text=>text.replace(/\s+/g,' ').trim();
+  for(let i=0;i<4;i++){
+    const row=expected[i],bubble=bubbles[i];
+    if(!row||typeof row.content!=='string'||!row.content.trim()||
+       typeof row.message_id!=='string'||!row.message_id.trim())return false;
+    if(row.role!==(bubble.classList.contains('nox')?'assistant':'user'))return false;
+    const bodies=[...bubble.querySelectorAll('.body')];
+    if(bodies.length!==1||!bodies[0].getClientRects().length||
+       typeof bodies[0].innerText!=='string'||
+       normalize(bodies[0].innerText)!==normalize(row.content))return false;
+    // Some UI builds expose durable row identity; when present it must agree.
+    // Absent DOM IDs are not claimed as independently verified row identities.
+    const visibleId=bubble.getAttribute('data-message-id')||
+                    bodies[0].getAttribute('data-message-id');
+    if(visibleId!==null&&visibleId!==row.message_id)return false;
+  }
+  return true;
+}"""
+
+
 SNAPSHOT_JS = r"""async () => {
  const q=window.__NOX_BROWSER_QA;if(!q)return null;
  // A per-browser ephemeral secret protects the low-entropy numeric answer
@@ -1696,6 +1724,19 @@ async def browser_run(report, directory, available):
                         or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
                     raise RuntimeError('HOLD_MULTITURN_RELOAD_POSTHISTORY_ACTIVE_DIALOG_CHANGED')
                 report['multiturn_reload_posthistory_active_dialog_verified']=True
+                # API row IDs do not by themselves prove the displayed four
+                # bubbles. Match exact ordered role/text against visible DOM;
+                # when DOM IDs exist, reject disagreements. No private export.
+                report['browser_stage']='QA_RELOAD_RENDERED_FOURROW'
+                try:
+                    await page.wait_for_function(
+                        RENDERED_FOURROW_JS,arg=reloaded_history['messages'],timeout=7000)
+                except PlaywrightTimeoutError:
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_RENDERED_FOURROW_MISMATCH') from None
+                if await page.evaluate(
+                        RENDERED_FOURROW_JS,reloaded_history['messages']) is not True:
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_RENDERED_FOURROW_MISMATCH')
+                report['multiturn_reload_rendered_fourrow_verified']=True
                 report['multiturn_reload_same_dialog_history_verified']=True
                 report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:
