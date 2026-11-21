@@ -957,6 +957,48 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     self.assertNotIn('_agent_final',payload)
                     self.assertEqual(len(requests),1)
 
+    async def test_pool_dedup_cannot_drop_a_distinct_model_tool_action(self):
+        # Pool optimization may collapse identical requests, but cannot hide
+        # a distinct model action and then present an S03-approved answer.
+        for duplicate in (False,True):
+            with self.subTest(duplicate=duplicate):
+                native=self.native()
+                native['_POOL']=True
+                native['prepare_payload']=lambda request,cache:dict(request)
+                native['try_deterministic']=lambda text:None
+                native['dedup_calls']=lambda calls:calls[:1]
+                second_args='{"a":1}' if duplicate else '{"a":2}'
+                first=Chunks([
+                    frame(calls=[
+                        {'index':0,'id':'call_first','type':'function',
+                         'function':{'name':'calculate','arguments':'{"a":1}'}},
+                        {'index':1,'id':'call_second','type':'function',
+                         'function':{'name':'calculate','arguments':second_args}}]),
+                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+                streams=[first]
+                if duplicate:
+                    streams.append(Chunks([
+                        frame('one result'),frame(finish='stop'),
+                        b'data: [DONE]\\n\\n']))
+                requests,factory=self.transport(streams)
+                payload={'messages':[{'role':'user','content':'Calculate two values'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Calculate two values',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertTrue(first.closed)
+                if duplicate:
+                    self.assertEqual(self.dispatched,[('calculate',{'a':1})])
+                    self.assertEqual(payload.get('_agent_final'),'one result')
+                    self.assertIn('[DONE]',wire)
+                    self.assertEqual(len(requests),2)
+                else:
+                    self.assertEqual(self.dispatched,[])
+                    self.assertIn('HOLD_TOOL_POOL_FIDELITY',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+                    self.assertEqual(len(requests),1)
+
     async def test_complete_tool_observation_is_not_silently_clipped(self):
         # Prior adapter sent only the first 8000 characters to the model.
         # Preserve real RU/ES evidence, including its final non-ASCII suffix.
