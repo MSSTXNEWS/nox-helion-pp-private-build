@@ -156,13 +156,25 @@ def eligibility_ledger(registry, previous=None, refill_request=None):
     """Describe structural eligibility; never label an ID executable by itself."""
     previous = previous if isinstance(previous, dict) else {}
     request = refill_request if isinstance(refill_request, dict) else {}
-    prior_parents = {row.get('parent_task_id') for row in previous.get('missions', [])
-                     if isinstance(row, dict)}
-    outcomes = request.get('outcomes', [])
-    observed_task_ids = {row.get('task_id') for row in outcomes if isinstance(row, dict)}
-    original_task_states = request.get('original_task_states', [])
-    observed_original_ids = {row.get('task_id') for row in original_task_states
-                             if isinstance(row,dict)}
+    # Never project corrupt predecessor/request rows as an empty, unclaimed
+    # history: that can both crash on unhashable IDs and suggest unsafe replay.
+    def checked_ids(document, rows_key, id_key):
+        rows = document.get(rows_key, [])
+        if not isinstance(rows, list):
+            return set(), False
+        ids = set()
+        for row in rows:
+            if (not isinstance(row, dict) or type(row.get(id_key)) is not str
+                    or not row[id_key].strip()):
+                return set(), False
+            ids.add(row[id_key])
+        return ids, True
+
+    prior_parents, previous_ids_valid = checked_ids(
+        previous, 'missions', 'parent_task_id')
+    observed_task_ids, outcomes_valid = checked_ids(request, 'outcomes', 'task_id')
+    observed_original_ids, states_valid = checked_ids(
+        request, 'original_task_states', 'task_id')
     observed_parent_ids = {task_id.split('.', 1)[0] for task_id in observed_task_ids
                            if isinstance(task_id, str) and '.' in task_id}
     observed_parent_ids.update(task_id.split('.',1)[0] for task_id in observed_original_ids
@@ -170,6 +182,8 @@ def eligibility_ledger(registry, previous=None, refill_request=None):
     result = []
     for task_id, parent in sorted(registry['parents'].items()):
         blockers, required_inputs = [], []
+        if not (previous_ids_valid and outcomes_valid and states_valid):
+            blockers.append('MALFORMED_PREDECESSOR_OR_REQUEST_IDS_HOLD')
         if parent['required_evidence'] != 'source':
             blockers.append('ORIGINAL_SCOPE_IS_NOT_SOURCE')
         if not parent.get('registered_acceptance'):
