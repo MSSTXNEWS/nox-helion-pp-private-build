@@ -17,6 +17,10 @@ from concurrent.futures import ThreadPoolExecutor
 API = "https://huggingface.co/api/models/unsloth/GLM-5.3-GGUF/tree/main/UD-Q4_K_XL"
 BASE = "https://huggingface.co/unsloth/GLM-5.3-GGUF/resolve/main/UD-Q4_K_XL/"
 ROOT = "/root/nox/glm53"
+RUN_ID = os.environ.get("NOX_GGUF_RUN_ID", "")
+if re.fullmatch(r"[0-9]{8}T[0-9]{6}Z-[0-9]+", RUN_ID) is None:
+    print("HOLD_GGUF_RUN_ID", flush=True)
+    sys.exit(2)
 PATTERN = re.compile(r"^GLM-5\.3-UD-Q4_K_XL-(\d{5})-of-00011\.gguf$")
 os.makedirs("/root/nox/logs", exist_ok=True)
 lock = open("/root/nox/logs/redo.worker.lock", "a")
@@ -69,6 +73,16 @@ except Exception as exc:
     print("HOLD_GGUF_METADATA_" + type(exc).__name__, flush=True)
     sys.exit(2)
 
+def cgroup_admitted():
+    try:
+        with open("/sys/fs/cgroup/memory.max") as fp:
+            upper = fp.read().strip()
+        with open("/sys/fs/cgroup/memory.current") as fp:
+            current = int(fp.read().strip())
+        return upper != "max" and int(upper) - current >= (2 << 30)
+    except (OSError, ValueError):
+        return False
+
 def one(name):
     size, oid = meta[name]
     directory = place(name)
@@ -87,6 +101,9 @@ def one(name):
         if not verified(part, size, oid):
             os.remove(part)
     for attempt in range(3):
+        if not cgroup_admitted():
+            print(name, "HOLD_CGROUP_RESERVE", flush=True)
+            return False
         if verified(part, size, oid):
             os.replace(part, path)
             print(name, "SHA_OK_REPLACED", flush=True)
@@ -142,16 +159,19 @@ receipt = {
     "verified": {name: meta[name][1] for name in names},
     "native_relay35_acceptance": False
 }
-temp_receipt = "/root/nox/logs/redo_sha_receipt.json.tmp"
+receipt["run_id"] = RUN_ID
+target_receipt = "/root/nox/logs/redo_sha_receipt-" + RUN_ID + ".json"
+temp_receipt = target_receipt + ".tmp"
 with open(temp_receipt, "w") as output:
     json.dump(receipt, output, sort_keys=True)
     output.flush()
     os.fsync(output.fileno())
-os.replace(temp_receipt, "/root/nox/logs/redo_sha_receipt.json")
+os.replace(temp_receipt, target_receipt)
 print("ALL_11_SHA_VERIFIED_SOURCE_WORKER", receipt["manifest_sha256"], flush=True)
 W
 # This only submits a background transfer. A terminal result requires an
-# independent read of redo_sha_receipt.json, not this launcher exit code.
-nohup setsid bash -c 'exec 9>&-; python3 /root/nox/redo_worker.py' > /root/nox/logs/redo.log 2>&1 < /dev/null &
+# independent read of the unique run-scoped receipt, not this launcher exit.
+run_id="$(date -u '+%Y%m%dT%H%M%SZ')-$"
+NOX_GGUF_RUN_ID="$run_id" nohup setsid bash -c 'exec 9>&-; python3 /root/nox/redo_worker.py' > /root/nox/logs/redo.log 2>&1 < /dev/null &
 worker_pid=$!
-echo "PENDING_GGUF_SHA worker_pid=$worker_pid; terminal receipt NOT YET VERIFIED"
+echo "PENDING_GGUF_SHA worker_pid=$worker_pid expected_receipt=/root/nox/logs/redo_sha_receipt-$run_id.json"
