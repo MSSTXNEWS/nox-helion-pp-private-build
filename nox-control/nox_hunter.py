@@ -244,15 +244,23 @@ def _github_items(body: bytes) -> list[dict[str, str]]:
     for release in decoded:
         if not isinstance(release, dict):
             continue
-        title = str(release.get("name") or release.get("tag_name") or "").strip()
-        url = str(release.get("html_url") or "").strip()
-        content = str(release.get("body") or "").strip()
+        # API fields can be null/malformed; a JSON list/dict is not a title
+        # or a human release note, and created_at is NOT a publication date.
+        name = release.get("name")
+        tag = release.get("tag_name")
+        title = next((v.strip() for v in (name, tag) if isinstance(v, str) and v.strip()), "")
+        link = release.get("html_url")
+        url = link.strip() if isinstance(link, str) else ""
+        body_text = release.get("body")
+        content = body_text.strip() if isinstance(body_text, str) else ""
+        published_at = release.get("published_at")
+        published = published_at.strip() if isinstance(published_at, str) else ""
         if title or url or content:
             items.append({
                 "title": title,
                 "url": url,
                 "content": content,
-                "published": str(release.get("published_at") or release.get("created_at") or ""),
+                "published": published,
             })
     return items
 
