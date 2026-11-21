@@ -25,12 +25,14 @@
       hold('HOLD_B1_UI_SCOPE');
     return {conversation_id:s.conversation_id,exchange_id:s.exchange_id};
   }
-  function createUiAdapter({container,beforeCommit=()=>Promise.resolve(),terminalTimeoutMs=30000}={}){
+  function createUiAdapter({container,beforeCommit=()=>Promise.resolve(),terminalTimeoutMs=30000,deltaPrecommitTimeoutMs=30000}={}){
     if(!container||container.nodeType!==1||
        !container.ownerDocument||
        typeof container.ownerDocument.createElement!=='function'||
        typeof beforeCommit!=='function'||
-       !Number.isSafeInteger(terminalTimeoutMs)||terminalTimeoutMs<1||terminalTimeoutMs>120000)
+       !Number.isSafeInteger(terminalTimeoutMs)||terminalTimeoutMs<1||terminalTimeoutMs>120000||
+       !Number.isSafeInteger(deltaPrecommitTimeoutMs)||
+       deltaPrecommitTimeoutMs<1||deltaPrecommitTimeoutMs>120000)
       hold('HOLD_B1_UI_CONTRACT');
     // Search existing direct children, not only memory, so adapter recreation
     // after reload/reattachment does not duplicate an already-present turn.
@@ -94,7 +96,7 @@
       let reservation=null;
       const job=previous.catch(()=>{}).then(async()=>{
         if(signal.aborted) return false;
-        let onAbort;
+        let onAbort,timeoutId=null;
         let outcome;
         try{
           outcome=await Promise.race([
@@ -104,12 +106,19 @@
               onAbort=()=>resolve({aborted:true});
               signal.addEventListener('abort',onAbort,{once:true});
               if(signal.aborted) onAbort();
+            }),
+            // An unresponsive UI precommit must not block this exchange's
+            // SSE FIFO indefinitely when STOP was never dispatched.
+            new Promise(resolve=>{
+              timeoutId=setTimeout(()=>resolve({timedOut:true}),deltaPrecommitTimeoutMs);
             })
           ]);
         }finally{
           if(onAbort) signal.removeEventListener('abort',onAbort);
+          if(timeoutId!==null) clearTimeout(timeoutId);
         }
         if(outcome.aborted||signal.aborted) return false;
+        if(outcome.timedOut) hold('HOLD_B1_UI_DELTA_TIMEOUT');
         if(outcome.failed) hold('HOLD_B1_UI_PRECOMMIT');
         let el=find(s);
         // A terminal projection is immutable; a late delta cannot reopen it.

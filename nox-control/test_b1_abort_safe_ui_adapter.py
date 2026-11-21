@@ -490,6 +490,36 @@ def main():
             results[1]===true&&rows.length===1&&
             rows[0].textContent==='SAFE'&&enter===1;
         }"""))
+        check("delta precommit timeout fences late DOM and releases FIFO + SSE replay ID",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'delta-precommit-timeout'};
+          const ctrl=new AbortController();
+          let release,calls=0;
+          const gate=new Promise(r=>release=r);
+          const ui=NOXB1AbortSafeUI.createUiAdapter({
+            container:chat,deltaPrecommitTimeoutMs:30,
+            beforeCommit:async kind=>{
+              if(kind==='delta'&&++calls===1) await gate;
+            }
+          });
+          const first=ui.onDelta(s,'SAFE',ctrl.signal,'event-timeout-1');
+          let timedOut=false;
+          try{await first;}
+          catch(e){timedOut=e.code==='HOLD_B1_UI_DELTA_TIMEOUT';}
+          if(!timedOut)return false;
+          const before=Array.from(chat.children).filter(
+            el=>el.dataset.noxB1Exchange===s.exchange_id).length;
+          release();
+          await new Promise(r=>setTimeout(r,0));
+          const late=Array.from(chat.children).filter(
+            el=>el.dataset.noxB1Exchange===s.exchange_id).length;
+          const retry=await ui.onDelta(s,'SAFE',ctrl.signal,'event-timeout-1');
+          const next=await ui.onDelta(s,'NEXT',ctrl.signal,'event-timeout-2');
+          const nodes=Array.from(chat.children).filter(
+            el=>el.dataset.noxB1Exchange===s.exchange_id);
+          return before===0&&late===0&&retry===true&&next===true&&
+            calls===3&&nodes.length===1&&nodes[0].textContent==='SAFENEXT';
+        }"""))
         browser.close()
     print(f"B1 source-only real Chromium: {len(checks)}/{len(checks)} PASS")
     for name, _ in checks:
