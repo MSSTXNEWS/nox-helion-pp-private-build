@@ -1421,3 +1421,48 @@ test('6A05 owner-native structured HOLD remains visible instead of object Object
     assert.deepEqual(calls,['/api/ui/memory/dialogs/create','/api/nox/chat/stream']);
   }
 });
+
+test('6A05 native NDJSON structured HOLD stays exact for JSON and SSE without S03 success',async()=>{
+  const cases=[
+    [{code:'HOLD_OWNER_LEASE_BUSY'},'HOLD_NATIVE_HOLD_OWNER_LEASE_BUSY'],
+    ['HOLD_RESOURCE_FLOOR','HOLD_NATIVE_HOLD_RESOURCE_FLOOR'],
+    [{message:'internal debug data'},'HOLD_NATIVE_ERROR'],
+    [{code:'\\uD800'},'HOLD_NATIVE_FRAME_UNICODE']
+  ];
+  for(const [nativeError,expected] of cases){
+    for(const streamed of [false,true]){
+      let historyReads=0;
+      const w={NOX_NATIVE_OWNER:true,fetch:async path=>{
+        const u=new URL(String(path),'https://nox.local');
+        if(u.pathname==='/api/ui/memory/dialogs/history'){
+          historyReads++;
+          assert.fail('unverified error must not read or certify S03');
+        }
+        if(u.pathname!=='/api/nox/chat/stream')assert.fail('unexpected native route '+u.pathname);
+        const wire=JSON.stringify({type:'error',error:nativeError})+'\\n';
+        return new Response(new ReadableStream({start(c){
+          c.enqueue(new TextEncoder().encode(wire));c.close();
+        }}),{headers:{'Content-Type':'application/x-ndjson'}});
+      }};
+      const loc={pathname:'/nox-web-v29/pc/resonance.html',
+        origin:'https://nox.local',href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+      vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+        TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,clearTimeout});
+      const request={message:prompt,dialog_id:id,...(streamed?{request_id:'6a05-error'}:{})};
+      const response=await w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify(request)});
+      if(streamed){
+        const out=await events(response);
+        assert.equal(out.at(-1).type,'error');
+        assert.equal(out.at(-1).error,expected);
+        assert.equal(out.some(e=>e.type==='done'),false);
+      }else{
+        assert.equal(response.status,503);
+        const body=await response.json();
+        assert.equal(body.error,expected);
+        assert.equal(body.history_persisted,false);
+        assert.equal(body.s03_integrated,false);
+      }
+      assert.equal(historyReads,0);
+    }
+  }
+});
