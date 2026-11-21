@@ -777,6 +777,77 @@ def main():
           await new Promise(resolve=>setTimeout(resolve,0));
           return reads===3&&projects===3&&gets===3&&posts===0&&acks===0;
         }'''))
+        check('STOP during hung reconnect GET settles promptly, late GET cannot ACK', page.evaluate('''async () => {
+          const s={conversation_id:'stop-reconnect',exchange_id:'hung-get'};
+          let release,reads=0,posts=0,projects=0,acks=0;
+          const transport={...opts.transport,
+            post(){posts++;throw Error('NO_MODEL_POST')},
+            readback(){
+              reads++;
+              if(reads===1)return new Promise(resolve=>{release=resolve});
+              return Promise.resolve({...s});
+            },
+            async ack(){acks++;return true}
+          };
+          const ui={async onDelta(){},async upsertTerminal(){projects++;return true;}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,
+            reconnectReadTimeoutMs:3000
+          });
+          const first=c.reconnect(s);
+          for(let i=0;i<30&&!release;i++) await new Promise(r=>setTimeout(r,0));
+          if(typeof release!=='function')return false;
+          const stopped=c.stop(s);
+          const code=await Promise.race([
+            first.then(()=>null,e=>e.code),
+            new Promise(r=>setTimeout(()=>r('HUNG'),400))
+          ]);
+          release({...s}); // stale GET must not project or ACK.
+          await new Promise(r=>setTimeout(r,0));
+          if(stopped!==true||code!=='HOLD_STREAM_RECONNECT_STOPPED'||
+             posts!==0||projects!==0||acks!==0)return false;
+          const recovered=await c.reconnect(s);
+          return recovered.safe_to_ack===true&&reads===2&&posts===0&&
+            projects===1&&acks===1&&c.stop(s)===false;
+        }'''))
+        check('STOP aborts late terminal DOM projection and never sends ACK', page.evaluate('''async () => {
+          const s={conversation_id:'stop-reconnect',exchange_id:'hung-ui'};
+          const container=document.createElement('main');
+          document.body.appendChild(container);
+          let release,precommits=0,posts=0,reads=0,acks=0;
+          const ui=NOXB1AbortSafeUI.createUiAdapter({
+            container,terminalTimeoutMs:3000,
+            beforeCommit(kind){
+              if(kind==='terminal'&&++precommits===1)
+                return new Promise(resolve=>{release=resolve});
+            }
+          });
+          const transport={...opts.transport,
+            post(){posts++;throw Error('NO_MODEL_POST')},
+            async readback(){reads++;return {...s}},
+            async ack(){acks++;return true}
+          };
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,
+            uiProjectionTimeoutMs:3000
+          });
+          const first=c.reconnect(s);
+          for(let i=0;i<30&&!release;i++) await new Promise(r=>setTimeout(r,0));
+          if(typeof release!=='function')return false;
+          const stopped=c.stop(s);
+          const code=await Promise.race([
+            first.then(()=>null,e=>e.code),
+            new Promise(r=>setTimeout(()=>r('HUNG'),400))
+          ]);
+          release(); // delayed beforeCommit cannot mutate after scoped STOP.
+          await new Promise(r=>setTimeout(r,0));
+          if(stopped!==true||code!=='HOLD_STREAM_RECONNECT_STOPPED'||
+             container.children.length!==0||acks!==0||posts!==0)return false;
+          const recovered=await c.reconnect(s);
+          return recovered.safe_to_ack===true&&reads===2&&
+            precommits===2&&container.children.length===1&&
+            posts===0&&acks===1;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
