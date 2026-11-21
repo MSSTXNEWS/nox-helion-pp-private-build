@@ -191,6 +191,16 @@ class HotContextTests(unittest.TestCase):
                    verified_s03=[],token_budget=512)
         self.assertIn("¡Hola! 🌍",[x["content"] for x in valid["messages"]])
 
+    def test_history_ids_are_bounded_for_lossless_omission_references(self):
+        # Malformed history IDs cannot poison omitted-turn readback metadata.
+        valid={"id":"turn-español-🌍","role":"assistant","content":"Mensaje anterior."}
+        good=call(conversation=[valid],verified_s03=[],token_budget=512)
+        self.assertEqual(good["omitted_turns"],[])
+        for bad in ("x"*129, "bad\nref", "bad\u202eR", "fake[ref]", "fake]ref"):
+            with self.subTest(bad=repr(bad)), self.assertRaisesRegex(
+                    m.ContextHold,"HOLD_CONTEXT_TURN"):
+                call(conversation=[{**valid,"id":bad}],verified_s03=[])
+
     def test_real_tokenizer_required(self):
         with self.assertRaisesRegex(m.ContextHold,"TOKENIZER_REQUIRED"):
             call(token_counter=None)
