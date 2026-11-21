@@ -1791,7 +1791,10 @@ class ControllerRestorationReceiptFence(unittest.TestCase):
         tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
         main = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
                     and node.name == "main")
-        restoration = main.finalbody[0]
+        finalizer = next(node for node in ast.walk(main)
+                         if isinstance(node, ast.Try) and node.finalbody
+                         and "controllers_stopped" in ast.unparse(node.finalbody))
+        restoration = finalizer.finalbody[0]
         self.assertIsInstance(restoration, ast.If)
         self.assertIn("controllers_stopped", ast.unparse(restoration))
         code = compile(ast.fix_missing_locations(ast.Module(
