@@ -1708,7 +1708,10 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 dict(valid['workers'][0],status='busy',current_task={'id':'Q-17'}),
                 valid['workers'][1]])
             path.write_text(json.dumps(live))
-            accepted=stream._executor_status_reply('Сколько агентов сейчас?',path)
+            # Explicitly admit the unaffected owner maintenance gate, as the
+            # production status route requires it both before and after read.
+            with patch.object(ui,'owner_maintenance_gate',return_value='ABSENT'):
+                accepted=stream._executor_status_reply('Сколько агентов сейчас?',path)
             self.assertIn('настроено 2',accepted)
             self.assertIn('по записи занято 1',accepted)
             self.assertNotIn('не могу подтвердить',accepted)
