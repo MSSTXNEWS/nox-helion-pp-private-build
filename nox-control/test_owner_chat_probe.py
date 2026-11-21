@@ -149,6 +149,64 @@ class ProbeTests(unittest.TestCase):
         self.assertLess(code.index('require_postturn_executor_identity(client, fresh)'),
                         code.index("emit('chat_recent_timing_after',metrics())"))
 
+    def test_explicit_model_identity_drift_holds_before_third_turn(self):
+        """The same dialog cannot silently switch an explicitly tagged model."""
+        self.assertIsNone(probe.require_stream_model_identity({'type': 'delta', 'text': '323'}))
+        self.assertEqual(probe.require_stream_model_identity(
+            {'type': 'start', 'model': 'GLM-5.3'}, None), 'GLM-5.3')
+        self.assertEqual(probe.require_stream_model_identity(
+            {'type': 'done', 'model_id': 'GLM-5.3', 'modelId': 'GLM-5.3'},
+            'GLM-5.3'), 'GLM-5.3')
+        for value in (None, '', True, 123, '   ', 'bad\\nroute'):
+            with self.subTest(invalid=value):
+                with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_MODEL_IDENTITY_INVALID'):
+                    probe.require_stream_model_identity({'model': value})
+        for frame, previous in (
+            ({'model': 'GLM-5.3', 'model_id': 'another'}, None),
+            ({'type': 'done', 'model': 'another'}, 'GLM-5.3'),
+        ):
+            with self.subTest(drift=frame), self.assertRaisesRegex(
+                    RuntimeError, 'HOLD_STREAM_MODEL_ROUTE_DRIFT'):
+                probe.require_stream_model_identity(frame, previous)
+        a, b = {'stream_model_identity': 'GLM-5.3'}, {'stream_model_identity': 'another'}
+        blank = {'stream_model_identity': None}
+        self.assertTrue(probe.require_multiturn_model_route(a, a, a))
+        self.assertFalse(probe.require_multiturn_model_route(blank, blank))
+        for turns in ((a, b), (a, blank), (blank, a, a)):
+            with self.subTest(turns=turns), self.assertRaisesRegex(
+                    RuntimeError, 'HOLD_CHAT_MULTITURN_MODEL_ROUTE_DRIFT'):
+                probe.require_multiturn_model_route(*turns)
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, rows):
+                self.rows, self.closed = rows, False
+            def __iter__(self):
+                return iter(json.dumps(row).encode() + b'\\n' for row in self.rows)
+            def close(self):
+                self.closed = True
+
+        did = '1' * 32
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        good = Response([{'type': 'start', 'model': 'GLM-5.3'},
+                         {'type': 'delta', 'text': '323'}, dict(done, model_id='GLM-5.3')])
+        with patch.object(probe, 'request', return_value=good):
+            result = probe.consume_turn(object(), 'synthetic', did)
+        self.assertEqual(result['stream_model_identity'], 'GLM-5.3')
+        self.assertTrue(good.closed)
+        bad = Response([{'type': 'start', 'model': 'GLM-5.3'},
+                        {'type': 'delta', 'text': '323'}, dict(done, model_id='another')])
+        with patch.object(probe, 'request', return_value=bad):
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_MODEL_ROUTE_DRIFT'):
+                probe.consume_turn(object(), 'synthetic', did)
+        self.assertTrue(bad.closed)
+        main = path.read_text().split('def main():', 1)[1]
+        self.assertLess(main.index('require_multiturn_model_route(turn,follow)'),
+                        main.index('turn3=admitted_consume_turn('))
+        self.assertLess(main.index('require_multiturn_model_route(turn,follow,turn3)'),
+                        main.index('require_postturn_owner_binding(client)'))
+
     def test_stream_textual_http_failure_status_fences(self):
         """Fail-closed on 4xx/5xx status lines even with later saved DONE."""
         failures = ('HTTP/1.1 503 Service Unavailable',
