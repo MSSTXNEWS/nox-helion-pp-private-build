@@ -143,6 +143,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
   const c=await(makeSession?makeSession():new Cdp(ws).open()),active=new Map(),finished=[];
   let startedPostCount=0,dialogFrameId=null,dialogLoaderId=null;
   let expectedDocumentURL=null,dialogInitiatorType=null;
+  let expectedTargetId=null,mainFrameId=null,mainLoaderId=null,lifecycleArmed=false;
   let yes,no;const completion=new Promise((a,b)=>{yes=a;no=b;});
   const deadline=Date.now()+timeoutMs;
   // A resolved body-count promise cannot be rejected again. Preserve a
@@ -198,6 +199,36 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     if(method==='CDP_DISCONNECTED'||method==='CDP_FOREIGN_TARGET_SESSION'){
       invalidate(Error(method));return;
     }
+    // Page navigation is a separate CDP event stream. A stable initial URL
+    // cannot prove that the same document survived both turns or quiescence.
+    if(lifecycleArmed){
+      if(method==='Page.frameNavigated'&&p.frame&&!p.frame.parentId){
+        invalidate(Error('CDP_MAIN_FRAME_NAVIGATED'));return;
+      }
+      if(method==='Page.frameStartedNavigating'&&p.frameId===mainFrameId){
+        invalidate(Error('CDP_MAIN_FRAME_NAVIGATION_STARTED'));return;
+      }
+      if(method==='Page.frameDetached'&&p.frameId===mainFrameId){
+        invalidate(Error('CDP_MAIN_FRAME_DETACHED'));return;
+      }
+      // Hash-only same-document navigation does not create a new loader.
+      if(method==='Page.navigatedWithinDocument'&&p.frameId===mainFrameId&&
+         normalizePageDocumentURL(p.url)!==expectedDocumentURL){
+        invalidate(Error('CDP_SAME_DOCUMENT_URL_CHANGED'));return;
+      }
+      if(method==='Target.targetDestroyed'&&p.targetId===expectedTargetId){
+        invalidate(Error('CDP_PAGE_TARGET_DESTROYED'));return;
+      }
+      if(method==='Target.targetCrashed'&&p.targetId===expectedTargetId){
+        invalidate(Error('CDP_PAGE_TARGET_CRASHED'));return;
+      }
+      if(method==='Target.detachedFromTarget'&&p.targetId===expectedTargetId){
+        invalidate(Error('CDP_PAGE_TARGET_DETACHED'));return;
+      }
+      if(method==='Inspector.detached'){
+        invalidate(Error('CDP_INSPECTOR_DETACHED'));return;
+      }
+    }
     if(method==='Network.requestWillBeSent'){
       // A redirected CDP request can reuse the original requestId, even
       // when the redirect changes the HTTP method or URL.
@@ -247,6 +278,9 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       if(typeof frameId!=='string'||!frameId||
          typeof loaderId!=='string'||!loaderId){
         invalidate(Error('CDP_FRAME_PROVENANCE_MISSING'));return;
+      }
+      if(frameId!==mainFrameId||loaderId!==mainLoaderId){
+        invalidate(Error('CDP_MAIN_FRAME_DOCUMENT_CHANGED'));return;
       }
       if(dialogFrameId===null){dialogFrameId=frameId;dialogLoaderId=loaderId;}
       else if(frameId!==dialogFrameId||loaderId!==dialogLoaderId){
@@ -343,7 +377,10 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     }
   });
   try{
-    await c.send('Network.enable');const version=await c.send('Browser.getVersion');
+    await c.send('Network.enable');
+    await c.send('Page.enable');
+    await c.send('Target.setDiscoverTargets',{discover:true});
+    const version=await c.send('Browser.getVersion');
     // A browser/worker/iframe target websocket cannot attest one chat tab.
     const target=await c.send('Target.getTargetInfo');
     if(target?.targetInfo?.type!=='page'||
@@ -353,6 +390,17 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     // certify the origin of either requestWillBeSent.documentURL.
     expectedDocumentURL=normalizePageDocumentURL(target.targetInfo.url);
     if(!expectedDocumentURL)throw Error('CDP_PAGE_DOCUMENT_REQUIRED');
+    // Pin primary frame and loader; a same-URL reload must not retain evidence.
+    const initial=await c.send('Page.getFrameTree');
+    const frame=initial?.frameTree?.frame;
+    if(typeof frame?.id!=='string'||!frame.id||
+       typeof frame.loaderId!=='string'||!frame.loaderId)
+      throw Error('CDP_MAIN_FRAME_REQUIRED');
+    if(normalizePageDocumentURL(frame.url)!==expectedDocumentURL)
+      throw Error('CDP_INITIAL_DOCUMENT_MISMATCH');
+    expectedTargetId=target.targetInfo.targetId;
+    mainFrameId=frame.id;mainLoaderId=frame.loaderId;
+    lifecycleArmed=true;
     if(onReady)await onReady(c);
     const records=(await completion).slice().sort((a,b)=>a.order-b.order);
     // Network.getResponseBody resolves asynchronously; completion order is not turn order.
