@@ -351,6 +351,57 @@ class FactReceiptTest(unittest.TestCase):
                     self.assertEqual(mirror_calls, [("Запомни ответ", "Ответ")])
                     self.assertTrue(any("soul_secondary_log_error RuntimeError" in e for e in bridge.errors))
 
+    def test_stop_while_s03_write_returns_preserves_receipt_but_no_soul_mirror(self):
+        """A late STOP must not become GENERATED after asynchronous S03 write."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *ignored): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Сохранённый ответ"}}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        rid = "stop-during-s03-write"
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.NKEEP, bridge.LAST_CHAT = 0, {"t": 0}
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Проверь поздний STOP"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        mirrors = []
+        bridge.SOUL = types.SimpleNamespace(log_turn=lambda *args: mirrors.append(args))
+        memory = types.ModuleType("s03_memory")
+        writes = []
+
+        def persist(*args):
+            writes.append(args)
+            # The real endpoint is asynchronously awaiting to_thread here.
+            W.CANCEL.add(rid)
+
+        memory.persist_turn = persist
+
+        async def scenario():
+            response = await chat(Request({
+                "request_id": rid, "mode": "fast", "use_memory": False,
+                "messages": [{"role": "user", "content": "Проверь поздний STOP"}],
+            }))
+            return [json.loads(row) async for row in response.body_iterator]
+
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.object(W, "W", None), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            frames = asyncio.run(scenario())
+        self.assertEqual(len(writes), 1)
+        self.assertEqual(mirrors, [])
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
+        self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+        self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
+
     def test_stop_scope_and_bad_json_cannot_cancel_all(self):
         """Invalid or non-generation commands cannot trigger an implicit broadcast."""
         stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
