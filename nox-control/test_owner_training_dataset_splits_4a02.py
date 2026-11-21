@@ -72,6 +72,19 @@ class DatasetSplitTests(unittest.TestCase):
         result = split_manifest(original + [equivalent])
         self.assertEqual(result["counts"]["deduplicated"], 1)
 
+    def test_source_license_cannot_change_across_distinct_goals(self):
+        rows = rows_fixture()
+        # Different goals of one publisher must not quietly acquire
+        # incompatible source-level licenses, even without duplicate text.
+        rows[1]["source_id"] = rows[0]["source_id"]
+        rows[1]["license"] = "Proprietary"
+        with self.assertRaisesRegex(SplitHold, "HOLD_CONFLICTING_SOURCE_LICENSE"):
+            split_manifest(rows)
+        # Equivalent casing and whitespace remain a single license claim.
+        rows[1]["license"] = " mit "
+        result = split_manifest(rows)
+        self.assertEqual(result["counts"]["kept"], 60)
+
     def test_duplicate_cross_group_holds(self):
         rows = rows_fixture()
         rows[1]["text"] = rows[0]["text"].upper()

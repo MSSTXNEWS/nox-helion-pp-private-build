@@ -56,6 +56,7 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
     # Origin+goal is a global provenance identity, independent of RU/ES and domain.
     seen_origin_goals = {}
     seen_group_licenses = {}
+    seen_source_licenses = {}
     duplicate_count = 0
     count = 0
     for row in records:
@@ -89,6 +90,12 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
         prior_license = seen_group_licenses.setdefault(group, license_claim)
         if prior_license != license_claim:
             raise SplitHold("HOLD_CONFLICTING_GROUP_LICENSE")
+        # A source's license claim cannot change merely because the training
+        # goal differs. Require a distinct source_id and independent review
+        # instead of admitting incompatible source-level rights into a split.
+        prior_source_license = seen_source_licenses.setdefault(origin, license_claim)
+        if prior_source_license != license_claim:
+            raise SplitHold("HOLD_CONFLICTING_SOURCE_LICENSE")
         fingerprint = _digest(_norm(row["text"]))
         prior = seen_content.get(fingerprint)
         if prior is not None:
