@@ -244,9 +244,14 @@
        }
        return;
      }
-     const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
-     trailing=glyphs.pop()||'';
-     if(glyphs.length)await emitPieces(glyphs.join(''));
+     // Carry only the last grapheme; avoid an array and extra joins.
+     let lastBoundary=0;
+     for(const part of segmenter.segment(trailing))lastBoundary=part.index;
+     if(lastBoundary>0){
+      const safe=trailing.slice(0,lastBoundary);
+      trailing=trailing.slice(lastBoundary);
+      await emitPieces(safe);
+     }
     },nativeSignal);
     if(trailing)await emitPieces(trailing);
     if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
