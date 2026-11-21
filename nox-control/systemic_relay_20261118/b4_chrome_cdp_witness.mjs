@@ -126,11 +126,16 @@ function eventData(record){
 // Invisible format/control/whitespace/isolated combining marks cannot
 // prove first-visible text. This proxy does not attest browser paint.
 const hasPrintableAnswerText=text=>/[\p{L}\p{N}\p{P}\p{S}]/u.test(text);
-export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expectedChatOrigin,makeSession,onReady}={}){
+export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expectedChatOrigin,makeSession,onReady,
+  responseBodyAckTimeoutMs=750,bodyAckClock=()=>performance.now()}={}){
   if(!/^ws:\/\/(localhost|127\.0\.0\.1):\d+\//.test(ws||''))throw Error('LOCAL_CDP_ONLY');
   if(!Number.isInteger(count)||count<1||count>6)throw Error('BAD_COUNT');
   if(!Number.isInteger(quiescenceMs)||quiescenceMs<50||quiescenceMs>1000)throw Error('BAD_QUIESCENCE');
   if(!Number.isInteger(timeoutMs)||timeoutMs<=quiescenceMs)throw Error('BAD_TIMEOUT');
+  if(!Number.isInteger(responseBodyAckTimeoutMs)||responseBodyAckTimeoutMs<25||
+     responseBodyAckTimeoutMs>2000||responseBodyAckTimeoutMs>=timeoutMs)
+    throw Error('BAD_BODY_ACK_TIMEOUT');
+  if(typeof bodyAckClock!=='function')throw Error('BAD_BODY_ACK_CLOCK');
   // The CDP websocket is NOT the chat service origin. An explicit, separately
   // established serving origin is mandatory; never infer one from a request.
   let expectedOrigin;
@@ -308,7 +313,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
           invalidate(Error('CDP_NON_SERIAL_CHAT_POST'));return;
         }
       }
-      const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false,finishStopAt:null,finishStopChunk:null,doneChunk:null,sseTextEventTimes:[],sseTextEventChunks:[],cdpChunkOrdinal:0,sseOutputCodepoints:0};
+      const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,bodyAckMs:null,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false,finishStopAt:null,finishStopChunk:null,doneChunk:null,sseTextEventTimes:[],sseTextEventChunks:[],cdpChunkOrdinal:0,sseOutputCodepoints:0};
       active.set(p.requestId,x);
       const record=s=>{
         if(typeof s!=='string'){x.missing=true;return;}
@@ -385,8 +390,28 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       try{x.partial+=x.decoder.decode();}catch{x.missing=true;}
       if(x.partial.length!==0)x.missing=true;
       x.streamDigest=x.streamHasher.digest('hex');
-      c.send('Network.getResponseBody',{requestId:p.requestId}).then(v=>{
-        if(typeof v.body!=='string'){x.missing=true;return;}
+      // Observer-local monotonic API round-trip, started AFTER Network.loadingFinished.
+      // Neither CDP timestamps nor model/token timing measure this asynchronous ACK.
+      let ackStart;
+      try{ackStart=bodyAckClock();}catch{ackStart=NaN;}
+      let bodyLookup;
+      try{bodyLookup=Promise.resolve(c.send('Network.getResponseBody',{requestId:p.requestId}));}
+      catch(error){bodyLookup=Promise.reject(error);}
+      let ackTimeout;
+      Promise.race([
+        bodyLookup,
+        new Promise((_,reject)=>{ackTimeout=setTimeout(
+          ()=>reject(Error('CDP_RESPONSE_BODY_ACK_TIMEOUT')),responseBodyAckTimeoutMs);})
+      ]).then(v=>{
+        let ackEnd;
+        try{ackEnd=bodyAckClock();}catch{ackEnd=NaN;}
+        const elapsed=Math.round(ackEnd-ackStart);
+        if(!validTime(ackStart)||!validTime(ackEnd)||ackEnd<ackStart||
+           !Number.isSafeInteger(elapsed)||elapsed<0||elapsed>responseBodyAckTimeoutMs){
+          x.missing=true;return;
+        }
+        x.bodyAckMs=elapsed;
+        if(typeof v?.body!=='string'){x.missing=true;return;}
         // Base64 bytes or UTF-8 text are the only unambiguous CDP decoded-body forms here.
         if(typeof v.base64Encoded!=='boolean'){x.missing=true;return;}
         // getResponseBody is a separate integrity witness: reject padding-bit aliases
@@ -396,7 +421,11 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         x.response=hash(body);
         x.bodyMatchesStream=!x.missing&&!x.encoded&&x.bytes===body.length&&x.streamDigest===x.response;
         if(!x.bodyMatchesStream)x.missing=true;
-      }).catch(()=>{x.missing=true;}).finally(()=>{finished.push(x);if(finished.length>=count)yes(finished);});
+      }).catch(()=>{x.missing=true;}).finally(()=>{
+        clearTimeout(ackTimeout);
+        finished.push(x);
+        if(finished.length>=count)yes(finished);
+      });
     }
   });
   try{
@@ -548,6 +577,9 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       sse_finish_stop_to_done_cross_chunk:stopToDoneMs===null?null:x.doneChunk>x.finishStopChunk,
       sse_done_to_loading_finished_ms:doneToLoadingFinishedMs,
       sse_done_to_loading_finished_source:doneToLoadingFinishedMs===null?null:'CDP:Network.loadingFinished',
+       cdp_response_body_ack_latency_ms:!x.missing&&x.bodyMatchesStream?x.bodyAckMs:null,
+       cdp_response_body_ack_latency_source:!x.missing&&x.bodyMatchesStream&&x.bodyAckMs!==null?
+         'LOCAL_MONOTONIC:Network.getResponseBody':null,
       sse_output_codepoints:!x.missing?x.sseOutputCodepoints:null,
       sse_text_event_gap_p95_ms:p95,
       sse_text_event_max_gap_ms:longest?.gapMs??null,
