@@ -352,6 +352,36 @@ def main():
             !Array.from(chat.children).some(
               x=>x.dataset.noxB1Exchange===s.exchange_id);
         }"""))
+        check("fresh STOP releases reconnect waiter while old terminal is still hung",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'terminal-waiter-quick-stop'};
+          const old=new AbortController(),fresh=new AbortController();
+          let entered=false,release,commits=0;
+          const gate=new Promise(resolve=>release=resolve);
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container:chat,
+            terminalTimeoutMs:1500,beforeCommit:async kind=>{
+              if(kind==='terminal'&&++commits===1){entered=true;await gate;}
+            }});
+          const first=ui.upsertTerminal(s,'event-quick-stop',old.signal);
+          for(let i=0;i<30&&!entered;i++) await Promise.resolve();
+          if(!entered)return false;
+          const second=ui.upsertTerminal(s,'event-quick-stop',fresh.signal);
+          fresh.abort();
+          const fast=await Promise.race([
+            second,new Promise(resolve=>setTimeout(()=>resolve('HUNG'),250))
+          ]);
+          const beforeRelease=!Array.from(chat.children).some(
+            x=>x.dataset.noxB1Exchange===s.exchange_id);
+          release();
+          const oldResult=await first;
+          await new Promise(resolve=>setTimeout(resolve,0));
+          const rows=Array.from(chat.children).filter(
+            x=>x.dataset.noxB1Exchange===s.exchange_id);
+          return fast===false&&beforeRelease&&oldResult===true&&
+            commits===1&&rows.length===1&&
+            rows[0].dataset.noxB1EventId==='event-quick-stop'&&
+            rows[0].dataset.noxB1State==='terminal';
+        }"""))
         browser.close()
     print(f"B1 source-only real Chromium: {len(checks)}/{len(checks)} PASS")
     for name, _ in checks:
