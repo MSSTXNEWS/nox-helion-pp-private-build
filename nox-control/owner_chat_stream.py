@@ -183,9 +183,10 @@ async def _bounded_sse_lines(response):
     """Bound partial SSE fields before a newline; httpx.aiter_lines() does not.
 
     Preserve CR, LF, CRLF (including split CRLF) and UTF-8 chunk boundaries.
-    No buffering of untrusted unterminated model output beyond 300k chars.
+    No buffering of untrusted unterminated model output beyond 300k UTF-8 bytes.
     """
     pending=''
+    pending_bytes=0
     after_cr=False
     # Un-sized chunks preserve immediate first-token delivery. Fixed-size
     # HTTPX text chunking can wait for 8 KiB and stall a live SSE response.
@@ -206,11 +207,13 @@ async def _bounded_sse_lines(response):
                         continue
                     yield pending
                     pending=''
+                    pending_bytes=0
                     after_cr=(part=='\r')
                 elif part:
                     after_cr=False
                     pending+=part
-                    if len(pending)>300000:
+                    pending_bytes+=len(part.encode('utf-8','strict'))
+                    if pending_bytes>300000:
                         raise StreamFailure('HOLD_MODEL_SSE_FRAME')
     try:
         decoder.decode(b'',final=True)
@@ -289,8 +292,9 @@ async def _model_events(client, url, payload):
                 frame_lines+=1
                 # Comments and id/retry/event metadata also consume memory and
                 # parsing time. Cap aggregate record bytes, not only data:.
-                record_size+=len(line)+1
-                if frame_lines>1024 or len(line)>300000 or record_size>300000:
+                line_bytes=len(line.encode('utf-8','strict'))
+                record_size+=line_bytes+1
+                if frame_lines>1024 or line_bytes>300000 or record_size>300000:
                     raise StreamFailure('HOLD_MODEL_SSE_FRAME')
             else:
                 # Each empty line ends one SSE record (including keepalives).
@@ -325,7 +329,7 @@ async def _model_events(client, url, payload):
                 value=line[5:] if line!='data' else ''
                 if value.startswith(' '):
                     value=value[1:]
-                frame_size+=len(value)+1
+                frame_size+=len(value.encode('utf-8','strict'))+1
                 if frame_size>300000:
                     raise StreamFailure('HOLD_MODEL_SSE_SIZE')
                 parts.append(value)
@@ -335,7 +339,7 @@ async def _model_events(client, url, payload):
             if wire=='[DONE]':
                 complete=True
                 break
-            if len(wire)>300000:
+            if len(wire.encode('utf-8','strict'))>300000:
                 raise StreamFailure('HOLD_MODEL_SSE_SIZE')
             try:
                 doc=json.loads(wire,object_pairs_hook=_reject_duplicate_json_keys,

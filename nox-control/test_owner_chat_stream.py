@@ -112,6 +112,31 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                             self.assertNotIn('_agent_final',payload)
 
 
+    async def test_unicode_sse_record_limit_is_wire_bytes_not_codepoints(self):
+        # A single JSON SSE record can be under 300k characters yet exceed
+        # the 300k-byte frame ceiling with UTF-8 emoji. Reject before showing
+        # model tokens or confirming a successful browser/S03 terminal.
+        for streaming in (True, False):
+            with self.subTest(streaming=streaming):
+                chunks=Chunks([frame('🌍' * 75000),
+                               frame(finish='stop'), b'data: [DONE]\n\n'])
+                requests,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Hola 🌍'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Hola 🌍',streaming)
+                    if streaming:
+                        wire=''.join([part async for part in response.body_iterator])
+                        self.assertIn('HOLD_MODEL_SSE_FRAME',wire)
+                        self.assertNotIn('[DONE]',wire)
+                    else:
+                        self.assertEqual(response.status_code,502)
+                        self.assertIn(b'HOLD_MODEL_SSE_FRAME',response.body)
+                self.assertTrue(chunks.closed)
+                self.assertEqual(len(requests),1)
+                self.assertNotIn('_agent_final',payload)
+
     async def test_native_sse_utf8_wire_limit_holds_before_oversized_token(self):
         # Three single-codepoint astral tokens are 12 UTF-8 bytes, not 3.
         # The third must never be emitted or certified by the browser/S03.
