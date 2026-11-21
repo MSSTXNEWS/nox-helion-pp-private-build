@@ -9,6 +9,8 @@ class Stub {
   async send(cmd,p={}){if(cmd==='Browser.getVersion')return {product:'CDP-FIXTURE'};
     if(cmd==='Network.streamResourceContent')return {};
     if(cmd==='Network.getResponseBody'){
+      if(this.responseBodyDelay?.[p.requestId])
+        await new Promise(resolve=>setTimeout(resolve,this.responseBodyDelay[p.requestId]));
       const canonical=this.bodies.get(p.requestId).toString('base64');
       if(typeof this.responseBodyTextMutator==='function')return {body:this.responseBodyTextMutator(this.bodies.get(p.requestId).toString('utf8'),p.requestId),base64Encoded:false};
       return {body:typeof this.responseBodyMutator==='function'?this.responseBodyMutator(canonical,p.requestId):canonical,base64Encoded:true};
@@ -17,6 +19,7 @@ class Stub {
 async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondTurn=null,encoding=null,options={}){const c=new Stub();
   c.responseBodyMutator=options.responseBodyBase64Mutator;
   c.responseBodyTextMutator=options.responseBodyTextMutator;
+  c.responseBodyDelay=options.responseBodyDelay;
   if(options.postDataMode){
     const normalSend=c.send.bind(c);
     c.send=(cmd,p={})=>{
@@ -38,6 +41,12 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
     c.bodies.set(requestId,i===1&&responseBodyForSecondTurn!==null?Buffer.from(responseBodyForSecondTurn):captured);
     c.emit('Network.requestWillBeSent',{requestId,timestamp,request:{method:'POST',url:'http://localhost/api/nox/chat',
       ...(i===1&&o.postDataMode?{}:{postData:i===1&&Object.hasOwn(o,'postDataText')?o.postDataText:'{"secret":"'+i+'"}'})}});
+    if(i===1&&options.injectExtraPost)c.emit('Network.requestWillBeSent',{
+      requestId:'unexpected-third',timestamp:101.001,request:{method:'POST',
+      url:'http://localhost/api/nox/chat',postData:'{"unexpected":3}'}});
+    if(i===1&&options.injectDuplicatePost)c.emit('Network.requestWillBeSent',{
+      requestId,timestamp:101.001,request:{method:'POST',
+      url:'http://localhost/api/nox/chat',postData:'{"duplicate":true}'}});
     const emitExtra=()=>c.emit('Network.responseReceivedExtraInfo',{requestId,statusCode:o.extraStatus??200,headers:o.extraHeaders??{}});
     if(o.extraBefore)emitExtra();
     const response={status:200,mimeType:'text/event-stream',headers:i===1&&encoding?{'Content-Encoding':encoding}:{}};
@@ -483,4 +492,23 @@ test('direct and delayed CDP POST digests reject lossy UTF-16 while preserving v
       assert.equal(x.turns[1].sse_done_ms,null,mode);
     }
   }
+});
+
+test('two-turn attribution follows request-start order even when CDP body ACK completes in reverse',async()=>{
+  const control=await run();
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  assert.deepEqual(control.turns.map(t=>t.cdp_request_id),['1','2']);
+  const reversed=await run(false,null,null,null,{responseBodyDelay:{'1':60}});
+  assert.equal(reversed.cdp_consistent,true);
+  assert.equal(reversed.ttft_sse_verified,true);
+  assert.deepEqual(reversed.turns.map(t=>t.cdp_request_id),['1','2'],
+    'async getResponseBody completion order cannot swap first and second conversational turn');
+  assert.deepEqual(reversed.turns.map(t=>t.request_sha256),
+    control.turns.map(t=>t.request_sha256));
+  assert.deepEqual(reversed.turns.map(t=>t.ttft_ms),control.turns.map(t=>t.ttft_ms));
+  await assert.rejects(run(false,null,null,null,{injectExtraPost:true}),/EXTRA_CDP_POST/,
+    'any observed unexpected third model POST must invalidate a two-turn measurement');
+  await assert.rejects(run(false,null,null,null,{injectDuplicatePost:true}),/DUPLICATE_CDP_ID/,
+    'a repeated CDP request ID must fail closed');
 });
