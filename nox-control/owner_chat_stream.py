@@ -371,8 +371,11 @@ async def _model_events(client, url, payload):
                 if already_finished and (reason is not None or part or fragments):
                     raise StreamFailure('HOLD_MODEL_POST_TERMINAL_DELTA')
                 if part:
-                    size+=len(part)
-                    if size>2000000:
+                    # Enforce the native token budget on UTF-8 wire bytes, not
+                    # Python codepoints: an RU/ES/emoji stream can exceed the
+                    # S03/browser ceiling before its final postflight.
+                    size+=len(part.encode('utf-8','strict'))
+                    if size>FINAL_RESPONSE_LIMIT:
                         raise StreamFailure('HOLD_MODEL_OUTPUT_SIZE')
                     text.append(part)
                     yield 'token',part
