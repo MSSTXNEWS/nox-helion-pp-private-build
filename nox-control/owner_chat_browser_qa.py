@@ -993,12 +993,27 @@ RENDERED_FOURROW_JS = r"""expected => {
     // CSS clip paths/masks can erase *painted* words even when DOM text,
     // checkVisibility and layout geometry still match the persisted history.
     // Check the message subtree AND its ancestors (including #messages).
+    // CSS filter:opacity(0) erases painted text without affecting DOM,
+    // checkVisibility, client rects, clip-path or mask-image.
+    // Treat other filters as visually ambiguous for this literal-text QA.
     const paintSafe=style=>
-      style.clipPath==='none'&&(!style.maskImage||style.maskImage==='none');
+      style.clipPath==='none'&&(!style.maskImage||style.maskImage==='none')&&
+      style.filter==='none';
+    // Computed transparent glyph color or WebKit text-fill can make a
+    // nonempty text node invisible even while innerText still matches.
+    const invisibleColor=value=>{
+      const v=String(value||'').replace(/\\s+/g,'').toLowerCase();
+      return v==='transparent'||/^rgba\\([^)]*,0(?:\\.0+)?\\)$/.test(v)||
+        /^rgb\\([^)]*\\/0(?:\\.0+)?\\)$/.test(v);
+    };
     const elements=[node,...node.querySelectorAll('*')];
     for(const el of elements){
       const style=getComputedStyle(el);
       if(style.textTransform!=='none'||!paintSafe(style))return false;
+      const ownsText=[...el.childNodes].some(child=>
+        child.nodeType===3&&/\\S/.test(child.nodeValue||''));
+      if(ownsText&&(invisibleColor(style.color)||
+         invisibleColor(style.webkitTextFillColor)))return false;
       for(const pseudo of ['::before','::after']){
         const content=getComputedStyle(el,pseudo).content;
         if(!['none','normal','""',"''"].includes(content))return false;
