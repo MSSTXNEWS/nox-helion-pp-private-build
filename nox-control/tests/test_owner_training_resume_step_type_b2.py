@@ -258,6 +258,69 @@ class CheckpointStepProvenance(unittest.TestCase):
         self.assertEqual(stopped, [["supervisorctl", "stop", name]])
 
 
+    def test_group_stop_requires_unambiguous_native_census(self):
+        # AST-execute actual stop_controller with synthetic process snapshots.
+        stop = load_pinned_verifier(Path("/tmp"))["stop_controller"]
+        name = "nox-dispatcher-t855u"
+        script = Path("/root/nox/scripts/nox_dispatcher_t855u.py")
+
+        def attempt(census, process_pgrp=321):
+            sent = []
+            def state(_name):
+                return {"state": "STOPPED" if sent else "RUNNING", "pid": 321}
+            helper = types.SimpleNamespace(
+                service_state=state,
+                program_config=lambda _name: {
+                    "command": "python " + str(script),
+                    "stopasgroup": "true", "killasgroup": "false"},
+                process=lambda _pid: {
+                    "service": name, "argv": ["python", str(script)],
+                    "pgrp": process_pgrp},
+                process_table=lambda: census,
+                command=lambda argv, timeout: (sent.append(argv) or 0, "ok"),
+            )
+            return lambda: stop(helper, name, script), sent
+
+        own = {"pgrp": 321, "state": "S", "service": name}
+        invalid = (
+            (None, 321), ([], 321), ({}, 321),
+            ({"self": None}, 321),
+            ({"self": {"pgrp": True, "state": "S", "service": name}}, 321),
+            ({"self": {"state": "S", "service": name}}, 321),
+            ({"self": {"pgrp": 321, "state": None, "service": name}}, 321),
+            ({"self": {"pgrp": 321, "state": "S"}}, 321),
+            ({"self": own}, True),
+            ({"self": own}, None),
+        )
+        for census, pgrp in invalid:
+            with self.subTest(census=repr(census), process_pgrp=repr(pgrp)):
+                run, sent = attempt(census, pgrp)
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_CONTROLLER_PROCESS_GROUP_READBACK"):
+                    run()
+                self.assertEqual(sent, [])
+
+        for census in (
+            {"self": own},
+            {"self": own, "other": {"pgrp": 444, "state": "S",
+                                      "service": "unrelated"}},
+            {"self": own, "zombie": {"pgrp": 321, "state": "Z",
+                                       "service": "foreign"}},
+        ):
+            with self.subTest(healthy=repr(census)):
+                run, sent = attempt(census)
+                self.assertIsNone(run())
+                self.assertEqual(sent, [["supervisorctl", "stop", name]])
+
+        run, sent = attempt({
+            "self": own, "foreign": {"pgrp": 321, "state": "S",
+                                     "service": "foreign"}})
+        with self.assertRaisesRegex(
+                RuntimeError, "HOLD_CONTROLLER_FOREIGN_PROCESS_GROUP"):
+            run()
+        self.assertEqual(sent, [])
+
+
     def test_post_stop_supervisor_readback_requires_valid_terminal_state(self):
         # Source-only, AST-executed. A successful stop command alone cannot
         # certify that the named controller is actually STOPPED/EXITED.
