@@ -554,6 +554,29 @@ def main():
             reconnectResult===true&&nodes.length===1&&
             nodes[0].textContent==='ONE';
         }"""))
+        check("completed terminal replay skips redundant precommit and conflicts fail closed",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'terminal-replay-precommit'};
+          const ctrl=new AbortController();
+          let terminalCalls=0;
+          const beforeCommit=async kind=>{if(kind==='terminal') terminalCalls++;};
+          const original=NOXB1AbortSafeUI.createUiAdapter({container:chat,beforeCommit});
+          const reconnect=NOXB1AbortSafeUI.createUiAdapter({container:chat,beforeCommit});
+          await original.onDelta(s,'saved',ctrl.signal,'delta-terminal-replay');
+          const first=await original.upsertTerminal(s,'terminal-replay-id');
+          await new Promise(resolve=>setTimeout(resolve,0));
+          const second=await reconnect.upsertTerminal(
+            s,'terminal-replay-id',new AbortController().signal);
+          let conflict=false;
+          try{await reconnect.upsertTerminal(s,'conflicting-terminal-id');}
+          catch(e){conflict=e.code==='HOLD_B1_UI_CONFLICTING_TERMINAL';}
+          const nodes=Array.from(chat.children).filter(
+            el=>el.dataset.noxB1Exchange===s.exchange_id);
+          return first===true&&second===true&&terminalCalls===1&&
+            conflict&&nodes.length===1&&nodes[0].textContent==='saved'&&
+            nodes[0].dataset.noxB1State==='terminal'&&
+            nodes[0].dataset.noxB1EventId==='terminal-replay-id';
+        }"""))
         browser.close()
     print(f"B1 source-only real Chromium: {len(checks)}/{len(checks)} PASS")
     for name, _ in checks:
