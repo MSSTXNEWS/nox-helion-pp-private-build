@@ -84,7 +84,8 @@ class ProbeTests(unittest.TestCase):
                           side_effect=[3 * 1024 ** 3, 3 * 1024 ** 3,
                                        RuntimeError('HOLD_CHAT_PROBE_CGROUP_RAM_ADMISSION')]) as gate, \
              patch.object(probe, 'model_slots_state', return_value={'count': 2, 'busy': 0}) as slots, \
-             patch.object(probe, 'consume_turn', return_value={'answer': '323'}) as stream:
+             patch.object(probe, 'require_preturn_owner_binding', return_value=True), \
+              patch.object(probe, 'consume_turn', return_value={'answer': '323'}) as stream:
             self.assertEqual(probe.admitted_consume_turn('client', 'first', did)['answer'], '323')
             self.assertEqual(probe.admitted_consume_turn('client', 'second', did)['answer'], '323')
             with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_CGROUP_RAM_ADMISSION$'):
@@ -112,7 +113,8 @@ class ProbeTests(unittest.TestCase):
                  {'count': 1, 'busy': 0},
                  {'count': 1, 'busy': 1},
                  RuntimeError('HOLD_CHAT_SLOTS_ENDPOINT_UNAVAILABLE')]) as slots, \
-             patch.object(probe, 'consume_turn', return_value={'answer': '323'}) as stream:
+             patch.object(probe, 'require_preturn_owner_binding', return_value=True), \
+              patch.object(probe, 'consume_turn', return_value={'answer': '323'}) as stream:
             self.assertEqual(probe.admitted_consume_turn('client', 'first', did)['answer'], '323')
             with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_BUSY_FOR_SYNTHETIC_PROBE$'):
                 probe.admitted_consume_turn('client', 'second', did)
@@ -122,6 +124,41 @@ class ProbeTests(unittest.TestCase):
             self.assertEqual(slots.call_count, 3)
             self.assertEqual(stream.call_count, 1)
             self.assertEqual(slots.call_args_list[0].args, ('client',))
+
+    def test_each_synthetic_turn_rechecks_owner_binding_before_post(self):
+        """An earlier bound status cannot authorize a later detached owner route."""
+        did = '1' * 32
+        for invalid in ({'native_p02_bound': False}, {}, {'native_p02_bound': 1},
+                        {'native_p02_bound': 'true'}, None, [], 'not-status'):
+            with self.subTest(status=invalid), \
+                 patch.object(probe, 'owner_readback_json', return_value=invalid) as read:
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_PRETURN_OWNER_CHAT_BINDING$'):
+                    probe.require_preturn_owner_binding('client')
+                read.assert_called_once_with('client', '/api/nox/status')
+        with patch.object(probe, 'require_cgroup_probe_headroom',
+                          return_value=3 * 1024 ** 3), \
+             patch.object(probe, 'model_slots_state', return_value={'count': 1, 'busy': 0}), \
+             patch.object(probe, 'owner_readback_json', side_effect=[
+                 {'native_p02_bound': True}, {'native_p02_bound': False}]) as read, \
+             patch.object(probe, 'consume_turn', return_value={'answer': '323'}) as stream:
+            self.assertEqual(probe.admitted_consume_turn('client', 'first', did)['answer'], '323')
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_PRETURN_OWNER_CHAT_BINDING$'):
+                probe.admitted_consume_turn('client', 'second', did)
+            self.assertEqual(stream.call_count, 1)
+            self.assertEqual(read.call_count, 2)
+        with patch.object(probe, 'require_cgroup_probe_headroom',
+                          return_value=3 * 1024 ** 3), \
+             patch.object(probe, 'model_slots_state', return_value={'count': 1, 'busy': 0}), \
+             patch.object(probe, 'owner_readback_json',
+                          side_effect=RuntimeError('HOLD_OWNER_READBACK_RESPONSE_ROUTE')), \
+             patch.object(probe, 'consume_turn') as stream:
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_OWNER_READBACK_RESPONSE_ROUTE$'):
+                probe.admitted_consume_turn('client', 'third', did)
+            stream.assert_not_called()
+        source = path.read_text()
+        self.assertLess(source.index('require_preturn_owner_binding(client)', source.index('def admitted_consume_turn(')),
+                        source.index('return consume_turn(client, prompt, dialog_id, timeout=timeout)'))
+
 
     def test_chat_post_redirect_is_never_replayed_to_a_different_url(self):
         """A POST must stop at any redirect, before the final URL checks."""
