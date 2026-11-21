@@ -1140,6 +1140,7 @@ async function check(chunks, status=200) {
             'done': {'saved': True, 's03_integrated': True,
                      'dialog_matches': True},
             'dom_answer_matches_native': True, 'answer_characters': 19,
+            'answer_sha256': 'a' * 64,
             'native_delta_count': 4, 'native_bytes': 180,
             'native_done_ms': 120.5,
         }
@@ -1227,6 +1228,7 @@ async function check(chunks, status=200) {
             'done': {'saved': True, 's03_integrated': True,
                      'dialog_matches': True},
             'dom_answer_matches_native': True, 'answer_characters': 19,
+            'answer_sha256': 'a' * 64,
             'native_delta_count': 4, 'native_bytes': 180,
             'native_done_ms': 120.5,
         }
@@ -1257,6 +1259,39 @@ async function check(chunks, status=200) {
         self.assertIn('HOLD_MULTITURN_POSTREAD_STREAM_CHANGED', caller)
         self.assertNotIn("context.request.post(", caller[history:passed])
         self.assertIn('canonical_s03_verified=False', caller)
+
+    def test_ru_es_equal_length_second_answer_mutation_must_hold(self):
+        """Same-length changed SSE answer must fail even if counters do not move."""
+        from owner_chat_browser_qa import SNAPSHOT_JS, stable_second_turn_quiescence
+        snapshot = {
+            'native_calls': 2, 'native_stream_complete': True,
+            'native_terminal_count': 1, 'error': None,
+            'done': {'saved': True, 's03_integrated': True,
+                     'dialog_matches': True},
+            'dom_answer_matches_native': True, 'answer_characters': 19,
+            'answer_sha256': 'a' * 64,
+            'native_delta_count': 4, 'native_bytes': 180,
+            'native_done_ms': 120.5,
+        }
+        self.assertTrue(stable_second_turn_quiescence(
+            snapshot, dict(snapshot), 2, True))
+        # Same byte/character lengths, terminal timestamp and delta count:
+        # only the stable salted answer digest distinguishes the mutation.
+        self.assertFalse(stable_second_turn_quiescence(
+            snapshot, dict(snapshot, answer_sha256='b' * 64), 2, True))
+        for malformed in (None, '', 'a' * 63, 'Z' * 64, 123, True):
+            with self.subTest(malformed=malformed):
+                self.assertFalse(stable_second_turn_quiescence(
+                    dict(snapshot, answer_sha256=malformed),
+                    dict(snapshot, answer_sha256=malformed), 2, True))
+        self.assertIn("SNAPSHOT_JS = r\"\"\"async () =>", inspect.getsource(
+            __import__('owner_chat_browser_qa')))
+        self.assertIn("crypto.getRandomValues(salt)", SNAPSHOT_JS)
+        self.assertIn("crypto.subtle.digest('SHA-256',salted)", SNAPSHOT_JS)
+        self.assertIn("answer_sha256:answerDigest", SNAPSHOT_JS)
+        # Never expose raw answer or secret salt in any report snapshot.
+        self.assertNotIn("answer_text:", SNAPSHOT_JS)
+        self.assertNotIn("qaDigestSalt:", SNAPSHOT_JS)
 
     def test_ru_es_four_turn_history_needs_independent_canonical_s03(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
