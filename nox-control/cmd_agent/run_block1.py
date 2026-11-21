@@ -19,6 +19,11 @@ def api(method, path, body=None):
     return json.loads(raw) if raw else {}
 
 def main():
+    try:
+        u = api('GET', '/users/current/')
+        print('VAST balance=%s credit=%s' % (u.get('balance'), u.get('credit')))
+        print('VAST keys:', sorted(k for k in u.keys() if any(s in k for s in ('bal','credit','spend','charge','recharge','auto')))[:12])
+    except Exception as e: print('VAST balance error', type(e).__name__)
     inst = api("GET", "/instances/%d/" % INSTANCE)
     inst = inst.get("instances", inst)
     if isinstance(inst, list): inst = next(i for i in inst if i.get("id") == INSTANCE)
