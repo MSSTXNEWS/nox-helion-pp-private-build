@@ -1402,10 +1402,109 @@ async function check(chunks, status=200) {
         self.assertLess(pre, admitted)
         self.assertLess(final, preaccept)
         self.assertLess(preaccept, accepted)
-        self.assertEqual(caller.count('page.evaluate(ACTIVE_QA_DIALOG_JS,title)'), 2)
+        self.assertEqual(caller.count('page.evaluate(ACTIVE_QA_DIALOG_JS,title)'), 3)
         self.assertIn("urllib.parse.urlsplit(page.url).path!=PAGE", caller)
         self.assertNotIn("context.request.post(", caller[final:accepted])
 
+
+    def test_ru_es_browser_reload_reselect_preserves_four_rows(self):
+        """Real Chromium reload recovers the same persisted RU/ES UI rows;
+        the in-memory stream witness is not reused as durable history.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import (
+            ACTIVE_QA_DIALOG_JS, postquiet_fourrow_history_stable,
+        )
+        title = 'NOX Browser QA synthetic'
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        transcript = [
+            dict(row, message_id=f'ru-es-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(spanish), 1)
+        ]
+        expected_sha = multiturn_transcript_sha256(transcript)
+        first_ids = verified_two_turn_firstturn_ids(transcript[:2])
+        self.assertIsNotNone(first_ids)
+        html = """
+          <div id="nativeChats">
+            <button id="qa-dialog" role="listitem" aria-current="false">
+              <span class="t">NOX Browser QA synthetic</span>
+            </button>
+          </div>
+          <div id="messages"></div>
+          <script>
+            const rows=__ROWS__;
+            document.getElementById('qa-dialog').addEventListener('click', function() {
+              this.setAttribute('aria-current','true');
+              const root=document.getElementById('messages');
+              root.textContent='';
+              for(const row of rows) {
+                const p=document.createElement('p');
+                p.dataset.messageId=row.message_id;
+                p.dataset.role=row.role;
+                p.textContent=row.content;
+                root.appendChild(p);
+              }
+            });
+          </script>
+        """.replace('__ROWS__', json.dumps(transcript, ensure_ascii=True))
+        read_js = """dialogId=>({
+          dialog_id:dialogId,
+          messages:[...document.querySelectorAll('#messages p')].map(p=>({
+            role:p.dataset.role, content:p.textContent,
+            message_id:p.dataset.messageId, dialog_id:dialogId
+          }))
+        })"""
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posted = []
+                page.on('request', lambda req: posted.append(req.method)
+                        if req.method == 'POST' else None)
+                page.route('**/b5-reload-ru-es',
+                           lambda route: route.fulfill(
+                               status=200, content_type='text/html', body=html))
+                page.goto('http://127.0.0.1:8765/b5-reload-ru-es')
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.locator('#qa-dialog').click()
+                before = page.evaluate(read_js, DIALOG)
+                self.assertEqual(before['messages'], transcript)
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                page.reload(wait_until='domcontentloaded')
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.locator('#qa-dialog').click()
+                after = page.evaluate(read_js, DIALOG)
+                self.assertTrue(postquiet_fourrow_history_stable(
+                    before, after, DIALOG, expected_sha, first_ids))
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                page.evaluate("""() => {
+                  document.querySelector('#messages p:last-child').textContent='0';
+                }""")
+                self.assertFalse(postquiet_fourrow_history_stable(
+                    before, page.evaluate(read_js, DIALOG), DIALOG,
+                    expected_sha, first_ids))
+                page.evaluate("""() => {
+                  document.querySelector('#messages p:first-child').dataset.messageId='replayed';
+                }""")
+                self.assertFalse(postquiet_fourrow_history_stable(
+                    before, page.evaluate(read_js, DIALOG), DIALOG,
+                    expected_sha, first_ids))
+                self.assertEqual(posted, [], 'reload must not generate a native POST')
+            finally:
+                browser.close()
+        caller = inspect.getsource(browser_run)
+        stream_end = caller.index("report['multiturn_preaccept_active_dialog_verified']=True")
+        reload_gate = caller.index("report['browser_stage']='QA_RELOAD_SAME_DIALOG_FOURROW'")
+        reload_call = caller.index("page.reload(wait_until='domcontentloaded'", reload_gate)
+        persisted = caller.index("postquiet_fourrow_history_stable(", reload_call)
+        passed = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(stream_end, reload_gate)
+        self.assertLess(reload_gate, reload_call)
+        self.assertLess(reload_call, persisted)
+        self.assertLess(persisted, passed)
+        self.assertNotIn('context.request.post(', caller[reload_gate:passed])
+        self.assertIn('HOLD_MULTITURN_RELOAD_OWNER_SESSION_CHANGED', caller)
+        self.assertIn('HOLD_MULTITURN_RELOAD_HISTORY_FOURROW_CHANGED', caller)
 
     def test_ru_es_snapshot_webcrypto_real_chromium(self):
         """Real isolated Chromium evaluates the production async snapshot JS.
