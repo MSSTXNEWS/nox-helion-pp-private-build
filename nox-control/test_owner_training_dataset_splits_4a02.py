@@ -59,6 +59,19 @@ class DatasetSplitTests(unittest.TestCase):
         result = split_manifest(rows + [duplicate])
         self.assertEqual(result["counts"], {"input": 61, "deduplicated": 1, "kept": 60})
 
+    def test_same_group_conflicting_license_must_hold_even_if_deduplicated(self):
+        original = rows_fixture()
+        for text in (original[0]["text"], "different content same origin and goal"):
+            with self.subTest(text=text):
+                duplicate = dict(original[0], id="another-record",
+                                 license="Proprietary", text=text)
+                with self.assertRaisesRegex(SplitHold, "HOLD_CONFLICTING_GROUP_LICENSE"):
+                    split_manifest(original + [duplicate])
+        equivalent = dict(original[0], id="case-normalized-license",
+                          license=" mit ", text=original[0]["text"])
+        result = split_manifest(original + [equivalent])
+        self.assertEqual(result["counts"]["deduplicated"], 1)
+
     def test_duplicate_cross_group_holds(self):
         rows = rows_fixture()
         rows[1]["text"] = rows[0]["text"].upper()
