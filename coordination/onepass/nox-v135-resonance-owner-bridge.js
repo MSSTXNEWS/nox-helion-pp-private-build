@@ -157,6 +157,13 @@
    } else if(e.type==='done') {
      if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
      if(doneSeen)throw Error('HOLD_DUPLICATE_DONE');
+     // Terminal model metadata is optional, but if supplied must match the
+     // native start model exactly. A conflicting receipt cannot attest serving identity.
+     if(Object.prototype.hasOwnProperty.call(e,'model')){
+       if(typeof e.model!=='string'||!e.model.trim()||e.model.length>96||
+          nativeModel==='UNKNOWN'||e.model!==nativeModel)
+         throw Error('HOLD_NATIVE_MODEL_RECEIPT_DRIFT');
+     }
      doneSeen=true;done=e;
    } else if(e.type==='start') {
      if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
