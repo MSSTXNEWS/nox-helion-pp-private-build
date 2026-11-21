@@ -55,6 +55,59 @@ class HotContextTests(unittest.TestCase):
                         owner_persona_id="owner-1",s03_revision="a"*64)
 
 
+    def test_3b03_shortlist_is_bound_to_exact_current_scoped_s03(self):
+        revision = "a"*64
+        facts = [
+            {"id":name,"source_sha256":sha*64,"text":"Verified "+name,
+             "persona_id":"owner-1","revision":revision,
+             "status":"ACTIVE","superseded_by":None}
+            for name,sha in (("unrelated","c"),("cat","d"),("dog","e"))
+        ]
+        rows = [
+            {"id":name,"persona_id":"owner-1","revision":revision,
+             "status":"ACTIVE","source_sha256":sha*64,
+             "fts_score":score,"vector_score":score}
+            for name,sha,score in (("cat","d",.95),("dog","e",.30))
+        ]
+        plan = m.plan_two_stage_retrieval(
+            candidates=rows,owner_persona_id="owner-1",
+            s03_revision=revision,shortlist_limit=2,rerank_limit=2)
+        kwargs = dict(conversation=[],verified_s03=facts,token_budget=2048,
+                      owner_persona_id="owner-1",current_s03_revision=revision)
+        out = call(**kwargs,retrieval_plan=plan)
+        self.assertEqual(out["selected_s03_ids"],["cat","dog"])
+        self.assertEqual(out["retrieval_shortlist_ids"],["cat","dog"])
+        self.assertTrue(out["retrieval_plan_consumed"])
+        self.assertFalse(out["gpu_reranker_executed"])
+        self.assertFalse(out["independent_s03_readback_verified"])
+        self.assertNotIn("Verified unrelated",
+                         "\\n".join(msg["content"] for msg in out["messages"]))
+        self.assertEqual(call(**kwargs)["selected_s03_ids"],
+                         ["unrelated","cat","dog"])
+        # A tie is deterministic: equal scores require ascending ID.
+        tied_rows = [{**row, "first_pass_score": .5}
+                     for row in plan["first_pass"]]
+        self.assertEqual(call(**kwargs, retrieval_plan={
+            **plan, "first_pass": tied_rows})["selected_s03_ids"], ["cat","dog"])
+        for mutated in (
+            {**plan, "first_pass": list(reversed(plan["first_pass"]))},
+            {**plan, "first_pass": list(reversed(tied_rows))},
+            {**plan,"first_pass":[{**plan["first_pass"][0],
+                                   "source_sha256":"f"*64}]},
+            {**plan,"first_pass":[{**plan["first_pass"][0], "id":"unrelated"}]},
+            {**plan,"first_pass":plan["first_pass"]*2},
+            {**plan,"gpu_reranker_executed":True},
+            {**plan,"optional_multilingual_rerank_ids":["unrelated"]},
+        ):
+            with self.subTest(mutated=str(mutated)[:100]):
+                with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_RETRIEVAL_"):
+                    call(**kwargs,retrieval_plan=mutated)
+        with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_RETRIEVAL_"):
+            call(conversation=[],verified_s03=[],retrieval_plan=plan)
+        with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_RETRIEVAL_"):
+            call(**{**kwargs,"verified_s03":[{**facts[1],"status":"REVOKED"}]},
+                 retrieval_plan=plan)
+
     def test_retains_persona_current_s03_and_retrieval_refs(self):
         out=call()
         text="\n".join(x["content"] for x in out["messages"])

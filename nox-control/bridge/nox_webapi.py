@@ -679,8 +679,14 @@ def install(app, B):
                         hist = {"status": "SAVED", "mini": mini, "s03_readback_verified": False}
                     except Exception as e:
                         hist = {"status": "HOLD", "reason": "S03: " + type(e).__name__}
-                    if B.SOUL and not mini:
-                        B.SOUL.log_turn(user, full.strip())
+                    # The secondary SOUL mirror must never advertise a chat turn
+                    # whose canonical S03 write failed. A secondary mirror error
+                    # also must not truncate an otherwise completed model stream.
+                    if B.SOUL and not mini and hist["status"] == "SAVED":
+                        try:
+                            B.SOUL.log_turn(user, full.strip())
+                        except Exception as e:
+                            B.log("soul_secondary_log_error " + type(e).__name__)
                 CANCEL.discard(rid)
                 yield fr(message={"role": "assistant", "content": ""}, done=True, done_reason="stop" if not stopped else "stopped",
                          completion_receipt={"status": "STOPPED" if stopped else "GENERATED",

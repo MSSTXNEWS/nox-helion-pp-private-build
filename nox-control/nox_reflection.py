@@ -22,7 +22,7 @@ import re
 import stat
 import sys
 from typing import Any
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 INPUT_SCHEMA = "nox.reflection.input.v1"
 RECEIPT_SCHEMA = "nox.reflection.receipt.v1"
@@ -125,6 +125,19 @@ def _https_reference(value: Any, field: str) -> str:
         ip = None
     if ip is not None and not ip.is_global:
         raise ReflectionError(f"{field} may not point to a non-public IP")
+    # Published references must never echo credential-like path segments.
+    # Query/fragment are discarded below; a credential hidden inside the
+    # retained path (including URL-encoded spelling) must fail closed.
+    decoded = parts.path
+    for _ in range(3):
+        if SECRET_PATTERN.search(decoded):
+            raise ReflectionError(f"{field} contains credential-like path material")
+        newer = unquote(decoded)
+        if newer == decoded:
+            break
+        decoded = newer
+    if SECRET_PATTERN.search(decoded):
+        raise ReflectionError(f"{field} contains credential-like path material")
     return urlunsplit(("https", host, parts.path or "/", "", ""))
 
 

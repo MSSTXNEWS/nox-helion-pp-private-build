@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
-"""NOX advisors: consult local OpenAI-compatible llama.cpp servers. Stdlib only.
+"""NOX advisors: consult local and remote OpenAI-compatible endpoints, allowlisted CLIs
+(copilot/gemini) and SearXNG. Stdlib only. One brain: NOX stays the decider.
 
-Advisor output is DATA: never executed, capped at MAX_ANSWER chars.
-Network: only URLs from the config and the embed URL.
+Advisor output is DATA: never executed, capped at MAX_ANSWER chars, labelled as
+"мнение советника, не NOX". Keys come only from env (api_key_env), never from files/logs.
+Outgoing text to remote advisors is filtered (secrets, local paths). Daily limits are
+counted in a JSON file. Network: only URLs from the config and the embed URL.
 """
 import argparse
 import json
 import math
 import re
 import sys
+import os
+import shutil
+import subprocess
+import tempfile
+import threading
 import time
+import urllib.error
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
@@ -32,48 +42,246 @@ def load_config(path):
     return cfg
 
 
-def _post_json(url, payload, timeout):
-    req = urllib.request.Request(
-        url, data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"}, method="POST")
+# ---------- safety: outgoing filter, key scrub, limits ----------
+LABEL = "мнение советника, не NOX"
+CLI_ALLOWLIST = {"copilot": ["copilot", "-p"], "gemini": ["gemini", "-p"]}
+_SECRET_RES = [
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)", re.S),
+    re.compile(r"\b(?:sk|pk|rk)-[A-Za-z0-9_\-]{16,}"),
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}"),
+    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}"),
+    re.compile(r"\bAIza[0-9A-Za-z_\-]{30,}"),
+    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{5,}"),
+    re.compile(r"(?i)\b(?:api[_-]?key|token|secret|password|passwd|authorization)\b\s*[:=]\s*['\"]?(?:Bearer\s+)?[^\s'\",;]{6,}"),
+    re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._\-]{16,}"),
+]
+_PATH_RES = [
+    re.compile(r"(?<![\w.])(?:/(?:home|root|etc|var|opt|srv|mnt|tmp|usr|Users)/[^\s'\"`,;:)]*)"),
+    re.compile(r"\b[A-Za-z]:\\[^\s'\"`,;:)]*"),
+    re.compile(r"(?<![\w.])~/[^\s'\"`,;:)]*"),
+]
+
+
+def sanitize_outgoing(text):
+    """Redact secrets and local filesystem paths before text leaves the machine."""
+    n = 0
+    for rx in _SECRET_RES:
+        text, k = rx.subn("[REDACTED_SECRET]", text)
+        n += k
+    for rx in _PATH_RES:
+        text, k = rx.subn("[PATH]", text)
+        n += k
+    return text, n
+
+
+def _scrub(msg, secret):
+    if secret and len(secret) >= 4:
+        msg = msg.replace(secret, "***")
+    msg, _ = sanitize_outgoing(msg)
+    return msg
+
+
+def _blocked(res, why, need):
+    res["blocked"], res["need"], res["error"] = why, need, why
+    return res
+
+
+_STATE_LOCK = threading.Lock()
+
+
+def state_path(config_path=None):
+    p = os.environ.get("NOX_ADVISORS_STATE")
+    if p:
+        return p
+    base = os.path.dirname(os.path.abspath(config_path)) if config_path else os.getcwd()
+    return os.path.join(base, "advisors_usage.json")
+
+
+def _today():
+    return time.strftime("%Y-%m-%d", time.gmtime())
+
+
+def usage_take(path, name, limit, today=None):
+    """Atomically count one call for today. Returns (allowed, used_after_or_current)."""
+    today = today or _today()
+    with _STATE_LOCK:
+        try:
+            with open(path, encoding="utf-8") as f:
+                st = json.load(f)
+            if not isinstance(st, dict):
+                st = {}
+        except (OSError, ValueError):
+            st = {}
+        day = st.get(today, {}) if isinstance(st.get(today), dict) else {}
+        used = int(day.get(name, 0))
+        if limit is not None and used >= int(limit):
+            return False, used
+        day[name] = used + 1
+        st = {today: day}  # drop older days
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(st, f)
+        os.replace(tmp, path)
+        return True, used + 1
+
+
+def _post_json(url, payload, timeout, headers=None):
+    h = {"Content-Type": "application/json"}
+    h.update(headers or {})
+    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
+                                 headers=h, method="POST")
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8", "replace"))
+
+
+def _get_json(url, timeout):
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8", "replace"))
 
 
 def _chat_url(base):
     base = base.rstrip("/")
-    return base if base.endswith("/chat/completions") else base + "/v1/chat/completions"
+    if base.endswith("/chat/completions"):
+        return base
+    if re.search(r"/v\d+$", base):
+        return base + "/chat/completions"
+    return base + "/v1/chat/completions"
 
 
-def _ask_one(adv, question, system):
+def _retryable(e):
+    if isinstance(e, urllib.error.HTTPError):
+        return e.code in (408, 429, 500, 502, 503, 504)
+    return isinstance(e, (urllib.error.URLError, TimeoutError, ConnectionError, OSError))
+
+
+def _with_retries(fn, retries, sleep=time.sleep):
+    for i in range(retries + 1):
+        try:
+            return fn()
+        except Exception as e:
+            if i >= retries or not _retryable(e):
+                raise
+            sleep(min(8.0, 0.5 * 2 ** i))
+
+
+def _run_cli(adv, prompt, timeout):
+    """Allowlisted CLI advisor (copilot/gemini): no shell, empty temp cwd, minimal env."""
+    tool = adv.get("cli")
+    if tool not in CLI_ALLOWLIST:
+        raise ValueError(f"cli not in allowlist: {tool!r}")
+    exe = shutil.which(CLI_ALLOWLIST[tool][0])
+    if not exe:
+        raise FileNotFoundError(tool)
+    env = {k: v for k, v in os.environ.items()
+           if k in ("PATH", "HOME", "USER", "LANG", "XDG_CONFIG_HOME", "XDG_DATA_HOME",
+                    "XDG_CACHE_HOME", "GEMINI_API_KEY", "GH_TOKEN", "GITHUB_TOKEN")}
+    with tempfile.TemporaryDirectory() as cwd:  # read-only intent: nothing of ours to touch
+        p = subprocess.run([exe] + CLI_ALLOWLIST[tool][1:] + [prompt], cwd=cwd, env=env,
+                           stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                           timeout=timeout, shell=False)
+    if p.returncode != 0:
+        raise RuntimeError(f"{tool} exit {p.returncode}: {(p.stderr or '')[:300]}")
+    return p.stdout
+
+
+def _search_searxng(adv, query, timeout):
+    base = adv["url"].rstrip("/")
+    data = _get_json(f"{base}/search?format=json&q={urllib.parse.quote(query[:500])}", timeout)
+    rows = []
+    for r in (data.get("results") or [])[: int(adv.get("max_results", 5))]:
+        rows.append(f"- {r.get('title', '')} | {r.get('url', '')} | {str(r.get('content', ''))[:300]}")
+    return "\n".join(rows) or "(нет результатов)"
+
+
+def _ask_one(adv, question, system, _state=None, _sleep=time.sleep):
     t0 = time.monotonic()
-    res = {"name": adv.get("name", "?"), "ok": False, "answer": "",
-           "latency_s": 0.0, "error": None, "role": adv.get("role")}
+    name = adv.get("name", "?")
+    kind = adv.get("kind", "openai")
+    res = {"name": name, "ok": False, "answer": "", "latency_s": 0.0, "error": None,
+           "role": adv.get("role"), "kind": kind, "label": LABEL}
+    key = ""
     try:
-        msgs = []
-        if system:
-            msgs.append({"role": "system", "content": system})
-        msgs.append({"role": "user", "content": question})
-        data = _post_json(_chat_url(adv["url"]),
-                          {"messages": msgs, "temperature": 0.2},
-                          float(adv.get("timeout_s", 60)))
-        text = data["choices"][0]["message"]["content"]
-        if not isinstance(text, str):
-            raise ValueError("non-string content")
-        res["answer"] = text[:MAX_ANSWER]
+        timeout = float(adv.get("timeout_s", 60))
+        remote = kind != "openai" or bool(adv.get("api_key_env")) or bool(adv.get("remote"))
+        question_out, redacted = (sanitize_outgoing(question) if remote else (question, 0))
+        system_out = sanitize_outgoing(system)[0] if (remote and system) else system
+        res["redacted"] = redacted
+        if kind == "openai":
+            env = adv.get("api_key_env")
+            headers = {}
+            if env:
+                key = os.environ.get(env, "")
+                if not key:
+                    return _blocked(res, f"api key env {env} is not set",
+                                    f"owner: export {env}=<key> in the NOX service environment")
+                headers["Authorization"] = "Bearer " + key
+            if not _admit(adv, _state, res):
+                return res
+            msgs = ([{"role": "system", "content": system_out}] if system_out else [])
+            msgs.append({"role": "user", "content": question_out})
+            payload = {"messages": msgs, "temperature": 0.2}
+            if adv.get("model"):
+                payload["model"] = adv["model"]
+            data = _with_retries(lambda: _post_json(_chat_url(adv["url"]), payload, timeout, headers),
+                                 int(adv.get("retries", 0)), _sleep)
+            text = data["choices"][0]["message"]["content"]
+            if not isinstance(text, str):
+                raise ValueError("non-string content")
+        elif kind == "cli":
+            tool = adv.get("cli")
+            if tool not in CLI_ALLOWLIST:
+                return _blocked(res, f"cli {tool!r} not in allowlist", "use cli: copilot or gemini")
+            if not shutil.which(CLI_ALLOWLIST[tool][0]):
+                return _blocked(res, f"{tool} CLI not installed or not logged in",
+                                f"owner: install {tool} CLI and sign in (GitHub/Google account)")
+            if not _admit(adv, _state, res):
+                return res
+            prompt = (system_out + "\n\n" if system_out else "") + question_out
+            text = _with_retries(lambda: _run_cli(adv, prompt, timeout),
+                                 int(adv.get("retries", 0)), _sleep)
+        elif kind == "searxng":
+            if not _admit(adv, _state, res):
+                return res
+            text = _with_retries(lambda: _search_searxng(adv, question_out, timeout),
+                                 int(adv.get("retries", 0)), _sleep)
+        else:
+            return _blocked(res, f"unknown kind {kind!r}", "use kind: openai|cli|searxng")
+        text = str(text)[:MAX_ANSWER]
+        res["answer"] = f"[{LABEL}: {name}] " + text if remote else text
+        res["answer"] = res["answer"][:MAX_ANSWER]
         res["ok"] = True
+    except subprocess.TimeoutExpired:
+        res["error"] = "timeout"
     except Exception as e:  # dead/slow advisor must not break the call
-        res["error"] = f"{type(e).__name__}: {e}"[:500]
+        res["error"] = _scrub(f"{type(e).__name__}: {e}", key)[:500]
     res["latency_s"] = round(time.monotonic() - t0, 3)
     return res
 
 
+def _admit(adv, state, res):
+    """Daily limit gate. Counts the attempt. Returns False (and fills res) when exhausted."""
+    limit = adv.get("daily_limit")
+    if limit is None:
+        return True
+    ok, used = usage_take(state or state_path(), adv.get("name", "?"), limit)
+    if not ok:
+        _blocked(res, f"daily limit {limit} reached ({used} used today, UTC)",
+                 "wait for the next UTC day or raise daily_limit in config")
+        return False
+    res["used_today"] = used
+    return True
+
+
 def ask_advisors(question, config_path, system=None, _advisors=None):
     advs = _advisors if _advisors is not None else load_config(config_path)
+    advs = [a for a in (advs or []) if a.get("enabled", True)]
     if not advs:
         return []
+    st = state_path(config_path)
     with ThreadPoolExecutor(max_workers=len(advs)) as ex:
-        return list(ex.map(lambda a: _ask_one(a, question, system), advs))
+        return list(ex.map(lambda a: _ask_one(a, question, system, st), advs))
 
 
 # ---------- consensus ----------
@@ -178,6 +386,42 @@ def review(task_text, acceptance_text, candidate_answer, config_path, _advisors=
             "answered": len(votes), "advisors": details}
 
 
+CODE_SYSTEM = ("You are a code advisor. Reply with a minimal unified diff (---/+++/@@) "
+               "in one fenced block, then at most 3 lines of rationale. Do not run anything.")
+
+
+def extract_patch(text):
+    """First unified-diff-looking block from text, else None."""
+    if not isinstance(text, str):
+        return None
+    for m in re.finditer(r"```(?:diff|patch)?\n(.*?)```", text, re.S):
+        if re.search(r"^--- .+\n\+\+\+ .+", m.group(1), re.M) and "@@" in m.group(1):
+            return m.group(1).strip("\n") + "\n"
+    m = re.search(r"^--- .+\n\+\+\+ .+\n@@.*", text, re.M | re.S)
+    return text[m.start():].strip("\n") + "\n" if m else None
+
+
+def code_consensus(task, config_path, embed_url=DEFAULT_EMBED_URL, _advisors=None):
+    """ask -> compare -> patch PROPOSAL. Never applies anything."""
+    raw = ask_advisors(task, config_path, system=CODE_SYSTEM, _advisors=_advisors)
+    good = [r for r in raw if r["ok"] and r["kind"] != "searxng"]
+    cons = consensus(good, embed_url)
+    patches = {r["name"]: extract_patch(r["answer"]) for r in good}
+    best = cons["majority_answer"]
+    proposal = extract_patch(best) if best else None
+    if len(good) < 2:
+        status = "insufficient"
+    elif proposal is None:
+        status = "no_patch"
+    else:
+        status = "agree" if not cons["dissenters"] and cons["agreement"] >= 0.75 else "split"
+    return {"status": status, "label": LABEL, "applied": False, "proposal": proposal,
+            "agreement": cons["agreement"], "dissenters": cons["dissenters"],
+            "method": cons["method"], "patches_found": sorted(k for k, v in patches.items() if v),
+            "blocked": [{"name": r["name"], "blocked": r["blocked"], "need": r["need"]}
+                        for r in raw if r.get("blocked")]}
+
+
 def _read(p):
     with open(p, encoding="utf-8") as f:
         return f.read()
@@ -191,6 +435,10 @@ def main(argv=None):
     a.add_argument("--config", required=True)
     a.add_argument("--system")
     a.add_argument("--embed-url", default=DEFAULT_EMBED_URL)
+    c = sub.add_parser("code")
+    c.add_argument("task")
+    c.add_argument("--config", required=True)
+    c.add_argument("--embed-url", default=DEFAULT_EMBED_URL)
     r = sub.add_parser("review")
     r.add_argument("--task-file", required=True)
     r.add_argument("--acceptance-file", required=True)
@@ -201,6 +449,8 @@ def main(argv=None):
         res = ask_advisors(args.question, args.config, args.system)
         out = {"answers": res,
                "consensus": consensus([x for x in res if x["ok"]], args.embed_url)}
+    elif args.cmd == "code":
+        out = code_consensus(args.task, args.config, args.embed_url)
     else:
         out = review(_read(args.task_file), _read(args.acceptance_file),
                      _read(args.answer_file), args.config)

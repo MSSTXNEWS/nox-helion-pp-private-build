@@ -14,6 +14,22 @@ from nox_reflection import MAX_INPUT_BYTES, ReflectionError, _load_input, main
 
 
 class ReflectionInputAdmission(unittest.TestCase):
+    def test_evidence_reference_paths_never_publish_credential_like_segments(self):
+        from nox_reflection import _https_reference
+        synthetic = "ghp_" + "A" * 24  # Test-only marker, not a credential.
+        for path in (
+            "/evidence/" + synthetic,
+            "/evidence/ghp%5f" + "A" * 24,
+            "/evidence/%2567hp%255f" + "A" * 24,
+        ):
+            with self.subTest(path=path):
+                with self.assertRaisesRegex(ReflectionError, "credential-like"):
+                    _https_reference("https://example.org" + path, "test.url")
+        self.assertEqual(
+            _https_reference("https://github.com/org/repo/actions/runs/123?token=fake", "test.url"),
+            "https://github.com/org/repo/actions/runs/123",
+        )
+
     def test_regular_json_snapshot(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "input.json"

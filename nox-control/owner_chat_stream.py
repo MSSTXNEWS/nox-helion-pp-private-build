@@ -37,7 +37,14 @@ FINAL_RESPONSE_LIMIT=2000000
 def _append_final_chunk(chunks, chunk, size):
     if type(chunk) is not str:
         raise StreamFailure('HOLD_MODEL_TOKEN_TYPE')
-    size+=len(chunk)
+    # Python character counts understate the actual UTF-8 payload sent to
+    # browser/S03 (especially RU/ES and supplementary Unicode symbols).
+    # Enforce the cumulative byte budget before buffering or showing a chunk;
+    # never truncate a valid message into a false successful terminal.
+    try:
+        size+=len(chunk.encode('utf-8','strict'))
+    except UnicodeError:
+        raise StreamFailure('HOLD_MODEL_TOKEN_ENCODING') from None
     if size>FINAL_RESPONSE_LIMIT:
         raise StreamFailure('HOLD_MODEL_TOTAL_OUTPUT_SIZE')
     chunks.append(chunk)
@@ -118,7 +125,15 @@ def _executor_status_reply(user_text,path=None):
             name=row.get('id');status=row.get('status');task=row.get('current_task')
             if not isinstance(name,str) or not re.fullmatch(r'nox-agent-\d{2,3}',name) or name in ids:return unknown
             if status=='busy':
-                if not isinstance(task,dict) or not isinstance(task.get('id'),str) or not task['id']:return unknown
+                if not isinstance(task,dict):return unknown
+                task_id=task.get('id')
+                # A live lease identity cannot be whitespace, a control-code
+                # payload or unbounded text. Otherwise a damaged snapshot can
+                # appear as independently executing work.
+                if (type(task_id) is not str or not 1<=len(task_id)<=160 or
+                        task_id!=task_id.strip() or
+                        not all(char.isprintable() for char in task_id)):
+                    return unknown
                 # Two busy workers claiming the same TaskID is not a trustworthy
                 # lease/registry snapshot. Do not report duplicate work as real.
                 if task['id'] in active_task_ids:return unknown
@@ -844,12 +859,12 @@ def install(native):
 
         async def generate():
             answer=[]
-            answer_chars=0
+            answer_bytes=0
             try:
                 async with aclosing(_run(native,url,payload,user_text)) as run:
                     async for kind,text in run:
                         if kind=='token' and text:
-                            answer_chars=_append_final_chunk(answer,text,answer_chars)
+                            answer_bytes=_append_final_chunk(answer,text,answer_bytes)
                             yield native['_sse'](text)
                 final=''.join(answer)
                 if not final.strip():raise StreamFailure('HOLD_MODEL_EMPTY')
@@ -874,11 +889,11 @@ def install(native):
                 'Cache-Control':'no-cache, no-store','X-Accel-Buffering':'no'})
         try:
             answer=[]
-            answer_chars=0
+            answer_bytes=0
             async with aclosing(_run(native,url,payload,user_text)) as run:
                 async for kind,text in run:
                     if kind=='token' and text:
-                        answer_chars=_append_final_chunk(answer,text,answer_chars)
+                        answer_bytes=_append_final_chunk(answer,text,answer_bytes)
             final=''.join(answer)
             if not final.strip():raise StreamFailure('HOLD_MODEL_EMPTY')
             payload['_agent_final']=final
