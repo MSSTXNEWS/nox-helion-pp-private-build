@@ -666,6 +666,77 @@ def main():
             reads===6&&projected===6&&acks===1&&posts===0&&
             new Set(eventIds).size===1;
         }'''))
+        check('canonical ACK GET and verifier stalls time out; retries remain GET-only', page.evaluate('''async () => {
+          const s={conversation_id:'canonical-stall',exchange_id:'read-verify'};
+          let posts=0,acks=0,reads=0,projects=0,gets=0,freshCalls=0;
+          let releaseGet,releaseVerifier;
+          const mint=challenge=>{
+            const now=Date.now();
+            return {request_nonce:challenge.request_nonce,issued_at_ms:now,
+              expires_at_ms:now+1000,ack_id:'canonical-confirmed'};
+          };
+          const transport={...opts.transport,
+            post(){posts++;throw Error('NO_MODEL_POST')},
+            async readback(){reads++;return {...s}},
+            async ack(){acks++;throw Error('NO_ACK_RESEND')},
+            readCanonicalAck(_s,_expected,challenge){
+              gets++;
+              if(gets===1)
+                return new Promise(resolve=>{releaseGet=()=>resolve(mint(challenge))});
+              return Promise.resolve(mint(challenge));
+            }
+          };
+          const host={...opts.host,
+            verifyFreshCanonicalAck(){
+              freshCalls++;
+              if(freshCalls===1)
+                return new Promise(resolve=>{releaseVerifier=resolve});
+              return true;
+            }
+          };
+          const gate={
+            async reserve(){return {status:'ALREADY_ACKED'}},
+            async beginSend(){throw Error('NO_NEW_ACK')},
+            async confirm(){throw Error('NO_LOCAL_ACK')},
+            async requireCanonicalAck(_s,eventId,cursor,read,verify){
+              const expected={event_id:eventId,ack_cursor:cursor};
+              const receipt=await read(expected);
+              if(await verify(receipt,expected)!==true)throw Error('BAD_ACK_PROOF');
+              return {status:'CANONICAL_ACK_CONFIRMED',
+                authority:'VERIFIER_CALLBACK_APPROVED',ack_id:receipt.ack_id};
+            }
+          };
+          const eventIds=[];
+          const ui={async onDelta(){},async upsertTerminal(_s,eventId){
+            projects++;eventIds.push(eventId);return true;
+          }};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,ackGate:gate,
+            canonicalAckTimeoutMs:25
+          });
+          const result=()=>Promise.race([
+            c.reconnect(s).then(()=>null,e=>e.code),
+            new Promise(resolve=>setTimeout(()=>resolve('HUNG'),400))
+          ]);
+          const one=await result();
+          if(one!=='HOLD_STREAM_CANONICAL_ACK_TIMEOUT'||
+             gets!==1||posts!==0||acks!==0||projects!==1||
+             typeof releaseGet!=='function')return false;
+          const two=await result();
+          if(two!=='HOLD_STREAM_CANONICAL_ACK_TIMEOUT'||
+             gets!==2||freshCalls!==1||posts!==0||acks!==0||
+             typeof releaseVerifier!=='function')return false;
+          const recovered=await c.reconnect(s);
+          if(recovered.canonical_ack_status!=='CANONICAL_ACK_CONFIRMED'||
+             reads!==3||projects!==3||gets!==3||posts!==0||acks!==0||
+             new Set(eventIds).size!==1)return false;
+          // Late GET/verifier settlement must not resume a timed-out path or
+          // trigger a model POST / network ACK after a successful GET retry.
+          releaseGet();
+          releaseVerifier(true);
+          await new Promise(resolve=>setTimeout(resolve,0));
+          return reads===3&&projects===3&&gets===3&&posts===0&&acks===0;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
