@@ -1529,7 +1529,7 @@ test('1A02 browser duplicate client request IDs never replay native generation',
 });
 
 test('1A02 malformed client request ID holds before any native side effect',async()=>{
-  const invalid=[null,{},'', ' '.repeat(2),'X'.repeat(161),'bad\\nline'];
+  const invalid=[null,{},'', ' '.repeat(2),'X'.repeat(161),'bad\nline'];
   for(const request_id of invalid){
     const native=[];
     const w={NOX_NATIVE_OWNER:true,fetch:async path=>{
