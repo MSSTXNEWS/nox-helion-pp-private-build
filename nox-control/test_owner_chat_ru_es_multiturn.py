@@ -1218,6 +1218,46 @@ async function check(chunks, status=200) {
         self.assertIn('canonical_s03_verified=False', caller)
 
 
+    def test_ru_es_postread_final_stream_fence_after_history_and_session(self):
+        """A late SSE mutation during read-only history/session GET is HOLD."""
+        from owner_chat_browser_qa import stable_second_turn_quiescence
+        quiet = {
+            'native_calls': 2, 'native_stream_complete': True,
+            'native_terminal_count': 1, 'error': None,
+            'done': {'saved': True, 's03_integrated': True,
+                     'dialog_matches': True},
+            'dom_answer_matches_native': True, 'answer_characters': 19,
+            'native_delta_count': 4, 'native_bytes': 180,
+            'native_done_ms': 120.5,
+        }
+        self.assertTrue(stable_second_turn_quiescence(
+            quiet, dict(quiet), 2, True))
+        for late in (
+            {'native_calls': 3}, {'native_terminal_count': 2},
+            {'native_delta_count': 5}, {'native_bytes': 181},
+            {'native_done_ms': 130.5}, {'error': 'HOLD_LATE_ERROR'},
+            {'dom_answer_matches_native': False},
+        ):
+            with self.subTest(late=late):
+                self.assertFalse(stable_second_turn_quiescence(
+                    quiet, dict(quiet, **late), 2, True))
+        self.assertFalse(stable_second_turn_quiescence(
+            quiet, dict(quiet), 2, False))
+        caller = inspect.getsource(browser_run)
+        history = caller.index("postquiet_history=await json_response(")
+        session = caller.index("signed_precert=await context.request.get(")
+        runtime = caller.index("if not clean_two_turn_browser_runtime(")
+        final = caller.index("postread_snapshot=await page.evaluate(SNAPSHOT_JS)")
+        passed = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(history, session)
+        self.assertLess(session, runtime)
+        self.assertLess(runtime, final)
+        self.assertLess(final, passed)
+        self.assertIn("quiet_snapshot, postread_snapshot, stream_admitted, postread_native_equal", caller)
+        self.assertIn('HOLD_MULTITURN_POSTREAD_STREAM_CHANGED', caller)
+        self.assertNotIn("context.request.post(", caller[history:passed])
+        self.assertIn('canonical_s03_verified=False', caller)
+
     def test_ru_es_four_turn_history_needs_independent_canonical_s03(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         transcript = rows(es)
