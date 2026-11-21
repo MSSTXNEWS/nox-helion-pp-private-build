@@ -42,7 +42,7 @@
  };
  const options=(init={})=>({
  method:init.method||'GET',cache:'no-store',credentials:'same-origin',
- signal:init.signal,headers:init.headers
+ redirect:'error',signal:init.signal,headers:init.headers
  });
  async function waitOrAbort(op,signal){
  if(!signal)return op();
@@ -56,7 +56,7 @@
  }
  const nativeBodyJSON=(response,signal)=>waitOrAbort(()=>response.json(),signal);
  const nativePost=(path,data,signal)=>waitOrAbort(()=>nativeFetch(path,{
- method:'POST',credentials:'same-origin',cache:'no-store',signal,
+ method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',signal,
  headers:{'Content-Type':'application/json'},body:JSON.stringify(data)
  }),signal);
  async function reason(r,signal) {
