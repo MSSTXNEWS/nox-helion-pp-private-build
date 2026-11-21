@@ -434,8 +434,8 @@ def main():
         check('STOP settles hung UI delta without later frame or repost', page.evaluate('''async () => {
           const s={conversation_id:'ui-stall',exchange_id:'stop-delta'};
           let posts=0,acks=0,calls=0,lateCommits=0,release;
-          const frame='id: delta-ui-1\nevent: delta\ndata: WAIT\n\n' +
-            'id: delta-ui-2\nevent: delta\ndata: NEVER\n\n';
+          const frame='id: delta-ui-1\\nevent: delta\\ndata: WAIT\\n\\n' +
+            'id: delta-ui-2\\nevent: delta\\ndata: NEVER\\n\\n';
           const transport={...opts.transport,async post(){
             posts++;
             return {ok:true,body:new ReadableStream({start(c){
@@ -472,7 +472,7 @@ def main():
         check('timeout settles hung UI delta without duplicate model POST', page.evaluate('''async () => {
           const s={conversation_id:'ui-stall',exchange_id:'timeout-delta'};
           let posts=0,acks=0,calls=0;
-          const frame='id: delta-time\nevent: delta\ndata: WAIT\n\n';
+          const frame='id: delta-time\\nevent: delta\\ndata: WAIT\\n\\n';
           const transport={...opts.transport,async post(){
             posts++;
             return {ok:true,body:new ReadableStream({start(c){
