@@ -65,7 +65,8 @@ def main():
     if isinstance(inst,list): inst=next((x for x in inst if x.get("id")==INSTANCE),{})
     ports=[int(x["HostPort"]) for x in inst.get("ports",{}).get("22/tcp",[])
            if str(x.get("HostPort","")).isdigit()]
-    if inst.get("actual_status")!="running" or not ports:
+    if (inst.get("actual_status")!="running" or
+        inst.get("intended_status")!="running" or not ports):
         raise RuntimeError("HOLD_INSTANCE_OR_PORT")
     # The owner must pin host identity independently of this SSH connection.
     # Refuse the operation entirely when the trusted pin is unavailable.

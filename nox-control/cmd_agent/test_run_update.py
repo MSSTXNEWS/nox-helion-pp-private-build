@@ -53,7 +53,7 @@ class ProbeTest(unittest.TestCase):
 
         def fake_api(method, path, body=None):
             if method == "GET" and path.endswith("/60509551/"):
-                return {"actual_status": "running", "ports": {"22/tcp": [{"HostPort": 2022}]},
+                return {"actual_status": "running", "intended_status": "running", "ports": {"22/tcp": [{"HostPort": 2022}]},
                         "public_ipaddr": "127.0.0.1"}
             if method == "POST":
                 return {}
@@ -75,7 +75,7 @@ class ProbeTest(unittest.TestCase):
     def test_missing_host_pin_holds_before_key_attachment(self):
         def instance_only(method, path, body=None):
             self.assertEqual(method, "GET")
-            return {"actual_status": "running", "ports": {"22/tcp": [{"HostPort": 2022}]},
+            return {"actual_status": "running", "intended_status": "running", "ports": {"22/tcp": [{"HostPort": 2022}]},
                     "public_ipaddr": "127.0.0.1"}
         with patch.dict(probe.os.environ, {"NOX_VAST_SSH_HOST_PUBLIC_KEY": ""}), \
              patch.object(probe, "api", side_effect=instance_only), \
@@ -83,6 +83,22 @@ class ProbeTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "HOLD_TRUSTED_HOST_KEY_PIN_REQUIRED"):
                 probe.main()
             runner.assert_not_called()
+
+    def test_intentionally_stopped_instance_holds_before_any_key_operation(self):
+        """Provider intent wins when actual status is briefly stale."""
+        operations = []
+        def provider(method, path, body=None):
+            operations.append((method, path))
+            self.assertEqual(method, "GET")
+            return {"actual_status": "running", "intended_status": "stopped",
+                    "ports": {"22/tcp": [{"HostPort": 2022}]},
+                    "public_ipaddr": "127.0.0.1"}
+        with patch.object(probe, "api", side_effect=provider), \
+             patch.object(probe.subprocess, "run") as runner:
+            with self.assertRaisesRegex(RuntimeError, "HOLD_INSTANCE_OR_PORT"):
+                probe.main()
+            runner.assert_not_called()
+            self.assertEqual(len(operations), 1)
 
     def test_supervisor_failure_cannot_be_masked_by_awk(self):
         with tempfile.TemporaryDirectory() as tmp:
