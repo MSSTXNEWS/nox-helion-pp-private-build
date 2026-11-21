@@ -25,7 +25,8 @@
   const key=s=>s.conversation_id+'\u0000'+s.exchange_id;
   function createClient({transport,host,bridge,ui,ackGate=null,timeoutMs=120000,
     canonicalFreshnessMs=30000,reconnectReadTimeoutMs=30000,
-    uiProjectionTimeoutMs=30000,ackSendTimeoutMs=30000}={}){
+    uiProjectionTimeoutMs=30000,ackSendTimeoutMs=30000,
+    canonicalAckTimeoutMs=30000}={}){
     if(!transport||!host||!bridge||!ui||
        typeof transport.post!=='function'||
        typeof transport.readback!=='function'||
@@ -48,7 +49,9 @@
        !Number.isSafeInteger(uiProjectionTimeoutMs)||
        uiProjectionTimeoutMs<1||uiProjectionTimeoutMs>600000||
        !Number.isSafeInteger(ackSendTimeoutMs)||
-       ackSendTimeoutMs<1||ackSendTimeoutMs>600000)
+       ackSendTimeoutMs<1||ackSendTimeoutMs>600000||
+       !Number.isSafeInteger(canonicalAckTimeoutMs)||
+       canonicalAckTimeoutMs<1||canonicalAckTimeoutMs>600000)
       hold('HOLD_STREAM_HOST_CONTRACT');
     const started=new Set(),active=new Map(),reconnecting=new Map();
     async function begin(raw){
@@ -290,7 +293,12 @@
         });
         let ack,freshVerified=false;
         try {
-          ack=await ackGate.requireCanonicalAck(s,witness.projection_event_id,
+          // A signed canonical ACK read still involves external GET and
+           // independent verification. Bound the whole trusted wait so a
+           // hung GET/verifier cannot pin reconnect forever. ackGate must
+           // independently fence late side effects with its durable CAS.
+           ack=await boundedRead(
+             ()=>ackGate.requireCanonicalAck(s,witness.projection_event_id,
             witness.ack_cursor,
             async expected=>{
               // readCanonicalAck MUST be a no-store, authenticated GET. It
@@ -315,7 +323,8 @@
               freshVerified=true;
               return receipt;
             },
-            (receipt,expected)=>host.verifyCanonicalAck(receipt,expected,s));
+            (receipt,expected)=>host.verifyCanonicalAck(receipt,expected,s)),
+             'HOLD_STREAM_CANONICAL_ACK_TIMEOUT',canonicalAckTimeoutMs);
         }catch(err){
           if(err&&typeof err.code==='string') throw err;
           hold('HOLD_STREAM_CANONICAL_ACK');
