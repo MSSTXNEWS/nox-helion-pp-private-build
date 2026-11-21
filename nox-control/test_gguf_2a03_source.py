@@ -57,7 +57,7 @@ class GGUFSourceContracts(unittest.TestCase):
     def test_mixed_verified_and_missing_shards_emit_hold_not_typeerror(self):
         tree = ast.parse(worker_source()[0])
         code = isolated_worker_node(tree, "__mixed_hold__")
-        scope = {"results": ["/verified/one.gguf", False], "sys": sys}
+        scope = {"results": ["/verified/one.gguf", False], "names": ["a.gguf", "b.gguf"], "sys": sys}
         capture = io.StringIO()
         with contextlib.redirect_stdout(capture), self.assertRaises(SystemExit) as raised:
             exec(code, scope)
@@ -90,7 +90,7 @@ class GGUFSourceContracts(unittest.TestCase):
 
             scope = {"os": os, "subprocess": subprocess, "sys": sys,
                      "meta": {name: (len(data), oid)}, "MANIFEST_SHA": manifest,
-                     "place": lambda _: folder, "sha": digest,
+                     "place": lambda _: folder, "sha": digest, "BASE": "fixture://",
                      "cgroup_admitted": lambda extra_bytes=0: True}
             exec(isolated_worker_node(tree, "verified"), scope)
             exec(isolated_worker_node(tree, "one"), scope)
