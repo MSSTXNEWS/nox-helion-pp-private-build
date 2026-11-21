@@ -1013,9 +1013,14 @@ RENDERED_FOURROW_JS = r"""expected => {
        bodies[0].textContent!==row.content)return false;
     // Some UI builds expose durable row identity; when present it must agree.
     // Absent DOM IDs are not claimed as independently verified row identities.
-    const visibleId=bubble.getAttribute('data-message-id')||
-                    bodies[0].getAttribute('data-message-id');
-    if(visibleId!==null&&visibleId!==row.message_id)return false;
+    // Both DOM layers can carry the durable ID. A matching bubble ID must
+    // never hide a conflicting or blank body ID (or vice versa).
+    const bubbleId=bubble.getAttribute('data-message-id');
+    const bodyId=bodies[0].getAttribute('data-message-id');
+    for(const candidate of [bubbleId,bodyId]){
+      if(candidate!==null&&(!candidate.trim()||candidate!==row.message_id))
+        return false;
+    }
   }
   return true;
 }"""
