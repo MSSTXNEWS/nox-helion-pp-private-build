@@ -1131,6 +1131,48 @@ async function check(chunks, status=200) {
         self.assertNotIn("blocked['external_origin'] +", caller)
         self.assertNotIn("blocked['legacy_unscoped_history'] +", caller)
 
+    def test_ru_es_second_turn_bounded_quiescence_before_browser_only_pass(self):
+        """A delayed third POST or changed stream after screenshot is HOLD."""
+        from owner_chat_browser_qa import stable_second_turn_quiescence
+        snapshot = {
+            'native_calls': 2, 'native_stream_complete': True,
+            'native_terminal_count': 1, 'error': None,
+            'done': {'saved': True, 's03_integrated': True,
+                     'dialog_matches': True},
+            'dom_answer_matches_native': True, 'answer_characters': 19,
+            'native_delta_count': 4, 'native_bytes': 180,
+            'native_done_ms': 120.5,
+        }
+        self.assertTrue(stable_second_turn_quiescence(
+            snapshot, dict(snapshot), 2, True))
+        for changed in (
+            {'native_calls': 3}, {'native_terminal_count': 2},
+            {'native_stream_complete': False}, {'answer_characters': 20},
+            {'native_delta_count': 5}, {'native_done_ms': 125.5},
+            {'dom_answer_matches_native': False},
+            {'done': dict(snapshot['done'], saved=False)},
+            {'error': 'HOLD_LATE_FAILURE'},
+        ):
+            with self.subTest(changed=changed):
+                self.assertFalse(stable_second_turn_quiescence(
+                    snapshot, dict(snapshot, **changed), 2, True))
+        self.assertFalse(stable_second_turn_quiescence(
+            snapshot, dict(snapshot), 3, True))
+        self.assertFalse(stable_second_turn_quiescence(
+            snapshot, dict(snapshot), 2, False))
+        caller = inspect.getsource(browser_run)
+        screenshot = caller.index("second_capture=await capture_private_screenshot(")
+        quiet = caller.index("quiet_snapshot=await page.evaluate(SNAPSHOT_JS)")
+        session = caller.index("signed_precert=await context.request.get(")
+        runtime = caller.index("if not clean_two_turn_browser_runtime(")
+        accepted = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertIn("await page.wait_for_timeout(500)", caller)
+        self.assertIn("HOLD_MULTITURN_POSTTERMINAL_QUIESCENCE", caller)
+        self.assertLess(screenshot, quiet)
+        self.assertLess(quiet, session)
+        self.assertLess(session, runtime)
+        self.assertLess(runtime, accepted)
+
     def test_ru_es_four_turn_history_needs_independent_canonical_s03(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         transcript = rows(es)

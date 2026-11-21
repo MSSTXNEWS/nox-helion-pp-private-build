@@ -277,6 +277,33 @@ def clean_two_turn_browser_runtime(page_errors, network, overflow_count=0,
     return True
 
 
+
+def stable_second_turn_quiescence(before, after, admitted, native_answer_equal):
+    """Bounded post-terminal observation must preserve the same second answer.
+
+    A late third browser POST or a changed terminal/answer after the screenshot
+    must not receive even narrow browser-only PASS. This is not proof against
+    events after the bounded observation window or a substitute for S03.
+    """
+    if (native_answer_equal is not True
+            or not exact_native_post_fence(before, admitted, 2)
+            or not exact_native_post_fence(after, admitted, 2)
+            or not native_terminal_stream_valid(before)
+            or not native_terminal_stream_valid(after)
+            or after.get('dom_answer_matches_native') is not True
+            or type(before.get('answer_characters')) is not int
+            or before['answer_characters'] <= 0
+            or type(before.get('native_delta_count')) is not int
+            or before['native_delta_count'] <= 0
+            or type(before.get('native_done_ms')) not in (int, float)):
+        return False
+    return all(before.get(key) == after.get(key) for key in (
+        'native_calls', 'native_stream_complete', 'native_terminal_count',
+        'done', 'native_done_ms', 'native_delta_count', 'native_bytes',
+        'answer_characters'))
+
+
+
 def distinct_explicit_message_ids(rows):
     """Optional row IDs must not claim multiple distinct turns with one identity.
 
@@ -1451,6 +1478,20 @@ async def browser_run(report, directory, available):
                     raise RuntimeError('HOLD_MULTITURN_SCREENSHOT_CAPTURE_PENDING')
                 require_screenshot_captures(report)
                 report['multiturn_second_screenshot_verified']=True
+                # Drain a bounded post-terminal browser observation window
+                # before the final session and runtime fences. Do not submit
+                # a third native POST or infer indefinite quiescence.
+                report['browser_stage']='QA_SECOND_TURN_POSTTERMINAL_QUIESCENCE'
+                await page.wait_for_timeout(500)
+                if stop_present():
+                    raise RuntimeError('HOLD_OWNER_STOP')
+                quiet_snapshot=await page.evaluate(SNAPSHOT_JS)
+                quiet_native_equal=await page.evaluate(
+                    '(value)=>window.__NOX_BROWSER_QA.answer===value', second_answer)
+                if not stable_second_turn_quiescence(
+                        second_final, quiet_snapshot, stream_admitted, quiet_native_equal):
+                    raise RuntimeError('HOLD_MULTITURN_POSTTERMINAL_QUIESCENCE')
+                report['multiturn_postterminal_quiescence_verified']=True
                 # Signed session proof above predates history read and
                 # private screenshot. Rotate/expire during either? Fail closed.
                 # Only this extra read-only GET; no model generation request.
