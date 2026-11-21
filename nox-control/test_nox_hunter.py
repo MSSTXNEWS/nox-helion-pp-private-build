@@ -315,15 +315,25 @@ class HunterURLSafetyTests(unittest.TestCase):
                     first = hunter._poll_one(conn, source, 1000, 1024)
                     self.assertEqual(first["status"], "polled")
                     self.assertFalse(any("SELECT body FROM http_cache" in q for q in sql))
+                    # Revalidating 304 must not update body or amplify the WAL.
+                    # An UPDATE OF body trigger makes this a database-level
+                    # assertion instead of just checking a SQL string.
+                    conn.execute(
+                        "CREATE TRIGGER reject_unchanged_body BEFORE UPDATE OF body "
+                        "ON http_cache BEGIN SELECT RAISE(ABORT, '304 rewrote body'); END"
+                    )
                     sql.clear()
                     opener.return_value.open.side_effect = HTTPError(
                         source["url"], 304, "Not Modified", {}, None)
                     second = hunter._poll_one(conn, source, 1100, 1024)
                     self.assertEqual(second["status"], "not_modified")
                     self.assertEqual(sum("SELECT body FROM http_cache" in q for q in sql), 1)
-                body = conn.execute(
-                    "SELECT body FROM http_cache WHERE source_id='lazy'").fetchone()[0]
+                body, fetched, checked = conn.execute(
+                    "SELECT body,fetched_at,checked_at FROM http_cache "
+                    "WHERE source_id='lazy'").fetchone()
                 self.assertEqual(body, b"<rss/>")
+                self.assertEqual(fetched, 1000)
+                self.assertEqual(checked, 1100)
             finally:
                 conn.close()
 
