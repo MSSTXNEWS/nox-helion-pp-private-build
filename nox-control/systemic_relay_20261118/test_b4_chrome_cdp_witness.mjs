@@ -892,7 +892,8 @@ test('SSE DONE to CDP loadingFinished measures network-tail, not TCP close',asyn
   assert.equal(textless.turns[1].sse_last_text_to_done_ms,null);
   assert.equal(textless.turns[1].sse_done_to_loading_finished_ms,30);
   const incomplete=await run(false,[Buffer.from(delta+finish)]);
-  assert.equal(incomplete.cdp_consistent,false);
+  assert.equal(incomplete.cdp_consistent,true,'decoded body can be internally consistent without final SSE');
+  assert.equal(incomplete.ttft_sse_verified,false,'missing [DONE] is not complete');
   assert.equal(incomplete.turns[1].sse_done_to_loading_finished_ms,null);
   assert.equal(incomplete.turns[1].sse_done_to_loading_finished_source,null);
   const failed=await run(false,[Buffer.from(delta+finish+done)],null,null,{loadingFailed:true});
