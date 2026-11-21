@@ -771,7 +771,7 @@ test('decoded SSE output cadence counts codepoints and event gaps, never invente
   assert.equal(result.turns[0].sse_text_event_gap_p95_ms,null);
   assert.doesNotMatch(JSON.stringify(result),/Привет|🐈|secret/);
   // Escaped JSON allows a lone surrogate. It must not silently hash or count U+FFFD.
-  const broken='data: '+JSON.stringify({choices:[{delta:{content:'\\uD800'}}]})+'\n\n'+
+  const broken='data: '+JSON.stringify({choices:[{delta:{content:String.fromCharCode(0xD800)}}]})+'\n\n'+
     'data: '+JSON.stringify({choices:[{delta:{},finish_reason:'stop'}]})+'\n\n'+
     'data: [DONE]\n\n';
   const rejected=await run(false,[Buffer.from(broken)]);
