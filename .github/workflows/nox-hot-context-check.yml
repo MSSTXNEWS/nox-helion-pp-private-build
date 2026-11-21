@@ -4,6 +4,7 @@ on:
     paths:
       - 'nox-control/nox_hot_context.py'
       - 'nox-control/test_nox_hot_context.py'
+      - 'nox-control/test_nox_hot_context_3a05.py'
       - '.github/workflows/nox-hot-context-check.yml'
   push:
     branches: [feat/nox-chat-latency-scope-20261119, a4/3b03-s03-id-provenance-20261120, a4/3b03-s03-body-provenance-20261120]
@@ -21,5 +22,5 @@ jobs:
       - name: Targeted offline check
         run: |
           set -euo pipefail
-          python3 -m py_compile nox-control/nox_hot_context.py nox-control/test_nox_hot_context.py
-          python3 -m unittest discover -s nox-control -p test_nox_hot_context.py -v
+          python3 -m py_compile nox-control/nox_hot_context.py nox-control/test_nox_hot_context.py nox-control/test_nox_hot_context_3a05.py
+          python3 -m unittest discover -s nox-control -p 'test_nox_hot_context*.py' -v
