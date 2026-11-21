@@ -1182,5 +1182,104 @@ class TestProbe(unittest.TestCase):
                     await browser.close()
         asyncio.run(run())
 
+
+    def test_native_burst_phase_event_coalescing_preserves_sse_and_s03(self):
+        """Real Chromium with synthetic native transport, not live serving acceptance."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+
+                    async def fixture(route):
+                        await route.fulfill(
+                            status=200, content_type='text/html',
+                            body='<html><body>B3 phase burst synthetic fixture</body></html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                    await page.goto(
+                        'http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__phases=[];
+                        window.__posts=0;
+                        window.__reads=0;
+                        window.addEventListener('nox:native-phase',
+                            e=>window.__phases.push(e.detail.phase));
+                        const id='a'.repeat(32);
+                        const exchange='ex-phase-burst';
+                        window.__burst=Array.from({length:512},(_,i)=>i%2?'Ж':'🧠');
+                        const pack=data=>new Response(JSON.stringify(data),{
+                            status:200,headers:{'Content-Type':'application/json'}
+                        });
+                        window.fetch=async (url,init)=>{
+                            if(url==='/api/nox/chat/stream'){
+                                window.__posts++;
+                                const frames=[
+                                    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start',model:'pinned-existing-native-fixture'},
+                                    ...window.__burst.map(text=>({type:'delta',text})),
+                                    {type:'done',saved:true,s03_integrated:true,
+                                     dialog_id:id,exchange_id:exchange}
+                                ];
+                                return new Response(
+                                    frames.map(JSON.stringify).join('\\n')+'\\n',
+                                    {status:200});
+                            }
+                            if(String(url).startsWith('/api/ui/memory/dialogs/history?')){
+                                window.__reads++;
+                                return pack({status:'READY',dialog_id:id,messages:[
+                                    {role:'user',content:'burst',exchange_id:exchange},
+                                    {role:'assistant',content:window.__burst.join(''),
+                                     exchange_id:exchange}
+                                ]});
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE:'+url);
+                        };
+                    }""")
+                    bridge = (pathlib.Path(__file__).parent /
+                              'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    result = await page.evaluate("""async () => {
+                        const resp=await fetch('/api/nox/chat',{
+                            method:'POST',body:JSON.stringify({
+                                dialog_id:'a'.repeat(32),
+                                request_id:'b3-phase-burst-512',
+                                message:'burst'
+                            })
+                        });
+                        const raw=await resp.text();
+                        const events=raw.split('\\n\\n').filter(Boolean)
+                            .map(row=>JSON.parse(row.replace(/^data: /,'')));
+                        return {
+                            phases:window.__phases,
+                            posts:window.__posts,
+                            reads:window.__reads,
+                            expected:window.__burst.join(''),
+                            actual:events.filter(e=>e.type==='token')
+                                .map(e=>e.t).join(''),
+                            done:events.filter(e=>e.type==='done'),
+                            errors:events.filter(e=>e.type==='error')
+                        };
+                    }""")
+                    # Hundreds of genuine browser-consumed SSE token deltas
+                    # must not cause hundreds of duplicate main-thread events.
+                    self.assertEqual(result['phases'], ['waiting', 'speaking', 'idle'])
+                    self.assertEqual(result['posts'], 1)
+                    self.assertEqual(result['reads'], 1)
+                    self.assertEqual(result['actual'], result['expected'])
+                    self.assertEqual(result['errors'], [])
+                    self.assertEqual(len(result['done']), 1)
+                    self.assertTrue(result['done'][0]['s03_integrated'])
+                    self.assertTrue(result['done'][0]['history_persisted'])
+                finally:
+                    await browser.close()
+
+        asyncio.run(run())
+
+
+
 if __name__ == '__main__':
     unittest.main()
