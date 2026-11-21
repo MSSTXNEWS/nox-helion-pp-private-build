@@ -6,7 +6,7 @@ import pathlib
 import tempfile
 import unittest
 
-from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames, evidence_hash, url_identity_sha256
+from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames, evidence_hash, url_identity_sha256, is_model_chat_endpoint
 
 
 class TestProbe(unittest.TestCase):
@@ -52,6 +52,29 @@ class TestProbe(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_SELECTOR_REQUIRED'):
                 measure(live, temp, chromium='/usr/bin/chromium')
+
+
+    def test_existing_serving_path_aliases_fenced_without_blocking_ui(self):
+        # /nox/chat is an existing NOX model-serving entrypoint; this opt-in
+        # browser probe must never issue even a GET to it.
+        for url in (
+            'http://127.0.0.1:18877/nox/chat',
+            'http://127.0.0.1:18877/nox/chat/stream?prompt=no',
+            'http://127.0.0.1:18877/nox%2Fchat/stream',
+            'http://127.0.0.1:18877/nox%252Fchat/stream',
+            'http://127.0.0.1:18877/api/nox/chat',
+            'http://127.0.0.1:18877/api/nox%2Fchat/stream',
+        ):
+            with self.subTest(block=url):
+                self.assertTrue(is_model_chat_endpoint(url))
+        for url in (
+            'http://127.0.0.1:18877/resonance.html',
+            'http://127.0.0.1:18877/nox/chat.html',
+            'http://127.0.0.1:18877/api/nox/chatty',
+            'http://127.0.0.1:18877/assets/chat.css',
+        ):
+            with self.subTest(allow=url):
+                self.assertFalse(is_model_chat_endpoint(url))
 
 
     def test_post_screenshot_spa_route_fence_wired(self):
@@ -249,13 +272,15 @@ class TestProbe(unittest.TestCase):
                     '{method:"POST",body:"x"}).catch(()=>{});'
                     'fetch("https://example.invalid/api/nox/chat/stream?message=unsafe").catch(()=>{});'
                     'fetch("https://example.invalid/api/nox/chat",{method:"HEAD"}).catch(()=>{});'
+                    'fetch("https://example.invalid/nox/chat?message=unsafe").catch(()=>{});'
+                    'fetch("https://example.invalid/nox%2Fchat/stream",{method:"HEAD"}).catch(()=>{});'
                     'try{const ws=new WebSocket("wss://example.invalid/nox/stream");'
                     'ws.onerror=()=>{};}catch(e){}'
                     '</script></body></html>'))
             self.assertEqual(len(result['runs']), 6)
             self.assertEqual(result['blocked_mutating_requests'], 6)
             self.assertEqual(result['blocked_model_posts'], 6)
-            self.assertEqual(result['blocked_model_read_requests'], 12)
+            self.assertEqual(result['blocked_model_read_requests'], 24)
             self.assertEqual(result['blocked_websocket_connections'], 6)
             self.assertTrue(result['service_workers_blocked'])
             self.assertEqual(len(result['chromium_version_sha256']), 64)
