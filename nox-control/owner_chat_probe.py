@@ -204,6 +204,20 @@ def page_snapshot(response, limit=200000, expected_path=None):
         raw = response.read(limit + 1)
         if len(raw) > limit:
             raise RuntimeError('HOLD_CHAT_PAGE_LIMIT')
+        # HTTP 200 may be a JSON gateway error or plain-text maintenance page.
+        # Status and same-origin routing alone never prove that the web UI exists.
+        if status == 200:
+            headers = getattr(response, 'headers', None)
+            ctype = headers.get('Content-Type', '') if headers is not None else ''
+            if not isinstance(ctype, str):
+                raise RuntimeError('HOLD_CHAT_PAGE_NOT_HTML')
+            media = ctype.split(';', 1)[0].strip().lower()
+            prefix = raw[:2048].lstrip(b'\xef\xbb\xbf \t\r\n')
+            html_start = re.search(
+                rb'(?is)^(?:<\?xml\b[^>]*>\s*)?(?:<!--.*?-->\s*)*'
+                rb'(?:<!doctype\s+html\b|<html\b|<head\b|<body\b)', prefix)
+            if media not in ('', 'text/html', 'application/xhtml+xml') or not html_start:
+                raise RuntimeError('HOLD_CHAT_PAGE_NOT_HTML')
         return status, path, raw
     finally:
         response.close()
