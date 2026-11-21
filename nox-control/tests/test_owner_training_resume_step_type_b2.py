@@ -2113,5 +2113,35 @@ class ChatHealthReadbackSchema(unittest.TestCase):
                 self.assertEqual(verify(helper)["gpu1"]["index"], 1)
 
 
+class FinalChatHealthReceiptFence(unittest.TestCase):
+    def test_final_proxy_health_schema_is_strict_and_receiptable(self):
+        """Execute main's final actual guard without calling native serving."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        main = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == "main")
+        guards = [node for node in ast.walk(main)
+                  if isinstance(node, ast.If) and len(node.body) == 2
+                  and isinstance(node.body[0], ast.Assign)
+                  and "chat_health_regression" in ast.unparse(node.body[0])]
+        self.assertEqual(len(guards), 1)
+        self.assertIn("8080", ast.unparse(guards[0].test))
+        code = compile(ast.fix_missing_locations(ast.Module(
+            body=[copy.deepcopy(guards[0])], type_ignores=[])), str(SOURCE), "exec")
+
+        for malformed in (None, [], "error", 200, {}, {"8080": True},
+                          {"8080": 200.0}, {"8080": "200"},
+                          {"8080": float("nan")}, {"8080": 503}):
+            with self.subTest(chat_after=repr(malformed)):
+                scope = {"result": {"chat_after": malformed}, "success": True}
+                exec(code, scope)
+                self.assertFalse(scope["success"])
+                self.assertIs(scope["result"]["chat_health_regression"], True)
+
+        scope = {"result": {"chat_after": {"8080": 200}}, "success": True}
+        exec(code, scope)
+        self.assertTrue(scope["success"])
+        self.assertNotIn("chat_health_regression", scope["result"])
+
+
 if __name__ == "__main__":
     unittest.main()
