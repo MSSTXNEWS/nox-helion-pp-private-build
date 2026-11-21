@@ -791,5 +791,102 @@ class TestProbe(unittest.TestCase):
                     await browser.close()
         asyncio.run(run())
 
+
+    def test_native_delta_forwarded_without_synthetic_raf_pacing(self):
+        """Chromium: one native delta remains one SSE token without timer/rAF waits."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+
+                    async def fixture(route):
+                        await route.fulfill(
+                            status=200, content_type='text/html',
+                            body='<html><body>isolated B3 native-delta fixture</body></html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                    await page.goto(
+                        'http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__posts=0;
+                        window.__reads=0;
+                        window.__rafCalls=0;
+                        window.requestAnimationFrame=()=>{
+                            window.__rafCalls++;
+                            return 1; // A hidden or throttled-tab rAF never fires.
+                        };
+                        const id='a'.repeat(32);
+                        window.__answer='Ж'.repeat(512)+'🧠';
+                        const pack=value=>new Response(JSON.stringify(value),{
+                            status:200,headers:{'Content-Type':'application/json'}
+                        });
+                        window.fetch=async (url)=>{
+                            if(url==='/api/nox/chat/stream'){
+                                window.__posts++;
+                                const text=[
+                                    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start',model:'existing-native-fixture'},
+                                    {type:'delta',text:window.__answer},
+                                    {type:'done',saved:true,s03_integrated:true,
+                                        dialog_id:id,exchange_id:'ex-b3-raf'}
+                                ].map(JSON.stringify).join('\\n')+'\\n';
+                                return new Response(text,{status:200});
+                            }
+                            if(String(url).startsWith(
+                                    '/api/ui/memory/dialogs/history?')){
+                                window.__reads++;
+                                return pack({status:'READY',dialog_id:id,messages:[
+                                    {role:'user',content:'native',exchange_id:'ex-b3-raf'},
+                                    {role:'assistant',content:window.__answer,
+                                        exchange_id:'ex-b3-raf'}
+                                ]});
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE:'+url);
+                        };
+                    }""")
+                    bridge = (pathlib.Path(__file__).parent /
+                              'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    result = await page.evaluate("""async () => {
+                        const start=performance.now();
+                        const response=await fetch('/api/nox/chat',{
+                            method:'POST',
+                            body:JSON.stringify({dialog_id:'a'.repeat(32),
+                                request_id:'b3-single-native-delta',
+                                message:'native'})
+                        });
+                        const sse=await response.text();
+                        const events=sse.split('\\n\\n').filter(Boolean).map(
+                            row=>JSON.parse(row.replace(/^data: /,'')));
+                        return {
+                            posts:window.__posts,
+                            reads:window.__reads,
+                            rafCalls:window.__rafCalls,
+                            elapsedMs:performance.now()-start,
+                            tokens:events.filter(e=>e.type==='token').map(e=>e.t),
+                            done:events.filter(e=>e.type==='done'),
+                            errors:events.filter(e=>e.type==='error'),
+                            answer:window.__answer
+                        };
+                    }""")
+                    self.assertEqual(result['posts'], 1)
+                    self.assertEqual(result['reads'], 1)
+                    self.assertEqual(result['rafCalls'], 0)
+                    self.assertEqual(result['tokens'], [result['answer']])
+                    self.assertEqual(len(result['done']), 1)
+                    self.assertEqual(result['done'][0]['s03_integrated'], True)
+                    self.assertEqual(result['errors'], [])
+                    # Elapsed time is recorded as synthetic browser evidence;
+                    # never claim this measures live production frame time.
+                    self.assertGreaterEqual(result['elapsedMs'], 0)
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
 if __name__ == '__main__':
     unittest.main()
