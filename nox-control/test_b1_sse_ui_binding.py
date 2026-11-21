@@ -1053,6 +1053,62 @@ def main():
           }
           return await one('stop') && await one('timeout');
         }'''))
+        # The composition binding must forward the UI adapter's own deadlines:
+        # otherwise a hung beforeCommit waits 30s despite a host's 30ms budget.
+        check('bound UI adapter deadlines stop hung delta and terminal projection', page.evaluate('''async () => {
+          let posts=0,acks=0;
+          const afterPosts=metrics.posts;
+          const container=document.createElement('div');
+          const scope={conversation_id:'ui-deadlines',exchange_id:'delta'};
+          const deltaTransport={...opts.transport,
+            async post(){
+              posts++;
+              return {ok:true,body:new ReadableStream({start(c){
+                c.enqueue(new TextEncoder().encode(
+                  'event: delta\\ndata: HELLO\\n\\n'));c.close();
+              }})};
+            },
+            async ack(){acks++;return true;}
+          };
+          const dc=NOXB1SseUiBinding.bind({
+            ...opts,container,transport:deltaTransport,
+            deltaPrecommitTimeoutMs:35,timeoutMs:1000,
+            beforeCommit:kind=>kind==='delta'?
+              new Promise(()=>{}):Promise.resolve()
+          });
+          const firstStarted=Date.now();
+          const first=await Promise.race([
+            dc.begin(scope).then(()=>null,e=>e.code),
+            new Promise(r=>setTimeout(()=>r('HUNG'),900))
+          ]);
+          if(first!=='HOLD_STREAM_POST_OR_READ'||
+             Date.now()-firstStarted>800||posts!==1||acks!==0||
+             container.children.length!==0)return false;
+          const secondScope={conversation_id:'ui-deadlines',exchange_id:'terminal'};
+          const tc=NOXB1SseUiBinding.bind({
+            ...opts,container,transport:{...opts.transport,
+              post(){posts++;throw Error('NO_SECOND_MODEL_POST')},
+              ack(){acks++;return true}},
+            terminalTimeoutMs:35,uiProjectionTimeoutMs:1000,
+            beforeCommit:kind=>kind==='terminal'?
+              new Promise(()=>{}):Promise.resolve()
+          });
+          const secondStarted=Date.now();
+          const second=await Promise.race([
+            tc.reconnect(secondScope).then(()=>null,e=>e.code),
+            new Promise(r=>setTimeout(()=>r('HUNG'),900))
+          ]);
+          if(second!=='HOLD_STREAM_UI_PROJECTION'||
+             Date.now()-secondStarted>800||posts!==1||acks!==0||
+             container.children.length!==0)return false;
+          for(const option of ['terminalTimeoutMs','deltaPrecommitTimeoutMs']){
+            let error=null;
+            try{NOXB1SseUiBinding.bind({...opts,[option]:0});}
+            catch(e){error=e.code}
+            if(error!=='HOLD_B1_UI_CONTRACT')return false;
+          }
+          return metrics.posts===afterPosts&&posts===1&&acks===0;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
