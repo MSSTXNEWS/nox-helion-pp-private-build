@@ -189,6 +189,14 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             add("GPU_RESIDUAL_THERMAL_HOLD", "hold",
                 "GPU thermal evidence is missing, invalid or at SAFE70. "
                 "Do not suggest residual GPU capacity or admit extra work.")
+        elif util < 35 and (onehost.get("healthy") is not True
+                              or s03.get("readback_verified") is not True):
+            # Serving continuity outranks opportunistic GPU use. Even a
+            # healthy sensor and low utilization cannot imply spare capacity
+            # while chat or durable memory is degraded.
+            add("GPU_RESIDUAL_SERVICE_HOLD", "hold",
+                "OneHost health or S03 readback is unverified. Do not suggest "
+                "residual GPU capacity before serving continuity is restored.")
         elif util < 35:
             # Low compute utilization alone is NOT spare accelerator capacity
             # without fresh VRAM, host I/O and chat latency.
