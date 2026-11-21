@@ -508,14 +508,37 @@ def install(app, B):
     async def a_chat(request: Request):
         # Capture before body parsing: STOP during request admission is binding.
         request_stop_epoch = CANCEL_ALL_EPOCH
-        b = await request.json()
+        # Reject malformed chat input before creating any SSE generator,
+        # model request, S03 write, or request-scoped STOP state.
+        try:
+            b = await request.json()
+        except Exception:
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_JSON"}, status_code=400)
+        if not isinstance(b, dict):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_BODY"}, status_code=400)
+        raw_messages = b.get("messages") or []
+        if not isinstance(raw_messages, list) or any(not isinstance(m, dict) for m in raw_messages):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_MESSAGES"}, status_code=400)
+        if any(m.get("role") in ("user", "assistant") and
+               not isinstance(m.get("content"), str) for m in raw_messages):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_CONTENT"}, status_code=400)
+        opts = b.get("options") or {}
+        if not isinstance(opts, dict):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_OPTIONS"}, status_code=400)
+        requested_tokens = opts.get("num_predict") or 700
+        if isinstance(requested_tokens, bool):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_NUM_PREDICT"}, status_code=400)
+        try:
+            npred = int(requested_tokens)
+        except (ValueError, TypeError, OverflowError):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_NUM_PREDICT"}, status_code=400)
+        if npred <= 0:
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_NUM_PREDICT"}, status_code=400)
         rid = str(b.get("request_id") or "")
-        msgs_in = [m for m in (b.get("messages") or []) if m.get("role") in ("user", "assistant")]
+        msgs_in = [m for m in raw_messages if m.get("role") in ("user", "assistant")]
         user = next((m["content"] for m in reversed(msgs_in) if m["role"] == "user"), "")
         use_mem = b.get("use_memory", True) is not False
-        npred = int((b.get("options") or {}).get("num_predict") or 700)
         mini = b.get("mini") is True
-        opts = b.get("options") or {}
         mode = str(opts.get("mode") or b.get("mode") or "auto")
         eph = b.get("ephemeral") is True
         if mode == "fast": npred = min(npred, 300)
