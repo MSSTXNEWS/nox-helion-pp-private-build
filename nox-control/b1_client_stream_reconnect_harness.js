@@ -266,7 +266,10 @@
         if(err&&err.code==='HOLD_STREAM_UI_PROJECTION_TIMEOUT') throw err;
         hold('HOLD_STREAM_UI_PROJECTION');
       }
-      if(projected===false) hold('HOLD_STREAM_UI_NOT_CONFIRMED');
+      // Only an explicit positive DOM commit witness may precede ACK. A
+      // missing return (undefined), null, string, or numeric truthy value
+      // is not proof that the terminal row was actually projected.
+      if(projected!==true) hold('HOLD_STREAM_UI_NOT_CONFIRMED');
       // Origin-local, cross-tab durable fence is opt-in. RESERVE and SENDING
       // must commit in IndexedDB BEFORE network ACK. An uncertain ACK is never
       // sent again after reload; recovery requires an independent server receipt.
