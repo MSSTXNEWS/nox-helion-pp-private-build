@@ -92,6 +92,24 @@ class WebGpuStatusTests(unittest.TestCase):
                 self.assertIsNone(result["disk_free_gib"])
                 self.assertEqual(result["gpus"], [])
 
+    def test_invalid_sampler_timestamps_fail_closed_without_status_crash(self):
+        ns = load_status()
+        ns["M"]["gpu"] = [sample(12), sample(36)]
+        for sample_time in (None, True, "bad", "1740000000", {}, [],
+                            float("nan"), float("inf"), float("-inf"),
+                            10**500, 1e308, -1e308):
+            with self.subTest(sample_time=str(sample_time)[:24]):
+                ns["M"]["t"] = sample_time
+                result = ns["_status_flat"]()
+                self.assertFalse(result["fresh"])
+                self.assertIsNone(result["timestamp"])
+                self.assertIsNone(result["timestamp_utc"])
+                for key in ("gpu_percent", "vram_used_gb", "vram_total_gb",
+                            "gpu_temperature_c", "gpu_power_w", "cpu_percent",
+                            "ram_percent", "disk_free_gib"):
+                    self.assertIsNone(result[key])
+                self.assertEqual(result["gpus"], [])
+
     def test_malformed_and_extreme_readings_fail_closed(self):
         ns = load_status()
         for value in (None, True, False, "0", -1, 100.01,
