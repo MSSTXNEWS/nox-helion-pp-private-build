@@ -1693,5 +1693,90 @@ async function check(chunks, status=200) {
         self.assertNotIn('context.request.post(', caller[session:accepted])
 
 
+
+    def test_ru_es_postreload_rendered_fourrow_identity_real_chromium(self):
+        """Only four visible, ordered, role-matched bubbles can certify UI readback.
+
+        This is synthetic browser DOM; not live model or independent S03 proof.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+        transcript = [
+            dict(row, message_id=f'fourrow-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                observed_posts = []
+                page.on('request', lambda req: observed_posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.querySelector('#messages');
+                    for(const row of items){
+                      const bubble=document.createElement('div');
+                      bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                      bubble.dataset.messageId=row.message_id;
+                      const body=document.createElement('div');
+                      body.className='body';
+                      body.textContent=row.content;
+                      bubble.append(body);
+                      root.append(bubble);
+                    }
+                }""", transcript)
+                proof = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(proof(), True)
+                # Browser rendering may collapse ordinary spaces without losing
+                # message identity; full content/order still must be identical.
+                page.locator('#messages .body').nth(0).evaluate(
+                    "(node)=>node.textContent='unexpected message'")
+                self.assertIs(proof(), False)
+                page.locator('#messages .body').nth(0).evaluate(
+                    "(node,text)=>node.textContent=text", transcript[0]['content'])
+                self.assertIs(proof(), True)
+                page.locator('#messages .v24-msg').nth(1).evaluate(
+                    "(node)=>node.classList.remove('nox')")
+                self.assertIs(proof(), False)
+                page.locator('#messages .v24-msg').nth(1).evaluate(
+                    "(node)=>node.classList.add('nox')")
+                self.assertIs(proof(), True)
+                page.locator('#messages .v24-msg').nth(2).evaluate(
+                    "(node)=>node.dataset.messageId='other-owner-row'")
+                self.assertIs(proof(), False)
+                page.locator('#messages .v24-msg').nth(2).evaluate(
+                    "(node,text)=>node.dataset.messageId=text",
+                    transcript[2]['message_id'])
+                self.assertIs(proof(), True)
+                page.locator('#messages .v24-msg').nth(3).evaluate(
+                    "(node)=>node.style.display='none'")
+                self.assertIs(proof(), False)
+                page.locator('#messages .v24-msg').nth(3).evaluate(
+                    "(node)=>node.style.display=''")
+                self.assertIs(proof(), True)
+                page.locator('#messages').evaluate(
+                    "(root)=>root.append(root.firstElementChild.cloneNode(true))")
+                self.assertIs(proof(), False)
+                self.assertEqual(observed_posts, [])
+            finally:
+                browser.close()
+        caller = inspect.getsource(browser_run)
+        history = caller.index('reloaded_history=await json_response(')
+        final_ui = caller.index(
+            'HOLD_MULTITURN_RELOAD_POSTHISTORY_ACTIVE_DIALOG_CHANGED', history)
+        rendered = caller.index(
+            'HOLD_MULTITURN_RELOAD_RENDERED_FOURROW_MISMATCH', final_ui)
+        accepted = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(history, final_ui)
+        self.assertLess(final_ui, rendered)
+        self.assertLess(rendered, accepted)
+        self.assertIn('page.wait_for_function(', caller[final_ui:accepted])
+        self.assertNotIn('context.request.post(', caller[history:accepted])
+        self.assertIn('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK', caller)
+
+
+
 if __name__ == "__main__":
     unittest.main()
