@@ -67,9 +67,33 @@
     status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}
   });
   async function nativeJSON(path,init) {
-    const r=await waitOrAbort(()=>nativeFetch(path,options(init)),init?.signal);
-    if (!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r,init?.signal));
-    return nativeBodyJSON(r,init?.signal);
+    // Read-only history/registry GETs can stall after HTTP headers. Do not
+    // leave the chat in "waiting" forever or retry a possibly executed POST.
+    // One deadline spans both response headers and the complete JSON body.
+    if(init?.signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
+    const readAbort=new AbortController();
+    const onAbort=()=>readAbort.abort();
+    init?.signal?.addEventListener?.('abort',onAbort,{once:true});
+    let timer;
+    const timeout=new Promise((_,reject)=>{
+      timer=setTimeout(()=>{
+        readAbort.abort();
+        reject(Error('HOLD_NATIVE_READBACK_TIMEOUT'));
+      },15000);
+    });
+    try {
+      const operation=async()=>{
+        const r=await waitOrAbort(()=>nativeFetch(path,options({
+          ...init,method:'GET',signal:readAbort.signal
+        })),init?.signal);
+        if(!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r,init?.signal));
+        return nativeBodyJSON(r,init?.signal);
+      };
+      return await Promise.race([operation(),timeout]);
+    }finally{
+      clearTimeout(timer);
+      init?.signal?.removeEventListener?.('abort',onAbort);
+    }
   }
   async function createDialog(title,signal) {
     const r=await nativePost('/api/ui/memory/dialogs/create',{
