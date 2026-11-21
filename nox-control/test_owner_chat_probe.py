@@ -725,11 +725,24 @@ class ProbeTests(unittest.TestCase):
         with patch.object(probe, 'request', return_value=both):
             self.assertEqual(probe.model_slots_state(object()), {'count': 2, 'busy': 1})
         self.assertTrue(both.closed)
+        identified = SlotsResponse([{'id': 0, 'is_processing': False},
+                                    {'id': 1, 'processing': True}])
+        with patch.object(probe, 'request', return_value=identified):
+            self.assertEqual(probe.model_slots_state(object()), {'count': 2, 'busy': 1})
+        self.assertTrue(identified.closed)
         for invalid in ([], {}, [{'id': 1}], [{'is_processing': 0}],
                         [{'is_processing': 'false'}], [None],
                         [{'is_processing': False, 'processing': True}],
                         [{'is_processing': True, 'processing': False}],
-                        [{'is_processing': False, 'processing': 0}]):
+                        [{'is_processing': False, 'processing': 0}],
+                        [{'id': 0, 'is_processing': False},
+                         {'id': 0, 'is_processing': False}],
+                        [{'id': 0, 'is_processing': False},
+                         {'is_processing': False}],
+                        [{'id': True, 'is_processing': False}],
+                        [{'id': -1, 'is_processing': False}],
+                        [{'id': '0', 'is_processing': False}],
+                        [{'id': None, 'is_processing': False}]):
             with self.subTest(invalid=invalid), patch.object(
                     probe, 'request', return_value=SlotsResponse(invalid)):
                 with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_SLOTS_STATE_UNVERIFIED$'):
