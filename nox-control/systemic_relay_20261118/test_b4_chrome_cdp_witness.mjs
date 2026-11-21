@@ -822,3 +822,50 @@ test('largest nonempty SSE event gap witnesses true CDP stall separately from co
   assert.equal(reversed.turns[1].sse_text_event_cross_chunk_pairs,null);
   assert.doesNotMatch(JSON.stringify(stall),/secret|data:/);
 });
+
+test('SSE tail-to-stop and tail-to-DONE witness separates delayed terminal chunks and empty text',async()=>{
+  const delta=s=>'data: '+JSON.stringify({choices:[{delta:{content:s}}]})+'\n\n';
+  const finish='data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n';
+  const done='data: [DONE]\n\n';
+  const same=await run(false,[Buffer.from(delta('A')+finish+done)]);
+  assert.equal(same.ttft_sse_verified,true);
+  assert.equal(same.turns[1].sse_first_text_event_ms,10);
+  assert.equal(same.turns[1].sse_last_text_event_ms,10);
+  assert.equal(same.turns[1].sse_last_text_to_finish_stop_ms,0);
+  assert.equal(same.turns[1].sse_last_text_to_done_ms,0);
+  assert.equal(same.turns[1].sse_last_text_to_done_cross_chunk,false);
+  assert.equal(same.turns[1].sse_finish_stop_to_done_ms,0);
+  assert.equal(same.turns[1].sse_finish_stop_to_done_cross_chunk,false);
+
+  const delayed=await run(false,[Buffer.from(delta('A')),Buffer.from(finish),Buffer.from(done)],null,null,{
+    chunkTimestamps:[101.010,101.020,101.250],closeTimestamp:101.270
+  });
+  assert.equal(delayed.cdp_consistent,true);
+  assert.equal(delayed.ttft_sse_verified,true);
+  const tail=delayed.turns[1];
+  assert.equal(tail.sse_first_text_event_ms,10);
+  assert.equal(tail.sse_last_text_event_ms,10);
+  assert.equal(tail.sse_last_text_to_finish_stop_ms,10);
+  assert.equal(tail.sse_last_text_to_done_ms,240);
+  assert.equal(tail.sse_last_text_to_done_cross_chunk,true);
+  assert.equal(tail.sse_finish_stop_to_done_ms,230);
+  assert.equal(tail.sse_finish_stop_to_done_cross_chunk,true);
+  assert.equal(delayed.turns[0].sse_last_text_to_done_ms,0);
+
+  const noText=await run(false,[Buffer.from(finish+done)]);
+  assert.equal(noText.cdp_consistent,true);
+  assert.equal(noText.ttft_sse_verified,false,'no text event cannot prove TTFT');
+  for(const key of ['sse_first_text_event_ms','sse_last_text_event_ms',
+    'sse_last_text_to_finish_stop_ms','sse_last_text_to_done_ms',
+    'sse_last_text_to_done_cross_chunk','sse_finish_stop_to_done_ms',
+    'sse_finish_stop_to_done_cross_chunk'])assert.equal(noText.turns[1][key],null,key);
+
+  const badClock=await run(false,[Buffer.from(delta('A')),Buffer.from(finish),Buffer.from(done)],null,null,{
+    chunkTimestamps:[101.250,101.010,101.015],closeTimestamp:101.270
+  });
+  assert.equal(badClock.cdp_consistent,false);
+  assert.equal(badClock.ttft_sse_verified,false);
+  assert.equal(badClock.turns[1].sse_last_text_to_done_ms,null);
+  assert.equal(badClock.turns[1].sse_last_text_to_done_cross_chunk,null);
+  assert.doesNotMatch(JSON.stringify(delayed),/secret|data:/);
+});
