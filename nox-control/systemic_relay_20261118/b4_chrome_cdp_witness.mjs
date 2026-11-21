@@ -110,11 +110,20 @@ function eventData(record){
 // Invisible format/control/whitespace/isolated combining marks cannot
 // prove first-visible text. This proxy does not attest browser paint.
 const hasPrintableAnswerText=text=>/[\p{L}\p{N}\p{P}\p{S}]/u.test(text);
-export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,makeSession,onReady}={}){
+export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expectedChatOrigin,makeSession,onReady}={}){
   if(!/^ws:\/\/(localhost|127\.0\.0\.1):\d+\//.test(ws||''))throw Error('LOCAL_CDP_ONLY');
   if(!Number.isInteger(count)||count<1||count>6)throw Error('BAD_COUNT');
   if(!Number.isInteger(quiescenceMs)||quiescenceMs<50||quiescenceMs>1000)throw Error('BAD_QUIESCENCE');
   if(!Number.isInteger(timeoutMs)||timeoutMs<=quiescenceMs)throw Error('BAD_TIMEOUT');
+  // The CDP websocket is NOT the chat service origin. An explicit, separately
+  // established serving origin is mandatory; never infer one from a request.
+  let expectedOrigin;
+  try{
+    const origin=new URL(expectedChatOrigin);
+    if(!['http:','https:'].includes(origin.protocol)||origin.username||origin.password||
+       origin.pathname!=='/'||origin.search||origin.hash)throw Error('INVALID_ORIGIN');
+    expectedOrigin=origin.origin;
+  }catch{throw Error('BAD_CHAT_ORIGIN');}
   const c=await(makeSession?makeSession():new Cdp(ws).open()),active=new Map(),finished=[];
   let startedPostCount=0;
   let yes,no;const completion=new Promise((a,b)=>{yes=a;no=b;});
@@ -171,13 +180,26 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,makeS
   c.on((method,p)=>{
     if(method==='CDP_DISCONNECTED'){invalidate(Error('CDP_DISCONNECTED'));return;}
     if(method==='Network.requestWillBeSent'){
-      let path;try{path=new URL(p.request.url).pathname;}catch{return;}
-      if(p.request.method!=='POST'||!paths.has(path))return;
-      if(active.has(p.requestId)){invalidate(Error('DUPLICATE_CDP_ID'));return;}
+      // A redirected CDP request can reuse the original requestId, even
+      // when the redirect changes the HTTP method or URL.
+      if(active.has(p.requestId)){
+        invalidate(Error(p.redirectResponse||p.redirectHasExtraInfo!==undefined?
+          'CDP_CHAT_REDIRECT':'DUPLICATE_CDP_ID'));return;
+      }
+      let requestUrl;
+      try{requestUrl=new URL(p.request?.url);}catch{return;}
+      if(p.request?.method!=='POST'||!paths.has(requestUrl.pathname))return;
+      if(requestUrl.origin!==expectedOrigin){
+        invalidate(Error('CHAT_POST_ORIGIN_MISMATCH'));return;
+      }
+      // A redirect chain cannot attest which origin initiated inference.
+      if(p.redirectResponse||p.redirectHasExtraInfo!==undefined){
+        invalidate(Error('CDP_CHAT_REDIRECT'));return;
+      }
       // Bind each conversational turn at requestWillBeSent, not async body ACK.
       // An unexpected third POST invalidates the entire observed two-turn capture.
       if(startedPostCount>=count){invalidate(Error('EXTRA_CDP_POST'));return;}
-      const x={id:p.requestId,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
+      const x={id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
       active.set(p.requestId,x);
       const record=s=>{
         if(typeof s!=='string'){x.missing=true;return;}
@@ -204,6 +226,12 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,makeS
     }
     if(method==='Network.responseReceived'){
       x.status=p.response?.status;x.mime=p.response?.mimeType;
+      // CDP Response.url is required by the protocol; an absent/foreign/
+      // redirected destination cannot certify the original chat POST.
+      try{
+        if(typeof p.response?.url!=='string'||
+           new URL(p.response.url).href!==x.requestUrl)x.missing=true;
+      }catch{x.missing=true;}
       if(chronological(x,p.timestamp)){
         // responseReceived observes response metadata, not a payload byte.
         x.responseHeadersMs=millis(x,p.timestamp);x.responseHeadersAt=p.timestamp;
