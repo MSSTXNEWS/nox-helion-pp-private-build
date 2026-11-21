@@ -326,7 +326,7 @@ def main():
           const deltas=[];
           // Each byte gets its own stream chunk, placing every CR and LF in
           // different chunks, including the blank line closing the frame.
-          const frame='id: event-123\r\nevent: delta\r\ndata: SPLIT\r\n\r\n';
+          const frame='id: event-123\\r\\nevent: delta\\r\\ndata: SPLIT\\r\\n\\r\\n';
           const transport={...opts.transport,async post(){
             posts++;
             return {ok:true,body:new ReadableStream({start(c){
