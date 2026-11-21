@@ -2388,5 +2388,50 @@ class LegacyHeavyServiceReadbackFence(unittest.TestCase):
         self.assertEqual(calls, ["legacy-a"])
 
 
+
+class ExistingTrainerSupervisorStateEnumFence(unittest.TestCase):
+    def test_attached_trainer_readback_rejects_unknown_supervisor_states(self):
+        """Execute exact nested source read_state; no GPU, I/O or process mutation."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        fn = next(node for node in tree.body
+                  if isinstance(node, ast.FunctionDef)
+                  and node.name == "prove_existing_training")
+        scope = {
+            "STOPPED": ("STOPPED", "EXITED", "FATAL"),
+            "global_stop": lambda: False,
+            "time": types.SimpleNamespace(monotonic=lambda: 0.0,
+                                          sleep=lambda _seconds: None),
+            "prove_training": lambda _helper: {"native_identity": "verified"},
+        }
+        exec(compile(ast.fix_missing_locations(ast.Module(
+            body=[copy.deepcopy(fn)], type_ignores=[])), str(SOURCE), "exec"),
+             scope)
+        attached = scope["prove_existing_training"]
+        for malformed in (
+            None, [], "RUNNING", {}, {"state": None}, {"state": True},
+            {"state": 1}, {"state": []}, {"state": b"RUNNING"},
+            {"state": "BACKOFF"}, {"state": "STOPPING"},
+            {"state": "UNKNOWN"}, {"state": "RUNNING "},
+        ):
+            with self.subTest(snapshot=repr(malformed)):
+                helper = types.SimpleNamespace(service_state=lambda value=malformed: value)
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_EXISTING_TRAINER_STATUS_READBACK"):
+                    attached(helper)
+
+        for terminal in ("STOPPED", "EXITED", "FATAL"):
+            helper = types.SimpleNamespace(service_state=lambda s=terminal: {"state": s})
+            with self.assertRaisesRegex(
+                    RuntimeError, "HOLD_EXISTING_TRAINER_NOT_RUNNING"):
+                attached(helper)
+
+        helper = types.SimpleNamespace(service_state=lambda: {"state": "RUNNING"})
+        self.assertEqual(attached(helper), {"native_identity": "verified"})
+        observations = iter(("STARTING", "RUNNING"))
+        helper = types.SimpleNamespace(
+            service_state=lambda: {"state": next(observations)})
+        self.assertEqual(attached(helper), {"native_identity": "verified"})
+
+
 if __name__ == "__main__":
     unittest.main()

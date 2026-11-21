@@ -765,7 +765,8 @@ def prove_existing_training(helper):
     def read_state():
         # Malformed Supervisor status is never evidence of an active trainer.
         status = helper.service_state()
-        if type(status) is not dict or type(status.get('state')) is not str:
+        if (type(status) is not dict or type(status.get('state')) is not str
+                or status['state'] not in STOPPED + ('RUNNING', 'STARTING')):
             raise RuntimeError('HOLD_EXISTING_TRAINER_STATUS_READBACK')
         return status['state']
 
