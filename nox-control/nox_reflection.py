@@ -311,13 +311,37 @@ def append_receipt(path: str | os.PathLike[str], receipt: dict[str, Any]) -> Non
 
 
 def _load_input(path: str) -> Any:
-    file = Path(path)
-    if file.is_symlink() or not file.is_file() or file.stat().st_size > MAX_INPUT_BYTES:
-        raise ReflectionError("input must be a regular, non-symlink file no larger than 64 KiB")
-    data = file.read_bytes()
-    if len(data) > MAX_INPUT_BYTES:
-        raise ReflectionError("input must be a regular, non-symlink file no larger than 64 KiB")
-    return json.loads(data.decode("utf-8"))
+    """Read one bounded regular-file snapshot from a single NOFOLLOW descriptor.
+
+    A pathname may be swapped between an is_file/is_symlink preflight and
+    read_bytes(). Descriptor-first checks prevent a raced symlink/FIFO/device
+    from replacing the approved input, and bound growth after fstat().
+    """
+    if not hasattr(os, "O_NOFOLLOW"):
+        raise ReflectionError("safe non-symlink input opening is unavailable")
+    flags = os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW
+    try:
+        fd = os.open(path, flags)
+    except OSError as exc:
+        raise ReflectionError("input must be an accessible non-symlink file") from exc
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_INPUT_BYTES:
+            raise ReflectionError("input must be a regular file no larger than 64 KiB")
+        data = bytearray()
+        while len(data) <= MAX_INPUT_BYTES:
+            part = os.read(fd, min(8192, MAX_INPUT_BYTES + 1 - len(data)))
+            if not part:
+                break
+            data.extend(part)
+        if len(data) > MAX_INPUT_BYTES:
+            raise ReflectionError("input grew beyond the 64 KiB limit")
+    finally:
+        os.close(fd)
+    try:
+        return json.loads(data.decode("utf-8"))
+    except UnicodeDecodeError as exc:
+        raise ReflectionError("input must be UTF-8 JSON") from exc
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -1,0 +1,26 @@
+name: NOX A6 4B04 reflection input guard
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/nox_reflection.py'
+      - 'nox-control/test_nox_reflection_io.py'
+      - '.github/workflows/nox-a6-4b04-reflection-source.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reflection-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: One focused input admission regression
+        env:
+          PYTHONPATH: nox-control
+        run: python -m unittest -v test_nox_reflection_io
