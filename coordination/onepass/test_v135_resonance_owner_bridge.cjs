@@ -1424,8 +1424,10 @@ test('6A05 owner-native structured HOLD remains visible instead of object Object
 
 test('6A05 native NDJSON structured HOLD stays exact for JSON and SSE without S03 success',async()=>{
   const cases=[
-    [{code:'HOLD_OWNER_LEASE_BUSY'},'HOLD_NATIVE_HOLD_OWNER_LEASE_BUSY'],
-    ['HOLD_RESOURCE_FLOOR','HOLD_NATIVE_HOLD_RESOURCE_FLOOR'],
+    [{code:'HOLD_OWNER_LEASE_BUSY'},'HOLD_OWNER_LEASE_BUSY'],
+    ['HOLD_RESOURCE_FLOOR','HOLD_RESOURCE_FLOOR'],
+    ['UNAVAILABLE','HOLD_NATIVE_UNAVAILABLE'],
+    ['HOLD_PRIVATE\nSECRET','HOLD_NATIVE_ERROR'],
     [{message:'internal debug data'},'HOLD_NATIVE_ERROR'],
     [{code:'\uD800'},'HOLD_NATIVE_FRAME_UNICODE']
   ];
