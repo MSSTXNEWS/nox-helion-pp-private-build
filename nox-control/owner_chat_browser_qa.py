@@ -1689,6 +1689,13 @@ async def browser_run(report, directory, available):
                             report['critical_requestfailed_count'],
                             blocked['non_qa_generation']+blocked['alternate_native_chat_route'])):
                     raise RuntimeError('HOLD_MULTITURN_RELOAD_RUNTIME_OR_POST')
+                # The history and signed-session GETs can finish after the UI
+                # switches dialogs. Re-pin the rendered owner dialog LAST,
+                # after slow readbacks; no model POST or synthetic click here.
+                if (urllib.parse.urlsplit(page.url).path!=PAGE
+                        or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_POSTHISTORY_ACTIVE_DIALOG_CHANGED')
+                report['multiturn_reload_posthistory_active_dialog_verified']=True
                 report['multiturn_reload_same_dialog_history_verified']=True
                 report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:
