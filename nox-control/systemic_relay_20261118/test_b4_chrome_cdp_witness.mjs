@@ -36,13 +36,17 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       return normalSend(cmd,p);
     };
   }
-  return capture({ws:'ws://127.0.0.1:9333/fake',makeSession:async()=>c,timeoutMs:2000,quiescenceMs:options.quiescenceMs??80,onReady:async()=>{
+  return capture({ws:'ws://127.0.0.1:9333/fake',expectedChatOrigin:options.expectedChatOrigin??'http://localhost',makeSession:async()=>c,timeoutMs:2000,quiescenceMs:options.quiescenceMs??80,onReady:async()=>{
   setTimeout(async()=>{for(let i=0;i<2;i++){
     const requestId=String(i+1),o=i===1?options:{},timestamp=Object.hasOwn(o,'requestTimestamp')?o.requestTimestamp:100+i;
     const chunks=i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):[Buffer.from(body)];
     const captured=Buffer.concat(chunks);
     c.bodies.set(requestId,i===1&&responseBodyForSecondTurn!==null?Buffer.from(responseBodyForSecondTurn):captured);
-    c.emit('Network.requestWillBeSent',{requestId,timestamp,request:{method:'POST',url:'http://localhost/api/nox/chat',
+    const requestUrl=i===1&&o.requestUrl?o.requestUrl:'http://localhost/api/nox/chat';
+    c.emit('Network.requestWillBeSent',{requestId,timestamp,
+      ...(i===1&&o.redirectResponse?{redirectResponse:{status:302,url:'http://foreign.invalid/old'}}:{}),
+      ...(i===1&&Object.hasOwn(o,'redirectHasExtraInfo')?{redirectHasExtraInfo:o.redirectHasExtraInfo}:{}),
+      request:{method:'POST',url:requestUrl,
       ...(i===1&&o.postDataMode?{}:{postData:i===1&&Object.hasOwn(o,'postDataText')?o.postDataText:'{"secret":"'+i+'"}'})}});
     if(i===1&&options.injectExtraPost)c.emit('Network.requestWillBeSent',{
       requestId:'unexpected-third',timestamp:101.001,request:{method:'POST',
@@ -52,7 +56,7 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       url:'http://localhost/api/nox/chat',postData:'{"duplicate":true}'}});
     const emitExtra=()=>c.emit('Network.responseReceivedExtraInfo',{requestId,statusCode:o.extraStatus??200,headers:o.extraHeaders??{}});
     if(o.extraBefore)emitExtra();
-    const response={status:200,mimeType:'text/event-stream',headers:i===1&&encoding?{'Content-Encoding':encoding}:{}};
+    const response={status:200,mimeType:'text/event-stream',url:i===1&&o.responseUrl?o.responseUrl:requestUrl,headers:i===1&&encoding?{'Content-Encoding':encoding}:{}};
     for(const key of ['fromDiskCache','fromServiceWorker','fromPrefetchCache','fromEarlyHints','cacheStorageCacheName','serviceWorkerResponseSource','serviceWorkerRouterInfo']){
       if(o[key]!==undefined)response[key]=o[key];
     }
@@ -530,4 +534,20 @@ test('post-body quiescence rejects third POST or CDP disconnect while preserving
   await assert.rejects(run(false,null,null,null,{
     quiescenceMs:85,postAckEvent:c=>c.emit('CDP_DISCONNECTED',{})
   }),/CDP_DISCONNECTED/);
+});
+
+
+test('CDP binds chat POSTs to expected serving origin and fails closed on redirects',async()=>{
+  const clean=await run();
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  for(const wrongOrigin of ['http://foreign.invalid/api/nox/chat','https://localhost/api/nox/chat']){
+    await assert.rejects(run(false,null,null,null,{requestUrl:wrongOrigin}),/CHAT_POST_ORIGIN_MISMATCH/);
+  }
+  await assert.rejects(run(false,null,null,null,{redirectResponse:true}),/CDP_CHAT_REDIRECT/);
+  await assert.rejects(run(false,null,null,null,{redirectHasExtraInfo:false}),/CDP_CHAT_REDIRECT/);
+  const responseMismatch=await run(false,null,null,null,{responseUrl:'http://foreign.invalid/api/nox/chat'});
+  assert.equal(responseMismatch.cdp_consistent,false);
+  assert.equal(responseMismatch.ttft_sse_verified,false);
+  const wrongExpectation=await assert.rejects(run(false,null,null,null,{expectedChatOrigin:'https://localhost'}),/CHAT_POST_ORIGIN_MISMATCH/);
 });
