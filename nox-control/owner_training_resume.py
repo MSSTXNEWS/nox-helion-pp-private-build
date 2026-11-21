@@ -864,6 +864,12 @@ def resource_admission(helper):
     except (OSError, ValueError) as exc:
         raise RuntimeError('HOLD_CGROUP_MEMORY_LIMIT') from exc
     budget = helper.resource_budget(memory_limit, memory_current, quota_cpus, affinity_cpus)
+    # The helper is a separate native component, not an authority to bypass
+    # the pinned resource gate. NaN, bool and missing/malformed values must
+    # never compare as sufficient RAM (NaN < configured_limit is False).
+    if (type(budget) is not dict or type(budget.get('train_cpu_gib')) is not int
+            or not 0 <= budget['train_cpu_gib'] <= memory_limit // (1024 ** 3)):
+        raise RuntimeError('HOLD_RESOURCE_BUDGET_READBACK')
     # A regular-file, pathname-bound, bounded read is required here.
     # A symlink may be switched before the wrapper sources the env cap;
     # a FIFO can otherwise block this admission check indefinitely.
