@@ -12,18 +12,18 @@ REMOTE = (
     "for s in /root/nox/STOP /root/nox/STOP.flag /root/nox/state/STOP /root/nox/state/STOP.flag; "
     "do if test -e \"$s\"; then printf 'STOP present\n'; fi; done; "
     "printf '== train\n'; "
-    "supervisorctl status nox-train-qwen9b-t131u nox-train-keeper | awk '{print $1, $2}'; "
+    "train=$(supervisorctl status nox-train-qwen9b-t131u nox-train-keeper 2>/dev/null) || exit 41; printf '%s\n' \"$train\" | awk '{print $1, $2}'; "
     "printf '== gpu\n'; "
     "nvidia-smi --query-gpu=index,utilization.gpu,memory.used --format=csv,noheader; "
     "printf '== disk\n'; "
-    "df -h / | awk 'NR == 2 {print $4, $5}'; "
+    "disk=$(df -h / 2>/dev/null) || exit 43; printf '%s\n' \"$disk\" | awk 'NR == 2 {print $4, $5}'; "
     "printf '== tasks\n'; "
     "python3 -c 'import json,collections; "
     "s=json.load(open(\"/root/nox/state/dispatcher/state.json\"))[\"tasks\"]; "
     "c=collections.Counter(t.get(\"status\") for t in s.values()); "
     "print(\" \".join(\"%s:%d\" % (k,c[k]) for k in (\"pending\",\"ready\",\"running\",\"done\",\"failed\",\"hold\")))'; "
     "printf '== svc\n'; "
-    "supervisorctl status | awk '$2 != \"RUNNING\" {print $1, $2}' | head -12"
+    "services=$(supervisorctl status 2>/dev/null) || exit 44; printf '%s\n' \"$services\" | awk '$2 != \"RUNNING\" {print $1, $2}' | head -12"
 )
 
 def api(method, path, body=None):
