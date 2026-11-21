@@ -825,6 +825,39 @@ async function check(chunks, status=200) {
         writer, readback = s03_proof(malformed)
         self.assertFalse(canonical_s03_proof_valid(writer, readback, DIALOG, malformed))
 
+    def test_browser_history_session_annotations_cannot_cross_ru_es_turns(self):
+        # The first read occurs BEFORE authorizing the Spanish POST; its two
+        # rows must not silently mix sessions. The four-row browser witness
+        # must enforce the same rule independently from canonical S03.
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        complete = rows(es)
+        for label, original in (("pre_second_post", complete[:2]),
+                                ("post_second_history", complete)):
+            with self.subTest(phase=label):
+                def valid(candidate):
+                    if label == "pre_second_post":
+                        return firstturn_history_valid(
+                            {"dialog_id": DIALOG, "messages": candidate},
+                            RU, FIRST, DIALOG)
+                    return multiturn_history_valid(
+                        candidate, RU, FIRST, es, LAST, DIALOG)
+
+                self.assertTrue(valid(original))  # legacy unannotated rows
+                bound = [dict(row, session_id="owner-session-A")
+                         for row in original]
+                self.assertTrue(valid(bound))
+                for index in range(len(bound)):
+                    for foreign in ("owner-session-B", None, "", " ", 42,
+                                    True, "owner-session-A "):
+                        with self.subTest(phase=label, row=index,
+                                          value=repr(foreign)):
+                            mixed = [dict(row) for row in bound]
+                            mixed[index]["session_id"] = foreign
+                            self.assertFalse(valid(mixed))
+                    partial = [dict(row) for row in bound]
+                    del partial[index]["session_id"]
+                    self.assertFalse(valid(partial))
+
     def test_four_turn_scope_rejects_cross_dialog_metadata_without_breaking_legacy_rows(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         transcript = rows(es)
