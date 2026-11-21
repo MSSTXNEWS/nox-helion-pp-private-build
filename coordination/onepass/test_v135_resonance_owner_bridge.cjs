@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,deadlineTimer){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -61,6 +61,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
   const context={window,location,URL,Request,Response,ReadableStream,
     TextDecoder,TextEncoder,AbortController,performance,console,
+    setTimeout:deadlineTimer||setTimeout,clearTimeout,
     ...(typeof raf==='function'?{requestAnimationFrame:raf}:raf)};
   if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
   vm.runInNewContext(JS,context,{filename:file});
@@ -1546,4 +1547,19 @@ test('1A02 malformed client request ID holds before any native side effect',asyn
     assert.equal((await response.json()).error,'HOLD_INVALID_CLIENT_REQUEST_ID');
     assert.deepEqual(native,[]);
   }
+});
+
+test('1A01 read-only S03 GET body deadline returns HOLD without duplicate model POST',async()=>{
+  // Shorten only the 15s browser deadline; keep the real native model fixture.
+  const clock=(fn,ms)=>setTimeout(fn,ms===15000?12:ms);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,undefined,'verified-exchange-01',[],true,false,prompt,clock);
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'1a01-readback-deadline'})});
+  const seen=await Promise.race([events(response),
+    new Promise((_,reject)=>setTimeout(()=>reject(Error('STALLED_READBACK_DEADLINE')),700))]);
+  assert(seen.some(e=>e.type==='error'&&e.error==='HOLD_NATIVE_READBACK_TIMEOUT'));
+  assert.equal(seen.some(e=>e.type==='done'),false);
+  assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
+  assert.equal(f.calls.filter(c=>c.path.startsWith('/api/ui/memory/dialogs/history')).length,1);
 });
