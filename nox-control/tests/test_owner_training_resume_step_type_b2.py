@@ -2146,5 +2146,48 @@ class FinalChatHealthReceiptFence(unittest.TestCase):
         self.assertNotIn("chat_health_regression", scope["result"])
 
 
+
+class ContinuationSupervisorReadbackFence(unittest.TestCase):
+    def test_four_continuation_observations_fail_closed_on_malformed_supervisor(self):
+        # Execute the reviewed guard AST; no native process, GPU or service.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        guard = next(node for node in tree.body
+                     if isinstance(node, ast.FunctionDef)
+                     and node.name == "read_training_status")
+        scope = {"STOPPED": ("STOPPED", "EXITED", "FATAL")}
+        exec(compile(ast.Module(body=[guard], type_ignores=[]),
+                     str(SOURCE), "exec"), scope)
+        read = scope["read_training_status"]
+        for malformed in (
+            None, [], "RUNNING", {}, {"state": None},
+            {"state": True}, {"state": 1}, {"state": b"RUNNING"},
+            {"state": "BACKOFF"}, {"state": "STOPPING"},
+            {"state": "UNKNOWN"}, {"state": ["RUNNING"]},
+        ):
+            with self.subTest(status=repr(malformed)):
+                helper = types.SimpleNamespace(service_state=lambda: malformed)
+                with self.assertRaisesRegex(RuntimeError, "HOLD_TRAINER_STATUS_READBACK"):
+                    read(helper)
+        for state in ("RUNNING", "STARTING", "STOPPED", "EXITED", "FATAL"):
+            snapshot = {"state": state}
+            helper = types.SimpleNamespace(service_state=lambda: snapshot)
+            self.assertIs(read(helper), snapshot)
+
+        main = next(node for node in tree.body
+                    if isinstance(node, ast.FunctionDef) and node.name == "main")
+        guarded = [node for node in ast.walk(main)
+                   if isinstance(node, ast.Call)
+                   and isinstance(node.func, ast.Name)
+                   and node.func.id == "read_training_status"]
+        self.assertEqual(len(guarded), 4)
+        raw_indexing = [node for node in ast.walk(main)
+                        if isinstance(node, ast.Subscript)
+                        and isinstance(node.value, ast.Call)
+                        and isinstance(node.value.func, ast.Attribute)
+                        and node.value.func.attr == "service_state"
+                        and not node.value.args]
+        self.assertEqual(raw_indexing, [])
+
+
 if __name__ == "__main__":
     unittest.main()
