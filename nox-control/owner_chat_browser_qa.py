@@ -1002,16 +1002,16 @@ RENDERED_FOURROW_JS = r"""expected => {
     // Computed transparent glyph color or WebKit text-fill can make a
     // nonempty text node invisible even while innerText still matches.
     const invisibleColor=value=>{
-      const v=String(value||'').replace(/\\s+/g,'').toLowerCase();
-      return v==='transparent'||/^rgba\\([^)]*,0(?:\\.0+)?\\)$/.test(v)||
-        /^rgb\\([^)]*\\/0(?:\\.0+)?\\)$/.test(v);
+      const v=String(value||'').replace(/\s+/g,'').toLowerCase();
+      return v==='transparent'||/^rgba\([^)]*,0(?:\.0+)?\)$/.test(v)||
+        /^rgb\([^)]*\/0(?:\.0+)?\)$/.test(v);
     };
     const elements=[node,...node.querySelectorAll('*')];
     for(const el of elements){
       const style=getComputedStyle(el);
       if(style.textTransform!=='none'||!paintSafe(style))return false;
       const ownsText=[...el.childNodes].some(child=>
-        child.nodeType===3&&/\\S/.test(child.nodeValue||''));
+        child.nodeType===3&&/\S/.test(child.nodeValue||''));
       if(ownsText&&(invisibleColor(style.color)||
          invisibleColor(style.webkitTextFillColor)))return false;
       for(const pseudo of ['::before','::after']){
