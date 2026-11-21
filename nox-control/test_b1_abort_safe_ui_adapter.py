@@ -520,6 +520,40 @@ def main():
           return before===0&&late===0&&retry===true&&next===true&&
             calls===3&&nodes.length===1&&nodes[0].textContent==='SAFENEXT';
         }"""))
+        check("fresh STOP promptly releases a waiting duplicate SSE event ID",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'sse-replay-fresh-stop'};
+          const old=new AbortController(),fresh=new AbortController();
+          let entered=0,release;
+          const gate=new Promise(r=>release=r);
+          const firstUi=NOXB1AbortSafeUI.createUiAdapter({
+            container:chat,deltaPrecommitTimeoutMs:2000,
+            beforeCommit:async kind=>{
+              if(kind==='delta'){entered++;await gate;}
+            }
+          });
+          const reconnected=NOXB1AbortSafeUI.createUiAdapter({container:chat});
+          const first=firstUi.onDelta(s,'ONE',old.signal,'event-fast-stop-1');
+          for(let i=0;i<30&&!entered;i++) await Promise.resolve();
+          if(entered!==1){release();return false;}
+          const waiting=reconnected.onDelta(s,'ONE',fresh.signal,'event-fast-stop-1');
+          fresh.abort();
+          const stopped=await Promise.race([
+            waiting,new Promise(r=>setTimeout(()=>r('HUNG'),250))
+          ]);
+          const before=Array.from(chat.children).filter(
+            el=>el.dataset.noxB1Exchange===s.exchange_id).length;
+          old.abort();
+          const oldResult=await first;
+          release();
+          const reconnectResult=await reconnected.onDelta(
+            s,'ONE',new AbortController().signal,'event-fast-stop-1');
+          const nodes=Array.from(chat.children).filter(
+            el=>el.dataset.noxB1Exchange===s.exchange_id);
+          return stopped===false&&oldResult===false&&before===0&&
+            reconnectResult===true&&nodes.length===1&&
+            nodes[0].textContent==='ONE';
+        }"""))
         browser.close()
     print(f"B1 source-only real Chromium: {len(checks)}/{len(checks)} PASS")
     for name, _ in checks:
