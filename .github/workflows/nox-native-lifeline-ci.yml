@@ -11,9 +11,14 @@ on:
       - 'nox-control/owner_native_lifeline.py'
       - 'nox-control/test_owner_native_lifeline.py'
       - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_chat_s03_source_attest.py'
+      - 'nox-control/test_owner_chat_s03_source_attest.py'
+      - 'nox-control/test_owner_native_operator_source_attest.py'
+      - 'nox-control/test_owner_native_operator_output_transfer.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
       - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_inspect_locks.py'
       - 'nox-control/test_owner_native_inspect_safety.py'
       - 'nox-control/test_owner_native_inspect_inventory.py'
       - 'nox-control/test_owner_native_inspect_receipt_privacy.py'
@@ -33,9 +38,14 @@ on:
       - 'nox-control/owner_native_lifeline.py'
       - 'nox-control/test_owner_native_lifeline.py'
       - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_chat_s03_source_attest.py'
+      - 'nox-control/test_owner_chat_s03_source_attest.py'
+      - 'nox-control/test_owner_native_operator_source_attest.py'
+      - 'nox-control/test_owner_native_operator_output_transfer.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
       - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_inspect_locks.py'
       - 'nox-control/test_owner_native_inspect_safety.py'
       - 'nox-control/test_owner_native_inspect_inventory.py'
       - 'nox-control/test_owner_native_inspect_receipt_privacy.py'
@@ -56,7 +66,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Source syntax
-        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py nox-control/nox_agent.py nox-control/test_nox_agent_status.py nox-control/nox_neuro_evolution_ingress.py nox-control/test_nox_neuro_evolution_ingress.py nox-control/owner_native_lifeline.py nox-control/test_owner_native_lifeline.py nox-control/owner_native_operator.py nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py
+        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py nox-control/nox_agent.py nox-control/test_nox_agent_status.py nox-control/nox_neuro_evolution_ingress.py nox-control/test_nox_neuro_evolution_ingress.py nox-control/owner_native_lifeline.py nox-control/test_owner_native_lifeline.py nox-control/owner_native_operator.py nox-control/test_owner_native_operator_output_transfer.py nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py
       - name: Independent lifeline unit and failure tests
         run: python3 -m unittest discover -s nox-control -p 'test_nox_native_lifeline.py' -v
       - name: Native NOX status truthfulness tests
@@ -71,7 +81,8 @@ jobs:
           python3 -m unittest discover -s nox-control -p 'test_owner_native_audit_mount_inventory.py' -v
       - name: Owner OneHost STOP lease and 8081 listener identity read-only gates
         run: |
-          python3 -m py_compile nox-control/owner_native_inspect.py nox-control/test_owner_native_inspect_safety.py
+          python3 -m py_compile nox-control/owner_native_inspect.py nox-control/owner_native_operator.py nox-control/test_owner_native_inspect_locks.py nox-control/test_owner_native_inspect_safety.py
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_locks.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_safety.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_inventory.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_receipt_privacy.py' -v
@@ -81,3 +92,9 @@ jobs:
         run: |
           python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_compat_privacy.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_maya_read_bounds.py' -v
+      - name: Owner native audit output transfer completeness and SHA gates
+        run: python3 -m unittest discover -s nox-control -p 'test_owner_native_operator_output_transfer.py' -v
+      - name: Fixed chat and S03 source attestation privacy tests
+        run: |
+          python3 -m py_compile nox-control/owner_native_operator.py nox-control/test_owner_native_operator_source_attest.py nox-control/owner_chat_s03_source_attest.py nox-control/test_owner_chat_s03_source_attest.py
+          python3 -m unittest discover -s nox-control -p 'test_owner_chat_s03_source_attest.py' -v

@@ -1,0 +1,117 @@
+{
+  "schema": "NOX_SOURCE_POST_MERGE_ACCEPTANCE_RECEIPT_V1",
+  "recorded_at_utc": "2026-11-19T11:59:48Z",
+  "append_only": true,
+  "purpose": "Record the independent PASS and merge outcome for I-49 so the pre-merge PENDING_PR_MERGE snapshot has a verifiable post-merge status. This receipt does not edit the 295-task registry, task registries, work receipts, or prior evidence.",
+  "task": {
+    "task_id": "I-49",
+    "title": "Сравнить тензоры двух checkpoints на CPU",
+    "required_evidence": "source",
+    "criterion": "Проверить разрешённые параметры выборочно, без загрузки полной модели",
+    "spec_sha256": "c126701e3699969ab557e9fb99f4c2085a0d678f06e11895835d89241f194e1f",
+    "work_ideas_path": "nox-control/four_queue_20261118/work_ideas.json",
+    "work_ideas_git_blob_sha": "6f84f315d9792cb43f08b72b062dc2f71ce1d4a6",
+    "all295_path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+    "all295_git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+    "work_receipts_path": "nox-control/four_queue_20261118/work_receipts.json",
+    "work_receipts_git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338"
+  },
+  "merge_binding": {
+    "pull_request_number": 486,
+    "pull_request_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/486",
+    "state": "MERGED",
+    "merged_at_utc": "2026-11-19T11:49:12Z",
+    "merged_head_sha": "a5a999e2705a242d266030ac0b09c29bb215e805",
+    "merge_commit_sha": "4193544b6b7fe4db82d64ef18fc33cc3bc5649ce",
+    "base_branch": "repair/nox-native-reflex-autorefill-20261119"
+  },
+  "independent_review": {
+    "result": "PASS",
+    "reviewed_head_sha": "a5a999e2705a242d266030ac0b09c29bb215e805",
+    "reviewer": "/root/acceptance_review",
+    "review_source": "Independent exact-head review result communicated to the task owner; no GitHub review submission was attached.",
+    "review_timestamp_utc": null,
+    "reviewed_scope": "Corrected-source rerun, frozen I-49 source criterion, current instruction binding, exact pair and 500-name fingerprints, source commit/blob/SHA, data minimization, historical-run caveat, and frozen-ledger boundaries."
+  },
+  "merged_premerge_acceptance_sidecar": {
+    "path": "nox-control/complete_executor_20261118/evidence/addenda/source_acceptance_addendum_20261119_i49_corrected.json",
+    "git_blob_sha": "564fa0dd1e578e46338a0c1476f09ec63150627d",
+    "recorded_premerge_effective_state": "PENDING_PR_MERGE",
+    "target_assessment_after_merge": "ACCEPTED_SOURCE_CRITERION",
+    "recorded_premerge_review_status": "PENDING_REVIEW_OF_CORRECTED_SOURCE_RUN",
+    "note": "This immutable pre-merge sidecar is preserved as recorded. This receipt supplies the post-merge binding to the exact independent PASS and merge commit."
+  },
+  "evidence": {
+    "corrected_comparison": {
+      "path": "nox-control/i49_checkpoint_compare_20261119/evidence/all500_tensor_delta_corrected_source_20261119.json",
+      "git_blob_sha": "4b136169a2a8fc76b64cc2001ff66ced393d18c4",
+      "content_sha256": "cde4705f5803e3a23292bd2a1026ac8bbcce08fe3758e9e62d170c203403f8b4",
+      "comparator": {
+        "repository": "s-grouptwet/nox-helion-pp-private-build",
+        "path": "handoff/20261117/nox-v15-kit/execution/role4/tensor_delta.py",
+        "revision": "e10c80f64e3fd88298be2776c58d03939e6e71f6",
+        "source_sha256": "f71ed5466efed6fe70a19c222df9dc7c97a1a44e5bee82b4747d099c7f65abf0",
+        "git_blob_sha": "93a5963b0951a38c00438ced561b1077fd8bf7ca",
+        "local_executable_sha256": "f71ed5466efed6fe70a19c222df9dc7c97a1a44e5bee82b4747d099c7f65abf0"
+      },
+      "pair": {
+        "pair_sha256": "1df59f1bd9fc4712b8ba01c429af5aa19895ea9ed907d1f807b99b9195a87bd1",
+        "before": {
+          "drive_folder_id": "1PNX-lRLaKVTRPakDOOqctF_rUoPvOu59",
+          "assembled_bytes": 306787336,
+          "assembled_sha256": "924d05894749d2107629549d9d95ca4e5538d33c2eac351d0c0c26919ccbb7a2"
+        },
+        "after": {
+          "drive_folder_id": "1CG_ALzrWsZLyrtuGxvNp4ajyZGfgh6nH",
+          "assembled_bytes": 306787336,
+          "assembled_sha256": "8c32c5979470018bd260421b7ace2ef681e3c7f0e3dc978b6fecfdd98c25bcd1"
+        }
+      },
+      "tensor_name_set": {
+        "count": 500,
+        "sorted_names_sha256": "d0baf44eff8da1fd86afaf812900b0f7ee273d7286a20f49de0237f4689ac7da"
+      },
+      "result": {
+        "compared_tensors": 500,
+        "changed_payload_hashes": 500,
+        "unchanged_payload_hashes": 0,
+        "comparison_issues": 0,
+        "payload_bytes_hashed_per_adapter": 306708480
+      },
+      "training_started": false,
+      "full_base_model_loaded": false,
+      "drive_written": false,
+      "server_written": false
+    },
+    "prior_run": {
+      "commit": "d56f5acae91aa01d2ba65d4bceb7b1715c253dba",
+      "recorded_comparator_sha256": "a1917cfda4fd012b92332a8b3513fb1ad3e4694050f254d38b3a88f803cfb867",
+      "status": "HISTORICAL_UNVERIFIED_FOR_PINNED_SOURCE",
+      "used_for_current_acceptance": false,
+      "note": "Preserved unchanged; matching results do not retroactively prove execution of the exact pinned source bytes."
+    }
+  },
+  "assessment": {
+    "status": "ACCEPTED_SOURCE_CRITERION",
+    "accepted_scope": "Only the frozen I-49 source criterion: bounded CPU payload-byte hash comparison for the currently authorized exact checkpoint pair and exact 500-name set without loading the full base model.",
+    "acceptance_claim_for_immutable_295_snapshot": false,
+    "does_not_assert": [
+      "Elementwise numeric delta magnitudes",
+      "Optimizer step",
+      "Training run or training readiness",
+      "Causal training provenance",
+      "Model quality or benchmark improvement",
+      "Native acceptance"
+    ]
+  },
+  "mutation_boundary": {
+    "append_only_receipt": true,
+    "all295_changed": false,
+    "work_ideas_changed": false,
+    "work_receipts_changed": false,
+    "prior_addenda_changed": false,
+    "prior_comparison_artifacts_changed": false,
+    "drive_changed": false,
+    "server_changed": false
+  }
+}

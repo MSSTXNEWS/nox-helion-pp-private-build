@@ -1,0 +1,214 @@
+{
+  "schema": "NOX_NATIVE_EVIDENCE_ADDENDUM_V1",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "Append a sanitized, point-in-time process-census result for the frozen 6V14-02 title criterion. Preserve the workflow's stricter composite HOLD and separately record namespace/executable, Supervisor, and GPU-join limitations.",
+  "scope": {
+    "task_ids": [
+      "6V14-02"
+    ],
+    "task_criterion": {
+      "task_spec_sha256": "00b403c24775060bb39c6d81f177c6c73073f1168538ca35a94a0213858f3d73",
+      "task_registry": {
+        "path": "nox-control/four_queue_20261118/work_tasks.json",
+        "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "task_title": "Проверить реальный набор фоновых процессов.",
+        "required_evidence": "native"
+      }
+    },
+    "frozen_ledgers": {
+      "all295_manifest": {
+        "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+        "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+        "task_record_key": "6V14-02",
+        "spec_sha256": "00b403c24775060bb39c6d81f177c6c73073f1168538ca35a94a0213858f3d73",
+        "original_acceptance_added": false
+      },
+      "work_receipts": {
+        "path": "nox-control/four_queue_20261118/work_receipts.json",
+        "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+        "receipt_key": "6V14-02",
+        "historical_receipt_preserved": true
+      },
+      "mutation_boundary": "This addendum is additive only. It does not update work_tasks.json, all295_execution_disposition.json, or work_receipts.json; the frozen all295 acceptance count is unchanged."
+    }
+  },
+  "audit_binding": {
+    "request": {
+      "github_issue_comment_id": 7012555110,
+      "request_kind": "owner-authenticated explicit read-only audit",
+      "command": "/nox-maintain 60509551 b1e33d60983885a7ebd1979bda4ec640b7ca7047 audit",
+      "owner_authorization_id": 7012555110
+    },
+    "workflow": {
+      "run_id": 44547824185,
+      "run_attempt": 1,
+      "job_id": 135643082464,
+      "job_name": "owner-inspect",
+      "workflow_name": "NOX owner maintenance - explicit command only",
+      "workflow_file_path": ".github/workflows/nox-owner-native-inspect.yml",
+      "workflow_file_blob_sha": "6eb00db24604395591e0aa59808271dc5b7fbbd6",
+      "run_head_sha": "9b52736047f46bc1873f1b3f9dbf3822d9e0753b",
+      "job_conclusion": "failure",
+      "job_started_at_utc": "2026-11-19T14:48:56Z",
+      "job_completed_at_utc": "2026-11-19T14:49:42Z"
+    },
+    "pinned_audit_source": {
+      "audit_pin_commit_sha": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",
+      "owner_guard_blob_sha": "ac49388329343289de3ebedafa77563ce237124a",
+      "operator_source_blob_sha": "32459885f2f6de545fcd53c3242aaaff242702f3",
+      "audit_source_blob_sha": "e5c439c6733fcb276bec58dbf8af5193694645ac"
+    },
+    "host": {
+      "instance_id": 60509551,
+      "host_pin_verified": true
+    },
+    "remote_execution": {
+      "audit_workers_complete": true,
+      "remote_exit_code": 0,
+      "workflow_result": "HOLD_AUDIT_CENSUS_INCOMPLETE",
+      "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED"
+    },
+    "transfer_bundle": {
+      "chunk_count": 3,
+      "byte_count": 32932,
+      "sha256": "d8708f7f3919446ec64a5b453bb609ebae444c501b50672cf6151eb736d61c98",
+      "request_and_source_binding_verified": true,
+      "reassembly_verified": true,
+      "raw_process_names_pids_and_command_lines_included": false
+    }
+  },
+  "process_census": {
+    "scope": "ALL_NUMERIC_PROC_PIDS_MINIMAL_IDENTITY",
+    "observed_row_count": 61,
+    "unique_pid_row_count": 61,
+    "duplicate_pid_row_count": 0,
+    "numeric_pid_enumeration_complete": true,
+    "enumeration_error_count": 0,
+    "truncated": false,
+    "core_identity_fields": [
+      "pid",
+      "comm",
+      "start_ticks"
+    ],
+    "core_identity_complete_row_count": 61,
+    "core_identity_complete": true,
+    "process_rows_sha256": "c20d2f549970366e0d0729b3ee93e877c2ed3605ce2031c1c9a60e2c930c68cb",
+    "supplemental_identity": {
+      "partial_row_count": 2,
+      "read_failure_count": 2,
+      "missing_field_counts": {
+        "namespace_mnt": 2,
+        "namespace_cgroup": 2,
+        "exe": 2
+      },
+      "full_process_identity_complete": false
+    },
+    "workflow_composite_gate": {
+      "process_census_complete": false,
+      "result": "HOLD_AUDIT_CENSUS_INCOMPLETE",
+      "explanation": "The workflow's stricter census gate includes supplemental process-identity fields. This does not change the observed result that all 61 enumerated rows have unique PID plus comm and start_ticks."
+    }
+  },
+  "supervisor": {
+    "inventory_complete": true,
+    "crosscheck_complete": true,
+    "row_identity_and_status_complete": true,
+    "command_rc": 3,
+    "command_success": false,
+    "service_health": "DEGRADED",
+    "service_counts": {
+      "RUNNING": 21,
+      "STOPPED": 34,
+      "FATAL": 2
+    }
+  },
+  "gpu_census": {
+    "link_count": 2,
+    "matched_link_count": 0,
+    "unresolved_link_count": 2,
+    "identity_join_complete": false
+  },
+  "criterion_assessment": {
+    "criterion_confirmed_for_point_in_time_process_census": true,
+    "accepted": true,
+    "acceptance_scope": "POINT_IN_TIME_PROCESS_SET_ENUMERATION_AND_CORE_IDENTITY_ONLY",
+    "basis": "The bounded audit enumerated 61 unique numeric PID rows with no truncation or enumeration error, and each row contains PID, comm, and start_ticks.",
+    "acceptance_increment": 0,
+    "original_all295_ledger_updated": false,
+    "limitations": [
+      "Two rows lack namespace_mnt, namespace_cgroup, and exe metadata; full process identity is incomplete.",
+      "Supervisor inventory is complete but degraded (rc=3; 21 RUNNING, 34 STOPPED, 2 FATAL); this is not a Supervisor health pass.",
+      "Both GPU links remain unmatched; no GPU-to-process attribution is established.",
+      "This is one point-in-time census and makes no claim about ongoing state, later process changes, or general system health."
+    ]
+  },
+  "overall_audit": "HOLD",
+  "criteria": {
+    "6V14-02": {
+      "spec_sha256": "00b403c24775060bb39c6d81f177c6c73073f1168538ca35a94a0213858f3d73",
+      "addendum_assessment": "ACCEPTED",
+      "result": "ACCEPTED",
+      "acceptance_scope": "POINT_IN_TIME_PROCESS_SET_ENUMERATION_AND_CORE_IDENTITY_ONLY",
+      "acceptance_binding": {
+        "evidence_pointer": "#/additional_evidence_records/0",
+        "workflow_run_id": 44547824185,
+        "workflow_job_id": 135643082464,
+        "owner_authorization_id": 7012555110
+      },
+      "evidence_pointer": "#/audit_evidence/point_in_time_census",
+      "acceptance_increment": 0
+    }
+  },
+  "additional_evidence_records": [
+    {
+      "task_id": "6V14-02",
+      "criterion_spec_sha256": "00b403c24775060bb39c6d81f177c6c73073f1168538ca35a94a0213858f3d73",
+      "result": "ACCEPTED",
+      "acceptance_scope": "POINT_IN_TIME_PROCESS_SET_ENUMERATION_AND_CORE_IDENTITY_ONLY",
+      "workflow_run_id": 44547824185,
+      "workflow_job_id": 135643082464,
+      "owner_authorization_id": 7012555110,
+      "audit_pin_commit_sha": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",
+      "source_head_sha": "9b52736047f46bc1873f1b3f9dbf3822d9e0753b",
+      "evidence_pointer": "#/audit_evidence/point_in_time_census",
+      "source_artifact_blobs": {
+        "task_registry": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "all295_manifest": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+        "work_receipts": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+        "workflow": "6eb00db24604395591e0aa59808271dc5b7fbbd6",
+        "owner_guard": "ac49388329343289de3ebedafa77563ce237124a",
+        "operator_source": "32459885f2f6de545fcd53c3242aaaff242702f3",
+        "audit_source": "e5c439c6733fcb276bec58dbf8af5193694645ac",
+        "transfer_bundle": "d8708f7f3919446ec64a5b453bb609ebae444c501b50672cf6151eb736d61c98",
+        "process_rows": "c20d2f549970366e0d0729b3ee93e877c2ed3605ce2031c1c9a60e2c930c68cb"
+      }
+    }
+  ],
+  "audit_evidence": {
+    "point_in_time_census": {
+      "workflow_run_id": 44547824185,
+      "workflow_job_id": 135643082464,
+      "owner_authorization_id": 7012555110,
+      "run_attempt": 1,
+      "source_head_sha": "9b52736047f46bc1873f1b3f9dbf3822d9e0753b",
+      "audit_pin_commit_sha": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",
+      "source_artifact_blobs": {
+        "task_registry": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "all295_manifest": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+        "work_receipts": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+        "workflow": "6eb00db24604395591e0aa59808271dc5b7fbbd6",
+        "owner_guard": "ac49388329343289de3ebedafa77563ce237124a",
+        "operator_source": "32459885f2f6de545fcd53c3242aaaff242702f3",
+        "audit_source": "e5c439c6733fcb276bec58dbf8af5193694645ac",
+        "transfer_bundle": "d8708f7f3919446ec64a5b453bb609ebae444c501b50672cf6151eb736d61c98",
+        "process_rows": "c20d2f549970366e0d0729b3ee93e877c2ed3605ce2031c1c9a60e2c930c68cb"
+      },
+      "process_census_pointer": "#/process_census",
+      "supervisor_pointer": "#/supervisor",
+      "gpu_census_pointer": "#/gpu_census",
+      "overall_audit": "HOLD",
+      "comment": "This evidence confirms the frozen title criterion only for the bounded point-in-time process census. It does not claim full process identity, GPU attribution, Supervisor health, ongoing state, or general system health."
+    }
+  }
+}

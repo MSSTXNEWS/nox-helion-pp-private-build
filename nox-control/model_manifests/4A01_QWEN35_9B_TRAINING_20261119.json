@@ -1,0 +1,140 @@
+{
+  "schema": "NOX_MODEL_TRAINING_MANIFEST_V1",
+  "task": {
+    "id": "4A01",
+    "spec_sha256": "c7d3737748301a132e1bc7df66af486d8fc012839c3301c6b7d72c5cf4900486",
+    "required_evidence": "source",
+    "title": "Прочитать точные манифесты модели: обучаемая ревизия, tokenizer, dtype, target modules, лицензия, размер тренировки и дефицит. GGUF имеет отдельный маршрут inference."
+  },
+  "status": "SOURCE_MANIFEST_PARTIAL_TARGET_MODULES_UNRESOLVED_TRAINING_BLOCKED_BY_STORAGE",
+  "generated_date": "2026-11-19",
+  "trainable_candidate": {
+    "repo_id": "Qwen/Qwen3.5-9B",
+    "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "repository_url": "https://huggingface.co/Qwen/Qwen3.5-9B/tree/c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "architecture": "Qwen3_5ForConditionalGeneration",
+    "license": "Apache-2.0",
+    "license_url": "https://huggingface.co/Qwen/Qwen3.5-9B/blob/c202236235762e1c871ad0ccb60c8ee5ba337b9a/LICENSE",
+    "tokenizer": {
+      "repo_id": "Qwen/Qwen3.5-9B",
+      "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+      "files": [
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "vocab.json",
+        "merges.txt",
+        "chat_template.jinja"
+      ],
+      "tokenizer_class": "Qwen2Tokenizer",
+      "model_max_length": 262144,
+      "pin_rule": "All tokenizer files must be fetched from the same immutable repository revision as the base weights."
+    },
+    "base_tensor_dtype": {
+      "BF16_elements": 9653100528,
+      "F32_elements": 3840,
+      "total_parameters": 9653104368,
+      "tensor_bytes": 19306216416,
+      "evidence": "Pinned Hugging Face model API safetensors metadata at the revision above."
+    },
+    "training_profile": {
+      "method": "QLoRA",
+      "base_quantization": "NF4 4-bit with double quantization",
+      "compute_dtype": "FP16",
+      "adapter_and_optimizer_state_dtype": "FP32",
+      "bf16": false,
+      "tf32": false,
+      "rank": 16,
+      "alpha": 32,
+      "dropout": 0.05,
+      "sequence_length_initial_tokens": 512,
+      "gradient_accumulation_steps": 8,
+      "gradient_checkpointing": true,
+      "use_cache": false
+    },
+    "target_modules": {
+      "language_decoder_only": true,
+      "suffixes": [
+        "linear_attn.in_proj_qkv",
+        "linear_attn.in_proj_z",
+        "linear_attn.in_proj_b",
+        "linear_attn.in_proj_a",
+        "linear_attn.out_proj",
+        "self_attn.q_proj",
+        "self_attn.k_proj",
+        "self_attn.v_proj",
+        "self_attn.o_proj",
+        "mlp.gate_proj",
+        "mlp.up_proj",
+        "mlp.down_proj"
+      ],
+      "exclusions": [
+        "visual.*",
+        "vision_tower.*",
+        "embed_tokens",
+        "lm_head",
+        "*norm*",
+        "linear_attn.conv1d"
+      ],
+      "preflight": "Before training, enumerate named_modules() on the pinned Qwen3.5 text decoder, require every configured suffix to match at least one module, reject any match outside decoder layers or under the vision module, and persist the resolved full names. No all-linear fallback.",
+      "resolved_modules": null,
+      "resolved_modules_status": "NOT_ENUMERATED_ON_PINNED_MODEL",
+      "required_artifact": {
+        "path": "nox-control/model_manifests/evidence/4A01_QWEN35_9B_RESOLVED_TARGET_MODULES_20261119.json",
+        "creation_condition": "Create only after an owner-approved load of the exact pinned base revision; enumerate named_modules() on that loaded model. Do not infer resolved names or classes from suffixes or source code.",
+        "required_fields": [
+          "task_id=4A01",
+          "model_repo_id",
+          "model_revision=c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "architecture",
+          "modules[].full_name",
+          "modules[].class",
+          "modules[].matched_suffix",
+          "enumeration_sha256"
+        ],
+        "acceptance_condition": "All configured suffixes have at least one resolved text-decoder module; no result is under visual/vision, embeddings, lm_head, norm, or excluded conv1d paths; artifact includes pinned revision and SHA-256 of the canonical resolved module list."
+      }
+    },
+    "training_size": {
+      "parameters": 9653104368,
+      "weight_tensor_bytes": 19306216416,
+      "full_repository_storage_bytes": 19319118862,
+      "full_repository_storage_source": "Pinned Hugging Face model API revision metadata (`usedStorage`).",
+      "dataset_bytes": null,
+      "dataset_bytes_status": "No dataset manifest is pinned in the reviewed 4A01 sources; dataset storage is excluded from the model-only deficit."
+    },
+    "current_storage_snapshot": {
+      "owner_audit_run_id": "44460035858",
+      "observed_at_utc": "2026-11-19T04:42:13Z",
+      "free_bytes": 17111969792,
+      "model_repository_storage_bytes": 19319118862,
+      "model_only_deficit_bytes": 2207149070,
+      "model_only_deficit_gib": 2.055,
+      "training_admission": "HOLD_STORAGE_DEFICIT_AND_NO_DATASET_MANIFEST",
+      "note": "Deficit is before dataset, cache, adapter/checkpoint output, or operational reserve. No weights were downloaded and no training was started."
+    },
+    "source_evidence": [
+      "https://huggingface.co/api/models/Qwen/Qwen3.5-9B/revision/c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+      "https://huggingface.co/Qwen/Qwen3.5-9B/blob/c202236235762e1c871ad0ccb60c8ee5ba337b9a/tokenizer_config.json",
+      "https://drive.google.com/file/d/1lYFF-_iIWT0-UGfdlElc8kP1I8d5NJ7h/view",
+      "https://github.com/huggingface/transformers/blob/v5.23.0/src/transformers/models/qwen3_5/modeling_qwen3_5.py"
+    ],
+    "source_resolution_notes": [
+      "The exact model revision and tokenizer files are pinned, and safetensors metadata resolves the mixed BF16/F32 base tensor dtype.",
+      "Configured target-module suffixes are explicit and text-only, but exact full names/classes are unresolved. Add the linked enumeration artifact only after the approved pinned model is loaded; 4A01 remains partial until then.",
+      "Dataset storage is not part of the computed model-only deficit because no exact dataset manifest is pinned."
+    ]
+  },
+  "separate_inference_candidate": {
+    "repo_id": "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
+    "revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+    "role": "inference_only",
+    "training_allowed": false,
+    "quantization": "GSQ-RCO-IQ2_XXS",
+    "total_unique_gguf_bytes": 248834257920,
+    "drive_manifest_id": "1DF1I9UQeDxxeYlRT1_FhvepmHXB7bsrr",
+    "drive_manifest_url": "https://drive.google.com/file/d/1DF1I9UQeDxxeYlRT1_FhvepmHXB7bsrr/view",
+    "current_free_disk_bytes": 17111969792,
+    "model_only_storage_deficit_bytes": 231722288128,
+    "native_state": "Manifest exists, but owner audit reports the pinned GGUF files missing from manifest locations; no model install or switch is asserted."
+  }
+}

@@ -25,10 +25,17 @@ NATIVE_SELF_SOURCE = Path("nox_runpod/teacher_mesh/v137/owner_self_observation.p
 NATIVE_RESPONSE_MODULE = "integration/nox_v137_owner_response_contract.py"
 NATIVE_RESPONSE_SOURCE = Path("nox_runpod/teacher_mesh/v137/owner_response_contract.py")
 MANIFEST = "NOX_V135_OWNER_RESONANCE_STREAM_MANIFEST.json"
+CAP_POLICY = "NOX_V135_OWNER_BRIDGE_CAP_POLICY.json"
+CAP_POLICY_SOURCE = Path("coordination/onepass/v135_owner_bridge_cap_policy.json")
+CAP_POLICY_SHA256 = "5025aaf9e84171e891a96040b815bf33ee43e81645237a6e7dd715d9219c982c"
 PAGES = ("site/pc/resonance.html", "site/pc/v22/resonance.template.html")
 ROLLBACK = "rollback/v135/"
 SCRIPT_URL = "/nox-web-v29/nox-v135-resonance-owner-bridge.js"
 SCRIPT_TAG = '<script defer src="' + SCRIPT_URL + '" data-nox-owner-v135="1"></script>'
+# Immutable v2 policy pins the measured compatibility bridge and a 512-byte reserve.
+MAX_OWNER_BRIDGE_BYTES = 25454
+EXPECTED_BRIDGE_BYTES = 24942
+EXPECTED_BRIDGE_SHA256 = "a1b0b0e2475c40e55586f5c14f9afccb0b88b38382876ed9690ad4bd3c9e4537"
 OBS_SCRIPT_URL = "/nox-web-v29/nox-v137-owner-self-status.js"
 OBS_SCRIPT_TAG = '<script defer src="' + OBS_SCRIPT_URL + '" data-nox-owner-v137="1"></script>'
 
@@ -70,8 +77,26 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
         raise ValueError("HOLD_FROZEN_ORIGINAL_SHA")
     if output.exists() or output.resolve() in (source.resolve(), frozen.resolve()):
         raise ValueError("HOLD_OUTPUT_OVERWRITE")
+    policy_bytes = CAP_POLICY_SOURCE.read_bytes()
+    if digest(policy_bytes) != CAP_POLICY_SHA256:
+        raise ValueError("HOLD_OWNER_BRIDGE_CAP_POLICY_SHA")
+    try:
+        cap_policy = json.loads(policy_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("HOLD_OWNER_BRIDGE_CAP_POLICY_JSON") from exc
+    expected_policy = {
+        "schema": "NOX_V135_OWNER_BRIDGE_CAP_POLICY_V2",
+        "measured_bridge_bytes": EXPECTED_BRIDGE_BYTES,
+        "max_bridge_bytes": MAX_OWNER_BRIDGE_BYTES,
+        "reserve_bytes": 512,
+        "bridge_sha256": EXPECTED_BRIDGE_SHA256,
+    }
+    if cap_policy != expected_policy:
+        raise ValueError("HOLD_OWNER_BRIDGE_CAP_POLICY_VERSION")
     script = js_file.read_bytes()
-    if len(script) < 5000 or len(script) > 20000:
+    if (len(script) != EXPECTED_BRIDGE_BYTES
+            or len(script) > MAX_OWNER_BRIDGE_BYTES
+            or digest(script) != EXPECTED_BRIDGE_SHA256):
         raise ValueError("HOLD_OWNER_BRIDGE_BOUNDS")
     if b"window.NOX_NATIVE_OWNER===true" not in script or b"/api/nox/chat/stream" not in script:
         raise ValueError("HOLD_OWNER_BRIDGE_CONTRACT")
@@ -110,7 +135,7 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
             if not set(original_names).issubset(source_names):
                 raise ValueError("HOLD_ORIGINAL_1089_MEMBER_LOSS")
             if (not set(PAGES).issubset(source_names) or
-                    any(name in source_names for name in (JS, OBS_JS, NATIVE_SELF_MODULE, NATIVE_RESPONSE_MODULE, MANIFEST))):
+                    any(name in source_names for name in (JS, OBS_JS, NATIVE_SELF_MODULE, NATIVE_RESPONSE_MODULE, MANIFEST, CAP_POLICY))):
                 raise ValueError("HOLD_UNEXPECTED_STAGE_OR_EXISTING_PATCH")
             if base.testzip() is not None or original.testzip() is not None:
                 raise ValueError("HOLD_ZIP_CRC")
@@ -129,6 +154,7 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
                     else:
                         release.writestr(copy.copy(item), blob)
                 _zip_file(release, JS, script)
+                _zip_file(release, CAP_POLICY, policy_bytes)
                 _zip_file(release, OBS_JS, monitor_js)
                 _zip_file(release, NATIVE_SELF_MODULE, native_self)
                 _zip_file(release, NATIVE_RESPONSE_MODULE, native_reply)
@@ -144,6 +170,15 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
                     "patched_html": list(PAGES),
                     "added_js": JS,
                     "added_js_sha256": digest(script),
+                    "added_js_bytes": len(script),
+                    "owner_bridge_cap_policy": {
+                        "schema": cap_policy["schema"],
+                        "sha256": CAP_POLICY_SHA256,
+                        "measured_bridge_bytes": cap_policy["measured_bridge_bytes"],
+                        "max_bridge_bytes": cap_policy["max_bridge_bytes"],
+                        "reserve_bytes": cap_policy["reserve_bytes"],
+                    },
+                    "added_cap_policy": CAP_POLICY,
                     "added_status_js": OBS_JS,
                     "added_status_js_sha256": digest(monitor_js),
                     "added_owner_self_observer": NATIVE_SELF_MODULE,
@@ -188,7 +223,7 @@ def verify(output: Path, *, source: Path, frozen: Path) -> dict:
             raise ValueError("HOLD_MANIFEST")
         source_names = base.namelist()
         out_names = patch.namelist()
-        if (len(out_names) != len(source_names) + len(PAGES) + 5
+        if (len(out_names) != len(source_names) + len(PAGES) + 6
                 or len(set(out_names)) != len(out_names)
                 or not set(original.namelist()).issubset(out_names)):
             raise ValueError("HOLD_TOTAL_MEMBERS")
@@ -203,7 +238,26 @@ def verify(output: Path, *, source: Path, frozen: Path) -> dict:
                     raise ValueError("HOLD_PATCH_OR_ROLLBACK_" + name)
             elif patch.read(name) != base.read(name):
                 raise ValueError("HOLD_SOURCE_FILE_MODIFIED_" + name)
-        if digest(patch.read(JS)) != manifest["added_js_sha256"]:
+        policy_blob = patch.read(CAP_POLICY)
+        if (digest(policy_blob) != CAP_POLICY_SHA256
+                or policy_blob != CAP_POLICY_SOURCE.read_bytes()):
+            raise ValueError("HOLD_OWNER_BRIDGE_CAP_POLICY_SHA")
+        cap_policy = json.loads(policy_blob)
+        policy_manifest = manifest.get("owner_bridge_cap_policy")
+        if (policy_manifest != {
+                "schema": cap_policy["schema"],
+                "sha256": CAP_POLICY_SHA256,
+                "measured_bridge_bytes": cap_policy["measured_bridge_bytes"],
+                "max_bridge_bytes": cap_policy["max_bridge_bytes"],
+                "reserve_bytes": cap_policy["reserve_bytes"],
+        }):
+            raise ValueError("HOLD_OWNER_BRIDGE_CAP_MANIFEST")
+        bridge_blob = patch.read(JS)
+        if (digest(bridge_blob) != manifest["added_js_sha256"]
+                or digest(bridge_blob) != cap_policy["bridge_sha256"]
+                or len(bridge_blob) != cap_policy["measured_bridge_bytes"]
+                or len(bridge_blob) != manifest.get("added_js_bytes")
+                or len(bridge_blob) > cap_policy["max_bridge_bytes"]):
             raise ValueError("HOLD_SCRIPT_HASH")
         if (digest(patch.read(OBS_JS)) != manifest.get("added_status_js_sha256")
                 or digest(patch.read(NATIVE_SELF_MODULE)) != manifest.get("added_owner_self_observer_sha256")

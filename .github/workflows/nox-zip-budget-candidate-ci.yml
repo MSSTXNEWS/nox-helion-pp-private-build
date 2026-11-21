@@ -1,0 +1,30 @@
+name: NOX reviewed ZIP budget candidate source-only checks
+on:
+  pull_request:
+    paths:
+      - 'nox-control/systemic_relay_20261118/next_zip_reviewed/**'
+      - '.github/workflows/nox-zip-budget-candidate-ci.yml'
+permissions:
+  contents: read
+jobs:
+  zip-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with: {python-version: '3.11'}
+      - name: Confirm preimage SHA and test exact candidate
+        working-directory: nox-control/systemic_relay_20261118
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          original=Path('next_reviewed_source/merge_web_source.py').read_bytes()
+          assert sha256(original).hexdigest()=='a580a7d9f3efd570cf4e84396ceb3e6f980fe2dc846d0fda633b6e65b4c36b54'
+          compiled=Path('next_zip_reviewed/merge_web_source.py').read_bytes()
+          compile(compiled,'reviewed-source','exec')
+          assert sha256(compiled).hexdigest()!=sha256(original).hexdigest()
+          PY
+          python -m unittest discover -s next_zip_reviewed -p test_zip_budget.py -v

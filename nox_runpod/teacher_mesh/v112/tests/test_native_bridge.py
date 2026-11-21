@@ -23,7 +23,7 @@ class V112Tests(unittest.TestCase):
         folder=Path(tmp.name)
         self.db=folder/'existing_s03.sqlite3'
         with sqlite3.connect(self.db) as db:
-            db.execute('CREATE TABLE s03_items (id TEXT PRIMARY KEY, sha256 TEXT, text TEXT, ts TEXT)')
+            db.execute('CREATE TABLE s03_items (id TEXT PRIMARY KEY, segment TEXT, text TEXT, provenance TEXT, sha256 TEXT, meta TEXT, ts TEXT)')
         mod=types.ModuleType('s03_memory')
         mod.DB=self.db
         previous=sys.modules.get('s03_memory')
@@ -45,10 +45,28 @@ class V112Tests(unittest.TestCase):
         self.calls=[]
         self.record=True
         self.bulk_sse=''
+        self.context_nonce=None
         async def native(payload):
             self.calls.append(payload)
-            q=payload['messages'][-1]['content']
+            messages=payload['messages']
+            q=messages[-1]['content']
             answer='Готов. Это проверенный ответ.'
+            if self.context_nonce:
+                nonce=self.context_nonce
+                first_q='first exact prompt '+nonce
+                first_a='first exchange stores nonce '+nonce
+                if q==first_q:
+                    answer=first_a
+                elif q=='second exact prompt':
+                    exact_first_pair=[
+                        {'role':'user','content':first_q},
+                        {'role':'assistant','content':first_a},
+                    ]
+                    # The nonce is emitted only when the complete first pair
+                    # is present immediately before the second prompt.
+                    answer=('recovered nonce '+nonce
+                            if messages[-3:-1]==exact_first_pair
+                            else 'MISSING_CONTEXT')
             async def chunks():
                 if self.bulk_sse=='coalesced':
                     # Two individually valid 160 KB SSE comment frames in
@@ -93,8 +111,9 @@ class V112Tests(unittest.TestCase):
                     from datetime import datetime,timezone
                     stamp=datetime.now(timezone.utc).isoformat()
                     with sqlite3.connect(self.db) as db:
-                        db.execute('INSERT INTO s03_items VALUES(?,?,?,?)',(
-                          'new-exchange-0001',hashlib.sha256((q+answer).encode()).hexdigest(),
+                        db.execute('INSERT INTO s03_items(id,sha256,text,ts) VALUES(?,?,?,?)',(
+                          'fixture-memory-'+str(len(self.calls)).zfill(4),
+                          hashlib.sha256((q+answer).encode()).hexdigest(),
                           'U:'+q+' A:'+answer,stamp))
                 if self.bulk_sse=='invalid_utf8_comment':
                     # Original model answer and S03 fixture proof exist, but
@@ -143,7 +162,7 @@ class V112Tests(unittest.TestCase):
             self.assertIsNone(check.execute('SELECT id FROM s03_items WHERE id=?',
                                             ('v112-db-rollback',)).fetchone())
 
-    def test_s03_exchange_receipt_collision_fails_closed(self):
+    def test_owner_dialog_exchange_receipt_collision_fails_closed(self):
         # The original OneHost dialog must never accept old text as saved=True
         # merely because an S03 exchange_id already has two rows.
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db, _save_exchange
@@ -189,6 +208,7 @@ class V112Tests(unittest.TestCase):
             ('/api/ui/memory/dialogs/status','get'),
             ('/api/ui/memory/dialogs','get'),
             ('/api/ui/memory/dialogs/create','post'),
+            ('/api/ui/memory/dialogs/exchange-readback','post'),
             ('/api/nox/chat/stream','post'),
             ('/api/nox/stop','post'),
             ('/nox-web-v29/','get'),
@@ -211,7 +231,7 @@ class V112Tests(unittest.TestCase):
         self.assertTrue(self.client.get('/api/ui/memory/dialogs/status',cookies=self.cookie)
                         .json()['persistent_threads'])
 
-    def test_stream_s03_and_owner_thread_roundtrip(self):
+    def test_stream_owner_dialog_receipt_and_thread_roundtrip(self):
         create=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
                json={'title':'Привет NOX','confirmed':True})
         self.assertEqual(create.status_code,200,create.text)
@@ -223,19 +243,116 @@ class V112Tests(unittest.TestCase):
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual([x['type'] for x in frames],['preparing','start','delta','delta','done'])
         self.assertTrue(frames[-1]['saved'])
-        self.assertTrue(frames[-1]['s03_integrated'])
+        # Legacy wire field remains for UI compatibility; only these dialog fields prove persistence.
+        self.assertFalse(frames[-1]['s03_integrated'])
+        self.assertTrue(frames[-1]['owner_dialog_saved'])
+        self.assertFalse(frames[-1]['canonical_s03_write_verified'])
         self.assertEqual(frames[-1]['dialog_id'],d)
-        self.assertEqual(frames[-1]['exchange_id'],'new-exchange-0001')
+        for key in ('turn_id','receipt_id','lease_epoch','exchange_id'):
+            self.assertRegex(frames[-1][key],r'^[a-f0-9]{32}$')
+        self.assertEqual(frames[-1]['writer'],'V112_OWNER_DIALOG_WRITER')
+        self.assertRegex(frames[-1]['receipt_sha256'],r'^[a-f0-9]{64}$')
         self.assertTrue(self.calls[-1]['_owner'])
         hist=self.client.get('/api/ui/memory/dialogs/history',
              cookies=self.cookie,params={'dialog_id':d}).json()
+        self.assertEqual(hist['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+        self.assertFalse(hist['canonical_s03_readback_verified'])
         self.assertEqual([x['role'] for x in hist['messages']],['user','assistant'])
         self.assertEqual(hist['messages'][0]['content'],'Привет NOX')
         self.assertEqual(hist['messages'][1]['content'],'Готов. Это проверенный ответ.')
+        proof=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,
+            json={key:frames[-1][key] for key in ('dialog_id','turn_id','receipt_id','lease_epoch')})
+        self.assertEqual(proof.status_code,200,proof.text)
+        self.assertEqual(proof.json()['messages'],[
+            {'role':'user','content':'Привет NOX','exchange_id':frames[-1]['exchange_id']},
+            {'role':'assistant','content':'Готов. Это проверенный ответ.','exchange_id':frames[-1]['exchange_id']}])
+        self.assertTrue(proof.json()['durable']);self.assertTrue(proof.json()['verified'])
+        self.assertEqual(proof.json()['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+        self.assertFalse(proof.json()['canonical_s03_verified'])
         listed=self.client.get('/api/ui/memory/dialogs',cookies=self.cookie).json()
         self.assertEqual(listed['dialogs'][0]['dialog_id'],d)
 
-    def test_coalesced_sse_transport_frames_preserve_native_s03_done(self):
+    def test_fixture_two_sequential_turns_have_distinct_receipts_and_exact_readbacks(self):
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Two turn source fixture','confirmed':True}).json()['dialog_id']
+        nonce='NOX-3A02-SAVED-TURN-7f83c'
+        self.context_nonce=nonce
+        prompts=('first exact prompt '+nonce,'second exact prompt')
+        expected_answers=('first exchange stores nonce '+nonce,'recovered nonce '+nonce)
+        receipts=[];expected=[]
+        model_messages=[]
+        for prompt_index,prompt in enumerate(prompts):
+            model_messages.append({'role':'user','content':prompt})
+            response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                json={'message':prompt,'dialog_id':dialog,'history':[]})
+            self.assertEqual(response.status_code,200,response.text[:200])
+            # The next inference must receive the durable prior pair, not browser history.
+            self.assertEqual(self.calls[-1]['messages'],model_messages)
+            frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
+            done=frames[-1]
+            self.assertEqual(done['type'],'done')
+            receipt={key:done[key] for key in ('dialog_id','turn_id','receipt_id','lease_epoch')}
+            proof=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,json=receipt)
+            self.assertEqual(proof.status_code,200,proof.text)
+            messages=proof.json()['messages']
+            self.assertEqual([row['role'] for row in messages],['user','assistant'])
+            self.assertEqual(messages[0]['content'],prompt)
+            self.assertEqual(messages[1]['content'],expected_answers[prompt_index])
+            model_messages.append({'role':'assistant','content':expected_answers[prompt_index]})
+            self.assertTrue(proof.json()['durable']);self.assertTrue(proof.json()['verified'])
+            self.assertEqual(proof.json()['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+            self.assertFalse(proof.json()['canonical_s03_verified'])
+            receipts.append(done)
+            expected.extend(messages)
+            history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+                params={'dialog_id':dialog,'limit':6}).json()
+            self.assertEqual(history['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+            self.assertFalse(history['canonical_s03_readback_verified'])
+            history=history['messages']
+            self.assertEqual([(row['role'],row['content']) for row in history],
+                [(row['role'],row['content']) for row in expected])
+        for key in ('turn_id','receipt_id','exchange_id'):
+            self.assertEqual(len({row[key] for row in receipts}),2)
+        self.assertEqual(receipts[0]['lease_epoch'],receipts[1]['lease_epoch'])
+
+    def test_independent_readback_holds_for_wrong_receipt_or_tampered_pair(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db,_save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Exact readback fixture','confirmed':True}).json()['dialog_id']
+        ids={'turn_id':'1'*32,'receipt_id':'2'*32,'lease_epoch':'3'*32}
+        exchange='4'*32
+        self.assertTrue(_save_exchange(dialog,'exact user','exact assistant',exchange,
+            turn_id=ids['turn_id'],receipt_id=ids['receipt_id'],lease_epoch=ids['lease_epoch']))
+        body={'dialog_id':dialog,**ids}
+        wrong=dict(body,receipt_id='5'*32)
+        self.assertEqual(self.client.post('/api/ui/memory/dialogs/exchange-readback',
+            cookies=self.cookie,json=wrong).status_code,409)
+        good=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,json=body)
+        self.assertEqual(good.status_code,200,good.text)
+        self.assertEqual([row['content'] for row in good.json()['messages']],
+                         ['exact user','exact assistant'])
+        with _db(True) as db:
+            db.execute('UPDATE nox_v29_dialog_messages SET content=? '
+                       'WHERE dialog_id=? AND exchange_id=? AND role=?',
+                       ('tampered assistant',dialog,exchange,'assistant'))
+        held=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,json=body)
+        self.assertEqual(held.status_code,409)
+
+    def test_owner_dialog_receipt_provider_excludes_fuzzy_matching_and_s03_claims(self):
+        source=Path(__file__).parents[1]/'native_v29_full_bridge.py'
+        text=source.read_text()
+        provider=text.split('class OwnerDialogExchangeReadback:',1)[1].split(
+            'def _save_exchange(',1)[0]
+        self.assertNotIn('instr(',provider)
+        self.assertNotIn('FROM s03_items',provider)
+        self.assertIn("'canonical_s03_verified':False",provider)
+        self.assertIn('def _legacy_memory_readback(',text)
+        stream=text.split("@app.post('/api/nox/chat/stream')",1)[1]
+        self.assertIn("if not dialog_id:",stream)
+        self.assertIn('OwnerDialogExchangeReadback(_db).read',stream)
+        self.assertIn("'canonical_s03_write_verified':False",stream)
+
+    def test_coalesced_sse_transport_frames_preserve_owner_dialog_done(self):
         self.bulk_sse='coalesced'
         created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
             json={'title':'V165 SSE','confirmed':True}).json()
@@ -244,16 +361,20 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(r.status_code,200,r.text[:300])
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual([f['type'] for f in frames],['preparing','start','delta','done'])
-        self.assertEqual(frames[-1]['exchange_id'],'new-exchange-0001')
-        self.assertTrue(frames[-1]['s03_integrated'])
+        self.assertRegex(frames[-1]['exchange_id'],r'^[a-f0-9]{32}$')
+        self.assertFalse(frames[-1]['s03_integrated'])
+        self.assertTrue(frames[-1]['owner_dialog_saved'])
+        self.assertFalse(frames[-1]['canonical_s03_write_verified'])
         self.assertEqual(''.join(f['text'] for f in frames if f['type']=='delta'),
                          'Готов. Это проверенный ответ.')
 
     def test_one_oversized_sse_frame_is_still_rejected(self):
         self.bulk_sse='oversized'
         self.record=False
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'oversized frame','confirmed':True}).json()['dialog_id']
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-            json={'message':'oversized single frame'})
+            json={'message':'oversized single frame','dialog_id':dialog})
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1],{'type':'error','error':'HOLD_SSE_FRAME_LIMIT'})
         self.assertFalse(any(f.get('saved') for f in frames))
@@ -448,14 +569,67 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(history[0],{'role':'user','content':'Вопрос 2'})
         self.assertEqual(history[-1],{'role':'assistant','content':'Ответ 13'})
         self.assertTrue(all(row['content']!='Незавершённая пара' for row in history))
-        for index in range(4):
-            self.assertTrue(_save_exchange(dialog,'😀'*8000,'😀'*9000,
-                                          f'large-{index}'))
-        issue,history=_dialog_context(dialog)
-        self.assertIsNone(issue)
-        self.assertEqual(len(history),2)
-        self.assertLessEqual(sum(len(row['content'].encode('utf-8')) for row in history),121000)
-        self.assertTrue(all(len(row['content'])<=8000 for row in history))
+    def test_dialog_context_preserves_full_multibyte_ru_and_es_text(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Полный многоязычный контекст','confirmed':True}).json()['dialog_id']
+        question='Русский вопрос: '+('ёжик ' * 900)
+        answer='Respuesta española: '+('niño café ☕ ' * 400)
+        self.assertLessEqual(len(question),8000)
+        self.assertLessEqual(len(answer),8000)
+        self.assertTrue(_save_exchange(dialog,question,answer,'multibyte-full-context'))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Продолжи','history':[]})
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(self.calls[-1]['messages'],[
+            {'role':'user','content':question},
+            {'role':'assistant','content':answer},
+            {'role':'user','content':'Продолжи'}])
+        frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1]['type'],'done')
+
+    def test_dialog_context_oversized_message_holds_before_model(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Слишком длинный контекст','confirmed':True}).json()['dialog_id']
+        oversized='Я'*1000000
+        self.assertTrue(_save_exchange(dialog,oversized,'saved reply','oversized-message'))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Не отправлять модели','history':[]})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_MESSAGE_LIMIT'})
+        self.assertEqual(self.calls,[])
+
+    def test_dialog_context_embedded_nul_cannot_bypass_message_limit(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db,_save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'NUL length guard','confirmed':True}).json()['dialog_id']
+        oversized='\0'+'x'*8001
+        self.assertTrue(_save_exchange(dialog,oversized,'saved reply','nul-message'))
+        with _db() as db:
+            stored=db.execute('SELECT content,length(content) AS sqlite_chars '
+                              'FROM nox_v29_dialog_messages WHERE dialog_id=? '
+                              "AND role='user'",(dialog,)).fetchone()
+            self.assertEqual(stored['sqlite_chars'],0)
+            self.assertEqual(len(stored['content']),8002)
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Не отправлять модели','history':[]})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_MESSAGE_LIMIT'})
+        self.assertEqual(self.calls,[])
+
+    def test_dialog_context_budget_overflow_holds_before_model(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Бюджет полного контекста','confirmed':True}).json()['dialog_id']
+        for index in range(8):
+            self.assertTrue(_save_exchange(dialog,'q'*8000,'a'*8000,
+                                           f'budget-pair-{index}'))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Не отправлять модели','history':[]})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_BUDGET'})
+        self.assertEqual(self.calls,[])
 
     def test_dialog_context_keeps_owner_and_archive_guards(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db
@@ -476,14 +650,38 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(response.json()['error'],'HOLD_DIALOG_SCOPE_NOT_BOUND')
         self.assertEqual(self.calls,[])
 
-    def test_no_fresh_s03_row_means_no_fake_done(self):
+    def test_exact_dialog_writer_receipt_does_not_depend_on_legacy_match(self):
+        self.record=False
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'No fuzzy matcher','confirmed':True}).json()['dialog_id']
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+          json={'message':'Другой уникальный вопрос','dialog_id':dialog})
+        frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
+        self.assertEqual(frames[-1]['type'],'done')
+        proof=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,
+            json={key:frames[-1][key] for key in ('dialog_id','turn_id','receipt_id','lease_epoch')})
+        self.assertEqual(proof.status_code,200,proof.text)
+        self.assertEqual(proof.json()['messages'][0]['content'],'Другой уникальный вопрос')
+
+    def test_no_dialog_legacy_caller_keeps_existing_s03_readback_behavior(self):
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'legacy no-dialog prompt'})
+        self.assertEqual(r.status_code,200,r.text[:200])
+        frames=[json.loads(line) for line in r.text.splitlines() if line.strip()]
+        done=frames[-1]
+        self.assertEqual(done['type'],'done')
+        self.assertTrue(done['saved']);self.assertTrue(done['s03_integrated'])
+        self.assertIsNone(done['dialog_id'])
+        self.assertEqual(done['exchange_id'],'fixture-memory-0001')
+        self.assertNotIn('receipt_id',done)
+
+    def test_no_dialog_legacy_caller_still_holds_without_old_s03_write(self):
         self.record=False
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-          json={'message':'Другой уникальный вопрос'})
-        frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
-        self.assertEqual(frames[-1]['type'],'error')
-        self.assertEqual(frames[-1]['error'],'HOLD_S03_COMMIT_NOT_VERIFIED')
-        self.assertFalse(any(x.get('saved') for x in frames))
+            json={'message':'legacy missing S03 write'})
+        frames=[json.loads(line) for line in r.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_S03_COMMIT_NOT_VERIFIED'})
+        self.assertFalse(any(frame.get('saved') for frame in frames))
 
     def test_dialog_revision_and_archive(self):
         created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
@@ -516,6 +714,126 @@ class V112Tests(unittest.TestCase):
 
     def test_s03_timestamp_guard(self):
         self.assertLess(_timestamp('2025-01-01T00:00:00Z'), _timestamp('2026-11-14T00:00:00Z'))
+
+
+    def _seed_owner_fact(self,event_id,fact_key,content,*,owner='nox-single-owner',
+                         source_ref='OWNER-TEST',valid_from='2026-11-19T00:00:00Z',
+                         ts='2026-11-19T00:00:00Z'):
+        source_sha=hashlib.sha256(content.encode('utf-8')).hexdigest()
+        meta={'schema':'NOX_OWNER_CONFIRMED_FACT_V1','owner_scope':owner,
+              'fact_key':fact_key,'source_ref':source_ref,
+              'source_sha256':source_sha,'valid_from':valid_from}
+        provenance='OWNER-CONFIRMED:'+source_ref
+        record_sha=hashlib.sha256(
+            ('M2|'+content+'|'+provenance+'|'+json.dumps(meta,sort_keys=True)).encode('utf-8')
+        ).hexdigest()
+        with sqlite3.connect(self.db) as db:
+            db.execute('INSERT INTO s03_items(id,segment,text,provenance,sha256,meta,ts) '
+                       'VALUES(?,?,?,?,?,?,?)',
+                       (event_id,'M2',content,provenance,record_sha,
+                        json.dumps(meta,ensure_ascii=False),ts))
+        return {'event_id':event_id,'fact_key':fact_key,'source_ref':source_ref,
+                'valid_from':valid_from,'source_sha256':source_sha,
+                'record_sha256':record_sha}
+
+    def _new_dialog(self,title):
+        response=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':title,'confirmed':True})
+        self.assertEqual(response.status_code,200,response.text)
+        return response.json()['dialog_id']
+
+    def _send_in_dialog(self,dialog,message):
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':message,'history':[]})
+        self.assertEqual(response.status_code,200,response.text)
+        return [json.loads(row) for row in response.text.splitlines() if row.strip()]
+
+    def test_cross_dialog_owner_fact_is_exactly_recalled_with_provenance(self):
+        first=self._new_dialog('Первый диалог')
+        second=self._new_dialog('Другой диалог')
+        self._seed_owner_fact('owner-fact-cross-001','PROJECT-NAME',
+                              'Проект называется NOX Helion.')
+        self._send_in_dialog(first,'Закрытая заметка не должна стать S03 fact')
+        frames=self._send_in_dialog(second,'Проект называется NOX Helion')
+        self.assertEqual(frames[-1]['type'],'done')
+        messages=self.calls[-1]['messages']
+        self.assertEqual(messages[0]['role'],'system')
+        self.assertIn('NOX_OWNER_CONFIRMED_FACT_V1',messages[0]['content'])
+        evidence=json.loads(messages[0]['content'].split('\n',1)[1])
+        self.assertEqual(len(evidence),1)
+        self.assertEqual(evidence[0]['fact_key'],'PROJECT-NAME')
+        self.assertEqual(evidence[0]['content'],'Проект называется NOX Helion.')
+        self.assertEqual(evidence[0]['source_ref'],'OWNER-TEST')
+        self.assertEqual(evidence[0]['event_id'],'owner-fact-cross-001')
+        self.assertEqual(evidence[0]['schema'],'NOX_OWNER_CONFIRMED_FACT_V1')
+        self.assertEqual(evidence[0]['owner_scope'],'nox-single-owner')
+        self.assertEqual(evidence[0]['provenance'],'OWNER-CONFIRMED:OWNER-TEST')
+        self.assertNotEqual(first,second)
+        self.assertNotIn('Закрытая заметка',messages[0]['content'])
+
+    def test_cross_dialog_memory_excludes_tampered_other_owner_and_invalid_receipts(self):
+        second=self._new_dialog('Изолированный диалог')
+        self._seed_owner_fact('owner-fact-tampered-01','TAMPERED',
+                              'Секретный маркер XZ-901 tamper')
+        self._seed_owner_fact('owner-fact-otherown-01','OTHER-OWNER',
+                              'Секретный маркер XZ-901 owner',
+                              owner='different-owner')
+        self._seed_owner_fact('owner-fact-invalid-01','INVALID-SOURCE',
+                              'Секретный маркер XZ-901 invalid',
+                              source_ref='not-owner-confirmed')
+        with sqlite3.connect(self.db) as db:
+            db.execute('UPDATE s03_items SET text=? WHERE id=?',
+                       ('Изменённый текст XZ-901', 'owner-fact-tampered-01'))
+            row=db.execute('SELECT meta FROM s03_items WHERE id=?',
+                           ('owner-fact-invalid-01',)).fetchone()
+            metadata=json.loads(row[0]);metadata['source_sha256']='0'*64
+            db.execute('UPDATE s03_items SET meta=? WHERE id=?',
+                       (json.dumps(metadata,ensure_ascii=False),'owner-fact-invalid-01'))
+        frames=self._send_in_dialog(second,'Секретный маркер XZ-901')
+        self.assertEqual(frames[-1]['type'],'done')
+        self.assertFalse(any(row.get('role')=='system'
+                             and 'XZ-901' in row.get('content','')
+                             for row in self.calls[-1]['messages']))
+
+    def test_cross_dialog_memory_has_deterministic_count_and_byte_limits(self):
+        second=self._new_dialog('Bounded S03 facts')
+        for index in range(5):
+            content='Ключевой термин BOUND-77 '+'x'*1450+f' END-{index}'
+            self._seed_owner_fact(f'owner-fact-bound-{index:02d}',f'BOUND-{index}',content,
+                                  source_ref=f'OWNER-BOUND-{index}')
+        frames=self._send_in_dialog(second,'Ключевой термин BOUND-77')
+        self.assertEqual(frames[-1]['type'],'done')
+        system=[row for row in self.calls[-1]['messages'] if row.get('role')=='system']
+        self.assertEqual(len(system),1)
+        raw=system[0]['content']
+        self.assertLessEqual(len(raw.encode('utf-8')),4096)
+        evidence=json.loads(raw.split('\n',1)[1])
+        self.assertLessEqual(len(evidence),3)
+        self.assertEqual([row['event_id'] for row in evidence],
+                         ['owner-fact-bound-04','owner-fact-bound-03'])
+
+
+    def test_cross_dialog_memory_caps_to_three_newest_facts(self):
+        second=self._new_dialog('Count-bounded S03 facts')
+        for index in range(5):
+            self._seed_owner_fact(f'owner-fact-count-{index:02d}',f'COUNT-{index}',
+                f'Неповторимый маркер COUNT-88 факт {index}',
+                source_ref=f'OWNER-COUNT-{index}')
+        frames=self._send_in_dialog(second,'Неповторимый маркер COUNT-88')
+        self.assertEqual(frames[-1]['type'],'done')
+        system=[row for row in self.calls[-1]['messages'] if row.get('role')=='system']
+        self.assertEqual(len(system),1)
+        evidence=json.loads(system[0]['content'].split('\n',1)[1])
+        self.assertEqual([row['event_id'] for row in evidence],
+                         ['owner-fact-count-04','owner-fact-count-03','owner-fact-count-02'])
+
+    def test_cross_dialog_memory_failure_and_no_match_add_no_context(self):
+        second=self._new_dialog('No memory')
+        frames=self._send_in_dialog(second,'ordinary question absent from facts')
+        self.assertEqual(frames[-1]['type'],'done')
+        self.assertFalse(any(row.get('role')=='system'
+                             for row in self.calls[-1]['messages']))
+
 
 if __name__=='__main__':
     unittest.main()

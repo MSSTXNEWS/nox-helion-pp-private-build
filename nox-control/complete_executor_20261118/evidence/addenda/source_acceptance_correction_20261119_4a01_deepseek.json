@@ -1,0 +1,394 @@
+{
+  "schema": "NOX_SOURCE_EVIDENCE_CORRECTION_V1",
+  "receipt_id": "NOX-4A01-CORRECTION-20261119-DEEPSEEK",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "Correct the effective 4A01 source assessment to match the canonical main target DeepSeek-V4.1-Flash-1017 served by Maya. Preserve PR #481 and all frozen registries unchanged.",
+  "scope": {
+    "task_ids": [
+      "4A01"
+    ],
+    "task": {
+      "title": "Прочитать точные манифесты модели: обучаемая ревизия, tokenizer, dtype, target modules, лицензия, размер тренировки и дефицит. GGUF имеет отдельный маршрут inference.",
+      "required_evidence": "source",
+      "spec_sha256": "c7d3737748301a132e1bc7df66af486d8fc012839c3301c6b7d72c5cf4900486"
+    },
+    "frozen_sources": {
+      "all295_manifest": {
+        "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+        "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+        "original_acceptance_added": false,
+        "mutation": false
+      },
+      "work_tasks": {
+        "path": "nox-control/four_queue_20261118/work_tasks.json",
+        "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "mutation": false
+      },
+      "work_receipts": {
+        "path": "nox-control/four_queue_20261118/work_receipts.json",
+        "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+        "mutation": false
+      }
+    },
+    "mutation_boundary": "This receipt adds one corrective evidence file only. It does not modify PR #481, the frozen all295 manifest, work_tasks.json, or work_receipts.json; it does not change the I-49 assessment."
+  },
+  "correction": {
+    "historical_pr": {
+      "number": 481,
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/481",
+      "merged_at": "2026-11-19T09:33:45Z",
+      "merge_commit_sha": "8e9b6760b292d3f65ee326b96a15ce8df2ffbfcf",
+      "old_4a01_label": "ACCEPTED_SOURCE_CRITERION",
+      "old_addendum_path": "nox-control/complete_executor_20261118/evidence/addenda/source_acceptance_addendum_20261119_4a01_i49.json",
+      "old_addendum_git_blob_sha": "19c7521b1b36479224478530bb1d06307967de35",
+      "old_4a01_manifest_path": "nox-control/model_manifests/4A01_QWEN35_9B_TRAINING_20261119.json",
+      "old_4a01_manifest_source_commit": "71a8146443470d7d0c3ce2cdb1bcfad5d110a3ab",
+      "old_4a01_manifest_git_blob_sha": "ee6aa7d493ea3e0a9e975b45e2d591eee562ce0c",
+      "interpretation": "Historical label and file are preserved. The Qwen3.5-9B manifest describes a separate assistant/student candidate; it does not satisfy the current 4A01 main-target source contract."
+    },
+    "effective_current_assessment": {
+      "state": "PARTIAL",
+      "status": "PARTIAL_WRONG_TARGET_MODEL_AND_REQUIRED_FIELDS_UNRESOLVED",
+      "supersedes_pr481_4a01_scope_only": true,
+      "accepted_source_criterion": false,
+      "original_295_acceptance_increment": 0,
+      "training_admission": "HOLD",
+      "reason": "The canonical plan selects DeepSeek-V4.1-Flash-1017 + Maya as the main target. #481 bound 4A01 to a Qwen helper manifest. The DeepSeek source facts below are pinned, but tokenizer identity/files, concrete target-module names/classes, dataset manifest/bytes, exact repository storage bytes, and a fresh exact deficit are not established."
+    }
+  },
+  "canonical_selection": {
+    "main_runtime": "Maya",
+    "main_model": "DeepSeek-V4.1-Flash-1017",
+    "qwen_role": "Separate first trainable helper/student candidate; not the main model target.",
+    "evidence": [
+      {
+        "name": "NOX canonical project overview",
+        "url": "https://app.notion.com/p/40cacc184a9f8170bcabca204c7d4c33",
+        "page_id": "40cacc18-4a9f-8170-bcab-ca204c7d4c33",
+        "retrieved_page_last_edited_at": "2026-11-19T11:19:57.746Z",
+        "retrieved_text_sha256": "a16b143352c442b8ebf284c519d5cc3ffebd1559dcba3548d18adbf51709106d",
+        "hash_basis": "SHA-256 of the exact Notion structuredContent.text snapshot read for this receipt (649670 UTF-8 bytes). The page is mutable; this digest binds the retrieved snapshot."
+      },
+      {
+        "name": "NOX training kit v0.1",
+        "url": "https://drive.google.com/file/d/1lYFF-_iIWT0-UGfdlElc8kP1I8d5NJ7h/view",
+        "drive_file_id": "1lYFF-_iIWT0-UGfdlElc8kP1I8d5NJ7h",
+        "drive_revision_id": "0BwLAbHbBiWEAeVYzcFpodTFMc282Ry9xdWx0ek1VYWVFakdZPQ",
+        "modified_at": "2026-11-16T02:10:50.480Z",
+        "raw_bytes": 20538,
+        "raw_sha256": "040e9d82f15946d6504cbd3a81e7eb51b119eb688f64316b1b8c8e931db05045",
+        "hash_basis": "SHA-256 of Google Drive raw file bytes. The note states DeepSeek-V4.1-Flash-1017 is the main target; Qwen3.5-9B is a separate first trainable helper."
+      },
+      {
+        "name": "16-Nov NOX development program note",
+        "url": "https://docs.google.com/document/d/12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0/edit",
+        "drive_file_id": "12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0",
+        "drive_revision_id": "27",
+        "modified_at": "2026-11-16T23:26:00.096Z",
+        "exported_text_plain_bytes": 315396,
+        "exported_text_plain_sha256": "2094819138c181c64726c849ef2f90f42eb795e7fec0c572cf6b90cf1ab21cf3",
+        "hash_basis": "SHA-256 of the Google Drive files.download text/plain export for revision 27, not native Docs storage bytes.",
+        "relevant_4a01_statement": "Ordinary QLoRA of exact DeepSeek does not fit one V100: the approximately 551.9B backbone alone implies at least 275.95 GB in ideal 4-bit before activations. CLI example returned HOLD; next gate is a proven specialized out-of-core backward or a resource decision. Qwen remains separate historical/helper progress."
+      }
+    ]
+  },
+  "official_model_source": {
+    "repository": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "pinned_revision": "08c8657f02291e11b6f6b63e0e16014f8e748518",
+    "current_main_observation": {
+      "observed_at_utc": "2026-11-19",
+      "visible_commit_prefix": "08c8657",
+      "matches_pinned_revision_prefix": true,
+      "note": "The current official HF model tree page showed main at 08c8657, matching the immutable full revision already referenced by the frozen receipt."
+    },
+    "config": {
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/08c8657f02291e11b6f6b63e0e16014f8e748518/config.json",
+      "git_revision": "08c8657f02291e11b6f6b63e0e16014f8e748518",
+      "architecture": "DeepseekV41ForCausalLM",
+      "model_type": "deepseek_v41",
+      "config_declared_dtype": "bfloat16",
+      "transformers_version_declared_by_config": "5.6.0",
+      "quantization_config": {
+        "quant_method": "fp8",
+        "activation_scheme": "dynamic",
+        "weight_block_size": [
+          32,
+          32
+        ],
+        "scale_fmt": "ue8m0",
+        "expert_dtype": "fp4"
+      },
+      "text_config": {
+        "model_type": "deepseek_v41_text",
+        "vocab_size": 129280,
+        "num_hidden_layers": 40,
+        "n_routed_experts": 384,
+        "n_shared_experts": 1,
+        "num_experts_per_tok": 6
+      },
+      "token_ids": {
+        "bos_token_id": 0,
+        "eos_token_id": 1,
+        "pad_token_id": 2,
+        "image_token_id": 129264
+      },
+      "meaning": "These are model/config declarations. They do not establish a DeepSeek V100 training compute dtype or a compatible training path."
+    },
+    "license": {
+      "value": "MIT",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/08c8657f02291e11b6f6b63e0e16014f8e748518/LICENSE",
+      "basis": "Pinned HF tree metadata and pinned LICENSE content both identify MIT."
+    },
+    "tokenizer": {
+      "prompt_format_reference": [
+        "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/08c8657f02291e11b6f6b63e0e16014f8e748518/encoding/README.md",
+        "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/08c8657f02291e11b6f6b63e0e16014f8e748518/encoding/encoding.py"
+      ],
+      "visible_pinned_assets": [
+        "encoding/README.md",
+        "encoding/encoding.py",
+        "chat_template.jinja"
+      ],
+      "tokenizer_class": null,
+      "tokenizer_repo_or_package_revision": null,
+      "tokenizer_files_with_sha256": null,
+      "tokenizer_status": "UNRESOLVED",
+      "notes": [
+        "The pinned config supplies vocabulary size and several token IDs, but not tokenizer class or tokenizer-file hashes.",
+        "The pinned README describes encoding/encoding.py as a prompt-format reference and points to deepseek-recipe for conversion to token IDs; no exact deepseek-recipe revision is pinned in the reviewed plan.",
+        "The pinned README says the release does not include a Jinja chat template while the pinned tree lists chat_template.jinja; this source discrepancy is retained rather than inferred away."
+      ],
+      "required_artifact": {
+        "path": "nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_TOKENIZER_MANIFEST_20261119.json",
+        "required_fields": [
+          "task_id=4A01",
+          "model_repo_id",
+          "model_revision",
+          "tokenizer_class_or_package",
+          "tokenizer_revision",
+          "all tokenizer files and SHA-256",
+          "vocabulary mapping/source",
+          "prompt-format version"
+        ],
+        "acceptance_condition": "One exact, pinned tokenizer implementation and complete file hashes are bound to the selected DeepSeek revision; do not infer them from vocab_size or prompt formatting alone."
+      }
+    },
+    "repository_size": {
+      "pinned_tree_url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/tree/08c8657f02291e11b6f6b63e0e16014f8e748518",
+      "displayed_size": "510 GB",
+      "listed_safetensors_shards": 48,
+      "exact_storage_bytes": null,
+      "qualification": "HF tree UI size is rounded and does not establish exact bytes to fetch, working storage, or training peak."
+    }
+  },
+  "training_source": {
+    "upstream_status": {
+      "issue_48755": {
+        "url": "https://github.com/huggingface/transformers/issues/48755",
+        "state_as_read": "OPEN",
+        "updated_at": "2026-11-18T02:45:52Z"
+      },
+      "pull_48721": {
+        "url": "https://github.com/huggingface/transformers/pull/48721",
+        "state_as_read": "CLOSED_UNMERGED",
+        "head_sha": "62d7ebd7de4938e072b7aaeb881593b79dc56835"
+      }
+    },
+    "community_modeling_port": {
+      "url": "https://github.com/malaiwah/transformers/commit/62d7ebd7de4938e072b7aaeb881593b79dc56835",
+      "commit_sha": "62d7ebd7de4938e072b7aaeb881593b79dc56835",
+      "tree_sha": "d20262a7c7be07dc0d6e917b6c9a4697355b5b2d",
+      "signature": "UNSIGNED_COMMUNITY_COMMIT"
+    },
+    "experimental_unsloth_support": [
+      {
+        "project": "unslothai/unsloth",
+        "pull_request": "https://github.com/unslothai/unsloth/pull/17625",
+        "head_sha": "162c7dc3325494bef180576d1604a35ec9e95c0f",
+        "merge_commit_sha": "3221ed08b0846c7a8d04415752abaa58ffb0864b",
+        "merged_at": "2026-11-12T20:10:09Z"
+      },
+      {
+        "project": "unslothai/unsloth-zoo",
+        "pull_request": "https://github.com/unslothai/unsloth-zoo/pull/2483",
+        "head_sha": "bcd14da25a1a3252e559aced29ab113f58e77037",
+        "merge_commit_sha": "0bf20b5f0f830308177a071e4d5c72d412fd35f3",
+        "merged_at": "2026-11-12T20:29:18Z"
+      }
+    ],
+    "demonstrated_scope": "Published PR descriptions report 10 SFT steps on a 79 MB tiny model built from the real config/tokenizer on Colab L4, with 65/65 tested adapters changing. They explicitly leave real FP4/FP8 release weights, multi-GPU, and merge/save round-trips unverified.",
+    "target_module_policy": {
+      "source_policy": "The experimental Unsloth Zoo implementation uses dynamic all-eligible-linear target discovery, adds Engram wkv handling, leaves the integer-top-k CSA indexer out, and has grouped o_a_proj/o_b_proj tests.",
+      "exact_resolved_full_names": null,
+      "exact_module_classes": null,
+      "exact_model_named_modules_enumeration_performed": false,
+      "status": "POLICY_SOURCE_FOUND_BUT_EXACT_TARGETS_UNRESOLVED",
+      "required_artifact": {
+        "path": "nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_RESOLVED_TARGET_MODULES_20261119.json",
+        "creation_condition": "After an approved exact-commit/config-only model-skeleton enumeration or approved model load, record the full named_modules() names and classes plus included/excluded reasons. This correction did not download weights or load a model.",
+        "required_fields": [
+          "task_id=4A01",
+          "model_repo_id",
+          "model_revision",
+          "training_port_commit",
+          "loader_and_library_pins",
+          "modules[].full_name",
+          "modules[].class",
+          "modules[].selection_rule",
+          "enumeration_sha256"
+        ],
+        "acceptance_condition": "The artifact binds all concrete selected LoRA modules to the exact target revision and training loader and records the exact canonical list SHA-256."
+      }
+    },
+    "selected_training_stack": null,
+    "training_compute_dtype": null,
+    "training_readiness": "NOT_ESTABLISHED"
+  },
+  "training_size_storage": {
+    "official_model_repository": {
+      "displayed_repo_size": "510 GB",
+      "exact_repo_bytes": null,
+      "source_revision": "08c8657f02291e11b6f6b63e0e16014f8e748518"
+    },
+    "plan_lower_bound": {
+      "approximate_backbone_parameters": 551900000000,
+      "source_display": "551.9B",
+      "ideal_4bit_backbone_bytes": 275950000000,
+      "excludes": [
+        "activations",
+        "dataset",
+        "adapter/checkpoint outputs",
+        "optimizer/state",
+        "cache",
+        "filesystem overhead",
+        "operational reserve"
+      ],
+      "qualification": "Parameter-count-derived idealized lower bound from the 16-Nov plan, not exact fetched bytes or a training estimate."
+    },
+    "last_owner_storage_observation": {
+      "workflow_run_id": 44460035858,
+      "workflow_job_id": 135344296278,
+      "workflow_job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44460035858/job/135344296278",
+      "workflow_source_commit": "52858cdd6612c130f5a70532ede75abb57cc7ed1",
+      "observed_at_utc": "2026-11-19T04:42:09.5670438Z",
+      "mount_path": "/root/nox",
+      "free_bytes": 17111969792,
+      "exact_audit_log_line_sha256": "f2e6c44e4055061fad9d59ee7a505c9ecada4be6c947edcbe10826749a250780",
+      "fresh_at_correction_time": false
+    },
+    "derived_gap_to_idealized_lower_bound": {
+      "bytes": 258838030208,
+      "decimal_gb_approx": 258.838,
+      "qualification": "275950000000 idealized lower-bound bytes minus the last observed 17111969792 free bytes. Inputs include rounded plan values and the storage snapshot is not fresh; this is not the exact current or full training deficit."
+    },
+    "exact_current_training_storage_deficit_bytes": null,
+    "exact_dataset_storage_bytes": null,
+    "training_admission": "HOLD_STORAGE_AND_UNRESOLVED_DATASET_AND_TRAINING_PATH"
+  },
+  "dataset": {
+    "manifest_found": false,
+    "dataset_id": null,
+    "dataset_revision": null,
+    "split_manifest_sha256": null,
+    "dataset_bytes": null,
+    "status": "UNRESOLVED",
+    "reviewed_sources": [
+      "Google Drive NOX training kit revision 0BwLAbHbBiWEAeVYzcFpodTFMc282Ry9xdWx0ek1VYWVFakdZPQ",
+      "Google Drive 16-Nov program note revision 27",
+      "Targeted Google Drive searches for DeepSeek training dataset manifests"
+    ],
+    "required_artifact": {
+      "path": "nox-control/model_manifests/evidence/4A01_DEEPSEEK_DATASET_MANIFEST_20261119.json",
+      "required_fields": [
+        "dataset_id",
+        "dataset_revision_or_source_commit",
+        "files[].path",
+        "files[].bytes",
+        "files[].sha256",
+        "train/validation split membership and hashes",
+        "deduplication/provenance policy"
+      ],
+      "acceptance_condition": "All dataset sources and split membership are pinned by immutable revision and file SHA-256; exact storage bytes are summed from the listed file set."
+    }
+  },
+  "separate_inference_artifact": {
+    "repository": "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
+    "revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+    "role": "inference_only",
+    "quantization": "GSQ-RCO-IQ2_XXS",
+    "total_unique_gguf_bytes": 248834257920,
+    "drive_manifest": {
+      "url": "https://drive.google.com/file/d/1DF1I9UQeDxxeYlRT1_FhvepmHXB7bsrr/view",
+      "drive_file_id": "1DF1I9UQeDxxeYlRT1_FhvepmHXB7bsrr",
+      "drive_revision_id": "0BwLAbHbBiWEAN0xldm9aVUJzeUlJVG84TWY3eitJZUExbXRzPQ",
+      "file_bytes": 3682,
+      "raw_sha256": "431d408aa8a1652f255d81b00b54385065e043c4240b4e8ae79aa913222ce609"
+    },
+    "hf_tree_url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/tree/65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+    "manifest_state": "MANIFEST_PLUS_METADATA_SHARD_ONLY_NOT_RUNNABLE",
+    "full_model_downloaded": false,
+    "training_allowed": false,
+    "note": "This GGUF is a distinct inference candidate, not a trainable checkpoint or evidence of the DeepSeek training route."
+  },
+  "source_index": [
+    {
+      "name": "Frozen 4A01 source task",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/07ebd86b15ae32644bc8bb562a396ec85918b13b/nox-control/four_queue_20261118/work_tasks.json",
+      "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f"
+    },
+    {
+      "name": "Frozen 295 disposition",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/07ebd86b15ae32644bc8bb562a396ec85918b13b/nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+      "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb"
+    },
+    {
+      "name": "Frozen 4-queue receipts",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/07ebd86b15ae32644bc8bb562a396ec85918b13b/nox-control/four_queue_20261118/work_receipts.json",
+      "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338"
+    },
+    {
+      "name": "Historical Qwen-only 4A01 manifest",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/71a8146443470d7d0c3ce2cdb1bcfad5d110a3ab/nox-control/model_manifests/4A01_QWEN35_9B_TRAINING_20261119.json",
+      "git_blob_sha": "ee6aa7d493ea3e0a9e975b45e2d591eee562ce0c"
+    },
+    {
+      "name": "Official DeepSeek pinned tree",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/tree/08c8657f02291e11b6f6b63e0e16014f8e748518",
+      "revision": "08c8657f02291e11b6f6b63e0e16014f8e748518"
+    },
+    {
+      "name": "Community DeepSeek modeling port",
+      "url": "https://github.com/malaiwah/transformers/commit/62d7ebd7de4938e072b7aaeb881593b79dc56835",
+      "commit_sha": "62d7ebd7de4938e072b7aaeb881593b79dc56835"
+    },
+    {
+      "name": "Unsloth LoRA/QLoRA port support",
+      "url": "https://github.com/unslothai/unsloth/pull/17625",
+      "merge_commit_sha": "3221ed08b0846c7a8d04415752abaa58ffb0864b"
+    },
+    {
+      "name": "Unsloth Zoo LoRA targets/training fixes",
+      "url": "https://github.com/unslothai/unsloth-zoo/pull/2483",
+      "merge_commit_sha": "0bf20b5f0f830308177a071e4d5c72d412fd35f3"
+    },
+    {
+      "name": "Official Transformers integration issue",
+      "url": "https://github.com/huggingface/transformers/issues/48755"
+    },
+    {
+      "name": "Official Transformers model PR (closed unmerged)",
+      "url": "https://github.com/huggingface/transformers/pull/48721",
+      "head_sha": "62d7ebd7de4938e072b7aaeb881593b79dc56835"
+    }
+  ],
+  "action_boundary": {
+    "weights_downloaded": 0,
+    "training_started": false,
+    "native_server_calls": 0,
+    "production_model_changes": 0,
+    "mutable_ledger_writes": 0,
+    "source_scope_only": true
+  }
+}

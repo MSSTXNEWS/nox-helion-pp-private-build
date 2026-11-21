@@ -65,6 +65,133 @@
     const reportStyle=E('style');reportStyle.textContent='.nox-owner-reports{margin:0 12px 10px;color:#cbd7e3;font:12px system-ui}.nox-owner-reports summary{padding:8px;cursor:pointer;color:#d8bc87}.nox-owner-report{border-left:2px solid #a3824e;background:#111b25b8;border-radius:0 9px 9px 0;padding:11px 13px;margin:7px 0;line-height:1.55}.nox-owner-report p{margin:5px 0}.nox-owner-report small{color:#90a2b5}';document.head.append(reportStyle);
     const inventory=E('details',undefined,'nox-owner-reports'),inventoryTitle=E('summary','Загрузки · проверяю файлы'),inventoryBody=E('div');
     inventory.dataset.noxDownloadInventory='1';inventory.append(inventoryTitle,inventoryBody);reports.before(inventory);
+    const progress=E('details',undefined,'nox-owner-reports'),progressTitle=E('summary','Прогресс · сверяю frozen 295'),progressBody=E('div');
+    progress.dataset.noxWorkProgress='1';progress.open=true;progress.append(progressTitle,progressBody);reports.before(progress);
+    let workProgressBusy=false;
+    async function refreshWorkProgress(){
+      if(workProgressBusy||document.hidden)return;workProgressBusy=true;
+      try{
+        const value=await api('/api/ui/work-progress');
+        const age=Date.now()/1000-Number(value.observed_at);
+        const criterionIds=value.criterion_verified_task_ids;
+        const deferredIds=value.evidence_only_deferred_task_ids;
+        const verifiedIds=value.verified_receipt_record_ids;
+        const groups=value.receipt_groups;
+        const expectedCriterion=['0B01','2V14-01','2V14-02','2V14-12','4A01','5A03','6V14-02','I-37','I-49'];
+        const expectedDeferred=['0A04','5A01'];
+        const expectedVerified=[...expectedCriterion,...expectedDeferred].sort();
+        if(value.schema!=='NOX_OWNER_WORK_PROGRESS_V1'||value.state!=='OBSERVED'
+          ||value.receipt_disposition_state!=='OBSERVED'||value.frozen_295_count!==295
+          ||value.criterion_verified_count!==9
+          ||!Array.isArray(criterionIds)||criterionIds.join('|')!==expectedCriterion.join('|')
+          ||value.evidence_only_deferred_count!==2
+          ||!Array.isArray(deferredIds)||deferredIds.join('|')!==expectedDeferred.join('|')
+          ||value.verified_receipt_record_count!==11
+          ||!Array.isArray(verifiedIds)||verifiedIds.join('|')!==expectedVerified.join('|')
+          ||value.receipt_manifest_git_blob_sha!=='f5c45dc8919b1b800e89a421676a3627e75fb3bb'
+          ||value.receipt_snapshot_git_blob_sha!=='6a9c71393735dbc4b5c1577272f22cef38ab6338'
+          ||!Number.isSafeInteger(value.supplemental_accepted_count)
+          ||!Array.isArray(value.supplemental_accepted_task_ids)
+          ||value.supplemental_accepted_task_ids.length!==value.supplemental_accepted_count
+          ||!Array.isArray(groups)||groups.length!==7
+          ||groups.some(row=>!row||typeof row.label!=='string'
+            ||!Number.isSafeInteger(row.verified_receipts)||!Number.isSafeInteger(row.total)
+            ||row.verified_receipts<0||row.verified_receipts>row.total)
+          ||groups.reduce((n,row)=>n+row.verified_receipts,0)!==value.verified_receipt_record_count
+          ||groups.reduce((n,row)=>n+row.total,0)!==295
+          ||!Number.isFinite(age)||age < -5||age>45)throw Error('UNAVAILABLE');
+        progressTitle.textContent='Критерии · '+value.criterion_verified_count+'/295';
+        progressBody.replaceChildren();
+        progressBody.append(E('p','По точному снимку реестра подтверждены критерии: '
+          +value.criterion_verified_count+' / 295.'));
+        progressBody.append(E('p','Verified-квитанций в снимке: '
+          +value.verified_receipt_record_count+'; из них отложены отдельно: '
+          +value.evidence_only_deferred_count+' ('+deferredIds.join(', ')
+          +') — они не входят в числитель 9/295.'));
+        progressBody.append(E('small','Подтверждённые TaskID: '+criterionIds.join(', ')));
+        const groupHeading=E('p','Квитанции по группам (включая отложенные записи; всего '
+          +value.verified_receipt_record_count+').');
+        const groupGrid=E('div');groupGrid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:2px 12px;margin:4px 0 10px';
+        for(const row of groups)groupGrid.append(E('span',row.label+': '
+          +row.verified_receipts+'/'+row.total+' квитанций'));
+        progressBody.append(groupHeading,groupGrid);
+        progressBody.append(E('p','Дополнительные подтверждённые критерии, отдельно от квитанций: '
+          +value.supplemental_accepted_count+(value.supplemental_accepted_task_ids.length
+            ?' · '+value.supplemental_accepted_task_ids.join(', '):' · нет')));
+        progressBody.append(E('small','Закреплённые источники: all295 '
+          +value.receipt_manifest_git_blob_sha.slice(0,12)+' · квитанции '
+          +value.receipt_snapshot_git_blob_sha.slice(0,12)+'.'));
+        progressBody.append(E('p','Это не общий процент программы и не подтверждение установки на сервере или live-приёмки.'));
+        const stamp=new Date(Number(value.observed_at)*1000);
+        progressBody.append(E('small','Снимок: '+stamp.toLocaleString()
+          +' · supplemental scan: '+value.supplemental_state));
+      }catch{
+        progressTitle.textContent='Прогресс программы · нет свежего подтверждения';
+        progressBody.replaceChildren(E('p','Сверка frozen 295 и квитанций сейчас недоступна.'));
+      }finally{workProgressBusy=false;}
+    }
+    void refreshWorkProgress();setInterval(()=>void refreshWorkProgress(),30000);
+    const stopConfig=E('details',undefined,'nox-owner-reports'),stopConfigTitle=E('summary','RPC конфигурация STOP · проверяю'),stopConfigBody=E('div');
+    stopConfig.dataset.noxStopConfigPreflight='1';stopConfig.append(stopConfigTitle,stopConfigBody);reports.before(stopConfig);
+    let stopConfigBusy=false;
+    const stopConfigLabels=[
+      ['Форма конфигурации','config_shape_supported'],
+      ['Снимок конфигурации стабилен','config_snapshot_stable'],
+      ['Include glob соответствует фиксированной области','include_glob_matches_fixed_scope'],
+      ['UNIX serverurl','serverurl_unix_scheme'],
+      ['Нет authority, query или fragment','serverurl_has_no_authority_query_fragment'],
+      ['Путь абсолютный, без traversal','socket_path_absolute_no_traversal'],
+      ['Socket path совпадает с serverurl','socket_serverurl_paths_equal'],
+      ['RPC factory в allowlist','rpc_factory_matches_fixed_allowlist'],
+      ['Владелец root:root','configured_owner_is_root_root'],
+      ['Формат режима допустим','configured_mode_format_allowed'],
+      ['Режим приватный','configured_mode_private'],
+      ['Owner write установлен','configured_mode_owner_write_set'],
+      ['Все endpoint predicates прошли','endpoint_config_predicates_all_pass']
+    ];
+    async function refreshStopConfig(){
+      if(stopConfigBusy||document.hidden)return;stopConfigBusy=true;
+      try{
+        const value=await api('/api/ui/emergency-stop-config');
+        const age=Date.now()/1000-Number(value.observed_at);
+        if(value.schema!=='NOX_OWNER_STOP_CONFIG_PREFLIGHT_V1'
+          ||!Number.isFinite(age)||age < -5||age>45
+          ||value.read_only!==true||value.supervisor_rpc_calls!==0
+          ||value.process_signals!==0||value.host_writes!==0
+          ||value.stop_command_sent!==false||value.live_stop_acceptance_proven!==false
+          ||value.evidence_scope!=='CONFIG_PREDICATES_ONLY')
+          throw Error('UNAVAILABLE');
+        if(value.state!=='OBSERVED'){
+          const hold=typeof value.hold_reason==='string'
+            &&/^HOLD_ENDPOINT_PREFLIGHT_[A-Z0-9_]+$/.test(value.hold_reason)
+            ?' · '+value.hold_reason:'';
+          stopConfigTitle.textContent='RPC конфигурация STOP · '+(value.state==='HOLD'?'HOLD':'нет свежих данных');
+          stopConfigBody.replaceChildren(E('p','Предикаты конфигурации не подтверждены'+hold+'.'));
+          stopConfigBody.append(E('p','Проверяется только конфигурация; STOP не отправлялся, live acceptance не подтверждён.'));
+          return;
+        }
+        const config=value.config_predicates,endpoint=value.endpoint_predicates;
+        if(!config||!endpoint||stopConfigLabels.some(([,key])=>typeof (key in config?config[key]:endpoint[key])!=='boolean'))
+          throw Error('UNVERIFIED');
+        const predicatesPass=Object.values(config).every(flag=>flag===true)
+          &&endpoint.endpoint_config_predicates_all_pass===true;
+        stopConfigTitle.textContent='RPC конфигурация STOP · '
+          +(predicatesPass?'предикаты конфигурации прошли':'HOLD');
+        stopConfigBody.replaceChildren();
+        for(const [label,key] of stopConfigLabels){
+          const pass=key in config?config[key]:endpoint[key];
+          stopConfigBody.append(E('p',label+': '+(pass?'PASS':'HOLD')));
+        }
+        stopConfigBody.append(E('p','Только конфигурационные predicates. Проверка не выполняет Supervisor RPC и не отправляет STOP.'));
+        stopConfigBody.append(E('p','Эти данные не подтверждают live STOP acceptance или установку.'));
+        const stamp=new Date(Number(value.observed_at)*1000);
+        stopConfigBody.append(E('small','Снимок конфигурации: '+stamp.toLocaleString()+'.'));
+      }catch{
+        stopConfigTitle.textContent='RPC конфигурация STOP · нет свежего подтверждения';
+        stopConfigBody.replaceChildren(E('p','Read-only endpoint preflight сейчас недоступен. STOP не отправлялся.'));
+      }finally{stopConfigBusy=false;}
+    }
+    void refreshStopConfig();setInterval(()=>void refreshStopConfig(),30000);
     let downloadsBusy=false;
     const size=value=>(Number(value)/1073741824).toLocaleString(undefined,{maximumFractionDigits:2})+' ГиБ';
     async function refreshDownloads(){
@@ -98,15 +225,23 @@
       finally{downloadsBusy=false;}
     }
     void refreshDownloads();setInterval(()=>void refreshDownloads(),20000);
+    const validEventCursor=n=>Number.isSafeInteger(n)&&n>=0&&n<1000000000000000;
     let eventCursor=null,eventsBusy=false,eventCount=0;
-    try{const n=Number(localStorage.getItem('nox.owner.events.cursor'));if(Number.isSafeInteger(n)&&n>0)eventCursor=n;}catch{}
+    try{const stored=localStorage.getItem('nox.owner.events.cursor');if(stored!==null&&/^[0-9]{1,15}$/.test(stored)){const n=Number(stored);if(validEventCursor(n))eventCursor=n;}}catch{}
     async function refreshEvents(){
       if(eventsBusy||document.hidden)return;eventsBusy=true;
       try{
-        const value=await api('/api/ui/events?limit=20'+(eventCursor===null?'':'&cursor='+eventCursor));
-        if(value.schema!=='NOX_OWNER_EVENTS_V1'||!Array.isArray(value.events)||!Number.isSafeInteger(value.next_cursor))return;
+        if(eventCursor!==null&&!validEventCursor(eventCursor)){reportTitle.textContent='Отчёты NOX · снимок недоступен';return;}
+        const value=await api('/api/ui/events/snapshot?limit=20'+(eventCursor===null?'':'&cursor='+eventCursor));
+        const validEvents=value&&value.schema==='NOX_OWNER_EVENTS_V1'&&Array.isArray(value.events)
+          &&value.events.length<=20&&validEventCursor(value.next_cursor)&&validEventCursor(value.latest_cursor)
+          &&value.next_cursor<=value.latest_cursor
+          &&value.events.every((event,index)=>event&&Number.isSafeInteger(event.sequence)
+            &&event.sequence>0&&event.sequence<=value.latest_cursor
+            &&(index===0||event.sequence>value.events[index-1].sequence)
+            &&typeof event.title==='string'&&typeof event.message==='string');
+        if(!validEvents){reportTitle.textContent='Отчёты NOX · снимок недоступен';return;}
         for(const event of value.events){
-          if(!Number.isSafeInteger(event.sequence)||typeof event.title!=='string'||typeof event.message!=='string')continue;
           if(reportList.querySelector('[data-event-sequence="'+event.sequence+'"]'))continue;
           const card=E('article',undefined,'nox-owner-report');card.dataset.eventSequence=String(event.sequence);
           const heading=E('b',event.title),message=E('p',event.message);
@@ -118,7 +253,7 @@
         eventCursor=value.next_cursor;try{localStorage.setItem('nox.owner.events.cursor',String(eventCursor));}catch{}
         const nextTitle=eventCount?'Отчёты NOX · '+eventCount:'Отчёты NOX · ожидаю события';
         if(reportTitle.textContent!==nextTitle)reportTitle.textContent=nextTitle;
-      }catch{if(!eventCount)reportTitle.textContent='Отчёты NOX · подключение';}
+      }catch{reportTitle.textContent='Отчёты NOX · снимок недоступен';}
       finally{eventsBusy=false;}
     }
     void refreshEvents();setInterval(()=>void refreshEvents(),5000);
@@ -167,17 +302,79 @@
     cancel.addEventListener('click',async()=>{if(job&&running){cancel.disabled=true;try{show(await api('/api/ui/media/jobs/'+job.id+'/cancel',{}));}catch(e){status.textContent=e.message;cancel.disabled=false;}}});
     async function refresh(){
       if(document.visibilityState==='hidden')return;
-      try{const value=await api('/api/ui/executors');chips.replaceChildren();
-        if(value.state==='MODEL_UPDATE'||value.state==='HOLD_MAINTENANCE_UNKNOWN'){
-          label.textContent=value.state==='MODEL_UPDATE'?'Модель обновляется · состояние процессов требует проверки':'Обслуживание · статус STOP не подтверждён';
-          window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:false,busy:0,state:value.state}}));
+      try{
+        const value=await api('/api/ui/executors');chips.replaceChildren();
+        const states=['OBSERVED','STALE','UNAVAILABLE','MODEL_UPDATE','HOLD_MAINTENANCE_UNKNOWN'];
+        const maintenanceStates=['ABSENT','PRESENT','UNKNOWN'];
+        const state=value&&value.state;
+        const maintenance=value&&value.owner_maintenance;
+        const rows=value&&value.workers;
+        const observedAt=value&&value.observed_at;
+        const maintenanceOk=maintenanceStates.includes(maintenance);
+        const observedState=state==='OBSERVED'||state==='STALE';
+        const observedAge=typeof observedAt==='number'&&Number.isFinite(observedAt)?Date.now()/1000-observedAt:NaN;
+        const rowsOk=Array.isArray(rows)&&rows.length<=64&&rows.every(row=>row
+          &&typeof row.id==='string'&&/^nox-agent-[0-9]{2}$/.test(row.id)
+          &&(row.status==='idle'||row.status==='busy')
+          &&(row.status==='busy'?typeof row.task_id==='string'&&row.task_id.length>0&&row.task_id.length<=100:row.task_id===null))
+          &&new Set(rows.map(row=>row.id)).size===rows.length
+          &&new Set(rows.filter(row=>row.status==='busy').map(row=>row.task_id)).size
+            ===rows.filter(row=>row.status==='busy').length;
+        const snapshotFieldsOk=observedState
+          ?maintenance==='ABSENT'&&rows.length>=1&&Number.isSafeInteger(value.configured)
+            &&value.configured===rows.length&&typeof observedAt==='number'&&Number.isFinite(observedAt)
+            &&(state==='OBSERVED'?observedAge>=-5&&observedAge<=45:observedAge < -5||observedAge>45)
+          :state==='MODEL_UPDATE'
+            ?maintenance==='PRESENT'&&rows.length===0&&value.configured===null&&observedAt===null
+            :state==='HOLD_MAINTENANCE_UNKNOWN'
+              ?maintenance==='UNKNOWN'&&rows.length===0&&value.configured===null&&observedAt===null
+              :state==='UNAVAILABLE'
+                ?maintenance==='ABSENT'&&rows.length===0&&value.configured===null&&observedAt===null
+                :false;
+        if(value.schema!=='NOX_OWNER_EXECUTORS_V1'||!states.includes(state)
+          ||!maintenanceOk||typeof value.training_held!=='boolean'||!rowsOk||!snapshotFieldsOk){
+          label.textContent='Исполнители · HOLD_INVALID_SNAPSHOT';
+          label.dataset.state='HOLD_INVALID_SNAPSHOT';
+          label.title='Данные не соответствуют контракту ограниченного снимка.';
+          window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:false,busy:0,state:'HOLD_INVALID_SNAPSHOT'}}));
           return;
         }
-        label.textContent=value.state==='OBSERVED'?'Исполнители · по файлу статуса':'Состояние обновляется';
-        window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:value.state==='OBSERVED',busy:(value.workers||[]).filter(x=>x.status==='busy').length}}));
-        for(const [index,worker] of (value.workers||[]).entries()){
-          const known=value.state==='OBSERVED',busy=worker.status==='busy';const chip=E('span',String(index+1)+' · '+(known?(busy?'работает':'свободен'):'нет свежих данных'),'nox-live-chip');chip.dataset.state=known&&busy?'busy':'idle';chip.title=worker.task_id||worker.id;chips.append(chip);
-        }}catch{label.textContent='Исполнители · нет связи';window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:false,busy:0}}));}
+        const stamp=typeof observedAt==='number'?new Date(observedAt*1000):null;
+        const timeText=stamp&&Number.isFinite(stamp.getTime())?stamp.toLocaleString():'время неизвестно';
+        const stateLabel={
+          OBSERVED:'OBSERVED · снимок актуален',
+          STALE:'STALE · снимок устарел',
+          UNAVAILABLE:'UNAVAILABLE · снимок недоступен',
+          MODEL_UPDATE:'MODEL_UPDATE · maintenance присутствует',
+          HOLD_MAINTENANCE_UNKNOWN:'HOLD_MAINTENANCE_UNKNOWN · maintenance неизвестен'
+        }[state];
+        const trainHold='training_held='+String(value.training_held);
+        label.textContent='Исполнители · '+stateLabel+' · maintenance='+maintenance
+          +(observedState?' · '+timeText:'')+' · '+trainHold;
+        label.dataset.state=state;
+        label.title='Ограниченный снимок status-файла; PID и факт приёма STOP здесь не проверяются.';
+        const busy=state==='OBSERVED'?rows.filter(row=>row.status==='busy').length:0;
+        window.dispatchEvent(new CustomEvent('nox:workers',{detail:{
+          online:state==='OBSERVED',busy,state,configured:observedState?value.configured:null,
+          observed_at:observedState?observedAt:null,owner_maintenance:maintenance,
+          training_held:value.training_held
+        }}));
+        for(const [index,worker] of rows.entries()){
+          const fresh=state==='OBSERVED',busyRow=fresh&&worker.status==='busy';
+          const chipText=state==='OBSERVED'
+            ?String(index+1)+' · '+(busyRow?'busy · снимок':'idle · снимок')
+            :'нет свежих данных · '+String(index+1);
+          const chip=E('span',chipText,'nox-live-chip');
+          chip.dataset.state=busyRow?'busy':state.toLowerCase();
+          chip.title=worker.task_id?worker.id+' · '+worker.task_id:worker.id;
+          chips.append(chip);
+        }
+      }catch{
+        label.textContent='Исполнители · UNAVAILABLE';
+        label.dataset.state='UNAVAILABLE';
+        label.title='Снимок status-файла сейчас недоступен.';
+        window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:false,busy:0,state:'UNAVAILABLE'}}));
+      }
     }
     void refresh();setInterval(()=>void refresh(),10000);
   }

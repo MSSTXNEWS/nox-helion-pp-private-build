@@ -1,0 +1,109 @@
+{
+  "schema": "NOX_I49_OWNER_INSTRUCTION_BINDING_V1",
+  "recorded_at_utc": "2026-11-19T11:09:41Z",
+  "append_only": true,
+  "purpose": "Bind the user's current instruction to a bounded I-49 read-only review of the already evidenced checkpoint pair and exactly the 500 names in the existing comparison artifact. This does not rewrite or backdate the prior run authorization.",
+  "task": {
+    "task_id": "I-49",
+    "title": "Сравнить тензоры двух checkpoints на CPU",
+    "spec_sha256": "c126701e3699969ab557e9fb99f4c2085a0d678f06e11895835d89241f194e1f",
+    "criterion": "Проверить разрешённые параметры выборочно, без загрузки полной модели",
+    "frozen_work_ideas_blob_sha": "6f84f315d9792cb43f08b72b062dc2f71ce1d4a6",
+    "frozen_all295_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+    "frozen_work_receipts_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+    "mutation_of_frozen_files": false
+  },
+  "owner_instruction": {
+    "basis": "Direct user instruction in the current conversation, interpreted as authorization to finish I-49 by a bounded read-only CPU comparison of this exact checkpoint pair.",
+    "exact_user_text": "измени и сделай все",
+    "authorization_timestamp_utc": "2026-11-19T11:09:41Z",
+    "timestamp_note": "Timestamp records when this instruction was bound into this evidence artifact; it is not inferred as a historical authorization timestamp for the earlier comparison run.",
+    "permitted_scope": "Use only the two Drive folders and the exact existing 500 common tensor names identified by the bound all500 artifact.",
+    "read_only_cpu_comparison": true,
+    "load_full_base_model": false,
+    "training": false,
+    "drive_or_server_writes": false,
+    "emit_tensor_values": false,
+    "historical_run_authorization_inferred": false
+  },
+  "pair_binding": {
+    "canonicalization": "UTF-8 JSON with sorted keys, separators ',' and ':', ensure_ascii=true; object has before and after keys, each containing drive_folder_id, assembled_bytes, assembled_sha256.",
+    "pair_sha256": "1df59f1bd9fc4712b8ba01c429af5aa19895ea9ed907d1f807b99b9195a87bd1",
+    "before": {
+      "folder_name": "understanding_pref_checkpoint-105",
+      "drive_folder_id": "1PNX-lRLaKVTRPakDOOqctF_rUoPvOu59",
+      "join_file_id": "15cFnblVY95bJuF20a-L9Qy7RLHdHyaug",
+      "assembled_bytes": 306787336,
+      "assembled_sha256": "924d05894749d2107629549d9d95ca4e5538d33c2eac351d0c0c26919ccbb7a2",
+      "sha256sums_file_id": "1T98w8xTgtMZFJuwvDrAOtJwWD6eAiXHJ",
+      "sha256sums_sha256": "0852c1181534439cc51f241aa091d76cc7fc1c48f3d8a39332c5362192207f9d",
+      "sha256sums_bytes": 1158
+    },
+    "after": {
+      "folder_name": "mix_final_sft_checkpoint-383",
+      "drive_folder_id": "1CG_ALzrWsZLyrtuGxvNp4ajyZGfgh6nH",
+      "join_file_id": "1x-DwWsOeRh-j-g9lu_a81WZPWxgSrAWI",
+      "assembled_bytes": 306787336,
+      "assembled_sha256": "8c32c5979470018bd260421b7ace2ef681e3c7f0e3dc978b6fecfdd98c25bcd1",
+      "sha256sums_file_id": "1EWa3HwSr3JGkrRd9azhghfdMuGvBUyZB",
+      "sha256sums_sha256": "bb207cd70ea65fc0145d435c135078c39f1a786df8338ea12df3b7c6e729e42a",
+      "sha256sums_bytes": 574
+    },
+    "pair_parts_rehashed_in_this_step": false,
+    "input_bytes_re_downloaded_in_this_step": false,
+    "provenance_basis": "The existing I-49 receipt records local assembly sizes and aggregate SHA-256 matching each JOIN file and all eight part hashes matching SHA256SUMS. The all500 report is bound to the same two aggregate SHA-256 values. The current Drive manifest recheck and limits are documented in source_evidence_erratum_20261119_i49.json."
+  },
+  "tensor_name_set": {
+    "source_artifact_commit": "d56f5acae91aa01d2ba65d4bceb7b1715c253dba",
+    "source_artifact_path": "nox-control/i49_checkpoint_compare_20261119/evidence/all500_tensor_delta.json",
+    "source_artifact_git_blob_sha": "a5e9fc5d763b2872d4e61cd0f3a95a9324320b19",
+    "source_artifact_content_sha256": "bb2280f10646331b0528599f5d2693779da4076bdbe53e280a09634a45d99ec6",
+    "count": 500,
+    "selection_rule": "Exactly the 500 unique name strings already present in comparison.tensors; no name was added or inferred.",
+    "name_set_sha256_canonicalization": "SHA-256 over lexicographically sorted unique UTF-8 names joined by LF, with one trailing LF.",
+    "name_set_sha256": "d0baf44eff8da1fd86afaf812900b0f7ee273d7286a20f49de0237f4689ac7da",
+    "preexisting_owner_allowlist_claimed": false
+  },
+  "existing_comparison": {
+    "artifact_commit": "d56f5acae91aa01d2ba65d4bceb7b1715c253dba",
+    "receipt_path": "nox-control/i49_checkpoint_compare_20261119/evidence/i49_cpu_comparison.json",
+    "receipt_git_blob_sha": "a2f2ff6f52cab8b02b299efda6646a5f5eaae3be",
+    "provenance_path": "nox-control/i49_checkpoint_compare_20261119/evidence/PROVENANCE.md",
+    "provenance_git_blob_sha": "c5765c517570b743b1508b865910440b0ead8308",
+    "all500_path": "nox-control/i49_checkpoint_compare_20261119/evidence/all500_tensor_delta.json",
+    "all500_git_blob_sha": "a5e9fc5d763b2872d4e61cd0f3a95a9324320b19",
+    "comparison_summary": {
+      "matching_tensors": 500,
+      "compared_tensors": 500,
+      "changed_payload_hashes": 500,
+      "unchanged_payload_hashes": 0,
+      "comparison_issues": 0,
+      "payload_bytes_hashed_per_adapter": 306708480,
+      "dtype": "F32",
+      "training_started": false
+    },
+    "result_reused_without_rerun": true,
+    "value_payloads_not_included": true
+  },
+  "comparator_binding": {
+    "repository": "s-grouptwet/nox-helion-pp-private-build",
+    "path": "handoff/20261117/nox-v15-kit/execution/role4/tensor_delta.py",
+    "revision": "e10c80f64e3fd88298be2776c58d03939e6e71f6",
+    "git_blob_sha": "93a5963b0951a38c00438ced561b1077fd8bf7ca",
+    "corrected_source_sha256": "f71ed5466efed6fe70a19c222df9dc7c97a1a44e5bee82b4747d099c7f65abf0",
+    "correction_erratum_commit": "7d8cd61096a502475ea3b5a9b447b41d076f1a46",
+    "correction_erratum_blob_sha": "e283948b2df1b037f2f2dd918de0cee7c7f49da6",
+    "correction_erratum_pr": 486,
+    "method": "Safetensors header validation and bounded 1 MiB payload hashing for explicitly supplied names; no tensor arrays or base model loaded."
+  },
+  "assessment": {
+    "authorization_binding": "CURRENT_DIRECT_INSTRUCTION_BOUND_TO_THIS_EXACT_PAIR_AND_EXISTING_NAME_SET",
+    "evidence_status": "EXISTING_REAL_PAIR_COMPARISON_BOUND; READY_FOR_INDEPENDENT_REVIEW",
+    "acceptance_claim": false,
+    "limitations": [
+      "The 500 names were not a pre-existing allowlist; this record binds only the user's current instruction to the exact existing set and does not assert a historical owner event.",
+      "The byte-hash comparison establishes payload-byte changes, not elementwise numeric delta magnitudes, training provenance, or model quality.",
+      "This record does not claim training readiness or any model execution."
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+name: NOX ZIP two archive preflight reviewed source checks
+on:
+  pull_request:
+    paths:
+      - nox-control/systemic_relay_20261118/next_zip_preflight/**
+      - .github/workflows/nox-zip-preflight-ci.yml
+permissions:
+  contents: read
+jobs:
+  source-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Verify current accepted source ancestor and focused tests
+        working-directory: nox-control/systemic_relay_20261118
+        run: |
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          before=Path('next_zip_reviewed/merge_web_source.py').read_bytes()
+          after=Path('next_zip_preflight/merge_web_source.py').read_bytes()
+          assert hashlib.sha256(before).hexdigest()=='7e9ffd7e6a3c69d8d7529d804ebd8d29d3a9199b1c39a2177eb1bc2a230d55b3'
+          assert hashlib.sha256(after).hexdigest()!=hashlib.sha256(before).hexdigest()
+          compile(after,'next-preflight','exec')
+          PY
+          python -B -m unittest discover -s next_zip_preflight -p 'test_zip_*.py' -v

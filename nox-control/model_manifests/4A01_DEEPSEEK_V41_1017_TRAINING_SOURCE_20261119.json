@@ -1,0 +1,227 @@
+{
+  "schema": "NOX_MODEL_SOURCE_MANIFEST_V1",
+  "task_id": "4A01",
+  "task_spec_sha256": "c7d3737748301a132e1bc7df66af486d8fc012839c3301c6b7d72c5cf4900486",
+  "manifest_date_utc": "2026-11-19",
+  "source_status": "SOURCE_CRITERION_COMPLETE",
+  "training_admission": "HOLD",
+  "canonical_target": {
+    "runtime": "Maya",
+    "model_repo": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "model_revision": "08c8657f02291e11b6f6b63e0e16014f8e748518",
+    "config_url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/08c8657f02291e11b6f6b63e0e16014f8e748518/config.json",
+    "architecture": "DeepseekV41ForCausalLM",
+    "model_type": "deepseek_v41",
+    "config_declared_dtype": "bfloat16",
+    "checkpoint_storage_format": {
+      "dense": "FP8 block quantized, UE8M0 scales",
+      "experts": "FP4",
+      "source": "pinned config"
+    },
+    "license": "MIT",
+    "license_url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/08c8657f02291e11b6f6b63e0e16014f8e748518/LICENSE"
+  },
+  "revision_relation": {
+    "launch_checkpoint": "deepseek-ai/DeepSeek-V4.1-Flash",
+    "evidence_repo": "vllm-project/recipes",
+    "evidence_commit": "475d03e40c206c2288092d0e53951a8869fcd676",
+    "evidence_file": "models/deepseek-ai/DeepSeek-V4.1-Flash.yaml",
+    "evidence_git_blob_sha": "7ef64b3f78451788efa6c7225d090f8aa92f2af5",
+    "evidence_url": "https://github.com/vllm-project/recipes/blob/475d03e40c206c2288092d0e53951a8869fcd676/models/deepseek-ai/DeepSeek-V4.1-Flash.yaml",
+    "statement": "The official vLLM recipe describes 1017 as the 2026-10-17 weight refresh: same architecture, config.json, tokenizer, prompt encoding, and same model tensor layout as launch; only model weights change. The NVIDIA training recipe below is therefore recorded as a source-adapted recipe for 1017, not as a 1017 training run."
+  },
+  "tokenizer": {
+    "local_path": "nox-control/model_manifests/evidence/assets/deepseek_v41_1017/tokenizer.json",
+    "tokenizer_file": "tokenizer.json",
+    "tokenizer_format": "Hugging Face tokenizer.json",
+    "tokenizer_class": "tokenizers::Tokenizer (Rust tokenizers crate, documented version 0.23)",
+    "prompt_encoder": "DeepseekV41Encoding from deepseek-recipe-encoding 0.2",
+    "source_repo": "deepseek-ai/deepseek-recipe",
+    "source_revision": "935817c66f5d6e64838f419692545f06787e485f",
+    "source_path": "static/tokenizers/v41/tokenizer.json",
+    "source_git_blob_sha1": "3abdf13e3488acc65e11e6a57f073f6673175c3a",
+    "size_bytes": 6367247,
+    "sha256": "81f64d1248a68ce3663e07ab3ee48b851e5df0e32d27cb98e4c9a268151e8d99",
+    "sha256_basis": "SHA-256 published in the upstream README at the same pinned repository revision; source blob SHA-1 and exact UTF-8 byte length were independently checked.",
+    "upstream_readme_url": "https://github.com/deepseek-ai/deepseek-recipe/blob/935817c66f5d6e64838f419692545f06787e485f/static/tokenizers/v41/README.md",
+    "upstream_readme_git_blob_sha1": "8d400056c0591a9e44a4967420f2c5b5e8269e48",
+    "upstream_license": "MIT, Copyright (c) 2023 DeepSeek",
+    "license_file": "nox-control/model_manifests/evidence/assets/deepseek_v41_1017/LICENSE",
+    "upstream_license_url": "https://github.com/deepseek-ai/deepseek-recipe/blob/935817c66f5d6e64838f419692545f06787e485f/static/tokenizers/LICENSE",
+    "upstream_license_git_blob_sha1": "d62e3bef9f054f21b7fc616365850fbf879a99ff",
+    "tokenizer_note": "The bundled V4.1 tokenizer is a modified copy of the referenced HF tokenizer with image token ID 129264 reassigned to <｜image｜>; other entries match comparison revision 6821d6ad3681a4b137b066b76094fa82ebd0a380. The upstream repository says the original import revision was not recorded.",
+    "model_repo_asset_check": {
+      "repo": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "revision": "08c8657f02291e11b6f6b63e0e16014f8e748518",
+      "tree_url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/tree/08c8657f02291e11b6f6b63e0e16014f8e748518",
+      "checked_at_utc": "2026-11-19",
+      "files_checked": [
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ],
+      "result": "not present at the pinned model revision"
+    },
+    "byte_identity_to_1017_tokenizer_file": "NOT_CLAIMED: the 1017 repository pin does not expose tokenizer.json or tokenizer_config.json. This asset is the pinned deepseek-recipe V4.1 modified copy; upstream says its original import revision was not recorded.",
+    "compatibility_basis": "The official vLLM recipe says 1017 and launch share tokenizer/prompt encoding, and the pinned 1017 config uses image_token_id 129264. This is compatibility evidence only; it is not a byte-identity proof for this modified copy.",
+    "prompt_reference_at_model_pin": {
+      "encoding_readme": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/08c8657f02291e11b6f6b63e0e16014f8e748518/encoding/README.md",
+      "encoding_python": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/08c8657f02291e11b6f6b63e0e16014f8e748518/encoding/encoding.py",
+      "note": "Pinned model reference sources; not copied into this PR."
+    },
+    "identity_status": "Exact pinned deepseek-recipe tokenizer asset and hash; modified upstream copy with unrecorded original import revision. Compatibility is supported by vLLM's 1017-to-launch statement, but no direct byte identity to a tokenizer file in the 1017 model repository is claimed."
+  },
+  "training_recipe": {
+    "source_type": "Official NVIDIA-NeMo AutoModel H100 recipe, adapted at source level only",
+    "source_repo": "NVIDIA-NeMo/Automodel",
+    "source_commit": "384f6b2ae5e6d9678b8dc6594844d666bee2928f",
+    "source_file": "examples/llm_finetune/deepseek_v41/deepseek_v41_flash_hellaswag_lora_h100_8nodes.yaml",
+    "source_git_blob_sha1": "a8e386bacbd06530c7c49238073d0b631871fd93",
+    "source_url": "https://github.com/NVIDIA-NeMo/Automodel/blob/384f6b2ae5e6d9678b8dc6594844d666bee2928f/examples/llm_finetune/deepseek_v41/deepseek_v41_flash_hellaswag_lora_h100_8nodes.yaml",
+    "source_license": "Apache-2.0 (license header in YAML)",
+    "original_model_repo": "deepseek-ai/DeepSeek-V4.1-Flash",
+    "original_model_revision": "df42c109f1defefcbfcedbe7d905718a12266e40",
+    "model_binding": "Source-adapted for canonical 1017 pin based on official vLLM recipe relation above: config/tokenizer/architecture/prompt encoding same; only weights change. No claim the H100 recipe was run on 1017.",
+    "training_dtype": "bfloat16 (model torch_dtype and FSDP param_dtype; reduction and LM head precision are float32)",
+    "source_checkpoint_quantization": "FP8 dense, FP4 experts; recipe dequantizes base checkpoint during DCP loading",
+    "method": "LoRA only; base weights frozen",
+    "lora": {
+      "rank": 8,
+      "alpha": 32,
+      "target_module_patterns": [
+        "model.layers.*.attn.wq_a",
+        "model.layers.*.attn.wq_b",
+        "model.layers.*.attn.wkv",
+        "model.layers.*.attn.wo_b",
+        "model.layers.*.ffn.experts"
+      ]
+    },
+    "module_mapping_qualification": "These exact dotted module patterns are from the official recipe. No module/class names beyond the source recipe are inferred.",
+    "data": {
+      "dataset": "rowan/hellaswag",
+      "license": "MIT",
+      "license_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/218ec52e09a7e7462a5400043bb9a69a41d06b76/README.md",
+      "training_split": "train",
+      "training_sample_limit": 16384,
+      "validation_split": "validation",
+      "validation_sample_limit": 128,
+      "snapshot_revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+      "note": "The NVIDIA recipe caps training at 16,384 train samples and 128 validation samples; these are recipe limits, not full split counts. The immutable train and validation files are pinned by revision, LFS SHA-256 and size. Their temporary downloaded bytes matched those pins, but no payload is retained, no Parquet content/schema or split semantics were inspected, and no reproducible sample manifest/seed receipt exists.",
+      "split_files": {
+        "train": {
+          "path": "data/train-00000-of-00001.parquet",
+          "immutable_url": "https://huggingface.co/datasets/Rowan/hellaswag/resolve/218ec52e09a7e7462a5400043bb9a69a41d06b76/data/train-00000-of-00001.parquet",
+          "sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
+          "lfs_oid_sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
+          "size_bytes": 24365524,
+          "byte_verification": {
+            "evidence_card_path": "nox-control/model_manifests/evidence/4A01_HELLASWAG_SPLIT_ACQUISITION_20261119.json",
+            "result": "BYTE_HASH_AND_SIZE_MATCH",
+            "measured_sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
+            "measured_size_bytes": 24365524,
+            "payload_retained": false,
+            "content_inspected": false
+          }
+        },
+        "validation": {
+          "path": "data/validation-00000-of-00001.parquet",
+          "immutable_url": "https://huggingface.co/datasets/Rowan/hellaswag/resolve/218ec52e09a7e7462a5400043bb9a69a41d06b76/data/validation-00000-of-00001.parquet",
+          "sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
+          "lfs_oid_sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
+          "size_bytes": 6315951,
+          "byte_verification": {
+            "evidence_card_path": "nox-control/model_manifests/evidence/4A01_HELLASWAG_SPLIT_ACQUISITION_20261119.json",
+            "result": "BYTE_HASH_AND_SIZE_MATCH",
+            "measured_sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
+            "measured_size_bytes": 6315951,
+            "payload_retained": false,
+            "content_inspected": false
+          }
+        }
+      },
+      "license_provenance": {
+        "claim": "MIT",
+        "source_kind": "PINNED_DATASET_CARD_BODY",
+        "dataset_card_revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+        "dataset_card_readme_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/218ec52e09a7e7462a5400043bb9a69a41d06b76/README.md",
+        "statement": "MIT https://github.com/rowanz/hellaswag/blob/master/LICENSE",
+        "direct_license_text_verified": false,
+        "linked_license_url": "https://github.com/rowanz/hellaswag/blob/master/LICENSE",
+        "linked_license_access_result": "GitHub API returned HTTP 451 (DMCA block) on 2026-11-19; no license-file content, immutable revision, or blob hash was verified.",
+        "qualification": "MIT is recorded as dataset-card-stated at the pinned README revision. The linked LICENSE text is not independently verified."
+      }
+    },
+    "hardware": {
+      "nodes": 8,
+      "gpus_per_node": 8,
+      "gpu": "H100 80GB",
+      "total_gpus": 64,
+      "recipe_comment_measured_peak_per_gpu_gib": 43.9,
+      "measured_training_steps": 100,
+      "qualification": "H100-specific, multi-node InfiniBand launch; not portable evidence for two V100 GPUs."
+    }
+  },
+  "licenses": [
+    {
+      "asset": "DeepSeek model",
+      "license": "MIT",
+      "source": "Pinned model LICENSE URL in canonical_target"
+    },
+    {
+      "asset": "V4.1 tokenizer",
+      "license": "MIT, Copyright (c) 2023 DeepSeek",
+      "source": "Pinned DeepSeek recipe LICENSE copied beside tokenizer"
+    },
+    {
+      "asset": "DeepSeek recipe project",
+      "license": "MIT",
+      "source": "https://github.com/deepseek-ai/deepseek-recipe/blob/935817c66f5d6e64838f419692545f06787e485f/LICENSE"
+    },
+    {
+      "asset": "NVIDIA AutoModel recipe source",
+      "license": "Apache-2.0",
+      "source": "Pinned YAML header / source_file"
+    },
+    {
+      "asset": "HellaSwag dataset",
+      "license": "MIT",
+      "source": "Pinned dataset-card README at https://huggingface.co/datasets/Rowan/hellaswag/blob/218ec52e09a7e7462a5400043bb9a69a41d06b76/README.md; MIT is card-stated only, direct LICENSE text not verified (HTTP 451)."
+    }
+  ],
+  "resources": {
+    "nox_observed_gpu_count": 2,
+    "nox_gpu_model": "V100",
+    "nox_gpu_inventory_note": "Prior source snapshot confirmed count/model family only; VRAM per device was not captured in that receipt.",
+    "published_recipe_minimum": "8 nodes × 8 H100 80GB; 64 total; recipe reports 43.9 GiB/GPU peak.",
+    "compute_status": "Not executable on the observed two-V100 inventory; no 1017 training run or optimizer step is claimed.",
+    "nox_free_storage_snapshot": {
+      "observed_at_utc": "2026-11-19T04:42:00Z",
+      "bytes": 17111969792,
+      "source_run_id": "44460035858",
+      "freshness": "point-in-time; not a current disk admission"
+    },
+    "checkpoint_size_reported": "510.3 GB (rounded in the official vLLM recipe, 96,085 tensors); exact bytes remain unproven.",
+    "checkpoint_stage_gap_approx_bytes": 493188030208,
+    "checkpoint_stage_gap_basis": "510.3 GB decimal minus 17,111,969,792 observed free bytes; approximate because published checkpoint size is rounded and storage snapshot is stale.",
+    "parameter_count_reference": "551.9B parameters in the NOX development note",
+    "idealized_4bit_weight_floor_bytes": 275950000000,
+    "idealized_floor_gap_approx_bytes": 258838030208,
+    "floor_basis": "551.9B × 4 bits/parameter / 8; excludes scales, metadata, activation, optimizer, and checkpoint copies. A lower bound only, not this recipe's true disk or training requirement.",
+    "admission": "HOLD for native training: no fresh storage/VRAM snapshot, no 64×H100 capacity, no retained dataset artifact or reproducible sampled-manifest receipt, and no checkpoint-resume/training execution evidence."
+  },
+  "acceptance": {
+    "original_source_criterion": "The requested source fields are populated from immutable source pins: selected model revision, tokenizer identity/file/hash/prompt format, source-adapted training dtype and target module patterns, license provenance, recipe sample caps, reported storage size, and quantified point-in-time resource gaps. This is source-manifest completeness only; it does not admit native training.",
+    "accepted_source_criterion": true,
+    "original_295_registry_mutated": false,
+    "work_receipts_mutated": false,
+    "live_training_claim": false
+  },
+  "gguf_inference_route_manifest_path": "nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_1017_GGUF_INFERENCE_ROUTE_20261119.json",
+  "gguf_inference_boundary": {
+    "route": "separate GGUF inference-only path",
+    "source_manifest": "nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_1017_GGUF_INFERENCE_ROUTE_20261119.json",
+    "training_source_unchanged": true,
+    "weights_downloaded": false,
+    "runtime_tested": false,
+    "status": "source pinned; download/runtime HOLD due storage gap"
+  }
+}

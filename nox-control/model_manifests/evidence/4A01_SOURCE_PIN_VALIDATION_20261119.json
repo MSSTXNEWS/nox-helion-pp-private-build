@@ -1,0 +1,93 @@
+{
+  "schema": "NOX_4A01_SOURCE_PIN_VALIDATION_EVIDENCE_V1",
+  "task_id": "4A01",
+  "checked_at_utc": "2026-11-19",
+  "base_commit": "67f0c5a5171c967fabc1420c5a538b0789617eaa",
+  "validator_path": "nox-control/validate_4a01_source_manifest.py",
+  "source_manifest_path": "nox-control/model_manifests/4A01_DEEPSEEK_V41_1017_TRAINING_SOURCE_20261119.json",
+  "source_manifest_git_blob_sha1": "f3e11cfc92bb75fe7ef13589a35fb127a81fceea",
+  "source_manifest_sha256": "0abd7f8889aa96c246349d78840e9b55a9a9a789c61ff0149e23ba92a55d3a78",
+  "targeted_check": {
+    "command": "python /tmp/nox_validate_4a01.py /tmp/nox_4a01_manifest.json",
+    "executed_against": "byte-identical final validator source (SHA-256 recorded above) and manifest fetched from the repair branch",
+    "exit_code": 2,
+    "state": "HOLD",
+    "missing_fields": [
+      "training_recipe.data.snapshot_revision",
+      "training_recipe.data.split_file_sha256"
+    ],
+    "invalid_fields": [],
+    "weights_loaded": false,
+    "network_used": false,
+    "execution_authorized": false,
+    "validator_source_sha256": "e473fea23b40d53b358ea8e3b97c947be82159ca1bfc1ff881680a46a514443b"
+  },
+  "pinned_source_values_present": {
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "model_revision": "08c8657f02291e11b6f6b63e0e16014f8e748518",
+    "tokenizer_repo": "deepseek-ai/deepseek-recipe",
+    "tokenizer_revision": "935817c66f5d6e64838f419692545f06787e485f",
+    "tokenizer_sha256": "81f64d1248a68ce3663e07ab3ee48b851e5df0e32d27cb98e4c9a268151e8d99",
+    "dtype": "bfloat16 (model torch_dtype and FSDP param_dtype; reduction and LM head precision are float32)",
+    "target_modules": [
+      "model.layers.*.attn.wq_a",
+      "model.layers.*.attn.wq_b",
+      "model.layers.*.attn.wkv",
+      "model.layers.*.attn.wo_b",
+      "model.layers.*.ffn.experts"
+    ],
+    "dataset": "rowan/hellaswag",
+    "train_split": "train",
+    "validation_split": "validation"
+  },
+  "tokenizer_identity_qualification": "NOT_CLAIMED: the pinned model repo lacks tokenizer.json/tokenizer_config.json; the manifest records the pinned modified deepseek-recipe tokenizer and does not assert byte identity.",
+  "resource_and_admission_gates": {
+    "training_admission": "HOLD",
+    "fresh_storage_and_vram_snapshot": false,
+    "published_recipe_minimum": "64 H100 80GB GPUs",
+    "observed_inventory": "2 V100 GPUs; per-device VRAM not captured in the referenced receipt",
+    "training_run_or_optimizer_steps_claimed": false
+  },
+  "scope": "metadata-only validator and evidence; no downloaded payloads, weights, training, registry status edits, or host changes",
+  "validator_sha256": "e473fea23b40d53b358ea8e3b97c947be82159ca1bfc1ff881680a46a514443b",
+  "dataset_artifact_search": {
+    "checked_at_utc": "2026-11-19",
+    "drive_search_scope": [
+      "HellaSwag",
+      "rowan/hellaswag",
+      "train-00000-of-00001.parquet",
+      "validation-00000-of-00001.parquet",
+      "hellaswag_train.jsonl",
+      "hellaswag_val.jsonl"
+    ],
+    "drive_result": "No matching HellaSwag dataset file metadata returned; the train basename query returned historical MASTER_CHECKLIST markdown, whose fetched content mentions SWE-Gym parquet but no HellaSwag.",
+    "repository_scope": {
+      "branch": "codex/4a01-source-pin-validator-20261119",
+      "head_before_acquisition_card": "6b0953289c7dad4f04558a070c9590c1ed735dcf",
+      "tree_entries": 2622,
+      "truncated": false,
+      "result": "No HellaSwag parquet/JSONL or split index. The only related named source is the generic nox-control/test_hybrid_training_dataset_reader.py."
+    },
+    "dataset_card_revision_candidate": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+    "acquisition_card_path": "nox-control/model_manifests/evidence/4A01_HELLASWAG_SPLIT_ACQUISITION_20261119.json",
+    "local_files_found": false,
+    "metadata_candidate_is_not_a_local_receipt": true,
+    "validator_state_unchanged": "HOLD"
+  },
+  "dataset_upstream_metadata_candidate": {
+    "revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+    "source_url": "https://huggingface.co/datasets/Rowan/hellaswag/commit/218ec52e09a7e7462a5400043bb9a69a41d06b76",
+    "train": {
+      "path": "data/train-00000-of-00001.parquet",
+      "size_bytes": 24365524,
+      "sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02"
+    },
+    "validation": {
+      "path": "data/validation-00000-of-00001.parquet",
+      "size_bytes": 6315951,
+      "sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd"
+    },
+    "qualification": "Metadata-only candidate. Local files were not downloaded or byte-verified; owner confirmation is required before manifest pins are promoted."
+  },
+  "supersession_note": "Historical validation record only: its HOLD result and missing dataset pins describe the pre-acquisition manifest state. The later source update pins the dataset revision and two split hashes; no current validator invocation was run after that update, so this file is not evidence that the current manifest passes the validator."
+}
