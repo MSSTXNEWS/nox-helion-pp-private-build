@@ -682,10 +682,18 @@ class RefillEligibilityTests(unittest.TestCase):
         invalid = (
             ({'missions': [{'parent_task_id': []}]}, good_request),
             ({'missions': None}, good_request),
+            (None, good_request),  # Missing predecessor document is not empty.
+            ('corrupt', good_request),
+            ({}, good_request),  # Missing required missions array.
             (good_previous, {'outcomes': [{'task_id': []}],
                              'original_task_states': []}),
             (good_previous, {'outcomes': [],
                              'original_task_states': [{'task_id': {}}]}),
+            (good_previous, None),  # Missing REFILL document.
+            (good_previous, []),
+            (good_previous, {}),
+            (good_previous, {'outcomes': []}),  # Missing original_task_states.
+            (good_previous, {'original_task_states': []}),  # Missing outcomes.
         )
         for previous, request in invalid:
             with self.subTest(previous=previous, request=request):
