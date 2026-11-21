@@ -1005,20 +1005,22 @@ class TestProbe(unittest.TestCase):
                         window.__posts=0;
                         window.__reads=0;
                         window.__answer='Ж'.repeat(4096)+'👩‍💻e\u0301';
+                        window.__answer2='🇪🇸'.repeat(128)+'👨‍👩‍👧‍👦e\u0301';
                         const id='a'.repeat(32);
                         const parts=['Ж'.repeat(4096)+'👩','‍','💻e','\u0301'];
+                        const parts2=['🇪🇸'.repeat(128)+'👨','‍','👩‍👧‍👦e','\u0301'];
                         const pack=data=>new Response(JSON.stringify(data),{
                             status:200,headers:{'Content-Type':'application/json'}
                         });
                         window.fetch=async url=>{
                             if(url==='/api/nox/chat/stream'){
-                                window.__posts++;
+                                const n=++window.__posts;
                                 const frames=[
                                     {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
                                     {type:'start',model:'pinned-existing-native-fixture'},
-                                    ...parts.map(text=>({type:'delta',text})),
+                                    ...(n===1?parts:parts2).map(text=>({type:'delta',text})),
                                     {type:'done',saved:true,s03_integrated:true,
-                                        dialog_id:id,exchange_id:'ex-b3-grapheme'}
+                                        dialog_id:id,exchange_id:'ex-b3-grapheme-'+n}
                                 ];
                                 return new Response(frames.map(JSON.stringify).join('\\n')+'\\n',{
                                     status:200});
@@ -1026,9 +1028,13 @@ class TestProbe(unittest.TestCase):
                             if(String(url).startsWith('/api/ui/memory/dialogs/history?')){
                                 window.__reads++;
                                 return pack({status:'READY',dialog_id:id,messages:[
-                                    {role:'user',content:'unicode',exchange_id:'ex-b3-grapheme'},
+                                    {role:'user',content:'unicode',exchange_id:'ex-b3-grapheme-1'},
                                     {role:'assistant',content:window.__answer,
-                                        exchange_id:'ex-b3-grapheme'}
+                                        exchange_id:'ex-b3-grapheme-1'},
+                                    ...(window.__posts===2?[
+                                      {role:'user',content:'unicode2',exchange_id:'ex-b3-grapheme-2'},
+                                      {role:'assistant',content:window.__answer2,
+                                          exchange_id:'ex-b3-grapheme-2'}]:[])
                                 ]});
                             }
                             throw Error('UNEXPECTED_NATIVE_ROUTE:'+url);
@@ -1038,32 +1044,37 @@ class TestProbe(unittest.TestCase):
                               'nox-v135-resonance-owner-bridge.js').read_text('utf8')
                     await page.add_script_tag(content=bridge)
                     result = await page.evaluate("""async () => {
-                        // Materializing a per-grapheme Array.from is forbidden here.
+                        // A full grapheme iterator walk on every delta is forbidden.
                         Array.from=()=>{throw Error('HOLD_GLYPH_ARRAY_MATERIALIZATION');};
-                        const response=await fetch('/api/nox/chat',{
-                            method:'POST',body:JSON.stringify({
-                                dialog_id:'a'.repeat(32),
-                                request_id:'b3-grapheme-large-single',
-                                message:'unicode'
-                            })
-                        });
-                        const raw=await response.text();
-                        const events=raw.split('\\n\\n').filter(Boolean)
-                          .map(row=>JSON.parse(row.replace(/^data: /,'')));
-                        return {
-                            posts:window.__posts,reads:window.__reads,
-                            text:events.filter(e=>e.type==='token').map(e=>e.t).join(''),
-                            done:events.filter(e=>e.type==='done'),
-                            errors:events.filter(e=>e.type==='error'),
-                            answer:window.__answer
+                        const segProto=Object.getPrototypeOf(new Intl.Segmenter().segment('Ж'));
+                        segProto[Symbol.iterator]=()=>{throw Error('HOLD_SEGMENTER_FULL_WALK');};
+                        const send=async (request_id,message)=>{
+                            const response=await fetch('/api/nox/chat',{
+                                method:'POST',body:JSON.stringify({
+                                    dialog_id:'a'.repeat(32),request_id,message
+                                })
+                            });
+                            const raw=await response.text();
+                            const events=raw.split('\\n\\n').filter(Boolean)
+                              .map(row=>JSON.parse(row.replace(/^data: /,'')));
+                            return {
+                                text:events.filter(e=>e.type==='token').map(e=>e.t).join(''),
+                                done:events.filter(e=>e.type==='done'),
+                                errors:events.filter(e=>e.type==='error')
+                            };
                         };
+                        const first=await send('b3-grapheme-large-first','unicode');
+                        const second=await send('b3-grapheme-large-second','unicode2');
+                        return {posts:window.__posts,reads:window.__reads,
+                            first,second,answer:window.__answer,answer2:window.__answer2};
                     }""")
-                    self.assertEqual(result['posts'], 1)
-                    self.assertEqual(result['reads'], 1)
-                    self.assertEqual(result['text'], result['answer'])
-                    self.assertEqual(len(result['done']), 1)
-                    self.assertTrue(result['done'][0]['s03_integrated'])
-                    self.assertEqual(result['errors'], [])
+                    self.assertEqual(result['posts'], 2)
+                    self.assertEqual(result['reads'], 2)
+                    for k,answer in (('first','answer'),('second','answer2')):
+                        self.assertEqual(result[k]['text'], result[answer])
+                        self.assertEqual(len(result[k]['done']), 1)
+                        self.assertTrue(result[k]['done'][0]['s03_integrated'])
+                        self.assertEqual(result[k]['errors'], [])
                 finally:
                     await browser.close()
         asyncio.run(run())
