@@ -8,11 +8,20 @@ class Stub {
   close(){}
   async send(cmd,p={}){if(cmd==='Browser.getVersion')return {product:'CDP-FIXTURE'};
     if(cmd==='Network.streamResourceContent')return {};
-    if(cmd==='Page.getFrameTree')return {frameTree:{frame:{
-      id:'fixture-frame',loaderId:'fixture-loader',url:this.targetUrl??'http://localhost/nox/chat'
-    }}};
+    if(cmd==='Page.getFrameTree'){
+      this.frameTreeReads=(this.frameTreeReads??0)+1;
+      if(this.frameTreeReads>1&&this.rejectFinalSnapshot)throw Error('FIXTURE_SNAPSHOT_REJECTED');
+      if(this.frameTreeReads>1&&this.dropFinalFrame)return {frameTree:{}};
+      return {frameTree:{frame:{
+        id:this.fixtureFrameId??'fixture-frame',
+        loaderId:this.fixtureLoaderId??'fixture-loader',
+        url:this.fixtureFrameUrl??this.targetUrl??'http://localhost/nox/chat'
+      }}};
+    }
     if(cmd==='Target.getTargetInfo')return {targetInfo:{
-      targetId:'fixture-page',type:this.targetType??'page',url:this.targetUrl??'http://localhost/nox/chat'
+      targetId:this.fixtureTargetId??'fixture-page',
+      type:this.targetType??'page',
+      url:this.targetUrl??'http://localhost/nox/chat'
     }};
     if(cmd==='Network.getResponseBody'){
       if(this.responseBodyDelay?.[p.requestId])
@@ -674,5 +683,34 @@ test('main-frame navigation/reload, detached target and document replacement fen
     await assert.rejects(run(false,null,null,null,{
       quiescenceMs:85,postAckEvent:c=>c.emit(method,p)
     }),expected,'post-body quiet window invalidated: '+method);
+  }
+});
+
+test('post-quiescence document snapshot catches silent frame/loader/target replacement',async()=>{
+  const good=await run(false,null,null,null,{quiescenceMs:85});
+  assert.equal(good.cdp_consistent,true);
+  assert.equal(good.ttft_sse_verified,true);
+  assert.deepEqual(good.turns.map(x=>x.ttft_ms),[10,10]);
+  const fragment=await run(false,null,null,null,{quiescenceMs:85,
+    postAckEvent:c=>{
+      c.fixtureFrameUrl='http://localhost/nox/chat#new-fragment';
+      c.targetUrl='http://localhost/nox/chat#new-fragment';
+    }
+  });
+  assert.equal(fragment.ttft_sse_verified,true);
+  const poisoned=[
+    [c=>{c.fixtureFrameId='silently-new-frame';},/CDP_FINAL_MAIN_FRAME_CHANGED/],
+    [c=>{c.fixtureLoaderId='silently-reloaded';},/CDP_FINAL_MAIN_FRAME_CHANGED/],
+    [c=>{c.fixtureTargetId='other-tab';},/CDP_FINAL_PAGE_TARGET_CHANGED/],
+    [c=>{c.targetType='service_worker';},/CDP_FINAL_PAGE_TARGET_CHANGED/],
+    [c=>{c.fixtureFrameUrl='http://localhost/nox/other';},/CDP_FINAL_PAGE_DOCUMENT_CHANGED/],
+    [c=>{c.targetUrl='http://foreign.invalid/nox/chat';},/CDP_FINAL_PAGE_DOCUMENT_CHANGED/],
+    [c=>{c.dropFinalFrame=true;},/CDP_FINAL_MAIN_FRAME_CHANGED/],
+    [c=>{c.rejectFinalSnapshot=true;},/CDP_FINAL_SNAPSHOT_UNAVAILABLE/]
+  ];
+  for(const [change,expected] of poisoned){
+    await assert.rejects(run(false,null,null,null,{
+      quiescenceMs:85,postAckEvent:change
+    }),expected,'silent post-body change must not certify two turns');
   }
 });
