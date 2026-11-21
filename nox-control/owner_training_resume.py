@@ -735,6 +735,16 @@ def prove_training(helper):
     return helper.public_process(entries[0])
 
 
+def read_training_status(helper):
+    """Fail closed on malformed/ambiguous Supervisor trainer state during observation."""
+    snapshot = helper.service_state()
+    if (type(snapshot) is not dict
+            or type(snapshot.get('state')) is not str
+            or snapshot['state'] not in STOPPED + ('RUNNING', 'STARTING')):
+        raise RuntimeError('HOLD_TRAINER_STATUS_READBACK')
+    return snapshot
+
+
 def prove_existing_training(helper):
     """Only accept a previously launched trainer after Supervisor RUNNING and native identity.
 
@@ -1355,7 +1365,7 @@ def main():
             publish_admission(5)
             release_flags(prefix, pause_required=True)
             start_once(5)
-        elif helper.service_state()['state'] in ('RUNNING', 'STARTING'):
+        elif read_training_status(helper)['state'] in ('RUNNING', 'STARTING'):
             identity = prove_existing_training(helper)
             result['training_started'] = True
             step('existing_single_training_observed', identity)
@@ -1365,7 +1375,7 @@ def main():
         fcntl.flock(fd, fcntl.LOCK_UN); lock_held = False
         result['state'] = 'BOUNDED_TRAINING_RUNNING_ACCEPTANCE_PENDING'; save()
         if pointer.get('max_steps') == 1000:
-            if helper.service_state()['state'] in ('RUNNING', 'STARTING'):
+            if read_training_status(helper)['state'] in ('RUNNING', 'STARTING'):
                 result['continuation_process'] = prove_existing_training(helper)
                 result['state'] = 'EXISTING_CONTINUATION_RUNNING'; success = True
             else:
@@ -1381,7 +1391,7 @@ def main():
         else:
             deadline = time.monotonic()+400; candidate = None; previous_progress = None
             while time.monotonic() < deadline:
-                status = helper.service_state()
+                status = read_training_status(helper)
                 terminal = OUTPUT/'owner_last_result.json'
                 if terminal.is_file():
                     candidate = read_json(terminal)
@@ -1405,7 +1415,7 @@ def main():
                 result['state'] = 'BOUNDED_TRAINING_RUNNING_ACCEPTANCE_PENDING'; success = True
             elif result['optimizer_steps_verified']:
                 deadline = time.monotonic()+40
-                while helper.service_state()['state'] in ('RUNNING', 'STARTING') and time.monotonic() < deadline:
+                while read_training_status(helper)['state'] in ('RUNNING', 'STARTING') and time.monotonic() < deadline:
                     time.sleep(2)
                 # A media/owner operation may now own maintenance. Leave the
                 # verified five-step checkpoint available instead of racing it.
