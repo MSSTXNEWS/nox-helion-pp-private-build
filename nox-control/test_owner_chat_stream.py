@@ -103,6 +103,35 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                             self.assertNotIn('_agent_final',payload)
 
 
+    async def test_oversized_full_model_post_holds_without_dropping_s03(self):
+        # Even valid S03 turns can cumulatively exceed the model request cap.
+        # Never silently trim a dialogue or POST before the bound is checked.
+        original='Помню важное 🌍 ' + ('ж' * 1500)
+        for streaming in (True,False):
+            with self.subTest(streaming=streaming):
+                native=self.native()
+                history=[{'role':'system','content':'PersonaID: original'},
+                         {'role':'user','content':original},
+                         {'role':'assistant','content':'Sí, lo recuerdo.'},
+                         {'role':'user','content':'What did I say?'}]
+                payload={'messages':json.loads(json.dumps(history,ensure_ascii=False))}
+                with (patch.object(stream,'MODEL_REQUEST_LIMIT',500),
+                      patch.object(stream.httpx.AsyncClient,'stream',
+                                   side_effect=AssertionError('no model POST permitted'))):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'What did I say?',streaming)
+                    if streaming:
+                        wire=''.join([part async for part in response.body_iterator])
+                        self.assertIn('HOLD_MODEL_REQUEST_SIZE',wire)
+                        self.assertNotIn('[DONE]',wire)
+                    else:
+                        self.assertEqual(response.status_code,502)
+                        self.assertEqual(json.loads(response.body)['error']['code'],
+                                         'HOLD_MODEL_REQUEST_SIZE')
+                self.assertEqual(payload['messages'],history)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+
     async def test_falsey_model_error_envelopes_cannot_certify_s03(self):
         # Some providers emit error:{} or error:false alongside a normal
         # choices shape. Presence of an error is a failure, not a truth test.
