@@ -404,6 +404,25 @@ async def postreload_owner_session_recheck(context, base, expected_pin):
         return False
 
 
+
+async def postrender_owner_session_dialog_fence(context, base, expected_pin,
+                                                page, title, rows):
+    """Read-only last owner/session and visible RU/ES dialog fence.
+
+    Awaiting DOM render can outlive the earlier owner-cookie and route checks.
+    Re-authenticate after render, then compare the still-selected dialog and
+    four visible rows; never issue a generation request. All errors fail closed.
+    """
+    if not await postreload_owner_session_recheck(context, base, expected_pin):
+        return False
+    try:
+        return (urllib.parse.urlsplit(page.url).path == PAGE
+                and await page.evaluate(ACTIVE_QA_DIALOG_JS, title) is True
+                and await page.evaluate(RENDERED_FOURROW_JS, rows) is True)
+    except Exception:
+        return False
+
+
 def verified_two_turn_firstturn_ids(rows):
     """Allow second POST only after two distinct, stable first-turn row IDs.
 
@@ -1737,6 +1756,22 @@ async def browser_run(report, directory, available):
                         RENDERED_FOURROW_JS,reloaded_history['messages']) is not True:
                     raise RuntimeError('HOLD_MULTITURN_RELOAD_RENDERED_FOURROW_MISMATCH')
                 report['multiturn_reload_rendered_fourrow_verified']=True
+                # Waiting for rendered bubbles can outlive the prior owner
+                # session and live-dialog pins. Fail closed on rotation,
+                # route/UI drift or new native requests before browser PASS.
+                report['browser_stage']='QA_RELOAD_POSTRENDER_FINAL_FENCE'
+                if not await postrender_owner_session_dialog_fence(
+                        context,base,owner_session_pin,page,title,
+                        reloaded_history['messages']):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_POSTRENDER_OWNER_OR_DIALOG')
+                if (stop_present() or not exact_native_post_fence(
+                        postread_snapshot,stream_admitted,2)
+                        or not clean_two_turn_browser_runtime(
+                            page_errors,network,report['network_response_overflow_count'],
+                            report['critical_requestfailed_count'],
+                            blocked['non_qa_generation']+blocked['alternate_native_chat_route'])):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_POSTRENDER_RUNTIME_OR_POST')
+                report['multiturn_reload_postrender_final_fence_verified']=True
                 report['multiturn_reload_same_dialog_history_verified']=True
                 report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:
