@@ -40,7 +40,10 @@ def pct(values: list[float], percentage: float) -> float:
 
 def summarize(receipts: list[dict], *, model_sha256: str, route_sha256: str,
               scenario_sha256: str) -> dict:
-    require(bool(SHA.fullmatch(model_sha256)) and bool(SHA.fullmatch(route_sha256)),
+    # Input can also come from a caller, not only argparse. Malformed model
+    # or route pins must produce a deterministic HOLD, never uncaught TypeError.
+    require(type(model_sha256) is str and bool(SHA.fullmatch(model_sha256))
+            and type(route_sha256) is str and bool(SHA.fullmatch(route_sha256)),
             'PIN_REQUIRED')
     # A latency comparison without a fixed owner-verified scenario is invalid:
     # identical model/route pins cannot rule out different task complexity.

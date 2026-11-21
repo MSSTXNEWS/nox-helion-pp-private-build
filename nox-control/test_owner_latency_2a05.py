@@ -47,6 +47,15 @@ class NativeLatencyContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'HOLD_2A05_BAD_LATENCY'):
             summarize([huge], model_sha256=M, route_sha256=R, scenario_sha256=Z)
 
+    def test_invalid_model_or_route_pins_fail_closed(self):
+        # The module can be called with non-CLI inputs: never leak TypeError.
+        for invalid in (None, 123, [], {}, True, '', 'A' * 64):
+            for model, route in ((invalid, R), (M, invalid)):
+                with self.subTest(invalid_type=type(invalid).__name__, model=model == invalid):
+                    with self.assertRaisesRegex(ValueError, 'HOLD_2A05_PIN_REQUIRED'):
+                        summarize([fixture(1)], model_sha256=model,
+                                  route_sha256=route, scenario_sha256=Z)
+
     def test_invalid_scenario_pin_is_hold(self):
         for pin in ('', '0' * 63, 'A' * 64, None):
             with self.assertRaisesRegex(ValueError, 'HOLD_2A05_SCENARIO_PIN_REQUIRED'):
