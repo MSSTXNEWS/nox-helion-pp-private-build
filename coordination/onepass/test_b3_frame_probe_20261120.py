@@ -644,5 +644,84 @@ class TestProbe(unittest.TestCase):
 
 
 
+
+    def test_native_endpoints_reject_http_redirect_before_fallback_browser(self):
+        """Native chat POST and memory GET must not follow browser redirects."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+                    fallbacks = []
+
+                    async def local_page(route):
+                        await route.fulfill(
+                            status=200, content_type='text/html',
+                            body='<html><body>isolated redirect test</body></html>')
+
+                    async def stream_redirect(route):
+                        await route.fulfill(status=307, headers={
+                            'Location': '/api/nox/chat/stream/unsafe-fallback'})
+
+                    async def history_redirect(route):
+                        await route.fulfill(status=302, headers={
+                            'Location': '/api/ui/memory/history-unsafe-fallback'})
+
+                    async def forbidden_fallback(route):
+                        fallbacks.append(route.request.url)
+                        await route.fulfill(
+                            status=200, content_type='application/json',
+                            body='{"status":"READY","messages":[]}')
+
+                    await page.route('**/nox-web-v29/pc/resonance.html', local_page)
+                    await page.route('**/api/nox/chat/stream', stream_redirect)
+                    await page.route(
+                        '**/api/ui/memory/dialogs/history?*', history_redirect)
+                    await page.route(
+                        '**/api/nox/chat/stream/unsafe-fallback',
+                        forbidden_fallback)
+                    await page.route(
+                        '**/api/ui/memory/history-unsafe-fallback',
+                        forbidden_fallback)
+                    await page.goto(
+                        'http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate('window.NOX_NATIVE_OWNER=true')
+                    bridge = (pathlib.Path(__file__).parent /
+                              'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    result = await page.evaluate("""async () => {
+                        const did='a'.repeat(32);
+                        const chat=await fetch('/api/nox/chat',{
+                            method:'POST',
+                            body:JSON.stringify({
+                                dialog_id:did,
+                                request_id:'b3-native-redirect-case',
+                                message:'hello'
+                            })
+                        });
+                        const chatBody=await chat.text();
+                        const history=await fetch(
+                            '/api/nox/history?dialog_id='+did);
+                        return {
+                            chatStatus:chat.status,
+                            chatBody,
+                            historyStatus:history.status,
+                            historyBody:await history.text()
+                        };
+                    }""")
+                    self.assertEqual(result['chatStatus'], 200)
+                    self.assertIn('"type":"error"', result['chatBody'])
+                    self.assertNotIn('"type":"done"', result['chatBody'])
+                    self.assertEqual(result['historyStatus'], 503)
+                    self.assertIn('HOLD', result['historyBody'])
+                    self.assertEqual(fallbacks, [])
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
 if __name__ == '__main__':
     unittest.main()
