@@ -1427,7 +1427,7 @@ test('6A05 native NDJSON structured HOLD stays exact for JSON and SSE without S0
     [{code:'HOLD_OWNER_LEASE_BUSY'},'HOLD_NATIVE_HOLD_OWNER_LEASE_BUSY'],
     ['HOLD_RESOURCE_FLOOR','HOLD_NATIVE_HOLD_RESOURCE_FLOOR'],
     [{message:'internal debug data'},'HOLD_NATIVE_ERROR'],
-    [{code:'\\uD800'},'HOLD_NATIVE_FRAME_UNICODE']
+    [{code:'\uD800'},'HOLD_NATIVE_FRAME_UNICODE']
   ];
   for(const [nativeError,expected] of cases){
     for(const streamed of [false,true]){
@@ -1439,7 +1439,7 @@ test('6A05 native NDJSON structured HOLD stays exact for JSON and SSE without S0
           assert.fail('unverified error must not read or certify S03');
         }
         if(u.pathname!=='/api/nox/chat/stream')assert.fail('unexpected native route '+u.pathname);
-        const wire=JSON.stringify({type:'error',error:nativeError})+'\\n';
+        const wire=JSON.stringify({type:'error',error:nativeError})+'\n';
         return new Response(new ReadableStream({start(c){
           c.enqueue(new TextEncoder().encode(wire));c.close();
         }}),{headers:{'Content-Type':'application/x-ndjson'}});
