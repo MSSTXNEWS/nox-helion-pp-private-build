@@ -8,6 +8,9 @@ class Stub {
   close(){}
   async send(cmd,p={}){if(cmd==='Browser.getVersion')return {product:'CDP-FIXTURE'};
     if(cmd==='Network.streamResourceContent')return {};
+    if(cmd==='Target.getTargetInfo')return {targetInfo:{
+      targetId:'fixture-page',type:this.targetType??'page'
+    }};
     if(cmd==='Network.getResponseBody'){
       if(this.responseBodyDelay?.[p.requestId])
         await new Promise(resolve=>setTimeout(resolve,this.responseBodyDelay[p.requestId]));
@@ -19,6 +22,7 @@ class Stub {
     }return {};}
 }
 async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondTurn=null,encoding=null,options={}){const c=new Stub();
+  c.targetType=options.targetType;
   c.responseBodyMutator=options.responseBodyBase64Mutator;
   c.responseBodyTextMutator=options.responseBodyTextMutator;
   c.responseBodyDelay=options.responseBodyDelay;
@@ -43,7 +47,11 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
     const captured=Buffer.concat(chunks);
     c.bodies.set(requestId,i===1&&responseBodyForSecondTurn!==null?Buffer.from(responseBodyForSecondTurn):captured);
     const requestUrl=i===1&&o.requestUrl?o.requestUrl:'http://localhost/api/nox/chat';
+    const frameId=i===1&&Object.hasOwn(o,'requestFrameId')?o.requestFrameId:'fixture-frame';
+    const loaderId=i===1&&Object.hasOwn(o,'requestLoaderId')?o.requestLoaderId:'fixture-loader';
     c.emit('Network.requestWillBeSent',{requestId,timestamp,
+      ...(i===1&&o.omitRequestFrame?{}:{frameId}),
+      ...(i===1&&o.omitRequestLoader?{}:{loaderId}),
       ...(i===1&&o.redirectResponse?{redirectResponse:{status:302,url:'http://foreign.invalid/old'}}:{}),
       ...(i===1&&Object.hasOwn(o,'redirectHasExtraInfo')?{redirectHasExtraInfo:o.redirectHasExtraInfo}:{}),
       request:{method:'POST',url:requestUrl,
@@ -61,7 +69,10 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       if(o[key]!==undefined)response[key]=o[key];
     }
     const responseTime=Object.hasOwn(o,'responseTimestamp')?o.responseTimestamp:timestamp+.005;
-    const responseEvent={requestId,timestamp:responseTime,response,hasExtraInfo:o.hasExtraInfo===true};
+    const responseEvent={requestId,timestamp:responseTime,response,hasExtraInfo:o.hasExtraInfo===true,
+      ...(i===1&&o.omitResponseFrame?{}:{frameId:i===1&&Object.hasOwn(o,'responseFrameId')?o.responseFrameId:frameId}),
+      ...(i===1&&o.omitResponseLoader?{}:{loaderId:i===1&&Object.hasOwn(o,'responseLoaderId')?o.responseLoaderId:loaderId})
+    };
     if(o.omitHasExtraInfo)delete responseEvent.hasExtraInfo;
     c.emit('Network.responseReceived',responseEvent);
     if(o.extraAfter)emitExtra();
@@ -550,4 +561,29 @@ test('CDP binds chat POSTs to expected serving origin and fails closed on redire
   assert.equal(responseMismatch.cdp_consistent,false);
   assert.equal(responseMismatch.ttft_sse_verified,false);
   const wrongExpectation=await assert.rejects(run(false,null,null,null,{expectedChatOrigin:'https://localhost'}),/CHAT_POST_ORIGIN_MISMATCH/);
+});
+
+test('two-turn CDP witness binds one page target, frame and document loader, not unrelated tab/iframe',async()=>{
+  const control=await run();
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  assert.deepEqual(control.turns.map(t=>t.cdp_request_id),['1','2']);
+  for(const flags of [
+    {requestFrameId:'unrelated-iframe'}, {requestLoaderId:'new-document'},
+    {requestFrameId:''}, {requestLoaderId:''},
+    {omitRequestFrame:true}, {omitRequestLoader:true}
+  ]){
+    await assert.rejects(run(false,null,null,null,flags),
+      /CDP_DIALOG_FRAME_MISMATCH|CDP_FRAME_PROVENANCE_MISSING/,JSON.stringify(flags));
+  }
+  for(const flags of [
+    {responseFrameId:'unrelated-iframe'}, {responseLoaderId:'other-document'},
+    {omitResponseFrame:true}, {omitResponseLoader:true}
+  ]){
+    const mismatched=await run(false,null,null,null,flags);
+    assert.equal(mismatched.cdp_consistent,false,JSON.stringify(flags));
+    assert.equal(mismatched.ttft_sse_verified,false,JSON.stringify(flags));
+    assert.equal(mismatched.turns[1].ttft_ms,null,JSON.stringify(flags));
+  }
+  await assert.rejects(run(false,null,null,null,{targetType:'service_worker'}),/CDP_PAGE_TARGET_REQUIRED/);
 });
