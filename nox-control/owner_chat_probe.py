@@ -220,6 +220,7 @@ def page_snapshot(response, limit=200000, expected_path=None):
             if media not in ('', 'text/html', 'application/xhtml+xml') or not html_start:
                 raise RuntimeError('HOLD_CHAT_PAGE_NOT_HTML')
             reject_auth_meta_refresh(raw, response.url)
+            reject_auth_refresh_header(response)
         return status, path, raw
     finally:
         response.close()
@@ -251,6 +252,26 @@ def reject_auth_meta_refresh(raw, response_url):
     scanner = RefreshScanner(convert_charrefs=True)
     scanner.feed(raw.decode('utf-8', errors='replace'))
     scanner.close()
+
+
+def reject_auth_refresh_header(response):
+    """HTTP Refresh: navigation to login is not proof of a healthy chat UI."""
+    headers = getattr(response, 'headers', None)
+    refresh = headers.get('Refresh', '') if headers is not None else ''
+    if not isinstance(refresh, str) or len(refresh) > 2048:
+        raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_INVALID')
+    if not refresh:
+        return
+    match = re.fullmatch(r'(?is)\s*\d+(?:\.\d+)?\s*;\s*url\s*=\s*(.*?)\s*', refresh)
+    if not match:
+        return
+    target = match.group(1).strip()
+    if len(target) >= 2 and target[0] in ('"', "'") and target[-1] == target[0]:
+        target = target[1:-1]
+    resolved = urllib.parse.urlsplit(urllib.parse.urljoin(response.url, target))
+    path = urllib.parse.unquote(resolved.path).rstrip('/').casefold()
+    if path in ('/chat/login', '/login', '/auth/login', '/signin', '/sign-in'):
+        raise RuntimeError('HOLD_CHAT_AUTH_REFRESH_HEADER')
 
 
 def meaningful_delta(text):
