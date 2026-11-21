@@ -974,12 +974,12 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                          'function':{'name':'calculate','arguments':'{"a":1}'}},
                         {'index':1,'id':'call_second','type':'function',
                          'function':{'name':'calculate','arguments':second_args}}]),
-                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+                    frame(finish='tool_calls'),b'data: [DONE]\n\n'])
                 streams=[first]
                 if duplicate:
                     streams.append(Chunks([
                         frame('one result'),frame(finish='stop'),
-                        b'data: [DONE]\\n\\n']))
+                        b'data: [DONE]\n\n']))
                 requests,factory=self.transport(streams)
                 payload={'messages':[{'role':'user','content':'Calculate two values'}]}
                 with factory:
