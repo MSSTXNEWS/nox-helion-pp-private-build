@@ -257,6 +257,51 @@ class HunterURLSafetyTests(unittest.TestCase):
         self.assertEqual(content_type, "application/rss+xml")
         self.assertTrue(reused)
 
+    def test_http_cache_blob_is_lazy_until_304(self):
+        # Even a large old BLOB must not be loaded into Python heap on HTTP 200.
+        source = hunter._validate_source({
+            "id": "lazy", "kind": "rss", "url": "https://example.org/feed",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+
+        class FreshResponse:
+            headers = {"ETag": "new"}
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self, size): return b"<rss/>"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            conn = sqlite3.connect(str(Path(tmp) / "state.sqlite"))
+            conn.row_factory = sqlite3.Row
+            try:
+                hunter._init_db(conn)
+                conn.execute(
+                    "INSERT INTO http_cache(source_id,url,etag,last_modified,content_type,"
+                    "body,fetched_at,checked_at) VALUES(?,?,?,?,?,?,?,?)",
+                    ("lazy", source["url"], "old", None, "application/rss+xml",
+                     sqlite3.Binary(b"x" * (2 * 1024 * 1024)), 10, 10),
+                )
+                conn.commit()
+                sql = []
+                conn.set_trace_callback(sql.append)
+                with patch.object(hunter, "build_opener") as opener, \\
+                     patch.object(hunter, "_parse", return_value=[]):
+                    opener.return_value.open.return_value = FreshResponse()
+                    first = hunter._poll_one(conn, source, 1000, 1024)
+                    self.assertEqual(first["status"], "polled")
+                    self.assertFalse(any("SELECT body FROM http_cache" in q for q in sql))
+                    sql.clear()
+                    opener.return_value.open.side_effect = HTTPError(
+                        source["url"], 304, "Not Modified", {}, None)
+                    second = hunter._poll_one(conn, source, 1100, 1024)
+                    self.assertEqual(second["status"], "not_modified")
+                    self.assertEqual(sum("SELECT body FROM http_cache" in q for q in sql), 1)
+                body = conn.execute(
+                    "SELECT body FROM http_cache WHERE source_id='lazy'").fetchone()[0]
+                self.assertEqual(body, b"<rss/>")
+            finally:
+                conn.close()
+
     def test_cli_returns_structured_config_error_without_network(self):
         with tempfile.TemporaryDirectory() as tmp:
             config = Path(tmp) / "sources.json"
