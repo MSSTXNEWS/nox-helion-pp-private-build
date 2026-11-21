@@ -44,6 +44,9 @@ class HotContextTests(unittest.TestCase):
                        {**rows[1],"revision":"c"*64},
                        {**rows[1],"fts_score":True},
                        {**rows[1],"vector_score":float("nan")},
+                       {**rows[1],"fts_score":10**401},
+                       {**rows[1],"vector_score":10**401},
+                       {**rows[1],"fts_score":-(10**401)},
                        {**rows[1],"source_sha256":"not-a-sha"}):
             with self.subTest(unsafe=unsafe):
                 with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_RETRIEVAL_"):
