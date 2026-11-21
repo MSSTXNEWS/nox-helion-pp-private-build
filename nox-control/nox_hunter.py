@@ -267,8 +267,15 @@ def _crossref_items(body: bytes) -> list[dict[str, str]]:
     for record in records:
         if not isinstance(record, dict):
             continue
-        title_value = record.get("title") or []
-        title = str(title_value[0] if isinstance(title_value, list) and title_value else title_value).strip()
+        # Missing/empty or malformed Crossref titles must not become
+        # fabricated evidence such as "[]" or a stringified JSON object.
+        title_value = record.get("title")
+        if isinstance(title_value, str):
+            title = title_value.strip()
+        elif isinstance(title_value, list):
+            title = next((v.strip() for v in title_value if isinstance(v, str) and v.strip()), "")
+        else:
+            title = ""
         doi = str(record.get("DOI") or "").strip()
         url = str(record.get("URL") or (f"https://doi.org/{doi}" if doi else "")).strip()
         abstract = _plain(str(record.get("abstract") or ""))
