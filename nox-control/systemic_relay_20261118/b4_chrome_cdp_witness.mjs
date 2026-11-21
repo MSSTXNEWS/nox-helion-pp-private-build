@@ -194,6 +194,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         if(event.text.length){
           // CDP-decoded SSE events, not tokenizer-verified output tokens.
           x.sseTextEventTimes.push(timestamp);
+          x.sseTextEventChunks.push(x.cdpChunkOrdinal);
           x.sseOutputCodepoints+=[...event.text].length;
         }
         if(hasPrintableAnswerText(event.text)&&x.ttft===null&&ms!==null){x.ttft=ms;x.ttftAt=timestamp;}
@@ -307,7 +308,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
           invalidate(Error('CDP_NON_SERIAL_CHAT_POST'));return;
         }
       }
-      const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false,sseTextEventTimes:[],sseOutputCodepoints:0};
+      const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false,sseTextEventTimes:[],sseTextEventChunks:[],cdpChunkOrdinal:0,sseOutputCodepoints:0};
       active.set(p.requestId,x);
       const record=s=>{
         if(typeof s!=='string'){x.missing=true;return;}
@@ -369,6 +370,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         if(x.firstDataAt===null){
           x.firstDataAt=p.timestamp;x.firstDataMs=millis(x,p.timestamp);
         }
+        x.cdpChunkOrdinal++;
         observe(x,chunk,p.timestamp);
       }else x.missing=true;
     }
@@ -480,13 +482,28 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       throw Error('CDP_FINAL_PAGE_DOCUMENT_CHANGED');
     // Rejected, missing or timed-out request metadata remains fail-closed.
     const turns=records.map((x,i)=>{
-      // Batched SSE events may share one CDP chunk timestamp: never
-      // advertise event gaps as tokenizer or actual GPU decode cadence.
-      const gaps=x.sseTextEventTimes.slice(1).map((t,j)=>
-        Math.round((t-x.sseTextEventTimes[j])*1000));
-      const sorted=gaps.slice().sort((a,b)=>a-b);
-      const p95=!x.missing&&sorted.length&&sorted.every(n=>Number.isSafeInteger(n)&&n>=0)?
-        sorted[Math.ceil(sorted.length*.95)-1]:null;
+      // CDP timestamps describe decoded chunks, NOT actual token emission.
+      // Events decoded from one chunk share the same arrival time. Preserve
+      // zero-gap/coalesced evidence rather than pretending per-token cadence.
+      const gaps=[];
+      let badGap=x.sseTextEventTimes.length!==x.sseTextEventChunks.length;
+      for(let j=1;j<x.sseTextEventTimes.length;j++){
+        const a=x.sseTextEventTimes[j-1],b=x.sseTextEventTimes[j];
+        const ac=x.sseTextEventChunks[j-1],bc=x.sseTextEventChunks[j];
+        const gapMs=Math.round((b-a)*1000);
+        const fromMs=Math.round((a-x.start)*1000),toMs=Math.round((b-x.start)*1000);
+        if(!validTime(a)||!validTime(b)||a<x.start||b<a||
+           !Number.isSafeInteger(ac)||ac<1||!Number.isSafeInteger(bc)||bc<ac||
+           ![gapMs,fromMs,toMs].every(v=>Number.isSafeInteger(v)&&v>=0)||
+           toMs<fromMs){badGap=true;break;}
+        gaps.push({gapMs,afterEvent:j,fromMs,toMs,crossChunk:bc>ac});
+      }
+      if(badGap)x.missing=true;
+      const sorted=gaps.map(g=>g.gapMs).sort((a,b)=>a-b);
+      const p95=!x.missing&&sorted.length?sorted[Math.ceil(sorted.length*.95)-1]:null;
+      // Earliest tied maximum is deterministic; pair index is one-based.
+      const longest=!x.missing&&gaps.length?
+        gaps.reduce((best,g)=>g.gapMs>best.gapMs?g:best):null;
       const outputWindowMs=!x.missing&&Number.isSafeInteger(x.ttft)&&
         Number.isSafeInteger(x.done)&&x.done>x.ttft?x.done-x.ttft:null;
       return {turn:i+1,cdp_request_id:x.id,request_sha256:x.request,cdp_decoded_body_sha256:x.response,
@@ -498,6 +515,13 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       sse_text_event_count:!x.missing?x.sseTextEventTimes.length:null,
       sse_output_codepoints:!x.missing?x.sseOutputCodepoints:null,
       sse_text_event_gap_p95_ms:p95,
+      sse_text_event_max_gap_ms:longest?.gapMs??null,
+      sse_text_event_max_gap_after_event:longest?.afterEvent??null,
+      sse_text_event_max_gap_from_ms:longest?.fromMs??null,
+      sse_text_event_max_gap_to_ms:longest?.toMs??null,
+      sse_text_event_max_gap_cross_chunk:longest?.crossChunk??null,
+      sse_text_event_same_chunk_pairs:!x.missing?gaps.filter(g=>!g.crossChunk).length:null,
+      sse_text_event_cross_chunk_pairs:!x.missing?gaps.filter(g=>g.crossChunk).length:null,
       sse_output_window_ms:outputWindowMs,
       sse_codepoints_per_second:outputWindowMs===null?null:
         Math.round(x.sseOutputCodepoints*10000/outputWindowMs)/10,
