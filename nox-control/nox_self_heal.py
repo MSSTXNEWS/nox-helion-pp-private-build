@@ -140,6 +140,12 @@ def repair_cycle(policy, state_path, dry_run=False):
     closed; it never causes a second systemctl restart or false receipt.
     """
     state_path = Path(state_path)
+    # Dry-run is an observation, not a writer. It cannot persist state or
+    # restart units, and must not create a lock file or missing directory.
+    # Atomic state replacement also gives it a complete snapshot if a writer
+    # happens to be active in parallel.
+    if dry_run:
+        return _repair_cycle_locked(policy, state_path, dry_run=True)
     lock_path = state_path.with_name(state_path.name + ".writer.lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(str(lock_path),
