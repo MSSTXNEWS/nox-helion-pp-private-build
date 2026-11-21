@@ -111,6 +111,46 @@ def renderer_resource_identity(inline, network):
             'count': len(entries)}
 
 
+def verify_report_screenshots(report, directory):
+    """Bind a saved baseline to the six on-disk Chromium PNGs.
+
+    A report SHA is not evidence if its screenshots have disappeared or changed.
+    Reject filenames that could escape the evidence directory; never trust a
+    caller-supplied path in report JSON. This is still browser-only evidence.
+    """
+    expected = {f'b3_{width}x{height}_{mode}.png'
+                for width, height in SIZES for mode in ('normal', 'reduced')}
+    rows = report.get('runs') if isinstance(report, dict) else None
+    if not isinstance(rows, list) or len(rows) != len(expected):
+        raise ValueError('HOLD_BASELINE_SCREENSHOT_COVERAGE')
+    seen = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError('HOLD_BASELINE_SCREENSHOT_METADATA')
+        name = row.get('screenshot')
+        exact_name = (f'b3_{row.get("width")}x{row.get("height")}_'
+                      f'{row.get("mode")}.png')
+        if (type(name) is not str or name not in expected or
+                name != exact_name or name in seen):
+            raise ValueError('HOLD_BASELINE_SCREENSHOT_NAME')
+        digest = row.get('screenshot_sha256')
+        length = row.get('screenshot_bytes')
+        if (type(digest) is not str or len(digest) != 64 or
+                any(c not in '0123456789abcdef' for c in digest) or
+                type(length) is not int or length < 8):
+            raise ValueError('HOLD_BASELINE_SCREENSHOT_METADATA')
+        try:
+            payload = (pathlib.Path(directory) / name).read_bytes()
+        except OSError as exc:
+            raise ValueError('HOLD_BASELINE_SCREENSHOT_MISSING') from exc
+        if (len(payload) != length or not payload.startswith(b'\x89PNG\r\n\x1a\n') or
+                hashlib.sha256(payload).hexdigest() != digest):
+            raise ValueError('HOLD_BASELINE_SCREENSHOT_BYTES_MISMATCH')
+        seen.add(name)
+    if seen != expected:
+        raise ValueError('HOLD_BASELINE_SCREENSHOT_COVERAGE')
+
+
 def compare_baseline(current, prior):
     """Fail closed if an old screenshot/frame report is not comparable.
 
@@ -374,6 +414,9 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
         baseline_path = pathlib.Path(baseline)
         baseline_bytes = baseline_path.read_bytes()
         old = json.loads(baseline_bytes.decode('utf8'))
+        # Verify both screenshot sets BEFORE accepting a frame-time delta.
+        verify_report_screenshots(old, baseline_path.parent)
+        verify_report_screenshots(result, out)
         deltas = compare_baseline(result, old)
         for row in result['runs']:
             key = (row['width'], row['height'], row['mode'])
