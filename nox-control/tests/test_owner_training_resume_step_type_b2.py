@@ -2329,5 +2329,64 @@ class FinalReadbackReceiptContinuity(unittest.TestCase):
 
 
 
+class LegacyHeavyServiceReadbackFence(unittest.TestCase):
+    def test_malformed_legacy_service_snapshot_cannot_authorize_training(self):
+        # Exercise actual source gate AST, not a duplicate in the test.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        fn = next(node for node in tree.body
+                  if isinstance(node, ast.FunctionDef)
+                  and node.name == "ensure_legacy_heavy_services_stopped")
+        main = next(node for node in tree.body
+                    if isinstance(node, ast.FunctionDef) and node.name == "main")
+        code = ast.unparse(main)
+        self.assertIn("ensure_legacy_heavy_services_stopped(helper)", code)
+        self.assertNotIn("helper.service_state(name)['state']", code)
+        scope = {"STOPPED": ("STOPPED", "EXITED", "FATAL")}
+        exec(compile(ast.Module(body=[fn], type_ignores=[]),
+                     str(SOURCE), "exec"), scope)
+        check = scope["ensure_legacy_heavy_services_stopped"]
+        for malformed in (None, [], "STOPPED", {}, {"state": None},
+                          {"state": True}, {"state": 0}, {"state": []},
+                          {"state": {"value": "STOPPED"}}):
+            with self.subTest(malformed=repr(malformed)):
+                helper = types.SimpleNamespace(
+                    HEAVY_SERVICES=("legacy-a",),
+                    service_state=lambda name, value=malformed: value)
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_LEGACY_HEAVY_STATUS_READBACK"):
+                    check(helper)
+        for state in ("RUNNING", "STARTING", "BACKOFF"):
+            with self.subTest(active=state):
+                helper = types.SimpleNamespace(
+                    HEAVY_SERVICES=("legacy-a",),
+                    service_state=lambda name, state=state: {"state": state})
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_LEGACY_HEAVY_SERVICE_REACTIVATED"):
+                    check(helper)
+        for states in (("STOPPED",), ("EXITED", "FATAL"),
+                       ("STOPPED", "EXITED", "FATAL")):
+            calls = []
+            names = tuple("legacy-" + str(i) for i in range(len(states)))
+            snapshots = dict(zip(names, states))
+            def read(name):
+                calls.append(name)
+                return {"state": snapshots[name]}
+            helper = types.SimpleNamespace(
+                HEAVY_SERVICES=names, service_state=read)
+            self.assertIsNone(check(helper))
+            self.assertEqual(tuple(calls), names)
+        # A later healthy service cannot mask one malformed earlier response.
+        calls = []
+        def read(name):
+            calls.append(name)
+            return None if name == "legacy-a" else {"state": "STOPPED"}
+        helper = types.SimpleNamespace(
+            HEAVY_SERVICES=("legacy-a", "legacy-b"), service_state=read)
+        with self.assertRaisesRegex(
+                RuntimeError, "HOLD_LEGACY_HEAVY_STATUS_READBACK"):
+            check(helper)
+        self.assertEqual(calls, ["legacy-a"])
+
+
 if __name__ == "__main__":
     unittest.main()
