@@ -1459,6 +1459,17 @@ class NativeThreeWorkerCap(unittest.TestCase):
             write_workers(workers)
             with self.assertRaisesRegex(RuntimeError, "HOLD_NATIVE_WORKER_CAP_READBACK"):
                 check(helper, fresh_after=__import__("time").time() + 120)
+            # Supervisor may return an incomplete or non-object status;
+            # never leak KeyError/TypeError or admit an ambiguous owner.
+            for malformed_service in (None, [], "RUNNING", {}, {"pid": 1234},
+                                      {"state": []}, {"state": {"status": "RUNNING"}}):
+                with self.subTest(dispatcher_service=repr(malformed_service)):
+                    active = malformed_service
+                    with self.assertRaisesRegex(RuntimeError,
+                                                "HOLD_DISPATCHER_NOT_RUNNING"):
+                        check(helper)
+            active = {"state": "RUNNING", "pid": 1234}
+            self.assertEqual(check(helper)["dispatcher_pid"], 1234)
             # RUNNING is not enough: only a strictly positive integer PID
             # can attest an actual dispatcher process in native admission.
             for invalid_pid in (None, False, True, 0, -3, "1234", 1.5, [], {}):
