@@ -18,10 +18,18 @@ class _LiveOwnerAssetScanner(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.inert_depth=0
+        self.raw_text_tag=None
         self.has_build=False
         self.scripts=set()
 
     def handle_starttag(self, tag, attrs):
+        # HTMLParser tokenizes markup inside some HTML raw-text elements, but
+        # browsers treat it as inert text. It cannot load our owner scripts.
+        if self.raw_text_tag is not None:
+            return
+        if tag in ('textarea', 'title', 'xmp', 'iframe', 'noembed', 'noframes'):
+            self.raw_text_tag=tag
+            return
         if tag in ('template', 'noscript'):
             self.inert_depth+=1
             return
@@ -41,6 +49,10 @@ class _LiveOwnerAssetScanner(HTMLParser):
                 self.scripts.add(url.split('?',1)[0])
 
     def handle_endtag(self, tag):
+        if self.raw_text_tag is not None:
+            if tag==self.raw_text_tag:
+                self.raw_text_tag=None
+            return
         if tag in ('template', 'noscript') and self.inert_depth:
             self.inert_depth-=1
 

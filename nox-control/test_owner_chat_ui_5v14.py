@@ -46,6 +46,21 @@ class OwnerLiveAssetTests(unittest.TestCase):
         self.assertEqual(result.count('src="/nox-web-v29/owner-presence.js"'),2)
         self.assertEqual(result.count('src="/nox-web-v29/owner-chat-ui.js"'),2)
 
+    def test_raw_text_elements_do_not_fake_executable_owner_scripts(self):
+        # HTMLParser reports a script tag inside textarea/title/iframe, while
+        # the actual HTML browser treats each nested tag as inert text.
+        raw=('<html><head><title><script src="/nox-web-v29/owner-chat-ui.js"></script></title>'
+             '</head><body><textarea><script src="/nox-web-v29/owner-presence.js"></script>'
+             '<meta name="nox-live-build"></textarea>'
+             '<iframe><script src="/nox-web-v29/nox-v137-owner-self-status.js"></script>'
+             '</iframe></body></html>')
+        result=self.decorate(raw,'pc/resonance.html')
+        for asset in ('owner-chat-ui.js','owner-presence.js',
+                      'nox-v137-owner-self-status.js'):
+            self.assertEqual(result.count('src="/nox-web-v29/'+asset+'"'),2)
+        self.assertEqual(result.count('data-nox-live-owner="1"'),4)
+        self.assertIn('<meta name="nox-live-build" content="',result)
+
     def test_comments_do_not_count_and_content_is_preserved(self):
         content='<!--<meta name="nox-live-build"><script src="/nox-web-v29/owner-presence.js"></script>-->'
         result=self.rendered(content)
