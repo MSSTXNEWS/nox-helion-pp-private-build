@@ -842,6 +842,9 @@ class TestProbe(unittest.TestCase):
                             ['/api/nox/%63hat',{method:'POST'}],
                             ['/api/nox/chat?wrong=1',{method:'POST'}],
                             ['/api/nox/chat',{method:'GET'}],
+                            ['/api/nox/chat/stream',{method:'POST'}],
+                            ['/api/nox/chat/stream?bypass=1',{method:'GET'}],
+                            ['/%61pi/nox/chat/stream',{method:'POST'}],
                             ['/%61pi/nox/history?dialog_id='+id,{method:'GET'}],
                             // Canonical legacy owner endpoints must not leak
                             // unsupported methods into the native fetch.
@@ -863,7 +866,7 @@ class TestProbe(unittest.TestCase):
                             direct:window.__nativeDirect.slice()};
                     }""")
                     self.assertEqual(result['statuses'],
-                        [[422,'HOLD_OWNER_ROUTE_ALIAS']] * 9)
+                        [[422,'HOLD_OWNER_ROUTE_ALIAS']] * 12)
                     self.assertEqual(result['before'], [])
                     self.assertEqual(result['allowedStatus'], 200)
                     self.assertEqual(len(result['direct']), 1)
