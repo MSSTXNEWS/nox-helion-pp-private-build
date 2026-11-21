@@ -679,10 +679,15 @@ def install(app, B):
                         hist = {"status": "SAVED", "mini": mini, "s03_readback_verified": False}
                     except Exception as e:
                         hist = {"status": "HOLD", "reason": "S03: " + type(e).__name__}
+                    # STOP can arrive while S03 persistence runs in a thread.
+                    # An already-started write cannot be rolled back here; retain
+                    # its unverified receipt, but do not report generated success
+                    # or publish a secondary SOUL mirror after cancellation.
+                    stopped = stopped or rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch
                     # The secondary SOUL mirror must never advertise a chat turn
-                    # whose canonical S03 write failed. A secondary mirror error
-                    # also must not truncate an otherwise completed model stream.
-                    if B.SOUL and not mini and hist["status"] == "SAVED":
+                    # whose canonical S03 write failed or was cancelled. A mirror
+                    # error also must not truncate an otherwise completed stream.
+                    if B.SOUL and not mini and not stopped and hist["status"] == "SAVED":
                         try:
                             B.SOUL.log_turn(user, full.strip())
                         except Exception as e:
