@@ -136,6 +136,22 @@ class DriveFirstTests(unittest.TestCase):
         with self.assertRaisesRegex(m.Hold,"MANIFEST_APPROVAL"):
             m.load_manifest(file,sha)
 
+    def test_manifest_rejects_shadowed_approval_and_nonfinite_json(self):
+        # Even an exactly SHA-pinned file cannot contain ambiguous approvals.
+        valid=json.dumps(self.asset, separators=(",", ":"))
+        for original, replacement in (
+            ('"approved":true', '"approved":false,"approved":true'),
+            ('"size":'+str(len(self.data)), '"size":NaN,"size":'+str(len(self.data))),
+            ('"source_url":', '"source_url":"https://invalid.example/x","source_url":'),
+        ):
+            self.assertIn(original, valid)
+            raw=valid.replace(original,replacement,1).encode()
+            file=self.root/"owner-manifest.json"
+            file.write_bytes(raw)
+            file.chmod(0o600)
+            with self.subTest(field=original), self.assertRaisesRegex(m.Hold,"MANIFEST_JSON"):
+                m.load_manifest(file,hashlib.sha256(raw).hexdigest())
+
     def test_url_host_approval_no_redirect_to_private_host(self):
         self.assertTrue(m.https_allowed(self.asset["source_url"]))
         for bad in ("http://huggingface.co/a","https://127.0.0.1/x",
