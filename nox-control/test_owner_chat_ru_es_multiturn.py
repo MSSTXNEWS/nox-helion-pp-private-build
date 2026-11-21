@@ -2199,5 +2199,66 @@ async function check(chunks, status=200) {
 
 
 
+    def test_ru_es_reload_conflicting_dom_row_ids_rejected_in_chromium(self):
+        """Both visible DOM ID attributes must agree with the durable history.
+
+        Synthetic Chromium witness only. No live model requests or S03 writes.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'row-id-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda req: posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root = document.getElementById('messages');
+                    for(const row of items){
+                        const bubble = document.createElement('div');
+                        bubble.className = 'v24-msg'+(row.role === 'assistant'?' nox':'');
+                        bubble.setAttribute('data-message-id', row.message_id);
+                        const body = document.createElement('div');
+                        body.className = 'body';
+                        body.textContent = row.content;
+                        bubble.append(body);
+                        root.append(bubble);
+                    }
+                }""", transcript)
+                witness = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(witness(), True)
+                bubble = page.locator('#messages .v24-msg').first
+                body = bubble.locator('.body')
+                body.evaluate("(n)=>n.setAttribute('data-message-id','foreign')")
+                self.assertIs(witness(), False, 'body ID contradicts valid bubble ID')
+                body.evaluate("(n)=>n.setAttribute('data-message-id','')")
+                self.assertIs(witness(), False, 'blank body ID cannot be ignored')
+                body.evaluate("(n)=>n.setAttribute('data-message-id','   ')")
+                self.assertIs(witness(), False, 'whitespace ID cannot be ignored')
+                body.evaluate("(n)=>n.setAttribute('data-message-id','row-id-1')")
+                self.assertIs(witness(), True, 'both agreeing IDs are valid')
+                bubble.evaluate("(n)=>n.setAttribute('data-message-id','foreign')")
+                self.assertIs(witness(), False, 'bubble ID contradicts valid body ID')
+                bubble.evaluate("(n)=>n.setAttribute('data-message-id','')")
+                self.assertIs(witness(), False, 'blank bubble ID cannot be ignored')
+                bubble.evaluate("(n)=>n.removeAttribute('data-message-id')")
+                self.assertIs(witness(), True, 'body-only ID remains valid')
+                bubble.evaluate("(n)=>n.setAttribute('data-message-id','row-id-1')")
+                body.evaluate("(n)=>n.removeAttribute('data-message-id')")
+                self.assertIs(witness(), True, 'bubble-only ID remains valid')
+                self.assertEqual(posts, [], 'no extra native model POST')
+            finally:
+                browser.close()
+
+
+
 if __name__ == "__main__":
     unittest.main()
