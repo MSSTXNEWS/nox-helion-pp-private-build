@@ -1142,7 +1142,15 @@ def main():
         # Supervisor can report STARTING before the native ENTRY process exists.
         # A successful start command is not a process identity proof; allow one
         # bounded transition to RUNNING, without sending a second start command.
-        status = helper.service_state()
+        # A successful supervisorctl start is not proof of a well-shaped
+        # Supervisor readback; reject invalid states before any identity claim.
+        def read_start_status():
+            status = helper.service_state()
+            if type(status) is not dict or type(status.get('state')) is not str:
+                raise RuntimeError('HOLD_NEW_TRAINER_STATUS_READBACK')
+            return status
+
+        status = read_start_status()
         if status['state'] == 'STARTING':
             deadline = time.monotonic() + 15
         while status['state'] == 'STARTING':
@@ -1151,7 +1159,7 @@ def main():
             if time.monotonic() >= deadline:
                 raise RuntimeError('HOLD_SINGLE_TRAINER_START_TIMEOUT')
             time.sleep(0.5)
-            status = helper.service_state()
+            status = read_start_status()
         if global_stop():
             raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
         if status['state'] != 'RUNNING':

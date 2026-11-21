@@ -919,6 +919,60 @@ class CheckpointStepProvenance(unittest.TestCase):
 
 
 
+
+    def test_start_once_invalid_supervisor_shape_fails_closed_initial_and_poll(self):
+        # Extract the actual nested function; never contact native Supervisor.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        main = next(node for node in tree.body
+                    if isinstance(node, ast.FunctionDef) and node.name == "main")
+        start = next(node for node in main.body
+                     if isinstance(node, ast.FunctionDef) and node.name == "start_once")
+        code = compile(ast.Module(body=[start], type_ignores=[]), str(SOURCE), "exec")
+
+        def scenario(replies):
+            start_calls, proofs, receipts, sleeps = [], [], [], []
+            iterator = iter(replies)
+            helper = types.SimpleNamespace(
+                command=lambda args, timeout: (start_calls.append((args, timeout)) or (0, "")),
+                service_state=lambda: next(iterator))
+            ctx = {
+                "helper": helper, "global_stop": lambda: False,
+                "SERVICE": "nox-train-volta-t866u",
+                "time": types.SimpleNamespace(monotonic=lambda: 0,
+                                              sleep=lambda delay: sleeps.append(delay)),
+                "result": {"training_started": False},
+                "prove_training": lambda _: (proofs.append("identified") or {"pid": 123}),
+                "step": lambda kind, data: receipts.append((kind, data)),
+            }
+            exec(code, ctx)
+            return ctx["start_once"], ctx["result"], start_calls, proofs, receipts, sleeps
+
+        malformed = (None, [], "RUNNING", {}, {"pid": 123},
+                     {"state": None}, {"state": []}, {"state": False},
+                     {"state": {"nested": "RUNNING"}})
+        for bad in malformed:
+            for replies in ([bad], [{"state": "STARTING"}, bad]):
+                with self.subTest(reply=repr(bad), mid_poll=len(replies) == 2):
+                    start_once, result, calls, proofs, receipts, sleeps = scenario(replies)
+                    with self.assertRaisesRegex(RuntimeError,
+                                                "HOLD_NEW_TRAINER_STATUS_READBACK"):
+                        start_once(5)
+                    self.assertEqual(len(calls), 1)
+                    self.assertEqual(proofs, [])
+                    self.assertEqual(receipts, [])
+                    self.assertFalse(result["training_started"])
+                    self.assertEqual(sleeps, [0.5] if len(replies) == 2 else [])
+
+        start_once, result, calls, proofs, receipts, sleeps = scenario(
+            [{"state": "STARTING"}, {"state": "RUNNING", "pid": 123}])
+        start_once(5)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(proofs, ["identified"])
+        self.assertEqual(len(receipts), 1)
+        self.assertEqual(receipts[0][0], "single_native_training_started")
+        self.assertTrue(result["training_started"])
+        self.assertEqual(sleeps, [0.5])
+
     def test_failed_supervisor_start_cannot_claim_existing_running_service(self):
         # A stale RUNNING status cannot legitimize a failed start command.
         # This is AST-isolated; no native service or persistent flag is touched.
