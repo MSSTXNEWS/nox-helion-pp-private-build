@@ -1075,7 +1075,9 @@ class TestProbe(unittest.TestCase):
                     self.assertEqual(len(result), 4)
                     for row in result:
                         self.assertEqual(row['posts'], 1)
-                        self.assertEqual(row['tokens'], 'answer:'+row['mode'])
+                        # A terminal HOLD can withhold its last carried grapheme;
+                        # only accepted streams promise complete visible text.
+                        self.assertTrue(('answer:'+row['mode']).startswith(row['tokens']))
                         if row['mode'] in ('mismatch', 'malformed'):
                             self.assertEqual(row['reads'], 0)
                             self.assertEqual(row['done'], [])
@@ -1083,6 +1085,7 @@ class TestProbe(unittest.TestCase):
                             self.assertIn('HOLD_NATIVE_MODEL_RECEIPT_DRIFT',
                                           row['errors'][0]['error'])
                         else:
+                            self.assertEqual(row['tokens'], 'answer:'+row['mode'])
                             self.assertEqual(row['reads'], 1)
                             self.assertEqual(row['errors'], [])
                             self.assertEqual(len(row['done']), 1)
