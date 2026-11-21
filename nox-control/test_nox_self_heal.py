@@ -1,6 +1,8 @@
 """NOX self-heal safe behavior regression checks."""
 import importlib.util
 import json
+import fcntl
+import os
 import subprocess
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -78,6 +80,44 @@ class SafeRepairTests(unittest.TestCase):
                     healer.write(state, {"services": {}})
             self.assertFalse(state.exists())
             self.assertEqual(list(Path(root).glob(".state.json.*.tmp")), [])
+
+    def test_concurrent_repair_cycles_fail_closed(self):
+        # Two processes using the same state must not both consume the same
+        # restart budget or overwrite each other's attempt receipts.
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "repair.json"
+            lock = state.with_name(state.name + ".writer.lock")
+            fd = os.open(str(lock), os.O_CREAT | os.O_RDWR, 0o600)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                with patch.object(healer, "alive") as alive, patch.object(
+                        healer.subprocess, "run") as run:
+                    with self.assertRaises(BlockingIOError):
+                        healer.repair_cycle(self.policy(Path(root) / "STOP"), state)
+                    alive.assert_not_called()
+                    run.assert_not_called()
+                self.assertFalse(state.exists())
+            finally:
+                os.close(fd)
+
+            # A released kernel lock allows the original observer to proceed.
+            with patch.object(healer, "alive", return_value=True):
+                rows = healer.repair_cycle(self.policy(Path(root) / "STOP"), state)
+            self.assertEqual(rows[0]["action"], "healthy")
+            self.assertEqual(healer.load(state)["services"]["nox-dispatcher.service"]["failures"], 0)
+
+    def test_writer_lock_symlink_cannot_redirect_observer(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "repair.json"
+            canary = Path(root) / "unrelated"
+            canary.write_text("DO_NOT_CHANGE", encoding="utf8")
+            state.with_name(state.name + ".writer.lock").symlink_to(canary)
+            with patch.object(healer, "alive") as alive:
+                with self.assertRaises(OSError):
+                    healer.repair_cycle(self.policy(Path(root) / "STOP"), state)
+                alive.assert_not_called()
+            self.assertEqual(canary.read_text(encoding="utf8"), "DO_NOT_CHANGE")
+            self.assertFalse(state.exists())
 
     def test_stop_blocks_restart(self):
         with tempfile.TemporaryDirectory() as t:
