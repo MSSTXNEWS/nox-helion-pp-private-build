@@ -315,7 +315,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         // Missing earlier POST metadata is an integrity HOLD, not overlap.
         // Only the observed SSE terminal and network close bound causality;
         // final per-turn validation still rejects previous.missing.
-        if(!previous||!previous.finishStop||
+        if(!previous||(previous.missing&&!previous.postDataLookupFailed)||!previous.finishStop||
            !validTime(previous.doneAt)||!validTime(previous.closeAt)||
            previous.done===null||previous.close===null||
            previous.doneAt>previous.closeAt||p.timestamp<=previous.closeAt){
@@ -324,6 +324,9 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         previousBodyAckPendingAtStart=previous.bodyAckPending;
       }
       const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,bodyAckMs:null,bodyAckPending:false,previousBodyAckPendingAtStart,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false,finishStopAt:null,finishStopChunk:null,doneChunk:null,sseTextEventTimes:[],sseTextEventChunks:[],cdpChunkOrdinal:0,sseOutputCodepoints:0};
+      // Keep a missing POST-body digest distinct from an invalid CDP stream;
+      // the former fails total integrity without proving the turns overlap.
+      x.postDataLookupFailed=false;
       active.set(p.requestId,x);
       const record=s=>{
         if(typeof s!=='string'){x.missing=true;return;}
@@ -341,6 +344,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         const failLookup=()=>{
           if(lookupSealed)return;
           lookupSealed=true;
+          x.postDataLookupFailed=true;
           x.missing=true;
           x.request=null;
         };
