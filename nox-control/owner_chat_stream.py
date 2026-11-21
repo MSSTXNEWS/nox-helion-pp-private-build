@@ -564,6 +564,11 @@ async def _run(native,url,payload,user_text):
             raise ValueError('invalid message history')
         history_wire=json.dumps(source_messages,ensure_ascii=False,
                                 allow_nan=False).encode('utf-8','strict')
+        # The native request cannot fit if its history alone exceeds the
+        # model byte budget. HOLD before decoding a second full S03 copy:
+        # low-headroom hosts must not allocate oversized duplicate history.
+        if len(history_wire)>MODEL_REQUEST_LIMIT:
+            raise StreamFailure('HOLD_MODEL_REQUEST_SIZE')
         messages=json.loads(history_wire)
     except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
         raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
