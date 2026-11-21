@@ -672,6 +672,30 @@ class RefillEligibilityTests(unittest.TestCase):
             producer.validate_manifest(changed)
 
 
+    def test_eligibility_ledger_corrupt_ids_hold_without_replay(self):
+        _, _, _, registry = exact_registry()
+        good_previous = {'missions': []}
+        good_request = {'outcomes': [], 'original_task_states': []}
+        control = {row['task_id']: row for row in
+                   eligibility_ledger(registry, good_previous, good_request)}
+        self.assertTrue(control['I-39']['structural_source_candidate'])
+        invalid = (
+            ({'missions': [{'parent_task_id': []}]}, good_request),
+            ({'missions': None}, good_request),
+            (good_previous, {'outcomes': [{'task_id': []}],
+                             'original_task_states': []}),
+            (good_previous, {'outcomes': [],
+                             'original_task_states': [{'task_id': {}}]}),
+        )
+        for previous, request in invalid:
+            with self.subTest(previous=previous, request=request):
+                ledger = {row['task_id']: row for row in
+                          eligibility_ledger(registry, previous, request)}
+                self.assertFalse(ledger['I-39']['structural_source_candidate'])
+                self.assertIn('MALFORMED_PREDECESSOR_OR_REQUEST_IDS_HOLD',
+                              ledger['I-39']['blockers'])
+                self.assertFalse(ledger['I-39']['executable_task_emitted'])
+
     def test_readonly_refill_review_rejects_unorderable_mission_ids(self):
         from unittest.mock import patch
         import owner_systemic_refill_producer as diagnostic
