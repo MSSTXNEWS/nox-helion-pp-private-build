@@ -493,7 +493,39 @@ async def _run(native,url,payload,user_text):
     except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
         raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
     if _current.relevant_query(user_text):
-        messages=await asyncio.to_thread(_current.augment_messages,messages,user_text)
+        # Evidence may annotate the leading system message, but it must not
+        # silently drop, reorder, or rewrite any persisted dialogue turn.
+        # Compare against the detached pre-augmentation wire: an augmenter
+        # could mutate the messages list in place before returning it.
+        augmented=await asyncio.to_thread(_current.augment_messages,messages,user_text)
+        try:
+            original=json.loads(history_wire)
+            had_system=bool(original) and original[0].get('role')=='system'
+            expected_len=len(original)+(0 if had_system else 1)
+            if type(augmented) is not list or len(augmented)!=expected_len:
+                raise ValueError('evidence changed history length')
+            system=augmented[0]
+            if type(system) is not dict or system.get('role')!='system':
+                raise ValueError('evidence changed system role')
+            expected_tail=original[1:] if had_system else original
+            canonical=lambda value:json.dumps(
+                value,sort_keys=True,ensure_ascii=False,allow_nan=False,
+                separators=(',',':')).encode('utf-8','strict')
+            if canonical(augmented[1:])!=canonical(expected_tail):
+                raise ValueError('evidence changed stored turns')
+            if had_system:
+                initial=original[0]
+                unchanged=dict(system,content=initial.get('content'))
+                if canonical(unchanged)!=canonical(initial):
+                    raise ValueError('evidence changed system metadata')
+                prefix=str(initial.get('content') or '')+'\\n\\n'
+                if type(system.get('content')) is not str or not system['content'].startswith(prefix):
+                    raise ValueError('evidence replaced system content')
+            elif type(system.get('content')) is not str or not system['content'].strip():
+                raise ValueError('evidence missing system context')
+        except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
+            raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
+        messages=augmented
     native_tools=list(native['TOOLS'])
     if _current.relevant_query(user_text):
         if any((row.get('function') or {}).get('name') in _current.NAMES for row in native_tools):
