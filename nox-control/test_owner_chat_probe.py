@@ -1086,7 +1086,7 @@ class ProbeTests(unittest.TestCase):
         self.assertLess(first_gate, source.index('turn3=admitted_consume_turn('))
         self.assertLess(source.index('require_executor_witness(end,third_history,'), second_gate)
         self.assertLess(second_gate, source.index("emit('chat_recent_timing_after'"))
-        self.assertGreater(final_gate, source.index("request(client,'/chat/logout'"))
+        self.assertGreater(final_gate, source.index('require_logout_revoked(client)', source.index('def main():')))
         self.assertLess(final_gate, source.index("print('NOX_MAINT_REPAIR_COMPLETE=true'"))
 
     def test_scoped_history_requires_explicit_top_level_dialog_id(self):
