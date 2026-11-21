@@ -58,6 +58,11 @@ class FactReceiptTest(unittest.TestCase):
             ({"options": {"num_predict": False}}, "CHAT_INVALID_NUM_PREDICT"),
             ({"options": {"num_predict": None}}, "CHAT_INVALID_NUM_PREDICT"),
             ({"options": {"num_predict": 1.5}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"request_id": {"id": "foreign"}, "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
+            ({"request_id": True, "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
+            ({"request_id": "*", "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
+            ({"messages": [{"role": "assistant", "content": "only response"}]}, "CHAT_MISSING_USER"),
+            ({"messages": [{"role": "user", "content": "   "}]}, "CHAT_MISSING_USER"),
         )
         for body, code in cases:
             with self.subTest(body=body):
@@ -65,6 +70,23 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertEqual(response.status_code, 400)
                 payload = json.loads(response.body)
                 self.assertEqual(payload, {"status": "HOLD", "reason": code})
+
+    def test_missing_legacy_request_id_is_unique_and_stop_addressable(self):
+        # A real chat endpoint first frame, without any model POST or S03 write.
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        async def first_frame():
+            response = await chat(Request({"messages": [{"role": "user", "content": "hello"}],
+                                           "mini": True, "use_memory": False}))
+            frame = json.loads(await response.body_iterator.__anext__())
+            await response.body_iterator.aclose()
+            return frame
+        frames = [asyncio.run(first_frame()) for _ in range(2)]
+        ids = [frame["request_id"] for frame in frames]
+        self.assertEqual(len(set(ids)), 2)
+        for frame in frames:
+            self.assertRegex(frame["request_id"], r"^[0-9a-f]{32}$")
+            self.assertEqual(frame["request_receipt"]["request_id"], frame["request_id"])
+            self.assertEqual(frame["request_receipt"]["status"], "RECEIVED")
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
