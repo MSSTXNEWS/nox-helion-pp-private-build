@@ -1553,6 +1553,17 @@ async def browser_run(report, directory, available):
                         report['critical_requestfailed_count'],
                         blocked['non_qa_generation'] + blocked['alternate_native_chat_route']):
                     raise RuntimeError('HOLD_BROWSER_JAVASCRIPT_OR_RESOURCE_ERRORS')
+                # History and final owner-session GETs can outlast the 500 ms
+                # browser quiescence. Re-pin the second stream immediately
+                # before narrow browser-only PASS, without an extra model POST.
+                report['browser_stage']='QA_POSTREAD_FINAL_STREAM_FENCE'
+                postread_snapshot=await page.evaluate(SNAPSHOT_JS)
+                postread_native_equal=await page.evaluate(
+                    '(value)=>window.__NOX_BROWSER_QA.answer===value', second_answer)
+                if not stable_second_turn_quiescence(
+                        quiet_snapshot, postread_snapshot, stream_admitted, postread_native_equal):
+                    raise RuntimeError('HOLD_MULTITURN_POSTREAD_STREAM_CHANGED')
+                report['multiturn_postread_stream_verified']=True
                 report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:
                     raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
