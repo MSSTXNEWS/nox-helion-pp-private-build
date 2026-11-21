@@ -735,6 +735,17 @@ def prove_training(helper):
     return helper.public_process(entries[0])
 
 
+def ensure_legacy_heavy_services_stopped(helper):
+    """Do not infer a safe legacy-service census from malformed Supervisor data."""
+    for name in helper.HEAVY_SERVICES:
+        snapshot = helper.service_state(name)
+        if (type(snapshot) is not dict
+                or type(snapshot.get('state')) is not str):
+            raise RuntimeError('HOLD_LEGACY_HEAVY_STATUS_READBACK')
+        if snapshot['state'] not in STOPPED:
+            raise RuntimeError('HOLD_LEGACY_HEAVY_SERVICE_REACTIVATED')
+
+
 def read_training_status(helper):
     """Fail closed on malformed/ambiguous Supervisor trainer state during observation."""
     snapshot = helper.service_state()
@@ -1343,9 +1354,7 @@ def main():
             raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
         if not (STATE/'train_wants_gpu1').is_file():
             raise RuntimeError('HOLD_TEACHER_RESERVATION_MISSING')
-        active_heavy = [name for name in helper.HEAVY_SERVICES if helper.service_state(name)['state'] not in STOPPED]
-        if active_heavy:
-            raise RuntimeError('HOLD_LEGACY_HEAVY_SERVICE_REACTIVATED')
+        ensure_legacy_heavy_services_stopped(helper)
         result['native_workers'] = worker_readback(helper)
         if not followup:
             prefix = 'OWNER_REQUESTED_TRAINING_HALT request='+helper.HALT_REQUEST+' source='+helper.HALT_SOURCE
