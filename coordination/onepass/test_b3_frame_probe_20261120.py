@@ -389,5 +389,103 @@ class TestProbe(unittest.TestCase):
                 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V6')
 
 
+    def test_native_bridge_done_terminal_across_later_network_chunk(self):
+        """Chromium mock transport: a later NDJSON frame must veto a prior done.
+
+        This exercises bridge source in the real browser engine, without an
+        inference request, server owner mutation or an S03 write.
+        """
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+                    async def local_page(route):
+                        await route.fulfill(
+                            status=200, content_type='text/html',
+                            body='<html><body><main id="resonance">mock</main></body></html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', local_page)
+                    await page.goto('http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER = true;
+                        window.__nativeCase = 'valid';
+                        window.__nativePosts = 0;
+                        window.__historyGets = 0;
+                        const id = 'a'.repeat(32), eid = 'ex00001';
+                        const pack = value => new Response(JSON.stringify(value), {
+                            status:200, headers:{'Content-Type':'application/json'}
+                        });
+                        window.fetch = async (url,opts) => {
+                            if (url === '/api/nox/chat/stream') {
+                                window.__nativePosts++;
+                                const frames = [
+                                    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start',model:'pinned-local-mock'},
+                                    {type:'delta',text:'world'},
+                                    {type:'done',saved:true,s03_integrated:true,
+                                     dialog_id:id,exchange_id:eid}
+                                ].map(JSON.stringify).join('\\n') + '\\n';
+                                const kind = window.__nativeCase;
+                                const bytes = new TextEncoder();
+                                const stream = new ReadableStream({start(ctrl) {
+                                    ctrl.enqueue(bytes.encode(frames));
+                                    if (kind === 'late') {
+                                        setTimeout(() => {
+                                            ctrl.enqueue(bytes.encode(
+                                                JSON.stringify({type:'delta',text:'unapproved'})
+                                                + '\\n'));
+                                            ctrl.close();
+                                        }, 15);
+                                    } else ctrl.close();
+                                }});
+                                return new Response(stream, {status:200});
+                            }
+                            if (String(url).startsWith('/api/ui/memory/dialogs/history?')) {
+                                window.__historyGets++;
+                                return pack({status:'READY',dialog_id:id,messages:[
+                                    {role:'user',content:'hello',exchange_id:eid},
+                                    {role:'assistant',content:'world',exchange_id:eid}
+                                ]});
+                            }
+                            throw Error('UNEXPECTED_TEST_NATIVE_ROUTE');
+                        };
+                    }""")
+                    bridge = (pathlib.Path(__file__).parent /
+                              'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    self.assertEqual(
+                        await page.evaluate("window.__NOX_V135_OWNER_RESONANCE"),
+                        'OWNER_NATIVE_ONLY')
+                    async def exchange(mode):
+                        return await page.evaluate("""async mode => {
+                            window.__nativeCase=mode;
+                            const r=await fetch('/api/nox/chat',{
+                                method:'POST',
+                                body:JSON.stringify({request_id:'b3-'+mode,
+                                    message:'hello',dialog_id:'a'.repeat(32)})
+                            });
+                            return {sse:await r.text(),
+                                posts:window.__nativePosts,
+                                reads:window.__historyGets};
+                        }""", mode)
+                    good = await exchange('valid')
+                    self.assertIn('"type":"done"', good['sse'])
+                    self.assertIn('"history_persisted":true', good['sse'])
+                    self.assertEqual(good['posts'], 1)
+                    self.assertEqual(good['reads'], 1)
+                    delayed = await exchange('late')
+                    self.assertIn('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE',
+                                  delayed['sse'])
+                    self.assertNotIn('"type":"done"', delayed['sse'])
+                    self.assertEqual(delayed['posts'], 2)
+                    self.assertEqual(delayed['reads'], 1)
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
 if __name__ == '__main__':
     unittest.main()
