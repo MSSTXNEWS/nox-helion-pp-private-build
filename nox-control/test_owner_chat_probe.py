@@ -1150,6 +1150,92 @@ class ProbeTests(unittest.TestCase):
 
 
 
+    def test_intermediate_stream_dialog_provenance_is_bound_per_frame(self):
+        """A foreign tagged SSE fragment must not join an otherwise correct turn."""
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        did = '1' * 32
+        clean_done = {'type': 'done', 'dialog_id': did,
+                      'saved': True, 's03_integrated': True}
+        for kind in ('preparing', 'started', 'status', 'meta', 'delta'):
+            for foreign in ('2' * 32, None, '', True):
+                fragment = {'type': kind, 'dialog_id': foreign}
+                if kind == 'delta':
+                    fragment['text'] = '323'
+                frames = [fragment, {'type': 'delta', 'text': '323'}, clean_done]
+                response = Response(frames)
+                with self.subTest(kind=kind, foreign=foreign), patch.object(
+                        probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH
+        """Do not certify third-turn owner/S03 evidence from redirected HTTP 200 JSON."""
+        class Response:
+            status = 200
+            def __init__(self, url):
+                self.url, self.closed = url, False
+            def read(self, limit):
+                return b'{"ok":true}'
+            def close(self):
+                self.closed = True
+
+        base = 'http://127.0.0.1:8080'
+        path_request = '/api/ui/memory/dialogs/history?dialog_id=' + '1' * 32 + '&limit=8'
+        with patch.object(probe, 'BASE', base):
+            valid = Response(base + path_request)
+            with patch.object(probe, 'request', return_value=valid):
+                self.assertEqual(probe.owner_readback_json(object(), path_request), {'ok': True})
+            self.assertTrue(valid.closed)
+
+            wrong_urls = (
+                base + '/chat/login',
+                base + '/api/ui/memory/dialogs/history?dialog_id=' + '2' * 32 + '&limit=8',
+                base + '/api/ui/memory/dialogs/history?dialog_id=' + '1' * 32 + '&limit=6',
+                base + path_request + '#fragment',
+                'https://127.0.0.1:8080' + path_request,
+                'http://127.0.0.1:8081' + path_request,
+                'http://evil.example' + path_request,
+                '',
+            )
+            for wrong in wrong_urls:
+                response = Response(wrong)
+                with self.subTest(url=wrong), patch.object(probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, '^HOLD_OWNER_READBACK_RESPONSE_ROUTE$'):
+                        probe.owner_readback_json(object(), path_request)
+                self.assertTrue(response.closed)
+
+        source = path.read_text()
+        self.assertEqual(source.count("owner_readback_json(client,'/api/ui/memory/dialogs/history?dialog_id='+did"), 3)
+        self.assertEqual(source.count("owner_readback_json(client,'/api/ui/executors')"), 2)
+        self.assertNotIn("third_history=obj(request(client,", source)
+
+
+
+if __name__ == '__main__':
+    unittest.main()
+):
+                        probe.consume_turn(object(), 'synthetic', did)
+                self.assertTrue(response.closed)
+
+        # Both explicitly tagged and legacy untagged intermediate frames remain usable.
+        for include_id in (False, True):
+            fragment = {'type': 'status', 'status': 'running'}
+            delta = {'type': 'delta', 'text': '323'}
+            if include_id:
+                fragment['dialog_id'] = did
+                delta['dialog_id'] = did
+            response = Response([fragment, delta, clean_done])
+            with self.subTest(include_id=include_id), patch.object(
+                    probe, 'request', return_value=response):
+                self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+            self.assertTrue(response.closed)
+
     def test_owner_readbacks_bind_exact_origin_path_and_query(self):
         """Do not certify third-turn owner/S03 evidence from redirected HTTP 200 JSON."""
         class Response:
