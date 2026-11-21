@@ -558,6 +558,47 @@ def main():
           return recovered.safe_to_ack===true&&calls===2&&reads===2&&
             posts===0&&acks===1&&projects===1;
         }'''))
+        check('hung ACK send times out and uncertain retry stays canonical GET only', page.evaluate('''async () => {
+          const s={conversation_id:'ack-stall',exchange_id:'send-pending'};
+          let stage='NEW',posts=0,reads=0,projects=0,acks=0,release;
+          const uncertain=code=>Object.assign(new Error(code),{code});
+          const transport={...opts.transport,
+            post(){posts++;throw Error('MODEL_POST_FORBIDDEN')},
+            async readback(){reads++;return {...s}},
+            ack(){acks++;return new Promise(resolve=>{release=resolve})}
+          };
+          const gate={
+            async reserve(){
+              if(stage==='SENDING') throw uncertain('HOLD_CROSSTAB_ACK_UNCERTAIN');
+              return {status:'RESERVED',key:s.exchange_id};
+            },
+            async beginSend(){stage='SENDING'},
+            async confirm(){throw Error('NO_LOCAL_CONFIRM')},
+            async requireCanonicalAck(){
+              throw uncertain('HOLD_STREAM_ACK_UNCERTAIN_GET_ONLY');
+            }
+          };
+          const ui={
+            async onDelta(){},
+            async upsertTerminal(){projects++;return true}
+          };
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,ackGate:gate,
+            reconnectReadTimeoutMs:150,ackSendTimeoutMs:25
+          });
+          const first=await Promise.race([
+            c.reconnect(s).then(()=>null,e=>e.code),
+            new Promise(resolve=>setTimeout(()=>resolve('HUNG'),400))
+          ]);
+          if(first!=='HOLD_STREAM_ACK_SEND_TIMEOUT'||stage!=='SENDING'||
+             posts!==0||reads!==1||acks!==1||projects!==1)return false;
+          const second=await c.reconnect(s).then(()=>null,e=>e.code);
+          if(typeof release!=='function')return false;
+          release(true); // late server ACK result cannot resume or resend
+          await new Promise(resolve=>setTimeout(resolve,0));
+          return second==='HOLD_STREAM_ACK_UNCERTAIN_GET_ONLY'&&
+            stage==='SENDING'&&posts===0&&reads===2&&acks===1;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
