@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551
 KEY = os.environ["NOX2"]
-REMOTE = 'curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c56/handoff_tasks.sh -o /tmp/c56.sh && bash /tmp/c56.sh 2>&1 | tail -30; echo ======; curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c55/clean_disk.sh -o /tmp/c55.sh && bash /tmp/c55.sh 2>&1 | tail -45; echo ======; curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-deploy-script/nox-control/cmd_agent/deploy_web.sh -o /tmp/deploy_web.sh && bash /tmp/deploy_web.sh 6c1c069beb1b1e9557cfa300ce979e3ab16639e0d8b2346e31a5a964a465d23d https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-dist/nox-web.part00 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-dist/nox-web.part01 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-dist/nox-web.part02 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-dist/nox-web.part03 2>&1 | tail -3; echo ---; for f in nox-v14-ai4.js nox-v14-ai5.js nox-v14-ai6.js nox-v14-res.js index.html chat.html; do curl -s -o /dev/null -w "$f=%{http_code}\\n" http://127.0.0.1:8091/web/$f; done'
+REMOTE = 'curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c56/probe_tasks.sh -o /tmp/c56.sh && bash /tmp/c56.sh'
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
