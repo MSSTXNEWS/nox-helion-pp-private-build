@@ -21,7 +21,7 @@ import re
 import sqlite3
 import sys
 import time
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -379,7 +379,8 @@ def _retry_delay(error: HTTPError | URLError, interval: int) -> int:
     return max(MIN_INTERVAL, min(interval, 300))
 
 
-def _fetch(source: dict[str, Any], cached: sqlite3.Row | None, max_bytes: int) -> tuple[bytes, str | None, str | None, str | None, bool]:
+def _fetch(source: dict[str, Any], cached: sqlite3.Row | None, max_bytes: int,
+           load_cached_body: Callable[[], bytes] | None = None) -> tuple[bytes, str | None, str | None, str | None, bool]:
     headers = {
         "User-Agent": USER_AGENT,
         "Accept": "application/atom+xml, application/rss+xml, application/xml, application/json, text/html;q=0.9, */*;q=0.1",
@@ -399,9 +400,12 @@ def _fetch(source: dict[str, Any], cached: sqlite3.Row | None, max_bytes: int) -
             return body, response.headers.get("ETag"), response.headers.get("Last-Modified"), response.headers.get("Content-Type"), False
     except HTTPError as exc:
         if exc.code == 304 and cached:
-            # A 304 response reuses a disk blob, bypassing response.read(max_bytes).
-            # Re-check the CURRENT budget: it may be lower than at first fetch.
-            body = bytes(cached["body"])
+            # Normal HTTP 200 must not materialize the old SQLite BLOB in RAM.
+            # The metadata-only row supplies its byte length before the only
+            # path that needs to fetch the old body from SQLite.
+            if "body_len" in cached.keys() and cached["body_len"] > max_bytes:
+                raise HunterError(f"cached response exceeds max_bytes={max_bytes}")
+            body = bytes(load_cached_body() if load_cached_body is not None else cached["body"])
             if len(body) > max_bytes:
                 raise HunterError(f"cached response exceeds max_bytes={max_bytes}")
             return body, cached["etag"], cached["last_modified"], cached["content_type"], True
@@ -443,11 +447,23 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
     if state and state["fingerprint"] == fingerprint and state["next_poll_at"] > now:
         return {"source_id": source["id"], "status": "not_due", "added": 0, "next_poll_at": state["next_poll_at"]}
     cached = conn.execute(
-        "SELECT * FROM http_cache WHERE source_id=? AND url=?",
+        "SELECT source_id,url,etag,last_modified,content_type,length(body) AS body_len "
+        "FROM http_cache WHERE source_id=? AND url=?",
         (source["id"], source["url"]),
     ).fetchone()
+
+    def load_cached_body() -> bytes:
+        row = conn.execute(
+            "SELECT body FROM http_cache WHERE source_id=? AND url=?",
+            (source["id"], source["url"]),
+        ).fetchone()
+        if row is None:
+            raise HunterError("cached response disappeared during conditional fetch")
+        return row[0]
+
     try:
-        body, etag, modified, content_type, not_modified = _fetch(source, cached, max_bytes)
+        body, etag, modified, content_type, not_modified = _fetch(
+            source, cached, max_bytes, load_cached_body=load_cached_body)
         parsed = _parse(source, body)
         inserted = 0
         quarantined = 0
