@@ -137,24 +137,32 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn('_agent_final',payload)
 
     async def test_model_heartbeat_cannot_keep_sse_post_open_forever(self):
-        # A healthy first delta followed by a permanently stalled response is
-        # not a successful assistant turn. HTTPX read timeouts alone cannot
-        # stop frequent upstream keepalives. Do not retry model POST or save S03.
+        # Heartbeats continually reset an HTTP read timeout. A real partial
+        # answer followed by endless legal comments must still terminate HOLD
+        # without any replayed POST or S03 completion.
+        class Heartbeats(httpx.AsyncByteStream):
+            def __init__(self):self.closed=False
+            async def __aiter__(self):
+                yield frame('Hola 🌍')
+                while True:
+                    await asyncio.sleep(0.002)
+                    yield b': heartbeat\n\n'
+            async def aclose(self):self.closed=True
+
         for streaming in (True,False):
             with self.subTest(streaming=streaming):
-                gate=asyncio.Event()
-                chunks=Chunks([frame('Hola 🌍'),b': heartbeat\\n\\n',
-                               frame(finish='stop'),b'data: [DONE]\\n\\n'],gate=gate)
+                chunks=Heartbeats()
                 requests,factory=self.transport([chunks])
                 native=self.native()
                 payload={'messages':[{'role':'user','content':'Hola'}]}
-                with (factory,patch.object(stream,'MODEL_STREAM_WALL_SECONDS',0.02)):
+                with (factory,patch.object(stream,'MODEL_STREAM_WALL_SECONDS',0.04)):
                     response=await native['owner_completion'](
                         'http://native/model',payload,'Hola',streaming)
                     if streaming:
                         wire=''.join([part async for part in response.body_iterator])
                         self.assertIn('HOLD_MODEL_STREAM_DEADLINE',wire)
                         self.assertNotIn('[DONE]',wire)
+                        self.assertIn('Hola',wire)
                     else:
                         self.assertEqual(response.status_code,502)
                         self.assertIn(b'HOLD_MODEL_STREAM_DEADLINE',response.body)
