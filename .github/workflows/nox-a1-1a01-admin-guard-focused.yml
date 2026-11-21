@@ -25,6 +25,7 @@ jobs:
           PYTHONPATH=nox-control python3 -m unittest -v test_owner_chat_stream.StreamTests.test_unconfirmed_direct_tool_or_media_never_certifies_s03 \
             test_owner_chat_stream.StreamTests.test_nonstream_reports_exact_hold_without_certifying_s03 \
             test_owner_chat_stream.StreamTests.test_pool_preserves_full_context_before_inference \
+            test_owner_chat_stream.StreamTests.test_pool_cannot_rewrite_or_remove_native_tool_schemas \
             test_owner_chat_stream.StreamTests.test_s03_history_is_detached_before_evidence_augmentation \
             test_owner_chat_stream.StreamTests.test_direct_admin_multiple_actions_holds_before_model_or_dispatch \
             test_owner_chat_stream.StreamTests.test_model_admin_batch_never_partly_executes_or_certifies_s03 \
