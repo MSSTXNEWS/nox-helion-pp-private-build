@@ -214,86 +214,86 @@
  let claimedId;
  const body=new ReadableStream({
    async start(controller){
-     const event=payload=>{
-       if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
-         firstVisibleMs=Math.round(performance.now()-started);
-       const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
-       if(phase&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-         window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
-       if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
-     };
-     try {
+    const event=payload=>{
+    if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
+     firstVisibleMs=Math.round(performance.now()-started);
+    const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
+    if(phase&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+     window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
+    if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
+    };
+    try {
+    if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+    const id=await dialogId(data,nativeSignal);
+    if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+    claimedId=claimDialog(id);
+    pinRequest(id,data);
+    event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
+     answer_source:'NATIVE_PENDING',model_identity_verified:false});
+    const upstream=await nativePost('/api/nox/chat/stream',{
+     message:data.message,dialog_id:id,task:'general',history:[]
+    },nativeSignal);
+    const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
+    const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
+    let trailing='';
+    const emitPieces=async t=>{
+     const parts=livePieces(t);
+     for(let index=0;index<parts.length;index++){
        if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-       const id=await dialogId(data,nativeSignal);
-       if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-       claimedId=claimDialog(id);
-       pinRequest(id,data);
-       event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
-         answer_source:'NATIVE_PENDING',model_identity_verified:false});
-       const upstream=await nativePost('/api/nox/chat/stream',{
-         message:data.message,dialog_id:id,task:'general',history:[]
-       },nativeSignal);
-       const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
-       const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
-       let trailing='';
-       const emitPieces=async t=>{
-         const parts=livePieces(t);
-         for(let index=0;index<parts.length;index++){
-           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-           event({type:'token',t:parts[index]});
-           if(index<Math.min(parts.length-1,7)){
-             await new Promise(resolve=>{
-               let settled=false;
-               const finish=()=>{if(!settled){settled=true;resolve();}};
-               if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);
-               if(typeof setTimeout==='function')setTimeout(finish,18);
-               else if(typeof requestAnimationFrame!=='function')finish();
-             });
-           }
-         }
-       };
-       const {answer,receipt}=await consume(upstream,async t=>{
-         trailing+=t;
-         if(!segmenter){
-           const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
-           if(ascii){
-             const safe=ascii[0].slice(0,-1);
-             trailing=trailing.slice(safe.length);
-             await emitPieces(safe);
-           }
-           return;
-         }
-         const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
-         trailing=glyphs.pop()||'';
-         if(glyphs.length)await emitPieces(glyphs.join(''));
-       },nativeSignal);
-       if(trailing)await emitPieces(trailing);
-       if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-       if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
-       await checkHistory(id,data.message,answer,receipt.exchange_id,nativeSignal);
-       if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-       event({type:'done',status:'done',saved:true,s03_integrated:true,
-         history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
-         model_label:receipt.native_model_label||'UNKNOWN',
-         model_identity_verified:false,answer_source:'LIVE_NOX',
-         first_visible_token_ms:firstVisibleMs,
-         seconds:+((performance.now()-started)/1000).toFixed(2)});
-     }catch(e){
-       event({type:'error',
-         error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
-         gpu_stop_verified:false});
-     }finally{
-       if(claimedId)activeDialogs.delete(claimedId);
-       signal?.removeEventListener?.('abort',onAbort);
-       if(!closed){closed=true;try{controller.close();}catch{}}
+       event({type:'token',t:parts[index]});
+       if(index<Math.min(parts.length-1,7)){
+         await new Promise(resolve=>{
+           let settled=false;
+           const finish=()=>{if(!settled){settled=true;resolve();}};
+           if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);
+           if(typeof setTimeout==='function')setTimeout(finish,18);
+           else if(typeof requestAnimationFrame!=='function')finish();
+         });
+       }
      }
+    };
+    const {answer,receipt}=await consume(upstream,async t=>{
+     trailing+=t;
+     if(!segmenter){
+       const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
+       if(ascii){
+         const safe=ascii[0].slice(0,-1);
+         trailing=trailing.slice(safe.length);
+         await emitPieces(safe);
+       }
+       return;
+     }
+     const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
+     trailing=glyphs.pop()||'';
+     if(glyphs.length)await emitPieces(glyphs.join(''));
+    },nativeSignal);
+    if(trailing)await emitPieces(trailing);
+    if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+    if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
+    await checkHistory(id,data.message,answer,receipt.exchange_id,nativeSignal);
+    if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+    event({type:'done',status:'done',saved:true,s03_integrated:true,
+     history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
+     model_label:receipt.native_model_label||'UNKNOWN',
+     model_identity_verified:false,answer_source:'LIVE_NOX',
+     first_visible_token_ms:firstVisibleMs,
+     seconds:+((performance.now()-started)/1000).toFixed(2)});
+    }catch(e){
+    event({type:'error',
+     error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
+     gpu_stop_verified:false});
+    }finally{
+    if(claimedId)activeDialogs.delete(claimedId);
+    signal?.removeEventListener?.('abort',onAbort);
+    if(!closed){closed=true;try{controller.close();}catch{}}
+    }
    },
    cancel(){
-     closed=true;
-     upstreamAbort.abort();
-     if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-       window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopped'}}));
-     signal?.removeEventListener?.('abort',onAbort);
+    closed=true;
+    upstreamAbort.abort();
+    if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+    window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopped'}}));
+    signal?.removeEventListener?.('abort',onAbort);
    }
  });
  return responseJSONStream(body);
@@ -324,46 +324,46 @@
  try{
    const method=String(init?.method||'GET').toUpperCase();
    if(url.pathname==='/api/nox/dialogs/new'&&method==='POST'){
-     const data=JSON.parse(init?.body||'{}');
-     const created=await createDialog(data.title,init?.signal);
-     return responseJSON({dialog_id:created.dialog_id,title:created.title||'Новый диалог'});
+    const data=JSON.parse(init?.body||'{}');
+    const created=await createDialog(data.title,init?.signal);
+    return responseJSON({dialog_id:created.dialog_id,title:created.title||'Новый диалог'});
    }
    if(url.pathname==='/api/nox/history'&&method==='GET'){
-     const did=url.searchParams.get('dialog_id');
-     if(did){
-       if(!ID.test(did))return errorResponse('HOLD_INVALID_DIALOG_SCOPE',422);
-       const n=Number(url.searchParams.get('limit')||100);
-       const limit=Number.isFinite(n)?Math.min(Math.max(Math.floor(n),1),100):100;
-       const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+did+'&limit='+limit,init);
-       if(data.status!=='READY'||data.dialog_id!==did||!Array.isArray(data.messages))
-         throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
-       return responseJSON({dialog_id:did,messages:data.messages.map(m=>({
-         role:m.role,content:m.content,created_at:m.ts||'',status:'saved'
-       }))});
-     }
-     const data=await nativeJSON('/api/ui/memory/dialogs?limit=80',init);
-     if(data.status!=='READY'||!Array.isArray(data.dialogs))throw Error('HOLD_DIALOG_LIST_CONTRACT');
-     return responseJSON({dialogs:data.dialogs.map(d=>({
-       id:d.dialog_id,title:d.title,messages:'—'
-     })),creator_messages_total:'—'});
+    const did=url.searchParams.get('dialog_id');
+    if(did){
+    if(!ID.test(did))return errorResponse('HOLD_INVALID_DIALOG_SCOPE',422);
+    const n=Number(url.searchParams.get('limit')||100);
+    const limit=Number.isFinite(n)?Math.min(Math.max(Math.floor(n),1),100):100;
+    const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+did+'&limit='+limit,init);
+    if(data.status!=='READY'||data.dialog_id!==did||!Array.isArray(data.messages))
+     throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
+    return responseJSON({dialog_id:did,messages:data.messages.map(m=>({
+     role:m.role,content:m.content,created_at:m.ts||'',status:'saved'
+    }))});
+    }
+    const data=await nativeJSON('/api/ui/memory/dialogs?limit=80',init);
+    if(data.status!=='READY'||!Array.isArray(data.dialogs))throw Error('HOLD_DIALOG_LIST_CONTRACT');
+    return responseJSON({dialogs:data.dialogs.map(d=>({
+    id:d.dialog_id,title:d.title,messages:'—'
+    })),creator_messages_total:'—'});
    }
    if(url.pathname==='/api/nox/dialog/rename'&&method==='POST'){
-     const data=JSON.parse(init?.body||'{}');
-     if(!ID.test(String(data.dialog_id||''))||typeof data.title!=='string'||!data.title.trim())
-       return errorResponse('HOLD_RENAME_SCOPE',422);
-     const list=await nativeJSON('/api/ui/memory/dialogs?limit=80',init);
-     if(list.status!=='READY'||!Array.isArray(list.dialogs))throw Error('HOLD_RENAME_LIST');
-     const row=list.dialogs.find(d=>d.dialog_id===data.dialog_id);
-     if(!row||!Number.isInteger(row.revision)||row.revision<1)throw Error('HOLD_RENAME_REVISION');
-     const r=await nativePost('/api/ui/memory/dialogs/update',{
-       dialog_id:data.dialog_id,revision:row.revision,title:data.title,confirmed:true
-     },init?.signal);
-     if(!r.ok)throw Error('HOLD_RENAME_'+await reason(r,init?.signal));
-     const d=await nativeBodyJSON(r,init?.signal);
-     if(d.dialog_id!==data.dialog_id||d.title!==data.title||
-        !Number.isInteger(d.revision)||d.revision<=row.revision)
-       throw Error('HOLD_RENAME_RECEIPT');
-     return responseJSON({status:'READY',dialog_id:d.dialog_id,title:d.title,revision:d.revision});
+    const data=JSON.parse(init?.body||'{}');
+    if(!ID.test(String(data.dialog_id||''))||typeof data.title!=='string'||!data.title.trim())
+    return errorResponse('HOLD_RENAME_SCOPE',422);
+    const list=await nativeJSON('/api/ui/memory/dialogs?limit=80',init);
+    if(list.status!=='READY'||!Array.isArray(list.dialogs))throw Error('HOLD_RENAME_LIST');
+    const row=list.dialogs.find(d=>d.dialog_id===data.dialog_id);
+    if(!row||!Number.isInteger(row.revision)||row.revision<1)throw Error('HOLD_RENAME_REVISION');
+    const r=await nativePost('/api/ui/memory/dialogs/update',{
+    dialog_id:data.dialog_id,revision:row.revision,title:data.title,confirmed:true
+    },init?.signal);
+    if(!r.ok)throw Error('HOLD_RENAME_'+await reason(r,init?.signal));
+    const d=await nativeBodyJSON(r,init?.signal);
+    if(d.dialog_id!==data.dialog_id||d.title!==data.title||
+    !Number.isInteger(d.revision)||d.revision<=row.revision)
+    throw Error('HOLD_RENAME_RECEIPT');
+    return responseJSON({status:'READY',dialog_id:d.dialog_id,title:d.title,revision:d.revision});
    }
    return errorResponse('HOLD_UNSUPPORTED_LEGACY_ROUTE',405);
  }catch(e){return errorResponse(String(e.message||'HOLD_NATIVE_DIALOG').slice(0,150));}
@@ -372,6 +372,10 @@
  const url=samePath(input);
  if(!url)return nativeFetch(input,init);
  const method=String(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();
+ let p;try{p=decodeURIComponent(url.pathname).toLowerCase()}catch{p=url.pathname.toLowerCase()}
+ if((p!==url.pathname&&p.startsWith('/api/nox/'))||
+ (url.pathname==='/api/nox/chat'&&(url.search||method!=='POST')))
+ return Promise.resolve(errorResponse('HOLD_OWNER_ROUTE_ALIAS',422));
  if(input instanceof Request&&!init?.body){
    const bridged=(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search)||
      (url.pathname==='/api/nox/history'&&method==='GET')||
