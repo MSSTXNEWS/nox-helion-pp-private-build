@@ -804,10 +804,27 @@ def resource_admission(helper):
         raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
     if not lease_free():
         raise RuntimeError('HOLD_SHARED_GPU1_LEASE_BUSY')
-    if helper.service_state()['state'] not in STOPPED or native_training(helper):
+    # Native admission must use a well-shaped, unambiguous supervisor and
+    # GPU census. In particular bool is an int subclass (True == GPU index 1).
+    trainer_snapshot = helper.service_state()
+    if (type(trainer_snapshot) is not dict
+            or type(trainer_snapshot.get('state')) is not str):
+        raise RuntimeError('HOLD_TRAINER_STATE_READBACK')
+    if trainer_snapshot['state'] not in STOPPED or native_training(helper):
         raise RuntimeError('HOLD_EXISTING_TRAINER_NOT_TERMINAL')
-    gpu1 = next((row for row in helper.gpu()['gpus'] if row['index'] == 1), None)
-    if not gpu1 or gpu1['free_mib'] < 27000:
+    gpu_snapshot = helper.gpu()
+    if (type(gpu_snapshot) is not dict or type(gpu_snapshot.get('gpus')) is not list):
+        raise RuntimeError('HOLD_GPU1_CENSUS_READBACK')
+    gpu_rows = gpu_snapshot['gpus']
+    if any(type(row) is not dict or type(row.get('index')) is not int
+           or type(row.get('free_mib')) is not int or row['free_mib'] < 0
+           for row in gpu_rows):
+        raise RuntimeError('HOLD_GPU1_CENSUS_READBACK')
+    gpu1_rows = [row for row in gpu_rows if row['index'] == 1]
+    if len(gpu1_rows) != 1:
+        raise RuntimeError('HOLD_GPU1_CENSUS_READBACK')
+    gpu1 = gpu1_rows[0]
+    if gpu1['free_mib'] < 27000:
         raise RuntimeError('HOLD_GPU1_HEADROOM')
     # cgroup v2 uses "max PERIOD" when CPU quota is unlimited.  Treat
     # that as the effective CPU affinity, without silently admitting malformed
