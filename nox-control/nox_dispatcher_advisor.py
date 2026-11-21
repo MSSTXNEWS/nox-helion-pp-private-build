@@ -152,6 +152,12 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             and native.get("active_claims") is False
             and type(native.get("resource_headroom_bytes")) is int
             and native["resource_headroom_bytes"] >= 2 * 1024**3
+            # A signed but stale native owner observation cannot support even
+            # a training-resume review hint. Match the bounded age/CAS gate
+            # used for existing native REFILL advice; this is NOT admission.
+            and type(native.get("owner_evidence_age_sec")) is int
+            and 0 <= native["owner_evidence_age_sec"] <= 30
+            and native.get("owner_lease_cas_verified") is True
             and _owner_snapshot_attested(snapshot, owner_snapshot_verifier)
         )
         if resume_evidence_ok:
