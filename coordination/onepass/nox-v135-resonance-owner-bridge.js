@@ -22,15 +22,6 @@
  issuedRequests.add(key);
  }
  const claimDialog=id=>{if(activeDialogs.has(id))throw Error('HOLD_DIALOG_INFLIGHT');activeDialogs.add(id);return id;};
- function livePieces(text) {
- const glyphs=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
-   ? Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text),part=>part.segment)
-   : [text];
- const width=Math.max(8,Math.ceil(glyphs.length/64));
- const pieces=[];
- for(let pos=0;pos<glyphs.length;pos+=width)pieces.push(glyphs.slice(pos,pos+width).join(''));
- return pieces;
- }
  const errorResponse=(error,status=503)=>new Response(JSON.stringify({
  status:'HOLD',error,history_persisted:false,s03_integrated:false
  }),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
@@ -236,21 +227,11 @@
     const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
     const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
     let trailing='';
+    // Native stream frames are already paced by the inference server.
+    // Do not insert synthetic rAF/timer delays or split real deltas.
     const emitPieces=async t=>{
-     const parts=livePieces(t);
-     for(let index=0;index<parts.length;index++){
-       if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-       event({type:'token',t:parts[index]});
-       if(index<Math.min(parts.length-1,7)){
-         await new Promise(resolve=>{
-           let settled=false;
-           const finish=()=>{if(!settled){settled=true;resolve();}};
-           if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);
-           if(typeof setTimeout==='function')setTimeout(finish,18);
-           else if(typeof requestAnimationFrame!=='function')finish();
-         });
-       }
-     }
+     if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+     if(t)event({type:'token',t});
     };
     const {answer,receipt}=await consume(upstream,async t=>{
      trailing+=t;
