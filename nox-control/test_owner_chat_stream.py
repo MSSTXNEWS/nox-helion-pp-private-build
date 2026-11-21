@@ -232,6 +232,50 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn('_agent_final',payload)
 
 
+    async def test_upstream_http_and_transport_failures_keep_exact_hold_and_one_post(self):
+        # 6A05: distinguish rate/resource/authorization HOLDs from network
+        # errors. No retry, fabricated final, or second model execution.
+        scenarios=[
+            ('unauthorized',401,'HOLD_MODEL_AUTH'),
+            ('forbidden',403,'HOLD_MODEL_AUTH'),
+            ('request-timeout',408,'HOLD_MODEL_HTTP_TIMEOUT'),
+            ('rate-limited',429,'HOLD_MODEL_RATE_LIMIT'),
+            ('unavailable',503,'HOLD_MODEL_UNAVAILABLE'),
+            ('other',502,'HOLD_MODEL_HTTP'),
+            ('read-timeout',None,'HOLD_MODEL_TRANSPORT_TIMEOUT'),
+            ('connection-reset',None,'HOLD_MODEL_TRANSPORT'),
+        ]
+        real_client=httpx.AsyncClient
+        for name,status,expected in scenarios:
+            for streaming in (True,False):
+                with self.subTest(case=name,streaming=streaming):
+                    requests=[]
+                    def reply(request):
+                        requests.append(request)
+                        if name=='read-timeout':
+                            raise httpx.ReadTimeout('fixture',request=request)
+                        if name=='connection-reset':
+                            raise httpx.ConnectError('fixture',request=request)
+                        return httpx.Response(status,request=request)
+                    def factory(**kwargs):
+                        return real_client(transport=httpx.MockTransport(reply),**kwargs)
+                    native=self.native()
+                    payload={'messages':[{'role':'user','content':'Olá 🌍'}]}
+                    with patch.object(stream.httpx,'AsyncClient',side_effect=factory):
+                        response=await native['owner_completion'](
+                            'http://native/model',payload,'Olá 🌍',streaming)
+                        if streaming:
+                            wire=''.join([part async for part in response.body_iterator])
+                            self.assertIn(expected,wire)
+                            self.assertNotIn('[DONE]',wire)
+                        else:
+                            self.assertEqual(response.status_code,502)
+                            self.assertEqual(json.loads(response.body)['error']['code'],expected)
+                    self.assertEqual(len(requests),1)
+                    self.assertNotIn('_agent_final',payload)
+                    self.assertEqual(self.dispatched,[])
+
+
     async def test_oversized_s03_history_holds_before_second_decode(self):
         # A history that cannot possibly fit the full native POST must not
         # be decoded into another large copy under scarce cgroup memory.
