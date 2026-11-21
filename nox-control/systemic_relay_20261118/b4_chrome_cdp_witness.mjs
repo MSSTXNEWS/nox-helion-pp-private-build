@@ -312,7 +312,10 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       let previousBodyAckPendingAtStart=null;
       if(startedPostCount>0&&validTime(p.timestamp)){
         const previous=[...active.values()][startedPostCount-1];
-        if(!previous||previous.missing||!previous.finishStop||
+        // Missing earlier POST metadata is an integrity HOLD, not overlap.
+        // Only the observed SSE terminal and network close bound causality;
+        // final per-turn validation still rejects previous.missing.
+        if(!previous||!previous.finishStop||
            !validTime(previous.doneAt)||!validTime(previous.closeAt)||
            previous.done===null||previous.close===null||
            previous.doneAt>previous.closeAt||p.timestamp<=previous.closeAt){
