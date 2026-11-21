@@ -272,32 +272,32 @@ def _crossref_items(body: bytes) -> list[dict[str, str]]:
         doi = str(record.get("DOI") or "").strip()
         url = str(record.get("URL") or (f"https://doi.org/{doi}" if doi else "")).strip()
         abstract = _plain(str(record.get("abstract") or ""))
-        date = record.get("published-print") or record.get("published-online") or record.get("created") or {}
-        date_parts = date.get("date-parts") if isinstance(date, dict) else None
+        # Crossref 'created' is a metadata-deposit timestamp, not a reliable
+        # publication date. Select the first VALID actual publication event;
+        # a corrupt print date must not hide a valid online publication date.
         published = ""
-        # Crossref data is external: some records contain a scalar date-parts
-        # element or even a string. Never manufacture a date by iterating its
-        # characters, and never abort healthy sibling records on malformed
-        # publication metadata. An unknown date remains explicitly empty.
-        if isinstance(date_parts, list) and date_parts and isinstance(date_parts[0], list):
+        for event in ("published-print", "published-online", "issued"):
+            meta = record.get(event)
+            date_parts = meta.get("date-parts") if isinstance(meta, dict) else None
+            if not (isinstance(date_parts, list) and date_parts
+                    and isinstance(date_parts[0], list)):
+                continue
             parts = date_parts[0]
-            if (1 <= len(parts) <= 3
+            if not (1 <= len(parts) <= 3
                     and all(type(part) is int for part in parts)
                     and 1 <= parts[0] <= 9999
                     and (len(parts) < 2 or 1 <= parts[1] <= 12)
                     and (len(parts) < 3 or 1 <= parts[2] <= 31)):
-                # Do not turn impossible Crossref calendar days into trusted
-                # chronological metadata. Partial year/month dates are valid.
-                try:
-                    if len(parts) == 3:
-                        calendar_date(*parts)
-                    published = (
-                        f"{parts[0]:04d}"
-                        + (f"-{parts[1]:02d}" if len(parts) >= 2 else "")
-                        + (f"-{parts[2]:02d}" if len(parts) == 3 else "")
-                    )
-                except ValueError:
-                    published = ""
+                continue
+            try:
+                if len(parts) == 3:
+                    calendar_date(*parts)
+            except ValueError:
+                continue
+            published = (f"{parts[0]:04d}"
+                         + (f"-{parts[1]:02d}" if len(parts) >= 2 else "")
+                         + (f"-{parts[2]:02d}" if len(parts) == 3 else ""))
+            break
         if title or url:
             items.append({"title": title, "url": url, "content": abstract, "published": published})
     return items
