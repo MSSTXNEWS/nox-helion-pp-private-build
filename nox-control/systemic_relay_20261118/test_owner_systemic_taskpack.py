@@ -511,7 +511,12 @@ class RefillEligibilityTests(unittest.TestCase):
     def test_i39_i48_i50_are_candidate_ids_but_not_executable(self):
         _,_,_,registry = exact_registry()
         census,census_sha = read(PACK / "source_census.json")
-        ledger = {row["task_id"]:row for row in eligibility_ledger(registry)}
+        # Positive case must explicitly supply a verified empty predecessor
+        # and REFILL request. Missing documents are now a hard HOLD.
+        previous = {"missions": []}
+        request = {"outcomes": [], "original_task_states": []}
+        ledger = {row["task_id"]:row for row in
+                  eligibility_ledger(registry, previous, request)}
         gaps = {row["task_id"]:row for row in special_candidate_gaps(registry,census,census_sha)}
         for task_id in ("I-39","I-48","I-50"):
             self.assertTrue(ledger[task_id]["structural_source_candidate"])
