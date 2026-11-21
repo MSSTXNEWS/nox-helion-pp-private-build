@@ -183,7 +183,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       if(!event||event.invalid){x.missing=true;return;}
       if(event?.stop){
         if(x.finishStop||x.done!==null){x.missing=true;return;}
-        x.finishStop=true;
+        x.finishStop=true;x.finishStopAt=timestamp;x.finishStopChunk=x.cdpChunkOrdinal;
       }
       if(Object.hasOwn(event,'text')){
         if(x.finishStop&&event.text.length>0){x.missing=true;return;}
@@ -201,7 +201,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       }
       if(event?.done){
         if(x.done!==null||ms===null||!x.finishStop){x.missing=true;return;}
-        x.done=ms;x.doneAt=timestamp;
+        x.done=ms;x.doneAt=timestamp;x.doneChunk=x.cdpChunkOrdinal;
       }}
   };
   c.on((method,p)=>{
@@ -308,7 +308,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
           invalidate(Error('CDP_NON_SERIAL_CHAT_POST'));return;
         }
       }
-      const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false,sseTextEventTimes:[],sseTextEventChunks:[],cdpChunkOrdinal:0,sseOutputCodepoints:0};
+      const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false,finishStopAt:null,finishStopChunk:null,doneChunk:null,sseTextEventTimes:[],sseTextEventChunks:[],cdpChunkOrdinal:0,sseOutputCodepoints:0};
       active.set(p.requestId,x);
       const record=s=>{
         if(typeof s!=='string'){x.missing=true;return;}
@@ -504,6 +504,24 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       // Earliest tied maximum is deterministic; pair index is one-based.
       const longest=!x.missing&&gaps.length?
         gaps.reduce((best,g)=>g.gapMs>best.gapMs?g:best):null;
+      // Tail timings are decoded CDP SSE event arrivals, never model token
+      // emission, raw TCP-byte arrival, or browser-visible paint timing.
+      // A stream without nonempty answer deltas has no first/last text event.
+      const firstText=x.sseTextEventTimes[0]??null;
+      const lastText=x.sseTextEventTimes.at(-1)??null;
+      const lastTextChunk=x.sseTextEventChunks.at(-1)??null;
+      const firstTextMs=!x.missing&&firstText!==null?millis(x,firstText):null;
+      const lastTextMs=!x.missing&&lastText!==null?millis(x,lastText):null;
+      const finishStopMs=!x.missing&&x.finishStopAt!==null?millis(x,x.finishStopAt):null;
+      const tailChronology=!x.missing&&lastTextMs!==null&&finishStopMs!==null&&
+        Number.isSafeInteger(x.done)&&x.done>=finishStopMs&&
+        Number.isSafeInteger(lastTextChunk)&&lastTextChunk>=1&&
+        Number.isSafeInteger(x.finishStopChunk)&&x.finishStopChunk>=lastTextChunk&&
+        Number.isSafeInteger(x.doneChunk)&&x.doneChunk>=x.finishStopChunk;
+      if(!x.missing&&lastText!==null&&!tailChronology)x.missing=true;
+      const tailToStopMs=tailChronology&&!x.missing?finishStopMs-lastTextMs:null;
+      const tailToDoneMs=tailChronology&&!x.missing?x.done-lastTextMs:null;
+      const stopToDoneMs=tailChronology&&!x.missing?x.done-finishStopMs:null;
       const outputWindowMs=!x.missing&&Number.isSafeInteger(x.ttft)&&
         Number.isSafeInteger(x.done)&&x.done>x.ttft?x.done-x.ttft:null;
       return {turn:i+1,cdp_request_id:x.id,request_sha256:x.request,cdp_decoded_body_sha256:x.response,
@@ -513,6 +531,13 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       sse_done_ms:!x.missing?x.done:null,close_ms:x.close,
       visible_text_sha256:!x.missing?hash(Buffer.from(x.visibleText,'utf8')):null,
       sse_text_event_count:!x.missing?x.sseTextEventTimes.length:null,
+      sse_first_text_event_ms:!x.missing?firstTextMs:null,
+      sse_last_text_event_ms:!x.missing?lastTextMs:null,
+      sse_last_text_to_finish_stop_ms:tailToStopMs,
+      sse_last_text_to_done_ms:tailToDoneMs,
+      sse_last_text_to_done_cross_chunk:tailToDoneMs===null?null:x.doneChunk>lastTextChunk,
+      sse_finish_stop_to_done_ms:stopToDoneMs,
+      sse_finish_stop_to_done_cross_chunk:stopToDoneMs===null?null:x.doneChunk>x.finishStopChunk,
       sse_output_codepoints:!x.missing?x.sseOutputCodepoints:null,
       sse_text_event_gap_p95_ms:p95,
       sse_text_event_max_gap_ms:longest?.gapMs??null,
