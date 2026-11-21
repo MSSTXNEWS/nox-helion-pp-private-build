@@ -81,5 +81,9 @@ P
   curl -s -m5 localhost:8082/v1/nox/stats | head -c 300
   ;;
 log) pgrep -af llama-server | cut -c1-160; tail -n 15 /root/nox/logs/fast_server.log | cut -c1-200; nvidia-smi --query-gpu=memory.used --format=csv,noheader;;
+bench)
+  python3 /tmp/bench.py 8083 | tail -3
+  curl -s -m60 localhost:8082/v1/chat/completions -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"Кто ты? Одной фразой."}],"nox_mode":"fast","max_tokens":60}' | head -c 400; echo
+  curl -s -m5 localhost:8081/health; echo; tail -n 3 /root/nox/logs/glm_server.log | cut -c1-200; free -g | sed -n 2p; nvidia-smi --query-gpu=memory.used --format=csv,noheader;;
 *) echo unknown;;
 esac
