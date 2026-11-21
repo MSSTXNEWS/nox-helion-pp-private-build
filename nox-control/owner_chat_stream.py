@@ -92,13 +92,17 @@ def _executor_status_reply(user_text,path=None):
         if not isinstance(doc,dict):return unknown
         rows=doc.get('workers');n=doc.get('n')
         if type(n) is not int or not 1<=n<=64 or not isinstance(rows,list) or len(rows)!=n:return unknown
-        ids=[];busy=0
+        ids=[];busy=0;active_task_ids=set()
         for row in rows:
             if not isinstance(row,dict):return unknown
             name=row.get('id');status=row.get('status');task=row.get('current_task')
             if not isinstance(name,str) or not re.fullmatch(r'nox-agent-\d{2,3}',name) or name in ids:return unknown
             if status=='busy':
                 if not isinstance(task,dict) or not isinstance(task.get('id'),str) or not task['id']:return unknown
+                # Two busy workers claiming the same TaskID is not a trustworthy
+                # lease/registry snapshot. Do not report duplicate work as real.
+                if task['id'] in active_task_ids:return unknown
+                active_task_ids.add(task['id'])
                 busy+=1
             elif status=='idle':
                 if task is not None:return unknown
