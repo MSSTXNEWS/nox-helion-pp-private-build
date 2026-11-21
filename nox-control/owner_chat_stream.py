@@ -861,6 +861,15 @@ async def _run(native,url,payload,user_text):
                     selected.append(call_id)
                 if selected!=[call_id for call_id in before_ids if call_id in seen]:
                     raise StreamFailure('HOLD_TOOL_POOL_FIDELITY')
+                # Deduplication may only discard an identical call that is
+                # still represented in the batch. Silently dropping a distinct
+                # tool request changes the model's intended actions while the
+                # browser/S03 could still receive a green final response.
+                if len(seen)<len(before_ids):
+                    retained={before[call_id] for call_id in selected}
+                    if any(before[call_id] not in retained
+                           for call_id in before_ids if call_id not in seen):
+                        raise StreamFailure('HOLD_TOOL_POOL_FIDELITY')
                 calls=reduced
             if not calls:raise StreamFailure('HOLD_TOOL_PARSE')
             _refuse_multi_admin_batch(calls)
