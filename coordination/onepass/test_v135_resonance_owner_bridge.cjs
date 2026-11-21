@@ -1472,3 +1472,29 @@ test('6A05 native NDJSON structured HOLD stays exact for JSON and SSE without S0
     }
   }
 });
+
+
+test('1A01 invalid decoded user UTF-16 never dispatches or creates S03 history',async()=>{
+  for(const half of ['\uD800','\uDFFF']){
+    for(const streamed of [false,true]){
+      const nativeCalls=[];
+      const w={NOX_NATIVE_OWNER:true,fetch:async path=>{
+        nativeCalls.push(String(path));
+        throw Error('native call is forbidden for invalid input');
+      }};
+      const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
+        href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+      vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+        TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+      const message='Pregunta '+half+' sin sustitución';
+      const payload=streamed?{message,dialog_id:id,request_id:'1a01-preflight'}:{message};
+      const response=await w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify(payload)});
+      assert.equal(response.status,422);
+      const result=await response.json();
+      assert.equal(result.error,'HOLD_INVALID_MESSAGE_UNICODE');
+      assert.equal(result.history_persisted,false);
+      assert.equal(result.s03_integrated,false);
+      assert.deepEqual(nativeCalls,[]);
+    }
+  }
+});
