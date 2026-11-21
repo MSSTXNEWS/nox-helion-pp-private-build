@@ -33,6 +33,10 @@ MODEL_REQUEST_LIMIT=4000000
 # must obey the same ceiling before native postflight certifies it.
 FINAL_RESPONSE_LIMIT=2000000
 
+# A model server can send heartbeats forever and keep HTTPX's per-read timeout
+# reset. Bound the complete native model POST + SSE exchange independently.
+MODEL_STREAM_WALL_SECONDS=300
+
 
 def _append_final_chunk(chunks, chunk, size):
     if type(chunk) is not str:
@@ -371,8 +375,11 @@ async def _model_events(client, url, payload):
                 if already_finished and (reason is not None or part or fragments):
                     raise StreamFailure('HOLD_MODEL_POST_TERMINAL_DELTA')
                 if part:
-                    size+=len(part)
-                    if size>2000000:
+                    # Enforce the native token budget on UTF-8 wire bytes, not
+                    # Python codepoints: an RU/ES/emoji stream can exceed the
+                    # S03/browser ceiling before its final postflight.
+                    size+=len(part.encode('utf-8','strict'))
+                    if size>FINAL_RESPONSE_LIMIT:
                         raise StreamFailure('HOLD_MODEL_OUTPUT_SIZE')
                     text.append(part)
                     yield 'token',part
@@ -426,6 +433,21 @@ async def _model_events(client, url, payload):
     elif not message['content'].strip():
         raise StreamFailure('HOLD_MODEL_EMPTY')
     yield 'message',message
+
+
+async def _deadline_model_events(client,url,payload):
+    """Bound complete model SSE even when upstream sends endless keepalives.
+
+    Close the underlying response on timeout. Never replay the POST or grant
+    S03 a final answer from an incomplete stream.
+    """
+    try:
+        async with asyncio.timeout(MODEL_STREAM_WALL_SECONDS):
+            async with aclosing(_model_events(client,url,payload)) as events:
+                async for item in events:
+                    yield item
+    except TimeoutError:
+        raise StreamFailure('HOLD_MODEL_STREAM_DEADLINE') from None
 
 
 def _native_json_value(value):
@@ -776,7 +798,7 @@ async def _run(native,url,payload,user_text):
                 model_request.pop('tools',None)
                 model_request['tool_choice']='none'
             message=None
-            async with aclosing(_model_events(client,url,model_request)) as model_stream:
+            async with aclosing(_deadline_model_events(client,url,model_request)) as model_stream:
                 async for kind,value in model_stream:
                     if kind=='token':
                         yield kind,value

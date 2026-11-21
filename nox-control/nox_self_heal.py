@@ -4,6 +4,7 @@ Local file policy only. Remote manifests and LLM messages cannot authorize repai
 """
 import argparse
 import datetime as datetime
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -130,6 +131,33 @@ def _unit_confirmed_inactive(service):
 
 
 def repair_cycle(policy, state_path, dry_run=False):
+    """Run one repair observation under an exclusive, nonblocking state lease.
+
+    Atomic replace alone does not prevent two observers from reading the same
+    failures/attempt counter and then overwriting each other's snapshots.
+    Keep a persistent sidecar inode so a concurrent process cannot race the
+    check -> recorded attempt -> optional action sequence. A busy owner fails
+    closed; it never causes a second systemctl restart or false receipt.
+    """
+    state_path = Path(state_path)
+    # Dry-run is an observation, not a writer. It cannot persist state or
+    # restart units, and must not create a lock file or missing directory.
+    # Atomic state replacement also gives it a complete snapshot if a writer
+    # happens to be active in parallel.
+    if dry_run:
+        return _repair_cycle_locked(policy, state_path, dry_run=True)
+    lock_path = state_path.with_name(state_path.name + ".writer.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(str(lock_path),
+                 os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return _repair_cycle_locked(policy, state_path, dry_run)
+    finally:
+        os.close(fd)
+
+
+def _repair_cycle_locked(policy, state_path, dry_run=False):
     state = load(state_path)
     services = state.setdefault("services", {})
     if not isinstance(services, dict):
