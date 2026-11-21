@@ -30,6 +30,13 @@ class ProbeTest(unittest.TestCase):
         outputs = io.StringIO()
 
         def fake_run(args, **kwargs):
+            child_env=kwargs.get("env")
+            self.assertIsInstance(child_env, dict)
+            self.assertEqual(set(child_env), {"PATH", "HOME", "LANG", "LC_ALL"})
+            self.assertNotIn("NOX2", child_env)
+            self.assertNotIn("GITHUB_TOKEN", child_env)
+            self.assertEqual(child_env["PATH"], "/usr/bin:/bin")
+            self.assertTrue(pathlib.Path(child_env["HOME"]).is_dir())
             if args[0] == "ssh-keygen":
                 k = pathlib.Path(args[args.index("-f") + 1])
                 k.write_text("private placeholder for mocked test")
