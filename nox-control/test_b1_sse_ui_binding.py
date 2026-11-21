@@ -431,6 +431,68 @@ def main():
           return result==='STOPPED_TIMEOUT' && noRepost &&
             posts===1 && acks===0 && deltas===0;
         }'''))
+        check('STOP settles hung UI delta without later frame or repost', page.evaluate('''async () => {
+          const s={conversation_id:'ui-stall',exchange_id:'stop-delta'};
+          let posts=0,acks=0,calls=0,lateCommits=0,release;
+          const frame='id: delta-ui-1\\nevent: delta\\ndata: WAIT\\n\\n' +
+            'id: delta-ui-2\\nevent: delta\\ndata: NEVER\\n\\n';
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({start(c){
+              c.enqueue(new TextEncoder().encode(frame));c.close();
+            }})};
+          },async ack(){acks++;return true;}};
+          const host={...opts.host,async readCommitted(){return null}};
+          const ui={
+            onDelta(_s,_content,signal){
+              calls++;
+              return new Promise(resolve=>{
+                release=()=>{if(!signal.aborted)lateCommits++;resolve();};
+              });
+            },
+            async upsertTerminal(){throw Error('NO_TERMINAL')}
+          };
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:2000
+          });
+          const pending=c.begin(s);
+          for(let i=0;i<40&&!release;i++) await new Promise(r=>setTimeout(r,0));
+          if(posts!==1||typeof release!=='function'||calls!==1) return false;
+          const didStop=c.stop(s);
+          const outcome=await Promise.race([
+            pending,new Promise(r=>setTimeout(()=>r('HUNG'),350))
+          ]);
+          release();
+          await new Promise(r=>setTimeout(r,0));
+          const noRepost=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return didStop===true&&outcome==='STOPPED'&&noRepost&&
+            posts===1&&acks===0&&calls===1&&lateCommits===0;
+        }'''))
+        check('timeout settles hung UI delta without duplicate model POST', page.evaluate('''async () => {
+          const s={conversation_id:'ui-stall',exchange_id:'timeout-delta'};
+          let posts=0,acks=0,calls=0;
+          const frame='id: delta-time\\nevent: delta\\ndata: WAIT\\n\\n';
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({start(c){
+              c.enqueue(new TextEncoder().encode(frame));c.close();
+            }})};
+          },async ack(){acks++;return true;}};
+          const host={...opts.host,async readCommitted(){return null}};
+          const ui={onDelta(){calls++;return new Promise(()=>{})},
+            async upsertTerminal(){throw Error('NO_TERMINAL')}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:40
+          });
+          const outcome=await Promise.race([
+            c.begin(s),new Promise(r=>setTimeout(()=>r('HUNG'),450))
+          ]);
+          const noRepost=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return outcome==='STOPPED_TIMEOUT'&&noRepost&&
+            posts===1&&acks===0&&calls===1;
+        }'''))
         check('hung reconnect GET times out and retry stays GET-only', page.evaluate('''async () => {
           const s={conversation_id:'reconnect-deadline',exchange_id:'get-hung'};
           let reads=0,posts=0,acks=0,projections=0,late;
