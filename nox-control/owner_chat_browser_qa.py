@@ -594,6 +594,18 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
         if (any(not isinstance(value, str) or not value.strip() for value in row_ids)
                 or len({value.strip() for value in row_ids}) != len(expected_messages)):
             return False
+    if require_full_transcript_pin and any(
+            'session_id' in row for row in expected_messages):
+        # A four-row RU/ES S03 readback cannot mix authenticated sessions.
+        # Historical rows may omit session_id entirely. If any row supplies
+        # this metadata, every row must provide the same nonblank exact ID;
+        # a partial annotation must not certify cross-session continuity.
+        # This alone is NOT an owner-cookie or independent writer proof.
+        session_ids = [row.get('session_id') for row in expected_messages]
+        if (any(not isinstance(value, str) or not value.strip()
+                or value != value.strip() for value in session_ids)
+                or len(set(session_ids)) != 1):
+            return False
     if (not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict)
             or writer_receipt is independent_readback):
         return False
