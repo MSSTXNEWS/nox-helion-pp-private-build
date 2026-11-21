@@ -141,7 +141,7 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       documentURL:'http://localhost/nox/chat',initiator:{type:'script'},
       request:{method:'POST',url:'http://localhost/api/nox/chat',postData:'{"overlap":true}'}
     });
-    if(!(i===0&&options.omitFirstClose)){
+    if(!((i===0&&options.omitFirstClose)||(i===1&&options.omitSecondClose))){
       const closeFailed=i===0?options.firstLoadingFailed===true:o.loadingFailed===true;
       const closeTimestamp=i===0&&Object.hasOwn(options,'firstCloseTimestamp')?
         options.firstCloseTimestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02;
@@ -1282,4 +1282,44 @@ test('post-DONE first-turn error plus failed, reversed or absent network close r
       /CDP_NON_SERIAL_CHAT_POST/,scenario);
   }
   assert.doesNotMatch(JSON.stringify(control),/after done|secret|Hello|data:/);
+});
+
+test('second post-DONE error plus failed or invalid network close never certifies second turn',async()=>{
+  const baseline=await run();
+  assert.equal(baseline.cdp_consistent,true);
+  assert.equal(baseline.ttft_sse_verified,true);
+  const invalidSecond=body+'event: error\n'+'data: {"error":"after-second-done"}\n\n';
+  const first=baseline.turns[0];
+  const keepFirst=(observed,label)=>{
+    assert.equal(observed.cdp_consistent,false,label);
+    assert.equal(observed.ttft_sse_verified,false,label);
+    assert.deepEqual(observed.turns.map(t=>t.cdp_request_id),['1','2'],label);
+    assert.equal(observed.turns[0].request_sha256,first.request_sha256,label);
+    assert.equal(observed.turns[0].cdp_decoded_body_sha256,first.cdp_decoded_body_sha256,label);
+    assert.equal(observed.turns[0].visible_text_sha256,first.visible_text_sha256,label);
+    assert.equal(observed.turns[0].ttft_ms,first.ttft_ms,label);
+    assert.equal(observed.turns[0].sse_done_ms,first.sse_done_ms,label);
+    assert.equal(observed.turns[0].stream_timing_complete,true,label);
+    assert.equal(observed.turns[1].ttft_ms,null,label);
+    assert.equal(observed.turns[1].sse_done_ms,null,label);
+    assert.equal(observed.turns[1].stream_timing_complete,false,label);
+    assert.doesNotMatch(JSON.stringify(observed),/after-second-done|secret|Hello|data:/,label);
+  };
+  // The second POST was serial and network-closed; a second post-DONE
+  // SSE fault alone must reject pair acceptance but not damage first evidence.
+  const faultOnly=await run(false,[Buffer.from(invalidSecond)]);
+  keepFirst(faultOnly,'second late event with valid close');
+  for(const [label,flags] of [
+    ['second Network.loadingFailed',{loadingFailed:true}],
+    ['second network close before decoded data',{closeTimestamp:101.009}]
+  ]){
+    const observed=await run(false,[Buffer.from(invalidSecond)],null,null,flags);
+    keepFirst(observed,label);
+    assert.equal(observed.turns[1].sse_done_to_loading_finished_ms,null,label);
+  }
+  // No Network.loadingFinished/Failed for second POST: no fabricated
+  // completion, regardless of decoded stop or [DONE].
+  await assert.rejects(
+    run(false,[Buffer.from(invalidSecond)],null,null,{omitSecondClose:true}),
+    /CDP_TIMEOUT/);
 });
