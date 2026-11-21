@@ -80,6 +80,8 @@ class WarmS03Cache:
                     _,n,_=self.entries.pop(key);self.bytes-=n
 
     def __call__(self,session:Session,prompt:str,limit:int)->list[dict]:
+        if type(limit) is not int or not 1 <= limit <= 20:
+            raise ValueError('S03_CACHE_LIMIT')
         # Fence BEFORE revision lookup, including uncached/bypass reads. An ACL
         # invalidation must revoke the in-flight result, not only its cache fill.
         ticket=[False]
@@ -93,15 +95,26 @@ class WarmS03Cache:
         finally:
             with self.lock:self._reads.pop(id(ticket),None)
 
+    def _assert_read_active(self,ticket:list[bool])->None:
+        # Do not START a new S03 lookup after a scoped revocation was observed
+        # during native revision lookup. In-flight callbacks are separately
+        # fenced by __call__ before exposing any results to the caller.
+        with self.lock:
+            if ticket[0]:
+                raise RuntimeError('HOLD_S03_CACHE_INVALIDATED_DURING_READ')
+
     def _read(self,session:Session,prompt:str,limit:int,ticket:list[bool])->list[dict]:
+        self._assert_read_active(ticket)
         if not self.revision:
             self.stats['bypasses']+=1
             return self.recall(session,prompt,limit)
         try:
             rev=self.revision(session)
         except Exception:
+            self._assert_read_active(ticket)
             self.stats['bypasses']+=1
             return self.recall(session,prompt,limit)
+        self._assert_read_active(ticket)
         if not isinstance(rev,str) or not 1<=len(rev)<=128:
             self.stats['bypasses']+=1
             return self.recall(session,prompt,limit)
@@ -147,14 +160,19 @@ class WarmS03Cache:
             n=len(json.dumps(safe,ensure_ascii=False).encode('utf8'))
         except (ValueError,TypeError):return got
         if n>self.max_bytes//2:return got
+        # Native callbacks may block or coordinate with owner revocation.
+        # Never hold the cache mutex across that external call. The read ticket
+        # fences a revoke observed before or during this final revision lookup.
+        try: same=self.revision(session)==rev
+        except Exception:same=False
+        self._assert_read_active(ticket)
         with self.lock:
-            # Avoid caching if revision changed while native callback was running.
-            try: same=self.revision(session)==rev
-            except Exception:same=False
             if same and not ticket[0]:
+                # Give a successful fill its full TTL after callback validation.
+                expires_at=time.monotonic()+self.ttl
                 old=self.entries.pop(key,None)
                 if old:self.bytes-=old[1]
-                self.entries[key]=(now+self.ttl,n,safe);self.bytes+=n
+                self.entries[key]=(expires_at,n,safe);self.bytes+=n
                 while self.bytes>self.max_bytes and self.entries:
                     _,(_,removed,_)=self.entries.popitem(last=False);self.bytes-=removed
         return got
@@ -227,7 +245,13 @@ class DurableTurn:
             ui_replace_supported:bool=False)->Iterator[dict]:
         try:
             session.validate()
-            self._append(session,turn_id,0,'user_message',{'text':prompt[:8000]})
+            # The model must never receive a longer prompt than the durable S03
+            # user message. Silent [:8000] clipping poisons future dialog recall.
+            # Preserve the exact accepted text, including RU/ES Unicode and
+            # leading/trailing whitespace, in the original native S03 writer.
+            if type(prompt) is not str or not prompt or len(prompt)>8000:
+                raise ValueError('HOLD_INPUT')
+            self._append(session,turn_id,0,'user_message',{'text':prompt})
         except Exception as e:
             yield {'type':'hold','state':str(e) if isinstance(e,RuntimeError) else 'HOLD_INPUT'};return
         seq=1;answer='';pending='';last_flush=time.monotonic()
