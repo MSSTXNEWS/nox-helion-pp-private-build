@@ -119,10 +119,22 @@
         // an already-aborted terminal projection. Wait for its reservation to
         // settle, then project the same server-verified event via GET-only
         // readback. Never overlap two writers or accept a different event ID.
-        if(signal&&pending.signal&&pending.signal!==signal&&
-           pending.signal.aborted&&!signal.aborted){
-          return pending.promise.then(projected=>
-            projected===true?true:upsertTerminal(s,eventId,signal));
+        if(signal&&pending.signal&&pending.signal!==signal){
+          // Reconnect can arrive before the old signal gets STOP. A new
+          // live signal must observe the old result, then safely retry the
+          // same canonical terminal event after an aborted old projection.
+          // A later STOP of the new signal must also win this waiting race.
+          return pending.promise.then(
+            projected=>{
+              if(signal.aborted) return false;
+              return projected===true?true:upsertTerminal(s,eventId,signal);
+            },
+            error=>{
+              if(signal.aborted) return false;
+              if(pending.signal.aborted) return upsertTerminal(s,eventId,signal);
+              throw error;
+            }
+          );
         }
         return pending.promise;
       }
