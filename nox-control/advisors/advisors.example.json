@@ -1,0 +1,5 @@
+[
+  {"name": "judge-1", "url": "http://127.0.0.1:8101", "timeout_s": 60, "role": "judge"},
+  {"name": "checker-1", "url": "http://127.0.0.1:8102", "timeout_s": 60, "role": "checker"},
+  {"name": "ru-es-1", "url": "http://127.0.0.1:8103", "timeout_s": 60, "role": "ru_es"}
+]
