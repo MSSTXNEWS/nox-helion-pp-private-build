@@ -24,6 +24,8 @@ class Stub {
       url:this.targetUrl??'http://localhost/nox/chat'
     }};
     if(cmd==='Network.getResponseBody'){
+       if(this.responseBodyHang?.includes(p.requestId))return new Promise(()=>{});
+       if(this.responseBodyReject?.includes(p.requestId))throw Error('BODY_LOOKUP_REJECTED');
       if(this.responseBodyDelay?.[p.requestId])
         await new Promise(resolve=>setTimeout(resolve,this.responseBodyDelay[p.requestId]));
       const canonical=this.bodies.get(p.requestId).toString('base64');
@@ -39,6 +41,8 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
   c.responseBodyMutator=options.responseBodyBase64Mutator;
   c.responseBodyTextMutator=options.responseBodyTextMutator;
   c.responseBodyDelay=options.responseBodyDelay;
+  c.responseBodyHang=options.responseBodyHang;
+  c.responseBodyReject=options.responseBodyReject;
   c.postAckEvent=options.postAckEvent;
   if(options.postDataMode){
     const normalSend=c.send.bind(c);
@@ -53,7 +57,9 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       return normalSend(cmd,p);
     };
   }
-  return capture({ws:'ws://127.0.0.1:9333/fake',expectedChatOrigin:options.expectedChatOrigin??'http://localhost',makeSession:async()=>c,timeoutMs:2000,quiescenceMs:options.quiescenceMs??80,onReady:async()=>{
+  return capture({ws:'ws://127.0.0.1:9333/fake',expectedChatOrigin:options.expectedChatOrigin??'http://localhost',makeSession:async()=>c,timeoutMs:2000,quiescenceMs:options.quiescenceMs??80,
+    responseBodyAckTimeoutMs:options.responseBodyAckTimeoutMs??750,
+    bodyAckClock:options.bodyAckClock??(()=>performance.now()),onReady:async()=>{
   setTimeout(async()=>{for(let i=0;i<2;i++){
     const requestId=String(i+1),o=i===1?options:{},timestamp=Object.hasOwn(o,'requestTimestamp')?o.requestTimestamp:100+i;
     const chunks=i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):
@@ -905,4 +911,38 @@ test('SSE DONE to CDP loadingFinished measures network-tail, not TCP close',asyn
   assert.equal(reversed.turns[1].sse_done_to_loading_finished_ms,null);
   assert.equal(reversed.turns[1].sse_done_to_loading_finished_source,null);
   assert.doesNotMatch(JSON.stringify(delayed),/secret|data:/);
+});
+
+test('getResponseBody ACK latency is bounded observer-only monotonic time, never model TTFT',async()=>{
+  const control=await run();
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  assert.equal(control.turns[1].sse_done_ms,10);
+  assert.equal(control.turns[1].cdp_response_body_ack_latency_source,
+    'LOCAL_MONOTONIC:Network.getResponseBody');
+  const delayed=await run(false,null,null,null,{responseBodyDelay:{'2':65}});
+  assert.equal(delayed.cdp_consistent,true);
+  assert.equal(delayed.ttft_sse_verified,true);
+  assert.equal(delayed.turns[1].ttft_ms,control.turns[1].ttft_ms);
+  assert.equal(delayed.turns[1].sse_done_ms,control.turns[1].sse_done_ms);
+  assert.ok(delayed.turns[1].cdp_response_body_ack_latency_ms>=45);
+  assert.ok(delayed.turns[1].cdp_response_body_ack_latency_ms<=750);
+  assert.ok(delayed.turns[1].cdp_response_body_ack_latency_ms>
+    delayed.turns[0].cdp_response_body_ack_latency_ms);
+  for(const options of [
+    {responseBodyReject:['2']},
+    {responseBodyHang:['2'],responseBodyAckTimeoutMs:45},
+    {responseBodyDelay:{'2':100},responseBodyAckTimeoutMs:45},
+    {bodyAckClock:()=>NaN},
+    {bodyAckClock:(()=>{let t=100;return ()=>--t;})()}
+  ]){
+    const failed=await run(false,null,null,null,options);
+    assert.equal(failed.cdp_consistent,false,JSON.stringify(Object.keys(options)));
+    assert.equal(failed.ttft_sse_verified,false);
+    assert.equal(failed.turns[1].cdp_response_body_ack_latency_ms,null);
+    assert.equal(failed.turns[1].cdp_response_body_ack_latency_source,null);
+    assert.equal(failed.turns[1].ttft_ms,null);
+    assert.equal(failed.turns[1].sse_done_ms,null);
+  }
+  assert.doesNotMatch(JSON.stringify(delayed),/secret|Hello/);
 });
