@@ -284,6 +284,54 @@ def reject_auth_refresh_header(response):
         raise RuntimeError('HOLD_CHAT_AUTH_REFRESH_HEADER')
 
 
+
+def resonance_runtime_assets(html, page_url, max_assets=35):
+    """Census browser-critical JS/CSS: never silently skip foreign or overflow assets.
+
+    HTTP evidence only, not real browser or independent native/S03 acceptance.
+    """
+    class Scanner(HTMLParser):
+        def __init__(self):
+            super().__init__(convert_charrefs=True)
+            self.refs = []
+            self.base_ref = None
+
+        def handle_starttag(self, tag, attrs):
+            fields = dict(attrs)
+            if tag == 'base' and self.base_ref is None and 'href' in fields:
+                self.base_ref = fields['href']
+            resource = None
+            if tag == 'script' and 'src' in fields:
+                resource = fields['src']
+            elif tag == 'link':
+                rel = str(fields.get('rel') or '').lower().split()
+                kind = str(fields.get('as') or '').lower().strip()
+                if ('stylesheet' in rel or 'modulepreload' in rel
+                        or ('preload' in rel and kind in ('script', 'style'))):
+                    resource = fields.get('href')
+            if resource is not None:
+                if not isinstance(resource, str) or not resource.strip():
+                    raise RuntimeError('HOLD_RESONANCE_RUNTIME_ASSET_CENSUS')
+                self.refs.append(resource)
+
+    scanner = Scanner()
+    scanner.feed(html)
+    scanner.close()
+    if not scanner.refs or len(scanner.refs) > max_assets:
+        raise RuntimeError('HOLD_RESONANCE_RUNTIME_ASSET_CENSUS')
+    effective_base = urllib.parse.urljoin(page_url, scanner.base_ref or '')
+    allowed = urllib.parse.urlsplit(BASE)
+    def require_local(url):
+        target = urllib.parse.urlsplit(url)
+        if ((target.scheme, target.netloc.lower()) !=
+                (allowed.scheme, allowed.netloc.lower())):
+            raise RuntimeError('HOLD_RESONANCE_EXTERNAL_RUNTIME_ASSET')
+        return url
+    require_local(effective_base)
+    return [require_local(urllib.parse.urljoin(effective_base, ref))
+            for ref in scanner.refs]
+
+
 def meaningful_delta(text):
     """Only visible glyphs may start meaningful-stream TTFT; ignore invisible format/mark/control placeholders."""
     return isinstance(text, str) and any(
@@ -787,11 +835,8 @@ def main():
             report['paths'].append({'path':path,'status':status,'final_path':final_path,'ms':round((time.monotonic()-t)*1000),
                 'sha256':digest(raw),'title':title[1][:150] if title else None,'scripts':re.findall(r'<script[^>]+src=[\"\']([^\"\']+)',text)[:30]})
             if path=='/nox-web-v29/pc/resonance.html':
-                resources=re.findall(r'<script[^>]+src=[\"\']([^\"\']+)',text)
-                resources+=re.findall(r'<link[^>]+href=[\"\']([^\"\']+)',text)
-                for resource in resources[:35]:
-                    target=urllib.parse.urljoin(BASE+path,resource)
-                    if urllib.parse.urlparse(target).netloc!=urllib.parse.urlparse(BASE).netloc:continue
+                resources=resonance_runtime_assets(text,BASE+path)
+                for target in resources:
                     target_parts=urllib.parse.urlsplit(target)
                     local=target_parts.path
                     asset_request=local + ('?' + target_parts.query if target_parts.query else '')
