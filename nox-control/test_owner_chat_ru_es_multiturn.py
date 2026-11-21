@@ -441,7 +441,7 @@ async function check(chunks, status=200) {
                 self.assertFalse(owner_session_continuity_valid(status, cookies, pin))
         self.assertFalse(owner_session_continuity_valid(200, owner, None))
         caller = inspect.getsource(browser_run)
-        self.assertEqual(caller.count('owner_session_continuity_valid('), 2)
+        self.assertEqual(caller.count('owner_session_continuity_valid('), 3)
         self.assertIn("signed_after_second=await context.request.get(", caller)
         self.assertIn("multiturn_postsecond_owner_session_verified", caller)
         self.assertLess(caller.index("signed_after_second=await context.request.get("),
@@ -450,6 +450,32 @@ async function check(chunks, status=200) {
                         caller.index("second_history=await json_response("))
         self.assertLess(caller.index("signed_after_second=await context.request.get("),
                         caller.index("multiturn_browser_acceptance_verified"))
+
+    def test_preacceptance_ru_es_owner_session_after_second_screenshot(self):
+        # A 200 identity check before history cannot pin the owner through
+        # potentially slow private screenshot capture.
+        original = [dict(name='nox_owner', domain='owner.example', path='/',
+                         value='signed-before-screenshot', httpOnly=True)]
+        pin = owner_session_cookie_pin(original)
+        self.assertTrue(owner_session_continuity_valid(200, original, pin))
+        for status, cookies in (
+            (401, original), (302, original),
+            (200, [dict(original[0], value='rotated-during-screenshot')]),
+            (200, [dict(original[0], path='/changed')]),
+        ):
+            with self.subTest(status=status):
+                self.assertFalse(owner_session_continuity_valid(status, cookies, pin))
+        caller = inspect.getsource(browser_run)
+        self.assertIn("signed_precert=await context.request.get(", caller)
+        self.assertIn("multiturn_precert_owner_session_verified", caller)
+        self.assertIn("HOLD_MULTITURN_OWNER_SESSION_CHANGED_BEFORE_ACCEPTANCE", caller)
+        screenshot = caller.index("second_capture=await capture_private_screenshot(")
+        session = caller.index("signed_precert=await context.request.get(")
+        runtime = caller.index("if not clean_two_turn_browser_runtime(")
+        accepted = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(screenshot, session)
+        self.assertLess(session, runtime)
+        self.assertLess(runtime, accepted)
 
     def test_two_turn_native_post_accounting_fences_before_s03_proof(self):
         for turn in (1, 2):

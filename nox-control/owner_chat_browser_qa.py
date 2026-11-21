@@ -1451,6 +1451,17 @@ async def browser_run(report, directory, available):
                     raise RuntimeError('HOLD_MULTITURN_SCREENSHOT_CAPTURE_PENDING')
                 require_screenshot_captures(report)
                 report['multiturn_second_screenshot_verified']=True
+                # Signed session proof above predates history read and
+                # private screenshot. Rotate/expire during either? Fail closed.
+                # Only this extra read-only GET; no model generation request.
+                report['browser_stage']='QA_PRECERT_OWNER_SESSION_RECHECK'
+                signed_precert=await context.request.get(
+                    base+'/chat/session',max_redirects=0,timeout=6000)
+                if not owner_session_continuity_valid(
+                        signed_precert.status, await context.cookies(base),
+                        owner_session_pin):
+                    raise RuntimeError('HOLD_MULTITURN_OWNER_SESSION_CHANGED_BEFORE_ACCEPTANCE')
+                report['multiturn_precert_owner_session_verified']=True
                 if not clean_two_turn_browser_runtime(
                         page_errors, network, report['network_response_overflow_count'],
                         report['critical_requestfailed_count'],
