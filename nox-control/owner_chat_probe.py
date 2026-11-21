@@ -399,13 +399,13 @@ def stream_status_is_failure(value):
         # Textual HTTP status lines are failures too. A subsequent saved=true
         # terminal must not erase an upstream 4xx/5xx proxy/model response.
         # Keep untagged model text (for example '500 tokens') out of this fence.
-        if re.match(r'^http(?:/\\d+(?:\\.\\d+)?)?\\s+[45]\\d{2}\\b', status):
+        if re.match(r'^http(?:/\d+(?:\.\d+)?)?\s+[45]\d{2}\b', status):
             return True
-        if re.match(r'^[45]\\d{2}\\s+(?:bad request|unauthorized|payment required|'
+        if re.match(r'^[45]\d{2}\s+(?:bad request|unauthorized|payment required|'
                     r'forbidden|not found|method not allowed|not acceptable|'
                     r'request timeout|conflict|gone|too many requests|'
                     r'internal server error|not implemented|bad gateway|'
-                    r'service unavailable|gateway timeout|client closed request)\\b',
+                    r'service unavailable|gateway timeout|client closed request)\b',
                     status):
             return True
         # Upstream may encode a failed stream as a plain status/state label
