@@ -1,0 +1,4438 @@
+{
+ "schema": "nox.task_status.v1",
+ "generated": "2026-11-21T11:03:57.086891Z",
+ "basis": "git log subjects; \"touched\" is NOT closed: acceptance still needs verification",
+ "total": 718,
+ "touched": 26,
+ "not_started": 692,
+ "top20_next_in_order": [
+  "1V14-06",
+  "3A02",
+  "3V14-06",
+  "5V14-12",
+  "5V14-13",
+  "5V14-15",
+  "5V14-23",
+  "1V14-24",
+  "6V14-08",
+  "6V14-10",
+  "4V14-01",
+  "3A04",
+  "0A05"
+ ],
+ "tasks": {
+  "0A01": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "4e3e1252b",
+    "1107077d2",
+    "3c1679b9b"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Зафиксировать цепочку «аварийный STOP → оптимизация → первое обучение → один живой чат → н"
+  },
+  "0A02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Собрать манифест исходных ZIP, сцен, редакторов, версии ядра, SHA, зависимостей и отката в"
+  },
+  "0A03": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "d55303c6a",
+    "2ff17abbb",
+    "c95e196aa",
+    "21feb5498",
+    "8270f9fd5"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Закрепить контракт браузер ↔ C01–C08 ↔ Maya ↔ S03 и отдельные квитанции принятия, завершен"
+  },
+  "0A04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Пересчитать критический путь. Основной релиз ждёт хранилище, совместимость и первый учебны"
+  },
+  "0A05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Принять четыре сценария на одном релизном SHA: разговор, память/STOP, восстановление поруч"
+  },
+  "1A01": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "36e3ec9dc",
+    "da6014824",
+    "11bc033fb",
+    "eef6ed4ea",
+    "fd89559a7"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Оставить один поток реальных токенов в исходном «Резонансе». Показывать отдельно принятый "
+  },
+  "1A02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Стабильные conversation_id, exchange_id, client request ID и дедупликация повторной отправ"
+  },
+  "1A03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Восстанавливать активное поручение по серверному ID и номеру события, сверять целиком акту"
+  },
+  "1A04": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "fc9b839db",
+    "fef3f4b53"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Развести STOP генерации, STOP медиа, отмену поручения и аварийный OWNER STOP. В интерфейсе"
+  },
+  "1A05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить маршрутизацию FAST/NORMAL/FORSAZH с реальным числом занятых слотов. Для FAST — "
+  },
+  "2A01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Снять PCIe/NVLink, VRAM/температуры обеих GPU, cgroup, SSD и I/O; согласовать SM70, CUDA/д"
+  },
+  "2A02": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "1c3691e0b",
+    "b7240d8f0",
+    "bd4731556"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Подтвердить дополнительную seekable-ёмкость, резерв, скорость произвольного чтения и отсут"
+  },
+  "2A03": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "259be977e"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Перепроверить exact комплект GGUF по размерам и SHA. Докачивать только недостающие части с"
+  },
+  "2A04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "На закреплённой сборке измерить совместимость CUDA FP16, несколько быстрых нативных прогон"
+  },
+  "2A05": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "ed44d71b7",
+    "792b194fe",
+    "b8e7dd9f9",
+    "55d01fe4e"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Снять в одинаковом сценарии базовое p50/p95 по этапам. Последовательно подобрать размер ок"
+  },
+  "3A01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить существующие C01–C08 к каждому действительному запросу: C01 восприятие, C02 S03"
+  },
+  "3A02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить существующую S03 и сегменты M0–M7: контекст, эпизоды, знания, хронология, навык"
+  },
+  "3A03": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "b068d8bf1",
+    "29bd04de2",
+    "5a9c5a4f2",
+    "fea1ca758"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "FAST — scoped SQLite FTS и WarmS03Cache по origin/PersonaID/ревизии. BGE и rerank использу"
+  },
+  "3A04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реальный self-model: список разрешённых способностей, активные задачи, версия весов, досту"
+  },
+  "3A05": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "d62de6865",
+    "c6d3639d8",
+    "196d7c5d4",
+    "73c28649a"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Контроль восстановления S03 и checkpoint после отдельного readback. Старые утверждения име"
+  },
+  "4A01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Прочитать точные манифесты модели: обучаемая ревизия, tokenizer, dtype, target modules, ли"
+  },
+  "4A02": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "0220e2d02",
+    "92569e467"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Подготовить независимые train/dev/holdout по RU/ES, памяти, речи, планированию, инструмент"
+  },
+  "4A03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Выполнить учебный smoke в допускаемом окне: forward, loss, backward, optimizer, SHA изменё"
+  },
+  "4A04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Возобновить тестовый checkpoint с optimizer, scaler, RNG и положением данных. Принять канд"
+  },
+  "4A05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Сохранить проверенный Qwen checkpoint как исторический прогресс. Загрузку и GPU-бюджет нап"
+  },
+  "5A01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Взять проверенный unified V140-derived ZIP за исходный кандидат, сопоставить оригинальные "
+  },
+  "5A02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Применить патч восстановления уже принятого media job к точному исходнику. Обновить манифе"
+  },
+  "5A03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подтверждены Painterro и его экспорт PNG в отдельной студии. Найденный Cinema проигрывает "
+  },
+  "5A04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Встроить «Редактировать» в карточку подтверждённого результата, передавать job/asset ID в "
+  },
+  "5A05": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "fd4fd0249"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Освободить основной поток браузера: ленивые ассеты WebGL и медиа, Reduced Motion, простой "
+  },
+  "6A01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Полный аварийный STOP старого контура, запрет возобновления, подтверждённые PID/start tick"
+  },
+  "6A02": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "95f5ed13d",
+    "49ddc1975"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Ввести контроль владения и право записи через существующий lease. Очередь и актуальный кур"
+  },
+  "6A03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подготовить soft yield на границах optimizer-step и embedding batch, отдельно жёсткий авар"
+  },
+  "6A04": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "6f3471279",
+    "da6084a4d",
+    "dbe1f832f",
+    "233d99c0f",
+    "a98f29fcd"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Отделить полезную GPU-загрузку, VRAM и CPU/I/O. Чат задаёт допустимую задержку, «черви» за"
+  },
+  "6A05": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "accc66291",
+    "16bd9b269",
+    "16ea54ec9",
+    "595452f71",
+    "5f1bc696a"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Достоверные причины блокировки, retry с задержкой и ограничением, контроль I/O, VRAM и про"
+  },
+  "0B01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Настроить советников в существующем реестре инструментов. Claude Opus 5.5 (claude-opus-5-5"
+  },
+  "0B02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Внешние модели получают минимальный фрагмент задачи, максимум два параллельных вызова на с"
+  },
+  "0B03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "В существующей эстафете семь направлений A/B берут свободные TaskID, сохраняют результат и"
+  },
+  "0B04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Монитор изменений: проект, источник, дата, эксперимент, разница метрик, результат и ссылка"
+  },
+  "0B05": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "f3b4ec4d9"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Первая видимая демонстрация одного живого сценария — уточнение голосом, память со ссылкой,"
+  },
+  "1B01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Постоянный голос RU/ES через существующие STT/TTS, при необходимости CPU whisper.cpp + Pip"
+  },
+  "1B02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "«Продолжи с места» при смене окна, темы или устройства. Сверка открытых задач по серверу, "
+  },
+  "1B03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Управляемый стиль NOX: формальность, темп, юмор, эмоциональная выразительность, тихие часы"
+  },
+  "1B04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проактивное действие по фактическим событиям: готовый результат, ошибка, подтверждённая во"
+  },
+  "1B05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Документы, изображение и избранные кадры видео в том же диалоге. Ссылки на страницу, таймк"
+  },
+  "2B01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверить реальный допуск GPU A для обучения, GPU B для знаний, а также вариант TP2 на зап"
+  },
+  "2B02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Измерить повторный запрос и холодный запуск отдельно. При рабочем Maya — профилировать mma"
+  },
+  "2B03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Испытывать speculative decoding только на доступной совместимой реализации и точном компле"
+  },
+  "2B04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверить возобновляемую доставку готовых внешних весов Maya и обучаемых исходников раздел"
+  },
+  "2B05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Экспорт принятой версии ученика в совместимый inference-формат после merge, если поддержан"
+  },
+  "3B01": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "c8011461d",
+    "9234cafa4",
+    "8792fa047",
+    "a33cf2988",
+    "5c30e31a5"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Hunter непрерывно наблюдает источники: релизы GitHub, официальные RSS/Atom, changelog, arX"
+  },
+  "3B02": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "2516be6b0",
+    "2f6a35e48",
+    "db4258724",
+    "32bafb2d4",
+    "61a448298"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Извлечение и проверка → карантин кандидата → факт с URL/датой/цитируемым основанием → S03 "
+  },
+  "3B03": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "6dd527631",
+    "dfb0e91a3"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Запустить GPU-пакеты BGE по бюджетам. Ввести двухшаговый поиск: дешёвый FTS/векторы, опцио"
+  },
+  "3B04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Консолидация в простое: обновление резюме и временных связей, восстановление приоритетов, "
+  },
+  "3B05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реестр навыка связывает задачу, результат, тест и область применения. Ранжировать навыки п"
+  },
+  "4B01": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "3f5c68c04",
+    "436293bac"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "FORGE непрерывно собирает разрешённые обучающие примеры из проверенных знаний, собственных"
+  },
+  "4B02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Запустить ограниченные циклы LoRA/QLoRA только при доказанной архитектуре, target modules "
+  },
+  "4B03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Непрерывный replay предыдущих навыков вокруг новых примеров. Эффективные шаги, градиенты, "
+  },
+  "4B04": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "f0459e2e2"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Bounded DREAM/Reflection: ошибочный случай → гипотеза → исходное изменение в разрешённой в"
+  },
+  "4B05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Согласовать полезность LoRA и дистилляции на одном наборе. Большую full-parameter трениров"
+  },
+  "5B01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить существующие фото/видео редакторы к job/asset ID чата. Сохранить оригинал и вер"
+  },
+  "5B02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Видео: таймлайн, trim/cut, громкость, субтитры WebVTT, preview proxy, вертикаль/горизонт, "
+  },
+  "5B03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Сцена: оригинальные 14 миров и D02, 5 профилей окружения, 6 палитр, 100 процедурных вариан"
+  },
+  "5B04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Артефакты рядом с чатом: файл, отчёт, код, аудио/видео и источник. Доступные HOME, проекты"
+  },
+  "5B05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "NOX Web самоулучшение: брать манифест оригинальных ассетов и готовых компонентов, предлага"
+  },
+  "6B01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Ввести справедливость очереди и гистерезис hot/cold режима. Короткие знания, сбор данных и"
+  },
+  "6B02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Показать живые метрики обеих карт и раскладку веса/знания/чат/черви. Отметить время уступк"
+  },
+  "6B03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Автовосстановление от обычных сбоев по bounded retry, сравнение run ID, сохранённого курсо"
+  },
+  "6B04": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "f761850c4",
+    "28fda4fe5",
+    "b56edec97",
+    "18ef7f9a6"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Падение OneHost/потеря сети → сверка очереди и подготовленных S03-транзакций → восстановле"
+  },
+  "6B05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "После приёмки одного опубликованного SHA полностью удалить подтверждённые заменённые и неу"
+  },
+  "1V14-01": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "162d69fe3",
+    "4e75bc311",
+    "ff0e6c437",
+    "58218ef58",
+    "ea041e12e"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Восстановить рабочий endpoint единого чата NOX."
+  },
+  "1V14-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить настоящий streaming от активной модели."
+  },
+  "1V14-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать мгновенный приём и подтверждение новых сообщений."
+  },
+  "1V14-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Разделить канал разговоров и очередь длительных задач."
+  },
+  "1V14-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Обеспечить возможность общаться во время программирования."
+  },
+  "1V14-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить STOP текущей генерации без остановки сервера."
+  },
+  "1V14-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать паузу, продолжение и отмену длительной задачи."
+  },
+  "1V14-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Создать режим FAST для простого разговора."
+  },
+  "1V14-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Создать NORMAL: главный + 3 универсальных исполнителя."
+  },
+  "1V14-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Создать FORSAZH: главный + 6 универсальных исполнителей."
+  },
+  "1V14-11": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Научить NOX автоматически выбирать режим сложности."
+  },
+  "1V14-12": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Ввести динамические приоритеты новых сообщений."
+  },
+  "1V14-13": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Разработать классификацию: вопрос, команда, задача, исправление."
+  },
+  "1V14-14": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить многошаговое планирование сложных запросов."
+  },
+  "1V14-15": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать самостоятельную декомпозицию больших задач."
+  },
+  "1V14-16": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить выбор инструментов по цели."
+  },
+  "1V14-17": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить обращение к старшей модели при доступности и необходимости."
+  },
+  "1V14-18": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать проверку собственных выводов перед ответом."
+  },
+  "1V14-19": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Научить NOX замечать противоречия в собственных действиях."
+  },
+  "1V14-20": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Поддержать голосовые диалоги RU/ES с прерыванием."
+  },
+  "1V14-21": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Сохранять смысл разговоров, решений и поручений в S03."
+  },
+  "1V14-22": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Создать естественную эмоциональную выразительность."
+  },
+  "1V14-23": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить инициативные реплики, вопросы и музыкальные предложения."
+  },
+  "1V14-24": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать непрерывное присутствие NOX в чате без навязчивого спама."
+  },
+  "2V14-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверить реальное состояние Vast.ai `#60509551`."
+  },
+  "2V14-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Установить владельца процессов и действующие STOP/maintenance locks."
+  },
+  "2V14-03": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "45d0cedc3"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Подтвердить право безопасной записи и перезапуска."
+  },
+  "2V14-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подтвердить независимое восстановление S03 и checkpoints."
+  },
+  "2V14-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Разрешить проблему нехватки дискового пространства."
+  },
+  "2V14-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить постоянное seekable-хранилище для весов."
+  },
+  "2V14-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверить сохранность текущих моделей перед заменой."
+  },
+  "2V14-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подготовить совместимое окружение Python/CUDA/PyTorch."
+  },
+  "2V14-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подготовить единый загрузчик Maya."
+  },
+  "2V14-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Завершить получение совместимых весов DeepSeek-V4.1-Flash-1017."
+  },
+  "2V14-11": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверить целостность весов по манифестам и хешам."
+  },
+  "2V14-12": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверить доступность обеих NVIDIA V100."
+  },
+  "2V14-13": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Настроить оптимальное размещение модели на двух GPU."
+  },
+  "2V14-14": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Выполнить минимальную реальную проверку inference."
+  },
+  "2V14-15": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить новую модель к существующему OneHost."
+  },
+  "2V14-16": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Обеспечить корректный streaming токенов в чат."
+  },
+  "2V14-17": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Оптимизировать TTFT, токены/секунду и задержки очереди."
+  },
+  "2V14-18": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Оптимизировать KV-cache, batching и контекстное окно."
+  },
+  "2V14-19": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Настроить FP16 и поддерживаемые ускорения V100."
+  },
+  "2V14-20": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подобрать сжатие или частичную загрузку без недоказанных обещаний качества."
+  },
+  "2V14-21": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Настроить освобождение VRAM под активный диалог."
+  },
+  "2V14-22": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить телеметрию реальной производительности."
+  },
+  "2V14-23": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подготовить будущий переход на улучшенные собственные веса NOX."
+  },
+  "2V14-24": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "После успешного перехода вывести устаревшие модели из активной конфигурации и очистить док"
+  },
+  "3V14-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить существующую S03 к новой главной модели."
+  },
+  "3V14-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Исключить создание второй независимой базы памяти."
+  },
+  "3V14-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Восстановить сохранение диалогов и задач."
+  },
+  "3V14-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать точное извлечение прошлых решений."
+  },
+  "3V14-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить приоритет актуальных данных над устаревшими."
+  },
+  "3V14-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Восстановить память текущего рабочего контекста."
+  },
+  "3V14-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать уровни когнитивной памяти M0–M7."
+  },
+  "3V14-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Интегрировать семантическую матрицу C01–C08."
+  },
+  "3V14-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить векторное извлечение и RAG."
+  },
+  "3V14-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Настроить гибридный семантический и точный поиск."
+  },
+  "3V14-11": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать временной граф событий."
+  },
+  "3V14-12": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Сохранять причинно-следственные связи решений."
+  },
+  "3V14-13": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Различать подтверждённые факты, гипотезы и ошибки."
+  },
+  "3V14-14": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить оценку значимости воспоминаний."
+  },
+  "3V14-15": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать контролируемое забывание повторов и мусора."
+  },
+  "3V14-16": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Создать автобиографическую память развития NOX."
+  },
+  "3V14-17": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Восстановить память инструментов и освоенных навыков."
+  },
+  "3V14-18": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить reasoning и reflection."
+  },
+  "3V14-19": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Создать функциональную модель собственного состояния."
+  },
+  "3V14-20": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать понимание доступных и отсутствующих способностей."
+  },
+  "3V14-21": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить обучение на успешных пользовательских задачах."
+  },
+  "3V14-22": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать «сонную» консолидацию памяти."
+  },
+  "3V14-23": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить инициативное извлечение полезных знаний."
+  },
+  "3V14-24": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверить восстановление памяти после перезапуска и интегрировать окончательную схему."
+  },
+  "4V14-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить инструменты работы с GitHub и исходниками."
+  },
+  "4V14-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Дать NOX доступ к разрешённым рабочим каталогам."
+  },
+  "4V14-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Научить самостоятельно читать существующую архитектуру."
+  },
+  "4V14-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать поиск готовых решений в интернете."
+  },
+  "4V14-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать сравнение нескольких альтернатив реализации."
+  },
+  "4V14-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить самостоятельное написание программных модулей."
+  },
+  "4V14-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать изменение существующего кода без потери функций."
+  },
+  "4V14-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Научить находить и устранять программные ошибки."
+  },
+  "4V14-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать поддержку длинных инженерных задач."
+  },
+  "4V14-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Ввести восстановление незавершённой разработки."
+  },
+  "4V14-11": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Создать память успешных способов исправления ошибок."
+  },
+  "4V14-12": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить механизм самостоятельного улучшения алгоритмов."
+  },
+  "4V14-13": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить поиск новых научных работ и технологий."
+  },
+  "4V14-14": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Организовать регулярное обновление базы знаний."
+  },
+  "4V14-15": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Научить проверять происхождение и надёжность новых знаний."
+  },
+  "4V14-16": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить FORGE для адаптации и дистилляции."
+  },
+  "4V14-17": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Настроить LoRA/QLoRA как временные инструменты развития."
+  },
+  "4V14-18": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Поддержать слияние проверенных адаптеров в модель."
+  },
+  "4V14-19": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подготовить полноценное обучение собственных весов."
+  },
+  "4V14-20": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить сравнение качества до и после обучения."
+  },
+  "4V14-21": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать сохранение и восстановление optimizer/checkpoint."
+  },
+  "4V14-22": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить DREAM ENGINE для фонового поиска решений."
+  },
+  "4V14-23": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать автономные исследовательские и экспериментальные задачи."
+  },
+  "4V14-24": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Создать подтверждаемый журнал улучшений и подключить приобретённые навыки к реальному NOX."
+  },
+  "5V14-01": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "18f1e00ed",
+    "0fbb7a3db"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Восстановить единую исходную WEB-сборку."
+  },
+  "5V14-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Использовать оригинальные материалы и библиотеки Google Drive."
+  },
+  "5V14-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Исправить D02 — живое чёрное солнце."
+  },
+  "5V14-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Восстановить оригинальные планетарные движки."
+  },
+  "5V14-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Восстановить все 14 орбитальных миров."
+  },
+  "5V14-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Исправить единую сцену, перспективу и масштаб объектов."
+  },
+  "5V14-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Обновить исходную страницу «Резонанс»."
+  },
+  "5V14-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Заменить точки ожидания генеративными абстракциями."
+  },
+  "5V14-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Разработать 100 вариантов визуальной активности из оригинальных эффектов."
+  },
+  "5V14-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Связать визуализацию с состоянием мышления и работы."
+  },
+  "5V14-11": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Создать изменение визуального настроения NOX."
+  },
+  "5V14-12": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить динамическую смену тем и цветовых схем."
+  },
+  "5V14-13": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить графические кнопки, очередь и командный центр."
+  },
+  "5V14-14": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Восстановить адаптивность от мобильного экрана до 4K."
+  },
+  "5V14-15": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Оптимизировать WebGL, эффекты и расход ресурсов."
+  },
+  "5V14-16": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить ввод и анализ изображений прямо в чате."
+  },
+  "5V14-17": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить локальную генерацию изображений."
+  },
+  "5V14-18": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Интегрировать редактирование изображений по инструкции."
+  },
+  "5V14-19": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить генерацию коротких видео."
+  },
+  "5V14-20": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить редактирование и анализ видеоматериалов."
+  },
+  "5V14-21": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать генерацию и обработку речи RU/ES."
+  },
+  "5V14-22": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подключить музыкальные предложения и управляемое воспроизведение доступных треков."
+  },
+  "5V14-23": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Восстановить кинотеатр, проекты, настройки, память и панели GPU."
+  },
+  "5V14-24": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Выполнить итоговую WEB-приёмку и заменить устаревшую публикацию единой рабочей версией."
+  },
+  "6V14-01": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "f2794866f",
+    "0ce51ed90"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Восстановить существующий диспетчер OneHost."
+  },
+  "6V14-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверить реальный набор фоновых процессов."
+  },
+  "6V14-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Установить фактическое число «червей» вместо предполагаемых 46."
+  },
+  "6V14-04": {
+   "status": "touched_needs_verification",
+   "commits": [
+    "1fc5ad81a",
+    "a63fd05d2",
+    "20d67fbcd"
+   ],
+   "origin": "ORIGINAL_295",
+   "title": "Создать единый реестр TaskID, PID и состояний."
+  },
+  "6V14-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Восстановить очередь после перезапуска."
+  },
+  "6V14-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Настроить запуск диспетчера вместе с основным сервисом."
+  },
+  "6V14-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Сохранить владелецкий STOP и контроль прав управления."
+  },
+  "6V14-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать heartbeat для всех активных процессов."
+  },
+  "6V14-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить контроль реального прогресса, а не только PID."
+  },
+  "6V14-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать обнаружение зависания без продвижения задачи."
+  },
+  "6V14-11": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Научить диспетчер менять способ выполнения при блокировке."
+  },
+  "6V14-12": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить ограниченные перезапуски с диагностикой причин."
+  },
+  "6V14-13": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать динамическое управление CPU."
+  },
+  "6V14-14": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать динамическое управление RAM."
+  },
+  "6V14-15": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать управление GPU и VRAM по приоритетам."
+  },
+  "6V14-16": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Освобождать ресурсы для активного чата."
+  },
+  "6V14-17": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Переводить тяжёлые фоновые задачи в сон."
+  },
+  "6V14-18": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Автоматически возобновлять их после освобождения ресурсов."
+  },
+  "6V14-19": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Контролировать заполнение дисков и состояние хранилища."
+  },
+  "6V14-20": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Контролировать целостность весов, S03 и checkpoints."
+  },
+  "6V14-21": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Настроить журнал причин отказов и успешных восстановлений."
+  },
+  "6V14-22": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реализовать взаимный контроль NOX и диспетчера."
+  },
+  "6V14-23": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Добавить самооптимизацию расписания и фоновых вычислений."
+  },
+  "6V14-24": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подтвердить работу после реального рестарта и убрать доказанно устаревшие службы."
+  },
+  "0V14-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Поднять собственный живой диалог с владельцем."
+  },
+  "0V14-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Создать глобальную приоритетную очередь всех поручений."
+  },
+  "0V14-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Разделить объёмную задачу на шесть независимых законченных пакетов."
+  },
+  "0V14-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Запускать шесть универсальных процессов параллельно."
+  },
+  "0V14-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Самостоятельно выполнять критическую седьмую часть."
+  },
+  "0V14-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Обслуживать новые сообщения без остановки исполнителей."
+  },
+  "0V14-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Помогать субагентам решать возникшие блокировки."
+  },
+  "0V14-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Разрешать конфликты зависимостей и общих ресурсов."
+  },
+  "0V14-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Определять необходимость дополнительных исследований и консультаций."
+  },
+  "0V14-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Обучать агентов на найденных ошибках и лучших решениях."
+  },
+  "0V14-11": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Динамически перераспределять работу при досрочном завершении пакета."
+  },
+  "0V14-12": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Следить за приоритетом живого чата над фоновыми процессами."
+  },
+  "0V14-13": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Выполнять собственные улучшения рассуждения и планирования."
+  },
+  "0V14-14": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Объединять результаты семи потоков без перезаписи чужих изменений."
+  },
+  "0V14-15": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Выполнить единую финальную приёмку всей системы."
+  },
+  "0V14-16": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Выпустить единый NOX, зафиксировать доказанный результат и научить систему повторять успеш"
+  },
+  "I-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Подхват поручения после reload по тому же ID"
+  },
+  "I-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Эхо памяти"
+  },
+  "I-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Быстрый ответ из S03"
+  },
+  "I-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Три разных STOP"
+  },
+  "I-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Живой RU/ES с перебиванием"
+  },
+  "I-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Устойчивая личность NOX"
+  },
+  "I-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Что изменилось с прошлого раза"
+  },
+  "I-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "D02 отражает реальный этап"
+  },
+  "I-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Studio управляет оригинальным HOME"
+  },
+  "I-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Восемь цветных шкал"
+  },
+  "I-11": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Открыть фото в Painterro"
+  },
+  "I-12": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Монтаж видео в «Резонансе»"
+  },
+  "I-13": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Непрерывный Hunter"
+  },
+  "I-14": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Три внешних советника"
+  },
+  "I-15": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Физические доказательства обучения"
+  },
+  "I-16": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Палитра D02 из фото или кадра"
+  },
+  "I-17": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Портрет без фона в один клик"
+  },
+  "I-18": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Раскадровка видео за один клик"
+  },
+  "I-19": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Экспорт живого D02 в GIF"
+  },
+  "I-20": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Облегчить изображение прямо в чате"
+  },
+  "I-21": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Слышать только голос"
+  },
+  "I-22": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Отправить скин NOX на телефон через QR"
+  },
+  "I-23": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Копирование текста из кадра RU/ES/EN"
+  },
+  "I-24": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "PDF с кликабельной страницей-цитатой"
+  },
+  "I-25": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Разбор и экспорт XLSX/CSV в чате"
+  },
+  "I-26": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "План или протокол одним DOCX"
+  },
+  "I-27": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Мгновенный поиск внутри загруженного проекта"
+  },
+  "I-28": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Сравнение доказательств и файлов до/после"
+  },
+  "I-29": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Показать вероятные дубли памяти"
+  },
+  "I-30": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Понимать «в прошлый четверг» на RU/ES"
+  },
+  "I-31": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Локальный поиск похожих воспоминаний в SQLite"
+  },
+  "I-32": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Мгновенный повтор вопроса после уточнения"
+  },
+  "I-33": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Лента находок Hunter"
+  },
+  "I-34": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Чтение статьи без мусора в «Резонансе»"
+  },
+  "I-35": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Квитанция советника с проверяемыми полями"
+  },
+  "I-36": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Цитата ведёт к точному абзацу"
+  },
+  "I-37": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Загрузить готовый набор контрольных вопросов памяти"
+  },
+  "I-38": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверить Hunter на реально трудном поиске"
+  },
+  "I-39": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Отсечь дубли до записи и обучения"
+  },
+  "I-40": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Радар задержки ответа"
+  },
+  "I-41": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Две карты в живом Dashboard"
+  },
+  "I-42": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Выбрать режим mmap по скорости диска"
+  },
+  "I-43": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Откуда взялась задержка чата"
+  },
+  "I-44": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Ускорить отправку событий при узком event loop"
+  },
+  "I-45": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Ускоренная доставка журналов и исходников"
+  },
+  "I-46": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Прямое сравнение интеллекта до/после"
+  },
+  "I-47": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Реальная карта времени обучения"
+  },
+  "I-48": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверить очередь на неожиданные цепочки событий"
+  },
+  "I-49": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Сравнить тензоры двух checkpoints на CPU"
+  },
+  "I-50": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверка точности распознавания RU/ES"
+  },
+  "I-51": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Память с машиной времени"
+  },
+  "I-52": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Проверяемое ассоциативное вспоминание"
+  },
+  "I-53": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "NOX опровергает своё вчерашнее решение"
+  },
+  "I-54": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Ум под заданную задержку"
+  },
+  "I-55": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Память сама перепроверяет исправления"
+  },
+  "I-56": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Навык из одного видимого действия"
+  },
+  "I-57": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Ночной разбор повторяющихся ошибок"
+  },
+  "I-58": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Два темпа самообучения"
+  },
+  "I-59": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "NOX готовит собственный учебный экзамен"
+  },
+  "I-60": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Советники с измеримой репутацией"
+  },
+  "I-61": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Перемотка поручения и пробный ход"
+  },
+  "I-62": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Экранный напарник с указанием на доказательство"
+  },
+  "I-63": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Чат забирает GPU к своему дедлайну"
+  },
+  "I-64": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Память или веса. Честный экзамен 2×2"
+  },
+  "I-65": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "ORIGINAL_295",
+   "title": "Длинное поручение с доказательством результата"
+  },
+  "WOW240/N01-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Возобновляемый поток ответа после обрыва"
+  },
+  "WOW240/N01-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "STOP доходит до всех частей активного запроса"
+  },
+  "WOW240/N01-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Уточнение во время ответа сохраняет причинную связь"
+  },
+  "WOW240/N01-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Владелец и диагностические пробы используют разные слоты"
+  },
+  "WOW240/N01-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Честное переключение на резервную модель"
+  },
+  "WOW240/N01-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Состояния работы из фактических событий"
+  },
+  "WOW240/N01-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Ветки диалога с обратимым исправлением запроса"
+  },
+  "WOW240/N01-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Отрисовка длинного ответа без зависания интерфейса"
+  },
+  "WOW240/N01-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Бюджет первого содержательного ответа"
+  },
+  "WOW240/N01-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Повторная отправка с другого устройства без дублей"
+  },
+  "WOW240/N02-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Причинная карточка ситуации вместо одного ярлыка"
+  },
+  "WOW240/N02-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Градация доказательств эмоционального вывода"
+  },
+  "WOW240/N02-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Две скорости состояния и защита от резких скачков тона"
+  },
+  "WOW240/N02-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Авторство цитаты, ирония и адресат реакции"
+  },
+  "WOW240/N02-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Смешанные реакции и конфликт целей"
+  },
+  "WOW240/N02-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Единый контракт подачи для текста, голоса и визуального состояния"
+  },
+  "WOW240/N02-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Исправление непонимания с проверяемым результатом"
+  },
+  "WOW240/N02-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Выбор полезной реакции по цене вмешательства"
+  },
+  "WOW240/N02-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Офлайн-калибровка RU/ES эмоциональных подсказок"
+  },
+  "WOW240/N02-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Согласование текста и голосовых сигналов без чтения мыслей"
+  },
+  "WOW240/N03-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Паспорт NOX из подтверждённых возможностей"
+  },
+  "WOW240/N03-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Контракт восьми HF-фасетов в одном ядре"
+  },
+  "WOW240/N03-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверяемые манифесты пяти персонажей"
+  },
+  "WOW240/N03-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "PersonaID в памяти, кэше и голосовой очереди"
+  },
+  "WOW240/N03-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Редактируемые рабочие предпочтения с контекстом действия"
+  },
+  "WOW240/N03-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Переносимость личности через версионный снимок"
+  },
+  "WOW240/N03-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Автобиография изменений только по событиям с доказательством"
+  },
+  "WOW240/N03-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Контроль дрейфа по инвариантам и утверждённым изменениям"
+  },
+  "WOW240/N03-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Компиляция личности в компактный стабильный префикс"
+  },
+  "WOW240/N03-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Ограниченное уточнение эстетических и объяснительных предпочтений"
+  },
+  "WOW240/N04-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Паспорт проекта с проверяемыми целями"
+  },
+  "WOW240/N04-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Будущие обязательства с условиями активации"
+  },
+  "WOW240/N04-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Реестр незакрытых вопросов и решений"
+  },
+  "WOW240/N04-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Объяснение межпроектных блокировок"
+  },
+  "WOW240/N04-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Плановые и фактические затраты проекта"
+  },
+  "WOW240/N04-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Память выбора с альтернативами"
+  },
+  "WOW240/N04-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Прогресс по принятым результатам"
+  },
+  "WOW240/N04-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Продолжение работы с точного места"
+  },
+  "WOW240/N04-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Календарь выполнимых обязательств"
+  },
+  "WOW240/N04-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Воспроизводимый пакет передачи проекта"
+  },
+  "WOW240/N05-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Постановка задачи с явными переменными"
+  },
+  "WOW240/N05-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Исполнимое числовое рассуждение"
+  },
+  "WOW240/N05-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Поиск противоречащих друг другу требований"
+  },
+  "WOW240/N05-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Границы применимости рекомендации"
+  },
+  "WOW240/N05-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Набор лучших компромиссов"
+  },
+  "WOW240/N05-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Диагностика через наиболее полезную проверку"
+  },
+  "WOW240/N05-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Перенос проверенного способа решения"
+  },
+  "WOW240/N05-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Граф зависимых выводов"
+  },
+  "WOW240/N05-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Краткий способ рассуждения для знакомых задач"
+  },
+  "WOW240/N05-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Структурные аналогии для незнакомой проблемы"
+  },
+  "WOW240/N06-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверка ключевых утверждений по опорным фрагментам"
+  },
+  "WOW240/N06-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверка чисел и размерностей"
+  },
+  "WOW240/N06-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Разбор временных противоречий"
+  },
+  "WOW240/N06-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Обнаружение ложной предпосылки вопроса"
+  },
+  "WOW240/N06-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверка полноты выполненного поручения"
+  },
+  "WOW240/N06-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверка устойчивости решения контрпримерами"
+  },
+  "WOW240/N06-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Эмпирическая калибровка уверенности"
+  },
+  "WOW240/N06-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Слепое сравнение двух решений сложной задачи"
+  },
+  "WOW240/N06-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Доказательный статус результата"
+  },
+  "WOW240/N06-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Набор реальных задач для сравнения изменений"
+  },
+  "WOW240/N07-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Единый адаптер поиска с наблюдаемыми провайдерами"
+  },
+  "WOW240/N07-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Исследование через карту вопросов"
+  },
+  "WOW240/N07-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Поиск первоисточника и научных связей"
+  },
+  "WOW240/N07-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Чтение основной части веб-страницы"
+  },
+  "WOW240/N07-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Отделение независимых источников от перепечаток"
+  },
+  "WOW240/N07-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Направленный поиск опровержений"
+  },
+  "WOW240/N07-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Обновление только изменившихся публикаций"
+  },
+  "WOW240/N07-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Поиск на RU/ES/EN с объединением результатов"
+  },
+  "WOW240/N07-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Прицельное чтение раздела сайта"
+  },
+  "WOW240/N07-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Отчёт с картой доказанности"
+  },
+  "WOW240/N08-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Исправить ограничение выдачи десятью pinned"
+  },
+  "WOW240/N08-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Контракт работоспособности векторного адаптера"
+  },
+  "WOW240/N08-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Транзакционный цикл памяти каждого хода"
+  },
+  "WOW240/N08-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Временные версии фактов и реестр противоречий"
+  },
+  "WOW240/N08-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Слияние поиска по рангу и разнообразию"
+  },
+  "WOW240/N08-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Запись фактов с типом и доказательством"
+  },
+  "WOW240/N08-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Исправление воспоминания во всех производных копиях"
+  },
+  "WOW240/N08-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Единый эпизод с точными мультимедийными якорями"
+  },
+  "WOW240/N08-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Компактный векторный индекс с повторной оценкой"
+  },
+  "WOW240/N08-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Адаптивный выбор операций памяти"
+  },
+  "WOW240/N09-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Полный каталог архива с картой покрытия"
+  },
+  "WOW240/N09-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Инкрементальное обновление по ленте изменений"
+  },
+  "WOW240/N09-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Дедупликация содержимого с сохранением всех ссылок"
+  },
+  "WOW240/N09-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Возобновляемое скачивание ограниченными блоками"
+  },
+  "WOW240/N09-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Адресуемые разделы больших книг и коллекций"
+  },
+  "WOW240/N09-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Пакет исходников и весов под конкретную задачу"
+  },
+  "WOW240/N09-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Извлечение содержимого только нужного уровня"
+  },
+  "WOW240/N09-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Согласованные снимки S03 и воспроизводимое восстановление"
+  },
+  "WOW240/N09-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Обнаружение пропавших и повреждённых материалов"
+  },
+  "WOW240/N09-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Актуальные права источников в локальном поиске"
+  },
+  "WOW240/N10-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Паспорт каждой обучающей строки"
+  },
+  "WOW240/N10-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Разделение обучения без утечки соседних диалогов"
+  },
+  "WOW240/N10-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Измеряемая смесь навыков и сохранение освоенного"
+  },
+  "WOW240/N10-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Исправленная ошибка становится проверяемым семейством задач"
+  },
+  "WOW240/N10-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Аудит того, какие токены действительно обучаются"
+  },
+  "WOW240/N10-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Малый последовательный эксперимент LoRA после u55"
+  },
+  "WOW240/N10-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Предпочтения в настоящих весах малого адаптера"
+  },
+  "WOW240/N10-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Экзамен переноса и забывания после обучения"
+  },
+  "WOW240/N10-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "GEPA для двух узких правил с жёстким бюджетом"
+  },
+  "WOW240/N10-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Повторяемая работа превращается в исполняемый навык"
+  },
+  "WOW240/N11-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Личный учебник из вопросов и сделанных проектов"
+  },
+  "WOW240/N11-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Карта предпосылок перед сложной темой"
+  },
+  "WOW240/N11-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Учебный маршрут по реальным ответам"
+  },
+  "WOW240/N11-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Повторение, рассчитанное по забыванию карточек"
+  },
+  "WOW240/N11-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Три ступени помощи вместо мгновенного готового решения"
+  },
+  "WOW240/N11-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Экзамен объяснения своими словами"
+  },
+  "WOW240/N11-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Бесконечные варианты задач с точной проверкой"
+  },
+  "WOW240/N11-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Практикум Python прямо в учебной странице"
+  },
+  "WOW240/N11-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Тетрадь конкретных заблуждений с повторной проверкой"
+  },
+  "WOW240/N11-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Учебный мини-проект с последствиями решений"
+  },
+  "WOW240/N12-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Операционный аналитик смен и загрузки персонала"
+  },
+  "WOW240/N12-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Цифровой эксперимент очереди ресторана или кинотеатра"
+  },
+  "WOW240/N12-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Финансовая модель проекта с проверяемой временной шкалой"
+  },
+  "WOW240/N12-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Статистик, который проверяет постановку эксперимента"
+  },
+  "WOW240/N12-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Инженерный расчёт с размерностями"
+  },
+  "WOW240/N12-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Химический справочник структур и свойств"
+  },
+  "WOW240/N12-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Геоаналитик зон обслуживания"
+  },
+  "WOW240/N12-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Правовой справочник по версии нормы и дате"
+  },
+  "WOW240/N12-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Психология как проверяемая предметная область"
+  },
+  "WOW240/N12-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Защитная карта угроз для конкретной системы"
+  },
+  "WOW240/N13-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Исполнимый план с контрактами входов и результатов"
+  },
+  "WOW240/N13-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Частичное перепланирование при новой вводной"
+  },
+  "WOW240/N13-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Параллельное исполнение действительно независимых шагов"
+  },
+  "WOW240/N13-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Раскрытие подробностей плана по мере надобности"
+  },
+  "WOW240/N13-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "План по оставшемуся времени и критическому пути"
+  },
+  "WOW240/N13-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Ожидание зависимости без постоянного опроса модели"
+  },
+  "WOW240/N13-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Компенсация уже выполненных обратимых шагов"
+  },
+  "WOW240/N13-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Разные реакции на разные причины неудачи"
+  },
+  "WOW240/N13-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Защита общих результатов от конфликтующих исполнителей"
+  },
+  "WOW240/N13-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Назначение шага подходящему обработчику"
+  },
+  "WOW240/N14-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Выборочная загрузка контрактов инструментов"
+  },
+  "WOW240/N14-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверка аргументов и результатов каждого tool-call"
+  },
+  "WOW240/N14-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Единый клиент MCP с корректным жизненным циклом"
+  },
+  "WOW240/N14-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Подключение HTTP API из ограниченного OpenAPI-контракта"
+  },
+  "WOW240/N14-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Паспорт фактических возможностей интеграции"
+  },
+  "WOW240/N14-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Разрешения, привязанные к текущему поручению"
+  },
+  "WOW240/N14-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Управление браузером через актуальные элементы страницы"
+  },
+  "WOW240/N14-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Управление ПК через проверяемый оконный исполнитель"
+  },
+  "WOW240/N14-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Большие результаты инструментов как адресуемые артефакты"
+  },
+  "WOW240/N14-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Внешняя запись с проверкой версии и неопределённого исхода"
+  },
+  "WOW240/N15-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Чтение PDF по страницам с сохранением структуры источника"
+  },
+  "WOW240/N15-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Таблицы из текстового PDF с координатами ячеек"
+  },
+  "WOW240/N15-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Точечное редактирование DOCX с сохранением оформления"
+  },
+  "WOW240/N15-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверяемые формулы XLSX и явный пересчёт"
+  },
+  "WOW240/N15-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Импорт данных с явными типами и локалью"
+  },
+  "WOW240/N15-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Анализ больших наборов без полной загрузки в память"
+  },
+  "WOW240/N15-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Сверка наборов перед объединением таблиц"
+  },
+  "WOW240/N15-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Содержательный diff документов и рабочих книг"
+  },
+  "WOW240/N15-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Согласованный комплект документов из общих параметров"
+  },
+  "WOW240/N15-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверка экспортированного файла по его реальному виду"
+  },
+  "WOW240/N16-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Карта символов репозитория вместо полного чтения кода"
+  },
+  "WOW240/N16-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Изолированная рабочая копия для каждой инженерной задачи"
+  },
+  "WOW240/N16-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Патч применяется только к ожидаемой версии файла"
+  },
+  "WOW240/N16-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Исправление по диагностике компилятора и Ruff"
+  },
+  "WOW240/N16-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Выбор релевантных тестов по карте покрытия"
+  },
+  "WOW240/N16-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Ограниченный запуск сгенерированного кода"
+  },
+  "WOW240/N16-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверка API-контрактов на локальной копии"
+  },
+  "WOW240/N16-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Воспроизводимая среда разработки без бесконтрольных обновлений"
+  },
+  "WOW240/N16-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Локальные правила опасных изменений"
+  },
+  "WOW240/N16-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Самопроверяемый пакет результата инженерной задачи"
+  },
+  "WOW240/N17-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверяемое восстановление имеющегося голосового тракта"
+  },
+  "WOW240/N17-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Речевой затвор с коротким кольцевым буфером"
+  },
+  "WOW240/N17-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Эхоподавление и контроль двойной обработки звука"
+  },
+  "WOW240/N17-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Подбор ASR-профиля под реальную V100 и короткую речь"
+  },
+  "WOW240/N17-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Склейка чернового и окончательного распознавания"
+  },
+  "WOW240/N17-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Прерывание на всём пути и учёт услышанного"
+  },
+  "WOW240/N17-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Потоковый Piper по смысловым отрезкам с ограниченной очередью"
+  },
+  "WOW240/N17-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Словарь произношения имён, чисел и технических обозначений"
+  },
+  "WOW240/N17-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Адаптивный буфер воспроизведения с отсечением устаревших пакетов"
+  },
+  "WOW240/N17-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Изолированный стенд будущей двусторонней речи"
+  },
+  "WOW240/N18-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Определение языка по фрагментам без случайного переключения"
+  },
+  "WOW240/N18-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Терминологическая база RU/ES с областями и ревизиями"
+  },
+  "WOW240/N18-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Защита кода, идентификаторов и числовых значений при переводе"
+  },
+  "WOW240/N18-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Перевод сегментами с обратимой привязкой к исходнику"
+  },
+  "WOW240/N18-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Локализация чисел без изменения их смысла"
+  },
+  "WOW240/N18-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Память переводов с проверкой устаревания"
+  },
+  "WOW240/N18-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Подключаемый компактный переводчик RU↔ES для простых блоков"
+  },
+  "WOW240/N18-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверка перевода по смысловым инвариантам"
+  },
+  "WOW240/N18-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Межъязычный поиск с единым идентификатором знания"
+  },
+  "WOW240/N18-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Последовательный устный перевод с подтверждёнными границами смысла"
+  },
+  "WOW240/N19-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Изображение сначала целиком, затем нужные детали"
+  },
+  "WOW240/N19-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "OCR с выделением сомнительных слов и чисел"
+  },
+  "WOW240/N19-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Разбор сложного скана на блоки, таблицы и формулы"
+  },
+  "WOW240/N19-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Зрительный специалист по запросу внутри одного NOX"
+  },
+  "WOW240/N19-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Сжатый обзор видео по сценам и контрольным кадрам"
+  },
+  "WOW240/N19-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Согласованные таймкоды речи, кадра и положения плеера"
+  },
+  "WOW240/N19-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Показ того, что изменилось на двух изображениях"
+  },
+  "WOW240/N19-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Интерактивное выделение объекта без большой модели"
+  },
+  "WOW240/N19-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Измерение на изображении с явной калибровкой"
+  },
+  "WOW240/N19-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Монтаж из исходных клипов по редактируемому плану"
+  },
+  "WOW240/N20-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Длинная история с контролем фактов мира"
+  },
+  "WOW240/N20-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Интерактивная повесть, в которую можно играть"
+  },
+  "WOW240/N20-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Киносценарий из замысла с производственной разбивкой"
+  },
+  "WOW240/N20-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Раскадровка с камерой, движением и смыслом кадра"
+  },
+  "WOW240/N20-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Авторский генеративный плакат с управляемыми вариантами"
+  },
+  "WOW240/N20-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Собственная музыкальная тема в редактируемой партитуре"
+  },
+  "WOW240/N20-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Звуковая сцена по драматургическому плану"
+  },
+  "WOW240/N20-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Анимированное объяснение, где формула превращается в движение"
+  },
+  "WOW240/N20-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Авторская электронная книга с живыми главами"
+  },
+  "WOW240/N20-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Единый творческий комплект для проекта или события"
+  },
+  "WOW240/N21-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Профилировщик причин задержки с выбором режима"
+  },
+  "WOW240/N21-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Версионный ключ сохранённого префикса"
+  },
+  "WOW240/N21-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Ngram-декодирование только там, где оно окупается"
+  },
+  "WOW240/N21-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Подбор prefill-профиля по реальному I/O"
+  },
+  "WOW240/N21-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Выбор CPU-доли для промахов expert cache"
+  },
+  "WOW240/N21-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Распределение слоёв по топологии и занятой памяти"
+  },
+  "WOW240/N21-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Квантованный KV только после проверки конкретного исправления"
+  },
+  "WOW240/N21-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Потоки CPU соответствуют квоте контейнера"
+  },
+  "WOW240/N21-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Профили sampling и размышления по типу задачи"
+  },
+  "WOW240/N21-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Паспорт возможностей конкретного inference-бинаря"
+  },
+  "WOW240/N22-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Допуск по реальной квоте cgroup"
+  },
+  "WOW240/N22-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Контроль давления памяти и дискового ожидания"
+  },
+  "WOW240/N22-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Атомарные резервы RAM/VRAM перед задачей"
+  },
+  "WOW240/N22-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Раздельный учёт shmem, page cache и рабочих данных"
+  },
+  "WOW240/N22-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Допуск VRAM по владельцам и пиковому расходу"
+  },
+  "WOW240/N22-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Профиль пиков загрузки для подключаемых моделей"
+  },
+  "WOW240/N22-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Общий лимит кэшей и буферов NOX"
+  },
+  "WOW240/N22-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Жизненный цикл подключаемого обработчика"
+  },
+  "WOW240/N22-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "I/O-бюджет для подгрузок рядом с mmap-моделью"
+  },
+  "WOW240/N22-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверяемый план переноса Engram на SSD"
+  },
+  "WOW240/N23-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Единый проверяемый план удаления"
+  },
+  "WOW240/N23-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Ротация активных логов без произвольного tail+cat"
+  },
+  "WOW240/N23-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверка владельца Engram и границ ожидания старта"
+  },
+  "WOW240/N23-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Единый бюджет восстановления от crash-loop"
+  },
+  "WOW240/N23-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Здоровье по цепочке зависимостей"
+  },
+  "WOW240/N23-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Раздельные права на чат, чтение статуса и действия"
+  },
+  "WOW240/N23-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Трасса запроса без утечки содержания"
+  },
+  "WOW240/N23-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Версионированная конфигурация с атомарным вводом"
+  },
+  "WOW240/N23-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Проверка восстановления без остановки работающего NOX"
+  },
+  "WOW240/N23-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Однозначный журнал действий запуска и планировщика"
+  },
+  "WOW240/N24-01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Эксперимент с обучаемой памятью Titans"
+  },
+  "WOW240/N24-02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Память с разными скоростями обучения по HOPE"
+  },
+  "WOW240/N24-03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Самоадаптация по SEAL на малом студенте"
+  },
+  "WOW240/N24-04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Латентное рассуждение Coconut"
+  },
+  "WOW240/N24-05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Малый SSM-компонент для длинных последовательностей"
+  },
+  "WOW240/N24-06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Компактный классификатор ошибочного шага"
+  },
+  "WOW240/N24-07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Ранняя остановка непродуктивного рассуждения"
+  },
+  "WOW240/N24-08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Симулятор будущего поведения системы"
+  },
+  "WOW240/N24-09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Различение причинного эффекта и корреляции"
+  },
+  "WOW240/N24-10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WOW_240_24_AREAS",
+   "title": "Выбор следующего эксперимента по его полезности"
+  },
+  "IDEA89/001": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Паспорт намерения"
+  },
+  "IDEA89/002": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Адаптивная глубина размышления"
+  },
+  "IDEA89/003": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "План с проверяемыми шагами"
+  },
+  "IDEA89/004": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Разделение фактов и предположений"
+  },
+  "IDEA89/005": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Проверка через инструменты"
+  },
+  "IDEA89/006": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Выборочная консультация советников"
+  },
+  "IDEA89/007": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Предварительная проверка последствий"
+  },
+  "IDEA89/008": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Гибридный поиск S03"
+  },
+  "IDEA89/009": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Контекстный пакет вместо всей истории"
+  },
+  "IDEA89/010": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Память с датами действия"
+  },
+  "IDEA89/011": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Реестр противоречий"
+  },
+  "IDEA89/012": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Память решений"
+  },
+  "IDEA89/013": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Память навыков"
+  },
+  "IDEA89/014": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Управляемые воспоминания"
+  },
+  "IDEA89/015": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Всегда доступное управляющее ядро"
+  },
+  "IDEA89/016": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Три–шесть логических исполнителей"
+  },
+  "IDEA89/017": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Приоритет живого «Резонанса»"
+  },
+  "IDEA89/018": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Надёжная передача задачи"
+  },
+  "IDEA89/019": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Продолжение после перезапуска"
+  },
+  "IDEA89/020": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Обнаружение зависания по прогрессу"
+  },
+  "IDEA89/021": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Один владелец серверного изменения"
+  },
+  "IDEA89/022": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Саморемонт по воспроизводимой ошибке"
+  },
+  "IDEA89/023": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Изолированная разработка патчей"
+  },
+  "IDEA89/024": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Библиотека проверок интеллекта"
+  },
+  "IDEA89/025": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Критерии до исправления"
+  },
+  "IDEA89/026": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Обучение на исправленных ошибках"
+  },
+  "IDEA89/027": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Защита освоенных навыков"
+  },
+  "IDEA89/028": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Раздельные версии знаний, навыков и весов"
+  },
+  "IDEA89/029": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Допуск модели по полному бюджету"
+  },
+  "IDEA89/030": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Отдельный допуск обучения"
+  },
+  "IDEA89/031": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Постоянно прогретая основная модель"
+  },
+  "IDEA89/032": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Кэш повторяющегося контекста"
+  },
+  "IDEA89/033": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Управляемая конкурентность"
+  },
+  "IDEA89/034": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Измеряемая оптимизация V100"
+  },
+  "IDEA89/035": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Спекулятивное декодирование — после базового замера"
+  },
+  "IDEA89/036": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Общая нижняя панель"
+  },
+  "IDEA89/037": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Контекстные команды по странице"
+  },
+  "IDEA89/038": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Доска мира NOX"
+  },
+  "IDEA89/039": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "D02 отражает реальные события"
+  },
+  "IDEA89/040": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Паспорт самого NOX"
+  },
+  "IDEA89/041": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Предпросмотр изменений"
+  },
+  "IDEA89/042": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Пять тем с единым управлением"
+  },
+  "IDEA89/043": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Живая телеметрия"
+  },
+  "IDEA89/044": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Голос RU/ES с прерыванием"
+  },
+  "IDEA89/045": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Фото и видео через единый медиапроцесс"
+  },
+  "IDEA89/046": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Календарь и обязательства"
+  },
+  "IDEA89/047": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Исследовательское пространство"
+  },
+  "IDEA89/048": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Кинотеатр и медиатека"
+  },
+  "IDEA89/049": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Персональные информационные блоки"
+  },
+  "IDEA89/050": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Объекты с содержанием и действиями"
+  },
+  "IDEA89/051": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Команды непосредственно объектам"
+  },
+  "IDEA89/052": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Эскиз как постановка задачи"
+  },
+  "IDEA89/053": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Возвращение к незаконченной мысли"
+  },
+  "IDEA89/054": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Приближение по смыслу"
+  },
+  "IDEA89/055": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Книга-собеседник"
+  },
+  "IDEA89/056": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Атлас фантастических миров"
+  },
+  "IDEA89/057": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Перевод фантастики в инженерную идею"
+  },
+  "IDEA89/058": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Неожиданные связи между дисциплинами"
+  },
+  "IDEA89/059": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Личный интерактивный учебник"
+  },
+  "IDEA89/060": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Любопытство с целью"
+  },
+  "IDEA89/061": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Карта неизвестного"
+  },
+  "IDEA89/062": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Собственная учебная программа"
+  },
+  "IDEA89/063": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Обнаружение неожиданностей"
+  },
+  "IDEA89/064": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Тренажёр переноса навыков"
+  },
+  "IDEA89/065": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Цифровая модель проекта"
+  },
+  "IDEA89/066": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Ветвящиеся сценарии"
+  },
+  "IDEA89/067": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Лаборатория контрпримеров"
+  },
+  "IDEA89/068": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Эксперименты, которыми можно управлять"
+  },
+  "IDEA89/069": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Извлечение общих правил"
+  },
+  "IDEA89/070": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Редактируемый эстетический вкус"
+  },
+  "IDEA89/071": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Понимание того, как тебе объяснять"
+  },
+  "IDEA89/072": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Автобиография с причинами изменений"
+  },
+  "IDEA89/073": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Чувство уместности инициативы"
+  },
+  "IDEA89/074": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Видимая история роста"
+  },
+  "IDEA89/075": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Независимые первые решения"
+  },
+  "IDEA89/076": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Объединение результатов с сохранением разногласий"
+  },
+  "IDEA89/077": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Назначение работы по способности и цене"
+  },
+  "IDEA89/078": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Проверяемая уверенность"
+  },
+  "IDEA89/079": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Происхождение каждой сильной идеи"
+  },
+  "IDEA89/080": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Интерфейс собирается под задачу"
+  },
+  "IDEA89/081": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Идея превращается в работающий предмет"
+  },
+  "IDEA89/082": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Общая память разных форматов"
+  },
+  "IDEA89/083": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Обучение показом"
+  },
+  "IDEA89/084": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Кинотеатр с интерактивными историями"
+  },
+  "IDEA89/085": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Быстрый путь для точных операций"
+  },
+  "IDEA89/086": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Превращение повторяемой работы в программу"
+  },
+  "IDEA89/087": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Предварительная загрузка нужного контекста"
+  },
+  "IDEA89/088": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Умение вовремя закончить поиск"
+  },
+  "IDEA89/089": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "OWNER_IDEAS_89",
+   "title": "Вычисления ближе к интерфейсу"
+  },
+  "WEBWOW/001": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Живой индикатор ожидания и генерации"
+  },
+  "WEBWOW/002": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Карта действий под ответом"
+  },
+  "WEBWOW/003": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Плавающий редактор запроса"
+  },
+  "WEBWOW/004": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Голосовое сообщение с волной"
+  },
+  "WEBWOW/005": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Локальная история черновиков"
+  },
+  "WEBWOW/006": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Сравнение двух ответов"
+  },
+  "WEBWOW/007": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Выделение текста → спросить NOX"
+  },
+  "WEBWOW/008": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Интерактивная таблица в ответе"
+  },
+  "WEBWOW/009": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Диаграммы в ответе Mermaid"
+  },
+  "WEBWOW/010": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Рендеринг формул KaTeX"
+  },
+  "WEBWOW/011": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Просмотр кода с подсветкой"
+  },
+  "WEBWOW/012": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Поиск по открытому диалогу"
+  },
+  "WEBWOW/013": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Карта темы разговора"
+  },
+  "WEBWOW/014": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Вложенные цитаты сообщений"
+  },
+  "WEBWOW/015": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Закрепление сообщений"
+  },
+  "WEBWOW/016": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Продолжить с выбранного сообщения"
+  },
+  "WEBWOW/017": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Снимок рабочего контекста"
+  },
+  "WEBWOW/018": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Сохранить ответ в проект/заметки"
+  },
+  "WEBWOW/019": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Краткая сводка длинного чата"
+  },
+  "WEBWOW/020": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Режим концентрации"
+  },
+  "WEBWOW/021": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Плавающие панели"
+  },
+  "WEBWOW/022": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Разделённый экран"
+  },
+  "WEBWOW/023": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Перетаскивание задач"
+  },
+  "WEBWOW/024": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Рабочие столы режимов"
+  },
+  "WEBWOW/025": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Ctrl+K и поиск по маршрутам"
+  },
+  "WEBWOW/026": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Цепочки команд"
+  },
+  "WEBWOW/027": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Настоящее избранное"
+  },
+  "WEBWOW/028": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Недавние страницы и объекты"
+  },
+  "WEBWOW/029": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Журнал действий и квитанций"
+  },
+  "WEBWOW/030": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Undo для обратимых операций"
+  },
+  "WEBWOW/031": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Панель текущего действия"
+  },
+  "WEBWOW/032": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "История событий на временной шкале"
+  },
+  "WEBWOW/033": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Граф проект→задача→документ"
+  },
+  "WEBWOW/034": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Превью операции до подтверждения"
+  },
+  "WEBWOW/035": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Объяснение HOLD и причины"
+  },
+  "WEBWOW/036": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Глобальный поиск функций"
+  },
+  "WEBWOW/037": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Переставляемые виджеты"
+  },
+  "WEBWOW/038": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Клавиатурные сочетания"
+  },
+  "WEBWOW/039": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Режим презентации"
+  },
+  "WEBWOW/040": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Обучающий тур"
+  },
+  "WEBWOW/041": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Перетаскивание PDF в чат"
+  },
+  "WEBWOW/042": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Выделение PDF и вопрос по фрагменту"
+  },
+  "WEBWOW/043": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Просмотр фото и выбор области"
+  },
+  "WEBWOW/044": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Рисование пометок на изображении"
+  },
+  "WEBWOW/045": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Редактор схем блоков и стрелок"
+  },
+  "WEBWOW/046": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Временная шкала ответа"
+  },
+  "WEBWOW/047": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Реальный прогресс загрузок"
+  },
+  "WEBWOW/048": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Сравнение двух документов"
+  },
+  "WEBWOW/049": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Граф знаний"
+  },
+  "WEBWOW/050": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Редактор кода"
+  },
+  "WEBWOW/051": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Групповая операция с файлами"
+  },
+  "WEBWOW/052": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Аудиозапись из карточки"
+  },
+  "WEBWOW/053": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Аудиоволна и перемотка"
+  },
+  "WEBWOW/054": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Киноплеер в стекле"
+  },
+  "WEBWOW/055": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Субтитры с переходом к реплике"
+  },
+  "WEBWOW/056": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Picture-in-Picture видео"
+  },
+  "WEBWOW/057": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Просмотр файла без скачивания"
+  },
+  "WEBWOW/058": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Экспорт карточки как изображение"
+  },
+  "WEBWOW/059": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Боковая панель источников"
+  },
+  "WEBWOW/060": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Медиатека с фильтрами"
+  },
+  "WEBWOW/061": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Магнитный hover без движения hitbox"
+  },
+  "WEBWOW/062": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Запаздывание стеклянных бликов"
+  },
+  "WEBWOW/063": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Световая дорожка навигации"
+  },
+  "WEBWOW/064": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Живой фокус на выбранном объекте"
+  },
+  "WEBWOW/065": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "FLIP-перестановка блоков"
+  },
+  "WEBWOW/066": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Контекстный подсвет операций"
+  },
+  "WEBWOW/067": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Тихая корона во время ожидания"
+  },
+  "WEBWOW/068": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Эхо памяти от реального recall"
+  },
+  "WEBWOW/069": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Стеклянные уведомления"
+  },
+  "WEBWOW/070": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Микроанимация confirmed-success"
+  },
+  "WEBWOW/071": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Сохранение положения панелей"
+  },
+  "WEBWOW/072": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Плавающий инспектор объектов"
+  },
+  "WEBWOW/073": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Затемнение фона при вводе"
+  },
+  "WEBWOW/074": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Неактивные панели уходят в фон"
+  },
+  "WEBWOW/075": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Последовательное появление карточек"
+  },
+  "WEBWOW/076": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Скелетон вместо пустого экрана"
+  },
+  "WEBWOW/077": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Подсказки клавиатуре и мыши"
+  },
+  "WEBWOW/078": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Небольшая вспышка только при receipt"
+  },
+  "WEBWOW/079": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Персональные профили плотности"
+  },
+  "WEBWOW/080": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "WEB_WOW_NEW_80",
+   "title": "Возврат камеры + сохранение места"
+  },
+  "SYS-SI/01": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Журнал всех событий задач и ошибок"
+  },
+  "SYS-SI/02": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Сопоставление duplicate TaskID и происхождения"
+  },
+  "SYS-SI/03": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Планировщик исправлений на основе повторяющихся ошибок"
+  },
+  "SYS-SI/04": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Проверенный контур исправление→одна проверка→интеграция"
+  },
+  "SYS-SI/05": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Автовозобновление после рестарта по checkpoint"
+  },
+  "SYS-SI/06": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Непрерывная проверка heartbeat и продвижения"
+  },
+  "SYS-SI/07": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Восстановление упавших исполнителей через существующий supervisor"
+  },
+  "SYS-SI/08": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Защита STOP и maintenance locks"
+  },
+  "SYS-SI/09": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Crash-loop budget и карантин повторных падений"
+  },
+  "SYS-SI/10": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Реестр результатов и независимой приёмки"
+  },
+  "SYS-SI/11": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Самодиагностика и приоритизация по Парето"
+  },
+  "SYS-SI/12": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Библиотека освоенных навыков и улучшений"
+  },
+  "SYS-SI/13": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Защита исходников и guardrails no-loss"
+  },
+  "SYS-SI/14": {
+   "status": "not_started",
+   "commits": [],
+   "origin": "NEW_SELF_IMPROVEMENT_TOOLING",
+   "title": "Отчёт о завершении каждой задачи и реальный прогресс"
+  }
+ }
+}
