@@ -28,6 +28,11 @@ class Stub {
        if(this.responseBodyReject?.includes(p.requestId))throw Error('BODY_LOOKUP_REJECTED');
       if(this.responseBodyDelay?.[p.requestId])
         await new Promise(resolve=>setTimeout(resolve,this.responseBodyDelay[p.requestId]));
+      if(this.responseBodyRejectAfterDelay?.includes(p.requestId)){
+        this.responseBodySettled?.(p.requestId,'rejected');
+        throw Error('BODY_LOOKUP_LATE_REJECTED');
+      }
+      this.responseBodySettled?.(p.requestId,'resolved');
       const canonical=this.bodies.get(p.requestId).toString('base64');
       if(p.requestId==='2'&&typeof this.postAckEvent==='function')
         setTimeout(()=>this.postAckEvent(this),25);
@@ -43,6 +48,8 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
   c.responseBodyDelay=options.responseBodyDelay;
   c.responseBodyHang=options.responseBodyHang;
   c.responseBodyReject=options.responseBodyReject;
+  c.responseBodyRejectAfterDelay=options.responseBodyRejectAfterDelay;
+  c.responseBodySettled=options.responseBodySettled;
   c.postAckEvent=options.postAckEvent;
   if(options.postDataMode){
     const normalSend=c.send.bind(c);
@@ -987,4 +994,35 @@ test('pending first-turn response-body ACK stays isolated from second SSE and re
   await assert.rejects(run(false,null,null,null,{responseBodyReject:['1']}),
     /CDP_NON_SERIAL_CHAT_POST/);
   assert.doesNotMatch(JSON.stringify(delayed),/secret|Hello|data:/);
+});
+
+test('post-timeout first body lookup late resolve/reject cannot alter final two-turn witness',async()=>{
+  const baseline=await run();
+  for(const rejectAfterDelay of [false,true]){
+    let ackSettled;
+    const lateAck=new Promise(resolve=>{ackSettled=resolve;});
+    const result=await run(false,null,null,null,{
+      responseBodyAckTimeoutMs:40,
+      responseBodyDelay:{'1':300},
+      responseBodyRejectAfterDelay:rejectAfterDelay?['1']:[],
+      responseBodySettled:(id,outcome)=>{if(id==='1')ackSettled(outcome);}
+    });
+    // A complete second SSE is not equivalent to a verified two-turn capture
+    // when the first turn's body witness has already timed out.
+    assert.equal(result.cdp_consistent,false);
+    assert.equal(result.ttft_sse_verified,false);
+    assert.deepEqual(result.turns.map(t=>t.cdp_request_id),['1','2']);
+    assert.equal(result.turns[0].cdp_response_body_ack_latency_ms,null);
+    assert.equal(result.turns[1].cdp_previous_turn_body_ack_pending_at_post_start,true);
+    assert.equal(result.turns[1].ttft_ms,baseline.turns[1].ttft_ms);
+    assert.equal(result.turns[1].sse_done_ms,baseline.turns[1].sse_done_ms);
+    assert.equal(result.turns[1].request_sha256,baseline.turns[1].request_sha256);
+    assert.equal(result.turns[1].cdp_decoded_body_sha256,
+      baseline.turns[1].cdp_decoded_body_sha256);
+    const beforeLate=JSON.stringify(result);
+    assert.equal(await lateAck,rejectAfterDelay?'rejected':'resolved');
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(JSON.stringify(result),beforeLate,'stale ACK cannot rewrite finalized digest or timing');
+    assert.doesNotMatch(beforeLate,/secret|Hello|data:/);
+  }
 });
