@@ -12,11 +12,11 @@
  const verifiedDialogTail=new Map();
  const activeDialogs=new Set();
  const issuedRequests=new Set();
- function pinRequest(id,data) {
+ function pinRequest(data) {
  if(!Object.prototype.hasOwnProperty.call(data,'request_id'))return;
  const rid=data.request_id;
  if(typeof rid!=='string'||!rid.trim()||rid.length>160)throw Error('HOLD_REQUEST_ID_SCOPE');
- const key=id+':'+rid;
+ const key=rid; // One request_id cannot create a second dialog.
  if(issuedRequests.has(key))throw Error('HOLD_REQUEST_REPLAY');
  if(issuedRequests.size>=2048)throw Error('HOLD_REQUEST_PIN_CAPACITY');
  issuedRequests.add(key);
@@ -222,10 +222,10 @@
     };
     try {
     if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+    pinRequest(data); // Reserve BEFORE native dialog-create (await).
     const id=await dialogId(data,nativeSignal);
     if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
     claimedId=claimDialog(id);
-    pinRequest(id,data);
     event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
      answer_source:'NATIVE_PENDING',model_identity_verified:false});
     const upstream=await nativePost('/api/nox/chat/stream',{
