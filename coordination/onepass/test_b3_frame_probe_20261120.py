@@ -843,6 +843,11 @@ class TestProbe(unittest.TestCase):
                             ['/api/nox/chat?wrong=1',{method:'POST'}],
                             ['/api/nox/chat',{method:'GET'}],
                             ['/%61pi/nox/history?dialog_id='+id,{method:'GET'}],
+                            // Canonical legacy owner endpoints must not leak
+                            // unsupported methods into the native fetch.
+                            ['/api/nox/history?dialog_id='+id,{method:'POST'}],
+                            ['/api/nox/dialogs/new',{method:'GET'}],
+                            ['/api/nox/dialog/rename',{method:'GET'}],
                         ];
                         const statuses=[];
                         for(const [path, opts] of cases) {
@@ -858,7 +863,7 @@ class TestProbe(unittest.TestCase):
                             direct:window.__nativeDirect.slice()};
                     }""")
                     self.assertEqual(result['statuses'],
-                        [[422,'HOLD_OWNER_ROUTE_ALIAS']] * 6)
+                        [[422,'HOLD_OWNER_ROUTE_ALIAS']] * 9)
                     self.assertEqual(result['before'], [])
                     self.assertEqual(result['allowedStatus'], 200)
                     self.assertEqual(len(result['direct']), 1)
