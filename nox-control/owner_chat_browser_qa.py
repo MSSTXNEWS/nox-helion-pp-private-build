@@ -986,9 +986,23 @@ RENDERED_FOURROW_JS = r"""expected => {
   // checkVisibility also traverses hidden/transparent ancestors.
   const visible=node=>typeof node.checkVisibility==='function'&&
     node.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
+  // DOM innerText/textContent do not attest CSS-generated or transformed glyphs.
+  // In this literal numeric QA, any such styling makes visual evidence ambiguous.
+  // Fail closed: inspect all descendants, not just the message body root.
+  const literalVisual=node=>{
+    const elements=[node,...node.querySelectorAll('*')];
+    for(const el of elements){
+      if(getComputedStyle(el).textTransform!=='none')return false;
+      for(const pseudo of ['::before','::after']){
+        const content=getComputedStyle(el,pseudo).content;
+        if(!['none','normal','""',"''"].includes(content))return false;
+      }
+    }
+    return true;
+  };
   for(let i=0;i<4;i++){
     const row=expected[i],bubble=bubbles[i];
-    if(!visible(bubble))return false;
+    if(!visible(bubble)||!literalVisual(bubble))return false;
     if(!row||typeof row.content!=='string'||!row.content.trim()||
        typeof row.message_id!=='string'||!row.message_id.trim())return false;
     if(row.role!==(bubble.classList.contains('nox')?'assistant':'user'))return false;
