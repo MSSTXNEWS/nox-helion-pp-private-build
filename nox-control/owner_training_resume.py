@@ -1277,7 +1277,12 @@ def main():
             helper.atomic(POLICY, json.dumps(policy, indent=2).encode())
             for name in list(controllers_stopped):
                 rc, _ = helper.command(['supervisorctl', 'start', name], 30)
-                if rc or helper.service_state(name)['state'] not in ('RUNNING', 'STARTING'):
+                if rc:
+                    raise RuntimeError('HOLD_CONTROLLER_RESTART')
+                # A malformed Supervisor snapshot cannot certify controller recovery.
+                restart_snapshot = helper.service_state(name)
+                if (type(restart_snapshot) is not dict
+                        or restart_snapshot.get('state') not in ('RUNNING', 'STARTING')):
                     raise RuntimeError('HOLD_CONTROLLER_RESTART')
                 controllers_stopped.remove(name)
             # Recheck resources after configuration while admissions remain held.
