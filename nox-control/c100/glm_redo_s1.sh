@@ -73,13 +73,19 @@ except Exception as exc:
     print("HOLD_GGUF_METADATA_" + type(exc).__name__, flush=True)
     sys.exit(2)
 
-def cgroup_admitted():
+# Stable content-addressed cache: interrupted transfers resume across launch IDs.
+# The manifest includes the 11 exact upstream sizes and SHA-256 digests.
+MANIFEST_SHA = hashlib.sha256(
+    json.dumps(meta, sort_keys=True, separators=(",", ":")).encode()
+).hexdigest()
+
+def cgroup_admitted(extra_bytes=0):
     try:
         with open("/sys/fs/cgroup/memory.max") as fp:
             upper = fp.read().strip()
         with open("/sys/fs/cgroup/memory.current") as fp:
             current = int(fp.read().strip())
-        return upper != "max" and int(upper) - current >= (2 << 30)
+        return (upper != "max" and int(upper) - current >= (2 << 30) + extra_bytes)
     except (OSError, ValueError):
         return False
 
@@ -88,7 +94,7 @@ def one(name):
     directory = place(name)
     os.makedirs(directory, exist_ok=True)
     path = os.path.join(directory, name)
-    stage_dir = os.path.join(directory, ".nox_verified", RUN_ID)
+    stage_dir = os.path.join(directory, ".nox_verified", MANIFEST_SHA)
     os.makedirs(stage_dir, exist_ok=True)
     staged = os.path.join(stage_dir, name)
     part = staged + ".part"
@@ -107,23 +113,27 @@ def one(name):
         if not verified(part, size, oid):
             os.remove(part)
     for attempt in range(3):
-        if not cgroup_admitted():
-            print(name, "HOLD_CGROUP_RESERVE", flush=True)
-            return False
         if verified(part, size, oid):
             os.replace(part, staged)
             print(name, "SHA_OK_REPLACED", flush=True)
             return staged
         prior = os.path.getsize(part) if os.path.isfile(part) else 0
+        # tmpfs bytes are cgroup-charged. Admit the FULL remaining shard plus
+        # 2 GiB reserve before curl, not merely the initial 2 GiB baseline.
+        remaining = max(0, size - prior)
+        if not cgroup_admitted(remaining if directory.startswith("/dev/shm/") else 0):
+            print(name, "HOLD_CGROUP_SHM_CAPACITY" if directory.startswith("/dev/shm/") else "HOLD_CGROUP_RESERVE", flush=True)
+            return False
         reserve = os.statvfs(directory)
         free = reserve.f_bavail * reserve.f_frsize
-        if free < max(0, size - prior) + (2 << 30):
+        if free < remaining + (2 << 30):
             print(name, "HOLD_DISK_RESERVE", flush=True)
             return False
         try:
             result = subprocess.run(
                 ["curl", "-fsSL", "-C", "-", "--retry", "3", "--retry-all-errors",
-                 "--connect-timeout", "30", "-o", part, BASE + name],
+                 "--connect-timeout", "30", "--max-filesize", str(size),
+                 "-o", part, BASE + name],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 timeout=3600, check=False)
         except subprocess.TimeoutExpired:
@@ -140,29 +150,34 @@ def one(name):
     print(name, "HOLD_SHA_OR_DOWNLOAD", flush=True)
     return False
 
-with ThreadPoolExecutor(max_workers=2) as executor:
+with ThreadPoolExecutor(max_workers=1) as executor:
     results = list(executor.map(one, names))
 if not all(results):
-    print("HOLD_GGUF_NOT_ALL_VERIFIED", sum(results), "of", len(names), flush=True)
+    print("HOLD_GGUF_NOT_ALL_VERIFIED", sum(bool(x) for x in results), "of", len(names), flush=True)
     sys.exit(3)
 
-# The complete verified generation is staged, but the live S1 directory
-# and files are untouched. Owner-pinned lease/CAS and active-reader checks
-# must authorize a later one-pointer atomic publish. Do not claim completion.
-versions = "/root/nox/glm53_verified_sets"
-os.makedirs(versions, exist_ok=True)
-generation = os.path.join(versions, RUN_ID)
-os.mkdir(generation)
+# Paths are NOT immutable snapshots: some can point to mutable live S1
+# files. Never create a symlink "generation" that could silently change after
+# hashing. A later owner-fenced publisher must verify each SHA/inode anew and
+# require STOP/reader/lease/CAS admission before any one-pointer swap.
+sources = {}
 for name, target in zip(names, results):
-    os.symlink(target, os.path.join(generation, name))
+    if not verified(target, *meta[name]):
+        print("HOLD_GGUF_SOURCE_CHANGED", name, flush=True)
+        sys.exit(4)
+    stat = os.stat(target, follow_symlinks=False)
+    sources[name] = {
+        "path": target, "sha256": meta[name][1], "size": meta[name][0],
+        "device": stat.st_dev, "inode": stat.st_ino,
+        "mtime_ns": stat.st_mtime_ns
+    }
 receipt = {
-    "state": "ALL_11_SHA_VERIFIED_STAGED_HOLD_OWNER_CAS",
-    "manifest_sha256": hashlib.sha256(
-        json.dumps(meta, sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest(),
+    "state": "ALL_11_SHA_VERIFIED_SOURCE_MANIFEST_HOLD_OWNER_CAS",
+    "manifest_sha256": MANIFEST_SHA,
     "shard_count": 11,
-    "verified": {name: meta[name][1] for name in names},
-    "generation_path": generation,
+    "sources": sources,
+    "immutable_snapshot": False,
+    "owner_prepublish_sha_inode_recheck_required": True,
     "live_root_untouched": ROOT,
     "native_relay35_acceptance": False,
     "run_id": RUN_ID
