@@ -51,5 +51,6 @@ jobs:
         run: |
           set -euo pipefail
           node --test --test-name-pattern='V175 JSON-escaped lone UTF-16' coordination/onepass/test_v135_resonance_owner_bridge.cjs
+          node --test --test-name-pattern='6A05 owner-native structured HOLD' coordination/onepass/test_v135_resonance_owner_bridge.cjs
           echo 'NOX_A1_V175_SOURCE_ONLY=true'
           echo 'NOX_A1_V175_NATIVE_ACCEPTANCE=false'
