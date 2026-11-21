@@ -1404,6 +1404,16 @@ class NativeThreeWorkerCap(unittest.TestCase):
             self.assertEqual(proof["worker_ids"], ["w1", "w2", "w3"])
             self.assertEqual(proof["claimed_task_ids"], ["job-1"])
             self.assertAlmostEqual(proof["mtime"], target.stat().st_mtime)
+            # The native status file may contain valid JSON with a non-map root.
+            # Invalid native proof must HOLD, not leak AttributeError from .get().
+            for invalid_root in (None, [], "RUNNING", 3, True):
+                with self.subTest(census_root=repr(invalid_root)):
+                    target.write_text(json.dumps(invalid_root), encoding="utf-8")
+                    with self.assertRaisesRegex(
+                            RuntimeError, "HOLD_NATIVE_WORKER_CAP_READBACK"):
+                        check(helper)
+            write_workers(workers)
+            self.assertEqual(check(helper)["worker_ids"], ["w1", "w2", "w3"])
             # Rebinding/freshening the pathname after the original read must
             # not launder a stale native-worker snapshot into current proof.
             real_reader = scope["read_json"]
