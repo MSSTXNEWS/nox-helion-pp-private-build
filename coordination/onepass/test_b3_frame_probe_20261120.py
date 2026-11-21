@@ -1,15 +1,67 @@
 import asyncio
 import copy
+import hashlib
 import json
 import inspect
 import pathlib
 import tempfile
 import unittest
 
-from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames, evidence_hash, url_identity_sha256, is_model_chat_endpoint
+from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames, evidence_hash, url_identity_sha256, is_model_chat_endpoint, verify_report_screenshots
 
 
 class TestProbe(unittest.TestCase):
+    def test_saved_baseline_screenshot_bytes_integrity(self):
+        # A JSON hash alone does not prove the captured images still exist.
+        # This deterministic fixture tests the evidence fence, not real NOX.
+        with tempfile.TemporaryDirectory() as root:
+            base = pathlib.Path(root)
+            rows = []
+            for width, height in ((320, 720), (390, 844), (1440, 900)):
+                for mode in ('normal', 'reduced'):
+                    name = f'b3_{width}x{height}_{mode}.png'
+                    image = b'\x89PNG\r\n\x1a\n' + name.encode('ascii') * 8
+                    (base / name).write_bytes(image)
+                    rows.append({'width': width, 'height': height, 'mode': mode,
+                                 'screenshot': name, 'screenshot_bytes': len(image),
+                                 'screenshot_sha256': hashlib.sha256(image).hexdigest()})
+            report = {'runs': rows}
+            self.assertIsNone(verify_report_screenshots(report, base))
+            target = base / rows[0]['screenshot']
+            original = target.read_bytes()
+            target.write_bytes(original + b'tampered')
+            with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_SCREENSHOT_BYTES_MISMATCH'):
+                verify_report_screenshots(report, base)
+            target.write_bytes(original)
+            target.unlink()
+            with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_SCREENSHOT_MISSING'):
+                verify_report_screenshots(report, base)
+            target.write_bytes(original)
+            for bad_name in ('../baseline.png', 'b3_390x844_normal.png'):
+                altered = copy.deepcopy(report)
+                altered['runs'][0]['screenshot'] = bad_name
+                with self.subTest(name=bad_name), self.assertRaisesRegex(
+                        ValueError, 'HOLD_BASELINE_SCREENSHOT_NAME'):
+                    verify_report_screenshots(altered, base)
+            altered = copy.deepcopy(report)
+            altered['runs'][0]['screenshot_sha256'] = 'not-a-hash'
+            with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_SCREENSHOT_METADATA'):
+                verify_report_screenshots(altered, base)
+            altered = copy.deepcopy(report)
+            altered['runs'][0]['screenshot_bytes'] = True
+            with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_SCREENSHOT_METADATA'):
+                verify_report_screenshots(altered, base)
+            altered = copy.deepcopy(report)
+            altered['runs'].pop()
+            with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_SCREENSHOT_COVERAGE'):
+                verify_report_screenshots(altered, base)
+        # The actual comparison entrypoint must check both evidence directories.
+        source = inspect.getsource(_measure_async)
+        self.assertLess(source.index('verify_report_screenshots(old, baseline_path.parent)'),
+                        source.index('deltas = compare_baseline(result, old)'))
+        self.assertLess(source.index('verify_report_screenshots(result, out)'),
+                        source.index('deltas = compare_baseline(result, old)'))
+
     def test_renderer_resource_identity_fail_closed(self):
         a = renderer_resource_identity([('script', 'const NOX = true;')],
                                        [('stylesheet', 'https://nox.invalid/res.css', b'body{}')])
