@@ -224,7 +224,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     {'role':'user','content':'Please explain the result'}]}
                 valid=change=='unchanged'
                 streams=[Chunks([frame('verified'),frame(finish='stop'),
-                                 b'data: [DONE]\\n\\n'])] if valid else []
+                                 b'data: [DONE]\n\n'])] if valid else []
                 requests,factory=self.transport(streams)
                 with factory:
                     response=await native['owner_completion'](
