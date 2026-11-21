@@ -130,9 +130,16 @@ def _executor_status_reply(user_text,path=None):
             ids.append(name)
         if owner_maintenance_gate()!='ABSENT':return unknown
         observed=datetime.fromtimestamp(meta.st_mtime,timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
-        return (f'Сейчас у диспетчера настроено {n} исполнителей: занято {busy}, свободно {n-busy}. '
+        # This file describes logical scheduler slots, not authenticated
+        # native process identities. Never turn its freshness alone into a
+        # claim about live PIDs, GPU execution or the owner lease.
+        return (f'По файлу диспетчера настроено {n} логических исполнителей: '
+                f'по записи занято {busy}, свободно {n-busy}. '
                 f'NOX — отдельный координатор и чат (1). Схема: {n} исполнителей + NOX.\n'
-                f'Исполнители: {", ".join(ids)}.\nИсточник: свежий статус диспетчера, {observed}.')
+                f'Логические слоты: {", ".join(ids)}.\n'
+                f'Источник: файл статуса диспетчера, {observed}. '
+                'Это не подтверждение живых PID/start_ticks, owner lease/CAS, '
+                'работы GPU или числа физических native workers.')
     except (OSError,ValueError,TypeError,OverflowError):
         return unknown
 
