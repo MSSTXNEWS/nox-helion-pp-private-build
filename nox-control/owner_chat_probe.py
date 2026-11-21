@@ -539,6 +539,36 @@ def stream_frame_reports_failure(frame):
     return any(stream_status_is_failure(frame.get(key)) for key in (*keys, 'state'))
 
 
+def require_stream_model_identity(frame, previous=None):
+    """Bind any explicitly reported model labels across one complete stream."""
+    fields = [frame[key] for key in ('model', 'model_id', 'modelId') if key in frame]
+    if not fields:
+        return previous  # Unlabeled legacy frames are not positive model proof.
+    if any(type(value) is not str or not 0 < len(value.strip()) <= 256
+           or any(ord(char) < 32 or ord(char) == 127 for char in value)
+           for value in fields):
+        raise RuntimeError('HOLD_STREAM_MODEL_IDENTITY_INVALID')
+    label = fields[0].strip()
+    if any(value.strip() != label for value in fields[1:]):
+        raise RuntimeError('HOLD_STREAM_MODEL_ROUTE_DRIFT')
+    if previous is not None and previous != label:
+        raise RuntimeError('HOLD_STREAM_MODEL_ROUTE_DRIFT')
+    return label
+
+
+def require_multiturn_model_route(*turns):
+    """Explicit model route identity must agree for every issued chat turn.
+
+    No model tag in any turn keeps legacy responses compatible, but never
+    provides independent installed/model identity evidence.
+    """
+    labels = [turn.get('stream_model_identity') for turn in turns]
+    tagged = [label for label in labels if label is not None]
+    if tagged and (len(tagged) != len(labels) or len(set(tagged)) != 1):
+        raise RuntimeError('HOLD_CHAT_MULTITURN_MODEL_ROUTE_DRIFT')
+    return bool(tagged)
+
+
 def bounded_stream_lines(response, max_line=100000):
     """Bound each network read; iteration can buffer a huge NDJSON line before a length check."""
     readline = getattr(response, 'readline', None)
@@ -559,7 +589,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
         {'message':prompt,'history':[],'task':'general','dialog_id':dialog_id},timeout=timeout)
     if response.status!=200:
         response.close();raise RuntimeError('HOLD_STREAM_HTTP_'+str(response.status))
-    events=[];answer='';done=None;first=None;placeholders=0;delta_count=0
+    events=[];answer='';done=None;first=None;placeholders=0;delta_count=0;model_identity=None
     try:
         require_exact_stream_target(response)
         for index,line in enumerate(bounded_stream_lines(response)):
@@ -575,6 +605,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             kind=frame.get('type');elapsed=round((time.monotonic()-started)*1000)
             if kind not in ('preparing','start','started','delta','done','error','status','meta'):
                 raise RuntimeError('HOLD_STREAM_FRAME_TYPE')
+            model_identity=require_stream_model_identity(frame,model_identity)
             # A tagged intermediate SSE event from another session must never
             # be folded into this dialog, even if a later DONE has the right ID.
             # Legacy intermediate frames without dialog_id are still accepted.
@@ -613,7 +644,8 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
     if done is None or first is None:raise RuntimeError('HOLD_STREAM_INCOMPLETE_OR_PLACEHOLDER')
     return {'answer':answer,'done':done,'events':events,'first_meaningful_delta_ms':first,
             'placeholder_delta_count':placeholders,'delta_count':delta_count,
-            'stream_total_ms':round((time.monotonic()-started)*1000)}
+            'stream_total_ms':round((time.monotonic()-started)*1000),
+             'stream_model_identity':model_identity}
 
 def admitted_consume_turn(client, prompt, dialog_id, timeout=95):
     """Re-admit RAM immediately before EVERY synthetic model-stream POST.
@@ -905,6 +937,7 @@ def main():
                 'answer_sha256':digest(answer2.encode()),
                 'performance_target_pass':follow['first_meaningful_delta_ms']<=5000 and follow['stream_total_ms']<=25000})
             require_durable_result(passed, numeric_public_answer(answer2)=='323', 'SECOND_TURN')
+            require_multiturn_model_route(turn,follow)  # Before a third non-idempotent POST.
             require_latency_target(follow, 'SECOND_TURN', 5000)
             require_executor_turn_budget(time.monotonic()-probe_started)
             question='Сколько сейчас исполнителей и агентов у NOX?'
@@ -921,6 +954,7 @@ def main():
                            and stable_postquiet_three_turn_history(client,third_history,expected_three,did))
             if not third_durable:raise RuntimeError('HOLD_CHAT_PROBE_POSTQUIET_HISTORY')
             require_executor_witness(end,third_history,expected_three,count,phrase,did)
+            model_route_verified=require_multiturn_model_route(turn,follow,turn3)
             require_postturn_owner_binding(client)  # final owner route continuity, read-only
             require_postturn_executor_identity(client, fresh)  # final identity continuity
             # Third inference and durable-history readback also consume the 210 s budget.
@@ -935,7 +969,8 @@ def main():
                 'three_turn_history_verified':third_durable,
                 'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
                 'answer_sha256':digest(text.encode()),'raw_answer_exported':False,
-                'verification_scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'}
+                'model_route_identity_verified':model_route_verified,
+                 'verification_scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'}
         emit('chat_recent_timing_after',metrics())
     finally:
         if sys.exc_info()[0] is None:
