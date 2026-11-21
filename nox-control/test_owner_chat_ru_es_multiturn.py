@@ -669,6 +669,37 @@ async function check(chunks, status=200) {
         self.assertFalse(canonical_s03_proof_valid(
             a, b, DIALOG, whitespace_collision, require_full_transcript_pin=True))
 
+    def test_strict_s03_explicit_row_session_ids_cannot_cross_owner_sessions(self):
+        # Four correct UTF-8 messages and durable IDs are insufficient when
+        # a canonical S03 row was persisted under another owner session.
+        baseline = [dict(row, message_id=f"durable-session-{i}")
+                    for i, row in enumerate(rows(multiturn_followup_prompt(
+                        TOKEN, "multiturn_ru_es")))]
+        w, r = s03_proof(baseline)
+        self.assertTrue(canonical_s03_proof_valid(
+            w, r, DIALOG, baseline, require_full_transcript_pin=True))
+        scoped = [dict(row, session_id="owner-session-A") for row in baseline]
+        w, r = s03_proof(scoped)
+        self.assertTrue(canonical_s03_proof_valid(
+            w, r, DIALOG, scoped, require_full_transcript_pin=True))
+        for invalid in ("owner-session-B", None, "", " ", 42, True,
+                        "owner-session-A "):
+            with self.subTest(foreign_or_invalid=repr(invalid)):
+                mixed = [dict(row) for row in scoped]
+                mixed[2]["session_id"] = invalid
+                a, b = s03_proof(mixed)
+                self.assertFalse(canonical_s03_proof_valid(
+                    a, b, DIALOG, mixed, require_full_transcript_pin=True))
+        for missing in range(4):
+            with self.subTest(partial_scope=missing):
+                partial = [dict(row) for row in scoped]
+                del partial[missing]["session_id"]
+                a, b = s03_proof(partial)
+                self.assertFalse(canonical_s03_proof_valid(
+                    a, b, DIALOG, partial, require_full_transcript_pin=True))
+        # S03 metadata consistency is only a gate. Native owner-cookie pins,
+        # real writer evidence and independent persisted readback remain HOLD.
+
     def test_strict_s03_writer_and_reader_bind_ordered_persisted_row_ids(self):
         # Identical four message texts cannot prove the same four durable S03
         # rows: a later writer may have replaced rows without changing text.
