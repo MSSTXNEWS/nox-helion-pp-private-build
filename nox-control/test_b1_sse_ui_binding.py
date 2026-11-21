@@ -144,6 +144,51 @@ def main():
           current()[0].c==='dialog'&&current()[1].c==='dialog' '''))
         check('two model POSTs and two ACKs in total', page.evaluate('''() =>
           metrics.posts===2 && metrics.acks===2 '''))
+        # A real Chromium caller must be able to select short B1 deadlines;
+        # the previous binding silently dropped these values, leaving 30s
+        # waits even when a host requested 25ms.
+        check('bound UI forwards four independent reconnect deadlines', page.evaluate('''async () => {
+          const cases=[
+            {name:'readback',config:{reconnectReadTimeoutMs:25,
+              transport:{...opts.transport,readback:()=>new Promise(()=>{})}},
+              code:'HOLD_STREAM_READBACK_TIMEOUT'},
+            {name:'projection',config:{uiProjectionTimeoutMs:25,
+              beforeCommit:kind=>kind==='terminal'?
+                new Promise(()=>{}):Promise.resolve()},
+              code:'HOLD_STREAM_UI_PROJECTION_TIMEOUT'},
+            {name:'acksend',config:{ackSendTimeoutMs:25,
+              transport:{...opts.transport,ack:()=>new Promise(()=>{})}},
+              code:'HOLD_STREAM_ACK_SEND_TIMEOUT'},
+            {name:'canonical',config:{canonicalAckTimeoutMs:25,
+              transport:{...opts.transport,
+                readCanonicalAck:()=>new Promise(()=>{})}},
+              code:'HOLD_STREAM_CANONICAL_ACK_TIMEOUT'}
+          ];
+          const beforePosts=metrics.posts;
+          for(const t of cases){
+            const c=NOXB1SseUiBinding.bind({...opts,...t.config});
+            const s={conversation_id:'deadline',exchange_id:t.name};
+            const started=Date.now();
+            const result=await Promise.race([
+              c.reconnect(s).then(()=>null,e=>e.code),
+              new Promise(r=>setTimeout(()=>r('HUNG'),1200))
+            ]);
+            if(result!==t.code||Date.now()-started>1000) return false;
+          }
+          return metrics.posts===beforePosts;
+        }'''))
+        check('invalid bound reconnect deadlines fail before IO', page.evaluate('''() => {
+          const beforePosts=metrics.posts;
+          for(const name of ['reconnectReadTimeoutMs',
+              'uiProjectionTimeoutMs','ackSendTimeoutMs',
+              'canonicalAckTimeoutMs']){
+            let code=null;
+            try {NOXB1SseUiBinding.bind({...opts,[name]:0});}
+            catch(e){code=e.code}
+            if(code!=='HOLD_STREAM_HOST_CONTRACT')return false;
+          }
+          return metrics.posts===beforePosts;
+        }'''))
         check('ACK-less mounting is rejected before any IO', page.evaluate('''() => {
           const p=metrics.posts,a=metrics.acks;
           try{ NOXB1SseUiBinding.bind({...opts,ackGate:null});return false; }
