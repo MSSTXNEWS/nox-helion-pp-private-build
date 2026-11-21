@@ -69,6 +69,11 @@ def s03_proof(transcript):
         "full_transcript_sha256": multiturn_transcript_sha256(transcript),
         "full_answer_sha256": hashlib.sha256(LAST.encode("utf-8")).hexdigest(),
     }
+    # Strict session-annotated rows require explicit matching session pins
+    # from both independent canonical witnesses. Absent metadata is legacy.
+    if len(transcript) == 4 and all('session_id' in row for row in transcript):
+        writer['session_id'] = transcript[0]['session_id']
+        readback['session_id'] = transcript[0]['session_id']
     # Test fixtures represent two distinct native witnesses. When the real
     # writer is wired, both must independently pin the SAME persisted row IDs.
     if len(transcript) == 4 and all(
@@ -699,6 +704,50 @@ async function check(chunks, status=200) {
                     a, b, DIALOG, partial, require_full_transcript_pin=True))
         # S03 metadata consistency is only a gate. Native owner-cookie pins,
         # real writer evidence and independent persisted readback remain HOLD.
+
+    def test_strict_s03_three_way_session_pin_rejects_cross_session_receipts(self):
+        # Four exact RU/ES rows and durable IDs are not enough if an S03
+        # writer receipt belongs to another owner session. All three witness
+        # scopes must agree; synthetic-only proof is never live S03 acceptance.
+        transcript = [
+            dict(row, message_id=f"session-triple-{i}")
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, "multiturn_ru_es")), 1)
+        ]
+        legacy_writer, legacy_readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(
+            legacy_writer, legacy_readback, DIALOG, transcript,
+            require_full_transcript_pin=True))
+        self.assertFalse(canonical_s03_proof_valid(
+            dict(legacy_writer, session_id="foreign-session"),
+            legacy_readback, DIALOG, transcript,
+            require_full_transcript_pin=True))
+        scoped = [dict(row, session_id="owner-session-A") for row in transcript]
+        writer, readback = s03_proof(scoped)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, scoped,
+            require_full_transcript_pin=True))
+        for side in ("writer", "readback"):
+            for corrupt in (None, "", "owner-session-B", "owner-session-A ",
+                            42, True):
+                with self.subTest(side=side, value=repr(corrupt)):
+                    w, r = dict(writer), dict(readback)
+                    (w if side == "writer" else r)["session_id"] = corrupt
+                    self.assertFalse(canonical_s03_proof_valid(
+                        w, r, DIALOG, scoped,
+                        require_full_transcript_pin=True))
+            with self.subTest(missing_side=side):
+                w, r = dict(writer), dict(readback)
+                (w if side == "writer" else r).pop("session_id")
+                self.assertFalse(canonical_s03_proof_valid(
+                    w, r, DIALOG, scoped,
+                    require_full_transcript_pin=True))
+        unscoped_writer, unscoped_reader = s03_proof(transcript)
+        unscoped_writer["session_id"] = "owner-session-A"
+        unscoped_reader["session_id"] = "owner-session-A"
+        self.assertFalse(canonical_s03_proof_valid(
+            unscoped_writer, unscoped_reader, DIALOG, transcript,
+            require_full_transcript_pin=True))
 
     def test_strict_s03_writer_and_reader_bind_ordered_persisted_row_ids(self):
         # Identical four message texts cannot prove the same four durable S03
