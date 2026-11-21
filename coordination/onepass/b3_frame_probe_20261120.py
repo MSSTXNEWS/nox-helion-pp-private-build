@@ -134,6 +134,20 @@ def compare_baseline(current, prior):
     engine = current.get('chromium_version_sha256')
     if not isinstance(engine, str) or len(engine) != 64 or any(c not in '0123456789abcdef' for c in engine):
         raise ValueError('HOLD_BASELINE_BROWSER_ENGINE_MISSING')
+    # Synthetic frame p95 can be compared only for the exact same HTML.
+    # Keep a digest in evidence; never persist fixture source or credentials.
+    if current['synthetic_fixture'] is True:
+        for report in (current, prior):
+            fixture_digest = report.get('fixture_html_sha256')
+            if (not isinstance(fixture_digest, str) or len(fixture_digest) != 64
+                    or any(ch not in '0123456789abcdef' for ch in fixture_digest)):
+                raise ValueError('HOLD_BASELINE_FIXTURE_HASH_MISSING')
+        if current['fixture_html_sha256'] != prior['fixture_html_sha256']:
+            raise ValueError('HOLD_BASELINE_FIXTURE_DRIFT')
+    elif any('fixture_html_sha256' not in report or
+             report['fixture_html_sha256'] is not None
+             for report in (current, prior)):
+        raise ValueError('HOLD_BASELINE_UNEXPECTED_FIXTURE_HASH')
     if current['synthetic_fixture'] is False:
         for report in (current, prior):
             selector_hash = report.get('expected_selector_sha256')
@@ -233,7 +247,7 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
     except FileExistsError as exc:
         raise ValueError('HOLD_EVIDENCE_DIRECTORY_REUSED') from exc
     result = {
-        'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V5',
+        'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V6',
         'scope': 'browser-only; not model/weights/tokenizer/S03 acceptance',
         'url_sha256': url_identity_sha256(url), 'chromium_version_sha256': None,
         'time_utc': datetime.now(timezone.utc).isoformat(),
@@ -243,6 +257,7 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
         'service_workers_blocked': True,
         'native_s03_verified': False, 'installed_model_identity_verified': False,
         'synthetic_fixture': fixture_html is not None,
+        'fixture_html_sha256': evidence_hash(fixture_html) if fixture_html is not None else None,
         'expected_selector_checked': expected_selector is not None,
         'expected_selector_sha256': evidence_hash(expected_selector) if expected_selector else None,
         'landing_url_verified': False,
