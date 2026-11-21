@@ -264,13 +264,29 @@
         if(onAbort) signal.removeEventListener('abort',onAbort);
       });
     }
+    // For a read-only GET, racing the UI await is insufficient: an aborted
+    // or timed-out request can keep the browser's network socket alive.
+    // Forward a per-GET AbortSignal to cooperative transports, and abort it
+    // when STOP, deadline, or transport failure wins. Never repeat a POST.
+    async function boundedGet(thunk,code,deadlineMs,signal){
+      const controller=new AbortController();
+      let completed=false;
+      try{
+        const answer=await boundedRead(
+          ()=>thunk(controller.signal),code,deadlineMs,signal);
+        completed=true;
+        return answer;
+      }finally{
+        if(!completed) controller.abort();
+      }
+    }
     // One in-flight GET/readback + UI projection + ACK per exchange per tab.
     // Coalesce concurrent reconnect calls; after a failure, allow readback-only
     // recovery. NEVER start another model POST for an uncertain exchange.
     async function reconnectOnce(s,signal){
       let packet,witness;
       try{
-        packet=await boundedRead(()=>transport.readback(s),
+        packet=await boundedGet(getSignal=>transport.readback(s,getSignal),
           'HOLD_STREAM_READBACK_TIMEOUT',reconnectReadTimeoutMs,signal); // GET only; never model POST
         witness=await boundedRead(()=>bridge.acceptTerminal(packet,s,host),
           'HOLD_STREAM_WITNESS_TIMEOUT',reconnectReadTimeoutMs,signal); // verification only; no side effects

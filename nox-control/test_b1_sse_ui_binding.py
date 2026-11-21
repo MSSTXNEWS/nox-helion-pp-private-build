@@ -888,6 +888,53 @@ def main():
           return restored.safe_to_ack===true&&reads===2&&
             posts===0&&acks===1;
         }'''))
+        check('STOP and timeout abort underlying read-only reconnect GET', page.evaluate('''async () => {
+          const stopScope={conversation_id:'get-abort',exchange_id:'stop'};
+          const timeoutScope={conversation_id:'get-abort',exchange_id:'deadline'};
+          let reads=0,posts=0,acks=0,projects=0;
+          const aborted={};
+          const transport={...opts.transport,
+            post(){posts++;throw Error('NO_MODEL_POST')},
+            readback(s,signal){
+              reads++;
+              // Old harness passed no signal: it released the UI wait but
+              // left the underlying HTTP GET alive after STOP/deadline.
+              if(!signal||typeof signal.addEventListener!=='function')
+                return new Promise(()=>{});
+              return new Promise(resolve=>{
+                signal.addEventListener('abort',()=>{
+                  aborted[s.exchange_id]=(aborted[s.exchange_id]||0)+1;
+                  // Even a transport resolving late cannot project or ACK.
+                  setTimeout(()=>resolve({...s}),0);
+                },{once:true});
+              });
+            },
+            ack(){acks++;return true}
+          };
+          const ui={async onDelta(){},async upsertTerminal(){projects++;return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,
+            reconnectReadTimeoutMs:45
+          });
+          const first=c.reconnect(stopScope);
+          for(let i=0;i<30&&reads<1;i++)await new Promise(r=>setTimeout(r,0));
+          if(reads!==1)return false;
+          const didStop=c.stop(stopScope);
+          const stopped=await Promise.race([
+            first.then(()=>null,e=>e.code),
+            new Promise(r=>setTimeout(()=>r('HUNG'),400))
+          ]);
+          const timedOut=await Promise.race([
+            c.reconnect(timeoutScope).then(()=>null,e=>e.code),
+            new Promise(r=>setTimeout(()=>r('HUNG'),400))
+          ]);
+          await new Promise(r=>setTimeout(r,0));
+          return didStop===true &&
+            stopped==='HOLD_STREAM_RECONNECT_STOPPED' &&
+            timedOut==='HOLD_STREAM_READBACK_TIMEOUT' &&
+            aborted.stop===1 && aborted.deadline===1 &&
+            reads===2&&posts===0&&acks===0&&projects===0;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
