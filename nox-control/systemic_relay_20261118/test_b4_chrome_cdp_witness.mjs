@@ -59,6 +59,12 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
         ()=>resolve({postData:'{"fallback":'+JSON.stringify(p.requestId)+'}'}),35));
       if(options.postDataMode==='lateCustom')return new Promise(resolve=>setTimeout(
         ()=>resolve({postData:options.postDataText}),35));
+      if(options.postDataMode==='lateAfterGuard'||options.postDataMode==='rejectAfterGuard')
+        return new Promise((resolve,reject)=>setTimeout(()=>{
+          const rejected=options.postDataMode==='rejectAfterGuard';
+          options.postDataSettled?.(p.requestId,rejected?'rejected':'resolved');
+          rejected?reject(Error('POST_DATA_TOO_LATE')):resolve({postData:options.postDataText??'{"too_late":true}'});
+        },options.postDataDelayMs??280));
       if(options.postDataMode==='reject')return Promise.reject(Error('POST_DATA_UNAVAILABLE'));
       if(options.postDataMode==='hang')return new Promise(()=>{});
       return normalSend(cmd,p);
@@ -66,6 +72,7 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
   }
   return capture({ws:'ws://127.0.0.1:9333/fake',expectedChatOrigin:options.expectedChatOrigin??'http://localhost',makeSession:async()=>c,timeoutMs:2000,quiescenceMs:options.quiescenceMs??80,
     responseBodyAckTimeoutMs:options.responseBodyAckTimeoutMs??750,
+    requestPostDataAckTimeoutMs:options.requestPostDataAckTimeoutMs??750,
     bodyAckClock:options.bodyAckClock??(()=>performance.now()),onReady:async()=>{
   setTimeout(async()=>{for(let i=0;i<2;i++){
     const requestId=String(i+1),o=i===1?options:{},timestamp=Object.hasOwn(o,'requestTimestamp')?o.requestTimestamp:100+i;
@@ -1025,4 +1032,38 @@ test('post-timeout first body lookup late resolve/reject cannot alter final two-
     assert.equal(JSON.stringify(result),beforeLate,'stale ACK cannot rewrite finalized digest or timing');
     assert.doesNotMatch(beforeLate,/secret|Hello|data:/);
   }
+});
+
+
+test('getRequestPostData late resolve or reject stays sealed after guard, quiet window and browser snapshot',async()=>{
+  const clean=await run(false,null,null,null,{postDataMode:'lateCustom',
+    postDataText:'{"message":"настоящий ответ 🐈"}',requestPostDataAckTimeoutMs:80});
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  assert.match(clean.turns[1].request_sha256,/^[a-f0-9]{64}$/);
+  for(const mode of ['lateAfterGuard','rejectAfterGuard']){
+    let settle;
+    const late=new Promise(resolve=>{settle=resolve;});
+    const observed=await run(false,null,null,null,{
+      postDataMode:mode,postDataText:'{"message":"too late"}',
+      requestPostDataAckTimeoutMs:40,postDataDelayMs:280,
+      postDataSettled:(id,status)=>{if(id==='2')settle(status);}
+    });
+    assert.equal(observed.cdp_consistent,false,mode);
+    assert.equal(observed.ttft_sse_verified,false,mode);
+    assert.equal(observed.turns[0].request_sha256,clean.turns[0].request_sha256);
+    assert.equal(observed.turns[1].request_sha256,null,mode);
+    assert.equal(observed.turns[1].ttft_ms,null,mode);
+    assert.equal(observed.turns[1].visible_text_sha256,null,mode);
+    const frozen=JSON.stringify(observed);
+    assert.equal(await late,mode==='rejectAfterGuard'?'rejected':'resolved');
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(JSON.stringify(observed),frozen,'late metadata cannot mutate released witness');
+  }
+  const hung=await run(false,null,null,null,{
+    postDataMode:'hang',requestPostDataAckTimeoutMs:40
+  });
+  assert.equal(hung.cdp_consistent,false);
+  assert.equal(hung.ttft_sse_verified,false);
+  assert.equal(hung.turns[1].request_sha256,null);
 });
