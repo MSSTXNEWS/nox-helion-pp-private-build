@@ -36,6 +36,7 @@ class ProbeTests(unittest.TestCase):
         poisoned = (
             dict(witness, workers=[{'id': 1}, {'id': 3}]),
             dict(witness, workers=[{'id': 1}, {'id': '1'}]),
+            dict(witness, workers=[{'id': 1}, {}]),
             dict(witness, configured=1, workers=[{'id': 1}]),
             dict(witness, state='UNKNOWN'),
             dict(witness, workers=[]),
