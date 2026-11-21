@@ -131,6 +131,13 @@ def owner_readback_json(client, requested_path):
     return obj(response)
 
 
+def anonymous_owner_scope_status(client, requested_path):
+    """A redirected 401 is not proof that the intended owner API is protected."""
+    with request(client, requested_path) as response:
+        require_exact_owner_readback_target(response, requested_path)
+        return response.status
+
+
 def require_not_html_asset(response, sample):
     """HTTP 200 SPA/login HTML at a JS/CSS path is not a usable Resonance asset."""
     headers = getattr(response, 'headers', None)
@@ -613,7 +620,7 @@ def main():
         unauth=urllib.request.build_opener(urllib.request.ProxyHandler({}))
         report['anonymous_http']={}
         for path in ('/api/nox/status','/api/ui/executors','/api/ui/events'):
-            with request(unauth,path) as response:report['anonymous_http'][path]=response.status
+            report['anonymous_http'][path]=anonymous_owner_scope_status(unauth,path)
         if report['nonloopback_peer']:
             if set(report['anonymous_http'].values())!={401}:raise RuntimeError('HOLD_ANONYMOUS_OWNER_SCOPE')
             status=owner_readback_json(client,'/api/nox/status')
