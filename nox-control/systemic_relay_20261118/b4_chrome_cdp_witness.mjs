@@ -522,6 +522,14 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       const tailToStopMs=tailChronology&&!x.missing?finishStopMs-lastTextMs:null;
       const tailToDoneMs=tailChronology&&!x.missing?x.done-lastTextMs:null;
       const stopToDoneMs=tailChronology&&!x.missing?x.done-finishStopMs:null;
+      // Decoded SSE [DONE] and CDP Network.loadingFinished are distinct.
+      // This CDP timing is NOT actual TCP/TLS socket-close timing.
+      // Unlike text-tail metrics, textless terminal replies can prove this gap.
+      const doneToLoadingFinishedMs=!x.missing&&x.streaming&&x.bodyMatchesStream&&
+        x.status===200&&x.mime==='text/event-stream'&&x.finishStop&&
+        validTime(x.doneAt)&&validTime(x.closeAt)&&x.closeAt>=x.doneAt&&
+        Number.isSafeInteger(x.done)&&x.done>=0&&
+        Number.isSafeInteger(x.close)&&x.close>=x.done?x.close-x.done:null;
       const outputWindowMs=!x.missing&&Number.isSafeInteger(x.ttft)&&
         Number.isSafeInteger(x.done)&&x.done>x.ttft?x.done-x.ttft:null;
       return {turn:i+1,cdp_request_id:x.id,request_sha256:x.request,cdp_decoded_body_sha256:x.response,
@@ -538,6 +546,8 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       sse_last_text_to_done_cross_chunk:tailToDoneMs===null?null:x.doneChunk>lastTextChunk,
       sse_finish_stop_to_done_ms:stopToDoneMs,
       sse_finish_stop_to_done_cross_chunk:stopToDoneMs===null?null:x.doneChunk>x.finishStopChunk,
+      sse_done_to_loading_finished_ms:doneToLoadingFinishedMs,
+      sse_done_to_loading_finished_source:doneToLoadingFinishedMs===null?null:'CDP:Network.loadingFinished',
       sse_output_codepoints:!x.missing?x.sseOutputCodepoints:null,
       sse_text_event_gap_p95_ms:p95,
       sse_text_event_max_gap_ms:longest?.gapMs??null,
