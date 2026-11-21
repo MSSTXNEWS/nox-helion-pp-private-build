@@ -282,7 +282,9 @@ def stable_second_turn_quiescence(before, after, admitted, native_answer_equal):
     """Bounded post-terminal observation must preserve the same second answer.
 
     A late third browser POST or a changed terminal/answer after the screenshot
-    must not receive even narrow browser-only PASS. This is not proof against
+    must not receive even narrow browser-only PASS. A per-browser salted answer
+    digest also detects same-length mutations that counters cannot detect.
+    This is not proof against
     events after the bounded observation window or a substitute for S03.
     """
     if (native_answer_equal is not True
@@ -293,6 +295,8 @@ def stable_second_turn_quiescence(before, after, admitted, native_answer_equal):
             or after.get('dom_answer_matches_native') is not True
             or type(before.get('answer_characters')) is not int
             or before['answer_characters'] <= 0
+            or not isinstance(before.get('answer_sha256'), str)
+            or re.fullmatch(r'[0-9a-f]{64}', before['answer_sha256']) is None
             or type(before.get('native_delta_count')) is not int
             or before['native_delta_count'] <= 0
             or type(before.get('native_done_ms')) not in (int, float)):
@@ -300,7 +304,7 @@ def stable_second_turn_quiescence(before, after, admitted, native_answer_equal):
     return all(before.get(key) == after.get(key) for key in (
         'native_calls', 'native_stream_complete', 'native_terminal_count',
         'done', 'native_done_ms', 'native_delta_count', 'native_bytes',
-        'answer_characters'))
+        'answer_characters', 'answer_sha256'))
 
 
 
@@ -897,8 +901,27 @@ OBSERVER_JS = r"""
 })();
 """
 
-SNAPSHOT_JS = r"""() => {
+SNAPSHOT_JS = r"""async () => {
  const q=window.__NOX_BROWSER_QA;if(!q)return null;
+ // A per-browser ephemeral secret protects the low-entropy numeric answer
+ // against dictionary reversal if snapshots are written to diagnostics.
+ const answerText=typeof q.answer==='string'?q.answer:'';
+ let answerDigest=null;
+ try{
+   if(typeof crypto!=='undefined'&&crypto.subtle&&typeof TextEncoder!=='undefined'){
+     if(!q.__qaDigestSalt){
+       const salt=new Uint8Array(32);
+       crypto.getRandomValues(salt);
+       q.__qaDigestSalt=salt;
+     }
+     const answerBytes=new TextEncoder().encode(answerText);
+     const salted=new Uint8Array(q.__qaDigestSalt.length+answerBytes.length);
+     salted.set(q.__qaDigestSalt,0);
+     salted.set(answerBytes,q.__qaDigestSalt.length);
+     const hashed=await crypto.subtle.digest('SHA-256',salted);
+     answerDigest=Array.from(new Uint8Array(hashed),b=>b.toString(16).padStart(2,'0')).join('');
+   }
+ }catch{answerDigest=null;}
  const normalize=s=>s.replace(/\s+/g,'');
  const mount=document.getElementById('messages'),body=q.uiBody;
  const rendered=!!(mount&&body&&mount.contains(body)&&q.answer&&
@@ -922,7 +945,8 @@ SNAPSHOT_JS = r"""() => {
    ui_measurement_kind:'CUMULATIVE_VISIBLE_ASSISTANT_BODY',
    intl_segmenter_available:typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function',
    stop_samples:q.stopSamples,stop_visible_samples:q.stopVisibleSamples,stop_occluded_samples:q.stopOccludedSamples,
-   answer_characters:q.answer.length,dom_answer_matches_native:rendered,contexts,draw_calls:q.draws,
+   answer_characters:answerText.length,answer_sha256:answerDigest,
+   dom_answer_matches_native:rendered,contexts,draw_calls:q.draws,
    native_owner:window.NOX_NATIVE_OWNER===true,v135:window.__NOX_V135_OWNER_RESONANCE==='OWNER_NATIVE_ONLY',
    v137:window.__NOX_V137_SELF_STATUS==='READ_ONLY',owner_live:window.__NOX_OWNER_LIVE_UI===true,
    build:document.querySelector('meta[name="nox-live-build"]')?.content||null,
