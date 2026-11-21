@@ -1348,5 +1348,65 @@ async function check(chunks, status=200) {
                 self.assertTrue(report[field]["native_request_already_started"])
 
 
+
+    def test_ru_es_snapshot_webcrypto_real_chromium(self):
+        """Real isolated Chromium evaluates the production async snapshot JS.
+
+        Browser-only evidence: no native inference, cookies, or canonical S03.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import SNAPSHOT_JS, stable_second_turn_quiescence
+
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                page.route("**/b5-crypto-snapshot", lambda route: route.fulfill(
+                    status=200, content_type="text/html",
+                    body='<html><body><div id="messages"><div id="answer">10,9,8</div></div></body></html>'))
+                page.goto("http://127.0.0.1:8765/b5-crypto-snapshot")
+                self.assertTrue(page.evaluate("window.isSecureContext"))
+                self.assertEqual(page.evaluate("typeof crypto.subtle"), "object")
+                page.evaluate("""() => {
+                    window.__NOX_BROWSER_QA={
+                        answer:'10,9,8',uiBody:document.getElementById('answer'),
+                        contexts:[],nativeFirst:10,nativeDone:100,nativeDeltas:4,
+                        nativeBytes:120,nativeCalls:2,nativeTerminalCount:1,
+                        nativeStreamComplete:true,done:{saved:true,s03_integrated:true,dialog_matches:true},
+                        error:null,draws:0
+                    };
+                }""")
+                first = page.evaluate(SNAPSHOT_JS)
+                second = page.evaluate(SNAPSHOT_JS)
+                self.assertRegex(first['answer_sha256'], r'^[0-9a-f]{64}    unittest.main()
+)
+                self.assertEqual(first['answer_sha256'], second['answer_sha256'])
+                self.assertTrue(first['dom_answer_matches_native'])
+                self.assertTrue(stable_second_turn_quiescence(first, second, 2, True))
+                self.assertNotIn('qaDigestSalt', first)
+                self.assertNotIn('10,9,8', str(first))
+                # The mutation preserves all network counters and character length.
+                page.evaluate("""() => {
+                    window.__NOX_BROWSER_QA.answer='10,9,7';
+                    document.getElementById('answer').innerText='10,9,7';
+                }""")
+                changed = page.evaluate(SNAPSHOT_JS)
+                self.assertEqual(first['answer_characters'], changed['answer_characters'])
+                for field in ('native_calls','native_delta_count','native_bytes','native_done_ms'):
+                    self.assertEqual(first[field], changed[field])
+                self.assertNotEqual(first['answer_sha256'], changed['answer_sha256'])
+                self.assertTrue(changed['dom_answer_matches_native'])
+                self.assertFalse(stable_second_turn_quiescence(first, changed, 2, True))
+                # Within one browser context the per-browser salt must remain stable.
+                page.evaluate("""() => {
+                    window.__NOX_BROWSER_QA.answer='10,9,8';
+                    document.getElementById('answer').innerText='10,9,8';
+                }""")
+                restored = page.evaluate(SNAPSHOT_JS)
+                self.assertEqual(first['answer_sha256'], restored['answer_sha256'])
+            finally:
+                browser.close()
+
+
 if __name__ == "__main__":
     unittest.main()
