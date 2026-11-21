@@ -19,7 +19,7 @@ const note = (t, bad) => { const h = $('#hint'); if (!h) return; h.textContent =
 const HINT = 'ENTER — ОТПРАВИТЬ · SHIFT+ENTER — СТРОКА · CTRL+K — КОМАНДЫ';
 
 /* ---------- настройки ---------- */
-const DEF = { proto: 'classic', enter: 'enter', speak: 'off', lang: 'auto', auto: 'off', dens: 'cozy', space: 'on', dust: 'on' };
+const DEF = { proto: 'classic', enter: 'enter', speak: 'on', lang: 'auto', auto: 'off', dens: 'cozy', space: 'on', dust: 'on' };
 const cfg = Object.assign({}, DEF, jget('nox.wow.cfg', {}));
 const saveCfg = () => ls.set('nox.wow.cfg', JSON.stringify(cfg));
 document.body.classList.add('boot');
@@ -162,10 +162,10 @@ function stopChat() {
 
 /* ---------- озвучка (TTS 8094 через /tts/*) ---------- */
 const speaker = (() => {
-  let ac = null, sess = null, next = 0, srcs = new Set(), pend = '', chain = Promise.resolve(), ctrl = null, on = false, rate = 24000;
+  let all = '', got = 0, fb = 0, ac = null, sess = null, next = 0, srcs = new Set(), pend = '', chain = Promise.resolve(), ctrl = null, on = false, rate = 24000;
   function prime() { try { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) { ac = null; } }
   function b64pcm(b64) { const bin = atob(b64), n = bin.length >> 1, f = new Float32Array(n); for (let i = 0; i < n; i++) { let v = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8); if (v & 0x8000) v -= 0x10000; f[i] = v / 32768; } return f; }
-  function play(f, sr) { if (!ac) return; const b = ac.createBuffer(1, f.length, sr), s = ac.createBufferSource(); b.copyToChannel(f, 0); s.buffer = b; s.connect(ac.destination); const t = Math.max(ac.currentTime + .03, next); s.start(t); next = t + b.duration; srcs.add(s); s.onended = () => { srcs.delete(s); if (!srcs.size && !on) setVoiceState(''); }; setVoiceState('ГОВОРИТ'); }
+  function play(f, sr) { got++; if (!ac) return; const b = ac.createBuffer(1, f.length, sr), s = ac.createBufferSource(); b.copyToChannel(f, 0); s.buffer = b; s.connect(ac.destination); const t = Math.max(ac.currentTime + .03, next); s.start(t); next = t + b.duration; srcs.add(s); s.onended = () => { srcs.delete(s); if (!srcs.size && !on) setVoiceState(''); }; setVoiceState('ГОВОРИТ'); }
   async function readAudio(id, c) {
     try {
       const r = await fetch('/tts/session/' + id + '/audio?format=sse', { signal: c.signal }); if (!r.ok) throw new Error('TTS HTTP ' + r.status);
@@ -174,13 +174,13 @@ const speaker = (() => {
     } catch (e) { if (!c.signal.aborted) note('TTS НЕДОСТУПЕН: ' + (e.message || e), true); }
   }
   function start() {
-    prime(); stop(true); on = true; ctrl = new AbortController(); pend = ''; next = 0; const c = ctrl, lang = cfg.lang === 'auto' ? 'auto' : cfg.lang;
+    prime(); stop(true); all = ''; got = 0; clearTimeout(fb); on = true; ctrl = new AbortController(); pend = ''; next = 0; const c = ctrl, lang = cfg.lang === 'auto' ? 'auto' : cfg.lang;
     sess = (async () => { const r = await fetch('/tts/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang }), signal: c.signal }); if (!r.ok) { let m = 'HTTP ' + r.status; try { m = (await r.json()).error || m; } catch (e) { /* не JSON */ } throw new Error(m); } const j = await r.json(); rate = j.out_rate || 24000; readAudio(j.id, c); return j.id; })();
     sess.catch((e) => { if (!c.signal.aborted) note('TTS НЕДОСТУПЕН: ' + (e.message || e), true); on = false; });
     return true;
   }
-  function push(text, final) { if (!sess || !on) return; const c = ctrl; chain = chain.then(async () => { try { const id = await sess; if (c.signal.aborted) return; await fetch('/tts/session/' + id + '/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text || '', final: !!final }), signal: c.signal }); } catch (e) { /* сессия отменена или сервис недоступен */ } }); if (final) on = false; }
-  function stop(silent) { const c = ctrl, s = sess; on = false; if (c) c.abort(); ctrl = null; sess = null; chain = Promise.resolve(); if (s) s.then((id) => fetch('/tts/session/' + id + '/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {})).catch(() => {}); srcs.forEach((x) => { try { x.stop(); } catch (e) { /* уже остановлен */ } }); srcs.clear(); next = 0; if (!silent) setVoiceState(''); }
+  function push(text, final) { if (!sess || !on) return; const c = ctrl; all += (text || ''); if (final) { const t = all, g0 = got; clearTimeout(fb); fb = setTimeout(() => { if (got === 0 && t.trim() && window.speechSynthesis) { note('СЕРВЕРНЫЙ ГОЛОС МОЛЧИТ — ГОВОРИТ БРАУЗЕР', true); try { const u = new SpeechSynthesisUtterance(t); u.lang = 'ru-RU'; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {} } }, 6000); } chain = chain.then(async () => { try { const id = await sess; if (c.signal.aborted) return; await fetch('/tts/session/' + id + '/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text || '', final: !!final }), signal: c.signal }); } catch (e) { /* сессия отменена или сервис недоступен */ } }); if (final) on = false; }
+  function stop(silent) { clearTimeout(fb); try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {} const c = ctrl, s = sess; on = false; if (c) c.abort(); ctrl = null; sess = null; chain = Promise.resolve(); if (s) s.then((id) => fetch('/tts/session/' + id + '/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {})).catch(() => {}); srcs.forEach((x) => { try { x.stop(); } catch (e) { /* уже остановлен */ } }); srcs.clear(); next = 0; if (!silent) setVoiceState(''); }
   return { prime, start, push, stop, get active() { return on || srcs.size > 0; } };
 })();
 let voiceState = '';
