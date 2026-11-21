@@ -2568,5 +2568,77 @@ class BoostInstalledReceiptDuplicateFence(unittest.TestCase):
                     verify(receipt)
 
 
+class DispatcherUpgradeReceiptShapeFence(unittest.TestCase):
+    def test_malformed_upgrade_evidence_cannot_crash_or_authorize(self):
+        """Run real dispatcher_upgrade_pins AST, with no services/weights/GPU."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        function = next(node for node in tree.body
+                        if isinstance(node, ast.FunctionDef)
+                        and node.name == "dispatcher_upgrade_pins")
+        root = Path("/root/nox")
+        dispatcher = root / "scripts/nox_dispatcher_t855u.py"
+        namespace = {
+            "ROOT": root, "re": re,
+            "BOOST_PINS": {dispatcher: "a" * 64},
+            "UPGRADE_SOURCE_PINS": {"mentor": "b" * 64},
+            "DISPATCHER_UPGRADE_REQUEST": "1234",
+            "DISPATCHER_UPGRADE_SOURCE": "c" * 40,
+            "DISPATCHER_UPGRADE_SHA": "d" * 64,
+            "UPGRADE_PINS": {dispatcher: "d" * 64},
+        }
+        exec(compile(ast.Module(body=[function], type_ignores=[]),
+                     str(SOURCE), "exec"), namespace)
+        verifier = namespace["dispatcher_upgrade_pins"]
+        request = namespace["DISPATCHER_UPGRADE_REQUEST"]
+        parent = "owner.autonomy.audit." + request
+        child_ids = ["owner.audit." + str(i) for i in range(6)]
+        task_ids = [parent, *child_ids]
+        plan = {
+            "verified": True, "parent_status": "done",
+            "scope": "BOUNDED_COMPONENT_AUDIT", "unique_claims": 7,
+            "training_optimizer_update_proven": False,
+            "children": [{"id": item, "status": "done"} for item in child_ids],
+            "proofs": [{"id": item, "receipt_sha256": "e" * 64}
+                       for item in task_ids],
+            "owner_reports": [{"task_id": item, "kind": "task_verified",
+                               "claim": format(i, "024x")}
+                              for i, item in enumerate(task_ids)],
+        }
+        good = {
+            "schema": "NOX_OWNER_DISPATCHER_UPGRADE_V1",
+            "request": request, "source_sha": namespace["DISPATCHER_UPGRADE_SOURCE"],
+            "state": "SIX_WORKER_LIFECYCLE_MEDIA_PLANS_REPORTS_VERIFIED",
+            "dispatcher_before": "a" * 64, "dispatcher_after": "d" * 64,
+            "source_pins": namespace["UPGRADE_SOURCE_PINS"],
+            "rollback": False, "training_started": False,
+            "training_hold_sha256": "f" * 64,
+            "workers": {"ids": ["worker-" + str(i) for i in range(6)]},
+            "native_plan": plan,
+        }
+        self.assertEqual(verifier(copy.deepcopy(good)),
+                         namespace["UPGRADE_PINS"])
+        cases = [
+            (None, "HOLD_VERIFIED_DISPATCHER_UPGRADE_REQUIRED"),
+            ([], "HOLD_VERIFIED_DISPATCHER_UPGRADE_REQUIRED"),
+            ({**good, "workers": ["spurious-worker"]},
+             "HOLD_DISPATCHER_UPGRADE_SIX_WORKERS_REQUIRED"),
+            ({**good, "workers": {"ids": True}},
+             "HOLD_DISPATCHER_UPGRADE_SIX_WORKERS_REQUIRED"),
+            ({**good, "native_plan": ["unexpected"]},
+             "HOLD_DISPATCHER_UPGRADE_NATIVE_PLAN_REQUIRED"),
+            ({**good, "native_plan": {**plan,
+                                    "children": [*plan["children"], None]}},
+             "HOLD_DISPATCHER_UPGRADE_NATIVE_PLAN_REQUIRED"),
+            ({**good, "native_plan": {**plan, "proofs": 2}},
+             "HOLD_DISPATCHER_UPGRADE_DURABLE_REPORTS_REQUIRED"),
+            ({**good, "native_plan": {**plan, "owner_reports": True}},
+             "HOLD_DISPATCHER_UPGRADE_DURABLE_REPORTS_REQUIRED"),
+        ]
+        for receipt, reason in cases:
+            with self.subTest(receipt=repr(receipt)[:120]):
+                with self.assertRaisesRegex(RuntimeError, reason):
+                    verifier(copy.deepcopy(receipt))
+
+
 if __name__ == "__main__":
     unittest.main()
