@@ -989,7 +989,23 @@ def stop_controller(helper, name, script):
     if not bound or not row or row['service'] != name or str(script) not in row['argv']:
         raise RuntimeError('HOLD_CONTROLLER_IDENTITY')
     if config.get('stopasgroup', '').lower() == 'true' or config.get('killasgroup', '').lower() == 'true':
-        group = [item for item in helper.process_table().values() if item['pgrp'] == row['pgrp'] and item['state'] != 'Z']
+        # Group-stop must not act on an incomplete native process census.
+        # bool is an int subclass: True is not process group 1.
+        census = helper.process_table()
+        if (type(census) is not dict or type(row.get('pgrp')) is not int
+                or row['pgrp'] <= 0):
+            raise RuntimeError('HOLD_CONTROLLER_PROCESS_GROUP_READBACK')
+        group = []
+        for item in census.values():
+            if (type(item) is not dict or type(item.get('pgrp')) is not int
+                    or item['pgrp'] <= 0 or type(item.get('state')) is not str):
+                raise RuntimeError('HOLD_CONTROLLER_PROCESS_GROUP_READBACK')
+            if item['pgrp'] == row['pgrp'] and item['state'] != 'Z':
+                if type(item.get('service')) is not str:
+                    raise RuntimeError('HOLD_CONTROLLER_PROCESS_GROUP_READBACK')
+                group.append(item)
+        if not group:
+            raise RuntimeError('HOLD_CONTROLLER_PROCESS_GROUP_READBACK')
         if any(item['service'] != name for item in group):
             raise RuntimeError('HOLD_CONTROLLER_FOREIGN_PROCESS_GROUP')
     rc, _ = helper.command(['supervisorctl', 'stop', name], 75)
