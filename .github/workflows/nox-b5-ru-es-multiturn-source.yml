@@ -13,7 +13,7 @@ permissions:
 jobs:
   b5-ru-es-history:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 9
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,6 +21,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Provide pinned Playwright Chromium for real WebCrypto regression
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'playwright==1.65.2'
+          python -m playwright install chromium
       - name: One focused RU-to-ES S03 history contract check
         env:
           PYTHONPATH: nox-control
