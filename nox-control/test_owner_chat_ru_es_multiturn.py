@@ -1798,8 +1798,9 @@ async function check(chunks, status=200) {
         cookie = {'name':'nox-owner','domain':'127.0.0.1',
                   'path':'/','value':'signed-A','httpOnly':True}
         pin = owner_session_cookie_pin([cookie])
-        self.assertRegex(pin, r'^[0-9a-f]{64}
-)
+        self.assertIsInstance(pin, str)
+        self.assertEqual(len(pin), 64)
+        self.assertTrue(all(ch in '0123456789abcdef' for ch in pin))
 
         async def exercise():
             async with async_playwright() as runner:
