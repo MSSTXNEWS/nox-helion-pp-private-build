@@ -87,7 +87,8 @@ def plan_two_stage_retrieval(*, candidates, owner_persona_id, s03_revision,
 
 def plan_prompt(*, persona, system, conversation, verified_s03,
                 current_user, token_counter, token_budget=4096,
-                recent_turns=8, owner_persona_id=None, current_s03_revision=None):
+                recent_turns=8, owner_persona_id=None, current_s03_revision=None,
+                retrieval_plan=None):
     _guard(callable(token_counter), "TOKENIZER_REQUIRED")
     _guard(type(token_budget) is int and token_budget >= 512, "BUDGET")
     _guard(type(recent_turns) is int and 1<=recent_turns<=32, "WINDOW")
@@ -164,6 +165,51 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
                        successor["status"] == "ACTIVE" and
                        successor["revision"] == current_s03_revision,
                        "S03_SUPERSESSION")
+    # Bind the existing 3B03 shortlist to *these exact* verified S03 facts.
+    # A retrieval proposal is not independent S03 verification or GPU admission.
+    selected_by_retrieval = None
+    if retrieval_plan is not None:
+        import math
+        _guard(scoped and type(retrieval_plan) is dict and
+               set(retrieval_plan) == {
+                   "schema", "first_pass", "optional_multilingual_rerank_ids",
+                   "requires_owner_gpu_resource_and_lease_gate",
+                   "gpu_reranker_executed", "native_installed",
+                   "independent_s03_readback_verified"}, "RETRIEVAL_PLAN")
+        _guard(retrieval_plan["schema"] == "NOX_RETRIEVAL_SHORTLIST_SOURCE_V1"
+               and retrieval_plan["gpu_reranker_executed"] is False
+               and retrieval_plan["native_installed"] is False
+               and retrieval_plan["independent_s03_readback_verified"] is False,
+               "RETRIEVAL_PLAN")
+        rows = retrieval_plan["first_pass"]
+        rerank = retrieval_plan["optional_multilingual_rerank_ids"]
+        _guard(type(rows) is list and len(rows) <= 12 and
+               type(rerank) is list and len(rerank) <= 12,
+               "RETRIEVAL_PLAN")
+        active_by_id = {item["id"]: item for item in s03
+                        if item["status"] == "ACTIVE"}
+        seen_ids = set()
+        selected_by_retrieval = []
+        for row in rows:
+            _guard(type(row) is dict and
+                   set(row) == {"id", "source_sha256", "first_pass_score"},
+                   "RETRIEVAL_PLAN")
+            ident, sha, score = row["id"], row["source_sha256"], row["first_pass_score"]
+            _guard(type(ident) is str and ident not in seen_ids and
+                   type(sha) is str and type(score) in (int, float) and
+                   0 <= score <= 1 and math.isfinite(score),
+                   "RETRIEVAL_PLAN")
+            exact = active_by_id.get(ident)
+            _guard(exact is not None and exact["source_sha256"] == sha and
+                   exact["revision"] == current_s03_revision and
+                   exact["persona_id"] == owner_persona_id,
+                   "RETRIEVAL_S03_MISMATCH")
+            seen_ids.add(ident)
+            selected_by_retrieval.append(exact)
+        _guard(all(type(ident) is str and ident in seen_ids for ident in rerank)
+               and len(set(rerank)) == len(rerank) and
+               retrieval_plan["requires_owner_gpu_resource_and_lease_gate"] is bool(rerank),
+               "RETRIEVAL_PLAN")
     def count(messages):
         n=token_counter(messages)
         _guard(type(n) is int and n>=0, "TOKEN_COUNT")
@@ -199,13 +245,17 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
     selected_s03_ids=[]
     selected_s03_refs=[]
     historical_s03_refs=[]
+    # Retain historical provenance even when a relevant shortlist is provided.
     for item in s03:
-        # Old/revoked assertions stay in provenance, never active prompt facts.
         if scoped and item["status"] != "ACTIVE":
             historical_s03_refs.append({
                 "id":item["id"],"source_sha256":item["source_sha256"],
                 "persona_id":owner_persona_id,"revision":item["revision"],
                 "status":item["status"],"superseded_by":item["superseded_by"]})
+    # Shortlist is opt-in; legacy callers keep their original order.
+    # Never smuggle unrelated memories into a scoped retrieval request.
+    for item in (selected_by_retrieval if selected_by_retrieval is not None else s03):
+        if scoped and item["status"] != "ACTIVE":
             continue
         # Quote the entire source record, not just its ID. Untrusted S03 text
         # must not be able to introduce a fake provenance header or role line.
@@ -232,4 +282,8 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
             "independent_s03_readback_verified":False,
             "persona_preserved":True,"current_user_preserved":True,
             "history_not_deleted":True,
+            "retrieval_plan_consumed":selected_by_retrieval is not None,
+            "retrieval_shortlist_ids":[item["id"] for item in selected_by_retrieval]
+                                      if selected_by_retrieval is not None else [],
+            "gpu_reranker_executed":False,
             "native_installed":False}
