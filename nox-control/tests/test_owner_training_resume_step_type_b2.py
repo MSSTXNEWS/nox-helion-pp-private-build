@@ -2434,5 +2434,39 @@ class ExistingTrainerSupervisorStateEnumFence(unittest.TestCase):
         self.assertEqual(attached(helper), {"native_identity": "verified"})
 
 
+
+class NewTrainerSupervisorStateEnumFence(unittest.TestCase):
+    def test_new_start_state_enum_is_fail_closed_before_identity(self):
+        """Execute actual nested read_start_status without Supervisor or training."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        matches = [node for node in ast.walk(tree)
+                   if isinstance(node, ast.FunctionDef)
+                   and node.name == "read_start_status"]
+        self.assertEqual(len(matches), 1)
+        code = compile(ast.Module(body=[copy.deepcopy(matches[0])],
+                                  type_ignores=[]), str(SOURCE), "exec")
+        for malformed in (
+            None, [], "RUNNING", {}, {"state": None}, {"state": True},
+            {"state": 1}, {"state": []}, {"state": b"RUNNING"},
+            {"state": "BACKOFF"}, {"state": "STOPPING"},
+            {"state": "UNKNOWN"}, {"state": "RUNNING "},
+            {"state": " starting"}, {"state": "FATAL "},
+        ):
+            with self.subTest(snapshot=repr(malformed)):
+                scope = {"helper": types.SimpleNamespace(
+                    service_state=lambda value=malformed: value)}
+                exec(code, scope)
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_NEW_TRAINER_STATUS_READBACK"):
+                    scope["read_start_status"]()
+        for state in ("STARTING", "RUNNING", "STOPPED", "EXITED", "FATAL"):
+            with self.subTest(state=state):
+                snapshot = {"state": state, "pid": 123}
+                scope = {"helper": types.SimpleNamespace(
+                    service_state=lambda value=snapshot: value)}
+                exec(code, scope)
+                self.assertEqual(scope["read_start_status"](), snapshot)
+
+
 if __name__ == "__main__":
     unittest.main()
