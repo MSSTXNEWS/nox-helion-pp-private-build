@@ -294,7 +294,8 @@
           'HOLD_STREAM_UI_PROJECTION_TIMEOUT',uiProjectionTimeoutMs,signal);
       }catch(err){
         projectionCtrl.abort();
-        if(err&&err.code==='HOLD_STREAM_UI_PROJECTION_TIMEOUT') throw err;
+        if(err&&(err.code==='HOLD_STREAM_UI_PROJECTION_TIMEOUT'||
+          err.code==='HOLD_STREAM_RECONNECT_STOPPED')) throw err;
         hold('HOLD_STREAM_UI_PROJECTION');
       }
       // Only an explicit positive DOM commit witness may precede ACK. A
@@ -403,7 +404,8 @@
         // A local confirm() would create ACKED without a server proof digest
         // and permanently block requireCanonicalAck() as unverified.
       }catch(err){
-        if(err&&err.code==='HOLD_STREAM_ACK_SEND_TIMEOUT') throw err;
+        if(err&&(err.code==='HOLD_STREAM_ACK_SEND_TIMEOUT'||
+          err.code==='HOLD_STREAM_RECONNECT_STOPPED')) throw err;
         hold('HOLD_STREAM_ACK_UNCONFIRMED');
       }
       return ackGate?canonicalCompletion():witness;
