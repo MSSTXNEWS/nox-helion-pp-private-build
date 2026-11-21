@@ -405,6 +405,29 @@ async def postreload_owner_session_recheck(context, base, expected_pin):
 
 
 
+async def postrender_owner_history_recheck(context, base, before, dialog_id,
+                                           transcript_sha, firstturn_ids):
+    """Refetch the same four owner-scoped rows AFTER browser DOM has rendered.
+
+    The earlier history GET cannot certify persisted IDs/text if another writer
+    changed them during the Chromium render wait. This is browser-history-only,
+    never an independent S03 receipt, and never sends inference requests.
+    The final caller must re-pin owner session and DOM AFTER this awaited GET.
+    """
+    if not isinstance(dialog_id, str) or not dialog_id.strip():
+        return False
+    try:
+        url = (base+'/api/ui/memory/dialogs/history?dialog_id='
+               +urllib.parse.quote(dialog_id, safe='')+'&limit=6')
+        response = await context.request.get(
+            url, max_redirects=0, timeout=6000)
+        after = await json_response(response)
+        return postquiet_fourrow_history_stable(
+            before, after, dialog_id, transcript_sha, firstturn_ids)
+    except Exception:
+        return False
+
+
 async def postrender_owner_session_dialog_fence(context, base, expected_pin,
                                                 page, title, rows):
     """Read-only last owner/session and visible RU/ES dialog fence.
@@ -1759,6 +1782,15 @@ async def browser_run(report, directory, available):
                 # Waiting for rendered bubbles can outlive the prior owner
                 # session and live-dialog pins. Fail closed on rotation,
                 # route/UI drift or new native requests before browser PASS.
+                # Render waits can overlap a competing history write.
+                # Re-read persisted four-row IDs/text before the LAST owner
+                # session and displayed-DOM fence, without a model POST.
+                report['browser_stage']='QA_RELOAD_POSTRENDER_HISTORY_RECHECK'
+                if not await postrender_owner_history_recheck(
+                        context,base,reloaded_history,did,
+                        browser_transcript_sha,firstturn_id_snapshot):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_POSTRENDER_HISTORY_DRIFT')
+                report['multiturn_reload_postrender_history_stable']=True
                 report['browser_stage']='QA_RELOAD_POSTRENDER_FINAL_FENCE'
                 if not await postrender_owner_session_dialog_fence(
                         context,base,owner_session_pin,page,title,
