@@ -383,6 +383,54 @@ def main():
             deltas.length===1 && deltas[0][0]===' indented  \\n spaced  ' &&
             deltas[0][1]==='space-123';
         }'''))
+        check('STOP interrupts hung model POST without retry or late UI commit', page.evaluate('''async () => {
+          const s={conversation_id:'hung-post',exchange_id:'stop-1'};
+          let posts=0,acks=0,deltas=0,release;
+          const transport={...opts.transport,
+            post(){posts++;return new Promise(resolve=>{release=resolve});},
+            async ack(){acks++;return true;}
+          };
+          const host={...opts.host,async readCommitted(){return null}};
+          const ui={async onDelta(){deltas++},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:2000
+          });
+          const pending=c.begin(s);
+          for(let i=0;i<30&&!release;i++) await new Promise(r=>setTimeout(r,0));
+          if(posts!==1||typeof release!=='function') return false;
+          const didStop=c.stop(s);
+          const result=await Promise.race([
+            pending,new Promise(r=>setTimeout(()=>r('HUNG'),350))
+          ]);
+          const noRepost=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          // Even if the transport later resolves, the stopped exchange must
+          // not consume its body, project a delta or send an ACK.
+          release({ok:true,body:{getReader(){deltas++;throw Error('LATE')}}});
+          await new Promise(r=>setTimeout(r,0));
+          return didStop===true && result==='STOPPED' && noRepost &&
+            posts===1 && acks===0 && deltas===0;
+        }'''))
+        check('timeout interrupts hung model POST without retransmit', page.evaluate('''async () => {
+          const s={conversation_id:'hung-post',exchange_id:'timeout-1'};
+          let posts=0,acks=0,deltas=0;
+          const transport={...opts.transport,
+            post(){posts++;return new Promise(()=>{})},
+            async ack(){acks++;return true;}
+          };
+          const host={...opts.host,async readCommitted(){return null}};
+          const ui={async onDelta(){deltas++},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host,bridge:opts.bridge,ui,timeoutMs:30
+          });
+          const result=await Promise.race([
+            c.begin(s),new Promise(r=>setTimeout(()=>r('HUNG'),500))
+          ]);
+          const noRepost=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return result==='STOPPED_TIMEOUT' && noRepost &&
+            posts===1 && acks===0 && deltas===0;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
