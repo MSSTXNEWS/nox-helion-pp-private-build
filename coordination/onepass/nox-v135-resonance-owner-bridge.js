@@ -104,6 +104,19 @@
     try{return await Promise.race([reader.read(),aborted]);}
     finally{signal.removeEventListener('abort',onAbort);}
   }
+  async function readNativeEofAfterDone(reader,signal) {
+    // A terminal NDJSON frame is not transport EOF. Reject later network
+    // chunks instead of treating the first 'done' as proof of completion.
+    let timer;
+    try {
+      return await Promise.race([
+        readNativeOrAbort(reader,signal),
+        new Promise((_,reject)=>{
+          timer=setTimeout(()=>reject(Error('HOLD_NATIVE_TERMINAL_EOF_TIMEOUT')),2500);
+        })
+      ]);
+    }finally{clearTimeout(timer);}
+  }
   async function consume(response,emit,signal) {
     if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
     const reader=response.body.getReader(),decoder=new TextDecoder();
@@ -146,7 +159,8 @@
     try{
       for(;;){
         if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
-        const chunk=await readNativeOrAbort(reader,signal);
+        const chunk=doneSeen ? await readNativeEofAfterDone(reader,signal)
+                             : await readNativeOrAbort(reader,signal);
         if(chunk.done)break;
         buf+=decoder.decode(chunk.value,{stream:true});
         // Cap unfinished NDJSON frames, not combined chunks.
@@ -155,10 +169,9 @@
           await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
         }
         if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
-        if(doneSeen){
-          if(buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
-          break;
-        }
+        if(doneSeen&&buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
+        // Keep draining to actual EOF: a later chunk may carry a
+        // duplicate done, error or model token after the receipt.
       }
       buf+=decoder.decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
