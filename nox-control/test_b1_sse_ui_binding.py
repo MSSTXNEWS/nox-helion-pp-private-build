@@ -980,6 +980,79 @@ def main():
             aborted.stop===1 && aborted.deadline===1 &&
             reads===2&&posts===0&&acks===0&&projects===0;
         }'''))
+        check('STOP/timeout abort canonical ACK GET and fence late gate completion', page.evaluate('''async () => {
+          async function one(kind){
+            const s={conversation_id:'canonical-abort',exchange_id:kind};
+            let posts=0,acks=0,gets=0,confirmed=0,verifications=0;
+            let release,readSignal;
+            const mint=challenge=>{
+              const now=Date.now();
+              return {request_nonce:challenge.request_nonce,issued_at_ms:now,
+                expires_at_ms:now+1000,ack_id:'ack-'+kind};
+            };
+            const transport={...opts.transport,
+              post(){posts++;throw Error('NO_MODEL_POST')},
+              async readback(){return {...s}},
+              ack(){acks++;throw Error('NO_DUPLICATE_ACK')},
+              readCanonicalAck(_s,_expected,challenge,signal){
+                gets++;
+                if(gets===1){
+                  readSignal=signal;
+                  return new Promise(resolve=>{
+                    release=()=>resolve(mint(challenge));
+                  });
+                }
+                return Promise.resolve(mint(challenge));
+              }
+            };
+            const host={...opts.host,
+              async verifyFreshCanonicalAck(){verifications++;return true}
+            };
+            const gate={
+              async reserve(){return {status:'ALREADY_ACKED'}},
+              async beginSend(){throw Error('NO_NEW_ACK')},
+              async confirm(){throw Error('NO_LOCAL_ACK')},
+              async requireCanonicalAck(_s,event,cursor,read,verify){
+                const expected={event_id:event,ack_cursor:cursor};
+                const receipt=await read(expected);
+                if(await verify(receipt,expected)!==true)
+                  throw Error('BAD_VERIFIER');
+                confirmed++;
+                return {status:'CANONICAL_ACK_CONFIRMED',
+                  authority:'VERIFIER_CALLBACK_APPROVED',ack_id:receipt.ack_id};
+              }
+            };
+            const ui={async onDelta(){},async upsertTerminal(){return true}};
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host,bridge:opts.bridge,ui,ackGate:gate,
+              canonicalAckTimeoutMs:35
+            });
+            const pending=c.reconnect(s);
+            for(let i=0;i<50&&!release;i++)
+              await new Promise(r=>setTimeout(r,0));
+            if(!release||!readSignal)return false;
+            const didStop=kind==='stop'?c.stop(s):false;
+            const code=await Promise.race([
+              pending.then(()=>null,e=>e.code),
+              new Promise(r=>setTimeout(()=>r('HUNG'),450))
+            ]);
+            if((kind==='stop'&&(!didStop||
+                code!=='HOLD_STREAM_RECONNECT_STOPPED'))||
+               (kind==='timeout'&&code!=='HOLD_STREAM_CANONICAL_ACK_TIMEOUT')||
+               !readSignal.aborted)return false;
+            // Even a transport ignoring AbortSignal and resolving later must
+            // not pass the receipt to an ACK gate after stop/deadline.
+            release();
+            await new Promise(r=>setTimeout(r,0));
+            if(confirmed!==0||verifications!==0||posts!==0||acks!==0)
+              return false;
+            const restored=await c.reconnect(s);
+            return restored.canonical_ack_status==='CANONICAL_ACK_CONFIRMED' &&
+              gets===2&&confirmed===1&&verifications===1&&
+              posts===0&&acks===0;
+          }
+          return await one('stop') && await one('timeout');
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
