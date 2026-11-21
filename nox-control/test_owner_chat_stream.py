@@ -128,7 +128,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     chunks=Chunks([frame(calls=[{
                         'index':0,'id':call_id,'type':'function',
                         'function':{'name':name,'arguments':args}}]),
-                        frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+                        frame(finish='tool_calls'),b'data: [DONE]\n\n'])
                     requests,factory=self.transport([chunks])
                     native=self.native()
                     payload={'messages':[{'role':'user','content':'Use a tool'}]}
