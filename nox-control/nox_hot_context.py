@@ -65,7 +65,7 @@ def plan_two_stage_retrieval(*, candidates, owner_persona_id, s03_revision,
                "RETRIEVAL_PROVENANCE")
         scores = (item["fts_score"], item["vector_score"])
         _guard(all(type(s) in (int, float) and
-                   math.isfinite(s) and 0.0 <= s <= 1.0 for s in scores),
+                   0.0 <= s <= 1.0 and math.isfinite(s) for s in scores),
                "RETRIEVAL_SCORE")
         # Only score normalized evidence; do not copy untrusted source text
         # into model instructions, and do not imply a live vector index exists.
