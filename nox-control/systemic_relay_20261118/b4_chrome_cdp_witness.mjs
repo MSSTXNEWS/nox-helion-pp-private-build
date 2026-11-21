@@ -30,7 +30,12 @@ export class Cdp {
     this.ws.addEventListener('message',e=>{
       let p;try{p=JSON.parse(e.data);}catch{return;}
       if(p.id){const cb=this.pending.get(p.id);if(cb){this.pending.delete(p.id);p.error?cb.no(Error(p.error.message)):cb.yes(p.result||{});}}
-      else if(p.method)this.listener?.(p.method,p.params||{});
+      else if(p.method){
+        // Flattened CDP traffic from a different target session must not
+        // contaminate a page-scoped observer.
+        if(p.sessionId)this.listener?.('CDP_FOREIGN_TARGET_SESSION',{});
+        else this.listener?.(p.method,p.params||{});
+      }
     });
     this.ws.addEventListener('close',()=>{for(const x of this.pending.values())x.no(Error('CDP_DISCONNECTED'));this.pending.clear();this.listener?.('CDP_DISCONNECTED',{});});return this;
   }
@@ -125,7 +130,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     expectedOrigin=origin.origin;
   }catch{throw Error('BAD_CHAT_ORIGIN');}
   const c=await(makeSession?makeSession():new Cdp(ws).open()),active=new Map(),finished=[];
-  let startedPostCount=0;
+  let startedPostCount=0,dialogFrameId=null,dialogLoaderId=null;
   let yes,no;const completion=new Promise((a,b)=>{yes=a;no=b;});
   const deadline=Date.now()+timeoutMs;
   // A resolved body-count promise cannot be rejected again. Preserve a
@@ -178,7 +183,9 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       }}
   };
   c.on((method,p)=>{
-    if(method==='CDP_DISCONNECTED'){invalidate(Error('CDP_DISCONNECTED'));return;}
+    if(method==='CDP_DISCONNECTED'||method==='CDP_FOREIGN_TARGET_SESSION'){
+      invalidate(Error(method));return;
+    }
     if(method==='Network.requestWillBeSent'){
       // A redirected CDP request can reuse the original requestId, even
       // when the redirect changes the HTTP method or URL.
@@ -199,7 +206,18 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       // Bind each conversational turn at requestWillBeSent, not async body ACK.
       // An unexpected third POST invalidates the entire observed two-turn capture.
       if(startedPostCount>=count){invalidate(Error('EXTRA_CDP_POST'));return;}
-      const x={id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
+      // Network.requestWillBeSent frameId and loaderId identify the same
+      // browser document; an empty loaderId denotes a worker, not this dialog.
+      const frameId=p.frameId,loaderId=p.loaderId;
+      if(typeof frameId!=='string'||!frameId||
+         typeof loaderId!=='string'||!loaderId){
+        invalidate(Error('CDP_FRAME_PROVENANCE_MISSING'));return;
+      }
+      if(dialogFrameId===null){dialogFrameId=frameId;dialogLoaderId=loaderId;}
+      else if(frameId!==dialogFrameId||loaderId!==dialogLoaderId){
+        invalidate(Error('CDP_DIALOG_FRAME_MISMATCH'));return;
+      }
+      const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
       active.set(p.requestId,x);
       const record=s=>{
         if(typeof s!=='string'){x.missing=true;return;}
@@ -225,6 +243,9 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       return;
     }
     if(method==='Network.responseReceived'){
+      // Response metadata must agree with the original POST's document.
+      // Missing frame/loader identifiers are not proof of provenance.
+      if(p.frameId!==x.frameId||p.loaderId!==x.loaderId)x.missing=true;
       x.status=p.response?.status;x.mime=p.response?.mimeType;
       // CDP Response.url is required by the protocol; an absent/foreign/
       // redirected destination cannot certify the original chat POST.
@@ -288,6 +309,11 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
   });
   try{
     await c.send('Network.enable');const version=await c.send('Browser.getVersion');
+    // A browser/worker/iframe target websocket cannot attest one chat tab.
+    const target=await c.send('Target.getTargetInfo');
+    if(target?.targetInfo?.type!=='page'||
+       typeof target.targetInfo.targetId!=='string'||!target.targetInfo.targetId)
+      throw Error('CDP_PAGE_TARGET_REQUIRED');
     if(onReady)await onReady(c);
     const records=(await completion).slice().sort((a,b)=>a.order-b.order);
     // Network.getResponseBody resolves asynchronously; completion order is not turn order.
