@@ -8,7 +8,7 @@ from owner_chat_browser_qa import (COMPOSER_JS, RESPONSIVE_LAYOUT_CASES,
     allowed_qa_request, fresh_qa_post_admission, post_admission_hold_reason,
     browser_route_method_allowed, check_report_layout, click_send, verify_saved_browser_refresh,
     idle_slots, MODEL_SLOTS_URL, pinned_served_html_hash,
-    native_stream_envelope_valid, OBSERVER_JS, SNAPSHOT_JS)
+    native_stream_envelope_valid, progressive_stream_valid, OBSERVER_JS, SNAPSHOT_JS)
 
 class FakePage:
     def __init__(self, bad_width=None, reported_width=None, reported_height=None):
@@ -72,6 +72,26 @@ class ResponsiveComposerContract(unittest.IsolatedAsyncioTestCase):
             await check_report_layout(page,{})
         self.assertIn((320,720),page.views)
 
+
+
+class ProgressiveStreamEvidenceContract(unittest.TestCase):
+    def test_progress_must_be_finite_and_bounded_by_real_native_answer(self):
+        good = {'ui_measurement_kind':'CUMULATIVE_VISIBLE_ASSISTANT_BODY',
+                'native_delta_count':2,'ui_before_native_done':True,
+                'ui_prefix_lengths_before_done':[3,5],
+                'answer_characters':8,'ui_first_ms':12.0,'native_done_ms':28.0}
+        self.assertTrue(progressive_stream_valid(good))
+        for field, bad in (
+            ('answer_characters', 4),  # Claimed visible prefix exceeds model answer.
+            ('answer_characters', None),
+            ('answer_characters', True),
+            ('answer_characters', 4097),
+            ('ui_first_ms', float('nan')),
+            ('native_done_ms', float('inf')),
+            ('native_done_ms', 10**500),
+        ):
+            with self.subTest(field=field, bad=str(bad)[:24]):
+                self.assertFalse(progressive_stream_valid(dict(good, **{field:bad})))
 
 
 class SavedRefreshContract(unittest.IsolatedAsyncioTestCase):
