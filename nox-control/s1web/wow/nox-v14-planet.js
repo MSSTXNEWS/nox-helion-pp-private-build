@@ -62,7 +62,7 @@ function renderer(cv,opts){var g=cv.getContext('webgl2',{alpha:true,premultiplie
  return{g:g,draw:function(pl,rot,w,h,cb){if(pl.kind<0){g.viewport(0,0,w,h);g.clearColor(0,0,0,0);g.clear(g.COLOR_BUFFER_BIT);return}
   g.viewport(0,0,w,h);g.clearColor(0,0,0,0);g.clear(g.COLOR_BUFFER_BIT);g.useProgram(p);g.bindVertexArray(vao);g.activeTexture(g.TEXTURE0);var t=tex(pl,cb),ent=texs[pl.id],useTex=!!(ent&&ent.ok);if(t)g.bindTexture(g.TEXTURE_2D,t);g.uniform1i(U.uT,0);g.uniform1i(U.uK,(pl.kind===0||useTex)?0:pl.kind);g.uniform1f(U.uRot,rot);g.uniform1f(U.uAK,pl.atmK==null?1:pl.atmK);g.uniform1f(U.uTilt,pl.rings?.42:.3);g.uniform3fv(U.uAtm,pl.atm||[.5,.6,.8]);g.uniform1f(U.uRing,pl.rings?1:0);g.drawArrays(g.TRIANGLES,0,3)}}}
 /* ---------- фон ---------- */
-var cv=null,rd=null,t0=performance.now(),run=false,last=0,reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+var cv=null,rd=null,t0=performance.now(),run=false,last=0,reduce=false;
 function small(){return innerWidth<=820||matchMedia('(pointer:coarse)').matches}
 function layout(){if(!cv)return;var m=small(),vw=innerWidth,vh=innerHeight,idx=!!D.getElementById('stage');var s=m?Math.min(vw*1.05,vh*.6):Math.min(vh*.95,vw*.62);if(idx)s*=.62;var pl=by(cur);if(pl.rings)s*=1.25;
  cv.style.width=s+'px';cv.style.height=s+'px';
