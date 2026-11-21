@@ -1,8 +1,12 @@
-"""Веб «Резонанс» на S1: статика /web/, старый протокол чата /api/chat (Ollama-NDJSON) -> шлюз GLM-5.3 (8082), новый чат /glm/* -> шлюз. Слушает только 127.0.0.1:8091 (доступ через SSH-туннель)."""
+"""Веб «Резонанс» на S1: статика /web/, старый протокол чата /api/chat (Ollama-NDJSON) -> шлюз GLM-5.3 (8082), новый чат /glm/* -> шлюз, голос /stt/* -> STT 8093, /tts/* -> TTS 8094. Слушает только 127.0.0.1:8091 (доступ через SSH-туннель)."""
 import os, sys, json, http.client, threading, mimetypes, urllib.parse
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 ROOT = os.environ.get("NOX_WEB_ROOT", "/root/nox/web")
 GW = os.environ.get("NOX_GW", "127.0.0.1:8082")
+STT = os.environ.get("NOX_STT", "127.0.0.1:8093")   # голос: /stt/* -> faster-whisper (voice/stt_server.py)
+TTS = os.environ.get("NOX_TTS", "127.0.0.1:8094")   # голос: /tts/* -> XTTS/Piper (voice/tts_server.py), SSE/PCM
+PORT = int(os.environ.get("NOX_WEB_PORT", "8091"))
+MAX_BODY = 40 * 1024 * 1024
 TAG = "nox-helion:latest"
 ACTIVE = {}; LOCK = threading.Lock()
 class H(BaseHTTPRequestHandler):
@@ -16,9 +20,11 @@ class H(BaseHTTPRequestHandler):
     def _j(self, code, obj): self._send(code, json.dumps(obj, ensure_ascii=False).encode())
     def do_HEAD(self): self.do_GET()
     def do_GET(self):
-        p = urllib.parse.unquote(self.path.split("?")[0])
+        p = urllib.parse.unquote(self.path.split("?")[0]); qs = self.path[len(self.path.split("?")[0]):]
         if p in ("/", ""): return self._send(302, b"", extra={"Location": "/web/chat.html"})
         if p.startswith("/glm/"): return self._proxy("GET", p[4:], None)
+        if p.startswith("/stt/"): return self._proxy("GET", p[4:] + qs, None, STT, "STT (127.0.0.1:8093)")
+        if p.startswith("/tts/"): return self._proxy("GET", p[4:] + qs, None, TTS, "TTS (127.0.0.1:8094)")
         if p.startswith("/api/"): return self._j(503, {"error": "API панели S2 не подключено (работает только чат через GLM-5.3 на S1)"})
         if p.startswith("/web/"):
             rel = p[5:] or "index.html"
@@ -33,7 +39,10 @@ class H(BaseHTTPRequestHandler):
     def _body(self):
         n = int(self.headers.get("Content-Length", "0") or 0); return self.rfile.read(n) if n else b""
     def do_POST(self):
-        p = urllib.parse.unquote(self.path.split("?")[0]); raw = self._body()
+        p = urllib.parse.unquote(self.path.split("?")[0]); qs = self.path[len(self.path.split("?")[0]):]
+        if int(self.headers.get("Content-Length", "0") or 0) > MAX_BODY:
+            self.close_connection = True; return self._j(413, {"error": "тело запроса больше %d МБ" % (MAX_BODY // 1048576)})
+        raw = self._body()
         if p == "/api/chat": return self._chat(raw)
         if p == "/api/chat/stop":
             try: rid = json.loads(raw or b"{}").get("request_id")
@@ -44,13 +53,19 @@ class H(BaseHTTPRequestHandler):
                 except Exception: pass
             return self._j(200, {"ok": True, "stopped": bool(c)})
         if p.startswith("/glm/"): return self._proxy("POST", p[4:], raw)
+        if p.startswith("/stt/"): return self._proxy("POST", p[4:] + qs, raw, STT, "STT (127.0.0.1:8093)", self.headers.get("Content-Type"))
+        if p.startswith("/tts/"): return self._proxy("POST", p[4:] + qs, raw, TTS, "TTS (127.0.0.1:8094)", self.headers.get("Content-Type"))
         if p.startswith("/api/"): return self._j(503, {"error": "API панели S2 не подключено"})
         return self._j(404, {"error": "not found"})
-    def _proxy(self, method, path, raw):
+    def _proxy(self, method, path, raw, host=None, name="шлюз GLM", ctype=None):
+        c = None; started = False
         try:
-            c = http.client.HTTPConnection(GW, timeout=900); c.request(method, path, body=raw, headers={"Content-Type": "application/json"}); r = c.getresponse()
+            c = http.client.HTTPConnection(host or GW, timeout=900)
+            hd = {"Content-Type": ctype or "application/json"} if method == "POST" else {}
+            c.request(method, path, body=raw, headers=hd); r = c.getresponse()
             self.send_response(r.status); self.send_header("Content-Type", r.getheader("Content-Type", "application/json"))
-            stream = "text/event-stream" in (r.getheader("Content-Type") or "")
+            stream = "text/event-stream" in (r.getheader("Content-Type") or "") or r.getheader("Content-Length") is None  # SSE, chunked PCM/WAV
+            started = True
             if stream:
                 self.send_header("Cache-Control", "no-cache"); self.send_header("Connection", "close"); self.end_headers()
                 while True:
@@ -60,8 +75,14 @@ class H(BaseHTTPRequestHandler):
                 self.close_connection = True
             else:
                 data = r.read(); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError): self.close_connection = True
         except Exception as e:
-            self._j(502, {"error": "шлюз GLM недоступен: %s" % e})
+            if started: self.close_connection = True
+            else: self._j(502, {"error": "%s недоступен: %s" % (name, e)})
+        finally:
+            if c is not None:
+                try: c.close()
+                except Exception: pass
     def _chat(self, raw):
         """Старый протокол: Ollama-запрос -> OpenAI-стрим шлюза -> NDJSON кадры с model=TAG."""
         try: b = json.loads(raw or b"{}")
@@ -111,5 +132,5 @@ class H(BaseHTTPRequestHandler):
             except Exception: pass
             self.close_connection = True
 if __name__ == "__main__":
-    print("NOX web S1 127.0.0.1:8091 root=%s gw=%s" % (ROOT, GW), flush=True)
-    ThreadingHTTPServer(("127.0.0.1", 8091), H).serve_forever()
+    print("NOX web S1 127.0.0.1:%d root=%s gw=%s stt=%s tts=%s" % (PORT, ROOT, GW, STT, TTS), flush=True)
+    ThreadingHTTPServer(("127.0.0.1", PORT), H).serve_forever()
