@@ -145,6 +145,10 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       c.emit(i===1&&o.loadingFailed?'Network.loadingFailed':'Network.loadingFinished',
         {requestId,timestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02});
     await new Promise(r=>setImmediate(r));
+    // Artificial wall-clock delay between browser POSTs: the first CDP
+    // metadata guard can seal before the second request even starts.
+    if(i===0&&options.delaySecondPostMs)
+      await new Promise(r=>setTimeout(r,options.delaySecondPostMs));
   }},10);
 }});}
 test('two Chrome-protocol POST events bind distinct digest-only receipts, with SSE timing',async()=>{
@@ -1116,4 +1120,48 @@ test('unresolved first POST-data ACK cannot rebind a serial second-turn SSE requ
     }
     assert.doesNotMatch(sealed,/secret|Hello|data:/);
   }
+});
+
+test('expired first POST metadata guard precedes second POST without hiding valid second SSE evidence',async()=>{
+  const baseline=await run();
+  assert.equal(baseline.cdp_consistent,true);
+  for(const mode of ['lateAfterGuard','rejectAfterGuard','hang']){
+    let didSettle;
+    const settled=new Promise(resolve=>{didSettle=resolve;});
+    // First guard expires in 40 ms; only after a 90 ms browser inter-turn
+    // delay does a causally serial second POST begin. No source module stubs.
+    const observed=await run(false,null,null,null,{
+      firstPostDataMode:mode,firstPostDataText:'{"secret":"late first request"}',
+      firstPostDataDelayMs:300,requestPostDataAckTimeoutMs:40,
+      delaySecondPostMs:90,
+      postDataSettled:(id,outcome)=>{if(id==='1')didSettle(outcome);}
+    });
+    assert.equal(observed.cdp_consistent,false,mode);
+    assert.equal(observed.ttft_sse_verified,false,mode);
+    assert.deepEqual(observed.turns.map(t=>t.cdp_request_id),['1','2'],mode);
+    assert.equal(observed.turns[0].request_sha256,null,mode);
+    assert.equal(observed.turns[0].ttft_ms,null,mode);
+    assert.equal(observed.turns[1].request_sha256,baseline.turns[1].request_sha256,mode);
+    assert.equal(observed.turns[1].cdp_decoded_body_sha256,
+      baseline.turns[1].cdp_decoded_body_sha256,mode);
+    assert.equal(observed.turns[1].visible_text_sha256,
+      baseline.turns[1].visible_text_sha256,mode);
+    assert.equal(observed.turns[1].ttft_ms,baseline.turns[1].ttft_ms,mode);
+    assert.equal(observed.turns[1].sse_done_ms,baseline.turns[1].sse_done_ms,mode);
+    assert.equal(observed.turns[1].sse_done_to_loading_finished_ms,
+      baseline.turns[1].sse_done_to_loading_finished_ms,mode);
+    const frozen=JSON.stringify(observed);
+    if(mode!=='hang'){
+      assert.equal(await settled,mode==='rejectAfterGuard'?'rejected':'resolved');
+      await new Promise(resolve=>setImmediate(resolve));
+      assert.equal(JSON.stringify(observed),frozen,'expired first ACK cannot mutate second');
+    }
+    assert.doesNotMatch(frozen,/secret|Hello|data:/,'only digests and timings may escape');
+  }
+  // Moving a legitimate second request later must not excuse a separate
+  // overlap that appeared before the first response finished.
+  await assert.rejects(run(false,null,null,null,{
+    firstPostDataMode:'hang',requestPostDataAckTimeoutMs:40,
+    delaySecondPostMs:90,overlapPostBeforeFirstClose:true
+  }),/CDP_NON_SERIAL_CHAT_POST/);
 });
