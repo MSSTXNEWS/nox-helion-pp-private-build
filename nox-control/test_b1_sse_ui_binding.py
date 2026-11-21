@@ -636,6 +636,36 @@ def main():
             posts===0&&acks===1&&projects===2&&
             ids.length===2&&ids[0]===ids[1];
         }'''))
+        check('terminal UI projection requires literal true before any ACK', page.evaluate('''async () => {
+          const s={conversation_id:'projection-contract',exchange_id:'strict-confirm'};
+          const projections=[undefined,null,false,0,'ok',true];
+          let posts=0,reads=0,acks=0,projected=0;
+          const eventIds=[];
+          const transport={...opts.transport,
+            post(){posts++;throw Error('NO_MODEL_POST')},
+            async readback(){reads++;return {...s}},
+            async ack(){acks++;return true}
+          };
+          const ui={async onDelta(){},
+            async upsertTerminal(_s,eventId){
+              projected++;eventIds.push(eventId);
+              return projections.shift();
+            }
+          };
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui
+          });
+          for(let i=0;i<5;i++){
+            const code=await c.reconnect(s).then(()=>null,e=>e.code);
+            if(code!=='HOLD_STREAM_UI_NOT_CONFIRMED'||
+               posts!==0||acks!==0||reads!==i+1||projected!==i+1)
+              return false;
+          }
+          const witness=await c.reconnect(s);
+          return witness.safe_to_ack===true &&
+            reads===6&&projected===6&&acks===1&&posts===0&&
+            new Set(eventIds).size===1;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
