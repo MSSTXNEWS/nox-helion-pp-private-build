@@ -125,7 +125,15 @@ def _executor_status_reply(user_text,path=None):
             name=row.get('id');status=row.get('status');task=row.get('current_task')
             if not isinstance(name,str) or not re.fullmatch(r'nox-agent-\d{2,3}',name) or name in ids:return unknown
             if status=='busy':
-                if not isinstance(task,dict) or not isinstance(task.get('id'),str) or not task['id']:return unknown
+                if not isinstance(task,dict):return unknown
+                task_id=task.get('id')
+                # A live lease identity cannot be whitespace, a control-code
+                # payload or unbounded text. Otherwise a damaged snapshot can
+                # appear as independently executing work.
+                if (type(task_id) is not str or not 1<=len(task_id)<=160 or
+                        task_id!=task_id.strip() or
+                        not all(char.isprintable() for char in task_id)):
+                    return unknown
                 # Two busy workers claiming the same TaskID is not a trustworthy
                 # lease/registry snapshot. Do not report duplicate work as real.
                 if task['id'] in active_task_ids:return unknown

@@ -1696,12 +1696,34 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                       # claims, even if both rows are syntactically valid.
                       dict(valid,workers=[
                           dict(valid['workers'][0],status='busy',current_task={'id':'Q-17'}),
-                          dict(valid['workers'][1],status='busy',current_task={'id':'Q-17'})])]
+                          dict(valid['workers'][1],status='busy',current_task={'id':'Q-17'})]),
+                      # Damaged lease identities must not count as real work.
+                      dict(valid,workers=[
+                          dict(valid['workers'][0],status='busy',current_task={'id':'   '}),
+                          valid['workers'][1]]),
+                      dict(valid,workers=[
+                          dict(valid['workers'][0],status='busy',current_task={'id':'Q-17'+chr(10)+'spoof'}),
+                          valid['workers'][1]]),
+                      dict(valid,workers=[
+                          dict(valid['workers'][0],status='busy',current_task={'id':'X'*161}),
+                          valid['workers'][1]])]
             for doc in variants:
                 path.write_text(json.dumps(doc))
                 answer=stream._executor_status_reply('Сколько агентов сейчас?',path)
                 self.assertIn('не могу подтвердить',answer)
                 self.assertNotIn('настроено',answer)
+            # A legitimate active TaskID still counts as one logical busy slot.
+            live=dict(valid,workers=[
+                dict(valid['workers'][0],status='busy',current_task={'id':'Q-17'}),
+                valid['workers'][1]])
+            path.write_text(json.dumps(live))
+            # Explicitly admit the unaffected owner maintenance gate, as the
+            # production status route requires it both before and after read.
+            with patch.object(ui,'owner_maintenance_gate',return_value='ABSENT'):
+                accepted=stream._executor_status_reply('Сколько агентов сейчас?',path)
+            self.assertIn('настроено 2',accepted)
+            self.assertIn('по записи занято 1',accepted)
+            self.assertNotIn('не могу подтвердить',accepted)
             path.write_text(json.dumps(valid));os.utime(path,(time.time()-60,time.time()-60))
             self.assertIn('не могу подтвердить',stream._executor_status_reply('Статус исполнителей',path))
             path.unlink();path.symlink_to(Path(folder)/'absent')
