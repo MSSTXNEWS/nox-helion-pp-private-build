@@ -112,6 +112,42 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                             self.assertNotIn('_agent_final',payload)
 
 
+    async def test_tool_call_fragment_limits_are_utf8_bytes(self):
+        # A Unicode tool identity/argument fits the old codepoint budget but
+        # exceeds the actual UTF-8 wire budget. Reject during model parsing,
+        # before the native parser, any tool side effect, or S03 final ACK.
+        cases=[
+            ('id', '🌍'*41, 'calculate', '{}', 'HOLD_TOOL_CALL_ID_SIZE'),
+            ('name', 'tool_ok', '🌍'*51, '{}', 'HOLD_TOOL_CALL_SIZE'),
+            ('args', 'tool_ok', 'calculate',
+             '{"message":"' + '🌍'*26000 + '"}', 'HOLD_TOOL_CALL_SIZE'),
+        ]
+        for kind,call_id,name,args,expected in cases:
+            for streaming in (True,False):
+                with self.subTest(kind=kind,streaming=streaming):
+                    chunks=Chunks([frame(calls=[{
+                        'index':0,'id':call_id,'type':'function',
+                        'function':{'name':name,'arguments':args}}]),
+                        frame(finish='tool_calls'),b'data: [DONE]\n\n'])
+                    requests,factory=self.transport([chunks])
+                    native=self.native()
+                    payload={'messages':[{'role':'user','content':'Use a tool'}]}
+                    with factory:
+                        response=await native['owner_completion'](
+                            'http://native/model',payload,'Use a tool',streaming)
+                        if streaming:
+                            wire=''.join([part async for part in response.body_iterator])
+                            self.assertIn(expected,wire)
+                            self.assertNotIn('[DONE]',wire)
+                        else:
+                            self.assertEqual(response.status_code,502)
+                            self.assertEqual(json.loads(response.body)['error']['code'],
+                                             expected)
+                    self.assertEqual(len(requests),1)
+                    self.assertTrue(chunks.closed)
+                    self.assertEqual(self.dispatched,[])
+                    self.assertNotIn('_agent_final',payload)
+
     async def test_unicode_sse_record_limit_is_wire_bytes_not_codepoints(self):
         # A single JSON SSE record can be under 300k characters yet exceed
         # the 300k-byte frame ceiling with UTF-8 emoji. Reject before showing
