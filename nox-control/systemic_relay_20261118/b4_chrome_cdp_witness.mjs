@@ -286,6 +286,19 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       else if(frameId!==dialogFrameId||loaderId!==dialogLoaderId){
         invalidate(Error('CDP_DIALOG_FRAME_MISMATCH'));return;
       }
+      // A second POST in the same frame is not proof of a second chat turn.
+      // It must begin after the previous stream's model stop, terminal [DONE]
+      // and Network.loadingFinished in CDP's monotonic clock. A delayed
+      // getResponseBody ACK is allowed; it does not represent model execution.
+      if(startedPostCount>0&&validTime(p.timestamp)){
+        const previous=[...active.values()][startedPostCount-1];
+        if(!previous||previous.missing||!previous.finishStop||
+           !validTime(previous.doneAt)||!validTime(previous.closeAt)||
+           previous.done===null||previous.close===null||
+           previous.doneAt>previous.closeAt||p.timestamp<=previous.closeAt){
+          invalidate(Error('CDP_NON_SERIAL_CHAT_POST'));return;
+        }
+      }
       const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
       active.set(p.requestId,x);
       const record=s=>{
