@@ -43,6 +43,11 @@ class ProbeTest(unittest.TestCase):
                 pathlib.Path(str(k) + ".pub").write_text("ssh-ed25519 TESTKEY nox-test")
                 return subprocess.CompletedProcess(args, 0)
             self.assertEqual(args[0], "ssh")
+            self.assertIn("StrictHostKeyChecking=yes", args)
+            self.assertNotIn("StrictHostKeyChecking=accept-new", args)
+            known = next(x.split("=", 1)[1] for x in args if x.startswith("UserKnownHostsFile="))
+            self.assertEqual(pathlib.Path(known).read_text(),
+                             "[127.0.0.1]:2022 ssh-ed25519 " + "A" * 48 + "\n")
             self.assertIs(kwargs["stdin"], subprocess.DEVNULL)
             return subprocess.CompletedProcess(args, 0, stdout=VALID, stderr="")
 
@@ -54,7 +59,8 @@ class ProbeTest(unittest.TestCase):
                 return {}
             raise AssertionError("unexpected API call: " + method + " " + path)
 
-        with patch.object(probe, "api", side_effect=fake_api), \
+        with patch.dict(probe.os.environ, {"NOX_VAST_SSH_HOST_PUBLIC_KEY": "ssh-ed25519 " + "A" * 48}), \
+             patch.object(probe, "api", side_effect=fake_api), \
              patch.object(probe, "matching", return_value=[{"id": "test-id"}]), \
              patch.object(probe, "detach", return_value=detaches), \
              patch.object(probe.subprocess, "run", side_effect=fake_run), \
@@ -65,6 +71,35 @@ class ProbeTest(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "HOLD_KEY_DETACH_UNVERIFIED"):
                     probe.main()
         return outputs.getvalue()
+
+    def test_missing_host_pin_holds_before_key_attachment(self):
+        def instance_only(method, path, body=None):
+            self.assertEqual(method, "GET")
+            return {"actual_status": "running", "ports": {"22/tcp": [{"HostPort": 2022}]},
+                    "public_ipaddr": "127.0.0.1"}
+        with patch.dict(probe.os.environ, {"NOX_VAST_SSH_HOST_PUBLIC_KEY": ""}), \
+             patch.object(probe, "api", side_effect=instance_only), \
+             patch.object(probe.subprocess, "run") as runner:
+            with self.assertRaisesRegex(RuntimeError, "HOLD_TRUSTED_HOST_KEY_PIN_REQUIRED"):
+                probe.main()
+            runner.assert_not_called()
+
+    def test_supervisor_failure_cannot_be_masked_by_awk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            supervisor = pathlib.Path(tmp) / "supervisorctl"
+            supervisor.write_text("#!/bin/sh\nexit 23\n")
+            supervisor.chmod(0o755)
+            result = subprocess.run(["sh", "-c", probe.REMOTE],
+                                    capture_output=True, text=True,
+                                    env={"PATH": tmp + ":/usr/bin:/bin"})
+            self.assertNotEqual(result.returncode, 0)
+            self.assertNotIn("NOX_OWNER_READONLY_V1", result.stdout)
+            supervisor.write_text("#!/bin/sh\nprintf 'nox-dispatcher-t855u RUNNING pid 1\\nnox-bridge RUNNING pid 2\\n'\n")
+            result = subprocess.run(["sh", "-c", probe.REMOTE],
+                                    capture_output=True, text=True,
+                                    env={"PATH": tmp + ":/usr/bin:/bin"})
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIsNotNone(probe.accepted(result.stdout))
 
     def test_detach_failure_prevents_success_marker(self):
         output = self.run_mock_probe(False)
