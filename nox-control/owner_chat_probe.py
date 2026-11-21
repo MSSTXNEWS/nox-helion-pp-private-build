@@ -307,6 +307,16 @@ def stream_frame_reports_failure(frame):
     """
     keys = ('code', 'status_code', 'statusCode', 'http_status', 'httpStatus')
     status = frame.get('status')
+    # A saved=true terminal can still represent truncated/filtered generation.
+    # Accept ordinary stop/end-of-turn and absent legacy finish metadata.
+    incomplete = ('length', 'max_tokens', 'max_length', 'content_filter',
+                  'error', 'failed', 'cancelled', 'canceled', 'aborted',
+                  'timeout', 'timed_out')
+    for metadata in (frame, status if isinstance(status, dict) else {}):
+        for key in ('finish_reason', 'finishReason', 'stop_reason', 'stopReason'):
+            reason = metadata.get(key)
+            if isinstance(reason, str) and reason.strip().lower() in incomplete:
+                return True
     if stream_status_is_failure(status):
         return True
     if isinstance(status, dict):
