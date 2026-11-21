@@ -94,7 +94,7 @@ def main():
         known_hosts=directory+"/known"
         with open(known_hosts,"w",encoding="ascii") as f:
             for port in ports:
-                f.write("[%s]:%d %s\\n"%(host_ip,port,host_pub))
+                f.write("[%s]:%d %s\n"%(host_ip,port,host_pub))
         os.chmod(known_hosts,0o600)
         for port in ports:
             r=subprocess.run(["ssh","-T","-i",keyfile,"-p",str(port),
