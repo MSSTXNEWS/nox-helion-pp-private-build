@@ -24,6 +24,10 @@ class StreamFailure(RuntimeError):
     pass
 
 
+# Require one bounded, valid JSON envelope before native model POST. Never
+# silently prune prior S03/persona turns to fit the limit; return an explicit HOLD.
+MODEL_REQUEST_LIMIT=4000000
+
 # Bound the cumulative browser/S03 result across multiple model/tool cycles.
 # Individual upstream responses have their own 2M limit; the complete turn
 # must obey the same ceiling before native postflight certifies it.
@@ -207,6 +211,18 @@ async def _model_events(client, url, payload):
     else:
         # Preserve the pre-existing alias for legacy callers without a model.
         request['model']='maya'
+    # The original authenticated S03 context may be arbitrarily long and each
+    # tool cycle appends messages. Reject an oversized aggregate POST before
+    # HTTPX serializes it or a native model sees partial/lost conversation.
+    # Do not truncate context, tool observations, or provenance.
+    try:
+        request_wire=json.dumps(request,ensure_ascii=False,allow_nan=False,
+                                separators=(',',':')).encode('utf-8','strict')
+    except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
+        raise StreamFailure('HOLD_MODEL_REQUEST_INVALID') from None
+    if len(request_wire)>MODEL_REQUEST_LIMIT:
+        raise StreamFailure('HOLD_MODEL_REQUEST_SIZE')
+    del request_wire
     text=[];calls={};finished=None;complete=False;size=0
     async with client.stream('POST',url,json=request,timeout=180.0) as response:
         if response.status_code!=200:
