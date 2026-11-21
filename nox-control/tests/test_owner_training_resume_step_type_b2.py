@@ -1793,7 +1793,8 @@ class ControllerRestorationReceiptFence(unittest.TestCase):
                     and node.name == "main")
         finalizer = next(node for node in ast.walk(main)
                          if isinstance(node, ast.Try) and node.finalbody
-                         and "controllers_stopped" in ast.unparse(node.finalbody))
+                         and any("controllers_stopped" in ast.unparse(stmt)
+                                 for stmt in node.finalbody))
         restoration = finalizer.finalbody[0]
         self.assertIsInstance(restoration, ast.If)
         self.assertIn("controllers_stopped", ast.unparse(restoration))
