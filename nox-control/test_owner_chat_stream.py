@@ -1061,6 +1061,29 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(chunks.closed)
 
 
+    async def test_invalid_tool_observation_never_audits_false_success(self):
+        # The dispatcher can return ok=True while its model-visible evidence is
+        # malformed or exceeds the bounded context. This is a HOLD, not PASS.
+        for invalid_text, expected in (([], 'HOLD_TOOL_RESULT'),
+                                       ('x' * 2000001, 'HOLD_TOOL_RESULT_FULL_CONTEXT')):
+            with self.subTest(expected=expected):
+                native=self.native(heuristic=[{'name':'calculate','arguments':{}}],
+                                   result={'ok':True,'text':invalid_text})
+                audit=[]
+                native['audit']=lambda *a,**k:audit.append(k)
+                requests,factory=self.transport([])
+                payload={'messages':[{'role':'user','content':'Compute'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Compute',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertIn(expected,wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(audit,[])
+                self.assertEqual(len(requests),0)
+                self.assertEqual(self.dispatched,[('calculate',{})])
+
     async def test_tool_error_envelopes_never_certify_successful_s03(self):
         # The explicit error key is authoritative even when its value is
         # falsey. A result claiming ok=True and error=<anything> is ambiguous.

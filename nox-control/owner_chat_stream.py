@@ -653,10 +653,9 @@ async def _run(native,url,payload,user_text):
                         raise StreamFailure('HOLD_TOOL_RESULT_OK')
                     if 'needs_confirmation' in rec and type(rec['needs_confirmation']) is not bool:
                         raise StreamFailure('HOLD_TOOL_RESULT_CONFIRMATION')
-                    await asyncio.to_thread(native['audit'],'tool_step',name=call['name'],
-                                            step=steps,ok=rec.get('ok'))
-                    # Present tool-result text is evidence: never coalesce a
-                    # falsey non-string value to an empty model-visible result.
+                    # Validate the entire tool observation before recording
+                    # an audit success. An invalid/oversized text result must
+                    # not generate a green tool_step when chat and S03 HOLD.
                     text=rec['text'] if 'text' in rec else ''
                     if not isinstance(text,str):raise StreamFailure('HOLD_TOOL_RESULT')
                     if rec.get('ok') is False and not rec.get('needs_confirmation'):
@@ -664,10 +663,19 @@ async def _run(native,url,payload,user_text):
                     if rec.get('needs_confirmation'):
                         text+=native['confirm_marker'](rec)
                         if not text.strip():raise StreamFailure('HOLD_TOOL_CONFIRMATION')
+                    if final_command and not text.strip():
+                        raise StreamFailure('HOLD_TOOL_EMPTY')
+                    # The complete observation must fit in the model context;
+                    # do not audit an otherwise successful but unusable result.
+                    if (not final_command and not rec.get('needs_confirmation')
+                            and len(text)>2000000):
+                        raise StreamFailure('HOLD_TOOL_RESULT_FULL_CONTEXT')
+                    await asyncio.to_thread(native['audit'],'tool_step',name=call['name'],
+                                            step=steps,ok=rec.get('ok'))
+                    if rec.get('needs_confirmation'):
                         yield 'token',text
                         return
                     if final_command:
-                        if not text.strip():raise StreamFailure('HOLD_TOOL_EMPTY')
                         if rec['ok'] is not True:
                             # Show the actual failure without claiming [DONE]
                             # or making the S03 postflight mark it successful.
@@ -675,12 +683,6 @@ async def _run(native,url,payload,user_text):
                             raise StreamFailure('HOLD_TOOL_RESULT_UNCONFIRMED')
                         yield 'token',text
                         return
-                    # Tool evidence is part of the complete conversation. Never
-                    # silently replace it with an 8k-character prefix; without
-                    # proven context capacity, fail closed rather than fabricate
-                    # a shortened observation for the model/S03 record.
-                    if len(text)>2000000:
-                        raise StreamFailure('HOLD_TOOL_RESULT_FULL_CONTEXT')
                     messages.append({'role':'tool','tool_call_id':call['id'],
                                      'name':call['name'],'content':text})
             calls=[]
