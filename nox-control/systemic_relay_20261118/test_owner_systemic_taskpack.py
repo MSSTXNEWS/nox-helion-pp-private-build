@@ -511,7 +511,12 @@ class RefillEligibilityTests(unittest.TestCase):
     def test_i39_i48_i50_are_candidate_ids_but_not_executable(self):
         _,_,_,registry = exact_registry()
         census,census_sha = read(PACK / "source_census.json")
-        ledger = {row["task_id"]:row for row in eligibility_ledger(registry)}
+        # Positive case must explicitly supply a verified empty predecessor
+        # and REFILL request. Missing documents are now a hard HOLD.
+        previous = {"missions": []}
+        request = {"outcomes": [], "original_task_states": []}
+        ledger = {row["task_id"]:row for row in
+                  eligibility_ledger(registry, previous, request)}
         gaps = {row["task_id"]:row for row in special_candidate_gaps(registry,census,census_sha)}
         for task_id in ("I-39","I-48","I-50"):
             self.assertTrue(ledger[task_id]["structural_source_candidate"])
@@ -671,6 +676,38 @@ class RefillEligibilityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"UNREGISTERED_ACCEPTANCE_MAPPING"):
             producer.validate_manifest(changed)
 
+
+    def test_eligibility_ledger_corrupt_ids_hold_without_replay(self):
+        _, _, _, registry = exact_registry()
+        good_previous = {'missions': []}
+        good_request = {'outcomes': [], 'original_task_states': []}
+        control = {row['task_id']: row for row in
+                   eligibility_ledger(registry, good_previous, good_request)}
+        self.assertTrue(control['I-39']['structural_source_candidate'])
+        invalid = (
+            ({'missions': [{'parent_task_id': []}]}, good_request),
+            ({'missions': None}, good_request),
+            (None, good_request),  # Missing predecessor document is not empty.
+            ('corrupt', good_request),
+            ({}, good_request),  # Missing required missions array.
+            (good_previous, {'outcomes': [{'task_id': []}],
+                             'original_task_states': []}),
+            (good_previous, {'outcomes': [],
+                             'original_task_states': [{'task_id': {}}]}),
+            (good_previous, None),  # Missing REFILL document.
+            (good_previous, []),
+            (good_previous, {}),
+            (good_previous, {'outcomes': []}),  # Missing original_task_states.
+            (good_previous, {'original_task_states': []}),  # Missing outcomes.
+        )
+        for previous, request in invalid:
+            with self.subTest(previous=previous, request=request):
+                ledger = {row['task_id']: row for row in
+                          eligibility_ledger(registry, previous, request)}
+                self.assertFalse(ledger['I-39']['structural_source_candidate'])
+                self.assertIn('MALFORMED_PREDECESSOR_OR_REQUEST_IDS_HOLD',
+                              ledger['I-39']['blockers'])
+                self.assertFalse(ledger['I-39']['executable_task_emitted'])
 
     def test_readonly_refill_review_rejects_unorderable_mission_ids(self):
         from unittest.mock import patch
