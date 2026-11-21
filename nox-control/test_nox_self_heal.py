@@ -106,6 +106,24 @@ class SafeRepairTests(unittest.TestCase):
             self.assertEqual(rows[0]["action"], "healthy")
             self.assertEqual(healer.load(state)["services"]["nox-dispatcher.service"]["failures"], 0)
 
+    def test_dry_run_has_no_lock_or_directory_side_effects(self):
+        # Read-only inspection on an absent state path must not create
+        # the directory, writer lock, state, or any extra local files.
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "not-created" / "repair.json"
+            lock = state.with_name(state.name + ".writer.lock")
+            with patch.object(healer, "alive", return_value=True) as alive, patch.object(
+                    healer.subprocess, "run") as run:
+                rows = healer.repair_cycle(self.policy(Path(root) / "STOP"),
+                                           state, dry_run=True)
+                self.assertEqual(rows[0]["action"], "healthy")
+                alive.assert_called_once()
+                run.assert_not_called()
+            self.assertFalse(state.parent.exists())
+            self.assertFalse(state.exists())
+            self.assertFalse(lock.exists())
+            self.assertEqual(list(Path(root).iterdir()), [])
+
     def test_writer_lock_symlink_cannot_redirect_observer(self):
         with tempfile.TemporaryDirectory() as root:
             state = Path(root) / "repair.json"
