@@ -80,5 +80,6 @@ P
   curl -s -m60 localhost:8082/v1/chat/completions -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"Кто ты и что умеешь? Одной фразой."}],"nox_mode":"fast","max_tokens":80}' | head -c 500; echo
   curl -s -m5 localhost:8082/v1/nox/stats | head -c 300
   ;;
+log) pgrep -af llama-server | cut -c1-160; tail -n 15 /root/nox/logs/fast_server.log | cut -c1-200; nvidia-smi --query-gpu=memory.used --format=csv,noheader;;
 *) echo unknown;;
 esac
