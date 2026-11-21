@@ -445,6 +445,11 @@ def stream_status_is_failure(value):
         return status in ('error', 'failed', 'failure', 'cancelled', 'canceled',
                           'aborted', 'timeout', 'timed_out', 'timed-out', 'fatal') or (
             status.isdecimal() and int(status) >= 400)
+    # JSON encoders may serialize HTTP status as 503.0 rather than 503.
+    # A later saved=true DONE cannot override such a numeric proxy failure.
+    # Exclude bool (a subclass of int); malformed non-finite floats fail closed.
+    if type(value) is float:
+        return not math.isfinite(value) or value >= 400
     return type(value) is int and value >= 400
 
 
