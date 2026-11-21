@@ -187,7 +187,15 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       }
       if(Object.hasOwn(event,'text')){
         if(x.finishStop&&event.text.length>0){x.missing=true;return;}
+        // Escaped JSON may contain unpaired UTF-16 surrogates. Never
+        // count or hash lossy U+FFFD replacement as response content.
+        if(encodeWellFormedUtf8(event.text)===null){x.missing=true;return;}
         x.visibleText+=event.text;
+        if(event.text.length){
+          // CDP-decoded SSE events, not tokenizer-verified output tokens.
+          x.sseTextEventTimes.push(timestamp);
+          x.sseOutputCodepoints+=[...event.text].length;
+        }
         if(hasPrintableAnswerText(event.text)&&x.ttft===null&&ms!==null){x.ttft=ms;x.ttftAt=timestamp;}
       }
       if(event?.done){
@@ -299,7 +307,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
           invalidate(Error('CDP_NON_SERIAL_CHAT_POST'));return;
         }
       }
-      const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
+      const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false,sseTextEventTimes:[],sseOutputCodepoints:0};
       active.set(p.requestId,x);
       const record=s=>{
         if(typeof s!=='string'){x.missing=true;return;}
@@ -471,13 +479,30 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
        normalizePageDocumentURL(finalInfo?.url)!==expectedDocumentURL)
       throw Error('CDP_FINAL_PAGE_DOCUMENT_CHANGED');
     // Rejected, missing or timed-out request metadata remains fail-closed.
-    const turns=records.map((x,i)=>({turn:i+1,cdp_request_id:x.id,request_sha256:x.request,cdp_decoded_body_sha256:x.response,
+    const turns=records.map((x,i)=>{
+      // Batched SSE events may share one CDP chunk timestamp: never
+      // advertise event gaps as tokenizer or actual GPU decode cadence.
+      const gaps=x.sseTextEventTimes.slice(1).map((t,j)=>
+        Math.round((t-x.sseTextEventTimes[j])*1000));
+      const sorted=gaps.slice().sort((a,b)=>a-b);
+      const p95=!x.missing&&sorted.length&&sorted.every(n=>Number.isSafeInteger(n)&&n>=0)?
+        sorted[Math.ceil(sorted.length*.95)-1]:null;
+      const outputWindowMs=!x.missing&&Number.isSafeInteger(x.ttft)&&
+        Number.isSafeInteger(x.done)&&x.done>x.ttft?x.done-x.ttft:null;
+      return {turn:i+1,cdp_request_id:x.id,request_sha256:x.request,cdp_decoded_body_sha256:x.response,
       cdp_streamed_body_sha256:x.streamDigest,cdp_decoded_body_matches_stream:x.bodyMatchesStream,
       status:x.status,mime:x.mime,response_headers_received_ms:x.responseHeadersMs,
       first_cdp_data_chunk_ms:x.firstDataMs,ttft_ms:!x.missing?x.ttft:null,
       sse_done_ms:!x.missing?x.done:null,close_ms:x.close,
       visible_text_sha256:!x.missing?hash(Buffer.from(x.visibleText,'utf8')):null,
-      stream_timing_complete:!x.missing&&x.streaming&&x.bodyMatchesStream}));
+      sse_text_event_count:!x.missing?x.sseTextEventTimes.length:null,
+      sse_output_codepoints:!x.missing?x.sseOutputCodepoints:null,
+      sse_text_event_gap_p95_ms:p95,
+      sse_output_window_ms:outputWindowMs,
+      sse_codepoints_per_second:outputWindowMs===null?null:
+        Math.round(x.sseOutputCodepoints*10000/outputWindowMs)/10,
+      stream_timing_complete:!x.missing&&x.streaming&&x.bodyMatchesStream};
+    });
     const unique=startedPostCount===count&&active.size===count&&records.length===count&&
       new Set(turns.map(x=>x.cdp_request_id)).size===count;
     const valid=unique&&turns.every(x=>x.request_sha256&&x.cdp_decoded_body_sha256&&x.cdp_decoded_body_matches_stream&&x.status===200&&x.mime==='text/event-stream');
