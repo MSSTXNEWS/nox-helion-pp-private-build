@@ -1310,5 +1310,83 @@ class TestProbe(unittest.TestCase):
 
 
 
+    def test_native_reader_cancel_keeps_terminal_stopped_phase(self):
+        """Real Chromium, synthetic native abort; never a live S03 acceptance."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+
+                    async def fixture(route):
+                        await route.fulfill(
+                            status=200, content_type='text/html',
+                            body='<html><body>B3 STOP phase fixture</body></html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                    await page.goto(
+                        'http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__phases=[];
+                        window.__posts=0;
+                        window.__aborts=0;
+                        window.addEventListener('nox:native-phase',
+                            e=>window.__phases.push(e.detail.phase));
+                        window.fetch=(url,init)=>{
+                            if(url==='/api/nox/chat/stream'){
+                                window.__posts++;
+                                return new Promise((resolve,reject)=>{
+                                    init.signal.addEventListener('abort',()=>{
+                                        window.__aborts++;
+                                        reject(Error('SYNTHETIC_NATIVE_ABORT'));
+                                    },{once:true});
+                                });
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE:'+url);
+                        };
+                    }""")
+                    bridge=(pathlib.Path(__file__).parent /
+                            'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    actual=await page.evaluate("""async () => {
+                        const response=await fetch('/api/nox/chat',{
+                            method:'POST',body:JSON.stringify({
+                                dialog_id:'a'.repeat(32),
+                                request_id:'b3-native-stop-phase-cancel',
+                                message:'stop'
+                            })
+                        });
+                        const reader=response.body.getReader();
+                        const first=await Promise.race([
+                            reader.read(),
+                            new Promise((_,reject)=>setTimeout(
+                                ()=>reject(Error('META_TIMEOUT')),1000))
+                        ]);
+                        for(let i=0;i<100&&!window.__posts;i++)
+                            await new Promise(resolve=>setTimeout(resolve,2));
+                        if(!window.__posts)return {error:'NO_NATIVE_POST'};
+                        await reader.cancel('CLIENT_STOP');
+                        await new Promise(resolve=>setTimeout(resolve,30));
+                        return {
+                            first:new TextDecoder().decode(first.value),
+                            phases:window.__phases,
+                            posts:window.__posts,
+                            aborts:window.__aborts
+                        };
+                    }""")
+                    self.assertNotIn('error', actual)
+                    self.assertIn('"type":"meta"', actual['first'])
+                    self.assertEqual(actual['posts'], 1)
+                    self.assertEqual(actual['aborts'], 1)
+                    self.assertEqual(actual['phases'], ['waiting', 'stopped'])
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
+
 if __name__ == '__main__':
     unittest.main()
