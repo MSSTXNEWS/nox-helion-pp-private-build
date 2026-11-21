@@ -1687,7 +1687,17 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                       # claims, even if both rows are syntactically valid.
                       dict(valid,workers=[
                           dict(valid['workers'][0],status='busy',current_task={'id':'Q-17'}),
-                          dict(valid['workers'][1],status='busy',current_task={'id':'Q-17'})])]
+                          dict(valid['workers'][1],status='busy',current_task={'id':'Q-17'})]),
+                      # Damaged lease identities must not count as real work.
+                      dict(valid,workers=[
+                          dict(valid['workers'][0],status='busy',current_task={'id':'   '}),
+                          valid['workers'][1]]),
+                      dict(valid,workers=[
+                          dict(valid['workers'][0],status='busy',current_task={'id':'Q-17\\nspoof'}),
+                          valid['workers'][1]]),
+                      dict(valid,workers=[
+                          dict(valid['workers'][0],status='busy',current_task={'id':'X'*161}),
+                          valid['workers'][1]])]
             for doc in variants:
                 path.write_text(json.dumps(doc))
                 answer=stream._executor_status_reply('Сколько агентов сейчас?',path)
