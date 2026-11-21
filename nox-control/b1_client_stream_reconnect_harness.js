@@ -25,7 +25,7 @@
   const key=s=>s.conversation_id+'\u0000'+s.exchange_id;
   function createClient({transport,host,bridge,ui,ackGate=null,timeoutMs=120000,
     canonicalFreshnessMs=30000,reconnectReadTimeoutMs=30000,
-    ackSendTimeoutMs=30000}={}){
+    uiProjectionTimeoutMs=30000,ackSendTimeoutMs=30000}={}){
     if(!transport||!host||!bridge||!ui||
        typeof transport.post!=='function'||
        typeof transport.readback!=='function'||
@@ -45,6 +45,8 @@
        canonicalFreshnessMs<1000||canonicalFreshnessMs>60000||
        !Number.isSafeInteger(reconnectReadTimeoutMs)||
        reconnectReadTimeoutMs<1||reconnectReadTimeoutMs>600000||
+       !Number.isSafeInteger(uiProjectionTimeoutMs)||
+       uiProjectionTimeoutMs<1||uiProjectionTimeoutMs>600000||
        !Number.isSafeInteger(ackSendTimeoutMs)||
        ackSendTimeoutMs<1||ackSendTimeoutMs>600000)
       hold('HOLD_STREAM_HOST_CONTRACT');
@@ -251,9 +253,19 @@
         hold('HOLD_STREAM_UNSAFE_WITNESS');
       // ACK must follow a *successful* idempotent UI projection. A partially
       // written UI may throw; retry must use the same event_id without POST.
+      // A hung UI projection must not pin reconnect forever or authorize ACK.
+      // Retrying remains GET-only and uses the SAME immutable event ID; the
+      // UI adapter MUST implement an idempotent upsert and fence late commits.
+      // This timeout cannot undo arbitrary uncooperative UI side effects.
       let projected;
-      try{projected=await ui.upsertTerminal(s,witness.projection_event_id);}
-      catch(_){hold('HOLD_STREAM_UI_PROJECTION');}
+      try{
+        projected=await boundedRead(
+          ()=>ui.upsertTerminal(s,witness.projection_event_id),
+          'HOLD_STREAM_UI_PROJECTION_TIMEOUT',uiProjectionTimeoutMs);
+      }catch(err){
+        if(err&&err.code==='HOLD_STREAM_UI_PROJECTION_TIMEOUT') throw err;
+        hold('HOLD_STREAM_UI_PROJECTION');
+      }
       if(projected===false) hold('HOLD_STREAM_UI_NOT_CONFIRMED');
       // Origin-local, cross-tab durable fence is opt-in. RESERVE and SENDING
       // must commit in IndexedDB BEFORE network ACK. An uncertain ACK is never
