@@ -251,8 +251,7 @@
        }
        return;
      }
-     // Carry only the last grapheme; avoid an array and extra joins.
-     let lastBoundary=0;
+      let lastBoundary=0;
      for(const part of segmenter.segment(trailing))lastBoundary=part.index;
      if(lastBoundary>0){
       const safe=trailing.slice(0,lastBoundary);
