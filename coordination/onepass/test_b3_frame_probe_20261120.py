@@ -626,7 +626,7 @@ class TestProbe(unittest.TestCase):
                     }""")
                     self.assertNotIn('error', actual)
                     self.assertEqual(actual['atOverlap'], 1)
-                    self.assertIn('HOLD_DIALOG_INFLIGHT', actual['rejected'])
+                    self.assertIn('HOLD_REQUEST_REPLAY', actual['rejected'])
                     self.assertNotIn('"type":"done"', actual['rejected'])
                     self.assertIn('"type":"done"', actual['completed'])
                     self.assertIn('HOLD_REQUEST_REPLAY', actual['replay'])
