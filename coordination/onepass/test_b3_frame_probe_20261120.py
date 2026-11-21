@@ -514,5 +514,89 @@ class TestProbe(unittest.TestCase):
         asyncio.run(run())
 
 
+    def test_same_dialog_overlapping_browser_stream_has_single_native_post(self):
+        """One in-flight browser turn per dialog, including release after done."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+                    async def local_page(route):
+                        await route.fulfill(
+                            status=200, content_type='text/html',
+                            body='<html><body><main>isolated mock</main></body></html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', local_page)
+                    await page.goto('http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__nativePosts=0;
+                        window.__releaseFirst=null;
+                        const did='a'.repeat(32);
+                        const response=value=>new Response(JSON.stringify(value),
+                            {status:200,headers:{'Content-Type':'application/json'}});
+                        window.fetch=async url=>{
+                            if(url==='/api/nox/chat/stream'){
+                                const n=++window.__nativePosts;
+                                if(n===1)await new Promise(resolve=>window.__releaseFirst=resolve);
+                                const frames=[
+                                    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start',model:'mock'},
+                                    {type:'delta',text:n===1?'answer1':'answer2'},
+                                    {type:'done',saved:true,s03_integrated:true,
+                                     dialog_id:did,exchange_id:n===1?'ex00001':'ex00002'}
+                                ].map(JSON.stringify).join('\\n')+'\\n';
+                                return new Response(frames,{status:200});
+                            }
+                            if(String(url).startsWith('/api/ui/memory/dialogs/history?')){
+                                const a=[
+                                    {role:'user',content:'hello',exchange_id:'ex00001'},
+                                    {role:'assistant',content:'answer1',exchange_id:'ex00001'}
+                                ];
+                                const b=[
+                                    {role:'user',content:'hello',exchange_id:'ex00002'},
+                                    {role:'assistant',content:'answer2',exchange_id:'ex00002'}
+                                ];
+                                return response({status:'READY',dialog_id:did,
+                                    messages:window.__nativePosts===1?a:[...a,...b]});
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE');
+                        };
+                    }""")
+                    bridge=(pathlib.Path(__file__).parent /
+                            'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    actual=await page.evaluate("""async () => {
+                        const body=JSON.stringify({
+                            dialog_id:'a'.repeat(32),message:'hello',request_id:'b3-test'});
+                        const first=fetch('/api/nox/chat',{method:'POST',body});
+                        for(let n=0;n<100 && !window.__releaseFirst;n++)
+                            await new Promise(resolve=>setTimeout(resolve,3));
+                        if(!window.__releaseFirst)return {error:'FIRST_NATIVE_NOT_STARTED'};
+                        const second=await fetch('/api/nox/chat',{method:'POST',body});
+                        const rejected=await second.text();
+                        const atOverlap=window.__nativePosts;
+                        window.__releaseFirst();
+                        const completed=await (await first).text();
+                        const third=await (await fetch('/api/nox/chat',
+                            {method:'POST',body})).text();
+                        return {atOverlap,rejected,completed,third,
+                            posts:window.__nativePosts};
+                    }""")
+                    self.assertNotIn('error', actual)
+                    self.assertEqual(actual['atOverlap'], 1)
+                    self.assertIn('HOLD_DIALOG_INFLIGHT', actual['rejected'])
+                    self.assertNotIn('"type":"done"', actual['rejected'])
+                    self.assertIn('"type":"done"', actual['completed'])
+                    self.assertIn('"type":"done"', actual['third'])
+                    self.assertEqual(actual['posts'], 2)
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
+
 if __name__ == '__main__':
     unittest.main()
