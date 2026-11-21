@@ -136,6 +136,41 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(len(requests),1)
                 self.assertNotIn('_agent_final',payload)
 
+    async def test_model_heartbeat_cannot_keep_sse_post_open_forever(self):
+        # Heartbeats continually reset an HTTP read timeout. A real partial
+        # answer followed by endless legal comments must still terminate HOLD
+        # without any replayed POST or S03 completion.
+        class Heartbeats(httpx.AsyncByteStream):
+            def __init__(self):self.closed=False
+            async def __aiter__(self):
+                yield frame('Hola 🌍')
+                while True:
+                    await asyncio.sleep(0.002)
+                    yield b': heartbeat\n\n'
+            async def aclose(self):self.closed=True
+
+        for streaming in (True,False):
+            with self.subTest(streaming=streaming):
+                chunks=Heartbeats()
+                requests,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Hola'}]}
+                with (factory,patch.object(stream,'MODEL_STREAM_WALL_SECONDS',0.04)):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Hola',streaming)
+                    if streaming:
+                        wire=''.join([part async for part in response.body_iterator])
+                        self.assertIn('HOLD_MODEL_STREAM_DEADLINE',wire)
+                        self.assertNotIn('[DONE]',wire)
+                        self.assertIn('Hola',wire)
+                    else:
+                        self.assertEqual(response.status_code,502)
+                        self.assertIn(b'HOLD_MODEL_STREAM_DEADLINE',response.body)
+                self.assertTrue(chunks.closed)
+                self.assertEqual(len(requests),1)
+                self.assertNotIn('_agent_final',payload)
+
+
     async def test_oversized_s03_history_holds_before_second_decode(self):
         # A history that cannot possibly fit the full native POST must not
         # be decoded into another large copy under scarce cgroup memory.
