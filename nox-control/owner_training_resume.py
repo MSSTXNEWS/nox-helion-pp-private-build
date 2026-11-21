@@ -1002,7 +1002,10 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
             # resumed 1000-step lineage may carry a per-run delta instead.
             or (not allow_completed and result['successful_optimizer_steps'] != step)
             or result.get('adapter_delta_verified') is not True
-            or type(result.get('loss')) not in (int, float) or not math.isfinite(result['loss'])):
+            or type(result.get('loss')) not in (int, float) or not math.isfinite(result['loss'])
+            # Bounded cross-entropy is nonnegative; a signed checkpoint
+            # cannot prove valid optimizer loss with a finite negative value.
+            or result['loss'] < 0):
         raise RuntimeError('HOLD_PAUSED_OPTIMIZER_RECEIPT')
     before, after = result.get('before_tensor_sha256'), result.get('after_tensor_sha256')
     if any(not isinstance(value, str) or not re.fullmatch('[0-9a-f]{64}', value) for value in (before, after)) or before == after:
