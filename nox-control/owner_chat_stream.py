@@ -183,7 +183,7 @@ async def _bounded_sse_lines(response):
     """Bound partial SSE fields before a newline; httpx.aiter_lines() does not.
 
     Preserve CR, LF, CRLF (including split CRLF) and UTF-8 chunk boundaries.
-    No buffering of untrusted unterminated model output beyond 300k chars.
+    No buffering of untrusted unterminated model output beyond 300k UTF-8 bytes.
     """
     pending=''
     pending_bytes=0
