@@ -24,5 +24,43 @@ recon2)
   for r in unsloth/Qwen3.5-9B-GGUF unsloth/Qwen3.5-4B-GGUF unsloth/Qwen3.5-27B-GGUF; do echo "== $r"; curl -s -m15 "https://huggingface.co/api/models/$r/tree/main" | python3 -c 'import sys,json;[print(x["path"],x.get("size")) for x in json.load(sys.stdin) if "Q4_K_M" in x["path"] or "Q4_K_XL" in x["path"] or "mmproj" in x["path"]]' 2>&1 | head -6; done
   ls /root/nox/dl/hf /root/nox/models 2>/dev/null | head; ls /root/s2_backup* 2>/dev/null | head -5
   ;;
+fast9b)
+  D=/root/nox/dl/hf/qwen35_9b; F=$D/Qwen3.5-9B-Q4_K_M.gguf; LG=/root/nox/logs; BIN=/root/nox/llama.cpp/build/bin/llama-server
+  U=https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf
+  mkdir -p $D
+  SZ=$(curl -sIL -m20 "$U" | tr -d '\r' | awk 'tolower($1)=="content-length:"{v=$2} END{print v}')
+  CUR=$(stat -c %s $F 2>/dev/null || echo 0); echo "size remote=$SZ local=$CUR"
+  if [ -n "$SZ" ] && [ "$CUR" -lt "$SZ" ]; then
+    pgrep -f "qwen35_9b.*curl|curl.*Qwen3.5-9B" >/dev/null || nohup setsid curl -fL -C - --retry 5 -o $F "$U" > $LG/dl_qwen35.log 2>&1 < /dev/null &
+    sleep 60; echo "dl now $(stat -c %s $F)"; exit 0
+  fi
+  pgrep -f "port 8084" >/dev/null && pkill -f "port 8084"; sleep 1
+  nohup setsid $BIN -m $F --host 127.0.0.1 --port 8084 -c 12288 -ngl 99 -fa on --parallel 2 --jinja --chat-template-kwargs '{"enable_thinking":false}' --reasoning-budget 0 > $LG/fast9b_test.log 2>&1 < /dev/null &
+  for i in $(seq 1 40); do curl -s -m2 localhost:8084/health | grep -q ok && break; sleep 3; done
+  tail -n 3 $LG/fast9b_test.log | cut -c1-200
+  nvidia-smi --query-gpu=memory.used --format=csv,noheader
+  cat > /tmp/bench.py <<'P'
+import json,sys,time,urllib.request
+port=sys.argv[1]
+def run(msg,n=120):
+    b={"model":"fast","messages":[{"role":"system","content":"Ты NOX HELION. Отвечай по-русски коротко."},{"role":"user","content":msg}],"max_tokens":n,"stream":True,"temperature":0.7}
+    t=time.time();r=urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:%s/v1/chat/completions"%port,json.dumps(b).encode(),{"Content-Type":"application/json"}),timeout=60)
+    first=None;k=0;txt=""
+    for l in r:
+        l=l.decode()
+        if l.startswith("data: {"):
+            d=json.loads(l[6:])["choices"][0]["delta"]; c=d.get("content") or ""
+            if c:
+                if first is None:first=time.time()-t
+                k+=1;txt+=c
+    tot=time.time()-t
+    return first,k/max(tot-(first or 0),1e-6),txt[:80].replace("\n"," ")
+run("привет",5)
+for m in ("Привет, кто ты?","Объясни разницу между TCP и UDP в трёх предложениях.","Напиши план проверки сервера на 5 пунктов."):
+    f,tps,t=run(m); print("TTFT=%.2fs tps=%.1f | %s"%(f,tps,t))
+P
+  python3 /tmp/bench.py 8084
+  echo "--old 4B:"; python3 /tmp/bench.py 8083 | tail -2
+  ;;
 *) echo unknown;;
 esac
