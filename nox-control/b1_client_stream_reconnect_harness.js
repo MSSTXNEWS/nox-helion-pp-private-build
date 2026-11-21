@@ -57,7 +57,10 @@
       reconnectControllers=new Map();
     async function begin(raw){
       const s=snap(raw),k=key(s);
-      if(started.has(k)||reconnectSeen.has(k)) hold('HOLD_STREAM_NO_REPOST');
+      if(started.has(k)) hold('HOLD_STREAM_NO_REPOST');
+      // Preserve RECONNECT_ONLY when a committed row exists, while refusing
+      // any new POST after an ambiguous reconnect with no durable row yet.
+      const priorReconnect=reconnectSeen.has(k);
       // Claim the exchange SYNCHRONOUSLY before the first await. Previously two
       // simultaneous begin() calls could both pass started.has() while the
       // host's readCommitted() promise was pending, causing two model POSTs.
@@ -90,6 +93,7 @@
         if(preflight.aborted||ctrl.signal.aborted) return stopped();
         if(preflight.storageError) hold('HOLD_STREAM_STORAGE');
         if(preflight.previous) hold('HOLD_STREAM_RECONNECT_ONLY');
+        if(priorReconnect) hold('HOLD_STREAM_NO_REPOST');
         // The host must ALSO enforce durable exchange idempotency across
         // tabs, reloads and devices. Never re-POST an ambiguous exchange.
         // A custom transport can ignore AbortSignal and keep post() pending
