@@ -382,6 +382,57 @@ def main():
             rows[0].dataset.noxB1EventId==='event-quick-stop'&&
             rows[0].dataset.noxB1State==='terminal';
         }"""))
+        check("two concurrent adapters serialize the same turn FIFO",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'reattach-shared-fifo'};
+          const ctrl=new AbortController();
+          let unblock,entered=0;
+          const gate=new Promise(resolve=>unblock=resolve);
+          const firstUi=NOXB1AbortSafeUI.createUiAdapter({
+            container:chat,beforeCommit:async kind=>{
+              if(kind==='delta'){entered++;await gate;}
+            }
+          });
+          const secondUi=NOXB1AbortSafeUI.createUiAdapter({container:chat});
+          const a=firstUi.onDelta(s,'A',ctrl.signal);
+          for(let i=0;i<20&&!entered;i++) await Promise.resolve();
+          if(entered!==1)return false;
+          const b=secondUi.onDelta(s,'B',ctrl.signal);
+          for(let i=0;i<5;i++) await Promise.resolve();
+          const premature=Array.from(chat.children).some(
+            x=>x.dataset.noxB1Exchange===s.exchange_id);
+          unblock();
+          const results=await Promise.all([a,b]);
+          const rows=Array.from(chat.children).filter(
+            x=>x.dataset.noxB1Exchange===s.exchange_id);
+          return !premature&&results.every(Boolean)&&rows.length===1&&
+            rows[0].textContent==='AB';
+        }"""))
+        check("two concurrent adapters coalesce identical terminal projection",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'reattach-shared-terminal'};
+          const ctrl=new AbortController();
+          let unblock,entered=0;
+          const gate=new Promise(resolve=>unblock=resolve);
+          const firstUi=NOXB1AbortSafeUI.createUiAdapter({
+            container:chat,beforeCommit:async kind=>{
+              if(kind==='terminal'){entered++;await gate;}
+            }
+          });
+          const secondUi=NOXB1AbortSafeUI.createUiAdapter({container:chat});
+          const a=firstUi.upsertTerminal(s,'canonical-event-shared',ctrl.signal);
+          for(let i=0;i<20&&!entered;i++) await Promise.resolve();
+          if(entered!==1)return false;
+          const b=secondUi.upsertTerminal(s,'canonical-event-shared',ctrl.signal);
+          const samePromise=a===b;
+          unblock();
+          const results=await Promise.all([a,b]);
+          const rows=Array.from(chat.children).filter(
+            x=>x.dataset.noxB1Exchange===s.exchange_id);
+          return samePromise&&entered===1&&results.every(Boolean)&&
+            rows.length===1&&rows[0].dataset.noxB1State==='terminal'&&
+            rows[0].dataset.noxB1EventId==='canonical-event-shared';
+        }"""))
         browser.close()
     print(f"B1 source-only real Chromium: {len(checks)}/{len(checks)} PASS")
     for name, _ in checks:
