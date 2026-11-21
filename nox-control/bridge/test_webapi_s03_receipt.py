@@ -226,5 +226,40 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertEqual(len(writes), 1)
 
+
+    def test_stop_scope_and_bad_json_cannot_cancel_all(self):
+        """Invalid or non-generation commands cannot trigger an implicit broadcast."""
+        stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
+
+        class BadJSON:
+            async def json(self):
+                raise ValueError("broken payload")
+
+        async def scenario():
+            bad = await stop(BadJSON())
+            wrong_shape = await stop(Request(["not", "an", "object"]))
+            wrong_scope = await stop(Request({"scope": "owner", "request_id": "*"}))
+            media_scope = await stop(Request({"scope": "media", "request_id": "*"}))
+            bad_target = await stop(Request({"request_id": {"id": "r1"}}))
+            empty_target = await stop(Request({"request_id": ""}))
+            before = (W.CANCEL_ALL_EPOCH, set(W.CANCEL))
+            valid = await stop(Request({"scope": "generation", "request_id": "chat-1"}))
+            return (bad, wrong_shape, wrong_scope, media_scope, bad_target,
+                    empty_target, before, valid, (W.CANCEL_ALL_EPOCH, set(W.CANCEL)))
+
+        with mock.patch.object(W, "CANCEL", set()), mock.patch.object(W, "CANCEL_ALL_EPOCH", 0):
+            bad, shape, owner, media, target, empty, before, valid, after = asyncio.run(scenario())
+        self.assertEqual([x.status_code for x in (bad, shape, owner, media, target, empty)],
+                         [400, 400, 409, 409, 400, 400])
+        self.assertEqual(before, (0, set()))
+        self.assertEqual(after, (0, {"chat-1"}))
+        self.assertEqual(valid["status"], "STOPPING")
+        self.assertEqual(valid["scope"], "generation")
+        self.assertEqual(valid["target_request_id"], "chat-1")
+        self.assertFalse(valid["stop_confirmed"])
+        self.assertFalse(valid["media_stopped"])
+        self.assertFalse(valid["task_cancelled"])
+        self.assertFalse(valid["owner_stop"])
+
 if __name__ == "__main__":
     unittest.main()
