@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused regression: probe may succeed only after key detach and full readback."""
+"""Focused regression for independent read-only owner probe; S1 launcher is untouched."""
 import contextlib
 import importlib.util
 import io
@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 os.environ.setdefault("NOX2", "unusable-test-token")
-SCRIPT = pathlib.Path(__file__).with_name("run_update.py")
+SCRIPT = pathlib.Path(__file__).with_name("owner_readonly_probe.py")
 spec = importlib.util.spec_from_file_location("nox_owner_probe_under_test", SCRIPT)
 probe = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(probe)
