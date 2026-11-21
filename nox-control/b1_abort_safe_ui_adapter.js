@@ -88,8 +88,32 @@
         if(known){
           if(known.delta!==delta) hold('HOLD_B1_UI_REPLAY_PAYLOAD');
           if(known.committed) return false;
-          return known.promise.then(ok=>
-            ok===true?false:onDelta(s,delta,signal,eventId));
+          // An overlapping reconnect must observe its OWN STOP. Waiting only
+          // on the original in-flight delta could otherwise delay cancellation
+          // until that adapter's precommit timeout, even after fresh STOP.
+          const readback=known.promise.then(
+            ok=>{
+              if(signal.aborted) return false;
+              return ok===true?false:onDelta(s,delta,signal,eventId);
+            },
+            error=>{
+              if(signal.aborted) return false;
+              // A failed prior projection releases its ID reservation; allow
+              // GET-only replay using the same event, without a second POST.
+              if(deltaEvents.get(replayKey)!==known)
+                return onDelta(s,delta,signal,eventId);
+              throw error;
+            }
+          );
+          let onAbort;
+          const stopped=new Promise(resolve=>{
+            onAbort=()=>resolve(false);
+            signal.addEventListener('abort',onAbort,{once:true});
+            if(signal.aborted) onAbort();
+          });
+          return Promise.race([readback,stopped]).finally(()=>{
+            signal.removeEventListener('abort',onAbort);
+          });
         }
       }
       const previous=deltaTails.get(k)||Promise.resolve();
