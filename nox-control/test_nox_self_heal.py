@@ -55,6 +55,30 @@ class SafeRepairTests(unittest.TestCase):
                 server.shutdown()
                 thread.join(timeout=4)
 
+    def test_atomic_state_write_does_not_follow_predictable_temp_symlink(self):
+        # Pre-existing state.json.tmp used to be opened with truncation and
+        # could overwrite a canary file. The private tmp filename prevents it.
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "state.json"
+            canary = Path(root) / "unrelated"
+            canary.write_text("DO_NOT_CHANGE", encoding="utf8")
+            fixed = Path(root) / "state.json.tmp"
+            fixed.symlink_to(canary)
+            healer.write(state, {"services": {"nox-dispatcher.service": {"failures": 1}}})
+            self.assertEqual(canary.read_text(encoding="utf8"), "DO_NOT_CHANGE")
+            self.assertTrue(fixed.is_symlink())
+            self.assertEqual(healer.load(state)["services"]["nox-dispatcher.service"]["failures"], 1)
+            self.assertEqual(state.stat().st_mode & 0o777, 0o600)
+
+    def test_failed_atomic_state_replacement_cleans_private_temp(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "state.json"
+            with patch.object(healer.os, "replace", side_effect=OSError("simulated")):
+                with self.assertRaises(OSError):
+                    healer.write(state, {"services": {}})
+            self.assertFalse(state.exists())
+            self.assertEqual(list(Path(root).glob(".state.json.*.tmp")), [])
+
     def test_stop_blocks_restart(self):
         with tempfile.TemporaryDirectory() as t:
             stop=Path(t)/"STOP"
