@@ -188,7 +188,7 @@ class ProbeTests(unittest.TestCase):
             status = 200
             url = 'http://127.0.0.1:8080/api/nox/chat/stream'
             def __init__(self, frames):
-                self.lines = iter((json.dumps(frame) + '\\n').encode()
+                self.lines = iter((json.dumps(frame) + '\n').encode()
                                   for frame in frames)
                 self.closed = False
             def readline(self, max_line):
