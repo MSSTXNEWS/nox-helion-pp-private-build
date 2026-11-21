@@ -755,6 +755,30 @@ class ProbeTests(unittest.TestCase):
         source = path.read_text()
         self.assertIn('require_browser_asset_mime(asset, local)', source)
 
+    def test_resonance_runtime_assets_complete_and_local(self):
+        """Inspect all browser-critical JS/CSS, never silently skip foreign assets."""
+        page = 'http://127.0.0.1:8080/nox-web-v29/pc/resonance.html'
+        html = ('<base href="/nox-web-v29/pc/"><script src="main.js?v=2"></script>'
+                '<link href="theme.css" rel="stylesheet">'
+                '<link href="https://cdn.test/ico" rel="icon">')
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'):
+            self.assertEqual(probe.resonance_runtime_assets(html, page), [
+                'http://127.0.0.1:8080/nox-web-v29/pc/main.js?v=2',
+                'http://127.0.0.1:8080/nox-web-v29/pc/theme.css'])
+            for poison in ('<script src="//cdn.test/a.js"></script>',
+                           '<link rel="stylesheet" href="https://cdn.test/a.css">',
+                           '<base href="https://cdn.test/"><script src="a.js"></script>'):
+                with self.assertRaisesRegex(RuntimeError, 'HOLD_RESONANCE_EXTERNAL_RUNTIME_ASSET'):
+                    probe.resonance_runtime_assets(poison, page)
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_RESONANCE_RUNTIME_ASSET_CENSUS'):
+                probe.resonance_runtime_assets(
+                    ''.join('<script src="a%d.js"></script>' % i for i in range(36)), page)
+            self.assertEqual(len(probe.resonance_runtime_assets(
+                ''.join('<script src="a%d.js"></script>' % i for i in range(35)), page)), 35)
+        source = path.read_text()
+        self.assertIn('resources=resonance_runtime_assets(text,BASE+path)', source)
+        self.assertNotIn('for resource in resources[:35]:', source)
+
     def test_resonance_versioned_asset_query_is_preserved_and_pinned(self):
         class Response:
             def __init__(self, url):
