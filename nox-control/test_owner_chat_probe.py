@@ -25,6 +25,65 @@ class SyntheticBoundedReader:
 
 
 class ProbeTests(unittest.TestCase):
+    def test_logout_ack_revocation_fences_green_probe_receipt(self):
+        """No successful COMPLETE if the synthetic owner login survives logout."""
+        class Response:
+            def __init__(self, path, status, base='http://127.0.0.1:8080'):
+                self.url, self.status, self.closed = base + path, status, False
+            def close(self):
+                self.closed = True
+            def __enter__(self):
+                return self
+            def __exit__(self, *_):
+                self.close()
+
+        good_logout = Response('/chat/logout', 200)
+        good_revocation = Response('/api/nox/status', 401)
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'), \\
+             patch.object(probe, 'request',
+                          side_effect=[good_logout, good_revocation]) as http:
+            self.assertTrue(probe.require_logout_revoked('owner'))
+            self.assertEqual([call.args[1] for call in http.call_args_list],
+                             ['/chat/logout', '/api/nox/status'])
+        self.assertTrue(good_logout.closed)
+        self.assertTrue(good_revocation.closed)
+
+        for path, code, expected in (
+            ('/chat/logout', 503, 'HOLD_OWNER_LOGOUT_NOT_ACKNOWLEDGED'),
+            ('/chat/login', 200, 'HOLD_OWNER_READBACK_RESPONSE_ROUTE'),
+        ):
+            logout = Response(path, code)
+            with self.subTest(path=path, code=code), \\
+                 patch.object(probe, 'BASE', 'http://127.0.0.1:8080'), \\
+                 patch.object(probe, 'request', return_value=logout) as http:
+                with self.assertRaisesRegex(RuntimeError, expected):
+                    probe.require_logout_revoked('owner')
+                http.assert_called_once()
+            self.assertTrue(logout.closed)
+        for path, status, reason in (
+            ('/api/nox/status', 200, 'HOLD_OWNER_LOGOUT_SESSION_ACTIVE'),
+            ('/chat/login', 401, 'HOLD_OWNER_READBACK_RESPONSE_ROUTE'),
+            ('/api/nox/status', 503, 'HOLD_OWNER_LOGOUT_SESSION_ACTIVE'),
+        ):
+            logout, check = Response('/chat/logout', 204), Response(path, status)
+            with self.subTest(check=(path, status)), \\
+                 patch.object(probe, 'BASE', 'http://127.0.0.1:8080'), \\
+                 patch.object(probe, 'request', side_effect=[logout, check]):
+                with self.assertRaisesRegex(RuntimeError, reason):
+                    probe.require_logout_revoked('owner')
+            self.assertTrue(logout.closed)
+            self.assertTrue(check.closed)
+        with patch.object(probe, 'request', side_effect=OSError('offline')):
+            with self.assertRaises(OSError):
+                probe.require_logout_revoked('owner')
+
+        main = path.read_text()[path.read_text().index('def main():'):]
+        self.assertNotIn("except Exception:pass", main)
+        self.assertLess(main.index('require_logout_revoked(client)'),
+                        main.index("emit('chat_executor_question',executor_question_receipt)"))
+        self.assertIn("if sys.exc_info()[0] is None:", main)
+        self.assertIn("emit('chat_logout_cleanup_hold'", main)
+
     def test_executor_positive_receipt_deferred_past_all_final_gates(self):
         """No green third-turn evidence may be emitted before postquiet, owner, logout and final budget."""
         code = path.read_text()
@@ -39,7 +98,7 @@ class ProbeTests(unittest.TestCase):
             'require_postturn_executor_identity(client, fresh)',
             'executor_question_receipt={',
             "emit('chat_recent_timing_after',metrics())",
-            "request(client,'/chat/logout','POST',{})",
+            'require_logout_revoked(client)',
             '    require_executor_turn_budget(time.monotonic()-probe_started)\\n    if executor_question_receipt is not None:',
             "emit('chat_executor_question',executor_question_receipt)",
             "print('NOX_MAINT_REPAIR_COMPLETE=true'",
