@@ -431,6 +431,71 @@ def main():
           return result==='STOPPED_TIMEOUT' && noRepost &&
             posts===1 && acks===0 && deltas===0;
         }'''))
+        check('hung reconnect GET times out and retry stays GET-only', page.evaluate('''async () => {
+          const s={conversation_id:'reconnect-deadline',exchange_id:'get-hung'};
+          let reads=0,posts=0,acks=0,projections=0,late;
+          const transport={...opts.transport,
+            post(){posts++;throw Error('NO_MODEL_POST')},
+            readback(){
+              reads++;
+              if(reads===1)return new Promise(resolve=>{late=resolve});
+              return Promise.resolve({conversation_id:s.conversation_id,
+                exchange_id:s.exchange_id});
+            },
+            async ack(){acks++;return true}
+          };
+          const ui={async onDelta(){},
+            async upsertTerminal(){projections++;return true;}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,
+            reconnectReadTimeoutMs:30
+          });
+          const first=await Promise.race([
+            c.reconnect(s).then(()=>null,e=>e.code),
+            new Promise(r=>setTimeout(()=>r('HUNG'),400))
+          ]);
+          if(first!=='HOLD_STREAM_READBACK_TIMEOUT'||reads!==1||
+             posts!==0||acks!==0||projections!==0)return false;
+          const recovered=await c.reconnect(s);
+          late({conversation_id:s.conversation_id,exchange_id:s.exchange_id});
+          await new Promise(r=>setTimeout(r,0));
+          return recovered.safe_to_ack===true&&reads===2&&
+            posts===0&&acks===1&&projections===1;
+        }'''))
+        check('late witness after timeout cannot project or ACK', page.evaluate('''async () => {
+          const s={conversation_id:'reconnect-deadline',exchange_id:'witness-hung'};
+          let posts=0,reads=0,acks=0,projects=0,calls=0,late;
+          const transport={...opts.transport,
+            post(){posts++;throw Error('NO_MODEL_POST')},
+            readback(){reads++;return Promise.resolve({conversation_id:s.conversation_id,
+              exchange_id:s.exchange_id});},
+            async ack(){acks++;return true}
+          };
+          const bridge={acceptTerminal(){
+            calls++;
+            const witness={safe_to_ack:true,model_post:false,
+              conversation_id:s.conversation_id,exchange_id:s.exchange_id,
+              projection_event_id:'event-witness',ack_cursor:'cursor-witness'};
+            if(calls===1)return new Promise(resolve=>{late=()=>resolve(witness)});
+            return Promise.resolve(witness);
+          }};
+          const ui={async onDelta(){},
+            async upsertTerminal(){projects++;return true;}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge,ui,reconnectReadTimeoutMs:30
+          });
+          const first=await Promise.race([
+            c.reconnect(s).then(()=>null,e=>e.code),
+            new Promise(r=>setTimeout(()=>r('HUNG'),400))
+          ]);
+          if(first!=='HOLD_STREAM_WITNESS_TIMEOUT'||calls!==1||
+             posts!==0||acks!==0||projects!==0)return false;
+          const recovered=await c.reconnect(s);
+          late();
+          await new Promise(r=>setTimeout(r,0));
+          return recovered.safe_to_ack===true&&calls===2&&reads===2&&
+            posts===0&&acks===1&&projects===1;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
