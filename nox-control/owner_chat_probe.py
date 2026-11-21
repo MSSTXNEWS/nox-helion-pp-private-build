@@ -455,10 +455,20 @@ def model_slots_state(client):
         raise RuntimeError('HOLD_CHAT_SLOTS_ENDPOINT_UNAVAILABLE') from exc
     if not isinstance(slots, list) or not slots or len(slots) > 1024:
         raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
+    # llama.cpp /slots supplies per-slot IDs. A duplicated or incomplete ID
+    # census must not authorize a competing synthetic generation. Preserve
+    # compatibility with older servers that expose no IDs at all.
+    identified = any(isinstance(slot, dict) and 'id' in slot for slot in slots)
+    seen_ids = set()
     busy = 0
     for slot in slots:
         if not isinstance(slot, dict):
             raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
+        if identified:
+            slot_id = slot.get('id')
+            if type(slot_id) is not int or slot_id < 0 or slot_id in seen_ids:
+                raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
+            seen_ids.add(slot_id)
         flags = [slot[key] for key in ('is_processing', 'processing') if key in slot]
         if (not flags or any(type(flag) is not bool for flag in flags)
                 or len(set(flags)) != 1):
