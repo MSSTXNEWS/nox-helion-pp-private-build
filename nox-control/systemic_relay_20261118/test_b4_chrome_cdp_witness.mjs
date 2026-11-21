@@ -12,6 +12,8 @@ class Stub {
       if(this.responseBodyDelay?.[p.requestId])
         await new Promise(resolve=>setTimeout(resolve,this.responseBodyDelay[p.requestId]));
       const canonical=this.bodies.get(p.requestId).toString('base64');
+      if(p.requestId==='2'&&typeof this.postAckEvent==='function')
+        setTimeout(()=>this.postAckEvent(this),25);
       if(typeof this.responseBodyTextMutator==='function')return {body:this.responseBodyTextMutator(this.bodies.get(p.requestId).toString('utf8'),p.requestId),base64Encoded:false};
       return {body:typeof this.responseBodyMutator==='function'?this.responseBodyMutator(canonical,p.requestId):canonical,base64Encoded:true};
     }return {};}
@@ -20,6 +22,7 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
   c.responseBodyMutator=options.responseBodyBase64Mutator;
   c.responseBodyTextMutator=options.responseBodyTextMutator;
   c.responseBodyDelay=options.responseBodyDelay;
+  c.postAckEvent=options.postAckEvent;
   if(options.postDataMode){
     const normalSend=c.send.bind(c);
     c.send=(cmd,p={})=>{
@@ -33,7 +36,7 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       return normalSend(cmd,p);
     };
   }
-  return capture({ws:'ws://127.0.0.1:9333/fake',makeSession:async()=>c,timeoutMs:2000,onReady:async()=>{
+  return capture({ws:'ws://127.0.0.1:9333/fake',makeSession:async()=>c,timeoutMs:2000,quiescenceMs:options.quiescenceMs??80,onReady:async()=>{
   setTimeout(async()=>{for(let i=0;i<2;i++){
     const requestId=String(i+1),o=i===1?options:{},timestamp=Object.hasOwn(o,'requestTimestamp')?o.requestTimestamp:100+i;
     const chunks=i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):[Buffer.from(body)];
@@ -511,4 +514,20 @@ test('two-turn attribution follows request-start order even when CDP body ACK co
     'any observed unexpected third model POST must invalidate a two-turn measurement');
   await assert.rejects(run(false,null,null,null,{injectDuplicatePost:true}),/DUPLICATE_CDP_ID/,
     'a repeated CDP request ID must fail closed');
+});
+
+
+test('post-body quiescence rejects third POST or CDP disconnect while preserving clean two-turn timing',async()=>{
+  const control=await run(false,null,null,null,{quiescenceMs:85});
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  assert.deepEqual(control.turns.map(t=>t.cdp_request_id),['1','2']);
+  const latePost=c=>c.emit('Network.requestWillBeSent',{
+    requestId:'third-after-second-body-ack',timestamp:103,
+    request:{method:'POST',url:'http://localhost/api/nox/chat',postData:'{"unexpected":3}'}
+  });
+  await assert.rejects(run(false,null,null,null,{quiescenceMs:85,postAckEvent:latePost}),/EXTRA_CDP_POST/);
+  await assert.rejects(run(false,null,null,null,{
+    quiescenceMs:85,postAckEvent:c=>c.emit('CDP_DISCONNECTED',{})
+  }),/CDP_DISCONNECTED/);
 });
