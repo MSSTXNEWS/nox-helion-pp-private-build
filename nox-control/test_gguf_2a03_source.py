@@ -34,7 +34,7 @@ def isolated_worker_node(tree, name):
     nodes = [node for node in tree.body
              if isinstance(node, (ast.FunctionDef, ast.If))
              and ((isinstance(node, ast.FunctionDef) and node.name == name)
-                  or (isinstance(node, ast.If)
+                  or (name == "__mixed_hold__" and isinstance(node, ast.If)
                       and "not all(results)" in ast.unparse(node.test)))]
     assert len(nodes) == 1, (name, len(nodes))
     return compile(ast.fix_missing_locations(ast.Module(
@@ -95,8 +95,8 @@ class GGUFSourceContracts(unittest.TestCase):
             exec(isolated_worker_node(tree, "verified"), scope)
             exec(isolated_worker_node(tree, "one"), scope)
             ample_disk = types.SimpleNamespace(f_bavail=1 << 30, f_frsize=4096)
-            with mock.patch.object(os, "statvfs", return_value=ample_disk), \\
-                 mock.patch.object(subprocess, "run", side_effect=download):
+            with (mock.patch.object(os, "statvfs", return_value=ample_disk),
+                 mock.patch.object(subprocess, "run", side_effect=download)):
                 staged = scope["one"](name)
                 self.assertEqual(calls, [cut], "resume must reuse existing bytes")
                 self.assertEqual(Path(staged).read_bytes(), data)
