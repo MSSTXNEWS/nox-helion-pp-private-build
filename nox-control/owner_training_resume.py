@@ -421,6 +421,8 @@ def dispatcher_upgrade_pins(receipt, request=None, source=None):
             or not isinstance(source, str) or not re.fullmatch('[0-9a-f]{40}', source)):
         raise RuntimeError('HOLD_PINNED_DISPATCHER_UPGRADE_CONTEXT_REQUIRED')
     dispatcher = ROOT / 'scripts/nox_dispatcher_t855u.py'
+    if type(receipt) is not dict:
+        raise RuntimeError('HOLD_VERIFIED_DISPATCHER_UPGRADE_REQUIRED')
     if (receipt.get('schema') != 'NOX_OWNER_DISPATCHER_UPGRADE_V1'
             or receipt.get('request') != request or receipt.get('source_sha') != source
             or receipt.get('state') != 'SIX_WORKER_LIFECYCLE_MEDIA_PLANS_REPORTS_VERIFIED'
@@ -431,15 +433,23 @@ def dispatcher_upgrade_pins(receipt, request=None, source=None):
             or not isinstance(receipt.get('training_hold_sha256'), str)
             or not re.fullmatch('[0-9a-f]{64}', receipt['training_hold_sha256'])):
         raise RuntimeError('HOLD_VERIFIED_DISPATCHER_UPGRADE_REQUIRED')
-    workers = receipt.get('workers') or {}
-    worker_ids = workers.get('ids') or []
-    if (not isinstance(worker_ids, list) or len(worker_ids) != 6 or any(not isinstance(value, str) for value in worker_ids)
+    workers = receipt.get('workers')
+    if type(workers) is not dict:
+        raise RuntimeError('HOLD_DISPATCHER_UPGRADE_SIX_WORKERS_REQUIRED')
+    worker_ids = workers.get('ids')
+    if (type(worker_ids) is not list or len(worker_ids) != 6
+            or any(type(value) is not str for value in worker_ids)
             or len(set(worker_ids)) != 6):
         raise RuntimeError('HOLD_DISPATCHER_UPGRADE_SIX_WORKERS_REQUIRED')
-    plan = receipt.get('native_plan') or {}
-    children = plan.get('children') or []
+    plan = receipt.get('native_plan')
+    if type(plan) is not dict:
+        raise RuntimeError('HOLD_DISPATCHER_UPGRADE_NATIVE_PLAN_REQUIRED')
+    children = plan.get('children')
+    if (type(children) is not list
+            or any(type(row) is not dict for row in children)):
+        raise RuntimeError('HOLD_DISPATCHER_UPGRADE_NATIVE_PLAN_REQUIRED')
     parent_id = 'owner.autonomy.audit.' + request
-    child_ids = [row.get('id') for row in children if isinstance(row, dict)]
+    child_ids = [row.get('id') for row in children]
     if (plan.get('verified') is not True or plan.get('parent_status') != 'done'
             or plan.get('scope') != 'BOUNDED_COMPONENT_AUDIT' or plan.get('unique_claims') != 7
             or plan.get('training_optimizer_update_proven') is not False
@@ -448,9 +458,10 @@ def dispatcher_upgrade_pins(receipt, request=None, source=None):
             or any(row.get('status') != 'done' for row in children)):
         raise RuntimeError('HOLD_DISPATCHER_UPGRADE_NATIVE_PLAN_REQUIRED')
     task_ids = set(child_ids + [parent_id])
-    proofs = plan.get('proofs') or []
-    reports = plan.get('owner_reports') or []
-    if (len(proofs) != 7 or any(not isinstance(row, dict) for row in proofs)
+    proofs = plan.get('proofs')
+    reports = plan.get('owner_reports')
+    if (type(proofs) is not list or type(reports) is not list
+            or len(proofs) != 7 or any(not isinstance(row, dict) for row in proofs)
             or {row.get('id') for row in proofs} != task_ids
             or any(not isinstance(row.get('receipt_sha256'), str)
                    or not re.fullmatch('[0-9a-f]{64}', row['receipt_sha256']) for row in proofs)
