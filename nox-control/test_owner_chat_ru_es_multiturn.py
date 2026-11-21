@@ -2113,5 +2113,91 @@ async function check(chunks, status=200) {
                 browser.close()
 
 
+
+    def test_ru_es_reload_css_generated_visual_text_fence_real_chromium(self):
+        """CSS pseudo glyphs/transforms cannot silently change rendered RU/ES text.
+
+        Synthetic Chromium DOM only, not live S03, serving or model acceptance.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'css-content-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda req: posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items) {
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body'; body.textContent=row.content;
+                        bubble.append(body); root.append(bubble);
+                    }
+                }""", transcript)
+                witness = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(witness(), True)
+                style = page.add_style_tag(content=(
+                    '#messages .v24-msg:nth-child(2) .body::before'
+                    '{content:"texto ajeno";}'
+                ))
+                self.assertIs(witness(), False, 'CSS ::before adds visual text')
+                style.evaluate('(node)=>node.remove()')
+                self.assertIs(witness(), True)
+                style = page.add_style_tag(content=(
+                    '#messages .v24-msg:nth-child(3)::after'
+                    '{content:"otro";}'
+                ))
+                self.assertIs(witness(), False, 'bubble ::after changes visible glyphs')
+                style.evaluate('(node)=>node.remove()')
+                self.assertIs(witness(), True)
+                # A nested span and its pseudoelement can alter visual text
+                # while the parent still has the exact persisted textContent.
+                body = page.locator('#messages .body').first
+                original = transcript[0]['content']
+                body.evaluate("""(node,value)=>{
+                    const span=document.createElement('span');
+                    span.textContent=value;
+                    node.replaceChildren(span);
+                }""", original)
+                self.assertIs(witness(), True)
+                style = page.add_style_tag(content=(
+                    '#messages .v24-msg:first-child .body span::after'
+                    '{content:" !";}'
+                ))
+                self.assertIs(witness(), False, 'nested ::after injects text')
+                style.evaluate('(node)=>node.remove()')
+                self.assertIs(witness(), True)
+                style = page.add_style_tag(content=(
+                    '#messages {text-transform:uppercase;}'
+                ))
+                self.assertIs(witness(), False, 'inherited transform changes display')
+                style.evaluate('(node)=>node.remove()')
+                self.assertIs(witness(), True)
+                # Empty generated content is allowed; it changes no glyphs.
+                style = page.add_style_tag(content=(
+                    '#messages .v24-msg:first-child .body::before'
+                    '{content:"";}'
+                ))
+                self.assertIs(witness(), True)
+                style.evaluate('(node)=>node.remove()')
+                self.assertIs(witness(), True)
+                self.assertEqual(posts, [], 'no new model POST')
+            finally:
+                browser.close()
+
+
+
 if __name__ == "__main__":
     unittest.main()
