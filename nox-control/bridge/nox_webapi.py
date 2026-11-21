@@ -646,6 +646,9 @@ def install(app, B):
                         full += add
                         yield fr(message={"role": "assistant", "content": add}, done=False)
                     yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": ("сомнение: " + sk["doubt"]) if sk.get("ok") is False else "проверка пройдена" if sk.get("ok") else "проверка недоступна", "ok": sk.get("ok")})
+                # STOP may arrive while the post-generation skeptic awaits. Never
+                # persist a cancelled answer using the stale pre-skeptic flag.
+                stopped = stopped or rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch
                 if eph:
                     hist = {"status": "SKIPPED", "reason": "ephemeral"}
                 elif full.strip() and not stopped:

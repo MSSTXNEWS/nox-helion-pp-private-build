@@ -227,6 +227,64 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(len(writes), 1)
 
 
+    def test_stop_during_post_generation_skeptic_skips_s03_write(self):
+        """STOP delivered during skeptic must fence later persistence."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *ignored):
+                return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Ответ"}}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs):
+                return Upstream()
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
+        bridge = self.bridge
+        bridge.LAST_CHAT, bridge.NKEEP = {"t": 0}, 0
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Проверь отмену"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        class Thinking:
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return False
+            def mode_hint(self, *args): return ""
+            async def skeptic(self, *args, **kwargs):
+                signal = await stop(Request({"request_id": "stop-in-skeptic"}))
+                self.signal = signal
+                return {"ok": True}
+
+        thinking = Thinking()
+        async def scenario():
+            response = await chat(Request({
+                "request_id": "stop-in-skeptic",
+                "mode": "thoughtful",
+                "use_memory": False,
+                "messages": [{"role": "user", "content": "Проверь отмену"}],
+            }))
+            return [json.loads(row) async for row in response.body_iterator]
+
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.object(W, "W", thinking), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            frames = asyncio.run(scenario())
+        self.assertEqual(thinking.signal["status"], "STOPPING")
+        self.assertEqual(writes, [])
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
+        self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "HOLD")
+        self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
+
     def test_stop_scope_and_bad_json_cannot_cancel_all(self):
         """Invalid or non-generation commands cannot trigger an implicit broadcast."""
         stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
