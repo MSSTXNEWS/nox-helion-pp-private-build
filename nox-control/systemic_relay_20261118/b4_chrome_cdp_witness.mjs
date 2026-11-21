@@ -402,12 +402,23 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       let bodyLookup;
       try{bodyLookup=Promise.resolve(c.send('Network.getResponseBody',{requestId:p.requestId}));}
       catch(error){bodyLookup=Promise.reject(error);}
-      let ackTimeout;
+      // Seal the ACK exactly once. A body lookup settling AFTER the timeout
+      // must never revive the first turn or change second-turn evidence.
+      let ackTimeout,ackSealed=false;
+      const failAck=()=>{
+        if(ackSealed)return;
+        ackSealed=true;
+        x.missing=true;
+      };
       Promise.race([
         bodyLookup,
-        new Promise((_,reject)=>{ackTimeout=setTimeout(
-          ()=>reject(Error('CDP_RESPONSE_BODY_ACK_TIMEOUT')),responseBodyAckTimeoutMs);})
+        new Promise((_,reject)=>{ackTimeout=setTimeout(()=>{
+          failAck();
+          reject(Error('CDP_RESPONSE_BODY_ACK_TIMEOUT'));
+        },responseBodyAckTimeoutMs);})
       ]).then(v=>{
+        if(ackSealed)return;
+        ackSealed=true;
         let ackEnd;
         try{ackEnd=bodyAckClock();}catch{ackEnd=NaN;}
         const elapsed=Math.round(ackEnd-ackStart);
@@ -426,7 +437,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         x.response=hash(body);
         x.bodyMatchesStream=!x.missing&&!x.encoded&&x.bytes===body.length&&x.streamDigest===x.response;
         if(!x.bodyMatchesStream)x.missing=true;
-      }).catch(()=>{x.missing=true;}).finally(()=>{
+      }).catch(failAck).finally(()=>{
         clearTimeout(ackTimeout);
         x.bodyAckPending=false;
         finished.push(x);
