@@ -24,7 +24,7 @@
   }
   const key=s=>s.conversation_id+'\u0000'+s.exchange_id;
   function createClient({transport,host,bridge,ui,ackGate=null,timeoutMs=120000,
-    canonicalFreshnessMs=30000}={}){
+    canonicalFreshnessMs=30000,reconnectReadTimeoutMs=30000}={}){
     if(!transport||!host||!bridge||!ui||
        typeof transport.post!=='function'||
        typeof transport.readback!=='function'||
@@ -41,7 +41,9 @@
          typeof host.verifyFreshCanonicalAck!=='function'))||
        !Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>600000||
        !Number.isSafeInteger(canonicalFreshnessMs)||
-       canonicalFreshnessMs<1000||canonicalFreshnessMs>60000)
+       canonicalFreshnessMs<1000||canonicalFreshnessMs>60000||
+       !Number.isSafeInteger(reconnectReadTimeoutMs)||
+       reconnectReadTimeoutMs<1||reconnectReadTimeoutMs>600000)
       hold('HOLD_STREAM_HOST_CONTRACT');
     const started=new Set(),active=new Map(),reconnecting=new Map();
     async function begin(raw){
@@ -194,14 +196,29 @@
       ctrl.abort();
       return true;
     }
+    // A hung or uncooperative read-only GET/witness must not pin reconnect()
+    // forever. Late resolutions have no continuation to UI/ACK after timeout.
+    // Both supplied functions MUST be side-effect free: never put model POST,
+    // DOM projection or ACK inside either untrusted callback.
+    function boundedRead(thunk,code){
+      let timer;
+      return Promise.race([
+        Promise.resolve().then(thunk),
+        new Promise((_,reject)=>{
+          timer=setTimeout(()=>reject(new HoldStream(code)),reconnectReadTimeoutMs);
+        })
+      ]).finally(()=>clearTimeout(timer));
+    }
     // One in-flight GET/readback + UI projection + ACK per exchange per tab.
     // Coalesce concurrent reconnect calls; after a failure, allow readback-only
     // recovery. NEVER start another model POST for an uncertain exchange.
     async function reconnectOnce(s){
       let packet,witness;
       try{
-        packet=await transport.readback(s); // GET or equivalent, NEVER POST model
-        witness=await bridge.acceptTerminal(packet,s,host);
+        packet=await boundedRead(()=>transport.readback(s),
+          'HOLD_STREAM_READBACK_TIMEOUT'); // GET only; never model POST
+        witness=await boundedRead(()=>bridge.acceptTerminal(packet,s,host),
+          'HOLD_STREAM_WITNESS_TIMEOUT'); // verification only; no side effects
       }catch(err){
         if(err&&typeof err.code==='string') throw err;
         hold('HOLD_STREAM_READBACK');
