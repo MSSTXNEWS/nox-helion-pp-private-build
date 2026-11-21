@@ -656,6 +656,48 @@ class ProbeTests(unittest.TestCase):
                 self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
             self.assertTrue(response.closed)
 
+    def test_upstream_timeout_status_state_cannot_be_hidden_by_saved_done(self):
+        """A preterminal timeout or terminal failure label invalidates a stream."""
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        did = '1' * 32
+        done = {'type': 'done', 'dialog_id': did, 'saved': True, 's03_integrated': True}
+        cases = (
+            ('status', {'status': ' Timeout '}),
+            ('status', {'state': 'timed_out'}),
+            ('status', {'status': {'state': 'canceled'}}),
+            ('status', {'status': {'state': 'fatal'}}),
+            ('delta', {'text': '323', 'state': 'failure'}),
+            ('done', {'status': 'Failure'}),
+            ('done', {'state': 'timeout'}),
+            ('done', {'status': {'state': 'fatal'}}),
+        )
+        for kind, fields in cases:
+            bad = dict(fields, type=kind)
+            frames = ([{'type': 'delta', 'text': '323'}, dict(done, **fields)]
+                      if kind == 'done' else [bad, {'type': 'delta', 'text': '323'}, done])
+            expected = ('HOLD_STREAM_TERMINAL_FAILURE' if kind == 'done'
+                        else 'HOLD_STREAM_PRETERMINAL_FAILURE')
+            response = Response(frames)
+            with self.subTest(kind=kind, fields=fields), patch.object(
+                    probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, expected):
+                    probe.consume_turn(object(), 'synthetic', did)
+            self.assertTrue(response.closed)
+        for fields in ({'status': 'running'}, {'state': 'completed'},
+                       {'status': {'state': 'done'}}, {'status': '200'}):
+            response = Response([{'type': 'delta', 'text': '323'}, dict(done, **fields)])
+            with self.subTest(fields=fields), patch.object(probe, 'request', return_value=response):
+                self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+            self.assertTrue(response.closed)
+
     def test_done_and_status_frames_reject_http_or_uppercase_failures(self):
         class Response(SyntheticBoundedReader):
             status = 200
