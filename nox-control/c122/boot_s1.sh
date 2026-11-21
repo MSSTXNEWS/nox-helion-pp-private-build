@@ -33,7 +33,7 @@ if [ -z "$WAIT_MODEL" ] && ! pgrep -f "llama-server -m /root/nox/glm53" >/dev/nu
   nohup setsid $BIN -m $M --host 127.0.0.1 --port 8081 -c 16384 -t 24 -tb 24 -ngl 38 --n-cpu-moe 999 -fa on --parallel 1 --jinja --temp 1.0 --top-p 0.95 --min-p 0.01 > $LG/glm_server.log 2>&1 < /dev/null &
 fi
 # 4b. память NOX (S03), душа, тон (QS6B): env для шлюза и recall_api. БД появляется после импорта бэкапа (c126/memory_boot_s1.sh, идемпотентен).
-export NOX_HOME=$N NOX_SERVER=S1 NOX_MODEL=GLM-5.3 NOX_PORT=8082 NOX_BUILD=$(git -C $R rev-parse --short HEAD 2>/dev/null)
+export NOX_HOME=$N NOX_SERVER=S1 NOX_MODEL="быстрый ответ — Qwen3.5-9B; глубокий — GLM-5.3 (отвечает только когда загружен)" NOX_PORT=8082 NOX_BUILD=$(git -C $R rev-parse --short HEAD 2>/dev/null)
 export NOX_MEMORY_DB=$N/memory/s03.db NOX_SOUL=1 NOX_EMOTION=1 NOX_EVENTS=$N/memory/events.jsonl NOX_SESSION_SUMMARY=$N/memory/sessions.jsonl NOX_JOURNAL=$LG/journal.jsonl
 export NOX_MEMORY_BACKUP_DIR=$N/memory/backups NOX_RECALL_PORT=8095   # NOX_EMBED_URL (bge-m3) не задан: вектор выключен, работает FTS5
 if [ ! -f "$NOX_MEMORY_DB" ] || ! crontab -l 2>/dev/null | grep -q nox-memory-backup; then

@@ -1,0 +1,60 @@
+/* NOX NEWCHAT: переключатель Старый/Новый чат и панель GLM-5.3. Только свои селекторы (#nxc*, .nxc-*). */
+#nxcBar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:4px 0 6px;min-width:0;font:600 12px/1.2 Inter,"Segoe UI",sans-serif;color:#eee9e2}
+#nxcBar button,#nxcSet button,#nxcPane button{font:inherit;color:inherit;cursor:pointer;min-height:32px;padding:0 12px;border-radius:9px;border:1px solid rgba(245,180,84,.28);background:rgba(20,14,10,.55);transition:background .15s,border-color .15s}
+#nxcBar button:hover,#nxcSet button:hover,#nxcPane button:hover{background:rgba(245,180,84,.16);border-color:rgba(245,180,84,.6)}
+#nxcBar button:focus-visible,#nxcSet :focus-visible,#nxcPane :focus-visible{outline:2px solid #f5b454;outline-offset:2px}
+#nxcBar button[aria-pressed="true"]{background:rgba(245,180,84,.24);border-color:#f5b454;color:#fff}
+.nxc-seg,.nxc-depth{display:inline-flex;gap:4px;max-width:100%}
+.nxc-seg button{min-height:36px}
+.nxc-stat{display:inline-flex;align-items:center;gap:6px;font-weight:500;opacity:.9}
+.nxc-stat::before{content:"";width:8px;height:8px;border-radius:50%;background:#8a8a8a}
+.nxc-stat[data-state="ok"]::before{background:#5fd08a}.nxc-stat[data-state="down"]::before{background:#ef6a5b}.nxc-stat[data-state="checking"]::before{background:#f5b454}
+.nxc-stat[hidden],.nxc-depth[hidden],.nxc-gear[hidden]{display:none}
+#nxcSet{display:grid;gap:8px;margin:0 0 8px;padding:10px;border:1px solid rgba(245,180,84,.25);border-radius:12px;background:rgba(14,10,8,.7);font-size:12px;color:#eee9e2}
+#nxcSet[hidden]{display:none}
+#nxcSet label{display:grid;gap:4px}
+#nxcSet input[type=text],#nxcSet textarea{width:100%;box-sizing:border-box;padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.35);color:inherit;font:13px/1.35 ui-monospace,Menlo,Consolas,monospace}
+#nxcSet .nxc-chk{display:flex;align-items:center;gap:8px}
+.nxc-row{display:flex;flex-wrap:wrap;gap:8px}
+.nxc-msgline{margin:0;min-height:1em;opacity:.8}
+#nxcPane{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;min-width:0;gap:8px;color:#eee9e2}
+#nxcPane[hidden]{display:none}
+#nxcList{flex:1 1 auto;min-height:160px;overflow:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:5px;padding:2px 2px 4px;overscroll-behavior:contain}
+.nxc-empty{margin:auto;max-width:44ch;text-align:center;opacity:.7;font-size:13px}
+.nxc-msg{max-width:min(100%,760px);padding:6px 11px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);overflow-wrap:anywhere;min-width:0}
+.nxc-msg.u{align-self:flex-end;background:rgba(245,180,84,.13);border-color:rgba(245,180,84,.32)}
+.nxc-msg.a{align-self:flex-start}
+.nxc-role{font:600 11px/1.2 Inter,sans-serif;letter-spacing:.06em;text-transform:uppercase;opacity:.75;margin-bottom:2px}
+.nxc-text{white-space:pre-wrap;font-size:14px;line-height:1.38}
+.nxc-badge{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;border:1px solid rgba(245,180,84,.5);color:#f5b454;font-size:10px;letter-spacing:.04em;text-transform:none}
+.nxc-badge[data-effort="max"]{background:rgba(239,106,91,.18);border-color:#ef6a5b;color:#ffb3a8}
+.nxc-badge[data-effort="high"]{background:rgba(245,180,84,.16)}
+.nxc-badge[data-effort="low"]{background:rgba(95,208,138,.14);border-color:#5fd08a;color:#a9efc4}
+.nxc-think{margin:0 0 6px;font-size:12px;opacity:.85}
+.nxc-think summary{cursor:pointer;min-height:24px;display:flex;align-items:center}
+.nxc-thinkbody{white-space:pre-wrap;margin-top:4px;padding:6px 8px;border-left:2px solid rgba(245,180,84,.4);opacity:.8;font-style:italic;max-height:240px;overflow:auto}
+.nxc-warns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.nxc-warns:empty,.nxc-judges:empty{display:none}
+.nxc-warn,.nxc-note{font-size:11px;padding:2px 8px;border-radius:7px;line-height:1.4}
+.nxc-warn{background:rgba(239,106,91,.16);border:1px solid rgba(239,106,91,.55);color:#ffc4bb}
+.nxc-note{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);opacity:.85}
+.nxc-judges{margin-top:6px}
+.nxc-judge{font-size:12px;padding:6px 9px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);white-space:pre-wrap}
+.nxc-judge button{margin-left:8px}
+#nxcGw,.nxc-fail{padding:10px 12px;border-radius:12px;border:1px solid rgba(239,106,91,.6);background:rgba(239,106,91,.13);font-size:13px;line-height:1.45;display:grid;gap:8px;overflow-wrap:anywhere}
+#nxcGw[hidden]{display:none}
+#nxcForm{display:flex;align-items:flex-end;gap:8px;flex:0 0 auto}
+#nxcInput{flex:1 1 auto;min-width:0;box-sizing:border-box;resize:none;padding:9px 11px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.4);color:#eee9e2;font:16px/1.4 Inter,"Segoe UI",sans-serif;max-height:180px}
+#nxcForm button{min-height:40px}
+#nxcSend{background:rgba(245,180,84,.28)!important;border-color:#f5b454!important}
+#nxcPane button:disabled{opacity:.45;cursor:not-allowed}
+html.nxc-on.nxc-on.nxc-on.nxc-on body #messages,html.nxc-on.nxc-on.nxc-on.nxc-on body #chatForm,html.nxc-on.nxc-on.nxc-on.nxc-on body .nxcw-bar,html.nxc-on.nxc-on.nxc-on.nxc-on body .nxcw-strip,html.nxc-on.nxc-on.nxc-on.nxc-on body .nxcw-gap,html.nxc-on.nxc-on.nxc-on.nxc-on body .nxcw-down,html.nxc-on.nxc-on.nxc-on.nxc-on body .nxcw-qa,html.nxc-on.nxc-on.nxc-on.nxc-on body .nx6-bar,html.nxc-on.nxc-on.nxc-on.nxc-on body .nm-count{display:none!important}
+@media(max-width:600px){#nxcBar{gap:6px 8px}.nxc-seg{width:100%}.nxc-seg button{flex:1 1 0;padding:0 6px}.nxc-depth{flex:1 1 auto}.nxc-depth button{flex:1 1 0;padding:0 6px}.nxc-msg{max-width:100%}}
+html #nxcBar button svg,html #nxcBar button i,html #nxcSet button svg,html #nxcSet button i,html #nxcPane button svg,html #nxcPane button i{display:none!important}
+html #nxcBar button,html #nxcSet button,html #nxcPane button{min-height:34px!important;height:auto!important;padding:0 12px!important;font-size:12px!important;line-height:1.2!important;text-transform:none!important;letter-spacing:0!important;width:auto!important}
+html #nxcBar .nxc-seg button,html #nxcBar .nxc-depth button{white-space:normal}
+@media(max-width:600px){html #nxcBar .nxc-depth{width:100%}html #nxcBar .nxc-depth button,html #nxcBar .nxc-seg button{flex:1 1 0!important;padding:0 4px!important;min-width:0!important}#nxcList{min-height:140px}#nxcPane{padding-bottom:56px}}
+@media(max-width:600px){html #nxcBar{padding-right:44px}#nxcForm{flex-wrap:wrap}#nxcInput{flex:1 1 100%}#nxcForm button{flex:1 1 0}#nxcSet{margin-right:44px}}
+.nxc-judge button{display:block;margin:6px 0 0!important}
+html.nxc-on.nxc-on.nxc-on.nxc-on body #noxTools,html.nxc-on.nxc-on.nxc-on.nxc-on body .nxcw-act,html.nxc-on.nxc-on.nxc-on.nxc-on body .nxcw-react,html.nxc-on.nxc-on.nxc-on.nxc-on body .nxcw-pop{display:none!important}
+.nxc-meta{margin-top:6px;font-size:11px;opacity:.6}.nxc-meta[hidden]{display:none}.nxc-skip{margin:0}#nxcSet select{width:100%;box-sizing:border-box;padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.35);color:inherit;font:13px/1.35 Inter,sans-serif}
