@@ -112,6 +112,16 @@ def qa_scoped_stop_request_id(body, dialog_id):
             re.fullmatch(r'[A-Za-z0-9._:-]{1,128}', rid) else None)
 
 
+def qa_scoped_stop_receipt_valid(http_status, receipt, request_id):
+    """HTTP success and exact target are required; a signal is not a stop proof."""
+    return (type(http_status) is int and http_status == 200 and
+            isinstance(receipt, dict) and
+            receipt.get('status') == 'STOPPING' and
+            receipt.get('scope') == 'generation' and
+            receipt.get('target_request_id') == request_id and
+            receipt.get('stop_confirmed') is False)
+
+
 def admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt):
     """A second native POST cannot start before terminal S03; a third never starts."""
     if count == 0:
@@ -1196,10 +1206,9 @@ async def browser_run(report, directory, available):
                                       'request_id':qa_pending_request_id},
                                 max_redirects=0,timeout=4000)
                             stop_receipt=await json_response(stop_response,limit=2048)
-                            if (stop_receipt.get('status')=='STOPPING'
-                                    and stop_receipt.get('scope')=='generation'
-                                    and stop_receipt.get('target_request_id')==qa_pending_request_id
-                                    and stop_receipt.get('stop_confirmed') is False):
+                            if qa_scoped_stop_receipt_valid(
+                                    stop_response.status, stop_receipt,
+                                    qa_pending_request_id):
                                 report['qa_cleanup_stop_state']='SCOPED_STOP_SIGNALLED_NOT_CONFIRMED'
                             else:
                                 report['qa_cleanup_stop_state']='HOLD_QA_SCOPED_STOP_READBACK'
