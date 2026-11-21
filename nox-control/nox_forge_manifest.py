@@ -266,6 +266,10 @@ def build_manifest(data: Any) -> dict[str, Any]:
         raise ForgeError("task reference does not match the pinned original 4B01 spec")
     if task["registry_blob_sha"] != SOURCE_REGISTRY_BLOB_SHA:
         raise ForgeError("task reference does not match the pinned all295 registry blob")
+    # This is only a caller-claimed chronological consistency check, not
+    # independent proof of when a permission or example actually existed.
+    created_at = _timestamp(top["created_at"], "created_at")
+    created_instant = dt.datetime.fromisoformat(created_at.replace("Z", "+00:00"))
 
     sources_raw = top["sources"]
     examples_raw = top["examples"]
@@ -279,6 +283,15 @@ def build_manifest(data: Any) -> dict[str, Any]:
         raise ForgeError("source_id values must be unique")
     source_id_set = set(source_ids)
     examples = [_example(value, source_id_set) for value in examples_raw]
+    # A manifest cannot truthfully attest that it already held examples or
+    # permission observations dated after its own creation instant. Compare
+    # parsed UTC instants (not ISO text: fractional seconds change sort order).
+    if any(dt.datetime.fromisoformat(item["permission_receipt"]["observed_at"].replace("Z", "+00:00"))
+           > created_instant for item in sources):
+        raise ForgeError("permission observation follows manifest creation")
+    if any(dt.datetime.fromisoformat(item["captured_at"].replace("Z", "+00:00"))
+           > created_instant for item in examples):
+        raise ForgeError("candidate capture follows manifest creation")
     if len({item["example_id"] for item in examples}) != len(examples):
         raise ForgeError("example_id values must be unique")
     if len({(item["source_id"], item["source_record_id"]) for item in examples}) != len(examples):
@@ -307,7 +320,7 @@ def build_manifest(data: Any) -> dict[str, Any]:
     result = {
         "schema": OUTPUT_SCHEMA,
         "manifest_id": manifest_id,
-        "created_at": _timestamp(top["created_at"], "created_at"),
+        "created_at": created_at,
         "task": {"id": TASK_ID, "spec_sha256": TASK_SPEC_SHA256, "registry_blob_sha": SOURCE_REGISTRY_BLOB_SHA},
         "sources": sorted(sources, key=lambda item: item["source_id"]),
         "candidate_examples": sorted(examples, key=lambda item: item["example_id"]),

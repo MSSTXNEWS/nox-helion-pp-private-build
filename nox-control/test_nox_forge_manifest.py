@@ -141,5 +141,44 @@ class ForgeJsonIntegrityTests(unittest.TestCase):
                     self.assertIn("ForgeError", receipt["error"])
 
 
+class ForgeChronologyTests(unittest.TestCase):
+    def test_future_claimed_permission_and_capture_are_held(self):
+        now = "2026-11-20T11:00:00Z"
+        later = "2026-11-20T11:00:00.000001Z"
+        digest = "0" * 64
+        payload = {
+            "schema": forge.INPUT_SCHEMA,
+            "manifest_id": "chronology-example",
+            "created_at": now,
+            "task": {"id": forge.TASK_ID, "spec_sha256": forge.TASK_SPEC_SHA256,
+                     "registry_blob_sha": forge.SOURCE_REGISTRY_BLOB_SHA},
+            "sources": [{
+                "source_id": "s1", "origin_kind": "SUCCESSFUL_ACTION",
+                "source_url": "https://example.org/action",
+                "source_sha256": digest, "license_id": "MIT",
+                "license_url": "https://example.org/license",
+                "license_sha256": digest, "permission_status": "ALLOWED",
+                "permission_receipt": {"url": "https://example.org/permission",
+                                       "sha256": digest, "observed_at": now},
+            }],
+            "examples": [{
+                "example_id": "e1", "source_id": "s1", "source_record_id": "r1",
+                "content_sha256": "1" * 64, "captured_at": now,
+            }],
+        }
+        accepted = forge.build_manifest(payload)
+        self.assertEqual(accepted["source_shares"][0]["example_count"], 1)
+        self.assertFalse(accepted["integrity_scope"]["permission_receipts_verified"])
+
+        payload["sources"][0]["permission_receipt"]["observed_at"] = later
+        with self.assertRaisesRegex(forge.ForgeError, "permission observation"):
+            forge.build_manifest(payload)
+        payload["sources"][0]["permission_receipt"]["observed_at"] = now
+
+        payload["examples"][0]["captured_at"] = later
+        with self.assertRaisesRegex(forge.ForgeError, "candidate capture"):
+            forge.build_manifest(payload)
+
+
 if __name__ == "__main__":
     unittest.main()
