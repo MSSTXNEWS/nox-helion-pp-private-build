@@ -502,14 +502,25 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
                 record,
             )
             inserted += cursor.rowcount
-        conn.execute(
-            "INSERT INTO http_cache(source_id,url,etag,last_modified,content_type,body,fetched_at,checked_at) "
-            "VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(source_id,url) DO UPDATE SET "
-            "etag=excluded.etag,last_modified=excluded.last_modified,content_type=excluded.content_type,"
-            "body=excluded.body,fetched_at=CASE WHEN ? THEN http_cache.fetched_at ELSE excluded.fetched_at END,"
-            "checked_at=excluded.checked_at",
-            (source["id"], source["url"], etag, modified, content_type, sqlite3.Binary(body), now, now, int(not_modified)),
-        )
+        if not_modified:
+            # A 304 validates the existing bytes; rewriting the same BLOB
+            # causes unnecessary SQLite WAL growth and disk I/O on each poll.
+            # Keep original fetch timestamp, validators and body untouched.
+            cursor = conn.execute(
+                "UPDATE http_cache SET checked_at=? WHERE source_id=? AND url=?",
+                (now, source["id"], source["url"]),
+            )
+            if cursor.rowcount != 1:
+                raise HunterError("cached response disappeared during 304 update")
+        else:
+            conn.execute(
+                "INSERT INTO http_cache(source_id,url,etag,last_modified,content_type,body,fetched_at,checked_at) "
+                "VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(source_id,url) DO UPDATE SET "
+                "etag=excluded.etag,last_modified=excluded.last_modified,content_type=excluded.content_type,"
+                "body=excluded.body,fetched_at=excluded.fetched_at,checked_at=excluded.checked_at",
+                (source["id"], source["url"], etag, modified, content_type,
+                 sqlite3.Binary(body), now, now),
+            )
         next_poll = now + source["interval_seconds"]
         conn.execute(
             "INSERT INTO source_state(source_id,fingerprint,next_poll_at,failures,last_error) VALUES(?,?,?,0,NULL) "
