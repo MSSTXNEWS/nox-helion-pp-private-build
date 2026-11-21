@@ -26,6 +26,7 @@ jobs:
             test_owner_chat_stream.StreamTests.test_native_sse_utf8_wire_limit_holds_before_oversized_token \
             test_owner_chat_stream.StreamTests.test_unicode_sse_record_limit_is_wire_bytes_not_codepoints \
             test_owner_chat_stream.StreamTests.test_model_heartbeat_cannot_keep_sse_post_open_forever \
+            test_owner_chat_stream.StreamTests.test_upstream_http_and_transport_failures_keep_exact_hold_and_one_post \
             test_owner_chat_stream.StreamTests.test_multibyte_tool_and_media_outcomes_hold_before_green_audit \
             test_owner_chat_stream.StreamTests.test_unconfirmed_direct_tool_or_media_never_certifies_s03 \
             test_owner_chat_stream.StreamTests.test_nonstream_reports_exact_hold_without_certifying_s03 \
