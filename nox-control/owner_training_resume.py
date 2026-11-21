@@ -111,9 +111,12 @@ CONTROLLER_SERVICES = {
     'nox-selfheal': Path('/root/nox_selfheal.py'),
 }
 STOPPED = ('STOPPED', 'EXITED', 'FATAL')
+# Native owner handoff SIX_LANE_EXECUTION_PIN_20261119 fixes physical cap at 3.
+# Six logical lanes are NOT six native worker processes.
+NATIVE_WORKER_CAP = 3
 
 
-def read_json(path, limit=4_000_000, expected_sha256=None):
+def read_json(path, limit=4_000_000, expected_sha256=None, include_mtime=False):
     """Bounded descriptor read: an untrusted state path cannot be swapped to a symlink."""
     path = Path(path)
     if type(limit) is not int or limit < 0:
@@ -129,8 +132,22 @@ def read_json(path, limit=4_000_000, expected_sha256=None):
         with os.fdopen(fd, 'rb') as stream:
             fd = -1
             raw = stream.read(limit + 1)
+            after = os.fstat(stream.fileno())
         if len(raw) > limit:
             raise RuntimeError('HOLD_BOUNDED_STATE_READ')
+        # A stable FD is insufficient if the named state file was rebound
+        # during reading; the next checkpoint stage will reopen this path.
+        # Reject a missing, swapped, symlinked or concurrently changed name.
+        try:
+            named = os.stat(path, follow_symlinks=False)
+        except OSError as exc:
+            raise RuntimeError('HOLD_STATE_FILE_MUTATED') from exc
+        fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+        if (len(raw) != info.st_size
+                or any(getattr(info, field) != getattr(after, field)
+                       or getattr(info, field) != getattr(named, field)
+                       for field in fields)):
+            raise RuntimeError('HOLD_STATE_FILE_MUTATED')
     finally:
         if fd >= 0:
             os.close(fd)
@@ -154,28 +171,96 @@ def read_json(path, limit=4_000_000, expected_sha256=None):
     def finite_json_constant(token):
         raise RuntimeError('HOLD_NONFINITE_STATE_JSON')
 
+    def finite_json_float(token):
+        # parse_constant catches NaN/Infinity literals, but standard JSON
+        # exponents such as 1e999 can still overflow to float infinity.
+        number = float(token)
+        if not math.isfinite(number):
+            raise RuntimeError('HOLD_NONFINITE_STATE_JSON')
+        return number
+
     value = json.loads(raw, object_pairs_hook=unique_object,
-                       parse_constant=finite_json_constant)
+                       parse_constant=finite_json_constant,
+                       parse_float=finite_json_float)
     if not isinstance(value, dict):
         raise RuntimeError('HOLD_STATE_OBJECT_REQUIRED')
-    return value
+    # Freshness must be evaluated against this verified descriptor snapshot,
+    # never a pathname that can be rebound after the JSON read.
+    return (value, info.st_mtime) if include_mtime else value
 
 
 def file_sha(path):
-    """Hash an opened regular-file descriptor, not a separately checked path."""
+    """Hash only a stable, pathname-bound regular file from one descriptor."""
+    path = Path(path)
     try:
-        fd = os.open(Path(path), os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
     except OSError as exc:
         raise RuntimeError('HOLD_SOURCE_PATH') from exc
     try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size < 0:
             raise RuntimeError('HOLD_SOURCE_PATH')
         digest = hashlib.sha256()
         with os.fdopen(fd, 'rb') as stream:
             fd = -1
-            for block in iter(lambda: stream.read(8 * 1024 * 1024), b''):
+            remaining = before.st_size
+            while remaining:
+                block = stream.read(min(8 * 1024 * 1024, remaining))
+                if not block:
+                    raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED')
                 digest.update(block)
+                remaining -= len(block)
+            if stream.read(1):
+                raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED')
+            after = os.fstat(stream.fileno())
+            # A stable open descriptor is insufficient if the named checkpoint
+            # was replaced after open; the caller will use the pathname again.
+            try:
+                named = os.stat(path, follow_symlinks=False)
+            except OSError as exc:
+                raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED') from exc
+            keys = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+            if any(getattr(before, key) != getattr(after, key)
+                   or getattr(before, key) != getattr(named, key) for key in keys):
+                raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED')
         return digest.hexdigest()
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
+
+
+def stable_backup_bytes(path, expected_sha256=None, max_bytes=64 * 1024 * 1024):
+    """Back up only a single stable named regular-file preimage, never a swapped link."""
+    path = Path(path)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError as exc:
+        raise RuntimeError('HOLD_BACKUP_SOURCE_CHANGED') from exc
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or not 0 <= before.st_size <= max_bytes:
+            raise RuntimeError('HOLD_BACKUP_SOURCE_CHANGED')
+        with os.fdopen(fd, 'rb') as stream:
+            fd = -1
+            raw = stream.read(before.st_size + 1)
+            after = os.fstat(stream.fileno())
+        try:
+            named = os.stat(path, follow_symlinks=False)
+        except OSError as exc:
+            raise RuntimeError('HOLD_BACKUP_SOURCE_CHANGED') from exc
+        fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+        if (len(raw) != before.st_size
+                or any(getattr(before, key) != getattr(after, key)
+                       or getattr(before, key) != getattr(named, key)
+                       for key in fields)):
+            raise RuntimeError('HOLD_BACKUP_SOURCE_CHANGED')
+        if (expected_sha256 is not None
+                and (type(expected_sha256) is not str
+                     or not re.fullmatch('[0-9a-f]{64}', expected_sha256)
+                     or hashlib.sha256(raw).hexdigest() != expected_sha256)):
+            raise RuntimeError('HOLD_BACKUP_PREIMAGE_MISMATCH')
+        return raw
     finally:
         if fd >= 0:
             os.close(fd)
@@ -195,17 +280,62 @@ PERMISSION_HELPER = '''
 # NOX_OWNER_SINGLE_TRAINER_PERMISSION_V1
 def _nox_owner_training_allowed():
     import json as _json
-    _p=ROOT/"state/task_boost_mode.json"
+    import math as _math
+    import os as _os
+    import stat as _stat
+    _p = ROOT / "state/task_boost_mode.json"
+    _fd = -1
     try:
-        if _p.is_symlink() or _p.stat().st_size>16000: return False
-        _v=_json.loads(_p.read_text())
-        return (_v.get("enabled") is True and _v.get("mode")=="TASK_BOOST"
+        # Authorize exactly the stable regular file named at this path, not
+        # a symlink/fifo rebound between the old is_symlink/stat/read_text.
+        _fd = _os.open(_p, _os.O_RDONLY | _os.O_NOFOLLOW | _os.O_NONBLOCK | _os.O_CLOEXEC)
+        _before = _os.fstat(_fd)
+        if not _stat.S_ISREG(_before.st_mode) or not 0 < _before.st_size <= 16000:
+            return False
+        _raw = _os.read(_fd, 16001)
+        _after = _os.fstat(_fd)
+        _named = _os.stat(_p, follow_symlinks=False)
+        _fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+        if (len(_raw) != _before.st_size
+                or any(getattr(_before, key) != getattr(_after, key)
+                       or getattr(_before, key) != getattr(_named, key)
+                       for key in _fields)):
+            return False
+        # Duplicate authority keys must not be interpreted last-value-wins.
+        # A verifier and the runtime must agree on one unambiguous policy.
+        def _unique_pairs(pairs):
+            _value = {}
+            for _key, _item in pairs:
+                if _key in _value:
+                    raise ValueError("duplicate owner policy key")
+                _value[_key] = _item
+            return _value
+        # Python's permissive JSON decoder accepts NaN/Infinity and can
+        # overflow a standards-compliant exponent (1e999) to infinity.
+        # Do not authorize a policy that the canonical state reader rejects.
+        def _finite_constant(_token):
+            raise ValueError("nonfinite owner policy constant")
+        def _finite_float(_token):
+            _number = float(_token)
+            if not _math.isfinite(_number):
+                raise ValueError("nonfinite owner policy float")
+            return _number
+        _v = _json.loads(_raw, object_pairs_hook=_unique_pairs,
+                         parse_constant=_finite_constant,
+                         parse_float=_finite_float)
+        return (type(_v) is dict and _v.get("enabled") is True
+                and _v.get("mode") == "TASK_BOOST"
                 and _v.get("training_allowed") is True
-                and _v.get("training_service")=="nox-train-volta-t866u")
-    except (ValueError,OSError,AttributeError): return False
+                and _v.get("training_service") == "nox-train-volta-t866u"
+                and _v.get("training_request") == "__NOX_OWNER_REQUEST_ID__"
+                and _v.get("training_source_sha") == "__NOX_OWNER_SOURCE_SHA__")
+    except (ValueError, OSError, UnicodeError, TypeError, AttributeError):
+        return False
+    finally:
+        if _fd >= 0:
+            _os.close(_fd)
 
 '''
-
 
 def replace_once(source, before, after):
     if source.count(before) != 1:
@@ -213,11 +343,25 @@ def replace_once(source, before, after):
     return source.replace(before, after, 1)
 
 
-def patch_permission(source, selfheal=False):
+def bound_permission_helper(request_id, source_sha):
+    """Bind controller permission to the exact reviewed owner request/source."""
+    if (type(request_id) is not str or not re.fullmatch('[0-9]+', request_id)
+            or type(source_sha) is not str
+            or not re.fullmatch('[0-9a-f]{40}', source_sha)):
+        raise RuntimeError('HOLD_OWNER_REQUEST_CONTEXT')
+    rendered = PERMISSION_HELPER.replace('"__NOX_OWNER_REQUEST_ID__"', repr(request_id))
+    rendered = rendered.replace('"__NOX_OWNER_SOURCE_SHA__"', repr(source_sha))
+    if '__NOX_OWNER_REQUEST_ID__' in rendered or '__NOX_OWNER_SOURCE_SHA__' in rendered:
+        raise RuntimeError('HOLD_OWNER_PERMISSION_BINDING')
+    compile(rendered, '<bound-owner-permission>', 'exec')
+    return rendered
+
+
+def patch_permission(source, request_id, source_sha, selfheal=False):
     if source.count('NOX_OWNER_ADMISSION_GUARD_V1') != 1 or 'NOX_OWNER_SINGLE_TRAINER_PERMISSION_V1' in source:
         raise RuntimeError('HOLD_DEPLOYED_GUARD_VERSION')
     source = replace_once(source, 'def _nox_owner_task_admitted(task):\n',
-                          PERMISSION_HELPER + 'def _nox_owner_task_admitted(task):\n')
+                          bound_permission_helper(request_id, source_sha) + 'def _nox_owner_task_admitted(task):\n')
     source = replace_once(source,
         '    if _nox_owner_boost_active() and name in ("nox-train-volta-t866u","nox-train-worm-t811u",\n',
         '    if (_nox_owner_boost_active()\n'
@@ -562,9 +706,24 @@ def media_acceptance_evidence(upgrade_chain, rehash_outputs=True):
 
 
 def native_training(helper):
+    """Fail closed if native process census cannot identify trainer candidates."""
     names = {str(TRAINER), str(ENTRY), str(WRAPPER)}
-    return [row for row in helper.process_table().values()
-            if row['state'] != 'Z' and names.intersection(row.get('argv', []))]
+    census = helper.process_table()
+    if type(census) is not dict:
+        raise RuntimeError('HOLD_NATIVE_TRAINER_CENSUS_READBACK')
+    candidates = []
+    for row in census.values():
+        if type(row) is not dict or type(row.get('state')) is not str:
+            raise RuntimeError('HOLD_NATIVE_TRAINER_CENSUS_READBACK')
+        if row['state'] == 'Z':
+            continue
+        argv = row.get('argv')
+        if (type(argv) not in (list, tuple)
+                or any(type(arg) is not str for arg in argv)):
+            raise RuntimeError('HOLD_NATIVE_TRAINER_CENSUS_READBACK')
+        if names.intersection(argv):
+            candidates.append(row)
+    return candidates
 
 
 def prove_training(helper):
@@ -574,6 +733,46 @@ def prove_training(helper):
             or any(str(TRAINER) in row['argv'] and str(ENTRY) not in row['argv'] for row in rows)):
         raise RuntimeError('HOLD_SINGLE_NATIVE_TRAINER_IDENTITY')
     return helper.public_process(entries[0])
+
+
+def read_training_status(helper):
+    """Fail closed on malformed/ambiguous Supervisor trainer state during observation."""
+    snapshot = helper.service_state()
+    if (type(snapshot) is not dict
+            or type(snapshot.get('state')) is not str
+            or snapshot['state'] not in STOPPED + ('RUNNING', 'STARTING')):
+        raise RuntimeError('HOLD_TRAINER_STATUS_READBACK')
+    return snapshot
+
+
+def prove_existing_training(helper):
+    """Only accept a previously launched trainer after Supervisor RUNNING and native identity.
+
+    A followup may attach while Supervisor still reports STARTING. This is
+    observation only: never issue another start or mutate the existing process.
+    """
+    def read_state():
+        # Malformed Supervisor status is never evidence of an active trainer.
+        status = helper.service_state()
+        if type(status) is not dict or type(status.get('state')) is not str:
+            raise RuntimeError('HOLD_EXISTING_TRAINER_STATUS_READBACK')
+        return status['state']
+
+    state = read_state()
+    if state == 'STARTING':
+        deadline = time.monotonic() + 15
+    while state == 'STARTING':
+        if global_stop():
+            raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
+        if time.monotonic() >= deadline:
+            raise RuntimeError('HOLD_EXISTING_TRAINER_START_TIMEOUT')
+        time.sleep(0.5)
+        state = read_state()
+    if global_stop():
+        raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
+    if state != 'RUNNING':
+        raise RuntimeError('HOLD_EXISTING_TRAINER_NOT_RUNNING')
+    return prove_training(helper)
 
 
 def global_stop():
@@ -593,57 +792,215 @@ def lease_free():
         os.close(fd)
 
 
+def read_installed_train_cpu_cap(path):
+    """Read exactly one approved env assignment from a stable regular file."""
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError as exc:
+        raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT') from exc
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or not 0 < before.st_size <= 64:
+            raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT')
+        with os.fdopen(fd, 'rb') as stream:
+            fd = -1
+            raw = stream.read(65)
+            after = os.fstat(stream.fileno())
+            named = os.stat(path, follow_symlinks=False)
+        fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+        if (len(raw) != before.st_size
+                or any(getattr(before, field) != getattr(after, field)
+                       or getattr(before, field) != getattr(named, field)
+                       for field in fields)):
+            raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT')
+        configured = re.fullmatch(r'TRAIN_CPU_MAX=([0-9]+)GiB\n?', raw.decode('ascii'))
+        if configured is None or not 56 <= int(configured.group(1)) <= 64:
+            raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT')
+        return int(configured.group(1))
+    except (OSError, UnicodeError) as exc:
+        raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT') from exc
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
+
 def resource_admission(helper):
     if global_stop():
         raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
     if not lease_free():
         raise RuntimeError('HOLD_SHARED_GPU1_LEASE_BUSY')
-    if helper.service_state()['state'] not in STOPPED or native_training(helper):
+    # Native admission must use a well-shaped, unambiguous supervisor and
+    # GPU census. In particular bool is an int subclass (True == GPU index 1).
+    trainer_snapshot = helper.service_state()
+    if (type(trainer_snapshot) is not dict
+            or type(trainer_snapshot.get('state')) is not str):
+        raise RuntimeError('HOLD_TRAINER_STATE_READBACK')
+    if trainer_snapshot['state'] not in STOPPED or native_training(helper):
         raise RuntimeError('HOLD_EXISTING_TRAINER_NOT_TERMINAL')
-    gpu1 = next((row for row in helper.gpu()['gpus'] if row['index'] == 1), None)
-    if not gpu1 or gpu1['free_mib'] < 27000:
+    gpu_snapshot = helper.gpu()
+    if (type(gpu_snapshot) is not dict or type(gpu_snapshot.get('gpus')) is not list):
+        raise RuntimeError('HOLD_GPU1_CENSUS_READBACK')
+    gpu_rows = gpu_snapshot['gpus']
+    if any(type(row) is not dict or type(row.get('index')) is not int
+           or type(row.get('free_mib')) is not int or row['free_mib'] < 0
+           for row in gpu_rows):
+        raise RuntimeError('HOLD_GPU1_CENSUS_READBACK')
+    gpu1_rows = [row for row in gpu_rows if row['index'] == 1]
+    if len(gpu1_rows) != 1:
+        raise RuntimeError('HOLD_GPU1_CENSUS_READBACK')
+    gpu1 = gpu1_rows[0]
+    if gpu1['free_mib'] < 27000:
         raise RuntimeError('HOLD_GPU1_HEADROOM')
-    quota, period = map(int, Path('/sys/fs/cgroup/cpu.max').read_text().split())
-    budget = helper.resource_budget(int(Path('/sys/fs/cgroup/memory.max').read_text()),
-        int(Path('/sys/fs/cgroup/memory.current').read_text()),
-        max(1, quota//period), len(os.sched_getaffinity(0)))
-    configured = re.findall(r'^TRAIN_CPU_MAX=([0-9]+)GiB$',
-                            (STATE/'train_cpu_max.env').read_text(), re.MULTILINE)
-    if len(configured) != 1 or not 56 <= int(configured[0]) <= 64:
-        raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT')
-    configured_gib = int(configured[0])
+    # cgroup v2 uses "max PERIOD" when CPU quota is unlimited.  Treat
+    # that as the effective CPU affinity, without silently admitting malformed
+    # or zero quotas/periods or bypassing the existing RAM/VRAM gates.
+    try:
+        cpu_spec = Path('/sys/fs/cgroup/cpu.max').read_text().split()
+        if (len(cpu_spec) != 2 or len(cpu_spec[0]) > 32 or len(cpu_spec[1]) > 32
+                or not re.fullmatch('[0-9]+', cpu_spec[1])):
+            raise ValueError('invalid cpu.max')
+        period = int(cpu_spec[1])
+        affinity_cpus = len(os.sched_getaffinity(0))
+        if period <= 0 or affinity_cpus < 1:
+            raise ValueError('invalid CPU period or affinity')
+        if cpu_spec[0] == 'max':
+            quota_cpus = affinity_cpus
+        elif re.fullmatch('[0-9]+', cpu_spec[0]) and int(cpu_spec[0]) >= period:
+            # A fractional cgroup CPU cannot be rounded up to an admitted
+            # full CPU: that would overstate headroom protecting live chat.
+            quota_cpus = int(cpu_spec[0]) // period
+        else:
+            raise ValueError('invalid CPU quota')
+    except (OSError, ValueError) as exc:
+        raise RuntimeError('HOLD_CGROUP_CPU_QUOTA') from exc
+    # Cgroup v2 may report an unlimited memory.max as "max".  An
+    # unbounded/malformed limit is not a verifiable RAM budget for training.
+    # Fail closed without treating host RAM as the owner's cgroup allowance.
+    try:
+        memory_limit_text = Path('/sys/fs/cgroup/memory.max').read_text().strip()
+        memory_current_text = Path('/sys/fs/cgroup/memory.current').read_text().strip()
+        if (not re.fullmatch('[0-9]{1,20}', memory_limit_text)
+                or not re.fullmatch('[0-9]{1,20}', memory_current_text)):
+            raise ValueError('unbounded or malformed cgroup memory')
+        memory_limit = int(memory_limit_text)
+        memory_current = int(memory_current_text)
+        if memory_limit <= 0 or memory_current > memory_limit:
+            raise ValueError('invalid cgroup memory limit or usage')
+    except (OSError, ValueError) as exc:
+        raise RuntimeError('HOLD_CGROUP_MEMORY_LIMIT') from exc
+    budget = helper.resource_budget(memory_limit, memory_current, quota_cpus, affinity_cpus)
+    # The helper is a separate native component, not an authority to bypass
+    # the pinned resource gate. NaN, bool and missing/malformed values must
+    # never compare as sufficient RAM (NaN < configured_limit is False).
+    if (type(budget) is not dict or type(budget.get('train_cpu_gib')) is not int
+            or not 0 <= budget['train_cpu_gib'] <= memory_limit // (1024 ** 3)):
+        raise RuntimeError('HOLD_RESOURCE_BUDGET_READBACK')
+    # A regular-file, pathname-bound, bounded read is required here.
+    # A symlink may be switched before the wrapper sources the env cap;
+    # a FIFO can otherwise block this admission check indefinitely.
+    configured_gib = read_installed_train_cpu_cap(STATE/'train_cpu_max.env')
     # The native loader uses the installed env cap. A smaller computed budget
     # is an admission refusal, never an implicit change to that loader setting.
     if budget['train_cpu_gib'] < configured_gib:
         raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_RAM_HEADROOM')
     budget['configured_train_cpu_gib'] = configured_gib
-    if helper.health().get('8081') != 200:
+    # Owner readback 2026-11-19: existing nox-proxy listens on 8080, not 8081.
+    # Fail closed on the serving route's actual /health; never start a new proxy.
+    health_snapshot = helper.health()
+    # A malformed native proxy reply is not proof of a healthy served chat.
+    # In Python, 200.0 == 200: use strict integer shape before the HTTP gate.
+    if type(health_snapshot) is not dict:
+        raise RuntimeError('HOLD_CHAT_HEALTH_READBACK')
+    status = health_snapshot.get('8080')
+    # Native health reports connection errors as strings; preserve the
+    # established unhealthy-chat HOLD. Only a spoofed 200-equivalent value
+    # requires a separate schema HOLD rather than successful admission.
+    if status == 200 and type(status) is not int:
+        raise RuntimeError('HOLD_CHAT_HEALTH_READBACK')
+    if status != 200:
         raise RuntimeError('HOLD_CHAT_HEALTH_BEFORE_TRAINING')
     return {'gpu1': gpu1, 'budget': budget}
 
 
 def worker_readback(helper, fresh_after=0):
     path = ROOT/'status/agents_t856u.json'
-    value = read_json(path)
+    # The descriptor-bound reader already rejects non-object JSON roots.
+    # Normalize only this known generic HOLD to the native-worker admission
+    # code, so a malformed census has a single owner-specific failure reason.
+    try:
+        value, snapshot_mtime = read_json(path, include_mtime=True)
+    except RuntimeError as exc:
+        if str(exc) != 'HOLD_STATE_OBJECT_REQUIRED':
+            raise
+        raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK') from exc
     rows = value.get('workers', [])
-    claimed = [row['current_task']['id'] for row in rows if isinstance(row.get('current_task'), dict)]
-    if (path.stat().st_mtime < max(fresh_after, time.time()-90) or value.get('n') != 6 or len(rows) != 6
-            or len({row.get('id') for row in rows}) != 6 or len(set(claimed)) != len(claimed)):
-        raise RuntimeError('HOLD_SIX_WORKER_READBACK')
+    # A historical six-worker BOOST receipt is not a fresh native-worker census.
+    # The pinned six-lane handoff observes exactly three physical workers; a
+    # stale six-worker status must never be accepted as current admission.
+    if type(rows) is not list or any(type(row) is not dict for row in rows):
+        raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
+    ids = [row.get('id') for row in rows]
+    # External JSON IDs can be arrays, objects or booleans; set(ids) would
+    # otherwise raise TypeError, and current_task without id raises KeyError.
+    # Treat ambiguous owner identity as an explicit admission HOLD.
+    claimed = []
+    for row in rows:
+        task = row.get('current_task')
+        if task is None:
+            continue
+        if (type(task) is not dict or type(task.get('id')) is not str
+                or not task['id'].strip()):
+            raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
+        claimed.append(task['id'])
+    # A far-future file timestamp is not evidence of a current native owner.
+    # Without an upper bound, stale worker IDs can remain 'fresh' indefinitely.
+    now = time.time()
+    if (snapshot_mtime < max(fresh_after, now-90)
+            or snapshot_mtime > now + 5
+            or type(value.get('n')) is not int or value['n'] != NATIVE_WORKER_CAP
+            or len(rows) != NATIVE_WORKER_CAP
+            or any(type(worker_id) is not str or not worker_id.strip()
+                   for worker_id in ids)
+            or len(set(ids)) != NATIVE_WORKER_CAP
+            or len(set(claimed)) != len(claimed)):
+        raise RuntimeError('HOLD_NATIVE_WORKER_CAP_READBACK')
     service = helper.service_state('nox-dispatcher-t855u')
-    if service['state'] != 'RUNNING':
+    # An incomplete or malformed Supervisor response is not RUNNING proof.
+    # Fail closed before accessing PID; do not leak KeyError/TypeError.
+    if type(service) is not dict or service.get('state') != 'RUNNING':
         raise RuntimeError('HOLD_DISPATCHER_NOT_RUNNING')
-    return {'workers': 6, 'worker_ids': [row.get('id') for row in rows],
+    # RUNNING alone is not evidence of a live, identified dispatcher.
+    # Supervisor may expose no PID or a malformed value during transitions.
+    if type(service.get('pid')) is not int or service['pid'] <= 0:
+        raise RuntimeError('HOLD_DISPATCHER_IDENTITY')
+    return {'workers': NATIVE_WORKER_CAP, 'worker_ids': ids,
             'busy_count': len(claimed), 'claimed_task_ids': claimed,
-            'dispatcher_pid': service['pid'], 'mtime': path.stat().st_mtime}
+            'dispatcher_pid': service['pid'], 'mtime': snapshot_mtime}
 
 
 def stop_controller(helper, name, script):
     status = helper.service_state(name)
-    if status['state'] != 'RUNNING':
+    # Do not treat a malformed Supervisor snapshot or bool/int-coerced PID
+    # as evidence that this particular controller is safe to stop.
+    if type(status) is not dict or status.get('state') != 'RUNNING':
         raise RuntimeError('HOLD_EXPECTED_CONTROLLER_NOT_RUNNING')
+    if type(status.get('pid')) is not int or status['pid'] <= 0:
+        raise RuntimeError('HOLD_CONTROLLER_IDENTITY')
     config = helper.program_config(name)
-    argv = shlex.split(config.get('command', ''))
+    # Missing or ambiguous group-stop flags are NOT proof that only this
+    # controller will be stopped. Validate before touching Supervisor.
+    if type(config) is not dict:
+        raise RuntimeError('HOLD_CONTROLLER_CONFIG_READBACK')
+    command = config.get('command')
+    stopasgroup, killasgroup = config.get('stopasgroup'), config.get('killasgroup')
+    if (type(command) is not str or not command.strip()
+            or type(stopasgroup) is not str or stopasgroup not in ('true', 'false')
+            or type(killasgroup) is not str or killasgroup not in ('true', 'false')):
+        raise RuntimeError('HOLD_CONTROLLER_CONFIG_READBACK')
+    try:
+        argv = shlex.split(command)
+    except ValueError as exc:
+        raise RuntimeError('HOLD_CONTROLLER_CONFIG_READBACK') from exc
     bound = str(script) in argv
     for arg in argv:
         path = Path(arg)
@@ -652,14 +1009,42 @@ def stop_controller(helper, name, script):
                 and str(script) in path.read_text()):
             bound = True
     row = helper.process(status['pid'])
-    if not bound or not row or row['service'] != name or str(script) not in row['argv']:
+    # The real process identity must be a typed argv vector, never an
+    # unverified substring inside a string or an incomplete native row.
+    if (type(row) is not dict or type(row.get('service')) is not str
+            or type(row.get('argv')) is not list
+            or any(type(arg) is not str for arg in row['argv'])
+            or not bound or row['service'] != name or str(script) not in row['argv']):
         raise RuntimeError('HOLD_CONTROLLER_IDENTITY')
-    if config.get('stopasgroup', '').lower() == 'true' or config.get('killasgroup', '').lower() == 'true':
-        group = [item for item in helper.process_table().values() if item['pgrp'] == row['pgrp'] and item['state'] != 'Z']
+    if stopasgroup == 'true' or killasgroup == 'true':
+        # Group-stop must not act on an incomplete native process census.
+        # bool is an int subclass: True is not process group 1.
+        census = helper.process_table()
+        if (type(census) is not dict or type(row.get('pgrp')) is not int
+                or row['pgrp'] <= 0):
+            raise RuntimeError('HOLD_CONTROLLER_PROCESS_GROUP_READBACK')
+        group = []
+        for item in census.values():
+            if (type(item) is not dict or type(item.get('pgrp')) is not int
+                    or item['pgrp'] <= 0 or type(item.get('state')) is not str):
+                raise RuntimeError('HOLD_CONTROLLER_PROCESS_GROUP_READBACK')
+            if item['pgrp'] == row['pgrp'] and item['state'] != 'Z':
+                if type(item.get('service')) is not str:
+                    raise RuntimeError('HOLD_CONTROLLER_PROCESS_GROUP_READBACK')
+                group.append(item)
+        if not group:
+            raise RuntimeError('HOLD_CONTROLLER_PROCESS_GROUP_READBACK')
         if any(item['service'] != name for item in group):
             raise RuntimeError('HOLD_CONTROLLER_FOREIGN_PROCESS_GROUP')
     rc, _ = helper.command(['supervisorctl', 'stop', name], 75)
-    if rc or helper.service_state(name)['state'] not in ('STOPPED', 'EXITED'):
+    # A successful supervisorctl command is not a verified controller stop.
+    # Missing/malformed post-stop Supervisor state must fail closed, not raise
+    # an unrelated KeyError/TypeError or count as an accepted stop.
+    if rc:
+        raise RuntimeError('HOLD_CONTROLLER_STOP_FAILED')
+    final_status = helper.service_state(name)
+    if (type(final_status) is not dict
+            or final_status.get('state') not in ('STOPPED', 'EXITED')):
         raise RuntimeError('HOLD_CONTROLLER_STOP_FAILED')
 
 
@@ -669,10 +1054,50 @@ def verify_policy(value):
         raise RuntimeError('HOLD_NATIVE_BOOST_POLICY_CHANGED')
 
 
+def verify_training_policy_owner(policy, admission):
+    """Require owner-lineage identity on follow-up and continuation."""
+    if (type(policy) is not dict or type(admission) is not dict
+            or type(admission.get('request')) is not str
+            or not re.fullmatch('[0-9]+', admission['request'])
+            or type(admission.get('source_sha')) is not str
+            or not re.fullmatch('[0-9a-f]{40}', admission['source_sha'])
+            or policy.get('training_request') != admission['request']
+            or policy.get('training_source_sha') != admission['source_sha']):
+        raise RuntimeError('HOLD_TRAINING_POLICY_OWNER_MISMATCH')
+    return True
+
+
 def owned_flag(path, prefix):
-    if (path.is_symlink() or not path.is_file() or path.stat().st_size > 4096
-            or not path.read_text().startswith(prefix)):
-        raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED')
+    """Verify an owned STOP flag through one bounded, pathname-stable descriptor."""
+    path = Path(path)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError as exc:
+        raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED') from exc
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or not 0 < before.st_size <= 4096:
+            raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED')
+        with os.fdopen(fd, 'rb') as stream:
+            fd = -1
+            raw = stream.read(4097)
+            after = os.fstat(stream.fileno())
+            named = os.stat(path, follow_symlinks=False)
+        # A matching hash prefix is not ownership: require a token boundary.
+        identity = prefix.encode('utf-8') if isinstance(prefix, str) else b''
+        fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+        if (len(raw) != before.st_size
+                or any(getattr(before, field) != getattr(after, field)
+                       or getattr(before, field) != getattr(named, field)
+                       for field in fields)
+                or not identity or not raw.startswith(identity)
+                or raw[len(identity):len(identity) + 1] not in (b'', b' ', b'\n', b'\r')):
+            raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED')
+    except (OSError, UnicodeError) as exc:
+        raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED') from exc
+    finally:
+        if fd >= 0:
+            os.close(fd)
 
 
 def verify_paused_result(helper, result, max_step=5, allow_completed=False):
@@ -683,8 +1108,15 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
             or type(step) is not int or not 1 <= step <= max_step
             or type(result.get('successful_optimizer_steps')) is not int
             or not 1 <= result['successful_optimizer_steps'] <= step
+            # During the initial bounded 1..5 step run, each global step must
+            # correspond to an independently reported optimizer update. A
+            # resumed 1000-step lineage may carry a per-run delta instead.
+            or (not allow_completed and result['successful_optimizer_steps'] != step)
             or result.get('adapter_delta_verified') is not True
-            or type(result.get('loss')) not in (int, float) or not math.isfinite(result['loss'])):
+            or type(result.get('loss')) not in (int, float) or not math.isfinite(result['loss'])
+            # Bounded cross-entropy is nonnegative; a signed checkpoint
+            # cannot prove valid optimizer loss with a finite negative value.
+            or result['loss'] < 0):
         raise RuntimeError('HOLD_PAUSED_OPTIMIZER_RECEIPT')
     before, after = result.get('before_tensor_sha256'), result.get('after_tensor_sha256')
     if any(not isinstance(value, str) or not re.fullmatch('[0-9a-f]{64}', value) for value in (before, after)) or before == after:
@@ -705,6 +1137,40 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
     if type(state.get('global_step')) is not int or state['global_step'] != step:
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_STEP')
     return True
+
+
+def continuation_terminal_state(terminal):
+    """Never label an owner-paused checkpoint as completed solely by step."""
+    if (terminal.get('state') == 'VERIFIED_BOUNDED_ADAPTER_UPDATE'
+            and type(terminal.get('global_step')) is int
+            and terminal['global_step'] == 1000):
+        return 'CONTINUATION_TARGET_1000_COMPLETED'
+    return 'CONTINUATION_CHECKPOINTED_BY_OWNER_PAUSE'
+
+
+
+def final_observation_snapshots(helper):
+    """Collect final readbacks without losing a durable receipt on one transport failure.
+
+    An unavailable supervisor, proxy, GPU or progress endpoint is a HOLD,
+    never evidence that the native continuation was accepted.
+    """
+    getters = (
+        ('service_after', helper.service_state),
+        ('chat_after', helper.health),
+        ('gpu_after', helper.gpu),
+        ('progress_after', helper.progress),
+    )
+    snapshots, errors = {}, {}
+    for key, readback in getters:
+        try:
+            snapshots[key] = readback()
+        except Exception as exc:
+            snapshots[key] = None
+            code = str(exc)
+            errors[key] = (code if re.fullmatch('HOLD_[A-Z0-9_]+', code)
+                           else type(exc).__name__)
+    return snapshots, errors
 
 
 def main():
@@ -738,15 +1204,18 @@ def main():
         result['steps'].append({'kind': kind, 'data': data, 'time': time.time()})
         save(); helper.emit(kind, data)
 
-    def backup(path):
+    def backup(path, expected_sha256=None):
         destination = backups/str(path).lstrip('/')
         if destination.exists() or path.is_symlink():
             raise RuntimeError('HOLD_SOURCE_BACKUP_COLLISION')
-        helper.atomic(destination, path.read_bytes())
+        data = stable_backup_bytes(path, expected_sha256)
+        helper.atomic(destination, data)
 
     def install(path, data):
         old = file_sha(path)
-        backup(path); helper.atomic(path, data); os.chmod(path, 0o755)
+        if old != expected[path]:
+            raise RuntimeError('HOLD_INSTALLED_TRAINING_SOURCE_CHANGED')
+        backup(path, expected[path]); helper.atomic(path, data); os.chmod(path, 0o755)
         expected[path] = hashlib.sha256(data).hexdigest()
         step('source_installed', {'path': str(path), 'before': old, 'after': expected[path]})
 
@@ -779,9 +1248,39 @@ def main():
         save(); helper.atomic(POINTER, json.dumps(pointer, indent=2).encode())
 
     def start_once(max_steps):
+        # STOP can be asserted after the earlier resource/flag admission.
+        # Recheck at the last owner-controlled point before starting training.
+        if global_stop():
+            raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
         rc, _ = helper.command(['supervisorctl', 'start', SERVICE], 35)
-        status = helper.service_state()
-        if status['state'] not in ('RUNNING', 'STARTING'):
+        # RUNNING may describe an older service, not this failed start.
+        # A nonzero supervisor exit cannot establish a fresh native launch.
+        if rc != 0:
+            raise RuntimeError('HOLD_SINGLE_TRAINER_START_FAILED')
+        # Supervisor can report STARTING before the native ENTRY process exists.
+        # A successful start command is not a process identity proof; allow one
+        # bounded transition to RUNNING, without sending a second start command.
+        # A successful supervisorctl start is not proof of a well-shaped
+        # Supervisor readback; reject invalid states before any identity claim.
+        def read_start_status():
+            status = helper.service_state()
+            if type(status) is not dict or type(status.get('state')) is not str:
+                raise RuntimeError('HOLD_NEW_TRAINER_STATUS_READBACK')
+            return status
+
+        status = read_start_status()
+        if status['state'] == 'STARTING':
+            deadline = time.monotonic() + 15
+        while status['state'] == 'STARTING':
+            if global_stop():
+                raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
+            if time.monotonic() >= deadline:
+                raise RuntimeError('HOLD_SINGLE_TRAINER_START_TIMEOUT')
+            time.sleep(0.5)
+            status = read_start_status()
+        if global_stop():
+            raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
+        if status['state'] != 'RUNNING':
             raise RuntimeError('HOLD_SINGLE_TRAINER_START_FAILED')
         identity = prove_training(helper)
         result['training_started'] = True
@@ -811,6 +1310,7 @@ def main():
                     or not str(pointer.get('request', '')).isdigit()
                     or not re.fullmatch('[0-9a-f]{40}', pointer.get('source_sha', ''))):
                 raise RuntimeError('HOLD_PREVIOUS_TRAINING_ADMISSION')
+            verify_training_policy_owner(policy, pointer)
             previous = read_json(STATE/('owner_maintenance_'+pointer['request']+'.json'))
             if (previous.get('schema') != SCHEMA or previous.get('source_sha') != pointer['source_sha']
                     or previous.get('admission') != pointer or policy.get('training_allowed') is not True
@@ -858,13 +1358,28 @@ def main():
             if OUTPUT.exists():
                 raise RuntimeError('HOLD_EXISTING_HYBRID_OUTPUT_INSPECT_FIRST')
             admission = resource_admission(helper); step('native_resource_admission', admission)
-            changed = {path: patch_permission(path.read_text(), path.name == 'nox_selfheal.py').encode() for path in CONTROLS}
+            # Render only the exact, stable source preimage already admitted above.
+            # A later pathname read must not silently rebound to foreign code.
+            changed = {
+                path: patch_permission(
+                    stable_backup_bytes(path, expected[path]).decode('utf-8'),
+                    request, source, path.name == 'nox_selfheal.py'
+                ).encode('utf-8')
+                for path in CONTROLS
+            }
             # Maintenance gates new claims; let already claimed CPU jobs finish.
             deadline = time.monotonic()+45
             while worker_readback(helper)['busy_count'] and time.monotonic() < deadline:
+                # STOP may latch while existing native claims drain; never
+                # perform maintenance after a newly asserted global STOP.
+                if global_stop():
+                    raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
                 time.sleep(2)
             if worker_readback(helper)['busy_count']:
                 raise RuntimeError('HOLD_DISPATCHER_BUSY_DRAIN_REQUIRED')
+            # Also fence STOP asserted exactly as the final worker goes idle.
+            if global_stop():
+                raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
             for name, script in CONTROLLER_SERVICES.items():
                 stop_controller(helper, name, script); controllers_stopped.append(name)
             for path, data in changed.items():
@@ -872,7 +1387,7 @@ def main():
             install(WRAPPER, helper.wrapper_source(request).encode())
             if helper.command(['bash', '-n', str(WRAPPER)])[0]:
                 raise RuntimeError('HOLD_WRAPPER_SYNTAX')
-            backup(POLICY)
+            backup(POLICY, file_sha(POLICY))
             policy.update(training_allowed=True, training_service=SERVICE,
                           training_request=request, training_source_sha=source,
                           training_gpu=1, training_planned_steps=1000,
@@ -880,7 +1395,12 @@ def main():
             helper.atomic(POLICY, json.dumps(policy, indent=2).encode())
             for name in list(controllers_stopped):
                 rc, _ = helper.command(['supervisorctl', 'start', name], 30)
-                if rc or helper.service_state(name)['state'] not in ('RUNNING', 'STARTING'):
+                if rc:
+                    raise RuntimeError('HOLD_CONTROLLER_RESTART')
+                # A malformed Supervisor snapshot cannot certify controller recovery.
+                restart_snapshot = helper.service_state(name)
+                if (type(restart_snapshot) is not dict
+                        or restart_snapshot.get('state') not in ('RUNNING', 'STARTING')):
                     raise RuntimeError('HOLD_CONTROLLER_RESTART')
                 controllers_stopped.remove(name)
             # Recheck resources after configuration while admissions remain held.
@@ -888,17 +1408,18 @@ def main():
             publish_admission(5)
             release_flags(prefix, pause_required=True)
             start_once(5)
-        elif helper.service_state()['state'] in ('RUNNING', 'STARTING'):
+        elif read_training_status(helper)['state'] in ('RUNNING', 'STARTING'):
+            identity = prove_existing_training(helper)
             result['training_started'] = True
-            step('existing_single_training_observed', prove_training(helper))
+            step('existing_single_training_observed', identity)
         elif not (OUTPUT/'owner_last_result.json').is_file():
             raise RuntimeError('HOLD_EXISTING_RUN_TERMINAL_WITHOUT_PROOF')
         # CPU work and media admission continue while observation is read-only.
         fcntl.flock(fd, fcntl.LOCK_UN); lock_held = False
         result['state'] = 'BOUNDED_TRAINING_RUNNING_ACCEPTANCE_PENDING'; save()
         if pointer.get('max_steps') == 1000:
-            if helper.service_state()['state'] in ('RUNNING', 'STARTING'):
-                result['continuation_process'] = prove_training(helper)
+            if read_training_status(helper)['state'] in ('RUNNING', 'STARTING'):
+                result['continuation_process'] = prove_existing_training(helper)
                 result['state'] = 'EXISTING_CONTINUATION_RUNNING'; success = True
             else:
                 terminal = read_json(OUTPUT/'owner_last_result.json')
@@ -908,13 +1429,12 @@ def main():
                 if terminal['state'] == 'VERIFIED_BOUNDED_ADAPTER_UPDATE' and terminal['global_step'] != 1000:
                     raise RuntimeError('HOLD_CONTINUATION_TARGET_NOT_REACHED')
                 result['continuation_terminal_receipt'] = terminal
-                result['state'] = ('CONTINUATION_TARGET_1000_COMPLETED' if terminal['global_step'] == 1000
-                                   else 'CONTINUATION_CHECKPOINTED_BY_OWNER_PAUSE')
+                result['state'] = continuation_terminal_state(terminal)
                 success = True
         else:
             deadline = time.monotonic()+400; candidate = None; previous_progress = None
             while time.monotonic() < deadline:
-                status = helper.service_state()
+                status = read_training_status(helper)
                 terminal = OUTPUT/'owner_last_result.json'
                 if terminal.is_file():
                     candidate = read_json(terminal)
@@ -938,7 +1458,7 @@ def main():
                 result['state'] = 'BOUNDED_TRAINING_RUNNING_ACCEPTANCE_PENDING'; success = True
             elif result['optimizer_steps_verified']:
                 deadline = time.monotonic()+40
-                while helper.service_state()['state'] in ('RUNNING', 'STARTING') and time.monotonic() < deadline:
+                while read_training_status(helper)['state'] in ('RUNNING', 'STARTING') and time.monotonic() < deadline:
                     time.sleep(2)
                 # A media/owner operation may now own maintenance. Leave the
                 # verified five-step checkpoint available instead of racing it.
@@ -951,6 +1471,7 @@ def main():
                     current_policy = read_json(POLICY, 16000); verify_policy(current_policy)
                     if current_policy.get('training_allowed') is not True or current_policy.get('training_service') != SERVICE:
                         raise RuntimeError('HOLD_NEW_TRAINING_POLICY')
+                    verify_training_policy_owner(current_policy, pointer)
                     for path, sha in expected.items():
                         if file_sha(path) != sha:
                             raise RuntimeError('HOLD_SOURCE_CHANGED_DURING_TRAINING')
@@ -960,7 +1481,10 @@ def main():
                         result['state'] = 'FIVE_STEPS_VERIFIED_OWNER_PAUSE_RETAINED'; success = True
                     else:
                         # Keep initial and continuation wrapper backups distinct.
-                        helper.atomic(backups/'first_five_wrapper.sh', WRAPPER.read_bytes())
+                        # Bind the five-step wrapper backup to the original admitted bytes.
+                        # The earlier source sweep cannot authorize a later raw pathname read.
+                        helper.atomic(backups/'first_five_wrapper.sh',
+                                      stable_backup_bytes(WRAPPER, expected[WRAPPER]))
                         data = helper.wrapper_source(request, 1000, True).encode()
                         helper.atomic(WRAPPER, data); os.chmod(WRAPPER, 0o755)
                         expected[WRAPPER] = hashlib.sha256(data).hexdigest()
@@ -980,20 +1504,57 @@ def main():
             helper.atomic(STATE/'TRAIN_HOLD.flag', ('OWNER_TRAINING_RESUME_FAILED request='+request+'\n').encode())
     finally:
         if lock_held:
-            for name in controllers_stopped:
-                if helper.service_state(name)['state'] in ('STOPPED', 'EXITED'):
-                    rc, _ = helper.command(['supervisorctl', 'start', name], 30)
-                    result['steps'].append({'kind': 'controller_restored', 'data': {'name': name, 'rc': rc}, 'time': time.time()})
-            fcntl.flock(fd, fcntl.LOCK_UN); lock_held = False
-        result.update(finished=time.time(), service_after=helper.service_state(),
+            try:
+                for name in controllers_stopped:
+                    try:
+                        before_restore = helper.service_state(name)
+                        # A malformed/future Supervisor state is not evidence
+                        # that this controller is safe or already restored.
+                        if (type(before_restore) is not dict
+                                or before_restore.get('state') not in
+                                ('STOPPED', 'EXITED', 'RUNNING', 'STARTING')):
+                            raise RuntimeError('HOLD_CONTROLLER_RESTORE_READBACK')
+                        if before_restore['state'] in ('STOPPED', 'EXITED'):
+                            rc, _ = helper.command(['supervisorctl', 'start', name], 30)
+                            if rc:
+                                raise RuntimeError('HOLD_CONTROLLER_RESTORE_FAILED')
+                            after_restore = helper.service_state(name)
+                            if (type(after_restore) is not dict
+                                    or after_restore.get('state') not in ('RUNNING', 'STARTING')):
+                                raise RuntimeError('HOLD_CONTROLLER_RESTORE_READBACK')
+                            result['steps'].append({'kind': 'controller_restored',
+                                'data': {'name': name, 'rc': rc}, 'time': time.time()})
+                    except Exception as exc:
+                        # A restoration failure must not mask the owner receipt
+                        # or leave the shared maintenance lock held indefinitely.
+                        reason = str(exc)
+                        if not re.fullmatch('HOLD_[A-Z0-9_]+', reason):
+                            reason = 'HOLD_CONTROLLER_RESTORE_READBACK'
+                        result['steps'].append({'kind': 'controller_restore_hold',
+                            'data': {'name': name, 'error': reason}, 'time': time.time()})
+                        result['restore_error'] = reason
+                        result['state'] = 'HOLD_TRAINING_RESUME'
+                        success = False
+            finally:
+                fcntl.flock(fd, fcntl.LOCK_UN); lock_held = False
+        result.update(finished=time.time(),
                       hold_retained=(STATE/'TRAIN_HOLD.flag').exists(),
-                      pause_retained=(STATE/'TRAIN_PAUSE_REQUEST.flag').exists(),
-                      chat_after=helper.health(), gpu_after=helper.gpu(), progress_after=helper.progress())
+                      pause_retained=(STATE/'TRAIN_PAUSE_REQUEST.flag').exists())
+        final_snapshots, final_errors = final_observation_snapshots(helper)
+        result.update(final_snapshots)
+        if final_errors:
+            result['final_readback_errors'] = final_errors
+            result['state'] = 'HOLD_TRAINING_RESUME'
+            success = False
         try:
             result['native_workers_after'] = worker_readback(helper)
         except Exception as exc:
             result['native_workers_readback_error'] = str(exc) if str(exc).startswith('HOLD_') else type(exc).__name__
-        if result['chat_after'].get('8081') != 200:
+        # Use the live serving proxy on 8080 for the final receipt too; 8081
+        # is a retired endpoint and must not turn healthy serving into failure.
+        if (type(result['chat_after']) is not dict
+                or type(result['chat_after'].get('8080')) is not int
+                or result['chat_after']['8080'] != 200):
             result['chat_health_regression'] = True; success = False
         save(); helper.emit('native_training_resume_receipt', result); os.close(fd)
     if success:
