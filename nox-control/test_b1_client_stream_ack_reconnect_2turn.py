@@ -158,6 +158,7 @@ def attach(page,db):
                     window.uiFailAfterWriteOnce--;
                     throw Error('synthetic UI failure after partial DOM mutation');
                 }
+                return true; // successful durable terminal DOM witness
             }
         };
         window.client=NOXB1StreamReconnect.createClient({
