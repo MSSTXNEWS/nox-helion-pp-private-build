@@ -41,7 +41,7 @@ function procRing() {
 
 export async function startSpace(opts) {
   const o = Object.assign({ canvas: null, onstate: () => {} }, opts || {});
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = false;
   const small = () => innerWidth <= 820 || matchMedia('(pointer:coarse)').matches;
   const cv = o.canvas;
   const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, alpha: false, powerPreference: 'high-performance' });
