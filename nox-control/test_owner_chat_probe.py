@@ -1191,6 +1191,63 @@ class ProbeTests(unittest.TestCase):
                 self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
             self.assertTrue(response.closed)
 
+
+    def test_third_turn_six_row_postquiet_readback_stays_identical(self):
+        """Two exact same-dialog GET snapshots, no extra POST and no S03 assertion."""
+        did = '1' * 32
+        turns = [('17 x 19?', '323'),
+                 ('Previous number?', '323'),
+                 ('How many executors?', '3')]
+        rows = []
+        for index, (question, answer) in enumerate(turns):
+            rows.extend([
+                {'id': index * 2 + 1, 'role': 'user',
+                 'content': question, 'dialog_id': did},
+                {'id': index * 2 + 2, 'role': 'assistant',
+                 'content': answer, 'dialog_id': did},
+            ])
+        initial = {'dialog_id': did, 'messages': rows}
+        def snap():
+            return json.loads(json.dumps(initial))
+        with patch.object(probe.time, 'sleep') as sleeper, patch.object(
+                probe, 'owner_readback_json', return_value=snap()) as fetch:
+            self.assertTrue(probe.stable_postquiet_three_turn_history(
+                object(), initial, turns, did))
+            sleeper.assert_called_once_with(0.5)
+            self.assertEqual(fetch.call_args.args[1],
+                '/api/ui/memory/dialogs/history?dialog_id=' + did + '&limit=8')
+        bad_snapshots = []
+        changed_content = snap()
+        changed_content['messages'][-1]['content'] = 'stale replacement'
+        bad_snapshots.append(changed_content)
+        changed_id = snap()
+        changed_id['messages'][1]['id'] = 777
+        bad_snapshots.append(changed_id)
+        missing_id = snap()
+        del missing_id['messages'][0]['id']
+        bad_snapshots.append(missing_id)
+        foreign = snap()
+        foreign['dialog_id'] = '2' * 32
+        bad_snapshots.append(foreign)
+        duplicate = snap()
+        duplicate['messages'][-1]['id'] = duplicate['messages'][-2]['id']
+        bad_snapshots.append(duplicate)
+        for poisoned in bad_snapshots:
+            with self.subTest(poisoned=poisoned), patch.object(
+                    probe.time, 'sleep'), patch.object(
+                    probe, 'owner_readback_json', return_value=poisoned):
+                self.assertFalse(probe.stable_postquiet_three_turn_history(
+                    object(), initial, turns, did))
+        with patch.object(probe.time, 'sleep') as sleeper, patch.object(
+                probe, 'owner_readback_json') as fetch:
+            self.assertFalse(probe.stable_postquiet_three_turn_history(
+                object(), {'dialog_id': did, 'messages': rows[:2]}, turns, did))
+            sleeper.assert_not_called()
+            fetch.assert_not_called()
+        source = path.read_text()
+        self.assertIn('stable_postquiet_three_turn_history(client,third_history,expected_three,did)', source)
+        self.assertIn("if not third_durable:raise RuntimeError('HOLD_CHAT_PROBE_POSTQUIET_HISTORY')", source)
+
     def test_owner_readbacks_bind_exact_origin_path_and_query(self):
         """Do not certify third-turn owner/S03 evidence from redirected HTTP 200 JSON."""
         class Response:
