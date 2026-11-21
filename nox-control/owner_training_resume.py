@@ -987,7 +987,20 @@ def stop_controller(helper, name, script):
     if type(status.get('pid')) is not int or status['pid'] <= 0:
         raise RuntimeError('HOLD_CONTROLLER_IDENTITY')
     config = helper.program_config(name)
-    argv = shlex.split(config.get('command', ''))
+    # Missing or ambiguous group-stop flags are NOT proof that only this
+    # controller will be stopped. Validate before touching Supervisor.
+    if type(config) is not dict:
+        raise RuntimeError('HOLD_CONTROLLER_CONFIG_READBACK')
+    command = config.get('command')
+    stopasgroup, killasgroup = config.get('stopasgroup'), config.get('killasgroup')
+    if (type(command) is not str or not command.strip()
+            or type(stopasgroup) is not str or stopasgroup not in ('true', 'false')
+            or type(killasgroup) is not str or killasgroup not in ('true', 'false')):
+        raise RuntimeError('HOLD_CONTROLLER_CONFIG_READBACK')
+    try:
+        argv = shlex.split(command)
+    except ValueError as exc:
+        raise RuntimeError('HOLD_CONTROLLER_CONFIG_READBACK') from exc
     bound = str(script) in argv
     for arg in argv:
         path = Path(arg)
@@ -996,9 +1009,14 @@ def stop_controller(helper, name, script):
                 and str(script) in path.read_text()):
             bound = True
     row = helper.process(status['pid'])
-    if not bound or not row or row['service'] != name or str(script) not in row['argv']:
+    # The real process identity must be a typed argv vector, never an
+    # unverified substring inside a string or an incomplete native row.
+    if (type(row) is not dict or type(row.get('service')) is not str
+            or type(row.get('argv')) is not list
+            or any(type(arg) is not str for arg in row['argv'])
+            or not bound or row['service'] != name or str(script) not in row['argv']):
         raise RuntimeError('HOLD_CONTROLLER_IDENTITY')
-    if config.get('stopasgroup', '').lower() == 'true' or config.get('killasgroup', '').lower() == 'true':
+    if stopasgroup == 'true' or killasgroup == 'true':
         # Group-stop must not act on an incomplete native process census.
         # bool is an int subclass: True is not process group 1.
         census = helper.process_table()
