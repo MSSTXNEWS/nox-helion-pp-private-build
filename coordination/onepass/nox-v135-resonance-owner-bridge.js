@@ -392,6 +392,9 @@
       let data;try{data=JSON.parse(init?.body);}catch{return Promise.resolve(errorResponse('INVALID_JSON',400));}
       if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.message!=='string'||
          !data.message.trim()||data.message.length>8000)return Promise.resolve(errorResponse('INVALID_MESSAGE',422));
+      // Reject decoded lone UTF-16 surrogates before any dialog or S03 write.
+      if(!validUnicodeScalars(data.message))
+        return Promise.resolve(errorResponse('HOLD_INVALID_MESSAGE_UNICODE',422));
       return typeof data.request_id==='string'||Object.prototype.hasOwnProperty.call(data,'dialog_id')
         ?Promise.resolve(sseChat(data,init?.signal)):jsonChat(data,init?.signal);
     }
