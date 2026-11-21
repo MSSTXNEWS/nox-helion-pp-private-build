@@ -536,6 +536,50 @@ class CheckpointStepProvenance(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "HOLD_GPU1_HEADROOM"):
                     admit(helper)
 
+    def test_resource_budget_readback_refuses_ambiguous_headroom(self):
+        # Execute the exact owner resource admission AST with synthetic cgroup
+        # and GPU probes only; no native trainer, lease or model is touched.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "train_cpu_max.env").write_text(
+                "TRAIN_CPU_MAX=64GiB\n", encoding="utf-8")
+            admit = load_pinned_verifier(root)["resource_admission"]
+            contents = {
+                "/sys/fs/cgroup/cpu.max": "400000 100000",
+                "/sys/fs/cgroup/memory.max": "194065203200",
+                "/sys/fs/cgroup/memory.current": "188662734848",
+            }
+            def fake_read_text(path, *args, **kwargs):
+                return contents[str(path)]
+            budget_value = {"train_cpu_gib": 64}
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "STOPPED"},
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 30000}]},
+                resource_budget=lambda *_: budget_value,
+                health=lambda: {"8080": 200},
+            )
+            with (mock.patch.object(Path, "read_text", autospec=True,
+                                    side_effect=fake_read_text),
+                  mock.patch("os.sched_getaffinity", return_value={0, 1, 2, 3})):
+                self.assertEqual(admit(helper)["budget"]["train_cpu_gib"], 64)
+                for invalid in (None, [], True, {}, {"train_cpu_gib": None},
+                                {"train_cpu_gib": True},
+                                {"train_cpu_gib": "64"},
+                                {"train_cpu_gib": 64.0},
+                                {"train_cpu_gib": float("nan")},
+                                {"train_cpu_gib": float("inf")},
+                                {"train_cpu_gib": -1},
+                                {"train_cpu_gib": 1000000000}):
+                    with self.subTest(budget=invalid):
+                        budget_value = invalid
+                        with self.assertRaisesRegex(
+                                RuntimeError, "HOLD_RESOURCE_BUDGET_READBACK"):
+                            admit(helper)
+                budget_value = {"train_cpu_gib": 63}
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_INSTALLED_TRAIN_CPU_RAM_HEADROOM"):
+                    admit(helper)
+
     def test_resource_admission_requires_actual_proxy_8080_not_legacy_8081(self):
         # Owner-confirmed 2026-11-19: proxy /health=200 on 8080; 8081 closed.
         # This source-only test never contacts the host or starts training.
