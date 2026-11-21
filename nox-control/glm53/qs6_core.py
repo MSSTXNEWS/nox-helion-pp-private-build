@@ -257,7 +257,7 @@ FIRST_TAIL = "\n\n[Режим первого такта: ответь тольк
 DEEP_TAIL = "\n\n[Короткое вступление уже показано пользователю. Не повторяй его и не подтверждай заново, сразу дай глубину: детали, шаги, нюансы.]"
 
 def _strip_nox(body):
-    b = {k: v for k, v in body.items() if not k.startswith("nox_") or k == "nox_facts"}
+    b = {k: v for k, v in body.items() if not k.startswith("nox_") or k in ("nox_facts", "nox_system")}
     return b
 
 def prefix_hash():
@@ -280,9 +280,9 @@ def build_deep(body, plan, cfg, stream, after_fast=False):
     return req, effort
 
 def build_fast(body, plan, cfg, stream, first_part):
-    b = _strip_nox(body); facts = b.pop("nox_facts", None); b.pop("reasoning_effort", None)
+    b = _strip_nox(body); facts = b.pop("nox_facts", None); soul = b.pop("nox_system", None); b.pop("reasoning_effort", None)
     msgs = P.clean_history(list(b.get("messages") or []), keep_reasoning=False)
-    sysmsg = {"role": "system", "content": P.persona() + FAST_SUFFIX}
+    sysmsg = {"role": "system", "content": (soul.strip() if isinstance(soul, str) and soul.strip() else P.persona()) + FAST_SUFFIX}
     msgs = [sysmsg] + [m for m in msgs if m.get("role") != "system"]
     block = P.compact_facts(facts)
     if block and msgs[-1].get("role") == "user" and isinstance(msgs[-1].get("content"), str):

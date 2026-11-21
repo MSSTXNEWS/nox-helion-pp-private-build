@@ -5,6 +5,8 @@ ROOT = os.environ.get("NOX_WEB_ROOT", "/root/nox/web")
 GW = os.environ.get("NOX_GW", "127.0.0.1:8082")
 STT = os.environ.get("NOX_STT", "127.0.0.1:8093")   # голос: /stt/* -> faster-whisper (voice/stt_server.py)
 TTS = os.environ.get("NOX_TTS", "127.0.0.1:8094")   # голос: /tts/* -> XTTS/Piper (voice/tts_server.py), SSE/PCM
+MEM = os.environ.get("NOX_MEMORY_API", "127.0.0.1:8095")   # «что NOX вспомнил»: qs6/recall_server.py, наружу только как /memory/*
+MEM_PATHS = ("/health", "/api")
 PORT = int(os.environ.get("NOX_WEB_PORT", "8091"))
 MAX_BODY = 40 * 1024 * 1024
 TAG = "nox-helion:latest"
@@ -25,6 +27,7 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/glm/"): return self._proxy("GET", p[4:], None)
         if p.startswith("/stt/"): return self._proxy("GET", p[4:] + qs, None, STT, "STT (127.0.0.1:8093)")
         if p.startswith("/tts/"): return self._proxy("GET", p[4:] + qs, None, TTS, "TTS (127.0.0.1:8094)")
+        if p.startswith("/memory/"): return self._memory("GET", p[7:], None)
         if p.startswith("/api/"): return self._j(503, {"error": "API панели S2 не подключено (работает только чат через GLM-5.3 на S1)"})
         if p.startswith("/web/"):
             rel = p[5:] or "index.html"
@@ -55,8 +58,13 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/glm/"): return self._proxy("POST", p[4:], raw)
         if p.startswith("/stt/"): return self._proxy("POST", p[4:] + qs, raw, STT, "STT (127.0.0.1:8093)", self.headers.get("Content-Type"))
         if p.startswith("/tts/"): return self._proxy("POST", p[4:] + qs, raw, TTS, "TTS (127.0.0.1:8094)", self.headers.get("Content-Type"))
+        if p.startswith("/memory/"): return self._memory("POST", p[7:], raw)
         if p.startswith("/api/"): return self._j(503, {"error": "API панели S2 не подключено"})
         return self._j(404, {"error": "not found"})
+    def _memory(self, method, path, raw):
+        """/memory/health, /memory/api -> recall_api (127.0.0.1:8095). Других путей у recall_api нет, остальное 404."""
+        if path not in MEM_PATHS or (path == "/health") != (method == "GET"): return self._j(404, {"ok": False, "error": "доступно: GET /memory/health, POST /memory/api"})
+        return self._proxy(method, path, raw, MEM, "память (recall_api %s)" % MEM)
     def _proxy(self, method, path, raw, host=None, name="шлюз GLM", ctype=None):
         c = None; started = False
         try:
