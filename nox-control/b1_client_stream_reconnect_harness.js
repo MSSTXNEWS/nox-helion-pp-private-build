@@ -172,8 +172,28 @@
               // UI handlers that await MUST check this signal immediately
               // before their actual DOM/state commit; this caller cannot undo
               // a UI effect already committed by an uncooperative adapter.
-              await ui.onDelta(s,data,ctrl.signal,eventId);
-              if(ctrl.signal.aborted) return stopped();
+              // An adapter may leave onDelta() pending forever, even after
+              // STOP/timeout. Its DOM commit contract must check AbortSignal
+              // immediately before mutation. Race only the wait; a late
+              // resolution cannot resume this stream loop or emit new frames.
+              let onDeltaAbort,deltaOutcome;
+              try{
+                deltaOutcome=await Promise.race([
+                  Promise.resolve().then(()=>ui.onDelta(
+                    s,data,ctrl.signal,eventId))
+                    .then(()=>({ok:true}),()=>({uiError:true})),
+                  new Promise(resolve=>{
+                    onDeltaAbort=()=>resolve({aborted:true});
+                    ctrl.signal.addEventListener('abort',onDeltaAbort,{once:true});
+                    if(ctrl.signal.aborted) onDeltaAbort();
+                  })
+                ]);
+              }finally{
+                if(onDeltaAbort)
+                  ctrl.signal.removeEventListener('abort',onDeltaAbort);
+              }
+              if(deltaOutcome.aborted||ctrl.signal.aborted) return stopped();
+              if(deltaOutcome.uiError) hold('HOLD_STREAM_POST_OR_READ');
             }
             // Terminal SSE frames are deliberately NOT sufficient to ACK;
             // only a separately authenticated durable readback is accepted.
