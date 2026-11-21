@@ -366,6 +366,11 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             kind=frame.get('type');elapsed=round((time.monotonic()-started)*1000)
             if kind not in ('preparing','start','started','delta','done','error','status','meta'):
                 raise RuntimeError('HOLD_STREAM_FRAME_TYPE')
+            # A tagged intermediate SSE event from another session must never
+            # be folded into this dialog, even if a later DONE has the right ID.
+            # Legacy intermediate frames without dialog_id are still accepted.
+            if kind != 'done' and 'dialog_id' in frame and frame['dialog_id'] != dialog_id:
+                raise RuntimeError('HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH')
             # A preterminal failure must poison the entire stream, even if
             # the backend subsequently emits a successful saved=true done.
             if kind not in ('done', 'error') and (
