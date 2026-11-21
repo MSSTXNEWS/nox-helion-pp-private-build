@@ -112,6 +112,30 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                             self.assertNotIn('_agent_final',payload)
 
 
+    async def test_native_sse_utf8_wire_limit_holds_before_oversized_token(self):
+        # Three single-codepoint astral tokens are 12 UTF-8 bytes, not 3.
+        # The third must never be emitted or certified by the browser/S03.
+        for streaming in (True, False):
+            with self.subTest(streaming=streaming):
+                chunks=Chunks([frame('🌍'),frame('🌍'),frame('🌍'),
+                               frame(finish='stop'),b'data: [DONE]\n\n'])
+                requests,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Привет'}]}
+                with (factory,patch.object(stream,'FINAL_RESPONSE_LIMIT',8)):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Привет',streaming)
+                    if streaming:
+                        wire=''.join([part async for part in response.body_iterator])
+                        self.assertIn('HOLD_MODEL_OUTPUT_SIZE',wire)
+                        self.assertNotIn('[DONE]',wire)
+                    else:
+                        self.assertEqual(response.status_code,502)
+                        self.assertIn(b'HOLD_MODEL_OUTPUT_SIZE',response.body)
+                self.assertTrue(chunks.closed)
+                self.assertEqual(len(requests),1)
+                self.assertNotIn('_agent_final',payload)
+
     async def test_oversized_s03_history_holds_before_second_decode(self):
         # A history that cannot possibly fit the full native POST must not
         # be decoded into another large copy under scarce cgroup memory.
