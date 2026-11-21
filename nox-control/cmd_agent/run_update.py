@@ -62,9 +62,12 @@ def main():
     directory=tempfile.mkdtemp(prefix="nox-owner-")
     keyfile=directory+"/key"
     pub=None; attached=False; removed=False; verified_rows=None
+    # Never inherit NOX2 or other CI/owner credentials into child processes.
+    # Use only deterministic non-secret environment keys, including a private HOME.
+    child_env={"PATH":"/usr/bin:/bin", "HOME":directory, "LANG":"C", "LC_ALL":"C"}
     try:
         subprocess.run(["ssh-keygen","-q","-t","ed25519","-N","","-C",
-                        "nox-owner-probe","-f",keyfile],check=True)
+                        "nox-owner-probe","-f",keyfile],check=True,env=child_env)
         with open(keyfile+".pub",encoding="utf-8") as f: pub=f.read().strip()
         attached=True
         api("POST","/instances/%d/ssh/"%INSTANCE,{"ssh_key":pub})
@@ -79,7 +82,7 @@ def main():
                 "-o","BatchMode=yes","-o","IdentitiesOnly=yes",
                 "-o","ConnectTimeout=15","-o","StrictHostKeyChecking=accept-new",
                 "-o","UserKnownHostsFile="+directory+"/known","root@"+inst["public_ipaddr"],REMOTE],
-                capture_output=True,text=True,errors="replace",timeout=65,stdin=subprocess.DEVNULL)
+                capture_output=True,text=True,errors="replace",timeout=65,stdin=subprocess.DEVNULL,env=child_env)
             if r.returncode==0:
                 verified_rows=accepted(r.stdout)
                 if verified_rows is None:
