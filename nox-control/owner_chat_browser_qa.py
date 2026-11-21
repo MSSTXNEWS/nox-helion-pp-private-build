@@ -634,6 +634,21 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
             or writer_receipt is independent_readback):
         return False
     if require_full_transcript_pin:
+        # Session-consistent rows alone do not bind a trusted S03 writer
+        # event to the independent reader's owner session. If any witness
+        # exposes a session pin, ALL three witnesses must agree exactly.
+        # Entirely unannotated older rows/receipts remain compatible.
+        row_scoped = 'session_id' in expected_messages[0]
+        witness_scoped = ('session_id' in writer_receipt
+                          or 'session_id' in independent_readback)
+        if row_scoped or witness_scoped:
+            if not row_scoped:
+                return False
+            session_id = expected_messages[0]['session_id']
+            if (writer_receipt.get('session_id') != session_id
+                    or independent_readback.get('session_id') != session_id):
+                return False
+    if require_full_transcript_pin:
         # The role/content fingerprint omits durable row identities. A stale
         # writer receipt can otherwise match newly replaced rows with the same
         # text. Both trusted witnesses must pin the same ordered four IDs.
