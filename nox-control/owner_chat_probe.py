@@ -226,6 +226,16 @@ def page_snapshot(response, limit=200000, expected_path=None):
         response.close()
 
 
+def require_same_origin_refresh_target(response_url, target):
+    """Browser navigations to a foreign origin cannot prove live NOX UI health."""
+    resolved = urllib.parse.urlsplit(urllib.parse.urljoin(response_url, target))
+    page = urllib.parse.urlsplit(response_url)
+    if ((resolved.scheme, resolved.netloc.lower()) !=
+            (page.scheme, page.netloc.lower())):
+        raise RuntimeError('HOLD_CHAT_CROSS_ORIGIN_REFRESH')
+    return resolved
+
+
 def reject_auth_meta_refresh(raw, response_url):
     """Reject successful HTML that sends the real browser to an auth page."""
     class RefreshScanner(HTMLParser):
@@ -244,7 +254,7 @@ def reject_auth_meta_refresh(raw, response_url):
             target = target_spec.split('=', 1)[1].strip()
             if len(target) >= 2 and target[0] in ('"', "'") and target[-1] == target[0]:
                 target = target[1:-1]
-            target_url = urllib.parse.urlsplit(urllib.parse.urljoin(response_url, target))
+            target_url = require_same_origin_refresh_target(response_url, target)
             path = urllib.parse.unquote(target_url.path).rstrip('/').casefold()
             if path in ('/chat/login', '/login', '/auth/login', '/signin', '/sign-in'):
                 raise RuntimeError('HOLD_CHAT_AUTH_META_REFRESH')
@@ -268,7 +278,7 @@ def reject_auth_refresh_header(response):
     target = match.group(1).strip()
     if len(target) >= 2 and target[0] in ('"', "'") and target[-1] == target[0]:
         target = target[1:-1]
-    resolved = urllib.parse.urlsplit(urllib.parse.urljoin(response.url, target))
+    resolved = require_same_origin_refresh_target(response.url, target)
     path = urllib.parse.unquote(resolved.path).rstrip('/').casefold()
     if path in ('/chat/login', '/login', '/auth/login', '/signin', '/sign-in'):
         raise RuntimeError('HOLD_CHAT_AUTH_REFRESH_HEADER')
