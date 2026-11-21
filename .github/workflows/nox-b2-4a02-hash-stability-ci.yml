@@ -24,7 +24,7 @@ jobs:
         shell: bash
         run: |
           test "$(git hash-object nox-control/owner_training_resume.py)" = "aa9b517da44790e7ba42870aa258a34566b8bcd4"
-          test "$(git hash-object nox-control/tests/test_owner_training_resume_step_type_b2.py)" = "40300f9202543b8c719662cac9978b4d70046b62"
+          test "$(git hash-object nox-control/tests/test_owner_training_resume_step_type_b2.py)" = "24dd184239eba5b801c60b32db6ecf674b2a1f6c"
       - name: Syntax and bounded non-native checkpoint regression
         run: |
           python -B -m py_compile nox-control/owner_training_resume.py nox-control/tests/test_owner_training_resume_step_type_b2.py

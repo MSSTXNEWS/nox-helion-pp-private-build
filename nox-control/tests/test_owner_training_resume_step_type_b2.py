@@ -1773,6 +1773,7 @@ class CheckpointStepProvenance(unittest.TestCase):
                 return clock[0]
             namespace = {
                 "helper": types.SimpleNamespace(service_state=service_state),
+                "STOPPED": ("STOPPED", "EXITED", "FATAL"),
                 "global_stop": global_stop,
                 "time": types.SimpleNamespace(monotonic=monotonic,
                                               sleep=lambda delay: sleeps.append(delay)),
