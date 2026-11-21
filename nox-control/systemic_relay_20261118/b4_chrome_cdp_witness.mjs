@@ -127,7 +127,7 @@ function eventData(record){
 // prove first-visible text. This proxy does not attest browser paint.
 const hasPrintableAnswerText=text=>/[\p{L}\p{N}\p{P}\p{S}]/u.test(text);
 export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expectedChatOrigin,makeSession,onReady,
-  responseBodyAckTimeoutMs=750,bodyAckClock=()=>performance.now()}={}){
+  responseBodyAckTimeoutMs=750,requestPostDataAckTimeoutMs=750,bodyAckClock=()=>performance.now()}={}){
   if(!/^ws:\/\/(localhost|127\.0\.0\.1):\d+\//.test(ws||''))throw Error('LOCAL_CDP_ONLY');
   if(!Number.isInteger(count)||count<1||count>6)throw Error('BAD_COUNT');
   if(!Number.isInteger(quiescenceMs)||quiescenceMs<50||quiescenceMs>1000)throw Error('BAD_QUIESCENCE');
@@ -135,6 +135,9 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
   if(!Number.isInteger(responseBodyAckTimeoutMs)||responseBodyAckTimeoutMs<25||
      responseBodyAckTimeoutMs>2000||responseBodyAckTimeoutMs>=timeoutMs)
     throw Error('BAD_BODY_ACK_TIMEOUT');
+  if(!Number.isInteger(requestPostDataAckTimeoutMs)||requestPostDataAckTimeoutMs<25||
+     requestPostDataAckTimeoutMs>2000||requestPostDataAckTimeoutMs>=timeoutMs)
+    throw Error('BAD_POST_DATA_ACK_TIMEOUT');
   if(typeof bodyAckClock!=='function')throw Error('BAD_BODY_ACK_CLOCK');
   // The CDP websocket is NOT the chat service origin. An explicit, separately
   // established serving origin is mandatory; never infer one from a request.
@@ -328,9 +331,30 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         x.request=hash(bytes);
       };
       if(typeof p.request.postData==='string')record(p.request.postData);
-      else x.requestLookupPending=Promise.resolve()
-        .then(()=>c.send('Network.getRequestPostData',{requestId:p.requestId}))
-        .then(v=>record(v?.postData)).catch(()=>{});
+      else {
+        // Every lookup is bounded from issue, not from SSE completion.
+        // The seal prevents late resolves or rejects from certifying a turn.
+        let lookupTimeout,lookupSealed=false;
+        const failLookup=()=>{
+          if(lookupSealed)return;
+          lookupSealed=true;
+          x.missing=true;
+          x.request=null;
+        };
+        const lookup=Promise.resolve()
+          .then(()=>c.send('Network.getRequestPostData',{requestId:p.requestId}));
+        x.requestLookupPending=Promise.race([
+          lookup,
+          new Promise((_,reject)=>{lookupTimeout=setTimeout(()=>{
+            failLookup();
+            reject(Error('CDP_POST_DATA_ACK_TIMEOUT'));
+          },requestPostDataAckTimeoutMs);})
+        ]).then(v=>{
+          if(lookupSealed)return;
+          lookupSealed=true;
+          record(v?.postData);
+        }).catch(failLookup).finally(()=>clearTimeout(lookupTimeout));
+      }
       return;
     }
     const x=active.get(p.requestId);if(!x)return;
@@ -472,19 +496,11 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     lifecycleArmed=true;
     if(onReady)await onReady(c);
     const records=(await completion).slice().sort((a,b)=>a.order-b.order);
-    // Network.getResponseBody resolves asynchronously; completion order is not turn order.
-    // Response-body completion can beat the asynchronous request-data CDP ACK.
-    // Wait only for already-issued metadata queries, never replay the model POST.
+    // Response-body completion may beat request-data ACK. Each request metadata
+    // lookup has already been issue-time bounded and sealed once; join only
+    // those promises without a second mutable timeout.
     const requestLookups=records.map(x=>x.requestLookupPending).filter(Boolean);
-    if(requestLookups.length){
-      let guard;
-      try{
-        await Promise.race([
-          Promise.allSettled(requestLookups),
-          new Promise(resolve=>{guard=setTimeout(resolve,750);})
-        ]);
-      }finally{clearTimeout(guard);}
-    }
+    if(requestLookups.length)await Promise.allSettled(requestLookups);
     // Keep CDP attached after the second body ACK: an extra browser POST or
     // socket loss in this finite interval invalidates the two-turn witness.
     // It observes only; it never sends/replays a model POST.
