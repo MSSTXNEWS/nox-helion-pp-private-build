@@ -47,7 +47,17 @@
     headers:{'Content-Type':'application/json'},body:JSON.stringify(data)
   }),signal);
   async function reason(r,signal) {
-    try{const j=await nativeBodyJSON(r,signal);return String(j.error||j.reason||'HTTP_'+r.status).slice(0,110);}
+    try{
+      const j=await nativeBodyJSON(r,signal);
+      // Owner routes use {error:{code:"HOLD_*"}} as well as legacy strings.
+      // Stringifying an object hid the actual blocker as "[object Object]".
+      const error=j?.error,detail=j?.reason;
+      const code=typeof error==='string'?error:
+        typeof error?.code==='string'?error.code:
+        typeof detail==='string'?detail:
+        typeof detail?.code==='string'?detail.code:null;
+      return String(code?.trim()||'HTTP_'+r.status).slice(0,110);
+    }
     catch{if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');return 'HTTP_'+r.status;}
   }
   const responseJSON=(data,status=200)=>new Response(JSON.stringify(data),{
