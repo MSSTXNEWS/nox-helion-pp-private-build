@@ -1123,6 +1123,39 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(len(requests),0)
                 self.assertEqual(self.dispatched,[('calculate',{})])
 
+    async def test_direct_and_confirmation_tool_results_obey_shared_memory_bound(self):
+        # These bypassed the model-only length fence. An oversized direct
+        # outcome/confirmation must not produce [DONE], audit success or S03.
+        cases=(
+            ('direct', {'ok':True,'text':'x'*2000001}),
+            ('confirmation', {'ok':False,'needs_confirmation':True,
+                              'text':'Confirm this'}),
+        )
+        for route,result in cases:
+            with self.subTest(route=route):
+                native=self.native(result=result)
+                if route=='direct':
+                    native['_direct_admin_calls']=lambda _: [
+                        {'name':'run_admin','arguments':{'action':'status'}}]
+                else:
+                    native['heuristic_tools']=lambda _: [
+                        {'name':'calculate','arguments':{}}]
+                    native['confirm_marker']=lambda _: 'z'*2000001
+                audit=[]
+                native['audit']=lambda *a,**k:audit.append(k)
+                payload={'messages':[{'role':'user','content':'Bound this outcome'}]}
+                with patch.object(stream._current,'dispatch',return_value=None), \
+                     patch.object(stream.httpx.AsyncClient,'stream',
+                                  side_effect=AssertionError('No model POST')):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Bound this outcome',False)
+                self.assertEqual(response.status_code,502)
+                self.assertEqual(json.loads(response.body)['error']['code'],
+                                 'HOLD_TOOL_RESULT_FULL_CONTEXT')
+                self.assertEqual(audit,[])
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(len(self.dispatched),1)
+
     async def test_tool_error_envelopes_never_certify_successful_s03(self):
         # The explicit error key is authoritative even when its value is
         # falsey. A result claiming ok=True and error=<anything> is ambiguous.

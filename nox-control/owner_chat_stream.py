@@ -668,10 +668,11 @@ async def _run(native,url,payload,user_text):
                         if not text.strip():raise StreamFailure('HOLD_TOOL_CONFIRMATION')
                     if final_command and not text.strip():
                         raise StreamFailure('HOLD_TOOL_EMPTY')
-                    # The complete observation must fit in the model context;
-                    # do not audit an otherwise successful but unusable result.
-                    if (not final_command and not rec.get('needs_confirmation')
-                            and len(text)>2000000):
+                    # Every route, including direct commands and pending owner
+                    # confirmations, must fit the same bounded chat/S03 result.
+                    # No successful audit or final ACK may certify an oversized
+                    # tool observation that can exhaust scarce host memory.
+                    if len(text)>2000000:
                         raise StreamFailure('HOLD_TOOL_RESULT_FULL_CONTEXT')
                     await asyncio.to_thread(native['audit'],'tool_step',name=call['name'],
                                             step=steps,ok=rec.get('ok'))
