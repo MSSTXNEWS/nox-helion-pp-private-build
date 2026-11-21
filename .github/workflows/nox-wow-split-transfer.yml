@@ -1,0 +1,142 @@
+name: NOX WOW split complete source ZIP for Drive connector
+on:
+  push:
+    branches: [codex/nox-wow-sources-20261121]
+    paths: [".github/workflows/nox-wow-split-transfer.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  split_transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Retrieve verified full 122-repository ZIP from prior run
+        uses: actions/download-artifact@v4
+        with:
+          name: NOX_WOW_UPSTREAM_SOURCES_20261121
+          run-id: 44858229578
+          github-token: ${{ github.token }}
+          path: original
+      - name: Split into lossless 390 MiB chunks with full ZIP SHA
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import pathlib,hashlib,json,shutil
+          p=pathlib.Path('original/NOX_WOW_UPSTREAM_SOURCES_20261121.zip')
+          assert p.exists(),list(pathlib.Path('original').rglob('*'))
+          dst=pathlib.Path('parts');dst.mkdir(exist_ok=True)
+          h=hashlib.sha256();parts=[];i=0
+          with p.open('rb') as f:
+              while True:
+                  part=f.read(390*1024*1024)
+                  if not part:break
+                  h.update(part)
+                  name='NOX_WOW_UPSTREAM_SOURCES_20261121.part%02d'%i
+                  (dst/name).write_bytes(part)
+                  parts.append({'file':name,'size':len(part),'sha256':hashlib.sha256(part).hexdigest()})
+                  i+=1
+          expected='cfbd7aaaeef5fdfe22a42a5f7f55d9e4c90ef92524aa39350c7c5c1986c18f32'
+          actual=h.hexdigest()
+          if actual!=expected:raise RuntimeError('Source full ZIP SHA mismatch '+actual)
+          (dst/'REASSEMBLE_MANIFEST.json').write_text(json.dumps({'source_zip_sha256':actual,'bytes':p.stat().st_size,'part_count':len(parts),'parts':parts,'downloaded':122,'failed':3},indent=2))
+          (dst/'JOIN_WINDOWS.ps1').write_text('$files=Get-ChildItem -Filter \"NOX_WOW_UPSTREAM_SOURCES_20261121.part*\" | Sort-Object Name; $o=[IO.File]::Create(\"NOX_WOW_UPSTREAM_SOURCES_20261121.zip\");try{foreach($f in $files){$i=[IO.File]::OpenRead($f.FullName);try{$i.CopyTo($o)}finally{$i.Dispose()}}}finally{$o.Dispose()}; Get-FileHash \"NOX_WOW_UPSTREAM_SOURCES_20261121.zip\" -Algorithm SHA256')
+          (dst/'JOIN_LINUX.sh').write_text('cat NOX_WOW_UPSTREAM_SOURCES_20261121.part* > NOX_WOW_UPSTREAM_SOURCES_20261121.zip && sha256sum NOX_WOW_UPSTREAM_SOURCES_20261121.zip\n')
+          shutil.copyfile('original/nox_wow_vendor_out/manifest/FETCH_RESULTS.json',dst/'FETCH_RESULTS.json')
+          print('parts',len(parts),'full_bytes',p.stat().st_size,'sha256',actual)
+          PY
+      - name: Upload chunk 00
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WOW_PART_00
+          path: |
+            parts/NOX_WOW_UPSTREAM_SOURCES_20261121.part00
+            parts/REASSEMBLE_MANIFEST.json
+            parts/FETCH_RESULTS.json
+            parts/JOIN_WINDOWS.ps1
+            parts/JOIN_LINUX.sh
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload chunk 01
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WOW_PART_01
+          path: |
+            parts/NOX_WOW_UPSTREAM_SOURCES_20261121.part01
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload chunk 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WOW_PART_02
+          path: |
+            parts/NOX_WOW_UPSTREAM_SOURCES_20261121.part02
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload chunk 03
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WOW_PART_03
+          path: |
+            parts/NOX_WOW_UPSTREAM_SOURCES_20261121.part03
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload chunk 04
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WOW_PART_04
+          path: |
+            parts/NOX_WOW_UPSTREAM_SOURCES_20261121.part04
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload chunk 05
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WOW_PART_05
+          path: |
+            parts/NOX_WOW_UPSTREAM_SOURCES_20261121.part05
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload chunk 06
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WOW_PART_06
+          path: |
+            parts/NOX_WOW_UPSTREAM_SOURCES_20261121.part06
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload chunk 07
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WOW_PART_07
+          path: |
+            parts/NOX_WOW_UPSTREAM_SOURCES_20261121.part07
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload chunk 08
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WOW_PART_08
+          path: |
+            parts/NOX_WOW_UPSTREAM_SOURCES_20261121.part08
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload chunk 09
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WOW_PART_09
+          path: |
+            parts/NOX_WOW_UPSTREAM_SOURCES_20261121.part09
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
