@@ -569,8 +569,11 @@ class CheckpointStepProvenance(unittest.TestCase):
             and "result['chat_after'].get(" in ast.unparse(node.test)
         ]
         self.assertEqual(len(health), 1)
-        self.assertEqual(ast.unparse(health[0].test),
-                         "result['chat_after'].get('8080') != 200")
+        predicate = ast.unparse(health[0].test)
+        self.assertIn("type(result['chat_after']) is not dict", predicate)
+        self.assertIn("type(result['chat_after'].get('8080')) is not int", predicate)
+        self.assertIn("result['chat_after']['8080'] != 200", predicate)
+        self.assertNotIn("'8081'", predicate)
         isolated = ast.Module(body=[copy.deepcopy(health[0])], type_ignores=[])
         compiled = compile(ast.fix_missing_locations(isolated), str(SOURCE), "exec")
 
