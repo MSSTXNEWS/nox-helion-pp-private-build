@@ -24,6 +24,22 @@ class StreamFailure(RuntimeError):
     pass
 
 
+# Bound the cumulative browser/S03 result across multiple model/tool cycles.
+# Individual upstream responses have their own 2M limit; the complete turn
+# must obey the same ceiling before native postflight certifies it.
+FINAL_RESPONSE_LIMIT=2000000
+
+
+def _append_final_chunk(chunks, chunk, size):
+    if type(chunk) is not str:
+        raise StreamFailure('HOLD_MODEL_TOKEN_TYPE')
+    size+=len(chunk)
+    if size>FINAL_RESPONSE_LIMIT:
+        raise StreamFailure('HOLD_MODEL_TOTAL_OUTPUT_SIZE')
+    chunks.append(chunk)
+    return size
+
+
 EXECUTOR_STATUS=Path('/root/nox/status/agents_t856u.json')
 
 
@@ -799,11 +815,12 @@ def install(native):
 
         async def generate():
             answer=[]
+            answer_chars=0
             try:
                 async with aclosing(_run(native,url,payload,user_text)) as run:
                     async for kind,text in run:
                         if kind=='token' and text:
-                            answer.append(text)
+                            answer_chars=_append_final_chunk(answer,text,answer_chars)
                             yield native['_sse'](text)
                 final=''.join(answer)
                 if not final.strip():raise StreamFailure('HOLD_MODEL_EMPTY')
@@ -828,9 +845,11 @@ def install(native):
                 'Cache-Control':'no-cache, no-store','X-Accel-Buffering':'no'})
         try:
             answer=[]
+            answer_chars=0
             async with aclosing(_run(native,url,payload,user_text)) as run:
                 async for kind,text in run:
-                    if kind=='token':answer.append(text)
+                    if kind=='token' and text:
+                        answer_chars=_append_final_chunk(answer,text,answer_chars)
             final=''.join(answer)
             if not final.strip():raise StreamFailure('HOLD_MODEL_EMPTY')
             payload['_agent_final']=final
