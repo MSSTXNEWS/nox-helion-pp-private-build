@@ -300,15 +300,19 @@ class FactReceiptTest(unittest.TestCase):
             media_scope = await stop(Request({"scope": "media", "request_id": "*"}))
             bad_target = await stop(Request({"request_id": {"id": "r1"}}))
             empty_target = await stop(Request({"request_id": ""}))
+            missing_target = await stop(Request({}))
+            missing_scoped = await stop(Request({"scope": "generation"}))
+            null_target = await stop(Request({"request_id": None}))
             before = (W.CANCEL_ALL_EPOCH, set(W.CANCEL))
             valid = await stop(Request({"scope": "generation", "request_id": "chat-1"}))
             return (bad, wrong_shape, wrong_scope, media_scope, bad_target,
-                    empty_target, before, valid, (W.CANCEL_ALL_EPOCH, set(W.CANCEL)))
+                    empty_target, missing_target, missing_scoped, null_target,
+                    before, valid, (W.CANCEL_ALL_EPOCH, set(W.CANCEL)))
 
         with mock.patch.object(W, "CANCEL", set()), mock.patch.object(W, "CANCEL_ALL_EPOCH", 0):
-            bad, shape, owner, media, target, empty, before, valid, after = asyncio.run(scenario())
-        self.assertEqual([x.status_code for x in (bad, shape, owner, media, target, empty)],
-                         [400, 400, 409, 409, 400, 400])
+            bad, shape, owner, media, target, empty, missing, scoped, null, before, valid, after = asyncio.run(scenario())
+        self.assertEqual([x.status_code for x in (bad, shape, owner, media, target, empty, missing, scoped, null)],
+                         [400, 400, 409, 409, 400, 400, 400, 400, 400])
         self.assertEqual(before, (0, set()))
         self.assertEqual(after, (0, {"chat-1"}))
         self.assertEqual(valid["status"], "STOPPING")
