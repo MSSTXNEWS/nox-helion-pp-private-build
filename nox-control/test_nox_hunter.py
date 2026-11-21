@@ -162,6 +162,26 @@ class HunterURLSafetyTests(unittest.TestCase):
             self.assertEqual(len(rejected), 2)
             self.assertTrue(all(len(row[0]) == 64 for row in rejected))
 
+    def test_github_release_metadata_never_fabricates_text_or_dates(self):
+        # JSON metadata structures must not turn into Python-repr "evidence";
+        # GitHub created_at is not an actual publication event.
+        rows = [
+            {"name": ["fake"], "tag_name": {"fake": "tag"},
+             "html_url": "https://github.com/example/repo/releases/tag/draft",
+             "body": {"fake": "notes"}, "created_at": "2026-11-10"},
+            {"name": None, "tag_name": " v1.2 ",
+             "html_url": "https://github.com/example/repo/releases/tag/v1.2",
+             "body": " real notes ", "published_at": "2026-11-20T12:00:00Z"},
+            {"name": {"fake": "title"}, "tag_name": [],
+             "html_url": [], "body": ["fake", "text"], "created_at": "2026-11-15"},
+        ]
+        found = hunter._github_items(json.dumps(rows).encode("utf-8"))
+        self.assertEqual(found, [
+            {"title": "", "url": rows[0]["html_url"], "content": "", "published": ""},
+            {"title": "v1.2", "url": rows[1]["html_url"], "content": "real notes",
+             "published": "2026-11-20T12:00:00Z"},
+        ])
+
     def test_crossref_empty_or_malformed_titles_are_not_fabricated(self):
         # Crossref title=[] was formerly stored as the literal "[]".
         # Keep URL-only provenance, but never invent a paper title.
