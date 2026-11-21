@@ -781,3 +781,44 @@ test('decoded SSE output cadence counts codepoints and event gaps, never invente
   assert.equal(rejected.turns[1].sse_text_event_gap_p95_ms,null);
   assert.equal(rejected.turns[1].sse_codepoints_per_second,null);
 });
+
+test('largest nonempty SSE event gap witnesses true CDP stall separately from coalesced burst',async()=>{
+  const delta=text=>'data: '+JSON.stringify({choices:[{delta:{content:text}}]})+'\n\n';
+  const terminal='data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n';
+  // Same CDP chunk: two visible deltas, no observed interval between them.
+  const burst=await run(false,[Buffer.from(delta('A')+delta('B')+terminal)]);
+  assert.equal(burst.ttft_sse_verified,true);
+  assert.equal(burst.turns[1].sse_text_event_max_gap_ms,0);
+  assert.equal(burst.turns[1].sse_text_event_max_gap_after_event,1);
+  assert.equal(burst.turns[1].sse_text_event_max_gap_cross_chunk,false);
+  assert.equal(burst.turns[1].sse_text_event_same_chunk_pairs,1);
+  assert.equal(burst.turns[1].sse_text_event_cross_chunk_pairs,0);
+  assert.equal(burst.turns[1].sse_text_event_max_gap_from_ms,10);
+  assert.equal(burst.turns[1].sse_text_event_max_gap_to_ms,10);
+  // Independent chunks: a 235 ms observed interarrival gap after event #2.
+  const stall=await run(false,[Buffer.from(delta('A')),Buffer.from(delta('B')),
+    Buffer.from(delta('C')+terminal)],null,null,{
+      chunkTimestamps:[101.010,101.015,101.250],closeTimestamp:101.270
+    });
+  assert.equal(stall.cdp_consistent,true);
+  assert.equal(stall.ttft_sse_verified,true);
+  assert.equal(stall.turns[1].sse_text_event_count,3);
+  assert.equal(stall.turns[1].sse_text_event_max_gap_ms,235);
+  assert.equal(stall.turns[1].sse_text_event_max_gap_after_event,2);
+  assert.equal(stall.turns[1].sse_text_event_max_gap_from_ms,15);
+  assert.equal(stall.turns[1].sse_text_event_max_gap_to_ms,250);
+  assert.equal(stall.turns[1].sse_text_event_max_gap_cross_chunk,true);
+  assert.equal(stall.turns[1].sse_text_event_same_chunk_pairs,0);
+  assert.equal(stall.turns[1].sse_text_event_cross_chunk_pairs,2);
+  assert.equal(stall.turns[1].sse_text_event_gap_p95_ms,235);
+  assert.equal(stall.turns[0].sse_text_event_max_gap_ms,null);
+  // Out-of-order CDP chunk timestamps cannot be reinterpreted as zero latency.
+  const reversed=await run(false,[Buffer.from(delta('A')),Buffer.from(delta('B')+terminal)],null,null,{
+    chunkTimestamps:[101.250,101.010],closeTimestamp:101.270
+  });
+  assert.equal(reversed.cdp_consistent,false);
+  assert.equal(reversed.ttft_sse_verified,false);
+  assert.equal(reversed.turns[1].sse_text_event_max_gap_ms,null);
+  assert.equal(reversed.turns[1].sse_text_event_cross_chunk_pairs,null);
+  assert.doesNotMatch(JSON.stringify(stall),/secret|data:/);
+});
