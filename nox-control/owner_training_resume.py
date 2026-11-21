@@ -386,8 +386,24 @@ def boost_pins(receipt):
             or receipt.get('state') != 'TASK_BOOST_SIX_NATIVE_WORKERS_ACTIVE_TRAINING_PAUSED'
             or receipt.get('hold_retained') is not True or receipt.get('training_started') is not False):
         raise RuntimeError('HOLD_VERIFIED_NATIVE_BOOST_REQUIRED')
-    installed = {row['data']['path']: row['data']['after'] for row in receipt.get('steps', [])
-                 if row.get('kind') == 'source_installed'}
+    # Reject contradictory installed-source evidence, not last-write-wins.
+    # A duplicate path with the correct hash last could otherwise mask a
+    # different hash from an earlier native installation record.
+    steps = receipt.get('steps')
+    if type(steps) is not list:
+        raise RuntimeError('HOLD_BOOST_INSTALLED_RECEIPT_MISMATCH')
+    installed = {}
+    for row in steps:
+        if type(row) is not dict:
+            raise RuntimeError('HOLD_BOOST_INSTALLED_RECEIPT_MISMATCH')
+        if row.get('kind') != 'source_installed':
+            continue
+        data = row.get('data')
+        if (type(data) is not dict or type(data.get('path')) is not str
+                or type(data.get('after')) is not str
+                or data['path'] in installed):
+            raise RuntimeError('HOLD_BOOST_INSTALLED_RECEIPT_MISMATCH')
+        installed[data['path']] = data['after']
     if any(installed.get(str(path)) != sha for path, sha in BOOST_PINS.items()):
         raise RuntimeError('HOLD_BOOST_INSTALLED_RECEIPT_MISMATCH')
     return dict(BOOST_PINS)
