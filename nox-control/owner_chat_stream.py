@@ -403,7 +403,7 @@ async def _model_events(client, url, payload):
                             call[field]+=value
                             # Model-supplied SSE identifiers are untrusted. A long ID
                             # must never reach the native tool dispatcher or S03.
-                            if len(call[field])>160:
+                            if len(call[field].encode('utf-8','strict'))>160:
                                 raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
                     function=fragment.get('function')
                     # Only missing/null is a legal id-only continuation. Reject
@@ -416,7 +416,10 @@ async def _model_events(client, url, payload):
                             if not isinstance(value,str):raise ValueError(field)
                             _reject_lone_surrogates(value)
                             call['function'][field]+=value
-                    if len(call['function']['arguments'])>100000 or len(call['function']['name'])>200:
+                    # Limit the UTF-8 bytes actually sent to tools/S03, not Python
+                    # codepoints (emoji can quadruple the old budget).
+                    if (len(call['function']['arguments'].encode('utf-8','strict'))>100000 or
+                            len(call['function']['name'].encode('utf-8','strict'))>200):
                         raise StreamFailure('HOLD_TOOL_CALL_SIZE')
             except StreamFailure:
                 raise
