@@ -889,5 +889,93 @@ class TestProbe(unittest.TestCase):
         asyncio.run(run())
 
 
+
+    def test_native_large_unicode_grapheme_stream_no_glyph_array(self):
+        """Headless Chromium: large split clusters preserve bytes without Array.from."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+
+                    async def fixture(route):
+                        await route.fulfill(
+                            status=200, content_type='text/html',
+                            body='<html><body>isolated B3 grapheme fixture</body></html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                    await page.goto(
+                        'http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__posts=0;
+                        window.__reads=0;
+                        window.__answer='Ж'.repeat(4096)+'👩‍💻e\u0301';
+                        const id='a'.repeat(32);
+                        const parts=['Ж'.repeat(4096)+'👩','‍','💻e','\u0301'];
+                        const pack=data=>new Response(JSON.stringify(data),{
+                            status:200,headers:{'Content-Type':'application/json'}
+                        });
+                        window.fetch=async url=>{
+                            if(url==='/api/nox/chat/stream'){
+                                window.__posts++;
+                                const frames=[
+                                    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start',model:'pinned-existing-native-fixture'},
+                                    ...parts.map(text=>({type:'delta',text})),
+                                    {type:'done',saved:true,s03_integrated:true,
+                                        dialog_id:id,exchange_id:'ex-b3-grapheme'}
+                                ];
+                                return new Response(frames.map(JSON.stringify).join('\\n')+'\\n',{
+                                    status:200});
+                            }
+                            if(String(url).startsWith('/api/ui/memory/dialogs/history?')){
+                                window.__reads++;
+                                return pack({status:'READY',dialog_id:id,messages:[
+                                    {role:'user',content:'unicode',exchange_id:'ex-b3-grapheme'},
+                                    {role:'assistant',content:window.__answer,
+                                        exchange_id:'ex-b3-grapheme'}
+                                ]});
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE:'+url);
+                        };
+                    }""")
+                    bridge = (pathlib.Path(__file__).parent /
+                              'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    result = await page.evaluate("""async () => {
+                        // Materializing a per-grapheme Array.from is forbidden here.
+                        Array.from=()=>{throw Error('HOLD_GLYPH_ARRAY_MATERIALIZATION');};
+                        const response=await fetch('/api/nox/chat',{
+                            method:'POST',body:JSON.stringify({
+                                dialog_id:'a'.repeat(32),
+                                request_id:'b3-grapheme-large-single',
+                                message:'unicode'
+                            })
+                        });
+                        const raw=await response.text();
+                        const events=raw.split('\\n\\n').filter(Boolean)
+                          .map(row=>JSON.parse(row.replace(/^data: /,'')));
+                        return {
+                            posts:window.__posts,reads:window.__reads,
+                            text:events.filter(e=>e.type==='token').map(e=>e.t).join(''),
+                            done:events.filter(e=>e.type==='done'),
+                            errors:events.filter(e=>e.type==='error'),
+                            answer:window.__answer
+                        };
+                    }""")
+                    self.assertEqual(result['posts'], 1)
+                    self.assertEqual(result['reads'], 1)
+                    self.assertEqual(result['text'], result['answer'])
+                    self.assertEqual(len(result['done']), 1)
+                    self.assertTrue(result['done'][0]['s03_integrated'])
+                    self.assertEqual(result['errors'], [])
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
 if __name__ == '__main__':
     unittest.main()
