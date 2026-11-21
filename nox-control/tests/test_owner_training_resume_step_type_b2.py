@@ -1784,5 +1784,72 @@ class NativeDrainStopFence(unittest.TestCase):
         self.assertEqual(attempt([1, 0, 0], [False, False]), [2])
 
 
+
+class ControllerRestorationReceiptFence(unittest.TestCase):
+    def test_malformed_supervisor_restoration_is_hold_and_unlocks(self):
+        """Execute the actual main.finally restoration AST; never call Supervisor."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        main = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == "main")
+        restoration = main.finalbody[0]
+        self.assertIsInstance(restoration, ast.If)
+        self.assertIn("controllers_stopped", ast.unparse(restoration))
+        code = compile(ast.fix_missing_locations(ast.Module(
+            body=[copy.deepcopy(restoration)], type_ignores=[])), str(SOURCE), "exec")
+
+        def simulate(snapshots, rc=0):
+            states, commands, unlocks = iter(snapshots), [], []
+            helper = types.SimpleNamespace(
+                service_state=lambda name: next(states),
+                command=lambda argv, timeout: (commands.append(argv) or rc, ""))
+            result = {"state": "BOUNDED_TRAINING_RUNNING_ACCEPTANCE_PENDING",
+                      "steps": []}
+            scope = {
+                "helper": helper, "result": result, "controllers_stopped": ["ctrl-a"],
+                "lock_held": True, "success": True, "fd": 71, "re": re,
+                "fcntl": types.SimpleNamespace(
+                    LOCK_UN="unlock",
+                    flock=lambda fd, mode: unlocks.append((fd, mode))),
+                "time": types.SimpleNamespace(time=lambda: 123.0),
+            }
+            exec(code, scope)
+            self.assertEqual(unlocks, [(71, "unlock")])
+            self.assertFalse(scope["lock_held"])
+            return scope, commands
+
+        for malformed in (None, [], {}, {"state": []}, "STOPPED",
+                          {"state": "FATAL"}, {"state": True}):
+            with self.subTest(snapshot=repr(malformed)):
+                state, commands = simulate([malformed])
+                self.assertFalse(state["success"])
+                self.assertEqual(commands, [])
+                self.assertEqual(state["result"]["state"], "HOLD_TRAINING_RESUME")
+                self.assertEqual(state["result"]["restore_error"],
+                                 "HOLD_CONTROLLER_RESTORE_READBACK")
+                self.assertEqual(state["result"]["steps"][-1]["kind"],
+                                 "controller_restore_hold")
+
+        state, commands = simulate([{"state": "STOPPED"},
+                                    {"state": "RUNNING"}])
+        self.assertTrue(state["success"])
+        self.assertEqual(commands, [["supervisorctl", "start", "ctrl-a"]])
+        self.assertEqual(state["result"]["steps"][-1]["kind"], "controller_restored")
+
+        state, commands = simulate([{"state": "STOPPED"}], rc=1)
+        self.assertFalse(state["success"])
+        self.assertEqual(state["result"]["restore_error"],
+                         "HOLD_CONTROLLER_RESTORE_FAILED")
+        self.assertEqual(len(commands), 1)
+
+        state, commands = simulate([{"state": "STOPPED"}, None])
+        self.assertFalse(state["success"])
+        self.assertEqual(state["result"]["restore_error"],
+                         "HOLD_CONTROLLER_RESTORE_READBACK")
+        self.assertEqual(len(commands), 1)
+
+        state, commands = simulate([{"state": "RUNNING"}])
+        self.assertTrue(state["success"])
+        self.assertEqual(commands, [])
+
 if __name__ == "__main__":
     unittest.main()
