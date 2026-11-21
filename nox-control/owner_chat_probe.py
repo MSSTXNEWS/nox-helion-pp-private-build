@@ -2,6 +2,7 @@
 """Bounded owner-authenticated latency/UI probe; exports synthetic text only."""
 import fcntl, hashlib, http.cookiejar, ipaddress, json, math, os, re, secrets, socket, struct, sys, time, unicodedata, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
+from html.parser import HTMLParser
 
 ROOT=Path('/root/nox')
 SITE=ROOT/'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site'
@@ -218,9 +219,38 @@ def page_snapshot(response, limit=200000, expected_path=None):
                 rb'(?:<!doctype\s+html\b|<html\b|<head\b|<body\b)', prefix)
             if media not in ('', 'text/html', 'application/xhtml+xml') or not html_start:
                 raise RuntimeError('HOLD_CHAT_PAGE_NOT_HTML')
+            reject_auth_meta_refresh(raw, response.url)
         return status, path, raw
     finally:
         response.close()
+
+
+def reject_auth_meta_refresh(raw, response_url):
+    """Reject successful HTML that sends the real browser to an auth page."""
+    class RefreshScanner(HTMLParser):
+        def handle_starttag(self, tag, attrs):
+            if tag != 'meta':
+                return
+            fields = dict(attrs)
+            if str(fields.get('http-equiv', '')).strip().casefold() != 'refresh':
+                return
+            content = fields.get('content')
+            if not isinstance(content, str) or ';' not in content:
+                return
+            target_spec = content.split(';', 1)[1].strip()
+            if not re.match(r'(?is)^url\s*=', target_spec):
+                return
+            target = target_spec.split('=', 1)[1].strip()
+            if len(target) >= 2 and target[0] in ('"', "'") and target[-1] == target[0]:
+                target = target[1:-1]
+            target_url = urllib.parse.urlsplit(urllib.parse.urljoin(response_url, target))
+            path = urllib.parse.unquote(target_url.path).rstrip('/').casefold()
+            if path in ('/chat/login', '/login', '/auth/login', '/signin', '/sign-in'):
+                raise RuntimeError('HOLD_CHAT_AUTH_META_REFRESH')
+
+    scanner = RefreshScanner(convert_charrefs=True)
+    scanner.feed(raw.decode('utf-8', errors='replace'))
+    scanner.close()
 
 
 def meaningful_delta(text):
