@@ -278,7 +278,10 @@ def _crossref_items(body: bytes) -> list[dict[str, str]]:
             title = ""
         doi = str(record.get("DOI") or "").strip()
         url = str(record.get("URL") or (f"https://doi.org/{doi}" if doi else "")).strip()
-        abstract = _plain(str(record.get("abstract") or ""))
+        # Crossref abstracts are text/HTML strings. Do not turn malformed JSON
+        # arrays/objects into fabricated Python-repr "evidence" in the catalog.
+        abstract_value = record.get("abstract")
+        abstract = _plain(abstract_value) if isinstance(abstract_value, str) else ""
         # Crossref 'created' is a metadata-deposit timestamp, not a reliable
         # publication date. Select the first VALID actual publication event;
         # a corrupt print date must not hide a valid online publication date.
