@@ -1338,7 +1338,7 @@ test('late second response-body ACK cannot revive failed or reversed network-clo
   };
   // A legitimate second Network.loadingFinished + immediate ACK is the
   // positive control. Its decoded-body witness MUST remain verifiable.
-  const healthy=await run(false,null,null,null,{responseBodyAckTimeoutMs:40,quiescenceMs:10});
+  const healthy=await run(false,null,null,null,{responseBodyAckTimeoutMs:40,quiescenceMs:50});
   assert.equal(healthy.cdp_consistent,true);
   assert.equal(healthy.ttft_sse_verified,true);
   assertFirst(healthy,'healthy');
@@ -1353,7 +1353,7 @@ test('late second response-body ACK cannot revive failed or reversed network-clo
   ]){
     for(const ackMode of ['late-resolve','late-reject','hang']){
       const label=closeLabel+' / '+ackMode, settled=[];
-      const flags={...closeFlags,responseBodyAckTimeoutMs:40,quiescenceMs:10,
+      const flags={...closeFlags,responseBodyAckTimeoutMs:40,quiescenceMs:50,
         responseBodySettled:(id,kind)=>settled.push([id,kind]),
         ...(ackMode==='hang'?{responseBodyHang:['2']}:
           {responseBodyDelay:{'2':200},
@@ -1388,7 +1388,7 @@ test('late second response-body ACK cannot revive failed or reversed network-clo
   // A correctly closed second stream with a late ACK is also unverified;
   // the same observer cannot recover PASS by ignoring the ACK guard.
   const lateControl=await run(false,null,null,null,{
-    responseBodyDelay:{'2':200},responseBodyAckTimeoutMs:40,quiescenceMs:10
+    responseBodyDelay:{'2':200},responseBodyAckTimeoutMs:40,quiescenceMs:50
   });
   assert.equal(lateControl.cdp_consistent,false);
   assert.equal(lateControl.ttft_sse_verified,false);
