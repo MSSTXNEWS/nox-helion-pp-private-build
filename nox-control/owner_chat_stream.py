@@ -528,10 +528,18 @@ async def _run(native,url,payload,user_text):
                 'chat_template_kwargs':req['chat_template_kwargs']},
                 sort_keys=True,ensure_ascii=False,allow_nan=False,
                 separators=(',',':')).encode('utf-8','strict')
+            # The cache optimizer must not silently remove or rewrite model
+            # tool schemas. Clone them before pool admission: a shallow list
+            # copy shares nested native definitions and hides in-place edits.
+            tools_wire=json.dumps(native_tools,sort_keys=True,
+                                  ensure_ascii=False,allow_nan=False,
+                                  separators=(',',':')).encode('utf-8','strict')
         except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
             raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
-        prepared=native['prepare_payload'](
-            dict(req,messages=json.loads(context_wire)),cache=True)
+        pool_input=dict(req,messages=json.loads(context_wire),
+                        tools=json.loads(tools_wire),
+                        chat_template_kwargs=json.loads(control_wire)['chat_template_kwargs'])
+        prepared=native['prepare_payload'](pool_input,cache=True)
         if not isinstance(prepared,dict):
             raise StreamFailure('HOLD_MODEL_IDENTITY')
         try:
@@ -543,19 +551,24 @@ async def _run(native,url,payload,user_text):
                 'chat_template_kwargs':prepared.get('chat_template_kwargs')},
                 sort_keys=True,ensure_ascii=False,allow_nan=False,
                 separators=(',',':')).encode('utf-8','strict')
+            after_tools_wire=json.dumps(prepared.get('tools'),sort_keys=True,
+                                        ensure_ascii=False,allow_nan=False,
+                                        separators=(',',':')).encode('utf-8','strict')
         except (KeyError,TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
             raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
         if after_wire!=context_wire:
             raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY')
         if after_control_wire!=control_wire:
             raise StreamFailure('HOLD_MODEL_CONTROL_FIDELITY')
+        if after_tools_wire!=tools_wire:
+            raise StreamFailure('HOLD_MODEL_TOOL_SCHEMA_FIDELITY')
         if explicit_model and (type(selected) is not str or
                                not 0<len(selected.strip())<=200 or
                                type(prepared.get('model')) is not str or
                                prepared['model']!=selected):
             raise StreamFailure('HOLD_MODEL_IDENTITY')
         req=prepared
-        req['tools']=native_tools
+        req['tools']=json.loads(tools_wire)
     steps=0
     # Resolve existing deterministic routes before any model text is shown.
     # Never reinterpret already-streamed prose as an executable command.
