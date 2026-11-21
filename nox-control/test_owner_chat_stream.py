@@ -112,6 +112,33 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                             self.assertNotIn('_agent_final',payload)
 
 
+    async def test_oversized_s03_history_holds_before_second_decode(self):
+        # A history that cannot possibly fit the full native POST must not
+        # be decoded into another large copy under scarce cgroup memory.
+        for streaming in (True, False):
+            with self.subTest(streaming=streaming):
+                native=self.native()
+                history=[{'role':'system','content':'PersonaID: same'},
+                         {'role':'user','content':'🌍' * 100}]
+                payload={'messages':history}
+                with (patch.object(stream,'MODEL_REQUEST_LIMIT',180),
+                      patch.object(stream.json,'loads',
+                                   side_effect=AssertionError('oversized history decoded')),
+                      patch.object(stream.httpx.AsyncClient,'stream',
+                                   side_effect=AssertionError('unexpected model POST'))):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Remember context',streaming)
+                    if streaming:
+                        wire=''.join([part async for part in response.body_iterator])
+                        self.assertIn('HOLD_MODEL_REQUEST_SIZE',wire)
+                        self.assertNotIn('[DONE]',wire)
+                    else:
+                        self.assertEqual(response.status_code,502)
+                        self.assertIn(b'HOLD_MODEL_REQUEST_SIZE',response.body)
+                self.assertEqual(payload['messages'],history)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+
     async def test_oversized_full_model_post_holds_without_dropping_s03(self):
         # Even valid S03 turns can cumulatively exceed the model request cap.
         # Never silently trim a dialogue or POST before the bound is checked.
