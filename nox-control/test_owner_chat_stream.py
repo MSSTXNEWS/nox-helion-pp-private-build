@@ -255,7 +255,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(change=change):
                 def augment(messages, _user_text):
                     if change=='valid':
-                        messages[0]['content']+='\\n\\nVerified status'
+                        messages[0]['content']+='\n\nVerified status'
                     elif change=='drop':
                         messages.pop(1)
                     elif change=='rewrite':
@@ -264,17 +264,17 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                         messages[1],messages[2]=messages[2],messages[1]
                     elif change=='in_place':
                         messages[0]['name']='different persona'
-                        messages[0]['content']+='\\n\\nVerified status'
+                        messages[0]['content']+='\n\nVerified status'
                     elif change=='extra_system':
                         messages.insert(1,{'role':'system','content':'hidden override'})
-                        messages[0]['content']+='\\n\\nVerified status'
+                        messages[0]['content']+='\n\nVerified status'
                     return messages
                 native=self.native()
                 payload={'model':'nox-existing','messages':json.loads(
                     json.dumps(original,ensure_ascii=False))}
                 valid=(change=='valid')
                 streams=[Chunks([frame('Azul 🌍'),frame(finish='stop'),
-                                 b'data: [DONE]\\n\\n'])] if valid else []
+                                 b'data: [DONE]\n\n'])] if valid else []
                 requests,factory=self.transport(streams)
                 with (factory,
                       patch.object(stream._current,'relevant_query',return_value=True),
