@@ -441,7 +441,7 @@ async function check(chunks, status=200) {
                 self.assertFalse(owner_session_continuity_valid(status, cookies, pin))
         self.assertFalse(owner_session_continuity_valid(200, owner, None))
         caller = inspect.getsource(browser_run)
-        self.assertEqual(caller.count('owner_session_continuity_valid('), 3)
+        self.assertEqual(caller.count('owner_session_continuity_valid('), 4)
         self.assertIn("signed_after_second=await context.request.get(", caller)
         self.assertIn("multiturn_postsecond_owner_session_verified", caller)
         self.assertLess(caller.index("signed_after_second=await context.request.get("),
