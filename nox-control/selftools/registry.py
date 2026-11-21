@@ -29,7 +29,7 @@ MODULES = [
     "eval_gate", "lint_syntax", "health_probe", "speed_bench", "svc_ctl",
     "disk_guard", "gpu_alloc", "mem_alloc", "priority_ctl", "corpus_build",
     "train_ctl", "judge_run", "rag_index", "lora_swap", "advisor_ask",
-    "web_fetch", "pc_pull", "model_dl", "inspector_hook"]
+    "web_fetch", "pc_pull", "warm_weights", "model_dl", "inspector_hook"]
 ALLOW_CMDS = {"git", "gh", "python3", "node", "bash", "sh", "supervisorctl", "ionice",
               "rsync", "ssh", "nvidia-smi", "df", "du", "unshare", "nice"}
 TOOLS = {}
