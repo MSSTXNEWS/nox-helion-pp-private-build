@@ -565,6 +565,37 @@ class RefillEligibilityTests(unittest.TestCase):
         self.assertIn("PARENT_ALREADY_OBSERVED_IN_REFILL_OUTCOMES",
                       ledger["I-39"]["blockers"])
 
+    def test_malformed_predecessor_mission_never_becomes_new_refill_work(self):
+        _,_,_,registry = exact_registry()
+        mission = {"parent_task_id": "I-39"}
+        malformed = (
+            None,
+            [],
+            {},
+            {"other": "value"},
+            {"missions": {"mission_id": "cache_fill_ttl"}},
+            {"missions": [{"mission_id": "", "revision": 1,
+                            "parent_task_id": "I-39"}]},
+            {"missions": [{"mission_id": "cache_fill_ttl", "revision": -1,
+                            "parent_task_id": "I-39"}]},
+            {"missions": [{"mission_id": "cache_fill_ttl", "revision": 1,
+                            "parent_task_id": ""}]},
+            {"missions": [{"mission_id": [], "revision": 1, "parent_task_id": "I-39"}]},
+            {"missions": [{"mission_id": "cache_fill_ttl", "revision": [],
+                            "parent_task_id": "I-39"}]},
+            {"missions": [{"mission_id": "cache_fill_ttl", "revision": 1,
+                            "parent_task_id": []}]},
+        )
+        for previous in malformed:
+            with self.subTest(previous=previous):
+                rows = proposal_predicate_diff([mission], registry, {}, {}, previous)
+                self.assertEqual(len(rows), 1)
+                self.assertFalse(rows[0]["all_passed"])
+                self.assertFalse(rows[0]["native_publish_performed"])
+                self.assertFalse(rows[0]["original_task_accepted"])
+                self.assertEqual(rows[0]["predicates"][0]["predicate"],
+                                 "previous_missions_valid")
+
     def test_current_refill_artifacts_produce_predicate_diff_not_plan(self):
         previous,_ = read(PREVIOUS)
         proposal,_ = read(PACK / "grounded_proposals.json")
