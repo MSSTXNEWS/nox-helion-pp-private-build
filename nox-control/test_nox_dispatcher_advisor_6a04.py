@@ -103,6 +103,18 @@ class GpuSourceEvidenceTests(unittest.TestCase):
                 self.assertIn("GPU_RESIDUAL_THERMAL_HOLD", current)
                 self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", current)
 
+    def test_degraded_serving_or_s03_never_claims_spare_gpu(self):
+        for section, field in (("onehost", "healthy"),
+                               ("s03", "readback_verified")):
+            with self.subTest(section=section):
+                s = snapshot()
+                s[section][field] = False
+                current = codes(s)
+                self.assertIn("GPU_RESIDUAL_SERVICE_HOLD", current)
+                self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", current)
+                self.assertIn("ONEHOST_DEGRADED" if section == "onehost"
+                              else "S03_NOT_VERIFIED", current)
+
     def test_high_valid_utilization_is_not_admission(self):
         s=snapshot(); s["gpu"]["utilization_pct"]=100
         self.assertEqual(codes(s), ["NO_UNVERIFIED_TUNING"])
