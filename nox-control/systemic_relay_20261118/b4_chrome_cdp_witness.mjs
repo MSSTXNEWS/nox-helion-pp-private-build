@@ -215,6 +215,9 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       if(p.redirectResponse||p.redirectHasExtraInfo!==undefined){
         invalidate(Error('CDP_CHAT_REDIRECT'));return;
       }
+      // Once two POSTs were observed, even a malformed third request must
+      // be rejected as EXTRA_CDP_POST, not downgraded to missing metadata.
+      if(startedPostCount>=count){invalidate(Error('EXTRA_CDP_POST'));return;}
       // Target.getTargetInfo is sampled before capture, independently of POST
       // metadata. Frame/loader alone cannot distinguish a foreign document.
       const documentURL=normalizePageDocumentURL(p.documentURL);
@@ -238,8 +241,6 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       }
       if(dialogInitiatorType===null)dialogInitiatorType=initiator.type;
       // Bind each conversational turn at requestWillBeSent, not async body ACK.
-      // An unexpected third POST invalidates the entire observed two-turn capture.
-      if(startedPostCount>=count){invalidate(Error('EXTRA_CDP_POST'));return;}
       // Network.requestWillBeSent frameId and loaderId identify the same
       // browser document; an empty loaderId denotes a worker, not this dialog.
       const frameId=p.frameId,loaderId=p.loaderId;
