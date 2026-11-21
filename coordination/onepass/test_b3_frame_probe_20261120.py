@@ -1111,6 +1111,8 @@ class TestProbe(unittest.TestCase):
                                 if(mode==='longstart')frames[1].model='x'.repeat(97);
                                 if(mode==='controlstart')frames[1].model='existing-\\nmodel';
                                 if(mode==='blankstart')frames[1].model='  ';
+                                if(mode==='bidistart')frames[1].model='existing-\\u202e-model';
+                                if(mode==='zerostart')frames[1].model='existing-\\u200b-model';
                                 return new Response(frames.map(JSON.stringify).join('\\n')+'\\n',{
                                     status:200
                                 });
@@ -1138,7 +1140,7 @@ class TestProbe(unittest.TestCase):
                         const rows=[];
                         for(const [i,mode] of
                             ['mismatch','match','absent','malformed','paddedstart',
-                             'longstart','controlstart','blankstart'].entries()){
+                             'longstart','controlstart','blankstart','bidistart','zerostart'].entries()){
                             const postsBefore=window.__posts;
                             const readsBefore=window.__reads;
                             const id=String(i).repeat(32);
@@ -1162,14 +1164,15 @@ class TestProbe(unittest.TestCase):
                         }
                         return rows;
                     }""")
-                    self.assertEqual(len(result), 8)
+                    self.assertEqual(len(result), 10)
                     for row in result:
                         self.assertEqual(row['posts'], 1)
                         # A terminal HOLD can withhold its last carried grapheme;
                         # only accepted streams promise complete visible text.
                         self.assertTrue(('answer:'+row['mode']).startswith(row['tokens']))
                         if row['mode'] in ('mismatch', 'malformed', 'paddedstart',
-                                           'longstart', 'controlstart', 'blankstart'):
+                                           'longstart', 'controlstart', 'blankstart',
+                                           'bidistart', 'zerostart'):
                             self.assertEqual(row['reads'], 0)
                             self.assertEqual(row['done'], [])
                             self.assertEqual(len(row['errors']), 1)
