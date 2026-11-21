@@ -9,7 +9,7 @@ class Stub {
   async send(cmd,p={}){if(cmd==='Browser.getVersion')return {product:'CDP-FIXTURE'};
     if(cmd==='Network.streamResourceContent')return {};
     if(cmd==='Target.getTargetInfo')return {targetInfo:{
-      targetId:'fixture-page',type:this.targetType??'page'
+      targetId:'fixture-page',type:this.targetType??'page',url:this.targetUrl??'http://localhost/nox/chat'
     }};
     if(cmd==='Network.getResponseBody'){
       if(this.responseBodyDelay?.[p.requestId])
@@ -23,6 +23,7 @@ class Stub {
 }
 async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondTurn=null,encoding=null,options={}){const c=new Stub();
   c.targetType=options.targetType;
+  c.targetUrl=options.targetUrl;
   c.responseBodyMutator=options.responseBodyBase64Mutator;
   c.responseBodyTextMutator=options.responseBodyTextMutator;
   c.responseBodyDelay=options.responseBodyDelay;
@@ -50,6 +51,10 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
     const frameId=i===1&&Object.hasOwn(o,'requestFrameId')?o.requestFrameId:'fixture-frame';
     const loaderId=i===1&&Object.hasOwn(o,'requestLoaderId')?o.requestLoaderId:'fixture-loader';
     c.emit('Network.requestWillBeSent',{requestId,timestamp,
+      ...(i===1&&o.omitDocumentURL?{}:{documentURL:i===1&&Object.hasOwn(o,'documentURL')?o.documentURL:'http://localhost/nox/chat'}),
+      ...(i===1&&o.omitInitiator?{}:{initiator:i===1&&Object.hasOwn(o,'initiatorType')?
+        {type:o.initiatorType,...(Object.hasOwn(o,'initiatorUrl')?{url:o.initiatorUrl}:{})}:
+        {type:options.firstInitiatorType??'script',...(options.firstInitiatorType==='parser'?{url:'http://localhost/nox/chat'}:{})}}),
       ...(i===1&&o.omitRequestFrame?{}:{frameId}),
       ...(i===1&&o.omitRequestLoader?{}:{loaderId}),
       ...(i===1&&o.redirectResponse?{redirectResponse:{status:302,url:'http://foreign.invalid/old'}}:{}),
@@ -586,4 +591,45 @@ test('two-turn CDP witness binds one page target, frame and document loader, not
     assert.equal(mismatched.turns[1].ttft_ms,null,JSON.stringify(flags));
   }
   await assert.rejects(run(false,null,null,null,{targetType:'service_worker'}),/CDP_PAGE_TARGET_REQUIRED/);
+});
+
+
+test('CDP independently pins page documentURL and rejects cross-document or ambiguous initiator',async()=>{
+  const control=await run();
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  assert.deepEqual(control.turns.map(t=>t.cdp_request_id),['1','2']);
+  // Hash-only navigation is the same document; external scripts can be the
+  // request initiator without needing an identical bundle URL/stack.
+  const hashOnly=await run(false,null,null,null,{documentURL:'http://localhost/nox/chat#chat'});
+  assert.equal(hashOnly.ttft_sse_verified,true);
+  for(const flags of [
+    {omitDocumentURL:true},
+    {documentURL:''},
+    {documentURL:'http://foreign.invalid/nox/chat'},
+    {documentURL:'http://localhost/nox/other'},
+    {documentURL:'http://localhost/nox/chat?foreign=1'},
+    {documentURL:'file:///nox/chat'}
+  ]){
+    await assert.rejects(run(false,null,null,null,flags),
+      /CDP_DOCUMENT_URL_MISSING|CDP_DOCUMENT_URL_MISMATCH/,JSON.stringify(flags));
+  }
+  await assert.rejects(run(false,null,null,null,{targetUrl:'about:blank'}),/CDP_PAGE_DOCUMENT_REQUIRED/);
+  await assert.rejects(run(false,null,null,null,{targetUrl:'http://foreign.invalid/nox/chat'}),/CDP_DOCUMENT_URL_MISMATCH/);
+  for(const flags of [
+    {omitInitiator:true},
+    {initiatorType:'other'},
+    {initiatorType:'preflight'},
+    {initiatorType:'parser',initiatorUrl:'http://foreign.invalid/nox/chat'},
+    {initiatorType:'parser',initiatorUrl:'http://localhost/nox/chat'}
+  ]){
+    await assert.rejects(run(false,null,null,null,flags),
+      /CDP_INITIATOR_AMBIGUOUS|CDP_PARSER_ORIGIN_MISMATCH|CDP_INITIATOR_TYPE_CHANGED/,
+      JSON.stringify(flags));
+  }
+  const validParser=await run(false,null,null,null,{
+    firstInitiatorType:'parser',initiatorType:'parser',initiatorUrl:'http://localhost/nox/chat'
+  });
+  assert.equal(validParser.cdp_consistent,true);
+  assert.equal(validParser.ttft_sse_verified,true);
 });
