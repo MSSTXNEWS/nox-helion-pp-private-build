@@ -52,6 +52,8 @@ class TrainingResumeAttestationTests(unittest.TestCase):
             "native_queue": {
                 "maintenance_busy": False, "active_claims": False,
                 "resource_headroom_bytes": 3 * 1024**3,
+                "owner_evidence_age_sec": 5,
+                "owner_lease_cas_verified": True,
             },
         }
 
@@ -79,6 +81,12 @@ class TrainingResumeAttestationTests(unittest.TestCase):
             (("native_queue", "active_claims"), True),
             (("native_queue", "resource_headroom_bytes"), 29000000),
             (("native_queue", "maintenance_busy"), None),
+            (("native_queue", "owner_evidence_age_sec"), None),
+            (("native_queue", "owner_evidence_age_sec"), 31),
+            (("native_queue", "owner_evidence_age_sec"), -1),
+            (("native_queue", "owner_evidence_age_sec"), True),
+            (("native_queue", "owner_lease_cas_verified"), False),
+            (("native_queue", "owner_lease_cas_verified"), None),
         ):
             with self.subTest(path=path, val=val):
                 s = self.snapshot()
