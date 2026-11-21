@@ -118,7 +118,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         for streaming in (True, False):
             with self.subTest(streaming=streaming):
                 chunks=Chunks([frame('🌍'),frame('🌍'),frame('🌍'),
-                               frame(finish='stop'),b'data: [DONE]\\n\\n'])
+                               frame(finish='stop'),b'data: [DONE]\n\n'])
                 requests,factory=self.transport([chunks])
                 native=self.native()
                 payload={'messages':[{'role':'user','content':'Привет'}]}
