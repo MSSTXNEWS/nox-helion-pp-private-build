@@ -1564,5 +1564,72 @@ async function check(chunks, status=200) {
                 browser.close()
 
 
+    def test_ru_es_postreload_session_rotation_during_fourrow_read_holds(self):
+        """A slow postreload history GET cannot certify a rotated owner."""
+        from types import SimpleNamespace
+        from owner_chat_browser_qa import postreload_owner_session_recheck
+
+        base = 'http://127.0.0.1:8765'
+        original = {'name':'nox-owner','domain':'127.0.0.1',
+                    'path':'/','value':'signed-A','httpOnly':True}
+        rotated = dict(original, value='signed-B')
+        pin = owner_session_cookie_pin([original])
+        self.assertRegex(pin, r'^[a-f0-9]{64})
+
+        async def exercise(mode):
+            cookies = [dict(original)]
+            async def slow_history_get():
+                # Simulate server rotation/expiration while the authenticated
+                # history endpoint is resolving after browser reload.
+                await asyncio.sleep(0)
+                if mode == 'rotated':
+                    cookies[:] = [rotated]
+                return {'messages': ['ru','answer','es','answer']}
+            await slow_history_get()
+
+            async def signed_get(url, **kwargs):
+                self.assertEqual(url, base+'/chat/session')
+                self.assertEqual(kwargs, {'max_redirects':0,'timeout':6000})
+                if mode == 'transport-error':
+                    raise OSError('synthetic lost session check')
+                return SimpleNamespace(status=401 if mode == 'expired' else 200)
+            async def observed_cookies(origin):
+                self.assertEqual(origin, base)
+                return list(cookies)
+            context=SimpleNamespace(
+                request=SimpleNamespace(get=AsyncMock(side_effect=signed_get)),
+                cookies=AsyncMock(side_effect=observed_cookies))
+            verified=await postreload_owner_session_recheck(context,base,pin)
+            context.request.get.assert_awaited_once()
+            context.cookies.assert_awaited_once() if mode != 'transport-error' else None
+            return verified
+
+        for mode, expected in (('stable',True),('rotated',False),
+                               ('expired',False),('transport-error',False)):
+            with self.subTest(mode=mode):
+                self.assertIs(asyncio.run(exercise(mode)), expected)
+        self.assertFalse(asyncio.run(postreload_owner_session_recheck(
+            SimpleNamespace(request=SimpleNamespace(
+                get=AsyncMock(side_effect=OSError('offline')))),
+            base,pin)))
+
+        caller = inspect.getsource(browser_run)
+        reload_point=caller.index("report['browser_stage']='QA_RELOAD_SAME_DIALOG_FOURROW'")
+        prehistory_session=caller.index("signed_reload=await context.request.get(",reload_point)
+        history=caller.index('reloaded_history=await json_response(',reload_point)
+        stable=caller.index('postquiet_fourrow_history_stable(',history)
+        posthistory_session=caller.index('postreload_owner_session_recheck(',history)
+        runtime=caller.index('HOLD_MULTITURN_RELOAD_RUNTIME_OR_POST',posthistory_session)
+        acceptance=caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(prehistory_session,history)
+        self.assertLess(history,stable)
+        self.assertLess(stable,posthistory_session)
+        self.assertLess(posthistory_session,runtime)
+        self.assertLess(runtime,acceptance)
+        self.assertIn('HOLD_MULTITURN_RELOAD_POSTHISTORY_SESSION_CHANGED',caller)
+        self.assertNotIn('context.request.post(',caller[history:acceptance])
+        self.assertIn('canonical_s03_verified=False',caller)
+
+
 if __name__ == "__main__":
     unittest.main()
