@@ -332,9 +332,9 @@ class FactReceiptTest(unittest.TestCase):
                         raise RuntimeError("S03 unavailable")
 
                 memory.persist_turn = persist
-                with mock.patch.object(W, "CANCEL", set()), \\
-                     mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \\
-                     mock.patch.object(W, "W", None), \\
+                with mock.patch.object(W, "CANCEL", set()), \
+                     mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+                     mock.patch.object(W, "W", None), \
                      mock.patch.dict(sys.modules, {"s03_memory": memory}):
                     frames = asyncio.run(scenario())
 
