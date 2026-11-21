@@ -473,6 +473,27 @@ def verified_two_turn_firstturn_ids(rows):
     return ids
 
 
+def firstturn_session_continuity_valid(first_rows, completed_rows):
+    """The second history snapshot must retain the FIRST owner's session scope.
+
+    Separate two-row and four-row validators reject mixed sessions *within*
+    each snapshot, but a wholesale A→B rotation can otherwise preserve the
+    first two row IDs and identical UTF-8 text. Compare exact optional scope
+    across the first and second history reads before any browser-only PASS.
+    Legacy unscoped history is compatible only when BOTH reads are unscoped.
+    This is not a canonical S03 writer receipt or owner-cookie verifier.
+    """
+    if (not isinstance(first_rows, list) or len(first_rows) != 2
+            or not isinstance(completed_rows, list) or len(completed_rows) != 4
+            or not consistent_explicit_row_session_ids(first_rows)
+            or not consistent_explicit_row_session_ids(completed_rows)):
+        return False
+    first_pin = ('session_id' in first_rows[0], first_rows[0].get('session_id'))
+    second_pin = ('session_id' in completed_rows[0],
+                  completed_rows[0].get('session_id'))
+    return first_pin == second_pin
+
+
 def firstturn_prefix_identity_valid(firstturn_ids, completed_rows):
     """A second history read must retain the first two persisted message IDs.
 
@@ -1704,6 +1725,8 @@ async def browser_run(report, directory, available):
                 second_scope_valid=('dialog_id' not in second_history
                                     or second_history['dialog_id']==did)
                 second_saved=(second_scope_valid
+                              and firstturn_session_continuity_valid(
+                                  rows, second_rows)
                               and firstturn_prefix_identity_valid(
                                   firstturn_id_snapshot,second_rows)
                               and multiturn_history_valid(
