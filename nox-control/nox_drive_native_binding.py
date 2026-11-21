@@ -111,10 +111,10 @@ def oauth_present(config=drive.CONFIG):
         cp = configparser.RawConfigParser(interpolation=None)
         cp.read_string(p.read_text(encoding="utf-8"))
         return (cp.has_section("noxdrive") and cp.get("noxdrive","type",fallback="")=="drive"
-                and cp.get("noxdrive","root_folder_id",fallback="")==drive.ROOT_ID
+                and drive.approved_cold_root(cp.get("noxdrive","root_folder_id",fallback="").strip())
                 and any(cp.get("noxdrive",name,fallback="").strip() for name in
                         ("token","service_account_file","service_account_credentials")))
-    except (OSError, ValueError, UnicodeError, drive.Hold):
+    except (OSError, ValueError, UnicodeError, configparser.Error, drive.Hold):
         return False
 
 
