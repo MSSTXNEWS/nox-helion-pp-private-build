@@ -81,7 +81,9 @@
     const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
     if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
     const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
-    if(pair.length!==2||pair[0].role!=='user'||pair[1].role!=='assistant'||
+    const currentAt=data.messages.indexOf(pair[0]);
+    if(pair.length!==2||data.messages[currentAt+1]!==pair[1]||
+       pair[0].role!=='user'||pair[1].role!=='assistant'||
        pair[0].content!==prompt||pair[1].content!==answer||
        pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
       throw Error('HOLD_DIALOG_HISTORY_READBACK');
@@ -90,7 +92,9 @@
       if(previous.exchange_id===exchangeId)
         throw Error('HOLD_DIALOG_EXCHANGE_REPLAY');
       const prior=data.messages.filter(m=>m&&m.exchange_id===previous.exchange_id);
-      if(prior.length!==2||prior[0].role!=='user'||prior[1].role!=='assistant'||
+      const priorAt=data.messages.indexOf(prior[0]);
+      if(prior.length!==2||priorAt>=currentAt||data.messages[priorAt+1]!==prior[1]||
+         prior[0].role!=='user'||prior[1].role!=='assistant'||
          prior[0].content!==previous.prompt||prior[1].content!==previous.answer)
         throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
     }
