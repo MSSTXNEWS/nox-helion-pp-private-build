@@ -196,6 +196,11 @@ def page_snapshot(response, limit=200000, expected_path=None):
         status = response.status
         require_same_origin_target(response, expected_path, expected_path is not None)
         path = urllib.parse.urlparse(response.url).path
+        # The authenticated root intentionally permits same-origin redirects,
+        # but a 200 login fallback is not evidence of a usable NOX home page.
+        if expected_path is None and urllib.parse.unquote(path).rstrip('/').casefold() in (
+                '/chat/login', '/login', '/auth/login', '/signin', '/sign-in'):
+            raise RuntimeError('HOLD_CHAT_ROOT_LOGIN_REDIRECT')
         raw = response.read(limit + 1)
         if len(raw) > limit:
             raise RuntimeError('HOLD_CHAT_PAGE_LIMIT')
