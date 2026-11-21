@@ -51,22 +51,29 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
   c.responseBodyRejectAfterDelay=options.responseBodyRejectAfterDelay;
   c.responseBodySettled=options.responseBodySettled;
   c.postAckEvent=options.postAckEvent;
-  if(options.postDataMode){
+  if(options.postDataMode||options.firstPostDataMode){
     const normalSend=c.send.bind(c);
     c.send=(cmd,p={})=>{
       if(cmd!=='Network.getRequestPostData')return normalSend(cmd,p);
-      if(options.postDataMode==='late')return new Promise(resolve=>setTimeout(
+      // Scope the asynchronous ACK to its own request; a first-turn ACK
+      // must never be mistaken for second-turn POST metadata.
+      const first=p.requestId==='1';
+      const mode=first?(options.firstPostDataMode??options.postDataMode):options.postDataMode;
+      const data=first?(options.firstPostDataText??options.postDataText):options.postDataText;
+      const delay=first?(options.firstPostDataDelayMs??options.postDataDelayMs??280):
+        (options.postDataDelayMs??280);
+      if(mode==='late')return new Promise(resolve=>setTimeout(
         ()=>resolve({postData:'{"fallback":'+JSON.stringify(p.requestId)+'}'}),35));
-      if(options.postDataMode==='lateCustom')return new Promise(resolve=>setTimeout(
-        ()=>resolve({postData:options.postDataText}),35));
-      if(options.postDataMode==='lateAfterGuard'||options.postDataMode==='rejectAfterGuard')
+      if(mode==='lateCustom')return new Promise(resolve=>setTimeout(
+        ()=>resolve({postData:data}),35));
+      if(mode==='lateAfterGuard'||mode==='rejectAfterGuard')
         return new Promise((resolve,reject)=>setTimeout(()=>{
-          const rejected=options.postDataMode==='rejectAfterGuard';
+          const rejected=mode==='rejectAfterGuard';
           options.postDataSettled?.(p.requestId,rejected?'rejected':'resolved');
-          rejected?reject(Error('POST_DATA_TOO_LATE')):resolve({postData:options.postDataText??'{"too_late":true}'});
-        },options.postDataDelayMs??280));
-      if(options.postDataMode==='reject')return Promise.reject(Error('POST_DATA_UNAVAILABLE'));
-      if(options.postDataMode==='hang')return new Promise(()=>{});
+          rejected?reject(Error('POST_DATA_TOO_LATE')):resolve({postData:data??'{"too_late":true}'});
+        },delay));
+      if(mode==='reject')return Promise.reject(Error('POST_DATA_UNAVAILABLE'));
+      if(mode==='hang')return new Promise(()=>{});
       return normalSend(cmd,p);
     };
   }
@@ -93,7 +100,8 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       ...(i===1&&o.redirectResponse?{redirectResponse:{status:302,url:'http://foreign.invalid/old'}}:{}),
       ...(i===1&&Object.hasOwn(o,'redirectHasExtraInfo')?{redirectHasExtraInfo:o.redirectHasExtraInfo}:{}),
       request:{method:'POST',url:requestUrl,
-      ...(i===1&&o.postDataMode?{}:{postData:i===1&&Object.hasOwn(o,'postDataText')?o.postDataText:'{"secret":"'+i+'"}'})}});
+      ...((i===1&&o.postDataMode)||(i===0&&options.firstPostDataMode)?{}:
+         {postData:i===1&&Object.hasOwn(o,'postDataText')?o.postDataText:'{"secret":"'+i+'"}'})}});
     if(i===1&&typeof options.lifecycleDuringSecond==='function')options.lifecycleDuringSecond(c);
     if(i===1&&options.injectExtraPost)c.emit('Network.requestWillBeSent',{
       requestId:'unexpected-third',timestamp:101.001,request:{method:'POST',
@@ -1066,4 +1074,46 @@ test('getRequestPostData late resolve or reject stays sealed after guard, quiet 
   assert.equal(hung.cdp_consistent,false);
   assert.equal(hung.ttft_sse_verified,false);
   assert.equal(hung.turns[1].request_sha256,null);
+});
+
+test('unresolved first POST-data ACK cannot rebind a serial second-turn SSE request',async()=>{
+  const baseline=await run();
+  const early=await run(false,null,null,null,{
+    firstPostDataMode:'lateCustom',firstPostDataText:'{"first":"verified"}',
+    requestPostDataAckTimeoutMs:90
+  });
+  assert.equal(early.cdp_consistent,true);
+  assert.equal(early.ttft_sse_verified,true);
+  assert.notEqual(early.turns[0].request_sha256,baseline.turns[0].request_sha256);
+  assert.equal(early.turns[1].request_sha256,baseline.turns[1].request_sha256);
+  assert.equal(early.turns[1].ttft_ms,baseline.turns[1].ttft_ms);
+  assert.equal(early.turns[1].sse_done_ms,baseline.turns[1].sse_done_ms);
+  for(const mode of ['lateAfterGuard','rejectAfterGuard','hang']){
+    let didSettle;
+    const settled=new Promise(resolve=>{didSettle=resolve;});
+    const observation=await run(false,null,null,null,{
+      firstPostDataMode:mode,firstPostDataText:'{"first":"too late"}',
+      firstPostDataDelayMs:260,requestPostDataAckTimeoutMs:40,
+      postDataSettled:(id,outcome)=>{if(id==='1')didSettle(outcome);}
+    });
+    assert.equal(observation.cdp_consistent,false,mode);
+    assert.equal(observation.ttft_sse_verified,false,mode);
+    assert.deepEqual(observation.turns.map(t=>t.cdp_request_id),['1','2'],mode);
+    assert.equal(observation.turns[0].request_sha256,null,mode);
+    assert.equal(observation.turns[0].ttft_ms,null,mode);
+    // The independent second-turn observation remains attributable, but it
+    // cannot certify a valid two-turn exchange with missing first provenance.
+    assert.equal(observation.turns[1].request_sha256,baseline.turns[1].request_sha256,mode);
+    assert.equal(observation.turns[1].cdp_decoded_body_sha256,
+      baseline.turns[1].cdp_decoded_body_sha256,mode);
+    assert.equal(observation.turns[1].ttft_ms,baseline.turns[1].ttft_ms,mode);
+    assert.equal(observation.turns[1].sse_done_ms,baseline.turns[1].sse_done_ms,mode);
+    const sealed=JSON.stringify(observation);
+    if(mode!=='hang'){
+      assert.equal(await settled,mode==='rejectAfterGuard'?'rejected':'resolved');
+      await new Promise(resolve=>setImmediate(resolve));
+      assert.equal(JSON.stringify(observation),sealed,'stale first-turn POST ACK is sealed');
+    }
+    assert.doesNotMatch(sealed,/secret|Hello|data:/);
+  }
 });
