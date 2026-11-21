@@ -388,6 +388,22 @@ def owner_session_continuity_valid(status, cookies, expected_pin):
             and owner_session_cookie_pin(cookies) == expected_pin)
 
 
+async def postreload_owner_session_recheck(context, base, expected_pin):
+    """Re-pin authenticated owner identity AFTER the slow reload-history GET.
+
+    A successful pre-history session check cannot authorize a later read if
+    the session expires or cookies rotate while history is being retrieved.
+    No generation request is made; any read failure is a conservative HOLD.
+    """
+    try:
+        response = await context.request.get(
+            base+'/chat/session', max_redirects=0, timeout=6000)
+        return owner_session_continuity_valid(
+            response.status, await context.cookies(base), expected_pin)
+    except Exception:
+        return False
+
+
 def verified_two_turn_firstturn_ids(rows):
     """Allow second POST only after two distinct, stable first-turn row IDs.
 
@@ -1658,6 +1674,14 @@ async def browser_run(report, directory, available):
                         postquiet_history,reloaded_history,did,
                         browser_transcript_sha,firstturn_id_snapshot):
                     raise RuntimeError('HOLD_MULTITURN_RELOAD_HISTORY_FOURROW_CHANGED')
+                # Owner session may rotate DURING the slow four-row history
+                # GET after reload; the earlier signed_reload pin is stale.
+                # Recheck owner status + cookie identity before any browser PASS.
+                report['browser_stage']='QA_POSTRELOAD_HISTORY_SESSION_RECHECK'
+                if not await postreload_owner_session_recheck(
+                        context,base,owner_session_pin):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_POSTHISTORY_SESSION_CHANGED')
+                report['multiturn_reload_posthistory_owner_session_verified']=True
                 if (stop_present() or not exact_native_post_fence(
                         postread_snapshot,stream_admitted,2)
                         or not clean_two_turn_browser_runtime(
