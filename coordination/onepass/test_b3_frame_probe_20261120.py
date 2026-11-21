@@ -426,7 +426,7 @@ class TestProbe(unittest.TestCase):
                                     {type:'start',model:'pinned-local-mock'},
                                     {type:'delta',text:'world'},
                                     {type:'done',saved:true,s03_integrated:true,
-                                     dialog_id:id,exchange_id:eid}
+                                     dialog_id:id,exchange_id:(window.__nativeCase === 'keep' ? 'ex00002' : window.__nativeCase === 'lost' ? 'ex00003' : eid)}
                                 ].map(JSON.stringify).join('\\n') + '\\n';
                                 const kind = window.__nativeCase;
                                 const bytes = new TextEncoder();
@@ -445,10 +445,21 @@ class TestProbe(unittest.TestCase):
                             }
                             if (String(url).startsWith('/api/ui/memory/dialogs/history?')) {
                                 window.__historyGets++;
-                                return pack({status:'READY',dialog_id:id,messages:[
+                                const kind=window.__nativeCase;
+                                const currentId=kind === 'keep' ? 'ex00002' :
+                                    kind === 'lost' ? 'ex00003' : eid;
+                                const current=[
+                                    {role:'user',content:'hello',exchange_id:currentId},
+                                    {role:'assistant',content:'world',exchange_id:currentId}
+                                ];
+                                const previous=[
                                     {role:'user',content:'hello',exchange_id:eid},
                                     {role:'assistant',content:'world',exchange_id:eid}
-                                ]});
+                                ];
+                                // 'keep' is a valid second turn retaining the first;
+                                // 'lost' is a later turn with its previous pair gone.
+                                return pack({status:'READY',dialog_id:id,messages:
+                                    kind === 'keep' ? [...previous,...current] : current});
                             }
                             throw Error('UNEXPECTED_TEST_NATIVE_ROUTE');
                         };
@@ -482,6 +493,15 @@ class TestProbe(unittest.TestCase):
                     self.assertNotIn('"type":"done"', delayed['sse'])
                     self.assertEqual(delayed['posts'], 2)
                     self.assertEqual(delayed['reads'], 1)
+                    retained = await exchange('keep')
+                    self.assertIn('"type":"done"', retained['sse'])
+                    self.assertEqual(retained['posts'], 3)
+                    self.assertEqual(retained['reads'], 2)
+                    lost = await exchange('lost')
+                    self.assertIn('HOLD_DIALOG_PRIOR_EXCHANGE_LOST', lost['sse'])
+                    self.assertNotIn('"type":"done"', lost['sse'])
+                    self.assertEqual(lost['posts'], 4)
+                    self.assertEqual(lost['reads'], 3)
                 finally:
                     await browser.close()
         asyncio.run(run())
