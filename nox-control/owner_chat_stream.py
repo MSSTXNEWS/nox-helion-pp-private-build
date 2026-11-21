@@ -271,7 +271,15 @@ async def _model_events(client, url, payload):
     text=[];calls={};finished=None;complete=False;size=0
     async with client.stream('POST',url,json=request,timeout=180.0) as response:
         if response.status_code!=200:
-            raise StreamFailure('HOLD_MODEL_HTTP')
+            # Keep the provider's capacity/permission outcome distinct from a
+            # malformed request. Never echo upstream bodies, tokens or URLs.
+            # An HTTP failure terminates this POST; no automatic replay may
+            # duplicate native tool work or claim a persisted S03 turn.
+            raise StreamFailure({
+                401:'HOLD_MODEL_AUTH',403:'HOLD_MODEL_AUTH',
+                408:'HOLD_MODEL_HTTP_TIMEOUT',429:'HOLD_MODEL_RATE_LIMIT',
+                503:'HOLD_MODEL_UNAVAILABLE',
+            }.get(response.status_code,'HOLD_MODEL_HTTP'))
         # A data: line is a field, not an event; dispatch only on a blank line.
         # Preserve valid multi-line JSON without allowing unbounded frames.
         parts=[]
@@ -455,6 +463,12 @@ async def _deadline_model_events(client,url,payload):
                     yield item
     except TimeoutError:
         raise StreamFailure('HOLD_MODEL_STREAM_DEADLINE') from None
+    except httpx.TimeoutException:
+        # HTTPX's per-operation timeout is different from the hard wall clock.
+        raise StreamFailure('HOLD_MODEL_TRANSPORT_TIMEOUT') from None
+    except httpx.RequestError:
+        # Network reset/DNS/connection faults are not a model completion.
+        raise StreamFailure('HOLD_MODEL_TRANSPORT') from None
 
 
 def _native_json_value(value):
