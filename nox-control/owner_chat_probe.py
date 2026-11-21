@@ -456,6 +456,10 @@ def stream_frame_reports_failure(frame):
     """
     keys = ('code', 'status_code', 'statusCode', 'http_status', 'httpStatus')
     status = frame.get('status')
+    # Explicit upstream ok=false is a failure even with no code/error field.
+    # Do not coerce zero or a missing legacy flag to boolean failure.
+    if frame.get('ok') is False:
+        return True
     # A saved=true terminal can still represent truncated/filtered generation.
     # Accept ordinary stop/end-of-turn and absent legacy finish metadata.
     incomplete = ('length', 'max_tokens', 'max_length', 'content_filter',
@@ -471,7 +475,8 @@ def stream_frame_reports_failure(frame):
     if isinstance(status, dict):
         # A structured status can carry an upstream failure without HTTP code.
         # Do not let a later saved=true done erase nested error/success=false.
-        if status.get('error') not in (None, '', False) or status.get('success') is False:
+        if (status.get('error') not in (None, '', False)
+                or status.get('success') is False or status.get('ok') is False):
             return True
         if any(stream_status_is_failure(status.get(key))
                for key in (*keys, 'status', 'state')):
