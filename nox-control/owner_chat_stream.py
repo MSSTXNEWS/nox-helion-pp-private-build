@@ -518,9 +518,13 @@ async def _run(native,url,payload,user_text):
                 unchanged=dict(system,content=initial.get('content'))
                 if canonical(unchanged)!=canonical(initial):
                     raise ValueError('evidence changed system metadata')
-                prefix=str(initial.get('content') or '')+'\n\n'
-                if type(system.get('content')) is not str or not system['content'].startswith(prefix):
-                    raise ValueError('evidence replaced system content')
+                # Existing multimodal/structured system content may be
+                # enriched in place; only plain text has a stable prefix.
+                if type(initial.get('content')) is str:
+                    prefix=initial['content']+'\n\n'
+                    if (type(system.get('content')) is not str
+                            or not system['content'].startswith(prefix)):
+                        raise ValueError('evidence replaced system content')
             elif type(system.get('content')) is not str or not system['content'].strip():
                 raise ValueError('evidence missing system context')
         except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
