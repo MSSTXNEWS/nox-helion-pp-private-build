@@ -4,7 +4,7 @@ import json, os, re, shutil, subprocess, tempfile, time, urllib.request
 
 INSTANCE=60509551
 TOKEN=os.environ["NOX2"]
-REMOTE="set -eu; printf 'NOX_OWNER_READONLY_V1\\n'; supervisorctl status nox-dispatcher-t855u nox-bridge 2>/dev/null | awk '{print $1, $2}'"
+REMOTE="set -eu; rows=$(supervisorctl status nox-dispatcher-t855u nox-bridge 2>/dev/null) || exit 41; printf 'NOX_OWNER_READONLY_V1\\n'; printf '%s\\n' \"$rows\" | awk '{print $1, $2}'"
 SERVICES={"nox-dispatcher-t855u", "nox-bridge"}
 
 def api(method,path,body=None):
@@ -14,6 +14,14 @@ def api(method,path,body=None):
                  "Content-Type":"application/json"},method=method)
     with urllib.request.urlopen(req,timeout=30) as r: data=r.read()
     return json.loads(data) if data else {}
+
+def trusted_host_key():
+    """Require an owner-authenticated pre-pinned host public key, never TOFU."""
+    value=os.environ.get("NOX_VAST_SSH_HOST_PUBLIC_KEY", "").strip()
+    fields=value.split()
+    if len(fields)!=2 or fields[0] not in ("ssh-ed25519", "ecdsa-sha2-nistp256", "ssh-rsa") or not re.fullmatch(r"[A-Za-z0-9+/=]{32,}",fields[1]):
+        raise RuntimeError("HOLD_TRUSTED_HOST_KEY_PIN_REQUIRED")
+    return " ".join(fields)
 
 def matching(pub):
     rows=api("GET","/instances/%d/ssh/"%INSTANCE)
@@ -59,6 +67,12 @@ def main():
            if str(x.get("HostPort","")).isdigit()]
     if inst.get("actual_status")!="running" or not ports:
         raise RuntimeError("HOLD_INSTANCE_OR_PORT")
+    # The owner must pin host identity independently of this SSH connection.
+    # Refuse the operation entirely when the trusted pin is unavailable.
+    host_pub=trusted_host_key()
+    import ipaddress
+    host_ip=str(ipaddress.ip_address(inst["public_ipaddr"]))
+    ports=sorted(set(ports))
     directory=tempfile.mkdtemp(prefix="nox-owner-")
     keyfile=directory+"/key"
     pub=None; attached=False; removed=False; verified_rows=None
@@ -77,11 +91,16 @@ def main():
             time.sleep(2)
         if not confirmed: raise RuntimeError("HOLD_KEY_ATTACH_UNCONFIRMED")
         time.sleep(10)
+        known_hosts=directory+"/known"
+        with open(known_hosts,"w",encoding="ascii") as f:
+            for port in ports:
+                f.write("[%s]:%d %s\\n"%(host_ip,port,host_pub))
+        os.chmod(known_hosts,0o600)
         for port in ports:
             r=subprocess.run(["ssh","-T","-i",keyfile,"-p",str(port),
                 "-o","BatchMode=yes","-o","IdentitiesOnly=yes",
-                "-o","ConnectTimeout=15","-o","StrictHostKeyChecking=accept-new",
-                "-o","UserKnownHostsFile="+directory+"/known","root@"+inst["public_ipaddr"],REMOTE],
+                "-o","ConnectTimeout=15","-o","StrictHostKeyChecking=yes",
+                "-o","UserKnownHostsFile="+known_hosts,"root@"+host_ip,REMOTE],
                 capture_output=True,text=True,errors="replace",timeout=65,stdin=subprocess.DEVNULL,env=child_env)
             if r.returncode==0:
                 verified_rows=accepted(r.stdout)
