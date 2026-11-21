@@ -2468,5 +2468,50 @@ class NewTrainerSupervisorStateEnumFence(unittest.TestCase):
                 self.assertEqual(scope["read_start_status"](), snapshot)
 
 
+
+class FinalWorkerCensusSuccessFence(unittest.TestCase):
+    def test_failed_final_worker_census_cannot_emit_success_receipt(self):
+        """Execute real main() final census Try AST without native side effects."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        main = next(node for node in tree.body
+                    if isinstance(node, ast.FunctionDef) and node.name == "main")
+        census_tries = [node for node in ast.walk(main)
+                        if isinstance(node, ast.Try)
+                        and "native_workers_readback_error" in ast.unparse(node)]
+        self.assertEqual(len(census_tries), 1)
+        isolated = compile(ast.fix_missing_locations(ast.Module(
+            body=[copy.deepcopy(census_tries[0])], type_ignores=[])),
+            str(SOURCE), "exec")
+
+        def hold_failure(_helper):
+            raise RuntimeError("HOLD_NATIVE_WORKER_CAP_READBACK")
+
+        def transport_failure(_helper):
+            raise ValueError("temporary transport exception")
+
+        for readback, expected in (
+                (hold_failure, "HOLD_NATIVE_WORKER_CAP_READBACK"),
+                (transport_failure, "ValueError")):
+            with self.subTest(error=expected):
+                scope = {"result": {"state": "CONTINUATION_TARGET_1000_COMPLETED"},
+                         "success": True, "worker_readback": readback,
+                         "helper": object()}
+                exec(isolated, scope)
+                self.assertFalse(scope["success"])
+                self.assertEqual(scope["result"]["state"], "HOLD_TRAINING_RESUME")
+                self.assertEqual(scope["result"]["native_workers_readback_error"], expected)
+                self.assertNotIn("native_workers_after", scope["result"])
+
+        healthy = {"workers": 3, "dispatcher_pid": 444}
+        scope = {"result": {"state": "CONTINUATION_TARGET_1000_COMPLETED"},
+                 "success": True, "worker_readback": lambda _: healthy,
+                 "helper": object()}
+        exec(isolated, scope)
+        self.assertTrue(scope["success"])
+        self.assertEqual(scope["result"]["state"], "CONTINUATION_TARGET_1000_COMPLETED")
+        self.assertEqual(scope["result"]["native_workers_after"], healthy)
+        self.assertNotIn("native_workers_readback_error", scope["result"])
+
+
 if __name__ == "__main__":
     unittest.main()
