@@ -240,8 +240,8 @@ def progressive_stream_valid(value):
             and type(answer_characters) is int and 3 <= answer_characters <= 4096
             and lengths[-1] <= answer_characters
             and type(first) in (int, float) and type(done) in (int, float)
-            and math.isfinite(first) and math.isfinite(done)
-            and 0 <= first < done)
+            and 0 <= first < done <= 600_000
+            and math.isfinite(first) and math.isfinite(done))
 
 
 def local_base():
