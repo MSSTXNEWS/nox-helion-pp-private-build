@@ -86,6 +86,22 @@ class DrivePrefetchTests(unittest.TestCase):
         with self.assertRaisesRegex(mod.Hold, "ENGRAM_PARTS_DISK_ONLY"):
             mod.run(opts)
 
+    def test_owner_pinned_drive_remote_only(self):
+        # A valid manifest digest must not authorize a second rclone account:
+        # the owner-native read probe verified the noxdrive alias only.
+        for alias in ("other:NOX_COLD", "noxdrive-evil:NOX_COLD",
+                      "noxdrive2:NOX_COLD"):
+            with self.subTest(remote=alias):
+                self.m["remote"] = alias
+                self.manifest.write_text(json.dumps(self.m))
+                digest = hashlib.sha256(self.manifest.read_bytes()).hexdigest()
+                with self.assertRaisesRegex(mod.Hold, "HOLD_DRIVE_REMOTE"):
+                    mod.read_manifest(self.manifest, digest)
+        self.m["remote"] = "noxdrive:NOX_COLD"
+        self.manifest.write_text(json.dumps(self.m))
+        digest = hashlib.sha256(self.manifest.read_bytes()).hexdigest()
+        self.assertEqual(mod.read_manifest(self.manifest, digest), self.m)
+
     def test_plan_only_does_not_create_weight(self):
         class Opt:
             mode = "disk"

@@ -86,7 +86,12 @@ def read_manifest(path, digest):
     check(isinstance(m, dict) and set(m) == {"schema", "remote", "assets"}, "MANIFEST_SCHEMA")
     check(m["schema"] == SCHEMA, "MANIFEST_VERSION")
     remote = m["remote"]
+    # The native owner OAuth probe pins the Google Drive project root on
+    # the noxdrive remote. Refuse a different rclone alias even when a manifest
+    # has a valid checksum: otherwise staging and the auth probe check
+    # different accounts / roots.
     check(isinstance(remote, str) and REMOTE.fullmatch(remote)
+          and remote.startswith("noxdrive:")
           and ".." not in remote and not remote.endswith("/"), "REMOTE")
     assets = m["assets"]
     check(isinstance(assets, list) and 0 < len(assets) <= 32, "ASSET_COUNT")
