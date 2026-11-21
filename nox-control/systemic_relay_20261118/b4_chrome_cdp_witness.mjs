@@ -32,7 +32,7 @@ export class Cdp {
       if(p.id){const cb=this.pending.get(p.id);if(cb){this.pending.delete(p.id);p.error?cb.no(Error(p.error.message)):cb.yes(p.result||{});}}
       else if(p.method)this.listener?.(p.method,p.params||{});
     });
-    this.ws.addEventListener('close',()=>{for(const x of this.pending.values())x.no(Error('CDP_DISCONNECTED'));this.pending.clear();});return this;
+    this.ws.addEventListener('close',()=>{for(const x of this.pending.values())x.no(Error('CDP_DISCONNECTED'));this.pending.clear();this.listener?.('CDP_DISCONNECTED',{});});return this;
   }
   send(method,params={}){return new Promise((yes,no)=>{const id=++this.next;this.pending.set(id,{yes,no});this.ws.send(JSON.stringify({id,method,params}));});}
   on(fn){this.listener=fn;}
@@ -110,13 +110,24 @@ function eventData(record){
 // Invisible format/control/whitespace/isolated combining marks cannot
 // prove first-visible text. This proxy does not attest browser paint.
 const hasPrintableAnswerText=text=>/[\p{L}\p{N}\p{P}\p{S}]/u.test(text);
-export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={}){
+export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,makeSession,onReady}={}){
   if(!/^ws:\/\/(localhost|127\.0\.0\.1):\d+\//.test(ws||''))throw Error('LOCAL_CDP_ONLY');
   if(!Number.isInteger(count)||count<1||count>6)throw Error('BAD_COUNT');
+  if(!Number.isInteger(quiescenceMs)||quiescenceMs<50||quiescenceMs>1000)throw Error('BAD_QUIESCENCE');
+  if(!Number.isInteger(timeoutMs)||timeoutMs<=quiescenceMs)throw Error('BAD_TIMEOUT');
   const c=await(makeSession?makeSession():new Cdp(ws).open()),active=new Map(),finished=[];
   let startedPostCount=0;
   let yes,no;const completion=new Promise((a,b)=>{yes=a;no=b;});
-  const timer=setTimeout(()=>no(Error('CDP_TIMEOUT')),timeoutMs);
+  const deadline=Date.now()+timeoutMs;
+  // A resolved body-count promise cannot be rejected again. Preserve a
+  // separate failure channel through metadata ACK and post-capture quiescence.
+  let fatal=null,quiescenceReject=null;
+  const invalidate=error=>{
+    if(fatal===null)fatal=error;
+    no(fatal);
+    quiescenceReject?.(fatal);
+  };
+  const timer=setTimeout(()=>invalidate(Error('CDP_TIMEOUT')),timeoutMs);
   const validTime=t=>typeof t==='number'&&Number.isFinite(t)&&t>=0;
   const millis=(x,t)=>{
     if(!validTime(x.start)||!validTime(t)||t<x.start){x.missing=true;return null;}
@@ -158,13 +169,14 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       }}
   };
   c.on((method,p)=>{
+    if(method==='CDP_DISCONNECTED'){invalidate(Error('CDP_DISCONNECTED'));return;}
     if(method==='Network.requestWillBeSent'){
       let path;try{path=new URL(p.request.url).pathname;}catch{return;}
       if(p.request.method!=='POST'||!paths.has(path))return;
-      if(active.has(p.requestId)){no(Error('DUPLICATE_CDP_ID'));return;}
+      if(active.has(p.requestId)){invalidate(Error('DUPLICATE_CDP_ID'));return;}
       // Bind each conversational turn at requestWillBeSent, not async body ACK.
       // An unexpected third POST invalidates the entire observed two-turn capture.
-      if(startedPostCount>=count){no(Error('EXTRA_CDP_POST'));return;}
+      if(startedPostCount>=count){invalidate(Error('EXTRA_CDP_POST'));return;}
       const x={id:p.requestId,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
       active.set(p.requestId,x);
       const record=s=>{
@@ -263,6 +275,23 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
         ]);
       }finally{clearTimeout(guard);}
     }
+    // Keep CDP attached after the second body ACK: an extra browser POST or
+    // socket loss in this finite interval invalidates the two-turn witness.
+    // It observes only; it never sends/replays a model POST.
+    if(fatal)throw fatal;
+    if(Date.now()+quiescenceMs>deadline)throw Error('CDP_TIMEOUT');
+    let quietTimer;
+    try{
+      await new Promise((resolve,reject)=>{
+        quiescenceReject=reject;
+        quietTimer=setTimeout(resolve,quiescenceMs);
+        if(fatal)reject(fatal);
+      });
+    }finally{
+      clearTimeout(quietTimer);
+      quiescenceReject=null;
+    }
+    if(fatal)throw fatal;
     // Rejected, missing or timed-out request metadata remains fail-closed.
     const turns=records.map((x,i)=>({turn:i+1,cdp_request_id:x.id,request_sha256:x.request,cdp_decoded_body_sha256:x.response,
       cdp_streamed_body_sha256:x.streamDigest,cdp_decoded_body_matches_stream:x.bodyMatchesStream,
