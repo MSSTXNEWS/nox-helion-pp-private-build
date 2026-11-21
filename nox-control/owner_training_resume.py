@@ -884,10 +884,15 @@ def resource_admission(helper):
     health_snapshot = helper.health()
     # A malformed native proxy reply is not proof of a healthy served chat.
     # In Python, 200.0 == 200: use strict integer shape before the HTTP gate.
-    if (type(health_snapshot) is not dict
-            or type(health_snapshot.get('8080')) is not int):
+    if type(health_snapshot) is not dict:
         raise RuntimeError('HOLD_CHAT_HEALTH_READBACK')
-    if health_snapshot['8080'] != 200:
+    status = health_snapshot.get('8080')
+    # Native health reports connection errors as strings; preserve the
+    # established unhealthy-chat HOLD. Only a spoofed 200-equivalent value
+    # requires a separate schema HOLD rather than successful admission.
+    if status == 200 and type(status) is not int:
+        raise RuntimeError('HOLD_CHAT_HEALTH_READBACK')
+    if status != 200:
         raise RuntimeError('HOLD_CHAT_HEALTH_BEFORE_TRAINING')
     return {'gpu1': gpu1, 'budget': budget}
 

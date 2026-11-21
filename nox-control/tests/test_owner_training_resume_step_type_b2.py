@@ -1981,16 +1981,24 @@ class ChatHealthReadbackSchema(unittest.TestCase):
                   mock.patch("os.sched_getaffinity", return_value={0, 1, 2, 3})):
                 self.assertEqual(
                     verify(helper)["budget"]["configured_train_cpu_gib"], 64)
-                for invalid in (
-                    None, [], {}, "healthy", 200,
-                    {"8080": True}, {"8080": 200.0}, {"8080": "200"},
-                    {"8080": None}, {"8080": []},
-                    {"8080": {"status": 200}}, {"8080": float("nan")},
-                ):
-                    with self.subTest(health=repr(invalid)):
-                        state[0] = invalid
+                for malformed in (None, [], "healthy", 200, {"8080": 200.0}):
+                    with self.subTest(malformed=repr(malformed)):
+                        state[0] = malformed
                         with self.assertRaisesRegex(
                                 RuntimeError, "HOLD_CHAT_HEALTH_READBACK"):
+                            verify(helper)
+                # ConnectionRefusedError is the established native helper
+                # convention for offline /health, not a schema error.
+                for unhealthy in (
+                    {}, {"8080": True}, {"8080": "200"},
+                    {"8080": None}, {"8080": []},
+                    {"8080": {"status": 200}}, {"8080": float("nan")},
+                    {"8080": "ConnectionRefusedError"},
+                ):
+                    with self.subTest(unhealthy=repr(unhealthy)):
+                        state[0] = unhealthy
+                        with self.assertRaisesRegex(
+                                RuntimeError, "HOLD_CHAT_HEALTH_BEFORE_TRAINING"):
                             verify(helper)
                 state[0] = {"8080": 503}
                 with self.assertRaisesRegex(
