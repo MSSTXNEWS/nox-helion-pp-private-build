@@ -14,7 +14,7 @@ import math
 import pathlib
 import statistics
 from datetime import datetime, timezone
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 SIZES = [(320, 720), (390, 844), (1440, 900)]
 SAMPLE_JS = """async () => {
@@ -48,6 +48,23 @@ def verify_url(url):
     if p.scheme not in ('http', 'https') or not p.hostname or p.username or p.password:
         raise ValueError('HOLD_INVALID_BROWSER_TARGET')
     return url
+
+
+def is_model_chat_endpoint(url):
+    """Fence existing inference routes even through percent-encoded aliases.
+
+    A GET is not necessarily read-only on an inference endpoint. This is a
+    browser-observer guard, NOT a change to the production serving route.
+    """
+    path = urlsplit(url).path
+    # Browsers and reverse proxies may normalize %2F or a nested encoding.
+    for _ in range(3):
+        decoded = unquote(path)
+        if decoded == path:
+            break
+        path = decoded
+    return any(path == root or path.startswith(root + '/')
+               for root in ('/api/nox/chat', '/nox/chat'))
 
 
 def evidence_hash(value):
@@ -247,12 +264,11 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                     try:
                         async def guard(route):
                             request = route.request
-                            u = urlsplit(request.url)
-                            model_path = (u.path == '/api/nox/chat' or
-                                          u.path.startswith('/api/nox/chat/'))
+                            model_path = is_model_chat_endpoint(request.url)
                             # A GET/HEAD/OPTIONS route is not proof of a read-only
-                            # model endpoint. Never let an opt-in render probe
-                            # inadvertently start inference on a live server.
+                            # model endpoint. Protect the existing NOX /nox/chat
+                            # and /api/nox/chat paths, including encoded aliases,
+                            # without changing the production routing contract.
                             if model_path and request.method in ('GET', 'HEAD', 'OPTIONS'):
                                 result['blocked_model_read_requests'] += 1
                                 await route.abort('blockedbyclient')
