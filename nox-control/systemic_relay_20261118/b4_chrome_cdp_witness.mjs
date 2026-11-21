@@ -304,6 +304,9 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       // It must begin after the previous stream's model stop, terminal [DONE]
       // and Network.loadingFinished in CDP's monotonic clock. A delayed
       // getResponseBody ACK is allowed; it does not represent model execution.
+      // Metadata about an earlier body ACK is causal observer provenance,
+      // not a barrier for a separately completed next SSE/model POST.
+      let previousBodyAckPendingAtStart=null;
       if(startedPostCount>0&&validTime(p.timestamp)){
         const previous=[...active.values()][startedPostCount-1];
         if(!previous||previous.missing||!previous.finishStop||
@@ -312,8 +315,9 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
            previous.doneAt>previous.closeAt||p.timestamp<=previous.closeAt){
           invalidate(Error('CDP_NON_SERIAL_CHAT_POST'));return;
         }
+        previousBodyAckPendingAtStart=previous.bodyAckPending;
       }
-      const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,bodyAckMs:null,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false,finishStopAt:null,finishStopChunk:null,doneChunk:null,sseTextEventTimes:[],sseTextEventChunks:[],cdpChunkOrdinal:0,sseOutputCodepoints:0};
+      const x={frameId,loaderId,id:p.requestId,requestUrl:requestUrl.href,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,bodyAckMs:null,bodyAckPending:false,previousBodyAckPendingAtStart,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false,finishStopAt:null,finishStopChunk:null,doneChunk:null,sseTextEventTimes:[],sseTextEventChunks:[],cdpChunkOrdinal:0,sseOutputCodepoints:0};
       active.set(p.requestId,x);
       const record=s=>{
         if(typeof s!=='string'){x.missing=true;return;}
@@ -392,6 +396,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       x.streamDigest=x.streamHasher.digest('hex');
       // Observer-local monotonic API round-trip, started AFTER Network.loadingFinished.
       // Neither CDP timestamps nor model/token timing measure this asynchronous ACK.
+      x.bodyAckPending=true;
       let ackStart;
       try{ackStart=bodyAckClock();}catch{ackStart=NaN;}
       let bodyLookup;
@@ -423,6 +428,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         if(!x.bodyMatchesStream)x.missing=true;
       }).catch(()=>{x.missing=true;}).finally(()=>{
         clearTimeout(ackTimeout);
+        x.bodyAckPending=false;
         finished.push(x);
         if(finished.length>=count)yes(finished);
       });
@@ -577,6 +583,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       sse_finish_stop_to_done_cross_chunk:stopToDoneMs===null?null:x.doneChunk>x.finishStopChunk,
       sse_done_to_loading_finished_ms:doneToLoadingFinishedMs,
       sse_done_to_loading_finished_source:doneToLoadingFinishedMs===null?null:'CDP:Network.loadingFinished',
+       cdp_previous_turn_body_ack_pending_at_post_start:!x.missing?x.previousBodyAckPendingAtStart:null,
        cdp_response_body_ack_latency_ms:!x.missing&&x.bodyMatchesStream?x.bodyAckMs:null,
        cdp_response_body_ack_latency_source:!x.missing&&x.bodyMatchesStream&&x.bodyAckMs!==null?
          'LOCAL_MONOTONIC:Network.getResponseBody':null,
