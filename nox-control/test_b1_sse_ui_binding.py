@@ -279,6 +279,47 @@ def main():
           return didStop===true && result==='STOPPED' &&
             posts===1 && acks===0 && deltas===0;
         }'''))
+        check('wire SSE id replay coalesces one UI delta and rejects conflicts without ACK', page.evaluate('''async () => {
+          const chat=document.querySelector('#chat');
+          const s1={conversation_id:'id-wire',exchange_id:'same'};
+          const s2={conversation_id:'id-wire',exchange_id:'conflict'};
+          const s3={conversation_id:'id-wire',exchange_id:'malformed'};
+          let posts=0,acks=0,commits=0;
+          const transport={...opts.transport,
+            async post(s){
+              posts++;
+              let frames;
+              if(s.exchange_id==='same')
+                frames='id: delta-001\\nevent: delta\\ndata: ONE\\n\\n' +
+                  'id: delta-001\\nevent: delta\\ndata: ONE\\n\\n';
+              else if(s.exchange_id==='conflict')
+                frames='id: delta-002\\nevent: delta\\ndata: SAFE\\n\\n' +
+                  'id: delta-002\\nevent: delta\\ndata: MUTATED\\n\\n';
+              else frames='id: invalid!\\nevent: delta\\ndata: EVIL\\n\\n';
+              return {ok:true,body:new ReadableStream({start(c){
+                c.enqueue(new TextEncoder().encode(frames));c.close();
+              }})};
+            },
+            async ack(){acks++;return true;}
+          };
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container:chat,
+            beforeCommit:async kind=>{if(kind==='delta') commits++;}});
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:3000
+          });
+          const same=await c.begin(s1);
+          const conflict=await c.begin(s2).then(()=>null,e=>e.code);
+          const malformed=await c.begin(s3).then(()=>null,e=>e.code);
+          const nodes=Array.from(chat.children).filter(
+            e=>e.dataset.noxB1Conversation==='id-wire');
+          const row=k=>nodes.find(e=>e.dataset.noxB1Exchange===k);
+          return same==='STREAM_ENDED_READBACK_REQUIRED' &&
+            conflict==='HOLD_STREAM_POST_OR_READ' &&
+            malformed==='HOLD_STREAM_DELTA_EVENT_ID' &&
+            posts===3 && acks===0 && commits===2 &&
+            nodes.length===2 && row('same')?.textContent==='ONE' &&
+            row('conflict')?.textContent==='SAFE' && !row('malformed');
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
