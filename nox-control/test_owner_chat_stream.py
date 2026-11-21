@@ -1598,10 +1598,14 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             with patch.object(stream,'EXECUTOR_STATUS',path),patch.object(stream.httpx,'AsyncClient',side_effect=AssertionError('no model')),patch.object(ui,'ROOT',Path(folder)):
                 response=await native['owner_completion']('http://native/model',payload,payload['messages'][0]['content'],True)
                 wire=''.join([chunk async for chunk in response.body_iterator])
-            self.assertIn('настроено 6',wire)
-            self.assertIn('занято 1, свободно 5',wire)
+            self.assertIn('настроено 6 логических исполнителей',wire)
+            self.assertIn('по записи занято 1, свободно 5',wire)
             self.assertIn('6 исполнителей + NOX',wire)
             self.assertIn('nox-agent-06',wire)
+            # A fresh status file is not process/lease/GPU attestation.
+            self.assertIn('не подтверждение живых PID/start_ticks',wire)
+            self.assertIn('owner lease/CAS',wire)
+            self.assertIn('числа физических native workers',wire)
             self.assertEqual(self.dispatched,[])
             self.assertIn('настроено 6',payload['_agent_final'])
 
