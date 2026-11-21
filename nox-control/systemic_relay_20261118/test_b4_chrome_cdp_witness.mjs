@@ -1396,3 +1396,59 @@ test('late second response-body ACK cannot revive failed or reversed network-clo
   assert.equal(lateControl.turns[1].cdp_decoded_body_sha256,null);
   assert.equal(lateControl.turns[1].ttft_ms,null);
 });
+
+test('second duplicate or contradictory close during post-ACK quiescence fails closed',async()=>{
+  // CDP is observed for a finite window after the second body ACK.
+  // These are late NETWORK events, not extra SSE data or model requests.
+  const firstKeys=['cdp_request_id','request_sha256','cdp_decoded_body_sha256',
+    'cdp_streamed_body_sha256','visible_text_sha256','ttft_ms','sse_done_ms',
+    'stream_timing_complete'];
+  const control=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  for(const method of ['Network.loadingFinished','Network.loadingFailed']){
+    let observedLateClose=0;
+    const observed=await run(false,null,null,null,{
+      quiescenceMs:80,
+      // Stub schedules postAckEvent 25ms after successful second
+      // Network.getResponseBody, before the 80ms quiet window expires.
+      postAckEvent:session=>{
+        observedLateClose++;
+        session.emit(method,{requestId:'2',timestamp:101.03});
+      }
+    });
+    assert.equal(observedLateClose,1,method+' delivered inside quiescence');
+    assert.equal(observed.cdp_consistent,false,method);
+    assert.equal(observed.ttft_sse_verified,false,method);
+    assert.deepEqual(observed.turns.map(x=>x.cdp_request_id),['1','2']);
+    for(const key of firstKeys)
+      assert.deepEqual(observed.turns[0][key],control.turns[0][key],method+' first '+key);
+    assert.equal(observed.turns[1].request_sha256,control.turns[1].request_sha256);
+    assert.equal(observed.turns[1].cdp_streamed_body_sha256,
+      control.turns[1].cdp_streamed_body_sha256);
+    assert.equal(observed.turns[1].cdp_decoded_body_matches_stream,false);
+    assert.equal(observed.turns[1].visible_text_sha256,null);
+    assert.equal(observed.turns[1].ttft_ms,null);
+    assert.equal(observed.turns[1].sse_done_ms,null);
+    assert.equal(observed.turns[1].stream_timing_complete,false);
+    assert.doesNotMatch(JSON.stringify(observed),/secret|Hello|data:/);
+  }
+  // This proves the observation boundary, NOT an unlimited guarantee:
+  // an event emitted only after capture returns cannot retroactively alter
+  // the returned snapshot. The real CDP connection is closed at this point.
+  let beyondWindow=0;
+  const limited=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      beyondWindow++;
+      session.emit('Network.loadingFailed',{requestId:'2',timestamp:101.04});
+    },90)
+  });
+  assert.equal(beyondWindow,0,'late event not present in the bounded observation');
+  assert.equal(limited.cdp_consistent,true);
+  assert.equal(limited.ttft_sse_verified,true);
+  const sealed=JSON.stringify(limited);
+  await new Promise(resolve=>setTimeout(resolve,110));
+  assert.equal(beyondWindow,1,'fixture deliberately emits after capture');
+  assert.equal(JSON.stringify(limited),sealed,'post-capture event cannot alter returned evidence');
+});
