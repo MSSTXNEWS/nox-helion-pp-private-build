@@ -9,8 +9,7 @@
   const enc=new TextEncoder();
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
-  // Last native/S03-backed exchange per dialog in this browser document.
-  // A later turn must not silently lose the preceding verified pair.
+  // Require preceding saved exchange in later same-dialog readbacks.
   const verifiedDialogTail=new Map();
   function livePieces(text) {
     const glyphs=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
@@ -95,8 +94,6 @@
          prior[0].content!==previous.prompt||prior[1].content!==previous.answer)
         throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
     }
-    // Do not commit a browser-side success marker before the native GET
-    // readback of both the new exchange and its preceding saved pair.
     if(!verifiedDialogTail.has(id)&&verifiedDialogTail.size>=128)
       verifiedDialogTail.delete(verifiedDialogTail.keys().next().value);
     verifiedDialogTail.set(id,{exchange_id:exchangeId,prompt,answer});
@@ -122,8 +119,6 @@
     finally{signal.removeEventListener('abort',onAbort);}
   }
   async function readNativeEofAfterDone(reader,signal) {
-    // A terminal NDJSON frame is not transport EOF. Reject later network
-    // chunks instead of treating the first 'done' as proof of completion.
     let timer;
     try {
       return await Promise.race([
@@ -169,7 +164,6 @@
         if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
         preparingSeen=true;
       } else {
-        // Fail closed: an unrecognized native frame cannot precede a
         throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
       }
     };
@@ -180,15 +174,12 @@
                              : await readNativeOrAbort(reader,signal);
         if(chunk.done)break;
         buf+=decoder.decode(chunk.value,{stream:true});
-        // Cap unfinished NDJSON frames, not combined chunks.
         let j;while((j=buf.indexOf('\n'))>=0){
           if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
           await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
         }
         if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
         if(doneSeen&&buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
-        // Keep draining to actual EOF: a later chunk may carry a
-        // duplicate done, error or model token after the receipt.
       }
       buf+=decoder.decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
@@ -232,11 +223,7 @@
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
               event({type:'token',t:parts[index]});
-              // Bound visual pacing to 8 actual frames per incoming native chunk.
-              // This never invents text or changes upstream TTFT.
               if(index<Math.min(parts.length-1,7)){
-                // Browsers with suspended rAF (including headless/hidden tabs)
-                // must still finish and verify S03. At most 18ms per slice.
                 await new Promise(resolve=>{
                   let settled=false;
                   const finish=()=>{if(!settled){settled=true;resolve();}};
@@ -250,9 +237,6 @@
           const {answer,receipt}=await consume(upstream,async t=>{
             trailing+=t;
             if(!segmenter){
-              // Without a segmenter, emit only a known-safe ASCII prefix.
-              // Keep one glyph of lookahead so subsequent combining marks
-              // cannot tear a grapheme across native delta boundaries.
               const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
               if(ascii){
                 const safe=ascii[0].slice(0,-1);
@@ -279,7 +263,6 @@
         }catch(e){
           event({type:'error',
             error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
-            // HTTP cancellation is confirmed; GPU/native execution is not.
             gpu_stop_verified:false});
         }finally{
           signal?.removeEventListener?.('abort',onAbort);
