@@ -162,6 +162,21 @@ class HunterURLSafetyTests(unittest.TestCase):
             self.assertEqual(len(rejected), 2)
             self.assertTrue(all(len(row[0]) == 64 for row in rejected))
 
+    def test_crossref_empty_or_malformed_titles_are_not_fabricated(self):
+        # Crossref title=[] was formerly stored as the literal "[]".
+        # Keep URL-only provenance, but never invent a paper title.
+        rows = [
+            {"DOI": "10.1234/empty", "title": [], "URL": "https://doi.org/10.1234/empty"},
+            {"DOI": "10.1234/missing", "URL": "https://doi.org/10.1234/missing"},
+            {"DOI": "10.1234/object", "title": {"fake": "title"}, "URL": "https://doi.org/10.1234/object"},
+            {"DOI": "10.1234/list", "title": [None, "", "  actual title  "], "URL": "https://doi.org/10.1234/list"},
+            {"DOI": "10.1234/scalar", "title": "  real scalar  ", "URL": "https://doi.org/10.1234/scalar"},
+        ]
+        got = hunter._crossref_items(json.dumps({"message": {"items": rows}}).encode("utf-8"))
+        self.assertEqual([item["title"] for item in got], ["", "", "", "actual title", "real scalar"])
+        self.assertEqual(len({item["url"] for item in got}), 5)
+        self.assertTrue(all(item["published"] == "" for item in got))
+
     def test_crossref_malformed_date_parts_preserve_healthy_siblings(self):
         # Bad Crossref dates must not roll back the entire read-only feed.
         # A string cannot be converted into a fake character-by-character date.
