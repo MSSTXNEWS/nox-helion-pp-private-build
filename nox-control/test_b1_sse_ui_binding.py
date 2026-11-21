@@ -599,6 +599,43 @@ def main():
           return second==='HOLD_STREAM_ACK_UNCERTAIN_GET_ONLY'&&
             stage==='SENDING'&&posts===0&&reads===2&&acks===1;
         }'''))
+        check('hung UI terminal projection times out without ACK or model repost', page.evaluate('''async () => {
+          const s={conversation_id:'projection-stall',exchange_id:'terminal-once'};
+          let posts=0,reads=0,acks=0,projects=0,release;
+          const ids=[];
+          const transport={...opts.transport,
+            post(){posts++;throw Error('MODEL_POST_FORBIDDEN')},
+            async readback(){reads++;return {...s}},
+            async ack(){acks++;return true}
+          };
+          const ui={
+            async onDelta(){},
+            upsertTerminal(_s,eventId){
+              ids.push(eventId);
+              projects++;
+              if(projects===1)
+                return new Promise(resolve=>{release=resolve});
+              return Promise.resolve(true);
+            }
+          };
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,
+            uiProjectionTimeoutMs:25
+          });
+          const first=await Promise.race([
+            c.reconnect(s).then(()=>null,e=>e.code),
+            new Promise(resolve=>setTimeout(()=>resolve('HUNG'),400))
+          ]);
+          if(first!=='HOLD_STREAM_UI_PROJECTION_TIMEOUT'||
+             posts!==0||reads!==1||acks!==0||projects!==1||
+             typeof release!=='function')return false;
+          const second=await c.reconnect(s);
+          release(true); // Late result must not resume the timed-out ACK path.
+          await new Promise(resolve=>setTimeout(resolve,0));
+          return second.safe_to_ack===true&&reads===2&&
+            posts===0&&acks===1&&projects===2&&
+            ids.length===2&&ids[0]===ids[1];
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
