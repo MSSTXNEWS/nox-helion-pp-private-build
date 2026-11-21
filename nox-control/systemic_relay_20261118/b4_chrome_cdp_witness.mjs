@@ -422,7 +422,10 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       }else x.missing=true;
     }
     if(method==='Network.loadingFinished'||method==='Network.loadingFailed'){
-      if(x.close!==null){x.missing=true;return;}
+      // A second terminal CDP close can arrive after getResponseBody ACK.
+      // Revoke an already-matched body witness as well as timing proof:
+      // setting missing alone would leave cdp_consistent incorrectly true.
+      if(x.close!==null){x.missing=true;x.bodyMatchesStream=false;return;}
       if(chronological(x,p.timestamp)){
         x.close=millis(x,p.timestamp);x.closeAt=p.timestamp;
         x.closeSucceeded=method==='Network.loadingFinished';
