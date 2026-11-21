@@ -39,6 +39,51 @@ class ScopedConversationTests(unittest.TestCase):
         self.assertFalse(result["owner_scope_supplied_and_matched"])
         self.assertTrue(any(m.get("content") == "Legacy history." for m in result["messages"]))
 
+    def test_redacted_historical_s03_keeps_provenance_not_prompt_text(self):
+        revision = "a" * 64
+        base = {"persona_id": "persona-A", "revision": revision}
+        old = {**base, "id": "old", "source_sha256": "b" * 64,
+               "text": "", "status": "SUPERSEDED", "superseded_by": "current"}
+        current = {**base, "id": "current", "source_sha256": "c" * 64,
+                   "text": "Current verified fact.", "status": "ACTIVE",
+                   "superseded_by": None}
+        revoked = {**base, "id": "revoked", "source_sha256": "d" * 64,
+                   "text": "", "status": "REVOKED", "superseded_by": None}
+        result = plan_prompt(
+            persona="NOX", system="Be precise.", conversation=[],
+            verified_s03=[old, current, revoked], current_user="Continue.",
+            token_counter=lambda msgs: sum(len(m["content"]) for m in msgs) // 4 + 1,
+            token_budget=2048, owner_persona_id="persona-A",
+            current_s03_revision=revision)
+        self.assertEqual(result["selected_s03_ids"], ["current"])
+        self.assertEqual([(ref["id"], ref["status"]) for ref
+                          in result["historical_s03_refs"]],
+                         [("old", "SUPERSEDED"), ("revoked", "REVOKED")])
+        self.assertNotIn('"untrusted_text":""',
+                         "\\n".join(msg["content"] for msg in result["messages"]))
+        with self.assertRaisesRegex(ContextHold, "HOLD_CONTEXT_S03"):
+            plan_prompt(persona="NOX", system="Be precise.", conversation=[],
+                        verified_s03=[{**current, "text": ""}], current_user="Continue.",
+                        token_counter=lambda msgs: 10, token_budget=2048,
+                        owner_persona_id="persona-A", current_s03_revision=revision)
+        # Malformed redacted provenance must HOLD, not raise TypeError
+        # from a membership test on an unhashable status.
+        for invalid_status in ([], {}, ["REVOKED"]):
+            with self.subTest(status=invalid_status):
+                with self.assertRaisesRegex(ContextHold, "HOLD_CONTEXT_S03"):
+                    plan_prompt(persona="NOX", system="Be precise.", conversation=[],
+                                verified_s03=[{**revoked, "status": invalid_status}],
+                                current_user="Continue.", token_counter=lambda msgs: 10,
+                                token_budget=2048, owner_persona_id="persona-A",
+                                current_s03_revision=revision)
+        # The legacy unscoped format still refuses empty active text.
+        with self.assertRaisesRegex(ContextHold, "HOLD_CONTEXT_S03"):
+            plan_prompt(persona="NOX", system="Be precise.", conversation=[],
+                        verified_s03=[{"id": "old", "source_sha256": "b" * 64,
+                                       "text": ""}],
+                        current_user="Continue.", token_counter=lambda msgs: 10,
+                        token_budget=2048)
+
 
 if __name__ == "__main__":
     unittest.main()
