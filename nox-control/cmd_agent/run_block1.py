@@ -3,11 +3,14 @@
 run the reviewed agent-updater (branch u, file u) over SSH, then detach the key.
 No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
+ACT = open(os.path.join(os.path.dirname(__file__), '..', 'block1', 'ACTION')).read() if os.path.exists(os.path.join(os.path.dirname(__file__), '..', 'block1', 'ACTION')) else ''
 INSTANCE = 60509551  # S2 (США); S1 (Квебек) = 61825960, выбирается маркером #S1 в начале REMOTE
 KEY = os.environ["NOX2"]
 REMOTE = '#S1\ncurl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/block1/boot_block1.sh -o /tmp/b1.sh && bash /tmp/b1.sh 2>&1 | tail -c 3000'
 
-if REMOTE.startswith("#S1"):
+if 'target=S2' in ACT:
+    REMOTE = REMOTE.replace('#S1\n', '', 1)
+elif REMOTE.startswith("#S1"):
     INSTANCE = 61825960
 
 def api(method, path, body=None):
@@ -19,6 +22,22 @@ def api(method, path, body=None):
     return json.loads(raw) if raw else {}
 
 def main():
+    for iid, nm in ((61825960, 'S1'), (60509551, 'S2')):
+        try:
+            r = api('GET', '/instances/%d/' % iid); r = r.get('instances', r)
+            if isinstance(r, list): r = next(i for i in r if i.get('id') == iid)
+            print('INST', nm, iid, 'status=%s intended=%s dph=%s gpu=%s disk=%s' % (r.get('actual_status'), r.get('intended_status'), r.get('dph_total'), r.get('gpu_name'), r.get('disk_space')))
+        except Exception as e: print('INST', nm, 'error', type(e).__name__)
+    if 'start_s2' in ACT:
+        try:
+            print('START S2 ->', api('PUT', '/instances/60509551/', {'state': 'running'}))
+            for _ in range(24):
+                time.sleep(15)
+                r = api('GET', '/instances/60509551/'); r = r.get('instances', r)
+                if isinstance(r, list): r = next(i for i in r if i.get('id') == 60509551)
+                print('S2 status', r.get('actual_status'), r.get('status_msg'))
+                if r.get('actual_status') == 'running': break
+        except Exception as e: print('START S2 error', type(e).__name__, str(e)[:200])
     try:
         u = api('GET', '/users/current/')
         print('VAST balance=%s credit=%s' % (u.get('balance'), u.get('credit')))
