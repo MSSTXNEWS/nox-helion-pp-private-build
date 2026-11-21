@@ -977,14 +977,20 @@ RENDERED_FOURROW_JS = r"""expected => {
   const bubbles=[...mount.querySelectorAll('.v24-msg')];
   if(bubbles.length!==4)return false;
   const normalize=text=>text.replace(/\s+/g,' ').trim();
+  // Layout boxes persist for CSS visibility:hidden and opacity:0.
+  // The four history rows must be rendered, not merely present in the DOM.
+  // checkVisibility also traverses hidden/transparent ancestors.
+  const visible=node=>typeof node.checkVisibility==='function'&&
+    node.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
   for(let i=0;i<4;i++){
     const row=expected[i],bubble=bubbles[i];
+    if(!visible(bubble))return false;
     if(!row||typeof row.content!=='string'||!row.content.trim()||
        typeof row.message_id!=='string'||!row.message_id.trim())return false;
     if(row.role!==(bubble.classList.contains('nox')?'assistant':'user'))return false;
     const bodies=[...bubble.querySelectorAll('.body')];
     if(bodies.length!==1||!bodies[0].getClientRects().length||
-       typeof bodies[0].innerText!=='string'||
+       !visible(bodies[0])||typeof bodies[0].innerText!=='string'||
        normalize(bodies[0].innerText)!==normalize(row.content))return false;
     // Some UI builds expose durable row identity; when present it must agree.
     // Absent DOM IDs are not claimed as independently verified row identities.
