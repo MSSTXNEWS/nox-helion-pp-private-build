@@ -2041,5 +2041,77 @@ async function check(chunks, status=200) {
                       caller)
 
 
+    def test_ru_es_reload_dom_unicode_whitespace_exactness_in_chromium(self):
+        """Chromium must not erase meaningful RU/ES persisted Unicode drift."""
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'unicode-row-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                observed_posts = []
+                page.on('request', lambda req: observed_posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const mount=document.getElementById('messages');
+                    for(const row of items){
+                      const bubble=document.createElement('div');
+                      bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                      bubble.dataset.messageId=row.message_id;
+                      const body=document.createElement('div');
+                      body.className='body'; body.textContent=row.content;
+                      bubble.append(body); mount.append(bubble);
+                    }
+                }""", transcript)
+                witness = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(witness(), True)
+                body = page.locator('#messages .v24-msg .body').first
+                original = transcript[0]['content']
+                self.assertIn(' ', original)
+                mutations = [
+                    original.replace(' ', '\u00a0', 1),  # NBSP: old \s+ collapsed it
+                    original.replace(' ', '  ', 1),      # extra ASCII space
+                    original.replace(' ', '\t', 1),     # tab alias
+                    original + ' ',                       # trailing whitespace
+                    '\u200b' + original,               # zero-width code point
+                    original.replace('\u0438', '\u0438\u0301', 1),
+                ]
+                for candidate in mutations:
+                    self.assertNotEqual(candidate, original)
+                    body.evaluate('(n,value)=>n.textContent=value', candidate)
+                    self.assertIs(witness(), False, repr(candidate[:30]))
+                    body.evaluate('(n,value)=>n.textContent=value', original)
+                    self.assertIs(witness(), True)
+                # A hidden inserted element is invisible to innerText but
+                # contributes to the actual persisted DOM text.
+                body.evaluate("""node => {
+                    const extra=document.createElement('span');
+                    extra.style.display='none'; extra.textContent='invisible';
+                    node.append(extra);
+                }""")
+                self.assertIs(witness(), False)
+                body.evaluate('(node,value)=>node.textContent=value', original)
+                self.assertIs(witness(), True)
+                # Ordinary visible span markup with exact text remains valid.
+                body.evaluate("""(node,value) => {
+                    const head=document.createElement('span');
+                    head.textContent=value.slice(0, 5);
+                    const tail=document.createElement('span');
+                    tail.textContent=value.slice(5);
+                    node.replaceChildren(head, tail);
+                }""", original)
+                self.assertIs(witness(), True)
+                self.assertEqual(observed_posts, [])
+            finally:
+                browser.close()
+
+
 if __name__ == "__main__":
     unittest.main()
