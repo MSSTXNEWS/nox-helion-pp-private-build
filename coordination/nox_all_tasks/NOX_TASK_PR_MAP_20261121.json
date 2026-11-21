@@ -1,0 +1,6371 @@
+{
+ "0A01": {
+  "open_prs": [],
+  "commits": [
+   "4e3e125",
+   "1107077",
+   "3c1679b"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "0A02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "0A03": {
+  "open_prs": [],
+  "commits": [
+   "d55303c",
+   "2ff17ab",
+   "c95e196",
+   "21feb54",
+   "8270f9f"
+  ],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "0A04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "0A05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "1A01": {
+  "open_prs": [
+   412,
+   458,
+   487
+  ],
+  "commits": [
+   "36e3ec9",
+   "da60148",
+   "11bc033",
+   "eef6ed4",
+   "fd89559",
+   "77fdbc1",
+   "683640d",
+   "17abc77",
+   "2458f6c",
+   "585b02b",
+   "6727f56",
+   "e845d08",
+   "baeb95e",
+   "8e283ab"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "1A02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1A03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1A04": {
+  "open_prs": [],
+  "commits": [
+   "fc9b839",
+   "fef3f4b"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "1A05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "2A01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "2A02": {
+  "open_prs": [],
+  "commits": [
+   "1c3691e",
+   "b7240d8",
+   "bd47315"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "2A03": {
+  "open_prs": [],
+  "commits": [
+   "259be97"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "2A04": {
+  "open_prs": [
+   382
+  ],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "2A05": {
+  "open_prs": [],
+  "commits": [
+   "ed44d71",
+   "792b194",
+   "b8e7dd9",
+   "55d01fe"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "3A01": {
+  "open_prs": [
+   562
+  ],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3A02": {
+  "open_prs": [
+   418,
+   519,
+   644
+  ],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3A03": {
+  "open_prs": [
+   519,
+   540,
+   644
+  ],
+  "commits": [
+   "b068d8b",
+   "29bd04d",
+   "5a9c5a4",
+   "fea1ca7"
+  ],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3A04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "3A05": {
+  "open_prs": [],
+  "commits": [
+   "d62de68",
+   "c6d3639",
+   "196d7c5",
+   "73c2864"
+  ],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "4A01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "4A02": {
+  "open_prs": [
+   429,
+   493
+  ],
+  "commits": [
+   "0220e2d",
+   "92569e4"
+  ],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "4A03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "4A04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "4A05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "5A01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "5A02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "5A03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "5A04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5A05": {
+  "open_prs": [
+   428,
+   717
+  ],
+  "commits": [
+   "fd4fd02"
+  ],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "6A01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "6A02": {
+  "open_prs": [],
+  "commits": [
+   "95f5ed1",
+   "49ddc19"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "6A03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "6A04": {
+  "open_prs": [],
+  "commits": [
+   "6f34712",
+   "da6084a",
+   "dbe1f83",
+   "233d99c",
+   "a98f29f",
+   "6e3c6fb"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "6A05": {
+  "open_prs": [],
+  "commits": [
+   "accc662",
+   "16bd9b2",
+   "16ea54e",
+   "595452f",
+   "5f1bc69",
+   "edb041d",
+   "bc3b09a"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "0B01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "0B02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "0B03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "0B04": {
+  "open_prs": [
+   562
+  ],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "0B05": {
+  "open_prs": [
+   941
+  ],
+  "commits": [
+   "f3b4ec4"
+  ],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "1B01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/voice/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "1B02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "1B03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "1B04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1B05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "2B01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "2B02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "2B03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "2B04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "2B05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3B01": {
+  "open_prs": [],
+  "commits": [
+   "c801146",
+   "9234caf",
+   "8792fa0",
+   "a33cf29",
+   "5c30e31",
+   "edb4f2b",
+   "c503a20",
+   "76cf1c5",
+   "32fa2ca",
+   "9c6c764"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3B02": {
+  "open_prs": [
+   937
+  ],
+  "commits": [
+   "2516be6",
+   "2f6a35e",
+   "db42587",
+   "32bafb2",
+   "61a4482",
+   "163f768",
+   "53250a3",
+   "1e9adad"
+  ],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3B03": {
+  "open_prs": [],
+  "commits": [
+   "6dd5276",
+   "dfb0e91"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "3B04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3B05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "4B01": {
+  "open_prs": [],
+  "commits": [
+   "3f5c68c",
+   "436293b"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "4B02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "4B03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "4B04": {
+  "open_prs": [],
+  "commits": [
+   "f0459e2"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "4B05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "5B01": {
+  "open_prs": [
+   373,
+   377,
+   400
+  ],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "5B02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "5B03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5B04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "5B05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "6B01": {
+  "open_prs": [
+   423
+  ],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "6B02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "6B03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "6B04": {
+  "open_prs": [],
+  "commits": [
+   "f761850",
+   "28fda4f",
+   "b56edec",
+   "18ef7f9"
+  ],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "6B05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "1V14-01": {
+  "open_prs": [
+   695
+  ],
+  "commits": [
+   "162d69f",
+   "4e75bc3",
+   "ff0e6c4",
+   "58218ef",
+   "ea041e1",
+   "116f6a1",
+   "4407b7a",
+   "ed96313",
+   "73a6b52",
+   "cd81e5c",
+   "1c0225a",
+   "155d63f"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "1V14-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1V14-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1V14-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "1V14-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1V14-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "1V14-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1V14-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1V14-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "1V14-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "1V14-11": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1V14-12": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "1V14-13": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1V14-14": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1V14-15": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1V14-16": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "1V14-17": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "1V14-18": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "1V14-19": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "1V14-20": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "1V14-21": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "1V14-22": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "1V14-23": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "1V14-24": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "2V14-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "2V14-02": {
+  "open_prs": [
+   536
+  ],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "2V14-03": {
+  "open_prs": [],
+  "commits": [
+   "45d0ced"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "2V14-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "2V14-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "2V14-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "2V14-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "2V14-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "2V14-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "2V14-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "2V14-11": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "2V14-12": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "2V14-13": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "2V14-14": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "2V14-15": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "2V14-16": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "2V14-17": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "2V14-18": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "2V14-19": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "2V14-20": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "2V14-21": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "2V14-22": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "2V14-23": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "2V14-24": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "3V14-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3V14-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3V14-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "3V14-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3V14-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3V14-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "3V14-11": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-12": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-13": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "3V14-14": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-15": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-16": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3V14-17": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3V14-18": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-19": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-20": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-21": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "3V14-22": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "3V14-23": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "3V14-24": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "4V14-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "4V14-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-07": {
+  "open_prs": [
+   440
+  ],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "4V14-11": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "4V14-12": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-13": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "4V14-14": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-15": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-16": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-17": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "4V14-18": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-19": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "4V14-20": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "4V14-21": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "4V14-22": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "4V14-23": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "4V14-24": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "5V14-01": {
+  "open_prs": [],
+  "commits": [
+   "18f1e00",
+   "0fbb7a3"
+  ],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "5V14-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "5V14-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-11": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-12": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "5V14-13": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "5V14-14": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-15": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "5V14-16": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "5V14-17": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-18": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-19": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-20": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-21": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-22": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "5V14-23": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "5V14-24": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "6V14-01": {
+  "open_prs": [],
+  "commits": [
+   "f279486",
+   "0ce51ed"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "6V14-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-04": {
+  "open_prs": [],
+  "commits": [
+   "1fc5ad8",
+   "a63fd05",
+   "20d67fb"
+  ],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "6V14-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "6V14-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "6V14-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "6V14-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-11": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "6V14-12": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-13": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-14": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-15": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-16": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "6V14-17": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-18": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-19": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-20": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "6V14-21": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-22": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "6V14-23": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "6V14-24": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "0V14-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "0V14-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "0V14-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "0V14-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "0V14-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "0V14-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "0V14-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "0V14-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "0V14-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "0V14-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "0V14-11": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "0V14-12": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "0V14-13": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "0V14-14": {
+  "open_prs": [
+   417,
+   427,
+   433,
+   439,
+   562
+  ],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "0V14-15": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "0V14-16": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "I-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "I-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "I-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "I-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-11": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-12": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "I-13": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-14": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-15": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "I-16": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-17": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-18": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-19": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-20": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "I-21": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/voice/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "I-22": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-23": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-24": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-25": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "I-26": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-27": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "I-28": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "I-29": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "I-30": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-31": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "I-32": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-33": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-34": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "I-35": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-36": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-37": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "I-38": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "I-39": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "I-40": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-41": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-42": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-43": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "I-44": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-45": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-46": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "I-47": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "I-48": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "I-49": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-50": {
+  "open_prs": [
+   632
+  ],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "I-51": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "I-52": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-53": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-54": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-55": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "I-56": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-57": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-58": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "I-59": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/models/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-60": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "I-61": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-62": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "I-63": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "I-64": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "I-65": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "WOW240/N01-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N01/stream_replay.py": "server"
+  }
+ },
+ "WOW240/N01-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N01/cancellation_scope.py.": "server"
+  }
+ },
+ "WOW240/N01-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N01/turn_reducer.py.": "server"
+  }
+ },
+ "WOW240/N01-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N01/slot_binding.py.": "server"
+  }
+ },
+ "WOW240/N01-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N01/origin_envelope.py.": "server"
+  }
+ },
+ "WOW240/N01-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N01/progress_events.py.": "server"
+  }
+ },
+ "WOW240/N01-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N01/conversation_branches.py.": "server"
+  }
+ },
+ "WOW240/N01-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N01/stream_renderer.js.": "server"
+  }
+ },
+ "WOW240/N01-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N01/response_budget.py.": "server"
+  }
+ },
+ "WOW240/N01-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N01/message_outbox.py.": "server"
+  }
+ },
+ "WOW240/N02-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n02/affect_event.py": "server"
+  }
+ },
+ "WOW240/N02-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n02/affect_evidence.py": "server"
+  }
+ },
+ "WOW240/N02-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n02/affect_reducer.py": "server"
+  }
+ },
+ "WOW240/N02-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n02/affect_attribution.py": "server"
+  }
+ },
+ "WOW240/N02-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n02/mixed_appraisal.py": "server"
+  }
+ },
+ "WOW240/N02-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n02/response_style.py": "server"
+  }
+ },
+ "WOW240/N02-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n02/interaction_repair.py": "server"
+  }
+ },
+ "WOW240/N02-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n02/support_action_policy.py": "server"
+  }
+ },
+ "WOW240/N02-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n02/affect_calibration_lab.py": "server"
+  }
+ },
+ "WOW240/N02-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n02/audio_text_affect_fusion.py": "server"
+  }
+ },
+ "WOW240/N03-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n03/self_manifest.py": "server"
+  }
+ },
+ "WOW240/N03-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n03/facet_contracts.py": "server"
+  }
+ },
+ "WOW240/N03-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n03/persona_manifest.py": "server"
+  }
+ },
+ "WOW240/N03-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n03/persona_scope.py": "server"
+  }
+ },
+ "WOW240/N03-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n03/preference_ledger.py": "server"
+  }
+ },
+ "WOW240/N03-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n03/self_snapshot.py": "server"
+  }
+ },
+ "WOW240/N03-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n03/autobiography_events.py": "server"
+  }
+ },
+ "WOW240/N03-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n03/persona_drift.py": "server"
+  }
+ },
+ "WOW240/N03-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n03/persona_prompt_compiler.py": "server"
+  }
+ },
+ "WOW240/N03-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n03/preference_candidates.py": "server"
+  }
+ },
+ "WOW240/N04-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n04/project_state.py": "server"
+  }
+ },
+ "WOW240/N04-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n04/commitments.py": "server"
+  }
+ },
+ "WOW240/N04-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n04/commitments.py": "server"
+  }
+ },
+ "WOW240/N04-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n04/project_state.py": "server"
+  }
+ },
+ "WOW240/N04-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n04/project_state.py": "server"
+  }
+ },
+ "WOW240/N04-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n04/project_state.py": "server"
+  }
+ },
+ "WOW240/N04-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n04/project_views.py": "server"
+  }
+ },
+ "WOW240/N04-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n04/project_views.py": "server"
+  }
+ },
+ "WOW240/N04-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n04/calendar_constraints.py": "server"
+  }
+ },
+ "WOW240/N04-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n04/project_views.py": "server"
+  }
+ },
+ "WOW240/N05-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n05/reasoning.py": "server"
+  }
+ },
+ "WOW240/N05-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n05/reasoning.py": "server"
+  }
+ },
+ "WOW240/N05-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n05/reasoning.py": "server"
+  }
+ },
+ "WOW240/N05-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n05/reasoning.py": "server"
+  }
+ },
+ "WOW240/N05-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n05/reasoning.py": "server"
+  }
+ },
+ "WOW240/N05-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n05/reasoning.py": "server"
+  }
+ },
+ "WOW240/N05-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n05/reasoning.py": "server",
+   "/root/nox/kb/textbook/nox_textbook.py.": "server"
+  }
+ },
+ "WOW240/N05-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n05/reasoning.py": "server"
+  }
+ },
+ "WOW240/N05-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n05/reasoning.py": "server"
+  }
+ },
+ "WOW240/N05-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n05/reasoning.py": "server"
+  }
+ },
+ "WOW240/N06-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n06/quality.py": "server"
+  }
+ },
+ "WOW240/N06-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n06/quality.py": "server"
+  }
+ },
+ "WOW240/N06-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n06/quality.py": "server"
+  }
+ },
+ "WOW240/N06-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n06/quality.py": "server"
+  }
+ },
+ "WOW240/N06-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n06/quality.py": "server"
+  }
+ },
+ "WOW240/N06-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n06/quality.py": "server"
+  }
+ },
+ "WOW240/N06-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n06/quality.py": "server"
+  }
+ },
+ "WOW240/N06-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n06/quality.py": "server"
+  }
+ },
+ "WOW240/N06-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n06/quality.py": "server"
+  }
+ },
+ "WOW240/N06-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n06/quality.py": "server"
+  }
+ },
+ "WOW240/N07-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n07/research.py": "server"
+  }
+ },
+ "WOW240/N07-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n07/research.py": "server"
+  }
+ },
+ "WOW240/N07-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n07/research.py": "server"
+  }
+ },
+ "WOW240/N07-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n07/research.py": "server"
+  }
+ },
+ "WOW240/N07-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n07/research.py": "server"
+  }
+ },
+ "WOW240/N07-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n07/research.py": "server"
+  }
+ },
+ "WOW240/N07-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n07/research.py": "server"
+  }
+ },
+ "WOW240/N07-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n07/research.py": "server"
+  }
+ },
+ "WOW240/N07-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n07/research.py": "server"
+  }
+ },
+ "WOW240/N07-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n07/research.py": "server"
+  }
+ },
+ "WOW240/N08-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/kb/knowledge.sqlite": "server",
+   "/root/nox/proposals/wow240/n08/recall_policy.py.": "server"
+  }
+ },
+ "WOW240/N08-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n08/vector_contract.py.": "server"
+  }
+ },
+ "WOW240/N08-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n08/turn_memory.py.": "server"
+  }
+ },
+ "WOW240/N08-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n08/memory_state.py": "server"
+  }
+ },
+ "WOW240/N08-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n08/recall_policy.py": "server"
+  }
+ },
+ "WOW240/N08-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n08/memory_state.py": "server"
+  }
+ },
+ "WOW240/N08-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n08/memory_state.py": "server"
+  }
+ },
+ "WOW240/N08-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n08/memory_state.py": "server"
+  }
+ },
+ "WOW240/N08-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n08/vector_contract.py": "server"
+  }
+ },
+ "WOW240/N08-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n08/recall_policy.py": "server"
+  }
+ },
+ "WOW240/N09-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n09/archive_catalog.py": "server"
+  }
+ },
+ "WOW240/N09-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n09/archive_catalog.py": "server"
+  }
+ },
+ "WOW240/N09-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n09/archive_catalog.py": "server"
+  }
+ },
+ "WOW240/N09-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n09/archive_transfer.py": "server"
+  }
+ },
+ "WOW240/N09-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n09/archive_catalog.py": "server"
+  }
+ },
+ "WOW240/N09-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n09/archive_transfer.py": "server"
+  }
+ },
+ "WOW240/N09-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n09/archive_catalog.py": "server"
+  }
+ },
+ "WOW240/N09-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n09/archive_snapshot.py": "server"
+  }
+ },
+ "WOW240/N09-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n09/archive_catalog.py": "server"
+  }
+ },
+ "WOW240/N09-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n09/archive_catalog.py": "server"
+  }
+ },
+ "WOW240/N10-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n10/dataset_receipts.py": "server"
+  }
+ },
+ "WOW240/N10-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n10/dataset_group_split.py": "server"
+  }
+ },
+ "WOW240/N10-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n10/curriculum_mixer.py": "server"
+  }
+ },
+ "WOW240/N10-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n10/error_curriculum.py": "server"
+  }
+ },
+ "WOW240/N10-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n10/sft_mask_audit.py": "server"
+  }
+ },
+ "WOW240/N10-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n10/lora_trial_plan.py": "server"
+  }
+ },
+ "WOW240/N10-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n10/preference_pairs.py": "server"
+  }
+ },
+ "WOW240/N10-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n10/transfer_exam.py": "server"
+  }
+ },
+ "WOW240/N10-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n10/gepa_prompt_lab.py": "server"
+  }
+ },
+ "WOW240/N10-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n10/skill_compiler.py": "server"
+  }
+ },
+ "WOW240/N11-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n11/living_textbook.py": "server"
+  }
+ },
+ "WOW240/N11-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n11/prerequisite_map.py": "server"
+  }
+ },
+ "WOW240/N11-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n11/mastery_tracker.py": "server"
+  }
+ },
+ "WOW240/N11-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n11/review_cards.py": "server"
+  }
+ },
+ "WOW240/N11-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n11/hint_ladder.py": "server"
+  }
+ },
+ "WOW240/N11-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n11/teachback_rubric.py": "server"
+  }
+ },
+ "WOW240/N11-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n11/math_exercises.py": "server"
+  }
+ },
+ "WOW240/N11-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n11/python_katas.js": "server"
+  }
+ },
+ "WOW240/N11-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n11/misconception_notebook.py": "server"
+  }
+ },
+ "WOW240/N11-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n11/capstone_builder.py": "server"
+  }
+ },
+ "WOW240/N12-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n12/staffing_solver.py": "server"
+  }
+ },
+ "WOW240/N12-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n12/service_queue_sim.py": "server"
+  }
+ },
+ "WOW240/N12-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n12/project_cashflow.py": "server"
+  }
+ },
+ "WOW240/N12-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n12/experiment_stats.py": "server"
+  }
+ },
+ "WOW240/N12-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n12/engineering_units.py": "server"
+  }
+ },
+ "WOW240/N12-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n12/chemistry_cards.py": "server"
+  }
+ },
+ "WOW240/N12-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n12/catchment_analysis.py": "server"
+  }
+ },
+ "WOW240/N12-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n12/legal_version_pack.py": "server"
+  }
+ },
+ "WOW240/N12-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n12/psychology_evidence_pack.py": "server"
+  }
+ },
+ "WOW240/N12-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n12/defensive_attack_map.py": "server"
+  }
+ },
+ "WOW240/N13-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n13/execution.py": "server"
+  }
+ },
+ "WOW240/N13-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n13/execution.py": "server"
+  }
+ },
+ "WOW240/N13-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n13/execution.py": "server"
+  }
+ },
+ "WOW240/N13-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n13/execution.py": "server"
+  }
+ },
+ "WOW240/N13-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n13/execution.py": "server"
+  }
+ },
+ "WOW240/N13-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n13/execution.py": "server"
+  }
+ },
+ "WOW240/N13-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n13/execution.py": "server"
+  }
+ },
+ "WOW240/N13-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n13/execution.py": "server"
+  }
+ },
+ "WOW240/N13-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n13/execution.py": "server"
+  }
+ },
+ "WOW240/N13-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n13/execution.py": "server"
+  }
+ },
+ "WOW240/N14-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n14/integration.py": "server"
+  }
+ },
+ "WOW240/N14-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n14/integration.py": "server"
+  }
+ },
+ "WOW240/N14-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n14/mcp_adapter.py": "server"
+  }
+ },
+ "WOW240/N14-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n14/openapi_adapter.py": "server"
+  }
+ },
+ "WOW240/N14-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n14/integration.py": "server"
+  }
+ },
+ "WOW240/N14-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n14/integration.py": "server"
+  }
+ },
+ "WOW240/N14-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n14/browser_adapter.py": "server"
+  }
+ },
+ "WOW240/N14-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n14/desktop_adapter.py": "server"
+  }
+ },
+ "WOW240/N14-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n14/integration.py": "server"
+  }
+ },
+ "WOW240/N14-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n14/integration.py": "server"
+  }
+ },
+ "WOW240/N15-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n15/documents.py": "server"
+  }
+ },
+ "WOW240/N15-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n15/documents.py": "server"
+  }
+ },
+ "WOW240/N15-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n15/documents.py": "server"
+  }
+ },
+ "WOW240/N15-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n15/tabular.py": "server"
+  }
+ },
+ "WOW240/N15-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n15/tabular.py": "server"
+  }
+ },
+ "WOW240/N15-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n15/tabular.py": "server"
+  }
+ },
+ "WOW240/N15-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n15/tabular.py": "server"
+  }
+ },
+ "WOW240/N15-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n15/documents.py": "server"
+  }
+ },
+ "WOW240/N15-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n15/documents.py": "server"
+  }
+ },
+ "WOW240/N15-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n15/conversion.py": "server"
+  }
+ },
+ "WOW240/N16-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N16/symbol_index.py": "server"
+  }
+ },
+ "WOW240/N16-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N16/worktree_manager.py": "server"
+  }
+ },
+ "WOW240/N16-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N16/patch_gate.py.": "server"
+  }
+ },
+ "WOW240/N16-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N16/diagnostic_adapter.py.": "server"
+  }
+ },
+ "WOW240/N16-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N16/impact_tests.py": "server"
+  }
+ },
+ "WOW240/N16-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N16/sandbox_runner.py": "server"
+  }
+ },
+ "WOW240/N16-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N16/api_contracts.py": "server"
+  }
+ },
+ "WOW240/N16-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N16/environment_lock.py": "server"
+  }
+ },
+ "WOW240/N16-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N16/semantic_rules.yml": "server"
+  }
+ },
+ "WOW240/N16-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N16/change_receipt.py.": "server"
+  }
+ },
+ "WOW240/N17-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n17/voice_recovery_adapter.py": "server"
+  }
+ },
+ "WOW240/N17-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n17/vad_gate.py": "server"
+  }
+ },
+ "WOW240/N17-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n17/audio_frontend.py": "server"
+  }
+ },
+ "WOW240/N17-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n17/asr_profile_probe.py": "server"
+  }
+ },
+ "WOW240/N17-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n17/transcript_commit.py": "server"
+  }
+ },
+ "WOW240/N17-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n17/voice_cancel.py": "server"
+  }
+ },
+ "WOW240/N17-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n17/piper_stream.py": "server"
+  }
+ },
+ "WOW240/N17-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n17/pronunciation_lexicon.py": "server"
+  }
+ },
+ "WOW240/N17-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n17/audio_playout.py": "server"
+  }
+ },
+ "WOW240/N17-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n17/duplex_lab.py": "server"
+  }
+ },
+ "WOW240/N18-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n18/language_router.py": "server"
+  }
+ },
+ "WOW240/N18-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n18/term_bank.py": "server"
+  }
+ },
+ "WOW240/N18-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n18/protected_spans.py": "server"
+  }
+ },
+ "WOW240/N18-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n18/translation_segments.py": "server"
+  }
+ },
+ "WOW240/N18-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n18/locale_values.py": "server"
+  }
+ },
+ "WOW240/N18-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n18/translation_memory.py": "server"
+  }
+ },
+ "WOW240/N18-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n18/opus_translation_adapter.py": "server"
+  }
+ },
+ "WOW240/N18-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n18/translation_review.py": "server"
+  }
+ },
+ "WOW240/N18-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n18/crosslingual_retrieval.py": "server"
+  }
+ },
+ "WOW240/N18-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n18/interpreter_pipeline.py": "server"
+  }
+ },
+ "WOW240/N19-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n19/vision.py": "server"
+  }
+ },
+ "WOW240/N19-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n19/ocr_adapter.py": "server"
+  }
+ },
+ "WOW240/N19-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n19/layout_adapter.py": "server"
+  }
+ },
+ "WOW240/N19-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n19/vlm_adapter.py": "server"
+  }
+ },
+ "WOW240/N19-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n19/video.py": "server"
+  }
+ },
+ "WOW240/N19-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n19/video.py": "server"
+  }
+ },
+ "WOW240/N19-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n19/vision.py": "server"
+  }
+ },
+ "WOW240/N19-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n19/vision.py": "server"
+  }
+ },
+ "WOW240/N19-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n19/vision.py": "server"
+  }
+ },
+ "WOW240/N19-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n19/video.py": "server"
+  }
+ },
+ "WOW240/N20-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n20/story_continuity.py": "server"
+  }
+ },
+ "WOW240/N20-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n20/interactive_fiction.py": "server"
+  }
+ },
+ "WOW240/N20-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n20/screenplay_fountain.py": "server"
+  }
+ },
+ "WOW240/N20-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n20/storyboard_svg.py": "server"
+  }
+ },
+ "WOW240/N20-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n20/generative_poster.js": "server"
+  }
+ },
+ "WOW240/N20-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n20/music_phrase.py": "server"
+  }
+ },
+ "WOW240/N20-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n20/sound_scene.py": "server"
+  }
+ },
+ "WOW240/N20-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n20/explainer_animation.py": "server"
+  }
+ },
+ "WOW240/N20-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n20/creative_epub.py": "server"
+  }
+ },
+ "WOW240/N20-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n20/brand_story_kit.py": "server"
+  }
+ },
+ "WOW240/N21-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N21/latency_profile.py.": "server"
+  }
+ },
+ "WOW240/N21-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N21/prefix_contract.py.": "server"
+  }
+ },
+ "WOW240/N21-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N21/ngram_policy.py.": "server"
+  }
+ },
+ "WOW240/N21-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N21/prefill_tuner.py.": "server"
+  }
+ },
+ "WOW240/N21-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N21/moe_miss_profile.py.": "server"
+  }
+ },
+ "WOW240/N21-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N21/layer_split_planner.py.": "server"
+  }
+ },
+ "WOW240/N21-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N21/kv_compatibility_gate.py.": "server"
+  }
+ },
+ "WOW240/N21-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N21/cpu_budget.py.": "server"
+  }
+ },
+ "WOW240/N21-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N21/generation_profiles.json": "server"
+  }
+ },
+ "WOW240/N21-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N21/runtime_manifest.py": "server",
+   "/root/nox/ops/nox_boot_ds41_8098.sh": "server"
+  }
+ },
+ "WOW240/N22-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/ops/nox_monitor.sh": "server",
+   "/root/nox/proposals/wow240/n22/resource_admission.py.": "server"
+  }
+ },
+ "WOW240/N22-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n22/resource_admission.py": "server"
+  }
+ },
+ "WOW240/N22-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n22/resource_admission.py": "server"
+  }
+ },
+ "WOW240/N22-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n22/resource_admission.py": "server"
+  }
+ },
+ "WOW240/N22-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n22/resource_admission.py": "server"
+  }
+ },
+ "WOW240/N22-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n22/resource_admission.py": "server"
+  }
+ },
+ "WOW240/N22-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n22/working_set.py": "server"
+  }
+ },
+ "WOW240/N22-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n22/working_set.py": "server"
+  }
+ },
+ "WOW240/N22-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n22/working_set.py": "server"
+  }
+ },
+ "WOW240/N22-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n22/working_set.py": "server"
+  }
+ },
+ "WOW240/N23-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/ops/nox_autoclean.sh": "server",
+   "/root/nox/proposals/wow240/N23/cleanup_plan.py": "server"
+  }
+ },
+ "WOW240/N23-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/ops/nox_autoclean.sh": "server",
+   "/root/nox/proposals/wow240/N23/log_policy.json.": "server"
+  }
+ },
+ "WOW240/N23-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/ops/nox_boot_ds41_8098.sh": "server",
+   "/root/nox/proposals/wow240/N23/engram_identity.py.": "server"
+  }
+ },
+ "WOW240/N23-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N23/recovery_budget.py": "server"
+  }
+ },
+ "WOW240/N23-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/ops/nox_monitor.sh": "server",
+   "/root/nox/ops/launch_resonance.sh": "server"
+  }
+ },
+ "WOW240/N23-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N23/access_policy.py": "server"
+  }
+ },
+ "WOW240/N23-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N23/trace_envelope.py.": "server"
+  }
+ },
+ "WOW240/N23-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N23/config_transaction.py.": "server"
+  }
+ },
+ "WOW240/N23-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/N23/restore_rehearsal.py.": "server"
+  }
+ },
+ "WOW240/N23-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/ops/nox_daily_morning.sh": "server",
+   "/root/nox/proposals/wow240/N23/run_receipt.py.": "server"
+  }
+ },
+ "WOW240/N24-01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n24/experiments.py": "server"
+  }
+ },
+ "WOW240/N24-02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n24/experiments.py": "server"
+  }
+ },
+ "WOW240/N24-03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n24/experiments.py": "server"
+  }
+ },
+ "WOW240/N24-04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n24/experiments.py": "server"
+  }
+ },
+ "WOW240/N24-05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n24/experiments.py": "server"
+  }
+ },
+ "WOW240/N24-06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n24/experiments.py": "server"
+  }
+ },
+ "WOW240/N24-07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n24/experiments.py": "server"
+  }
+ },
+ "WOW240/N24-08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n24/experiments.py": "server"
+  }
+ },
+ "WOW240/N24-09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n24/experiments.py": "server"
+  }
+ },
+ "WOW240/N24-10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "server",
+  "target_paths": {
+   "/root/nox/proposals/wow240/n24/experiments.py": "server"
+  }
+ },
+ "IDEA89/001": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/002": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/003": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/004": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/005": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/006": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/007": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/008": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "IDEA89/009": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/010": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/011": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/012": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/013": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/014": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/015": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/016": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "IDEA89/017": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/018": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/019": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/020": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/021": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/022": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/023": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/024": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/025": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "IDEA89/026": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/027": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/028": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/029": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/030": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "IDEA89/031": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/032": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/033": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/034": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/035": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/036": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "IDEA89/037": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "IDEA89/038": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "IDEA89/039": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/040": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "IDEA89/041": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "IDEA89/042": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "IDEA89/043": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/044": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/045": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/046": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "IDEA89/047": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "IDEA89/048": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/049": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/050": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/051": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "IDEA89/052": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/053": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/054": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "IDEA89/055": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/056": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/057": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "IDEA89/058": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "IDEA89/059": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "IDEA89/060": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "IDEA89/061": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/062": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/063": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/models/": "server"
+  }
+ },
+ "IDEA89/064": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/065": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/066": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/067": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/068": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/": "protected_web",
+   "/root/nox/scripts/": "server"
+  }
+ },
+ "IDEA89/069": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/070": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/071": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/072": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/073": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/074": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/075": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/076": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/077": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/078": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/079": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/080": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "IDEA89/081": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/082": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "IDEA89/083": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/084": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/085": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/086": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "IDEA89/087": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "nox-control/": "repo"
+  }
+ },
+ "IDEA89/088": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ },
+ "IDEA89/089": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/": "protected_web",
+   "site/nox-fastwow/": "protected_web"
+  }
+ },
+ "WEBWOW/001": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v22/nox-resonance-v22.js": "protected_web",
+   "site/pc/nox-resonance-cinema-v13.js": "protected_web"
+  }
+ },
+ "WEBWOW/002": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v24/nox-v24-chat.js": "protected_web",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "WEBWOW/003": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v22/nox-resonance-v22.js": "protected_web",
+   "site/pc/resonance.html": "protected_web"
+  }
+ },
+ "WEBWOW/004": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/voice/index.html": "protected_web",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "WEBWOW/005": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-fastwow/nox-fastwow.js": "protected_web",
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "WEBWOW/006": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v24/nox-v24-chat.js": "protected_web",
+   "site/pc/resonance.html": "protected_web"
+  }
+ },
+ "WEBWOW/007": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "WEBWOW/008": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v24/nox-v24-chat.js": "protected_web",
+   "site/pc/vendor/nox-ux/nox_ux.js": "protected_web"
+  }
+ },
+ "WEBWOW/009": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/vendor/nox-ux/mermaid.min.js": "protected_web",
+   "site/pc/nox-chat-diagrams.js": "protected_web"
+  }
+ },
+ "WEBWOW/010": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/vendor/nox-ux/katex/katex.min.js": "protected_web",
+   "site/pc/v24/nox-v24-chat.js": "protected_web"
+  }
+ },
+ "WEBWOW/011": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/vendor/v24/highlight.min.js": "protected_web",
+   "site/pc/v24/nox-v24-chat.js": "protected_web"
+  }
+ },
+ "WEBWOW/012": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "WEBWOW/013": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/resonance.html": "protected_web",
+   "site/pc/vendor/nox-extra/echarts.min.js": "protected_web"
+  }
+ },
+ "WEBWOW/014": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v24/nox-v24-chat.js": "protected_web"
+  }
+ },
+ "WEBWOW/015": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "WEBWOW/016": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "WEBWOW/017": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v22/nox-resonance-v22.js": "protected_web",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "WEBWOW/018": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v24/nox-v24-chat.js": "protected_web",
+   "site/pc/projects.html": "protected_web"
+  }
+ },
+ "WEBWOW/019": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v22/nox-resonance-v22.js": "protected_web"
+  }
+ },
+ "WEBWOW/020": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v22/nox-resonance-v22.css": "protected_web",
+   "site/nox-resonance-focus.css": "protected_web"
+  }
+ },
+ "WEBWOW/021": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-fastwow/nox-fastwow.js": "protected_web",
+   "site/pc/workspace.js": "protected_web"
+  }
+ },
+ "WEBWOW/022": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-chat-layout.css": "protected_web",
+   "site/pc/resonance.html": "protected_web"
+  }
+ },
+ "WEBWOW/023": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/dispatcher.html": "protected_web",
+   "site/nox-task-dispatcher-v4.js": "protected_web"
+  }
+ },
+ "WEBWOW/024": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/hub.html": "protected_web",
+   "site/pc/workspace-pages.js": "protected_web"
+  }
+ },
+ "WEBWOW/025": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-fastwow/nox-fastwow.js": "protected_web",
+   "site/nox-function-catalog.js": "protected_web"
+  }
+ },
+ "WEBWOW/026": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-command-center.js": "protected_web",
+   "site/pc/nox-command-center.js": "protected_web"
+  }
+ },
+ "WEBWOW/027": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-fastwow/nox-fastwow.js": "protected_web"
+  }
+ },
+ "WEBWOW/028": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-fastwow/nox-fastwow.js": "protected_web",
+   "site/pc/workspace.js": "protected_web"
+  }
+ },
+ "WEBWOW/029": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/dispatcher.html": "protected_web",
+   "site/pc/nox-command-center.js": "protected_web"
+  }
+ },
+ "WEBWOW/030": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/nox-command-center.js": "protected_web"
+  }
+ },
+ "WEBWOW/031": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/dispatcher.html": "protected_web",
+   "site/nox-task-dispatcher-v4.js": "protected_web"
+  }
+ },
+ "WEBWOW/032": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/system.html": "protected_web",
+   "site/nox-dashboard-cinema.js": "protected_web"
+  }
+ },
+ "WEBWOW/033": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/graph/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/034": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/nox-command-center.js": "protected_web"
+  }
+ },
+ "WEBWOW/035": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-connection-v13.js": "protected_web",
+   "site/nox-fastwow/nox-fastwow.js": "protected_web"
+  }
+ },
+ "WEBWOW/036": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-function-catalog.js": "protected_web",
+   "site/nox-fastwow/nox-fastwow.js": "protected_web"
+  }
+ },
+ "WEBWOW/037": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/system.html": "protected_web",
+   "site/pc/workspace.js": "protected_web"
+  }
+ },
+ "WEBWOW/038": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-fastwow/nox-fastwow.js": "protected_web"
+  }
+ },
+ "WEBWOW/039": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-master-web.css": "protected_web",
+   "site/pc/system.html": "protected_web"
+  }
+ },
+ "WEBWOW/040": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/help.html": "protected_web",
+   "site/nox-fastwow/nox-fastwow.js": "protected_web"
+  }
+ },
+ "WEBWOW/041": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/resonance.html": "protected_web",
+   "site/pc/pages/reader/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/042": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/reader/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/043": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/image/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/044": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/canvas/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/045": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/graph/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/046": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/system.html": "protected_web",
+   "site/pc/projects.html": "protected_web"
+  }
+ },
+ "WEBWOW/047": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/downloads.html": "protected_web"
+  }
+ },
+ "WEBWOW/048": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/reader/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/049": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/graph/index.html": "protected_web",
+   "site/pc/memory.html": "protected_web"
+  }
+ },
+ "WEBWOW/050": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/code/index.html": "protected_web",
+   "site/pc/pages/_vendor/monaco": "protected_web"
+  }
+ },
+ "WEBWOW/051": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/reader/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/052": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/voice/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/053": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/voice/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/054": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/cinema.html": "protected_web",
+   "site/pc/pages/cinema/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/055": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/cinema/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/056": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/cinema/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/057": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/pages/reader/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/058": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/v24/nox-v24-chat.js": "protected_web"
+  }
+ },
+ "WEBWOW/059": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/resonance.html": "protected_web",
+   "site/nox-chat-layout.css": "protected_web"
+  }
+ },
+ "WEBWOW/060": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/cinema.html": "protected_web",
+   "site/pc/pages/cinema/index.html": "protected_web"
+  }
+ },
+ "WEBWOW/061": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-world-controls-v13.css": "protected_web",
+   "site/nox-cinematic-motion.js": "protected_web"
+  }
+ },
+ "WEBWOW/062": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-glass-film.css": "protected_web",
+   "site/nox-world-controls-v13.css": "protected_web"
+  }
+ },
+ "WEBWOW/063": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-cinematic-director.mjs": "protected_web"
+  }
+ },
+ "WEBWOW/064": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-cinematic-worlds.js": "protected_web"
+  }
+ },
+ "WEBWOW/065": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/workspace.js": "protected_web"
+  }
+ },
+ "WEBWOW/066": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-fastwow/nox-fastwow.js": "protected_web",
+   "site/nox-world-controls-v13.css": "protected_web"
+  }
+ },
+ "WEBWOW/067": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/nox-resonance-cinema-v13.js": "protected_web"
+  }
+ },
+ "WEBWOW/068": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/nox-resonance-cinema-v13.js": "protected_web",
+   "site/pc/nox-memory.js": "protected_web"
+  }
+ },
+ "WEBWOW/069": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-fastwow/nox-fastwow.css": "protected_web"
+  }
+ },
+ "WEBWOW/070": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-world-controls-v13.css": "protected_web"
+  }
+ },
+ "WEBWOW/071": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/workspace.js": "protected_web",
+   "site/nox-fastwow/nox-fastwow.js": "protected_web"
+  }
+ },
+ "WEBWOW/072": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/nox-core-inspector.js": "protected_web"
+  }
+ },
+ "WEBWOW/073": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-resonance-focus.css": "protected_web",
+   "site/pc/resonance.html": "protected_web"
+  }
+ },
+ "WEBWOW/074": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-chat-layout.css": "protected_web"
+  }
+ },
+ "WEBWOW/075": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-cinematic-motion.js": "protected_web"
+  }
+ },
+ "WEBWOW/076": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-ui.css": "protected_web",
+   "site/pc/v24/nox-v24-chat.js": "protected_web"
+  }
+ },
+ "WEBWOW/077": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/nox-ui.js": "protected_web"
+  }
+ },
+ "WEBWOW/078": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-cinematic-worlds.js": "protected_web"
+  }
+ },
+ "WEBWOW/079": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/pc/settings.html": "protected_web",
+   "site/nox-appearance.css": "protected_web"
+  }
+ },
+ "WEBWOW/080": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "protected_web",
+  "target_paths": {
+   "site/nox-cinematic-director.mjs": "protected_web",
+   "site/pc/workspace.js": "protected_web"
+  }
+ },
+ "SYS-SI/01": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "SYS-SI/02": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo"
+  }
+ },
+ "SYS-SI/03": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo"
+  }
+ },
+ "SYS-SI/04": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo"
+  }
+ },
+ "SYS-SI/05": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "SYS-SI/06": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "/root/nox/state/": "server"
+  }
+ },
+ "SYS-SI/07": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo"
+  }
+ },
+ "SYS-SI/08": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo"
+  }
+ },
+ "SYS-SI/09": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo"
+  }
+ },
+ "SYS-SI/10": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo",
+   "nox-control/": "repo"
+  }
+ },
+ "SYS-SI/11": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "coordination/": "repo"
+  }
+ },
+ "SYS-SI/12": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "/root/nox/kb/": "server",
+   "coordination/": "repo"
+  }
+ },
+ "SYS-SI/13": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "site/": "protected_web",
+   "nox-control/": "repo"
+  }
+ },
+ "SYS-SI/14": {
+  "open_prs": [],
+  "commits": [],
+  "where_target_lives": "repo",
+  "target_paths": {
+   "nox-control/": "repo",
+   "site/pc/": "protected_web"
+  }
+ }
+}
