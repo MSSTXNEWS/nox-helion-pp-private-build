@@ -433,6 +433,63 @@ def main():
             rows.length===1&&rows[0].dataset.noxB1State==='terminal'&&
             rows[0].dataset.noxB1EventId==='canonical-event-shared';
         }"""))
+        check("SSE Last-Event-ID replay coalesces identical deltas across adapters",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'sse-id-replay'};
+          const ctrl=new AbortController();
+          let enter=0,release;
+          const gate=new Promise(r=>release=r);
+          const firstUi=NOXB1AbortSafeUI.createUiAdapter({
+            container:chat,beforeCommit:async kind=>{
+              if(kind==='delta'){enter++;await gate;}
+            }
+          });
+          const secondUi=NOXB1AbortSafeUI.createUiAdapter({container:chat});
+          const first=firstUi.onDelta(s,'A',ctrl.signal,'sse-101');
+          for(let i=0;i<30&&!enter;i++) await Promise.resolve();
+          if(enter!==1){release();return false;}
+          const duplicate=secondUi.onDelta(s,'A',ctrl.signal,'sse-101');
+          let conflict=false;
+          try{await secondUi.onDelta(s,'EVIL',ctrl.signal,'sse-101');}
+          catch(e){conflict=e.code==='HOLD_B1_UI_REPLAY_PAYLOAD';}
+          release();
+          const [one,two]=await Promise.all([first,duplicate]);
+          const replay=await secondUi.onDelta(s,'A',ctrl.signal,'sse-101');
+          const next=await secondUi.onDelta(s,'B',ctrl.signal,'sse-102');
+          const rows=Array.from(chat.children).filter(
+            x=>x.dataset.noxB1Exchange===s.exchange_id);
+          return conflict&&one===true&&two===false&&replay===false&&
+            next===true&&enter===1&&rows.length===1&&
+            rows[0].textContent==='AB';
+        }"""))
+        check("aborted replay ID reservation permits fresh reconnect to render once",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'sse-replay-after-stop'};
+          const old=new AbortController(),fresh=new AbortController();
+          let enter=0,release;
+          const gate=new Promise(r=>release=r);
+          const firstUi=NOXB1AbortSafeUI.createUiAdapter({
+            container:chat,beforeCommit:async kind=>{
+              if(kind==='delta'){enter++;await gate;}
+            }
+          });
+          const secondUi=NOXB1AbortSafeUI.createUiAdapter({container:chat});
+          const first=firstUi.onDelta(s,'SAFE',old.signal,'sse-201');
+          for(let i=0;i<30&&!enter;i++) await Promise.resolve();
+          if(enter!==1){release();return false;}
+          const duplicate=secondUi.onDelta(s,'SAFE',fresh.signal,'sse-201');
+          old.abort();
+          const results=await Promise.race([
+            Promise.all([first,duplicate]),
+            new Promise(r=>setTimeout(()=>r('HUNG'),300))
+          ]);
+          release();
+          const rows=Array.from(chat.children).filter(
+            x=>x.dataset.noxB1Exchange===s.exchange_id);
+          return Array.isArray(results)&&results[0]===false&&
+            results[1]===true&&rows.length===1&&
+            rows[0].textContent==='SAFE'&&enter===1;
+        }"""))
         browser.close()
     print(f"B1 source-only real Chromium: {len(checks)}/{len(checks)} PASS")
     for name, _ in checks:
