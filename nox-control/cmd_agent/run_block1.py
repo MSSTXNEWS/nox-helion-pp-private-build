@@ -28,6 +28,11 @@ def main():
             if isinstance(r, list): r = next(i for i in r if i.get('id') == iid)
             print('INST', nm, iid, 'status=%s intended=%s dph=%s gpu=%s disk=%s' % (r.get('actual_status'), r.get('intended_status'), r.get('dph_total'), r.get('gpu_name'), r.get('disk_space')))
         except Exception as e: print('INST', nm, 'error', type(e).__name__)
+    if 'copy_s2' in ACT:
+        for sp in ('/root/nox/', '/workspace/', '/root/'):
+            try:
+                print('COPY', sp, api('PUT', '/commands/copy_direct/', {'src_id': 60509551, 'dst_id': 61825960, 'src_path': sp, 'dst_path': '/root/s2_backup' + sp.rstrip('/').replace('/', '_') + '/'}))
+            except Exception as e: print('COPY error', sp, type(e).__name__, str(e)[:300])
     if 'start_s2' in ACT:
         try:
             print('START S2 ->', api('PUT', '/instances/60509551/', {'state': 'running'}))
