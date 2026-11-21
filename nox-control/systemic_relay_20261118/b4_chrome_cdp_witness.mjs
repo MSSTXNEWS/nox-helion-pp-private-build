@@ -21,6 +21,17 @@ function encodeWellFormedUtf8(text){
   }
   return Buffer.from(text,'utf8');
 }
+// This is the page target's independently sampled URL, not a URL copied
+// from a model POST. Fragments do not identify a different document; query does.
+function normalizePageDocumentURL(value){
+  if(typeof value!=='string'||!value)return null;
+  try{
+    const u=new URL(value);
+    if(!['http:','https:'].includes(u.protocol)||u.username||u.password)return null;
+    u.hash='';
+    return u.href;
+  }catch{return null;}
+}
 const paths=new Set(['/api/nox/chat','/api/nox/chat/stream','/nox/chat']);
 export class Cdp {
   constructor(url){this.url=url;this.next=0;this.pending=new Map();}
@@ -131,6 +142,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
   }catch{throw Error('BAD_CHAT_ORIGIN');}
   const c=await(makeSession?makeSession():new Cdp(ws).open()),active=new Map(),finished=[];
   let startedPostCount=0,dialogFrameId=null,dialogLoaderId=null;
+  let expectedDocumentURL=null,dialogInitiatorType=null;
   let yes,no;const completion=new Promise((a,b)=>{yes=a;no=b;});
   const deadline=Date.now()+timeoutMs;
   // A resolved body-count promise cannot be rejected again. Preserve a
@@ -203,6 +215,28 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       if(p.redirectResponse||p.redirectHasExtraInfo!==undefined){
         invalidate(Error('CDP_CHAT_REDIRECT'));return;
       }
+      // Target.getTargetInfo is sampled before capture, independently of POST
+      // metadata. Frame/loader alone cannot distinguish a foreign document.
+      const documentURL=normalizePageDocumentURL(p.documentURL);
+      if(!documentURL){invalidate(Error('CDP_DOCUMENT_URL_MISSING'));return;}
+      if(documentURL!==expectedDocumentURL){
+        invalidate(Error('CDP_DOCUMENT_URL_MISMATCH'));return;
+      }
+      // Fetch/XHR normally reports a script initiator. Its stack frames can
+      // legally refer to external bundles, so do not compare script URL to
+      // the page URL or require a populated/unchanging stack.
+      const initiator=p.initiator;
+      if(!initiator||typeof initiator!=='object'||Array.isArray(initiator)||
+         !['script','parser'].includes(initiator.type)){
+        invalidate(Error('CDP_INITIATOR_AMBIGUOUS'));return;
+      }
+      if(initiator.type==='parser'&&normalizePageDocumentURL(initiator.url)!==expectedDocumentURL){
+        invalidate(Error('CDP_PARSER_ORIGIN_MISMATCH'));return;
+      }
+      if(dialogInitiatorType!==null&&initiator.type!==dialogInitiatorType){
+        invalidate(Error('CDP_INITIATOR_TYPE_CHANGED'));return;
+      }
+      if(dialogInitiatorType===null)dialogInitiatorType=initiator.type;
       // Bind each conversational turn at requestWillBeSent, not async body ACK.
       // An unexpected third POST invalidates the entire observed two-turn capture.
       if(startedPostCount>=count){invalidate(Error('EXTRA_CDP_POST'));return;}
@@ -314,6 +348,10 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     if(target?.targetInfo?.type!=='page'||
        typeof target.targetInfo.targetId!=='string'||!target.targetInfo.targetId)
       throw Error('CDP_PAGE_TARGET_REQUIRED');
+    // A tab with no independently observable HTTP(S) document cannot
+    // certify the origin of either requestWillBeSent.documentURL.
+    expectedDocumentURL=normalizePageDocumentURL(target.targetInfo.url);
+    if(!expectedDocumentURL)throw Error('CDP_PAGE_DOCUMENT_REQUIRED');
     if(onReady)await onReady(c);
     const records=(await completion).slice().sort((a,b)=>a.order-b.order);
     // Network.getResponseBody resolves asynchronously; completion order is not turn order.
