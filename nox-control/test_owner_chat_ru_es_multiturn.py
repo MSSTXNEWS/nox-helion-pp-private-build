@@ -1778,5 +1778,117 @@ async function check(chunks, status=200) {
 
 
 
+    def test_ru_es_postrender_final_owner_fence_real_chromium(self):
+        """A session/UI mutation while rendering cannot certify RU/ES history.
+
+        Synthetic Chromium only; native S03 and installed serving remain HOLD.
+        """
+        from types import SimpleNamespace
+        from playwright.async_api import async_playwright
+        from owner_chat_browser_qa import (
+            PAGE, owner_session_cookie_pin, postrender_owner_session_dialog_fence,
+        )
+
+        title = 'NOX Browser QA synthetic'
+        transcript = [
+            dict(row, message_id=f'postrender-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        cookie = {'name':'nox-owner','domain':'127.0.0.1',
+                  'path':'/','value':'signed-A','httpOnly':True}
+        pin = owner_session_cookie_pin([cookie])
+        self.assertRegex(pin, r'^[0-9a-f]{64}
+)
+
+        async def exercise():
+            async with async_playwright() as runner:
+                browser = await runner.chromium.launch(headless=True)
+                try:
+                    page = await browser.new_page()
+                    observed_posts = []
+                    page.on('request', lambda req: observed_posts.append(req.url)
+                            if req.method == 'POST' else None)
+                    html = (
+                        '<div id="nativeChats">'
+                        '<button id="pinned" role="listitem" aria-current="true">'
+                        '<span class="t">NOX Browser QA synthetic</span></button>'
+                        '<button id="other" role="listitem" aria-current="false">'
+                        '<span class="t">Other dialog</span></button>'
+                        '</div><main id="messages"></main>'
+                    )
+                    async def serve(route):
+                        await route.fulfill(status=200, content_type='text/html', body=html)
+                    await page.route('**'+PAGE, serve)
+                    await page.goto('http://127.0.0.1:8765'+PAGE)
+                    for mode, expected in (
+                            ('stable', True), ('rotated', False),
+                            ('expired', False), ('transport', False),
+                            ('dialog-switched-during-get', False),
+                            ('render-mutation-during-get', False)):
+                        await page.evaluate("""items => {
+                          document.getElementById('pinned').setAttribute('aria-current','true');
+                          document.getElementById('other').setAttribute('aria-current','false');
+                          const root=document.getElementById('messages');
+                          root.textContent='';
+                          for(const row of items) {
+                            const el=document.createElement('div');
+                            el.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                            el.dataset.messageId=row.message_id;
+                            const body=document.createElement('div');
+                            body.className='body';
+                            body.textContent=row.content;
+                            el.append(body);
+                            root.append(el);
+                          }
+                        }""", transcript)
+                        cookies = [dict(cookie)]
+                        async def session_get(url, **opts):
+                            self.assertEqual(url,'http://127.0.0.1:8765/chat/session')
+                            self.assertEqual(opts, {'max_redirects':0,'timeout':6000})
+                            if mode == 'transport':
+                                raise OSError('synthetic session error')
+                            if mode == 'rotated':
+                                cookies[:] = [dict(cookie, value='signed-B')]
+                            if mode == 'dialog-switched-during-get':
+                                await page.evaluate("""() => {
+                                  document.getElementById('pinned').setAttribute('aria-current','false');
+                                  document.getElementById('other').setAttribute('aria-current','true');
+                                }""")
+                            if mode == 'render-mutation-during-get':
+                                await page.evaluate("""() => {
+                                  document.querySelector('#messages .body').textContent='changed';
+                                }""")
+                            return SimpleNamespace(status=401 if mode=='expired' else 200)
+                        async def observed_cookies(origin):
+                            self.assertEqual(origin,'http://127.0.0.1:8765')
+                            return list(cookies)
+                        ctx = SimpleNamespace(
+                            request=SimpleNamespace(get=AsyncMock(side_effect=session_get)),
+                            cookies=AsyncMock(side_effect=observed_cookies),
+                        )
+                        verified = await postrender_owner_session_dialog_fence(
+                            ctx,'http://127.0.0.1:8765',pin,page,title,transcript)
+                        self.assertIs(verified,expected,mode)
+                        ctx.request.get.assert_awaited_once()
+                    self.assertEqual(observed_posts, [], 'read-only acceptance never regenerates')
+                finally:
+                    await browser.close()
+
+        asyncio.run(exercise())
+        caller = inspect.getsource(browser_run)
+        rendered = caller.index("report['multiturn_reload_rendered_fourrow_verified']=True")
+        final_session = caller.index('postrender_owner_session_dialog_fence(',rendered)
+        runtime = caller.index('HOLD_MULTITURN_RELOAD_POSTRENDER_RUNTIME_OR_POST',final_session)
+        accepted = caller.index("report['multiturn_browser_acceptance_verified']=True",runtime)
+        self.assertLess(rendered,final_session)
+        self.assertLess(final_session,runtime)
+        self.assertLess(runtime,accepted)
+        self.assertIn('HOLD_MULTITURN_RELOAD_POSTRENDER_OWNER_OR_DIALOG',caller)
+        self.assertNotIn('context.request.post(',caller[rendered:accepted])
+        self.assertIn('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK',caller)
+
+
+
 if __name__ == "__main__":
     unittest.main()
