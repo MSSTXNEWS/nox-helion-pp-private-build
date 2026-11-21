@@ -39,7 +39,7 @@ class ProbeTests(unittest.TestCase):
 
         good_logout = Response('/chat/logout', 200)
         good_revocation = Response('/api/nox/status', 401)
-        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'), \\
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'), \
              patch.object(probe, 'request',
                           side_effect=[good_logout, good_revocation]) as http:
             self.assertTrue(probe.require_logout_revoked('owner'))
@@ -48,26 +48,26 @@ class ProbeTests(unittest.TestCase):
         self.assertTrue(good_logout.closed)
         self.assertTrue(good_revocation.closed)
 
-        for path, code, expected in (
+        for route, code, expected in (
             ('/chat/logout', 503, 'HOLD_OWNER_LOGOUT_NOT_ACKNOWLEDGED'),
             ('/chat/login', 200, 'HOLD_OWNER_READBACK_RESPONSE_ROUTE'),
         ):
-            logout = Response(path, code)
-            with self.subTest(path=path, code=code), \\
-                 patch.object(probe, 'BASE', 'http://127.0.0.1:8080'), \\
+            logout = Response(route, code)
+            with self.subTest(path=route, code=code), \
+                 patch.object(probe, 'BASE', 'http://127.0.0.1:8080'), \
                  patch.object(probe, 'request', return_value=logout) as http:
                 with self.assertRaisesRegex(RuntimeError, expected):
                     probe.require_logout_revoked('owner')
                 http.assert_called_once()
             self.assertTrue(logout.closed)
-        for path, status, reason in (
+        for route, status, reason in (
             ('/api/nox/status', 200, 'HOLD_OWNER_LOGOUT_SESSION_ACTIVE'),
             ('/chat/login', 401, 'HOLD_OWNER_READBACK_RESPONSE_ROUTE'),
             ('/api/nox/status', 503, 'HOLD_OWNER_LOGOUT_SESSION_ACTIVE'),
         ):
-            logout, check = Response('/chat/logout', 204), Response(path, status)
-            with self.subTest(check=(path, status)), \\
-                 patch.object(probe, 'BASE', 'http://127.0.0.1:8080'), \\
+            logout, check = Response('/chat/logout', 204), Response(route, status)
+            with self.subTest(check=(route, status)), \
+                 patch.object(probe, 'BASE', 'http://127.0.0.1:8080'), \
                  patch.object(probe, 'request', side_effect=[logout, check]):
                 with self.assertRaisesRegex(RuntimeError, reason):
                     probe.require_logout_revoked('owner')
