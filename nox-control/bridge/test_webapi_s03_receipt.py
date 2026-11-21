@@ -46,6 +46,18 @@ class FactReceiptTest(unittest.TestCase):
             ({"options": ["wrong-shape"]}, "CHAT_INVALID_OPTIONS"),
             ({"options": {"num_predict": "nan"}}, "CHAT_INVALID_NUM_PREDICT"),
             ({"options": {"num_predict": -1}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"messages": ""}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": 0}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": False}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": None}, "CHAT_INVALID_MESSAGES"),
+            ({"options": []}, "CHAT_INVALID_OPTIONS"),
+            ({"options": 0}, "CHAT_INVALID_OPTIONS"),
+            ({"options": False}, "CHAT_INVALID_OPTIONS"),
+            ({"options": None}, "CHAT_INVALID_OPTIONS"),
+            ({"options": {"num_predict": 0}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"options": {"num_predict": False}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"options": {"num_predict": None}}, "CHAT_INVALID_NUM_PREDICT"),
+            ({"options": {"num_predict": 1.5}}, "CHAT_INVALID_NUM_PREDICT"),
         )
         for body, code in cases:
             with self.subTest(body=body):
