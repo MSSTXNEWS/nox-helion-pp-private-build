@@ -740,7 +740,7 @@ test('multi-turn causal boundary rejects overlapping POSTs, missing terminal and
     /CDP_NON_SERIAL_CHAT_POST/,'second POST seen before first loadingFinished must fail');
   await assert.rejects(run(false,null,null,null,{omitFirstClose:true}),
     /CDP_NON_SERIAL_CHAT_POST/,'unknown first loadingFinished must not certify a second turn');
-  const missingDone=body.replace('data: [DONE]\\n\\n','');
+  const missingDone=body.replace('data: [DONE]\n\n','');
   await assert.rejects(run(false,null,null,null,{firstBody:missingDone}),
     /CDP_NON_SERIAL_CHAT_POST/,'stop without explicit terminal [DONE] is not a completed first turn');
   // Malformed clock evidence remains a HOLD rather than a fake PASS.
