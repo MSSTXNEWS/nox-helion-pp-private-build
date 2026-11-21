@@ -15,6 +15,7 @@
   }
   function hold(code){ throw new BindingHold(code); }
   function bind({container,transport,host,bridge,ackGate,beforeCommit,
+    terminalTimeoutMs,deltaPrecommitTimeoutMs,
     timeoutMs,canonicalFreshnessMs,reconnectReadTimeoutMs,
     uiProjectionTimeoutMs,ackSendTimeoutMs,canonicalAckTimeoutMs}={}){
     // A UI completion is never a server ACK. Fail closed instead of silently
@@ -34,6 +35,12 @@
       hold('HOLD_B1_BINDING_DEPENDENCY');
     const options={container};
     if(beforeCommit!==undefined) options.beforeCommit=beforeCommit;
+    // UI precommit and terminal deadlines must reach the abort-safe adapter.
+    // Validation is performed by createUiAdapter before a stream or GET starts.
+    if(terminalTimeoutMs!==undefined)
+      options.terminalTimeoutMs=terminalTimeoutMs;
+    if(deltaPrecommitTimeoutMs!==undefined)
+      options.deltaPrecommitTimeoutMs=deltaPrecommitTimeoutMs;
     const ui=dom.createUiAdapter(options);
     const config={transport,host,bridge,ui,ackGate};
     if(timeoutMs!==undefined) config.timeoutMs=timeoutMs;
