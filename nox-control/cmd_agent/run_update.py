@@ -24,7 +24,7 @@ def main():
     if isinstance(inst, list): inst = next(i for i in inst if i.get("id") == INSTANCE)
     ip = inst["public_ipaddr"]
     ports = [int(m["HostPort"]) for m in inst.get("ports", {}).get("22/tcp", []) if str(m.get("HostPort", "")).isdigit()]
-    if inst.get("actual_status") != "running" or not ports: sys.exit("instance not running / no ssh port")
+    if inst.get("actual_status") != "running" or not ports: sys.exit("instance not running / no ssh port: id=%s actual_status=%s cur_state=%s intended=%s msg=%s" % (INSTANCE, inst.get("actual_status"), inst.get("cur_state"), inst.get("intended_status"), str(inst.get("status_msg"))[:200]))
     d = tempfile.mkdtemp(); kf = d + "/k"
     subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "nox-update-button", "-f", kf], check=True)
     pub = open(kf + ".pub").read().strip()
