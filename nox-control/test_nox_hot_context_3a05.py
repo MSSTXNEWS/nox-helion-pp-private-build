@@ -66,6 +66,16 @@ class ScopedConversationTests(unittest.TestCase):
                         verified_s03=[{**current, "text": ""}], current_user="Continue.",
                         token_counter=lambda msgs: 10, token_budget=2048,
                         owner_persona_id="persona-A", current_s03_revision=revision)
+        # Malformed redacted provenance must HOLD, not raise TypeError
+        # from a membership test on an unhashable status.
+        for invalid_status in ([], {}, ["REVOKED"]):
+            with self.subTest(status=invalid_status):
+                with self.assertRaisesRegex(ContextHold, "HOLD_CONTEXT_S03"):
+                    plan_prompt(persona="NOX", system="Be precise.", conversation=[],
+                                verified_s03=[{**revoked, "status": invalid_status}],
+                                current_user="Continue.", token_counter=lambda msgs: 10,
+                                token_budget=2048, owner_persona_id="persona-A",
+                                current_s03_revision=revision)
         # The legacy unscoped format still refuses empty active text.
         with self.assertRaisesRegex(ContextHold, "HOLD_CONTEXT_S03"):
             plan_prompt(persona="NOX", system="Be precise.", conversation=[],
