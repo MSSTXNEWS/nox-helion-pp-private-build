@@ -1387,3 +1387,37 @@ test('V173 legacy RU ES first meaningful delta precedes delayed native done, S03
     assert.equal(f.calls.some(x=>x.path==='/api/nox/stop'),false);
   }
 });
+
+
+test('6A05 owner-native structured HOLD remains visible instead of object Object',async()=>{
+  const cases=[
+    [{error:{code:'HOLD_OWNER_LEASE_BUSY'}},'HOLD_OWNER_LEASE_BUSY'],
+    [{reason:{code:'HOLD_RESOURCE_FLOOR'}},'HOLD_RESOURCE_FLOOR'],
+    [{error:'HOLD_STOP_ACTIVE'},'HOLD_STOP_ACTIVE'],
+    [{error:{message:'internal fields not for browser'}},'HTTP_503']
+  ];
+  for(const [nativeError,expected] of cases){
+    const calls=[];
+    const w={NOX_NATIVE_OWNER:true,fetch:async path=>{
+      const u=new URL(String(path),'https://nox.local');
+      calls.push(u.pathname);
+      if(u.pathname==='/api/ui/memory/dialogs/create')
+        return Response.json({dialog_id:id});
+      if(u.pathname==='/api/nox/chat/stream')
+        return Response.json(nativeError,{status:503});
+      assert.fail('unapproved native route '+u.pathname);
+    }};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',
+      origin:'https://nox.local',href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,clearTimeout});
+    const res=await w.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt})});
+    const body=await res.json();
+    assert.equal(res.status,503);
+    assert.equal(body.error,'HOLD_NATIVE_STREAM_'+expected);
+    assert.equal(body.history_persisted,false);
+    assert.equal(body.s03_integrated,false);
+    assert.deepEqual(calls,['/api/ui/memory/dialogs/create','/api/nox/chat/stream']);
+  }
+});
