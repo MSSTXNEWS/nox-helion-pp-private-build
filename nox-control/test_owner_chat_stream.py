@@ -69,9 +69,18 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
     async def test_total_answer_limit_across_model_and_tool_cycles(self):
+        # Count UTF-8 bytes, not codepoints: RU/ES + emoji can exceed RAM
+        # even while Python len() stays below the numeric limit.
+        chunks=[]
+        with patch.object(stream,'FINAL_RESPONSE_LIMIT',6):
+            self.assertEqual(stream._append_final_chunk(chunks,'éé',0),4)
+            with self.assertRaisesRegex(stream.StreamFailure,
+                                        'HOLD_MODEL_TOTAL_OUTPUT_SIZE'):
+                stream._append_final_chunk(chunks,'🌍',4)
+            self.assertEqual(chunks,['éé'])
         # An upstream model limits each response, but the full native turn may
         # contain several cycles. Neither SSE [DONE] nor JSON/S03 may certify
-        # an accumulated answer that exceeds the same 2M ceiling.
+        # an accumulated answer that exceeds the same 2M-byte ceiling.
         async def fake_run(parts):
             for part in parts:
                 yield 'token',part
@@ -82,7 +91,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     payload={'messages':[{'role':'user','content':'Say hello'}]}
                     with (patch.object(stream,'_run',
                                        side_effect=lambda *args:fake_run(parts)),
-                          patch.object(stream,'FINAL_RESPONSE_LIMIT',6)):
+                          patch.object(stream,'FINAL_RESPONSE_LIMIT',9)):
                         response=await native['owner_completion'](
                             'http://native/model',payload,'Say hello',streaming)
                         if streaming:
