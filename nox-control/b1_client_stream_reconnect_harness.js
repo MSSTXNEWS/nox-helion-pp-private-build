@@ -53,7 +53,8 @@
        !Number.isSafeInteger(canonicalAckTimeoutMs)||
        canonicalAckTimeoutMs<1||canonicalAckTimeoutMs>600000)
       hold('HOLD_STREAM_HOST_CONTRACT');
-    const started=new Set(),active=new Map(),reconnecting=new Map();
+    const started=new Set(),active=new Map(),reconnecting=new Map(),
+      reconnectControllers=new Map();
     async function begin(raw){
       const s=snap(raw),k=key(s);
       if(started.has(k)) hold('HOLD_STREAM_NO_REPOST');
@@ -219,34 +220,56 @@
       }
     }
     function stop(raw){
-      const k=key(snap(raw)),ctrl=active.get(k);
-      if(!ctrl) return false;
-      ctrl.abort();
+      const k=key(snap(raw));
+      const streamCtrl=active.get(k),reconnectCtrl=reconnectControllers.get(k);
+      if(!streamCtrl&&!reconnectCtrl) return false;
+      // STOP is scoped to one exchange, including a pending readback,
+      // UI terminal projection, local ACK reservation or canonical GET.
+      // It never starts a new model POST and cannot undo an ACK already sent.
+      if(streamCtrl) streamCtrl.abort();
+      if(reconnectCtrl) reconnectCtrl.abort();
       return true;
     }
     // A hung or uncooperative read-only GET/witness must not pin reconnect()
     // forever. Late resolutions have no continuation to UI/ACK after timeout.
     // Both supplied functions MUST be side-effect free: never put model POST,
     // DOM projection or ACK inside either untrusted callback.
-    function boundedRead(thunk,code,deadlineMs=reconnectReadTimeoutMs){
-      let timer;
-      return Promise.race([
-        Promise.resolve().then(thunk),
+    function boundedRead(thunk,code,deadlineMs=reconnectReadTimeoutMs,signal=null){
+      if(signal&&signal.aborted) hold('HOLD_STREAM_RECONNECT_STOPPED');
+      let timer,onAbort;
+      const tasks=[
+        Promise.resolve().then(()=>{
+          if(signal&&signal.aborted) hold('HOLD_STREAM_RECONNECT_STOPPED');
+          return thunk();
+        }),
         new Promise((_,reject)=>{
           timer=setTimeout(()=>reject(new HoldStream(code)),deadlineMs);
         })
-      ]).finally(()=>clearTimeout(timer));
+      ];
+      if(signal) tasks.push(new Promise((_,reject)=>{
+        onAbort=()=>reject(new HoldStream('HOLD_STREAM_RECONNECT_STOPPED'));
+        signal.addEventListener('abort',onAbort,{once:true});
+        if(signal.aborted) onAbort();
+      }));
+      return Promise.race(tasks).then(value=>{
+        // Even a just-settled callback must not resume UI/ACK after STOP.
+        if(signal&&signal.aborted) hold('HOLD_STREAM_RECONNECT_STOPPED');
+        return value;
+      }).finally(()=>{
+        clearTimeout(timer);
+        if(onAbort) signal.removeEventListener('abort',onAbort);
+      });
     }
     // One in-flight GET/readback + UI projection + ACK per exchange per tab.
     // Coalesce concurrent reconnect calls; after a failure, allow readback-only
     // recovery. NEVER start another model POST for an uncertain exchange.
-    async function reconnectOnce(s){
+    async function reconnectOnce(s,signal){
       let packet,witness;
       try{
         packet=await boundedRead(()=>transport.readback(s),
-          'HOLD_STREAM_READBACK_TIMEOUT'); // GET only; never model POST
+          'HOLD_STREAM_READBACK_TIMEOUT',reconnectReadTimeoutMs,signal); // GET only; never model POST
         witness=await boundedRead(()=>bridge.acceptTerminal(packet,s,host),
-          'HOLD_STREAM_WITNESS_TIMEOUT'); // verification only; no side effects
+          'HOLD_STREAM_WITNESS_TIMEOUT',reconnectReadTimeoutMs,signal); // verification only; no side effects
       }catch(err){
         if(err&&typeof err.code==='string') throw err;
         hold('HOLD_STREAM_READBACK');
@@ -268,7 +291,7 @@
       try{
         projected=await boundedRead(
           ()=>ui.upsertTerminal(s,witness.projection_event_id,projectionCtrl.signal),
-          'HOLD_STREAM_UI_PROJECTION_TIMEOUT',uiProjectionTimeoutMs);
+          'HOLD_STREAM_UI_PROJECTION_TIMEOUT',uiProjectionTimeoutMs,signal);
       }catch(err){
         projectionCtrl.abort();
         if(err&&err.code==='HOLD_STREAM_UI_PROJECTION_TIMEOUT') throw err;
@@ -329,7 +352,7 @@
               return receipt;
             },
             (receipt,expected)=>host.verifyCanonicalAck(receipt,expected,s)),
-             'HOLD_STREAM_CANONICAL_ACK_TIMEOUT',canonicalAckTimeoutMs);
+             'HOLD_STREAM_CANONICAL_ACK_TIMEOUT',canonicalAckTimeoutMs,signal);
         }catch(err){
           if(err&&typeof err.code==='string') throw err;
           hold('HOLD_STREAM_CANONICAL_ACK');
@@ -345,7 +368,9 @@
       let grant=null;
       if(ackGate){
         try{
-          grant=await ackGate.reserve(s,witness.projection_event_id,witness.ack_cursor);
+          grant=await boundedRead(
+            ()=>ackGate.reserve(s,witness.projection_event_id,witness.ack_cursor),
+            'HOLD_STREAM_ACK_RESERVE_TIMEOUT',reconnectReadTimeoutMs,signal);
         }catch(err){
           // An uncertain SENDING ACK must NEVER be retransmitted: GET-only
           // readback, with the original event/cursor and CAS proof.
@@ -356,7 +381,10 @@
         }
         if(grant.status==='ALREADY_ACKED') return canonicalCompletion();
         if(grant.status!=='RESERVED') hold('HOLD_STREAM_ACK_GATE');
-        try{await ackGate.beginSend(grant);}
+        try{
+          await boundedRead(()=>ackGate.beginSend(grant),
+            'HOLD_STREAM_ACK_BEGIN_TIMEOUT',reconnectReadTimeoutMs,signal);
+        }
         catch(err){
           if(err&&typeof err.code==='string') throw err;
           hold('HOLD_STREAM_ACK_GATE');
@@ -369,7 +397,7 @@
         // reconnect uses canonical GET-only verification of that attempt.
         const acked=await boundedRead(
           ()=>transport.ack(s,witness.ack_cursor),
-          'HOLD_STREAM_ACK_SEND_TIMEOUT',ackSendTimeoutMs);
+          'HOLD_STREAM_ACK_SEND_TIMEOUT',ackSendTimeoutMs,signal);
         if(acked===false) hold('HOLD_STREAM_ACK_UNCONFIRMED');
         // Leave IndexedDB SENDING until a signed canonical GET proves ACKED.
         // A local confirm() would create ACKED without a server proof digest
@@ -385,9 +413,16 @@
       if(active.has(k)) hold('HOLD_STREAM_ACTIVE_POST');
       const pending=reconnecting.get(k);
       if(pending) return pending;
-      const attempt=reconnectOnce(s);
+      const ctrl=new AbortController();
+      const attempt=reconnectOnce(s,ctrl.signal);
       reconnecting.set(k,attempt);
-      const clear=()=>{if(reconnecting.get(k)===attempt) reconnecting.delete(k);};
+      reconnectControllers.set(k,ctrl);
+      const clear=()=>{
+        if(reconnecting.get(k)===attempt){
+          reconnecting.delete(k);
+          reconnectControllers.delete(k);
+        }
+      };
       attempt.then(clear,clear);
       return attempt;
     }
