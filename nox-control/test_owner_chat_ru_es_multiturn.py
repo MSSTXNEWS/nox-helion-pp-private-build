@@ -1332,6 +1332,61 @@ async function check(chunks, status=200) {
         self.assertIn('canonical_s03_verified=False', caller)
 
 
+    def test_ru_es_reload_history_recheck_cannot_rotate_row_session_metadata(self):
+        """Stable four-message IDs/text must not hide an owner-session switch."""
+        from types import SimpleNamespace
+        from owner_chat_browser_qa import (
+            postquiet_fourrow_history_stable, postrender_owner_history_recheck,
+        )
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        legacy = {'dialog_id': DIALOG, 'messages': [
+            dict(row, message_id=f'row-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(es), 1)]}
+        scoped = json.loads(json.dumps(legacy))
+        for row in scoped['messages']:
+            row['session_id'] = 'owner-session-A'
+        sha = multiturn_transcript_sha256(scoped['messages'])
+        first_ids = ('row-1', 'row-2')
+        self.assertTrue(postquiet_fourrow_history_stable(
+            legacy, json.loads(json.dumps(legacy)), DIALOG, sha, first_ids))
+        self.assertTrue(postquiet_fourrow_history_stable(
+            scoped, json.loads(json.dumps(scoped)), DIALOG, sha, first_ids))
+
+        rotated = json.loads(json.dumps(scoped))
+        for row in rotated['messages']:
+            row['session_id'] = 'owner-session-B'
+        partial = json.loads(json.dumps(scoped))
+        partial['messages'][2].pop('session_id')
+        padded = json.loads(json.dumps(scoped))
+        padded['messages'][1]['session_id'] = ' owner-session-A '
+        malformed = json.loads(json.dumps(scoped))
+        malformed['messages'][1]['session_id'] = 0
+        snapshots = (
+            (scoped, rotated), (scoped, legacy), (legacy, scoped),
+            (scoped, partial), (scoped, padded), (scoped, malformed),
+        )
+        for before, after in snapshots:
+            with self.subTest(before_session=before['messages'][0].get('session_id'),
+                              after_session=after['messages'][0].get('session_id')):
+                # The transcript SHA and all four message IDs stay identical;
+                # only the owner/session provenance changes.
+                self.assertEqual(
+                    multiturn_transcript_sha256(before['messages']),
+                    multiturn_transcript_sha256(after['messages']))
+                self.assertEqual(
+                    [row['message_id'] for row in before['messages']],
+                    [row['message_id'] for row in after['messages']])
+                self.assertFalse(postquiet_fourrow_history_stable(
+                    before, after, DIALOG, sha, first_ids))
+                response = SimpleNamespace(status=200, body=AsyncMock(
+                    return_value=json.dumps(after, ensure_ascii=False).encode('utf-8')))
+                context = SimpleNamespace(request=SimpleNamespace(
+                    get=AsyncMock(return_value=response)))
+                self.assertFalse(asyncio.run(postrender_owner_history_recheck(
+                    context, 'http://127.0.0.1:18775', before,
+                    DIALOG, sha, first_ids)))
+                self.assertEqual(context.request.get.await_count, 1)
+
     def test_ru_es_postread_final_stream_fence_after_history_and_session(self):
         """A late SSE mutation during read-only history/session GET is HOLD."""
         from owner_chat_browser_qa import stable_second_turn_quiescence
