@@ -68,6 +68,7 @@ def main():
                 time.sleep(10)
         sys.exit("ssh failed on all attempts")
     finally:
+        cleanup_error = None
         try:
             # A delayed key-list update must not leave an attached temporary key
             # behind just because the first bounded lookup missed its ID.
@@ -81,12 +82,15 @@ def main():
                 api("DELETE", "/instances/%d/ssh/%s" % (INSTANCE, key_id))
                 print("temp key detached")
             elif attach_attempted:
-                print("DETACH UNVERIFIED - remove 'nox-update-button' key in Vast manually")
+                raise RuntimeError("HOLD_OBSERVER_EPHEMERAL_KEY_NOT_FOUND")
         except Exception as e:
+            cleanup_error = e
             print("DETACH UNVERIFIED", type(e).__name__, "- remove 'nox-update-button' key in Vast manually")
         finally:
             # Delete private key and isolated known_hosts even if SSH/API failed.
             shutil.rmtree(d)
+        if cleanup_error is not None:
+            raise RuntimeError("HOLD_OBSERVER_KEY_DETACH_UNVERIFIED") from cleanup_error
 
 if __name__ == "__main__":
     main()
