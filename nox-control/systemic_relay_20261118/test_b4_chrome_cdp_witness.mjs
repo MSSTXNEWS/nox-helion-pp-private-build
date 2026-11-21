@@ -8,6 +8,9 @@ class Stub {
   close(){}
   async send(cmd,p={}){if(cmd==='Browser.getVersion')return {product:'CDP-FIXTURE'};
     if(cmd==='Network.streamResourceContent')return {};
+    if(cmd==='Page.getFrameTree')return {frameTree:{frame:{
+      id:'fixture-frame',loaderId:'fixture-loader',url:this.targetUrl??'http://localhost/nox/chat'
+    }}};
     if(cmd==='Target.getTargetInfo')return {targetInfo:{
       targetId:'fixture-page',type:this.targetType??'page',url:this.targetUrl??'http://localhost/nox/chat'
     }};
@@ -61,6 +64,7 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       ...(i===1&&Object.hasOwn(o,'redirectHasExtraInfo')?{redirectHasExtraInfo:o.redirectHasExtraInfo}:{}),
       request:{method:'POST',url:requestUrl,
       ...(i===1&&o.postDataMode?{}:{postData:i===1&&Object.hasOwn(o,'postDataText')?o.postDataText:'{"secret":"'+i+'"}'})}});
+    if(i===1&&typeof options.lifecycleDuringSecond==='function')options.lifecycleDuringSecond(c);
     if(i===1&&options.injectExtraPost)c.emit('Network.requestWillBeSent',{
       requestId:'unexpected-third',timestamp:101.001,request:{method:'POST',
       url:'http://localhost/api/nox/chat',postData:'{"unexpected":3}'}});
@@ -579,7 +583,7 @@ test('two-turn CDP witness binds one page target, frame and document loader, not
     {omitRequestFrame:true}, {omitRequestLoader:true}
   ]){
     await assert.rejects(run(false,null,null,null,flags),
-      /CDP_DIALOG_FRAME_MISMATCH|CDP_FRAME_PROVENANCE_MISSING/,JSON.stringify(flags));
+      /CDP_DIALOG_FRAME_MISMATCH|CDP_MAIN_FRAME_DOCUMENT_CHANGED|CDP_FRAME_PROVENANCE_MISSING/,JSON.stringify(flags));
   }
   for(const flags of [
     {responseFrameId:'unrelated-iframe'}, {responseLoaderId:'other-document'},
@@ -632,4 +636,43 @@ test('CDP independently pins page documentURL and rejects cross-document or ambi
   });
   assert.equal(validParser.cdp_consistent,true);
   assert.equal(validParser.ttft_sse_verified,true);
+});
+
+test('main-frame navigation/reload, detached target and document replacement fence both turns through quiescence',async()=>{
+  const control=await run(false,null,null,null,{quiescenceMs:85});
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  assert.deepEqual(control.turns.map(t=>t.cdp_request_id),['1','2']);
+  // Navigation within the *same* document (hash/SPA) is not a reload.
+  const hashChange=await run(false,null,null,null,{
+    lifecycleDuringSecond:c=>c.emit('Page.navigatedWithinDocument',{
+      frameId:'fixture-frame',url:'http://localhost/nox/chat#after-first-turn'
+    })
+  });
+  assert.equal(hashChange.ttft_sse_verified,true);
+  const subframe=await run(false,null,null,null,{
+    lifecycleDuringSecond:c=>{
+      c.emit('Page.frameNavigated',{frame:{id:'iframe',parentId:'fixture-frame',url:'http://localhost/embed'}});
+      c.emit('Page.frameDetached',{frameId:'iframe'});
+    }
+  });
+  assert.equal(subframe.ttft_sse_verified,true);
+  const bad=[
+    ['Page.frameStartedNavigating',{frameId:'fixture-frame',navigationType:'reload'},/CDP_MAIN_FRAME_NAVIGATION_STARTED/],
+    ['Page.frameNavigated',{frame:{id:'fixture-frame',loaderId:'new-loader',url:'http://localhost/nox/chat'}},/CDP_MAIN_FRAME_NAVIGATED/],
+    ['Page.frameDetached',{frameId:'fixture-frame'},/CDP_MAIN_FRAME_DETACHED/],
+    ['Page.navigatedWithinDocument',{frameId:'fixture-frame',url:'http://localhost/other'},/CDP_SAME_DOCUMENT_URL_CHANGED/],
+    ['Target.targetDestroyed',{targetId:'fixture-page'},/CDP_PAGE_TARGET_DESTROYED/],
+    ['Target.targetCrashed',{targetId:'fixture-page'},/CDP_PAGE_TARGET_CRASHED/],
+    ['Target.detachedFromTarget',{targetId:'fixture-page'},/CDP_PAGE_TARGET_DETACHED/],
+    ['Inspector.detached',{reason:'target_closed'},/CDP_INSPECTOR_DETACHED/]
+  ];
+  for(const [method,p,expected] of bad){
+    await assert.rejects(run(false,null,null,null,{
+      lifecycleDuringSecond:c=>c.emit(method,p)
+    }),expected,'active stream invalidated: '+method);
+    await assert.rejects(run(false,null,null,null,{
+      quiescenceMs:85,postAckEvent:c=>c.emit(method,p)
+    }),expected,'post-body quiet window invalidated: '+method);
+  }
 });
