@@ -40,15 +40,16 @@ def detach(pub):
     return False
 
 def accepted(stdout):
+    """Parse the complete allowlisted readback without emitting partial success."""
     lines=stdout.splitlines()
-    if not lines or lines[0].strip()!="NOX_OWNER_READONLY_V1": return False
-    seen=set()
+    if not lines or lines[0].strip()!="NOX_OWNER_READONLY_V1": return None
+    seen={}
     for line in lines[1:]:
         m=re.fullmatch(r"([a-z0-9_-]+) (RUNNING|STOPPED|STARTING|BACKOFF|EXITED|FATAL)",line.strip())
-        if m and m.group(1) in SERVICES and m.group(1) not in seen:
-            seen.add(m.group(1))
-            print(m.group(1)+"="+m.group(2))
-    return seen==SERVICES
+        if not m or m.group(1) not in SERVICES or m.group(1) in seen:
+            return None
+        seen[m.group(1)]=m.group(2)
+    return seen if set(seen)==SERVICES else None
 
 def main():
     inst=api("GET","/instances/%d/"%INSTANCE)
@@ -60,7 +61,7 @@ def main():
         raise RuntimeError("HOLD_INSTANCE_OR_PORT")
     directory=tempfile.mkdtemp(prefix="nox-owner-")
     keyfile=directory+"/key"
-    pub=None; attached=False; removed=False
+    pub=None; attached=False; removed=False; verified_rows=None
     try:
         subprocess.run(["ssh-keygen","-q","-t","ed25519","-N","","-C",
                         "nox-owner-probe","-f",keyfile],check=True)
@@ -80,17 +81,21 @@ def main():
                 "-o","UserKnownHostsFile="+directory+"/known","root@"+inst["public_ipaddr"],REMOTE],
                 capture_output=True,text=True,errors="replace",timeout=65,stdin=subprocess.DEVNULL)
             if r.returncode==0:
-                if accepted(r.stdout):
-                    print("owner_probe=READ_ONLY_VERIFIED")
-                    return
-                raise RuntimeError("HOLD_AMBIGUOUS_READBACK")
-        raise RuntimeError("HOLD_SSH_FAILED")
+                verified_rows=accepted(r.stdout)
+                if verified_rows is None:
+                    raise RuntimeError("HOLD_AMBIGUOUS_READBACK")
+                break
+        if verified_rows is None: raise RuntimeError("HOLD_SSH_FAILED")
     finally:
         try:
             if attached and pub: removed=detach(pub)
         finally:
-            shutil.rmtree(directory,ignore_errors=True)
+            shutil.rmtree(directory)
         if attached and not removed: raise RuntimeError("HOLD_KEY_DETACH_UNVERIFIED")
+    # Do not emit any successful status until provider and local key cleanup complete.
+    for service in sorted(verified_rows):
+        print(service+"="+verified_rows[service])
+    print("owner_probe=READ_ONLY_VERIFIED")
 
 if __name__=="__main__":
     try: main()
