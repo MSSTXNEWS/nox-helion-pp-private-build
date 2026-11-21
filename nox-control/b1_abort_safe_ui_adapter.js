@@ -124,7 +124,12 @@
           // live signal must observe the old result, then safely retry the
           // same canonical terminal event after an aborted old projection.
           // A later STOP of the new signal must also win this waiting race.
-          return pending.promise.then(
+          // A fresh STOP must release its reconnect waiter immediately,
+          // even if the previous terminal precommit remains hung. Waiting
+          // exclusively on pending.promise delays STOP until the old timeout.
+          // Promise.race observes both outcomes, so a late rejection cannot
+          // turn into an unhandled rejection after the fresh signal aborts.
+          const readback=pending.promise.then(
             projected=>{
               if(signal.aborted) return false;
               return projected===true?true:upsertTerminal(s,eventId,signal);
@@ -135,6 +140,15 @@
               throw error;
             }
           );
+          let onAbort;
+          const stopped=new Promise(resolve=>{
+            onAbort=()=>resolve(false);
+            signal.addEventListener('abort',onAbort,{once:true});
+            if(signal.aborted) onAbort();
+          });
+          return Promise.race([readback,stopped]).finally(()=>{
+            signal.removeEventListener('abort',onAbort);
+          });
         }
         return pending.promise;
       }
