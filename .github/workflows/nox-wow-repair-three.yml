@@ -1,0 +1,49 @@
+name: NOX WOW 3 corrected upstream source ZIPs
+on:
+  push:
+    branches: [codex/nox-wow-sources-20261121]
+    paths: [".github/workflows/nox-wow-repair-three.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  repair_missing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Download 3 renamed repos by pinned commit
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,urllib.request,zipfile,pathlib
+          repos={'kamranahmedse/driver.js':'nilbuild/driver.js',
+                 'layoutit/grid':'layoutit/layoutit-grid',
+                 'rive-app/rive-web':'rive-app/rive-wasm'}
+          out=pathlib.Path('NOX_WOW_MISSING_THREE_20261121.zip')
+          rows=[]
+          with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_STORED) as pack:
+              for old,new in repos.items():
+                  headers={'User-Agent':'NOX-WOW-repair','Authorization':'Bearer '+os.environ['GITHUB_TOKEN']}
+                  def get(u):
+                      with urllib.request.urlopen(urllib.request.Request(u,headers=headers),timeout=60) as resp:return resp.read()
+                  info=json.loads(get('https://api.github.com/repos/'+new))
+                  branch=info['default_branch']
+                  sha=json.loads(get('https://api.github.com/repos/'+new+'/commits/'+branch))['sha']
+                  data=get('https://codeload.github.com/'+new+'/zip/'+sha)
+                  path='sources/'+new.replace('/','__')+'.zip'
+                  pack.writestr(path,data)
+                  with zipfile.ZipFile(__import__('io').BytesIO(data)) as z:
+                      assert z.testzip() is None
+                  rows.append({'original_broken':old,'replacement':new,'commit_sha':sha,'sha256':hashlib.sha256(data).hexdigest(),'source_path':path,'bytes':len(data),'license':(info.get('license') or {}).get('spdx_id')})
+              pack.writestr('manifest/REPLACEMENTS.json',json.dumps(rows,indent=2))
+          print(json.dumps({'repaired':len(rows),'archive_bytes':out.stat().st_size,'sha256':hashlib.sha256(out.read_bytes()).hexdigest()}))
+          PY
+      - name: Upload verified supplemental source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WOW_MISSING_THREE_20261121
+          path: NOX_WOW_MISSING_THREE_20261121.zip
+          compression-level: 0
+          retention-days: 3
