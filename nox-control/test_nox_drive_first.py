@@ -270,6 +270,25 @@ class DriveFirstTests(unittest.TestCase):
             m.save_receipt(receipt,{"state":"DIFFERENT"})
         self.assertEqual(receipt.read_bytes(),before)
 
+    def test_long_rclone_copy_observes_owner_stop_and_terminates_child(self):
+        # A stalled multi-hour copyto must not mask an emergency OWNER STOP.
+        child = FakeChild()
+        child.returncode = None
+        calls = [0]
+        def owner_stop():
+            calls[0] += 1
+            if calls[0] >= 3:
+                raise m.Hold("HOLD_DRIVE_FIRST_STOP")
+        with patch.object(m.shutil, "which", return_value="/usr/bin/rclone"), \
+             patch.object(m.subprocess, "Popen", return_value=child) as spawned, \
+             patch.object(m.time, "sleep"), \
+             patch.object(m, "stop_clear", side_effect=owner_stop):
+            with self.assertRaisesRegex(m.Hold, "STOP"):
+                m.run_rclone(["copyto", "local.gguf", "noxchunks:STAGING/test.gguf"],
+                             self.conf, timeout=120)
+        spawned.assert_called_once()
+        self.assertEqual(child.returncode, -15)
+
     def test_remote_sha_readback_streams_normal_bytes(self):
         # Drive is never contacted; feed a real Linux pipe to the readback.
         reader, writer = os.pipe()
