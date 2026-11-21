@@ -1402,7 +1402,7 @@ async function check(chunks, status=200) {
         self.assertLess(pre, admitted)
         self.assertLess(final, preaccept)
         self.assertLess(preaccept, accepted)
-        self.assertEqual(caller.count('page.evaluate(ACTIVE_QA_DIALOG_JS,title)'), 3)
+        self.assertEqual(caller.count('page.evaluate(ACTIVE_QA_DIALOG_JS,title)'), 4)
         self.assertIn("urllib.parse.urlsplit(page.url).path!=PAGE", caller)
         self.assertNotIn("context.request.post(", caller[final:accepted])
 
@@ -1630,6 +1630,67 @@ async function check(chunks, status=200) {
         self.assertIn('HOLD_MULTITURN_RELOAD_POSTHISTORY_SESSION_CHANGED',caller)
         self.assertNotIn('context.request.post(',caller[history:acceptance])
         self.assertIn('canonical_s03_verified=False',caller)
+
+
+    def test_ru_es_postreload_posthistory_ui_drift_fails_closed(self):
+        """A late UI switch after owner history/session reads cannot certify B5."""
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import ACTIVE_QA_DIALOG_JS
+
+        title = 'NOX Browser QA synthetic'
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                observed_posts = []
+                page.on('request', lambda req: observed_posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content(
+                    '<div id="nativeChats">'
+                    '<button id="pinned" role="listitem" aria-current="true">'
+                    '<span class="t">NOX Browser QA synthetic</span></button>'
+                    '<button id="other" role="listitem" aria-current="false">'
+                    '<span class="t">Other dialog</span></button>'
+                    '</div><div id="messages"></div>')
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                # Simulate the user switching dialogs during a slow history
+                # and signed-session read. The last witness must see the drift.
+                page.evaluate("""() => {
+                  setTimeout(() => {
+                    document.getElementById('pinned').setAttribute('aria-current','false');
+                    document.getElementById('other').setAttribute('aria-current','true');
+                  }, 15);
+                }""")
+                page.wait_for_function(
+                    "document.getElementById('other').getAttribute('aria-current')==='true'",
+                    timeout=2000)
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.evaluate("""() => {
+                    document.getElementById('other').setAttribute('aria-current','false');
+                    document.getElementById('pinned').setAttribute('aria-current','true');
+                }""")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                page.locator('#messages').evaluate('(el)=>el.remove()')
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                self.assertEqual(observed_posts, [], 'UI fence never requests generation')
+            finally:
+                browser.close()
+
+        caller = inspect.getsource(browser_run)
+        reloaded_history = caller.index('reloaded_history=await json_response(')
+        session = caller.index('postreload_owner_session_recheck(', reloaded_history)
+        runtime = caller.index('HOLD_MULTITURN_RELOAD_RUNTIME_OR_POST', session)
+        guard = caller.index(
+            'HOLD_MULTITURN_RELOAD_POSTHISTORY_ACTIVE_DIALOG_CHANGED', runtime)
+        accepted = caller.index(
+            "report['multiturn_browser_acceptance_verified']=True", guard)
+        self.assertLess(reloaded_history, session)
+        self.assertLess(session, runtime)
+        self.assertLess(runtime, guard)
+        self.assertLess(guard, accepted)
+        self.assertIn('page.evaluate(ACTIVE_QA_DIALOG_JS,title)',
+                      caller[runtime:guard])
+        self.assertNotIn('context.request.post(', caller[session:accepted])
 
 
 if __name__ == "__main__":
