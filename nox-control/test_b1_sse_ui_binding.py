@@ -848,6 +848,46 @@ def main():
             precommits===2&&container.children.length===1&&
             posts===0&&acks===1;
         }'''))
+        check('reconnect ownership fences duplicate begin during GET and after STOP', page.evaluate('''async () => {
+          const s={conversation_id:'reconnect-begin-fence',exchange_id:'one'};
+          let release,reads=0,posts=0,acks=0;
+          const transport={...opts.transport,
+            async post(){posts++;throw Error('DUPLICATE_MODEL_POST')},
+            readback(){
+              reads++;
+              if(reads===1)return new Promise(resolve=>{release=resolve});
+              return Promise.resolve({...s});
+            },
+            async ack(){acks++;return true}
+          };
+          const ui={async onDelta(){},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,
+            reconnectReadTimeoutMs:3000
+          });
+          const pending=c.reconnect(s);
+          for(let i=0;i<30&&!release;i++)await new Promise(r=>setTimeout(r,0));
+          if(typeof release!=='function')return false;
+          // Old code accepted begin() here if readCommitted() returned null,
+          // causing a second model POST for the same ambiguous exchange.
+          const beforeStop=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          const stopped=c.stop(s);
+          const status=await Promise.race([
+            pending.then(()=>null,e=>e.code),
+            new Promise(r=>setTimeout(()=>r('HUNG'),400))
+          ]);
+          const afterStop=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          release({...s}); // stale GET must not ACK.
+          await new Promise(r=>setTimeout(r,0));
+          if(!beforeStop||!afterStop||!stopped||
+             status!=='HOLD_STREAM_RECONNECT_STOPPED'||
+             posts!==0||acks!==0)return false;
+          const restored=await c.reconnect(s);
+          return restored.safe_to_ack===true&&reads===2&&
+            posts===0&&acks===1;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
