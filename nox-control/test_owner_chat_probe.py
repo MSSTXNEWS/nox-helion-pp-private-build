@@ -439,6 +439,52 @@ class ProbeTests(unittest.TestCase):
                     probe.page_snapshot(response, expected_path='/chat')
                 self.assertTrue(response.closed)
 
+    def test_http_200_crossorigin_refresh_navigation_cannot_certify_chat_health(self):
+        """A foreign browser navigation is not a healthy local NOX web interface."""
+        class Response:
+            status = 200
+            url = 'http://127.0.0.1:8080/chat'
+            def __init__(self, refresh=None, meta=None):
+                self.headers = {'Content-Type': 'text/html'}
+                if refresh is not None:
+                    self.headers['Refresh'] = refresh
+                self.body = (b'<html><head>' + (meta or b'') + b'</head><body>NOX</body></html>')
+                self.closed, self.reads = False, 0
+            def read(self, size):
+                self.reads += 1
+                return self.body[:size]
+            def close(self):
+                self.closed = True
+
+        def meta(target):
+            return ('<meta http-equiv="refresh" content="0;url=' +
+                    target + '">').encode('utf-8')
+
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'):
+            bad_targets = (
+                'https://external.example/login', '//external.example/chat',
+                'javascript:alert(1)', 'data:text/html,not-nox',
+            )
+            for target in bad_targets:
+                for mode in ('meta', 'header'):
+                    with self.subTest(target=target, mode=mode):
+                        response = (Response(meta=meta(target)) if mode == 'meta'
+                                    else Response(refresh='0;url=' + target))
+                        with self.assertRaisesRegex(
+                                RuntimeError, '^HOLD_CHAT_CROSS_ORIGIN_REFRESH$'):
+                            probe.page_snapshot(response, expected_path='/chat')
+                        self.assertTrue(response.closed)
+                        self.assertEqual(response.reads, 1)
+            for target in ('/chat', 'http://127.0.0.1:8080/nox-web-v29/chat.html'):
+                for mode in ('meta', 'header'):
+                    with self.subTest(valid=target, mode=mode):
+                        response = (Response(meta=meta(target)) if mode == 'meta'
+                                    else Response(refresh='1;url=' + target))
+                        self.assertEqual(
+                            probe.page_snapshot(response, expected_path='/chat')[0], 200)
+                        self.assertTrue(response.closed)
+                        self.assertEqual(response.reads, 1)
+
     def test_authenticated_root_login_redirect_cannot_certify_web_health(self):
         """The permissive root route must not accept an auth/login page as home."""
         class Response:
