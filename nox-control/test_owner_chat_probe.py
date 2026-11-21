@@ -157,7 +157,7 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual(probe.require_stream_model_identity(
             {'type': 'done', 'model_id': 'GLM-5.3', 'modelId': 'GLM-5.3'},
             'GLM-5.3'), 'GLM-5.3')
-        for value in (None, '', True, 123, '   ', 'bad\\nroute'):
+        for value in (None, '', True, 123, '   ', 'bad' + chr(10) + 'route'):
             with self.subTest(invalid=value):
                 with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_MODEL_IDENTITY_INVALID'):
                     probe.require_stream_model_identity({'model': value})
@@ -182,7 +182,7 @@ class ProbeTests(unittest.TestCase):
             def __init__(self, rows):
                 self.rows, self.closed = rows, False
             def __iter__(self):
-                return iter(json.dumps(row).encode() + b'\\n' for row in self.rows)
+                return iter(json.dumps(row).encode() + bytes([10]) for row in self.rows)
             def close(self):
                 self.closed = True
 
