@@ -20,6 +20,7 @@ from owner_chat_browser_qa import (
     click_send,
     firstturn_history_valid,
     firstturn_prefix_identity_valid,
+    firstturn_session_continuity_valid,
     verified_two_turn_firstturn_ids,
     owner_session_cookie_pin,
     owner_session_continuity_valid,
@@ -372,6 +373,51 @@ async function check(chunks, status=200) {
             ["turn-0", "turn-1"], final_rows))
         self.assertFalse(firstturn_prefix_identity_valid(
             initial_ids, final_rows[:2]))
+
+    def test_first_to_second_ru_es_session_scope_does_not_rotate(self):
+        # Even homogeneous snapshots are unsafe if the first RU turn was
+        # saved in owner session A and the completed RU/ES history is session B.
+        # Exact row IDs and all four original UTF-8 texts remain unchanged.
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        final = [dict(row, message_id=f"durable-{index}")
+                 for index, row in enumerate(rows(es))]
+        first = [dict(row) for row in final[:2]]
+        scoped_first = [dict(row, session_id="owner-A") for row in first]
+        scoped_final = [dict(row, session_id="owner-A") for row in final]
+        self.assertTrue(firstturn_session_continuity_valid(first, final))
+        self.assertTrue(firstturn_session_continuity_valid(
+            scoped_first, scoped_final))
+        self.assertTrue(firstturn_history_valid(
+            {"messages": scoped_first}, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            scoped_final, RU, FIRST, es, LAST, dialog_id=DIALOG))
+        self.assertTrue(firstturn_prefix_identity_valid(
+            ("durable-0", "durable-1"), scoped_final))
+        self.assertFalse(firstturn_session_continuity_valid(
+            scoped_first, [dict(row, session_id="owner-B") for row in final]))
+        self.assertFalse(firstturn_session_continuity_valid(
+            scoped_first, final))  # Scoped to legacy unscoped rotation.
+        self.assertFalse(firstturn_session_continuity_valid(
+            first, scoped_final))  # Legacy to newly scoped rotation.
+        for bad in (None, "", " ", 17, True, "owner-A "):
+            with self.subTest(session_id=repr(bad)):
+                corrupted = [dict(row) for row in scoped_final]
+                corrupted[2]["session_id"] = bad
+                self.assertFalse(firstturn_session_continuity_valid(
+                    scoped_first, corrupted))
+        self.assertFalse(firstturn_session_continuity_valid(
+            scoped_first[:1], scoped_final))
+        self.assertFalse(firstturn_session_continuity_valid(
+            scoped_first, scoped_final[:2]))
+        # Callsite must gate the final browser-history pass itself;
+        # a helper tested but never called is not a physical correction.
+        caller = inspect.getsource(browser_run)
+        self.assertIn(
+            "and firstturn_session_continuity_valid(\n"
+            "                                  rows, second_rows)", caller)
+        self.assertLess(
+            caller.index("and firstturn_session_continuity_valid("),
+            caller.index("report['multiturn_browser_acceptance_verified']=True"))
 
     def test_second_ru_es_post_needs_two_persisted_firstturn_identities(self):
         # Matching role/text without two durable identities cannot admit POST 2.
