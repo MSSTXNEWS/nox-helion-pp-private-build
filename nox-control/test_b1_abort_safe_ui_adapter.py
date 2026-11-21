@@ -300,6 +300,58 @@ def main():
             rows[0].dataset.noxB1EventId==='canonical-reconnect-id'&&
             rows[0].textContent==='';
         }"""))
+        check("reconnect subscribed before old STOP retries same terminal exactly once",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'terminal-early-reconnect'};
+          const old=new AbortController(),fresh=new AbortController();
+          let entered=false,release,commits=0;
+          const hung=new Promise(resolve=>release=resolve);
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container:chat,
+            terminalTimeoutMs:1000,beforeCommit:async kind=>{
+              if(kind==='terminal'&&++commits===1){entered=true;await hung;}
+            }});
+          const first=ui.upsertTerminal(s,'event-reconnect-early',old.signal);
+          for(let i=0;i<30&&!entered;i++) await Promise.resolve();
+          if(!entered)return false;
+          // Unlike prior regression, reconnect is issued BEFORE STOP.
+          const second=ui.upsertTerminal(s,'event-reconnect-early',fresh.signal);
+          old.abort();
+          const results=await Promise.race([
+            Promise.all([first,second]),
+            new Promise(r=>setTimeout(()=>r('HUNG'),250))
+          ]);
+          release();await new Promise(r=>setTimeout(r,0));
+          const rows=Array.from(chat.children).filter(
+            x=>x.dataset.noxB1Exchange===s.exchange_id);
+          return Array.isArray(results)&&results[0]===false&&
+            results[1]===true&&commits===2&&rows.length===1&&
+            rows[0].dataset.noxB1EventId==='event-reconnect-early'&&
+            rows[0].dataset.noxB1State==='terminal';
+        }"""))
+        check("fresh STOP while reconnect waits prevents terminal DOM commit",page.evaluate("""async()=>{
+          const chat=document.querySelector('#chat');
+          const s={conversation_id:'dialog',exchange_id:'terminal-fresh-stop'};
+          const old=new AbortController(),fresh=new AbortController();
+          let entered=false,release;
+          const hung=new Promise(resolve=>release=resolve);
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container:chat,
+            terminalTimeoutMs:1000,beforeCommit:async kind=>{
+              if(kind==='terminal'){entered=true;await hung;}
+            }});
+          const first=ui.upsertTerminal(s,'event-fresh-stop',old.signal);
+          for(let i=0;i<30&&!entered;i++) await Promise.resolve();
+          if(!entered)return false;
+          const second=ui.upsertTerminal(s,'event-fresh-stop',fresh.signal);
+          fresh.abort();old.abort();
+          const results=await Promise.race([
+            Promise.all([first,second]),
+            new Promise(r=>setTimeout(()=>r('HUNG'),250))
+          ]);
+          release();await new Promise(r=>setTimeout(r,0));
+          return Array.isArray(results)&&results.every(x=>x===false)&&
+            !Array.from(chat.children).some(
+              x=>x.dataset.noxB1Exchange===s.exchange_id);
+        }"""))
         browser.close()
     print(f"B1 source-only real Chromium: {len(checks)}/{len(checks)} PASS")
     for name, _ in checks:
