@@ -62,5 +62,23 @@ P
   python3 /tmp/bench.py 8084
   echo "--old 4B:"; python3 /tmp/bench.py 8083 | tail -2
   ;;
+swap)
+  F=/root/nox/dl/hf/qwen35_9b/Qwen3.5-9B-Q4_K_M.gguf; LG=/root/nox/logs; BIN=/root/nox/llama.cpp/build/bin/llama-server
+  mkdir -p /root/nox/gpu_tier
+  cat > /root/nox/gpu_tier/fast_start.sh <<'P'
+#!/bin/bash
+# быстрый тир: Qwen3.5-9B Q4_K_M целиком на GPU, без размышлений, порт 8083
+pkill -f "port 8083"; pkill -f "port 8084"; sleep 2
+exec setsid /root/nox/llama.cpp/build/bin/llama-server -m /root/nox/dl/hf/qwen35_9b/Qwen3.5-9B-Q4_K_M.gguf --host 127.0.0.1 --port 8083 -c 12288 -ngl 99 -fa on --parallel 2 --jinja --chat-template-kwargs '{"enable_thinking":false}' --reasoning-budget 0 >> /root/nox/logs/fast_server.log 2>&1 < /dev/null
+P
+  chmod +x /root/nox/gpu_tier/fast_start.sh
+  nohup setsid /root/nox/gpu_tier/fast_start.sh > /dev/null 2>&1 < /dev/null &
+  for i in $(seq 1 40); do curl -s -m2 localhost:8083/health | grep -q ok && break; sleep 3; done
+  pgrep -af llama-server | cut -c1-150; nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader
+  python3 /tmp/bench.py 8083 | tail -3
+  echo "--gateway fast:"
+  curl -s -m60 localhost:8082/v1/chat/completions -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"Кто ты и что умеешь? Одной фразой."}],"nox_mode":"fast","max_tokens":80}' | head -c 500; echo
+  curl -s -m5 localhost:8082/v1/nox/stats | head -c 300
+  ;;
 *) echo unknown;;
 esac
