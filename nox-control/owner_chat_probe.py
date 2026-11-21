@@ -730,6 +730,29 @@ def require_cgroup_probe_headroom(
     return limit - current
 
 
+def require_logout_revoked(client):
+    """A positive chat probe requires an ACK and proof its owner session ended.
+
+    This is a bounded owner-only readback, NOT browser/S03 acceptance.
+    Reject redirected success and never count an HTTP error as logout.
+    """
+    response = request(client, '/chat/logout', 'POST', {})
+    try:
+        require_exact_owner_readback_target(response, '/chat/logout')
+        if response.status not in (200, 204):
+            raise RuntimeError('HOLD_OWNER_LOGOUT_NOT_ACKNOWLEDGED')
+    finally:
+        response.close()
+    # Reuse the same authenticated cookie jar; an active owner session must
+    # no longer read the protected API after logout. Anonymous 401 is already
+    # checked before any synthetic model POST.
+    with request(client, '/api/nox/status') as probe:
+        require_exact_owner_readback_target(probe, '/api/nox/status')
+        if probe.status != 401:
+            raise RuntimeError('HOLD_OWNER_LOGOUT_SESSION_ACTIVE')
+    return True
+
+
 def main():
     global BASE
     if os.environ.get('NOX_PROBE_NONLOOPBACK','1')=='1':BASE=nonloopback_base()
@@ -860,8 +883,15 @@ def main():
                 'verification_scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'}
         emit('chat_recent_timing_after',metrics())
     finally:
-        try:request(client,'/chat/logout','POST',{}).close()
-        except Exception:pass
+        if sys.exc_info()[0] is None:
+            # Success must not certify an unreleased owner session.
+            require_logout_revoked(client)
+        else:
+            # Keep the original HOLD; separately report failed cleanup.
+            try:
+                require_logout_revoked(client)
+            except Exception:
+                emit('chat_logout_cleanup_hold', {'reason':'HOLD_OWNER_LOGOUT_UNCONFIRMED'})
     # Logout/metrics are part of elapsed probe time; check immediately before COMPLETE.
     require_executor_turn_budget(time.monotonic()-probe_started)
     if executor_question_receipt is not None:
