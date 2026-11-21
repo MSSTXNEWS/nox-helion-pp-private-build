@@ -3,9 +3,12 @@
 run the reviewed agent-updater (branch u, file u) over SSH, then detach the key.
 No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
-INSTANCE = 60509551
+INSTANCE = 60509551  # S2 (США); S1 (Квебек) = 61825960, выбирается маркером #S1 в начале REMOTE
 KEY = os.environ["NOX2"]
 REMOTE = 'curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c73/inspect.sh -o /tmp/in.sh && bash /tmp/in.sh 2>&1 | tail -c 3000'
+
+if REMOTE.startswith("#S1"):
+    INSTANCE = 61825960
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
