@@ -94,11 +94,12 @@ class TestProbe(unittest.TestCase):
             for mode in ('normal', 'reduced')
         ]
         baseline = {
-            'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V5',
+            'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V6',
             'url_sha256': url_identity_sha256('http://127.0.0.1:8765/resonance.html'),
             'chromium_version_sha256': 'c' * 64,
             'sample_js': '90 consecutive real requestAnimationFrame intervals',
-            'synthetic_fixture': False, 'expected_selector_checked': True,
+            'synthetic_fixture': False, 'fixture_html_sha256': None,
+            'expected_selector_checked': True,
             'expected_selector_sha256': evidence_hash('#resonance'), 'landing_url_verified': True,
             'blocked_mutating_requests': 0, 'blocked_model_posts': 0,
             'blocked_model_read_requests': 0, 'blocked_websocket_connections': 0, 'service_workers_blocked': True,
@@ -106,6 +107,16 @@ class TestProbe(unittest.TestCase):
         }
         measured = copy.deepcopy(baseline)
         self.assertEqual(len(compare_baseline(measured, baseline)), 6)
+        for wrong_digest in ('f' * 64, '', False):
+            live_wrong = copy.deepcopy(measured)
+            live_wrong['fixture_html_sha256'] = wrong_digest
+            with self.subTest(live_digest=wrong_digest), self.assertRaisesRegex(
+                    ValueError, 'HOLD_BASELINE_UNEXPECTED_FIXTURE_HASH'):
+                compare_baseline(live_wrong, live_wrong)
+        missing_live = copy.deepcopy(measured)
+        missing_live.pop('fixture_html_sha256')
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_UNEXPECTED_FIXTURE_HASH'):
+            compare_baseline(missing_live, missing_live)
         # Both files may carry the same malformed 'synthetic' value. Before
         # this fence the truthy string "false" bypassed every live guard.
         for malformed in ('false', 'true', 0, 1, None):
@@ -199,7 +210,22 @@ class TestProbe(unittest.TestCase):
         synthetic = copy.deepcopy(measured)
         synthetic['synthetic_fixture'] = True
         synthetic['landing_url_verified'] = False
+        synthetic['fixture_html_sha256'] = evidence_hash('<main>fixture-A</main>')
         self.assertEqual(len(compare_baseline(synthetic, synthetic)), 6)
+        changed_fixture = copy.deepcopy(synthetic)
+        changed_fixture['fixture_html_sha256'] = evidence_hash('<main>fixture-B</main>')
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_FIXTURE_DRIFT'):
+            compare_baseline(synthetic, changed_fixture)
+        for invalid_hash in (None, '', 'not-digest', 'F' * 64, True):
+            invalid_fixture = copy.deepcopy(synthetic)
+            invalid_fixture['fixture_html_sha256'] = invalid_hash
+            with self.subTest(fixture_hash=invalid_hash), self.assertRaisesRegex(
+                    ValueError, 'HOLD_BASELINE_FIXTURE_HASH_MISSING'):
+                compare_baseline(invalid_fixture, invalid_fixture)
+        missing_fixture = copy.deepcopy(synthetic)
+        missing_fixture.pop('fixture_html_sha256')
+        with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_FIXTURE_HASH_MISSING'):
+            compare_baseline(missing_fixture, missing_fixture)
         with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_PROVENANCE_MISMATCH'):
             compare_baseline(measured, synthetic)
 
@@ -264,9 +290,7 @@ class TestProbe(unittest.TestCase):
             evidence_dir = pathlib.Path(tmp) / 'first_probe'
             secret_url = 'http://127.0.0.1:8765/resonance.html?auth=SECRET_URL_ABC#/resonance'
             secret_selector = '#resonance[data-session="SECRET_SELECTOR_XYZ"]'
-            result = measure(secret_url, str(evidence_dir),
-                chromium='/usr/bin/chromium', expected_selector=secret_selector,
-                fixture_html=(
+            fixture_html = (
                     '<html><body><main id="resonance" data-session="SECRET_SELECTOR_XYZ">NOX synthetic local page</main>'
                     '<script>fetch("https://example.invalid/api/nox/chat",'
                     '{method:"POST",body:"x"}).catch(()=>{});'
@@ -276,7 +300,11 @@ class TestProbe(unittest.TestCase):
                     'fetch("https://example.invalid/nox%2Fchat/stream",{method:"HEAD"}).catch(()=>{});'
                     'try{const ws=new WebSocket("wss://example.invalid/nox/stream");'
                     'ws.onerror=()=>{};}catch(e){}'
-                    '</script></body></html>'))
+                    '</script></body></html>')
+            result = measure(secret_url, str(evidence_dir),
+                chromium='/usr/bin/chromium', expected_selector=secret_selector,
+                fixture_html=fixture_html)
+            self.assertEqual(result['fixture_html_sha256'], evidence_hash(fixture_html))
             self.assertEqual(len(result['runs']), 6)
             self.assertEqual(result['blocked_mutating_requests'], 6)
             self.assertEqual(result['blocked_model_posts'], 6)
@@ -306,7 +334,7 @@ class TestProbe(unittest.TestCase):
             self.assertEqual(result['url_sha256'], url_identity_sha256(secret_url))
             self.assertEqual(result['expected_selector_sha256'], evidence_hash(secret_selector))
             self.assertEqual(json.loads(report_text)['schema'],
-                'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V5')
+                'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V6')
 
 
 if __name__ == '__main__':
