@@ -2514,5 +2514,59 @@ class FinalWorkerCensusSuccessFence(unittest.TestCase):
         self.assertNotIn("native_workers_readback_error", scope["result"])
 
 
+
+class BoostInstalledReceiptDuplicateFence(unittest.TestCase):
+    def test_ambiguous_native_install_evidence_never_admits_training(self):
+        """Run real boost_pins() AST without Supervisor, trainer or GPU."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        fun = next(node for node in tree.body
+                   if isinstance(node, ast.FunctionDef) and node.name == "boost_pins")
+        pinned = {Path("/root/nox/scripts/owner-a.py"): "a" * 64,
+                  Path("/root/nox/scripts/owner-b.py"): "b" * 64}
+        scope = {"BOOST_PINS": pinned, "BOOST_REQUEST": "6903121842",
+                 "BOOST_SOURCE": "3b964f6c9861ca89437aa158b912dc9686e99cb6"}
+        exec(compile(ast.Module(body=[fun], type_ignores=[]), str(SOURCE), "exec"), scope)
+        verify = scope["boost_pins"]
+        good = {
+            "schema": "NOX_OWNER_OPTIMIZE_HYBRID_V1",
+            "request": scope["BOOST_REQUEST"],
+            "source_sha": scope["BOOST_SOURCE"],
+            "state": "TASK_BOOST_SIX_NATIVE_WORKERS_ACTIVE_TRAINING_PAUSED",
+            "hold_retained": True, "training_started": False,
+            "steps": [
+                {"kind": "source_installed", "data": {"path": str(path), "after": sha}}
+                for path, sha in pinned.items()
+            ],
+        }
+        self.assertEqual(verify(copy.deepcopy(good)), pinned)
+        # Both directions of the duplicate matter: last-write-wins is unsafe.
+        a = str(next(iter(pinned)))
+        contradicted = {"kind": "source_installed",
+                        "data": {"path": a, "after": "0" * 64}}
+        for extra in (
+            [contradicted, *good["steps"]],
+            [*good["steps"], contradicted],
+            [good["steps"][0], *good["steps"]],
+        ):
+            with self.subTest(extra=repr(extra)):
+                receipt = copy.deepcopy(good)
+                receipt["steps"] = extra
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_BOOST_INSTALLED_RECEIPT_MISMATCH"):
+                    verify(receipt)
+        for steps in (None, {}, "installed", [None], [["not-a-row"]],
+                      [{"kind": "source_installed"}],
+                      [{"kind": "source_installed", "data": []}],
+                      [{"kind": "source_installed", "data": {"path": a}}],
+                      [{"kind": "source_installed",
+                        "data": {"path": a, "after": True}}]):
+            with self.subTest(malformed=repr(steps)):
+                receipt = copy.deepcopy(good)
+                receipt["steps"] = steps
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_BOOST_INSTALLED_RECEIPT_MISMATCH"):
+                    verify(receipt)
+
+
 if __name__ == "__main__":
     unittest.main()
