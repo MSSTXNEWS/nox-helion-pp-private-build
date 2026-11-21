@@ -1233,7 +1233,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         # A million Cyrillic characters fit the previous character count but
         # exceed the 2MB UTF-8 wire/S03 cap. No success audit can precede HOLD.
         for label, outcome in (('utf8_overflow', 'Ж' * 1000001),
-                               ('invalid_unicode', 'broken'+chr(0xD800)):
+                               ('invalid_unicode', 'broken'+chr(0xD800))):
             for route in ('direct', 'media'):
                 with self.subTest(label=label, route=route):
                     native=self.native(result={'ok':True, 'text':outcome})
