@@ -2477,7 +2477,8 @@ class FinalWorkerCensusSuccessFence(unittest.TestCase):
                     if isinstance(node, ast.FunctionDef) and node.name == "main")
         census_tries = [node for node in ast.walk(main)
                         if isinstance(node, ast.Try)
-                        and "native_workers_readback_error" in ast.unparse(node)]
+                        and any("native_workers_readback_error" in ast.unparse(handler)
+                                for handler in node.handlers)]
         self.assertEqual(len(census_tries), 1)
         isolated = compile(ast.fix_missing_locations(ast.Module(
             body=[copy.deepcopy(census_tries[0])], type_ignores=[])),
