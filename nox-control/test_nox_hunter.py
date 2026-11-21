@@ -284,7 +284,7 @@ class HunterURLSafetyTests(unittest.TestCase):
                 conn.commit()
                 sql = []
                 conn.set_trace_callback(sql.append)
-                with patch.object(hunter, "build_opener") as opener, \\
+                with patch.object(hunter, "build_opener") as opener, \
                      patch.object(hunter, "_parse", return_value=[]):
                     opener.return_value.open.return_value = FreshResponse()
                     first = hunter._poll_one(conn, source, 1000, 1024)
