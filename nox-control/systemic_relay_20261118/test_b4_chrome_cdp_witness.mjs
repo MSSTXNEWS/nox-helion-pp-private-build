@@ -748,3 +748,36 @@ test('multi-turn causal boundary rejects overlapping POSTs, missing terminal and
   assert.equal(malformed.cdp_consistent,false);
   assert.equal(malformed.ttft_sse_verified,false);
 });
+
+test('decoded SSE output cadence counts codepoints and event gaps, never invented tokens or lossy Unicode',async()=>{
+  const printable='Привет 🐈';
+  const tail='! За';
+  const partA='data: '+JSON.stringify({choices:[{delta:{content:printable}}]})+'\n\n';
+  const partB='data: '+JSON.stringify({choices:[{delta:{content:tail}}]})+'\n\n'+
+    'data: '+JSON.stringify({choices:[{delta:{},finish_reason:'stop'}]})+'\n\n'+
+    'data: [DONE]\n\n';
+  const result=await run(false,[Buffer.from(partA),Buffer.from(partB)],null,null,{
+    chunkTimestamps:[101.01,101.016]
+  });
+  assert.equal(result.cdp_consistent,true);
+  assert.equal(result.ttft_sse_verified,true);
+  const second=result.turns[1];
+  const codepoints=[...printable,...tail].length;
+  assert.equal(second.sse_text_event_count,2);
+  assert.equal(second.sse_output_codepoints,codepoints);
+  assert.equal(second.sse_text_event_gap_p95_ms,6);
+  assert.equal(second.sse_output_window_ms,6);
+  assert.equal(second.sse_codepoints_per_second,Math.round(codepoints*10000/6)/10);
+  assert.equal(result.turns[0].sse_text_event_gap_p95_ms,null);
+  assert.doesNotMatch(JSON.stringify(result),/Привет|🐈|secret/);
+  // Escaped JSON allows a lone surrogate. It must not silently hash or count U+FFFD.
+  const broken='data: '+JSON.stringify({choices:[{delta:{content:'\\uD800'}}]})+'\n\n'+
+    'data: '+JSON.stringify({choices:[{delta:{},finish_reason:'stop'}]})+'\n\n'+
+    'data: [DONE]\n\n';
+  const rejected=await run(false,[Buffer.from(broken)]);
+  assert.equal(rejected.cdp_consistent,false);
+  assert.equal(rejected.ttft_sse_verified,false);
+  assert.equal(rejected.turns[1].sse_output_codepoints,null);
+  assert.equal(rejected.turns[1].sse_text_event_gap_p95_ms,null);
+  assert.equal(rejected.turns[1].sse_codepoints_per_second,null);
+});
