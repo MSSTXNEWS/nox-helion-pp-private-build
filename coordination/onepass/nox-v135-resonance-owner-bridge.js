@@ -144,7 +144,14 @@
         if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
         throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
       }
-      if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
+      if(e.type==='error'){
+        // Native error frames may carry {error:{code:"HOLD_*"}}.
+        // Do not disguise a real owner/resource/lease blocker as [object Object].
+        const code=typeof e.error==='string'?e.error:
+          typeof e.error?.code==='string'?e.error.code:'ERROR';
+        if(!validUnicodeScalars(code))throw Error('HOLD_NATIVE_FRAME_UNICODE');
+        throw Error('HOLD_NATIVE_'+(code.trim()||'ERROR').slice(0,90));
+      }
       if(e.type==='delta'){
         if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
         if(doneSeen||typeof e.text!=='string'||answer.length+e.text.length>MAX)throw Error('HOLD_NATIVE_DELTA');
