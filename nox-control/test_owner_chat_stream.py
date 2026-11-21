@@ -383,19 +383,30 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
              'HOLD_TOOL_CALL_SHAPE'),
             ([{'id':'bad\nreceipt','name':'calculate','arguments':{}}],
              'HOLD_TOOL_CALL_ID_SIZE'),
+            # Native heuristic IDs and names are bounded by UTF-8 bytes.
+            ([{'id':'🌍'*41,'name':'calculate','arguments':{}}],
+             'HOLD_TOOL_CALL_ID_SIZE'),
+            ([{'id':'valid','name':'🌍'*51,'arguments':{}}],
+             'HOLD_TOOL_CALL_SHAPE'),
         ]
         for rows,expected in cases:
-            with self.subTest(expected=expected,rows=rows):
-                native=self.native(heuristic=rows)
-                payload={'messages':[{'role':'user','content':'calculate'}]}
-                with patch.object(stream.httpx,'AsyncClient',
-                                  side_effect=AssertionError('no model POST permitted')):
-                    response=await native['owner_completion'](
-                        'http://native/model',payload,'calculate',False)
-                self.assertEqual(response.status_code,502)
-                self.assertEqual(json.loads(response.body)['error']['code'],expected)
-                self.assertEqual(self.dispatched,[])
-                self.assertNotIn('_agent_final',payload)
+            for streaming in (False,True):
+                with self.subTest(expected=expected,rows=rows,streaming=streaming):
+                    native=self.native(heuristic=rows)
+                    payload={'messages':[{'role':'user','content':'calculate'}]}
+                    with patch.object(stream.httpx,'AsyncClient',
+                                      side_effect=AssertionError('no model POST permitted')):
+                        response=await native['owner_completion'](
+                            'http://native/model',payload,'calculate',streaming)
+                        if streaming:
+                            wire=''.join([part async for part in response.body_iterator])
+                            self.assertIn(expected,wire)
+                            self.assertNotIn('[DONE]',wire)
+                        else:
+                            self.assertEqual(response.status_code,502)
+                            self.assertEqual(json.loads(response.body)['error']['code'],expected)
+                    self.assertEqual(self.dispatched,[])
+                    self.assertNotIn('_agent_final',payload)
 
     async def test_nonstream_reports_exact_hold_without_certifying_s03(self):
         # The ordinary JSON route must retain a known pre-model rejection,

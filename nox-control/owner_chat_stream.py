@@ -503,9 +503,10 @@ def _normal_calls(rows,step):
         name=row.get('name')
         # Heuristic/direct calls never pass through the streamed model parser.
         # Reject malformed tool identities at their shared native boundary.
-        if (type(name) is not str or not 1<=len(name)<=200 or
+        if (type(name) is not str or not name or
                 any(ord(char)<32 or 127<=ord(char)<=159 or
-                    0xD800<=ord(char)<=0xDFFF for char in name)):
+                    0xD800<=ord(char)<=0xDFFF for char in name) or
+                len(name.encode('utf-8','strict'))>200):
             raise StreamFailure('HOLD_TOOL_CALL_SHAPE')
         args=row.get('arguments')
         # Missing/null or a blank native argument string means no arguments.
@@ -529,9 +530,10 @@ def _normal_calls(rows,step):
         # Native parser / deterministic routes share the same bounded ID rule.
         call_id=row.get('id')
         if call_id is not None and (type(call_id) is not str or
-                not 1<=len(call_id)<=160 or
+                not call_id or
                 any(ord(char)<32 or 127<=ord(char)<=159 or
-                    0xD800<=ord(char)<=0xDFFF for char in call_id)):
+                    0xD800<=ord(char)<=0xDFFF for char in call_id) or
+                len(call_id.encode('utf-8','strict'))>160):
             raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
         effective_id=call_id if call_id is not None else f'owner_call_{step}_{index}'
         # Duplicate native IDs can double-execute a side effect yet give S03
