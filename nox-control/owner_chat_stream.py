@@ -518,7 +518,7 @@ async def _run(native,url,payload,user_text):
                 unchanged=dict(system,content=initial.get('content'))
                 if canonical(unchanged)!=canonical(initial):
                     raise ValueError('evidence changed system metadata')
-                prefix=str(initial.get('content') or '')+'\\n\\n'
+                prefix=str(initial.get('content') or '')+'\n\n'
                 if type(system.get('content')) is not str or not system['content'].startswith(prefix):
                     raise ValueError('evidence replaced system content')
             elif type(system.get('content')) is not str or not system['content'].strip():
