@@ -304,6 +304,40 @@ def stable_second_turn_quiescence(before, after, admitted, native_answer_equal):
 
 
 
+def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, firstturn_ids):
+    """Pin four persisted row identities and exact RU/ES text after quiescence.
+
+    Owner-scoped dialog history is NOT canonical S03. Private IDs/text never
+    enter a public QA report: only this boolean attestation is recorded.
+    """
+    if (not isinstance(before, dict) or not isinstance(after, dict)
+            or not isinstance(dialog_id, str) or not dialog_id.strip()
+            or not isinstance(transcript_sha, str)
+            or re.fullmatch(r'[0-9a-f]{64}', transcript_sha) is None):
+        return False
+    pinned_ids = None
+    for history in (before, after):
+        if 'dialog_id' in history and history['dialog_id'] != dialog_id:
+            return False
+        rows = history.get('messages')
+        if (not isinstance(rows, list) or len(rows) != 4
+                or not all(isinstance(row, dict) for row in rows)
+                or any('dialog_id' in row and row['dialog_id'] != dialog_id
+                       for row in rows)
+                or not firstturn_prefix_identity_valid(firstturn_ids, rows)
+                or multiturn_transcript_sha256(rows) != transcript_sha):
+            return False
+        ids = tuple(row.get('message_id') for row in rows)
+        if (any(not isinstance(mid, str) or not mid.strip() or mid != mid.strip()
+                for mid in ids)
+                or len(set(ids)) != 4):
+            return False
+        if pinned_ids is not None and ids != pinned_ids:
+            return False
+        pinned_ids = ids
+    return pinned_ids is not None
+
+
 def distinct_explicit_message_ids(rows):
     """Optional row IDs must not claim multiple distinct turns with one identity.
 
@@ -1492,6 +1526,17 @@ async def browser_run(report, directory, available):
                         second_final, quiet_snapshot, stream_admitted, quiet_native_equal):
                     raise RuntimeError('HOLD_MULTITURN_POSTTERMINAL_QUIESCENCE')
                 report['multiturn_postterminal_quiescence_verified']=True
+                # The first four-row history read predates the screenshot and
+                # quiescence. Re-read only owner history, never generate again.
+                report['browser_stage']='QA_POSTQUIET_PERSISTED_HISTORY'
+                postquiet_history=await json_response(await context.request.get(
+                    base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
+                    max_redirects=0,timeout=6000))
+                if not postquiet_fourrow_history_stable(
+                        second_history, postquiet_history, did,
+                        browser_transcript_sha, firstturn_id_snapshot):
+                    raise RuntimeError('HOLD_MULTITURN_POSTQUIET_HISTORY_CHANGED')
+                report['multiturn_postquiet_history_verified']=True
                 # Signed session proof above predates history read and
                 # private screenshot. Rotate/expire during either? Fail closed.
                 # Only this extra read-only GET; no model generation request.
