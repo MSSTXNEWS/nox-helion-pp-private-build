@@ -1434,6 +1434,8 @@ test('6A05 native NDJSON structured HOLD stays exact for JSON and SSE without S0
       let historyReads=0;
       const w={NOX_NATIVE_OWNER:true,fetch:async path=>{
         const u=new URL(String(path),'https://nox.local');
+        if(u.pathname==='/api/ui/memory/dialogs/create')
+          return Response.json({dialog_id:id});
         if(u.pathname==='/api/ui/memory/dialogs/history'){
           historyReads++;
           assert.fail('unverified error must not read or certify S03');
@@ -1448,7 +1450,9 @@ test('6A05 native NDJSON structured HOLD stays exact for JSON and SSE without S0
         origin:'https://nox.local',href:'https://nox.local/nox-web-v29/pc/resonance.html'};
       vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
         TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,clearTimeout});
-      const request={message:prompt,dialog_id:id,...(streamed?{request_id:'6a05-error'}:{})};
+      const request=streamed
+        ?{message:prompt,dialog_id:id,request_id:'6a05-error'}
+        :{message:prompt};
       const response=await w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify(request)});
       if(streamed){
         const out=await events(response);
