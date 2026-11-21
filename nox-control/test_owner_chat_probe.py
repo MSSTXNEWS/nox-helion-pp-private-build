@@ -499,6 +499,44 @@ class ProbeTests(unittest.TestCase):
                             {'saved': True, 's03_integrated': True},
                             history, turns, True, True, did)
 
+    def test_history_row_ids_are_unique_across_api_alias_fields(self):
+        """Cross-field aliases cannot make two saved rows look independent."""
+        did = 'e' * 32
+        turns = [('first', '323'), ('second', '323'), ('third', '3 плюс NOX')]
+        rows = [
+            {'role': role, 'content': content, 'id': 'row-' + str(index)}
+            for index, (role, content) in enumerate((
+                ('user', 'first'), ('assistant', '323'),
+                ('user', 'second'), ('assistant', '323'),
+                ('user', 'third'), ('assistant', '3 плюс NOX')))
+        ]
+        # Multiple aliases on the SAME row are legitimate.
+        rows[0]['message_id'] = rows[0]['id']
+        rows[0]['s03_id'] = rows[0]['id']
+        self.assertTrue(probe.scoped_history_matches_turns(
+            {'dialog_id': did, 'messages': rows}, turns, did))
+        for alias in ('id', 'message_id', 's03_id'):
+            poisoned = [dict(row) for row in rows]
+            poisoned[1].pop('id')
+            poisoned[1][alias] = rows[0]['id']
+            with self.subTest(alias=alias):
+                history = {'dialog_id': did, 'messages': poisoned}
+                self.assertFalse(probe.scoped_history_matches_turns(
+                    history, turns, did))
+                with self.assertRaisesRegex(
+                        RuntimeError, 'HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED'):
+                    probe.require_executor_witness(
+                        {'saved': True, 's03_integrated': True},
+                        history, turns, True, True, did)
+        # An integer/string rendering of the same ID is not a new row.
+        numbers = [dict(row) for row in rows]
+        numbers[0]['id'] = 42
+        numbers[0]['message_id'] = '42'
+        numbers[0]['s03_id'] = 42
+        numbers[1]['id'] = '42'
+        self.assertFalse(probe.scoped_history_matches_turns(
+            {'dialog_id': did, 'messages': numbers}, turns, did))
+
     def test_third_turn_owner_witness_uses_live_executor_count(self):
         """A truthful 3-worker owner must not be rejected by a stale 6-worker assertion."""
         for count in (3, 6):
