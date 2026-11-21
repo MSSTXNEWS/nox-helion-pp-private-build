@@ -726,19 +726,26 @@ def prove_existing_training(helper):
     A followup may attach while Supervisor still reports STARTING. This is
     observation only: never issue another start or mutate the existing process.
     """
-    status = helper.service_state()
-    if status['state'] == 'STARTING':
+    def read_state():
+        # Malformed Supervisor status is never evidence of an active trainer.
+        status = helper.service_state()
+        if type(status) is not dict or type(status.get('state')) is not str:
+            raise RuntimeError('HOLD_EXISTING_TRAINER_STATUS_READBACK')
+        return status['state']
+
+    state = read_state()
+    if state == 'STARTING':
         deadline = time.monotonic() + 15
-    while status['state'] == 'STARTING':
+    while state == 'STARTING':
         if global_stop():
             raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
         if time.monotonic() >= deadline:
             raise RuntimeError('HOLD_EXISTING_TRAINER_START_TIMEOUT')
         time.sleep(0.5)
-        status = helper.service_state()
+        state = read_state()
     if global_stop():
         raise RuntimeError('HOLD_GLOBAL_STOP_REMAINS')
-    if status['state'] != 'RUNNING':
+    if state != 'RUNNING':
         raise RuntimeError('HOLD_EXISTING_TRAINER_NOT_RUNNING')
     return prove_training(helper)
 

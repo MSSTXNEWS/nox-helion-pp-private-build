@@ -1375,7 +1375,7 @@ class CheckpointStepProvenance(unittest.TestCase):
             def service_state():
                 state = next(state_iter, states[-1])
                 events.append(state)
-                return {"state": state}
+                return {"state": state} if type(state) is str else state
             def global_stop():
                 return next(stop_iter, False)
             def monotonic():
@@ -1414,6 +1414,22 @@ class CheckpointStepProvenance(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "HOLD_GLOBAL_STOP_REMAINS"):
             check(service)
         self.assertFalse(proofs)
+        # Transient malformed Supervisor readback must HOLD before accepting
+        # a followup, both on the first read and after a STARTING poll.
+        malformed = (None, [], {}, {"pid": 37}, {"state": None},
+                     {"state": []}, {"state": False},
+                     {"state": {"nested": "RUNNING"}})
+        for value in malformed:
+            for sequence in ([value], ["STARTING", value]):
+                with self.subTest(reply=repr(value), after_starting=len(sequence) == 2):
+                    check, service, proofs, _ = scenario(sequence)
+                    with self.assertRaisesRegex(
+                            RuntimeError, "HOLD_EXISTING_TRAINER_STATUS_READBACK"):
+                        check(service)
+                    self.assertFalse(proofs)
+        check, service, proofs, _ = scenario(["STARTING", "RUNNING"])
+        self.assertEqual(check(service), {"pid": 731})
+        self.assertEqual(proofs, ["RUNNING"])
 
 
     def test_initial_controller_render_and_install_pin_original_preimage(self):
