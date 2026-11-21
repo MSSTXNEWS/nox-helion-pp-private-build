@@ -315,7 +315,7 @@ def main():
           const row=k=>nodes.find(e=>e.dataset.noxB1Exchange===k);
           return same==='STREAM_ENDED_READBACK_REQUIRED' &&
             conflict==='HOLD_STREAM_POST_OR_READ' &&
-            malformed==='HOLD_STREAM_POST_OR_READ' &&
+            malformed==='HOLD_STREAM_DELTA_EVENT_ID' &&
             posts===3 && acks===0 && commits===2 &&
             nodes.length===2 && row('same')?.textContent==='ONE' &&
             row('conflict')?.textContent==='SAFE' && !row('malformed');
