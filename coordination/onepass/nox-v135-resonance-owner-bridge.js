@@ -169,7 +169,7 @@
      startSeen=true;
      if(Object.prototype.hasOwnProperty.call(e,'model')&&
        (typeof e.model!=='string'||!e.model.trim()||e.model!==e.model.trim()||
-        e.model.length>96||/[\x00-\x1F\x7F]/.test(e.model)))
+        e.model.length>96||/[\x00-\x1F\x7F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/.test(e.model)))
        throw Error('HOLD_NATIVE_MODEL_START_LABEL');
      nativeModel=e.model||'UNKNOWN';
    } else if(e.type==='preparing') {
@@ -204,7 +204,7 @@
  }
  function sseChat(data,signal) {
  let closed=false;const started=performance.now();let firstVisibleMs=null;
- let lastNativePhase=null; // Phase transitions, not every token, notify the UI.
+ let lastNativePhase=null;
  const upstreamAbort=new AbortController();
  const onAbort=()=>upstreamAbort.abort();
  if(signal?.aborted)upstreamAbort.abort();
