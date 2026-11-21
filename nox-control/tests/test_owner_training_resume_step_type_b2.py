@@ -11,6 +11,7 @@ import math
 import os
 from pathlib import Path
 import re
+import shlex
 import stat
 import tempfile
 import types
@@ -21,7 +22,7 @@ from unittest import mock
 SOURCE = Path(__file__).resolve().parents[1] / "owner_training_resume.py"
 FN_NAMES = {"read_json", "file_sha", "verify_paused_result", "resource_admission",
             "continuation_terminal_state", "read_installed_train_cpu_cap",
-            "owned_flag"}
+            "owned_flag", "stop_controller"}
 
 
 def load_pinned_verifier(output):
@@ -32,7 +33,7 @@ def load_pinned_verifier(output):
         raise AssertionError("HOLD_EXACT_OWNER_VERIFIER_MISSING")
     namespace = {
         "Path": Path, "hashlib": hashlib, "json": json, "math": math,
-        "os": os, "stat": stat,
+        "os": os, "shlex": shlex, "stat": stat,
         "re": re, "OUTPUT": output, "STATE": output,
         "STOPPED": ("STOPPED", "EXITED", "FATAL"),
         "global_stop": lambda: False, "lease_free": lambda: True,
@@ -162,6 +163,57 @@ class CheckpointStepProvenance(unittest.TestCase):
                     with self.assertRaisesRegex(
                             RuntimeError, "HOLD_PAUSED_OPTIMIZER_RECEIPT"):
                         check(helper, {**receipt, "loss": invalid_loss})
+
+
+    def test_stop_controller_state_shape_and_pid_guard_before_supervisor_stop(self):
+        # Isolated AST function: no real Supervisor command, worker, or STOP.
+        stop = load_pinned_verifier(Path("/tmp"))["stop_controller"]
+        script = Path("/root/nox/scripts/nox_dispatcher_t855u.py")
+        name = "nox-dispatcher-t855u"
+        malformed = (
+            (None, "HOLD_EXPECTED_CONTROLLER_NOT_RUNNING"),
+            ([], "HOLD_EXPECTED_CONTROLLER_NOT_RUNNING"),
+            ({}, "HOLD_EXPECTED_CONTROLLER_NOT_RUNNING"),
+            ({"state": "STOPPED"}, "HOLD_EXPECTED_CONTROLLER_NOT_RUNNING"),
+            ({"state": True}, "HOLD_EXPECTED_CONTROLLER_NOT_RUNNING"),
+            ({"state": "RUNNING"}, "HOLD_CONTROLLER_IDENTITY"),
+            ({"state": "RUNNING", "pid": None}, "HOLD_CONTROLLER_IDENTITY"),
+            ({"state": "RUNNING", "pid": True}, "HOLD_CONTROLLER_IDENTITY"),
+            ({"state": "RUNNING", "pid": False}, "HOLD_CONTROLLER_IDENTITY"),
+            ({"state": "RUNNING", "pid": 0}, "HOLD_CONTROLLER_IDENTITY"),
+            ({"state": "RUNNING", "pid": -3}, "HOLD_CONTROLLER_IDENTITY"),
+            ({"state": "RUNNING", "pid": "321"}, "HOLD_CONTROLLER_IDENTITY"),
+            ({"state": "RUNNING", "pid": [321]}, "HOLD_CONTROLLER_IDENTITY"),
+        )
+        for snapshot, reason in malformed:
+            with self.subTest(snapshot=snapshot):
+                helper = types.SimpleNamespace(
+                    service_state=lambda _name, value=snapshot: value,
+                    program_config=lambda _name: self.fail(
+                        "malformed supervisor snapshot reached config"),
+                    process=lambda _pid: self.fail(
+                        "malformed supervisor snapshot reached process"),
+                    command=lambda *args: self.fail(
+                        "malformed supervisor snapshot sent stop"),
+                )
+                with self.assertRaisesRegex(RuntimeError, reason):
+                    stop(helper, name, script)
+
+        # A valid positive PID still reaches the existing checked stop path.
+        stopped = []
+        helper = types.SimpleNamespace(
+            service_state=lambda _name: {
+                "state": "STOPPED" if stopped else "RUNNING", "pid": 321},
+            program_config=lambda _name: {
+                "command": "python " + str(script),
+                "stopasgroup": "false", "killasgroup": "false"},
+            process=lambda _pid: {
+                "service": name, "argv": ["python", str(script)], "pgrp": 321},
+            command=lambda argv, timeout: (
+                (stopped.append(list(argv)) or 0), "stopped"),
+        )
+        self.assertIsNone(stop(helper, name, script))
+        self.assertEqual(stopped, [["supervisorctl", "stop", name]])
 
 
     def test_owner_pause_at_target_never_claims_completed_continuation(self):
