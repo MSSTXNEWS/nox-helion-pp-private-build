@@ -260,12 +260,17 @@
       // Retrying remains GET-only and uses the SAME immutable event ID; the
       // UI adapter MUST implement an idempotent upsert and fence late commits.
       // This timeout cannot undo arbitrary uncooperative UI side effects.
+      // The abort-safe DOM adapter already accepts a signal, but previous
+      // reconnect timeouts did not supply one: a late beforeCommit could
+      // mutate the DOM after HOLD. Fence both the await and the DOM commit.
+      const projectionCtrl=new AbortController();
       let projected;
       try{
         projected=await boundedRead(
-          ()=>ui.upsertTerminal(s,witness.projection_event_id),
+          ()=>ui.upsertTerminal(s,witness.projection_event_id,projectionCtrl.signal),
           'HOLD_STREAM_UI_PROJECTION_TIMEOUT',uiProjectionTimeoutMs);
       }catch(err){
+        projectionCtrl.abort();
         if(err&&err.code==='HOLD_STREAM_UI_PROJECTION_TIMEOUT') throw err;
         hold('HOLD_STREAM_UI_PROJECTION');
       }
