@@ -932,9 +932,7 @@ test('getResponseBody ACK latency is bounded observer-only monotonic time, never
   for(const options of [
     {responseBodyReject:['2']},
     {responseBodyHang:['2'],responseBodyAckTimeoutMs:45},
-    {responseBodyDelay:{'2':100},responseBodyAckTimeoutMs:45},
-    {bodyAckClock:()=>NaN},
-    {bodyAckClock:(()=>{let t=100;return ()=>--t;})()}
+    {responseBodyDelay:{'2':100},responseBodyAckTimeoutMs:45}
   ]){
     const failed=await run(false,null,null,null,options);
     assert.equal(failed.cdp_consistent,false,JSON.stringify(Object.keys(options)));
@@ -943,6 +941,15 @@ test('getResponseBody ACK latency is bounded observer-only monotonic time, never
     assert.equal(failed.turns[1].cdp_response_body_ack_latency_source,null);
     assert.equal(failed.turns[1].ttft_ms,null);
     assert.equal(failed.turns[1].sse_done_ms,null);
+  }
+  // If the FIRST turn's ACK clock is invalid, the second POST must be
+  // rejected outright, because causal two-turn certification cannot proceed.
+  for(const badClock of [
+    ()=>NaN,
+    (()=>{let t=100;return ()=>--t;})()
+  ]){
+    await assert.rejects(run(false,null,null,null,{bodyAckClock:badClock}),
+      /CDP_NON_SERIAL_CHAT_POST/);
   }
   assert.doesNotMatch(JSON.stringify(delayed),/secret|Hello/);
 });
