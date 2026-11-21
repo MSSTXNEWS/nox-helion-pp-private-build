@@ -61,21 +61,37 @@
     // projections for the very same exchange (duplicate-turn risk).
     let shared=containerStates.get(container);
     if(!shared){
-      shared={deltaTails:new Map(),terminalIntents:new Map()};
+      shared={deltaTails:new Map(),terminalIntents:new Map(),deltaEvents:new Map()};
       containerStates.set(container,shared);
     }
-    const {deltaTails,terminalIntents}=shared;
+    const {deltaTails,terminalIntents,deltaEvents}=shared;
     // Reserve terminal intent synchronously, before any async precommit.
     // Earlier queued deltas drain FIFO across *all* adapters of this container.
-    async function onDelta(raw,delta,signal){
+    async function onDelta(raw,delta,signal,eventId){
       const s=scope(raw);
       if(!signal||typeof signal.aborted!=='boolean'||
          typeof signal.addEventListener!=='function'||
          typeof delta!=='string') hold('HOLD_B1_UI_DELTA_CONTRACT');
+      if(eventId!==undefined&&(typeof eventId!=='string'||!ID.test(eventId)))
+        hold('HOLD_B1_UI_DELTA_EVENT_ID');
       if(signal.aborted) return false;
       const k=s.conversation_id+'\u0000'+s.exchange_id;
       if(terminalIntents.has(k)) return false;
+      // SSE reconnect may replay the final event. Reserve the event ID before
+      // the first await, across all adapters sharing this DOM container.
+      // Equal IDs with different payloads are corrupt: fail closed.
+      const replayKey=eventId===undefined?null:k+'\u0000'+eventId;
+      if(replayKey!==null){
+        const known=deltaEvents.get(replayKey);
+        if(known){
+          if(known.delta!==delta) hold('HOLD_B1_UI_REPLAY_PAYLOAD');
+          if(known.committed) return false;
+          return known.promise.then(ok=>
+            ok===true?false:onDelta(s,delta,signal,eventId));
+        }
+      }
       const previous=deltaTails.get(k)||Promise.resolve();
+      let reservation=null;
       const job=previous.catch(()=>{}).then(async()=>{
         if(signal.aborted) return false;
         let onAbort;
@@ -101,10 +117,21 @@
         if(!el) el=create(s);
         // textContent, never innerHTML: arbitrary model text cannot inject DOM.
         el.textContent+=delta;
+        if(reservation) reservation.committed=true;
         return true;
       });
       deltaTails.set(k,job);
-      const release=()=>{if(deltaTails.get(k)===job) deltaTails.delete(k);};
+      if(replayKey!==null){
+        reservation={delta,committed:false,promise:job};
+        deltaEvents.set(replayKey,reservation);
+      }
+      const release=()=>{
+        if(deltaTails.get(k)===job) deltaTails.delete(k);
+        // STOP, timeout or failed precommit must not poison a GET-only replay.
+        if(reservation&&!reservation.committed&&
+           deltaEvents.get(replayKey)===reservation)
+          deltaEvents.delete(replayKey);
+      };
       job.then(release,release);
       return job;
     }
