@@ -1,7 +1,7 @@
 """NOX web adapter: делает веб-сборку «Резонанс» рабочей поверх умного моста (ядро, память S03, эмоции остаются на пути ответа).
 Подключается из nox_bridge.py: WEB.install(app, bridge_module). Слушает тот же 127.0.0.1:8091.
 Без выдумок: нет измерения -> null / HOLD. Токен доступа: если есть /root/nox/state/web_token, он обязателен."""
-import asyncio, hashlib, json, math, os, re, shutil, subprocess, threading, time
+import asyncio, hashlib, json, math, os, re, secrets, shutil, subprocess, threading, time
 import httpx
 from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
@@ -536,9 +536,19 @@ def install(app, B):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_NUM_PREDICT"}, status_code=400)
         if npred <= 0:
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_NUM_PREDICT"}, status_code=400)
-        rid = str(b.get("request_id") or "")
+        # A missing legacy request ID is given a unique, STOP-addressable ID.
+        # Never stringify malformed IDs (dict/bool/number) into shared STOP keys.
+        supplied_id = b.get("request_id")
+        if supplied_id is None or supplied_id == "":
+            rid = secrets.token_hex(16)
+        elif isinstance(supplied_id, str) and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", supplied_id):
+            rid = supplied_id
+        else:
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_REQUEST_ID"}, status_code=400)
         msgs_in = [m for m in raw_messages if m.get("role") in ("user", "assistant")]
         user = next((m["content"] for m in reversed(msgs_in) if m["role"] == "user"), "")
+        if not user.strip():
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_MISSING_USER"}, status_code=400)
         use_mem = b.get("use_memory", True) is not False
         mini = b.get("mini") is True
         mode = str(opts.get("mode") or b.get("mode") or "auto")
