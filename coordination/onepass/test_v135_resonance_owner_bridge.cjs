@@ -1498,3 +1498,52 @@ test('1A01 invalid decoded user UTF-16 never dispatches or creates S03 history',
     }
   }
 });
+
+
+test('1A02 browser duplicate client request IDs never replay native generation',async()=>{
+  const f=fake();
+  const send=request_id=>f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id})});
+  const first=await send('1a02-replay-1');
+  const duplicate=await send('1a02-replay-1');
+  assert.equal(duplicate.status,409);
+  const held=await duplicate.json();
+  assert.equal(held.error,'HOLD_DUPLICATE_CLIENT_REQUEST_ID');
+  assert.equal(held.history_persisted,false);
+  assert.equal(held.s03_integrated,false);
+  const initial=await events(first);
+  assert.equal(initial.at(0).client_request_id,'1a02-replay-1');
+  assert.equal(initial.at(-1).type,'done');
+  assert.equal(initial.at(-1).client_request_id,'1a02-replay-1');
+  assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
+  // Replaying after terminal completion still cannot mutate S03 twice.
+  const again=await send('1a02-replay-1');
+  assert.equal(again.status,409);
+  assert.equal((await again.json()).error,'HOLD_DUPLICATE_CLIENT_REQUEST_ID');
+  // A distinct request_id remains usable in the same dialog.
+  const next=await send('1a02-replay-2');
+  const latest=await events(next);
+  assert.equal(latest.at(-1).type,'done');
+  assert.equal(latest.at(-1).client_request_id,'1a02-replay-2');
+  assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,2);
+});
+
+test('1A02 malformed client request ID holds before any native side effect',async()=>{
+  const invalid=[null,{},'', ' '.repeat(2),'X'.repeat(161),'bad\nline'];
+  for(const request_id of invalid){
+    const native=[];
+    const w={NOX_NATIVE_OWNER:true,fetch:async path=>{
+      native.push(String(path));
+      throw Error('unexpected native call');
+    }};
+    const location={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+    vm.runInNewContext(JS,{window:w,location,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,Intl,console,setTimeout});
+    const response=await w.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id})});
+    assert.equal(response.status,422);
+    assert.equal((await response.json()).error,'HOLD_INVALID_CLIENT_REQUEST_ID');
+    assert.deepEqual(native,[]);
+  }
+});
