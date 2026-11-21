@@ -1,52 +1,107 @@
 #!/usr/bin/env python3
-"""One fixed action: temporarily attach a throwaway SSH key to Vast instance 60509551,
-run the reviewed agent-updater (branch u, file u) over SSH, then detach the key.
-No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
-import json, os, re, subprocess, sys, tempfile, time, urllib.request
-INSTANCE = 60509551
-KEY = os.environ["NOX2"]
-REMOTE = 'curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c73/inspect.sh -o /tmp/in.sh && bash /tmp/in.sh 2>&1 | tail -c 3000'
+"""Read-only NOX owner observer. Never restart, deploy or print raw host logs."""
+import json, os, re, shutil, subprocess, tempfile, time, urllib.request
 
-def api(method, path, body=None):
-    req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
+INSTANCE=60509551
+TOKEN=os.environ["NOX2"]
+REMOTE="set -eu; printf 'NOX_OWNER_READONLY_V1\\n'; supervisorctl status nox-dispatcher-t855u nox-bridge 2>/dev/null | awk '{print $1, $2}'"
+SERVICES={"nox-dispatcher-t855u", "nox-bridge"}
+
+def api(method,path,body=None):
+    req=urllib.request.Request("https://console.vast.ai/api/v0"+path,
         data=json.dumps(body).encode() if body is not None else None,
-        headers={"Authorization": "Bearer " + KEY, "Accept": "application/json", "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        raw = r.read()
-    return json.loads(raw) if raw else {}
+        headers={"Authorization":"Bearer "+TOKEN,"Accept":"application/json",
+                 "Content-Type":"application/json"},method=method)
+    with urllib.request.urlopen(req,timeout=30) as r: data=r.read()
+    return json.loads(data) if data else {}
+
+def matching(pub):
+    rows=api("GET","/instances/%d/ssh/"%INSTANCE)
+    if isinstance(rows,dict): rows=rows.get("ssh_keys",rows.get("keys"))
+    if not isinstance(rows,list): raise RuntimeError("HOLD_KEY_LIST_CONTRACT")
+    identity=pub.split()[1]
+    return [r for r in rows if isinstance(r,dict) and
+            isinstance(r.get("ssh_key",r.get("key","")),str) and
+            identity in r.get("ssh_key",r.get("key","")).split()]
+
+def detach(pub):
+    deleted=False
+    for _ in range(5):
+        for row in matching(pub):
+            if row.get("id") is None: raise RuntimeError("HOLD_KEY_ID_MISSING")
+            api("DELETE","/instances/%d/ssh/%s"%(INSTANCE,row["id"]))
+            deleted=True
+        if deleted:
+            time.sleep(2)
+            if not matching(pub):
+                time.sleep(2)
+                if not matching(pub): return True
+        time.sleep(2)
+    return False
+
+def accepted(stdout):
+    """Parse the complete allowlisted readback without emitting partial success."""
+    lines=stdout.splitlines()
+    if not lines or lines[0].strip()!="NOX_OWNER_READONLY_V1": return None
+    seen={}
+    for line in lines[1:]:
+        m=re.fullmatch(r"([a-z0-9_-]+) (RUNNING|STOPPED|STARTING|BACKOFF|EXITED|FATAL)",line.strip())
+        if not m or m.group(1) not in SERVICES or m.group(1) in seen:
+            return None
+        seen[m.group(1)]=m.group(2)
+    return seen if set(seen)==SERVICES else None
 
 def main():
-    inst = api("GET", "/instances/%d/" % INSTANCE)
-    inst = inst.get("instances", inst)
-    if isinstance(inst, list): inst = next(i for i in inst if i.get("id") == INSTANCE)
-    ip = inst["public_ipaddr"]
-    ports = [int(m["HostPort"]) for m in inst.get("ports", {}).get("22/tcp", []) if str(m.get("HostPort", "")).isdigit()]
-    if inst.get("actual_status") != "running" or not ports: sys.exit("instance not running / no ssh port")
-    d = tempfile.mkdtemp(); kf = d + "/k"
-    subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "nox-update-button", "-f", kf], check=True)
-    pub = open(kf + ".pub").read().strip()
-    key_id = None
+    inst=api("GET","/instances/%d/"%INSTANCE)
+    inst=inst.get("instances",inst)
+    if isinstance(inst,list): inst=next((x for x in inst if x.get("id")==INSTANCE),{})
+    ports=[int(x["HostPort"]) for x in inst.get("ports",{}).get("22/tcp",[])
+           if str(x.get("HostPort","")).isdigit()]
+    if inst.get("actual_status")!="running" or not ports:
+        raise RuntimeError("HOLD_INSTANCE_OR_PORT")
+    directory=tempfile.mkdtemp(prefix="nox-owner-")
+    keyfile=directory+"/key"
+    pub=None; attached=False; removed=False; verified_rows=None
+    # Never inherit NOX2 or other CI/owner credentials into child processes.
+    # Use only deterministic non-secret environment keys, including a private HOME.
+    child_env={"PATH":"/usr/bin:/bin", "HOME":directory, "LANG":"C", "LC_ALL":"C"}
     try:
-        api("POST", "/instances/%d/ssh/" % INSTANCE, {"ssh_key": pub})
+        subprocess.run(["ssh-keygen","-q","-t","ed25519","-N","","-C",
+                        "nox-owner-probe","-f",keyfile],check=True,env=child_env)
+        with open(keyfile+".pub",encoding="utf-8") as f: pub=f.read().strip()
+        attached=True
+        api("POST","/instances/%d/ssh/"%INSTANCE,{"ssh_key":pub})
+        confirmed=False
         for _ in range(8):
-            rows = api("GET", "/instances/%d/ssh/" % INSTANCE)
-            rows = rows if isinstance(rows, list) else rows.get("ssh_keys", rows.get("keys", []))
-            hit = [r for r in rows if isinstance(r, dict) and pub.split()[1] in json.dumps(r)]
-            if hit: key_id = hit[0].get("id"); break
+            if matching(pub): confirmed=True; break
             time.sleep(2)
-        time.sleep(15)
+        if not confirmed: raise RuntimeError("HOLD_KEY_ATTACH_UNCONFIRMED")
+        time.sleep(10)
         for port in ports:
-            for attempt in range(3):
-                r = subprocess.run(["ssh", "-T", "-i", kf, "-p", str(port), "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes",
-                    "-o", "ConnectTimeout=15", "-o", "StrictHostKeyChecking=accept-new", "-o", "UserKnownHostsFile=" + d + "/kh",
-                    "root@" + ip, REMOTE], capture_output=True, text=True, errors="replace", timeout=295, input=(os.environ.get("TS_AUTHKEY","") + "\n"))
-                print("ssh rc=%d" % r.returncode); print(re.sub(r"(github_pat_\w+|tskey-[\w-]+)", "***", r.stdout[-3000:]))
-                if r.returncode == 0: return
-                time.sleep(10)
-        sys.exit("ssh failed on all attempts")
+            r=subprocess.run(["ssh","-T","-i",keyfile,"-p",str(port),
+                "-o","BatchMode=yes","-o","IdentitiesOnly=yes",
+                "-o","ConnectTimeout=15","-o","StrictHostKeyChecking=accept-new",
+                "-o","UserKnownHostsFile="+directory+"/known","root@"+inst["public_ipaddr"],REMOTE],
+                capture_output=True,text=True,errors="replace",timeout=65,stdin=subprocess.DEVNULL,env=child_env)
+            if r.returncode==0:
+                verified_rows=accepted(r.stdout)
+                if verified_rows is None:
+                    raise RuntimeError("HOLD_AMBIGUOUS_READBACK")
+                break
+        if verified_rows is None: raise RuntimeError("HOLD_SSH_FAILED")
     finally:
-        if key_id is not None:
-            try: api("DELETE", "/instances/%d/ssh/%s" % (INSTANCE, key_id)); print("temp key detached")
-            except Exception as e: print("DETACH FAILED", type(e).__name__, "- remove 'nox-update-button' key in Vast manually")
+        try:
+            if attached and pub: removed=detach(pub)
+        finally:
+            shutil.rmtree(directory)
+        if attached and not removed: raise RuntimeError("HOLD_KEY_DETACH_UNVERIFIED")
+    # Do not emit any successful status until provider and local key cleanup complete.
+    for service in sorted(verified_rows):
+        print(service+"="+verified_rows[service])
+    print("owner_probe=READ_ONLY_VERIFIED")
 
-main()
+if __name__=="__main__":
+    try: main()
+    except Exception as exc:
+        print("owner_probe=HOLD",type(exc).__name__)
+        raise SystemExit(1)
