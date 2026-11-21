@@ -53,11 +53,14 @@
        !Number.isSafeInteger(canonicalAckTimeoutMs)||
        canonicalAckTimeoutMs<1||canonicalAckTimeoutMs>600000)
       hold('HOLD_STREAM_HOST_CONTRACT');
-    const started=new Set(),active=new Map(),reconnecting=new Map(),
+    const started=new Set(),reconnectSeen=new Set(),active=new Map(),reconnecting=new Map(),
       reconnectControllers=new Map();
     async function begin(raw){
       const s=snap(raw),k=key(s);
       if(started.has(k)) hold('HOLD_STREAM_NO_REPOST');
+      // Preserve RECONNECT_ONLY when a committed row exists, while refusing
+      // any new POST after an ambiguous reconnect with no durable row yet.
+      const priorReconnect=reconnectSeen.has(k);
       // Claim the exchange SYNCHRONOUSLY before the first await. Previously two
       // simultaneous begin() calls could both pass started.has() while the
       // host's readCommitted() promise was pending, causing two model POSTs.
@@ -90,6 +93,7 @@
         if(preflight.aborted||ctrl.signal.aborted) return stopped();
         if(preflight.storageError) hold('HOLD_STREAM_STORAGE');
         if(preflight.previous) hold('HOLD_STREAM_RECONNECT_ONLY');
+        if(priorReconnect) hold('HOLD_STREAM_NO_REPOST');
         // The host must ALSO enforce durable exchange idempotency across
         // tabs, reloads and devices. Never re-POST an ambiguous exchange.
         // A custom transport can ignore AbortSignal and keep post() pending
@@ -415,6 +419,11 @@
       if(active.has(k)) hold('HOLD_STREAM_ACTIVE_POST');
       const pending=reconnecting.get(k);
       if(pending) return pending;
+      // A readback-only reconnect means this exchange may already exist on
+      // the server, even when storage has not committed yet. Fence begin()
+      // synchronously before any GET/await; STOP, timeout or GET failure must
+      // never grant permission for another model POST of this exchange.
+      reconnectSeen.add(k);
       const ctrl=new AbortController();
       const attempt=reconnectOnce(s,ctrl.signal);
       reconnecting.set(k,attempt);
