@@ -297,6 +297,45 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     self.assertNotIn('_agent_final',payload)
                     self.assertEqual(self.dispatched,[])
 
+    async def test_pool_prepares_exact_augmented_model_context(self):
+        # A live cache optimizer must key and inspect the SAME S03/evidence
+        # turn the model receives, not the unaugmented caller's history.
+        original=[
+            {'role':'system','content':'PersonaID: original'},
+            {'role':'user','content':'¿Qué pasó con la nota azul?'},
+        ]
+        native=self.native()
+        native['_POOL']=True
+        native['try_deterministic']=lambda _:None
+        prepared=[]
+        def prepare(req,cache):
+            prepared.append(json.loads(json.dumps(req['messages'],ensure_ascii=False)))
+            return req
+        def augment(messages,user_text):
+            messages[0]['content']+='\\n\\nEvidence: nota azul 🌍'
+            return messages
+        native['prepare_payload']=prepare
+        payload={'model':'nox-existing','messages':json.loads(
+            json.dumps(original,ensure_ascii=False))}
+        requests,factory=self.transport([Chunks([
+            frame('Recuerdo la nota azul.'),frame(finish='stop'),
+            b'data: [DONE]\\n\\n'
+        ])])
+        with (factory,
+              patch.object(stream._current,'relevant_query',return_value=True),
+              patch.object(stream._current,'augment_messages',side_effect=augment)):
+            response=await native['owner_completion'](
+                'http://native/model',payload,'¿Qué pasó?',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertEqual(len(prepared),1)
+        self.assertEqual(len(requests),1)
+        self.assertEqual(prepared[0],requests[0]['messages'])
+        self.assertEqual(prepared[0][1:],original[1:])
+        self.assertIn('Evidence: nota azul 🌍',prepared[0][0]['content'])
+        self.assertEqual(payload['messages'],original)
+        self.assertEqual(payload['_agent_final'],'Recuerdo la nota azul.')
+        self.assertIn('[DONE]',wire)
+
     async def test_s03_history_is_detached_before_evidence_augmentation(self):
         # Evidence augmentation may enrich nested model content, never mutate
         # the request-bound S03 history subsequently read by postflight.
