@@ -539,7 +539,7 @@ def install(app, B):
         # A missing legacy request ID is given a unique, STOP-addressable ID.
         # Never stringify malformed IDs (dict/bool/number) into shared STOP keys.
         supplied_id = b.get("request_id")
-        if supplied_id is None or supplied_id == "":
+        if "request_id" not in b or supplied_id == "":
             rid = secrets.token_hex(16)
         elif isinstance(supplied_id, str) and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", supplied_id):
             rid = supplied_id
