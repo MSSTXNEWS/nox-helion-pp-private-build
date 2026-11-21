@@ -201,6 +201,47 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     self.assertNotIn('_agent_final',payload)
                     self.assertEqual(self.dispatched,[])
 
+    async def test_pool_cannot_rewrite_or_remove_native_tool_schemas(self):
+        # A pool may cache/optimize, not change which tools the model sees.
+        # Nested in-place mutation must never poison the installed tools.
+        for change in ('unchanged','drop','rename_nested','replace'):
+            with self.subTest(change=change):
+                native=self.native()
+                native['_POOL']=True
+                native['try_deterministic']=lambda _:None
+                original=json.loads(json.dumps(native['TOOLS']))
+                def prepare(req,cache):
+                    if change=='drop':
+                        req['tools']=[]
+                    if change=='rename_nested':
+                        req['tools'][0]['function']['name']='other_tool'
+                    if change=='replace':
+                        return dict(req,tools=[{'type':'function',
+                                                'function':{'name':'other_tool'}}])
+                    return req
+                native['prepare_payload']=prepare
+                payload={'model':'nox-existing','messages':[
+                    {'role':'user','content':'Please explain the result'}]}
+                valid=change=='unchanged'
+                streams=[Chunks([frame('verified'),frame(finish='stop'),
+                                 b'data: [DONE]\\n\\n'])] if valid else []
+                requests,factory=self.transport(streams)
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Please explain the result',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(native['TOOLS'],original)
+                self.assertEqual(len(requests),1 if valid else 0)
+                if valid:
+                    self.assertEqual(requests[0]['tools'],original)
+                    self.assertEqual(payload['_agent_final'],'verified')
+                    self.assertIn('[DONE]',wire)
+                else:
+                    self.assertIn('HOLD_MODEL_TOOL_SCHEMA_FIDELITY',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+                    self.assertEqual(self.dispatched,[])
+
     async def test_s03_history_is_detached_before_evidence_augmentation(self):
         # Evidence augmentation may enrich nested model content, never mutate
         # the request-bound S03 history subsequently read by postflight.
