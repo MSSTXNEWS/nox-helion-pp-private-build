@@ -714,7 +714,13 @@ async def _run(native,url,payload,user_text):
                     if len(text)>2000000:
                         raise StreamFailure('HOLD_TOOL_RESULT_FULL_CONTEXT')
                     await asyncio.to_thread(native['audit'],'tool_step',name=call['name'],
-                                            step=steps,ok=rec.get('ok'))
+                                            step=steps,
+                                            # A confirmation request is NOT a completed
+                                            # tool action even if the provider's `ok`
+                                            # field is true. Keep audit truth separate
+                                            # from user-visible confirmation text.
+                                            ok=(rec.get('ok') is True and
+                                                rec.get('needs_confirmation') is not True))
                     if rec.get('needs_confirmation'):
                         yield 'token',text
                         return

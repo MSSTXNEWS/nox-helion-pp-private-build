@@ -1428,6 +1428,27 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn('[DONE]',wire)
                 self.assertNotIn('_agent_final',payload)
 
+    async def test_confirmation_pending_cannot_audit_success(self):
+        # A tool provider may say ok=True while also asking for approval.
+        # The user may see a confirmation prompt, but no successful tool_step.
+        native=self.native([{'name':'calculate','arguments':{}}],
+                           {'ok':True,'needs_confirmation':True,
+                            'text':'Needs approval'})
+        audits=[]
+        native['audit']=lambda *a,**k:audits.append((a,k))
+        payload={'messages':[{'role':'user','content':'Calculate'}]}
+        with patch.object(stream._current,'dispatch',return_value=None), \
+             patch.object(stream.httpx.AsyncClient,'stream',
+                          side_effect=AssertionError('No model POST')):
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Calculate',False)
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(len(audits),1)
+        self.assertEqual(audits[0][0],('tool_step',))
+        self.assertFalse(audits[0][1]['ok'])
+        self.assertIn('Needs approval [CONFIRM fixture]',payload['_agent_final'])
+        self.assertEqual(self.dispatched,[('calculate',{})])
+
     async def test_confirmation_stops_before_model_and_preserves_real_marker(self):
         native=self.native([{'name':'run_admin','arguments':{'action':'pause'}}],
                            {'ok':False,'needs_confirmation':True,'text':'Confirm pause'})
