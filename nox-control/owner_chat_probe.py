@@ -297,6 +297,22 @@ def resonance_runtime_assets(html, page_url, max_assets=35):
             self.base_ref = None
 
         def handle_starttag(self, tag, attrs):
+            # HTML browsers honor the first of duplicate attributes, whereas
+            # dict(attrs) keeps the last. A foreign script/href can otherwise
+            # be disguised by a later local attribute in this health census.
+            if tag == 'script':
+                guarded = ('src',)
+            elif tag == 'base':
+                guarded = ('href',)
+            elif tag == 'link' and any(
+                    name == 'rel' and isinstance(value, str)
+                    and set(value.lower().split()) & {'stylesheet', 'preload', 'modulepreload'}
+                    for name, value in attrs):
+                guarded = ('rel', 'href', 'as')
+            else:
+                guarded = ()
+            if any(sum(name == key for name, _ in attrs) > 1 for key in guarded):
+                raise RuntimeError('HOLD_RESONANCE_RUNTIME_DUPLICATE_ATTRIBUTE')
             fields = dict(attrs)
             if tag == 'base' and self.base_ref is None and 'href' in fields:
                 self.base_ref = fields['href']
