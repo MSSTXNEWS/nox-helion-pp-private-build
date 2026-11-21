@@ -154,12 +154,13 @@ def strict_parent_registry(disposition, source_documents, source_raw_sha256):
 
 def eligibility_ledger(registry, previous=None, refill_request=None):
     """Describe structural eligibility; never label an ID executable by itself."""
-    previous = previous if isinstance(previous, dict) else {}
-    request = refill_request if isinstance(refill_request, dict) else {}
-    # Never project corrupt predecessor/request rows as an empty, unclaimed
-    # history: that can both crash on unhashable IDs and suggest unsafe replay.
+    # Missing or malformed documents must never become an empty history.
+    # Empty arrays are valid only when their keys are explicitly present.
+    request = refill_request
     def checked_ids(document, rows_key, id_key):
-        rows = document.get(rows_key, [])
+        if not isinstance(document, dict) or rows_key not in document:
+            return set(), False
+        rows = document[rows_key]
         if not isinstance(rows, list):
             return set(), False
         ids = set()
