@@ -2189,5 +2189,60 @@ class ContinuationSupervisorReadbackFence(unittest.TestCase):
         self.assertEqual(raw_indexing, [])
 
 
+
+class FinalReadbackReceiptContinuity(unittest.TestCase):
+    def test_one_failed_native_observation_cannot_erase_final_receipt(self):
+        # Execute the actual helper AST with simulated transport failures only.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        fn = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                  and node.name == "final_observation_snapshots")
+        namespace = {"re": re}
+        exec(compile(ast.Module(body=[fn], type_ignores=[]),
+                     str(SOURCE), "exec"), namespace)
+        snapshot = namespace["final_observation_snapshots"]
+        keys = ("service_after", "chat_after", "gpu_after", "progress_after")
+        healthy = ({"state": "RUNNING"}, {"8080": 200},
+                   {"gpus": []}, {"step": 5})
+
+        def failure():
+            raise RuntimeError("HOLD_FINAL_READBACK_OFFLINE")
+
+        def other_failure():
+            raise ValueError("temporary transport break")
+
+        for broken in range(len(keys)):
+            for failed in (failure, other_failure):
+                with self.subTest(field=keys[broken], exception=failed.__name__):
+                    getters = [lambda value=value: value for value in healthy]
+                    getters[broken] = failed
+                    helper = types.SimpleNamespace(
+                        service_state=getters[0], health=getters[1],
+                        gpu=getters[2], progress=getters[3])
+                    observed, errors = snapshot(helper)
+                    self.assertEqual(set(observed), set(keys))
+                    self.assertEqual(set(errors), {keys[broken]})
+                    self.assertIsNone(observed[keys[broken]])
+                    for index, key in enumerate(keys):
+                        if index != broken:
+                            self.assertEqual(observed[key], healthy[index])
+                    expected = ("HOLD_FINAL_READBACK_OFFLINE"
+                                if failed is failure else "ValueError")
+                    self.assertEqual(errors[keys[broken]], expected)
+
+        helper = types.SimpleNamespace(
+            service_state=lambda: healthy[0], health=lambda: healthy[1],
+            gpu=lambda: healthy[2], progress=lambda: healthy[3])
+        self.assertEqual(snapshot(helper), (dict(zip(keys, healthy)), {}))
+        main = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == "main")
+        code = ast.unparse(main)
+        self.assertIn("final_snapshots, final_errors = final_observation_snapshots(helper)", code)
+        self.assertIn("result['final_readback_errors'] = final_errors", code)
+        self.assertIn("result['state'] = 'HOLD_TRAINING_RESUME'", code)
+        self.assertLess(code.index("final_observation_snapshots(helper)"),
+                        code.rindex("save()"))
+
+
+
 if __name__ == "__main__":
     unittest.main()
