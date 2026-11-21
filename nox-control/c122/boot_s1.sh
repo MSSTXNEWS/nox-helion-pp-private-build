@@ -31,10 +31,22 @@ if [ -z "$WAIT_MODEL" ] && ! up 8081; then
   M=$N/glm53/GLM-5.3-UD-Q4_K_XL-00001-of-00011.gguf; log "GLM :8081"
   nohup setsid $BIN -m $M --host 127.0.0.1 --port 8081 -c 16384 -t 24 -tb 24 -ngl 38 --n-cpu-moe 999 -fa on --parallel 1 --jinja --temp 1.0 --top-p 0.95 --min-p 0.01 > $LG/glm_server.log 2>&1 < /dev/null &
 fi
-# 5. шлюз (qs6): быстрый тир + GLM, память, душа
+# 4b. память NOX (S03), душа, тон (QS6B): env для шлюза и recall_api. БД появляется после импорта бэкапа (c126/memory_boot_s1.sh, идемпотентен).
+export NOX_HOME=$N NOX_SERVER=S1 NOX_MODEL=GLM-5.3 NOX_PORT=8082 NOX_BUILD=$(git -C $R rev-parse --short HEAD 2>/dev/null)
+export NOX_MEMORY_DB=$N/memory/s03.db NOX_SOUL=1 NOX_EMOTION=1 NOX_EVENTS=$N/memory/events.jsonl NOX_SESSION_SUMMARY=$N/memory/sessions.jsonl NOX_JOURNAL=$LG/journal.jsonl
+export NOX_MEMORY_BACKUP_DIR=$N/memory/backups NOX_RECALL_PORT=8095   # NOX_EMBED_URL (bge-m3) не задан: вектор выключен, работает FTS5
+if [ ! -f "$NOX_MEMORY_DB" ] || ! crontab -l 2>/dev/null | grep -q nox-memory-backup; then
+  log "память: c126/memory_boot_s1.sh"; bash $C/c126/memory_boot_s1.sh >> $LG/boot.log 2>&1
+fi
+if [ -f "$NOX_MEMORY_DB" ] && ! up 8095; then
+  log "recall_api :8095"; (cd $C && nohup setsid python3 -m qs6.recall_server > $LG/recall_api.log 2>&1 < /dev/null &)
+fi
+# 5. шлюз (qs6): быстрый тир + GLM, память, душа. Работавший без памяти шлюз перезапускаем один раз.
+GP=$(pgrep -f "glm53/gateway.py" | head -1)
+if [ -n "$GP" ] && ! tr '\0' '\n' < /proc/$GP/environ 2>/dev/null | grep -q '^NOX_SOUL=1$'; then log "gateway без памяти/души: перезапуск"; kill $GP; sleep 2; fi
 if ! pgrep -f "glm53/gateway.py" >/dev/null; then
   log "gateway :8082"; cd $C/glm53
-  PYTHONPATH=$C NOX_UPSTREAM=http://127.0.0.1:8081 NOX_FAST_UPSTREAM=http://127.0.0.1:8083 NOX_TWO_STAGE=1 nohup setsid python3 gateway.py > $LG/gateway.log 2>&1 < /dev/null &
+  PYTHONPATH=$C NOX_UPSTREAM=http://127.0.0.1:8081 NOX_FAST_UPSTREAM=http://127.0.0.1:8083 NOX_TWO_STAGE=1 nohup setsid python3 $C/glm53/gateway.py > $LG/gateway.log 2>&1 < /dev/null &
 fi
 # 6. веб
 pgrep -f "/root/nox/web_server.py" >/dev/null || { [ -d $N/web ] && { cp $C/s1web/web_server.py $N/web_server.py; nohup setsid python3 $N/web_server.py > $LG/web_server.log 2>&1 < /dev/null & log "web :8091"; }; }
@@ -43,4 +55,4 @@ P=$(find $DL/hf/piper_ru -name "*.onnx" -path "*ru*" | head -1); E=$(find $DL/hf
 export NOX_PIPER_MODEL_RU=$P NOX_PIPER_MODEL_ES=$E NOX_STT_MODEL=$DL/hf/whisper_small NOX_TTS_BACKENDS=piper,xtts NOX_STT_DEVICE=cpu
 export NOX_SMART_TURN_MODEL=$(find $DL/hf/smart_turn -name "*.onnx" | head -1)
 bash $C/voice/start_voice.sh all 2>&1 | tail -4
-sleep 8; for p in 8083 8081 8082 8091 8093 8094; do up $p && echo "UP $p" || echo "down $p"; done | tr '\n' ' '; echo
+sleep 8; for p in 8083 8081 8082 8095 8091 8093 8094; do up $p && echo "UP $p" || echo "down $p"; done | tr '\n' ' '; echo

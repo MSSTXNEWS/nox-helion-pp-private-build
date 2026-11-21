@@ -72,7 +72,10 @@ def build_request(body):
     user = last_user_text(msgs)
     effort = pick_effort(user, b.pop("reasoning_effort", None))
     facts = b.pop("nox_facts", None)
-    sysmsg = {"role": "system", "content": persona() + "\nЯзык ответа: язык вопроса (русский по умолчанию); размышления тоже по-русски."}  # G25, G27
+    soul = b.pop("nox_system", None)      # QS6B: системный промпт от prompt_builder (душа + память), вместо короткой персоны
+    LANG = "\nЯзык ответа: язык вопроса (русский по умолчанию); размышления тоже по-русски."   # G25, G27
+    soul = soul.strip() if isinstance(soul, str) else ""
+    sysmsg = {"role": "system", "content": soul or (persona() + LANG)}     # промпт души кончается «Главным», ничего после него не дописываем
     msgs = [sysmsg] + [m for m in msgs if not (m.get("role") == "system" and m.get("content") == sysmsg["content"])]
     block = compact_facts(facts)
     if msgs and msgs[-1].get("role") == "user" and isinstance(msgs[-1].get("content"), str):
