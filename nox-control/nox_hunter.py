@@ -284,8 +284,13 @@ def _crossref_items(body: bytes) -> list[dict[str, str]]:
             title = next((v.strip() for v in title_value if isinstance(v, str) and v.strip()), "")
         else:
             title = ""
-        doi = str(record.get("DOI") or "").strip()
-        url = str(record.get("URL") or (f"https://doi.org/{doi}" if doi else "")).strip()
+        # Only actual text is valid DOI / link metadata. Stringifying JSON
+        # arrays or objects invents DOI-like links that never existed.
+        doi_value = record.get("DOI")
+        doi = doi_value.strip() if isinstance(doi_value, str) else ""
+        url_value = record.get("URL")
+        link = url_value.strip() if isinstance(url_value, str) else ""
+        url = link or (f"https://doi.org/{doi}" if doi else "")
         # Crossref abstracts are text/HTML strings. Do not turn malformed JSON
         # arrays/objects into fabricated Python-repr "evidence" in the catalog.
         abstract_value = record.get("abstract")
