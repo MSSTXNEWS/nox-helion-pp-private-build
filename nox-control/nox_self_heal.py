@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 import time
 import urllib.request
 from urllib.parse import urlsplit
@@ -23,14 +24,32 @@ def load(path):
         return {}
 
 def write(path, value):
+    """Atomically persist a private state snapshot without following a fixed .tmp.
+
+    A predictable temporary filename could collide with another repair cycle
+    or point at an unrelated file. mkstemp creates a private O_EXCL file in the
+    same directory so os.replace remains atomic.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_name(path.name + ".tmp")
-    with temp.open("w", encoding="utf8") as fh:
-        json.dump(value, fh, ensure_ascii=False, indent=2)
-        fh.write("\n")
-        fh.flush()
-        os.fsync(fh.fileno())
-    os.replace(temp, path)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp",
+                                   dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf8") as fh:
+            json.dump(value, fh, ensure_ascii=False, indent=2)
+            fh.write("\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp_name, path)
+        tmp_name = None
+        # Persist the directory entry as well as the JSON bytes.
+        dir_fd = os.open(str(path.parent), os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    finally:
+        if tmp_name is not None:
+            os.unlink(tmp_name)
 
 def policy_validate(p):
     if p.get("schema_version") != 1 or not isinstance(p.get("services"), list):
