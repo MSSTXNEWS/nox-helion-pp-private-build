@@ -131,7 +131,12 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
                and isinstance(item["id"],str) and 1<=len(item["id"])<=128
                and item["id"].isprintable() and "[" not in item["id"] and "]" not in item["id"]
                and item["id"] not in seen_s03_ids
-               and _scalar_text(item["text"]) and item["text"]
+               and _scalar_text(item["text"])
+               # Old/revoked facts are provenance-only tombstones: keep their
+               # metadata even after the source text has been safely redacted.
+               # Current and legacy unscoped facts still require actual text.
+               and (bool(item["text"]) or (scoped and
+                    item.get("status") in {"SUPERSEDED", "REVOKED"}))
                and isinstance(item["source_sha256"],str) and len(item["source_sha256"])==64
                and all(x in "0123456789abcdef" for x in item["source_sha256"]), "S03")
         if scoped:
