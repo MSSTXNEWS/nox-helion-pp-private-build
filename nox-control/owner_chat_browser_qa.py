@@ -976,7 +976,11 @@ RENDERED_FOURROW_JS = r"""expected => {
   if(!mount)return false;
   const bubbles=[...mount.querySelectorAll('.v24-msg')];
   if(bubbles.length!==4)return false;
-  const normalize=text=>text.replace(/\s+/g,' ').trim();
+  // No whitespace collapsing or Unicode normalization: NBSP, combining marks,
+  // trailing spaces and hidden descendants change the actual four-row witness.
+  // This numeric RU/ES QA contract uses unformatted, literal row text.
+  // Require BOTH rendered text and raw DOM text to match persisted bytes.
+  // innerText alone can omit a display:none child whose raw text differs.
   // Layout boxes persist for CSS visibility:hidden and opacity:0.
   // The four history rows must be rendered, not merely present in the DOM.
   // checkVisibility also traverses hidden/transparent ancestors.
@@ -991,7 +995,8 @@ RENDERED_FOURROW_JS = r"""expected => {
     const bodies=[...bubble.querySelectorAll('.body')];
     if(bodies.length!==1||!bodies[0].getClientRects().length||
        !visible(bodies[0])||typeof bodies[0].innerText!=='string'||
-       normalize(bodies[0].innerText)!==normalize(row.content))return false;
+       bodies[0].innerText!==row.content||
+       bodies[0].textContent!==row.content)return false;
     // Some UI builds expose durable row identity; when present it must agree.
     // Absent DOM IDs are not claimed as independently verified row identities.
     const visibleId=bubble.getAttribute('data-message-id')||
