@@ -11,6 +11,9 @@
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
   const ID=/^[A-Za-z0-9._:-]{1,128}$/;
+  // Multiple opt-in adapters can coexist during chat reattachment. Their
+  // exchange queues must be shared for the same live DOM container.
+  const containerStates=new WeakMap();
   class UiHold extends Error {
     constructor(code){super(code);this.name='UiHold';this.code=code;}
   }
@@ -53,11 +56,17 @@
     // Concurrent render callbacks may otherwise commit in completion order,
     // which silently reorders SSE tokens. Serialize each exchange independently;
     // STOP releases hung precommit waits and fences every queued DOM mutation.
-    const deltaTails=new Map();
-    // Reserve a terminal intent synchronously, before any async precommit.
-    // New deltas cannot overtake a verified reconnect terminal, but deltas
-    // queued earlier still drain in FIFO so a partial answer is not lost.
-    const terminalIntents=new Map();
+    // A new adapter may be attached while the old one has async callbacks
+    // pending. Per-instance queues would reorder deltas or overlap terminal
+    // projections for the very same exchange (duplicate-turn risk).
+    let shared=containerStates.get(container);
+    if(!shared){
+      shared={deltaTails:new Map(),terminalIntents:new Map()};
+      containerStates.set(container,shared);
+    }
+    const {deltaTails,terminalIntents}=shared;
+    // Reserve terminal intent synchronously, before any async precommit.
+    // Earlier queued deltas drain FIFO across *all* adapters of this container.
     async function onDelta(raw,delta,signal){
       const s=scope(raw);
       if(!signal||typeof signal.aborted!=='boolean'||
