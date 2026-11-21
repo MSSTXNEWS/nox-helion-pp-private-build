@@ -51,6 +51,22 @@ def _append_final_chunk(chunks, chunk, size):
     return size
 
 
+def _assert_verified_result_bytes(text, hold_code):
+    """Apply the final browser/S03 UTF-8 budget before any green tool audit.
+
+    A result may be fewer than two million Python characters but larger on
+    the wire. It must not be audited as successful before the final encoder
+    rejects it. The same rule applies to direct tools and media fast paths.
+    """
+    if len(text)>FINAL_RESPONSE_LIMIT:
+        raise StreamFailure(hold_code)
+    try:
+        if len(text.encode('utf-8','strict'))>FINAL_RESPONSE_LIMIT:
+            raise StreamFailure(hold_code)
+    except UnicodeError:
+        raise StreamFailure(hold_code) from None
+
+
 EXECUTOR_STATUS=Path('/root/nox/status/agents_t856u.json')
 
 
@@ -521,10 +537,11 @@ async def _run(native,url,payload,user_text):
         # This route has no confirmation continuation, so fail closed on one.
         if (not isinstance(rec,dict) or type(rec.get('ok')) is not bool
                 or type(rec.get('text')) is not str or not rec['text'].strip()
-                or len(rec['text'])>2000000
+
                 or ('needs_confirmation' in rec and rec['needs_confirmation'] is not False)
                 or ('error' in rec and rec.get('ok') is True)):
             raise StreamFailure('HOLD_MEDIA_RESULT_FIDELITY')
+        _assert_verified_result_bytes(rec['text'],'HOLD_MEDIA_RESULT_FIDELITY')
         await asyncio.to_thread(native['audit'],'tool_step',name=name,step=1,ok=rec['ok'])
         if not rec['ok']:
             # An unverified media enqueue may be visible to the user, but it
@@ -726,8 +743,7 @@ async def _run(native,url,payload,user_text):
                     # confirmations, must fit the same bounded chat/S03 result.
                     # No successful audit or final ACK may certify an oversized
                     # tool observation that can exhaust scarce host memory.
-                    if len(text)>2000000:
-                        raise StreamFailure('HOLD_TOOL_RESULT_FULL_CONTEXT')
+                    _assert_verified_result_bytes(text,'HOLD_TOOL_RESULT_FULL_CONTEXT')
                     await asyncio.to_thread(native['audit'],'tool_step',name=call['name'],
                                             step=steps,
                                             # A confirmation request is NOT a completed

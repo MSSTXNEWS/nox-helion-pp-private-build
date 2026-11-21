@@ -1229,6 +1229,40 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn('_agent_final',payload)
                 self.assertEqual(len(self.dispatched),1)
 
+    async def test_multibyte_tool_and_media_outcomes_hold_before_green_audit(self):
+        # A million Cyrillic characters fit the previous character count but
+        # exceed the 2MB UTF-8 wire/S03 cap. No success audit can precede HOLD.
+        for label, outcome in (('utf8_overflow', 'Ж' * 1000001),
+                               ('invalid_unicode', 'broken'+chr(0xD800))):
+            for route in ('direct', 'media'):
+                with self.subTest(label=label, route=route):
+                    native=self.native(result={'ok':True, 'text':outcome})
+                    audited=[]
+                    native['audit']=lambda *a,**k:audited.append(k)
+                    payload={'messages':[{'role':'user','content':'Result fidelity'}]}
+                    if route=='direct':
+                        native['_direct_admin_calls']=lambda _: [
+                            {'name':'run_admin','arguments':{'action':'status'}}]
+                        with patch.object(stream._current,'dispatch',return_value=None):
+                            response=await native['owner_completion'](
+                                'http://native/model',payload,'Result fidelity',False)
+                        expected='HOLD_TOOL_RESULT_FULL_CONTEXT'
+                        self.assertEqual(len(self.dispatched),1)
+                    else:
+                        with (patch.object(stream._current,'explicit_media_request',
+                                           return_value={'kind':'image'}),
+                              patch.object(stream._current,'media_status_query',
+                                           return_value=None),
+                              patch.object(stream._current,'dispatch',
+                                           return_value={'ok':True,'text':outcome})):
+                            response=await native['owner_completion'](
+                                'http://native/model',payload,'Result fidelity',False)
+                        expected='HOLD_MEDIA_RESULT_FIDELITY'
+                    self.assertEqual(response.status_code,502)
+                    self.assertEqual(json.loads(response.body)['error']['code'], expected)
+                    self.assertEqual(audited,[])
+                    self.assertNotIn('_agent_final',payload)
+
     async def test_tool_error_envelopes_never_certify_successful_s03(self):
         # The explicit error key is authoritative even when its value is
         # falsey. A result claiming ok=True and error=<anything> is ambiguous.
