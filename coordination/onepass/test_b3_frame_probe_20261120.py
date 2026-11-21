@@ -645,6 +645,83 @@ class TestProbe(unittest.TestCase):
 
 
 
+    def test_new_dialog_request_id_replay_fenced_before_native_create(self):
+        """One request_id cannot create a second dialog or invoke a second model."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+                    async def local_page(route):
+                        await route.fulfill(status=200, content_type='text/html',
+                                            body='<html><body>mock B3 replay</body></html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', local_page)
+                    await page.goto('http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__created=0;
+                        window.__modelPosts=0;
+                        const response=value=>new Response(JSON.stringify(value),
+                            {status:200,headers:{'Content-Type':'application/json'}});
+                        window.fetch=async (url,init={})=>{
+                            if(url==='/api/ui/memory/dialogs/create'){
+                                const n=++window.__created;
+                                return response({dialog_id:'a'.repeat(31)+n,title:'new'});
+                            }
+                            if(url==='/api/nox/chat/stream'){
+                                window.__modelPosts++;
+                                const data=JSON.parse(init.body);
+                                const n=data.dialog_id.slice(-1);
+                                const frames=[
+                                    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start',model:'existing-mock-native'},
+                                    {type:'delta',text:'answer'+n},
+                                    {type:'done',saved:true,s03_integrated:true,
+                                     dialog_id:data.dialog_id,exchange_id:'ex-new-'+n}
+                                ].map(JSON.stringify).join('\\n')+'\\n';
+                                return new Response(frames,{status:200});
+                            }
+                            if(String(url).startsWith('/api/ui/memory/dialogs/history?')){
+                                const id=new URL(url,location.href).searchParams.get('dialog_id');
+                                const n=id.slice(-1);
+                                return response({status:'READY',dialog_id:id,messages:[
+                                    {role:'user',content:'hello',exchange_id:'ex-new-'+n},
+                                    {role:'assistant',content:'answer'+n,
+                                     exchange_id:'ex-new-'+n}
+                                ]});
+                            }
+                            throw Error('UNEXPECTED_MOCK_ENDPOINT '+url);
+                        };
+                    }""")
+                    bridge=(pathlib.Path(__file__).parent /
+                            'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    actual=await page.evaluate("""async () => {
+                        const send=async request_id=>{
+                            const r=await fetch('/api/nox/chat',{method:'POST',
+                                body:JSON.stringify({message:'hello',request_id})});
+                            return await r.text();
+                        };
+                        const first=await send('global-new-id');
+                        const replay=await send('global-new-id');
+                        const fresh=await send('global-fresh-id');
+                        return {first,replay,fresh,creates:window.__created,
+                            posts:window.__modelPosts};
+                    }""")
+                    self.assertIn('"type":"done"', actual['first'])
+                    self.assertIn('HOLD_REQUEST_REPLAY', actual['replay'])
+                    self.assertNotIn('"type":"done"', actual['replay'])
+                    self.assertIn('"type":"done"', actual['fresh'])
+                    self.assertEqual(actual['creates'], 2)
+                    self.assertEqual(actual['posts'], 2)
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
     def test_native_endpoints_reject_http_redirect_before_fallback_browser(self):
         """Native chat POST and memory GET must not follow browser redirects."""
         from playwright.async_api import async_playwright
