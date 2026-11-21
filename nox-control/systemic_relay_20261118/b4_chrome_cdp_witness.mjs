@@ -186,7 +186,11 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       const data=x.partial.slice(0,m.index);x.partial=x.partial.slice(m.index+m[0].length);
       // Any frame after the first terminal is ambiguous, even if it is not JSON.
       // Preserve decoded-body digest checks but never promote an invalid SSE stream.
-      if(x.done!==null&&data.trim()!==''){x.missing=true;return;}
+      if(x.done!==null&&data.trim()!==''){
+        // A post-terminal SSE frame invalidates the first turn's proof,
+        // but a later, strictly serial POST can retain its own diagnostics.
+        x.postDoneStreamFault=true;x.missing=true;return;
+      }
       const event=eventData(data),ms=millis(x,timestamp);
       if(!event||event.invalid){x.missing=true;return;}
       if(event?.stop){
@@ -315,7 +319,8 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         // Missing earlier POST metadata is an integrity HOLD, not overlap.
         // Only the observed SSE terminal and network close bound causality;
         // final per-turn validation still rejects previous.missing.
-        if(!previous||(previous.missing&&!previous.postDataLookupFailed)||!previous.finishStop||
+        if(!previous||(previous.missing&&!previous.postDataLookupFailed&&!previous.postDoneStreamFault)||
+            !previous.closeSucceeded||!previous.finishStop||
            !validTime(previous.doneAt)||!validTime(previous.closeAt)||
            previous.done===null||previous.close===null||
            previous.doneAt>previous.closeAt||p.timestamp<=previous.closeAt){
@@ -327,6 +332,8 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       // Keep a missing POST-body digest distinct from an invalid CDP stream;
       // the former fails total integrity without proving the turns overlap.
       x.postDataLookupFailed=false;
+      x.postDoneStreamFault=false;
+      x.closeSucceeded=false;
       active.set(p.requestId,x);
       const record=s=>{
         if(typeof s!=='string'){x.missing=true;return;}
@@ -416,7 +423,10 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     }
     if(method==='Network.loadingFinished'||method==='Network.loadingFailed'){
       if(x.close!==null){x.missing=true;return;}
-      if(chronological(x,p.timestamp)){x.close=millis(x,p.timestamp);x.closeAt=p.timestamp;}
+      if(chronological(x,p.timestamp)){
+        x.close=millis(x,p.timestamp);x.closeAt=p.timestamp;
+        x.closeSucceeded=method==='Network.loadingFinished';
+      }
       if(method==='Network.loadingFailed')x.missing=true;
       // A final incomplete UTF-8 code point or unclosed SSE event is NOT a clean stream.
       if(!x.streaming||x.extraExpected===null||
