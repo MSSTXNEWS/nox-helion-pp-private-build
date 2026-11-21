@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#02030a">
+<title>NOX HELION · РЕЗОНАНС</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./vendor/driver.js/dist/driver.css">
+<link rel="stylesheet" href="./vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="./nox-wow.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
+</head>
+<body data-page="wow-chat">
+<!-- единая линза-преломление для стекла (SVG feDisplacementMap; где backdrop-filter:url() не поддержан - обычное размытие) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<filter id="nox-lens" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="2" seed="7" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="14" xChannelSelector="R" yChannelSelector="G"/></filter>
+</defs></svg>
+
+<canvas id="space" aria-hidden="true"></canvas>
+<div id="dust" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div><div class="vignette" aria-hidden="true"></div>
+
+<div id="app">
+  <header class="bar" id="bar">
+    <div class="bar-l">
+      <a class="brand" href="index.html" aria-label="NOX HELION, главная"><span class="mark" aria-hidden="true"></span><b>NOX&nbsp;HELION</b><i>РЕЗОНАНС</i></a>
+    </div>
+    <nav class="seg nav" id="nav" aria-label="Разделы">
+      <a href="index.html" data-k="home">Главная</a>
+      <a href="chat.html" data-k="chat" aria-current="page">Резонанс</a>
+      <a href="projects.html" data-k="proj">Проекты</a>
+      <a href="memory.html" data-k="mem">Память</a>
+      <a href="training.html" data-k="train">Обучение</a>
+      <a href="models.html" data-k="core">Ядро</a>
+      <a href="system.html" data-k="sys">Система</a>
+    </nav>
+    <div class="bar-r">
+      <span class="status" id="gwStatus" role="status"><i class="led" id="gwLed"></i><span id="gwText" class="mono">ПРОВЕРКА</span></span>
+      <span class="seg icons">
+        <button id="btnPalette" type="button" aria-label="Команды, Ctrl+K" title="Команды  Ctrl+K"><sl-icon library="tabler" name="command"></sl-icon></button>
+        <button id="btnThreads" type="button" aria-label="Диалоги" title="Диалоги"><sl-icon library="tabler" name="history"></sl-icon></button>
+        <button id="btnSettings" type="button" aria-label="Настройки" title="Настройки"><sl-icon library="tabler" name="settings"></sl-icon></button>
+      </span>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <section class="feed" id="feed" aria-label="Диалог" tabindex="-1">
+      <div class="col" id="col">
+        <div class="hero" id="hero">
+          <div class="hero-kicker mono">ЛОКАЛЬНОЕ ЯДРО · ОЖИДАНИЕ ВВОДА</div>
+          <h1>Резонанс</h1>
+          <div class="seg suggest" id="suggest" role="group" aria-label="Быстрые запросы">
+            <button type="button" data-q="Кратко опиши, что ты умеешь делать на этом сервере.">Что умеешь</button>
+            <button type="button" data-q="Составь план работы на сегодня из моих текущих задач и спроси, чего не хватает.">План дня</button>
+            <button type="button" data-q="Объясни по шагам, как проверить, что голосовой ввод и озвучка работают.">Проверить голос</button>
+            <button type="button" data-q="Придумай три идеи, как улучшить интерфейс Резонанса, и оцени каждую.">Идеи</button>
+          </div>
+        </div>
+        <div id="msgs" class="msgs" role="log" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <form class="dock" id="form" autocomplete="off">
+      <div class="composer" id="composer">
+        <i class="br tl"></i><i class="br tr"></i><i class="br bl"></i><i class="br brr"></i>
+        <div class="wavebox" id="wavebox" hidden>
+          <span class="rec-dot" aria-hidden="true"></span><span class="mono" id="recTime">00:00</span>
+          <div id="wave" class="wave" aria-label="Волна голоса"></div>
+          <button type="button" class="chip" id="recCancel" aria-label="Отменить запись"><sl-icon library="tabler" name="x"></sl-icon></button>
+          <button type="button" class="chip ok" id="recDone" aria-label="Закончить запись и распознать"><sl-icon library="tabler" name="check"></sl-icon></button>
+        </div>
+        <textarea id="input" rows="1" maxlength="12000" placeholder="Сообщение NOX…" aria-label="Сообщение NOX"></textarea>
+        <div class="row">
+          <span class="seg tools">
+            <button type="button" id="btnAttach" aria-label="Прикрепить текстовый файл" title="Прикрепить текстовый файл"><sl-icon library="tabler" name="paperclip"></sl-icon></button>
+            <button type="button" id="btnMic" aria-label="Голосовой ввод" title="Голосовой ввод"><sl-icon library="tabler" name="microphone"></sl-icon></button>
+            <button type="button" id="btnSpeak" aria-pressed="false" aria-label="Озвучивать ответы" title="Озвучивать ответы"><sl-icon library="tabler" name="volume"></sl-icon></button>
+          </span>
+          <span class="hint mono" id="hint">ENTER — ОТПРАВИТЬ · SHIFT+ENTER — СТРОКА · CTRL+K — КОМАНДЫ</span>
+          <button type="submit" class="send" id="btnSend" aria-label="Отправить"><span>Отправить</span><sl-icon library="tabler" name="arrow-up"></sl-icon></button>
+          <button type="button" class="send stop" id="btnStop" aria-label="Остановить" hidden><span>STOP</span><sl-icon library="tabler" name="player-stop"></sl-icon></button>
+        </div>
+        <input type="file" id="file" hidden accept=".txt,.md,.json,.csv,.py,.js,.ts,.html,.css,.log,.yml,.yaml,.sh">
+      </div>
+    </form>
+
+    <aside class="edge edge-l mono" id="edgeL" aria-label="Состояние"><span id="clock" class="hud-clock">—</span><span id="eModel">МОДЕЛЬ —</span><span id="eProto">ПРОТОКОЛ —</span></aside>
+    <aside class="edge edge-r mono" id="edgeR" aria-label="Метрики последнего ответа"><span id="eTtft">ТТФТ —</span><span id="eRate">ЧАНК/С —</span><span id="eVoice">ГОЛОС —</span></aside>
+  </main>
+
+  <nav class="mnav" id="mnav" aria-label="Разделы (телефон)">
+    <div class="swiper"><div class="swiper-wrapper seg">
+      <a class="swiper-slide" href="index.html">Главная</a>
+      <a class="swiper-slide" href="chat.html" aria-current="page">Резонанс</a>
+      <a class="swiper-slide" href="projects.html">Проекты</a>
+      <a class="swiper-slide" href="memory.html">Память</a>
+      <a class="swiper-slide" href="training.html">Обучение</a>
+      <a class="swiper-slide" href="models.html">Ядро</a>
+      <a class="swiper-slide" href="system.html">Система</a>
+      <a class="swiper-slide" href="install.html">Установка</a>
+    </div></div>
+  </nav>
+</div>
+
+<!-- Настройки (shoelace drawer) -->
+<sl-drawer id="drSettings" label="Настройки" placement="end" class="nox-dr">
+  <div class="set">
+    <section><h3 class="mono">Планета</h3><div class="planets" id="planets" role="radiogroup" aria-label="Планета"></div><p class="note" id="planetNote"></p></section>
+    <section><h3 class="mono">Космос</h3>
+      <div class="seg opt" data-opt="space" role="radiogroup" aria-label="Яркость космоса"><button role="radio" data-v="off">Стоп</button><button role="radio" data-v="on">Мягко</button><button role="radio" data-v="high">Ярко</button></div>
+      <div class="seg opt" data-opt="dust" role="radiogroup" aria-label="Звёздная пыль"><button role="radio" data-v="off">Пыль выкл</button><button role="radio" data-v="on">Пыль вкл</button></div></section>
+    <section><h3 class="mono">Чат</h3>
+      <div class="seg opt" data-opt="proto" role="radiogroup" aria-label="Протокол чата"><button role="radio" data-v="classic">Классический /api/chat</button><button role="radio" data-v="glm">Шлюз GLM-5.3</button></div>
+      <div class="seg opt" data-opt="enter" role="radiogroup" aria-label="Отправка"><button role="radio" data-v="enter">Enter</button><button role="radio" data-v="ctrl">Ctrl+Enter</button></div></section>
+    <section><h3 class="mono">Голос</h3>
+      <div class="seg opt" data-opt="speak" role="radiogroup" aria-label="Озвучка ответов"><button role="radio" data-v="off">Озвучка выкл</button><button role="radio" data-v="on">Озвучка вкл</button></div>
+      <div class="seg opt" data-opt="lang" role="radiogroup" aria-label="Язык распознавания"><button role="radio" data-v="auto">Авто</button><button role="radio" data-v="ru">RU</button><button role="radio" data-v="es">ES</button></div>
+      <div class="seg opt" data-opt="auto" role="radiogroup" aria-label="Автоотправка"><button role="radio" data-v="off">Текст в поле</button><button role="radio" data-v="on">Сразу отправлять</button></div>
+      <p class="note mono" id="voiceStat">STT — · TTS —</p></section>
+    <section><h3 class="mono">Интерфейс</h3>
+      <div class="seg opt" data-opt="dens" role="radiogroup" aria-label="Плотность"><button role="radio" data-v="cozy">Просторно</button><button role="radio" data-v="tight">Компактно</button></div>
+      <div class="seg act"><button type="button" id="btnTour">Показать тур</button><button type="button" id="btnClassic">Классический чат</button></div></section>
+    <section><h3 class="mono">О сборке</h3><p class="note">Текстуры планет — Solar System Scope, CC BY 4.0 (данные NASA). Шрифты Inter, Manrope, JetBrains Mono (OFL). Библиотеки: three, postprocessing, motion, tsparticles, lottie-web, wavesurfer.js, driver.js, swiper, Shoelace, Tabler Icons (MIT/BSD/Zlib).</p></section>
+  </div>
+</sl-drawer>
+
+<!-- Диалоги -->
+<sl-drawer id="drThreads" label="Диалоги" placement="start" class="nox-dr">
+  <div class="seg act"><button type="button" id="thNew"><sl-icon library="tabler" name="plus"></sl-icon>Новый диалог</button></div>
+  <ul class="threads" id="threadList"></ul>
+</sl-drawer>
+
+<!-- Палитра команд (Ctrl+K) -->
+<sl-dialog id="dlPalette" label="Команды" class="nox-dl no-header">
+  <div class="pal"><sl-icon library="tabler" name="search"></sl-icon><input id="palInput" type="text" placeholder="Команда или раздел…" aria-label="Поиск команды" autocomplete="off"></div>
+  <ul class="pal-list" id="palList" role="listbox"></ul>
+  <div class="pal-foot mono">↑↓ ВЫБОР · ENTER — ВЫПОЛНИТЬ · ESC — ЗАКРЫТЬ</div>
+</sl-dialog>
+
+<script type="module" src="./nox-wow.js"></script>
+</body>
+</html>
