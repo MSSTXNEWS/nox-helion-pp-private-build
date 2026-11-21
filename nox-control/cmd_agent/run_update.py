@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551  # S2 (США); S1 (Квебек) = 61825960, выбирается маркером #S1 в начале REMOTE
 KEY = os.environ["NOX2"]
-REMOTE = '#S1\ncurl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c124/drive_pull_s1.sh -o /tmp/sr.sh && bash /tmp/sr.sh 2>&1 | tail -c 3000 # 1795297904.3282163'
+REMOTE = 'curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-deploy-script/nox-control/cmd_agent/deploy_web.sh -o /tmp/dw.sh && bash /tmp/dw.sh 88e31ec32a042288371c1d41e5e5c3101286c2115eb1149883271064f892d2be https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/cf68eb2282703998d636a234b4ebe3d5c8eccee8/nox-web.part00 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/cf68eb2282703998d636a234b4ebe3d5c8eccee8/nox-web.part01 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/cf68eb2282703998d636a234b4ebe3d5c8eccee8/nox-web.part02 2>&1 | tail -12'
 
 if REMOTE.startswith("#S1"):
     INSTANCE = 61825960
