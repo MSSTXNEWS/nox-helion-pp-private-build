@@ -216,6 +216,45 @@ class CheckpointStepProvenance(unittest.TestCase):
         self.assertEqual(stopped, [["supervisorctl", "stop", name]])
 
 
+    def test_post_stop_supervisor_readback_requires_valid_terminal_state(self):
+        # Source-only, AST-executed. A successful stop command alone cannot
+        # certify that the named controller is actually STOPPED/EXITED.
+        stop = load_pinned_verifier(Path("/tmp"))["stop_controller"]
+        name = "nox-dispatcher-t855u"
+        script = Path("/root/nox/scripts/nox_dispatcher_t855u.py")
+        malformed = (None, [], "STOPPED", {}, {"state": None},
+                     {"state": "RUNNING"}, {"state": "FATAL"},
+                     {"state": "STARTING"}, {"state": 0})
+        for post in (*malformed, {"state": "STOPPED"}, {"state": "EXITED"}):
+            with self.subTest(post=repr(post)):
+                calls = []
+                snapshots = []
+                def service_state(_name):
+                    snapshots.append(_name)
+                    return ({"state": "RUNNING", "pid": 321}
+                            if len(snapshots) == 1 else post)
+                def command(argv, timeout):
+                    calls.append((argv, timeout))
+                    return (0, "ok")
+                helper = types.SimpleNamespace(
+                    service_state=service_state,
+                    program_config=lambda _name: {
+                        "command": "python " + str(script),
+                        "stopasgroup": "false", "killasgroup": "false"},
+                    process=lambda _pid: {
+                        "service": name, "argv": ["python", str(script)],
+                        "pgrp": 321},
+                    command=command,
+                )
+                if isinstance(post, dict) and post.get("state") in ("STOPPED", "EXITED"):
+                    self.assertIsNone(stop(helper, name, script))
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "HOLD_CONTROLLER_STOP_FAILED"):
+                        stop(helper, name, script)
+                self.assertEqual(calls, [(["supervisorctl", "stop", name], 75)])
+                self.assertEqual(snapshots, [name, name])
+
+
     def test_owner_pause_at_target_never_claims_completed_continuation(self):
         # A verified 1000-step owner STOP is a checkpoint, not proof that the
         # native continuation emitted VERIFIED_BOUNDED_ADAPTER_UPDATE.

@@ -937,7 +937,14 @@ def stop_controller(helper, name, script):
         if any(item['service'] != name for item in group):
             raise RuntimeError('HOLD_CONTROLLER_FOREIGN_PROCESS_GROUP')
     rc, _ = helper.command(['supervisorctl', 'stop', name], 75)
-    if rc or helper.service_state(name)['state'] not in ('STOPPED', 'EXITED'):
+    # A successful supervisorctl command is not a verified controller stop.
+    # Missing/malformed post-stop Supervisor state must fail closed, not raise
+    # an unrelated KeyError/TypeError or count as an accepted stop.
+    if rc:
+        raise RuntimeError('HOLD_CONTROLLER_STOP_FAILED')
+    final_status = helper.service_state(name)
+    if (type(final_status) is not dict
+            or final_status.get('state') not in ('STOPPED', 'EXITED')):
         raise RuntimeError('HOLD_CONTROLLER_STOP_FAILED')
 
 
