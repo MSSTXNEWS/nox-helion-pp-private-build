@@ -84,7 +84,14 @@ class HotContextTests(unittest.TestCase):
                          "\\n".join(msg["content"] for msg in out["messages"]))
         self.assertEqual(call(**kwargs)["selected_s03_ids"],
                          ["unrelated","cat","dog"])
+        # A tie is deterministic: equal scores require ascending ID.
+        tied_rows = [{**row, "first_pass_score": .5}
+                     for row in plan["first_pass"]]
+        self.assertEqual(call(**kwargs, retrieval_plan={
+            **plan, "first_pass": tied_rows})["selected_s03_ids"], ["cat","dog"])
         for mutated in (
+            {**plan, "first_pass": list(reversed(plan["first_pass"]))},
+            {**plan, "first_pass": list(reversed(tied_rows))},
             {**plan,"first_pass":[{**plan["first_pass"][0],
                                    "source_sha256":"f"*64}]},
             {**plan,"first_pass":[{**plan["first_pass"][0], "id":"unrelated"}]},
