@@ -141,9 +141,13 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       documentURL:'http://localhost/nox/chat',initiator:{type:'script'},
       request:{method:'POST',url:'http://localhost/api/nox/chat',postData:'{"overlap":true}'}
     });
-    if(!(i===0&&options.omitFirstClose))
-      c.emit(i===1&&o.loadingFailed?'Network.loadingFailed':'Network.loadingFinished',
-        {requestId,timestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02});
+    if(!(i===0&&options.omitFirstClose)){
+      const closeFailed=i===0?options.firstLoadingFailed===true:o.loadingFailed===true;
+      const closeTimestamp=i===0&&Object.hasOwn(options,'firstCloseTimestamp')?
+        options.firstCloseTimestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02;
+      c.emit(closeFailed?'Network.loadingFailed':'Network.loadingFinished',
+        {requestId,timestamp:closeTimestamp});
+    }
     await new Promise(r=>setImmediate(r));
     // Artificial wall-clock delay between browser POSTs: the first CDP
     // metadata guard can seal before the second request even starts.
@@ -1246,4 +1250,36 @@ test('expired first POST metadata cannot mask another first-stream fault or cert
     overlapPostBeforeFirstClose:true
   }),/CDP_NON_SERIAL_CHAT_POST/);
   assert.doesNotMatch(JSON.stringify(observed),/secret|Hello|data:/);
+});
+
+
+test('post-DONE first-turn error plus failed, reversed or absent network close rejects second POST',async()=>{
+  const baseline=await run();
+  assert.equal(baseline.cdp_consistent,true);
+  const invalidFirst=body+'event: error\n'+'data: {"error":"after done"}\n\n';
+  // A successfully closed first network request allows attribution of a
+  // second stream for diagnostics, but not aggregate acceptance of the pair.
+  const control=await run(false,null,null,null,{firstBody:invalidFirst});
+  assert.equal(control.cdp_consistent,false);
+  assert.equal(control.ttft_sse_verified,false);
+  assert.deepEqual(control.turns.map(t=>t.cdp_request_id),['1','2']);
+  assert.equal(control.turns[0].stream_timing_complete,false);
+  assert.equal(control.turns[0].ttft_ms,null);
+  assert.equal(control.turns[1].request_sha256,baseline.turns[1].request_sha256);
+  assert.equal(control.turns[1].cdp_decoded_body_sha256,
+    baseline.turns[1].cdp_decoded_body_sha256);
+  assert.equal(control.turns[1].ttft_ms,baseline.turns[1].ttft_ms);
+  assert.equal(control.turns[1].sse_done_ms,baseline.turns[1].sse_done_ms);
+  assert.equal(control.turns[1].stream_timing_complete,true);
+  // An apparent SSE stop+[DONE] never substitutes for a valid first
+  // Network.loadingFinished before the second browser POST.
+  for(const [scenario,flags] of [
+    ['first network loadingFailed',{firstLoadingFailed:true}],
+    ['first close before data',{firstCloseTimestamp:100.009}],
+    ['first close missing',{omitFirstClose:true}]
+  ]){
+    await assert.rejects(run(false,null,null,null,{firstBody:invalidFirst,...flags}),
+      /CDP_NON_SERIAL_CHAT_POST/,scenario);
+  }
+  assert.doesNotMatch(JSON.stringify(control),/after done|secret|Hello|data:/);
 });
