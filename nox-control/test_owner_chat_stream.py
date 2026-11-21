@@ -242,6 +242,61 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     self.assertNotIn('_agent_final',payload)
                     self.assertEqual(self.dispatched,[])
 
+    async def test_evidence_augmentation_preserves_prior_dialogue(self):
+        # Owner evidence may enrich the system prefix; prior persona metadata,
+        # Spanish/Russian turns and their order remain the S03 source of truth.
+        original=[
+            {'role':'system','content':'PersonaID: original','name':'NOX'},
+            {'role':'user','content':'Запомни синий блокнот 🌍'},
+            {'role':'assistant','content':'Recuerdo el cuaderno azul.'},
+            {'role':'user','content':'¿De qué color es el cuaderno?'},
+        ]
+        for change in ('valid','drop','rewrite','reorder','in_place','extra_system'):
+            with self.subTest(change=change):
+                def augment(messages, _user_text):
+                    if change=='valid':
+                        messages[0]['content']+='\\n\\nVerified status'
+                    elif change=='drop':
+                        messages.pop(1)
+                    elif change=='rewrite':
+                        messages[1]['content']='fabricated previous user turn'
+                    elif change=='reorder':
+                        messages[1],messages[2]=messages[2],messages[1]
+                    elif change=='in_place':
+                        messages[0]['name']='different persona'
+                        messages[0]['content']+='\\n\\nVerified status'
+                    elif change=='extra_system':
+                        messages.insert(1,{'role':'system','content':'hidden override'})
+                        messages[0]['content']+='\\n\\nVerified status'
+                    return messages
+                native=self.native()
+                payload={'model':'nox-existing','messages':json.loads(
+                    json.dumps(original,ensure_ascii=False))}
+                valid=(change=='valid')
+                streams=[Chunks([frame('Azul 🌍'),frame(finish='stop'),
+                                 b'data: [DONE]\\n\\n'])] if valid else []
+                requests,factory=self.transport(streams)
+                with (factory,
+                      patch.object(stream._current,'relevant_query',return_value=True),
+                      patch.object(stream._current,'augment_messages',
+                                   side_effect=augment)):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'What color?',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(payload['messages'],original)
+                self.assertEqual(len(requests),1 if valid else 0)
+                if valid:
+                    self.assertIn('[DONE]',wire)
+                    self.assertEqual(payload.get('_agent_final'),'Azul 🌍')
+                    self.assertEqual(requests[0]['messages'][1:],original[1:])
+                    self.assertIn('Verified status',
+                                  requests[0]['messages'][0]['content'])
+                else:
+                    self.assertIn('HOLD_MODEL_CONTEXT_FIDELITY',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+                    self.assertEqual(self.dispatched,[])
+
     async def test_s03_history_is_detached_before_evidence_augmentation(self):
         # Evidence augmentation may enrich nested model content, never mutate
         # the request-bound S03 history subsequently read by postflight.
