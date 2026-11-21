@@ -114,6 +114,7 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
   if(!/^ws:\/\/(localhost|127\.0\.0\.1):\d+\//.test(ws||''))throw Error('LOCAL_CDP_ONLY');
   if(!Number.isInteger(count)||count<1||count>6)throw Error('BAD_COUNT');
   const c=await(makeSession?makeSession():new Cdp(ws).open()),active=new Map(),finished=[];
+  let startedPostCount=0;
   let yes,no;const completion=new Promise((a,b)=>{yes=a;no=b;});
   const timer=setTimeout(()=>no(Error('CDP_TIMEOUT')),timeoutMs);
   const validTime=t=>typeof t==='number'&&Number.isFinite(t)&&t>=0;
@@ -161,7 +162,10 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       let path;try{path=new URL(p.request.url).pathname;}catch{return;}
       if(p.request.method!=='POST'||!paths.has(path))return;
       if(active.has(p.requestId)){no(Error('DUPLICATE_CDP_ID'));return;}
-      const x={id:p.requestId,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
+      // Bind each conversational turn at requestWillBeSent, not async body ACK.
+      // An unexpected third POST invalidates the entire observed two-turn capture.
+      if(startedPostCount>=count){no(Error('EXTRA_CDP_POST'));return;}
+      const x={id:p.requestId,order:++startedPostCount,start:p.timestamp,request:null,response:null,status:null,mime:null,responseHeadersMs:null,firstDataMs:null,ttft:null,done:null,close:null,streaming:false,missing:!validTime(p.timestamp),lastTimestamp:validTime(p.timestamp)?p.timestamp:null,responseHeadersAt:null,firstDataAt:null,ttftAt:null,doneAt:null,closeAt:null,bytes:0,partial:'',decoder:new TextDecoder('utf-8',{fatal:true}),visibleText:'',streamHasher:createHash('sha256'),streamDigest:null,bodyMatchesStream:false,encoded:false,extraExpected:null,extraSeen:0,requestLookupPending:null,finishStop:false};
       active.set(p.requestId,x);
       const record=s=>{
         if(typeof s!=='string'){x.missing=true;return;}
@@ -245,7 +249,8 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
   try{
     await c.send('Network.enable');const version=await c.send('Browser.getVersion');
     if(onReady)await onReady(c);
-    const records=await completion;
+    const records=(await completion).slice().sort((a,b)=>a.order-b.order);
+    // Network.getResponseBody resolves asynchronously; completion order is not turn order.
     // Response-body completion can beat the asynchronous request-data CDP ACK.
     // Wait only for already-issued metadata queries, never replay the model POST.
     const requestLookups=records.map(x=>x.requestLookupPending).filter(Boolean);
@@ -266,7 +271,8 @@ export async function capture({ws,count=2,timeoutMs=45000,makeSession,onReady}={
       sse_done_ms:!x.missing?x.done:null,close_ms:x.close,
       visible_text_sha256:!x.missing?hash(Buffer.from(x.visibleText,'utf8')):null,
       stream_timing_complete:!x.missing&&x.streaming&&x.bodyMatchesStream}));
-    const unique=new Set(turns.map(x=>x.cdp_request_id)).size===turns.length;
+    const unique=startedPostCount===count&&active.size===count&&records.length===count&&
+      new Set(turns.map(x=>x.cdp_request_id)).size===count;
     const valid=unique&&turns.every(x=>x.request_sha256&&x.cdp_decoded_body_sha256&&x.cdp_decoded_body_matches_stream&&x.status===200&&x.mime==='text/event-stream');
     const timed=valid&&turns.every((t,i)=>{
       const x=records[i],raw=[x.start,x.responseHeadersAt,x.firstDataAt,x.ttftAt,x.doneAt,x.closeAt];
