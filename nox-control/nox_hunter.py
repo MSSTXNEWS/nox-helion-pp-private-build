@@ -10,7 +10,7 @@ crossref, and html_page.
 from __future__ import annotations
 
 import argparse
-from datetime import date
+from datetime import date as calendar_date
 from email.utils import parsedate_to_datetime
 import hashlib
 from html.parser import HTMLParser
@@ -290,7 +290,7 @@ def _crossref_items(body: bytes) -> list[dict[str, str]]:
                 # chronological metadata. Partial year/month dates are valid.
                 try:
                     if len(parts) == 3:
-                        date(*parts)
+                        calendar_date(*parts)
                     published = (
                         f"{parts[0]:04d}"
                         + (f"-{parts[1]:02d}" if len(parts) >= 2 else "")
