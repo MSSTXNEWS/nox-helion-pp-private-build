@@ -734,6 +734,7 @@ def main():
     global BASE
     if os.environ.get('NOX_PROBE_NONLOOPBACK','1')=='1':BASE=nonloopback_base()
     probe_started=time.monotonic()
+    executor_question_receipt=None  # Publish only after every gate, logout and final budget.
     if os.environ.get('NOX_PROBE_SOURCE_EXPORT')=='1':sources()
     emit('chat_recent_timing',metrics())
     sys.path.insert(0,str(ROOT/'scripts'))
@@ -840,15 +841,6 @@ def main():
             third_durable=(isinstance(end,dict) and end.get('saved') is True
                            and end.get('s03_integrated') is True
                            and stable_postquiet_three_turn_history(client,third_history,expected_three,did))
-            emit('chat_executor_question',{'verified_six_plus_nox':bool(configured == 6 and phrase and third_durable),
-                'verified_observed_executor_count':bool(count and phrase and third_durable),
-                'observed_configured_count':configured,
-                'live_api_fresh':count,'native_answer_matches_six_plus_nox':bool(configured == 6 and phrase),
-                'native_answer_matches_observed_count':phrase,
-                'saved':end.get('saved') is True,'s03_integrated':end.get('s03_integrated') is True,
-                'three_turn_history_verified':third_durable,
-                'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
-                'answer_sha256':digest(text.encode()),'raw_answer_exported':False})
             if not third_durable:raise RuntimeError('HOLD_CHAT_PROBE_POSTQUIET_HISTORY')
             require_executor_witness(end,third_history,expected_three,count,phrase,did)
             require_postturn_owner_binding(client)  # final owner route continuity, read-only
@@ -856,12 +848,24 @@ def main():
             # Third inference and durable-history readback also consume the 210 s budget.
             # A passed pre-POST gate alone must never authorize final COMPLETE.
             require_executor_turn_budget(time.monotonic()-probe_started)
+            executor_question_receipt={'verified_six_plus_nox':bool(configured == 6 and phrase and third_durable),
+                'verified_observed_executor_count':bool(count and phrase and third_durable),
+                'observed_configured_count':configured,
+                'live_api_fresh':count,'native_answer_matches_six_plus_nox':bool(configured == 6 and phrase),
+                'native_answer_matches_observed_count':phrase,
+                'saved':end.get('saved') is True,'s03_integrated':end.get('s03_integrated') is True,
+                'three_turn_history_verified':third_durable,
+                'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
+                'answer_sha256':digest(text.encode()),'raw_answer_exported':False,
+                'verification_scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'}
         emit('chat_recent_timing_after',metrics())
     finally:
         try:request(client,'/chat/logout','POST',{}).close()
         except Exception:pass
     # Logout/metrics are part of elapsed probe time; check immediately before COMPLETE.
     require_executor_turn_budget(time.monotonic()-probe_started)
+    if executor_question_receipt is not None:
+        emit('chat_executor_question',executor_question_receipt)
     print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
 
 if __name__=='__main__':

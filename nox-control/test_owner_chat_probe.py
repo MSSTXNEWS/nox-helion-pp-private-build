@@ -25,6 +25,32 @@ class SyntheticBoundedReader:
 
 
 class ProbeTests(unittest.TestCase):
+    def test_executor_positive_receipt_deferred_past_all_final_gates(self):
+        """No green third-turn evidence may be emitted before postquiet, owner, logout and final budget."""
+        code = path.read_text()
+        main = code[code.index('def main():'):]
+        self.assertIn('executor_question_receipt=None', main)
+        self.assertEqual(main.count("emit('chat_executor_question',"), 1)
+        self.assertEqual(main.count('executor_question_receipt={'), 1)
+        order = (
+            'if not third_durable:raise RuntimeError',
+            'require_executor_witness(end,third_history',
+            'require_postturn_owner_binding(client)  # final',
+            'require_postturn_executor_identity(client, fresh)',
+            'executor_question_receipt={',
+            "emit('chat_recent_timing_after',metrics())",
+            "request(client,'/chat/logout','POST',{})",
+            '    require_executor_turn_budget(time.monotonic()-probe_started)\\n    if executor_question_receipt is not None:',
+            "emit('chat_executor_question',executor_question_receipt)",
+            "print('NOX_MAINT_REPAIR_COMPLETE=true'",
+        )
+        # Distinguish the final timeout guard from the earlier two guards.
+        order = tuple(x.replace('\\n', '\n') for x in order)
+        positions = [main.index(token) for token in order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("'verification_scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'", main)
+        self.assertEqual(main.count("require_executor_turn_budget(time.monotonic()-probe_started)"), 3)
+
     def test_postthird_owner_executor_identity_drift_fails_closed(self):
         """A settled 3-turn history cannot certify stale executor identities."""
         witness = {'schema': 'NOX_OWNER_EXECUTORS_V1', 'state': 'OBSERVED',
