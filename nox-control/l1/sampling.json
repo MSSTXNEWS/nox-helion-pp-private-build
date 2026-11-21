@@ -1,0 +1,10 @@
+{
+  "default_mode": "fast",
+  "common": {"top_p": 0.9, "repeat_penalty": 1.05, "min_p": 0.05, "stream": true},
+  "modes": {
+    "fast": {"temperature": 0.55, "max_tokens": 512, "reasoning": "off",
+             "note": "обычный чат: низкая задержка"},
+    "precise": {"temperature": 0.3, "max_tokens": 1536, "reasoning": "on",
+                "note": "расчёты, код, факты: разбор по шагам и самопроверка"}
+  }
+}
