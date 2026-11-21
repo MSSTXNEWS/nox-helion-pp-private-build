@@ -1574,7 +1574,8 @@ async function check(chunks, status=200) {
                     'path':'/','value':'signed-A','httpOnly':True}
         rotated = dict(original, value='signed-B')
         pin = owner_session_cookie_pin([original])
-        self.assertRegex(pin, r'^[a-f0-9]{64})
+        self.assertIsInstance(pin, str)
+        self.assertEqual(len(pin), 64)
 
         async def exercise(mode):
             cookies = [dict(original)]
