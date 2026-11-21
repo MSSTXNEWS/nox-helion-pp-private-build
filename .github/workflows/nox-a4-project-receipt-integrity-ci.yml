@@ -1,0 +1,28 @@
+name: NOX A4 project integration receipt integrity source check
+on:
+  pull_request:
+    paths:
+      - 'nox-control/systemic_relay_20261118/runtime/owner_project_native.py'
+      - 'nox-control/systemic_relay_20261118/test_owner_project_integrity_receipt.py'
+      - '.github/workflows/nox-a4-project-receipt-integrity-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  a4-receipt-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Exact focused syntax and receipt proof (no native operations)
+        working-directory: nox-control/systemic_relay_20261118
+        run: |
+          python -B -m py_compile runtime/owner_project_native.py test_owner_project_integrity_receipt.py
+          python -B -m unittest -v test_owner_project_integrity_receipt
+      - name: No live integration claim
+        run: echo "SOURCE_PATCH_TESTED_ONLY; original295 accepted increment=0"

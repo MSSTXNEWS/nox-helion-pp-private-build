@@ -95,20 +95,53 @@ class ProjectBinding:
         import owner_subagent_dispatcher as binding
         native = self.native
         evidence = event['project_evidence']
-        if (evidence.get('task_id') != task['id']
+        # A contract-only model preparer pins its generated plan in the
+        # persisted task. Do not sign a different plan as a completed result.
+        reference = (task.get('native_project_generated_reference')
+                     or self.reference(task['params']))
+        if (not isinstance(reference, dict)
+                or reference.get('contract_sha256') != task['params'].get('contract_sha256')
+                or evidence.get('plan_sha256') != reference.get('plan_sha256')
+                or ('contract_sha256' in reference
+                    and evidence.get('contract_sha256') != reference['contract_sha256'])
+                or evidence.get('task_id') != task['id']
                 or evidence.get('parent_task_id') != task['parent_task_id']
                 or evidence.get('queue_id') != task['queue_id']
                 or evidence.get('original_task_accepted') is not False
+                or not isinstance(execution_claim, str) or not execution_claim
+                or evidence.get('claim') != execution_claim
                 or event.get('project_evidence_sha256') != binding.digest(binding.encoded(evidence))):
             raise GateError('HOLD_PROJECT_FINAL_EVIDENCE')
         integrated = evidence.get('state') == 'INTEGRATED'
         if integrated and (evidence.get('integration_verified') is not True
-                or evidence.get('tests', {}).get('passed') is not True):
+                or evidence.get('project_source_changed') is not True
+                or not isinstance(evidence.get('tests'), dict)
+                or evidence['tests'].get('passed') is not True):
             raise GateError('HOLD_PROJECT_INTEGRATION_PROOF')
-        # Sanitization is performed before the final digest and exact S03 write,
-        # matching the existing native queue's own result sanitization.
-        event = native.ns['owner_mentor'].clean(event)
-        evidence = event['project_evidence']
+        # The sanitizer is not required to return a new object: it may
+        # mutate event and evidence in place. Snapshot signed verdict bytes
+        # BEFORE calling it, so an in-place rewrite cannot self-validate.
+        protected = ('task_id', 'parent_task_id', 'queue_id', 'plan_sha256',
+                     'contract_sha256', 'claim', 'acceptance_scope', 'state',
+                     'original_task_accepted', 'project_source_changed',
+                     'integration_verified')
+        signed_fields = {key: (type(evidence.get(key)),
+                                binding.encoded(evidence.get(key)))
+                         for key in protected}
+        signed_tests = binding.encoded(evidence.get('tests')) if integrated else None
+        cleaned = native.ns['owner_mentor'].clean(event)
+        if not isinstance(cleaned, dict) or not isinstance(cleaned.get('project_evidence'), dict):
+            raise GateError('HOLD_PROJECT_SANITIZED_EVIDENCE')
+        sanitized = cleaned['project_evidence']
+        if (any(type(sanitized.get(key)) is not field_type
+                or binding.encoded(sanitized.get(key)) != signed_value
+                for key, (field_type, signed_value) in signed_fields.items())
+                or (integrated and (not isinstance(sanitized.get('tests'), dict)
+                    or sanitized['tests'].get('passed') is not True
+                    or binding.encoded(sanitized['tests']) != signed_tests))):
+            raise GateError('HOLD_PROJECT_SANITIZED_EVIDENCE')
+        event = cleaned
+        evidence = sanitized
         event['project_evidence_sha256'] = binding.digest(binding.encoded(evidence))
         result = {'schema':binding.RECEIPT,
                   'phase':'PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED' if integrated
@@ -136,7 +169,9 @@ class ProjectBinding:
                 task['native_worker_lease'] = {**lease, 'phase':'SETTLED',
                     'receipt_sha256':receipt_sha, 'settled_at':time.time()}
             native.ns['save_state'](native.state)
-        self.terminal_cache.add(receipt_sha)
+        # remember() returns a write acknowledgement, not an independent S03
+        # readback. Do not seed terminal_cache until terminal_for_capacity()
+        # has checked an exact durable task/job/receipt witness.
         return (True if integrated else False), info
 
     def _planner_failure(self, task, event, identity, contract, claim):
@@ -426,6 +461,7 @@ class ProjectBinding:
         value = task.get('native_project_terminal') or {}
         receipt = value.get('receipt')
         if (not isinstance(receipt, dict) or receipt.get('task_id') != task.get('id')
+                or receipt.get('job_id') != (task.get('params') or {}).get('job_id')
                 or receipt.get('phase') != 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED'
                 or receipt.get('original_task_accepted') is not False
                 or receipt.get('claim') != task.get('owner_claim')
@@ -436,10 +472,19 @@ class ProjectBinding:
         if native.pool and task['id'] in native.pool.active.values():
             return False
         sha = value['receipt_sha256']
-        if sha not in self.terminal_cache:
-            if not binding.s03_readback(receipt):
-                return False
-            self.terminal_cache.add(sha)
+        # A cached positive is not a durable S03 lease: a previously verified
+        # receipt may have been revoked or replaced. Revalidate each capacity
+        # release instead of trusting the historical cache alone.
+        proof = binding.s03_readback(receipt)
+        if (not isinstance(proof, dict) or proof.get('native_verified') is not True
+                or proof.get('task_id') != task.get('id')
+                or proof.get('job_id') != receipt.get('job_id')
+                or proof.get('receipt_sha256') != sha
+                or not isinstance(proof.get('s03_item_id'), str)
+                or not proof['s03_item_id']):
+            self.terminal_cache.discard(sha)
+            return False
+        self.terminal_cache.add(sha)
         evidence = (receipt.get('worker_result') or {}).get('project_evidence') or {}
         return evidence.get('state') in executor.TERMINAL_WITHOUT_CHANGES
 
@@ -463,16 +508,31 @@ class ProjectBinding:
                 if (task.get('params') or {}).get('source_sha256') != native.source:
                     continue  # Historical source records are read-only, never a recovery/replay grant.
                 if task.get('native_project_terminal'):
-                    # The generic mentor may propose retry; this adapter needs
-                    # a new reviewed plan for a proved failed implementation.
+                    # Do not convert a pending/retry task into a terminal blocker
+                    # on a truthy S03 reply for another job or a forged receipt.
+                    # Reconciliation is as strict as terminal_for_capacity().
                     info = task['native_project_terminal']
-                    receipt = info.get('receipt') or {}
-                    if (receipt.get('phase') == 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED'
+                    receipt = info.get('receipt') if isinstance(info, dict) else None
+                    params = task.get('params') or {}
+                    if (isinstance(receipt, dict)
+                            and receipt.get('phase') == 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED'
+                            and receipt.get('original_task_accepted') is False
+                            and receipt.get('task_id') == task.get('id')
+                            and receipt.get('job_id') == params.get('job_id')
+                            and receipt.get('claim') == task.get('owner_claim')
+                            and native.receipt_source_allowed(task, receipt)
+                            and info.get('receipt_sha256') == binding.digest(binding.encoded(receipt))
                             and task.get('status') in ('pending', 'retry', 'wait')
-                            and (not native.pool or task['id'] not in native.pool.active.values())
-                            and binding.s03_readback(receipt)):
-                        task.update(status='blocked', note='PROJECT_ATTEMPT_TERMINAL_REPAIR_PLAN_REQUIRED')
-                        native.ns['save_state'](native.state)
+                            and (not native.pool or task['id'] not in native.pool.active.values())):
+                        proof = binding.s03_readback(receipt)
+                        if (isinstance(proof, dict) and proof.get('native_verified') is True
+                                and proof.get('task_id') == task['id']
+                                and proof.get('job_id') == receipt['job_id']
+                                and proof.get('receipt_sha256') == info['receipt_sha256']
+                                and isinstance(proof.get('s03_item_id'), str)
+                                and proof['s03_item_id']):
+                            task.update(status='blocked', note='PROJECT_ATTEMPT_TERMINAL_REPAIR_PLAN_REQUIRED')
+                            native.ns['save_state'](native.state)
                     continue
                 prior = task.get('native_project_attempt')
                 owner = task.get('owner_claim') or {}
@@ -518,17 +578,59 @@ class ProjectBinding:
         if not isinstance(evidence, dict):
             return None
         receipt = evidence.get('receipt')
-        if (not isinstance(receipt, dict) or receipt.get('task_id') != task.get('id')
+        # Model-prepared plans are pinned by native_project_generated_reference,
+        # not by the original contract-only catalog params.
+        reference = (task.get('native_project_generated_reference')
+                     or self.reference(task.get('params') or {}))
+        if (not isinstance(reference, dict)
+                or reference.get('contract_sha256') != (task.get('params') or {}).get('contract_sha256')
+                or not isinstance(receipt, dict) or receipt.get('task_id') != task.get('id')
                 or receipt.get('phase') != 'PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED'
                 or receipt.get('claim') != task.get('owner_claim')
                 or receipt.get('parent_task_id') != task.get('parent_task_id')
                 or receipt.get('queue_id') != task.get('queue_id')
+                or receipt.get('job_id') != (task.get('params') or {}).get('job_id')
+                or receipt.get('plan_sha256') != reference.get('plan_sha256')
                 or receipt.get('original_task_accepted') is not False
                 or not self.native.receipt_source_allowed(task, receipt)
                 or evidence.get('receipt_sha256') != binding.digest(binding.encoded(receipt))):
             return None
+        # A signed/S03-readable receipt is insufficient if its own execution
+        # evidence denies an actual integrated source change. Fail closed rather
+        # than manufacturing a positive project_source_changed result.
+        result = receipt.get('worker_result')
+        worker = result.get('project_evidence') if isinstance(result, dict) else None
+        if (not isinstance(worker, dict)
+                or not isinstance(receipt.get('execution_claim'), str)
+                or not receipt['execution_claim']
+                or worker.get('claim') != receipt['execution_claim']
+                or result.get('project_evidence_sha256') != binding.digest(binding.encoded(worker))):
+            return None
+        if (receipt.get('project_source_changed') is not True
+                or receipt.get('recovery_required') is not False
+                or not isinstance(worker, dict)
+                or worker.get('task_id') != task.get('id')
+                or worker.get('parent_task_id') != task.get('parent_task_id')
+                or worker.get('queue_id') != task.get('queue_id')
+                or worker.get('plan_sha256') != receipt.get('plan_sha256')
+                or worker.get('contract_sha256') != (task.get('params') or {}).get('contract_sha256')
+                or worker.get('acceptance_scope') != receipt.get('scope')
+                or worker.get('state') != 'INTEGRATED'
+                or worker.get('original_task_accepted') is not False
+                or worker.get('project_source_changed') is not True
+                or worker.get('integration_verified') is not True
+                or not isinstance(worker.get('tests'), dict)
+                or worker['tests'].get('passed') is not True):
+            return None
         proof = binding.s03_readback(receipt)
-        if not proof:
+        # The durable readback must attest this precise task/job and digest,
+        # not just return a truthy S03 result for another completed attempt.
+        if (not isinstance(proof, dict) or proof.get('native_verified') is not True
+                or proof.get('task_id') != task.get('id')
+                or proof.get('job_id') != receipt.get('job_id')
+                or proof.get('receipt_sha256') != evidence['receipt_sha256']
+                or not isinstance(proof.get('s03_item_id'), str)
+                or not proof['s03_item_id']):
             return None
         return {'kind':'bounded_native_project_change', 'task_id':task['id'],
                 'parent_task_id':task['parent_task_id'], 'scope':receipt['scope'],
