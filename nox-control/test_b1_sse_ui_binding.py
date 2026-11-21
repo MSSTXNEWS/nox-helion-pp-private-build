@@ -351,6 +351,38 @@ def main():
             deltas.length===1 && deltas[0][0]==='SPLIT' &&
             deltas[0][1]==='event-123';
         }'''))
+        check('SSE preserves literal leading/trailing spaces in multi-line delta', page.evaluate('''async () => {
+          const s={conversation_id:'literal-whitespace',exchange_id:'one'};
+          let posts=0,acks=0;
+          const deltas=[];
+          // Literal payload spaces after the optional single separator must
+          // survive CRLF, multiple data fields, and one-byte stream chunks.
+          const frame='id: space-123\\r\\nevent: delta\\r\\n' +
+            'data:  indented  \\r\\ndata:  spaced  \\r\\n\\r\\n';
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({start(c){
+              for(const ch of frame) c.enqueue(new TextEncoder().encode(ch));
+              c.close();
+            }})};
+          },async ack(){acks++;return true;}};
+          const ui={
+            async onDelta(scope,content,signal,eventId){
+              if(!signal.aborted) deltas.push([content,eventId]);
+            },
+            async upsertTerminal(){return true;}
+          };
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:5000
+          });
+          const ended=await c.begin(s);
+          const noRepost=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return ended==='STREAM_ENDED_READBACK_REQUIRED' &&
+            noRepost && posts===1 && acks===0 &&
+            deltas.length===1 && deltas[0][0]===' indented  \\n spaced  ' &&
+            deltas[0][1]==='space-123';
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:

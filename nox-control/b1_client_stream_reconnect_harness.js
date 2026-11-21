@@ -136,7 +136,10 @@
             buf=buf.slice(e+2);
             const lines=frame.split('\n');
             const event=lines.find(l=>l.startsWith('event:'));
-            const data=lines.filter(l=>l.startsWith('data:')).map(l=>l.slice(5).trim()).join('\n');
+            const data=lines.filter(l=>l.startsWith('data:'))
+               // SSE removes at most one U+0020 separator after ':'. Literal
+               // leading/trailing spaces are model output, not padding.
+               .map(l=>l.slice(5).replace(/^ /,'')).join('\n');
             if(event && event.slice(6).trim()==='delta'){
               // The B1 DOM adapter accepts an optional immutable per-delta SSE
               // event ID. Without forwarding the wire id: field, its replay
