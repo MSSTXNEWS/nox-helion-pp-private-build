@@ -312,14 +312,14 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             prepared.append(json.loads(json.dumps(req['messages'],ensure_ascii=False)))
             return req
         def augment(messages,user_text):
-            messages[0]['content']+='\\n\\nEvidence: nota azul 🌍'
+            messages[0]['content']+='\n\nEvidence: nota azul 🌍'
             return messages
         native['prepare_payload']=prepare
         payload={'model':'nox-existing','messages':json.loads(
             json.dumps(original,ensure_ascii=False))}
         requests,factory=self.transport([Chunks([
             frame('Recuerdo la nota azul.'),frame(finish='stop'),
-            b'data: [DONE]\\n\\n'
+            b'data: [DONE]\n\n'
         ])])
         with (factory,
               patch.object(stream._current,'relevant_query',return_value=True),
