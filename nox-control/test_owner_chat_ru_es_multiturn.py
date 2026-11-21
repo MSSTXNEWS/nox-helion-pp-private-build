@@ -2317,5 +2317,73 @@ async function check(chunks, status=200) {
                 browser.close()
 
 
+    def test_ru_es_reload_filter_and_transparent_text_paint_real_chromium(self):
+        """Literal RU/ES four-row history must actually be painted as text.
+
+        Browser-only readback, not proof of live model or canonical S03.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'paint-opaque-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda request: posts.append(request.url)
+                        if request.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items){
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body';
+                        body.textContent=row.content;
+                        bubble.append(body);
+                        root.append(bubble);
+                    }
+                }""", transcript)
+                check = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(check(), True)
+
+                bubble = page.locator('#messages .v24-msg').first
+                bubble.evaluate("(n)=>n.style.filter='opacity(0)'")
+                self.assertIs(check(), False,
+                              'CSS filter opacity zero erases painted bubble')
+                bubble.evaluate("(n)=>n.style.filter=''")
+                self.assertIs(check(), True)
+
+                mount = page.locator('#messages')
+                mount.evaluate("(n)=>n.style.filter='opacity(0)'")
+                self.assertIs(check(), False,
+                              'ancestor filter erases every painted history row')
+                mount.evaluate("(n)=>n.style.filter=''")
+                self.assertIs(check(), True)
+
+                body = page.locator('#messages .v24-msg .body').nth(1)
+                body.evaluate("(n)=>n.style.color='transparent'")
+                self.assertIs(check(), False,
+                              'transparent computed text color is not visible')
+                body.evaluate("(n)=>n.style.color=''")
+                self.assertIs(check(), True)
+
+                body.evaluate("(n)=>n.style.webkitTextFillColor='transparent'")
+                self.assertIs(check(), False,
+                              'transparent text fill hides unchanged text nodes')
+                body.evaluate("(n)=>n.style.webkitTextFillColor=''")
+                self.assertIs(check(), True)
+                self.assertEqual(posts, [], 'paint QA cannot trigger model POST')
+            finally:
+                browser.close()
+
+
 if __name__ == "__main__":
     unittest.main()
