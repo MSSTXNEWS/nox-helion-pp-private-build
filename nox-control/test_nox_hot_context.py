@@ -18,6 +18,43 @@ def call(**kwargs):
     default.update(kwargs);return m.plan_prompt(**default)
 
 class HotContextTests(unittest.TestCase):
+
+    def test_3b03_scoped_first_pass_and_rerank_proposal_never_claim_gpu(self):
+        def row(ident, fts, vec):
+            return {"id":ident, "persona_id":"owner-1", "revision":"a"*64,
+                    "status":"ACTIVE", "source_sha256":"b"*64,
+                    "fts_score":fts, "vector_score":vec}
+        rows=[row("a",.90,.90),row("b",.86,.88),row("c",.20,.20)]
+        result=m.plan_two_stage_retrieval(
+            candidates=rows,owner_persona_id="owner-1",
+            s03_revision="a"*64,shortlist_limit=3,rerank_limit=2)
+        self.assertEqual([r["id"] for r in result["first_pass"]],["a","b","c"])
+        self.assertEqual(result["optional_multilingual_rerank_ids"],["a","b"])
+        self.assertTrue(result["requires_owner_gpu_resource_and_lease_gate"])
+        self.assertFalse(result["gpu_reranker_executed"])
+        self.assertFalse(result["native_installed"])
+        self.assertFalse(result["independent_s03_readback_verified"])
+        # A confidently separated first-pass winner must not spend GPU.
+        certain=m.plan_two_stage_retrieval(
+            candidates=[row("a",1,1),row("b",0,0)],
+            owner_persona_id="owner-1",s03_revision="a"*64)
+        self.assertEqual(certain["optional_multilingual_rerank_ids"],[])
+        for unsafe in ({**rows[1],"persona_id":"someone-else"},
+                       {**rows[1],"status":"REVOKED"},
+                       {**rows[1],"revision":"c"*64},
+                       {**rows[1],"fts_score":True},
+                       {**rows[1],"vector_score":float("nan")},
+                       {**rows[1],"fts_score":10**401},
+                       {**rows[1],"vector_score":10**401},
+                       {**rows[1],"fts_score":-(10**401)},
+                       {**rows[1],"source_sha256":"not-a-sha"}):
+            with self.subTest(unsafe=unsafe):
+                with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_RETRIEVAL_"):
+                    m.plan_two_stage_retrieval(
+                        candidates=[rows[0],unsafe],
+                        owner_persona_id="owner-1",s03_revision="a"*64)
+
+
     def test_retains_persona_current_s03_and_retrieval_refs(self):
         out=call()
         text="\n".join(x["content"] for x in out["messages"])

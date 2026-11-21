@@ -21,6 +21,70 @@ def _scalar_text(value):
 def _guard(cond, code):
     if not cond: raise ContextHold("HOLD_CONTEXT_" + code)
 
+
+def plan_two_stage_retrieval(*, candidates, owner_persona_id, s03_revision,
+                             shortlist_limit=6, rerank_limit=4):
+    """Source-only cheap FTS/vector shortlist and optional rerank *proposal*.
+
+    Callers supply 0..1 normalized first-pass scores. Never performs GPU
+    inference or authorizes GPU use. Canonical S03/source authentication is a
+    separate prerequisite; source_sha256 here is an identity, not verification.
+    """
+    import math
+    _guard(isinstance(owner_persona_id, str) and
+           re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}", owner_persona_id)
+           is not None, "RETRIEVAL_PERSONA")
+    _guard(isinstance(s03_revision, str) and
+           re.fullmatch(r"[0-9a-f]{64}", s03_revision) is not None,
+           "RETRIEVAL_REVISION")
+    _guard(type(shortlist_limit) is int and 1 <= shortlist_limit <= 12 and
+           type(rerank_limit) is int and 2 <= rerank_limit <= shortlist_limit,
+           "RETRIEVAL_BUDGET")
+    _guard(isinstance(candidates, list) and len(candidates) <= 128,
+           "RETRIEVAL_INPUT")
+    seen = set()
+    ranked = []
+    required = {"id", "persona_id", "revision", "status",
+                "source_sha256", "fts_score", "vector_score"}
+    for item in candidates:
+        _guard(isinstance(item, dict) and set(item) == required,
+               "RETRIEVAL_FIELDS")
+        ident = item["id"]
+        _guard(isinstance(ident, str) and
+               re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}", ident) is not None
+               and ident not in seen, "RETRIEVAL_ID")
+        seen.add(ident)
+        # Do not silently mix a different PersonaID, S03 revision, or revoked
+        # record into the shortlist. Owner must refresh the atomic snapshot.
+        _guard(item["persona_id"] == owner_persona_id and
+               item["revision"] == s03_revision and
+               item["status"] == "ACTIVE", "RETRIEVAL_SCOPE")
+        sha = item["source_sha256"]
+        _guard(isinstance(sha, str) and
+               re.fullmatch(r"[0-9a-f]{64}", sha) is not None,
+               "RETRIEVAL_PROVENANCE")
+        scores = (item["fts_score"], item["vector_score"])
+        _guard(all(type(s) in (int, float) and
+                   0.0 <= s <= 1.0 and math.isfinite(s) for s in scores),
+               "RETRIEVAL_SCORE")
+        # Only score normalized evidence; do not copy untrusted source text
+        # into model instructions, and do not imply a live vector index exists.
+        score = round(.55 * scores[0] + .45 * scores[1], 8)
+        ranked.append({"id": ident, "source_sha256": sha,
+                       "first_pass_score": score})
+    ranked.sort(key=lambda x: (-x["first_pass_score"], x["id"]))
+    top = ranked[:shortlist_limit]
+    # Ask an existing owner-admitted multilingual GPU reranker only when the
+    # cheap stage cannot confidently separate the best two results.
+    ambiguous = (len(top) > 1 and
+                 top[0]["first_pass_score"] - top[1]["first_pass_score"] <= .08)
+    rerank_ids = [x["id"] for x in top[:rerank_limit]] if ambiguous else []
+    return {"schema": "NOX_RETRIEVAL_SHORTLIST_SOURCE_V1",
+            "first_pass": top, "optional_multilingual_rerank_ids": rerank_ids,
+            "requires_owner_gpu_resource_and_lease_gate": bool(rerank_ids),
+            "gpu_reranker_executed": False, "native_installed": False,
+            "independent_s03_readback_verified": False}
+
 def plan_prompt(*, persona, system, conversation, verified_s03,
                 current_user, token_counter, token_budget=4096,
                 recent_turns=8, owner_persona_id=None, current_s03_revision=None):
