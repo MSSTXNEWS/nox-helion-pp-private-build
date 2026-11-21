@@ -150,7 +150,12 @@
         const code=typeof e.error==='string'?e.error:
           typeof e.error?.code==='string'?e.error.code:'ERROR';
         if(!validUnicodeScalars(code))throw Error('HOLD_NATIVE_FRAME_UNICODE');
-        throw Error('HOLD_NATIVE_'+(code.trim()||'ERROR').slice(0,90));
+        // Native owner HOLD is already a full machine-readable reason.
+        // Never turn HOLD_RESOURCE_FLOOR into HOLD_NATIVE_HOLD_RESOURCE_FLOOR.
+        const reason=(code.trim()||'ERROR').slice(0,90);
+        if(/^HOLD_[A-Z0-9_]+$/.test(reason))throw Error(reason);
+        // Unexpected upstream messages are not trusted as browser-safe codes.
+        throw Error('HOLD_NATIVE_'+(/^[A-Z0-9_]+$/.test(reason)?reason:'ERROR'));
       }
       if(e.type==='delta'){
         if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
