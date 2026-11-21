@@ -17,7 +17,7 @@ import stat
 import time
 import urllib.parse
 
-BASE_SHA='2d7b64881f8c82477dc70f8b703b754ddbfddd7f34d39e0740649a48a159546d'
+BASE_SHA='d0a407310f28c5fef7b0e043528d55a6268c714663c02838b544bbd7c3c7ce1c'
 # Includes both exact PROXY_CHANGES from installed training binding91df0894.
 PROXY_FUNCTION_SHA='f849432d675eb3732076634b359ebbb6e516c3361ddba441def7f6dc7e355daf'
 STREAM_SHA='5b7bafde0c25fa26d6b8f98dfbb4958f0faa42ee77292da561834a63097a2e8e'
