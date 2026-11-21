@@ -431,7 +431,9 @@ class TestProbe(unittest.TestCase):
                                 const kind = window.__nativeCase;
                                 const bytes = new TextEncoder();
                                 const stream = new ReadableStream({start(ctrl) {
-                                    ctrl.enqueue(bytes.encode(frames));
+                                    const encoded = bytes.encode(frames);
+                                    if (kind === 'badutf8') encoded[frames.indexOf('world')] = 255;
+                                    ctrl.enqueue(encoded);
                                     if (kind === 'late') {
                                         setTimeout(() => {
                                             ctrl.enqueue(bytes.encode(
@@ -448,10 +450,10 @@ class TestProbe(unittest.TestCase):
                                 const kind=window.__nativeCase;
                                 const currentId=kind === 'keep' ? 'ex00002' :
                                     (kind === 'lost' || kind === 'reordered') ? 'ex00003' : eid;
-                                const priorId=kind === 'reordered' ? 'ex00002' : eid;
+                                const priorId=['reordered','badutf8'].includes(kind) ? 'ex00002' : eid;
                                 const current=[
                                     {role:'user',content:'hello',exchange_id:currentId},
-                                    {role:'assistant',content:'world',exchange_id:currentId}
+                                    {role:'assistant',content:kind==='badutf8'?'\ufffdorld':'world',exchange_id:currentId}
                                 ];
                                 const previous=[
                                     {role:'user',content:'hello',exchange_id:priorId},
@@ -460,7 +462,7 @@ class TestProbe(unittest.TestCase):
                                 // 'keep' is a valid second turn retaining the first;
                                 // 'lost' is a later turn with its previous pair gone.
                                 return pack({status:'READY',dialog_id:id,messages:
-                                    kind === 'keep' ? [...previous,...current] :
+                                    ['keep','badutf8'].includes(kind) ? [...previous,...current] :
                                     kind === 'reordered' ? [...current,...previous] : current});
                             }
                             throw Error('UNEXPECTED_TEST_NATIVE_ROUTE');
@@ -509,6 +511,11 @@ class TestProbe(unittest.TestCase):
                     self.assertNotIn('"type":"done"', lost['sse'])
                     self.assertEqual(lost['posts'], 5)
                     self.assertEqual(lost['reads'], 4)
+                    corrupted = await exchange('badutf8')
+                    self.assertIn('"type":"error"', corrupted['sse'])
+                    self.assertNotIn('"type":"done"', corrupted['sse'])
+                    self.assertEqual(corrupted['posts'], 6)
+                    self.assertEqual(corrupted['reads'], 4)
                 finally:
                     await browser.close()
         asyncio.run(run())
