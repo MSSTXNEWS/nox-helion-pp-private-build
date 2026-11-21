@@ -723,5 +723,73 @@ class TestProbe(unittest.TestCase):
         asyncio.run(run())
 
 
+
+    def test_owner_route_alias_does_not_escape_browser_guard(self):
+        """Real Chromium: encoded/cased/query chat aliases must not bypass owner."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+
+                    async def local_page(route):
+                        await route.fulfill(status=200, content_type='text/html',
+                                            body='<html><body>owner-route fixture</body></html>')
+
+                    await page.route('**/nox-web-v29/pc/resonance.html', local_page)
+                    await page.goto(
+                        'http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__nativeDirect=[];
+                        window.fetch=async (path, opts) => {
+                            window.__nativeDirect.push(String(path));
+                            return new Response(JSON.stringify({
+                                status:'READY',dialog_id:'a'.repeat(32),
+                                messages:[]
+                            }),{status:200,headers:{
+                                'Content-Type':'application/json'}});
+                        };
+                    }""")
+                    bridge = (pathlib.Path(__file__).parent /
+                              'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    result = await page.evaluate("""async () => {
+                        const id='a'.repeat(32);
+                        const cases=[
+                            ['/API/NOX/CHAT',{method:'POST'}],
+                            ['/%61pi/nox/chat',{method:'POST'}],
+                            ['/api/nox/%63hat',{method:'POST'}],
+                            ['/api/nox/chat?wrong=1',{method:'POST'}],
+                            ['/api/nox/chat',{method:'GET'}],
+                            ['/%61pi/nox/history?dialog_id='+id,{method:'GET'}],
+                        ];
+                        const statuses=[];
+                        for(const [path, opts] of cases) {
+                            const r=await fetch(path, opts);
+                            const data=await r.json();
+                            statuses.push([r.status,data.error]);
+                        }
+                        const before=window.__nativeDirect.slice();
+                        const allowed=await fetch(
+                            '/api/nox/history?dialog_id='+id);
+                        return {statuses,before,
+                            allowedStatus:allowed.status,
+                            direct:window.__nativeDirect.slice()};
+                    }""")
+                    self.assertEqual(result['statuses'],
+                        [[422,'HOLD_OWNER_ROUTE_ALIAS']] * 6)
+                    self.assertEqual(result['before'], [])
+                    self.assertEqual(result['allowedStatus'], 200)
+                    self.assertEqual(len(result['direct']), 1)
+                    self.assertIn('/api/ui/memory/dialogs/history?',
+                                  result['direct'][0])
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
 if __name__ == '__main__':
     unittest.main()
