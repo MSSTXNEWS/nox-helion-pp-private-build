@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551  # S2 (США); S1 (Квебек) = 61825960, выбирается маркером #S1 в начале REMOTE
 KEY = os.environ["NOX2"]
-REMOTE = 'curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-deploy-script/nox-control/cmd_agent/deploy_web.sh -o /tmp/dw.sh && bash /tmp/dw.sh e44b779f26e4aec4e79e4e866e67c13339f8b564a3c02dffae2bc190611d9c80 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/19fceb89884f4cb2dfe9d4300173f718e017a897/nox-web.part00 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/19fceb89884f4cb2dfe9d4300173f718e017a897/nox-web.part01 2>&1 | tail -12'
+REMOTE = 'curl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/nox-web-deploy-script/nox-control/cmd_agent/deploy_web.sh -o /tmp/dw.sh && bash /tmp/dw.sh 78880aa9c67f93154d3617248e4e199655614baa3a3800ac727a6d38248e8a19 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/29ffd55ae8882e12e57f2467fb7f73fa747b24bd/nox-web.part00 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/29ffd55ae8882e12e57f2467fb7f73fa747b24bd/nox-web.part01 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/29ffd55ae8882e12e57f2467fb7f73fa747b24bd/nox-web.part02 2>&1 | tail -12'
 
 if REMOTE.startswith("#S1"):
     INSTANCE = 61825960
