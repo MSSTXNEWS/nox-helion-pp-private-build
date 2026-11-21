@@ -167,9 +167,11 @@
      if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
      if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
      startSeen=true;
-     nativeModel=typeof e.model==='string'
-       ?e.model.replace(/[\x00-\x1F\x7F]/g,' ').trim().slice(0,96)||'UNKNOWN'
-       :'UNKNOWN';
+     if(Object.prototype.hasOwnProperty.call(e,'model')&&
+       (typeof e.model!=='string'||!e.model.trim()||e.model!==e.model.trim()||
+        e.model.length>96||/[\x00-\x1F\x7F]/.test(e.model)))
+       throw Error('HOLD_NATIVE_MODEL_START_LABEL');
+     nativeModel=e.model||'UNKNOWN';
    } else if(e.type==='preparing') {
      if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
      if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
