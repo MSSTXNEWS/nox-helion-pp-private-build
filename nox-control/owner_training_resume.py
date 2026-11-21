@@ -914,8 +914,12 @@ def worker_readback(helper, fresh_after=0):
 
 def stop_controller(helper, name, script):
     status = helper.service_state(name)
-    if status['state'] != 'RUNNING':
+    # Do not treat a malformed Supervisor snapshot or bool/int-coerced PID
+    # as evidence that this particular controller is safe to stop.
+    if type(status) is not dict or status.get('state') != 'RUNNING':
         raise RuntimeError('HOLD_EXPECTED_CONTROLLER_NOT_RUNNING')
+    if type(status.get('pid')) is not int or status['pid'] <= 0:
+        raise RuntimeError('HOLD_CONTROLLER_IDENTITY')
     config = helper.program_config(name)
     argv = shlex.split(config.get('command', ''))
     bound = str(script) in argv
