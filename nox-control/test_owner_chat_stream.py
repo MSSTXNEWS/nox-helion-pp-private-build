@@ -68,6 +68,41 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_total_answer_limit_across_model_and_tool_cycles(self):
+        # An upstream model limits each response, but the full native turn may
+        # contain several cycles. Neither SSE [DONE] nor JSON/S03 may certify
+        # an accumulated answer that exceeds the same 2M ceiling.
+        async def fake_run(parts):
+            for part in parts:
+                yield 'token',part
+        for streaming in (True,False):
+            for parts,valid in ((['Hola 🌍'],True),(['Hola 🌍','!'],False)):
+                with self.subTest(streaming=streaming,valid=valid):
+                    native=self.native()
+                    payload={'messages':[{'role':'user','content':'Say hello'}]}
+                    with (patch.object(stream,'_run',
+                                       side_effect=lambda *args:fake_run(parts)),
+                          patch.object(stream,'FINAL_RESPONSE_LIMIT',6)):
+                        response=await native['owner_completion'](
+                            'http://native/model',payload,'Say hello',streaming)
+                        if streaming:
+                            wire=''.join([chunk async for chunk in response.body_iterator])
+                            if valid:
+                                self.assertIn('[DONE]',wire)
+                            else:
+                                self.assertIn('HOLD_MODEL_TOTAL_OUTPUT_SIZE',wire)
+                                self.assertNotIn('[DONE]',wire)
+                        else:
+                            self.assertEqual(response.status_code,200 if valid else 502)
+                            if not valid:
+                                self.assertEqual(json.loads(response.body)['error']['code'],
+                                                 'HOLD_MODEL_TOTAL_OUTPUT_SIZE')
+                        if valid:
+                            self.assertEqual(payload.get('_agent_final'),'Hola 🌍')
+                        else:
+                            self.assertNotIn('_agent_final',payload)
+
+
     async def test_falsey_model_error_envelopes_cannot_certify_s03(self):
         # Some providers emit error:{} or error:false alongside a normal
         # choices shape. Presence of an error is a failure, not a truth test.
