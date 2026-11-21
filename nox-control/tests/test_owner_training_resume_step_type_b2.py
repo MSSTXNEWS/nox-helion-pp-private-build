@@ -46,6 +46,48 @@ def load_pinned_verifier(output):
 
 
 class CheckpointStepProvenance(unittest.TestCase):
+    def test_native_training_process_census_fail_closed_before_admission(self):
+        # Execute the actual source AST only; no process, trainer or GPU access.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        function = next(node for node in tree.body
+                        if isinstance(node, ast.FunctionDef)
+                        and node.name == "native_training")
+        namespace = {
+            "TRAINER": Path("/root/nox/scripts/train_qlora_35b_t866u.py"),
+            "ENTRY": Path("/root/nox/scripts/hybrid_training_entry.py"),
+            "WRAPPER": Path("/root/nox/scripts/run_train_volta_t866u.sh"),
+        }
+        exec(compile(ast.Module(body=[function], type_ignores=[]),
+                     str(SOURCE), "exec"), namespace)
+        census = namespace["native_training"]
+        malformed = (
+            None, [], "not-a-map", {"w": None}, {"w": []},
+            {"w": {}}, {"w": {"state": None}},
+            {"w": {"state": True, "argv": []}},
+            {"w": {"state": "R"}},
+            {"w": {"state": "R", "argv": "python"}},
+            {"w": {"state": "R", "argv": [None]}},
+            {"w": {"state": "R", "argv": [True]}},
+            {"w": {"state": "R", "argv": {"argv": "hidden"}}},
+        )
+        for snapshot in malformed:
+            with self.subTest(snapshot=repr(snapshot)):
+                helper = types.SimpleNamespace(
+                    process_table=lambda value=snapshot: value)
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_NATIVE_TRAINER_CENSUS_READBACK"):
+                    census(helper)
+        entry = str(namespace["ENTRY"])
+        trainer = {"state": "R", "argv": ["python", entry], "service": "nox-train-volta-t866u"}
+        healthy = {"zombie": {"state": "Z"},
+                   "unrelated": {"state": "R", "argv": ["python", "else.py"]},
+                   "trainer": trainer}
+        self.assertEqual(
+            census(types.SimpleNamespace(process_table=lambda: healthy)),
+            [trainer])
+        self.assertEqual(
+            census(types.SimpleNamespace(process_table=lambda: {})), [])
+
     def test_step_types_fail_closed_even_with_matching_file_sha(self):
         with tempfile.TemporaryDirectory() as folder:
             out = Path(folder)

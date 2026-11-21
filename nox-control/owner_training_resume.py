@@ -706,9 +706,24 @@ def media_acceptance_evidence(upgrade_chain, rehash_outputs=True):
 
 
 def native_training(helper):
+    """Fail closed if native process census cannot identify trainer candidates."""
     names = {str(TRAINER), str(ENTRY), str(WRAPPER)}
-    return [row for row in helper.process_table().values()
-            if row['state'] != 'Z' and names.intersection(row.get('argv', []))]
+    census = helper.process_table()
+    if type(census) is not dict:
+        raise RuntimeError('HOLD_NATIVE_TRAINER_CENSUS_READBACK')
+    candidates = []
+    for row in census.values():
+        if type(row) is not dict or type(row.get('state')) is not str:
+            raise RuntimeError('HOLD_NATIVE_TRAINER_CENSUS_READBACK')
+        if row['state'] == 'Z':
+            continue
+        argv = row.get('argv')
+        if (type(argv) not in (list, tuple)
+                or any(type(arg) is not str for arg in argv)):
+            raise RuntimeError('HOLD_NATIVE_TRAINER_CENSUS_READBACK')
+        if names.intersection(argv):
+            candidates.append(row)
+    return candidates
 
 
 def prove_training(helper):
