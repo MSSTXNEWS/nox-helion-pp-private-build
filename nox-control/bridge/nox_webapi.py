@@ -516,17 +516,19 @@ def install(app, B):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_JSON"}, status_code=400)
         if not isinstance(b, dict):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_BODY"}, status_code=400)
-        raw_messages = b.get("messages") or []
+        raw_messages = b.get("messages", [])
         if not isinstance(raw_messages, list) or any(not isinstance(m, dict) for m in raw_messages):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_MESSAGES"}, status_code=400)
         if any(m.get("role") in ("user", "assistant") and
                not isinstance(m.get("content"), str) for m in raw_messages):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_CONTENT"}, status_code=400)
-        opts = b.get("options") or {}
+        opts = b.get("options", {})
         if not isinstance(opts, dict):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_OPTIONS"}, status_code=400)
-        requested_tokens = opts.get("num_predict") or 700
-        if isinstance(requested_tokens, bool):
+        requested_tokens = opts.get("num_predict", 700)
+        # Missing key may default; an explicitly supplied zero, false,
+        # null, float or other invalid type must never bypass admission.
+        if isinstance(requested_tokens, bool) or not isinstance(requested_tokens, (int, str)):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_NUM_PREDICT"}, status_code=400)
         try:
             npred = int(requested_tokens)
