@@ -88,13 +88,19 @@ def one(name):
     directory = place(name)
     os.makedirs(directory, exist_ok=True)
     path = os.path.join(directory, name)
-    part = path + ".verified-download.part"
-    if os.path.islink(path) or os.path.islink(part):
+    stage_dir = os.path.join(directory, ".nox_verified", RUN_ID)
+    os.makedirs(stage_dir, exist_ok=True)
+    staged = os.path.join(stage_dir, name)
+    part = staged + ".part"
+    if any(os.path.islink(p) for p in (path, staged, part)):
         print(name, "HOLD_SYMLINK", flush=True)
         return False
     if verified(path, size, oid):
         print(name, "SHA_OK_EXISTING", flush=True)
-        return True
+        return path
+    if verified(staged, size, oid):
+        print(name, "SHA_OK_STAGED", flush=True)
+        return staged
     if os.path.isfile(part) and os.path.getsize(part) >= size:
         # A same-size but wrong-hash partial cannot be resumed. Never touch
         # the live shard; only discard our own unverified temporary download.
@@ -105,9 +111,9 @@ def one(name):
             print(name, "HOLD_CGROUP_RESERVE", flush=True)
             return False
         if verified(part, size, oid):
-            os.replace(part, path)
+            os.replace(part, staged)
             print(name, "SHA_OK_REPLACED", flush=True)
-            return True
+            return staged
         prior = os.path.getsize(part) if os.path.isfile(part) else 0
         reserve = os.statvfs(directory)
         free = reserve.f_bavail * reserve.f_frsize
@@ -128,9 +134,9 @@ def one(name):
         if os.path.isfile(part) and os.path.getsize(part) == size and not verified(part, size, oid):
             os.remove(part)
     if verified(part, size, oid):
-        os.replace(part, path)
+        os.replace(part, staged)
         print(name, "SHA_OK_REPLACED", flush=True)
-        return True
+        return staged
     print(name, "HOLD_SHA_OR_DOWNLOAD", flush=True)
     return False
 
@@ -140,26 +146,27 @@ if not all(results):
     print("HOLD_GGUF_NOT_ALL_VERIFIED", sum(results), "of", len(names), flush=True)
     sys.exit(3)
 
-# Publication is deferred until all 11 exact-size+SHA checks have succeeded.
-# The existing live shard targets are never modified on a failed generation.
-os.makedirs(ROOT, exist_ok=True)
-for name in names:
-    link = os.path.join(ROOT, name)
-    temp = link + ".verified-link.tmp"
-    if os.path.lexists(temp):
-        os.remove(temp)
-    os.symlink(os.path.join(place(name), name), temp)
-    os.replace(temp, link)
+# The complete verified generation is staged, but the live S1 directory
+# and files are untouched. Owner-pinned lease/CAS and active-reader checks
+# must authorize a later one-pointer atomic publish. Do not claim completion.
+versions = "/root/nox/glm53_verified_sets"
+os.makedirs(versions, exist_ok=True)
+generation = os.path.join(versions, RUN_ID)
+os.mkdir(generation)
+for name, target in zip(names, results):
+    os.symlink(target, os.path.join(generation, name))
 receipt = {
-    "state": "ALL_11_SHARDS_SHA_VERIFIED",
+    "state": "ALL_11_SHA_VERIFIED_STAGED_HOLD_OWNER_CAS",
     "manifest_sha256": hashlib.sha256(
         json.dumps(meta, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest(),
     "shard_count": 11,
     "verified": {name: meta[name][1] for name in names},
-    "native_relay35_acceptance": False
+    "generation_path": generation,
+    "live_root_untouched": ROOT,
+    "native_relay35_acceptance": False,
+    "run_id": RUN_ID
 }
-receipt["run_id"] = RUN_ID
 target_receipt = "/root/nox/logs/redo_sha_receipt-" + RUN_ID + ".json"
 temp_receipt = target_receipt + ".tmp"
 with open(temp_receipt, "w") as output:
@@ -167,11 +174,12 @@ with open(temp_receipt, "w") as output:
     output.flush()
     os.fsync(output.fileno())
 os.replace(temp_receipt, target_receipt)
-print("ALL_11_SHA_VERIFIED_SOURCE_WORKER", receipt["manifest_sha256"], flush=True)
+print("HOLD_GGUF_OWNER_CAS_PUBLICATION", receipt["manifest_sha256"], flush=True)
+sys.exit(75)
 W
 # This only submits a background transfer. A terminal result requires an
 # independent read of the unique run-scoped receipt, not this launcher exit.
-run_id="$(date -u '+%Y%m%dT%H%M%SZ')-$"
+run_id="$(date -u '+%Y%m%dT%H%M%SZ')-$$"
 NOX_GGUF_RUN_ID="$run_id" nohup setsid bash -c 'exec 9>&-; python3 /root/nox/redo_worker.py' > /root/nox/logs/redo.log 2>&1 < /dev/null &
 worker_pid=$!
 echo "PENDING_GGUF_SHA worker_pid=$worker_pid expected_receipt=/root/nox/logs/redo_sha_receipt-$run_id.json"
