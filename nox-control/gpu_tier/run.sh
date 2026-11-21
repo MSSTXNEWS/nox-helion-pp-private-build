@@ -85,5 +85,10 @@ bench)
   python3 /tmp/bench.py 8083 | tail -3
   curl -s -m60 localhost:8082/v1/chat/completions -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"Кто ты? Одной фразой."}],"nox_mode":"fast","max_tokens":60}' | head -c 400; echo
   curl -s -m5 localhost:8081/health; echo; tail -n 3 /root/nox/logs/glm_server.log | cut -c1-200; free -g | sed -n 2p; nvidia-smi --query-gpu=memory.used --format=csv,noheader;;
+glmstate)
+  ls -la /dev/shm/nox_glm | awk '{print $5,$9}' | tail -12; ls -la /root/nox/glm53_disk /root/nox/glm53 2>/dev/null | awk '{print $5,$9}' | tail -6
+  pgrep -af "curl|redo|llama" | cut -c1-130 | head -5
+  grep -E " E |error|failed|alloc|CUDA|out of memory" /root/nox/logs/glm_server.log | cut -c1-220 | tail -8
+  nvidia-smi --query-gpu=memory.used --format=csv,noheader;;
 *) echo unknown;;
 esac
