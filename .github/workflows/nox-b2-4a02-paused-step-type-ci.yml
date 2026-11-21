@@ -1,0 +1,26 @@
+name: NOX B2 4A02 paused checkpoint step-type gate
+on:
+  pull_request:
+    branches:
+      - repair/nox-native-reflex-autorefill-20261119
+    paths:
+      - 'nox-control/owner_training_resume.py'
+      - 'nox-control/tests/test_owner_training_resume_step_type_b2.py'
+      - '.github/workflows/nox-b2-4a02-paused-step-type-ci.yml'
+permissions:
+  contents: read
+jobs:
+  paused-checkpoint-types:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Compile only the exact owner verifier and B2 regression
+        run: python -B -m py_compile nox-control/owner_training_resume.py nox-control/tests/test_owner_training_resume_step_type_b2.py
+      - name: Verify paused checkpoint receipt types with isolated, non-native source seam
+        run: python -B -m unittest discover -s nox-control/tests -p 'test_owner_training_resume_step_type_b2.py' -v
