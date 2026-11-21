@@ -49,7 +49,9 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
     for turn in conversation:
         _guard(isinstance(turn,dict) and set(turn)==expected_turn_fields
                and turn["role"] in ("user","assistant")
-               and _scalar_text(turn["id"]) and turn["id"] and turn["id"] not in ids
+               and _scalar_text(turn["id"]) and 1 <= len(turn["id"]) <= 128
+               and turn["id"].isprintable() and "[" not in turn["id"] and "]" not in turn["id"]
+               and turn["id"] not in ids
                and _scalar_text(turn["content"]), "TURN_SCOPE" if scoped else "TURN")
         if scoped:
             _guard(turn["persona_id"] == owner_persona_id, "TURN_PERSONA")
