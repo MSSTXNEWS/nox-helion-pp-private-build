@@ -1118,6 +1118,37 @@ async function check(chunks, status=200) {
         self.assertFalse(canonical_s03_proof_valid(aliased, aliased, DIALOG, transcript))
         self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
 
+    def test_strict_s03_event_and_turn_witness_ids_reject_invisible_aliases(self):
+        # Even two mutually matching receipts are not independent proof if the
+        # durable event/turn identity is padded or contains invisible controls.
+        transcript = [
+            dict(row, message_id=f"witness-r12-{i}")
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, "multiturn_ru_es")))
+        ]
+        writer, reader = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, transcript,
+            require_full_transcript_pin=True))
+        for field in ("event_id", "turn_id"):
+            original = writer[field]
+            for changed in (
+                    " " + original, original + " ", original + "\\t",
+                    original + "\\n", original + "\\u200b",
+                    original + "\\u200e", original + "\\x00"):
+                # The escapes above are decoded to actual characters before
+                # asserting; no literal backslash-only regression alias.
+                decoded = changed.encode("utf-8").decode("unicode_escape") if "\\\\" in changed else changed
+                with self.subTest(identity=field, value=repr(decoded)):
+                    altered_writer = dict(writer, **{field: decoded})
+                    altered_reader = dict(reader, **{field: decoded})
+                    self.assertFalse(canonical_s03_proof_valid(
+                        altered_writer, altered_reader, DIALOG, transcript,
+                        require_full_transcript_pin=True))
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, transcript,
+            require_full_transcript_pin=False))
+
     def test_canonical_s03_readback_sequence_requires_exact_int(self):
         # JSON 2.0 compares equal to Python int 2, but is not a valid
         # canonical integer turn index in an independent S03 readback.
