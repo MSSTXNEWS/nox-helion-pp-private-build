@@ -677,6 +677,14 @@ def install(app, B):
             rid = supplied_id
         else:
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_REQUEST_ID"}, status_code=400)
+        # An explicit exchange ID opts new clients into bounded retry dedup.
+        # Legacy callers frequently reuse request IDs across different turns.
+        exchange_id = b.get("exchange_id")
+        if exchange_id is not None and (
+                not isinstance(exchange_id, str) or
+                not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", exchange_id)):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_EXCHANGE_ID"},
+                                status_code=400)
         msgs_in = [m for m in raw_messages if m.get("role") in ("user", "assistant")]
         user = next((m["content"] for m in reversed(msgs_in) if m["role"] == "user"), "")
         if not user.strip():
@@ -699,10 +707,13 @@ def install(app, B):
         # bounded process-local snapshot is a recent-ID tombstone, not a replay
         # or durable idempotency promise across process restarts/TTL eviction.
         # Ephemeral requests intentionally retain no post-stream identity.
-        if not eph:
+        if not eph and exchange_id is not None:
             _prune_chat_snapshots()
-            if any(row.get("request_id") == rid for row in CHAT_SNAPSHOTS.values()):
-                return JSONResponse({"status": "HOLD", "reason": "CHAT_REQUEST_ID_RECENTLY_USED",
+            if any(row.get("request_id") == rid and
+                   row.get("exchange_id") == exchange_id and
+                   row.get("state") != "ADMITTED"
+                   for row in CHAT_SNAPSHOTS.values()):
+                return JSONResponse({"status": "HOLD", "reason": "CHAT_EXCHANGE_RECENTLY_USED",
                                      "retry_same_id": False, "snapshot_scope": "PROCESS_LOCAL",
                                      "s03_readback_verified": False}, status_code=409)
         if len(ACTIVE_CHAT_IDS) >= MAX_ACTIVE_CHAT_IDS:
@@ -718,7 +729,7 @@ def install(app, B):
             while len(CHAT_SNAPSHOTS) >= MAX_CHAT_SNAPSHOTS:
                 CHAT_SNAPSHOTS.pop(next(iter(CHAT_SNAPSHOTS)))
             CHAT_SNAPSHOTS[stream_id] = {
-                "request_id": rid, "event_seq": 0, "text": "",
+                "request_id": rid, "exchange_id": exchange_id, "event_seq": 0, "text": "",
                 "text_bytes": 0, "state": "ADMITTED", "terminal": False,
                 "completion_receipt": None, "memory_write_receipt": None,
                 "snapshot_hold_reason": None,
@@ -758,6 +769,7 @@ def install(app, B):
                         row[receipt] = k[receipt].copy()
             d = {"model": TAG, "request_id": rid, "stream_id": stream_id,
                  "event_seq": frame_seq,
+                 **({"exchange_id": exchange_id} if exchange_id is not None else {}),
                  "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
             d.update(k)
             return json.dumps(d, ensure_ascii=False) + "\n"
