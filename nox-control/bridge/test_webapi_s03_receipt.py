@@ -295,6 +295,39 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertTrue(any("UPSTREAM_CONTENT_INVALID" in item for item in bridge.errors))
 
 
+        # A malformed top-level delta (0/false/[]/""/null) must not be
+        # converted to {} by truthiness and accepted as the stop chunk.
+        class FalseyDeltaUpstream(Upstream):
+            status_code = 200
+            def __init__(self, invalid):
+                self.invalid = invalid
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"A"}}]}'
+                yield 'data: ' + json.dumps({
+                    "choices": [{"delta": self.invalid, "finish_reason": "stop"}]})
+                yield 'data: [DONE]'
+
+        class FalseyDeltaClient:
+            def __init__(self, invalid):
+                self.invalid = invalid
+            def stream(self, *args, **kwargs):
+                return FalseyDeltaUpstream(self.invalid)
+
+        for invalid_delta in (0, False, [], "", None):
+            with self.subTest(falsey_delta=invalid_delta):
+                writes.clear()
+                bridge.errors.clear()
+                bridge.hc = lambda invalid=invalid_delta: FalseyDeltaClient(invalid)
+                with mock.patch.dict(sys.modules, {"s03_memory": module}), mock.patch.object(W, "W", None):
+                    bad_frames = asyncio.run(get_frames())
+                self.assertEqual(writes, [])
+                self.assertFalse(any(v.get("done") is True for v in bad_frames))
+                self.assertEqual(bad_frames[-1]["status"], "HOLD")
+                self.assertEqual(bad_frames[-1]["reason"], "MODEL_STREAM_INCOMPLETE")
+                self.assertEqual(bad_frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+                self.assertTrue(any("UPSTREAM_DELTA_INVALID" in item for item in bridge.errors))
+
+
 
     def test_broadcast_stop_survives_new_chat_and_does_not_stop_future_chats(self):
         """New request must not clear a STOP already sent to an older stream."""
