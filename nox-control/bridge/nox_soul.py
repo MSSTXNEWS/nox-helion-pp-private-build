@@ -5,6 +5,7 @@
 - consult(): совет от внешних моделей через API (OpenAI-совместимые), ответы в карантин; отвечает всегда сам NOX
 Ключи API кладёт только владелец в /root/nox/state/advisors.json. Без ключей совет выключен."""
 import json, os, subprocess, time, shutil, urllib.request
+from collections import deque
 D = "/root/nox/state"
 TURNS, JOURNAL, NOTES, ADV = D + "/turns.jsonl", D + "/self_journal.jsonl", D + "/teacher_notes.jsonl", D + "/advisors.json"
 os.makedirs(D, exist_ok=True)
@@ -16,14 +17,23 @@ def _append(path, obj):
     except Exception: pass
 
 def _tail(path, n):
-    try: return [json.loads(l) for l in open(path).read().splitlines()[-n:]]
-    except Exception: return []
+    """Read only the latest bounded log records without loading the entire journal."""
+    if type(n) is not int or not 1 <= n <= 256:
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as fp:
+            return [json.loads(line) for line in deque(fp, maxlen=n)]
+    except (OSError, ValueError, UnicodeError, TypeError):
+        return []
 
 def awareness_line():
     if time.time() - _c["t"] < 30: return _c["v"]
     parts = []
     try:
-        o = subprocess.run(["supervisorctl", "status"], capture_output=True, text=True, timeout=6).stdout.splitlines()
+        result = subprocess.run(["supervisorctl", "status"], capture_output=True, text=True, timeout=6)
+        if result.returncode != 0:
+            raise RuntimeError("SUPERVISOR_STATUS_FAILED")
+        o = result.stdout.splitlines()
         run = [l.split()[0] for l in o if " RUNNING" in l]; bad = [l.split()[0] for l in o if any(x in l for x in ("FATAL", "BACKOFF", "EXITED"))]
         parts.append("процессов работает %d, сбойных %d%s" % (len(run), len(bad), (": " + ", ".join(bad[:5])) if bad else ""))
     except Exception: parts.append("процессы: нет данных")
@@ -31,10 +41,14 @@ def awareness_line():
         u = shutil.disk_usage("/root"); parts.append("диск занят %d%%" % (u.used * 100 // u.total))
     except Exception: pass
     try:
-        parts.append("модель " + ("жива" if urllib.request.urlopen("http://127.0.0.1:8098/health", timeout=2).status == 200 else "не отвечает"))
-    except Exception: parts.append("модель не отвечает")
+        with urllib.request.urlopen("http://127.0.0.1:8098/health", timeout=2) as response:
+            healthy = response.status == 200
+        parts.append("модель: /health=200, генерация не проверена" if healthy
+                     else "модель: /health не OK, генерация не проверена")
+    except Exception: parts.append("модель: /health недоступен, генерация не проверена")
     j = _tail(JOURNAL, 1)
-    if j: parts.append("моя последняя мысль о развитии: " + str(j[0].get("improve", ""))[:120])
+    if j and isinstance(j[0], dict):
+        parts.append("моя последняя мысль о развитии: " + str(j[0].get("improve", ""))[:120])
     _c.update(t=time.time(), v="; ".join(parts)); return _c["v"]
 
 def log_turn(user, ans):
