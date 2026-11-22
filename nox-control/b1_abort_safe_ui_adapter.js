@@ -208,7 +208,13 @@
             },
             error=>{
               if(signal.aborted) return false;
-              if(pending.signal&&pending.signal.aborted)
+              // A legacy projection can have no signal. If it expires
+              // without committing, the fresh GET-only reconnect must be
+              // allowed to project the SAME event instead of inheriting its
+              // timeout. Do not retry arbitrary precommit/DOM failures.
+              if((pending.signal&&pending.signal.aborted)||
+                 (error instanceof UiHold&&
+                  error.code==='HOLD_B1_UI_TERMINAL_TIMEOUT'))
                 return upsertTerminal(s,eventId,signal);
               throw error;
             }
