@@ -764,16 +764,52 @@ def install(app, B):
                          digest=hashlib.sha256(full.encode()).hexdigest(), frames=n, memory_history=hist, nox_mode=mode, skeptic=sk, plan=plan or None,
                          total_duration=int((time.time() - t0) * 1e9), eval_count=n)
 
-        async def tracked_gen():
-            try:
-                async for frame in gen():
-                    yield frame
-            finally:
-                # Includes browser disconnect / producer cancellation.
-                ACTIVE_CHAT_IDS.discard(rid)
-                CANCEL.discard(rid)
+        def release_chat_admission():
+            ACTIVE_CHAT_IDS.discard(rid)
+            CANCEL.discard(rid)
 
-        return StreamingResponse(tracked_gen(), media_type="application/x-ndjson", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+        class TrackedChatBody:
+            """Release admission on normal EOF, early aclose, error or cancellation."""
+            def __init__(self):
+                self._stream = gen()
+                self._closed = False
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if self._closed:
+                    raise StopAsyncIteration
+                try:
+                    return await self._stream.__anext__()
+                except BaseException:
+                    await self.aclose()
+                    raise
+
+            async def aclose(self):
+                if self._closed:
+                    return
+                self._closed = True
+                try:
+                    await self._stream.aclose()
+                finally:
+                    # An unstarted generator's finally never executes on aclose.
+                    release_chat_admission()
+
+        class TrackedChatResponse(StreamingResponse):
+            async def __call__(self, scope, receive, send):
+                try:
+                    return await super().__call__(scope, receive, send)
+                finally:
+                    # ASGI disconnect may happen before the first body iteration.
+                    await self.body_iterator.aclose()
+
+        try:
+            return TrackedChatResponse(TrackedChatBody(), media_type="application/x-ndjson",
+                                       headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+        except BaseException:
+            release_chat_admission()
+            raise
 
     @app.get("/app")
     async def a_app():

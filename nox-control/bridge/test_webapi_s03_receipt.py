@@ -577,5 +577,33 @@ class FactReceiptTest(unittest.TestCase):
 
 
 
+
+    def test_1a04_preframe_abort_frees_active_slot_and_allows_retry(self):
+        """An unstarted StreamingResponse must not permanently exhaust ACTIVE_CHAT_IDS."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        rid = "aborted-before-first-frame"
+
+        def request():
+            return Request({"request_id": rid, "mini": True, "use_memory": False,
+                            "messages": [{"role": "user", "content": "retry after abort"}]})
+
+        async def scenario():
+            response = await chat(request())
+            admitted = rid in W.ACTIVE_CHAT_IDS
+            # No __anext__: the response was abandoned before any SSE frame.
+            await response.body_iterator.aclose()
+            released = rid not in W.ACTIVE_CHAT_IDS
+            retry = await chat(request())
+            readmitted = hasattr(retry, "body_iterator") and rid in W.ACTIVE_CHAT_IDS
+            if hasattr(retry, "body_iterator"):
+                await retry.body_iterator.aclose()
+            return admitted, released, readmitted, rid not in W.ACTIVE_CHAT_IDS
+
+        with mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "CANCEL", set()):
+            admitted, released, readmitted, clean = asyncio.run(scenario())
+        self.assertEqual((admitted, released, readmitted, clean),
+                         (True, True, True, True))
+
 if __name__ == "__main__":
     unittest.main()
