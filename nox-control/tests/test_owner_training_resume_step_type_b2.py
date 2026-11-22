@@ -2865,5 +2865,106 @@ class S03ContentReindexNestedShapeFence(unittest.TestCase):
             check(candidate, chain)
 
 
+    def test_media_acceptance_nested_proof_shape_is_fail_closed(self):
+        # Source-isolated actual verifier AST: no production, GPU, media or training.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        node = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                    and n.name == "media_acceptance_proof")
+        root = Path("/root/nox")
+        scope = {
+            "Path": Path, "re": re, "math": math, "ROOT": root,
+            "MEDIA_ACCEPTANCE_REQUEST": "10001",
+            "MEDIA_ACCEPTANCE_SOURCE": "a" * 40,
+            "STOPPED": ("STOPPED", "EXITED", "FATAL"),
+        }
+        exec(compile(ast.Module(body=[node], type_ignores=[]), str(SOURCE),
+                     "exec"), scope)
+        check = scope["media_acceptance_proof"]
+        chain = {"training_hold_sha256": "e" * 64}
+        base = {
+            "schema": "NOX_OWNER_MEDIA_ACCEPTANCE_V1",
+            "request": "10001", "source": "a" * 40,
+            "state": "GENERATED_DECODED_AND_GPU_RELEASED",
+            "pixels_exported": False,
+            "release": {
+                "forge_lease_reacquired": True, "forge_lease_released": True,
+                "original_flags_preserved": True, "training_started": False,
+                "hold_sha256": chain["training_hold_sha256"],
+                "pause_sha256": chain["training_hold_sha256"],
+                "trainer": {"state": "STOPPED", "pid": None},
+                "gpu1": {"free_mib": 32000},
+            },
+            "artifacts": [],
+        }
+        for kind, job_id in (("image", "a" * 32), ("video", "b" * 32)):
+            image = kind == "image"
+            suffix = ".png" if image else ".webm"
+            decode = {
+                "max_channel_range": 4.0,
+                "width": 512 if image else 256,
+                "height": 512 if image else 256,
+                "frames": 1 if image else 9,
+                "codec": "png" if image else "vp9",
+            }
+            if image:
+                decode["max_channel_variance"] = 1.0
+            else:
+                decode.update(decoded_fps=8.0, timestamp_span_seconds=1.0,
+                              max_frame_interval_error_seconds=0.001,
+                              distinct_decoded_frames=3,
+                              timestamps_strictly_increasing=True)
+            base["artifacts"].append({
+                "kind": kind, "job_id": job_id,
+                "path": str(root / "media/outputs/nox" / job_id /
+                            ("sample" + suffix)),
+                "url": "/api/ui/media/jobs/" + job_id + "/outputs/0",
+                "media_type": "image/png" if image else "video/webm",
+                "decode_verified": True, "authenticated_http_verified": True,
+                "pixels_exported": False,
+                "scope": "GENERATED_FILE_DECODE_AND_AUTHENTICATED_DELIVERY",
+                "bytes": 100, "sha256": "1" * 64, "decode": decode,
+            })
+        self.assertEqual([x["kind"] for x in check(copy.deepcopy(base), chain)],
+                         ["image", "video"])
+
+        for invalid in (None, [], ["spoof"], True, "not-chain"):
+            with self.subTest(chain=repr(invalid)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_MEDIA_ACCEPTANCE_GPU_AND_TRAINER_RELEASE"):
+                    check(copy.deepcopy(base), invalid)
+        for field in ("release", "trainer", "gpu1"):
+            for bad in ([], ["spoof"], True, "non-map"):
+                with self.subTest(field=field, value=repr(bad)):
+                    row = copy.deepcopy(base)
+                    if field == "release":
+                        row["release"] = bad
+                    else:
+                        row["release"][field] = bad
+                    with self.assertRaisesRegex(
+                            RuntimeError, "HOLD_MEDIA_ACCEPTANCE_GPU_AND_TRAINER_RELEASE"):
+                        check(row, chain)
+        for bad in ([], ["spoof"], True, {"malformed": 1}):
+            row = copy.deepcopy(base)
+            row["artifacts"][0]["kind"] = bad
+            with self.subTest(kind=repr(bad)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_MEDIA_ACCEPTANCE_TWO_DECODED_OUTPUTS"):
+                    check(row, chain)
+        for bad in ([], ["spoof"], True, {"malformed": 1}):
+            row = copy.deepcopy(base)
+            row["artifacts"][0]["decode"] = bad
+            with self.subTest(decode=repr(bad)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_MEDIA_ACCEPTANCE_FINITE_DECODE"):
+                    check(row, chain)
+        for bad in ([], ["spoof"], True, {"malformed": 1}):
+            row = copy.deepcopy(base)
+            row["artifacts"][0]["path"] = bad
+            with self.subTest(path=repr(bad)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_MEDIA_ACCEPTANCE_ARTIFACT_PROOF"):
+                    check(row, chain)
+
+
 if __name__ == "__main__":
     unittest.main()
