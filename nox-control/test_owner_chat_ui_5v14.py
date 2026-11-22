@@ -88,9 +88,6 @@ class OwnerLiveAssetTests(unittest.TestCase):
         # uppercase or whitespace while remaining valid in a browser.
         for closing in ('</HEAD>', '</HeAd >', '</head >'):
             with self.subTest(closing=closing):
-                raw='<html><HEAD></HEAD><head>'+closing+'<body></body></html>'
-                # Use one real head end tag: the uppercase HEAD above opens
-                # a second ancestor only if this fixture is malformed.
                 raw='<html><HEAD><title>NOX</title>'+closing+'<body></body></html>'
                 result=self.decorate(raw,'pc/resonance.html')
                 self.assertIn('<meta name="nox-live-build" content="',result)
