@@ -1612,6 +1612,54 @@ def main():
           }
           return true;
         }'''))
+        # SSE control frames can reset EventSource IDs without projecting a
+        # delta. NOX must fail closed before the next UI token, not silently
+        # treat the reset as a harmless heartbeat and lose replay safety.
+        check('SSE control ID resets and duplicates fail closed without repost', page.evaluate('''async () => {
+          const cases=[
+            ['bare-reset',['event: heartbeat','id'],false],
+            ['colon-reset',['event: heartbeat','id:'],false],
+            ['duplicate-control',['event: heartbeat','id: old','id: other'],false],
+            ['malformed-control',['event: heartbeat','id: old '],false],
+            ['valid-heartbeat',['event: heartbeat','id: ctl-1'],true],
+            ['comment-not-id',[': id: fake'],true]
+          ];
+          const nl=String.fromCharCode(10);
+          for(const [name,control,valid] of cases){
+            const scope={conversation_id:'control-id',exchange_id:name};
+            let posts=0,acks=0,deltas=0,last=null,wireId=null;
+            const frames=control.concat(['','']).join(nl)+
+              ['event: delta','id: real-delta','data: SAFE','',''].join(nl);
+            const transport={...opts.transport,
+              async post(){
+                posts++;
+                return {ok:true,body:new ReadableStream({start(c){
+                  c.enqueue(new TextEncoder().encode(frames));c.close();
+                }})};
+              },
+              async ack(){acks++;return true}
+            };
+            const ui={
+              async onDelta(_s,value,signal,id){
+                if(signal.aborted)throw Error('unexpected STOP');
+                deltas++;last=value;wireId=id;
+              },
+              async upsertTerminal(){throw Error('unexpected terminal')}
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:3000
+            });
+            const result=await client.begin(scope).then(v=>v,e=>e.code);
+            const noRepost=await client.begin(scope).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(result!==(valid?'STREAM_ENDED_READBACK_REQUIRED':
+                'HOLD_STREAM_DELTA_EVENT_ID') ||
+              posts!==1||acks!==0||deltas!==(valid?1:0)||!noRepost ||
+              (valid&&(last!=='SAFE'||wireId!=='real-delta')))
+              return false;
+          }
+          return true;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
