@@ -2804,7 +2804,7 @@ test('R22 third printable delta before STOP/DONE cannot certify midstream loadin
   const protectedKeys=['cdp_request_id','request_sha256','cdp_decoded_body_sha256',
     'cdp_streamed_body_sha256','visible_text_sha256','ttft_ms','sse_done_ms',
     'stream_timing_complete','cdp_decoded_body_matches_stream'];
-  const partial='data: '+JSON.stringify({choices:[{delta:{content:'third-printable 🐈'}}]})+'\\n\\n';
+  const partial='data: '+JSON.stringify({choices:[{delta:{content:'third-printable 🐈'}}]})+'\n\n';
   for(const [name,flag] of [
     ['third-Network.loadingFailed',{thirdLoadingFailed:true}],
     ['third-loadingFinished-without-SSE-DONE',{}]
