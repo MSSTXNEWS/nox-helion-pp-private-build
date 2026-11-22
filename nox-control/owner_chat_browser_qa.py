@@ -347,7 +347,7 @@ def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, f
             return False
         ids = tuple(row.get('message_id') for row in rows)
         if (any(not isinstance(mid, str) or not mid.strip() or mid != mid.strip()
-                for mid in ids)
+                or not mid.isprintable() for mid in ids)
                 or len(set(ids)) != 4):
             return False
         if pinned_ids is not None and ids != pinned_ids:
@@ -494,7 +494,7 @@ def verified_two_turn_firstturn_ids(rows):
         return None
     ids = tuple(row.get('message_id') for row in rows)
     if (any(not isinstance(mid, str) or not mid.strip()
-            or mid != mid.strip() for mid in ids)
+            or mid != mid.strip() or not mid.isprintable() for mid in ids)
             or ids[0] == ids[1]):
         return None
     return ids

@@ -445,6 +445,56 @@ async function check(chunks, status=200) {
         self.assertFalse(firstturn_prefix_identity_valid(
             initial_ids, final_rows[:2]))
 
+    def test_browser_ru_es_row_ids_reject_nonprintable_aliases(self):
+        """Two-turn owner-history PASS cannot bless invisible durable IDs.
+
+        The strict canonical S03 verifier already rejects nonprintable IDs.
+        This browser-only preflight must agree, even if BOTH owner-history
+        snapshots repeat the same poisoned ID (not merely detect drift).
+        No real browser, model POST or native S03 write occurs.
+        """
+        import copy
+        from owner_chat_browser_qa import postquiet_fourrow_history_stable
+
+        es = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        clean = {'dialog_id': DIALOG, 'messages': [
+            dict(row, message_id=f'row-{i}')
+            for i, row in enumerate(rows(es), 1)]}
+        transcript = multiturn_transcript_sha256(clean['messages'])
+        first_ids = ('row-1', 'row-2')
+        check = lambda h, ids: postquiet_fourrow_history_stable(
+            h, copy.deepcopy(h), DIALOG, transcript, ids)
+        self.assertEqual(verified_two_turn_firstturn_ids(
+            clean['messages'][:2]), first_ids)
+        self.assertTrue(check(clean, first_ids))
+        for index in range(4):
+            for invisible in ('\u200b', '\u2060', '\u202e', '\x00'):
+                with self.subTest(index=index, marker=repr(invisible)):
+                    poisoned = copy.deepcopy(clean)
+                    poisoned['messages'][index]['message_id'] += invisible
+                    matching_first_ids = tuple(
+                        row['message_id'] for row in poisoned['messages'][:2])
+                    # Both snapshots contain the same 4 rows. Prior code
+                    # returned True despite uncanonical persistent IDs.
+                    self.assertFalse(check(poisoned, matching_first_ids))
+                    if index < 2:
+                        self.assertIsNone(verified_two_turn_firstturn_ids(
+                            poisoned['messages'][:2]))
+        # Printable Russian and Spanish Unicode is valid inside row IDs.
+        multilingual = copy.deepcopy(clean)
+        multilingual['messages'][0]['message_id'] = 'ряд-ñ-1'
+        multilingual['messages'][1]['message_id'] = 'fila-á-2'
+        multilingual_ids = tuple(row['message_id']
+                                 for row in multilingual['messages'][:2])
+        self.assertEqual(verified_two_turn_firstturn_ids(
+            multilingual['messages'][:2]), multilingual_ids)
+        self.assertTrue(check(multilingual, multilingual_ids))
+        caller = inspect.getsource(browser_run)
+        self.assertLess(caller.index('verified_two_turn_firstturn_ids('),
+                        caller.index("report['multiturn_browser_acceptance_verified']=True"))
+        self.assertLess(caller.index('postquiet_fourrow_history_stable('),
+                        caller.index("report['multiturn_browser_acceptance_verified']=True"))
+
     def test_first_to_second_ru_es_session_scope_does_not_rotate(self):
         # Even homogeneous snapshots are unsafe if the first RU turn was
         # saved in owner session A and the completed RU/ES history is session B.
