@@ -330,6 +330,68 @@ class FactReceiptTest(unittest.TestCase):
 
 
 
+    def test_1a03_ambiguous_sse_json_never_certifies_s03(self):
+        """Duplicate/nonfinite/multi-choice model envelopes must fail closed."""
+        invalid_events = (
+            # JSON duplicate keys (including nested keys) must not be
+            # interpreted according to provider-specific last-key wins.
+            '{"choices":[{"delta":{},"finish_reason":"stop"}],"choices":[{"delta":{},"finish_reason":"stop"}]}',
+            '{"choices":[{"delta":{},"finish_reason":"stop","finish_reason":"stop"}]}',
+            '{"choices":[{"delta":{"content":"B","content":"B"},"finish_reason":"stop"}]}',
+            # Python json.loads accepts nonstandard JSON constants by default.
+            '{"choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"total_tokens":NaN}}',
+            # Ignoring the second choice could falsely authorize completion.
+            '{"choices":[{"delta":{},"finish_reason":"stop"},{"delta":{"content":"B"}}]}',
+        )
+
+        class Upstream:
+            status_code = 200
+            def __init__(self, event):
+                self.event = event
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"A"}}]}'
+                yield 'data: ' + self.event
+                yield 'data: [DONE]'
+
+        class Client:
+            def __init__(self, event):
+                self.event = event
+            def stream(self, *args, **kwargs):
+                return Upstream(self.event)
+
+        endpoint = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT = {"t": 0}
+        mem = types.ModuleType("s03_memory")
+        writes = []
+        mem.persist_turn = lambda *args: writes.append(args)
+        async def frames():
+            response = await endpoint(Request({
+                "messages": [{"role": "user", "content": "Check stream integrity"}],
+                "mini": True, "use_memory": False}))
+            return [json.loads(part) async for part in response.body_iterator]
+
+        for event in invalid_events:
+            with self.subTest(event=event):
+                writes.clear()
+                bridge.errors.clear()
+                bridge.hc = lambda event=event: Client(event)
+                with mock.patch.dict(sys.modules, {"s03_memory": mem}), mock.patch.object(W, "W", None):
+                    observed = asyncio.run(frames())
+                self.assertEqual(writes, [])
+                self.assertFalse(any(frame.get("done") is True for frame in observed))
+                self.assertEqual(observed[-1]["status"], "HOLD")
+                self.assertEqual(observed[-1]["reason"], "MODEL_STREAM_INCOMPLETE")
+                self.assertEqual(observed[-1]["memory_write_receipt"]["status"], "SKIPPED")
+                self.assertTrue(any("INVALID_SSE_JSON" in error or
+                                    "UPSTREAM_CHOICES_INVALID" in error
+                                    for error in bridge.errors))
+
     def test_upstream_invalid_unicode_or_output_overrun_skips_s03(self):
         """1A03: only bounded valid Unicode may reach terminal SSE/S03."""
         class Upstream:
