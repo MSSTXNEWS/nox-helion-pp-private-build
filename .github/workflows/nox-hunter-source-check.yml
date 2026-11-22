@@ -27,7 +27,7 @@ jobs:
           set -euo pipefail
           python3 -m py_compile nox-control/nox_hunter.py nox-control/test_nox_hunter.py
           # Explicit named case fails if a subsequent merge removes the provenance gate.
-          PYTHONPATH=nox-control python3 -m unittest -v test_nox_hunter.HunterTests.test_crossref_malformed_text_doi_does_not_forge_provenance
+          PYTHONPATH=nox-control python3 -m unittest -v test_nox_hunter.HunterURLSafetyTests.test_crossref_malformed_text_doi_does_not_forge_provenance
           PYTHONPATH=nox-control python3 -m unittest -v test_nox_hunter
           echo 'NOX_3B02_SOURCE_ONLY=true'
           echo 'NOX_3B02_NATIVE_ACCEPTANCE=false'
