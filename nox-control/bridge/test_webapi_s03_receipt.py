@@ -2133,8 +2133,11 @@ class FactReceiptTest(unittest.TestCase):
     def test_0a03_real_bridge_recall_failure_and_cache_generation_fence(self):
         """A failed S03 recall cannot masquerade as no memories; stale reads cannot refill cache."""
         # Import bridge with startup warmers disabled; never touch a real host.
+        # The lean source gate installs fastapi/httpx but not uvicorn.
+        # Stub the server runner only; the actual bridge logic is imported.
         with mock.patch.object(W.threading.Thread, "start"), \
-             mock.patch.object(W.os.path, "isdir", return_value=False):
+             mock.patch.object(W.os.path, "isdir", return_value=False), \
+             mock.patch.dict(sys.modules, {"uvicorn": types.ModuleType("uvicorn")}):
             import nox_bridge as bridge
         memory = types.ModuleType("s03_memory")
         calls = []
