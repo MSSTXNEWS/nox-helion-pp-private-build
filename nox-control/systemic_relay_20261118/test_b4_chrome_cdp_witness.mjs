@@ -2947,9 +2947,27 @@ test('R23 actual headless Chromium: loopback three-turn SSE/CDP provenance, two-
         'try{await r.text();}catch(e){if(p.scenario==="aborted3"&&p.ordinal===3)'+
         'failures++;else throw e;}await new Promise(resolve=>setTimeout(resolve,110));}'+
         'return failures;})()';
-      return capture({ws:target.webSocketDebuggerUrl,count,
+      const cdplog=[];
+      try{
+        return await capture({ws:target.webSocketDebuggerUrl,count,
         expectedChatOrigin:origin+'/',timeoutMs:30000,quiescenceMs:120,
         responseBodyAckTimeoutMs:1500,requestPostDataAckTimeoutMs:1500,
+        makeSession:async()=>{
+          const session=await new Cdp(target.webSocketDebuggerUrl).open();
+          const realOn=session.on.bind(session);
+          session.on=listener=>realOn((method,p)=>{
+            if(cdplog.length<45){
+              if(method==='Network.requestWillBeSent'&&p.request?.method==='POST')
+                cdplog.push(['POST',p.requestId,p.redirectHasExtraInfo,p.redirectResponse?true:false]);
+              else if(['Network.responseReceived','Network.dataReceived',
+                'Network.loadingFinished','Network.loadingFailed',
+                'Network.responseReceivedExtraInfo'].includes(method))
+                cdplog.push([method,p.requestId,Boolean(p.data),p.response?.status||p.statusCode||null]);
+            }
+            listener(method,p);
+          });
+          return session;
+        },
         onReady:async c=>{
           const x=await c.send('Runtime.evaluate',
             {expression,awaitPromise:true,returnByValue:true});
@@ -2957,6 +2975,11 @@ test('R23 actual headless Chromium: loopback three-turn SSE/CDP provenance, two-
             'REAL_BROWSER_EVALUATION_FAILED '+String(x.exceptionDetails?.text||''));
           assert.equal(x.result?.value,scenario==='aborted3'?1:0);
         }});
+      }catch(error){
+        t.diagnostic('NOX_B4_R23_REAL_CDP_FAIL_'+scenario+'='+String(error?.message));
+        t.diagnostic('NOX_B4_R23_CDP_META_ONLY='+JSON.stringify(cdplog));
+        throw error;
+      }
     };
     const exact=async(scenario,count)=>{
       const result=await sample(scenario,count);
