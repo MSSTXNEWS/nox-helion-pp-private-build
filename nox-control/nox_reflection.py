@@ -223,6 +223,13 @@ def validate_record(data: Any) -> dict[str, Any]:
     }
     if verification_receipt["target_commit_sha"] != change_receipt["commit_sha"]:
         raise ReflectionError("verification must target the exact source-change commit")
+    # A check completed before the reported failure is not a causal
+    # reflection cycle. Parse normalized UTC instants: string order is
+    # incorrect when one ISO-8601 timestamp has fractional seconds.
+    failure_time = dt.datetime.fromisoformat(failure_receipt["observed_at"].replace("Z", "+00:00"))
+    verified_time = dt.datetime.fromisoformat(verification_receipt["reported_at"].replace("Z", "+00:00"))
+    if verified_time < failure_time:
+        raise ReflectionError("verification must not predate the observed failure")
 
     receipt: dict[str, Any] = {
         "schema": RECEIPT_SCHEMA,
