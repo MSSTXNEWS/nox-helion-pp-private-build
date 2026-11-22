@@ -3265,5 +3265,47 @@ class PreviousTrainingReceiptEnvelopeFence(unittest.TestCase):
                     check(previous, changed, policy, boost, memory, media)
 
 
+
+class EmbeddedOwnerBoostPolicyDepthFence(unittest.TestCase):
+    def test_bounded_deep_policy_denies_training_permission_without_exception(self):
+        # Execute only the embedded real owner policy helper. No native trainer.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        assignment = next((node for node in tree.body
+                           if isinstance(node, ast.Assign)
+                           and any(isinstance(target, ast.Name)
+                                   and target.id == "PERMISSION_HELPER"
+                                   for target in node.targets)), None)
+        self.assertIsNotNone(assignment, "HOLD_EMBEDDED_PERMISSION_SOURCE_MISSING")
+        helper_text = ast.literal_eval(assignment.value)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            state = root / "state"
+            state.mkdir()
+            policy_path = state / "task_boost_mode.json"
+            namespace = {"ROOT": root}
+            exec(compile(helper_text, "<real-owner-permission>", "exec"), namespace)
+            allowed = namespace["_nox_owner_training_allowed"]
+            healthy = {
+                "enabled": True, "mode": "TASK_BOOST",
+                "training_allowed": True,
+                "training_service": "nox-train-volta-t866u",
+                "training_request": "__NOX_OWNER_REQUEST_ID__",
+                "training_source_sha": "__NOX_OWNER_SOURCE_SHA__",
+            }
+            policy_path.write_text(json.dumps(healthy), encoding="utf-8")
+            self.assertIs(allowed(), True)
+            # Even under the real 16,000-byte read bound, valid JSON may
+            # exceed Python's maximum nesting depth and raise RecursionError.
+            depth = 6000
+            hostile = (b'{"enabled":true,"padding":' + b'[' * depth
+                       + b'0' + b']' * depth + b'}')
+            self.assertLess(len(hostile), 16000)
+            policy_path.write_bytes(hostile)
+            self.assertIs(allowed(), False)
+            # No lingering permission / descriptor corruption after denial.
+            policy_path.write_text(json.dumps(healthy), encoding="utf-8")
+            self.assertIs(allowed(), True)
+
+
 if __name__ == "__main__":
     unittest.main()

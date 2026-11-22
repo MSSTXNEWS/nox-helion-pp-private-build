@@ -337,7 +337,9 @@ def _nox_owner_training_allowed():
                 and _v.get("training_service") == "nox-train-volta-t866u"
                 and _v.get("training_request") == "__NOX_OWNER_REQUEST_ID__"
                 and _v.get("training_source_sha") == "__NOX_OWNER_SOURCE_SHA__")
-    except (ValueError, OSError, UnicodeError, TypeError, AttributeError):
+    except (ValueError, OSError, UnicodeError, TypeError, AttributeError, RecursionError):
+        # A 16 KB policy may still exceed the JSON decoder nesting limit.
+        # Deny trainer admission rather than leak an unclassified exception.
         return False
     finally:
         if _fd >= 0:
