@@ -58,7 +58,11 @@ class _LiveOwnerAssetScanner(HTMLParser):
 
 def decorate_html(raw,path):
     if path.lstrip('/') not in PAGES:return raw
-    if raw.count('</head>')!=1:raise ValueError('HOLD_RESONANCE_HEAD')
+    # HTML closing tags are case-insensitive, including in older WEB archives.
+    # Keep the original tag spelling/spacing rather than rewriting archive HTML.
+    head_closers=list(re.finditer(r'</head\s*>',raw,re.I))
+    if len(head_closers)!=1:raise ValueError('HOLD_RESONANCE_HEAD')
+    head_close=head_closers[0].group(0)
     # The original archive assumes hosting at /. Our owner-only mount is nested.
     raw=raw.replace('="/pc/','="/nox-web-v29/pc/').replace("='/pc/","='/nox-web-v29/pc/")
     # The legacy shell otherwise inserts a second, unmounted /pc/v25 CSS URL.
@@ -83,7 +87,7 @@ def decorate_html(raw,path):
         if '/nox-web-v29/'+name in scanner.scripts:
             continue
         extra+='<script defer src="/nox-web-v29/'+name+'" data-nox-live-owner="1"></script>\n'
-    return raw.replace('</head>',extra+'</head>',1) if extra else raw
+    return raw.replace(head_close,extra+head_close,1) if extra else raw
 
 def owner_maintenance_gate():
     """Read-only, fail-closed owner maintenance indicator; never grants a lease."""
