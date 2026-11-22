@@ -141,6 +141,39 @@ class ForgeJsonIntegrityTests(unittest.TestCase):
                     self.assertIn("ForgeError", receipt["error"])
 
 
+class ForgeInodeReadTests(unittest.TestCase):
+    def test_source_input_is_read_from_safe_regular_inode(self):
+        # A symlink (including a symlink swapped in at open-time) cannot
+        # substitute different metadata after an earlier path check.
+        import os
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as root:
+            real = Path(root) / "safe.json"
+            real.write_bytes(b'{"schema":"invalid"}')
+            link = Path(root) / "input.json"
+            link.symlink_to(real)
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                self.assertEqual(forge.main(["--input", str(link)]), 2)
+            self.assertEqual(json.loads(stderr.getvalue())["status"], "HOLD")
+
+            # Opening a regular file is unchanged. A file swapped for a
+            # symlink just before the OS open must fail closed, not follow it.
+            self.assertEqual(forge._read_manifest_bytes(real), real.read_bytes())
+            link.unlink()
+            link.write_bytes(b'{"schema":"invalid"}')
+            real_open = os.open
+            def swap_before_open(file, flags, *args, **kwargs):
+                if str(file) == str(link):
+                    link.unlink()
+                    link.symlink_to(real)
+                return real_open(file, flags, *args, **kwargs)
+            with mock.patch.object(forge.os, "open", side_effect=swap_before_open):
+                with self.assertRaises(OSError):
+                    forge._read_manifest_bytes(link)
+
+
 class ForgeChronologyTests(unittest.TestCase):
     def test_future_claimed_permission_and_capture_are_held(self):
         now = "2026-11-20T11:00:00Z"

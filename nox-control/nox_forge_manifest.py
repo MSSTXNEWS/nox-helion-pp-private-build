@@ -17,6 +17,8 @@ from decimal import Decimal, ROUND_HALF_UP
 import datetime as dt
 import hashlib
 import ipaddress
+import os
+import stat
 import json
 from pathlib import Path
 import re
@@ -360,17 +362,39 @@ def _reject_nonfinite_json_constant(_value: str) -> Any:
     raise ForgeError("nonfinite JSON constant in FORGE input")
 
 
+def _read_manifest_bytes(path: Path) -> bytes:
+    """Read one opened inode, not a path that can become a symlink after precheck."""
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    # A raced FIFO/device must not block open before fstat rejects the inode.
+    flags |= getattr(os, "O_NONBLOCK", 0)
+    fd = os.open(path, flags)
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_INPUT_BYTES:
+            raise ForgeError("input must be a regular file no larger than 8 MiB")
+        raw = bytearray()
+        while len(raw) <= MAX_INPUT_BYTES:
+            chunk = os.read(fd, min(65536, MAX_INPUT_BYTES + 1 - len(raw)))
+            if not chunk:
+                break
+            raw.extend(chunk)
+        if len(raw) > MAX_INPUT_BYTES:
+            raise ForgeError("input exceeds 8 MiB")
+        after = os.fstat(fd)
+        observed = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
+        if observed(before) != observed(after):
+            raise ForgeError("input changed during read")
+        return bytes(raw)
+    finally:
+        os.close(fd)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate one metadata-only FORGE 4B01 manifest.")
     parser.add_argument("--input", required=True, help="JSON input using nox.forge.input.v1")
     args = parser.parse_args(argv)
     try:
-        path = Path(args.input)
-        if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_INPUT_BYTES:
-            raise ForgeError("input must be a non-symlink regular file no larger than 8 MiB")
-        raw = path.read_bytes()
-        if len(raw) > MAX_INPUT_BYTES:
-            raise ForgeError("input must be a non-symlink regular file no larger than 8 MiB")
+        raw = _read_manifest_bytes(Path(args.input))
         result = build_manifest(json.loads(
             raw.decode("utf-8"),
             object_pairs_hook=_unique_json_fields,
