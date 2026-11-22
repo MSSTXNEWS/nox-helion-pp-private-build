@@ -323,6 +323,7 @@ def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, f
     pinned_session = None
     pinned_root_session = None
     pinned_root_dialog_presence = None
+    pinned_row_dialog_presence = None
     for history in (before, after):
         if 'dialog_id' in history and history['dialog_id'] != dialog_id:
             return False
@@ -351,6 +352,14 @@ def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, f
             return False
         if pinned_ids is not None and ids != pinned_ids:
             return False
+        # Even a matching explicit dialog_id is not a stable row provenance
+        # witness if that field disappears or appears across owner GETs.
+        # Keep wholly legacy unscoped snapshots compatible.
+        row_dialog_presence = tuple('dialog_id' in row for row in rows)
+        if (pinned_row_dialog_presence is not None
+                and row_dialog_presence != pinned_row_dialog_presence):
+            return False
+        pinned_row_dialog_presence = row_dialog_presence
         # A role/content SHA and four stable row IDs do not pin optional
         # owner session metadata. A reload/recheck must not silently rotate
         # all four rows from one session to another with identical text/IDs.

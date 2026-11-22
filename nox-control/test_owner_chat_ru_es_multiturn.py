@@ -1705,6 +1705,46 @@ async function check(chunks, status=200) {
         self.assertIn('canonical_s03_verified=False', caller)
 
 
+    def test_postquiet_row_dialog_presence_remains_pinned_across_reload(self):
+        """Do not mistake changed row-level dialog provenance for stable history.
+
+        Read-only synthetic owner-history snapshots, NOT live canonical S03.
+        """
+        from owner_chat_browser_qa import postquiet_fourrow_history_stable
+
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        scoped = {'dialog_id': DIALOG, 'messages': [
+            dict(row, message_id=f'row-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(spanish), 1)]}
+        clone = lambda obj: json.loads(json.dumps(obj, ensure_ascii=False))
+        legacy = clone(scoped)
+        for row in legacy['messages']:
+            del row['dialog_id']
+        transcript = multiturn_transcript_sha256(scoped['messages'])
+        first_ids = ('row-1', 'row-2')
+        stable = lambda a, b: postquiet_fourrow_history_stable(
+            a, b, DIALOG, transcript, first_ids)
+
+        self.assertTrue(stable(scoped, clone(scoped)))
+        self.assertTrue(stable(legacy, clone(legacy)))
+        for index in range(4):
+            with self.subTest(row_index=index):
+                # Equal role/text digest, durable message IDs, root dialog
+                # and session scope, but one row drops explicit provenance.
+                dropped = clone(scoped)
+                del dropped['messages'][index]['dialog_id']
+                self.assertFalse(stable(scoped, dropped))
+                added = clone(legacy)
+                added['messages'][index]['dialog_id'] = DIALOG
+                self.assertFalse(stable(legacy, added))
+
+        # Whole-history scope can also vanish or appear during reload.
+        self.assertFalse(stable(scoped, legacy))
+        self.assertFalse(stable(legacy, scoped))
+        self.assertNotIn('context.request.post(',
+                         inspect.getsource(postquiet_fourrow_history_stable))
+
+
     def test_postquiet_root_dialog_presence_cannot_rotate_after_second_turn(self):
         """Postquiet and reload owner-history GETs must pin root dialog presence."""
         from owner_chat_browser_qa import postquiet_fourrow_history_stable
