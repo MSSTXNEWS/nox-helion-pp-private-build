@@ -567,6 +567,41 @@ def main():
             deltas[0][0]==='FIRST' && deltas[0][1]==='cr-one' &&
             deltas[1][0]==='SECOND' && deltas[1][1]==='cr-two';
         }'''))
+        # A CR-only blank line is a complete event BEFORE stream closure.
+        # A hanging subsequent reader must not stall visible streaming tokens.
+        check('CR-only SSE event is visible before EOF and STOP fences its turn', page.evaluate('''async () => {
+          const s={conversation_id:'cr-only',exchange_id:'open-reader'};
+          const frame='id: early\\revent: delta\\rdata: LIVE\\r\\r';
+          let posts=0,acks=0,deltas=0,notify;
+          const visible=new Promise(r=>{notify=r});
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({start(c){
+              c.enqueue(new TextEncoder().encode(frame));
+              // Intentionally do NOT close: must dispatch before EOF.
+            }})};
+          },async ack(){acks++;return true}};
+          const ui={async onDelta(_s,data,signal,id){
+            if(!signal.aborted&&data==='LIVE'&&id==='early'){
+              deltas++;notify('VISIBLE');
+            }
+          },async upsertTerminal(){return true}};
+          const client=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:2000
+          });
+          const pending=client.begin(s);
+          const first=await Promise.race([
+            visible,new Promise(r=>setTimeout(()=>r('LATE'),300))
+          ]);
+          const stopped=client.stop(s);
+          const result=await Promise.race([
+            pending,new Promise(r=>setTimeout(()=>r('HUNG'),350))
+          ]);
+          const noRepost=await client.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return first==='VISIBLE'&&stopped&&result==='STOPPED'&&
+            noRepost&&posts===1&&acks===0&&deltas===1;
+        }'''))
         check('CRLF split between chunks still emits one identified SSE delta', page.evaluate('''async () => {
           const s={conversation_id:'crlf-boundary',exchange_id:'one'};
           let posts=0,acks=0;
