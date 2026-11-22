@@ -249,6 +249,14 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             elif host["cpu_busy_pct"] >= 85 or host["io_wait_pct"] >= 10:
                 add("GPU_HOST_PIPELINE_PRESSURE", "hold",
                     "Host CPU/I/O pressure blocks further GPU work despite low compute utilization.")
+            elif not _owner_snapshot_attested(snapshot, owner_snapshot_verifier):
+                # Raw JSON claims of idle leases and fresh sensors are not
+                # authenticated owner evidence. Never call these "measured"
+                # spare resources without attesting the exact snapshot.
+                add("GPU_RESIDUAL_SOURCE_UNATTESTED", "hold",
+                    "Low-utilization telemetry is not owner-attested. Recheck the "
+                    "exact snapshot with the trusted owner verifier before "
+                    "reporting spare GPU observations; no new work is admitted.")
             else:
                 cap = round(85 - util, 2)
                 add("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", "observe",
