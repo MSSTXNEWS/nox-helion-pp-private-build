@@ -62,8 +62,9 @@ class _SG:
 '''
 m = re.search(r"^_MSK = .*$", s, re.M); assert m, "no _MSK"
 s = s[:m.start()] + imp + s[m.start():]
-rep('out({"model": TAG, "message": {"role": "assistant", "content": "🧠 GLM-5.3 думает и пишет (~1,4 ток/с)…\\n\\n"}, "done": False})',
-    'out({"model": TAG, "message": {"role": "assistant", "content": ""}, "done": False, "nox_phase": {"phase": "deep_start"}})')
+s, n0 = re.subn(r'out\(\{"model": TAG, "message": \{"role": "assistant", "content": "🧠[^\n]*?\}, "done": False\}\)',
+    'out({"model": TAG, "message": {"role": "assistant", "content": ""}, "done": False, "nox_phase": {"phase": "deep_start"}})', s)
+print("deep_start:", n0)
 s, n = re.subn(r'^(\s*)out\(\{"model": TAG, "message": \{"role": "assistant", "content": "⏳ Глубокий ответ.*$',
     r'\1out({"model": TAG, "message": {"role": "assistant", "content": ""}, "done": False, "nox_phase": {"phase": "deep_queued", "task": str(jid), "ahead": ahead}})', s, flags=re.M)
 print("deep_queued lines:", n)
