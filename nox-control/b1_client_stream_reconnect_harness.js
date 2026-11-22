@@ -191,21 +191,21 @@
                // SSE removes at most one U+0020 separator after ':'. Literal
                // leading/trailing spaces are model output, not padding.
                .map(l=>l.slice(5).replace(/^ /,'')).join('\n');
+            // Control/heartbeat frames can carry EventSource id resets even
+            // when they contain no projected delta. Silently ignoring id:
+            // (or a bare id) would discard a replay-cursor transition,
+            // allowing later deltas to bypass exact-ID deduplication. NOX
+            // therefore fails closed on empty/malformed or repeated IDs in
+            // EVERY frame; valid control IDs and comments remain non-projecting.
+            const ids=lines.filter(l=>l==='id'||l.startsWith('id:'));
+            if(ids.length>1) hold('HOLD_STREAM_DELTA_EVENT_ID');
+            const rawEventId=ids.length===1?ids[0].slice(3):undefined;
+            const eventId=rawEventId===undefined?undefined:
+              rawEventId.startsWith(' ')?rawEventId.slice(1):rawEventId;
+            if(eventId!==undefined&&!ID.test(eventId))
+              hold('HOLD_STREAM_DELTA_EVENT_ID');
             if(event==='delta'){
-              // The B1 DOM adapter accepts an optional immutable per-delta SSE
-              // event ID. Without forwarding the wire id: field, its replay
-              // dedupe never runs and reconnect can duplicate visible tokens.
-              // Reject malformed/ambiguous IDs BEFORE any UI side effect.
-              const ids=lines.filter(l=>l==='id'||l.startsWith('id:'));
-              if(ids.length>1) hold('HOLD_STREAM_DELTA_EVENT_ID');
-              // The SSE spec permits removing ONE U+0020 after the colon.
-              // Do not trim the ID: different wire IDs must never collide
-              // after normalization in DOM delta replay deduplication.
-              const rawEventId=ids.length===1?ids[0].slice(3):undefined;
-              const eventId=rawEventId===undefined?undefined:
-                rawEventId.startsWith(' ')?rawEventId.slice(1):rawEventId;
-              if(eventId!==undefined&&!ID.test(eventId))
-                hold('HOLD_STREAM_DELTA_EVENT_ID');
+              // Forward exact wire ID to the B1 abort-safe DOM replay fence.
               // UI handlers that await MUST check this signal immediately
               // before their actual DOM/state commit; this caller cannot undo
               // a UI effect already committed by an uncooperative adapter.
