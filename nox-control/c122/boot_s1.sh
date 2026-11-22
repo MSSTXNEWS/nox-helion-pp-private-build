@@ -42,6 +42,16 @@ fi
 if [ -f "$NOX_MEMORY_DB" ] && ! up 8095; then
   log "recall_api :8095"; (cd $C && nohup setsid python3 -m qs6.recall_server > $LG/recall_api.log 2>&1 < /dev/null &)
 fi
+# 4c. V7 ФЛАГИ: NOX_PRIME/NOX_CORE/NOX_CONSCIENCE... из state/v7_flags.json переживают перезапуск сервера; RTE :8084 и CORE :8090 поднимаем до шлюза
+V7F=$N/state/v7_flags.json; W7=$C/wow7
+if [ -f "$V7F" ]; then
+  eval "$(python3 -c "import json,shlex;d=json.load(open('$V7F'));print('\n'.join('export %s=%s'%(k,shlex.quote(str(v))) for k,v in d.items() if k.startswith('NOX_')))" 2>/dev/null)"
+fi
+if [ "$NOX_CORE" = 1 ] && [ -f $W7/brain/nox_core.py ]; then
+  export NOX_WOW7=$W7 NOX_STATE=$N/state NOX_RECEIPTS=$N/receipts NOX_TRACE_DIR=$N/state/v7/core_trace
+  up 8084 || { log "rte :8084"; (cd $W7/rte && NOX_GATEWAY_URL=http://127.0.0.1:8082 NOX_DEEP_SLOTS_URL=http://127.0.0.1:$GLMP NOX_FAST_UPSTREAM=http://127.0.0.1:8083 nohup setsid python3 rte_server.py > $LG/rte.log 2>&1 < /dev/null &); }
+  up 8090 || { log "core :8090"; (cd $W7/brain && NOX_GLM_URL=http://127.0.0.1:$GLMP NOX_FAST_URL=http://127.0.0.1:8083 nohup setsid python3 nox_core.py > $LG/core.log 2>&1 < /dev/null &); }
+fi
 # 5. шлюз (qs6): быстрый тир + GLM, память, душа. Работавший без памяти шлюз перезапускаем один раз.
 GP=$(pgrep -f "python3 .*gateway.py" | head -1)
 if [ -n "$GP" ] && { ! tr '\0' '\n' < /proc/$GP/environ 2>/dev/null | grep -q '^NOX_SOUL=1$' || ! tr '\0' '\n' < /proc/$GP/environ 2>/dev/null | grep -q "^NOX_UPSTREAM=http://127.0.0.1:$GLMP$"; }; then log "gateway без памяти/души: перезапуск"; kill $GP; sleep 2; fi
