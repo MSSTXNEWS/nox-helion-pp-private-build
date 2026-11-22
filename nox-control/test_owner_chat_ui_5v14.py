@@ -3,6 +3,11 @@
 Do not import the FastAPI runtime, access the owner host or alter production files.
 """
 import ast
+import json
+import os
+import tempfile
+import time
+from unittest.mock import patch
 from html.parser import HTMLParser
 from pathlib import Path
 import re
@@ -100,6 +105,57 @@ class OwnerLiveAssetTests(unittest.TestCase):
         result=self.rendered('<link rel="stylesheet" href="/pc/v25/nox-shell-v25.css">')
         self.assertIn('href="/nox-web-v29/pc/v25/nox-shell-v25.css"',result)
         self.assertIn('data-n25-css="1"',result)
+
+
+def load_worker_reader():
+    source=Path(__file__).with_name('owner_chat_ui.py').read_text(encoding='utf-8')
+    tree=ast.parse(source, filename='owner_chat_ui.py')
+    names={'_owner_status_pairs_unique','_owner_status_no_nonfinite','workers'}
+    parts=[node for node in tree.body if isinstance(node,ast.FunctionDef)
+           and node.name in names]
+    if {node.name for node in parts} != names:
+        raise AssertionError('HOLD_OWNER_WORKER_SOURCE_ANCHOR')
+    import stat
+    namespace={'os':os,'stat':stat,'json':json,'time':time,'re':re,
+               'Path':Path}
+    exec(compile(ast.Module(body=parts,type_ignores=[]),
+                 'owner_chat_ui.py','exec'),namespace)
+    return namespace['workers']
+
+
+class OwnerWorkerSnapshotTrustTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.reader=staticmethod(load_worker_reader())
+
+    def read_snapshot(self,raw,mode=0o600):
+        with tempfile.TemporaryDirectory() as base:
+            root=Path(base)
+            (root/'status').mkdir()
+            status=root/'status'/'agents_t856u.json'
+            status.write_bytes(raw.encode('utf-8'))
+            status.chmod(mode)
+            with patch.dict(self.reader.__globals__,
+                            {'ROOT':root,'owner_maintenance_gate':lambda:'ABSENT'}):
+                return self.reader()
+
+    def test_valid_owner_readonly_snapshot_is_observed(self):
+        raw='{"n":1,"workers":[{"id":"nox-agent-01","status":"idle","current_task":null}]}'
+        snap=self.read_snapshot(raw)
+        self.assertEqual(snap['state'],'OBSERVED')
+        self.assertEqual(snap['configured'],1)
+
+    def test_group_or_world_writable_status_never_certifies_work(self):
+        raw='{"n":1,"workers":[{"id":"nox-agent-01","status":"idle","current_task":null}]}'
+        self.assertEqual(self.read_snapshot(raw,0o666)['state'],'UNAVAILABLE')
+
+    def test_duplicate_json_keys_cannot_override_status(self):
+        raw='{"n":1,"workers":[{"id":"nox-agent-01","status":"idle","current_task":null}],"n":1}'
+        self.assertEqual(self.read_snapshot(raw)['state'],'UNAVAILABLE')
+
+    def test_nonfinite_json_cannot_be_certified(self):
+        raw='{"n":1,"workers":[{"id":"nox-agent-01","status":"idle","current_task":null}],"extra":NaN}'
+        self.assertEqual(self.read_snapshot(raw)['state'],'UNAVAILABLE')
 
 
 if __name__ == '__main__':

@@ -122,6 +122,19 @@ def owner_maintenance_gate():
         os.close(fd)
 
 
+def _owner_status_pairs_unique(pairs):
+    result={}
+    for key,value in pairs:
+        if key in result:
+            raise ValueError('HOLD_EXECUTOR_STATUS_DUPLICATE_KEY')
+        result[key]=value
+    return result
+
+
+def _owner_status_no_nonfinite(value):
+    raise ValueError('HOLD_EXECUTOR_STATUS_NONFINITE')
+
+
 def workers():
     """Read a single bounded descriptor-pinned worker snapshot, fail closed on races."""
     result={'schema':'NOX_OWNER_EXECUTORS_V1','state':'UNAVAILABLE','workers':[],
@@ -139,13 +152,17 @@ def workers():
             file_fd=os.open('agents_t856u.json',os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=parent_fd)
             try:
                 before=os.fstat(file_fd)
-                if not stat.S_ISREG(before.st_mode) or not 0<before.st_size<=750000:return result
+                if (not stat.S_ISREG(before.st_mode) or before.st_uid!=os.geteuid()
+                        or before.st_mode & 0o022 or not 0<before.st_size<=750000):
+                    return result
                 raw=os.read(file_fd,750001)
                 after=os.fstat(file_fd)
                 if len(raw)!=before.st_size or (
-                    before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns
+                    before.st_dev,before.st_ino,before.st_uid,before.st_mode,
+                    before.st_size,before.st_mtime_ns,before.st_ctime_ns
                 )!=(
-                    after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns
+                    after.st_dev,after.st_ino,after.st_uid,after.st_mode,
+                    after.st_size,after.st_mtime_ns,after.st_ctime_ns
                 ):return result
             finally:
                 os.close(file_fd)
@@ -155,7 +172,8 @@ def workers():
             )!=(anchor.st_dev,anchor.st_ino):return result
         finally:
             os.close(parent_fd)
-        value=json.loads(raw)
+        value=json.loads(raw,object_pairs_hook=_owner_status_pairs_unique,
+                         parse_constant=_owner_status_no_nonfinite)
         stamp=before.st_mtime
         if not isinstance(value,dict):return result
         rows=value.get('workers')
