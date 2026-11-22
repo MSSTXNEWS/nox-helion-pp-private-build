@@ -861,7 +861,7 @@ class ProbeTests(unittest.TestCase):
                     probe.page_snapshot(response, expected_path='/chat')
                 self.assertTrue(response.closed)
                 self.assertEqual(response.reads, 1)
-            for value in ('2;url=/chat', '5;url=/nox-web-v29/chat.html', ''):
+            for value in ('2;url=/chat', '5;url=/nox-web-v29/chat.html', '2'):
                 response = Response(value)
                 with self.subTest(healthy=value):
                     self.assertEqual(probe.page_snapshot(response, expected_path='/chat')[0], 200)
@@ -873,6 +873,41 @@ class ProbeTests(unittest.TestCase):
                         RuntimeError, '^HOLD_CHAT_REFRESH_HEADER_INVALID$'):
                     probe.page_snapshot(response, expected_path='/chat')
                 self.assertTrue(response.closed)
+
+    def test_http_200_malformed_refresh_header_fail_closed(self):
+        """A malformed HTTP 200 Refresh cannot certify browser UI health."""
+        from email.message import Message
+        class Response:
+            status = 200
+            url = 'http://127.0.0.1:8080/chat'
+            def __init__(self, value):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/html'
+                if value is not None:
+                    self.headers['Refresh'] = value
+                self.closed, self.reads = False, 0
+            def read(self, size):
+                self.reads += 1
+                return b'<html><head><title>NOX</title></head><body>ok</body></html>'
+            def close(self):
+                self.closed = True
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'):
+            for value in ('', '0 url=/chat/login', '0; href=/chat/login',
+                          '0;url=', '0;url="/chat/login',
+                          '0;url=/chat/login"', 'not-a-delay'):
+                response = Response(value)
+                with self.subTest(malformed=value), self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_CHAT_REFRESH_HEADER_MALFORMED$'):
+                    probe.page_snapshot(response, expected_path='/chat')
+                self.assertTrue(response.closed)
+                self.assertEqual(response.reads, 1)
+            for value in (None, '2', '0.25;url=/chat'):
+                response = Response(value)
+                with self.subTest(valid=value):
+                    self.assertEqual(probe.page_snapshot(
+                        response, expected_path='/chat')[0], 200)
+                self.assertTrue(response.closed)
+                self.assertEqual(response.reads, 1)
 
     def test_http_200_duplicate_refresh_headers_hold_before_healthy_ui(self):
         """A second HTTP Refresh header must not hide login/foreign navigation."""
