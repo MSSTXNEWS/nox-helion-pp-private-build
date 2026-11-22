@@ -600,6 +600,25 @@ def require_multiturn_model_route(*turns):
     return bool(tagged)
 
 
+def require_stream_response_mime(response):
+    """A 200 HTML/login/gateway fallback cannot certify a chat stream.
+
+    Real HTTP responses expose headers; older headerless in-memory fixtures
+    remain supported only as offline synthetic tests, never native proof.
+    """
+    headers = getattr(response, 'headers', None)
+    if headers is None:
+        return
+    raw = headers.get('Content-Type', '')
+    if not isinstance(raw, str):
+        raise RuntimeError('HOLD_STREAM_RESPONSE_MIME')
+    media = raw.split(';', 1)[0].strip().lower()
+    if media not in ('application/x-ndjson', 'application/ndjson',
+                     'application/jsonl', 'application/jsonlines',
+                     'application/json', 'text/event-stream', 'text/plain'):
+        raise RuntimeError('HOLD_STREAM_RESPONSE_MIME')
+
+
 def bounded_stream_lines(response, max_line=100000):
     """Bound each network read; iteration can buffer a huge NDJSON line before a length check."""
     readline = getattr(response, 'readline', None)
@@ -623,6 +642,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
     events=[];answer='';done=None;first=None;placeholders=0;delta_count=0;model_identity=None
     try:
         require_exact_stream_target(response)
+        require_stream_response_mime(response)
         for index,line in enumerate(bounded_stream_lines(response)):
             if index>2000 or len(line)>100000 or time.monotonic()-started>timeout+5:
                 raise RuntimeError('HOLD_BOUNDED_STREAM')
