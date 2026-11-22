@@ -13,9 +13,9 @@ try() { # $1 имя, остальное - доп. аргументы
   echo "$B -m $M --host 127.0.0.1 --port 8081 --parallel 4 -c 32768 -fa on --jinja -ngl 99 -ot exps=CPU -t 26 -tb 26 $*" > /root/nox/state/FLASH_ARGS_$n.txt
   for j in $(seq 1 100); do
     [ "$(curl -s -m 3 -o /dev/null -w '%{http_code}' http://127.0.0.1:8081/health)" = 200 ] && { echo "UP try=$n after $((j*5))s"; echo $n > /root/nox/state/FLASH_ARGS_USED; return 0; }
-    pgrep -f "port 8081" >/dev/null || { echo "DIED try=$n"; grep -E " E |error|out of memory" /root/nox/logs/glm_8081.log | tail -n 3 | cut -c1-200; return 1; }
+    pgrep -f "port 8081" >/dev/null || { echo "DIED try=$n"; grep -a -E "alloc|failed to" /root/nox/logs/glm_8081.log | tail -n 3 | cut -c1-200; return 1; }
     sleep 5
   done; echo TIMEOUT; return 1; }
-try A || try B --no-kv-offload
+try C -ub 256 -b 1024 || try D -ub 128 -b 512 || try E -ub 128 -b 512 -ngl 24
 nvidia-smi --query-gpu=memory.used --format=csv,noheader
-grep -E "buffer size|KV|offloaded" /root/nox/logs/glm_8081.log | cut -c1-200 | head -8
+grep -a -E "buffer size|KV|offloaded|model buffer" /root/nox/logs/glm_8081.log | cut -c1-200 | head -8
