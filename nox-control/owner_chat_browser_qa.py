@@ -613,6 +613,15 @@ def firstturn_root_session_continuity_valid(first_history, completed_history):
             or not root_history_session_valid(first_history, first_rows)
             or not root_history_session_valid(completed_history, completed_rows)):
         return False
+    # The original two persisted RU rows cannot quietly gain/lose their
+    # per-row dialog provenance after the Spanish turn. Both snapshots may
+    # be individually valid even if the same first two durable rows change
+    # their dialog_id field presence. Fully legacy stable rows remain valid.
+    for first_row, completed_row in zip(first_rows, completed_rows[:2]):
+        if (('dialog_id' in first_row, first_row.get('dialog_id')) !=
+                ('dialog_id' in completed_row,
+                 completed_row.get('dialog_id'))):
+            return False
     # A root dialog_id is optional only in entirely legacy owner histories.
     # Its presence must not rotate between RU and ES while row IDs/text match.
     return (('session_id' in first_history, first_history.get('session_id'))

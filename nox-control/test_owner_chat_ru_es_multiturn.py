@@ -546,6 +546,59 @@ async function check(chunks, status=200) {
             __import__('owner_chat_browser_qa').presecond_owner_history_fence)
         self.assertIn('presecond_firstturn_history_stable(', owner_fence)
 
+    def test_firstsecond_ru_es_prefix_row_dialog_scope_is_immutable(self):
+        """A Spanish follow-up cannot rebind the persisted first RU row scope.
+
+        Only synthetic owner-history responses; NOT native S03 acceptance.
+        """
+        from owner_chat_browser_qa import firstturn_root_session_continuity_valid
+        import copy
+
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        final_rows = [
+            dict(row, message_id=f'durable-{i}', dialog_id=DIALOG,
+                 session_id='owner-A')
+            for i, row in enumerate(rows(spanish))
+        ]
+        first = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                 'messages': copy.deepcopy(final_rows[:2])}
+        completed = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                     'messages': copy.deepcopy(final_rows)}
+        check = firstturn_root_session_continuity_valid
+        self.assertTrue(check(first, completed))
+        self.assertTrue(firstturn_history_valid(first, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            completed['messages'], RU, FIRST, spanish, LAST, dialog_id=DIALOG))
+        for index in (0, 1):
+            with self.subTest(row=index, change='drop_after_spanish'):
+                changed = copy.deepcopy(completed)
+                del changed['messages'][index]['dialog_id']
+                self.assertTrue(multiturn_history_valid(
+                    changed['messages'], RU, FIRST, spanish, LAST,
+                    dialog_id=DIALOG))
+                self.assertFalse(check(first, changed))
+            with self.subTest(row=index, change='add_after_spanish'):
+                initial_legacy = copy.deepcopy(first)
+                del initial_legacy['messages'][index]['dialog_id']
+                self.assertTrue(firstturn_history_valid(
+                    initial_legacy, RU, FIRST, DIALOG))
+                self.assertFalse(check(initial_legacy, completed))
+                both_legacy = copy.deepcopy(completed)
+                del both_legacy['messages'][index]['dialog_id']
+                self.assertTrue(check(initial_legacy, both_legacy))
+        # Unscoped legacy messages in BOTH snapshots remain supported.
+        no_row_scope_first = copy.deepcopy(first)
+        no_row_scope_final = copy.deepcopy(completed)
+        for snapshot in (no_row_scope_first, no_row_scope_final):
+            for row in snapshot['messages']:
+                row.pop('dialog_id')
+        self.assertTrue(check(no_row_scope_first, no_row_scope_final))
+        # The real browser gate must call this helper before browser-only PASS.
+        caller = inspect.getsource(browser_run)
+        self.assertIn('firstturn_root_session_continuity_valid(', caller)
+        self.assertLess(caller.index('firstturn_root_session_continuity_valid('),
+                        caller.index("report['multiturn_browser_acceptance_verified']=True"))
+
     def test_first_to_second_owner_history_root_dialog_presence_is_pinned(self):
         """Two separately valid RU/ES histories cannot change root dialog scope."""
         from owner_chat_browser_qa import firstturn_root_session_continuity_valid
