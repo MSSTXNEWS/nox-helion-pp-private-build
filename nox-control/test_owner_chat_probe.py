@@ -2543,6 +2543,9 @@ class ProbeTests(unittest.TestCase):
                 self.headers = Message()
                 self.headers['Content-Type'] = 'text/event-stream'
 
+            def __iter__(self):
+                return iter(self.rows)
+
             def close(self):
                 self.closed = True
 
