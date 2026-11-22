@@ -8,11 +8,11 @@ while [ $# -gt 0 ]; do case "$1" in --dry-run) DRY=1;; --no-system) NOSYS=1;; --
 DEST=$ROOT/src/adv; ENVF=$ROOT/secrets/advisors.env; REC=$ROOT/receipts/ADV-01.json
 WORLD="$SRC/../WORLD"; COMMON="$SRC/../COMMON"; [ -f "$SRC/advisor_pool.py" ] && WORLD="$SRC"; [ -d "$SRC/common" ] && COMMON="$SRC/common"
 run() { if [ "$DRY" = 1 ]; then echo "[dry-run] $*"; else eval "$*"; fi; }
-for f in advisor_hub.py health_check.py handoff.py advisors_live.json test_adv.py; do [ -f "$SRC/$f" ] || { echo "нет $SRC/$f" >&2; exit 1; }; done
+for f in advisor_hub.py advisor_proxy.py gateway_adv.diff health_check.py handoff.py advisors_live.json test_adv.py; do [ -f "$SRC/$f" ] || { echo "нет $SRC/$f" >&2; exit 1; }; done
 [ -f "$WORLD/advisor_pool.py" ] || { echo "нет advisor_pool.py ($WORLD)" >&2; exit 1; }
 for f in datafence.py statefile.py; do [ -f "$COMMON/$f" ] || { echo "нет $COMMON/$f" >&2; exit 1; }; done
 run "mkdir -p $DEST/common $ROOT/state $ROOT/logs $ROOT/receipts $ROOT/scripts $ROOT/secrets && chmod 700 $ROOT/secrets"
-run "cp $SRC/advisor_hub.py $SRC/health_check.py $SRC/handoff.py $SRC/advisors_live.json $SRC/test_adv.py $WORLD/advisor_pool.py $DEST/"
+run "cp $SRC/advisor_hub.py $SRC/advisor_proxy.py $SRC/gateway_adv.diff $SRC/health_check.py $SRC/handoff.py $SRC/advisors_live.json $SRC/test_adv.py $WORLD/advisor_pool.py $DEST/"
 run "cp $COMMON/*.py $DEST/common/"
 if [ -f "$ENVF" ]; then echo "env уже есть: $ENVF (не трогаю)"; else
   TPL='# ключи бесплатных советников NOX (SETUP.md). Только KEY=значение, без кавычек. Файл chmod 600, в git не класть.
@@ -54,7 +54,7 @@ WantedBy=multi-user.target"
     printf '%s\n' "$CRON" > /etc/cron.d/nox-advisors
   fi
 fi
-if [ "$DRY" = 1 ]; then echo "[dry-run] unittest (фейковые провайдеры), health_check, квитанция $REC"; echo "[dry-run] шлюз: проксировать /v1/advisors/* на http://127.0.0.1:$PORT (gateway.py - отдельной карточкой)"; exit 0; fi
+if [ "$DRY" = 1 ]; then echo "[dry-run] unittest (фейковые провайдеры), health_check, квитанция $REC"; echo "[dry-run] шлюз: проксировать /v1/advisors/* на http://127.0.0.1:$PORT (advisor_proxy.py + gateway_adv.diff: patch -p1 -i gateway_adv.diff в корне клона; модуль положить рядом с glm53/gateway.py)"; exit 0; fi
 TESTS=$(cd "$DEST" && python3 -W ignore -m unittest test_adv 2>&1 | tail -3 | tr '\n' ' ' | sed 's/"//g')
 TOK=0; case "$TESTS" in *OK*) TOK=1;; esac
 set -a; . "$ENVF"; set +a

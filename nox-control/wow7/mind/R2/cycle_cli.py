@@ -218,6 +218,12 @@ def run_evolve(state, loop, steps=3, kinds=("prompt", "strategy"), gate_checker=
     """loop: M2 EvolutionLoop (generator, evaluator, archive, champions уже собраны вызывающим). gate_checker - ворота gate_all внутри loop.gate. Возвращает метрики."""
     res = loop.run(steps, kinds=list(kinds), baseline=baseline)
     acc = [(k, r) for k, r in res if r.get("accepted")]
+    for k, r in acc:        # MIND-10: принятый patch не применяем сами - карточка для agent/selfbuild (ветка nox/*, тесты, судья, release)
+        cur = loop.champs.current("patch") if k == "patch" else None
+        if cur:
+            import evolve as EV
+            import bench_evaluator as BE
+            BE.queue_selfbuild(EV.Variant.from_json(cur["variant"]), r.get("verdict"), os.path.join(paths(state)["sd"], "selfbuild_queue.jsonl"))
     out = {"steps": steps, "accepted": len(acc), "kinds_accepted": [k for k, _ in acc],
            "coverage": loop.arch.coverage(), "log": len(loop.log)}
     _dump(os.path.join(paths(state)["sd"], "evolve_last.json"), {"t": time.time(), **{k: v for k, v in out.items() if k != "log"},
@@ -225,28 +231,71 @@ def run_evolve(state, loop, steps=3, kinds=("prompt", "strategy"), gate_checker=
     return out
 
 
-def cmd_evolve(state, now=None):
-    """Боевой evolve требует настроенного evaluator (внешняя команда NOX_EVOLVE_CMD: принимает вариант и печатает {task_id: score}); без неё шаг честно пропускается."""
-    if not os.environ.get("NOX_EVOLVE_CMD"):
-        return {"steps": 0, "accepted": 0, "skipped": "NOX_EVOLVE_CMD не задан: evaluator вариантов не подключён"}
+def _cmd_evaluator(cmd):
+    """Внешняя команда NOX_EVOLVE_CMD (переопределение): stdin {variant, tasks} -> stdout последней строкой {task_id: score}."""
     import subprocess
-    import evolve as EV
-    import gate_all as GA
-    wk = json.load(open(os.path.join(paths(state)["sd"], "weakest_axis.json"), encoding="utf-8")) if os.path.exists(os.path.join(paths(state)["sd"], "weakest_axis.json")) else {}
-    tasks = [{"id": t["id"]} for t in MB.load_suite(None, None, "dev")["tasks"] if not wk.get("axis") or t["axis"] == wk["axis"]]
-    cmd = os.environ["NOX_EVOLVE_CMD"]
 
     def evaluator(v, ts):
         r = subprocess.run(cmd, shell=True, input=json.dumps({"variant": v.to_json(), "tasks": [t["id"] for t in ts]}), capture_output=True, text=True, timeout=7200)
         return json.loads(r.stdout.strip().splitlines()[-1])
-    import fastq
-    fq = fastq.get()
-    gen = EV.LLMGenerator(fq.llm(fastq.P3))
+    return evaluator
+
+
+def _fast_alive(url, timeout=3.0):
+    import urllib.request
+    try:
+        urllib.request.urlopen(url.rstrip("/") + "/health", timeout=timeout).read()
+        return True
+    except Exception:
+        try:
+            urllib.request.urlopen(url.rstrip("/") + "/props", timeout=timeout).read()
+            return True
+        except Exception:
+            return False
+
+
+def cmd_evolve(state, now=None, evaluator=None, generator=None):
+    """MIND-10: боевой evolve. Evaluator по умолчанию = MIND-BENCH на временном ядре (M4_BENCH/bench_evaluator.BenchEvaluator: вариант применяется только к временному ядру,
+    holdout бенчмарка не используется). NOX_EVOLVE_CMD (внешняя команда) переопределяет; NOX_EVOLVE_BENCH=0 выключает шаг; быстрая модель недоступна -> шаг честно пропущен.
+    Виды: NOX_EVOLVE_KINDS=prompt,strategy[,patch] (patch нужен NOX_EVOLVE_REPO - корень пакета; принятый patch -> очередь selfbuild_queue.jsonl, не применяется здесь).
+    Принятие кода/стратегии проходит gate_all (подпись Создателя): без подписи чемпион не меняется, но прогон и лог остаются."""
+    if os.environ.get("NOX_EVOLVE_BENCH") == "0" and not os.environ.get("NOX_EVOLVE_CMD") and evaluator is None:
+        return {"steps": 0, "accepted": 0, "skipped": "NOX_EVOLVE_BENCH=0: шаг выключен"}
+    import evolve as EV
+    import gate_all as GA
     sd = paths(state)["sd"]
+    wk = json.load(open(os.path.join(sd, "weakest_axis.json"), encoding="utf-8")) if os.path.exists(os.path.join(sd, "weakest_axis.json")) else {}
+    tasks = [{"id": t["id"]} for t in MB.load_suite(None, None, "dev")["tasks"] if not wk.get("axis") or t["axis"] == wk["axis"]]
+    kinds = tuple(k for k in os.environ.get("NOX_EVOLVE_KINDS", "prompt,strategy").split(",") if k in EV.KINDS) or ("prompt", "strategy")
+    sandbox = None
+    if evaluator is None:
+        if os.environ.get("NOX_EVOLVE_CMD"):
+            evaluator = _cmd_evaluator(os.environ["NOX_EVOLVE_CMD"])
+        else:
+            import bench_evaluator as BE
+            fast = os.environ.get("NOX_FAST_URL", "http://127.0.0.1:8083")
+            if not _fast_alive(fast):
+                return {"steps": 0, "accepted": 0, "skipped": "быстрая модель %s не отвечает: evaluator (временное ядро) поднять нельзя" % fast}
+            repo = os.environ.get("NOX_EVOLVE_REPO")
+            evaluator = BE.BenchEvaluator(suite=MB.load_suite(None, None, "dev"), fast_url=fast, glm_url=os.environ.get("NOX_GLM_URL"), patch_repo=repo)
+            if "patch" in kinds:
+                if not repo:
+                    kinds = tuple(k for k in kinds if k != "patch")
+                else:
+                    sandbox = EV.PatchSandbox(repo, os.environ.get("NOX_EVOLVE_TESTCMD", "python3 -m unittest discover -s BRAIN -p 'test_*.py'"))
+    if generator is None:
+        import fastq
+        generator = EV.LLMGenerator(fastq.get().llm(fastq.P3), kinds=kinds)
     check = lambda: {"pass": False, "decision": "pending_signature", "reasons": [], "needs_signature": ["evolve: принятие кода/стратегии подтверждает Создатель"]}
-    loop = EV.EvolutionLoop(gen, evaluator, tasks, EV.Archive(os.path.join(sd, "archive.jsonl")), EV.Champions(os.path.join(sd, "champions.json")),
-                            gate=GA.evolve_gate(check), stop_file=os.path.join(state, "STOP"))
-    return run_evolve(state, loop)
+    loop = EV.EvolutionLoop(generator, evaluator, tasks, EV.Archive(os.path.join(sd, "archive.jsonl")), EV.Champions(os.path.join(sd, "champions.json")),
+                            gate=GA.evolve_gate(check), sandbox=sandbox, stop_file=os.path.join(state, "STOP"))
+    baseline = {"prompt": EV.Variant("prompt", "", note="текущая душа"), "strategy": EV.Variant("strategy", "{}", note="текущие параметры")}
+    out = run_evolve(state, loop, steps=int(os.environ.get("NOX_EVOLVE_STEPS", "3")), kinds=kinds, baseline=baseline)
+    errs = [e for e in loop.log if isinstance(e, dict) and e.get("evaluator_error")]
+    if errs:
+        out["evaluator_errors"] = len(errs)
+        out["first_evaluator_error"] = errs[0]["evaluator_error"]
+    return out
 
 
 # ---------------------------------------------------------------- отчёты и предложения (подпись Создателя)

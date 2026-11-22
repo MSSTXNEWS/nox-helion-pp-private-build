@@ -1,0 +1,26 @@
+--- a/nox-control/glm53/gateway.py	2026-11-22 06:26:44.657186093 +0300
++++ b/nox-control/glm53/gateway.py	2026-11-22 06:26:49.237093402 +0300
+@@ -63,6 +63,11 @@
+         # ---- маршруты
+         def do_GET(self):
+             p = self.path.split("?")[0]
++            if p.startswith("/v1/advisors/"):
++                try:
++                    import advisor_proxy                    # ADV-04: /v1/advisors/* -> хаб советников :8095 (NOX_ADV=0 выключает)
++                    if advisor_proxy.handle(self, "GET", self.path, b""): return
++                except Exception as e: print("[adv] прокси выключен: %s" % e, file=sys.stderr, flush=True)
+             if p == "/v1/nox/stats":
+                 return self._json(200, {"speed": st.meter.snapshot(), "cache": st.cache.snapshot(), "active": st.reg.active(), "fast_available": st.fast_ok(), "prefix": C.prefix_hash()})
+             if p == "/v1/resume":
+@@ -81,6 +86,11 @@
+             if p == "/v1/stop":
+                 rid = body.get("request_id") or ""
+                 return self._json(200, {"request_id": rid, "stopped": st.reg.stop(rid)})
++            if p.startswith("/v1/advisors/"):
++                try:
++                    import advisor_proxy
++                    if advisor_proxy.handle(self, "POST", self.path, json.dumps(body, ensure_ascii=False).encode("utf-8")): return
++                except Exception as e: print("[adv] прокси выключен: %s" % e, file=sys.stderr, flush=True)
+             if p not in ("/v1/chat/completions", "/chat/completions"):
+                 return self._relay(self.path, body)
+             self.chat(body)
