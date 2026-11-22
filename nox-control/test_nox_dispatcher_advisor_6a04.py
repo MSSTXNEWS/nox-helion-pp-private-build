@@ -19,7 +19,9 @@ def snapshot():
                     "utilization_pct": 15, "vram_used_mib": 10000,
                     "vram_total_mib": 16000, "age_sec": 1},
             "cpu_io": {"cpu_busy_pct": 40, "io_wait_pct": 2, "age_sec": 1},
-            "disk": {"free_gib": 100}}
+            "disk": {"free_gib": 100},
+            "native_queue": {"active_claims": False, "maintenance_busy": False,
+                             "resource_headroom_bytes": 3*1024**3}}
 
 
 def codes(s):
@@ -127,6 +129,26 @@ class GpuSourceEvidenceTests(unittest.TestCase):
                 current = codes(s)
                 self.assertIn("GPU_RESIDUAL_OWNER_BUSY_HOLD", current)
                 self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", current)
+
+    def test_unknown_owner_claim_state_never_suggests_spare_gpu(self):
+        # An otherwise healthy low-utilization snapshot without owner claim
+        # provenance is not proof that an independent GPU task can start.
+        baseline = snapshot()
+        baseline.pop("native_queue")
+        self.assertIn("GPU_RESIDUAL_OWNER_UNVERIFIED", codes(baseline))
+        for field, value in (("active_claims", None),
+                             ("active_claims", 0),
+                             ("active_claims", 1),
+                             ("active_claims", "false"),
+                             ("maintenance_busy", None),
+                             ("maintenance_busy", 0),
+                             ("maintenance_busy", "false")):
+            with self.subTest(field=field, value=value):
+                s = snapshot()
+                s["native_queue"][field] = value
+                observed = codes(s)
+                self.assertIn("GPU_RESIDUAL_OWNER_UNVERIFIED", observed)
+                self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", observed)
 
     def test_high_valid_utilization_is_not_admission(self):
         s=snapshot(); s["gpu"]["utilization_pct"]=100
