@@ -93,7 +93,7 @@
      throw Error('HOLD_DIALOG_EXCHANGE_REPLAY');
    const prior=data.messages.filter(m=>m&&m.exchange_id===previous.exchange_id);
    const priorAt=data.messages.indexOf(prior[0]);
-   if(prior.length!==2||priorAt>=currentAt||data.messages[priorAt+1]!==prior[1]||
+   if(prior.length!==2||priorAt+2!==currentAt||data.messages[priorAt+1]!==prior[1]||
       prior[0].role!=='user'||prior[1].role!=='assistant'||
       prior[0].content!==previous.prompt||prior[1].content!==previous.answer)
      throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
