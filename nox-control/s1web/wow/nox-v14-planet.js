@@ -1,17 +1,17 @@
 /* NOX · фон-планета (выбор в «Настройки → Фон»). WebGL2-сфера: терминатор, атмосферное свечение, без жёстких контуров.
-   Земля/Луна — текстуры Solar System Scope (CC BY 4.0, NASA); остальные тела — процедурные шейдеры. Выбор хранится в localStorage. */
+   Все тела — фото-текстуры Solar System Scope (CC BY 4.0, данные NASA): одобренные nox-<тело>.jpg 2048x1024 (Луна — 2k_moon/moon); процедурный шейдер включается только если файла нет. Выбор хранится в localStorage. */
 (function(){'use strict';if(window.NOXPlanet)return;
 var D=document,H=D.documentElement,KEY='nox:planet',SRC=(D.currentScript&&D.currentScript.src)||'';var BASE=SRC?SRC.replace(/[^\/]*$/,''):'./';
 var PL=[{id:'none',name:'Только космос',kind:-1,note:'Без планеты: туманность и звёзды'},
-{id:'mercury',name:'Меркурий',kind:1,tx:['vendor/nox-planets/2k_mercury.jpg'],note:'Фото-текстура SSS, запасная процедурная',atm:[.5,.5,.55]},
-{id:'venus',name:'Венера',kind:2,tx:['vendor/nox-planets/2k_venus_surface.jpg'],note:'Фото-текстура SSS, запасная процедурная',atm:[1,.75,.4]},
-{id:'earth',name:'Земля',kind:0,tx:['vendor/nox-planets/2k_earth_daymap.jpg','vendor/nox-planets/earth_daymap.jpg'],note:'Текстура Solar System Scope, CC BY 4.0 (NASA)',atm:[.3,.55,1]},
-{id:'moon',name:'Луна',kind:0,tx:['vendor/nox-planets/2k_moon.jpg','vendor/nox-planets/moon.jpg'],note:'Текстура Solar System Scope, CC BY 4.0 (NASA)',atm:[.6,.6,.62],atmK:.15},
-{id:'mars',name:'Марс',kind:3,tx:['vendor/nox-planets/2k_mars.jpg'],note:'Фото-текстура SSS, запасная процедурная',atm:[1,.5,.3]},
-{id:'jupiter',name:'Юпитер',kind:4,tx:['vendor/nox-planets/2k_jupiter.jpg'],note:'Фото-текстура SSS, запасная процедурная',atm:[1,.8,.6]},
-{id:'saturn',name:'Сатурн',kind:5,tx:['vendor/nox-planets/2k_saturn.jpg'],note:'Фото-текстура SSS, кольца процедурные',atm:[1,.85,.55],rings:1},
-{id:'uranus',name:'Уран',kind:6,tx:['vendor/nox-planets/2k_uranus.jpg'],note:'Фото-текстура SSS, запасная процедурная',atm:[.5,.9,.95]},
-{id:'neptune',name:'Нептун',kind:7,tx:['vendor/nox-planets/2k_neptune.jpg'],note:'Фото-текстура SSS, запасная процедурная',atm:[.3,.5,1]}];
+{id:'mercury',name:'Меркурий',kind:1,tx:['vendor/nox-planets/nox-mercury.jpg','vendor/nox-planets/2k_mercury.jpg'],note:'Фото-текстура Solar System Scope, CC BY 4.0',atm:[.5,.5,.55]},
+{id:'venus',name:'Венера',kind:2,tx:['vendor/nox-planets/nox-venus.jpg','vendor/nox-planets/2k_venus_surface.jpg'],note:'Фото-текстура Solar System Scope, CC BY 4.0',atm:[1,.75,.4]},
+{id:'earth',name:'Земля',kind:0,tx:['vendor/nox-planets/nox-earth.jpg','vendor/nox-planets/2k_earth_daymap.jpg','vendor/nox-planets/earth_daymap.jpg'],note:'Фото-текстура Solar System Scope, CC BY 4.0',atm:[.3,.55,1]},
+{id:'moon',name:'Луна',kind:0,tx:['vendor/nox-planets/2k_moon.jpg','vendor/nox-planets/moon.jpg'],note:'Фото-текстура Solar System Scope, CC BY 4.0',atm:[.6,.6,.62],atmK:.15},
+{id:'mars',name:'Марс',kind:3,tx:['vendor/nox-planets/nox-mars.jpg','vendor/nox-planets/2k_mars.jpg'],note:'Фото-текстура Solar System Scope, CC BY 4.0',atm:[1,.5,.3]},
+{id:'jupiter',name:'Юпитер',kind:4,tx:['vendor/nox-planets/nox-jupiter.jpg','vendor/nox-planets/2k_jupiter.jpg'],note:'Фото-текстура Solar System Scope, CC BY 4.0',atm:[1,.8,.6]},
+{id:'saturn',name:'Сатурн',kind:5,tx:['vendor/nox-planets/nox-saturn.jpg','vendor/nox-planets/2k_saturn.jpg'],note:'Фото-текстура Solar System Scope, кольца процедурные',atm:[1,.85,.55],rings:1},
+{id:'uranus',name:'Уран',kind:6,tx:['vendor/nox-planets/nox-uranus.jpg','vendor/nox-planets/2k_uranus.jpg'],note:'Фото-текстура Solar System Scope, CC BY 4.0',atm:[.5,.9,.95]},
+{id:'neptune',name:'Нептун',kind:7,tx:['vendor/nox-planets/nox-neptune.jpg','vendor/nox-planets/2k_neptune.jpg'],note:'Фото-текстура Solar System Scope, CC BY 4.0',atm:[.3,.5,1]}];
 function by(id){for(var i=0;i<PL.length;i++)if(PL[i].id===id)return PL[i];return PL[0]}
 function load(){try{var v=localStorage.getItem(KEY);if(v)return by(v).id}catch(e){}return 'earth'}
 var cur=load(),subs=[];var MF=null,mfP=null;function mfLoad(){if(mfP)return mfP;mfP=fetch(BASE+'vendor/nox-planets/manifest.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():{files:['*']}}).then(function(j){MF=new Set(j.files||[])}).catch(function(){MF=new Set(['*'])});return mfP}
@@ -81,7 +81,7 @@ var ui=null;
 function syncUI(){if(!ui)return;ui.querySelectorAll('[data-pl]').forEach(function(b){var on=b.getAttribute('data-pl')===cur;b.setAttribute('aria-checked',String(on));b.classList.toggle('on',on)})}
 function buildUI(){var anchor=D.getElementById('workspacePanel');if(!anchor||D.getElementById('nxPlanets'))return;
  var sec=D.createElement('section');sec.id='nxPlanets';sec.className='nxp';sec.setAttribute('aria-label','Фон: планета');
- sec.innerHTML='<div class="nxp-h"><h2>Фон</h2><p>Планета за интерфейсом. Применяется сразу, запоминается на этом устройстве.</p></div><div class="nxp-g" role="radiogroup" aria-label="Планета"></div><p class="nxp-f">Земля и Луна — текстуры Solar System Scope (CC BY 4.0, данные NASA). Остальные тела нарисованы процедурно в шейдере — это не фотографии.</p>';
+ sec.innerHTML='<div class="nxp-h"><h2>Фон</h2><p>Планета за интерфейсом. Применяется сразу, запоминается на этом устройстве.</p></div><div class="nxp-g" role="radiogroup" aria-label="Планета"></div><p class="nxp-f">Текстуры планет — Solar System Scope (CC BY 4.0, данные NASA); кольца Сатурна рисуются процедурно. Если файла текстуры нет, тело рисуется процедурным шейдером — это видно в статусе.</p>';
  var grid=sec.querySelector('.nxp-g');
  var th=D.createElement('canvas');th.width=th.height=160;var tr=null;try{tr=renderer(th,{keep:true})}catch(e){}
  PL.forEach(function(pl){var b=D.createElement('button');b.type='button';b.setAttribute('role','radio');b.setAttribute('data-pl',pl.id);b.setAttribute('aria-checked','false');
