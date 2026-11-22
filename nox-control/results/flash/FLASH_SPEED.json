@@ -1,0 +1,42 @@
+{
+ "single": {
+  "short": {
+   "ttft_s": 3.44,
+   "wall_s": 12.1,
+   "pp": 8.28,
+   "tg": 2.64,
+   "prompt_n": 27,
+   "pred_n": 24
+  },
+  "medium": {
+   "ttft_s": 4.19,
+   "wall_s": 116.9,
+   "pp": 11.17,
+   "tg": 2.65,
+   "prompt_n": 45,
+   "pred_n": 300
+  },
+  "long": {
+   "ttft_s": 90.29,
+   "wall_s": 105.7,
+   "pp": 32.72,
+   "tg": 2.54,
+   "prompt_n": 2949,
+   "pred_n": 40
+  }
+ },
+ "summary": "Flash: tg 2.65 ток/с, pp 32.72 ток/с, TTFT 3.44 с",
+ "date": "2026-11-22T06:11:32.446622Z",
+ "parallel": {
+  "single_tokps_wall": 2.9,
+  "four_tokps_wall": 6.04,
+  "factor": 2.08,
+  "single_tg_slot": 3.12,
+  "four_tg_slot": [
+   1.69,
+   1.69,
+   1.69,
+   1.69
+  ]
+ }
+}
