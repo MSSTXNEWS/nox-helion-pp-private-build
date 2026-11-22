@@ -426,10 +426,32 @@ def install(app, B):
     @app.post("/api/nox/memory/facts")
     @app.post("/api/s03/remember")
     async def a_fact(request: Request):
-        b = await request.json()
-        txt = str(b.get("content", "")).strip()[:2000]
+        # Reject malformed fact submissions before any canonical S03 or
+        # secondary log write. Stringifying a dict/None or silently truncating
+        # content would fabricate a different memory than the user supplied.
+        try:
+            b = await request.json()
+        except Exception:
+            return JSONResponse({"status": "HOLD", "reason": "S03_FACT_INVALID_JSON",
+                                 "saved": False, "s03_readback_verified": False}, status_code=400)
+        if not isinstance(b, dict):
+            return JSONResponse({"status": "HOLD", "reason": "S03_FACT_INVALID_BODY",
+                                 "saved": False, "s03_readback_verified": False}, status_code=400)
+        raw_txt = b.get("content")
+        if not isinstance(raw_txt, str):
+            return JSONResponse({"status": "HOLD", "reason": "S03_FACT_INVALID_CONTENT",
+                                 "saved": False, "s03_readback_verified": False}, status_code=400)
+        txt = raw_txt.strip()
         if not txt:
-            return JSONResponse({"status": "HOLD", "reason": "пустой факт"}, status_code=400)
+            return JSONResponse({"status": "HOLD", "reason": "пустой факт",
+                                 "saved": False, "s03_readback_verified": False}, status_code=400)
+        if len(txt) > 2000:
+            return JSONResponse({"status": "HOLD", "reason": "S03_FACT_TOO_LONG",
+                                 "saved": False, "s03_readback_verified": False}, status_code=400)
+        if re.search(r"[\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f]", txt) or any(
+                0xD800 <= ord(c) <= 0xDFFF for c in txt):
+            return JSONResponse({"status": "HOLD", "reason": "S03_FACT_INVALID_UNICODE",
+                                 "saved": False, "s03_readback_verified": False}, status_code=400)
         # The S03 write must succeed before a secondary facts log advertises
         # the candidate. This is NOT an independent S03 readback/acceptance.
         try:
