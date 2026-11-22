@@ -51,6 +51,13 @@ class _LiveOwnerAssetScanner(HTMLParser):
             ):
                 self.scripts.add(url.split('?',1)[0])
 
+    def handle_startendtag(self, tag, attrs):
+        # HTML void syntax is not honored on non-void elements. In HTML5,
+        # <template/>, <noscript/> and <textarea/> are opening tags, not
+        # closed tags. HTMLParser otherwise calls start AND end here, making
+        # browser-inert owner assets appear executable to this source check.
+        self.handle_starttag(tag, attrs)
+
     def handle_endtag(self, tag):
         if self.raw_text_tag is not None:
             if tag==self.raw_text_tag:
