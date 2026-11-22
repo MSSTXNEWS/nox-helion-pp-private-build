@@ -970,6 +970,13 @@ def install(app, B):
                         hint = W.mode_hint(mode)
                         if not isinstance(hint, str):
                             raise TypeError("MODE_HINT_NOT_STRING")
+                        # Advisory text is not canonical user context. A bad
+                        # Unicode scalar or oversized optional hint must not
+                        # break JSON encoding or consume the primary model
+                        # request budget. Discard the hint; keep the full
+                        # user/S03 conversation unchanged.
+                        if len(hint.encode("utf-8", "strict")) > 2048:
+                            raise ValueError("MODE_HINT_UTF8_LIMIT")
                         extra += hint
                     except Exception as e:
                         B.log("web_mode_hint_unavailable " + type(e).__name__)
