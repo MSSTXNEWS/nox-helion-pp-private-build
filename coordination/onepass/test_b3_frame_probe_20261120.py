@@ -1537,7 +1537,7 @@ class TestProbe(unittest.TestCase):
                   'nox-v135-resonance-owner-bridge.js').read_text('utf8')
         self.assertIn("error:nativeSignal.aborted?'stopped':'error'", bridge)
         self.assertIn("error:nativeSignal.aborted?'STREAM_STOP_REQUESTED'", bridge)
-        self.assertIn("upstreamAbort.abort();\n    stopPhase();", bridge)
+        self.assertIn("upstreamAbort.abort();\n    if(phasePrev!=='idle')stopPhase();", bridge)
 
 
 
