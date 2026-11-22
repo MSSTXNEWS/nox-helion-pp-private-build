@@ -68,7 +68,7 @@ export class Cdp {
     }
     this.ws.addEventListener('message',e=>{
       let p;try{p=JSON.parse(e.data);}catch{return;}
-      if(p.id){const cb=this.pending.get(p.id);if(cb){this.pending.delete(p.id);p.error?cb.no(Error(p.error.message)):cb.yes(p.result||{});}}
+      if(p.id){const cb=this.pending.get(p.id);if(cb){p.error?cb.no(Error(p.error.message)):cb.yes(p.result||{});}}
       else if(p.method){
         // Flattened CDP traffic from a different target session must not
         // contaminate a page-scoped observer.
