@@ -343,6 +343,55 @@ async function check(chunks, status=200) {
         foreign[2]["dialog_id"] = "foreign-dialog"
         self.assertFalse(strict(foreign))
 
+    def test_browser_first_second_reload_reject_partial_row_dialog_provenance(self):
+        """All owner-history gates reject partial scope, independent of S03 R24."""
+        from owner_chat_browser_qa import (
+            coherent_row_dialog_scope, postquiet_fourrow_history_stable,
+        )
+        import copy
+        es = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        legacy = [dict(row, message_id=f'browser-row-{i}')
+                  for i, row in enumerate(rows(es), 1)]
+        scoped = [dict(row, dialog_id=DIALOG) for row in legacy]
+        sha = multiturn_transcript_sha256(legacy)
+        first_ids = ('browser-row-1', 'browser-row-2')
+
+        def browser_checks(sample):
+            first = {'dialog_id': DIALOG, 'messages': copy.deepcopy(sample[:2])}
+            final = {'dialog_id': DIALOG, 'messages': copy.deepcopy(sample)}
+            return (
+                firstturn_history_valid(first, RU, FIRST, DIALOG),
+                multiturn_history_valid(sample, RU, FIRST, es, LAST, DIALOG),
+                postquiet_fourrow_history_stable(
+                    final, copy.deepcopy(final), DIALOG, sha, first_ids),
+            )
+
+        self.assertEqual(browser_checks(legacy), (True, True, True))
+        self.assertEqual(browser_checks(scoped), (True, True, True))
+        for index in range(4):
+            with self.subTest(missing_dialog_id=index):
+                partial = copy.deepcopy(scoped)
+                del partial[index]['dialog_id']
+                self.assertFalse(coherent_row_dialog_scope(partial))
+                first, second, reload = browser_checks(partial)
+                self.assertFalse(second)
+                self.assertFalse(reload)
+                if index < 2:
+                    self.assertFalse(first)
+            with self.subTest(only_scoped_row=index):
+                partial = copy.deepcopy(legacy)
+                partial[index]['dialog_id'] = DIALOG
+                self.assertFalse(coherent_row_dialog_scope(partial))
+                first, second, reload = browser_checks(partial)
+                self.assertFalse(second)
+                self.assertFalse(reload)
+                if index < 2:
+                    self.assertFalse(first)
+        self.assertIn('firstturn_history_valid(', inspect.getsource(browser_run))
+        self.assertIn('multiturn_history_valid(', inspect.getsource(browser_run))
+        self.assertIn('postquiet_fourrow_history_stable(',
+                      inspect.getsource(browser_run))
+
     def test_explicit_message_ids_do_not_replay_one_row_as_multiple_ru_es_turns(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         legacy = rows(es)
@@ -736,14 +785,14 @@ async function check(chunks, status=200) {
             with self.subTest(row=index, change='drop_after_spanish'):
                 changed = copy.deepcopy(completed)
                 del changed['messages'][index]['dialog_id']
-                self.assertTrue(multiturn_history_valid(
+                self.assertFalse(multiturn_history_valid(
                     changed['messages'], RU, FIRST, spanish, LAST,
                     dialog_id=DIALOG))
                 self.assertFalse(check(first, changed))
             with self.subTest(row=index, change='add_after_spanish'):
                 initial_legacy = copy.deepcopy(first)
                 del initial_legacy['messages'][index]['dialog_id']
-                self.assertTrue(firstturn_history_valid(
+                self.assertFalse(firstturn_history_valid(
                     initial_legacy, RU, FIRST, DIALOG))
                 self.assertFalse(check(initial_legacy, completed))
                 both_legacy = copy.deepcopy(completed)

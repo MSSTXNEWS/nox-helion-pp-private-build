@@ -308,6 +308,18 @@ def stable_second_turn_quiescence(before, after, admitted, native_answer_equal):
 
 
 
+def coherent_row_dialog_scope(rows):
+    """Browser-history rows must be all scoped or all legacy unscoped.
+
+    Partially annotated rows do not prove one RU/ES dialog even when content,
+    message identities, and explicit per-row dialog IDs otherwise agree.
+    """
+    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+        return False
+    scope = ['dialog_id' in row for row in rows]
+    return not any(scope) or all(scope)
+
+
 def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, firstturn_ids):
     """Pin four persisted row identities and exact RU/ES text after quiescence.
 
@@ -340,6 +352,7 @@ def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, f
                 or not all(isinstance(row, dict) for row in rows)
                 or any('dialog_id' in row and row['dialog_id'] != dialog_id
                        for row in rows)
+                or not coherent_row_dialog_scope(rows)
                 or not firstturn_prefix_identity_valid(firstturn_ids, rows)
                 or not consistent_explicit_row_session_ids(rows)
                 or not root_history_session_valid(history, rows)
@@ -668,6 +681,7 @@ def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
     if (not isinstance(rows, list) or len(rows) != 2
             or not all(isinstance(row, dict) for row in rows)
             or any('dialog_id' in row and row['dialog_id'] != dialog_id for row in rows)
+            or not coherent_row_dialog_scope(rows)
             or not distinct_explicit_message_ids(rows)
             or not consistent_explicit_row_session_ids(rows)
             or not root_history_session_valid(history, rows)
@@ -734,7 +748,8 @@ def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, sec
     if (not isinstance(rows, list) or len(rows) != 4
             or not all(isinstance(row, dict) for row in rows)
             or not distinct_explicit_message_ids(rows)
-            or not consistent_explicit_row_session_ids(rows)):
+            or not consistent_explicit_row_session_ids(rows)
+            or not coherent_row_dialog_scope(rows)):
         return False
     # Legacy rows may omit per-message dialog_id. If supplied, a wrong/null
     # identifier must never certify continuity of the current browser session.
