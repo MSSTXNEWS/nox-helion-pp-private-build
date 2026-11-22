@@ -47,4 +47,4 @@ jobs:
         with:
           node-version: "22"
       - name: One native-bridge browser S03 history integrity regression
-        run: node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+        run: node --test --test-name-pattern='0A03 legacy S03 history never labels malformed native rows saved' coordination/onepass/test_v135_resonance_owner_bridge.cjs
