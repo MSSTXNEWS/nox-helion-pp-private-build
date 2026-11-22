@@ -153,7 +153,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         # Do not materialize another giant decoded string before frame limits
         # run; preserve split-codepoint boundaries and CRLF framing.
         logical_line='data: '+('🌍'*12000)
-        raw=(logical_line+'\\r\\n\\r\\n').encode('utf-8')
+        raw=(logical_line+'\r\n\r\n').encode('utf-8')
         observed=[]
         class Response:
             async def aiter_bytes(self):
