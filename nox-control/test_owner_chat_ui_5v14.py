@@ -190,7 +190,7 @@ class OwnerWorkerSnapshotTrustTests(unittest.TestCase):
             return json.dumps({'n':1,'workers':[{'id':'nox-agent-01',
                 'status':'busy','current_task':{'id':claim}}]})
         self.assertEqual(self.read_snapshot(snapshot('6V14-04'))['state'],'OBSERVED')
-        for invalid in (' 6V14-04','6V14-04 ','bad\\nid','', 'x'*101):
+        for invalid in (' 6V14-04','6V14-04 ','bad\nid','', 'x'*101):
             with self.subTest(invalid=repr(invalid)):
                 self.assertEqual(self.read_snapshot(snapshot(invalid))['state'],
                                  'UNAVAILABLE')
