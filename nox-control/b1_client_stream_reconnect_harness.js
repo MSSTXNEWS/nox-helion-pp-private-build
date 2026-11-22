@@ -506,39 +506,56 @@
               // an OPEN body after STOP/deadline. The enclosing gate Promise
               // may never resolve to boundedGet, so dispose here at the
               // transport boundary. Never resume verifier/CAS or model POST.
-              let disposedLateReceipt=false;
-              const receipt=await Promise.resolve(transport.readCanonicalAck(
-                s,expected,challenge,lifecycleSignal)).then(value=>{
-                  if(lifecycleSignal.aborted){
-                    disposedLateReceipt=true;
-                    cancelAbandonedGet(value); // best effort, nonblocking
-                  }
-                  return value;
-                });
-              if(lifecycleSignal.aborted){
-                if(!disposedLateReceipt) cancelAbandonedGet(receipt);
-                hold('HOLD_STREAM_RECONNECT_STOPPED');
+              // A rejected, malformed or stalled signed GET still holds an
+              // HTTP response body. Keep one disposal fence shared by the
+              // abort listener and the synchronous verifier rejection path.
+              // Successful receipts remain owned by the canonical ACK gate.
+              let receipt=null,discardedReceipt=false;
+              const discardReceipt=value=>{
+                if(discardedReceipt)return;
+                discardedReceipt=true;
+                cancelAbandonedGet(value); // never await rejected/hung cancel()
+              };
+              const onReceiptAbort=()=>{
+                if(receipt)discardReceipt(receipt);
+              };
+              lifecycleSignal.addEventListener('abort',onReceiptAbort,{once:true});
+              try{
+                receipt=await Promise.resolve(transport.readCanonicalAck(
+                  s,expected,challenge,lifecycleSignal)).then(value=>{
+                    // Non-cooperative transport may settle after deadline/STOP.
+                    if(lifecycleSignal.aborted)discardReceipt(value);
+                    return value;
+                  });
+                if(lifecycleSignal.aborted)
+                  hold('HOLD_STREAM_RECONNECT_STOPPED');
+                const now=Date.now();
+                if(!receipt||typeof receipt!=='object'||Array.isArray(receipt)||
+                   receipt.request_nonce!==challenge.request_nonce||
+                   !Number.isSafeInteger(receipt.issued_at_ms)||
+                   !Number.isSafeInteger(receipt.expires_at_ms)||
+                   receipt.issued_at_ms<challenge.requested_at_ms-5000||
+                   receipt.issued_at_ms>now+5000||
+                   receipt.expires_at_ms<=now||
+                   receipt.expires_at_ms-receipt.issued_at_ms>canonicalFreshnessMs)
+                  hold('HOLD_STREAM_RECEIPT_FRESHNESS');
+                // The host verifier must attest scope, nonce, CAS and S03;
+                // if it fails or hangs, the receipt body is not acknowledged.
+                const trusted=await host.verifyFreshCanonicalAck(
+                  receipt,expected,s,challenge);
+                if(lifecycleSignal.aborted)
+                  hold('HOLD_STREAM_RECONNECT_STOPPED');
+                if(trusted!==true)hold('HOLD_STREAM_FRESHNESS_UNVERIFIED');
+                freshVerified=true;
+                return receipt;
+              }catch(err){
+                // Invalid/failing receipts must release the unclaimed socket.
+                // After timeout this shares the same once-only abort fence.
+                if(receipt)discardReceipt(receipt);
+                throw err;
+              }finally{
+                lifecycleSignal.removeEventListener('abort',onReceiptAbort);
               }
-              const now=Date.now();
-              if(!receipt||typeof receipt!=='object'||Array.isArray(receipt)||
-                 receipt.request_nonce!==challenge.request_nonce||
-                 !Number.isSafeInteger(receipt.issued_at_ms)||
-                 !Number.isSafeInteger(receipt.expires_at_ms)||
-                 receipt.issued_at_ms<challenge.requested_at_ms-5000||
-                 receipt.issued_at_ms>now+5000||
-                 receipt.expires_at_ms<=now||
-                 receipt.expires_at_ms-receipt.issued_at_ms>canonicalFreshnessMs)
-                hold('HOLD_STREAM_RECEIPT_FRESHNESS');
-              // This callback MUST cryptographically attest the nonce,
-              // timestamps, ACK scope, owner CAS and S03. A plain true
-              // callback is acceptable ONLY in isolated synthetic tests.
-              const trusted=await host.verifyFreshCanonicalAck(
-                receipt,expected,s,challenge);
-              if(lifecycleSignal.aborted)
-                hold('HOLD_STREAM_RECONNECT_STOPPED');
-              if(trusted!==true) hold('HOLD_STREAM_FRESHNESS_UNVERIFIED');
-              freshVerified=true;
-              return receipt;
             },
             async (receipt,expected)=>{
               if(lifecycleSignal.aborted)
