@@ -77,5 +77,36 @@ swapB)
   ls -la /root/nox | grep -E "llama.cpp-f|flash" ; ls /root/nox/state/MODEL_SWAP 2>/dev/null
   cat /root/nox/gpu_tier/glm.args; uptime
   ;;
+swapC)
+  echo "== C: ТОЛЬКО ЧТЕНИЕ. инвентарь истории ответов GLM-5.3 (счётчики, без текста)"
+  python3 - <<'P'
+import json,glob,os,sqlite3,collections
+def cnt_jsonl(f):
+    n=0;keys=collections.Counter();models=collections.Counter()
+    for l in open(f,errors="replace"):
+        try:d=json.loads(l)
+        except Exception:continue
+        n+=1
+        if isinstance(d,dict):
+            keys.update(d.keys())
+            for k in("model","upstream","tier","nox_mode","mode"):
+                if k in d:models[str(d[k])[:30]]+=1
+    return n,dict(keys.most_common(12)),dict(models.most_common(6))
+for f in sorted(glob.glob("/root/nox/logs/*.jsonl"))+sorted(glob.glob("/root/nox/events/*.jsonl"))+sorted(glob.glob("/root/nox/memory/*.jsonl")):
+    try:print(f,os.path.getsize(f),cnt_jsonl(f))
+    except Exception as e:print(f,"err",e)
+db="/root/nox/memory/s03.db"
+c=sqlite3.connect("file:%s?mode=ro"%db,uri=True)
+for (n,) in c.execute("select name from sqlite_master where type='table'"):
+    try:
+        k=c.execute("select count(*) from %s"%n).fetchone()[0]
+        cols=[r[1] for r in c.execute("pragma table_info(%s)"%n)]
+        print("tbl",n,k,cols[:10])
+    except Exception as e:print("tbl",n,"err")
+P
+  ls /root/nox/receipts | head -3; ls /root/nox/receipts | wc -l
+  ls /root/nox/memory | head -12; ls -la /root/nox/logs | grep -iE "chat|life|trace|turn|journal" | cut -c1-120
+  find /root/nox -maxdepth 3 -iname "*life_journal*" -o -maxdepth 3 -iname "*trace*" 2>/dev/null | head -8
+  ;;
 *) echo "unknown stage $S";;
 esac
