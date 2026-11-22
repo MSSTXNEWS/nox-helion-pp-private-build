@@ -631,7 +631,7 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
   // A second NDJSON chunk after a verified-looking done was ignored when
   // consume() stopped reading immediately. No S03 READY before native EOF.
   for(const trailing of [unexpected,
-      JSON.stringify({type:'delta',text:'surprise-after-done'})+'\\n']){
+      JSON.stringify({type:'delta',text:'surprise-after-done'})+'\n']){
     const split=await attempt([start+delta+done,trailing]);
     assert.equal(split.status,503,'post-done chunk must fail closed');
     assert.match(split.body.error,/HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE/);
