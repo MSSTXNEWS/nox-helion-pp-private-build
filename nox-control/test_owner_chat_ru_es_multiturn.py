@@ -888,6 +888,33 @@ async function check(chunks, status=200) {
         self.assertLess(caller.index("HOLD_MULTITURN_OWNER_SESSION_CHANGED"),
                         caller.index("second_permitted=True"))
 
+    def test_ru_es_owner_cookie_httponly_downgrade_cannot_reuse_session_pin(self):
+        """No multi-turn owner PASS after a signed cookie becomes JS-readable."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='unchanged-signed-session', httpOnly=True)
+        client_ui = dict(name='theme', domain='owner.example', path='/',
+                         value='dark', httpOnly=False)
+        original_pin = owner_session_cookie_pin([signed])
+        self.assertEqual(len(original_pin), 64)
+        self.assertEqual(owner_session_cookie_pin([client_ui, signed]),
+                         original_pin)
+        self.assertTrue(owner_session_continuity_valid(
+            200, [client_ui, signed], original_pin))
+        for stripped in (False, None):
+            changed = dict(signed)
+            if stripped is None:
+                del changed['httpOnly']
+            else:
+                changed['httpOnly'] = stripped
+            with self.subTest(http_only=stripped):
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [changed], original_pin))
+                self.assertNotEqual(owner_session_cookie_pin([changed]),
+                                    original_pin)
+        legacy = [dict(client_ui)]
+        self.assertEqual(owner_session_cookie_pin(legacy),
+                         owner_session_cookie_pin([dict(client_ui)]))
+
     def test_ru_es_presecond_readonly_history_owner_fence_prevents_stale_post(self):
         """Re-read first turn after composer delays, before Spanish model POST."""
         from types import SimpleNamespace

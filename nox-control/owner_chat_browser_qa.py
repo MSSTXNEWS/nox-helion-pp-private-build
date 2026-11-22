@@ -407,9 +407,12 @@ def owner_session_cookie_pin(cookies):
     for cookie in selected:
         if not isinstance(cookie, dict):
             return None
+        # A signed owner cookie losing HttpOnly cannot authenticate the
+        # next RU/ES turn just because its name, path and value stay equal.
         fields = tuple(cookie.get(key) for key in ('name', 'domain', 'path', 'value'))
         if any(not isinstance(field, str) or not field for field in fields):
             return None
+        fields += (cookie.get('httpOnly') is True,)
         identity.append(fields)
     if len(set(fields[:3] for fields in identity)) != len(identity):
         return None
