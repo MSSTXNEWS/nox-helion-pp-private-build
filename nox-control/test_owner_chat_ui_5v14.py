@@ -93,7 +93,7 @@ class OwnerLiveAssetTests(unittest.TestCase):
                 self.assertIn('<meta name="nox-live-build" content="',result)
                 self.assertIn('data-nox-live-owner="1"',result)
                 self.assertIn(closing,result)
-                self.assertIn('data-nox-live-owner="1"></script>\\n'+closing,result)
+                self.assertIn('data-nox-live-owner="1"></script>\n'+closing,result)
                 self.assertEqual(self.decorate(result,'pc/resonance.html'),result)
 
     def test_legacy_pc_assets_remain_nested_mount(self):
