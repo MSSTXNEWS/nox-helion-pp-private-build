@@ -17,4 +17,3 @@ try:
     print('nextn tensors in shard1:',n[:5])
 except Exception as e: print('ERR',e)
 PY
-grep -c . /dev/null; for f in /dev/shm/glm53f/*.gguf; do :; done; strings -n 8 /dev/shm/glm53f/*00006.gguf 2>/dev/null | grep -m3 nextn
