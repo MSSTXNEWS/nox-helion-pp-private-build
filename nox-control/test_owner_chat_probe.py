@@ -2527,11 +2527,11 @@ class ProbeTests(unittest.TestCase):
                 'saved': True, 's03_integrated': True}
 
         def event(kind, frame, eid, extra=()):
-            lines = [b'event: ' + kind.encode() + b'\\n']
+            lines = [b'event: ' + kind.encode() + b'\n']
             lines.extend(extra)
-            lines.extend([b'id: ' + eid + b'\\n',
-                          b'data: ' + json.dumps(frame).encode() + b'\\n',
-                          b'\\n'])
+            lines.extend([b'id: ' + eid + b'\n',
+                          b'data: ' + json.dumps(frame).encode() + b'\n',
+                          b'\n'])
             return lines
 
         class Response(SyntheticBoundedReader):
@@ -2549,7 +2549,7 @@ class ProbeTests(unittest.TestCase):
         start_lines = event('start', start, b'evt-001')
         delta_lines = event('delta', delta, b'evt-002')
         done_lines = event('done', done, b'evt-003')
-        good = ([b'retry: 3000\\n', b'\\n'] + start_lines +
+        good = ([b'retry: 3000\n', b'\n'] + start_lines +
                 delta_lines + done_lines)
         response = Response(good)
         with patch.object(probe, 'request', return_value=response):
@@ -2562,28 +2562,33 @@ class ProbeTests(unittest.TestCase):
             (start_lines + event('delta', delta, b'evt-001') + done_lines,
              'HOLD_STREAM_SSE_EVENT_ID_REPLAY'),
             (event('start', start, b'evt-001',
-                   extra=(b'id: duplicate\\n',)) + delta_lines + done_lines,
+                   extra=(b'id: duplicate\n',)) + delta_lines + done_lines,
              'HOLD_STREAM_SSE_EVENT_ID_INVALID'),
             (event('start', start, b'') + delta_lines + done_lines,
              'HOLD_STREAM_SSE_EVENT_ID_INVALID'),
-            (event('start', start, b'bad\\x00id') + delta_lines + done_lines,
+            (event('start', start, b'bad\x00id') + delta_lines + done_lines,
              'HOLD_STREAM_SSE_EVENT_ID_INVALID'),
             (event('start', start, b'evt-001',
-                   extra=(b'retry: fast\\n',)) + delta_lines + done_lines,
+                   extra=(b'retry: fast\n',)) + delta_lines + done_lines,
              'HOLD_STREAM_SSE_RETRY_INVALID'),
             (event('start', start, b'evt-001',
-                   extra=(b'retry: 1\\n', b'retry: 2\\n')) + delta_lines +
+                   extra=(b'retry: 1\n', b'retry: 2\n')) + delta_lines +
              done_lines, 'HOLD_STREAM_SSE_RETRY_INVALID'),
-            ([b'id: orphan\\n', b'\\n'] + start_lines + delta_lines +
+            ([b'id: orphan\n', b'\n'] + start_lines + delta_lines +
              done_lines, 'HOLD_STREAM_SSE_EMPTY_EVENT'),
-            (start_lines + delta_lines + [b'retry: 1000\\n'],
+            (start_lines + delta_lines + [b'retry: 1000\n'],
              'HOLD_STREAM_SSE_UNTERMINATED'),
         )
         for wire, expected in cases:
             response = Response(wire)
             with self.subTest(expected=expected), patch.object(
                     probe, 'request', return_value=response):
-                with self.assertRaisesRegex(RuntimeError, '^' + expected + '):
+                with self.assertRaisesRegex(RuntimeError, '^' + expected + '
+                    probe.consume_turn(object(), 'synthetic', did)
+            self.assertTrue(response.closed)
+
+
+):
                     probe.consume_turn(object(), 'synthetic', did)
             self.assertTrue(response.closed)
 
