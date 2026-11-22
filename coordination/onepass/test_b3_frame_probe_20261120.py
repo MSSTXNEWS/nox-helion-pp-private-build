@@ -750,7 +750,7 @@ class TestProbe(unittest.TestCase):
                     self.assertEqual(missing_ancestor['posts'], 5)
                     self.assertEqual(missing_ancestor['reads'], 4)
                     reordered = await exchange('reordered')
-                    self.assertIn('HOLD_DIALOG_PRIOR_EXCHANGE_LOST', reordered['sse'])
+                    self.assertIn('HOLD_DIALOG_HISTORY_READBACK', reordered['sse'])
                     self.assertNotIn('"type":"done"', reordered['sse'])
                     self.assertEqual(reordered['posts'], 6)
                     self.assertEqual(reordered['reads'], 5)
