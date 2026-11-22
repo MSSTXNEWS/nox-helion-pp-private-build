@@ -731,6 +731,11 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
     data_size = 0
     event_name = None
     terminal = False
+    # SSE event IDs are transport metadata, not proof of stored S03 rows.
+    # A repeated explicit ID can represent replay, never a distinct model event.
+    event_id = None
+    seen_event_ids = set()
+    retry_seen = False
 
     def parse_payload(payload):
         if payload == b'[DONE]':
@@ -767,15 +772,21 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
             line = line[:-1]
         if not line:
             if not data_lines:
-                if event_name is not None:
+                if event_name is not None or event_id is not None:
                     raise RuntimeError('HOLD_STREAM_SSE_EMPTY_EVENT')
+                # A standalone numeric retry is valid but never chat evidence.
+                retry_seen = False
                 continue
             frame = parse_payload(b'\n'.join(data_lines))
             if (event_name is not None and event_name != 'message' and
                     (not isinstance(frame, dict) or frame.get('type') != event_name)):
                 raise RuntimeError('HOLD_STREAM_SSE_EVENT_MISMATCH')
+            if event_id is not None:
+                if event_id in seen_event_ids:
+                    raise RuntimeError('HOLD_STREAM_SSE_EVENT_ID_REPLAY')
+                seen_event_ids.add(event_id)
             terminal = isinstance(frame, dict) and frame.get('type') == 'done'
-            data_lines, data_size, event_name = [], 0, None
+            data_lines, data_size, event_name, event_id, retry_seen = [], 0, None, None, False
             yield frame
             continue
         if line.startswith(b':'):
@@ -797,9 +808,20 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
             if event_name not in ('message', 'preparing', 'start', 'started',
                                   'delta', 'done', 'error', 'status', 'meta'):
                 raise RuntimeError('HOLD_STREAM_SSE_EVENT')
+        elif field == b'id':
+            if (event_id is not None or not 0 < len(value) <= 128 or
+                    any(byte < 33 or byte > 126 for byte in value)):
+                raise RuntimeError('HOLD_STREAM_SSE_EVENT_ID_INVALID')
+            event_id = value
+        elif field == b'retry':
+            if (retry_seen or not re.fullmatch(rb'[0-9]{1,6}', value)
+                    or int(value) > 60000):
+                raise RuntimeError('HOLD_STREAM_SSE_RETRY_INVALID')
+            retry_seen = True
         else:
             raise RuntimeError('HOLD_STREAM_SSE_FIELD')
-    if mode == 'sse' and (data_lines or event_name is not None):
+    if mode == 'sse' and (data_lines or event_name is not None
+                          or event_id is not None or retry_seen):
         raise RuntimeError('HOLD_STREAM_SSE_UNTERMINATED')
 
 def consume_turn(client,prompt,dialog_id,timeout=95):
