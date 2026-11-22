@@ -6,7 +6,11 @@ import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 61825960  # S1 (Квебек)
 KEY = os.environ["NOX2"]
 G = "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/contents/nox-control/web/"
-REMOTE = 'H="Accept: application/vnd.github.raw"; curl -fsSL -H "$H" "%sboot_web.sh?ref=main" -o /tmp/bw.sh && bash /tmp/bw.sh 2>&1 | tail -c 3000' % G
+import base64
+_M = open(os.path.join(os.path.dirname(__file__), "..", "web", "MODE")).read().strip()
+_B = base64.b64encode(open(os.path.join(os.path.dirname(__file__), "..", "web", _M + ".sh"), "rb").read()).decode()
+REMOTE = "echo %s | base64 -d > /tmp/webm.sh && bash /tmp/webm.sh 2>&1 | tail -c 3000" % _B
+_OLD = 'H="Accept: application/vnd.github.raw"; curl -fsSL -H "$H" "%sboot_web.sh?ref=main" -o /tmp/bw.sh && bash /tmp/bw.sh 2>&1 | tail -c 3000' % G
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
