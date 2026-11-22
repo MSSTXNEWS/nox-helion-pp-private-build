@@ -117,6 +117,18 @@ class HotContextTests(unittest.TestCase):
                      for row in plan["first_pass"]]
         self.assertEqual(call(**kwargs, retrieval_plan={
             **plan, "first_pass": tied_rows})["selected_s03_ids"], ["cat","dog"])
+        # A valid ambiguous shortlist is only a proposal, not GPU admission.
+        ambiguous_rows = [
+            {**row, "fts_score":score, "vector_score":score}
+            for row, score in zip(rows, (.88, .87))
+        ]
+        ambiguous_plan = m.plan_two_stage_retrieval(
+            candidates=ambiguous_rows, owner_persona_id="owner-1",
+            s03_revision=revision, shortlist_limit=2, rerank_limit=2)
+        self.assertEqual(ambiguous_plan["optional_multilingual_rerank_ids"],
+                         ["cat", "dog"])
+        self.assertEqual(call(**kwargs, retrieval_plan=ambiguous_plan)
+                         ["selected_s03_ids"], ["cat", "dog"])
         for mutated in (
             {**plan, "first_pass": list(reversed(plan["first_pass"]))},
             {**plan, "first_pass": list(reversed(tied_rows))},
@@ -126,6 +138,16 @@ class HotContextTests(unittest.TestCase):
             {**plan,"first_pass":plan["first_pass"]*2},
             {**plan,"gpu_reranker_executed":True},
             {**plan,"optional_multilingual_rerank_ids":["unrelated"]},
+            # A synthetic zero-only row could previously be used to
+            # populate the hot prompt even after the producer filtered zeros.
+            {**plan,"first_pass":[{**plan["first_pass"][0],
+                                    "first_pass_score":0.0}]},
+            # Only an ambiguous top-ranked prefix may request an optional
+            # owner-admitted rerank: this confident gap does not qualify.
+            {**plan,"optional_multilingual_rerank_ids":["cat","dog"],
+             "requires_owner_gpu_resource_and_lease_gate":True},
+            {**ambiguous_plan,
+             "optional_multilingual_rerank_ids":["dog","cat"]},
         ):
             with self.subTest(mutated=str(mutated)[:100]):
                 with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_RETRIEVAL_"):
