@@ -1172,6 +1172,29 @@ def verify_followup_pointer_sources(pointer, expected, allowed_changes):
     return sources
 
 
+
+def verify_previous_training_receipt(previous, pointer, policy,
+                                     upgrade_evidence, memory_evidence,
+                                     media_evidence):
+    """Fail closed on an untrusted prior owner receipt before reusing its lineage."""
+    if (type(previous) is not dict or type(pointer) is not dict
+            or type(policy) is not dict):
+        raise RuntimeError('HOLD_PREVIOUS_TRAINING_RECEIPT')
+    if (previous.get('schema') != SCHEMA
+            or previous.get('source_sha') != pointer['source_sha']
+            or previous.get('admission') != pointer
+            or policy.get('training_allowed') is not True
+            or policy.get('training_service') != SERVICE
+            or pointer.get('dispatcher_upgrade') != upgrade_evidence
+            or previous.get('dispatcher_upgrade') != upgrade_evidence
+            or pointer.get('s03_activation') != memory_evidence
+            or previous.get('s03_activation') != memory_evidence
+            or pointer.get('media_acceptance') != media_evidence
+            or previous.get('media_acceptance') != media_evidence):
+        raise RuntimeError('HOLD_PREVIOUS_TRAINING_RECEIPT')
+    return True
+
+
 def verify_training_policy_owner(policy, admission):
     """Require owner-lineage identity on follow-up and continuation."""
     if (type(policy) is not dict or type(admission) is not dict
@@ -1432,16 +1455,9 @@ def main():
                 pointer, expected, set(CONTROLS) | {WRAPPER})
             verify_training_policy_owner(policy, pointer)
             previous = read_json(STATE/('owner_maintenance_'+pointer['request']+'.json'))
-            if (previous.get('schema') != SCHEMA or previous.get('source_sha') != pointer['source_sha']
-                    or previous.get('admission') != pointer or policy.get('training_allowed') is not True
-                    or policy.get('training_service') != SERVICE
-                    or pointer.get('dispatcher_upgrade') != upgrade_evidence
-                    or previous.get('dispatcher_upgrade') != upgrade_evidence
-                    or pointer.get('s03_activation') != memory_evidence
-                    or previous.get('s03_activation') != memory_evidence
-                    or pointer.get('media_acceptance') != media_evidence
-                    or previous.get('media_acceptance') != media_evidence):
-                raise RuntimeError('HOLD_PREVIOUS_TRAINING_RECEIPT')
+            verify_previous_training_receipt(
+                previous, pointer, policy, upgrade_evidence,
+                memory_evidence, media_evidence)
             for path in expected:
                 expected[path] = recorded_sources[str(path)]
         for path, sha in expected.items():
