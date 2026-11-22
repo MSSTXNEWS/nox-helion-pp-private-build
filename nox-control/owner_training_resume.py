@@ -1135,7 +1135,8 @@ def stop_controller(helper, name, script):
 
 
 def verify_policy(value):
-    if (value.get('enabled') is not True or value.get('mode') != 'TASK_BOOST'
+    if (type(value) is not dict or value.get('enabled') is not True
+            or value.get('mode') != 'TASK_BOOST'
             or value.get('request') != BOOST_REQUEST or value.get('source_sha') != BOOST_SOURCE):
         raise RuntimeError('HOLD_NATIVE_BOOST_POLICY_CHANGED')
 
