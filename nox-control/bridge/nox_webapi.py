@@ -947,8 +947,20 @@ def install(app, B):
                                      memory_history={"status": "SKIPPED", "reason": "USER_STOP",
                                                      "s03_readback_verified": False})
                             return
-                        try: plan = await W.make_plan(lambda m, n: B.ask(m, n, slot=1), user)
-                        except Exception: plan = []
+                        try:
+                            plan = await W.make_plan(lambda m, n: B.ask(m, n, slot=1), user)
+                            # This optional model output is not trusted JSON. A
+                            # malformed item must not kill the *primary* stream.
+                            # The built-in planner returns <=5 text steps, <=100
+                            # characters each; validate that existing contract.
+                            if (not isinstance(plan, list) or len(plan) > 5 or
+                                    any(not isinstance(step, str) or not step.strip() or
+                                        len(step) > 100 for step in plan)):
+                                raise ValueError("PLAN_STEPS_INVALID")
+                            json.dumps(plan, ensure_ascii=False, allow_nan=False).encode("utf-8", "strict")
+                        except Exception as e:
+                            B.log("web_plan_result_unavailable " + type(e).__name__)
+                            plan = []
                         if plan:
                             extra += "[План (следуй по порядку, нумеруй шаги): " + "; ".join("%d) %s" % (i + 1, x) for i, x in enumerate(plan)) + "]"
                             yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "план: %d шагов" % len(plan), "plan": plan})

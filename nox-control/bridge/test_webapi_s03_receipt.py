@@ -1599,6 +1599,67 @@ class FactReceiptTest(unittest.TestCase):
         self.assertTrue(any("web_plan_classifier_unavailable RuntimeError" in msg for msg in bridge.errors))
         self.assertTrue(any("web_mode_hint_unavailable ValueError" in msg for msg in bridge.errors))
 
+    def test_1a01_malformed_optional_plan_keeps_real_stream_and_s03_attempt(self):
+        """Bad advisory plan payload must never abort the primary SSE stream."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Живой ответ 🌌"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        class BadPlan:
+            def __init__(self, payload): self.payload = payload
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return True
+            async def make_plan(self, *args): return self.payload
+            def mode_hint(self, *args): return ""
+            def is_factual(self, *args): return False
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT, bridge.SOUL = {"t": 0}, None
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Привет"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def scenario(idx):
+            response = await chat(Request({
+                "request_id": f"bad-plan-{idx}", "mode": "plan", "use_memory": False,
+                "messages": [{"role": "user", "content": "Привет"}],
+            }))
+            return [json.loads(row) async for row in response.body_iterator]
+
+        bad_payloads = (
+            ["valid", {"unserializable": object()}],
+            ["surrogate \\ud800".replace("\\ud800", "\ud800")],
+            ["x" * 101],
+            {"wrong": "shape"},
+        )
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            for idx, payload in enumerate(bad_payloads):
+                with self.subTest(idx=idx), mock.patch.object(W, "W", BadPlan(payload)):
+                    frames = asyncio.run(scenario(idx))
+                self.assertTrue(any(f.get("message", {}).get("content") == "Живой ответ 🌌" for f in frames))
+                self.assertEqual(frames[-1]["completion_receipt"]["status"], "GENERATED")
+                self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+                self.assertFalse(any(f.get("nox_event", {}).get("plan") for f in frames))
+        self.assertEqual(writes, [("Привет", "Живой ответ 🌌")] * len(bad_payloads))
+        self.assertEqual(sum("web_plan_result_unavailable" in e for e in bridge.errors),
+                         len(bad_payloads))
+
     def test_1a01_optional_s03_provenance_failure_keeps_real_model_and_write(self):
         """Malformed advisory provenance must never abort a valid S03-backed answer."""
         class Upstream:
