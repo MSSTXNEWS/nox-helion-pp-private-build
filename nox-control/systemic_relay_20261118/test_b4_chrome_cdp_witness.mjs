@@ -1630,3 +1630,60 @@ test('second responseReceived replay after body ACK fails closed without first-t
   assert.equal(beyond,1);
   assert.equal(JSON.stringify(boundary),sealed);
 });
+
+
+test('late second requestServedFromCache after ACK revokes matched SSE body only within bounded CDP capture',async()=>{
+  const firstKeys=['cdp_request_id','request_sha256','cdp_decoded_body_sha256',
+    'cdp_streamed_body_sha256','visible_text_sha256','ttft_ms','sse_done_ms',
+    'stream_timing_complete'];
+  const control=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  assert.equal(control.turns[1].cdp_decoded_body_matches_stream,true);
+  // The second body ACK succeeded, then a contradictory cache provenance
+  // event appears during the finite post-ACK observation interval.
+  for(const [name,event] of [
+    ['cache-provenance',{requestId:'2'}],
+    ['cache-provenance-with-ignored-protocol-time',{requestId:'2',timestamp:101.03}]
+  ]){
+    let delivered=0;
+    const result=await run(false,null,null,null,{
+      quiescenceMs:80,
+      postAckEvent:session=>{
+        delivered++;
+        session.emit('Network.requestServedFromCache',event);
+      }
+    });
+    assert.equal(delivered,1,name+' observed inside post-ACK quiescence');
+    assert.equal(result.cdp_consistent,false,name+' cannot certify second body');
+    assert.equal(result.ttft_sse_verified,false,name);
+    assert.deepEqual(result.turns.map(t=>t.cdp_request_id),['1','2']);
+    for(const key of firstKeys)
+      assert.deepEqual(result.turns[0][key],control.turns[0][key],name+' first '+key);
+    assert.equal(result.turns[1].request_sha256,control.turns[1].request_sha256);
+    assert.equal(result.turns[1].cdp_streamed_body_sha256,
+      control.turns[1].cdp_streamed_body_sha256);
+    assert.equal(result.turns[1].cdp_decoded_body_matches_stream,false,name);
+    assert.equal(result.turns[1].ttft_ms,null,name);
+    assert.equal(result.turns[1].sse_done_ms,null,name);
+    assert.equal(result.turns[1].visible_text_sha256,null,name);
+    assert.equal(result.turns[1].stream_timing_complete,false,name);
+    assert.doesNotMatch(JSON.stringify(result),/secret|Hello|data:/);
+  }
+  // After capture returns, a later notification cannot retroactively certify
+  // or mutate its sealed digest-only observation; it is not attested either.
+  let beyond=0;
+  const sealed=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      beyond++;
+      session.emit('Network.requestServedFromCache',{requestId:'2'});
+    },90)
+  });
+  assert.equal(sealed.cdp_consistent,true);
+  assert.equal(beyond,0);
+  const snapshot=JSON.stringify(sealed);
+  await new Promise(resolve=>setTimeout(resolve,110));
+  assert.equal(beyond,1);
+  assert.equal(JSON.stringify(sealed),snapshot);
+});
