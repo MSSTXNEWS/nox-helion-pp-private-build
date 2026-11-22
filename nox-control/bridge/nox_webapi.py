@@ -621,6 +621,7 @@ def install(app, B):
                         "chat_template_kwargs": {"enable_thinking": False}}
                 err = None
                 upstream_done = False
+                upstream_stop_seen = False
                 upstream_failure = None
                 try:
                     if True:
@@ -642,6 +643,11 @@ def install(app, B):
                                     continue
                                 d = line[5:].strip()
                                 if d == "[DONE]":
+                                    # Do not treat a premature stream sentinel as
+                                    # successful generation or an S03 write receipt.
+                                    if not upstream_stop_seen:
+                                        upstream_failure = "UPSTREAM_MISSING_STOP_FINISH"
+                                        break
                                     upstream_done = True
                                     continue
                                 # A model can send [DONE] after a truncated finish or
@@ -660,9 +666,11 @@ def install(app, B):
                                     break
                                 choice = choices[0]
                                 finish_reason = choice.get("finish_reason")
-                                if finish_reason is not None and finish_reason != "stop":
-                                    upstream_failure = "UPSTREAM_NONSTOP_FINISH"
-                                    break
+                                if finish_reason is not None:
+                                    if finish_reason != "stop":
+                                        upstream_failure = "UPSTREAM_NONSTOP_FINISH"
+                                        break
+                                    upstream_stop_seen = True
                                 delta = choice.get("delta") or {}
                                 if not isinstance(delta, dict):
                                     upstream_failure = "UPSTREAM_DELTA_INVALID"
