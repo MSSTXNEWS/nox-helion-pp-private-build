@@ -61,6 +61,9 @@ def _reserve_chat_snapshot_slot():
 
 # Reject oversized or non-scalar user/assistant inputs before any model/S03 admission.
 # Explicit HOLD, never silently truncate the canonical conversational context.
+# Bound raw HTTP JSON (including padding, metadata and chunked uploads) before
+# parsing. This is separate from the decoded 1 MiB conversational text limit.
+MAX_CHAT_WIRE_BYTES = 8 * 1024 * 1024
 MAX_CHAT_INPUT_UTF8_BYTES = 1024 * 1024
 MAX_CHAT_INPUT_MESSAGES = 512
 # Bound the canonical response before a corrupt upstream can exhaust RAM or S03.
@@ -668,7 +671,25 @@ def install(app, B):
         # Reject malformed chat input before creating any SSE generator,
         # model request, S03 write, or request-scoped STOP state.
         try:
-            b = await request.json()
+            if hasattr(request, "stream"):
+                # FastAPI's request.json() reads an unlimited body first. Read
+                # bounded raw chunks instead, including without Content-Length.
+                declared = request.headers.get("content-length")
+                if declared is not None:
+                    if not declared.isdecimal():
+                        return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_CONTENT_LENGTH"}, status_code=400)
+                    if int(declared) > MAX_CHAT_WIRE_BYTES:
+                        return JSONResponse({"status": "HOLD", "reason": "CHAT_WIRE_TOO_LARGE"}, status_code=413)
+                wire = bytearray()
+                async for chunk in request.stream():
+                    if len(chunk) > MAX_CHAT_WIRE_BYTES - len(wire):
+                        return JSONResponse({"status": "HOLD", "reason": "CHAT_WIRE_TOO_LARGE"}, status_code=413)
+                    wire.extend(chunk)
+                b = json.loads(wire)
+            else:
+                # Unit-level request doubles expose json() only; real ASGI
+                # Request always exposes stream() and uses the bounded path.
+                b = await request.json()
         except Exception:
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_JSON"}, status_code=400)
         if not isinstance(b, dict):
