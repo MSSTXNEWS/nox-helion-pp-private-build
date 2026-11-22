@@ -30,6 +30,50 @@ class ReflectionInputAdmission(unittest.TestCase):
             "https://github.com/org/repo/actions/runs/123",
         )
 
+    def test_reflection_chronology_requires_a_real_causal_order(self):
+        from nox_reflection import (
+            INPUT_SCHEMA, TASK_SPEC_SHA256, SOURCE_REGISTRY_BLOB_SHA,
+            validate_record,
+        )
+        record = {
+            "schema": INPUT_SCHEMA,
+            "record_id": "a6-4b04-chronology-synthetic",
+            "task": {
+                "id": "4B04", "spec_sha256": TASK_SPEC_SHA256,
+                "registry_blob_sha": SOURCE_REGISTRY_BLOB_SHA,
+            },
+            "failure": {
+                "observed_at": "2026-11-22T03:00:00+03:00",
+                "summary": "Synthetic public failure",
+                "evidence_url": "https://example.org/issue",
+                "evidence_sha256": "a" * 64,
+            },
+            "hypothesis": {"statement": "Synthetic causal hypothesis",
+                           "observable": "A bounded public test result"},
+            "change": {
+                "branch": "repair/chronology-proof", "commit_sha": "b" * 40,
+                "diff_sha256": "c" * 64, "files": ["nox-control/example.py"],
+                "permission_receipt_url": "https://example.org/permission",
+                "permission_receipt_sha256": "d" * 64,
+            },
+            "verification": {
+                "status": "FAIL", "verified_at": "2026-11-21T23:59:59Z",
+                "target_commit_sha": "b" * 40,
+                "receipt_url": "https://example.org/check",
+                "artifact_sha256": "e" * 64,
+            },
+        }
+        # The report's wall-clock date can precede the failure's local
+        # date yet still represent a later UTC instant; compare instants.
+        with self.assertRaisesRegex(ReflectionError, "predate"):
+            validate_record(record)
+        record["verification"]["verified_at"] = "2026-11-22T00:00:00.000001Z"
+        self.assertEqual(validate_record(record)["original_task_accepted"], False)
+        # One second before the failure is still invalid, even in FAIL.
+        record["verification"]["verified_at"] = "2026-11-22T02:59:59+03:00"
+        with self.assertRaisesRegex(ReflectionError, "predate"):
+            validate_record(record)
+
     def test_regular_json_snapshot(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "input.json"
