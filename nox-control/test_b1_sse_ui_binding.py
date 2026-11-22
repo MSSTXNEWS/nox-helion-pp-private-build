@@ -1719,6 +1719,105 @@ def main():
           return await one('stop')&&await one('timeout');
         }'''))
 
+        # Rejecting an in-time canonical ACK GET (freshness, verifier false,
+        # verifier exception, or verifier timeout) must close its unclaimed
+        # response body once, even when cancel() rejects or hangs. A second
+        # and third exchange in the same dialog recover by GET only.
+        check('rejected canonical ACK receipt closes body once; later same-dialog GET turns remain distinct', page.evaluate('''async () => {
+          async function one(kind){
+            const s={conversation_id:'r30-multiturn',exchange_id:kind+'-first'};
+            const second={conversation_id:s.conversation_id,exchange_id:kind+'-second'};
+            const third={conversation_id:s.conversation_id,exchange_id:kind+'-third'};
+            let gets=0,reads=0,posts=0,acks=0,canceled=0;
+            let healthyCanceled=0,verified=0,confirmed=0,projects=0;
+            const expectedCode={
+              stale:'HOLD_STREAM_RECEIPT_FRESHNESS',
+              denied:'HOLD_STREAM_FRESHNESS_UNVERIFIED',
+              throws:'HOLD_STREAM_CANONICAL_ACK',
+              stall:'HOLD_STREAM_CANONICAL_ACK_TIMEOUT'
+            }[kind];
+            const mint=(challenge,body,bad=false)=>{
+              const now=Date.now();
+              return {request_nonce:challenge.request_nonce,
+                issued_at_ms:now,expires_at_ms:bad?now-1:now+1000,
+                ack_id:'ack-r30-'+kind,body};
+            };
+            const transport={...opts.transport,
+              post(){posts++;throw Error('NO_MODEL_POST')},
+              readback(scope){reads++;return Promise.resolve({...scope})},
+              ack(){acks++;throw Error('NO_NETWORK_ACK')},
+              readCanonicalAck(_s,_expected,challenge){
+                gets++;
+                if(gets===1){
+                  return Promise.resolve(mint(challenge,{
+                    cancel(){
+                      canceled++;
+                      if(kind==='stale')
+                        return Promise.reject(Error('cancel rejected'));
+                      if(kind==='denied')return new Promise(()=>{});
+                      return Promise.resolve();
+                    }
+                  },kind==='stale'));
+                }
+                return Promise.resolve(mint(challenge,{
+                  cancel(){healthyCanceled++;return Promise.resolve()}
+                }));
+              }
+            };
+            const host={...opts.host,
+              verifyFreshCanonicalAck(){
+                verified++;
+                if(gets===1){
+                  if(kind==='denied')return false;
+                  if(kind==='throws')throw Error('bad verifier');
+                  if(kind==='stall')return new Promise(()=>{});
+                }
+                return true;
+              },
+              verifyCanonicalAck(){return true}
+            };
+            const gate={
+              async reserve(){return {status:'ALREADY_ACKED'}},
+              async beginSend(){throw Error('NO_NEW_ACK')},
+              async confirm(){throw Error('NO_LOCAL_ACK')},
+              async requireCanonicalAck(_scope,event,cursor,read,verify){
+                const expected={event_id:event,ack_cursor:cursor};
+                const receipt=await read(expected);
+                if(await verify(receipt,expected)!==true)
+                  throw Error('BAD_ACK');
+                confirmed++;
+                return {status:'CANONICAL_ACK_CONFIRMED',
+                  authority:'VERIFIER_CALLBACK_APPROVED',ack_id:receipt.ack_id};
+              }
+            };
+            const ui={async onDelta(){},
+              async upsertTerminal(){projects++;return true}
+            };
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host,bridge:opts.bridge,ui,ackGate:gate,
+              canonicalAckTimeoutMs:kind==='stall'?45:500
+            });
+            const first=await Promise.race([
+              c.reconnect(s).then(()=>null,e=>e.code),
+              new Promise(r=>setTimeout(()=>r('HUNG'),650))
+            ]);
+            if(first!==expectedCode||canceled!==1||confirmed!==0||
+               posts!==0||acks!==0||healthyCanceled!==0)return false;
+            const restored=await c.reconnect(s);
+            const next=await c.reconnect(second);
+            const next2=await c.reconnect(third);
+            return restored.canonical_ack_status==='CANONICAL_ACK_CONFIRMED'&&
+              next.canonical_ack_status==='CANONICAL_ACK_CONFIRMED'&&
+              next2.canonical_ack_status==='CANONICAL_ACK_CONFIRMED'&&
+              reads===4&&gets===4&&projects===4&&
+              confirmed===3&&canceled===1&&healthyCanceled===0&&
+              posts===0&&acks===0&&
+              (kind==='stale'?verified===3:verified===4);
+          }
+          return await one('stale')&&await one('denied')&&
+            await one('throws')&&await one('stall');
+        }'''))
+
         # The composition binding must forward the UI adapter's own deadlines:
         # otherwise a hung beforeCommit waits 30s despite a host's 30ms budget.
         check('bound UI adapter deadlines stop hung delta and terminal projection', page.evaluate('''async () => {
