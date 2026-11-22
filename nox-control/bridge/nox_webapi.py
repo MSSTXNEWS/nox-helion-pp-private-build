@@ -689,7 +689,10 @@ def install(app, B):
                                 if finish_reason is not None and finish_reason != "stop":
                                     upstream_failure = "UPSTREAM_NONSTOP_FINISH"
                                     break
-                                delta = choice.get("delta") or {}
+                                # A falsey non-object SSE delta is corrupt data, not
+                                # an empty metadata chunk. Only an absent delta
+                                # defaults to an empty mapping.
+                                delta = choice.get("delta", {})
                                 if not isinstance(delta, dict):
                                     upstream_failure = "UPSTREAM_DELTA_INVALID"
                                     break
