@@ -60,7 +60,10 @@ def par():
     out = load_speed()
     qs = ["Объясни, что такое простое число, и приведи пять примеров.", "Опиши, как работает светофор на перекрёстке.",
           "Почему зимой холоднее, чем летом? Объясни подробно.", "Расскажи, как приготовить омлет по шагам."]
-    def one(q, res, i): res[i] = post([{"role": "user", "content": q}], 128)
+    def one(q, res, i):
+        try: res[i] = post([{"role": "user", "content": q}], 128)
+        except Exception as e:
+            print("thread err", i, repr(e), flush=True); res[i] = {"timings": None, "wall": 0, "text": "", "ttft": None}
     r1 = post([{"role": "user", "content": qs[0]}], 128)
     n1 = (r1["timings"] or {}).get("predicted_n", 0); w1 = r1["wall"]
     res = [None] * 4; th = [threading.Thread(target=one, args=(q, res, i)) for i, q in enumerate(qs)]
