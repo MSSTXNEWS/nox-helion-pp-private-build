@@ -713,6 +713,56 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertNotIn(rid, W.CANCEL)
 
 
+    def test_stop_on_plan_status_prevents_optional_gpu_planning(self):
+        """1A04: STOP at plan SSE status must not invoke the planner model."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
+        bridge = self.bridge
+        bridge.LAST_CHAT, bridge.NKEEP = {"t": 0}, 0
+        model_calls = []
+        bridge.hc = lambda: model_calls.append("main-model")
+        bridge.ask = lambda *args, **kwargs: model_calls.append("plan-model")
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        class Thinking:
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return True
+            def mode_hint(self, *args): return ""
+            async def make_plan(self, *args):
+                model_calls.append("make_plan")
+                return ["unexpected"]
+
+        async def scenario():
+            response = await chat(Request({
+                "request_id": "stop-before-plan-model", "mode": "thoughtful",
+                "use_memory": False,
+                "messages": [{"role": "user", "content": "Составь план"}],
+            }))
+            frames, stop_result = [], None
+            async for item in response.body_iterator:
+                frame = json.loads(item)
+                frames.append(frame)
+                if (frame.get("nox_event") or {}).get("step") == "plan":
+                    stop_result = await stop(Request({
+                        "scope": "generation", "request_id": "stop-before-plan-model"}))
+            return frames, stop_result
+
+        with mock.patch.object(W, "CANCEL", set()), \\
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \\
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \\
+             mock.patch.object(W, "W", Thinking()), \\
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            frames, signal = asyncio.run(scenario())
+        self.assertEqual(signal["status"], "STOPPING")
+        self.assertFalse(signal["stop_confirmed"])
+        self.assertEqual(model_calls, [])
+        self.assertEqual(writes, [])
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
+        self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+        self.assertFalse(frames[-1]["completion_receipt"]["upstream_done"])
+
     def test_broadcast_stop_survives_new_chat_and_does_not_stop_future_chats(self):
         """New request must not clear a STOP already sent to an older stream."""
         class Upstream:
