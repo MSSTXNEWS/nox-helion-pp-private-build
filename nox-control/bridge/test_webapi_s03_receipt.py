@@ -329,6 +329,63 @@ class FactReceiptTest(unittest.TestCase):
 
 
 
+
+    def test_upstream_invalid_unicode_or_output_overrun_skips_s03(self):
+        """1A03: only bounded valid Unicode may reach terminal SSE/S03."""
+        class Upstream:
+            status_code = 200
+            def __init__(self, content):
+                self.content = content
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *ignored):
+                return False
+            async def aiter_lines(self):
+                yield 'data: ' + json.dumps({"choices": [{"delta": {"content": "А"}}]})
+                yield 'data: ' + json.dumps({
+                    "choices": [{"delta": {"content": self.content},
+                                 "finish_reason": "stop"}]})
+                yield 'data: [DONE]'
+
+        class Client:
+            def __init__(self, content):
+                self.content = content
+            def stream(self, *args, **kwargs):
+                return Upstream(self.content)
+
+        endpoint = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT = {"t": 0}
+        writes = []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def frames():
+            response = await endpoint(Request({
+                "messages": [{"role": "user", "content": "Проверка UTF-8"}],
+                "mini": True, "use_memory": False,
+                "request_id": "utf8-bound-test"}))
+            return [json.loads(chunk) async for chunk in response.body_iterator]
+
+        for content, expected_error in (
+            ("\\ud800", "UPSTREAM_CONTENT_UNICODE_INVALID"),
+            ("x" * (W.MAX_CHAT_OUTPUT_UTF8_BYTES + 1), "UPSTREAM_OUTPUT_LIMIT"),
+        ):
+            with self.subTest(error=expected_error):
+                writes.clear()
+                bridge.errors.clear()
+                bridge.hc = lambda content=content: Client(content)
+                with mock.patch.dict(sys.modules, {"s03_memory": memory}), mock.patch.object(W, "W", None):
+                    emitted = asyncio.run(frames())
+                self.assertFalse(any(e.get("done") is True for e in emitted))
+                self.assertEqual(emitted[-1]["status"], "HOLD")
+                self.assertEqual(emitted[-1]["reason"], "MODEL_STREAM_INCOMPLETE")
+                self.assertEqual(emitted[-1]["memory_write_receipt"]["status"], "SKIPPED")
+                self.assertEqual(writes, [])
+                self.assertTrue(any(expected_error in msg for msg in bridge.errors))
+
+
     def test_broadcast_stop_survives_new_chat_and_does_not_stop_future_chats(self):
         """New request must not clear a STOP already sent to an older stream."""
         class Upstream:
