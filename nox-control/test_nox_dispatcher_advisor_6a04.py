@@ -115,6 +115,19 @@ class GpuSourceEvidenceTests(unittest.TestCase):
                 self.assertIn("ONEHOST_DEGRADED" if section == "onehost"
                               else "S03_NOT_VERIFIED", current)
 
+    def test_existing_owner_claim_or_maintenance_blocks_gpu_slack_hint(self):
+        # A low-utilization instant is not spare capacity during an active
+        # owner native claim or an owner maintenance window.
+        for field in ("active_claims", "maintenance_busy"):
+            with self.subTest(field=field):
+                s = snapshot()
+                s["native_queue"] = {"active_claims": False,
+                                     "maintenance_busy": False}
+                s["native_queue"][field] = True
+                current = codes(s)
+                self.assertIn("GPU_RESIDUAL_OWNER_BUSY_HOLD", current)
+                self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", current)
+
     def test_high_valid_utilization_is_not_admission(self):
         s=snapshot(); s["gpu"]["utilization_pct"]=100
         self.assertEqual(codes(s), ["NO_UNVERIFIED_TUNING"])
