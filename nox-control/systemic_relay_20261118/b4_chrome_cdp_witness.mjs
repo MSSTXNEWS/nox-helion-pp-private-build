@@ -375,6 +375,9 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     if(method==='Network.requestServedFromCache'){x.missing=true;return;}
     // ExtraInfo can precede OR follow responseReceived; cached 200 can hide a 304.
     if(method==='Network.responseReceivedExtraInfo'){
+      // Extra HTTP provenance after terminal close/body ACK cannot certify an
+      // already-finalized response. Revoke matched integrity during quiescence.
+      if(x.close!==null){x.missing=true;x.bodyMatchesStream=false;return;}
       x.extraSeen++;
       if(x.extraSeen!==1||x.extraExpected===false||p.statusCode!==200||
          ambiguousEncoding(p.headers)){x.missing=true;x.encoded=true;}
