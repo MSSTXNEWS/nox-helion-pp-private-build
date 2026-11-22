@@ -209,7 +209,16 @@ def page_snapshot(response, limit=200000, expected_path=None):
         # Status and same-origin routing alone never prove that the web UI exists.
         if status == 200:
             headers = getattr(response, 'headers', None)
-            ctype = headers.get('Content-Type', '') if headers is not None else ''
+            # HTTPMessage.get() hides repeated Content-Type headers. A browser
+            # must not certify ambiguous HTML/gateway MIME as healthy NOX UI.
+            get_all = getattr(headers, 'get_all', None)
+            if callable(get_all):
+                declared = get_all('Content-Type') or []
+                if not isinstance(declared, (list, tuple)) or len(declared) > 1:
+                    raise RuntimeError('HOLD_CHAT_PAGE_CONTENT_TYPE_AMBIGUOUS')
+                ctype = declared[0] if declared else ''
+            else:
+                ctype = headers.get('Content-Type', '') if headers is not None else ''
             if not isinstance(ctype, str):
                 raise RuntimeError('HOLD_CHAT_PAGE_NOT_HTML')
             media = ctype.split(';', 1)[0].strip().lower()
