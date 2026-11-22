@@ -643,10 +643,10 @@ class TestProbe(unittest.TestCase):
                                 window.__nativePosts++;
                                 const frames = [
                                     {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
-                                    {type:'start',model:'pinned-local-mock'},
+                                    {type:'start',model:window.__nativeCase==='labeldrift'?'other-local-mock':'pinned-local-mock'},
                                     {type:'delta',text:'world'},
                                     {type:'done',saved:true,s03_integrated:true,
-                                     dialog_id:id,exchange_id:(window.__nativeCase === 'keep' ? 'ex00002' : window.__nativeCase === 'keep3' ? 'ex00004' : window.__nativeCase === 'lostfirst' ? 'ex00005' : ['lost','reordered'].includes(window.__nativeCase) ? 'ex00003' : eid)}
+                                     dialog_id:id,exchange_id:(window.__nativeCase === 'keep' ? 'ex00002' : window.__nativeCase === 'keep3' ? 'ex00004' : ['lostfirst','labeldrift'].includes(window.__nativeCase) ? 'ex00005' : ['lost','reordered'].includes(window.__nativeCase) ? 'ex00003' : eid)}
                                 ].map(JSON.stringify).join('\\n') + '\\n';
                                 const kind = window.__nativeCase;
                                 const bytes = new TextEncoder();
@@ -670,7 +670,7 @@ class TestProbe(unittest.TestCase):
                                 const kind=window.__nativeCase;
                                 const currentId=kind === 'keep' ? 'ex00002' :
                                     kind === 'keep3' ? 'ex00004' :
-                                    kind === 'lostfirst' ? 'ex00005' :
+                                    ['lostfirst','labeldrift'].includes(kind) ? 'ex00005' :
                                     (kind === 'lost' || kind === 'reordered') ? 'ex00003' : eid;
                                 const priorId=['reordered','badutf8'].includes(kind) ? 'ex00002' : eid;
                                 const current=[
@@ -692,6 +692,7 @@ class TestProbe(unittest.TestCase):
                                 // 'keep' is a valid second turn retaining the first;
                                 // 'lost' is a later turn with its previous pair gone.
                                 return pack({status:'READY',dialog_id:id,messages:
+                                    kind === 'labeldrift' ? [...previous,...second,...third,...current] :
                                     kind === 'keep3' ? [...previous,...second,...current] :
                                     kind === 'lostfirst' ? [...second,...third,...current] :
                                     ['keep','badutf8'].includes(kind) ? [...previous,...current] :
@@ -757,6 +758,11 @@ class TestProbe(unittest.TestCase):
                     self.assertNotIn('"type":"done"', corrupted['sse'])
                     self.assertEqual(corrupted['posts'], 8)
                     self.assertEqual(corrupted['reads'], 6)
+                    drift = await exchange('labeldrift')
+                    self.assertIn('HOLD_DIALOG_MODEL_DRIFT', drift['sse'])
+                    self.assertNotIn('"type":"done"', drift['sse'])
+                    self.assertEqual(drift['posts'], 9)
+                    self.assertEqual(drift['reads'], 7)
                 finally:
                     await browser.close()
         asyncio.run(run())

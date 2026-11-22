@@ -77,7 +77,7 @@
  if(typeof data.dialog_id!=='string'||!ID.test(data.dialog_id))throw Error('HOLD_INVALID_DIALOG_SCOPE');
  return data.dialog_id;
  }
- async function checkHistory(id,prompt,answer,exchangeId,signal) {
+ async function checkHistory(id,prompt,answer,exchangeId,signal,model) {
  const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
  if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
  const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
@@ -88,6 +88,7 @@
     pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
    throw Error('HOLD_DIALOG_HISTORY_READBACK');
  const chain=verifiedChain.get(id)||[];
+  if(chain.length&&chain[0].model!==model)throw Error('HOLD_DIALOG_MODEL_DRIFT');
  if(chain.length>=50)throw Error('HOLD_DIALOG_HISTORY_WINDOW_EXHAUSTED');
  const begin=currentAt-2*chain.length;
  if(begin<0)throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
@@ -98,7 +99,7 @@
       u.content!==p.prompt||v.content!==p.answer)
      throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
  }
- verifiedChain.set(id,[...chain,{exchange_id:exchangeId,prompt,answer}]);
+ verifiedChain.set(id,[...chain,{exchange_id:exchangeId,prompt,answer,model}]);
  }
  function accepted(done,id) {
  return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
@@ -261,7 +262,7 @@
     if(trailing)await emitPieces(trailing);
     if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
     if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
-    await checkHistory(id,data.message,answer,receipt.exchange_id,nativeSignal);
+    await checkHistory(id,data.message,answer,receipt.exchange_id,nativeSignal,receipt.native_model_label);
     if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
     event({type:'done',status:'done',saved:true,s03_integrated:true,
      history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
@@ -303,7 +304,7 @@
    const {answer,receipt,nativeModel}=await consume(upstream,()=>{},signal);
    if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
    if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
-   await checkHistory(id,data.message,answer,receipt.exchange_id,signal);
+   await checkHistory(id,data.message,answer,receipt.exchange_id,signal,nativeModel);
    if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
    return responseJSON({answer,model:nativeModel,model_identity_verified:false,dialog_id:id,
      exchange_id:receipt.exchange_id,history_persisted:true,s03_integrated:true});
