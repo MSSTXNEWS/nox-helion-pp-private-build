@@ -1997,6 +1997,66 @@ def main():
             timeoutSignal.aborted===true&&reads===2&&posts===0;
         }'''))
 
+        # When readCommitted ignores AbortSignal, a STOP/timeout may win
+        # the Promise.race but leave a late HTTP body unclaimed. Cancel that
+        # abandoned body exactly once, do not await hung/rejected cancel(),
+        # and do not release the exchange no-POST fence. Healthy committed
+        # preflight records remain untouched.
+        check('late preflight GET response body is canceled after STOP/timeout, never re-POSTed', page.evaluate('''async () => {
+          const cases=[['stop',200],['timeout',25]];
+          for(const [name,deadline] of cases){
+            let entered,finish,posts=0,acks=0,deltas=0,cancels=0;
+            let signal=null;
+            const pending=new Promise(resolve=>finish=resolve);
+            const arrived=new Promise(resolve=>entered=resolve);
+            const s={conversation_id:'r27',exchange_id:name};
+            const client=NOXB1StreamReconnect.createClient({
+              transport:{post(){posts++;throw Error('re-POST')},
+                async readback(){throw Error('unused')},
+                async ack(){acks++;return true}},
+              host:{readCommitted(_c,_e,sig){
+                signal=sig;entered();return pending;
+              }},
+              bridge:{async acceptTerminal(){throw Error('unused')}},
+              ui:{onDelta(){deltas++;},async upsertTerminal(){}},
+              timeoutMs:deadline
+            });
+            const turn=client.begin(s);
+            await arrived;
+            if(name==='stop'&&!client.stop(s))return false;
+            const outcome=await Promise.race([turn,
+              new Promise(resolve=>setTimeout(()=>resolve('HUNG'),1000))]);
+            if(outcome!==(name==='stop'?'STOPPED':'STOPPED_TIMEOUT')||
+              !signal.aborted)return false;
+            finish({body:{cancel(){
+              cancels++;
+              // An uncooperative cancellation cannot pin STOP or produce a
+              // model POST; reject in one case and hang in the other.
+              return name==='stop'?Promise.reject(Error('cancel failed')):
+                new Promise(()=>{});
+            }}});
+            await new Promise(resolve=>setTimeout(resolve,0));
+            const refused=await client.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(!refused||cancels!==1||posts||acks||deltas)return false;
+          }
+          let healthyCancels=0,healthyPosts=0;
+          const row={body:{cancel(){healthyCancels++;}}};
+          const healthy=NOXB1StreamReconnect.createClient({
+            transport:{post(){healthyPosts++;throw Error('unexpected')},
+              async readback(){throw Error('unused')},
+              async ack(){throw Error('unused')}},
+            host:{async readCommitted(){return row}},
+            bridge:{async acceptTerminal(){}},
+            ui:{async onDelta(){},async upsertTerminal(){}},
+            timeoutMs:200
+          });
+          const hold=await healthy.begin({conversation_id:'r27',
+            exchange_id:'healthy'}).then(()=>null,e=>e.code);
+          return hold==='HOLD_STREAM_RECONNECT_ONLY'&&
+            healthyCancels===0&&healthyPosts===0;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
