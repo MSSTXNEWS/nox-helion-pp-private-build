@@ -179,9 +179,14 @@ def read_json(path, limit=4_000_000, expected_sha256=None, include_mtime=False):
             raise RuntimeError('HOLD_NONFINITE_STATE_JSON')
         return number
 
-    value = json.loads(raw, object_pairs_hook=unique_object,
-                       parse_constant=finite_json_constant,
-                       parse_float=finite_json_float)
+    # Signed bytes may still be truncated JSON or invalid UTF-8. Convert
+    # parser failures to an owner-visible durable HOLD, not a raw exception.
+    try:
+        value = json.loads(raw, object_pairs_hook=unique_object,
+                           parse_constant=finite_json_constant,
+                           parse_float=finite_json_float)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise RuntimeError('HOLD_INVALID_STATE_JSON') from exc
     if not isinstance(value, dict):
         raise RuntimeError('HOLD_STATE_OBJECT_REQUIRED')
     # Freshness must be evaluated against this verified descriptor snapshot,
