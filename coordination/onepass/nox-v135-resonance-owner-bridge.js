@@ -392,8 +392,9 @@
       !data.message.trim()||data.message.length>8000)return Promise.resolve(errorResponse('INVALID_MESSAGE',422));
    if('request_id'in data&&(typeof data.request_id!=='string'||!data.request_id.trim()||data.request_id.length>160))
      return Promise.resolve(errorResponse('HOLD_REQUEST_ID_SCOPE',422));
+ const s=init?.signal||(input instanceof Request&&input.signal);
    return typeof data.request_id==='string'||Object.prototype.hasOwnProperty.call(data,'dialog_id')
-     ?Promise.resolve(sseChat(data,init?.signal)):jsonChat(data,init?.signal);
+  ?Promise.resolve(sseChat(data,s)):jsonChat(data,s);
  }
  if((url.pathname==='/api/nox/history'&&method==='GET')||
     (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
