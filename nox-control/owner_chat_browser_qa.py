@@ -418,8 +418,19 @@ def owner_session_cookie_pin(cookies):
         same_site = cookie.get('sameSite')
         if same_site is not None and same_site not in ('Strict', 'Lax', 'None'):
             return None
+        # CHIPS/partitioned cookies can be scoped to distinct top-level sites;
+        # pin the optional partition key without exposing its value in reports.
+        if 'partitionKey' in cookie:
+            partition = cookie['partitionKey']
+            if (not isinstance(partition, str) or not partition
+                    or partition != partition.strip()
+                    or not partition.isprintable()):
+                return None
+        else:
+            partition = None
         fields += (cookie.get('httpOnly') is True,
-                   cookie.get('secure') is True, same_site)
+                   cookie.get('secure') is True, same_site,
+                   'partitionKey' in cookie, partition)
         identity.append(fields)
     if len(set(fields[:3] for fields in identity)) != len(identity):
         return None

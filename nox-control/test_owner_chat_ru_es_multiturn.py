@@ -973,6 +973,41 @@ async function check(chunks, status=200) {
         self.assertEqual(owner_session_cookie_pin([legacy]),
                          owner_session_cookie_pin([dict(legacy)]))
 
+    def test_ru_es_owner_cookie_partition_key_drift_cannot_reuse_session_pin(self):
+        """A partitioned signed cookie must keep its top-level site across turns."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='unchanged-owner-session', httpOnly=True,
+                      secure=True, sameSite='None',
+                      partitionKey='https://owner.example')
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        baseline = owner_session_cookie_pin([signed])
+        self.assertIsInstance(baseline, str)
+        self.assertTrue(owner_session_continuity_valid(200, [ui, signed], baseline))
+        self.assertEqual(owner_session_cookie_pin([dict(signed)]), baseline)
+        for replacement in ('https://other.example', None):
+            drift = dict(signed)
+            if replacement is None:
+                drift.pop('partitionKey')
+            else:
+                drift['partitionKey'] = replacement
+            with self.subTest(partition_key=replacement):
+                self.assertNotEqual(owner_session_cookie_pin([drift]), baseline)
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [ui, drift], baseline))
+        for malformed in ('', ' https://owner.example', 'https://owner.example ',
+                          'https://owner.example\\u200b', 17, False, None, [], {}):
+            with self.subTest(malformed=repr(malformed)):
+                self.assertIsNone(owner_session_cookie_pin(
+                    [dict(signed, partitionKey=malformed)]))
+        legacy = dict(signed)
+        legacy.pop('partitionKey')
+        legacy_pin = owner_session_cookie_pin([legacy])
+        self.assertIsInstance(legacy_pin, str)
+        self.assertEqual(owner_session_cookie_pin([dict(legacy)]), legacy_pin)
+        self.assertNotEqual(legacy_pin, baseline)
+        self.assertEqual(owner_session_cookie_pin([ui, signed]), baseline)
+
     def test_ru_es_presecond_readonly_history_owner_fence_prevents_stale_post(self):
         """Re-read first turn after composer delays, before Spanish model POST."""
         from types import SimpleNamespace
