@@ -56,6 +56,21 @@ class OwnerLiveAssetTests(unittest.TestCase):
                 self.assertEqual(result.count('data-nox-live-owner="1"'),4)
                 self.assertIn('content="NOX_OWNER_LIVE_RESONANCE_20261116"',result)
 
+    def test_stray_inert_closer_never_exposes_fake_owner_assets(self):
+        # HTMLParser emits unmatched closing tags that the browser ignores.
+        # A depth counter would expose assets still inside the outer inert tag.
+        for outer, stray in (('template', 'noscript'), ('noscript', 'template')):
+            with self.subTest(outer=outer, stray=stray):
+                content=(f'<{outer}></{stray}>'
+                         '<script src="/nox-web-v29/owner-chat-ui.js"></script>'
+                         '<meta name="nox-live-build" content="inert-fake">'
+                         f'</{outer}>')
+                result=self.rendered(content)
+                self.assertEqual(result.count('src="/nox-web-v29/owner-chat-ui.js"'),2)
+                self.assertEqual(result.count('data-nox-live-owner="1"'),4)
+                self.assertIn('content="NOX_OWNER_LIVE_RESONANCE_20261116"',result)
+                self.assertEqual(self.decorate(result,'pc/resonance.html'),result)
+
     def test_noscript_and_nonexecuting_script_cannot_satisfy_live_asset(self):
         content=('<noscript><script src="/nox-web-v29/owner-presence.js"></script></noscript>'
                  '<script type="application/json" src="/nox-web-v29/owner-chat-ui.js"></script>')
