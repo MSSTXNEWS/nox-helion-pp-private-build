@@ -1096,7 +1096,9 @@ def install(app, B):
                 elif full.strip() and not stopped:
                     try:
                         import s03_memory as S
-                        await asyncio.to_thread(S.persist_turn, ("[mini] " + user) if mini else user, full.strip())
+                        # Keep the exact streamed Unicode/whitespace: stripping changes S03 history
+                        # relative to the SSE text and its terminal digest.
+                        await asyncio.to_thread(S.persist_turn, ("[mini] " + user) if mini else user, full)
                         hist = {"status": "SAVED", "mini": mini, "s03_readback_verified": False}
                     except Exception as e:
                         hist = {"status": "HOLD", "reason": "S03: " + type(e).__name__}
@@ -1110,7 +1112,7 @@ def install(app, B):
                     # error also must not truncate an otherwise completed stream.
                     if B.SOUL and not mini and not stopped and hist["status"] == "SAVED":
                         try:
-                            B.SOUL.log_turn(user, full.strip())
+                            B.SOUL.log_turn(user, full)
                         except Exception as e:
                             B.log("soul_secondary_log_error " + type(e).__name__)
                 CANCEL.discard(rid)
