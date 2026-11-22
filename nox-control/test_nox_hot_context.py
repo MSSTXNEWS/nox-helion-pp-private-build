@@ -55,6 +55,34 @@ class HotContextTests(unittest.TestCase):
                         owner_persona_id="owner-1",s03_revision="a"*64)
 
 
+    def test_3b03_zero_score_is_not_memory_or_gpu_evidence(self):
+        def row(ident, fts, vec):
+            return {"id":ident, "persona_id":"owner-1", "revision":"a"*64,
+                    "status":"ACTIVE", "source_sha256":"b"*64,
+                    "fts_score":fts, "vector_score":vec}
+        none=m.plan_two_stage_retrieval(
+            candidates=[row("unrelated-a",0,0),row("unrelated-b",0,0)],
+            owner_persona_id="owner-1",s03_revision="a"*64)
+        self.assertEqual(none["first_pass"], [])
+        self.assertEqual(none["optional_multilingual_rerank_ids"], [])
+        self.assertFalse(none["requires_owner_gpu_resource_and_lease_gate"])
+        mixed=m.plan_two_stage_retrieval(
+            candidates=[row("zero",0,0),row("relevant",.7,0)],
+            owner_persona_id="owner-1",s03_revision="a"*64)
+        self.assertEqual([x["id"] for x in mixed["first_pass"]], ["relevant"])
+        self.assertEqual(mixed["optional_multilingual_rerank_ids"], [])
+        # The hot prompt must not convert a zero-only retrieval into a
+        # fallback to all S03 facts; an empty shortlist means no additions.
+        facts=[{"id":"unrelated-a","source_sha256":"b"*64,
+                "text":"Unrelated owner memory","persona_id":"owner-1",
+                "revision":"a"*64,"status":"ACTIVE","superseded_by":None}]
+        result=call(conversation=[],verified_s03=facts,token_budget=2048,
+                    owner_persona_id="owner-1",current_s03_revision="a"*64,
+                    retrieval_plan=none)
+        self.assertEqual(result["selected_s03_ids"], [])
+        self.assertEqual(result["retrieval_shortlist_ids"], [])
+        self.assertTrue(result["retrieval_plan_consumed"])
+
     def test_3b03_shortlist_is_bound_to_exact_current_scoped_s03(self):
         revision = "a"*64
         facts = [
