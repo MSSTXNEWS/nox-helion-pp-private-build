@@ -9,8 +9,8 @@ G = "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/contents
 import base64
 _M = open(os.path.join(os.path.dirname(__file__), "..", "web", "MODE")).read().strip()
 _B = base64.b64encode(open(os.path.join(os.path.dirname(__file__), "..", "web", _M + ".sh"), "rb").read()).decode()
-REMOTE = "echo %s | base64 -d > /tmp/webm.sh && bash /tmp/webm.sh 2>&1 | tail -c 3000" % _B
-_OLD = 'H="Accept: application/vnd.github.raw"; curl -fsSL -H "$H" "%sboot_web.sh?ref=main" -o /tmp/bw.sh && bash /tmp/bw.sh 2>&1 | tail -c 3000' % G
+REMOTE = "echo %s | base64 -d > /tmp/webm.sh && bash /tmp/webm.sh 2>&1 | tail -c 24000" % _B
+_OLD = 'H="Accept: application/vnd.github.raw"; curl -fsSL -H "$H" "%sboot_web.sh?ref=main" -o /tmp/bw.sh && bash /tmp/bw.sh 2>&1 | tail -c 24000' % G
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
@@ -45,7 +45,7 @@ def main():
                 r = subprocess.run(["ssh", "-T", "-i", kf, "-p", str(port), "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes",
                     "-o", "ConnectTimeout=15", "-o", "StrictHostKeyChecking=accept-new", "-o", "UserKnownHostsFile=" + d + "/kh",
                     "root@" + ip, REMOTE], capture_output=True, text=True, errors="replace", timeout=295, input=(os.environ.get("TS_AUTHKEY","") + "\n"))
-                print("ssh rc=%d" % r.returncode); print(re.sub(r"(github_pat_\w+|tskey-[\w-]+)", "***", r.stdout[-3000:]))
+                print("ssh rc=%d" % r.returncode); print(re.sub(r"(github_pat_\w+|tskey-[\w-]+)", "***", r.stdout[-24000:]))
                 if r.returncode == 0: return
                 time.sleep(10)
         sys.exit("ssh failed on all attempts")
