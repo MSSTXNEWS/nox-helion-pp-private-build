@@ -229,7 +229,9 @@
         if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
         if(doneSeen){
           if(buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
-          break;
+          // The native done receipt is not trustworthy until stream EOF.
+          // A later read() chunk can still contain a second delta/control
+          // event; do not silently cancel it and certify S03 early.
         }
       }
       buf+=decode();
