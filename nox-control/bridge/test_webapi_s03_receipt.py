@@ -1374,6 +1374,61 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
         self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
 
+    def test_1a01_optional_planner_and_mode_hint_fail_open_to_real_stream(self):
+        """An advisory planner outage cannot replace real tokens with HTTP 500."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Живой ответ 🌌"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        class BrokenOptionalDecorators:
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): raise RuntimeError("planner unavailable")
+            def mode_hint(self, *args): raise ValueError("hint formatter unavailable")
+            def is_factual(self, *args): return False
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT, bridge.SOUL = {"t": 0}, None
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Привет"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def scenario():
+            response = await chat(Request({
+                "request_id": "plan-advisory-outage",
+                "mode": "auto", "use_memory": False,
+                "messages": [{"role": "user", "content": "Привет"}],
+            }))
+            return [json.loads(row) async for row in response.body_iterator]
+
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.object(W, "W", BrokenOptionalDecorators()), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            frames = asyncio.run(scenario())
+
+        self.assertTrue(any(frame.get("message", {}).get("content") == "Живой ответ 🌌" for frame in frames))
+        terminal = frames[-1]
+        self.assertTrue(terminal["done"])
+        self.assertEqual(terminal["completion_receipt"]["status"], "GENERATED")
+        self.assertEqual(terminal["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+        self.assertEqual(writes, [("Привет", "Живой ответ 🌌")])
+        self.assertTrue(any("web_plan_classifier_unavailable RuntimeError" in msg for msg in bridge.errors))
+        self.assertTrue(any("web_mode_hint_unavailable ValueError" in msg for msg in bridge.errors))
+
     def test_stop_scope_and_bad_json_cannot_cancel_all(self):
         """Invalid or non-generation commands cannot trigger an implicit broadcast."""
         stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")

@@ -864,7 +864,14 @@ def install(app, B):
                         extra += "[Напоминание создано на %s МСК: подтверди коротко.]" % hh
                         yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "reminder", "text": "напоминание на " + hh + " МСК", "reminder": rem["reminder"]})
                 if W and not mini:
-                    if W.wants_plan(user, mode):
+                    # Optional planning must not abort the primary live-chat route.
+                    # Treat a failed advisory classifier as unavailable.
+                    try:
+                        wants_plan = bool(W.wants_plan(user, mode))
+                    except Exception as e:
+                        B.log("web_plan_classifier_unavailable " + type(e).__name__)
+                        wants_plan = False
+                    if wants_plan:
                         yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "разбиваю задачу на шаги"})
                         # The client can STOP at this yield; do not dispatch a second
                         # GPU/model request through make_plan after that STOP.
@@ -884,7 +891,15 @@ def install(app, B):
                         if plan:
                             extra += "[План (следуй по порядку, нумеруй шаги): " + "; ".join("%d) %s" % (i + 1, x) for i, x in enumerate(plan)) + "]"
                             yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "план: %d шагов" % len(plan), "plan": plan})
-                    extra += W.mode_hint(mode)
+                    # Mode hints are advisory. A broken formatter must not
+                    # turn an otherwise valid chat into a streaming exception.
+                    try:
+                        hint = W.mode_hint(mode)
+                        if not isinstance(hint, str):
+                            raise TypeError("MODE_HINT_NOT_STRING")
+                        extra += hint
+                    except Exception as e:
+                        B.log("web_mode_hint_unavailable " + type(e).__name__)
                 yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "think", "text": "формулирую ответ"})
                 if mini:
                     last = msgs_in[-1]["content"] if msgs_in else user
