@@ -314,10 +314,21 @@ def compare_baseline(current, prior, approved_render_transition=None):
                 if (type(frame.get('frames')) is not int or frame['frames'] != 90
                         or type(frame.get('p95_ms')) not in (int, float)):
                     raise ValueError()
+            # Median and slow-frame count are part of the SAME six-mode
+            # browser receipt; validating p95 alone admitted forged metrics.
+            for frame in (previous, measured):
+                if (type(frame.get('median_ms')) not in (int, float)
+                        or type(frame.get('over_50ms')) is not int
+                        or not 0 <= frame['over_50ms'] <= frame['frames']):
+                    raise ValueError()
             p95 = float(previous['p95_ms'])
             now_p95 = float(measured['p95_ms'])
+            old_median = float(previous['median_ms'])
+            new_median = float(measured['median_ms'])
             if not (math.isfinite(p95) and math.isfinite(now_p95)
-                    and 0 < p95 < 120000 and 0 < now_p95 < 120000):
+                    and math.isfinite(old_median) and math.isfinite(new_median)
+                    and 0 < old_median <= p95 < 120000
+                    and 0 < new_median <= now_p95 < 120000):
                 raise ValueError()
         except (KeyError, TypeError, ValueError, OverflowError) as exc:
             raise ValueError('HOLD_BASELINE_FRAME_INVALID') from exc

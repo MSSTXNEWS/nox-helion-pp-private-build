@@ -200,7 +200,8 @@ class TestProbe(unittest.TestCase):
     def test_baseline_provenance_and_six_frame_modes(self):
         rows = [
             {'width': width, 'height': height, 'mode': mode,
-             'frame_time': {'frames': 90, 'p95_ms': 16.0},
+             'frame_time': {'frames': 90, 'median_ms': 16.0,
+                            'p95_ms': 16.0, 'over_50ms': 0},
              'renderer_resource_sha256': 'a' * 64, 'renderer_resource_count': 2,
              'landing_url_sha256': url_identity_sha256('http://127.0.0.1:8765/resonance.html')}
             for width, height in ((320, 720), (390, 844), (1440, 900))
@@ -352,6 +353,25 @@ class TestProbe(unittest.TestCase):
                         ValueError, 'HOLD_BASELINE_FRAME_INVALID'):
                     compare_baseline(forged, baseline) if side == 'current' else compare_baseline(
                         baseline, forged)
+        # R20: invalid median and >50ms count must not masquerade as a
+        # comparable six-viewport screenshot/frame receipt on EITHER side.
+        for field, bogus in (('median_ms', True), ('median_ms', '16.0'),
+                             ('median_ms', None), ('median_ms', 17.0),
+                             ('median_ms', 0), ('median_ms', float('nan')),
+                             ('over_50ms', True), ('over_50ms', '0'),
+                             ('over_50ms', -1), ('over_50ms', 91),
+                             ('over_50ms', 0.0)):
+            for side in ('current', 'prior'):
+                forged = copy.deepcopy(baseline)
+                forged['runs'][0]['frame_time'][field] = bogus
+                with self.subTest(metric=field, value=bogus, side=side), self.assertRaisesRegex(
+                        ValueError, 'HOLD_BASELINE_FRAME_INVALID'):
+                    compare_baseline(forged, baseline) if side == 'current' else compare_baseline(
+                        baseline, forged)
+        healthy = copy.deepcopy(baseline)
+        healthy['runs'][0]['frame_time']['median_ms'] = 15.0
+        healthy['runs'][0]['frame_time']['over_50ms'] = 2
+        self.assertEqual(len(compare_baseline(healthy, baseline)), 6)
         broken = copy.deepcopy(baseline)
         broken['runs'][0]['frame_time']['p95_ms'] = float('nan')
         with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_FRAME_INVALID'):
