@@ -1230,7 +1230,10 @@ def main():
                 'answer_sha256':digest(answer2.encode()),
                 'performance_target_pass':follow['first_meaningful_delta_ms']<=5000 and follow['stream_total_ms']<=25000})
             require_durable_result(passed, numeric_public_answer(answer2)=='323', 'SECOND_TURN')
-            require_multiturn_model_route(turn,follow)  # Before a third non-idempotent POST.
+            # An untagged stream provides no evidence that the model route stayed fixed.
+            # Hold before issuing the third non-idempotent model request.
+            if not require_multiturn_model_route(turn,follow):
+                raise RuntimeError('HOLD_CHAT_MULTITURN_MODEL_IDENTITY_MISSING')
             require_latency_target(follow, 'SECOND_TURN', 5000)
             require_executor_turn_budget(time.monotonic()-probe_started)
             question='Сколько сейчас исполнителей и агентов у NOX?'
@@ -1248,6 +1251,8 @@ def main():
             if not third_durable:raise RuntimeError('HOLD_CHAT_PROBE_POSTQUIET_HISTORY')
             require_executor_witness(end,third_history,expected_three,count,phrase,did)
             model_route_verified=require_multiturn_model_route(turn,follow,turn3)
+            if not model_route_verified:
+                raise RuntimeError('HOLD_CHAT_MULTITURN_MODEL_IDENTITY_MISSING')
             require_postturn_owner_binding(client)  # final owner route continuity, read-only
             require_postturn_executor_identity(client, fresh)  # final identity continuity
             # Third inference and durable-history readback also consume the 210 s budget.
