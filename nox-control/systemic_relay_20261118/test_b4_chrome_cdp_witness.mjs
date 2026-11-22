@@ -1817,3 +1817,76 @@ test('late FIRST data after body ACK during SECOND stream cannot poison independ
   assert.equal(afterCapture,1);
   assert.equal(JSON.stringify(sealed),snapshot);
 });
+
+test('late FIRST ExtraInfo after its body ACK during SECOND SSE revokes first only',async()=>{
+  const clean=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  for(const [name,statusCode,headers,duplicate] of [
+    ['unexpected-late-identity',200,{'Content-Encoding':'identity'},false],
+    ['cached-304-after-200',304,{'X-Cache':'HIT'},false],
+    ['conflicting-compression',200,{'content-encoding':'gzip','Cache-Control':'public'},false],
+    ['duplicate-late-extra-info',200,{'Content-Encoding':'identity'},true],
+  ]){
+    let firstBodyAck=false,ackBeforeSecond=false,delivered=0;
+    const observed=await run(false,null,null,null,{
+      quiescenceMs:80,
+      responseBodySettled:(id,status)=>{
+        if(id==='1'&&status==='resolved')firstBodyAck=true;
+      },
+      lifecycleDuringSecond:session=>{
+        // FIRST loadingFinished and body ACK preceded SECOND requestWillBeSent.
+        // The second HTTP/SSE body has not yet been delivered.
+        ackBeforeSecond=firstBodyAck;
+        const event={requestId:'1',statusCode,headers};
+        session.emit('Network.responseReceivedExtraInfo',event);
+        delivered++;
+        if(duplicate){
+          session.emit('Network.responseReceivedExtraInfo',event);
+          delivered++;
+        }
+      }
+    });
+    assert.equal(ackBeforeSecond,true,name+' first body ACK precedes second');
+    assert.equal(delivered,duplicate?2:1,name+' first HTTP event delivered');
+    assert.equal(observed.cdp_consistent,false,name+' pair must not certify');
+    assert.equal(observed.ttft_sse_verified,false,name);
+    assert.deepEqual(observed.turns.map(t=>t.cdp_request_id),['1','2']);
+    const first=observed.turns[0],second=observed.turns[1];
+    for(const key of ['request_sha256','cdp_streamed_body_sha256',
+      'cdp_decoded_body_sha256']){
+      assert.deepEqual(first[key],clean.turns[0][key],name+' first digest '+key);
+    }
+    assert.equal(first.cdp_decoded_body_matches_stream,false,name);
+    assert.equal(first.ttft_ms,null,name);
+    assert.equal(first.sse_done_ms,null,name);
+    assert.equal(first.visible_text_sha256,null,name);
+    assert.equal(first.stream_timing_complete,false,name);
+    for(const key of ['cdp_request_id','request_sha256','cdp_streamed_body_sha256',
+      'cdp_decoded_body_sha256','cdp_decoded_body_matches_stream',
+      'visible_text_sha256','ttft_ms','sse_done_ms',
+      'sse_done_to_loading_finished_ms','stream_timing_complete']){
+      assert.deepEqual(second[key],clean.turns[1][key],name+' second '+key);
+    }
+    assert.equal(second.stream_timing_complete,true,name);
+    assert.equal(second.ttft_ms,10,name);
+    assert.doesNotMatch(JSON.stringify(observed),/secret|Hello|data:/,name);
+  }
+  // Only a finite observation interval can be certified. Later notifications
+  // do not amend a returned snapshot or prove lifetime-long absence.
+  let beyondCapture=0;
+  const sealed=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      beyondCapture++;
+      session.emit('Network.responseReceivedExtraInfo',{
+        requestId:'1',statusCode:304,headers:{'X-Cache':'HIT'}});
+    },90)
+  });
+  assert.equal(sealed.cdp_consistent,true);
+  assert.equal(beyondCapture,0);
+  const snapshot=JSON.stringify(sealed);
+  await new Promise(resolve=>setTimeout(resolve,125));
+  assert.equal(beyondCapture,1);
+  assert.equal(JSON.stringify(sealed),snapshot);
+});
