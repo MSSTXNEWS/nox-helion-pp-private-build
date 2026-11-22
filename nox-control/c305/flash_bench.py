@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Тест GLM-5.3-Flash на :8081. python3 flash_bench.py speed|par|suites [--url U]"""
-import json, sys, os, re, time, random, threading, importlib.util, urllib.request, datetime
+import concurrent.futures, json, sys, os, re, time, random, threading, importlib.util, urllib.request, datetime
 URL = "http://127.0.0.1:8081"
 ST = "/root/nox/state"
 MB = "/root/nox/dl/v7/core/nox_wow/MIND/M4_BENCH"
 SOUL = open("/root/nox/dl/v7/core/nox_wow/soul_prompt_ru.txt", encoding="utf-8").read()
 os.environ.setdefault("NOX_SLP_DIR", "/root/nox/dl/v7/core/nox_wow/SLP")
 
-def post(msgs, max_tokens, think=False, stream=True, system=None, temp=0.3):
+def post(msgs, max_tokens, think=False, stream=True, system=None, temp=0.3, cache=False):
     m = ([{"role": "system", "content": system}] if system else []) + msgs
     body = {"model": "x", "messages": m, "max_tokens": max_tokens, "temperature": temp, "stream": stream,
-            "cache_prompt": False, "chat_template_kwargs": {"enable_thinking": bool(think)}}
+            "cache_prompt": cache, "chat_template_kwargs": {"enable_thinking": bool(think)}}
     req = urllib.request.Request(URL + "/v1/chat/completions", json.dumps(body).encode(), {"Content-Type": "application/json"})
     t0 = time.time(); ttft = None; text = ""; timings = None
     with urllib.request.urlopen(req, timeout=1500) as r:
@@ -84,15 +84,17 @@ def suites():
            "provoc": ["chr-%02d" % i for i in range(1, 11)]}
     hard = ["rea-03", "rea-07", "rea-08", "rea-10", "tom-02"]
     def runset(name, think_ids=(), system=None, mx=600):
-        res = []
-        for i in ids[name]:
-            for think in ([False] + ([True] if i in think_ids else [])):
-                def chat(msgs, sid, headers=None, _t=think):
-                    r = post(msgs, 2500 if _t else mx, think=_t, system=system, temp=0.3); return {"text": r["text"], "ttft": r["ttft"]}
-                t0 = time.time()
-                try: r = mb.run_task(T[i], chat, "flash1", run_id="fl")
-                except Exception as e: r = {"id": i, "score": None, "error": repr(e)}
-                r["think"] = think; r["sec"] = round(time.time() - t0, 1); res.append(r); print(name, i, think, r.get("score"), r["sec"], flush=True)
+        jobs = [(i, th) for i in ids[name] for th in ([False] + ([True] if i in think_ids else []))]
+        def work(job):
+            i, think = job
+            def chat(msgs, sid, headers=None, _t=think):
+                r = post(msgs, 1500 if _t else mx, think=_t, system=system, temp=0.3, cache=True); return {"text": r["text"], "ttft": r["ttft"]}
+            t0 = time.time()
+            try: r = mb.run_task(T[i], chat, "flash1", run_id="fl")
+            except Exception as e: r = {"id": i, "score": None, "error": repr(e)}
+            r["think"] = think; r["sec"] = round(time.time() - t0, 1); print(name, i, think, r.get("score"), r["sec"], flush=True)
+            return r
+        with concurrent.futures.ThreadPoolExecutor(4) as ex: res = list(ex.map(work, jobs))
         return res
     out = {"date": datetime.datetime.utcnow().isoformat() + "Z", "source": "MIND-BENCH dev.json (nox_wow v7), часть заданий"}
     out["mind"] = runset("mind", hard); save(ST + "/flash_suite_mind.json", out)
@@ -104,12 +106,13 @@ def suites():
           "Перескажи в трёх предложениях сюжет сказки «Колобок».", "Мессир устал после рабочего дня. Скажи ему что-нибудь тёплое, без банальностей.",
           "Объясни разницу между «ложить» и «класть».", "Опиши словами закат над морем, без штампов, не больше четырёх предложений.",
           "Составь вежливый отказ коллеге, который просит срочно задержаться вечером.", "Что значит выражение «бить баклуши»? Одной фразой."]
-    ru = []
-    for q in RU:
-        r = post([{"role": "user", "content": q}], 600, system=SOUL)
+    def ruone(q):
+        r = post([{"role": "user", "content": q}], 600, system=SOUL, cache=True)
         txt = mb.strip_think(r["text"]); letters = re.findall(r"[A-Za-zА-Яа-яЁё]", txt); cyr = len(re.findall(r"[А-Яа-яЁё]", txt)) / max(1, len(letters))
         chk = {"cyrillic>=0.95": cyr >= 0.95, "no_emoji": not mb._EMOJI.search(txt), "no_list": len(mb._LIST.findall(txt)) < 2, "nonempty": len(txt) > 20}
-        ru.append({"q": q, "answer": r["text"], "checks": chk, "score": sum(chk.values()) / len(chk), "tg": tm(r)["tg"]}); print("ru", q[:30], ru[-1]["score"], flush=True)
+        print("ru", q[:30], flush=True)
+        return {"q": q, "answer": r["text"], "checks": chk, "score": sum(chk.values()) / len(chk)}
+    with concurrent.futures.ThreadPoolExecutor(4) as ex: ru = list(ex.map(ruone, RU))
     out["ru"] = ru; out["ru_note"] = "реплики и автопроверки составлены исполнителем; качество речи — только слепая оценка человеком"
     out["hard_think"] = hard
     save(ST + "/flash_suites_all.json", out); print("DONE")
