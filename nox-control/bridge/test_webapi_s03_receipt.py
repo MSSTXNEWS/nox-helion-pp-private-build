@@ -261,6 +261,40 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(post_stop_frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
         self.assertTrue(any("UPSTREAM_AFTER_STOP_FINISH" in item for item in bridge.errors))
 
+        # A falsey non-string delta after real tokens must not be quietly
+        # erased before finish_reason=stop and committed to S03.
+        class FalseyContentUpstream(Upstream):
+            status_code = 200
+            def __init__(self, invalid):
+                self.invalid = invalid
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"A"}}]}'
+                yield 'data: ' + json.dumps({
+                    "choices": [{"delta": {"content": self.invalid},
+                                 "finish_reason": "stop"}]})
+                yield 'data: [DONE]'
+
+        class FalseyContentClient:
+            def __init__(self, invalid):
+                self.invalid = invalid
+            def stream(self, *args, **kwargs):
+                return FalseyContentUpstream(self.invalid)
+
+        for invalid in (0, False, [], {}):
+            with self.subTest(falsey_invalid=invalid):
+                writes.clear()
+                bridge.errors.clear()
+                bridge.hc = lambda invalid=invalid: FalseyContentClient(invalid)
+                with mock.patch.dict(sys.modules, {"s03_memory": module}), mock.patch.object(W, "W", None):
+                    bad_frames = asyncio.run(get_frames())
+                self.assertEqual(writes, [])
+                self.assertFalse(any(v.get("done") is True for v in bad_frames))
+                self.assertEqual(bad_frames[-1]["status"], "HOLD")
+                self.assertEqual(bad_frames[-1]["reason"], "MODEL_STREAM_INCOMPLETE")
+                self.assertEqual(bad_frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+                self.assertTrue(any("UPSTREAM_CONTENT_INVALID" in item for item in bridge.errors))
+
+
 
     def test_broadcast_stop_survives_new_chat_and_does_not_stop_future_chats(self):
         """New request must not clear a STOP already sent to an older stream."""
