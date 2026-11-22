@@ -381,7 +381,7 @@ async function boot() {
     .catch(async (e) => { lib.three = 'FALLBACK ' + (e.message || e); $('#space').remove(); document.body.classList.add('bgfallback'); try { await loadScript('./nox-v14-real.js'); await loadScript('./nox-v14-planet.js'); } catch (x) { /* без фона */ } });
   dust();
   /* нижнее меню-ползунок на телефоне */
-  if (small()) import(V + 'swiper/swiper-bundle.min.mjs').then((m) => { const S = m.default || m.Swiper; const s = new S('.mnav .swiper', { slidesPerView: 'auto', freeMode: true, spaceBetween: 0, resistanceRatio: .6 }); s.slideTo(1, 0); lib.swiper = true; }).catch((e) => { lib.swiper = 'ERR ' + e.message; });
+  if (small()) import(V + 'swiper/swiper-bundle.min.mjs').then((m) => { const S = m.default || m.Swiper; const s = new S('.mnav .swiper', { slidesPerView: 'auto', freeMode: true, spaceBetween: 0, resistanceRatio: .6, centeredSlides: true, centeredSlidesBounds: true, initialSlide: 1 }); s.slideTo(1, 0); lib.swiper = true; }).catch((e) => { lib.swiper = 'ERR ' + e.message; });
   pollGw(); setInterval(pollGw, 30000); pollVoice(); setInterval(pollVoice, 60000);
   setTimeout(() => tour(false), 1600);
   window.__noxWow = { cfg, lib, get cur() { return cur; }, send, speaker, mic };
