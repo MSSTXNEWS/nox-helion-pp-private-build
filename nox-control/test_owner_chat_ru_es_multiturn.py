@@ -534,7 +534,7 @@ async function check(chunks, status=200) {
         self.assertFalse(check(root_only_first, {'messages': []}))
         caller = inspect.getsource(browser_run)
         self.assertIn(
-            'and firstturn_root_session_continuity_valid(\\n'
+            'and firstturn_root_session_continuity_valid(\n'
             '                                  history, second_history)', caller)
         self.assertLess(
             caller.index('and firstturn_root_session_continuity_valid('),
