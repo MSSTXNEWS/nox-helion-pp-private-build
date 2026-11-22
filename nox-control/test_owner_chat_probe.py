@@ -2868,5 +2868,59 @@ class ProbeTests(unittest.TestCase):
                 self.assertTrue(response.closed)
 
 
+
+    def test_upstream_http_redirect_poison_cannot_be_laundered_by_sse_done(self):
+        """An authenticated model turn cannot turn upstream HTTP 3xx into OK."""
+        did = 'f' * 32
+        for value in ('HTTP/1.1 301 Moved Permanently', 'HTTP 302 Found',
+                      '303 See Other', 'HTTP/2 307 Temporary Redirect',
+                      '308 Permanent Redirect', 302, 307.0, '308'):
+            with self.subTest(redirect=value):
+                self.assertTrue(probe.stream_status_is_failure(value))
+        for value in ('ready', '323 tokens', 200, 'HTTP/1.1 200 OK', '200',
+                      None, True):
+            with self.subTest(healthy=value):
+                self.assertFalse(probe.stream_status_is_failure(value))
+
+        healthy_done = {'type': 'done', 'dialog_id': did, 'saved': True,
+                        's03_integrated': True, 'model': 'GLM-5.3'}
+        cases = [
+            {'type': 'status', 'status': 'HTTP/1.1 302 Found'},
+            {'type': 'status', 'metadata': {'status': {'httpStatus': 307}}},
+            {'type': 'meta', 'meta': {'status_code': '308'}},
+            {'type': 'status', 'code': 301.0},
+            dict(healthy_done, metadata={'http_status': 303}),
+        ]
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, frames):
+                self.frames = frames
+                self.closed = False
+
+            def __iter__(self):
+                return iter(json.dumps(row).encode() + b'\n'
+                            for row in self.frames)
+
+            def close(self):
+                self.closed = True
+
+        for poisoned in cases:
+            frames = [{'type': 'start', 'model': 'GLM-5.3'},
+                      {'type': 'delta', 'text': '323'}]
+            if poisoned['type'] == 'done':
+                frames.append(poisoned)
+                expected = 'HOLD_STREAM_TERMINAL_FAILURE'
+            else:
+                frames.extend((poisoned, healthy_done))
+                expected = 'HOLD_STREAM_PRETERMINAL_FAILURE'
+            response = Response(frames)
+            with self.subTest(frame=poisoned):
+                with patch.object(probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, expected):
+                        probe.consume_turn(object(), 'offline synthetic', did)
+                self.assertTrue(response.closed)
+
 if __name__ == '__main__':
     unittest.main()
