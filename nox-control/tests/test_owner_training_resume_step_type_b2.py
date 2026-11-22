@@ -222,6 +222,27 @@ class CheckpointStepProvenance(unittest.TestCase):
                 read_json(source, expected_sha256=hashlib.sha256(valid).hexdigest()),
                 {"global_step": 2})
 
+    def test_signed_checkpoint_json_extreme_depth_is_named_hold(self):
+        # A SHA-256-matching JSON file can still exceed json.loads nesting
+        # limits while remaining far under the bounded descriptor byte limit.
+        # Exercise the actual source function; no training process or S03 write.
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "trainer_state.json"
+            read_json = load_pinned_verifier(Path(folder))["read_json"]
+            deeply_nested = (b'{"events":' + b'[' * 10000
+                             + b'0' + b']' * 10000 + b'}')
+            source.write_bytes(deeply_nested)
+            with self.assertRaisesRegex(
+                    RuntimeError, "^HOLD_INVALID_STATE_JSON$"):
+                read_json(source, expected_sha256=hashlib.sha256(
+                    deeply_nested).hexdigest())
+            healthy = b'{"global_step":2,"events":[1,2,3]}'
+            source.write_bytes(healthy)
+            self.assertEqual(
+                read_json(source, expected_sha256=hashlib.sha256(
+                    healthy).hexdigest()),
+                {"global_step": 2, "events": [1, 2, 3]})
+
     def test_negative_cross_entropy_loss_denied_even_with_valid_checkpoint_hashes(self):
         # Signed SHA bytes and a positive optimizer step cannot legitimate a
         # finite negative cross-entropy loss. No service or trainer is run.
