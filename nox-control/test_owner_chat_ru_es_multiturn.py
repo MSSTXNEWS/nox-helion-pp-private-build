@@ -3345,5 +3345,51 @@ async function check(chunks, status=200) {
                 browser.close()
 
 
+    def test_ru_es_reload_zero_font_text_cannot_pass_visual_readback(self):
+        """Zero-size text preserves DOM bytes but cannot paint RU/ES history."""
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+        transcript = [
+            dict(row, message_id=f'zero-font-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda req: posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items){
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body';
+                        body.textContent=row.content;
+                        bubble.append(body);root.append(bubble);
+                    }
+                }""", transcript)
+                check = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(check(), True)
+                body = page.locator('#messages .v24-msg .body').nth(1)
+                body.evaluate("(n)=>n.style.fontSize='0px'")
+                self.assertIs(check(), False, 'zero-size message text is not painted')
+                body.evaluate("(n)=>n.style.fontSize=''")
+                self.assertIs(check(), True)
+                bubble = page.locator('#messages .v24-msg').nth(2)
+                bubble.evaluate("(n)=>n.style.fontSize='0px'")
+                self.assertIs(check(), False, 'inherited zero-size text must fail')
+                bubble.evaluate("(n)=>n.style.fontSize=''")
+                self.assertIs(check(), True)
+                self.assertEqual(posts, [], 'no additional native model POST')
+            finally:
+                browser.close()
+
+
 if __name__ == "__main__":
     unittest.main()

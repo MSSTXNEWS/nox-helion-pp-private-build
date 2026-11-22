@@ -1262,7 +1262,9 @@ RENDERED_FOURROW_JS = r"""expected => {
       if(style.textTransform!=='none'||!paintSafe(style))return false;
       const ownsText=[...el.childNodes].some(child=>
         child.nodeType===3&&/\S/.test(child.nodeValue||''));
-      if(ownsText&&(invisibleColor(style.color)||
+      // font-size:0 preserves DOM bytes but paints no RU/ES glyphs.
+      if(ownsText&&(!Number.isFinite(parseFloat(style.fontSize))||
+         parseFloat(style.fontSize)<=0||invisibleColor(style.color)||
          invisibleColor(style.webkitTextFillColor)))return false;
       for(const pseudo of ['::before','::after']){
         const content=getComputedStyle(el,pseudo).content;
