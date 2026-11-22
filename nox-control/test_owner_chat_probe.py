@@ -3141,5 +3141,40 @@ class ProbeTests(unittest.TestCase):
             {'dialog_id': did, 'messages': legacy}, turns, did))
 
 
+    def test_stream_post_explicit_sse_accept_keeps_owner_json_routes(self):
+        """A three-turn stream probe must ask for SSE, not silently negotiate JSON."""
+        class Client:
+            def __init__(self):
+                self.requests = []
+
+            def open(self, request, timeout):
+                self.requests.append((request, timeout))
+                return object()
+
+        client = Client()
+        probe.request(client, '/api/nox/chat/stream', 'POST',
+                      {'message': 'offline', 'dialog_id': 'f' * 32}, timeout=12)
+        stream, timeout = client.requests[-1]
+        headers = {key.lower(): value for key, value in stream.header_items()}
+        self.assertEqual(stream.get_method(), 'POST')
+        self.assertEqual(timeout, 12)
+        self.assertEqual(headers['accept'], 'text/event-stream')
+        self.assertEqual(headers['content-type'], 'application/json')
+        self.assertTrue(stream.full_url.endswith('/api/nox/chat/stream'))
+        self.assertIn(b'"message": "offline"', stream.data)
+
+        for path, method, payload in (
+                ('/api/nox/status', 'GET', None),
+                ('/api/ui/memory/dialogs/create', 'POST', {'confirmed': True}),
+                ('/api/nox/chat/stream', 'GET', None)):
+            with self.subTest(path=path, method=method):
+                probe.request(client, path, method, payload)
+                current, _ = client.requests[-1]
+                request_headers = {key.lower(): value
+                                   for key, value in current.header_items()}
+                self.assertEqual(request_headers['accept'], 'application/json')
+                self.assertEqual(request_headers['content-type'], 'application/json')
+
+
 if __name__ == '__main__':
     unittest.main()

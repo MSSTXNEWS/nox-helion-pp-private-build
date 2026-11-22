@@ -45,7 +45,12 @@ class RejectPostRedirect(urllib.request.HTTPRedirectHandler):
 
 def request(client,path,method='GET',data=None,timeout=6,base=None):
     payload=None if data is None else json.dumps(data,ensure_ascii=False).encode()
-    req=urllib.request.Request((base or BASE)+path,data=payload,method=method,headers={'Content-Type':'application/json','Accept':'application/json'})
+    # Explicitly negotiate the browser's SSE wire format for model streaming.
+    # Other owner/slots endpoints retain their JSON readback contract.
+    accept = ('text/event-stream'
+              if method == 'POST' and path == '/api/nox/chat/stream'
+              else 'application/json')
+    req=urllib.request.Request((base or BASE)+path,data=payload,method=method,headers={'Content-Type':'application/json','Accept':accept})
     try:return client.open(req,timeout=timeout)
     except urllib.error.HTTPError as exc:return exc
 
