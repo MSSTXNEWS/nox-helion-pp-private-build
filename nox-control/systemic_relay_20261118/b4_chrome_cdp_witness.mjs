@@ -35,9 +35,37 @@ function normalizePageDocumentURL(value){
 const paths=new Set(['/api/nox/chat','/api/nox/chat/stream','/nox/chat']);
 export class Cdp {
   constructor(url){this.url=url;this.next=0;this.pending=new Map();}
-  async open(){
+  async open(connectTimeoutMs=5000){
+    if(!Number.isInteger(connectTimeoutMs)||connectTimeoutMs<25||connectTimeoutMs>60000)
+      throw Error('BAD_CDP_CONNECT_TIMEOUT');
     this.ws=new WebSocket(this.url);
-    await new Promise((yes,no)=>{this.ws.addEventListener('open',yes,{once:true});this.ws.addEventListener('error',no,{once:true});});
+    // The capture clock cannot prove SSE timing if its CDP socket hangs
+    // before open. Handle early close as well as error, and bound the handshake.
+    try{
+      await new Promise((yes,no)=>{
+        let settled=false,timeout;
+        const finish=reason=>{
+          if(settled)return;
+          settled=true;clearTimeout(timeout);
+          this.ws.removeEventListener('open',onOpen);
+          this.ws.removeEventListener('error',onError);
+          this.ws.removeEventListener('close',onClose);
+          reason?no(Error(reason)):yes();
+        };
+        const onOpen=()=>finish(null);
+        const onError=()=>finish('CDP_CONNECT_ERROR');
+        const onClose=()=>finish('CDP_DISCONNECTED_BEFORE_OPEN');
+        this.ws.addEventListener('open',onOpen,{once:true});
+        this.ws.addEventListener('error',onError,{once:true});
+        this.ws.addEventListener('close',onClose,{once:true});
+        timeout=setTimeout(()=>finish('CDP_CONNECT_TIMEOUT'),connectTimeoutMs);
+      });
+      // A close racing the open promise continuation must not be missed.
+      if(this.ws.readyState!==1)throw Error('CDP_DISCONNECTED_AFTER_OPEN');
+    }catch(error){
+      try{this.ws.close();}catch{}
+      throw error;
+    }
     this.ws.addEventListener('message',e=>{
       let p;try{p=JSON.parse(e.data);}catch{return;}
       if(p.id){const cb=this.pending.get(p.id);if(cb){this.pending.delete(p.id);p.error?cb.no(Error(p.error.message)):cb.yes(p.result||{});}}
@@ -148,12 +176,13 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
        origin.pathname!=='/'||origin.search||origin.hash)throw Error('INVALID_ORIGIN');
     expectedOrigin=origin.origin;
   }catch{throw Error('BAD_CHAT_ORIGIN');}
-  const c=await(makeSession?makeSession():new Cdp(ws).open()),active=new Map(),finished=[];
+  const captureStartedAt=Date.now();
+  const c=await(makeSession?makeSession():new Cdp(ws).open(Math.min(timeoutMs,5000))),active=new Map(),finished=[];
   let startedPostCount=0,dialogFrameId=null,dialogLoaderId=null;
   let expectedDocumentURL=null,dialogInitiatorType=null;
   let expectedTargetId=null,mainFrameId=null,mainLoaderId=null,lifecycleArmed=false;
   let yes,no;const completion=new Promise((a,b)=>{yes=a;no=b;});
-  const deadline=Date.now()+timeoutMs;
+  const deadline=captureStartedAt+timeoutMs;
   // A resolved body-count promise cannot be rejected again. Preserve a
   // separate failure channel through metadata ACK and post-capture quiescence.
   let fatal=null,quiescenceReject=null;
@@ -162,7 +191,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     no(fatal);
     quiescenceReject?.(fatal);
   };
-  const timer=setTimeout(()=>invalidate(Error('CDP_TIMEOUT')),timeoutMs);
+  const timer=setTimeout(()=>invalidate(Error('CDP_TIMEOUT')),Math.max(0,deadline-Date.now()));
   const validTime=t=>typeof t==='number'&&Number.isFinite(t)&&t>=0;
   const millis=(x,t)=>{
     if(!validTime(x.start)||!validTime(t)||t<x.start){x.missing=true;return null;}
