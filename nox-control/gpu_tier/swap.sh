@@ -68,5 +68,14 @@ for r in ("unsloth/GLM-5.3-Flash-GGUF","ggml-org/GLM-5.3-Flash-GGUF"):
 P
   df -h /dev/shm | tail -1
   ;;
+swapB)
+  echo "== B: поиск скриптов эталона, кто занял shm, кто собирает движок"
+  find / -xdev \( -name mind_bench.py -o -name soul_recognition.py -o -name ru_probe* -o -name "fid*prov*" \) -not -path "*/node_modules/*" 2>/dev/null | head -10
+  ls -d /root/nox/MIND /root/nox/GROW /root/nox/src/wow7/* /tmp/nox_v7 2>/dev/null | head -12
+  du -sh /dev/shm/* 2>/dev/null | sort -rh | head -8; df -h /dev/shm | tail -1
+  pgrep -af "cmake|gmake|git clone|curl.*huggingface|hf_|aria2|python3 /root/nox" | grep -v pgrep | cut -c1-170 | head -12
+  ls -la /root/nox | grep -E "llama.cpp-f|flash" ; ls /root/nox/state/MODEL_SWAP 2>/dev/null
+  cat /root/nox/gpu_tier/glm.args; uptime
+  ;;
 *) echo "unknown stage $S";;
 esac
