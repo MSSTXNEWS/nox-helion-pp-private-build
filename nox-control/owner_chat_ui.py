@@ -30,6 +30,9 @@ class _LiveOwnerAssetScanner(HTMLParser):
         if tag in ('textarea', 'title', 'xmp', 'iframe', 'noembed', 'noframes'):
             self.raw_text_tag=tag
             return
+        # Nested inert elements remain inert until their *matching* close.
+        # Count nested templates/noscript before skipping all other tags;
+        # otherwise an inner </template> exposes scripts in its outer parent.
         if tag in ('template', 'noscript'):
             self.inert_depth+=1
             return
