@@ -37,8 +37,27 @@ CHAT_SNAPSHOT_TTL_S = 120
 def _prune_chat_snapshots():
     cutoff = time.monotonic() - CHAT_SNAPSHOT_TTL_S
     for key, row in list(CHAT_SNAPSHOTS.items()):
-        if row["updated_at"] < cutoff:
+        # In-flight model streams can be silent longer than the privacy TTL.
+        # They still own their snapshot until their actual generator exits.
+        if row["updated_at"] < cutoff and row.get("request_id") not in ACTIVE_CHAT_IDS:
             CHAT_SNAPSHOTS.pop(key, None)
+
+
+def _reserve_chat_snapshot_slot():
+    """Reserve one bounded process-local snapshot without evicting a live one.
+
+    A busy stream must not become unrecoverable just because other requests
+    filled the 24-entry cache. If every slot is active, fail before admitting
+    the new model request rather than running it without a reconnect cursor.
+    """
+    _prune_chat_snapshots()
+    if len(CHAT_SNAPSHOTS) < MAX_CHAT_SNAPSHOTS:
+        return True
+    for key, row in list(CHAT_SNAPSHOTS.items()):
+        if row.get("request_id") not in ACTIVE_CHAT_IDS:
+            CHAT_SNAPSHOTS.pop(key, None)
+            return True
+    return False
 
 # Bound the canonical response before a corrupt upstream can exhaust RAM or S03.
 MAX_CHAT_OUTPUT_UTF8_BYTES = 128 * 1024
@@ -718,6 +737,13 @@ def install(app, B):
                                      "s03_readback_verified": False}, status_code=409)
         if len(ACTIVE_CHAT_IDS) >= MAX_ACTIVE_CHAT_IDS:
             return JSONResponse({"status": "HOLD", "reason": "CHAT_ACTIVE_CAPACITY"}, status_code=503)
+        # Reserve before registering the active request: a capacity HOLD
+        # must not leave a stale active ID, start inference or touch S03.
+        if not eph and not _reserve_chat_snapshot_slot():
+            return JSONResponse({"status": "HOLD",
+                                 "reason": "CHAT_SNAPSHOT_ACTIVE_CAPACITY",
+                                 "retry_same_id": True,
+                                 "snapshot_scope": "PROCESS_LOCAL"}, status_code=503)
         ACTIVE_CHAT_IDS.add(rid)
 
         # Each HTTP stream has its own server-assigned identity and monotonically
@@ -725,9 +751,6 @@ def install(app, B):
         stream_id = secrets.token_hex(16)
         frame_seq = 0
         if not eph:
-            _prune_chat_snapshots()
-            while len(CHAT_SNAPSHOTS) >= MAX_CHAT_SNAPSHOTS:
-                CHAT_SNAPSHOTS.pop(next(iter(CHAT_SNAPSHOTS)))
             CHAT_SNAPSHOTS[stream_id] = {
                 "request_id": rid, "exchange_id": exchange_id, "event_seq": 0, "text": "",
                 "text_bytes": 0, "state": "ADMITTED", "terminal": False,
