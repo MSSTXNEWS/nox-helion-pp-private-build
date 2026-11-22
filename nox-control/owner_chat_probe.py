@@ -753,7 +753,7 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
         if not isinstance(wire, bytes) or not wire.endswith(b'\n'):
             raise RuntimeError('HOLD_STREAM_MISSING_NEWLINE')
         if mode is None:
-            if sse_allowed and wire.startswith((b'data:', b'event:', b':')):
+            if sse_allowed and wire.startswith((b'data:', b'event:', b'id:', b'retry:', b':')):
                 mode = 'sse'
             elif wire.lstrip().startswith(b'{'):
                 mode = 'ndjson'
