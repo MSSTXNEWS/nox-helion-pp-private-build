@@ -2375,3 +2375,40 @@ test('injected CDP session factory stalls are bounded and late sessions are clos
   assert.equal(healthy.ttft_sse_verified,true);
   assert.equal(healthy.native_verified,false,'fixture never proves installed runtime');
 });
+
+test('pre-capture CDP bootstrap commands and onReady obey one absolute deadline',async()=>{
+  // Each of the six bootstrap commands can hang independently; onReady may
+  // also never settle. No hang may turn into an accepted TTFT/completion.
+  const base={ws:'ws://127.0.0.1:9333/fake',expectedChatOrigin:'http://localhost',
+    timeoutMs:115,quiescenceMs:50,responseBodyAckTimeoutMs:25,
+    requestPostDataAckTimeoutMs:25};
+  for(const stall of ['Network.enable','Page.enable','Target.setDiscoverTargets',
+    'Browser.getVersion','Target.getTargetInfo','Page.getFrameTree','onReady']){
+    const session=new Stub();
+    let closed=0,readyCalled=0,resolveLate;
+    const send=session.send.bind(session);
+    session.send=(cmd,p)=>cmd===stall?new Promise(resolve=>{resolveLate=resolve;}):send(cmd,p);
+    session.close=()=>{closed++;};
+    const started=Date.now();
+    await assert.rejects(capture({...base,makeSession:()=>session,
+      onReady:()=>{
+        readyCalled++;
+        if(stall==='onReady')return new Promise(()=>{});
+      }}),error=>error?.message==='CDP_TIMEOUT',
+    'stalled '+stall+' must fail closed at the capture deadline');
+    assert.ok(Date.now()-started<850,stall+' must not hang indefinitely');
+    assert.equal(closed,1,stall+' must close its CDP session exactly once');
+    assert.equal(readyCalled,stall==='onReady'?1:0,stall+' readiness boundary');
+    if(resolveLate){
+      resolveLate({});
+      await new Promise(resolve=>setImmediate(resolve));
+      assert.equal(closed,1,stall+' late ACK cannot re-open the capture');
+    }
+  }
+  const good=await run();
+  assert.equal(good.cdp_consistent,true,'healthy two-turn control unchanged');
+  assert.equal(good.ttft_sse_verified,true,'healthy SSE timing control unchanged');
+  assert.equal(good.turns.length,2);
+  assert.equal(good.native_verified,false,'synthetic control never claims production');
+  assert.equal(good.canonical_s03_verified,false);
+});
