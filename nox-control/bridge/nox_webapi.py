@@ -1115,7 +1115,12 @@ def install(app, B):
                             verdict = await W.skeptic(lambda m, n_: B.ask(m, n_, slot=1), user, full, record=not eph)
                             if not isinstance(verdict, dict) or type(verdict.get("ok")) is not bool:
                                 raise ValueError("SKEPTIC_INVALID_VERDICT")
-                            sk = verdict
+                            # Verifier metadata is untrusted: extra keys may be
+                            # unserializable, non-finite or private. Never let an
+                            # advisory payload poison the terminal SSE receipt.
+                            sk = {"ok": verdict["ok"]}
+                            if verdict["ok"] is False:
+                                sk["doubt"] = verdict.get("doubt")
                         except Exception as e:
                             B.log("web_skeptic_unavailable " + type(e).__name__)
                             sk = {"ok": None, "reason": "SKEPTIC_UNAVAILABLE"}
