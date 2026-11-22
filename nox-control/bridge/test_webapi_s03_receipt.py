@@ -752,6 +752,72 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "HOLD")
         self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
 
+    def test_stop_after_skeptic_status_never_calls_second_model(self):
+        """1A04: client STOP on check event must fence optional skeptic inference."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *ignored): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Ответ"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
+        bridge = self.bridge
+        bridge.LAST_CHAT, bridge.NKEEP = {"t": 0}, 0
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Стоп проверка"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        class Thinking:
+            def __init__(self): self.skeptic_calls = 0
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return False
+            def mode_hint(self, *args): return ""
+            async def skeptic(self, *args, **kwargs):
+                self.skeptic_calls += 1
+                return {"ok": True}
+
+        thinking = Thinking()
+        async def scenario():
+            response = await chat(Request({
+                "request_id": "stop-before-skeptic",
+                "mode": "thoughtful",
+                "use_memory": False,
+                "messages": [{"role": "user", "content": "Стоп проверка"}],
+            }))
+            frames = []
+            stop_status = None
+            async for row in response.body_iterator:
+                frame = json.loads(row)
+                frames.append(frame)
+                if (frame.get("nox_event") or {}).get("step") == "check":
+                    signal = await stop(Request({"request_id": "stop-before-skeptic"}))
+                    stop_status = signal["status"]
+            return frames, stop_status
+
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "W", thinking), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            frames, signal_status = asyncio.run(scenario())
+        self.assertEqual(signal_status, "STOPPING")
+        self.assertEqual(thinking.skeptic_calls, 0)
+        self.assertEqual(writes, [])
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
+        self.assertFalse(frames[-1]["completion_receipt"]["upstream_done"])
+        self.assertNotEqual(frames[-1]["memory_write_receipt"]["status"], "SAVED")
+
     def test_secondary_soul_mirror_is_gated_by_s03_write_and_is_nonfatal(self):
         """S03 failure must not leak into secondary memory; mirror failure cannot hide DONE."""
         class Upstream:
