@@ -475,6 +475,42 @@ async function check(chunks, status=200) {
             __import__('owner_chat_browser_qa').presecond_owner_history_fence)
         self.assertIn('presecond_firstturn_history_stable(', owner_fence)
 
+    def test_first_to_second_owner_history_root_dialog_presence_is_pinned(self):
+        """Two separately valid RU/ES histories cannot change root dialog scope."""
+        from owner_chat_browser_qa import firstturn_root_session_continuity_valid
+        import copy
+
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        persisted = [
+            dict(row, message_id=f'persisted-{i}', dialog_id=DIALOG,
+                 session_id='owner-A')
+            for i, row in enumerate(rows(spanish))
+        ]
+        first = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                 'messages': copy.deepcopy(persisted[:2])}
+        completed = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                     'messages': copy.deepcopy(persisted)}
+        check = firstturn_root_session_continuity_valid
+        self.assertTrue(firstturn_history_valid(first, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            completed['messages'], RU, FIRST, spanish, LAST, dialog_id=DIALOG))
+        self.assertTrue(check(first, completed))
+
+        absent_first = copy.deepcopy(first)
+        absent_final = copy.deepcopy(completed)
+        del absent_first['dialog_id']
+        del absent_final['dialog_id']
+        # The old verifier permitted one-sided root disappearance or
+        # appearance despite both individual snapshots being scope-valid.
+        self.assertTrue(firstturn_history_valid(
+            absent_first, RU, FIRST, DIALOG))
+        self.assertTrue(check(absent_first, absent_final))
+        self.assertFalse(check(first, absent_final))
+        self.assertFalse(check(absent_first, completed))
+        altered = copy.deepcopy(completed)
+        altered['dialog_id'] = 'another-dialog'
+        self.assertFalse(check(first, altered))
+
     def test_postsecond_root_session_provenance_cannot_rotate_from_first_ru_turn(self):
         """The four-row response must preserve the first root owner-session.
 

@@ -604,9 +604,14 @@ def firstturn_root_session_continuity_valid(first_history, completed_history):
             or not root_history_session_valid(first_history, first_rows)
             or not root_history_session_valid(completed_history, completed_rows)):
         return False
+    # A root dialog_id is optional only in entirely legacy owner histories.
+    # Its presence must not rotate between RU and ES while row IDs/text match.
     return (('session_id' in first_history, first_history.get('session_id'))
             == ('session_id' in completed_history,
-                completed_history.get('session_id')))
+                completed_history.get('session_id'))
+            and ('dialog_id' in first_history, first_history.get('dialog_id'))
+            == ('dialog_id' in completed_history,
+                completed_history.get('dialog_id')))
 
 
 def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
