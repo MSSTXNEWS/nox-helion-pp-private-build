@@ -222,7 +222,8 @@ REASON_RE = re.compile(
     re.I,
 )
 FORMAL_VERB_REPAIRS = (
-    (re.compile(r"\bты\s+(?:не\s+)?прав(?:а)?\b", re.I), "вы правы"),
+    (re.compile(r"\bты\s+(?:неправ(?:а)?|не\s+прав(?:а)?)\b", re.I), "вы не правы"),
+    (re.compile(r"\bты\s+прав(?:а)?\b", re.I), "вы правы"),
     (re.compile(r"\bты\s+хочешь\b", re.I), "вы хотите"),
     (re.compile(r"\bты\s+можешь\b", re.I), "вы можете"),
     (re.compile(r"\bты\s+знаешь\b", re.I), "вы знаете"),
