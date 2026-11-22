@@ -820,6 +820,53 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertNotIn(rid, W.CANCEL)
 
 
+    def test_1a04_stop_on_memory_source_prevents_reminder_side_effect(self):
+        """A STOP on the memory SSE frame cannot create a reminder or invoke GPU."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
+        bridge = self.bridge
+        bridge.LAST_CHAT, bridge.NKEEP = {"t": 0}, 0
+        model_calls, reminders, writes = [], [], []
+        bridge.hc = lambda: model_calls.append("main-model")
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        class Thinking:
+            def maybe_reminder(self, *args):
+                reminders.append("created")
+                return None
+            def wants_plan(self, *args): return False
+            def mode_hint(self, *args): return ""
+
+        rid = "stop-before-reminder-side-effect"
+        async def scenario():
+            response = await chat(Request({
+                "request_id": rid, "mode": "fast", "use_memory": False,
+                "messages": [{"role": "user", "content": "Поставь напоминание"}],
+            }))
+            frames, signal = [], None
+            async for item in response.body_iterator:
+                frame = json.loads(item)
+                frames.append(frame)
+                if "nox_sources" in frame:
+                    signal = await stop(Request({
+                        "scope": "generation", "request_id": rid}))
+            return frames, signal
+
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "W", Thinking()), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            frames, signal = asyncio.run(scenario())
+        self.assertEqual(signal["status"], "STOPPING")
+        self.assertEqual(reminders, [])
+        self.assertEqual(model_calls, [])
+        self.assertEqual(writes, [])
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
+        self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+        self.assertFalse(frames[-1]["completion_receipt"]["upstream_done"])
+
     def test_stop_on_plan_status_prevents_optional_gpu_planning(self):
         """1A04: STOP at plan SSE status must not invoke the planner model."""
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
