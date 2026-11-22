@@ -30,6 +30,14 @@ CREATE TABLE IF NOT EXISTS mem_questions(
   id INTEGER PRIMARY KEY, ts REAL, kind TEXT, a_ref TEXT, b_ref TEXT, pair TEXT UNIQUE, question TEXT,
   status TEXT NOT NULL DEFAULT 'open', answer TEXT, answered_ts REAL);
 CREATE TABLE IF NOT EXISTS mem_autobio(day TEXT PRIMARY KEY, text TEXT, data TEXT, ts REAL);
+CREATE TABLE IF NOT EXISTS zm_advice(
+  id INTEGER PRIMARY KEY, speaker TEXT NOT NULL, privacy TEXT NOT NULL DEFAULT 'owner_only',
+  text TEXT NOT NULL, premises TEXT NOT NULL, breakers TEXT NOT NULL DEFAULT '[]',
+  free_premises TEXT NOT NULL DEFAULT '[]', nox_conf REAL,
+  status TEXT NOT NULL DEFAULT 'live', history TEXT NOT NULL DEFAULT '[]',
+  src_kind TEXT NOT NULL DEFAULT 'nox_generated',
+  t_event REAL NOT NULL, t_learned REAL NOT NULL, created REAL NOT NULL, updated REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS zm_advice_speaker_status ON zm_advice(speaker,status);
 """
 
 
