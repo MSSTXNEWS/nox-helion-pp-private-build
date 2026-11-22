@@ -71,6 +71,7 @@
       let timedOut=false;
       const stopped=()=>timedOut?'STOPPED_TIMEOUT':'STOPPED';
       const timer=setTimeout(()=>{timedOut=true;ctrl.abort();},timeoutMs);
+      let reader=null,streamComplete=false;
       try{
         // STOP and timeout must interrupt a hung preflight, not merely an SSE
         // stream. This remains a read-only probe; no local claim is native CAS.
@@ -121,7 +122,8 @@
           hold('HOLD_STREAM_POST_RESPONSE');
         // Never silently replace malformed/incomplete UTF-8 with U+FFFD in
         // a model delta. An ambiguous stream must recover from canonical GET.
-        const reader=res.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
+        reader=res.body.getReader();
+        const decoder=new TextDecoder('utf-8',{fatal:true});
         let buf='',swallowNextLF=false;
         while(true){
           if(ctrl.signal.aborted) return stopped();
@@ -143,16 +145,7 @@
           }finally{
             if(onReadAbort) ctrl.signal.removeEventListener('abort',onReadAbort);
           }
-          if(outcome.aborted||ctrl.signal.aborted){
-            // Best-effort stream cleanup, deliberately NOT awaited. Some
-            // readers leave cancel() pending forever after network abort.
-            try{
-              const cancellation=reader.cancel();
-              if(cancellation&&typeof cancellation.catch==='function')
-                cancellation.catch(()=>{});
-            }catch(_){}
-            return stopped();
-          }
+          if(outcome.aborted||ctrl.signal.aborted) return stopped();
           if(outcome.readError) hold('HOLD_STREAM_POST_OR_READ');
           const part=outcome.part;
           // EventSource allows CR, LF, and CRLF. Dispatch a lone CR
@@ -228,7 +221,7 @@
           // The unframed tail, unlike completed events, must be bounded.
           // A single unterminated oversized event is not a valid stream.
           if(buf.length>65536) hold('HOLD_STREAM_FRAME_TOO_LARGE');
-          if(part.done) break;
+          if(part.done){streamComplete=true;break;}
         }
         if(ctrl.signal.aborted) return stopped();
         return 'STREAM_ENDED_READBACK_REQUIRED';
@@ -239,6 +232,17 @@
       }finally{
         clearTimeout(timer);
         active.delete(k);
+        // STOP or stream HOLD can happen while awaiting an uncooperative UI
+        // projection (not only inside reader.read()). Release the underlying
+        // SSE connection on *every* non-EOF exit without awaiting cancel().
+        // A hung cancel must never block STOP, nor permit another model POST.
+        if(reader&&!streamComplete){
+          try{
+            const cancellation=reader.cancel();
+            if(cancellation&&typeof cancellation.catch==='function')
+              cancellation.catch(()=>{});
+          }catch(_){}
+        }
       }
     }
     function stop(raw){
