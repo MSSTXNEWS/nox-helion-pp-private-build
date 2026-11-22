@@ -1,0 +1,28 @@
+name: NOX A5 2A05 latency receipt source gate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/owner_latency_2a05.py'
+      - 'nox-control/test_owner_latency_2a05.py'
+      - '.github/workflows/nox-a5-2a05-latency-source-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-2a05:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Single focused bounded receipt regression
+        run: |
+          set -euo pipefail
+          PYTHONPATH=nox-control python3 -m unittest -v test_owner_latency_2a05
+          echo 'NOX_2A05_SOURCE_ONLY=true'
+          echo 'NOX_2A05_NATIVE_ACCEPTED=false'
