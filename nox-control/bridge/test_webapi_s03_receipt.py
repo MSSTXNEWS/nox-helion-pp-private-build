@@ -369,7 +369,7 @@ class FactReceiptTest(unittest.TestCase):
             return [json.loads(chunk) async for chunk in response.body_iterator]
 
         for content, expected_error in (
-            ("\\ud800", "UPSTREAM_CONTENT_UNICODE_INVALID"),
+            ("\ud800", "UPSTREAM_CONTENT_UNICODE_INVALID"),
             ("x" * (W.MAX_CHAT_OUTPUT_UTF8_BYTES + 1), "UPSTREAM_OUTPUT_LIMIT"),
         ):
             with self.subTest(error=expected_error):
