@@ -120,7 +120,7 @@
         if(!res||res.ok!==true||!res.body||typeof res.body.getReader!=='function')
           hold('HOLD_STREAM_POST_RESPONSE');
         const reader=res.body.getReader(),decoder=new TextDecoder();
-        let buf='';
+        let buf='',swallowNextLF=false;
         while(true){
           if(ctrl.signal.aborted) return stopped();
           // reader.read() is not guaranteed to settle when a custom transport
@@ -153,18 +153,18 @@
           }
           if(outcome.readError) hold('HOLD_STREAM_POST_OR_READ');
           const part=outcome.part;
-          // EventSource permits CR, LF and CRLF line endings. Keep a trailing
-          // CR unresolved until the next network read: it might be the first
-          // half of CRLF, and treating it as LF early would create a false
-          // blank line when the next chunk starts with LF.
-          // At EOF flush the decoder and the final pending CR so a CR-only
-          // blank line at the end of a stream can dispatch its frame.
-          if(part.done){
-            buf=(buf+decoder.decode()).replace(/\r\n?|\r/g,'\n');
-          }else{
-            buf=(buf+decoder.decode(part.value,{stream:true}))
-              .replace(/\r\n|\r(?=[\s\S])/g,'\n');
+          // EventSource allows CR, LF, and CRLF. Dispatch a lone CR
+          // immediately (without waiting for another chunk or EOF), but
+          // swallow a following LF if CRLF was split between reads. Even
+          // zero-character TextDecoder outputs must preserve this fence.
+          let decoded=part.done?decoder.decode():
+            decoder.decode(part.value,{stream:true});
+          if(swallowNextLF&&decoded.length){
+            if(decoded[0]==='\n') decoded=decoded.slice(1);
+            swallowNextLF=false;
           }
+          if(decoded.endsWith('\r')) swallowNextLF=true;
+          buf+=decoded.replace(/\r\n?/g,'\n');
           let e;
           while((e=buf.indexOf('\n\n'))>=0){
             // Bound EACH frame, not the aggregate transport read. One chunk
