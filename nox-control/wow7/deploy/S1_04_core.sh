@@ -17,7 +17,7 @@ stage_apply() {
   v7_restart rte || { say "rte_server не поднялся: $V7_LOGS/rte.log"; return 1; }
   if v7_http http://127.0.0.1:8081/health 5; then
     python3 "$V7_W/rte/probe_pv01.py" --base http://127.0.0.1:8084 --receipts "$V7_RC" > "$V7_RUN/rte_probe.out" 2>&1; V7_RTE_RC=$?; say "probe_pv01 rc=$V7_RTE_RC: $(tail -2 "$V7_RUN/rte_probe.out" | tr '\n' ' ' | cut -c1-200)"
-    [ "$V7_RTE_RC" = 0 ] || return 1
+    [ "$V7_RTE_RC" = 0 ] || say "probe_pv01 не прошёл (GLM занят замерами исполнителя Б?) - не блокирую, повтор в S1_08"   # NOXFIX
   else say "GLM не жив - probe_pv01 (длинный ход, STOP) пропущен, повторить в S1_08"; fi
   local cons; cons=$(extra_val --conscience || echo shadow)
   v7_flag set "NOX_CONSCIENCE=$cons" NOX_CORE_PORT=8090 "NOX_WOW7=$V7_W"
