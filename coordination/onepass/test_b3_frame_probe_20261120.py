@@ -116,6 +116,12 @@ class TestProbe(unittest.TestCase):
             'http://127.0.0.1:18877/nox%252Fchat/stream',
             'http://127.0.0.1:18877/api/nox/chat',
             'http://127.0.0.1:18877/api/nox%2Fchat/stream',
+            'http://127.0.0.1:18877/API/NOX/CHAT',
+            'http://127.0.0.1:18877/%2fapi/nox/chat',
+            'http://127.0.0.1:18877/api%255CNOX%255CCHAT',
+            'http://127.0.0.1:18877/nox/chat;rev=2',
+            'http://127.0.0.1:18877/api/nox/chat%3Bsession=1',
+            'http://127.0.0.1:18877/api//nox///chat/stream',
         ):
             with self.subTest(block=url):
                 self.assertTrue(is_model_chat_endpoint(url))
@@ -124,6 +130,8 @@ class TestProbe(unittest.TestCase):
             'http://127.0.0.1:18877/nox/chat.html',
             'http://127.0.0.1:18877/api/nox/chatty',
             'http://127.0.0.1:18877/assets/chat.css',
+            'http://127.0.0.1:18877/api/nox/chat.html',
+            'http://127.0.0.1:18877/NOX/CHATTER',
         ):
             with self.subTest(allow=url):
                 self.assertFalse(is_model_chat_endpoint(url))
