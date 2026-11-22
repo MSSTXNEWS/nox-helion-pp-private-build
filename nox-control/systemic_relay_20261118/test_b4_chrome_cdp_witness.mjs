@@ -2030,3 +2030,79 @@ test('late FIRST terminal-close replay during SECOND SSE revokes first only',asy
   assert.equal(afterCapture,1);
   assert.equal(JSON.stringify(sealed),snapshot);
 });
+
+test('late FIRST requestWillBeSent replay during SECOND stream revokes first not second',async()=>{
+  const clean=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  assert.deepEqual(clean.turns.map(t=>t.cdp_request_id),['1','2']);
+  for(const [name,request] of [
+    ['same-request',{method:'POST',url:'http://localhost/api/nox/chat',
+      postData:'{"secret":"0"}'}],
+    ['changed-first-body',{method:'POST',url:'http://localhost/api/nox/chat',
+      postData:'{"changed":true}'}],
+    ['missing-metadata',{method:'POST',url:'http://localhost/api/nox/chat'}]
+  ]){
+    let firstAck=false,ackBeforeSecond=false,delivered=0;
+    const observed=await run(false,null,null,null,{
+      quiescenceMs:80,
+      responseBodySettled:(id,status)=>{
+        if(id==='1'&&status==='resolved')firstAck=true;
+      },
+      lifecycleDuringSecond:session=>{
+        ackBeforeSecond=firstAck;delivered++;
+        session.emit('Network.requestWillBeSent',{
+          requestId:'1',timestamp:101.004,frameId:'fixture-frame',
+          loaderId:'fixture-loader',documentURL:'http://localhost/nox/chat',
+          initiator:{type:'script'},request});
+      }
+    });
+    assert.equal(ackBeforeSecond,true,name+' FIRST body ACK before SECOND');
+    assert.equal(delivered,1,name+' replay received during SECOND in flight');
+    assert.equal(observed.cdp_consistent,false,name+' pair must fail closed');
+    assert.equal(observed.ttft_sse_verified,false,name);
+    assert.deepEqual(observed.turns.map(t=>t.cdp_request_id),['1','2'],name);
+    const [first,second]=observed.turns;
+    for(const key of ['request_sha256','cdp_streamed_body_sha256',
+      'cdp_decoded_body_sha256'])
+      assert.deepEqual(first[key],clean.turns[0][key],name+' FIRST diagnostic '+key);
+    assert.equal(first.cdp_decoded_body_matches_stream,false,name);
+    assert.equal(first.ttft_ms,null,name);
+    assert.equal(first.sse_done_ms,null,name);
+    assert.equal(first.visible_text_sha256,null,name);
+    assert.equal(first.stream_timing_complete,false,name);
+    for(const key of ['cdp_request_id','request_sha256','cdp_streamed_body_sha256',
+      'cdp_decoded_body_sha256','cdp_decoded_body_matches_stream',
+      'visible_text_sha256','ttft_ms','sse_done_ms',
+      'sse_done_to_loading_finished_ms','stream_timing_complete'])
+      assert.deepEqual(second[key],clean.turns[1][key],name+' SECOND independent '+key);
+    assert.equal(second.stream_timing_complete,true,name);
+    assert.equal(second.ttft_ms,10,name+' synthetic CDP, not model TTFT');
+    assert.doesNotMatch(JSON.stringify(observed),/secret|Hello|data:/,name);
+  }
+  // CDP redirects stay globally fatal even for an already-closed FIRST ID.
+  await assert.rejects(run(false,null,null,null,{
+    lifecycleDuringSecond:session=>session.emit('Network.requestWillBeSent',{
+      requestId:'1',timestamp:101.004,redirectResponse:{status:302},
+      request:{method:'POST',url:'http://localhost/api/nox/chat'}})
+  }),/CDP_CHAT_REDIRECT/);
+  // Quiescence is bounded. A notification after capture cannot update the
+  // already-returned witness or justify a lifetime-long absence guarantee.
+  let afterCapture=0;
+  const sealed=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      afterCapture++;
+      session.emit('Network.requestWillBeSent',{
+        requestId:'1',timestamp:101.06,
+        request:{method:'POST',url:'http://localhost/api/nox/chat',
+          postData:'{"late":true}'}});
+    },90)
+  });
+  assert.equal(sealed.cdp_consistent,true);
+  assert.equal(afterCapture,0);
+  const snapshot=JSON.stringify(sealed);
+  await new Promise(resolve=>setTimeout(resolve,125));
+  assert.equal(afterCapture,1);
+  assert.equal(JSON.stringify(sealed),snapshot);
+});
