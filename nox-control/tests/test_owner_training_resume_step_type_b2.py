@@ -3407,8 +3407,8 @@ class MediaOutputRehashPathFence(unittest.TestCase):
                 verify(row)
             path.write_bytes(data)
             self.assertIsNone(verify(row))
-            # Path becomes unavailable after the FD opened but before name stat.
-            with mock.patch.object(Path, "stat", side_effect=FileNotFoundError("rebound")):
+            # A descriptor readback fails after opening the stable named FD.
+            with mock.patch("os.fstat", side_effect=FileNotFoundError("rebound")):
                 with self.assertRaisesRegex(
                         RuntimeError, "^HOLD_MEDIA_ACCEPTANCE_OUTPUT_PATH_CHANGED$"):
                     verify(row)
