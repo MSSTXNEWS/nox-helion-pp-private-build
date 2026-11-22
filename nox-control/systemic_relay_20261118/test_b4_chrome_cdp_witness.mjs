@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {capture} from './b4_chrome_cdp_witness.mjs';
+import {capture,Cdp} from './b4_chrome_cdp_witness.mjs';
 const body='data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n';
 class Stub {
   constructor(){this.bodies=new Map();}
@@ -2293,5 +2293,55 @@ test('second responseReceived replay midstream fails closed without losing first
     assert.equal(x.turns[1].sse_done_ms,null,name);
     assert.equal(x.turns[1].stream_timing_complete,false,name);
     assert.doesNotMatch(JSON.stringify(x),/secret|Hello|data:/,name);
+  }
+});
+
+test('CDP handshake explicitly rejects pre-open close, error and stall with a bounded timeout',async()=>{
+  // A browser/CDP socket can disappear before the first open event; without
+  // the handshake guard the capture deadline used to start only afterwards.
+  const original=globalThis.WebSocket;
+  let mode='close',last;
+  class FakeSocket {
+    constructor(){
+      last=this;this.readyState=0;this.closeCount=0;this.handlers=new Map();
+      queueMicrotask(()=>{
+        if(mode==='close'){this.readyState=3;this.emit('close');}
+        if(mode==='error'){this.readyState=3;this.emit('error');}
+        if(mode==='open'){this.readyState=1;this.emit('open');}
+      });
+    }
+    addEventListener(name,fn){
+      if(!this.handlers.has(name))this.handlers.set(name,new Set());
+      this.handlers.get(name).add(fn);
+    }
+    removeEventListener(name,fn){this.handlers.get(name)?.delete(fn);}
+    emit(name){for(const fn of [...(this.handlers.get(name)??[])])fn({type:name});}
+    close(){this.closeCount++;this.readyState=3;this.emit('close');}
+    send(){}
+  }
+  try{
+    globalThis.WebSocket=FakeSocket;
+    for(const [nextMode,message] of [
+      ['close','CDP_DISCONNECTED_BEFORE_OPEN'],
+      ['error','CDP_CONNECT_ERROR'],
+      ['stall','CDP_CONNECT_TIMEOUT']
+    ]){
+      mode=nextMode;
+      const client=new Cdp('ws://127.0.0.1:9222/devtools/page/test');
+      await assert.rejects(client.open(40),new RegExp(message));
+      assert.equal(last.closeCount,1,'failed handshake closes its own socket');
+      for(const name of ['open','error','close'])
+        assert.equal(last.handlers.get(name)?.size??0,0,'handshake listeners cleared');
+    }
+    mode='open';
+    const valid=new Cdp('ws://127.0.0.1:9222/devtools/page/test');
+    assert.equal(await valid.open(40),valid);
+    assert.equal(last.readyState,1);
+    assert.equal(last.handlers.get('open')?.size??0,0);
+    valid.close();
+    await assert.rejects(new Cdp('ws://127.0.0.1:9222/devtools/page/test').open(10),
+      /BAD_CDP_CONNECT_TIMEOUT/);
+  }finally{
+    globalThis.WebSocket=original;
   }
 });
