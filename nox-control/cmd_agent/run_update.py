@@ -37,19 +37,26 @@ def main():
             hit = [r for r in rows if isinstance(r, dict) and pub.split()[1] in json.dumps(r)]
             if hit: key_id = hit[0].get("id"); break
             time.sleep(2)
+        # Do not dispatch SSH until the ephemeral provider key is confirmed.
+        # One remote command only: an SSH failure may hide an action that ran.
+        if key_id is None or not str(key_id).isdecimal() or int(key_id) <= 0:
+            sys.exit("HOLD_UNCONFIRMED_EPHEMERAL_KEY_ID; remote command NOT dispatched")
+        key_id = int(key_id)
         time.sleep(15)
-        for port in ports:
-            for attempt in range(3):
-                r = subprocess.run(["ssh", "-T", "-i", kf, "-p", str(port), "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes",
-                    "-o", "ConnectTimeout=15", "-o", "StrictHostKeyChecking=accept-new", "-o", "UserKnownHostsFile=" + d + "/kh",
-                    "root@" + ip, "bash -o pipefail -c " + shlex.quote(REMOTE)], capture_output=True, text=True, errors="replace", timeout=295, input=(os.environ.get("TS_AUTHKEY","") + "\n"))
-                print("ssh rc=%d" % r.returncode); print(re.sub(r"(github_pat_\w+|tskey-[\w-]+)", "***", r.stdout[-3000:]))
-                if r.returncode == 0: return
-                time.sleep(10)
-        sys.exit("ssh failed on all attempts")
+        r = subprocess.run(["ssh", "-T", "-i", kf, "-p", str(ports[0]), "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes",
+            "-o", "ConnectTimeout=15", "-o", "StrictHostKeyChecking=accept-new", "-o", "UserKnownHostsFile=" + d + "/kh",
+            "root@" + ip, "bash -o pipefail -c " + shlex.quote(REMOTE)], capture_output=True, text=True, errors="replace", timeout=295,
+            input=(os.environ.get("TS_AUTHKEY","") + "\n"))
+        print("ssh rc=%d" % r.returncode)
+        print(re.sub(r"(github_pat_\w+|tskey-[\w-]+)", "***", r.stdout[-3000:]))
+        if r.returncode != 0:
+            sys.exit("HOLD_AMBIGUOUS_SSH_REMOTE_OUTCOME; no automatic replay, owner readback required")
+
     finally:
-        if key_id is not None:
+        if isinstance(key_id, int) and key_id > 0:
             try: api("DELETE", "/instances/%d/ssh/%s" % (INSTANCE, key_id)); print("temp key detached")
             except Exception as e: print("DETACH FAILED", type(e).__name__, "- remove 'nox-update-button' key in Vast manually")
+        else:
+            print("HOLD_UNCONFIRMED_EPHEMERAL_KEY_ID: provider key cleanup needs owner inspection")
 
 main()
