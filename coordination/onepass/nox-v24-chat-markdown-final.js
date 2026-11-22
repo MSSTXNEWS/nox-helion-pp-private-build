@@ -6,7 +6,7 @@
   const act = k => document.querySelector('[data-action="' + k + '"]');
   const body = document.body, root = document.documentElement;
   const LS = 'nox_v24_dialog', LS_ARC = 'nox_v24_archived', LS_RAIL = 'nox_v24_rail';
-  const state = { dialog: null, active: null, status: null, address: 'auto', memPrev: null, archived: [] };
+  const state = { dialog: null, active: null, status: null, address: 'auto', memPrev: null, archived: [], historyEpoch: 0, historyAbort: null };
   try { state.archived = JSON.parse(localStorage.getItem(LS_ARC) || '[]'); if (!Array.isArray(state.archived)) state.archived = []; } catch { state.archived = []; }
   const say = t => { const n = $('chatHold'); if (n) n.textContent = t || ''; };
   const thought = t => { const n = $('noxV22Thought'); if (n) n.textContent = t || ''; };
@@ -288,33 +288,77 @@
     if (hs) hs.textContent = 'S03 · диалогов ' + all.length + ' · в архиве окна ' + state.archived.length + ' · сообщений создателя навсегда: ' + d.creator_messages_total;
     return all;
   }
+  // A changed dialog selection invalidates every outstanding history page.
+  async function getHistoryPage(url, signal) {
+    const r = await fetch(url, { method: 'GET', cache: 'no-store', signal });
+    if (!r.ok || !r.body?.getReader) throw Error('HOLD_HISTORY_HTTP_' + r.status);
+    const reader = r.body.getReader(), decoder = new TextDecoder('utf-8', { fatal: true });
+    let body = '', bytes = 0;
+    try {
+      for (;;) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        bytes += chunk.value.byteLength;
+        if (bytes > 262144) throw Error('HOLD_HISTORY_PAGE_BYTES');
+        body += decoder.decode(chunk.value, { stream: true });
+      }
+      body += decoder.decode();
+      return JSON.parse(body);
+    } finally { reader.releaseLock(); }
+  }
   async function loadDialog(id) {
+    const epoch = ++state.historyEpoch;
+    state.historyAbort?.abort();
+    const controller = new AbortController();
+    state.historyAbort = controller;
     state.dialog = id; try { localStorage.setItem(LS, id || ''); } catch { }
     $('messages').replaceChildren();
-    if (id) {
-      const all = [];
-      let cursor = null, priorCursor = null;
-      for (;;) {
-        const params = new URLSearchParams({ dialog_id: id, limit: '100' });
-        if (cursor !== null) params.set('cursor', cursor);
-        const h = await getJSON('/api/nox/history?' + params.toString());
-        if (!Array.isArray(h.messages)) throw Error('INVALID_HISTORY_PAGE');
-        all.unshift(...h.messages);
-        const next = h.next_cursor;
-        if (next === null || next === undefined || next === '') break;
-        const value = String(next);
-        const olderThan = priorCursor === null ||
-          value.length < priorCursor.length ||
-          (value.length === priorCursor.length && value < priorCursor);
-        if (!/^[1-9][0-9]{0,18}$/.test(value) || !olderThan) throw Error('INVALID_HISTORY_CURSOR');
-        priorCursor = value; cursor = value;
+    const all = [];
+    let partialReason = null;
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+      if (id) {
+        let cursor = null, priorCursor = null, pages = 0, chars = 0;
+        for (;;) {
+          const params = new URLSearchParams({ dialog_id: id, limit: '100' });
+          if (cursor !== null) params.set('cursor', cursor);
+          const h = await getHistoryPage('/api/nox/history?' + params.toString(), controller.signal);
+          if (epoch !== state.historyEpoch || state.dialog !== id) return;
+          if (!Array.isArray(h.messages) || h.messages.length > 100) throw Error('HOLD_HISTORY_PAGE');
+          const pageChars = JSON.stringify(h.messages).length;
+          if (chars + pageChars > 1800000 || all.length + h.messages.length > 1200) {
+            partialReason = 'HOLD_HISTORY_BYTES'; break;
+          }
+          chars += pageChars; pages++;
+          all.unshift(...h.messages);
+          const next = h.next_cursor;
+          if (next === null || next === undefined || next === '') break;
+          const value = String(next);
+          const olderThan = priorCursor === null ||
+            value.length < priorCursor.length ||
+            (value.length === priorCursor.length && value < priorCursor);
+          if (!/^[1-9][0-9]{0,18}$/.test(value) || !olderThan) throw Error('INVALID_HISTORY_CURSOR');
+          if (pages >= 12 || all.length >= 1200) {
+            partialReason = 'HOLD_HISTORY_PAGE_BUDGET'; break;
+          }
+          priorCursor = value; cursor = value;
+        }
       }
-      for (const m of all) {
-        message(m.role === 'user' ? 'user' : 'assistant', m.content,
-          m.role === 'user' ? String(m.created_at || '').slice(11, 16) : (m.status === 'stopped' ? 'остановлено STOP' : (m.status || '')) + ' · ' + String(m.created_at || '').slice(11, 16),
-          { status: m.status, source: /\[(MOCK|HARNESS)\]/.exec(m.model || '')?.[1] || (/^nox(-prime)?/.test(m.model || '') ? 'LIVE_NOX' : '') });
-      }
+    } catch (err) {
+      if (epoch !== state.historyEpoch || state.dialog !== id) return;
+      partialReason = controller.signal.aborted ? 'HOLD_HISTORY_TIMEOUT' : (err?.message || 'HOLD_HISTORY_FAILED');
+      controller.abort();
+    } finally {
+      clearTimeout(timeout);
+      if (state.historyAbort === controller) state.historyAbort = null;
     }
+    if (epoch !== state.historyEpoch || state.dialog !== id) return;
+    for (const m of all) {
+      message(m.role === 'user' ? 'user' : 'assistant', m.content,
+        m.role === 'user' ? String(m.created_at || '').slice(11, 16) : (m.status === 'stopped' ? 'остановлено STOP' : (m.status || '')) + ' · ' + String(m.created_at || '').slice(11, 16),
+        { status: m.status, source: /\[(MOCK|HARNESS)\]/.exec(m.model || '')?.[1] || (/^nox(-prime)?/.test(m.model || '') ? 'LIVE_NOX' : '') });
+    }
+    if (partialReason) say('История загружена частично · ' + partialReason);
     emptyHint(); refreshDialogs();
   }
   function startRename(id, title) {

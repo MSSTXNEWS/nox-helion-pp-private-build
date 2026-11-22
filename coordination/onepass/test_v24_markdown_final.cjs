@@ -41,6 +41,21 @@ function runtime() {
   return {render: context.render, node, window, ready, calls, timers, writes, tick};
 }
 
+function historyHarness(getHistoryPage) {
+  const messages = [], holds = [], state = { dialog: null, historyEpoch: 0, historyAbort: null };
+  const context = vm.createContext({ state, LS: 'nox-test', AbortController, URLSearchParams,
+    setTimeout, clearTimeout, getHistoryPage,
+    localStorage: {setItem() {}},
+    $() { return {replaceChildren() {}}; },
+    message(role, content) { messages.push({ dialog: state.dialog, role, content }); },
+    say(text) { holds.push(text); }, emptyHint() {}, refreshDialogs() {} });
+  const start = source.indexOf('  async function loadDialog(id) {');
+  const end = source.indexOf('  function startRename', start);
+  assert.ok(start > 0 && end > start);
+  vm.runInContext(source.slice(start, end) + '\n globalThis.loadFixture=loadDialog;', context);
+  return {load: context.loadFixture, state, messages, holds};
+}
+
 const tests = [
   ['dialog history follows every older cursor page without truncation', () => {
     const start = source.indexOf('  async function loadDialog(id) {');
@@ -52,6 +67,33 @@ const tests = [
     assert.match(loader, /all\.unshift\(\.\.\.h\.messages\)/);
     assert.match(loader, /INVALID_HISTORY_CURSOR/);
   }],
+  ['stale A history cannot render into a newer B selection', async () => {
+    let releaseA;
+    const h = historyHarness(url => {
+      const id = new URL(url, 'https://nox.local').searchParams.get('dialog_id');
+      if (id === 'A') return new Promise(resolve => { releaseA = resolve; });
+      return Promise.resolve({messages: [{role:'assistant', content:'B only'}], next_cursor:null});
+    });
+    const old = h.load('A'), newer = h.load('B');
+    await newer;
+    releaseA({messages: [{role:'assistant', content:'A stale'}], next_cursor:null});
+    await old;
+    assert.deepEqual(h.messages.map(m => m.content), ['B only']);
+    assert.equal(h.state.dialog, 'B');
+  }],
+  ['history page budget makes a partial result explicit after 12 pages', async () => {
+    let requests = 0;
+    const h = historyHarness(() => {
+      requests++;
+      return Promise.resolve({messages:Array.from({length:100},
+        (_,i) => ({role:'assistant', content:'row '+requests+'-'+i})),
+        next_cursor:String(10000-requests)});
+    });
+    await h.load('C');
+    assert.equal(requests, 12);
+    assert.equal(h.messages.length, 1200);
+    assert(h.holds.some(v => v.includes('частично') && v.includes('HOLD_HISTORY_PAGE_BUDGET')));
+  }],
   ['all unrelated V24 behavior remains the exact verified preimage', () => {
     const helperStart = source.indexOf('  // Final formatting owns only its original message node');
     assert.ok(helperStart > begin && helperStart < end);
@@ -62,7 +104,7 @@ const tests = [
       "        if (result && done.status === 'done' && !controller.signal.aborted) renderSafeMarkdown(out.body, result);\n        else if (!result) out.body.textContent = done.status === 'STOP_FLAG' ? '— STOP активен —' : '—';",
       "        const h = result && md(result); if (h) { out.body.innerHTML = h; highlight(out.body); } else if (!result) out.body.textContent = done.status === 'STOP_FLAG' ? '— STOP активен —' : '—';");
     assert.equal(crypto.createHash('sha256').update(original).digest('hex'),
-      'f3c51b34eda735950e11bcf6dcfa77e4199ccc9d63c57f65933079dd43386644');
+      'a6d427bc91d9ec929a38ffb06114e7c5a00098fbe5dcc759dd46d6ad3ac77ff1');
   }],
   ['only a string returned by the sanitizer reaches the HTML sink', () => {
     const r = runtime(), n = r.node(), raw = '<img src=x onerror=alert(1)> **text**';
@@ -118,5 +160,7 @@ const tests = [
   }]
 ];
 
-for (const [name, test] of tests) { test(); process.stdout.write('PASS ' + name + '\n'); }
-process.stdout.write(`${tests.length} local tests passed; native final-DOM acceptance remains separate.\n`);
+(async () => {
+  for (const [name, test] of tests) { await test(); process.stdout.write('PASS ' + name + '\n'); }
+  process.stdout.write(`${tests.length} local tests passed; native final-DOM acceptance remains separate.\n`);
+})().catch(e => { console.error(e); process.exitCode = 1; });

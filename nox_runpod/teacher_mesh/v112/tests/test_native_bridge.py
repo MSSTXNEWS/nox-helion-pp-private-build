@@ -591,6 +591,26 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(bad.status_code,422)
         self.assertEqual(bad.json()['error'],'INVALID_CURSOR')
 
+    def test_dialog_context_is_recent_bounded_complete_pairs(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
+            _db,_dialog_context,_save_exchange,
+        )
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Ограниченный контекст','confirmed':True}).json()['dialog_id']
+        for index in range(14):
+            self.assertTrue(_save_exchange(dialog,f'Вопрос {index}',f'Ответ {index}',
+                                          f'bounded-{index}'))
+        with _db(True) as db:
+            db.execute('INSERT INTO nox_v29_dialog_messages '
+                       '(dialog_id,exchange_id,role,content,ts) VALUES(?,?,?,?,?)',
+                       (dialog,'orphan','assistant','Незавершённая пара','2026-11-15'))
+        issue,history=_dialog_context(dialog)
+        self.assertIsNone(issue)
+        self.assertEqual(len(history),24)
+        self.assertEqual(history[0],{'role':'user','content':'Вопрос 2'})
+        self.assertEqual(history[-1],{'role':'assistant','content':'Ответ 13'})
+        self.assertTrue(all(row['content']!='Незавершённая пара' for row in history))
+
     def test_dialog_context_preserves_full_multibyte_ru_and_es_text(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
         dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
