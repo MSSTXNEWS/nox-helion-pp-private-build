@@ -78,7 +78,17 @@ export class Cdp {
     });
     this.ws.addEventListener('close',()=>{for(const x of this.pending.values())x.no(Error('CDP_DISCONNECTED'));this.pending.clear();this.listener?.('CDP_DISCONNECTED',{});});return this;
   }
-  send(method,params={}){return new Promise((yes,no)=>{const id=++this.next;this.pending.set(id,{yes,no});this.ws.send(JSON.stringify({id,method,params}));});}
+  send(method,params={}){return new Promise((yes,no)=>{
+    const id=++this.next;
+    this.pending.set(id,{yes,no});
+    try{this.ws.send(JSON.stringify({id,method,params}));}
+    catch(error){
+      // Promise rejects on synchronous WebSocket.send failure, but its
+      // pending entry must also be removed (no later ACK can revive it).
+      this.pending.delete(id);
+      no(error);
+    }
+  });}
   on(fn){this.listener=fn;}
   close(){this.ws?.close();}
 }

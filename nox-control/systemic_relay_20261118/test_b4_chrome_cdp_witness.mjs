@@ -2412,3 +2412,50 @@ test('pre-capture CDP bootstrap commands and onReady obey one absolute deadline'
   assert.equal(good.native_verified,false,'synthetic control never claims production');
   assert.equal(good.canonical_s03_verified,false);
 });
+
+test('Cdp.send synchronous WebSocket throw frees pending and keeps later SSE healthy',async()=>{
+  const original=globalThis.WebSocket;
+  let socket;
+  class FakeSocket {
+    constructor(){
+      socket=this;this.readyState=0;this.handlers=new Map();
+      queueMicrotask(()=>{this.readyState=1;this.emit('open',{});});
+    }
+    addEventListener(name,fn){
+      if(!this.handlers.has(name))this.handlers.set(name,new Set());
+      this.handlers.get(name).add(fn);
+    }
+    removeEventListener(name,fn){this.handlers.get(name)?.delete(fn);}
+    emit(name,data){for(const fn of [...(this.handlers.get(name)??[])])
+      fn(name==='message'?{data:JSON.stringify(data)}:{type:name});}
+    send(wire){
+      const command=JSON.parse(wire);
+      if(this.failNext){
+        this.failNext=false;
+        throw Error('FIXTURE_WS_SEND_SYNC_THROW');
+      }
+      queueMicrotask(()=>this.emit('message',{id:command.id,result:{ok:true}}));
+    }
+    close(){this.readyState=3;this.emit('close',{});}
+  }
+  try{
+    globalThis.WebSocket=FakeSocket;
+    const client=await new Cdp('ws://127.0.0.1:9222/devtools/page/b4').open(100);
+    socket.failNext=true;
+    await assert.rejects(client.send('Network.enable'),/FIXTURE_WS_SEND_SYNC_THROW/);
+    assert.equal(client.pending.size,0,'failed command cannot remain pending');
+    socket.emit('message',{id:1,result:{ok:true}});
+    assert.equal(client.pending.size,0,'late ACK cannot revive failed command');
+    assert.deepEqual(await client.send('Page.enable'),{ok:true},
+      'a subsequent CDP command still succeeds');
+    assert.equal(client.pending.size,0,'healthy ACK also clears pending');
+    client.close();
+  }finally{
+    globalThis.WebSocket=original;
+  }
+  const healthy=await run();
+  assert.equal(healthy.cdp_consistent,true,'healthy two-turn capture remains valid');
+  assert.equal(healthy.ttft_sse_verified,true,'healthy SSE first-text timing remains valid');
+  assert.equal(healthy.turns.length,2);
+  assert.equal(healthy.native_verified,false,'source fixture is not a native acceptance');
+});
