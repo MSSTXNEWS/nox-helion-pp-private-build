@@ -907,12 +907,23 @@ def install(app, B):
                                  memory_history={"status": "SKIPPED", "reason": "USER_STOP",
                                                  "s03_readback_verified": False})
                         return
-                    try: rem = W.maybe_reminder(user, "mini" if mini else "chat")
-                    except Exception: rem = None
-                    if rem:
-                        hh = time.strftime("%d.%m %H:%M", time.gmtime(rem["reminder"]["due"] + 3 * 3600))
-                        extra += "[Напоминание создано на %s МСК: подтверди коротко.]" % hh
-                        yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "reminder", "text": "напоминание на " + hh + " МСК", "reminder": rem["reminder"]})
+                    # Reminder display is advisory. A malformed/partial receipt
+                    # must not abort an already admitted real model stream.
+                    try:
+                        rem = W.maybe_reminder(user, "mini" if mini else "chat")
+                        if rem:
+                            reminder = rem.get("reminder") if isinstance(rem, dict) else None
+                            due = reminder.get("due") if isinstance(reminder, dict) else None
+                            if (type(due) not in (int, float) or not math.isfinite(due)
+                                    or not 0 <= due <= 253402289999):
+                                raise ValueError("REMINDER_DUE_INVALID")
+                            hh = time.strftime("%d.%m %H:%M", time.gmtime(due + 3 * 3600))
+                            extra += "[Напоминание создано на %s МСК: подтверди коротко.]" % hh
+                            yield fr(message={"role": "assistant", "content": ""}, done=False,
+                                     nox_event={"step": "reminder", "text": "напоминание на " + hh + " МСК",
+                                                "reminder": reminder})
+                    except Exception as e:
+                        B.log("web_reminder_advisory_unavailable " + type(e).__name__)
                 if W and not mini:
                     # Optional planning must not abort the primary live-chat route.
                     # Treat a failed advisory classifier as unavailable.
