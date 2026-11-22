@@ -163,7 +163,13 @@ def _executor_status_reply(user_text,path=None):
                 if task is not None:return unknown
             else:return unknown
             ids.append(name)
-        if owner_maintenance_gate()!='ABSENT':return unknown
+        # Owner maintenance may transition or become unreadable after the
+        # first guard. Never turn an unstable owner gate into a 500 response
+        # or certify a stale executor snapshot as live.
+        try:
+            if owner_maintenance_gate()!='ABSENT':return unknown
+        except Exception:
+            return unknown
         observed=datetime.fromtimestamp(meta.st_mtime,timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
         # This file describes logical scheduler slots, not authenticated
         # native process identities. Never turn its freshness alone into a
