@@ -2,6 +2,8 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import json
+import tempfile
 
 spec = importlib.util.spec_from_file_location(
     "nox_dispatcher_advisor", Path(__file__).with_name("nox_dispatcher_advisor.py")
@@ -118,6 +120,36 @@ class NativeRefillSourceGateTests(unittest.TestCase):
                 s["native_queue"][field] = value
                 self.assertIn("NATIVE_REFILL_OWNER_HOLD",
                               codes(s, lambda exact: exact is s))
+
+    def test_advice_output_cannot_overwrite_snapshot_or_symlink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            evidence = root / "owner-snapshot.json"
+            original = json.dumps(snapshot(), sort_keys=True)
+            evidence.write_text(original, encoding="utf8")
+            report = {"schema_version": 1, "mode": "read_only", "advice": []}
+            with self.assertRaisesRegex(SystemExit, "HOLD_OWNER_ADVICE_OUTPUT_COLLISION"):
+                mod._write_report(evidence, evidence, report)
+            self.assertEqual(evidence.read_text(encoding="utf8"), original)
+            link = root / "advisor.json"
+            link.symlink_to(evidence)
+            with self.assertRaisesRegex(SystemExit, "HOLD_OWNER_ADVICE_OUTPUT_COLLISION|HOLD_OWNER_ADVICE_OUTPUT_UNSAFE"):
+                mod._write_report(evidence, link, report)
+            self.assertEqual(evidence.read_text(encoding="utf8"), original)
+
+    def test_atomic_advice_receipt_replaces_complete_json_without_temp_leak(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            evidence = root / "owner-snapshot.json"
+            evidence.write_text(json.dumps(snapshot()), encoding="utf8")
+            output = root / "advisor.json"
+            output.write_text('{"previous":"complete"}\n', encoding="utf8")
+            report = {"schema_version": 1, "mode": "read_only", "advice": [
+                {"code": "NATIVE_REFILL_OWNER_HOLD", "urgency": "hold", "advice": "Await owner."}
+            ]}
+            mod._write_report(evidence, output, report)
+            self.assertEqual(json.loads(output.read_text(encoding="utf8")), report)
+            self.assertEqual(list(root.glob(".advisor.json.*.tmp")), [])
 
     def test_missing_stop_is_higher_priority(self):
         s = snapshot()
