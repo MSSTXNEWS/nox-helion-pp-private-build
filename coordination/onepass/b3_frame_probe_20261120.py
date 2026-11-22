@@ -57,13 +57,18 @@ def is_model_chat_endpoint(url):
     browser-observer guard, NOT a change to the production serving route.
     """
     path = urlsplit(url).path
-    # Browsers and reverse proxies may normalize %2F or a nested encoding.
-    for _ in range(3):
+    # Proxies may decode %2F, collapse repeated separators, case-fold
+    # routes, or strip ;matrix parameters before dispatching inference.
+    for _ in range(4):
         decoded = unquote(path)
         if decoded == path:
             break
         path = decoded
-    return any(path == root or path.startswith(root + '/')
+    path = path.replace('\\', '/').lower()
+    while '//' in path:
+        path = path.replace('//', '/')
+    return any(path == root or path.startswith(root + '/') or
+               path.startswith(root + ';')
                for root in ('/api/nox/chat', '/nox/chat'))
 
 
