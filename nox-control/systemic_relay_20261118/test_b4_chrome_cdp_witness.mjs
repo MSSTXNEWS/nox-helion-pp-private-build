@@ -2843,3 +2843,173 @@ test('R22 third printable delta before STOP/DONE cannot certify midstream loadin
   // These are deterministic CDP fixture observations, not a live-browser
   // timing measurement or an independent S03 writer/readback.
 });
+test('R23 actual headless Chromium: loopback three-turn SSE/CDP provenance, two-turn compatibility and third abort', {timeout:65000}, async t=>{
+  // LOCAL browser + LOCAL synthetic HTTP. This never contacts NOX/model/production.
+  const [{createServer},{spawn,spawnSync},{mkdtemp,readFile,rm},
+    {tmpdir},{join},{setTimeout:sleep},{createHash}]=await Promise.all([
+      import('node:http'),import('node:child_process'),import('node:fs/promises'),
+      import('node:os'),import('node:path'),import('node:timers/promises'),
+      import('node:crypto')
+    ]);
+  const binaries=[process.env.NOX_B4_CHROMIUM_BIN,'google-chrome-stable',
+    'google-chrome','chromium','chromium-browser'].filter(Boolean);
+  const browser=binaries.find(name=>spawnSync('which',[name],{encoding:'utf8'}).status===0);
+  if(!browser){t.skip('NOX_B4_REAL_CHROMIUM_NOT_INSTALLED (not browser-verified)');return;}
+  const sha256=s=>createHash('sha256').update(s).digest('hex');
+  const answers=['Hola, niño 🌈','Привет, космос 🚀','第三回 ✨'];
+  const frames=text=>[
+    ': heartbeat\n\n',
+    'data: '+JSON.stringify({choices:[{delta:{content:text}}]})+'\n\n',
+    'data: '+JSON.stringify({choices:[{delta:{},finish_reason:'stop'}]})+'\n\n',
+    'data: [DONE]\n\n'
+  ];
+  const requests=[];
+  const server=createServer(async(req,res)=>{
+    try{
+      if(req.method==='GET'&&req.url==='/nox/chat'){
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        res.end('<!doctype html><html><head><meta charset="utf-8"><title>NOX B4 loopback only</title></head><body></body></html>');
+        return;
+      }
+      if(req.method!=='POST'||req.url!=='/api/nox/chat'){
+        res.writeHead(404);res.end();return;
+      }
+      let body='';
+      for await(const chunk of req)body+=chunk.toString('utf8');
+      const p=JSON.parse(body),ordinal=p.ordinal;
+      if(!Number.isInteger(ordinal)||ordinal<1||ordinal>3||
+         !['clean3','clean2','aborted3'].includes(p.scenario)){
+        res.writeHead(400);res.end();return;
+      }
+      requests.push({scenario:p.scenario,ordinal,bodySha:sha256(body)});
+      const chunks=frames(answers[ordinal-1]);
+      res.writeHead(200,{'Content-Type':'text/event-stream; charset=utf-8',
+        'Cache-Control':'no-store, no-transform','X-Accel-Buffering':'no'});
+      res.flushHeaders();
+      await sleep(90); // let Chrome subscribe via Network.streamResourceContent
+      res.write(chunks[0]);await sleep(28);
+      res.write(chunks[1]);await sleep(28);
+      if(p.scenario==='aborted3'&&ordinal===3){
+        res.destroy(); // printable text, but no model STOP/[DONE]/loadingFinished
+        return;
+      }
+      res.write(chunks[2]);await sleep(28);
+      res.end(chunks[3]);
+    }catch{try{res.destroy();}catch{}}
+  });
+  await new Promise((resolve,reject)=>{
+    server.once('error',reject);
+    server.listen(0,'127.0.0.1',resolve);
+  });
+  const origin='http://127.0.0.1:'+server.address().port;
+  const pageUrl=origin+'/nox/chat';
+  let chrome=null,profile=null;
+  try{
+    profile=await mkdtemp(join(tmpdir(),'nox-b4-chrome-r23-'));
+    chrome=spawn(browser,[
+      '--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage',
+      '--disable-background-networking','--no-first-run','--no-default-browser-check',
+      '--no-proxy-server','--remote-debugging-port=0','--user-data-dir='+profile,
+      pageUrl
+    ],{stdio:'ignore'});
+    let debugPort=null;
+    for(let attempt=0;attempt<130;attempt++){
+      try{
+        const lines=(await readFile(join(profile,'DevToolsActivePort'),'utf8')).split('\n');
+        debugPort=Number(lines[0]);
+        if(Number.isInteger(debugPort)&&debugPort>0)break;
+      }catch{}
+      if(chrome.exitCode!==null)throw Error('CHROMIUM_EXITED_BEFORE_CDP');
+      await sleep(100);
+    }
+    assert.ok(debugPort,'CHROMIUM_DEBUG_PORT_UNAVAILABLE');
+    let target=null;
+    for(let attempt=0;attempt<100;attempt++){
+      try{
+        const listing=await (await fetch('http://127.0.0.1:'+debugPort+'/json/list')).json();
+        target=listing.find(p=>p.type==='page'&&p.url===pageUrl&&
+          /^ws:\/\/127\.0\.0\.1:\d+\/devtools\/page\//.test(p.webSocketDebuggerUrl));
+      }catch{}
+      if(target)break;
+      await sleep(100);
+    }
+    assert.ok(target,'CHROMIUM_PAGE_TARGET_NOT_FOUND');
+    const sample=async(scenario,count)=>{
+      const posts=Array.from({length:count},(_,i)=>({scenario,ordinal:i+1}));
+      const expression='(async()=>{const posts='+JSON.stringify(posts)+
+        ';let failures=0;for(const p of posts){const r=await fetch("/api/nox/chat",'+
+        '{method:"POST",headers:{"Content-Type":"application/json"},'+
+        'body:JSON.stringify(p)});if(!r.ok)throw Error("BAD_LOOPBACK_STATUS");'+
+        'try{await r.text();}catch(e){if(p.scenario==="aborted3"&&p.ordinal===3)'+
+        'failures++;else throw e;}await new Promise(resolve=>setTimeout(resolve,110));}'+
+        'return failures;})()';
+      return capture({ws:target.webSocketDebuggerUrl,count,
+        expectedChatOrigin:origin+'/',timeoutMs:30000,quiescenceMs:120,
+        responseBodyAckTimeoutMs:1500,requestPostDataAckTimeoutMs:1500,
+        onReady:async c=>{
+          const x=await c.send('Runtime.evaluate',
+            {expression,awaitPromise:true,returnByValue:true});
+          assert.ok(!x.exceptionDetails,
+            'REAL_BROWSER_EVALUATION_FAILED '+String(x.exceptionDetails?.text||''));
+          assert.equal(x.result?.value,scenario==='aborted3'?1:0);
+        }});
+    };
+    const exact=async(scenario,count)=>{
+      const result=await sample(scenario,count);
+      assert.match(result.chrome_product,/^Chrome\/\d+/);
+      assert.equal(result.browser_authenticated,false);
+      assert.equal(result.native_verified,false);
+      assert.equal(result.canonical_s03_verified,false);
+      assert.equal(result.remote_attested,false);
+      assert.equal(result.turns.length,count);
+      assert.equal(new Set(result.turns.map(p=>p.cdp_request_id)).size,count);
+      for(let i=0;i<count;i++){
+        const turn=result.turns[i];
+        const request=JSON.stringify({scenario,ordinal:i+1});
+        assert.equal(turn.request_sha256,sha256(request));
+        assert.equal(turn.status,200);
+        assert.equal(turn.mime,'text/event-stream');
+        if(scenario==='aborted3'&&i===2)continue;
+        assert.equal(turn.cdp_decoded_body_sha256,sha256(frames(answers[i]).join('')));
+        assert.equal(turn.cdp_streamed_body_sha256,turn.cdp_decoded_body_sha256);
+        assert.equal(turn.cdp_decoded_body_matches_stream,true);
+        assert.equal(turn.visible_text_sha256,sha256(answers[i]));
+        assert.ok(turn.ttft_ms>0&&turn.sse_done_ms>=turn.ttft_ms);
+        assert.ok(turn.close_ms>=turn.sse_done_ms);
+        assert.equal(turn.stream_timing_complete,true);
+      }
+      return result;
+    };
+    const good3=await exact('clean3',3);
+    assert.equal(good3.cdp_consistent,true);
+    assert.equal(good3.ttft_sse_verified,true);
+    const good2=await exact('clean2',2);
+    assert.equal(good2.cdp_consistent,true);
+    assert.equal(good2.ttft_sse_verified,true);
+    const aborted=await exact('aborted3',3);
+    assert.equal(aborted.cdp_consistent,false,'aborted third may not certify three turns');
+    assert.equal(aborted.ttft_sse_verified,false);
+    assert.equal(aborted.turns[2].ttft_ms,null);
+    assert.equal(aborted.turns[2].sse_done_ms,null);
+    assert.equal(aborted.turns[2].visible_text_sha256,null);
+    assert.equal(aborted.turns[2].stream_timing_complete,false);
+    assert.equal(requests.length,8,'one real network POST per loopback turn');
+    for(const scenario of ['clean3','clean2','aborted3']){
+      assert.deepEqual(requests.filter(p=>p.scenario===scenario).map(p=>p.ordinal),
+        Array.from({length:scenario==='clean2'?2:3},(_,i)=>i+1));
+    }
+    const sourceDigest=sha256(answers.map(a=>frames(a).join('')).join('\0'));
+    t.diagnostic('NOX_B4_R23_LOOPBACK_REAL_CHROMIUM='+good3.chrome_product+
+      '; fixture_sha256='+sourceDigest+
+      '; turn3_ttft_ms='+good3.turns[2].ttft_ms+
+      '; turn3_done_ms='+good3.turns[2].sse_done_ms+
+      '; native_verified=false; production_model_tokens_per_second=NOT_MEASURED');
+    assert.doesNotMatch(JSON.stringify(good3),/Hola|Привет|第三回/,
+      'CDP witness exports digests, not raw fake prompt or output');
+  }finally{
+    try{chrome?.kill('SIGKILL');}catch{}
+    server.closeAllConnections();
+    await new Promise(resolve=>server.close(resolve));
+    if(profile)await rm(profile,{recursive:true,force:true,maxRetries:3,retryDelay:100});
+  }
+});
