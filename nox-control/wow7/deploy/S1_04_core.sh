@@ -33,7 +33,7 @@ stage_apply() {
   grep -q '"ok": true' "$V7_RUN/gw_core_probe.json" || { say "чат через шлюз+CORE не ответил"; return 1; }
   V7_RESULT="core=ok conscience=$cons core_flag=1 rte_probe=${V7_RTE_RC:-skipped}"
 }
-stage_health() { v7_health_regress && v7_http http://127.0.0.1:8090/health 5 && v7_http http://127.0.0.1:8082/health 10; }
+stage_health() { v7_health_regress && v7_http http://127.0.0.1:8090/health 5 && v7_http http://127.0.0.1:8082/v1/nox/stats 10; }
 stage_rollback() {
   v7_flag unset NOX_CORE NOX_CONSCIENCE NOX_CORE_PORT
   pkill -f 'wow7/brain/nox_core\.py' 2>/dev/null; pkill -f 'rte_server\.py' 2>/dev/null

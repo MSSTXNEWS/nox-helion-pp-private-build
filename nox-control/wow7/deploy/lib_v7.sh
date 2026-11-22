@@ -162,7 +162,7 @@ v7_restart() {
   if [ "$DRY" = 1 ]; then echo "[dry-run] restart $n (через DSP если жив, иначе gw_env.py)"; return 0; fi
   if v7_dsp_live; then v7_flags_to_local; v7_dsp restart "$n" >/dev/null 2>&1; sleep 3; return 0; fi
   case "$n" in
-    gateway) python3 "$V7_TOOLS/gw_env.py" restart --match 'python3 .*gateway\.py' --cwd "$V7_CTL/glm53" --log "$V7_LOGS/gateway.log" --health http://127.0.0.1:8082/health \
+    gateway) python3 "$V7_TOOLS/gw_env.py" restart --match 'python3 .*gateway\.py' --cwd "$V7_CTL/glm53" --log "$V7_LOGS/gateway.log" --health http://127.0.0.1:8082/v1/nox/stats \
                --env-default "PYTHONPATH=$V7_CTL" --env-default "NOX_UPSTREAM=http://127.0.0.1:8081" --env-default "NOX_FAST_UPSTREAM=http://127.0.0.1:8083" --env-default NOX_TWO_STAGE=1 --env-default NOX_SOUL=1 --env-default NOX_EMOTION=1 \
                -- python3 "$V7_CTL/glm53/gateway.py";;
     recall)  python3 "$V7_TOOLS/gw_env.py" restart --match 'qs6\.recall_server' --cwd "$V7_CTL" --log "$V7_LOGS/recall_api.log" --health http://127.0.0.1:8095/health \
@@ -219,6 +219,7 @@ v7_main() {
   v7_receipt running started="$(date -Is)"
   v7_bk_begin; v7_snap_health
   mkdir -p "$V7_RUN"; v7_sync_set deploy >/dev/null 2>&1 || true
+  mkdir -p "$V7_RUN/tools"; cp -f "$V7_W"/deploy/*.py "$V7_RUN/tools/" 2>/dev/null; V7_TOOLS="$V7_RUN/tools"   # NOXFIX: откат не должен терять инструменты
   if stage_apply; then
     if stage_health; then v7_receipt ok finished="$(date -Is)" ${V7_RESULT:+result="$V7_RESULT"}; say "ГОТОВО"; exit 0; fi
     say "здоровье НЕ прошло"

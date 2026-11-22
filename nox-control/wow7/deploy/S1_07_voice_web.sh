@@ -43,7 +43,7 @@ stage_apply() {
   V7_RESULT="voice=$RES_VOICE;web=$RES_WEB;img=$RES_IMG"; say "$V7_RESULT"; v7_receipt running voice="$RES_VOICE" web="$RES_WEB" img="$RES_IMG" web_dir="${WEB_DST:-}"
   case "$RES_WEB$RES_VOICE" in *failed*) return 1;; esac; return 0
 }
-stage_health() { v7_health_regress && v7_http http://127.0.0.1:8082/health 10; }
+stage_health() { v7_health_regress && v7_http http://127.0.0.1:8082/v1/nox/stats 10; }
 stage_rollback() { pkill -f 'wow/voice_server\.py' 2>/dev/null; pkill -f 'wow/presence\.py' 2>/dev/null; python3 "$V7_TOOLS/gw_env.py" flags unset NOX_VOICE_PORT >/dev/null 2>&1; return 0; }
 
 V7_SELF="${BASH_SOURCE[0]}"; V7_SELF_DIR=$(cd "$(dirname "$V7_SELF")" && pwd)
