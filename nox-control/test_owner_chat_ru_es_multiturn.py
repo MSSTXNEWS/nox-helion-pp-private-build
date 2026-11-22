@@ -3493,9 +3493,10 @@ async function check(chunks, status=200) {
             {"messages": first}, RU, FIRST, DIALOG))
         self.assertTrue(multiturn_history_valid(
             complete, RU, FIRST, prompt, LAST, DIALOG))
-        for malicious in (" padded", "padded ", "word\\tpart",
-                          "word\\npart", "\\u200bhidden", "a\\u2066b",
-                          "a\\u200db", "word\\rpart"):
+        for malicious in (" padded", "padded ", "word"+chr(9)+"part",
+                          "word"+chr(10)+"part", chr(0x200b)+"hidden",
+                          "a"+chr(0x2066)+"b", "a"+chr(0x200d)+"b",
+                          "word"+chr(13)+"part"):
             with self.subTest(id=ascii(malicious)):
                 corrupt_first = [dict(row) for row in first]
                 corrupt_first[0]["message_id"] = malicious
