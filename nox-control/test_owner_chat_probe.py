@@ -2033,5 +2033,68 @@ class ProbeTests(unittest.TestCase):
 
 
 
+    def test_nested_stream_model_provenance_matches_actual_route(self):
+        """Nested SSE model labels cannot hide route drift behind saved DONE."""
+        did = '1' * 32
+        for container in ('status', 'metadata', 'meta'):
+            with self.subTest(container=container):
+                frame = {'type': 'meta', container: {'model_id': 'GLM-5.3'}}
+                self.assertEqual(probe.require_stream_model_identity(frame), 'GLM-5.3')
+                self.assertEqual(probe.require_stream_model_identity(
+                    {'type': 'done', container: {'model': 'GLM-5.3'}}, 'GLM-5.3'),
+                    'GLM-5.3')
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT    unittest.main()
+):
+                    probe.require_stream_model_identity(
+                        {'type': 'status', 'model': 'GLM-5.3',
+                         container: {'model_id': 'other'}}, None)
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT    unittest.main()
+):
+                    probe.require_stream_model_identity(
+                        {'type': 'meta', container: {'model': 'other'}}, 'GLM-5.3')
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_STREAM_MODEL_IDENTITY_INVALID    unittest.main()
+):
+                    probe.require_stream_model_identity(
+                        {'type': 'status', container: {'model': True}}, None)
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        healthy = Response([
+            {'type': 'start', 'model': 'GLM-5.3'},
+            {'type': 'status', 'metadata': {'model_id': 'GLM-5.3'}},
+            {'type': 'delta', 'text': '323'},
+            dict(done, meta={'model': 'GLM-5.3'})])
+        with patch.object(probe, 'request', return_value=healthy):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)[
+                'stream_model_identity'], 'GLM-5.3')
+        self.assertTrue(healthy.closed)
+        poisoned = Response([
+            {'type': 'start', 'model': 'GLM-5.3'},
+            {'type': 'status', 'metadata': {'model': 'different'}},
+            {'type': 'delta', 'text': '323'}, done])
+        with patch.object(probe, 'request', return_value=poisoned):
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT    unittest.main()
+):
+                probe.consume_turn(object(), 'synthetic', did)
+        self.assertTrue(poisoned.closed)
+        unlabeled = Response([{'type': 'delta', 'text': '323'}, done])
+        with patch.object(probe, 'request', return_value=unlabeled):
+            self.assertIsNone(probe.consume_turn(object(), 'synthetic', did)[
+                'stream_model_identity'])
+        self.assertTrue(unlabeled.closed)
+
+
 if __name__ == '__main__':
     unittest.main()
