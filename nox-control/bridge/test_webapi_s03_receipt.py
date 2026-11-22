@@ -158,6 +158,53 @@ class FactReceiptTest(unittest.TestCase):
         self.assertFalse(unsafe_snapshot["s03_readback_verified"])
         self.assertEqual(len(writes), 2)
 
+    def test_0a03_s03_persists_exact_streamed_unicode_and_whitespace(self):
+        """Successful canonical writer call receives exact SSE text, not stripped text."""
+        import hashlib
+        reply = "  Привет 🌌\\n"
+        writes = []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: ' + json.dumps({"choices": [{"delta": {"content": "  Привет 🌌"}}]}, ensure_ascii=False)
+                yield 'data: ' + json.dumps({"choices": [{"delta": {"content": "\\n"}}]}, ensure_ascii=False)
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT = {"t": 0}
+        bridge.hc = lambda: Client()
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+
+        async def scenario():
+            response = await chat(Request({
+                "request_id": "a3-exact-unicode-whitespace", "mini": True,
+                "use_memory": False, "messages": [
+                    {"role": "user", "content": "Проверь сохранение Unicode"}
+                ]}))
+            return [json.loads(chunk) async for chunk in response.body_iterator]
+
+        with (mock.patch.object(W, "W", None),
+              mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.dict(sys.modules, {"s03_memory": memory})):
+            frames = asyncio.run(scenario())
+        streamed = "".join(frame.get("message", {}).get("content", "") for frame in frames)
+        self.assertEqual(streamed, reply)
+        self.assertEqual(writes, [("[mini] Проверь сохранение Unicode", reply)])
+        self.assertEqual(frames[-1]["digest"], hashlib.sha256(reply.encode()).hexdigest())
+        self.assertTrue(frames[-1]["done"])
+        self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+        self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
+
     def test_1a03_snapshot_ttl_not_extended_by_wall_clock_rollback(self):
         """A backward wall-clock jump must never retain chat snapshots past TTL."""
         snapshots = {
