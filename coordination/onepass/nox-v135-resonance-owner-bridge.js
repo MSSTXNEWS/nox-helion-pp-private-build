@@ -8,7 +8,7 @@
  const nativeFetch=window.fetch.bind(window);
  const enc=new TextEncoder();
  const ID=/^[a-f0-9]{32}$/;
- const verifiedDialogChain=new Map();
+ const verifiedChain=new Map();
  const activeDialogs=new Set();
  const issuedRequests=new Set();
  function pinRequest(data) {
@@ -87,25 +87,20 @@
     pair[0].content!==prompt||pair[1].content!==answer||
     pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
    throw Error('HOLD_DIALOG_HISTORY_READBACK');
- // Verify all locally observed ancestors; checking only the last pair
- // previously allowed a fourth turn to hide the loss of the first.
- const chain=verifiedDialogChain.get(id)||[];
- // Native history readback is capped at 100 messages = 50 full pairs.
+ const chain=verifiedChain.get(id)||[];
  if(chain.length>=50)throw Error('HOLD_DIALOG_HISTORY_WINDOW_EXHAUSTED');
- const chainStart=currentAt-chain.length*2;
- if(chainStart<0)throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
+ const begin=currentAt-2*chain.length;
+ if(begin<0)throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
  for(let i=0;i<chain.length;i++){
-   const prior=chain[i], user=data.messages[chainStart+i*2],
-     assistant=data.messages[chainStart+i*2+1];
-   if(!user||!assistant||user.role!=='user'||assistant.role!=='assistant'||
-      user.exchange_id!==prior.exchange_id||
-      assistant.exchange_id!==prior.exchange_id||
-      user.content!==prior.prompt||assistant.content!==prior.answer)
+   const p=chain[i],u=data.messages[begin+2*i],v=data.messages[begin+2*i+1];
+   if(!u||!v||u.role!=='user'||v.role!=='assistant'||
+      u.exchange_id!==p.exchange_id||v.exchange_id!==p.exchange_id||
+      u.content!==p.prompt||v.content!==p.answer)
      throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
  }
- if(!verifiedDialogChain.has(id)&&verifiedDialogChain.size>=128)
-   verifiedDialogChain.delete(verifiedDialogChain.keys().next().value);
- verifiedDialogChain.set(id,[...chain,{exchange_id:exchangeId,prompt,answer}]);
+ if(!verifiedChain.has(id)&&verifiedChain.size>=128)
+   verifiedChain.delete(verifiedChain.keys().next().value);
+ verifiedChain.set(id,[...chain,{exchange_id:exchangeId,prompt,answer}]);
  }
  function accepted(done,id) {
  return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
