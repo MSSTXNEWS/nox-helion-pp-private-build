@@ -1687,3 +1687,63 @@ test('late second requestServedFromCache after ACK revokes matched SSE body only
   assert.equal(beyond,1);
   assert.equal(JSON.stringify(sealed),snapshot);
 });
+
+
+test('late FIRST cache provenance during second POST revokes first only, retaining second SSE proof',async()=>{
+  const clean=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  let firstBodyAck=false,ackBeforeSecond=null,cacheEvents=0;
+  const observed=await run(false,null,null,null,{
+    quiescenceMs:80,
+    responseBodySettled:(id,status)=>{
+      if(id==='1'&&status==='resolved')firstBodyAck=true;
+    },
+    lifecycleDuringSecond:session=>{
+      // This executes after second requestWillBeSent but BEFORE its SSE
+      // response/data/DONE/loadingFinished events.
+      ackBeforeSecond=firstBodyAck;
+      cacheEvents++;
+      session.emit('Network.requestServedFromCache',{requestId:'1'});
+    }
+  });
+  assert.equal(ackBeforeSecond,true,'first getResponseBody ACK before second POST');
+  assert.equal(cacheEvents,1,'first cache event observed while second was in flight');
+  assert.equal(observed.cdp_consistent,false,'uncertain first provenance revokes pair');
+  assert.equal(observed.ttft_sse_verified,false);
+  assert.deepEqual(observed.turns.map(t=>t.cdp_request_id),['1','2']);
+  const first=observed.turns[0],second=observed.turns[1];
+  assert.equal(first.request_sha256,clean.turns[0].request_sha256);
+  assert.equal(first.cdp_streamed_body_sha256,clean.turns[0].cdp_streamed_body_sha256);
+  assert.equal(first.cdp_decoded_body_sha256,clean.turns[0].cdp_decoded_body_sha256);
+  assert.equal(first.cdp_decoded_body_matches_stream,false);
+  assert.equal(first.ttft_ms,null);assert.equal(first.sse_done_ms,null);
+  assert.equal(first.stream_timing_complete,false);
+  assert.equal(first.visible_text_sha256,null);
+  for(const key of ['cdp_request_id','request_sha256','cdp_decoded_body_sha256',
+    'cdp_streamed_body_sha256','visible_text_sha256','ttft_ms','sse_done_ms',
+    'sse_done_to_loading_finished_ms','stream_timing_complete',
+    'cdp_decoded_body_matches_stream']){
+    assert.deepEqual(second[key],clean.turns[1][key],'independent second '+key);
+  }
+  assert.equal(second.stream_timing_complete,true);
+  assert.equal(second.ttft_ms,10);
+  assert.doesNotMatch(JSON.stringify(observed),/secret|Hello|data:/);
+
+  // The observer has a finite capture interval. A first-turn cache event
+  // after capture cannot retroactively alter the returned sealed snapshot.
+  let afterCapture=0;
+  const sealed=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      afterCapture++;
+      session.emit('Network.requestServedFromCache',{requestId:'1'});
+    },90)
+  });
+  assert.equal(sealed.cdp_consistent,true);
+  assert.equal(afterCapture,0);
+  const snapshot=JSON.stringify(sealed);
+  await new Promise(resolve=>setTimeout(resolve,130));
+  assert.equal(afterCapture,1);
+  assert.equal(JSON.stringify(sealed),snapshot);
+});
