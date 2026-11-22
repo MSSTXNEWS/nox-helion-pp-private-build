@@ -3385,5 +3385,40 @@ class EmbeddedOwnerBoostPolicyDepthFence(unittest.TestCase):
             self.assertIs(allowed(), True)
 
 
+class MediaOutputRehashPathFence(unittest.TestCase):
+    def test_removed_and_rebound_media_get_named_hold(self):
+        # Run the actual reviewed verifier AST; no native GPU or media job.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        node = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                    and n.name == "verify_media_artifact")
+        namespace = {"Path": Path, "os": os, "stat": stat,
+                     "hashlib": hashlib}
+        exec(compile(ast.Module(body=[node], type_ignores=[]),
+                     str(SOURCE), "exec"), namespace)
+        verify = namespace["verify_media_artifact"]
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "approved.png"
+            data = b"valid prior verified media output"
+            row = {"path": str(path), "bytes": len(data),
+                   "sha256": hashlib.sha256(data).hexdigest()}
+            # Missing signed file is a predictable owner HOLD, not FileNotFoundError.
+            with self.assertRaisesRegex(
+                    RuntimeError, "^HOLD_MEDIA_ACCEPTANCE_OUTPUT_PATH_CHANGED$"):
+                verify(row)
+            path.write_bytes(data)
+            self.assertIsNone(verify(row))
+            # Path becomes unavailable after the FD opened but before name stat.
+            with mock.patch.object(Path, "stat", side_effect=FileNotFoundError("rebound")):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_MEDIA_ACCEPTANCE_OUTPUT_PATH_CHANGED$"):
+                    verify(row)
+            self.assertIsNone(verify(row))
+            path.unlink()
+            path.symlink_to(Path(folder) / "removed-target")
+            with self.assertRaisesRegex(
+                    RuntimeError, "^HOLD_MEDIA_ACCEPTANCE_OUTPUT_PATH_CHANGED$"):
+                verify(row)
+
+
 if __name__ == "__main__":
     unittest.main()

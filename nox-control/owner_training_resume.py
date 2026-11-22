@@ -780,7 +780,12 @@ def verify_media_artifact(row):
     path = Path(row['path'])
     if any(item.is_symlink() for item in (path, *path.parents)):
         raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_OUTPUT_PATH_CHANGED')
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError as exc:
+        # Signed media may have been removed after the original acceptance.
+        # Classify missing/rebound files as an explicit evidence HOLD.
+        raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_OUTPUT_PATH_CHANGED') from exc
     try:
         before = os.fstat(fd)
         if not stat.S_ISREG(before.st_mode) or before.st_size != row['bytes']:
@@ -798,6 +803,9 @@ def verify_media_artifact(row):
         if (count != row['bytes'] or value.hexdigest() != row['sha256']
                 or any(getattr(before, key) != getattr(after, key) or getattr(before, key) != getattr(named, key) for key in keys)):
             raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_OUTPUT_HASH_CHANGED')
+    except OSError as exc:
+        # Include unlink/rebind or I/O failure after the descriptor was opened.
+        raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_OUTPUT_PATH_CHANGED') from exc
     finally:
         os.close(fd)
 
