@@ -19,6 +19,8 @@ WEBROOT = "/opt/nox-web"
 M = {"t": 0, "gpu": [], "cpu": None, "ram": None, "disk": None}
 SRC = {}
 CANCEL = set()
+# Cap unresolved scoped STOP signals: unknown IDs must not exhaust host RAM.
+MAX_PENDING_SCOPED_STOPS = 4096
 # Increment-only broadcast STOP epoch: a new request cannot clear an older stream's STOP.
 CANCEL_ALL_EPOCH = 0
 _lock = None
@@ -498,6 +500,10 @@ def install(app, B):
             # A broadcast applies only to previously admitted requests.
             CANCEL_ALL_EPOCH += 1
         else:
+            # Never evict a real pending STOP to accept another unverified ID.
+            # Repeating an existing ID remains idempotent at the capacity bound.
+            if target not in CANCEL and len(CANCEL) >= MAX_PENDING_SCOPED_STOPS:
+                return JSONResponse({"status": "HOLD", "reason": "STOP_PENDING_CAPACITY"}, status_code=429)
             CANCEL.add(target)
         # Signal queued is not evidence that generation actually stopped.
         return {"status": "STOPPING", "scope": "generation",
