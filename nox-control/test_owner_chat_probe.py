@@ -2790,6 +2790,18 @@ class ProbeTests(unittest.TestCase):
                     probe, 'request', return_value=response):
                 with self.assertRaisesRegex(
                         RuntimeError, '^HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH
+                    probe.consume_turn(object(), 'second-turn', did)
+            self.assertTrue(response.closed)
+
+        response = Response(actual)
+        with patch.object(probe, 'request', return_value=response):
+            measured = probe.consume_turn(object(), 'second-turn', did)
+        self.assertEqual(measured['answer'], '323')
+        self.assertTrue(response.closed)
+
+
+if __name__ == '__main__':
+    unittest.main()
 ):
                     probe.consume_turn(object(), 'second-turn', did)
             self.assertTrue(response.closed)
