@@ -20,7 +20,11 @@ class TestProbe(unittest.TestCase):
             for width, height in ((320, 720), (390, 844), (1440, 900)):
                 for mode in ('normal', 'reduced'):
                     name = f'b3_{width}x{height}_{mode}.png'
-                    image = b'\x89PNG\r\n\x1a\n' + name.encode('ascii') * 8
+                    # Structural IHDR fixture (PNG decode not under test).
+                    image = (b'\x89PNG\r\n\x1a\n'
+                             + (13).to_bytes(4, 'big') + b'IHDR'
+                             + width.to_bytes(4, 'big') + height.to_bytes(4, 'big')
+                             + b'\x08\x06\x00\x00\x00' + b'\x00' * 4)
                     (base / name).write_bytes(image)
                     rows.append({'width': width, 'height': height, 'mode': mode,
                                  'screenshot': name, 'screenshot_bytes': len(image),
@@ -28,6 +32,20 @@ class TestProbe(unittest.TestCase):
             report = {'runs': rows}
             self.assertIsNone(verify_report_screenshots(report, base))
             target = base / rows[0]['screenshot']
+            original_header = target.read_bytes()
+            # Attacker recomputes the image SHA: only IHDR dimensions/type differ.
+            # Pre-fence these forged screenshot metadata pairs passed silently.
+            for spoofed in (
+                original_header[:16] + (390).to_bytes(4, 'big') + original_header[20:],
+                original_header[:12] + b'JUNK' + original_header[16:],
+            ):
+                target.write_bytes(spoofed)
+                altered = copy.deepcopy(report)
+                altered['runs'][0]['screenshot_sha256'] = hashlib.sha256(spoofed).hexdigest()
+                with self.subTest(spoofed=spoofed[12:24]), self.assertRaisesRegex(
+                        ValueError, 'HOLD_BASELINE_SCREENSHOT_DIMENSIONS'):
+                    verify_report_screenshots(altered, base)
+            target.write_bytes(original_header)
             original = target.read_bytes()
             target.write_bytes(original + b'tampered')
             with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_SCREENSHOT_BYTES_MISMATCH'):

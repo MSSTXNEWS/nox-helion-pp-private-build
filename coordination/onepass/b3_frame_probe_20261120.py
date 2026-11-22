@@ -157,9 +157,17 @@ def verify_report_screenshots(report, directory):
             payload = (pathlib.Path(directory) / name).read_bytes()
         except OSError as exc:
             raise ValueError('HOLD_BASELINE_SCREENSHOT_MISSING') from exc
-        if (len(payload) != length or not payload.startswith(b'\x89PNG\r\n\x1a\n') or
+        if (len(payload) != length or len(payload) < 33 or
+                not payload.startswith(b'\x89PNG\r\n\x1a\n') or
                 hashlib.sha256(payload).hexdigest() != digest):
             raise ValueError('HOLD_BASELINE_SCREENSHOT_BYTES_MISMATCH')
+        # Pin actual PNG pixel dimensions to the claimed viewport.
+        # A matching file SHA alone cannot validate a spoofed width/height.
+        if (int.from_bytes(payload[8:12], 'big') != 13 or
+                payload[12:16] != b'IHDR' or
+                int.from_bytes(payload[16:20], 'big') != row['width'] or
+                int.from_bytes(payload[20:24], 'big') != row['height']):
+            raise ValueError('HOLD_BASELINE_SCREENSHOT_DIMENSIONS')
         seen.add(name)
     if seen != expected:
         raise ValueError('HOLD_BASELINE_SCREENSHOT_COVERAGE')
