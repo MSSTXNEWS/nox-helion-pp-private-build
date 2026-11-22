@@ -1873,6 +1873,53 @@ def main():
           return true;
         }'''))
 
+        # A clean TCP EOF is not sufficient to declare a complete SSE
+        # event: an unterminated data/control tail must HOLD, keep the
+        # no-repost fence and permit canonical GET-only recovery.
+        check('truncated SSE EOF rejects unframed tail without repost; complete frames pass', page.evaluate('''async () => {
+          const cases=[
+            ['partial-data','event: delta\\nid: eof-partial\\ndata: LOST',
+              'HOLD_STREAM_TRUNCATED_SSE',0],
+            ['partial-control','event: heartbeat\\nid: ctl-partial',
+              'HOLD_STREAM_TRUNCATED_SSE',0],
+            ['complete','event: delta\\nid: eof-complete\\ndata: SAFE\\n\\n',
+              'STREAM_ENDED_READBACK_REQUIRED',1],
+            ['extra-blank','event: delta\\nid: eof-extra\\ndata: SAFE\\n\\n\\n',
+              'STREAM_ENDED_READBACK_REQUIRED',1]
+          ];
+          for(const [name,wire,expected,expectedDeltas] of cases){
+            const scope={conversation_id:'eof-fence',exchange_id:name};
+            let posts=0,acks=0,deltas=0,last=null;
+            const transport={...opts.transport,
+              async post(){
+                posts++;
+                return {ok:true,body:new ReadableStream({start(controller){
+                  controller.enqueue(new TextEncoder().encode(wire));
+                  controller.close();
+                }})};
+              },
+              async ack(){acks++;return true}
+            };
+            const ui={
+              async onDelta(_s,chunk,signal){
+                if(signal.aborted)throw Error('unexpected abort');
+                deltas++;last=chunk;
+              },
+              async upsertTerminal(){throw Error('no terminal')}
+            };
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:3000
+            });
+            const result=await c.begin(scope).then(x=>x,e=>e.code);
+            const refused=await c.begin(scope).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(result!==expected||posts!==1||acks!==0||
+              deltas!==expectedDeltas||!refused||
+              (expectedDeltas===1&&last!=='SAFE')) return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
