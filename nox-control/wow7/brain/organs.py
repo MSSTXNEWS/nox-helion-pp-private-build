@@ -139,7 +139,7 @@ class Organs:
 def build_default(state_dir=None):
     """Пробует подключить реальные органы из репозитория; что не поднялось - просто отсутствует (см. /health)."""
     parts = {}
-    sf = os.environ.get("NOX_SOUL_FILE") or os.path.join(ROOT, "PRIME", "soul_prime_v3.txt")
+    sf = os.environ.get("NOX_SOUL_FILE") or os.path.join(ROOT, "PRIME", "soul_prime_v4.txt")
     try:
         with open(sf, encoding="utf-8") as f:
             parts["soul"] = f.read().strip()
