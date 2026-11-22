@@ -232,7 +232,12 @@ class CheckpointStepProvenance(unittest.TestCase):
             helper = types.SimpleNamespace(CHECKPOINT_NAMES=names)
             self.assertTrue(check(helper, receipt))
             self.assertTrue(check(helper, {**receipt, "loss": 0.0}))
-            for invalid_loss in (-0.25, -1, -1e-300):
+            self.assertTrue(check(helper, {**receipt, "loss": 7}))
+            # Signed JSON with a 400-digit integer loss used to escape as
+            # OverflowError from math.isfinite(), not a stable owner HOLD.
+            for invalid_loss in (-0.25, -1, -1e-300, 10**400, -(10**400),
+                                 float('inf'), float('-inf'), float('nan'),
+                                 True, '0.5'):
                 with self.subTest(loss=invalid_loss):
                     with self.assertRaisesRegex(
                             RuntimeError, "HOLD_PAUSED_OPTIMIZER_RECEIPT"):
