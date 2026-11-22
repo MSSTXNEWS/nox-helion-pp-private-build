@@ -1662,7 +1662,7 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertTrue(any(f.get("message", {}).get("content") == "Живой ответ 🌌"
                                     for f in frames))
                 if invalid:
-                    self.assertEqual(model_contexts[-1], "\n")
+                    self.assertEqual(model_contexts[-1], "")
                     self.assertTrue(any("web_mode_hint_unavailable" in e
                                         for e in bridge.errors))
                 else:
