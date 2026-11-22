@@ -318,12 +318,37 @@ class DriveFirstTests(unittest.TestCase):
         with patch.object(m.shutil, "which", return_value="/usr/bin/rclone"), \
              patch.object(m.subprocess, "Popen", return_value=child) as spawned, \
              patch.object(m.time, "sleep"), \
+             patch.object(m, "cgroup_admit"), \
              patch.object(m, "stop_clear", side_effect=owner_stop):
             with self.assertRaisesRegex(m.Hold, "STOP"):
                 m.run_rclone(["copyto", "local.gguf", "noxchunks:STAGING/test.gguf"],
                              self.conf, timeout=120)
         spawned.assert_called_once()
         self.assertEqual(child.returncode, -15)
+
+    def test_heavy_rclone_transfer_aborts_on_midflight_raw_ram_loss(self):
+        # A transfer can be admitted with enough RAM and become unsafe later.
+        # Fence the owned child, without touching source data or remote paths.
+        for verb in ("copyto", "moveto"):
+            child = FakeChild()
+            child.returncode = None
+            sampled = [0]
+            def cgroup_gate():
+                sampled[0] += 1
+                if sampled[0] >= 2:
+                    raise m.Hold("HOLD_DRIVE_FIRST_CGROUP_BUSY")
+            with self.subTest(verb=verb), \
+                 patch.object(m.shutil, "which", return_value="/usr/bin/rclone"), \
+                 patch.object(m.subprocess, "Popen", return_value=child) as spawned, \
+                 patch.object(m.time, "sleep"), \
+                 patch.object(m, "stop_clear"), \
+                 patch.object(m, "cgroup_admit", side_effect=cgroup_gate):
+                with self.assertRaisesRegex(m.Hold, "CGROUP_BUSY"):
+                    m.run_rclone([verb, "weight.gguf", "noxchunks:STAGING/test.gguf"],
+                                 self.conf, timeout=120)
+            spawned.assert_called_once()
+            self.assertEqual(child.returncode, -15)
+            self.assertEqual(sampled[0], 2)
 
     def test_remote_sha_readback_streams_normal_bytes(self):
         # Drive is never contacted; feed a real Linux pipe to the readback.
