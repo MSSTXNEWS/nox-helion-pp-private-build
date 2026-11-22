@@ -1,0 +1,25 @@
+name: NOX core v6 S1 preflight
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'nox-control/cmd_agent/run_core_preflight.py'
+      - '.github/workflows/nox-core-v6-preflight.yml'
+permissions:
+  contents: read
+concurrency:
+  group: nox-core-v6-preflight
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.actor == 'MSSTXNEWS'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Run read-only S1 core v6 preflight
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          TS_AUTHKEY: ${{ secrets.NOXXXXX }}
+        run: python3 -B nox-control/cmd_agent/run_core_preflight.py
