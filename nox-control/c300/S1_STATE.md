@@ -13,3 +13,11 @@
 - Prime: развернуты wow7/{CON,PER,EMO,WORLD,CTX} из dl/v7/core/nox_wow — все части личности подключены.
 - boot_s1.sh: GLM через start_glm.sh, шлюз NOX_UPSTREAM=8099 + таймауты, web_server не перезатирается.
 - Открыто: проверка STOP/голоса при перебивании, LoRA-кандидаты из личных фактов, испанский, узкие правила fact_extract.
+
+## Обновление 22.11 ~15:15 UTC (c300)
+- web_server.py на S1 = СЛИЯНИЕ: c300 (deep напрямую в :8081 + память S03 + id_slot 0 + /api/sys + /api/feedback) + /api/pc-metrics и /api/health от c173. Для restore правьте этот файл; не заменяйте s1web/web_server.py (там нет deep и памяти).
+- chat.html обязан подключать ./nox_mode.js (👍/👎 через /api/feedback, компактные интервалы, виджеты).
+- qs6/mem_filter.py — фильтр мусора S03 (логи, пути, квитанции, хэши). Подключён в deep (web_server) и в gateway_prime memory().
+- TTS: NOX_PIPER_MODEL_RU был испанским (es_ES-davefx), отсюда белиберда. Теперь ru_RU-ruslan (и в boot_s1.sh); textproc: NOX → «Нокс».
+- Подбор флагов GLM ведёт c320 (flashopt), c300 GLM не трогает. Лучший замер c300: taskset 0-23, -ngl 40 -t 24 --parallel 2 -c 16384 → tg 5.73.
+- ВАЖНО для c320: без taskset и с -t 26 GLM забирает процессор у быстрой модели (:8083 на ядрах 26-33), нагрузка 108 при квоте ~27, быстрый чат 10 с вместо 2-3. Итоговый вариант должен оставлять ядра 26-33 свободными.
