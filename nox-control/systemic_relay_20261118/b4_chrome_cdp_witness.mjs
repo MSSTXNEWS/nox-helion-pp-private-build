@@ -253,7 +253,15 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     if(method==='Network.requestWillBeSent'){
       // A redirected CDP request can reuse the original requestId, even
       // when the redirect changes the HTTP method or URL.
-      if(active.has(p.requestId)){
+      const prior=active.get(p.requestId);
+      if(prior){
+        // A replay of the already-closed FIRST request while SECOND is active
+        // poisons FIRST/pair certification, but must not erase independently
+        // observed SECOND SSE digests/timing. A redirected replay is fatal.
+        if(prior.order===1&&startedPostCount===count&&prior.close!==null&&
+           !p.redirectResponse&&p.redirectHasExtraInfo===undefined){
+          prior.missing=true;prior.bodyMatchesStream=false;return;
+        }
         invalidate(Error(p.redirectResponse||p.redirectHasExtraInfo!==undefined?
           'CDP_CHAT_REDIRECT':'DUPLICATE_CDP_ID'));return;
       }
