@@ -145,6 +145,10 @@ class SafeRepairTests(unittest.TestCase):
             '{"services":{"nox-dispatcher.service":{"failures":true,"attempts":[]}}}',
             '{"services":{"nox-dispatcher.service":{"failures":2,"attempts":[],"attempts":[1]}}}',
             '{"services":{"nox-dispatcher.service":{"failures":2,"attempts":[NaN]}}}',
+            # A clock rollback previously discarded future-dated attempts,
+            # resetting the 24-hour restart cap and enabling an extra restart.
+            json.dumps({"services":{"nox-dispatcher.service":{
+                "failures":2,"attempts":[healer.time.time()+3600]}}}),
         )
         for raw in bad_states:
             with self.subTest(raw=raw), tempfile.TemporaryDirectory() as root:
