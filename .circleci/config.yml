@@ -62,6 +62,15 @@ jobs:
               -p test_gguf_2a03_source.py \
               -v
 
+      - run:
+          name: Verify 3B03 scoped hot-context shortlist and retrieval
+          command: |
+            set -eu
+            python -B -m unittest discover \
+              -s nox-control \
+              -p test_nox_hot_context.py \
+              -v
+
 workflows:
   source-verification:
     jobs:
