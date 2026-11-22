@@ -2091,5 +2091,90 @@ class TestProbe(unittest.TestCase):
         asyncio.run(run())
 
 
+
+    def test_current_exchange_requires_latest_history_tail(self):
+        """Chromium synthetic-native: an older exchange cannot be approved as latest."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+                    async def fixture(route):
+                        await route.fulfill(status=200, content_type='text/html',
+                                            body='<html>B3 history tail fixture</html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                    await page.goto(
+                        'http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__posts=0;window.__reads=0;
+                        const did='a'.repeat(32);
+                        const rows=[
+                            ['one','answer1','b3-tail-ex1'],
+                            ['two','answer2','b3-tail-ex2'],
+                            ['three','answer3','b3-tail-ex3']];
+                        window.fetch=async (url,init)=>{
+                            if(url==='/api/nox/chat/stream'){
+                                const row=rows[window.__posts++];
+                                const frames=[
+                                    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start',model:'mock-pinned'},
+                                    {type:'delta',text:row[1]},
+                                    {type:'done',saved:true,s03_integrated:true,
+                                     dialog_id:did,exchange_id:row[2]}];
+                                return new Response(
+                                    frames.map(JSON.stringify).join('\\n')+'\\n',
+                                    {status:200});
+                            }
+                            if(String(url).startsWith(
+                                '/api/ui/memory/dialogs/history?')){
+                                window.__reads++;
+                                const messages=rows.slice(0,window.__posts)
+                                    .flatMap(row=>[
+                                        {role:'user',content:row[0],exchange_id:row[2]},
+                                        {role:'assistant',content:row[1],exchange_id:row[2]}]);
+                                if(window.__posts===3)messages.push(
+                                    {role:'user',content:'later',exchange_id:'foreign'},
+                                    {role:'assistant',content:'reply',exchange_id:'foreign'});
+                                return new Response(JSON.stringify({
+                                    status:'READY',dialog_id:did,messages
+                                }),{status:200});
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE');
+                        };
+                    }""")
+                    bridge=(pathlib.Path(__file__).parent /
+                            'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    actual=await page.evaluate("""async () => {
+                        const out=[];
+                        for(const message of ['one','two','three']){
+                            const r=await fetch('/api/nox/chat',{
+                                method:'POST',body:JSON.stringify({
+                                    dialog_id:'a'.repeat(32),
+                                    request_id:'b3-tail-'+message,message})
+                            });
+                            const events=(await r.text()).split('\\n\\n')
+                                .filter(Boolean).map(s=>JSON.parse(s.slice(6)));
+                            out.push({done:events.filter(x=>x.type==='done'),
+                                      error:events.filter(x=>x.type==='error')});
+                        }
+                        return {out,posts:window.__posts,reads:window.__reads};
+                    }""")
+                    self.assertEqual(actual['posts'],3)
+                    self.assertEqual(actual['reads'],3)
+                    self.assertEqual([len(x['done']) for x in actual['out']],
+                                     [1,1,0])
+                    self.assertEqual([len(x['error']) for x in actual['out']],
+                                     [0,0,1])
+                    self.assertIn('HOLD_DIALOG_HISTORY_READBACK',
+                                  actual['out'][2]['error'][0]['error'])
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
 if __name__ == '__main__':
     unittest.main()

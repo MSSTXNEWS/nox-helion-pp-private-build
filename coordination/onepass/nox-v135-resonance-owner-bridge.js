@@ -82,7 +82,7 @@ const r=await nativePost('/api/ui/memory/dialogs/create',{
  if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
  const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
  const currentAt=data.messages.indexOf(pair[0]);
- if(pair.length!==2||data.messages[currentAt+1]!==pair[1]||
+ if(pair.length!==2||currentAt!==data.messages.length-2||
     pair[0].role!=='user'||pair[1].role!=='assistant'||
     pair[0].content!==prompt||pair[1].content!==answer||
     pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
