@@ -1966,3 +1966,67 @@ test('late FIRST responseReceived replay during SECOND SSE revokes first only',a
   assert.equal(afterCapture,1);
   assert.equal(JSON.stringify(sealed),snapshot);
 });
+
+test('late FIRST terminal-close replay during SECOND SSE revokes first only',async()=>{
+  // A first-turn network close cannot be repeated once its getResponseBody ACK
+  // has settled, even when Chrome is already streaming the second chat POST.
+  const clean=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  assert.deepEqual(clean.turns.map(t=>t.cdp_request_id),['1','2']);
+  for(const [name,method] of [
+    ['duplicate-loadingFinished','Network.loadingFinished'],
+    ['contradictory-loadingFailed','Network.loadingFailed']
+  ]){
+    let acked=false,ackBeforeSecond=false,delivered=0;
+    const observed=await run(false,null,null,null,{
+      quiescenceMs:80,
+      responseBodySettled:(id,status)=>{
+        if(id==='1'&&status==='resolved')acked=true;
+      },
+      lifecycleDuringSecond:session=>{
+        ackBeforeSecond=acked;
+        delivered++;
+        session.emit(method,{requestId:'1',timestamp:100.04});
+      }
+    });
+    assert.equal(ackBeforeSecond,true,name+' FIRST body ACK preceded SECOND');
+    assert.equal(delivered,1,name+' late FIRST close reached observer during SECOND');
+    assert.deepEqual(observed.turns.map(t=>t.cdp_request_id),['1','2'],name);
+    assert.equal(observed.cdp_consistent,false,name+' pair integrity revoked');
+    assert.equal(observed.ttft_sse_verified,false,name+' pair timing revoked');
+    const [first,second]=observed.turns;
+    for(const key of ['request_sha256','cdp_streamed_body_sha256',
+      'cdp_decoded_body_sha256'])
+      assert.deepEqual(first[key],clean.turns[0][key],name+' FIRST diagnostic '+key);
+    assert.equal(first.cdp_decoded_body_matches_stream,false,name);
+    assert.equal(first.ttft_ms,null,name);
+    assert.equal(first.sse_done_ms,null,name);
+    assert.equal(first.visible_text_sha256,null,name);
+    assert.equal(first.stream_timing_complete,false,name);
+    for(const key of ['cdp_request_id','request_sha256','cdp_streamed_body_sha256',
+      'cdp_decoded_body_sha256','cdp_decoded_body_matches_stream',
+      'visible_text_sha256','ttft_ms','sse_done_ms',
+      'sse_done_to_loading_finished_ms','stream_timing_complete'])
+      assert.deepEqual(second[key],clean.turns[1][key],name+' SECOND independent '+key);
+    assert.equal(second.stream_timing_complete,true,name);
+    assert.equal(second.ttft_ms,10,name+' fixture CDP TTFT, not real model');
+    assert.doesNotMatch(JSON.stringify(observed),/secret|Hello|data:/,name);
+  }
+  // A returned snapshot is immutable; finite quiescence is not proof that
+  // Chrome can never emit a later contradictory notification.
+  let afterCapture=0;
+  const sealed=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      afterCapture++;
+      session.emit('Network.loadingFailed',{requestId:'1',timestamp:100.05});
+    },90)
+  });
+  assert.equal(sealed.cdp_consistent,true);
+  assert.equal(afterCapture,0);
+  const snapshot=JSON.stringify(sealed);
+  await new Promise(resolve=>setTimeout(resolve,125));
+  assert.equal(afterCapture,1);
+  assert.equal(JSON.stringify(sealed),snapshot);
+});
