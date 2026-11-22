@@ -50,6 +50,16 @@ class NativeLatencyContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'HOLD_2A05_BAD_LATENCY'):
             summarize([huge], model_sha256=M, route_sha256=R, scenario_sha256=Z)
 
+    def test_first_turn_terminal_must_not_precede_first_token(self):
+        for field, impossible in (('native_first_ms', 110), ('ui_first_ms', 110)):
+            with self.subTest(field=field):
+                row = fixture(1)  # first turn elapsed=100 ms
+                row['stream'][field] = impossible
+                with self.assertRaisesRegex(ValueError,
+                        'HOLD_2A05_INCONSISTENT_FIRST_TURN_TIMING'):
+                    summarize([row], model_sha256=M, route_sha256=R,
+                              scenario_sha256=Z)
+
     def test_invalid_model_or_route_pins_fail_closed(self):
         # The module can be called with non-CLI inputs: never leak TypeError.
         for invalid in (None, 123, [], {}, True, '', 'A' * 64):
