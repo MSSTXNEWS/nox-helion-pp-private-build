@@ -40,6 +40,7 @@ MIN_RAM = 384 * MIB
 BLOCK = MIB
 MAX_MANIFEST = 16384
 MAX_FILE = 5 * 1024 ** 4
+MAX_VERIFY_SECONDS = 8 * 3600  # Bound whole Drive SHA readback, even if bytes trickle.
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,79}\Z")
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,159}\Z")
@@ -304,11 +305,14 @@ def verify_remote(remote, *, config, size, digest):
     except OSError:
         raise Hold("HOLD_DRIVE_FIRST_RCLONE_EXECUTION") from None
     last_progress = time.monotonic()
+    deadline = last_progress + MAX_VERIFY_SECONDS
     try:
         while True:
             stop_clear()
             cgroup_admit()
-            require(time.monotonic() - last_progress <= 180, "REMOTE_STALLED")
+            now = time.monotonic()
+            require(now <= deadline, "REMOTE_TOTAL_TIMEOUT")
+            require(now - last_progress <= 180, "REMOTE_STALLED")
             try:
                 ready, _, _ = select.select([proc.stdout], [], [], 1.0)
             except (OSError, ValueError):
@@ -329,6 +333,8 @@ def verify_remote(remote, *, config, size, digest):
         # while waiting instead of blocking for 30 seconds in wait().
         for _ in range(30):
             stop_clear()
+            cgroup_admit()
+            require(time.monotonic() <= deadline, "REMOTE_TOTAL_TIMEOUT")
             if proc.poll() is not None:
                 break
             time.sleep(1)
