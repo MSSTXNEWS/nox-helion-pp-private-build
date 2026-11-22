@@ -3092,9 +3092,7 @@ class ProbeTests(unittest.TestCase):
             response = Response(fields)
             sample = response.read(512)
             with self.subTest(rejected=fields), self.assertRaisesRegex(
-                    RuntimeError, '^' + reason + '
-    unittest.main()
-):
+                    RuntimeError, '^' + reason + '$'):
                 probe.complete_runtime_asset_body(response, sample)
 
         for fields in ([], [('Content-Length', str(len(body)))],
@@ -3102,9 +3100,7 @@ class ProbeTests(unittest.TestCase):
             response = Response(fields)
             sample = response.read(512)
             with self.subTest(limit=fields), self.assertRaisesRegex(
-                    RuntimeError, '^HOLD_RESONANCE_ASSET_LIMIT
-    unittest.main()
-):
+                    RuntimeError, '^HOLD_RESONANCE_ASSET_LIMIT$'):
                 probe.complete_runtime_asset_body(response, sample, limit=700)
 
         source = path.read_text()
