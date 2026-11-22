@@ -694,6 +694,17 @@ def install(app, B):
         # second simultaneous generation under an indistinguishable ID.
         if rid in ACTIVE_CHAT_IDS:
             return JSONResponse({"status": "HOLD", "reason": "CHAT_DUPLICATE_INFLIGHT_REQUEST_ID"}, status_code=409)
+        # A retry after a completed/disconnected non-ephemeral stream must not
+        # generate another answer or append the same turn to S03. The existing
+        # bounded process-local snapshot is a recent-ID tombstone, not a replay
+        # or durable idempotency promise across process restarts/TTL eviction.
+        # Ephemeral requests intentionally retain no post-stream identity.
+        if not eph:
+            _prune_chat_snapshots()
+            if any(row.get("request_id") == rid for row in CHAT_SNAPSHOTS.values()):
+                return JSONResponse({"status": "HOLD", "reason": "CHAT_REQUEST_ID_RECENTLY_USED",
+                                     "retry_same_id": False, "snapshot_scope": "PROCESS_LOCAL",
+                                     "s03_readback_verified": False}, status_code=409)
         if len(ACTIVE_CHAT_IDS) >= MAX_ACTIVE_CHAT_IDS:
             return JSONResponse({"status": "HOLD", "reason": "CHAT_ACTIVE_CAPACITY"}, status_code=503)
         ACTIVE_CHAT_IDS.add(rid)
