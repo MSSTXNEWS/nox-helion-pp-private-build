@@ -609,7 +609,16 @@ def require_stream_response_mime(response):
     headers = getattr(response, 'headers', None)
     if headers is None:
         return
-    raw = headers.get('Content-Type', '')
+    # HTTPMessage.get() returns only one of several Content-Type fields.
+    # A second field could describe a gateway fallback or conflicting stream.
+    get_all = getattr(headers, 'get_all', None)
+    if callable(get_all):
+        fields = get_all('Content-Type')
+        if not isinstance(fields, (list, tuple)) or len(fields) != 1:
+            raise RuntimeError('HOLD_STREAM_RESPONSE_MIME')
+        raw = fields[0]
+    else:
+        raw = headers.get('Content-Type', '')
     if not isinstance(raw, str):
         raise RuntimeError('HOLD_STREAM_RESPONSE_MIME')
     media = raw.split(';', 1)[0].strip().lower()
