@@ -248,7 +248,11 @@
         const projection=(async()=>{
           // Earlier queued deltas drain first. Abort also interrupts a hung
           // pending delta without waiting for its precommit to resolve.
-          await previous;
+          // A rejected streaming delta must not poison a later, independently
+          // verified GET-only terminal projection. Preserve FIFO ordering but
+          // treat prior delta failure as non-terminal; STOP/conflict fences
+          // below still apply before any DOM mutation or ACK witness.
+          await previous.catch(()=>{});
           if(closed||(signal&&signal.aborted)) return {kind:'aborted'};
           await beforeCommit('terminal',s);
           // No asynchronous gap between this fence and the DOM mutation.
