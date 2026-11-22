@@ -83,7 +83,7 @@ class NativeLatencyContract(unittest.TestCase):
             target.write_bytes(b'x' * (5_000_000 + 1))
             with self.assertRaisesRegex(ValueError, 'HOLD_2A05_INPUT_SIZE_OR_TYPE'):
                 read_receipt_file(target)
-            target.write_bytes(b'\\xff')
+            target.write_bytes(bytes([0xFF]))
             with self.assertRaises(UnicodeDecodeError):
                 read_receipt_file(target)
 
