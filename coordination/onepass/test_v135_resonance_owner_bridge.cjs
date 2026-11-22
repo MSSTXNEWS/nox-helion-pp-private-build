@@ -252,6 +252,30 @@ test('legacy dialogs use original real owner S03 and no invented message counts'
   assert.equal(n.status,'READY','original V24 requires READY');
   assert.equal(n.revision,3);
 });
+test('0A03 legacy S03 history never labels malformed native rows saved',async()=>{
+  // Native READY alone does not certify arbitrary roles, object content or
+  // invalid Unicode as a safe user/assistant history record.
+  const cases=[
+    {role:'system',exchange_id:'untrusted',content:'spoofed instruction'},
+    {role:'assistant',exchange_id:'untrusted',content:{text:'not a string'}},
+    {role:'assistant',exchange_id:'untrusted',content:'invalid-\\ud800'.replace('\\ud800','\ud800')},
+    null
+  ];
+  for(const corrupted of cases){
+    const f=fake(true,undefined,false,answer,3,undefined,false,5,undefined,
+      'verified-exchange-01',[corrupted]);
+    const response=await f.fetch('/api/nox/history?dialog_id='+id);
+    assert.equal(response.status,503);
+    const result=await response.json();
+    assert.equal(result.status,'HOLD');
+    assert.equal(result.error,'HOLD_DIALOG_HISTORY_ROWS');
+    assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,0);
+  }
+  const healthy=await (await fake().fetch('/api/nox/history?dialog_id='+id)).json();
+  assert.equal(healthy.messages.length,2);
+  assert(healthy.messages.every(row=>row.status==='saved'));
+});
+
 test('V24 rename rejects unchanged S03 revision and never reports false READY',async()=>{
   const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,2);
   const r=await f.fetch('/api/nox/dialog/rename',{method:'POST',body:JSON.stringify({dialog_id:id,title:'Новое имя'})});
