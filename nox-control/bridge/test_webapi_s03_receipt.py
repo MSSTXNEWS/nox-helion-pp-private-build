@@ -112,6 +112,44 @@ class FactReceiptTest(unittest.TestCase):
                 payload = json.loads(response.body)
                 self.assertEqual(payload, {"status": "HOLD", "reason": code})
 
+    def test_1v14_01_raw_chat_wire_bound_before_model_or_s03(self):
+        """Reject oversized headers and chunked bodies without parsing or admission."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+
+        class WireRequest:
+            def __init__(self, chunks, declared=None):
+                self.chunks = chunks
+                self.headers = {} if declared is None else {"content-length": declared}
+
+            async def stream(self):
+                for chunk in self.chunks:
+                    yield chunk
+
+            async def json(self):
+                raise AssertionError("real ASGI wire path must not call json()")
+
+        async def scenario():
+            header = await chat(WireRequest([b'{}'], "65"))
+            chunked = await chat(WireRequest([b'a' * 40, b'b' * 25]))
+            bad_length = await chat(WireRequest([b'{}'], "-1"))
+            malformed = await chat(WireRequest([b'{"messages":']))
+            return header, chunked, bad_length, malformed
+
+        with (mock.patch.object(W, "MAX_CHAT_WIRE_BYTES", 64),
+              mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
+              mock.patch.object(W, "CHAT_SNAPSHOTS", {})):
+            header, chunked, bad_length, malformed = asyncio.run(scenario())
+            self.assertEqual(W.ACTIVE_CHAT_IDS, set())
+            self.assertEqual(W.CHAT_SNAPSHOTS, {})
+        for response in (header, chunked):
+            self.assertEqual(response.status_code, 413)
+            self.assertEqual(json.loads(response.body),
+                             {"status": "HOLD", "reason": "CHAT_WIRE_TOO_LARGE"})
+        self.assertEqual(bad_length.status_code, 400)
+        self.assertEqual(json.loads(bad_length.body)["reason"], "CHAT_INVALID_CONTENT_LENGTH")
+        self.assertEqual(malformed.status_code, 400)
+        self.assertEqual(json.loads(malformed.body)["reason"], "CHAT_INVALID_JSON")
+
     def test_1a03_process_local_snapshot_reconciles_utf8_and_disconnect(self):
         """Snapshot is bounded, non-replaying and never certifies S03 readback."""
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
