@@ -118,6 +118,30 @@ class BackupT(unittest.TestCase):
         self.assertEqual(open(self.db, "rb").read(), old_contents)
         self.assertFalse(os.path.exists(self.db + ".restore.tmp"))
 
+    def test_restore_refuses_foreign_staging_without_truncation(self):
+        """An interrupted restore owns its .restore.tmp; do not touch it."""
+        r = B.backup(self.db, self.bdir)
+        prior = open(self.db, "rb").read()
+        foreign = b"foreign interrupted restore - preserve exact bytes"
+        tmp = self.db + ".restore.tmp"
+        with open(tmp, "wb") as f:
+            f.write(foreign)
+        with self.assertRaisesRegex(RuntimeError, "restore HOLD"):
+            B.restore(r["path"], self.db)
+        self.assertEqual(open(tmp, "rb").read(), foreign)
+        self.assertEqual(open(self.db, "rb").read(), prior)
+
+    def test_restore_copy_failure_cleans_only_own_temp(self):
+        """A disk/read failure must not strand or install a partial DB."""
+        from unittest.mock import patch
+        r = B.backup(self.db, self.bdir)
+        prior = open(self.db, "rb").read()
+        with patch.object(B.shutil, "copyfileobj", side_effect=OSError("injected copy failure")):
+            with self.assertRaisesRegex(OSError, "injected copy failure"):
+                B.restore(r["path"], self.db)
+        self.assertFalse(os.path.lexists(self.db + ".restore.tmp"))
+        self.assertEqual(open(self.db, "rb").read(), prior)
+
     def test_restore_failed_atomic_swap_rolls_back_original(self):
         from unittest.mock import patch
 
