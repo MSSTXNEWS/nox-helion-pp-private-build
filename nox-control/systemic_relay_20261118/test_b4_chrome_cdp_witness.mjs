@@ -77,19 +77,20 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       return normalSend(cmd,p);
     };
   }
-  return capture({ws:'ws://127.0.0.1:9333/fake',expectedChatOrigin:options.expectedChatOrigin??'http://localhost',makeSession:async()=>c,timeoutMs:2000,quiescenceMs:options.quiescenceMs??80,
+  return capture({ws:'ws://127.0.0.1:9333/fake',count:options.count??2,expectedChatOrigin:options.expectedChatOrigin??'http://localhost',makeSession:async()=>c,timeoutMs:2000,quiescenceMs:options.quiescenceMs??80,
     responseBodyAckTimeoutMs:options.responseBodyAckTimeoutMs??750,
     requestPostDataAckTimeoutMs:options.requestPostDataAckTimeoutMs??750,
     bodyAckClock:options.bodyAckClock??(()=>performance.now()),onReady:async()=>{
-  setTimeout(async()=>{for(let i=0;i<2;i++){
+  setTimeout(async()=>{for(let i=0;i<(options.count??2);i++){
     const requestId=String(i+1),o=i===1?options:{},timestamp=Object.hasOwn(o,'requestTimestamp')?o.requestTimestamp:100+i;
     const chunks=i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):
-      [Buffer.from(i===0&&Object.hasOwn(options,'firstBody')?options.firstBody:body)];
+      [Buffer.from(options.turnBodies?.[i]??(i===0&&Object.hasOwn(options,'firstBody')?options.firstBody:body))];
     const captured=Buffer.concat(chunks);
     c.bodies.set(requestId,i===1&&responseBodyForSecondTurn!==null?Buffer.from(responseBodyForSecondTurn):captured);
     const requestUrl=i===1&&o.requestUrl?o.requestUrl:'http://localhost/api/nox/chat';
     const frameId=i===1&&Object.hasOwn(o,'requestFrameId')?o.requestFrameId:'fixture-frame';
-    const loaderId=i===1&&Object.hasOwn(o,'requestLoaderId')?o.requestLoaderId:'fixture-loader';
+    const loaderId=i===2&&options.thirdLoaderId?options.thirdLoaderId:
+      i===1&&Object.hasOwn(o,'requestLoaderId')?o.requestLoaderId:'fixture-loader';
     c.emit('Network.requestWillBeSent',{requestId,timestamp,
       ...(i===1&&o.omitDocumentURL?{}:{documentURL:i===1&&Object.hasOwn(o,'documentURL')?o.documentURL:'http://localhost/nox/chat'}),
       ...(i===1&&o.omitInitiator?{}:{initiator:i===1&&Object.hasOwn(o,'initiatorType')?
@@ -147,6 +148,14 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       frameId:'fixture-frame',loaderId:'fixture-loader',
       documentURL:'http://localhost/nox/chat',initiator:{type:'script'},
       request:{method:'POST',url:'http://localhost/api/nox/chat',postData:'{"overlap":true}'}
+    });
+    // A third browser turn must never begin before SECOND's model terminal
+    // and Network.loadingFinished. This hook changes only synthetic fixtures.
+    if(i===1&&options.overlapThirdBeforeSecondClose)c.emit('Network.requestWillBeSent',{
+      requestId:'3',timestamp:timestamp+.015,frameId:'fixture-frame',
+      loaderId:'fixture-loader',documentURL:'http://localhost/nox/chat',
+      initiator:{type:'script'},request:{method:'POST',
+        url:'http://localhost/api/nox/chat',postData:'{"earlyThird":true}'}
     });
     if(!((i===0&&options.omitFirstClose)||(i===1&&options.omitSecondClose))){
       const closeFailed=i===0?options.firstLoadingFailed===true:o.loadingFailed===true;
@@ -2507,4 +2516,55 @@ test('Cdp open socket no-ACK has bounded pending lifetime and preserves healthy 
   assert.equal(healthy.ttft_sse_verified,true,'SSE TTFT remains independently measured');
   assert.equal(healthy.turns.length,2);
   assert.equal(healthy.native_verified,false,'fixture is not native attestation');
+});
+
+test('three serial same-page CDP chat turns retain independent request/body/visible SHA and SSE timing',async()=>{
+  const wire=text=>
+    'data: '+JSON.stringify({choices:[{delta:{content:text}}]})+'\n\n'+
+    'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'+
+    'data: [DONE]\n\n';
+  const bodies=['Hello again','Привет, продолжение','¡Hola! 🧠 tercer turno'].map(wire);
+  const options={count:3,turnBodies:bodies};
+  const triplet=await run(false,null,null,null,options);
+  assert.equal(triplet.cdp_consistent,true);
+  assert.equal(triplet.ttft_sse_verified,true);
+  assert.deepEqual(triplet.turns.map(t=>t.turn),[1,2,3]);
+  assert.deepEqual(triplet.turns.map(t=>t.cdp_request_id),['1','2','3']);
+  for(const field of ['request_sha256','cdp_decoded_body_sha256','visible_text_sha256']){
+    const sha=triplet.turns.map(t=>t[field]);
+    assert.equal(new Set(sha).size,3,field+' must bind three independent turns');
+    assert.ok(sha.every(value=>/^[a-f0-9]{64}$/.test(value)),field);
+  }
+  for(const t of triplet.turns){
+    assert.equal(t.ttft_ms,10);
+    assert.equal(t.sse_done_ms,10);
+    assert.equal(t.close_ms,20);
+    assert.equal(t.stream_timing_complete,true);
+    assert.equal(t.cdp_decoded_body_matches_stream,true);
+    assert.equal(t.cdp_decoded_body_sha256,t.cdp_streamed_body_sha256);
+    assert.equal(t.sse_done_to_loading_finished_ms,10);
+  }
+  assert.equal(triplet.browser_authenticated,false);
+  assert.equal(triplet.native_verified,false);
+  assert.equal(triplet.canonical_s03_verified,false);
+  assert.equal(triplet.one_model_post_per_turn_verified,false);
+  assert.doesNotMatch(JSON.stringify(triplet),/Hello again|Привет|Hola|secret/);
+  const healthyPair=await run();
+  assert.equal(healthyPair.ttft_sse_verified,true,'count=2 compatibility');
+  assert.equal(healthyPair.turns.length,2);
+  const aborted=await run(false,null,null,null,{
+    ...options,turnBodies:[bodies[0],bodies[1],bodies[2].replace('data: [DONE]\n\n','')]
+  });
+  assert.equal(aborted.cdp_consistent,false,'third turn lacking DONE cannot certify triplet');
+  assert.equal(aborted.ttft_sse_verified,false);
+  assert.equal(aborted.turns[0].stream_timing_complete,true);
+  assert.equal(aborted.turns[1].stream_timing_complete,true);
+  assert.equal(aborted.turns[2].stream_timing_complete,false);
+  assert.equal(aborted.turns[2].ttft_ms,null);
+  await assert.rejects(run(false,null,null,null,{
+    ...options,overlapThirdBeforeSecondClose:true
+  }),/CDP_NON_SERIAL_CHAT_POST/);
+  await assert.rejects(run(false,null,null,null,{
+    ...options,thirdLoaderId:'new-document-loader'
+  }),/CDP_MAIN_FRAME_DOCUMENT_CHANGED/);
 });
