@@ -27,13 +27,15 @@ ACTIVE_CHAT_IDS = set()
 MAX_ACTIVE_CHAT_IDS = 128
 # Short-lived, bounded, process-local reconciliation only. Never store ephemeral
 # turns, and never present this as durable replay or an S03 readback.
+# Use monotonic clock for the 120s privacy TTL: wall-clock NTP rollback must
+# never extend the lifetime of retained chat content.
 CHAT_SNAPSHOTS = {}
 MAX_CHAT_SNAPSHOTS = 24
 CHAT_SNAPSHOT_TTL_S = 120
 
 
 def _prune_chat_snapshots():
-    cutoff = time.time() - CHAT_SNAPSHOT_TTL_S
+    cutoff = time.monotonic() - CHAT_SNAPSHOT_TTL_S
     for key, row in list(CHAT_SNAPSHOTS.items()):
         if row["updated_at"] < cutoff:
             CHAT_SNAPSHOTS.pop(key, None)
@@ -704,7 +706,7 @@ def install(app, B):
                 "request_id": rid, "event_seq": 0, "text": "",
                 "text_bytes": 0, "state": "ADMITTED", "terminal": False,
                 "completion_receipt": None, "memory_write_receipt": None,
-                "updated_at": time.time(),
+                "updated_at": time.monotonic(),
             }
 
         def fr(**k):
@@ -713,7 +715,7 @@ def install(app, B):
             row = CHAT_SNAPSHOTS.get(stream_id)
             if row is not None:
                 row["event_seq"] = frame_seq
-                row["updated_at"] = time.time()
+                row["updated_at"] = time.monotonic()
                 if row["state"] == "ADMITTED":
                     row["state"] = "STREAMING"
                 message = k.get("message")
@@ -1048,7 +1050,7 @@ def install(app, B):
             if row is not None and not row["terminal"] and row["state"] not in ("HOLD", "STOPPED"):
                 # A disconnected transport is not evidence of model completion.
                 row["state"] = "INTERRUPTED"
-                row["updated_at"] = time.time()
+                row["updated_at"] = time.monotonic()
 
         class TrackedChatBody:
             """Release admission on normal EOF, early aclose, error or cancellation."""
