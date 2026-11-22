@@ -104,9 +104,17 @@
         let preflight;
         try{
           preflight=await Promise.race([
-            Promise.resolve().then(()=>host.readCommitted(
-              s.conversation_id,s.exchange_id))
-              .then(previous=>({previous}),()=>({storageError:true})),
+            // STOP can occur synchronously before this queued microtask.
+            // Do not issue an unnecessary GET after cancellation. Give
+            // cooperative preflight transports the same AbortSignal as POST.
+            Promise.resolve().then(async()=>{
+              if(ctrl.signal.aborted) return {aborted:true};
+              try{
+                const previous=await host.readCommitted(
+                  s.conversation_id,s.exchange_id,ctrl.signal);
+                return {previous};
+              }catch(_){return {storageError:true};}
+            }),
             new Promise(resolve=>{
               onAbort=()=>resolve({aborted:true});
               ctrl.signal.addEventListener('abort',onAbort,{once:true});
