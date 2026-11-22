@@ -1,13 +1,9 @@
 #!/bin/bash
 cd /root/nox
-echo "== v7 dirs"; ls /root/nox/dl/v7 /root/nox/src/wow7 /tmp/nox_v7 2>&1 | head -40
-echo "== receipts"; ls -t /root/nox/receipts /root/nox/state/receipts /root/nox/logs 2>/dev/null | head -40
-find / -xdev \( -name "S1_0*" -o -name "*S1_0*receipt*" \) -mmin -600 2>/dev/null | head -30
-echo "== web_server markers"; for m in NOXHF NOXHF2 NOX_CORE StreamGuard conscience _SG actions; do echo "$m: $(grep -c "$m" web_server.py)"; done
-ls -la web_server.py* | head; ls /root/nox/.soul_merged_hotfix2 2>&1
-echo "== ports"; ss -ltn | grep -E ":(8081|8082|8083|8091|8190|8092) " | awk '{print $4}'
-for p in chat.html resonance.html index.html; do echo "$p $(curl -s -m6 -o /dev/null -w %{http_code} http://127.0.0.1:8091/web/$p)"; done
-echo "== v7 services"; ps aux | grep -E "nox_core|nox_wow|wow7|watch|dispatcher" | grep -v grep | awk '{print $11,$12,$13}' | head
-echo "== gateway env flags"; pid=$(ss -ltnp | grep ":8082 " | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2); tr '\0' '\n' </proc/$pid/environ | grep -E "^NOX_(CORE|CONSC|FAST|MODEL)" | cut -c1-80
-echo "== v7 deploy log tail"; ls -t /root/nox/logs | head -15; tail -n 25 /root/nox/logs/v7*.log 2>/dev/null | cut -c1-200
-echo "== HANDOFF"; ls /root/nox/dl/v7/v4/nox_wow/DEPLOY 2>/dev/null
+echo "== v7 state/receipts"; ls -t /root/nox/state 2>/dev/null| head; find /root/nox -maxdepth 3 \( -iname "*receipt*" -o -iname "V7-*" \) -mmin -900 2>/dev/null | head -20
+ls /root/nox/backups/v7/; tail -n 30 /root/nox/logs/V7-04.run.log | cut -c1-180
+echo "== accept"; ls /root/nox/src/wow7/deploy; tail -n 20 /root/nox/logs/V7-04.test_brain.log | cut -c1-160
+echo "== web_server.py head"; grep -n "^def \|^class \|^import\|^from\|8082\|8090\|8091\|/api/" web_server.py | cut -c1-150 | head -80
+echo "== wow7 pkg"; ls src/wow7/brain src/wow7/common src/wow7/prime src/wow7/act repo/nox-control/wow7 2>&1 | head -60
+echo "== core health"; curl -s -m5 http://127.0.0.1:8090/health | head -c 400; echo; tail -n 5 logs/core.log | cut -c1-200
+echo "== web log"; tail -n 8 logs/web_server.log | cut -c1-160
