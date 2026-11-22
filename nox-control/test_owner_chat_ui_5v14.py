@@ -157,6 +157,44 @@ class OwnerWorkerSnapshotTrustTests(unittest.TestCase):
         raw='{"n":1,"workers":[{"id":"nox-agent-01","status":"idle","current_task":null}],"extra":NaN}'
         self.assertEqual(self.read_snapshot(raw)['state'],'UNAVAILABLE')
 
+    def test_status_path_swap_during_read_never_certifies_stale_worker(self):
+        # The file descriptor stays readable after os.replace(); validating
+        # just before/after fstat would incorrectly advertise its old content.
+        with tempfile.TemporaryDirectory() as base:
+            root=Path(base)
+            (root/'status').mkdir()
+            status=root/'status'/'agents_t856u.json'
+            original={'n':1,'workers':[{'id':'nox-agent-01',
+                        'status':'idle','current_task':None}]}
+            status.write_text(json.dumps(original),encoding='utf-8')
+            status.chmod(0o600)
+            real_read=os.read
+            reads=[]
+            def replace_after_read(fd, limit):
+                data=real_read(fd,limit)
+                reads.append(True)
+                replacement=status.with_suffix('.replacement')
+                replacement.write_bytes(data)
+                replacement.chmod(0o600)
+                os.replace(replacement,status)
+                return data
+            with patch.object(os,'read',side_effect=replace_after_read):
+                with patch.dict(self.reader.__globals__,
+                                {'ROOT':root,'owner_maintenance_gate':lambda:'ABSENT'}):
+                    observed=self.reader()
+            self.assertEqual(reads,[True])
+            self.assertEqual(observed['state'],'UNAVAILABLE')
+
+    def test_busy_claim_id_must_be_printable_canonical_text(self):
+        def snapshot(claim):
+            return json.dumps({'n':1,'workers':[{'id':'nox-agent-01',
+                'status':'busy','current_task':{'id':claim}}]})
+        self.assertEqual(self.read_snapshot(snapshot('6V14-04'))['state'],'OBSERVED')
+        for invalid in (' 6V14-04','6V14-04 ','bad\\nid','', 'x'*101):
+            with self.subTest(invalid=repr(invalid)):
+                self.assertEqual(self.read_snapshot(snapshot(invalid))['state'],
+                                 'UNAVAILABLE')
+
 
 if __name__ == '__main__':
     unittest.main()
