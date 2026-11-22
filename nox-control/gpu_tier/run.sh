@@ -135,5 +135,21 @@ tier4b)
   curl -s -m3 localhost:8083/health; nvidia-smi --query-gpu=memory.used --format=csv,noheader; nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader
   pgrep -af llama-server | cut -c1-120; free -g | sed -n 2p; uptime
   ;;
+gw)
+  tail -n 4 /root/nox/logs/glm_bench.out
+  curl -s -m5 localhost:8082/health | head -c 150; echo
+  for M in fast deep; do echo "== $M"; curl -sN -m 100 localhost:8082/v1/chat/completions -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"Объясни в двух предложениях, чем RAID1 отличается от RAID5."}],"nox_mode":"'$M'","stream":true,"max_tokens":60}' | python3 -c '
+import sys,json,time
+t=time.time();st={}
+for l in sys.stdin:
+    if l.startswith("data: {"):
+        d=json.loads(l[6:]);ch=d.get("choices") or [{}]
+        dl=ch[0].get("delta",{});c=dl.get("content")
+        if c:
+            s=dl.get("nox_stage","?");st.setdefault(s,[round(time.time()-t,2),""]);st[s][1]+=c
+        if d.get("nox") and ch[0].get("finish_reason"): print("final",json.dumps(d["nox"],ensure_ascii=False)[:300])
+for k,v in st.items(): print(k,"first@",v[0],"|",v[1][:150].replace("\n"," "))
+' ; done
+  ;;
 *) echo unknown;;
 esac
