@@ -44,6 +44,18 @@ class OwnerLiveAssetTests(unittest.TestCase):
         self.assertEqual(result.count('src="/nox-web-v29/owner-chat-ui.js"'),2)
         self.assertEqual(result.count('data-nox-live-owner="1"'),4)
 
+    def test_nested_inert_elements_never_suppress_real_bridge(self):
+        # The inner close does NOT make the outer template executable.
+        for inert in ('template', 'noscript'):
+            with self.subTest(inert=inert):
+                content=('<template><'+inert+'>nested</'+inert+'>'
+                         '<script src="/nox-web-v29/owner-chat-ui.js"></script>'
+                         '<meta name="nox-live-build" content="fake"></template>')
+                result=self.rendered(content)
+                self.assertEqual(result.count('src="/nox-web-v29/owner-chat-ui.js"'),2)
+                self.assertEqual(result.count('data-nox-live-owner="1"'),4)
+                self.assertIn('content="NOX_OWNER_LIVE_RESONANCE_20261116"',result)
+
     def test_noscript_and_nonexecuting_script_cannot_satisfy_live_asset(self):
         content=('<noscript><script src="/nox-web-v29/owner-presence.js"></script></noscript>'
                  '<script type="application/json" src="/nox-web-v29/owner-chat-ui.js"></script>')
