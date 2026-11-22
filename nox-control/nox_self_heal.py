@@ -11,12 +11,14 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import stat
 import tempfile
 import time
 import urllib.request
 from urllib.parse import urlsplit
 
 UNIT_PATTERN = re.compile(r"^nox-[a-z0-9][a-z0-9_.@-]{0,79}\.service$")
+MAX_REPAIR_STATE_BYTES = 1 << 20  # 1 MiB; well above 16 scoped units.
 
 def load(path):
     try:
@@ -147,12 +149,27 @@ def _read_repair_state_checked(path):
     A missing state is valid for first boot. A corrupt one requires an owner
     repair; preserve its original bytes, do not probe or restart anything.
     """
+    # Open once, refuse symlinks/special devices, and bound the total bytes.
+    # An attacker-supplied FIFO or huge file must never hang or exhaust the
+    # single-writer restart observer before it can fail safely.
     try:
-        raw = path.read_text(encoding="utf8")
+        fd = os.open(str(path), os.O_RDONLY | os.O_NOFOLLOW |
+                     os.O_CLOEXEC | os.O_NONBLOCK)
     except FileNotFoundError:
-        if path.is_symlink():  # broken symlink is not an absent trusted state
+        if path.is_symlink():  # Broken link is not an absent trusted state.
             raise ValueError("invalid repair state symlink") from None
         return {}
+    except OSError:
+        raise ValueError("unreadable repair state") from None
+    try:
+        with os.fdopen(fd, "rb") as fh:
+            info = os.fstat(fh.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_REPAIR_STATE_BYTES:
+                raise ValueError("invalid repair state file")
+            raw_bytes = fh.read(MAX_REPAIR_STATE_BYTES + 1)
+            if len(raw_bytes) > MAX_REPAIR_STATE_BYTES:
+                raise ValueError("oversized repair state")
+            raw = raw_bytes.decode("utf-8")
     except (OSError, UnicodeError):
         raise ValueError("unreadable repair state") from None
     try:
