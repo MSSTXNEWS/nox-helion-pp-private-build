@@ -235,8 +235,7 @@
     const upstream=await nativePost('/api/nox/chat/stream',{
      message:data.message,dialog_id:id,task:'general',history:[]
     },nativeSignal);
-    const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
-    const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
+    const segmenter=Intl.Segmenter?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
     let trailing='';
     const emitPieces=async t=>{
      if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
@@ -244,6 +243,7 @@
     };
     const {answer,receipt}=await consume(upstream,async t=>{
      trailing+=t;
+     if(trailing.length>8192)throw Error('HOLD_GRAPHEME_RUN');
      if(!segmenter){
        const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
        if(ascii){
