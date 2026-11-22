@@ -1,0 +1,13 @@
+/* c145: общие правки старых страниц (проекты, память, обучение, ядро, система, настройки) без правки их исходников */
+#nox-public-safe-preview{max-width:calc(100vw - 16px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.7;background:rgba(14,23,40,.45)!important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+@media (max-width:760px){
+  #nox-public-safe-preview{display:none}
+  .model-card-heading{flex-wrap:wrap;gap:8px}
+  .model-card-heading>*:first-child{flex:1 1 100%;min-width:0}
+  .training-stage-heading{flex-wrap:wrap;gap:8px}
+  .training-stage-heading>*:first-child{flex:1 1 60%;min-width:0}
+  .training-stage-tools{flex:0 0 auto;white-space:nowrap}
+  .training-stage-tools .status,#globalStatus{white-space:nowrap}
+  .graphic-button,.nox-graphic-control{overflow-wrap:anywhere;hyphens:auto}
+}
+#noxDashboardCore{min-height:120px!important}
