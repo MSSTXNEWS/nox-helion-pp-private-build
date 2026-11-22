@@ -1152,6 +1152,7 @@ class TestProbe(unittest.TestCase):
                         window.__reads=0;
                         window.__answer='Ж'.repeat(4096)+'👩‍💻e\u0301';
                         window.__answer2='🇪🇸'.repeat(128)+'👨‍👩‍👧‍👦e\u0301';
+                        window.__longCluster=Array.from({length:9},()=>'\u0301'.repeat(1024));
                         const id='a'.repeat(32);
                         const parts=['Ж'.repeat(4096)+'👩','‍','💻e','\u0301'];
                         const parts2=['🇪🇸'.repeat(128)+'👨','‍','👩‍👧‍👦e','\u0301'];
@@ -1164,7 +1165,8 @@ class TestProbe(unittest.TestCase):
                                 const frames=[
                                     {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
                                     {type:'start',model:'pinned-existing-native-fixture'},
-                                    ...(n===1?parts:parts2).map(text=>({type:'delta',text})),
+                                    ...(n===1?parts:n===2?parts2:window.__longCluster)
+                                        .map(text=>({type:'delta',text})),
                                     {type:'done',saved:true,s03_integrated:true,
                                         dialog_id:id,exchange_id:'ex-b3-grapheme-'+n}
                                 ];
@@ -1211,16 +1213,20 @@ class TestProbe(unittest.TestCase):
                         };
                         const first=await send('b3-grapheme-large-first','unicode');
                         const second=await send('b3-grapheme-large-second','unicode2');
+                        const third=await send('b3-grapheme-run-hold','unicode3');
                         return {posts:window.__posts,reads:window.__reads,
-                            first,second,answer:window.__answer,answer2:window.__answer2};
+                            first,second,third,answer:window.__answer,answer2:window.__answer2};
                     }""")
-                    self.assertEqual(result['posts'], 2)
+                    self.assertEqual(result['posts'], 3)
                     self.assertEqual(result['reads'], 2)
                     for k,answer in (('first','answer'),('second','answer2')):
                         self.assertEqual(result[k]['text'], result[answer])
                         self.assertEqual(len(result[k]['done']), 1)
                         self.assertTrue(result[k]['done'][0]['s03_integrated'])
                         self.assertEqual(result[k]['errors'], [])
+                    self.assertEqual(result['third']['done'], [])
+                    self.assertEqual(len(result['third']['errors']), 1)
+                    self.assertIn('HOLD_GRAPHEME_RUN',result['third']['errors'][0]['error'])
                 finally:
                     await browser.close()
         asyncio.run(run())
