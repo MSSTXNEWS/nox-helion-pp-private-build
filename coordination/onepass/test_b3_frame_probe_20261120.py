@@ -521,6 +521,95 @@ class TestProbe(unittest.TestCase):
         asyncio.run(run())
 
 
+    def test_same_dialog_foreign_interleave_fails_before_accepted_done(self):
+        """Real Chromium / synthetic native: third turn must reject alien S03 pair."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+                    async def local_page(route):
+                        await route.fulfill(
+                            status=200, content_type='text/html',
+                            body='<html><main id="resonance">mock</main></html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', local_page)
+                    await page.goto('http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__posts=0;
+                        window.__reads=0;
+                        const did='a'.repeat(32);
+                        const rows=[
+                            ['one','answer1','ex00001'],
+                            ['two','answer2','ex00002'],
+                            ['three','answer3','ex00003']];
+                        window.fetch=async url=>{
+                            if(url==='/api/nox/chat/stream'){
+                                const row=rows[window.__posts++];
+                                const frames=[
+                                    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start',model:'mock-pinned'},
+                                    {type:'delta',text:row[1]},
+                                    {type:'done',saved:true,s03_integrated:true,
+                                     dialog_id:did,exchange_id:row[2]}];
+                                return new Response(
+                                    frames.map(JSON.stringify).join('\\n')+'\\n',
+                                    {status:200});
+                            }
+                            if(String(url).startsWith('/api/ui/memory/dialogs/history?')){
+                                window.__reads++;
+                                const messages=rows.slice(0,window.__posts)
+                                    .flatMap(row=>[
+                                        {role:'user',content:row[0],exchange_id:row[2]},
+                                        {role:'assistant',content:row[1],exchange_id:row[2]}]);
+                                if(window.__posts===3)
+                                    messages.splice(4,0,
+                                        {role:'user',content:'alien',exchange_id:'foreign'},
+                                        {role:'assistant',content:'reply',exchange_id:'foreign'});
+                                return new Response(JSON.stringify({
+                                    status:'READY',dialog_id:did,messages
+                                }),{status:200});
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE');
+                        };
+                    }""")
+                    bridge=(pathlib.Path(__file__).parent /
+                            'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    outcome=await page.evaluate("""async () => {
+                        const results=[];
+                        for(const message of ['one','two','three']){
+                            const response=await fetch('/api/nox/chat',{
+                                method:'POST',
+                                body:JSON.stringify({dialog_id:'a'.repeat(32),
+                                    request_id:'b3-interleave-'+message,message})
+                            });
+                            const events=(await response.text()).split('\\n\\n')
+                                .filter(Boolean).map(s=>JSON.parse(s.slice(6)));
+                            results.push({
+                                done:events.filter(x=>x.type==='done'),
+                                error:events.filter(x=>x.type==='error')
+                            });
+                        }
+                        return {results,posts:window.__posts,reads:window.__reads};
+                    }""")
+                    self.assertEqual(outcome['posts'],3)
+                    self.assertEqual(outcome['reads'],3)
+                    self.assertEqual([len(x['done']) for x in outcome['results']],
+                                     [1,1,0])
+                    self.assertEqual([len(x['error']) for x in outcome['results']],
+                                     [0,0,1])
+                    self.assertIn('HOLD_DIALOG_PRIOR_EXCHANGE_LOST',
+                                  outcome['results'][2]['error'][0]['error'])
+                finally:
+                    await browser.close()
+
+        asyncio.run(run())
+
+
     def test_same_dialog_overlapping_browser_stream_has_single_native_post(self):
         """One in-flight browser turn per dialog, including release after done."""
         from playwright.async_api import async_playwright
