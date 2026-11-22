@@ -610,7 +610,7 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
     const loc={pathname:'/nox-web-v29/pc/resonance.html',
       href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
     vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
-      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,clearTimeout,
       requestAnimationFrame:cb=>cb(performance.now())});
     const r=await w.fetch('/api/nox/chat',{method:'POST',
       body:JSON.stringify({message:prompt})});
