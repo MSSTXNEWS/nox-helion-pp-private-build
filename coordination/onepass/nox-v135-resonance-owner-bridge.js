@@ -16,7 +16,7 @@
  if(!Object.prototype.hasOwnProperty.call(data,'request_id'))return;
  const rid=data.request_id;
  if(typeof rid!=='string'||!rid.trim()||rid.length>160)throw Error('HOLD_REQUEST_ID_SCOPE');
- const key=rid; // One request_id cannot create a second dialog.
+ const key=rid;
  if(issuedRequests.has(key))throw Error('HOLD_REQUEST_REPLAY');
  if(issuedRequests.size>=2048)throw Error('HOLD_REQUEST_PIN_CAPACITY');
  issuedRequests.add(key);
@@ -211,6 +211,8 @@
  else signal?.addEventListener?.('abort',onAbort,{once:true});
  const nativeSignal=upstreamAbort.signal;
  let claimedId;
+ const stopPhase=()=>{if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+ window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopped'}}));};
  const body=new ReadableStream({
    async start(controller){
     const event=payload=>{if(closed)return;
@@ -226,7 +228,7 @@
     };
     try {
     if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-    pinRequest(data); // Reserve BEFORE native dialog-create (await).
+    pinRequest(data);
     const id=await dialogId(data,nativeSignal);
     if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
     claimedId=claimDialog(id);
@@ -272,8 +274,8 @@
      first_visible_token_ms:firstVisibleMs,
      seconds:+((performance.now()-started)/1000).toFixed(2)});
     }catch(e){
-    event({type:'error',
-     error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
+    if(nativeSignal.aborted){if(!closed)stopPhase();}
+    else event({type:'error',error:String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
      gpu_stop_verified:false});
     }finally{
     if(claimedId)activeDialogs.delete(claimedId);
@@ -284,8 +286,7 @@
    cancel(){
     closed=true;
     upstreamAbort.abort();
-    if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-    window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopped'}}));
+    stopPhase();
     signal?.removeEventListener?.('abort',onAbort);
    }
  });
