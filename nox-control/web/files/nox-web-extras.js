@@ -37,6 +37,13 @@ function bnav(){if($('#nxw-bnav'))return;var n=el('nav');n.id='nxw-bnav';n.setAt
 /* 4. «Что NOX вспомнил»: серверная память /memory/api (s03), запасной вариант - localStorage */
 var SF=[];
 function mapi(o){return fetch('/memory/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).then(function(r){return r.json()})}
+function memErr(m){var b=$('#nxw-merr');if(!b){b=el('div','nxw-card');b.id='nxw-merr';b.setAttribute('role','alert');b.style.cssText='border:1px solid #f66;color:#fbb';var h=$('#nxw-facts');if(h)h.prepend(b);else D.body.append(b)}
+ b.textContent=m;clearTimeout(b._t);b._t=setTimeout(function(){b.remove()},8000)}
+/* чтение записи из S03: op get (recall_api+correction.py); у старого сервера - запасной путь через list */
+function readback(id){return mapi({op:'get',id:id}).then(function(j){
+ if(j&&j.ok&&j.item)return j.item;
+ if(j&&/неизвестн/.test(j.error||''))return mapi({op:'list',limit:300}).then(function(l){return (l.facts||[]).filter(function(x){return x.id===id})[0]||null});
+ return null})}
 function pushFacts(list){var t=list.map(function(f){return f.text}).slice(0,25).join('\n');L.setItem('nox.facts.text',t);
  var c=jget('nox.newchat.cfg',{});if(c.facts!==t){c.facts=t;L.setItem('nox.newchat.cfg',JSON.stringify(c))}}
 function loadFacts(){return mapi({op:'list',limit:40}).then(function(j){if(j.ok){SF=j.facts;pushFacts(SF)}return SF}).catch(function(){SF=(jget('nox.facts.v1',[])||[]).map(function(t,i){return {id:'l'+i,text:t,local:true}});return SF})}
@@ -47,9 +54,16 @@ function memPanel(){if(page!=='memory.html'||$('#nxw-facts'))return;var host=$('
   if(!list.length)fl.append(el('div','','<i>Пока пусто.</i>'));
   list.forEach(function(f){var r=el('div','nxw-fact');var d=el('div');d.contentEditable='true';d.textContent=f.text;
    d.onblur=function(){var t=d.textContent.trim();if(t===f.text)return;if(f.local){var a=jget('nox.facts.v1',[]);a[+f.id.slice(1)]=t;L.setItem('nox.facts.v1',JSON.stringify(a));return}
-    mapi({op:'correct',id:f.id,text:t,reason:'правка в вебе'}).then(function(){f.text=t;pushFacts(SF)})};
+    d.setAttribute('aria-busy','true');
+    mapi({op:'correct',id:f.id,text:t,reason:'правка в вебе'}).then(function(j){
+     if(!j||j.ok!==true)throw new Error((j&&j.error)||'сервер не принял правку');
+     return readback(f.id).then(function(it){var got=it?it.text:(j.item&&j.item.text);if(got!==t)throw new Error('S03 хранит другой текст');})
+    }).then(function(){f.text=t;return loadFacts()}).catch(function(e){d.textContent=f.text;memErr('Правка не сохранена: '+(e&&e.message||e))}).then(function(){d.removeAttribute('aria-busy')})};
    var x=el('button','nxw-b','✕');x.onclick=function(){if(f.local){var a=jget('nox.facts.v1',[]);a.splice(+f.id.slice(1),1);L.setItem('nox.facts.v1',JSON.stringify(a));return loadFacts().then(draw)}
-    mapi({op:'delete',id:f.id,reason:'удалено в вебе'}).then(function(){return loadFacts()}).then(draw)};
+    mapi({op:'delete',id:f.id,reason:'удалено в вебе'}).then(function(j){
+     if(!j||j.ok!==true)throw new Error((j&&j.error)||'сервер не принял отзыв');
+     return readback(f.id).then(function(it){if(it&&it.status!==undefined&&it.status!=='deleted')throw new Error('запись в S03 всё ещё активна')})
+    }).then(function(){return loadFacts()}).then(draw).catch(function(e){memErr('Отзыв не выполнен: '+(e&&e.message||e))})};
    r.append(d,x);fl.append(r)})}
  loadFacts().then(draw);
  $('#nxw-add',c).onclick=function(){var t=prompt('Новый факт');if(!t)return;if(SF.length&&SF[0].local){var a=jget('nox.facts.v1',[]);a.push(t);L.setItem('nox.facts.v1',JSON.stringify(a));return loadFacts().then(draw)}mapi({op:'add',text:t}).then(function(){return loadFacts()}).then(draw)};

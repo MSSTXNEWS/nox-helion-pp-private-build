@@ -1,0 +1,22 @@
+{"_comment": "Бесплатные советники NOX (проверено по открытым источникам 22.11.2026; лимиты меняются - сверять с /models и документацией). Ключи ТОЛЬКО из env. trains_on_data=true -> только для публичных (privacy=public) запросов. DuckDuckGo AI Chat НЕ используется: условия duck.ai запрещают automated querying. Модели :free и id у провайдеров ротируются: model пустой -> берётся первый из GET /models по фильтру (model_filter).",
+ "cache_ttl_s": 86400, "max_answer": 6000,
+ "providers": [
+  {"name": "groq", "kind": "openai", "url": "https://api.groq.com/openai/v1", "api_key_env": "GROQ_API_KEY", "model": "llama-3.3-70b-versatile",
+   "rpm": 25, "daily": 900, "timeout_s": 45, "trains_on_data": false, "role": "general", "prio": 1,
+   "note": "free: ~30 rpm / ~1000 req/day (чужой замер, openrouter.ai/blog free-llm-apis-compared)"},
+  {"name": "cerebras", "kind": "openai", "url": "https://api.cerebras.ai/v1", "api_key_env": "CEREBRAS_API_KEY", "model": "",
+   "model_filter": "llama|qwen|gpt-oss", "rpm": 25, "daily": 800, "timeout_s": 45, "trains_on_data": false, "role": "general", "prio": 2,
+   "note": "free ~1M tok/day, 30 rpm (чужой замер)"},
+  {"name": "openrouter-free", "kind": "openai", "url": "https://openrouter.ai/api/v1", "api_key_env": "OPENROUTER_API_KEY", "model": "",
+   "model_filter": ":free$", "rpm": 15, "daily": 45, "timeout_s": 90, "trains_on_data": false, "role": "general", "prio": 3,
+   "note": "без пополнения: 20 rpm, 50 запросов/день на ВСЕ :free (пополнение $10 = платное, НЕ делаем)"},
+  {"name": "google-ai-studio", "kind": "openai", "url": "https://generativelanguage.googleapis.com/v1beta/openai", "api_key_env": "GEMINI_API_KEY",
+   "model": "gemini-2.5-flash", "rpm": 5, "daily": 20, "timeout_s": 60, "trains_on_data": true, "role": "research", "prio": 4,
+   "note": "free tier 5-15 rpm, 20-1500/день по модели; вне EU/UK/EEA данные идут в обучение -> только public"},
+  {"name": "hf-router", "kind": "openai", "url": "https://router.huggingface.co/v1", "api_key_env": "HF_TOKEN", "model": "Qwen/Qwen3-32B",
+   "rpm": 10, "daily": 100, "timeout_s": 90, "trains_on_data": false, "role": "general", "prio": 5,
+   "note": "бесплатный кредит HF мал и без точной цифры; при 402/429 пул уходит в кулдаун"},
+  {"name": "hf-space", "kind": "gradio", "space": "", "api_name": "/chat", "rpm": 3, "daily": 30, "timeout_s": 120,
+   "trains_on_data": true, "role": "fallback", "prio": 9, "enabled": false,
+   "note": "публичный Space через gradio_client (pip install gradio_client); владелец вписывает space и api_name, ZeroGPU-квота и очереди; только public"}
+ ]}

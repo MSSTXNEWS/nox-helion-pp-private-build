@@ -1,0 +1,459 @@
+{
+ "_comment": "Приёмка ACT-02: 10 реальных обратимых задач. Для каждой: submit x2 без дубля, [обрыв процесса], повтор с места обрыва, квитанция с живой перепроверкой, откат x2 и состояние файлов побайтно как до. Запуск: python3 task_runner.py --home /root/nox/state/act accept acceptance_10.json",
+ "tasks": [
+  {
+   "card": {
+    "id": "A01",
+    "title": "Заметка: итоги дня для мессира",
+    "steps": [
+     {
+      "id": "s1",
+      "op": "write_file",
+      "args": {
+       "path": "notes/a01_day.md",
+       "content": "# Итоги дня\n- память S03 открывается\n- чат: STOP без квитанции\n"
+      },
+      "verify": [
+       {
+        "kind": "file_contains",
+        "path": "notes/a01_day.md",
+        "text": "STOP без квитанции"
+       }
+      ]
+     }
+    ],
+    "verify": [
+     {
+      "kind": "file_exists",
+      "path": "notes/a01_day.md"
+     }
+    ]
+   },
+   "touches": [
+    "notes/a01_day.md"
+   ],
+   "expect": "done"
+  },
+  {
+   "card": {
+    "id": "A02",
+    "title": "Правка конфига тона: verbosity short -> brief",
+    "steps": [
+     {
+      "id": "s1",
+      "op": "patch_file",
+      "args": {
+       "path": "config/nox.conf",
+       "old": "verbosity=short",
+       "new": "verbosity=brief"
+      }
+     }
+    ],
+    "verify": [
+     {
+      "kind": "file_contains",
+      "path": "config/nox.conf",
+      "text": "verbosity=brief"
+     },
+     {
+      "kind": "file_contains",
+      "path": "config/nox.conf",
+      "text": "tone=neutral"
+     }
+    ]
+   },
+   "touches": [
+    "config/nox.conf"
+   ],
+   "expect": "done",
+   "seed": {
+    "config/nox.conf": "tone=neutral\nverbosity=short\n"
+   }
+  },
+  {
+   "card": {
+    "id": "A03",
+    "title": "Настройка: окно проактивности 08-23 МСК",
+    "steps": [
+     {
+      "id": "s1",
+      "op": "json_set",
+      "args": {
+       "path": "settings.json",
+       "key": "nox.proactive_hours",
+       "value": "08-23"
+      }
+     }
+    ],
+    "verify": [
+     {
+      "kind": "json_eq",
+      "path": "settings.json",
+      "key": "nox.proactive_hours",
+      "value": "08-23"
+     },
+     {
+      "kind": "json_eq",
+      "path": "settings.json",
+      "key": "nox.verbosity",
+      "value": "short"
+     }
+    ]
+   },
+   "touches": [
+    "settings.json"
+   ],
+   "expect": "done",
+   "seed": {
+    "settings.json": "{\n \"nox\": {\n  \"verbosity\": \"short\"\n }\n}\n"
+   }
+  },
+  {
+   "card": {
+    "id": "A04",
+    "title": "Канбан: проверить бэкап S03",
+    "steps": [
+     {
+      "id": "s1",
+      "op": "board_add",
+      "args": {
+       "path": "board.json",
+       "item": {
+        "id": "k-backup-s03",
+        "title": "Проверить свежесть бэкапа памяти S03",
+        "column": "todo",
+        "prio": 1
+       }
+      }
+     }
+    ],
+    "verify": [
+     {
+      "kind": "json_has_item",
+      "path": "board.json",
+      "list_key": "cards",
+      "id": "k-backup-s03",
+      "fields": {
+       "column": "todo"
+      }
+     }
+    ]
+   },
+   "touches": [
+    "board.json"
+   ],
+   "expect": "done"
+  },
+  {
+   "card": {
+    "id": "A05",
+    "title": "Календарь: ревью дыр P0 в 12:00 МСК",
+    "steps": [
+     {
+      "id": "s1",
+      "op": "calendar_add",
+      "args": {
+       "path": "calendar.json",
+       "item": {
+        "id": "e-review-p0",
+        "title": "Ревью дыр P0 (чат/STOP/память)",
+        "start": "2026-12-01T12:00:00+03:00",
+        "end": "2026-12-01T12:30:00+03:00"
+       }
+      }
+     }
+    ],
+    "verify": [
+     {
+      "kind": "json_has_item",
+      "path": "calendar.json",
+      "list_key": "events",
+      "id": "e-review-p0"
+     }
+    ]
+   },
+   "touches": [
+    "calendar.json"
+   ],
+   "expect": "done"
+  },
+  {
+   "card": {
+    "id": "A06",
+    "title": "Патч модуля greet + проверка запуском",
+    "steps": [
+     {
+      "id": "s1",
+      "op": "patch_file",
+      "args": {
+       "path": "mod.py",
+       "old": "return 'privet'",
+       "new": "return 'privet, messir'"
+      },
+      "verify": [
+       {
+        "kind": "cmd_ok",
+        "cmd": [
+         "python3",
+         "-c",
+         "import mod; assert mod.greet()=='privet, messir'"
+        ]
+       }
+      ]
+     }
+    ],
+    "verify": [
+     {
+      "kind": "cmd_ok",
+      "cmd": [
+       "python3",
+       "-m",
+       "py_compile",
+       "mod.py"
+      ]
+     }
+    ]
+   },
+   "touches": [
+    "mod.py"
+   ],
+   "expect": "done",
+   "seed": {
+    "mod.py": "def greet():\n    return 'privet'\n"
+   }
+  },
+  {
+   "card": {
+    "id": "A07",
+    "title": "Заведомо плохой патч: откат по провалу проверки",
+    "steps": [
+     {
+      "id": "s1",
+      "op": "patch_file",
+      "args": {
+       "path": "mod7.py",
+       "old": "return 1",
+       "new": "return 1 +"
+      },
+      "verify": [
+       {
+        "kind": "cmd_ok",
+        "cmd": [
+         "python3",
+         "-m",
+         "py_compile",
+         "mod7.py"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "touches": [
+    "mod7.py"
+   ],
+   "expect": "rolled_back",
+   "seed": {
+    "mod7.py": "def f():\n    return 1\n"
+   }
+  },
+  {
+   "card": {
+    "id": "A08",
+    "title": "Лог + карточка; обрыв после эффекта до записи в журнал",
+    "steps": [
+     {
+      "id": "s1",
+      "op": "append_line",
+      "args": {
+       "path": "logs/a08.log",
+       "line": "A08 deployed marker-8f3a"
+      }
+     },
+     {
+      "id": "s2",
+      "op": "board_add",
+      "args": {
+       "path": "board.json",
+       "item": {
+        "id": "k-a08",
+        "title": "Проверить A08 на S1",
+        "column": "doing"
+       }
+      }
+     }
+    ],
+    "verify": [
+     {
+      "kind": "file_contains",
+      "path": "logs/a08.log",
+      "text": "marker-8f3a"
+     },
+     {
+      "kind": "json_has_item",
+      "path": "board.json",
+      "list_key": "cards",
+      "id": "k-a08"
+     }
+    ]
+   },
+   "touches": [
+    "logs/a08.log",
+    "board.json"
+   ],
+   "expect": "done",
+   "seed": {
+    "board.json": "{\n \"cards\": []\n}\n"
+   },
+   "crash": {
+    "step": "s1",
+    "point": "after_effect"
+   },
+   "expect_lines": [
+    {
+     "path": "logs/a08.log",
+     "line": "A08 deployed marker-8f3a"
+    }
+   ]
+  },
+  {
+   "card": {
+    "id": "A09",
+    "title": "Три шага; обрыв после applied шага 2; продолжить с места обрыва",
+    "steps": [
+     {
+      "id": "s1",
+      "op": "write_file",
+      "args": {
+       "path": "notes/a09_plan.md",
+       "content": "план A09\n"
+      }
+     },
+     {
+      "id": "s2",
+      "op": "append_line",
+      "args": {
+       "path": "notes/a09_plan.md",
+       "line": "шаг2 marker-9c1d"
+      }
+     },
+     {
+      "id": "s3",
+      "op": "json_set",
+      "args": {
+       "path": "settings9.json",
+       "key": "a09.done",
+       "value": true
+      }
+     }
+    ],
+    "verify": [
+     {
+      "kind": "file_contains",
+      "path": "notes/a09_plan.md",
+      "text": "marker-9c1d"
+     },
+     {
+      "kind": "json_eq",
+      "path": "settings9.json",
+      "key": "a09.done",
+      "value": true
+     }
+    ]
+   },
+   "touches": [
+    "notes/a09_plan.md",
+    "settings9.json"
+   ],
+   "expect": "done",
+   "crash": {
+    "step": "s2",
+    "point": "after_applied"
+   },
+   "expect_lines": [
+    {
+     "path": "notes/a09_plan.md",
+     "line": "шаг2 marker-9c1d"
+    }
+   ]
+  },
+  {
+   "card": {
+    "id": "A10",
+    "title": "Составная: заметка+карточка+событие+настройка; обрыв после intent шага 3",
+    "steps": [
+     {
+      "id": "s1",
+      "op": "write_file",
+      "args": {
+       "path": "notes/a10_gap.md",
+       "content": "Вопрос: чем проверять факты без интернета?\n"
+      }
+     },
+     {
+      "id": "s2",
+      "op": "board_add",
+      "args": {
+       "path": "board.json",
+       "item": {
+        "id": "k-a10",
+        "title": "Разобрать вопрос из карты незнания",
+        "column": "todo"
+       }
+      }
+     },
+     {
+      "id": "s3",
+      "op": "calendar_add",
+      "args": {
+       "path": "calendar.json",
+       "item": {
+        "id": "e-a10",
+        "title": "Разбор вопроса из карты незнания",
+        "start": "2026-12-02T15:00:00+03:00"
+       }
+      }
+     },
+     {
+      "id": "s4",
+      "op": "json_set",
+      "args": {
+       "path": "settings.json",
+       "key": "gap_map.last_review",
+       "value": "2026-12-02"
+      }
+     }
+    ],
+    "verify": [
+     {
+      "kind": "json_has_item",
+      "path": "board.json",
+      "list_key": "cards",
+      "id": "k-a10"
+     },
+     {
+      "kind": "json_has_item",
+      "path": "calendar.json",
+      "list_key": "events",
+      "id": "e-a10"
+     },
+     {
+      "kind": "file_exists",
+      "path": "notes/a10_gap.md"
+     }
+    ]
+   },
+   "touches": [
+    "notes/a10_gap.md",
+    "board.json",
+    "calendar.json",
+    "settings.json"
+   ],
+   "expect": "done",
+   "crash": {
+    "step": "s3",
+    "point": "after_intent"
+   }
+  }
+ ]
+}

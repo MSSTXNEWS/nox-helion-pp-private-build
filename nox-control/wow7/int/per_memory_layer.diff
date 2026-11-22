@@ -1,0 +1,30 @@
+--- a/nox-control/qs6/memory_layer.py
++++ b/nox-control/qs6/memory_layer.py
+@@ -73,6 +73,14 @@
+         self._next_try = 0.0
+         self._warned = set()
+         self.pad = PadState() if self.emotion else None
++        self.per = None                      # PER-02: живая личность (NOX_PERSONA=1); флаг выключен -> поведение прежнее
++        if _flag(e("NOX_PERSONA")):
++            try:
++                _wow_path("per")
++                from per_wire import PerWire
++                self.per = PerWire(state_dir=e("NOX_STATE") or None, pad=self.pad)
++            except Exception as ex:
++                self._log("NOX_PERSONA=1, но per_wire не загружен (%s): личность не живёт" % ex)
+         self._guard = _guarded()
+         if self._guard is None:
+             self._log("MEM-03: wow7/mem/correction.py не найден: отозванные факты могут вернуться")
+@@ -219,6 +227,12 @@
+                     self.pad.apply(ev, self.clock())
+         except Exception as ex:
+             self._log("тон не обновлён: %s" % ex)
++        if self.per is not None:
++            try:
++                with self.lock:
++                    rep["persona"] = self.per.after_reply(user_text, reply, self.clock())
++            except Exception as ex:
++                self._log("личность не обновлена: %s" % ex)
+         if self.memory_on:
+             try:
+                 with self.lock:

@@ -20,6 +20,12 @@ except Exception as _e:     # без пакета qs6 шлюз работает 
 class State:
     def __init__(self, cfg, mem=None):
         self.cfg = cfg; self.mem = mem if mem is not None else (MemoryLayer() if MemoryLayer else None); self.meter = C.SpeedMeter(cfg); self.cache = C.CacheStats(); self.reg = C.Registry(); self.fast_down_until = 0.0
+        self.prime = None
+        if os.environ.get("NOX_PRIME") == "1":
+            try:
+                import gateway_prime as GP
+                self.prime = GP.make_prime(self.mem)
+            except Exception as e: print("[prime] выключен: %s" % e, file=sys.stderr, flush=True)
         if self.mem is not None:
             self.mem.telemetry = lambda: {"speed": self.meter.snapshot(), "fast_available": self.fast_ok()}
             if not self.mem.summary_path and cfg.session_summary: self.mem.summary_path = cfg.session_summary
@@ -63,10 +69,15 @@ def make_handler(st):
                 return self._json(200, {"text": RS.resume_answer(cfg.session_summary)})
             self._relay(self.path)
         def do_POST(self):
-            n = int(self.headers.get("Content-Length", "0"))
-            try: body = json.loads(self.rfile.read(n) or b"{}")
+            n = int(self.headers.get("Content-Length", "0")); raw = self.rfile.read(n) if n else b""
+            try: body = json.loads(raw or b"{}")
             except Exception: return self._json(400, {"error": "bad json"})
             p = self.path.split("?")[0].rstrip("/")
+            if os.environ.get("NOX_CORE") == "1" and p in ("/v1/chat/completions", "/chat/completions", "/v1/stop"):
+                try:
+                    import core_proxy                       # NOX_CORE=1: тело и поток байт-в-байт через CORE; CORE лежит -> старый путь ниже
+                    if core_proxy.proxy(self, p, raw): return
+                except Exception as e: print("[core] прокси выключен: %s" % e, file=sys.stderr, flush=True)
             if p == "/v1/stop":
                 rid = body.get("request_id") or ""
                 return self._json(200, {"request_id": rid, "stopped": st.reg.stop(rid)})
@@ -104,11 +115,19 @@ def make_handler(st):
                     mem.finished(rid, len(self._res["text"]))
                     if self._res["ok"] and not req.cancelled.is_set():
                         mem.after_reply(user, self._res["text"], rid, msgs, body.get("nox_session"))
+                if self._res["ok"] and not req.cancelled.is_set() and st.prime is not None:
+                    try: st.prime.after_reply(user, self._res["text"], rid)
+                    except Exception as e: print("[prime] after_reply: %s" % e, file=sys.stderr, flush=True)
             finally:
                 st.reg.done(req)
         def _with_memory(self, body, user, rid, info, plan):
             """QS6B: системный промпт (душа + память + самознание + тон) и/или факты в запрос; клиентский nox_system не принимается."""
             body = dict(body); body.pop("nox_system", None)
+            if st.prime is not None:
+                try:
+                    import gateway_prime as GP
+                    return GP.apply(st.prime, body, user, rid, info)
+                except Exception as e: info["prime_error"] = str(e)   # падение Prime -> старая душа qs6
             if not st.mem: return body
             try:
                 prep = st.mem.prepare(user, rid)

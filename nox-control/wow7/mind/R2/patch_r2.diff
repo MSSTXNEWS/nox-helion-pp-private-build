@@ -1,0 +1,349 @@
+--- a/BRAIN/nox_core.py	2026-11-22 05:17:31.139251252 +0300
++++ b/BRAIN/nox_core.py	2026-11-22 05:17:48.790408792 +0300
+@@ -4,7 +4,9 @@
+ POST /v1/chat/completions   OpenAI-совместимо; stream=true -> SSE: текст только в `data:` chunk, служебное только в `event: nox_phase` / `event: nox_meta`
+ POST /v1/stop               {"turn_id"|"conversation_id"} -> квитанция
+ GET  /v1/core/trace/<id>    трасса хода;  GET /v1/core/followup/<id>  фоновое доведение ответа;  GET /health
+-Доп. поля запроса: nox_mode (auto|fast|deep|max), nox_turn_id, nox_conversation_id, user; заголовки X-Nox-Turn-Id, X-Nox-Conversation, X-Nox-Speaker.
++Доп. поля запроса: nox_mode (auto|fast|deep|max), nox_turn_id, nox_conversation_id, user; заголовки X-Nox-Turn-Id, X-Nox-Conversation (или X-Nox-Session), X-Nox-Speaker.
++MIND R2: X-NOX-Eval: 1 - ход бенчмарка (память пишется с пометкой [EVAL], Решатель/Предсказатель/сон не учатся); POST /v1/core/eval/purge - очистка [EVAL];
++        X-NOX-Ablate: episode:<id>[,episode:<id2>] - абляция эпизода (из истории диалога и из выдачи памяти) только для этого хода.
+ Env: NOX_CORE_HOST/PORT (127.0.0.1:8090), NOX_FAST_URL (:8083), NOX_GLM_URL (:8081), NOX_CONSCIENCE=enforce|shadow, NOX_STATE, NOX_RECEIPTS, NOX_TRACE_DIR, NOX_BG_DEEP=1.
+ """
+ import asyncio
+@@ -239,6 +241,8 @@
+         self.planners = list(planners)
+         self.convs, self.turns, self.followups = {}, {}, {}
+         self.glm_inflight, self._gs = 0, (0.0, "unknown")
++        self.eval_turns = {}                      # turn_id -> {bench, conv, ts}: метки X-NOX-Eval для очистки
++        self.eval_convs = set()
+         self.server = None
+ 
+     # ---------- утилиты ----------
+@@ -326,6 +330,14 @@
+     async def run_turn(self, turn, conv, history, user_text, opts):
+         st = E.State(self, turn, conv, user_text, history, opts)
+         children = []
++        if opts.get("eval"):
++            turn.trace["eval"] = {"bench": opts.get("bench") or ""}
++            self.mark_eval(turn, conv)
++        if opts.get("ablate"):
++            ids = set(opts["ablate"])
++            before = len(st.history)
++            st.history = [m for m in st.history if m.get("turn_id") not in ids]
++            turn.trace["ablate"] = {"episodes": sorted(ids), "dropped_history": before - len(st.history), "dropped_recalled": 0}
+         try:
+             turn.emit_meta("meta", {"conversation_id": conv.id, "version": VERSION})
+             await E.Perception(self)(st)
+@@ -392,10 +404,11 @@
+         if turn.trace.get("intent") == "stop":
+             return
+         now = time.time()
+-        conv.messages.append({"role": "user", "content": user_text, "turn_id": turn.id, "ts": now, "control": turn.control})
++        ev = bool(turn.trace.get("eval"))
++        conv.messages.append({"role": "user", "content": user_text, "turn_id": turn.id, "ts": now, "control": turn.control, **({"eval": True} if ev else {})})
+         txt = turn.text().strip()
+         if txt:
+-            conv.messages.append({"role": "assistant", "content": txt, "turn_id": turn.id, "ts": now, "control": turn.control, "stopped": turn.status == "stopped"})
++            conv.messages.append({"role": "assistant", "content": txt, "turn_id": turn.id, "ts": now, "control": turn.control, "stopped": turn.status == "stopped", **({"eval": True} if ev else {})})
+         conv.messages = conv.messages[-200:]
+         if statefile and os.path.isdir(self.cfg.state_dir):
+             try:
+@@ -403,6 +416,76 @@
+             except Exception:
+                 pass
+ 
++    # ---------- MIND R2: X-NOX-Eval ----------
++    def mark_eval(self, turn, conv):
++        if turn.id in self.eval_turns:
++            return
++        rec = {"turn_id": turn.id, "conv": conv.id, "bench": turn.trace.get("eval", {}).get("bench", ""), "ts": time.time()}
++        self.eval_turns[turn.id] = rec
++        self.eval_convs.add(conv.id)
++        if os.path.isdir(self.cfg.state_dir):
++            try:
++                statefile.append_line(os.path.join(self.cfg.state_dir, "eval_turns.jsonl"), json.dumps(rec, ensure_ascii=False)) if statefile else None
++            except Exception:
++                pass
++
++    def _eval_ids_from_disk(self):
++        out = {}
++        p = os.path.join(self.cfg.state_dir, "eval_turns.jsonl")
++        try:
++            with open(p, encoding="utf-8") as f:
++                for l in f:
++                    try:
++                        r = json.loads(l)
++                        out[r["turn_id"]] = r
++                    except (ValueError, KeyError):
++                        pass
++        except OSError:
++            pass
++        return out
++
++    def purge_eval(self, bench=None, conv=None):
++        """Очистка следов [EVAL]: записи памяти (organs.forget), диалоги бенчмарка, файлы диалогов. Живые диалоги не трогаются."""
++        recs = dict(self._eval_ids_from_disk())
++        recs.update(self.eval_turns)
++        ids = [i for i, r in recs.items() if (not bench or r.get("bench") == bench) and (not conv or r.get("conv") == conv)]
++        res = {"purged_turns": len(ids), "forget": None, "convs": 0}
++        if ids:
++            try:
++                res["forget"] = self.organs.forget(ids)
++            except Exception as e:
++                res["forget"] = {"ok": False, "error": "%s: %s" % (type(e).__name__, e)}
++        gone = {recs[i]["conv"] for i in ids}
++        for cid in gone:
++            if cid in self.convs and all(m.get("eval") for m in self.convs[cid].messages):
++                self.convs.pop(cid, None)
++                res["convs"] += 1
++            try:
++                os.remove(os.path.join(self.cfg.state_dir, "core_conv_%s.json" % re.sub(r"\W", "_", cid)))
++            except OSError:
++                pass
++        keep = [r for i, r in recs.items() if i not in set(ids)]
++        for i in ids:
++            self.eval_turns.pop(i, None)
++        if os.path.isdir(self.cfg.state_dir):
++            try:
++                with open(os.path.join(self.cfg.state_dir, "eval_turns.jsonl"), "w", encoding="utf-8") as f:
++                    for r in keep:
++                        f.write(json.dumps(r, ensure_ascii=False) + "\n")
++            except OSError:
++                pass
++        return res
++
++    @staticmethod
++    def parse_ablate(h):
++        """'episode:<id>[,episode:<id2>]' -> список id (пустой при мусоре)."""
++        out = []
++        for part in re.split(r"[,;]", h or ""):
++            m = re.fullmatch(r"\s*episode:([\w.\-]{1,80})\s*", part)
++            if m:
++                out.append(m.group(1))
++        return out[:8]
++
+     # ---------- STOP ----------
+     async def stop_turn(self, turn):
+         if turn.status != "running":
+@@ -528,6 +611,8 @@
+                 body = json.loads(raw or b"{}")
+             except ValueError:
+                 return await netio.send_json(writer, 400, {"error": "bad_json"})
++            if method == "POST" and path == "/v1/core/eval/purge":
++                return await netio.send_json(writer, 200, self.purge_eval(body.get("bench"), body.get("conversation_id")))
+             if method == "POST" and path == "/v1/stop":
+                 t = self.turns.get(body.get("turn_id") or "")
+                 if t is None and body.get("conversation_id"):
+@@ -556,11 +641,16 @@
+         text = self._user_text(msgs)
+         if not text:
+             return await netio.send_json(writer, 400, {"error": "empty_user_message"})
+-        cid = hdrs.get("x-nox-conversation") or body.get("nox_conversation_id") or body.get("user") or "default"
++        cid = hdrs.get("x-nox-conversation") or body.get("nox_conversation_id") or hdrs.get("x-nox-session") or body.get("user") or "default"
+         tid = hdrs.get("x-nox-turn-id") or body.get("nox_turn_id")
+         seed = [{"role": m["role"], "content": self._user_text([m]) if m["role"] == "user" else str(m.get("content") or "")}
+                 for m in msgs[:-1] if m.get("role") in ("user", "assistant")]
+         opts = {"mode": body.get("nox_mode"), "speaker": hdrs.get("x-nox-speaker")}
++        if str(hdrs.get("x-nox-eval", "")).strip().lower() in ("1", "true", "yes"):
++            opts["eval"], opts["bench"] = True, hdrs.get("x-nox-bench") or ""
++        ab = self.parse_ablate(hdrs.get("x-nox-ablate"))
++        if ab:
++            opts["ablate"] = ab
+         stream = bool(body.get("stream"))
+         turn, _new = self.start_turn(text, cid, tid, stream, opts, seed)
+         if not stream:
+--- a/BRAIN/executors.py	2026-11-22 05:17:31.139289458 +0300
++++ b/BRAIN/executors.py	2026-11-22 05:19:46.258236608 +0300
+@@ -185,6 +185,9 @@
+ 
+     async def run(self, st):
+         core, t = self.core, st.user_text
++        if st.opts.get("eval"):                       # ход бенчмарка: ни прогноза, ни закрытия прошлого прогноза (MIND R2)
++            self.note(st, "skipped")
++            return
+         prev = next((m["turn_id"] for m in reversed(st.history) if m["role"] == "assistant" and not m.get("control") and m.get("turn_id")), None)
+         if prev and st.intent not in ("stop",):
+             corrected = bool(CORRECT.search(t))
+@@ -213,6 +216,32 @@
+         st.mood = self.core.organs.mood()
+ 
+ 
++def _mentions(x, ids):
++    if isinstance(x, dict):
++        if str(x.get("turn_id") or x.get("episode") or x.get("id") or "") in ids:
++            return True
++        x = json.dumps(x, ensure_ascii=False)
++    s = str(x)
++    return any(i in s for i in ids)
++
++
++def ablate_memory(mem, ids):
++    """Убрать из выдачи памяти записи, относящиеся к эпизодам ids (turn_id/id записи или упоминание id в тексте). -> (mem, сколько убрано)."""
++    ids = set(ids)
++    mem = dict(mem or {})
++    rec = list(mem.get("recalled") or [])
++    keep = [r for r in rec if not _mentions(r, ids)]
++    n = len(rec) - len(keep)
++    mem["recalled"] = keep
++    core = mem.get("core")
++    if isinstance(core, str) and any(i in core for i in ids):
++        lines = core.split("\n")
++        left = [l for l in lines if not any(i in l for i in ids)]
++        n += len(lines) - len(left)
++        mem["core"] = "\n".join(left)
++    return mem, n
++
++
+ # ---------------------------------------------------------------- 3. Память
+ class Memory(Exec):
+     name, budget_s = "memory", 0.3
+@@ -223,6 +252,10 @@
+             return
+         loop = asyncio.get_running_loop()
+         st.mem = await loop.run_in_executor(None, self.core.organs.memory, st.user_text, st.turn.id) or {}
++        ab = st.opts.get("ablate")
++        if ab:                                         # X-NOX-Ablate: эпизод выключается из ретривала только на этот ход
++            st.mem, n = ablate_memory(st.mem, ab)
++            st.turn.trace.setdefault("ablate", {})["dropped_recalled"] = n
+ 
+ 
+ # ---------------------------------------------------------------- 4. Решатель
+@@ -559,13 +592,23 @@
+         st.turn.trace["chronicler"] = rec
+         try:
+             loop = asyncio.get_running_loop()
+-            await asyncio.wait_for(loop.run_in_executor(None, self.core.organs.after, st.user_text, reply, st.turn.id), 10.0)
++            ev = bool(st.opts.get("eval"))
++            u, r_ = (("[EVAL] " + st.user_text), ("[EVAL] " + reply)) if ev else (st.user_text, reply)      # метка для очистки по X-NOX-Eval
++            await asyncio.wait_for(loop.run_in_executor(None, self.core.organs.after, u, r_, st.turn.id), 10.0)
+             tr = st.turn.trace
++            if ev:
++                rec["mind"] = {"skipped": "eval"}              # бенчмарк не обучает ни Решатель, ни Предсказатель, ни сон
++                rec["status"] = "done"
++                rec["ms"] = int((time.monotonic() - t0) * 1000)
++                self.core.persist_trace(st.turn)
++                return
+             ok = tr["conscience"].get("verdict") == "pass"
+             empty = "exhausted" in (tr.get("reason_attempts") or [])
+             info = {"outcome": {"conscience_ok": ok, "rewrites": tr["conscience"].get("rewrites", 0), "empty": empty, "stopped": False,
+                                 "latency_s": tr.get("total_ms", 0) / 1000.0},
+-                    "success": ok and not empty, "latency_s": max(tr.get("total_ms", 0) / 1000.0, 0.05)}
++                    "success": ok and not empty, "latency_s": max(tr.get("total_ms", 0) / 1000.0, 0.05),
++                    "ctx": {"greeting": "chat", "smalltalk": "chat", "telemetry_q": "chat", "question": "question", "task": "task"}.get(st.intent, "question"),
++                    "path": tr.get("path_code")}
+             rec["mind"] = await asyncio.wait_for(loop.run_in_executor(None, self.core.organs.observe_turn, st.turn.id, info), 5.0)
+             rec["status"] = "done"
+         except Exception as e:
+--- a/BRAIN/organs.py	2026-11-22 05:17:31.139314528 +0300
++++ b/BRAIN/organs.py	2026-11-22 05:18:03.258334785 +0300
+@@ -8,7 +8,7 @@
+ 
+ HERE = os.path.dirname(os.path.abspath(__file__))
+ ROOT = os.path.dirname(HERE)
+-for _d in (os.environ.get("NOX_COMMON", ""), os.path.join(ROOT, "COMMON"), os.path.join(ROOT, "RTE"), os.path.join(ROOT, "PRIME"), os.path.join(ROOT, "CON"), os.path.join(ROOT, "EMO"), os.path.join(ROOT, "MEM"), os.path.join(ROOT, "ACT"), os.path.join(ROOT, "MIND", "M1_ARCH"), os.path.join(ROOT, "MIND", "M3_CONSCIOUS"), ROOT):
++for _d in (os.environ.get("NOX_COMMON", ""), os.path.join(ROOT, "COMMON"), os.path.join(ROOT, "RTE"), os.path.join(ROOT, "PRIME"), os.path.join(ROOT, "CON"), os.path.join(ROOT, "EMO"), os.path.join(ROOT, "MEM"), os.path.join(ROOT, "ACT"), os.path.join(ROOT, "MIND", "M1_ARCH"), os.path.join(ROOT, "MIND", "M3_CONSCIOUS"), os.path.join(ROOT, "MIND", "M4_BENCH"), os.path.join(ROOT, "MIND", "M5_GROWTH"), os.path.join(ROOT, "MIND", "R2"), ROOT):
+     if _d and os.path.isdir(_d) and _d not in sys.path:
+         sys.path.append(_d)
+ 
+@@ -81,6 +81,9 @@
+ 
+     def observe_turn(self, turn_id, info):
+         """После хода (Летописец): исход -> Решатель (policy.observe), прогноз -> predictive.observe, удивление -> рабочее пространство."""
++        br = self.parts.get("bridge")
++        if br is not None:                       # MIND R2: единый стык (MindBridge) вместо прямых вызовов
++            return br.on_turn(turn_id, info)
+         out = {}
+         sv, ps, ws = self.parts.get("solver"), self.parts.get("predictive"), self.parts.get("workspace")
+         if sv is not None:
+@@ -107,6 +110,9 @@
+ 
+     def observe_late(self, prev_turn_id, reaction, corrected):
+         """Реакция Создателя в СЛЕДУЮЩЕЙ реплике по прошлому ходу: observe_late у Решателя (только при поправке) и закрытие прогноза."""
++        br = self.parts.get("bridge")
++        if br is not None:
++            return br.on_late(prev_turn_id, reaction, corrected)
+         out = {}
+         sv, ps, ws = self.parts.get("solver"), self.parts.get("predictive"), self.parts.get("workspace")
+         if sv is not None and corrected:
+@@ -164,4 +170,10 @@
+         parts["predictive"] = PS.PredictiveSelf(os.path.join(state_dir or "/root/nox/state", "predictive_self.json"))
+     except Exception:
+         pass
++    if os.environ.get("NOX_MIND_BRIDGE", "1") == "1" and (parts.get("solver") or parts.get("predictive")):
++        try:
++            import mind_bridge as MB
++            parts["bridge"] = MB.build_bridge(parts, state_dir or "/root/nox/state")
++        except Exception:
++            pass
+     return Organs(**parts)
+--- a/SLP/sleep_cycle.py	2026-11-22 05:21:28.125576517 +0300
++++ b/SLP/sleep_cycle.py	2026-11-22 05:23:08.447579322 +0300
+@@ -115,6 +115,7 @@
+     train = staticmethod(real_train)
+     fidelity = staticmethod(real_fidelity)
+     regress = staticmethod(real_regress)
++    extra_gate = None      # MIND R2: callable(cfg, tr, fi, day) -> результат MIND/R2/gate_all.run_gate (MIND-BENCH + contam + подпись Создателя)
+ 
+ 
+ # ---------------- этапы ----------------
+@@ -262,6 +263,16 @@
+         if not rgr["ok"] or not rgr.get("pass"):
+             why.append("забывание общих навыков: " + str(rgr.get("error") or "регресс выше допуска"))
+         e = AR.register(P, tr["gguf"], a.base, tr["peft"], {"fidelity": fi.get("cand", {}).get("score"), "mode": stats["mode"], "pos": stats["pos"], "neg": stats["neg"]}, note="ночь " + day)
++        eg = getattr(hooks, "extra_gate", None)
++        if eg and not why:
++            try:
++                g2 = eg(cfg, tr, fi, day)
++            except Exception as ex:
++                g2 = {"pass": False, "decision": "reject", "reasons": ["gate_all: %s" % ex]}
++            if g2.get("decision") == "pending_signature":
++                return {"accepted": False, "id": e["id"], "pending_signature": True, "why": ["ждёт подписи Создателя: " + "; ".join(g2.get("needs_signature") or [])]}
++            if not g2.get("pass"):
++                why += ["gate_all: " + r for r in (g2.get("reasons") or ["не пройден"])]
+         if why:
+             AR.reject(P, e["id"], "; ".join(why)[:400])
+             return {"accepted": False, "id": e["id"], "why": why}
+@@ -368,7 +379,12 @@
+     r.add_argument("--train-timeout", type=int, default=6 * 3600); r.add_argument("--force-window", action="store_true"); r.add_argument("--force-promote", action="store_true")
+     r.add_argument("--restart", action="store_true"); r.add_argument("--dry-run", action="store_true")
+     a = ap.parse_args(argv)
+-    return run(a)
++    hk = Hooks
++    if os.environ.get("NOX_SLP_HOOKS"):          # MIND R2: "модуль:Класс" - Hooks с extra_gate (gate_all)
++        import importlib
++        mod, _, cls = os.environ["NOX_SLP_HOOKS"].partition(":")
++        hk = getattr(importlib.import_module(mod), cls or "Hooks")
++    return run(a, hk)
+ 
+ 
+ if __name__ == "__main__":
+--- a/EMO/affect_loop.py	2026-11-22 05:23:07.815156209 +0300
++++ b/EMO/affect_loop.py	2026-11-22 05:23:07.831537649 +0300
+@@ -69,10 +69,26 @@
+         self.last_emotions = self.pad.log[-1]["emotions"]
+         self._save_pad()
+ 
++    def drain_mind_feed(self):
++        """MIND R2: наблюдения/утоления от других процессов (ядро, growth) приходят очередью; drives.json пишет только этот процесс. -> счётчики или None."""
++        feed = os.path.join(self.dir, "drives.json.feed.jsonl")
++        if not os.path.exists(feed) or os.path.getsize(feed) == 0:
++            return None
++        try:
++            import sys
++            r2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "MIND", "R2")
++            if os.path.isdir(r2) and r2 not in sys.path:
++                sys.path.append(r2)
++            import curiosity
++            return curiosity.drain_feed(self.drives, feed)
++        except Exception:
++            return None
++
+     def tick(self, signals=None, now=None):
+         """Один такт: сигналы -> drives -> события -> PAD -> настроение -> база PAD. -> снимок состояния."""
+         now = self.clock() if now is None else now
+         sig = dict(signals or {})
++        self.drain_mind_feed()
+         for k, v in self.drives.error_signals().items():
+             sig.setdefault(k, v)
+         self._apply(self.drives.tick(sig, now=now), now)

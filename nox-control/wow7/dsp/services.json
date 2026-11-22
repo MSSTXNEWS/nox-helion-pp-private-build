@@ -1,0 +1,115 @@
+{
+  "_comment": "Реестр сервисов NOX на S1 «Канада» (Vast). Источник: block1/boot_block1.sh, c109/glm_start3_s1.sh, c122/boot_s1.sh, c132/gw_restart_s1.sh, gpu_tier/run.sh, SPD/start_glm_best.sh, voice/start_voice.sh, s1web/web_server.py. Токены: @HOME@ @CTL@ @LOGS@ @STATE@ @DL@ @BIN@. Локальные правки — /root/nox/dsp/local.json (поверх, не затираются обновлением).",
+  "version": 1,
+  "home": "/root/nox",
+  "control": "/root/nox/repo/nox-control",
+  "policy": {
+    "tick_s": 15,
+    "_quiet": "тихие часы - единый COMMON/quiet.py (env NOX_QUIET, по умолчанию 23-8 МСК)",
+    "disk_min_free_gb": 5,
+    "mem_min_available_gb": 48,
+    "mem_resume_available_gb": 64,
+    "backoff_s": [5, 15, 45, 120, 300, 900],
+    "backoff_s_heavy": [60, 180, 600, 1800],
+    "stable_reset_s": 600,
+    "max_restarts_day": 12,
+    "auto_update": true,
+    "update_every_s": 21600,
+    "update_base_url": "https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/wow7/dsp",
+    "forbidden_flags": ["--no-mmap", "--mlock", "-ctk", "-ctv", "--cache-type-k", "--cache-type-v"],
+    "safe_clean": ["/tmp", "@HOME@/dl/npm", "@HOME@/dl/gh", "/root/.nuget", "/root/.cache/pip", "/var/cache/apt"],
+    "protected": ["@HOME@/state", "@HOME@/memory", "@HOME@/glm53", "@HOME@/glm53_disk", "@HOME@/receipts", "/dev/shm/nox_glm", "@HOME@/backup_s2", "@HOME@/dl/hf"],
+    "log_max_mb": 200
+  },
+  "glm": {
+    "model": "@HOME@/glm53/GLM-5.3-UD-Q4_K_XL-00001-of-00011.gguf",
+    "shards_shm": "/dev/shm/nox_glm",
+    "shards_disk": "@HOME@/glm53_disk",
+    "shards_total": 11,
+    "shards_in_shm": 9,
+    "redo_script": "@CTL@/c100/glm_redo_s1.sh",
+    "redo_script_local": "@HOME@/glm_redo_s1.sh",
+    "winner_json": "@LOGS@/spd_ab/winner.json",
+    "args_file": "@HOME@/gpu_tier/glm.args",
+    "args_safe": "-c 16384 -ngl 24 -ot exps=CPU -t 24 -tb 24 -fa on --parallel 1 -b 512 -ub 256 --no-op-offload --jinja --temp 1.0 --top-p 0.95 --min-p 0.01",
+    "slot_dir": "@STATE@/soul_kv"
+  },
+  "res_budget": {"_comment": "REVIEW_1 п.1: GLM - высший приоритет и oom -500; фон: nice 10, ionice idle, 3 ядра (24-26, только если vCPU>=27), oom +300; голос <=2 потока. Менять после SPD-06.",
+    "bg": {"nice": 10, "ionice": "3", "cpus": "24-26", "min_cpus": 27, "oom_score_adj": 300},
+    "voice_threads": 2},
+  "env": {
+    "NOX_HOME": "@HOME@", "NOX_SERVER": "S1",
+    "LD_LIBRARY_PATH": "@CUDA_LD@"
+  },
+  "services": [
+    {
+      "name": "fast", "res": {"nice": 0, "oom_score_adj": -200}, "group": "chat", "port": 8083, "gpu": true, "prio": 10,
+      "argv": ["@BIN@", "-m", "@MODEL@", "--host", "127.0.0.1", "--port", "8083", "-c", "12288", "-ngl", "99", "-fa", "on", "--parallel", "2", "--jinja", "--chat-template-kwargs", "{\"enable_thinking\":false}", "--reasoning-budget", "0"],
+      "model_candidates": ["@DL@/hf/qwen35_9b/Qwen3.5-9B-Q4_K_M.gguf", "@DL@/hf/qwen3_4b/*.gguf"],
+      "match": "llama-server .*--port 8083",
+      "health": {"path": "/health", "ok": [200], "loading": [503]},
+      "start_timeout_s": 240, "load_grace_s": 300, "log": "fast_server.log"
+    },
+    {
+      "name": "glm", "res": {"nice": -5, "ionice": "2:0", "oom_score_adj": -500}, "group": "chat", "port": 8081, "gpu": true, "heavy": true, "exclusive": "glm", "prio": 20,
+      "after": ["fast"], "argv_from": "glm",
+      "match": "llama-server .*-m \\S*glm53/GLM-5\\.3",
+      "preconditions": ["glm_shards"],
+      "health": {"path": "/health", "ok": [200], "loading": [503]},
+      "start_timeout_s": 0, "load_grace_s": 1800, "hang_cpu_s": 300, "log": "glm_server.log"
+    },
+    {
+      "name": "gateway", "res": {"nice": 0, "oom_score_adj": -100}, "group": "chat", "port": 8082, "prio": 30,
+      "argv": ["python3", "@CTL@/glm53/gateway.py"], "cwd": "@CTL@/glm53",
+      "env": {"PYTHONPATH": "@CTL@", "NOX_UPSTREAM": "http://127.0.0.1:8081", "NOX_FAST_UPSTREAM": "http://127.0.0.1:8083", "NOX_TWO_STAGE": "1",
+              "NOX_PORT": "8082", "NOX_SOUL": "1", "NOX_EMOTION": "1", "NOX_MEMORY_DB": "@HOME@/memory/s03.db",
+              "NOX_EVENTS": "@HOME@/memory/events.jsonl", "NOX_SESSION_SUMMARY": "@HOME@/memory/sessions.jsonl", "NOX_JOURNAL": "@LOGS@/journal.jsonl",
+              "NOX_MEMORY_BACKUP_DIR": "@HOME@/memory/backups", "NOX_RECALL_PORT": "8095",
+              "NOX_MODEL": "быстрый ответ — Qwen3.5-9B; глубокий — GLM-5.3 (отвечает только когда загружен)"},
+      "requires": ["fast"], "after": ["glm", "recall"],
+      "match": "python3 .*gateway\\.py",
+      "health": {"path": "/health", "ok": [200], "loading": []},
+      "probe": {"method": "POST", "path": "/v1/chat/completions", "body": {"messages": [{"role": "user", "content": "ping"}], "nox_mode": "fast", "max_tokens": 1, "stream": false}, "timeout_s": 60, "bad": [502, 503, 504], "every_s": 60},
+      "start_timeout_s": 30, "load_grace_s": 60, "log": "gateway.log"
+    },
+    {
+      "name": "recall", "res": {"nice": 5, "oom_score_adj": 100}, "group": "chat", "port": 8095, "prio": 25,
+      "argv": ["python3", "-m", "qs6.recall_server"], "cwd": "@CTL@",
+      "env": {"PYTHONPATH": "@CTL@", "NOX_MEMORY_DB": "@HOME@/memory/s03.db", "NOX_RECALL_PORT": "8095", "NOX_SOUL": "1", "NOX_EMOTION": "1", "NOX_EVENTS": "@HOME@/memory/events.jsonl"},
+      "preconditions": ["file:@HOME@/memory/s03.db"],
+      "match": "qs6\\.recall_server",
+      "health": {"path": "/health", "ok": [200], "loading": []},
+      "start_timeout_s": 30, "load_grace_s": 60, "log": "recall_api.log"
+    },
+    {
+      "name": "web", "res": {"nice": 5, "oom_score_adj": 200}, "group": "chat", "port": 8091, "prio": 40,
+      "argv": ["python3", "@CTL@/s1web/web_server.py"], "env": {"NOX_WEB_PORT": "8091"},
+      "preconditions": ["dir:@HOME@/web"],
+      "match": "web_server\\.py",
+      "health": {"path": "/", "ok": [200, 301, 302, 404], "loading": []},
+      "start_timeout_s": 30, "load_grace_s": 60, "log": "web_server.log"
+    },
+    {
+      "name": "stt", "res": {"nice": 10, "ionice": "3", "cpus": "24-26", "min_cpus": 27, "oom_score_adj": 300}, "group": "chat", "port": 8093, "prio": 50, "launcher": true,
+      "argv": ["bash", "@CTL@/voice/start_voice.sh", "stt"],
+      "env": {"NOX_STT_MODEL": "@DL@/hf/whisper_small", "NOX_STT_DEVICE": "cpu", "OMP_NUM_THREADS": "2", "MKL_NUM_THREADS": "2", "ORT_NUM_THREADS": "2", "NOX_VOICE_THREADS": "2", "NOX_TTS_BACKENDS": "piper,xtts",
+              "NOX_PIPER_MODEL_RU": {"glob": "@DL@/hf/piper_ru/**/*ru*.onnx"}, "NOX_PIPER_MODEL_ES": {"glob": "@DL@/hf/piper_ru/**/*es*.onnx"},
+              "NOX_SMART_TURN_MODEL": {"glob": "@DL@/hf/smart_turn/**/*.onnx"}},
+      "match": "stt_server\\.py", "health": {"path": "/health", "ok": [200], "loading": []}, "start_timeout_s": 60, "load_grace_s": 120, "log": "voice_stt.log"
+    },
+    {
+      "name": "tts", "res": {"nice": 10, "ionice": "3", "cpus": "24-26", "min_cpus": 27, "oom_score_adj": 300}, "group": "chat", "port": 8094, "prio": 51, "launcher": true,
+      "argv": ["bash", "@CTL@/voice/start_voice.sh", "tts"],
+      "env": {"NOX_STT_MODEL": "@DL@/hf/whisper_small", "NOX_STT_DEVICE": "cpu", "OMP_NUM_THREADS": "2", "MKL_NUM_THREADS": "2", "ORT_NUM_THREADS": "2", "NOX_VOICE_THREADS": "2", "NOX_TTS_BACKENDS": "piper,xtts",
+              "NOX_PIPER_MODEL_RU": {"glob": "@DL@/hf/piper_ru/**/*ru*.onnx"}, "NOX_PIPER_MODEL_ES": {"glob": "@DL@/hf/piper_ru/**/*es*.onnx"}},
+      "match": "tts_server\\.py", "health": {"path": "/health", "ok": [200], "loading": []}, "start_timeout_s": 60, "load_grace_s": 120, "log": "voice_tts.log"
+    },
+    {
+      "name": "con_inner", "res": {"nice": 10, "ionice": "3", "cpus": "24-26", "min_cpus": 27, "oom_score_adj": 300}, "group": "bg", "prio": 90,
+      "argv": ["python3", "nox_inner_loop.py", "--daemon", "--interval", "300"], "cwd": "@HOME@/src/con",
+      "preconditions": ["file:@HOME@/src/con/nox_inner_loop.py"],
+      "match": "nox_inner_loop\\.py --daemon", "health": {"none": true},
+      "after": ["gateway"], "load_grace_s": 30, "log": "con_inner.log"
+    }
+  ]
+}
