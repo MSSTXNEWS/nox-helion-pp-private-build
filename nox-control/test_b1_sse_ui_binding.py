@@ -485,6 +485,55 @@ def main():
             nodes.length===2 && row('same')?.textContent==='ONE' &&
             row('conflict')?.textContent==='SAFE' && !row('malformed');
         }'''))
+        # A proxy may batch >64KiB of individually valid, small SSE frames
+        # into ONE read(). Reject oversized individual frames, not large reads.
+        # This is a source-only Chromium transport/DOM regression.
+        check('one large read of small SSE frames preserves one turn', page.evaluate('''async () => {
+          const s={conversation_id:'bulk-framing',exchange_id:'many-deltas'};
+          const container=document.createElement('section');
+          const payload='X'.repeat(780);
+          const packed=Array.from({length:96},(_,i)=>
+            'id: bulk-'+i+'\\nevent: delta\\ndata: '+payload+'\\n\\n').join('');
+          let posts=0,acks=0;
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({start(c){
+              c.enqueue(new TextEncoder().encode(packed));
+              c.close();
+            }})};
+          },async ack(){acks++;return true;}};
+          const ui=NOXB1AbortSafeUI.createUiAdapter({container});
+          const client=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:5000
+          });
+          const ended=await client.begin(s);
+          const rejected=await client.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return packed.length>65536 &&
+            ended==='STREAM_ENDED_READBACK_REQUIRED' && rejected &&
+            posts===1 && acks===0 &&
+            container.children.length===1 &&
+            container.firstElementChild.textContent===payload.repeat(96);
+        }'''))
+        check('one SSE frame over 64KiB still fails closed', page.evaluate('''async () => {
+          const s={conversation_id:'bulk-framing',exchange_id:'oversized-frame'};
+          const payload='X'.repeat(65537);
+          const packed='id: huge\\nevent: delta\\ndata: '+payload+'\\n\\n';
+          let posts=0,acks=0,deltas=0;
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({start(c){
+              c.enqueue(new TextEncoder().encode(packed));c.close();
+            }})};
+          },async ack(){acks++;return true;}};
+          const ui={async onDelta(){deltas++},async upsertTerminal(){return true}};
+          const client=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:5000
+          });
+          const code=await client.begin(s).then(()=>null,e=>e.code);
+          return code==='HOLD_STREAM_FRAME_TOO_LARGE' &&
+            posts===1 && acks===0 && deltas===0;
+        }'''))
         check('CRLF split between chunks still emits one identified SSE delta', page.evaluate('''async () => {
           const s={conversation_id:'crlf-boundary',exchange_id:'one'};
           let posts=0,acks=0;
