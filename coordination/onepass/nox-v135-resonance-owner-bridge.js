@@ -122,12 +122,12 @@
       throw Error('HOLD_DIALOG_HISTORY_READBACK');
   }
   // Correlation IDs appear in UI and S03 receipts. Invisible direction/format
-  // controls and edge whitespace make two visually identical IDs distinct.
+  // controls (all Unicode Cf, including bidi isolates) and edge whitespace make visually identical IDs distinct.
   // Reject them, rather than normalize a previously reserved client identity.
   function validCorrelationId(value,minLength) {
     return typeof value==='string'&&value.length>=minLength&&value.length<=160&&
       value===value.trim()&&validUnicodeScalars(value)&&
-      !/[\x00-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2060\ufeff]/.test(value);
+      !/[\x00-\x1f\x7f\p{Cf}]/u.test(value);
   }
   function accepted(done,id) {
     return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
