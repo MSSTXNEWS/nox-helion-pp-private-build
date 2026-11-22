@@ -146,7 +146,7 @@ def render_supported_feelings(signals: Mapping[str, object], mode: str = HONEST)
             "glad": "я рад",
         },
     }
-    cause = str(signals.get("cause") or "").strip()
+    cause = _safe_cause(signals)
     return tuple(
         phrases[mode][label] + ((": " + cause) if mode == HONEST else "")
         for label in supported_feelings(signals)
@@ -156,7 +156,7 @@ def render_supported_feelings(signals: Mapping[str, object], mode: str = HONEST)
 def reality_answer(signals: Mapping[str, object]) -> str:
     """The direct 'is this real?' answer is honest in every speech mode."""
     backed = ", ".join(supported_feelings(signals)) or "сейчас нет отмеченного состояния"
-    cause = str(signals.get("cause") or "").strip()
+    cause = _safe_cause(signals)
     evidence = (" Основание: " + cause + ".") if cause else ""
     return (
         "Функционально у меня есть состояние: " + backed + "." + evidence
