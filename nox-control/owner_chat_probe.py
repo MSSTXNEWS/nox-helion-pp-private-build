@@ -50,7 +50,12 @@ def request(client,path,method='GET',data=None,timeout=6,base=None):
     accept = ('text/event-stream'
               if method == 'POST' and path == '/api/nox/chat/stream'
               else 'application/json')
-    req=urllib.request.Request((base or BASE)+path,data=payload,method=method,headers={'Content-Type':'application/json','Accept':accept})
+    headers={'Content-Type':'application/json','Accept':accept}
+    # A proxy must not replay an old owner/executor/history snapshot as live
+    # admission or multi-turn readback evidence.
+    if method == 'GET' and path.startswith(('/api/nox/', '/api/ui/')):
+        headers.update({'Cache-Control':'no-store, no-cache', 'Pragma':'no-cache'})
+    req=urllib.request.Request((base or BASE)+path,data=payload,method=method,headers=headers)
     try:return client.open(req,timeout=timeout)
     except urllib.error.HTTPError as exc:return exc
 
@@ -134,11 +139,46 @@ def require_exact_owner_readback_target(response, requested_path):
         raise RuntimeError('HOLD_OWNER_READBACK_RESPONSE_ROUTE')
 
 
+def require_fresh_owner_readback(response):
+    """Fail closed on explicit cached owner GET responses before JSON parsing.
+
+    Owner status, worker identities and chat history are evidence of *current*
+    state; a gateway HIT or Age>0 can replay an earlier healthy snapshot.
+    Headerless offline fixtures remain compatible, never native evidence.
+    """
+    headers = getattr(response, 'headers', None)
+    if headers is None:
+        return
+
+    def unique_header(name):
+        get_all = getattr(headers, 'get_all', None)
+        fields = get_all(name) if callable(get_all) else (
+            [headers.get(name)] if headers.get(name) is not None else [])
+        if not fields:
+            return None
+        if len(fields) != 1 or not isinstance(fields[0], str):
+            raise RuntimeError('HOLD_OWNER_READBACK_CACHE_UNVERIFIED')
+        return fields[0].strip()
+
+    age = unique_header('Age')
+    if age is not None:
+        if not re.fullmatch(r'[0-9]{1,12}', age):
+            raise RuntimeError('HOLD_OWNER_READBACK_CACHE_UNVERIFIED')
+        if int(age) > 0:
+            raise RuntimeError('HOLD_OWNER_READBACK_CACHED')
+    for name in ('X-Cache', 'CF-Cache-Status', 'X-Cache-Status', 'Cache-Status'):
+        value = unique_header(name)
+        if value is not None and re.search(
+                r'(?i)(?:^|[^a-z])(hit|stale|revalidated)(?:$|[^a-z])', value):
+            raise RuntimeError('HOLD_OWNER_READBACK_CACHED')
+
+
 def owner_readback_json(client, requested_path):
     """Bind read-only owner JSON to its exact path and close on both PASS and HOLD."""
     response = request(client, requested_path)
     try:
         require_exact_owner_readback_target(response, requested_path)
+        require_fresh_owner_readback(response)
     except Exception:
         response.close()
         raise
