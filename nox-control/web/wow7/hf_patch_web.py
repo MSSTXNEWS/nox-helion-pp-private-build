@@ -64,8 +64,6 @@ m = re.search(r"^_MSK = .*$", s, re.M); assert m, "no _MSK"
 s = s[:m.start()] + imp + s[m.start():]
 s, n0 = re.subn(r'"content": "🧠[^"]*"', '"content": "", "nox_phase": {"phase": "deep_start"}', s)
 print("deep_start:", n0)
-rep('_deep = _mode in ("deep", "max") or os.environ.get("NOX_SMALL_OFF", "1") == "1"',
-    '_deep = _mode in ("deep", "max") or (os.environ.get("NOX_SMALL_OFF", "1") == "1" and _intent(_user_text) == "other")  # NOXHF: приветствия/статус — быстрым слоем')
 s, n = re.subn(r'^(\s*)out\(\{"model": TAG, "message": \{"role": "assistant", "content": "⏳ Глубокий ответ.*$',
     r'\1out({"model": TAG, "message": {"role": "assistant", "content": ""}, "done": False, "nox_phase": {"phase": "deep_queued", "task": str(jid), "ahead": ahead}})', s, flags=re.M)
 print("deep_queued lines:", n)
