@@ -149,6 +149,45 @@ class FactReceiptTest(unittest.TestCase):
         self.assertFalse(row["s03_readback_verified"])
 
 
+    def test_s03_fact_admission_rejects_ambiguous_input_before_persistence(self):
+        """Malformed JSON, structured content, truncation and unsafe Unicode HOLD."""
+        m = types.ModuleType("s03_memory")
+        writes = []
+        m.persist_turn = lambda *args: writes.append(args)
+        cases = (
+            (None, "S03_FACT_INVALID_BODY"),
+            ([], "S03_FACT_INVALID_BODY"),
+            ({"content": None}, "S03_FACT_INVALID_CONTENT"),
+            ({"content": False}, "S03_FACT_INVALID_CONTENT"),
+            ({"content": {"value": "wrong"}}, "S03_FACT_INVALID_CONTENT"),
+            ({"content": ["wrong"]}, "S03_FACT_INVALID_CONTENT"),
+            ({"content": "   "}, "пустой факт"),
+            ({"content": "A" * 2001}, "S03_FACT_TOO_LONG"),
+            ({"content": "A\\x00B"}, "S03_FACT_INVALID_UNICODE"),
+            ({"content": "A\\ud800B"}, "S03_FACT_INVALID_UNICODE"),
+        )
+        with mock.patch.dict(sys.modules, {"s03_memory": m}):
+            for body, reason in cases:
+                with self.subTest(reason=reason, body_type=type(body).__name__):
+                    result = asyncio.run(self.endpoint(Request(body)))
+                    self.assertEqual(result.status_code, 400)
+                    data = json.loads(result.body)
+                    self.assertEqual(data["reason"], reason)
+                    self.assertEqual(data["status"], "HOLD")
+                    self.assertFalse(data["saved"])
+                    self.assertFalse(data["s03_readback_verified"])
+
+            class MalformedJSON:
+                async def json(self):
+                    raise ValueError("bad JSON")
+
+            result = asyncio.run(self.endpoint(MalformedJSON()))
+            self.assertEqual(result.status_code, 400)
+            self.assertEqual(json.loads(result.body)["reason"], "S03_FACT_INVALID_JSON")
+
+        self.assertEqual(writes, [])
+        self.assertFalse(self.fact_path.exists())
+
     def test_partial_upstream_never_claims_done_or_persists_s03(self):
         """One endpoint-level check for complete, truncated and HTTP-failed streams."""
         class Upstream:
