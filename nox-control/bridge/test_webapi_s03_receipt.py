@@ -511,6 +511,72 @@ class FactReceiptTest(unittest.TestCase):
                                      "SKEPTIC_ANNOTATION_INVALID_OR_OVERSIZE")
                 self.assertTrue(all(frame.get("status") != "HOLD" for frame in frames))
 
+    def test_optional_skeptic_failure_cannot_lose_completed_answer_or_s03_write(self):
+        """1A03: optional verifier errors are explicitly unavailable, not model errors."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Ответ модели"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        class Thinking:
+            def __init__(self, verdict): self.verdict = verdict
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return False
+            def mode_hint(self, *args): return ""
+            async def skeptic(self, *args, **kwargs):
+                if isinstance(self.verdict, Exception):
+                    raise self.verdict
+                return self.verdict
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.NKEEP, bridge.LAST_CHAT = 0, {"t": 0}
+        bridge.SOUL = None
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Вопрос"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def collect():
+            response = await chat(Request({
+                "mode": "thoughtful", "use_memory": False,
+                "messages": [{"role": "user", "content": "Вопрос"}]}))
+            return [json.loads(chunk) async for chunk in response.body_iterator]
+
+        for verdict, expected_ok in (
+            (RuntimeError("verifier unavailable"), None),
+            (["invalid", "verdict"], None),
+            ({"ok": 1, "doubt": "wrong boolean"}, None),
+            ({"ok": True}, True),
+        ):
+            with self.subTest(verdict_type=type(verdict).__name__, expected_ok=expected_ok):
+                writes.clear()
+                with mock.patch.object(W, "W", Thinking(verdict)), \\
+                     mock.patch.dict(sys.modules, {"s03_memory": memory}):
+                    frames = asyncio.run(collect())
+                terminal = frames[-1]
+                self.assertTrue(terminal["done"])
+                self.assertEqual(terminal["completion_receipt"]["status"], "GENERATED")
+                self.assertEqual(terminal["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+                self.assertFalse(terminal["memory_write_receipt"]["s03_readback_verified"])
+                self.assertEqual(writes, [("Вопрос", "Ответ модели")])
+                self.assertEqual(terminal["skeptic"]["ok"], expected_ok)
+                if expected_ok is None:
+                    self.assertEqual(terminal["skeptic"]["reason"], "SKEPTIC_UNAVAILABLE")
+                    self.assertTrue(any("проверка недоступна" in
+                        str(f.get("nox_event", {}).get("text", "")) for f in frames))
+                self.assertFalse(any(f.get("status") == "HOLD" for f in frames))
+
     def test_stop_during_memory_or_prompt_assembly_never_posts_model(self):
         """1A04: accepted STOP after a slow phase must not start GPU inference."""
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
