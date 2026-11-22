@@ -174,12 +174,22 @@
             const frame=buf.slice(0,e);
             buf=buf.slice(e+2);
             const lines=frame.split('\n');
-            const event=lines.find(l=>l.startsWith('event:'));
+            // EventSource removes at most ONE U+0020 from an event field.
+            // A delta-like alias must not project a model token under a
+            // normalized name. Duplicate event fields are ambiguous here.
+            const eventFields=lines.filter(l=>l==='event'||l.startsWith('event:'));
+            if(eventFields.length>1) hold('HOLD_STREAM_EVENT_TYPE');
+            const rawEvent=eventFields.length===1?
+              eventFields[0].slice(6):undefined;
+            const event=rawEvent===undefined?undefined:
+              rawEvent.startsWith(' ')?rawEvent.slice(1):rawEvent;
+            if(event!==undefined&&event.trim()==='delta'&&event!=='delta')
+              hold('HOLD_STREAM_EVENT_TYPE');
             const data=lines.filter(l=>l.startsWith('data:'))
                // SSE removes at most one U+0020 separator after ':'. Literal
                // leading/trailing spaces are model output, not padding.
                .map(l=>l.slice(5).replace(/^ /,'')).join('\n');
-            if(event && event.slice(6).trim()==='delta'){
+            if(event==='delta'){
               // The B1 DOM adapter accepts an optional immutable per-delta SSE
               // event ID. Without forwarding the wire id: field, its replay
               // dedupe never runs and reconnect can duplicate visible tokens.
