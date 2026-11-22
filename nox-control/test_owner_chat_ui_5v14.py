@@ -83,6 +83,22 @@ class OwnerLiveAssetTests(unittest.TestCase):
         self.assertEqual(self.decorate(first,'pc/resonance.html'),first)
         self.assertEqual(self.decorate(start,'pc/unrelated.html'),start)
 
+    def test_mixed_case_head_end_tag_preserved_and_idempotent(self):
+        # HTML5 closing tags are case-insensitive. Archived WEB skins may use
+        # uppercase or whitespace while remaining valid in a browser.
+        for closing in ('</HEAD>', '</HeAd >', '</head >'):
+            with self.subTest(closing=closing):
+                raw='<html><HEAD></HEAD><head>'+closing+'<body></body></html>'
+                # Use one real head end tag: the uppercase HEAD above opens
+                # a second ancestor only if this fixture is malformed.
+                raw='<html><HEAD><title>NOX</title>'+closing+'<body></body></html>'
+                result=self.decorate(raw,'pc/resonance.html')
+                self.assertIn('<meta name="nox-live-build" content="',result)
+                self.assertIn('data-nox-live-owner="1"',result)
+                self.assertIn(closing,result)
+                self.assertIn('data-nox-live-owner="1"></script>\\n'+closing,result)
+                self.assertEqual(self.decorate(result,'pc/resonance.html'),result)
+
     def test_legacy_pc_assets_remain_nested_mount(self):
         result=self.rendered('<link rel="stylesheet" href="/pc/v25/nox-shell-v25.css">')
         self.assertIn('href="/nox-web-v29/pc/v25/nox-shell-v25.css"',result)
