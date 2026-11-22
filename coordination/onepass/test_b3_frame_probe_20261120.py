@@ -540,6 +540,9 @@ class TestProbe(unittest.TestCase):
                     await page.evaluate("""() => {
                         window.NOX_NATIVE_OWNER=true;
                         window.__nativePosts=0;
+                        window.__phases=[];
+                        window.addEventListener('nox:native-phase',
+                            e=>window.__phases.push(e.detail.phase));
                         window.__releaseFirst=null;
                         const did='a'.repeat(32);
                         const response=value=>new Response(JSON.stringify(value),
@@ -624,12 +627,13 @@ class TestProbe(unittest.TestCase):
                             return {error:'ABORT_NATIVE_NOT_STARTED'};
                         ac.abort();
                         const stopped=await (await stop).text();
+                        const stopPhase=window.__phases.at(-1);
                         const afterStop=await (await fetch('/api/nox/chat',
                             {method:'POST',body:abortBody})).text();
                         const atStopReplay=window.__nativePosts;
                         window.__releaseAbort();
                         return {atOverlap,rejected,completed,replay,atReplay,third,
-                            stopped,afterStop,atStopReplay,posts:window.__nativePosts};
+                            stopped,stopPhase,afterStop,atStopReplay,posts:window.__nativePosts};
                     }""")
                     self.assertNotIn('error', actual)
                     self.assertEqual(actual['atOverlap'], 1)
@@ -641,6 +645,7 @@ class TestProbe(unittest.TestCase):
                     self.assertEqual(actual['atReplay'], 1)
                     self.assertIn('"type":"done"', actual['third'])
                     self.assertIn('STREAM_STOP_REQUESTED', actual['stopped'])
+                    self.assertEqual(actual['stopPhase'], 'stopped')
                     self.assertNotIn('"type":"done"', actual['stopped'])
                     self.assertIn('HOLD_REQUEST_REPLAY', actual['afterStop'])
                     self.assertEqual(actual['atStopReplay'], 3)
@@ -1390,13 +1395,12 @@ class TestProbe(unittest.TestCase):
 
 
     def test_native_abort_signal_terminal_phase_source_contract(self):
-        """Fail closed on client AbortController STOP, with no false error event."""
+        """Preserve SSE STOP receipt while keeping browser phase stopped."""
         bridge = (pathlib.Path(__file__).parent /
                   'nox-v135-resonance-owner-bridge.js').read_text('utf8')
-        self.assertIn("if(nativeSignal.aborted){if(!closed)stopPhase();}", bridge)
-        self.assertIn("else event({type:'error',error:String(e.message", bridge)
+        self.assertIn("error:nativeSignal.aborted?'stopped':'error'", bridge)
+        self.assertIn("error:nativeSignal.aborted?'STREAM_STOP_REQUESTED'", bridge)
         self.assertIn("upstreamAbort.abort();\n    stopPhase();", bridge)
-        self.assertNotIn("error:nativeSignal.aborted?'STREAM_STOP_REQUESTED'", bridge)
 
 
 if __name__ == '__main__':
