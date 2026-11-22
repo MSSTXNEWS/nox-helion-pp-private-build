@@ -483,8 +483,8 @@ class Conscience:
             t, _ = strip_service(s) if "service_lines" in {f.code for f in fs} else strip_banned_opener(s)
             return ("strip", t) if t else ("drop", "")
         if all(f.code == "address_vy" for f in fs):
-            t = fix_formal_address(s, self.ctx)
-            return ("ok", t) if t and not det_address_vy(t, self.ctx) else ("drop", "")
+            t = fix_formal_address(s, ctx)
+            return ("ok", t) if t and not det_address_vy(t, ctx) else ("drop", "")
         return "drop", ""
 
 
