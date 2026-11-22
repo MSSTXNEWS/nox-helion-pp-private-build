@@ -152,6 +152,7 @@ def log(m):
 
 _RC = {}
 _RC_LOCK = threading.Lock()
+_RC_GENERATION = 0
 _TRIVIAL = ("привет", "здравств", "спасибо", "благодар", "пока", "доброе", "добрый", "ок", "окей", "да", "нет", "ага")
 
 def _trivial(t):
@@ -172,33 +173,48 @@ def memory_block(text):
     if _trivial(text):
         return ""
     key = hashlib.md5((text or "").strip().lower().encode("utf-8", "ignore")).hexdigest()
-    now = time.time()
+    now = time.monotonic()
     with _RC_LOCK:
+        generation = _RC_GENERATION
         h = _RC.get(key)
-        if h and now - h[0] < 180:
+        if h and 0 <= now - h[0] < 180:
             return h[1]
     try:
         import s03_memory as M
         res = M.recall(text)
-        out = M.format_for_prompt(res)
-        out = trim_mem(out) if isinstance(out, str) else ""
+        formatted = M.format_for_prompt(res)
+        if not isinstance(formatted, str):
+            raise TypeError("S03_MEMORY_FORMAT_NON_TEXT")
+        out = trim_mem(formatted)
     except Exception as e:
-        log("recall_error %s %s" % (type(e).__name__, str(e)[:120]))
-        return ""
+        log("recall_error %s" % type(e).__name__)
+        # A failed canonical S03 read is not an empty memory result. The
+        # browser route must HOLD before invoking the model or writing S03.
+        raise RuntimeError("S03_MEMORY_LOOKUP_FAILED") from e
     with _RC_LOCK:
-        _RC[key] = (now, out)
-        if len(_RC) > 128:
-            for k in sorted(_RC, key=lambda k: _RC[k][0])[:32]:
-                _RC.pop(k, None)
+        # An older in-flight recall must not reinsert stale context after a
+        # concurrent completed S03 write invalidated the cache.
+        if generation == _RC_GENERATION:
+            _RC[key] = (now, out)
+            if len(_RC) > 128:
+                for k in sorted(_RC, key=lambda k: _RC[k][0])[:32]:
+                    _RC.pop(k, None)
     return out
+
+def invalidate_s03_cache():
+    """Revoke cached context after a completed canonical S03 mutation."""
+    global _RC_GENERATION
+    with _RC_LOCK:
+        _RC_GENERATION += 1
+        _RC.clear()
+
 
 def remember(user, answer):
     """Attempt S03 write. True is a returned write, NOT verified readback."""
     try:
         import s03_memory as M
         M.persist_turn(user, answer)
-        with _RC_LOCK:
-            _RC.clear()
+        invalidate_s03_cache()
         return True
     except Exception as e:
         log("persist_error %s %s" % (type(e).__name__, str(e)[:120]))
@@ -207,6 +223,7 @@ def remember(user, answer):
 def remember_fact(u, a):
     import s03_memory as M
     M.persist_turn(u, a)
+    invalidate_s03_cache()
 
 async def ask(messages, max_tokens, slot=0):
     max_tokens = min(max_tokens, 700)

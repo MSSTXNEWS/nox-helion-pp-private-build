@@ -2129,5 +2129,101 @@ class FactReceiptTest(unittest.TestCase):
                          W.hashlib.sha256(expected.encode("utf-8")).hexdigest())
 
 
+
+    def test_0a03_real_bridge_recall_failure_and_cache_generation_fence(self):
+        """A failed S03 recall cannot masquerade as no memories; stale reads cannot refill cache."""
+        # Import bridge with startup warmers disabled; never touch a real host.
+        # The lean source gate installs fastapi/httpx but not uvicorn.
+        # Stub the server runner only; the actual bridge logic is imported.
+        with mock.patch.object(W.threading.Thread, "start"), \
+             mock.patch.object(W.os.path, "isdir", return_value=False), \
+             mock.patch.dict(sys.modules, {"uvicorn": types.ModuleType("uvicorn")}):
+            import nox_bridge as bridge
+        memory = types.ModuleType("s03_memory")
+        calls = []
+        memory.recall = lambda q: calls.append(q) or ["source"]
+        memory.format_for_prompt = lambda rows: "S03 remembers important context"
+        with mock.patch.dict(sys.modules, {"s03_memory": memory}), \
+             mock.patch.object(bridge, "_RC", {}), \
+             mock.patch.object(bridge, "_RC_GENERATION", 0), \
+             mock.patch.object(bridge, "_trivial", return_value=False):
+            first = bridge.memory_block("первый вопрос")
+            self.assertEqual(first, "S03 remembers important context")
+            self.assertEqual(bridge.memory_block("первый вопрос"), first)
+            self.assertEqual(len(calls), 1)
+            bridge.invalidate_s03_cache()
+            self.assertEqual(bridge.memory_block("первый вопрос"), first)
+            self.assertEqual(len(calls), 2)
+
+            def concurrent_recall(q):
+                # Simulate an S03 write completing while recall is in flight.
+                bridge.invalidate_s03_cache()
+                return ["old-version"]
+
+            memory.recall = concurrent_recall
+            bridge.memory_block("второй вопрос")
+            self.assertNotIn(
+                bridge.hashlib.md5("второй вопрос".encode()).hexdigest(), bridge._RC)
+
+            memory.recall = lambda q: ["invalid-output"]
+            memory.format_for_prompt = lambda rows: {"not": "text"}
+            with self.assertRaisesRegex(RuntimeError, "S03_MEMORY_LOOKUP_FAILED"):
+                bridge.memory_block("память неверного типа")
+
+            memory.recall = mock.Mock(side_effect=OSError("private S03 unavailable"))
+            with self.assertRaisesRegex(RuntimeError, "S03_MEMORY_LOOKUP_FAILED"):
+                bridge.memory_block("нужна память")
+            self.assertNotIn(
+                bridge.hashlib.md5("нужна память".encode()).hexdigest(), bridge._RC)
+
+    def test_0a03_web_write_revokes_recall_cache_only_after_s03_returns(self):
+        """A returned canonical S03 write invalidates memory, an exception does not."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.invalidate_s03_cache = mock.Mock()
+        events = []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: events.append(args)
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Готово 🌌"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        bridge.hc = lambda: Client()
+
+        async def run_one(rid):
+            response = await chat(Request({
+                "request_id": rid, "mini": True, "use_memory": False,
+                "messages": [{"role": "user", "content": "Проверь S03"}]}))
+            return [json.loads(line) async for line in response.body_iterator]
+
+        with mock.patch.object(W, "W", None), \
+             mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            ok = asyncio.run(run_one("cache-write-returned"))
+            self.assertTrue(ok[-1]["done"])
+            self.assertEqual(ok[-1]["memory_write_receipt"]["status"],
+                             "WRITE_RETURNED_UNVERIFIED")
+            self.assertFalse(ok[-1]["memory_write_receipt"]["s03_readback_verified"])
+            bridge.invalidate_s03_cache.assert_called_once_with()
+            self.assertEqual(events, [("[mini] Проверь S03", "Готово 🌌")])
+
+            memory.persist_turn = mock.Mock(side_effect=OSError("S03 write failed"))
+            held = asyncio.run(run_one("cache-write-failed"))
+            self.assertEqual(held[-1]["memory_write_receipt"]["status"], "HOLD")
+            bridge.invalidate_s03_cache.assert_called_once_with()
+
+
 if __name__ == "__main__":
     unittest.main()
