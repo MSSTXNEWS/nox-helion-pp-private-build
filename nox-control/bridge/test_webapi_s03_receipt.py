@@ -237,6 +237,30 @@ class FactReceiptTest(unittest.TestCase):
                     self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
                     self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
 
+        # Reviewer counterexample: A -> stop -> B -> DONE must not
+        # generate terminal success or persist an unverifiable "AB".
+        class PostStopUpstream(Upstream):
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"A"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: {"choices":[{"delta":{"content":"B"}}]}'
+                yield 'data: [DONE]'
+
+        class PostStopClient(Client):
+            def stream(self, *args, **kwargs):
+                return PostStopUpstream(True, 200, "stop")
+
+        writes.clear()
+        bridge.hc = lambda: PostStopClient(True, 200, "stop")
+        with mock.patch.dict(sys.modules, {"s03_memory": module}), mock.patch.object(W, "W", None):
+            post_stop_frames = asyncio.run(get_frames())
+        self.assertEqual(writes, [])
+        self.assertFalse(any(v.get("done") is True for v in post_stop_frames))
+        self.assertEqual(post_stop_frames[-1]["status"], "HOLD")
+        self.assertEqual(post_stop_frames[-1]["reason"], "MODEL_STREAM_INCOMPLETE")
+        self.assertEqual(post_stop_frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+        self.assertTrue(any("UPSTREAM_AFTER_STOP_FINISH" in item for item in bridge.errors))
+
 
     def test_broadcast_stop_survives_new_chat_and_does_not_stop_future_chats(self):
         """New request must not clear a STOP already sent to an older stream."""
