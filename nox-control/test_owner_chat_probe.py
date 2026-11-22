@@ -2710,5 +2710,47 @@ class ProbeTests(unittest.TestCase):
             self.assertTrue(response.closed)
 
 
+    def test_nested_status_model_provenance_cannot_launder_second_turn_route(self):
+        """A foreign model inside metadata.status cannot hide under a good DONE."""
+        did = '4' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        for container in ('status', 'metadata', 'meta'):
+            for field in ('model', 'model_id', 'modelId'):
+                poison = {'type': 'status', container:
+                          {'status': {field: 'foreign-route'}}}
+                response = Response([
+                    {'type': 'start', 'model': 'GLM-5.3'}, poison,
+                    {'type': 'delta', 'text': '323'}, done])
+                with self.subTest(container=container, field=field), patch.object(
+                        probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT
+    unittest.main()
+):
+                        probe.consume_turn(object(), 'second-turn', did)
+                self.assertTrue(response.closed)
+            good = Response([
+                {'type': 'start', 'model': 'GLM-5.3'},
+                {'type': 'status', container:
+                 {'status': {'model_id': 'GLM-5.3'}}},
+                {'type': 'delta', 'text': '323'}, done])
+            with self.subTest(good_container=container), patch.object(
+                    probe, 'request', return_value=good):
+                result = probe.consume_turn(object(), 'second-turn', did)
+            self.assertEqual(result['stream_model_identity'], 'GLM-5.3')
+            self.assertTrue(good.closed)
+
+
 if __name__ == '__main__':
     unittest.main()
