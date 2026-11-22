@@ -34,19 +34,35 @@ var NAV=[['chat.html','💬','Чат'],['resonance.html','🌌','Резонан�
 function bnav(){if($('#nxw-bnav'))return;var n=el('nav');n.id='nxw-bnav';n.setAttribute('aria-label','Нижнее меню');
  NAV.forEach(function(x){var a=el('a',x[0]===page?'on':'','<b>'+x[1]+'</b>'+x[2]);a.href=x[0];n.append(a)});D.body.append(n);
  var on=n.querySelector('.on');if(on)n.scrollLeft=on.offsetLeft-n.clientWidth/2+on.clientWidth/2}
-/* 4. «Что NOX вспомнил» */
-function facts(){return jget('nox.facts.v1',[])}
+/* 4. «Что NOX вспомнил»: серверная память /memory/api (s03), запасной вариант - localStorage */
+var SF=[];
+function mapi(o){return fetch('/memory/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).then(function(r){return r.json()})}
+function pushFacts(list){var t=list.map(function(f){return f.text}).slice(0,25).join('\n');L.setItem('nox.facts.text',t);
+ var c=jget('nox.newchat.cfg',{});if(c.facts!==t){c.facts=t;L.setItem('nox.newchat.cfg',JSON.stringify(c))}}
+function loadFacts(){return mapi({op:'list',limit:40}).then(function(j){if(j.ok){SF=j.facts;pushFacts(SF)}return SF}).catch(function(){SF=(jget('nox.facts.v1',[])||[]).map(function(t,i){return {id:'l'+i,text:t,local:true}});return SF})}
 function memPanel(){if(page!=='memory.html'||$('#nxw-facts'))return;var host=$('main')||D.body;
- var c=el('section','nxw-card');c.id='nxw-facts';c.innerHTML='<h3>Что NOX вспомнил</h3><div id="nxw-fl"></div><p><button class="nxw-b" id="nxw-add">+ факт</button> <button class="nxw-b" id="nxw-pull">Подтянуть из его мыслей</button></p>';
+ var c=el('section','nxw-card');c.id='nxw-facts';c.innerHTML='<h3>Что NOX вспомнил <small id="nxw-src" style="opacity:.6"></small></h3><div id="nxw-fl"></div><p><button class="nxw-b" id="nxw-add">+ факт</button> <button class="nxw-b" id="nxw-q">Найти</button> <input id="nxw-qi" placeholder="запрос к памяти" style="background:#0003;color:#fff;border:1px solid #fff3;border-radius:8px;padding:3px 8px"></p>';
  host.prepend(c);var fl=$('#nxw-fl',c);
- function save(){L.setItem('nox.facts.v1',JSON.stringify(facts_));L.setItem('nox.facts.text',facts_.join('\n'))}
- var facts_=facts();
- function draw(){fl.innerHTML='';if(!facts_.length)fl.append(el('div','', '<i>Пока пусто — NOX добавит факты, или добавь сам.</i>'));
-  facts_.forEach(function(t,i){var r=el('div','nxw-fact');var d=el('div');d.contentEditable='true';d.textContent=t;d.onblur=function(){facts_[i]=d.textContent.trim();if(!facts_[i])facts_.splice(i,1);save();draw()};
-   var x=el('button','nxw-b','✕');x.onclick=function(){facts_.splice(i,1);save();draw()};r.append(d,x);fl.append(r)})}
- draw();
- $('#nxw-add',c).onclick=function(){facts_.push('новый факт');save();draw();var l=fl.querySelectorAll('[contenteditable]');l[l.length-1].focus()};
- $('#nxw-pull',c).onclick=function(){fetch('/api/life',{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){var t=j.thought||j.last_thought;if(t&&facts_.indexOf(t)<0){facts_.push(t);save();draw()}}).catch(function(){})}}
+ function draw(list){fl.innerHTML='';var loc=list.length&&list[0].local;$('#nxw-src',c).textContent=loc?'(локально, сервер недоступен)':'(сервер, s03)';
+  if(!list.length)fl.append(el('div','','<i>Пока пусто.</i>'));
+  list.forEach(function(f){var r=el('div','nxw-fact');var d=el('div');d.contentEditable='true';d.textContent=f.text;
+   d.onblur=function(){var t=d.textContent.trim();if(t===f.text)return;if(f.local){var a=jget('nox.facts.v1',[]);a[+f.id.slice(1)]=t;L.setItem('nox.facts.v1',JSON.stringify(a));return}
+    mapi({op:'correct',id:f.id,text:t,reason:'правка в вебе'}).then(function(){f.text=t;pushFacts(SF)})};
+   var x=el('button','nxw-b','✕');x.onclick=function(){if(f.local){var a=jget('nox.facts.v1',[]);a.splice(+f.id.slice(1),1);L.setItem('nox.facts.v1',JSON.stringify(a));return loadFacts().then(draw)}
+    mapi({op:'delete',id:f.id,reason:'удалено в вебе'}).then(function(){return loadFacts()}).then(draw)};
+   r.append(d,x);fl.append(r)})}
+ loadFacts().then(draw);
+ $('#nxw-add',c).onclick=function(){var t=prompt('Новый факт');if(!t)return;if(SF.length&&SF[0].local){var a=jget('nox.facts.v1',[]);a.push(t);L.setItem('nox.facts.v1',JSON.stringify(a));return loadFacts().then(draw)}mapi({op:'add',text:t}).then(function(){return loadFacts()}).then(draw)};
+ $('#nxw-q',c).onclick=function(){var q=$('#nxw-qi',c).value.trim();if(!q)return loadFacts().then(draw);mapi({op:'search',query:q,k:10}).then(function(j){draw((j.hits||[]).map(function(h){return {id:h.ref,text:h.text||h.snippet||JSON.stringify(h).slice(0,200)}}))})}}
+/* передача фактов в чат: nox_facts в тело запроса к шлюзу */
+(function(){var of=window.fetch;window.fetch=function(u,o){try{if(o&&typeof o.body==='string'&&/\/glm\/|\/api\/chat/.test(String(u&&u.url||u))&&o.body.charAt(0)==='{'){var j=JSON.parse(o.body),t=L.getItem('nox.facts.text');if(t&&!j.nox_facts){j.nox_facts=t.split('\n').filter(Boolean);o=Object.assign({},o,{body:JSON.stringify(j)})}}}catch(e){}return of.call(this,u,o)}})();
+/* 4b. «Шаблоны» в верхнем меню/на главной + встроенные канбан и календарь */
+function tplLink(){if(page==='templates.html')return;var as=[].filter.call(D.querySelectorAll('a[href$="widgets.html"],a[href$="projects.html"]'),function(a){return !a.closest('#nxw-bnav')});
+ as.forEach(function(a){var p=a.parentNode;if(!p||p.querySelector('a[href$="templates.html"]'))return;var c=a.cloneNode(true);c.href='templates.html';c.removeAttribute('aria-current');c.classList.remove('on','active');
+  var w=D.createTreeWalker(c,NodeFilter.SHOW_TEXT),n,done=0;while(n=w.nextNode()){if(n.nodeValue.trim()){n.nodeValue=n.nodeValue.replace(/\S.*\S|\S/,'Шаблоны');done=1;break}}
+  if(!done)c.append('Шаблоны');a.after(c)})}
+function embeds(){var map={'projects.html':['kb','Канбан проектов'],'widgets.html':['cl','Календарь']},m=map[page];if(!m||$('#nxw-emb'))return;
+ var c=el('section','nxw-card');c.id='nxw-emb';c.innerHTML='<h3>'+m[1]+'</h3><iframe loading="lazy" src="templates.html?embed=1#'+m[0]+'" style="width:100%;height:560px;border:0;border-radius:12px;background:transparent"></iframe>';(($('main'))||D.body).append(c)}
 /* 5. микрофон: STT + silero VAD (конец реплики) */
 function mic(){if(page!=='chat.html'&&page!=='resonance.html'||$('#nxw-mic')||$('[data-nox-mic]'))return;
  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
@@ -65,7 +81,7 @@ function mic(){if(page!=='chat.html'&&page!=='resonance.html'||$('#nxw-mic')||$(
   loadVad().then(function(v){if(!v||!v.MicVAD)return;return v.MicVAD.new({model:'v5',baseAssetPath:'vendor/vad-web/dist/',onnxWASMBasePath:'vendor/onnxruntime-web/dist/',onSpeechEnd:function(){setTimeout(function(){if(b.classList.contains('rec')){stop();send()}},400)}}).then(function(m){vad=m;m.start()})}).catch(function(){})}}
 /* 6. лёгкость: ленивые изображения */
 function lazy(){[].forEach.call(D.images,function(i){if(!i.loading)i.loading='lazy';i.decoding='async'})}
-function init(){applyPlanet();planetPicker();bnav();memPanel();mic();lazy();depthUI();
+function init(){applyPlanet();planetPicker();bnav();memPanel();embeds();tplLink();setTimeout(tplLink,1500);setTimeout(tplLink,4000);if(page==='chat.html'||page==='resonance.html')loadFacts();mic();lazy();depthUI();
  new MutationObserver(function(){depthUI()}).observe(D.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-pressed']})}
 if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',init);else init();
 })();

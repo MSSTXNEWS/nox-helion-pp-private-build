@@ -192,6 +192,13 @@ class Recall:
                 return {"ok": True, "item": self.revert(int(req["change_id"]), req.get("actor", "owner"))}
             if op == "journal":
                 return {"ok": True, "changes": self.journal(int(req.get("limit", 50)), req.get("id"))}
+            if op == "list":
+                rows = self.s.db.execute("SELECT id,kind,text,pinned,owner_confirmed FROM mem_facts WHERE status='active' ORDER BY pinned DESC, owner_confirmed DESC, importance DESC, updated DESC LIMIT ?", (min(int(req.get("limit", 60)), 300),)).fetchall()
+                return {"ok": True, "facts": [{"id": "f:%s" % r[0], "kind": r[1], "text": r[2], "pinned": bool(r[3]), "confirmed": bool(r[4])} for r in rows]}
+            if op == "add":
+                fid = self.s.add_fact(req["text"], kind="owner", source="owner", pinned=True, actor=req.get("actor", "owner"))
+                self.s.db.commit()
+                return {"ok": True, "id": "f:%s" % fid}
             if op == "search":
                 return {"ok": True, **self.search.search(req.get("query", ""), int(req.get("k", 8)))}
             if op == "core":
