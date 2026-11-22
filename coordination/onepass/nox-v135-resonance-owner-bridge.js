@@ -7,62 +7,62 @@
  window.__NOX_V135_OWNER_RESONANCE='OWNER_NATIVE_ONLY';
  const nativeFetch=window.fetch.bind(window);
  const enc=new TextEncoder();
- const ID=/^[a-f0-9]{32}$/;
- const verifiedChain=new Map();
- const activeDialogs=new Set();
- const issuedRequests=new Set();
- function pinRequest(data) {
- if(!Object.prototype.hasOwnProperty.call(data,'request_id'))return;
- const rid=data.request_id;
- if(typeof rid!=='string'||!rid.trim()||rid.length>160)throw Error('HOLD_REQUEST_ID_SCOPE');
- if(issuedRequests.has(rid))throw Error('HOLD_REQUEST_REPLAY');
- if(issuedRequests.size>=2048)throw Error('HOLD_REQUEST_PIN_CAPACITY');
- issuedRequests.add(rid);
- }
- const claimDialog=id=>{if(activeDialogs.has(id))throw Error('HOLD_DIALOG_INFLIGHT');if(!verifiedChain.has(id)&&verifiedChain.size>=128)throw Error('HOLD_DIALOG_PIN_CAPACITY');activeDialogs.add(id);return id;};
- const errorResponse=(error,status=503)=>new Response(JSON.stringify({
- status:'HOLD',error,history_persisted:false,s03_integrated:false
- }),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
- const samePath=input=>{
- try {
-   const u=new URL(input instanceof Request?input.url:String(input),location.href);
-   return u.origin===location.origin?u:null;
- } catch{return null;}
- };
- const options=(init={})=>({
- method:init.method||'GET',cache:'no-store',credentials:'same-origin',
- redirect:'error',signal:init.signal,headers:init.headers
- });
- async function waitOrAbort(op,signal){
- if(!signal)return op();
- if(signal.aborted)throw Error('STREAM_STOP_REQUESTED');
- let stop;const cancelled=new Promise((_,reject)=>{
-   stop=()=>reject(Error('STREAM_STOP_REQUESTED'));
-   signal.addEventListener('abort',stop,{once:true});
- });
- try{return await Promise.race([Promise.resolve().then(op),cancelled]);}
- finally{signal.removeEventListener('abort',stop);}
- }
- const nativeBodyJSON=(response,signal)=>waitOrAbort(()=>response.json(),signal);
- const nativePost=(path,data,signal)=>waitOrAbort(()=>nativeFetch(path,{
- method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',signal,
- headers:{'Content-Type':'application/json'},body:JSON.stringify(data)
- }),signal);
- async function reason(r,signal) {
- try{const j=await nativeBodyJSON(r,signal);return String(j.error||j.reason||'HTTP_'+r.status).slice(0,110);}
- catch{if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');return 'HTTP_'+r.status;}
- }
- const responseJSON=(data,status=200)=>new Response(JSON.stringify(data),{
- status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}
- });
- async function nativeJSON(path,init) {
- const r=await waitOrAbort(()=>nativeFetch(path,options(init)),init?.signal);
- if (!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r,init?.signal));
- return nativeBodyJSON(r,init?.signal);
- }
- async function createDialog(title,signal) {
- const r=await nativePost('/api/ui/memory/dialogs/create',{
-   title:String(title||'Новый диалог').replace(/[\x00-\x1F\x7F]/g,' ').trim().slice(0,140)||'Новый диалог',
+const ID=/^[a-f0-9]{32}$/;
+const verifiedChain=new Map();
+const activeDialogs=new Set();
+const issuedRequests=new Set();
+function pinRequest(data) {
+if(!Object.prototype.hasOwnProperty.call(data,'request_id'))return;
+const rid=data.request_id;
+if(typeof rid!=='string'||!rid.trim()||rid.length>160)throw Error('HOLD_REQUEST_ID_SCOPE');
+if(issuedRequests.has(rid))throw Error('HOLD_REQUEST_REPLAY');
+if(issuedRequests.size>=2048)throw Error('HOLD_REQUEST_PIN_CAPACITY');
+issuedRequests.add(rid);
+}
+const claimDialog=id=>{if(activeDialogs.has(id))throw Error('HOLD_DIALOG_INFLIGHT');if(!verifiedChain.has(id)&&verifiedChain.size>=128)throw Error('HOLD_DIALOG_PIN_CAPACITY');activeDialogs.add(id);return id;};
+const errorResponse=(error,status=503)=>new Response(JSON.stringify({
+status:'HOLD',error,history_persisted:false,s03_integrated:false
+}),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
+const samePath=input=>{
+try {
+  const u=new URL(input instanceof Request?input.url:String(input),location.href);
+  return u.origin===location.origin?u:null;
+} catch{return null;}
+};
+const options=(init={})=>({
+method:init.method||'GET',cache:'no-store',credentials:'same-origin',
+redirect:'error',signal:init.signal,headers:init.headers
+});
+async function waitOrAbort(op,signal){
+if(!signal)return op();
+if(signal.aborted)throw Error('STREAM_STOP_REQUESTED');
+let stop;const cancelled=new Promise((_,reject)=>{
+  stop=()=>reject(Error('STREAM_STOP_REQUESTED'));
+  signal.addEventListener('abort',stop,{once:true});
+});
+try{return await Promise.race([Promise.resolve().then(op),cancelled]);}
+finally{signal.removeEventListener('abort',stop);}
+}
+const nativeBodyJSON=(response,signal)=>waitOrAbort(()=>response.json(),signal);
+const nativePost=(path,data,signal)=>waitOrAbort(()=>nativeFetch(path,{
+method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',signal,
+headers:{'Content-Type':'application/json'},body:JSON.stringify(data)
+}),signal);
+async function reason(r,signal) {
+try{const j=await nativeBodyJSON(r,signal);return String(j.error||j.reason||'HTTP_'+r.status).slice(0,110);}
+catch{if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');return 'HTTP_'+r.status;}
+}
+const responseJSON=(data,status=200)=>new Response(JSON.stringify(data),{
+status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}
+});
+async function nativeJSON(path,init) {
+const r=await waitOrAbort(()=>nativeFetch(path,options(init)),init?.signal);
+if (!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r,init?.signal));
+return nativeBodyJSON(r,init?.signal);
+}
+async function createDialog(title,signal) {
+const r=await nativePost('/api/ui/memory/dialogs/create',{
+  title:String(title||'Новый диалог').replace(/[\x00-\x1F\x7F]/g,' ').trim().slice(0,140)||'Новый диалог',
    confirmed:true
  },signal);
  if(!r.ok)throw Error('HOLD_DIALOG_CREATE_'+await reason(r,signal));
