@@ -1,9 +1,16 @@
 #!/bin/bash
 cd /root/nox
-echo "== v7 state/receipts"; ls -t /root/nox/state 2>/dev/null| head; find /root/nox -maxdepth 3 \( -iname "*receipt*" -o -iname "V7-*" \) -mmin -900 2>/dev/null | head -20
-ls /root/nox/backups/v7/; tail -n 30 /root/nox/logs/V7-04.run.log | cut -c1-180
-echo "== accept"; ls /root/nox/src/wow7/deploy; tail -n 20 /root/nox/logs/V7-04.test_brain.log | cut -c1-160
-echo "== web_server.py head"; grep -n "^def \|^class \|^import\|^from\|8082\|8090\|8091\|/api/" web_server.py | cut -c1-150 | head -80
-echo "== wow7 pkg"; ls src/wow7/brain src/wow7/common src/wow7/prime src/wow7/act repo/nox-control/wow7 2>&1 | head -60
-echo "== core health"; curl -s -m5 http://127.0.0.1:8090/health | head -c 400; echo; tail -n 5 logs/core.log | cut -c1-200
-echo "== web log"; tail -n 8 logs/web_server.log | cut -c1-160
+for f in receipts/V7-*.json; do echo "== $f"; python3 -c "
+import json,sys; o=json.load(open('$f')); print({k:(v if len(str(v))<120 else str(v)[:120]) for k,v in o.items()})"; done
+echo "== web_server _chat"; sed -n 73,140p web_server.py | cut -c1-210
+echo "== gateway: soul/core hooks"; grep -n "NOX_CORE\|soul\|conscience\|StreamGuard\|actions" repo/nox-control/glm53/gateway.py repo/nox-control/qs6/*.py 2>/dev/null | cut -c1-170 | head -40
+echo "== ask"; ask(){ curl -sN -m120 http://127.0.0.1:8091/api/chat -H 'Content-Type: application/json' -d "$1" | python3 -c "
+import sys,json
+t=''
+for l in sys.stdin:
+    try: o=json.loads(l)
+    except Exception: continue
+    t+=(o.get('message') or {}).get('content','')
+print(repr(t[:300]))"; }
+for i in 1 2 3; do echo "привет#$i: $(ask '{"messages":[{"role":"user","content":"привет"}],"stream":true}')"; done
+echo "сервер: $(ask '{"messages":[{"role":"user","content":"как сервер?"}],"stream":true}')"
