@@ -806,9 +806,23 @@ def install(app, B):
                     yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": "проверяю факты (скептик)"})
                     sk = await W.skeptic(lambda m, n_: B.ask(m, n_, slot=1), user, full, record=not eph)
                     if sk.get("ok") is False:
-                        add = "\n\n⚠ Скептик: " + sk["doubt"]
-                        full += add
-                        yield fr(message={"role": "assistant", "content": add}, done=False)
+                        # A secondary verifier cannot bypass the upstream 128 KiB
+                        # UTF-8 budget or add malformed Unicode to the S03 turn.
+                        # Keep the already-complete model response intact and
+                        # degrade only the optional skeptic annotation.
+                        doubt = sk.get("doubt")
+                        add = "\n\n⚠ Скептик: " + doubt if isinstance(doubt, str) else None
+                        try:
+                            add_bytes = len(add.encode("utf-8")) if add is not None else None
+                        except UnicodeEncodeError:
+                            add_bytes = None
+                        if add_bytes is None or output_utf8_bytes + add_bytes > MAX_CHAT_OUTPUT_UTF8_BYTES:
+                            B.log("web_skeptic_annotation_discarded")
+                            sk = {"ok": None, "reason": "SKEPTIC_ANNOTATION_INVALID_OR_OVERSIZE"}
+                        else:
+                            output_utf8_bytes += add_bytes
+                            full += add
+                            yield fr(message={"role": "assistant", "content": add}, done=False)
                     yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": ("сомнение: " + sk["doubt"]) if sk.get("ok") is False else "проверка пройдена" if sk.get("ok") else "проверка недоступна", "ok": sk.get("ok")})
                 # STOP may arrive while the post-generation skeptic awaits. Never
                 # persist a cancelled answer using the stale pre-skeptic flag.
