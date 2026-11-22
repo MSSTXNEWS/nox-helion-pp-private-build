@@ -75,7 +75,8 @@
         if(pending&&typeof pending.catch==='function')pending.catch(()=>{});
       }catch(_){}
     }
-    const started=new Set(),reconnectSeen=new Set(),active=new Map(),reconnecting=new Map(),
+    const started=new Set(),reconnectSeen=new Set(),ackAttempted=new Set(),
+      active=new Map(),reconnecting=new Map(),
       reconnectControllers=new Map();
     async function begin(raw){
       const s=snap(raw),k=key(s);
@@ -529,6 +530,16 @@
           hold('HOLD_STREAM_ACK_GATE');
         }
       }
+      // Without a durable ACK gate, any network attempt is ambiguous after
+      // reconnect, even when the callback reports success. Fence same-tab
+      // retries BEFORE starting a second ACK; GET readback remains allowed.
+      // Cross-tab/reload safety still requires the supplied durable ackGate.
+      if(!ackGate){
+        const attemptKey=key(s);
+        if(ackAttempted.has(attemptKey))
+          hold('HOLD_STREAM_ACK_UNCERTAIN_GET_ONLY');
+        ackAttempted.add(attemptKey);
+      }
       try{
         // ACK may be accepted by the server even if its Promise never
         // settles. Bound this wait, but DO NOT cancel/retry a potentially
@@ -537,7 +548,9 @@
         const acked=await boundedRead(
           ()=>transport.ack(s,witness.ack_cursor),
           'HOLD_STREAM_ACK_SEND_TIMEOUT',ackSendTimeoutMs,signal);
-        if(acked===false) hold('HOLD_STREAM_ACK_UNCONFIRMED');
+        // Only explicit true is an ACK transport result. Undefined, null,
+        // nonboolean truthy values, and false cannot prove delivery.
+        if(acked!==true) hold('HOLD_STREAM_ACK_UNCONFIRMED');
         // Leave IndexedDB SENDING until a signed canonical GET proves ACKED.
         // A local confirm() would create ACKED without a server proof digest
         // and permanently block requireCanonicalAck() as unverified.
