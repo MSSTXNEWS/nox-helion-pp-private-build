@@ -178,5 +178,6 @@ sweep)
   for f in $(ls -t /root/nox/logs/*sweep* 2>/dev/null | head -2); do echo "## $f"; tail -n 25 $f | cut -c1-230; done
   pgrep -af "glm_sweep|ik_llama" | cut -c1-260; curl -s -m2 localhost:8081/health
   ;;
+sweep2) cat /root/nox/logs/bench_glm_base.txt | tail -n 8 | cut -c1-220; echo ==; tail -n 20 /root/nox/logs/glm_sweep.log | cut -c1-230; echo ==; tail -c 600 /root/nox/logs/glm_sweep.json 2>/dev/null;;
 *) echo unknown;;
 esac
