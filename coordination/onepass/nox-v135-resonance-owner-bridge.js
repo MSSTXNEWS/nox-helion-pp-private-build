@@ -218,7 +218,7 @@
     const event=payload=>{if(closed)return;
     if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
      firstVisibleMs=Math.round(performance.now()-started);
-    const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
+    const phase={meta:'waiting',token:'speaking',done:'idle',error:nativeSignal.aborted?'stopped':'error'}[payload.type];
     if(phase&&phase!==lastNativePhase){
      lastNativePhase=phase;
      if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
@@ -274,8 +274,8 @@
      first_visible_token_ms:firstVisibleMs,
      seconds:+((performance.now()-started)/1000).toFixed(2)});
     }catch(e){
-    if(nativeSignal.aborted){if(!closed)stopPhase();}
-    else event({type:'error',error:String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
+    event({type:'error',
+     error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
      gpu_stop_verified:false});
     }finally{
     if(claimedId)activeDialogs.delete(claimedId);
