@@ -1530,7 +1530,9 @@ test('1A02 browser duplicate client request IDs never replay native generation',
 });
 
 test('1A02 malformed client request ID holds before any native side effect',async()=>{
-  const invalid=[null,{},'', ' '.repeat(2),'X'.repeat(161),'bad\nline'];
+  const invalid=[null,{},'', ' '.repeat(2),'X'.repeat(161),'bad\nline',
+    ' leading','trailing ','a\u200bb','ab\u202ecd','ab\u2060cd',
+    'ab\u2066cd','ab\u2067cd','ab\u2068cd','ab\u2069cd','ab\u061ccd'];
   for(const request_id of invalid){
     const native=[];
     const w={NOX_NATIVE_OWNER:true,fetch:async path=>{
@@ -1546,6 +1548,41 @@ test('1A02 malformed client request ID holds before any native side effect',asyn
     assert.equal(response.status,422);
     assert.equal((await response.json()).error,'HOLD_INVALID_CLIENT_REQUEST_ID');
     assert.deepEqual(native,[]);
+  }
+});
+
+test('1A02 invisible S03 exchange identity fails closed before readback',async()=>{
+  for(const exchange_id of ['valid-01\u202e',
+    'valid-01\u200b',' valid-01','valid-01 ','valid-01\n',
+    'valid-01\u2066','valid-01\u2067','valid-01\u2068','valid-01\u2069','valid-01\u061c']){
+    const calls=[];
+    const original=async path=>{
+      const route=new URL(String(path),'https://nox.local').pathname;
+      calls.push(route);
+      if(route==='/api/nox/chat/stream'){
+        const wire=[
+          {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+          {type:'start',model:'NOX HELION'},
+          {type:'delta',text:answer},
+          {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id}
+        ].map(x=>JSON.stringify(x)).join('\n')+'\n';
+        return new Response(wire,{headers:{'content-type':'application/x-ndjson'}});
+      }
+      if(route==='/api/ui/memory/dialogs/history')
+        assert.fail('ambiguous S03 exchange ID must never be accepted');
+      assert.fail('unexpected route '+route);
+    };
+    const window={NOX_NATIVE_OWNER:true,fetch:original};
+    const location={pathname:'/nox-web-v29/pc/resonance.html',
+      origin:'https://nox.local',href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+    vm.runInNewContext(JS,{window,location,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,Intl,console,setTimeout,clearTimeout});
+    const reply=await window.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'invalid-exchange-identity'})});
+    const rows=await events(reply);
+    assert.equal(rows.at(-1).error,'HOLD_S03_COMMIT_RECEIPT');
+    assert.equal(rows.some(x=>x.type==='done'),false);
+    assert.deepEqual(calls,['/api/nox/chat/stream']);
   }
 });
 

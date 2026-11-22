@@ -121,10 +121,17 @@
        pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
       throw Error('HOLD_DIALOG_HISTORY_READBACK');
   }
+  // Correlation IDs appear in UI and S03 receipts. Invisible direction/format
+  // controls (all Unicode Cf, including bidi isolates) and edge whitespace make visually identical IDs distinct.
+  // Reject them, rather than normalize a previously reserved client identity.
+  function validCorrelationId(value,minLength) {
+    return typeof value==='string'&&value.length>=minLength&&value.length<=160&&
+      value===value.trim()&&validUnicodeScalars(value)&&
+      !/[\x00-\x1f\x7f\p{Cf}]/u.test(value);
+  }
   function accepted(done,id) {
     return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
-      done.dialog_id===id&&typeof done.exchange_id==='string'&&
-      done.exchange_id.length>=6&&done.exchange_id.length<=160;
+      done.dialog_id===id&&validCorrelationId(done.exchange_id,6);
   }
   async function readNativeOrAbort(reader,signal) {
     if(!signal)return reader.read();
@@ -425,8 +432,7 @@
         return Promise.resolve(errorResponse('HOLD_INVALID_MESSAGE_UNICODE',422));
       if(Object.prototype.hasOwnProperty.call(data,'request_id')){
         const rid=data.request_id;
-        if(typeof rid!=='string'||!rid.trim()||rid.length>160||
-           !validUnicodeScalars(rid)||/[\x00-\x1f\x7f]/.test(rid))
+        if(!validCorrelationId(rid,1))
           return Promise.resolve(errorResponse('HOLD_INVALID_CLIENT_REQUEST_ID',422));
         // Reserve synchronously before dialog creation or the model POST.
         if(admittedClientRequests.has(rid))
