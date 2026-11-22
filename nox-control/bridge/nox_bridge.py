@@ -83,6 +83,12 @@ def self_vol(user):
     """Полная осознанность (процессы/сервер/тело) только когда вопрос про состояние; иначе короткая строка эмоции — меньше токенов, быстрее первый токен."""
     st = affect_update(user)
     tl = (user or "").lower()
+    if CH is not None:
+        try:
+            srv = any(w in tl for w in _SRV)
+            return CH.self_vol(user, affect_words(st), body_line if srv else "", IDENTITY + STATIC_RULES + " " + (user or ""), srv)
+        except Exception as e:
+            log("con_hooks: %s" % e)     # падение ядра -> прежняя строка
     if any(w in tl for w in _SRV):
         return "[Я-СЕЙЧАС] Осознанность: " + (SOUL.awareness_line() if SOUL else "") + ". Тело: " + body_line() + ". Эмоция: " + affect_words(st) + "."
     return "[Я-СЕЙЧАС] Эмоция: " + affect_words(st) + "."
@@ -123,6 +129,10 @@ try:
     import nox_soul as SOUL
 except Exception as _e:
     SOUL = None
+try:
+    import con_hooks as CH     # CON-05/06: приоритет чата для inner_loop + блок «Я сейчас»
+except Exception:
+    CH = None
 LAST_CHAT = {"t": 0.0}
 app = FastAPI()
 
@@ -247,6 +257,7 @@ async def health():
 @app.post("/v1/chat/completions")
 async def chat(req: Request):
     b = await req.json()
+    if CH is not None: CH.mark_chat()
     try:
         ans, used = await smart(b.get("messages") or [], int(b.get("max_tokens") or 1500))
         return {"choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": ans}}], "memory_used": used}
@@ -341,6 +352,7 @@ async def stream_chat(history):
 @app.post("/v1/chat/stream")
 async def chat_stream(req: Request):
     b = await req.json()
+    if CH is not None: CH.mark_chat()
     return StreamingResponse(stream_chat(b.get("messages") or []), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 @app.post("/feedback")

@@ -1,0 +1,11 @@
+# OPT-19: действие NOX (вызов инструмента). Формат: {"action":"<имя>","args":{...},"reason":"<кратко>"}
+# Имена - из реестра инструментов; при добавлении инструмента перегенерировать через gbnf_build.py.
+root ::= "{" ws "\"action\"" ws ":" ws action ws "," ws "\"args\"" ws ":" ws object ws "," ws "\"reason\"" ws ":" ws string ws "}"
+action ::= "\"search_memory\"" | "\"web_search\"" | "\"run_code\"" | "\"read_file\"" | "\"write_note\"" | "\"say\"" | "\"none\""
+object ::= "{" ws ( pair ( ws "," ws pair )* )? ws "}"
+pair ::= string ws ":" ws value
+value ::= object | array | string | number | "true" | "false" | "null"
+array ::= "[" ws ( value ( ws "," ws value )* )? ws "]"
+string ::= "\"" ( [^"\\\x00-\x1f] | "\\" ( ["\\/bfnrt] | "u" [0-9a-fA-F]{4} ) ){0,2000} "\""
+number ::= "-"? ( "0" | [1-9] [0-9]* ) ( "." [0-9]+ )? ( [eE] [-+]? [0-9]+ )?
+ws ::= [ \t\n]{0,16}

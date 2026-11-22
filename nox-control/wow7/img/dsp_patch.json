@@ -1,0 +1,46 @@
+{
+  "_comment": "IMG-03: запись сервиса img в реестр диспетчера (nox-control/wow7/dsp/services.json) + 3-строчный хук lease. Применять: python3 apply_dsp_patch.py (см. install_img_s1.sh шаг 5) или вручную: добавить объект из services_add в services[], политику из policy_add - в policy.",
+  "version": 1,
+  "services_add": [
+    {
+      "name": "img",
+      "res": {"nice": 5, "ionice": "2:4", "oom_score_adj": 200},
+      "group": "media",
+      "port": 8097,
+      "gpu": true,
+      "exclusive": "vram",
+      "prio": 60,
+      "after": ["gateway"],
+      "argv": ["@HOME@/venv_img/bin/python", "@CTL@/imagegen/img_service.py"],
+      "env": {
+        "NOX_IMG_PORT": "8097",
+        "NOX_IMG_MODEL_DIR": "@DL@/hf/img",
+        "NOX_IMG_STATE": "@STATE@/img",
+        "NOX_RECEIPTS_DIR": "@HOME@/receipts",
+        "NOX_IMG_RAM_IDLE_EVICT_S": "0",
+        "NOX_MEM_MIN_GB": "48",
+        "NOX_DSP_CLI": "python3 @HOME@/dsp/current/nox_dispatcher.py",
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+      },
+      "preconditions": ["file:@CTL@/imagegen/img_service.py"],
+      "match": "img_service\\.py",
+      "health": {"path": "/health", "ok": [200], "loading": []},
+      "start_timeout_s": 60,
+      "load_grace_s": 120,
+      "respect_quiet": false,
+      "log": "img_service.log"
+    }
+  ],
+  "policy_add": {
+    "_vram": "exclusive 'vram' = единственный держатель окна VRAM под генерацию (тег уникален в реестре: validate() запрещает двух). Веса модели живут в RAM процесса img (28+21 ГБ, не в /dev/shm: там почти нет места из-за GLM); mem_min_available_gb=48 проверяется сервисом ПЕРЕД загрузкой весов.",
+    "vram_lease_file": "@STATE@/vram_lease.json"
+  },
+  "protected_add": ["@DL@/hf/img", "@STATE@/img"],
+  "dispatcher_hook": {
+    "_comment": "Правка nox_dispatcher.py (3 строки) в Dispatcher.reconcile(), в самом начале ветки DOWN после `if st.get('suspended'): return`: пока жив lease img, быстрый тир не перезапускается. Без хука сервис всё равно работает: окно берётся режимом group (3 ГБ), а освобождённый тир диспетчер вернёт сам (мы лишь теряем быстрый режим model).",
+    "file": "nox_dispatcher.py",
+    "insert_after": "        if st.get(\"suspended\"):\n            return\n",
+    "insert": "        import vram_coord  # IMG-03: lease на VRAM-окно\n        if name in vram_coord.leased_names(os.path.join(self.home, \"state/vram_lease.json\")):\n            return\n",
+    "needs_file": "vram_coord.py рядом с nox_dispatcher.py (скопировать из IMG/)"
+  }
+}

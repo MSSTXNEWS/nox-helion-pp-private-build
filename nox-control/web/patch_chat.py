@@ -12,11 +12,15 @@ helper='''    def _fast_text(self, req):  # NOXFB
             return cl(m.get("content")) or cl(m.get("reasoning_content")) or cl(m.get("reasoning"))
         except Exception:
             return ""
+    def _clean(self, t):  # NOXFB: служебное - не в текст (фазы идут полем nox_phase)
+        import re as _re
+        keep = [l for l in (t or "").split("\\n") if not _re.search(r"Глубокий ответ|готовлю в фоне|\\(задача\\s*t?\\d+|результат появится|Быстрый слой|быстрым слоем|повтори(те)? запрос|GLM\\s*занят|</?think>|⏳", l)]
+        return "\\n".join(keep).strip()
     def _fb(self, req, mode, why):
-        txt = self._fast_text(req) or "Быстрый слой сейчас недоступен, повтори через минуту."
-        if mode in ("deep", "max"): txt = "GLM занят, отвечаю быстрым слоем. " + txt
+        txt = self._clean(self._fast_text(req)) or "Мессир, ответ сейчас не сложился; запись в журнале."
+        phase = "deep_busy" if mode in ("deep", "max") else "fast_fallback"
         self.send_response(200); self.send_header("Content-Type", "application/x-ndjson"); self.send_header("Cache-Control", "no-cache"); self.send_header("Connection", "close"); self.end_headers()
-        for o in ({"model": TAG, "message": {"role": "assistant", "content": txt}, "done": False}, {"model": TAG, "message": {"role": "assistant", "content": ""}, "done": True, "done_reason": "stop"}):
+        for o in ({"model": TAG, "message": {"role": "assistant", "content": txt}, "done": False, "nox_phase": {"phase": phase, "why": why[:80]}}, {"model": TAG, "message": {"role": "assistant", "content": ""}, "done": True, "done_reason": "stop"}):
             self.wfile.write((json.dumps(o, ensure_ascii=False) + "\\n").encode())
         self.wfile.flush()
     def _body(self):'''
@@ -29,12 +33,12 @@ s=s.replace(b.group(0),'return self._fb(req, _mode, "gw %s" % r.status)',1)
 c='            if ok: out({"model": TAG, "message": {"role": "assistant", "content": ""}, "done": True, "done_reason": "stop"})'
 assert c in s
 s=s.replace(c,'''            if not "".join(_acc).strip():
-                _t = self._fast_text(req) or "Быстрый слой ответил пусто, повтори запрос."
-                out({"model": TAG, "message": {"role": "assistant", "content": ("GLM занят, отвечаю быстрым слоем. " if _mode in ("deep", "max") else "") + _t}, "done": False}); ok = True
+                _t = self._clean(self._fast_text(req)) or "Мессир, ответ сейчас не сложился; запись в журнале."
+                out({"model": TAG, "message": {"role": "assistant", "content": _t}, "done": False, "nox_phase": {"phase": "deep_busy" if _mode in ("deep", "max") else "empty_retry"}}); ok = True
 '''+c,1)
 # 3. честная ошибка фоновой задачи
 d='j["status"] = "error"; j["text"] = str(e)'; assert d in s
-s=s.replace(d,'j["status"] = "error"; j["text"] = ("GLM занят или недоступен, ответ дан быстрым слоем." if any(k in str(e) for k in ("111", "refused", "timed out", "Connection")) else "Ошибка GLM: " + str(e)[:160])',1)
+s=s.replace(d,'j["status"] = "error"; j["text"] = ""; j["phase"] = "deep_failed"',1)
 open(p,'w',encoding='utf-8').write(s); print('patched web_server')
 # 4. Максимум
 m='/root/nox/web/nox_mode.js'; t=open(m,encoding='utf-8').read()

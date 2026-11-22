@@ -1,0 +1,15 @@
+[Unit]
+Description=NOX DSP dispatcher (опциональный запуск через systemd; на Vast-контейнере обычно не нужен)
+After=network-online.target
+
+[Service]
+Type=simple
+Environment=DSP_HOME=/root/nox
+ExecStart=/usr/bin/python3 /root/nox/dsp/current/nox_dispatcher.py run
+Restart=always
+RestartSec=5
+# сервисы NOX запущены setsid и обязаны пережить рестарт диспетчера
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

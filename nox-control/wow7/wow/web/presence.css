@@ -1,0 +1,17 @@
+/* NOX presence HUD: орб + теги-инициативы. Стиль в духе nox-wow.css (тёмное стекло, циан/янтарь). Без внешних ресурсов. */
+.npr{--npr-rgb:127,245,239;position:fixed;right:18px;bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:40;width:176px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;font-family:var(--mono,ui-monospace,Menlo,Consolas,monospace)}
+.npr>*{pointer-events:auto}
+.npr-orb{width:160px;height:160px;display:block;filter:drop-shadow(0 0 18px rgba(var(--npr-rgb),.28))}
+.npr-badge{font-size:10px;letter-spacing:.16em;color:rgba(var(--npr-rgb),.9);text-shadow:0 0 8px rgba(var(--npr-rgb),.5);min-height:14px;text-align:center}
+.npr[data-state=thinking] .npr-badge{animation:npr-blink 1.4s steps(2,end) infinite}
+.npr-tags{display:flex;flex-direction:column;align-items:flex-end;gap:5px;width:100%;max-height:34vh;overflow:hidden}
+.npr-tag{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:3px 4px 3px 9px;border:1px solid rgba(var(--npr-rgb),.28);border-radius:999px;background:rgba(5,8,13,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#cfe9ec;font-size:10.5px;letter-spacing:.06em;animation:npr-in .5s cubic-bezier(.22,.8,.2,1) both;transition:opacity .25s,transform .25s}
+.npr-tag span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.npr-tag.hot{border-color:rgba(255,180,84,.7);color:#ffd9a0;box-shadow:0 0 12px rgba(255,180,84,.25)}
+.npr-tag.gone{opacity:0;transform:translateX(12px)}
+.npr-x{width:18px;height:18px;border-radius:50%;line-height:16px;font-size:13px;color:#9eaab6;background:rgba(255,255,255,.05);cursor:pointer}
+.npr-x:hover,.npr-x:focus-visible{color:#fff;background:rgba(255,255,255,.14)}
+@keyframes npr-in{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes npr-blink{50%{opacity:.45}}
+@media (max-width:640px){.npr{right:8px;bottom:calc(72px + env(safe-area-inset-bottom,0px));width:128px}.npr-orb{width:112px;height:112px}.npr-tags{max-height:24vh}}
+@media (prefers-reduced-motion:reduce){.npr-tag,.npr[data-state=thinking] .npr-badge{animation:none}.npr-tag{transition:none}}

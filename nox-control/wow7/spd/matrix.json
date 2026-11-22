@@ -1,0 +1,30 @@
+{
+  "_doc": "SPD-02: матрица A/B для GLM-5.3 на S1. Один рычаг за раз относительно base; победитель закрепляется (--accumulate) и тестируется следующий. Свип флагов gpu_tier (ngl/moe-cache/b/ub/NUMA) уже идёт — здесь порядок и недостающие рычаги: MTP, op-offload порог, cache-reuse, cache-ram, ngram, потоки.",
+  "base": ["-c", "16384", "-ngl", "24", "-ot", "exps=CPU", "-t", "24", "-tb", "24", "-fa", "on", "--parallel", "1", "-b", "512", "-ub", "256", "--no-op-offload", "--jinja", "--temp", "1.0", "--top-p", "0.95", "--min-p", "0.01"],
+  "base_env": {},
+  "bans": {
+    "flags": ["--no-mmap", "--mlock", "--no-mmap=1"],
+    "kv_quant_flags": ["-ctk", "-ctv", "--cache-type-k", "--cache-type-v"],
+    "kv_quant_allowed_values": ["f16"],
+    "min_ctx": 16384,
+    "note": "ЗАПРЕТЫ CONTEXT.md: --no-mmap/--mlock, квантование KV без A/B качества, контекст не урезать."
+  },
+  "quality": {"prompt": "Перечисли по порядку первые двенадцать простых чисел, через запятую, без пояснений.", "n_predict": 48, "min_similarity": 0.9},
+  "bench": {"short_prompt": "Объясни кратко, что такое RAID.", "short_n": 64, "long_repeat": 60, "long_n": 24, "repeats": 2, "cache_n": 8, "timeout_s": 900, "health_timeout_s": 1500},
+  "decision": {"min_gain": 0.05, "w_tg": 0.6, "w_pp": 0.3, "w_ttft": 0.1, "max_tg_regress": 0.10},
+  "levers": [
+    {"id": "L01_threads_phys", "why": "потоки = физические ядра cgroup, не vCPU: SMT-потоки в MoE-matvec мешают (ГИПОТЕЗА, мерить; число из recon_s1.sh)", "set": {"-t": "20", "-tb": "27"}, "risk": "low"},
+    {"id": "L02_ub1024_opoffload", "why": "prefill: большой ub + op-offload порог 512 (copy весов по PCIe окупается только на больших батчах; HF-гайд Doctor-Shotgun)", "set": {"-b": "2048", "-ub": "1024"}, "drop": ["--no-op-offload"], "env": {"GGML_OP_OFFLOAD_MIN_BATCH": "512"}, "risk": "med: VRAM compute buffer, смотреть OOM"},
+    {"id": "L03_ub2048_opoffload", "set": {"-b": "4096", "-ub": "2048"}, "drop": ["--no-op-offload"], "env": {"GGML_OP_OFFLOAD_MIN_BATCH": "1024"}, "risk": "med"},
+    {"id": "L04_moe_cache_4g", "why": "GPU-LRU кэш экспертов (PR #29887; чужой замер: до 1.3-2.2x tg на 5060Ti/5090, но на GLM-5.3 Flash есть отчёт о падении 33->16 tok/s при hit 43%)", "set": {"--moe-cache-mib": "4000"}, "requires_help": ["--moe-cache-mib"], "risk": "med: может замедлить tg и pp"},
+    {"id": "L05_mtp_n2", "why": "самоспекулятивное декодирование NextN-головой GLM-5.x (PR #29928, b11474+). Лосслесс при greedy. ЧУЖОЙ отчёт: на GLM-5.2 DSA MTP ещё не работал в сборках до #29928", "set": {"--spec-type": "draft-mtp", "--spec-draft-n-max": "2"}, "requires_help": ["draft-mtp"], "risk": "med: +VRAM/KV под MTP-слой, pp медленнее"},
+    {"id": "L06_mtp_n3", "set": {"--spec-type": "draft-mtp", "--spec-draft-n-max": "3"}, "requires_help": ["draft-mtp"], "risk": "med"},
+    {"id": "L07_ngram", "why": "n-gram самоспекуляция для структурного/повторяющегося текста (чужой замер NVIDIA forum: ~24 tok/s на структурном vs ~6.8 на новом)", "set": {"--spec-type": "ngram-map-k"}, "requires_help": ["ngram"], "risk": "low"},
+    {"id": "L08_cache_reuse", "why": "KV-shift сдвиг: переиспользовать кэш при вставке/удалении блока в середине промпта", "set": {"--cache-reuse": "256"}, "requires_help": ["--cache-reuse"], "risk": "low"},
+    {"id": "L09_cache_ram", "why": "хост-RAM кэш префиксов (762 ГБ RAM): несколько диалогов без пересчёта", "set": {"--cache-ram": "16384"}, "requires_help": ["--cache-ram"], "risk": "low"},
+    {"id": "L10_numa_distribute", "why": "NUMA: если recon показал >1 узла", "set": {"--numa": "distribute"}, "requires_help": ["--numa"], "risk": "low"},
+    {"id": "L12_no_repack", "why": "CPU-repack весов создаёт отдельные буферы (лишняя RAM/время загрузки вместо чистого mmap); отключение может ускорить загрузку, но замедлить pp (ГИПОТЕЗА, мерить)", "set": {"--no-repack": ""}, "requires_help": ["--no-repack"], "risk": "low"},
+    {"id": "L11_ngl_up", "why": "больше слоёв на GPU пока влезает (дублирует свип; оставлено как якорь для воспроизводимости)", "set": {"-ngl": "30"}, "risk": "med: OOM"},
+    {"id": "X01_kv_q8_QUALITY_ONLY", "why": "ЗАПРЕЩЕНО без A/B качества: будет заблокирован проверкой запретов, если не указан --allow-kv-quant", "set": {"-ctk": "q8_0", "-ctv": "q8_0"}, "risk": "quality", "ab_quality_only": true}
+  ]
+}

@@ -1,0 +1,20 @@
+--- a/nox-control/glm53/gateway.py
++++ b/nox-control/glm53/gateway.py
+@@ -69,10 +69,15 @@
+                 return self._json(200, {"text": RS.resume_answer(cfg.session_summary)})
+             self._relay(self.path)
+         def do_POST(self):
+-            n = int(self.headers.get("Content-Length", "0"))
+-            try: body = json.loads(self.rfile.read(n) or b"{}")
++            n = int(self.headers.get("Content-Length", "0")); raw = self.rfile.read(n) if n else b""
++            try: body = json.loads(raw or b"{}")
+             except Exception: return self._json(400, {"error": "bad json"})
+             p = self.path.split("?")[0].rstrip("/")
++            if os.environ.get("NOX_CORE") == "1" and p in ("/v1/chat/completions", "/chat/completions", "/v1/stop"):
++                try:
++                    import core_proxy                       # NOX_CORE=1: тело и поток байт-в-байт через CORE; CORE лежит -> старый путь ниже
++                    if core_proxy.proxy(self, p, raw): return
++                except Exception as e: print("[core] прокси выключен: %s" % e, file=sys.stderr, flush=True)
+             if p == "/v1/stop":
+                 rid = body.get("request_id") or ""
+                 return self._json(200, {"request_id": rid, "stopped": st.reg.stop(rid)})

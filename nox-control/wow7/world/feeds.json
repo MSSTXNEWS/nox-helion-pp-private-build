@@ -1,0 +1,255 @@
+{
+ "_comment": "Allowlist лент NOX WORLD. lean = сторона спектра (для баланса, не оценка). kind = доверие в beliefs (primary/secondary). live_checked=false: из песочницы не проверялось (нет сети); проверить на S1: python3 world_feed.py check. Хост ленты = единственный разрешённый хост (редиректы на другой хост запрещены).",
+ "feeds": [
+  {
+   "id": "bbc_world",
+   "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+   "lang": "en",
+   "lean": "center",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "BBC World",
+   "live_checked": false
+  },
+  {
+   "id": "npr",
+   "url": "https://feeds.npr.org/1001/rss.xml",
+   "lang": "en",
+   "lean": "center-left",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "NPR",
+   "live_checked": false
+  },
+  {
+   "id": "guardian_world",
+   "url": "https://www.theguardian.com/world/rss",
+   "lang": "en",
+   "lean": "left",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "The Guardian World",
+   "live_checked": false
+  },
+  {
+   "id": "jacobin",
+   "url": "https://jacobin.com/feed",
+   "lang": "en",
+   "lean": "left",
+   "topic": "politics",
+   "kind": "secondary",
+   "name": "Jacobin (левое мнение)",
+   "live_checked": false
+  },
+  {
+   "id": "foxnews",
+   "url": "https://moxie.foxnews.com/google-publisher/latest.xml",
+   "lang": "en",
+   "lean": "right",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "Fox News",
+   "live_checked": false
+  },
+  {
+   "id": "nationalreview",
+   "url": "https://www.nationalreview.com/feed/",
+   "lang": "en",
+   "lean": "right",
+   "topic": "politics",
+   "kind": "secondary",
+   "name": "National Review (правое мнение)",
+   "live_checked": false
+  },
+  {
+   "id": "reason",
+   "url": "https://reason.com/feed/",
+   "lang": "en",
+   "lean": "libertarian",
+   "topic": "politics",
+   "kind": "secondary",
+   "name": "Reason (либертарианское)",
+   "live_checked": false
+  },
+  {
+   "id": "aljazeera",
+   "url": "https://www.aljazeera.com/xml/rss/all.xml",
+   "lang": "en",
+   "lean": "non-western",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "Al Jazeera",
+   "live_checked": false
+  },
+  {
+   "id": "dw_en",
+   "url": "https://rss.dw.com/rdf/rss-en-all",
+   "lang": "en",
+   "lean": "center",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "Deutsche Welle",
+   "live_checked": false
+  },
+  {
+   "id": "scmp",
+   "url": "https://www.scmp.com/rss/91/feed",
+   "lang": "en",
+   "lean": "non-western",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "SCMP (Китай/Азия)",
+   "live_checked": false
+  },
+  {
+   "id": "tass_en",
+   "url": "https://tass.com/rss/v2.xml",
+   "lang": "en",
+   "lean": "state-ru",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "ТАСС англ. (государственное РФ)",
+   "live_checked": false
+  },
+  {
+   "id": "nature",
+   "url": "https://www.nature.com/nature.rss",
+   "lang": "en",
+   "lean": "none",
+   "topic": "science",
+   "kind": "primary",
+   "name": "Nature",
+   "live_checked": false
+  },
+  {
+   "id": "arxiv_ai",
+   "url": "https://rss.arxiv.org/rss/cs.AI",
+   "lang": "en",
+   "lean": "none",
+   "topic": "science",
+   "kind": "primary",
+   "name": "arXiv cs.AI (препринты, не рецензировано)",
+   "live_checked": false
+  },
+  {
+   "id": "quanta",
+   "url": "https://www.quantamagazine.org/feed/",
+   "lang": "en",
+   "lean": "none",
+   "topic": "science",
+   "kind": "secondary",
+   "name": "Quanta",
+   "live_checked": false
+  },
+  {
+   "id": "sciencedaily",
+   "url": "https://www.sciencedaily.com/rss/all.xml",
+   "lang": "en",
+   "lean": "none",
+   "topic": "science",
+   "kind": "secondary",
+   "name": "ScienceDaily",
+   "live_checked": false
+  },
+  {
+   "id": "marginalian",
+   "url": "https://www.themarginalian.org/feed/",
+   "lang": "en",
+   "lean": "none",
+   "topic": "culture",
+   "kind": "secondary",
+   "name": "The Marginalian",
+   "live_checked": false
+  },
+  {
+   "id": "meduza",
+   "url": "https://meduza.io/rss/all",
+   "lang": "ru",
+   "lean": "independent-ru",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "Медуза",
+   "live_checked": false
+  },
+  {
+   "id": "novaya_eu",
+   "url": "https://novayagazeta.eu/feed/rss",
+   "lang": "ru",
+   "lean": "independent-ru",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "Новая газета Европа",
+   "live_checked": false
+  },
+  {
+   "id": "lenta",
+   "url": "https://lenta.ru/rss/news",
+   "lang": "ru",
+   "lean": "mainstream-ru",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "Lenta.ru",
+   "live_checked": false
+  },
+  {
+   "id": "kommersant",
+   "url": "https://www.kommersant.ru/RSS/news.xml",
+   "lang": "ru",
+   "lean": "mainstream-ru",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "Коммерсантъ",
+   "live_checked": false
+  },
+  {
+   "id": "rbc",
+   "url": "http://static.feed.rbc.ru/rbc/logical/footer/news.rss",
+   "lang": "ru",
+   "lean": "mainstream-ru",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "РБК",
+   "live_checked": false
+  },
+  {
+   "id": "ria",
+   "url": "https://ria.ru/export/rss2/archive/index.xml",
+   "lang": "ru",
+   "lean": "state-ru",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "РИА Новости (государственное)",
+   "live_checked": false
+  },
+  {
+   "id": "tass_ru",
+   "url": "https://tass.ru/rss/v2.xml",
+   "lang": "ru",
+   "lean": "state-ru",
+   "topic": "news",
+   "kind": "secondary",
+   "name": "ТАСС (государственное)",
+   "live_checked": false
+  },
+  {
+   "id": "nplus1",
+   "url": "https://nplus1.ru/rss",
+   "lang": "ru",
+   "lean": "none",
+   "topic": "science",
+   "kind": "secondary",
+   "name": "N+1",
+   "live_checked": false
+  },
+  {
+   "id": "elementy",
+   "url": "https://elementy.ru/rss/news",
+   "lang": "ru",
+   "lean": "none",
+   "topic": "science",
+   "kind": "secondary",
+   "name": "Элементы",
+   "live_checked": false
+  }
+ ]
+}

@@ -5,6 +5,12 @@ import os
 import sys
 
 
+def _wow_mem():
+    d = os.environ.get("NOX_WOW7_MEM") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "wow7", "mem")
+    if os.path.isdir(d) and d not in sys.path:
+        sys.path.append(d)
+
+
 def build(env=None):
     from .events_bus import EventBus
     from .memory_search import MemorySearch
@@ -21,6 +27,12 @@ def build(env=None):
     store = Store(db)
     ev = (env.get("NOX_EVENTS") or "").strip() or os.path.join(os.path.dirname(os.path.abspath(db)), "events.jsonl")
     recall = Recall(store, MemorySearch(store), bus=EventBus(ev))
+    _wow_mem()
+    try:
+        from correction import CorrectionAPI     # MEM-02: правка/отзыв проверяются перечитыванием, + get/revoke/restore/revision
+        recall = CorrectionAPI(recall)
+    except Exception as ex:
+        print("recall_server: ВНИМАНИЕ, CorrectionAPI не загружен (%s): правки и отзывы НЕ проверяются" % ex, file=sys.stderr, flush=True)
     return serve(recall, host, port)
 
 

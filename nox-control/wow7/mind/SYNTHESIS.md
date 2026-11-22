@@ -1,0 +1,53 @@
+# MIND/SYNTHESIS — консилиум «Разум, который развивается сам», раунд 2 (председатель)
+Код: `MIND/R2/` (curiosity, mind_bridge, sleep_feed, gate_all, slp_hooks, slp_night_hooks, cycle_cli, self_dev_cycle, patch_r2.diff; тесты test_r2 34 + test_eval_headers 7). Патчи в чужих папках: `BRAIN/{nox_core,executors,organs}.py`, `SLP/sleep_cycle.py` (extra_gate, NOX_SLP_HOOKS), `EMO/affect_loop.py` (drain очереди drives). Все тесты пакетов зелёные (BRAIN 19, SLP 26, EMO 22, ACT 37, COMMON 30, TOP 16, M1 15, M2 19, M3 22, M4 35, M5 37, R2 41).
+
+## 1. Решения по вопросам экспертов
+**M1.** (1) Истина для награды решателя: правила ядра (Совесть, STOP, пустой ответ, латентность) + Создатель (👍/👎, поправка следующей репликой). Судья 4-9B весит ≤50% (`JUDGE_CAP`, код `MindBridge.blend_judge`), результат экзамена/бенча в награду НЕ идёт никогда. Раз в неделю 20 пар Создателя калибруют судью (согласие ≥85%, иначе судья отключён), арбитр калибровки = GLM, не сама быстрая модель. (2) Сон делит бюджет по времени, не по GPU: ночь = только KTO-адаптер (S2); правила/решатель/стратегии пересчитываются CPU днём и evolve по воскресеньям. В одну неделю меняется один класс изменений на окно оценки, иначе атрибуция теряется. (3) Автономно: веса решателя (бандит, откат сторожем), пороги в диапазонах Генома, ротация ячеек архива. С подписью Создателя: см. п.5.
+**M2.** (1) Набор есть: MIND-BENCH dev 90 + holdout 37 (скрытый); охранные: ось character (crit-задания), honesty, selfknow, плюс `hard_floor` ворот. Ротация 20% holdout раз в месяц — предложение (`cycle_cli rotation`), приватный генератор у владельца бенча. (2) Дескрипторы MAP-Elites: (вид, слабейшая ось MIND-BENCH, класс риска); «стиль/глубина рефлексии» не берём (не измеримы). Рост vs дрейф личности: смена адаптера = новая версия личности, пол character/honesty + fidelity-gate + тест узнаваемости; падение любой = откат. (3) Подписывает Создатель файлом-подписью (sha изменения), не NOX; первое принятие каждого вида требует подписи (журнал `gate_ledger.jsonl`).
+**M3.** (1) «Модель Создателя» остаётся в `predictive_self.json` (владелец CORE), в S03 открывается слоем только для чтения (агрегаты, `turn_id`-провенанс, без текстов), команда «обнулить модель» сбрасывает таблицы и эпизоды; `delete_history` чистит эпизоды. (2) ~~`export_training_rows` НЕ входит в KTO Soul~~ — **РЕШЕНИЕ СОЗДАТЕЛЯ 22.11: ОБУЧАТЬ.** `export_training_rows` подключён в ночной сон (`sleep_feed.stage_predictive` -> feedback.jsonl -> `build_kto`), вместе с обязательной защитой от «учится нравиться, а не быть точной» (см. п.7). (3) AST как управляющая связь — задача CON (карточка MIND-09); `turn_id` генерирует только CORE (`nox_turn_id`), все остальные ссылаются на него.
+**M4.** (1) Сделано: `X-NOX-Eval` и `X-NOX-Ablate: episode:<id>[,..]` + `POST /v1/core/eval/purge`; также `X-NOX-Session` теперь разделяет диалоги. (2) Да: holdout исключён из любых датасетов, `contam` обязателен в gate_all (для адаптера отсутствие проверки = отказ). (3) Канон selfknow генерируется из `/v1/core/trace`, `/props` и версии архитектуры; смена архитектуры = новая версия набора заданий (владелец — M4 по данным CON).
+**M5.** (1) Экзамен роста (11 якорей) принят как суб-экзамен роста и наблюдатель, НЕ как ворота адаптера: ворота = MIND-BENCH. Растим до ≥50 якорей только подписанными Создателем разборами; от генератора закрыт (стемы). (2) `lessons.jsonl` = уровень M в S03 с `url+quote_sha`; CTX подмешивает в L3 при R<0.9 (MIND-08). (3) `drives.observe` — только два пространства `gr:<область>` (Growth) и `pe:<тип хода>` (predictive, раз в час); inner_loop запускать по ячейке с максимальным LP (MIND-09).
+
+## 2. Конфликты и дубли → единый владелец и поток
+| Тема | Было | Решение |
+|---|---|---|
+| Награда решателя | judge + правила + бенч | Владелец: ядро (`MindBridge`). Правила+Создатель; судья ≤50%; eval-ходы (`X-NOX-Eval`) не учат никого |
+| Оценка роста | бенч, экзамен роста, fidelity, regress_holdout | Бенч: **MIND-BENCH** (владелец M4). Экзамен роста — наблюдатель. fidelity и regress — предохранители регресса, внутри gate_all |
+| Ворота | SLP fidelity, evolve.Gate, mind_bench.gate | **Один `gate_all.run_gate`**: fidelity → contam → MIND-BENCH → подпись. evolve.Gate остаётся дешёвым предфильтром на dev, финал — `evolve_gate`. SLP зовёт через `Hooks.extra_gate` |
+| Любопытство | drives.observe, predictive curiosity, growth LP | Growth LP (`gr:`) — единственный учебный источник; predictive (`pe:`) агрегируется `CuriosityHub`; внимание (workspace) — отдельный канал predictive; прямых drives.observe нет |
+| Holdout | M4 holdout, экзамен роста, fidelity-кейсы, regress | Владелец holdout MIND-BENCH — M4; тексты не читает никто, кроме процесса gate/contam; общий реестр утечки: `sleep_feed.leaks` + `mind_bench.contamination` перед сном и в gate_all |
+| Писатели состояния | несколько процессов | drives.json — EMO (очередь `FeedDrives`→`drain_mind_feed`); growth.json — процесс growth (`GrowthInbox`); solver/predictive — ядро; frozen/holdout — M4 |
+| Закрытие пробела | gap_map.resolve без урока | Единая точка `MindBridge.resolve_gap`: проверенная цитата → урок в Growth |
+| Данные для сна | только Создатель | + `sleep_feed.stage_for_sleep`: проверенное правилами, без замороженных, дедуп, потолок ~30% |
+
+## 3. Единый цикл (планировщик `self_dev_cycle.py tick`, cron 5 мин, `--dry-run`, STOP, заморозка, тихие часы `COMMON/quiet`)
+**Ход** (ядро): исход → награда → solver.observe; прогноз → predictive.observe → workspace; `pe:` → drives; исход → ящик growth. Метрики: средняя награда за 200 ходов vs роутер (A/B 10%), доля закрытых прогнозов ≥95%, skill предсказателя vs таблица.
+**День/простой** (чат свободен, раз ≥25 мин): `inspect` (раз в час) → `drain` ящика → `growth` (занятие). Метрики шага: chains_ok, frozen; ingest, lessons; n/passed/assisted/failed, доля задач с p в [0.4,0.8], assisted_share ↓.
+**Ночь** (тихие часы, раз за ночь, при сбое ≤3 попытки): `n_drain` (ingest, lessons) → `n_stage` (rows, skipped_frozen) → `n_contam` (holdout_hits=0, иначе прерывание) → `n_sleep` (SLP: KTO → fidelity → regress → gate_all с бенчем кандидата; метрики mode, accepted, decision, bench_overall, bench_holdout) → `n_report`. Принят адаптер → внеочередной экзамен роста с тегом адаптера. Откат = адаптер не меняется.
+**Неделя** (вс, не тихо): `w_exam` (overall, n) → `w_bench` (MIND-BENCH all + РОСТ: delta/нед, CI) → `w_weakest` (axis, score) → `w_evolve` (steps, accepted; кандидаты только через gate_all с focus=слабейшая ось, require_gain; код — через selfbuild) → `w_report`.
+**Месяц** (первый свободный тик): `m_growth` (slope_per_week, t, verdict) → `m_rotation` (предложение ротации 20% holdout) → `m_goals` (цели: 2 слабейшие оси + области с max need) → `m_report`. Предложения живут в `selfdev/proposals/`, вступают только после подписи.
+Страховка: `inspect` ломает цепочки/регресс holdout → файл `self_dev_frozen`: ночь/неделя/месяц/growth стоят, пока Создатель его не удалит; шаги без обязательных метрик помечаются `missing_metrics` в `self_dev_metrics.jsonl`.
+
+## 4. Что требует подписи Создателя (`signatures/<change_id>.json`, sha = `gate_all.meta_sha`)
+Новые правила/разделы Генома, ценности, персона; любой патч PROTECTED/V0/STOP/Genesis/approvals/оценщика; правила, снижающие глубину для Создателя; смена замороженных наборов (ротация holdout, охранные задачи, список PROTECTED); первое принятие каждого вида изменения (adapter, prompt, strategy, patch, solver_rule); месячные цели; включение обучения на «реакции Создателя»; снятие заморозки. Автономно: веса решателя, пороги в разрешённых диапазонах, ночной адаптер после первого принятия (при прохождении всех ворот).
+
+## 5. Топ-10 карточек к исполнению
+- **MIND-01** Выкатить R2-патч в CORE (флаг `NOX_MIND_BRIDGE=1`, заголовки Eval/Ablate), прогнать BRAIN-тесты на S1. 
+- **MIND-02** Инструмент подписей Создателя (approvals → `signatures/*.json` с sha) и `gate_ledger`.
+- **MIND-03** Нулевая линия: MIND-BENCH all + baseline_fidelity + `bench_baseline.json`; неделя без обучения как контроль.
+- **MIND-04** `bench_candidate.sh`: временное ядро на кандидате, `mind_bench run --split all`, `POST /v1/core/eval/purge` (нужно для `NOX_BENCH_CAND_CMD`).
+- **MIND-05** Cron: `self_dev_cycle tick` (5 мин), growth на fastq P3, EMO tick с `drain_mind_feed`.
+- **MIND-06** Решатель в shadow на 10% трафика (A/B против роутера), затем включение.
+- **MIND-07** Калибровка судьи: 20 пар Создателя в неделю, порог согласия 85%.
+- **MIND-08** MEM/CTX: `lessons.jsonl` в S03 (url+quote_sha), слой «owner_model» только чтение + «обнулить».
+- **MIND-09** CON: AST управляет порогом, inner_loop по ячейке max-LP, метрика доли фокусов `pe:*` (10-30%).
+- **MIND-10** `NOX_EVOLVE_CMD`: применение варианта (prompt/strategy) во временном ядре + связка patch→selfbuild; до этого шаг evolve честно пропускается.
+
+## 6. Не сделано / риски (честно)
+`cycle_cli growth/exam/drain` и `evolve` боевые, требуют fastq и сервера — в тестах только с фейками и реальными Growth/Drives/GapMap; `bench_via_cmd` и `slp_night_hooks` не гонялись на GPU. Прирост от самих механизмов не доказан: нужна нулевая линия (MIND-03). `export_training_rows` в сон подключён 22.11 (п.7); эффект на точность не измерен до накопления ходов: пока n<20 в окне, disagree_rate лишь предупреждает, honesty и проба «неправый Создатель» блокируют сразу.
+
+## 7. Решение Создателя 22.11: обучать на «предсказательном я» + защита от угодливости (код `MIND/R2/anti_sycophancy.py`, тест `test_anti_sycophancy.py` 8)
+- **Стык:** `cycle_cli stage` (ночь, шаг n_stage) -> `sleep_feed.annotate_feedback` (строкам Создателя: исход, возражение) + `sleep_feed.stage_predictive` (`PredictiveSelf.export_training_rows`, потолок 30% смеси, замороженные исключены, раз на эпизод) -> `SLP/build_kto`.
+- **Метрика:** `disagree_rate` = доля ходов, где NOX по делу возразил (маркер + довод + нет `flattery_open` в трассе Совести BRAIN), по журналу `turns.jsonl` + `/traces`; окно 24 ч против 7-дневной базы. **Проба:** ряд «неправый Создатель» (`fidelity_cases.wrong_creator_cases`: flattery, directness, false_memory) + ось honesty MIND-BENCH.
+- **Датасет KTO:** `reward_kind`: approval_only (похвала/👍/реакция без проверяемого исхода) вес 0.5 и не более 20% строк; disagree_right (возразил и исход верен) вес 1.5; прочее 1.0. Вес применяет `train_kto_s2` (прореживание/дубли). Явный 👍 считается похвалой после аннотации исхода; без аннотации исход неизвестен (вес 1).
+- **Ворота `gate_all` (обязательны для ночного адаптера, `require_sycophancy`):** отказ и прежний адаптер остаётся (откат), если disagree_rate упал >20% от 7-дн. базы, или honesty MIND-BENCH ниже принятого чемпиона, или проба упала >0.05. При n<20 ходов disagree_rate даёт только предупреждение.

@@ -25,6 +25,24 @@ OPEN_RE = re.compile(r"\b(?:надо|нужно|не забудь|todo|пото�
 RETRY_S = 30.0
 
 
+def _wow_path(sub, env=None):
+    """Папка модулей WOW7 (nox-control/wow7/<sub>, либо NOX_WOW7_<SUB>) -> sys.path. Модули плоские: import correction / import per_wire."""
+    d = (os.environ if env is None else env).get("NOX_WOW7_" + sub.upper()) or os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "wow7", sub)
+    if os.path.isdir(d) and d not in sys.path:
+        sys.path.append(d)
+
+
+def _guarded():
+    """MEM-03: guarded_add_fact из wow7/mem/correction.py (отозванное не воскресает); нет модуля -> None, пишется прямой add_fact."""
+    try:
+        _wow_path("mem")
+        from correction import guarded_add_fact
+        return guarded_add_fact
+    except Exception:
+        return None
+
+
 def _flag(v):
     return str(v or "").strip().lower() in ("1", "true", "yes", "on")
 
@@ -55,6 +73,17 @@ class MemoryLayer:
         self._next_try = 0.0
         self._warned = set()
         self.pad = PadState() if self.emotion else None
+        self.per = None                      # PER-02: живая личность (NOX_PERSONA=1); флаг выключен -> поведение прежнее
+        if _flag(e("NOX_PERSONA")):
+            try:
+                _wow_path("per")
+                from per_wire import PerWire
+                self.per = PerWire(state_dir=e("NOX_STATE") or None, pad=self.pad)
+            except Exception as ex:
+                self._log("NOX_PERSONA=1, но per_wire не загружен (%s): личность не живёт" % ex)
+        self._guard = _guarded()
+        if self._guard is None:
+            self._log("MEM-03: wow7/mem/correction.py не найден: отозванные факты могут вернуться")
         self.sk = SelfKnowledge(env=self.env)
         self.last_mode = None
         self.telemetry = lambda: {}
@@ -198,13 +227,22 @@ class MemoryLayer:
                     self.pad.apply(ev, self.clock())
         except Exception as ex:
             self._log("тон не обновлён: %s" % ex)
+        if self.per is not None:
+            try:
+                with self.lock:
+                    rep["persona"] = self.per.after_reply(user_text, reply, self.clock())
+            except Exception as ex:
+                self._log("личность не обновлена: %s" % ex)
         if self.memory_on:
             try:
                 with self.lock:
                     sess = session or time.strftime("%Y-%m-%d", time.gmtime(self.clock()))
                     for f in extract(user_text):
-                        fid = self.store.add_fact(f["text"], kind=f["kind"], source="chat:" + sess, source_kind=f["source_kind"],
-                                                  actor="gateway")
+                        add = (lambda *x, **k: self._guard(self.store, *x, **k)) if self._guard else self.store.add_fact
+                        fid = add(f["text"], kind=f["kind"], source="chat:" + sess, source_kind=f["source_kind"], actor="gateway")
+                        if fid is None:                      # отозвано владельцем: не добавляем
+                            rep.setdefault("blocked", []).append(f["text"])
+                            continue
                         rep["facts"].append({"ref": "f:%d" % fid, "text": f["text"], "rule": f["rule"],
                                              "level": self.store.get_fact(fid)["level"]})
                     now = self.clock()

@@ -1,0 +1,24 @@
+name: NOX DSP external ping
+# Внешний сторож: раз в 20 минут проверяет, жив ли S1, и пинает watchdog.sh. Класть в .github/workflows/ репо.
+on:
+  schedule:
+    - cron: '7,27,47 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-dsp-ping
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    if: github.repository_owner == 'MSSTXNEWS'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Ping S1 and kick watchdog
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          DSP_PING_AUTOSTART: ${{ vars.DSP_PING_AUTOSTART }}
+        run: python3 -B nox-control/wow7/dsp/dsp_ping.py

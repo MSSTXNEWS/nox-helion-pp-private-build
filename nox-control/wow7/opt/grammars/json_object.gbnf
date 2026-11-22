@@ -1,0 +1,9 @@
+# OPT-19: любой JSON-объект верхнего уровня (json-mode для судей/экстракторов без схемы).
+root ::= object
+object ::= "{" ws ( pair ( ws "," ws pair )* )? ws "}"
+pair ::= string ws ":" ws value
+value ::= object | array | string | number | "true" | "false" | "null"
+array ::= "[" ws ( value ( ws "," ws value )* )? ws "]"
+string ::= "\"" ( [^"\\\x00-\x1f] | "\\" ( ["\\/bfnrt] | "u" [0-9a-fA-F]{4} ) ){0,4000} "\""
+number ::= "-"? ( "0" | [1-9] [0-9]* ) ( "." [0-9]+ )? ( [eE] [-+]? [0-9]+ )?
+ws ::= [ \t\n]{0,16}
