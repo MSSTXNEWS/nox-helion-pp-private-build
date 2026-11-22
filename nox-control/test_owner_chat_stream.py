@@ -148,6 +148,35 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(self.dispatched,[])
                     self.assertNotIn('_agent_final',payload)
 
+    async def test_coalesced_sse_transport_decodes_bounded_utf8_slices(self):
+        # One HTTP chunk can contain tens of thousands of Unicode characters.
+        # Do not materialize another giant decoded string before frame limits
+        # run; preserve split-codepoint boundaries and CRLF framing.
+        logical_line='data: '+('🌍'*12000)
+        raw=(logical_line+'\\r\\n\\r\\n').encode('utf-8')
+        observed=[]
+        class Response:
+            async def aiter_bytes(self):
+                yield raw
+        real_factory=stream.codecs.getincrementaldecoder
+        def bounded_factory(name):
+            make=real_factory(name)
+            class Decoder:
+                def __init__(self,errors='strict'):
+                    self.inner=make(errors)
+                def decode(self,data,final=False):
+                    observed.append(len(data))
+                    if len(data)>8192:
+                        raise AssertionError('SSE decoder received unbounded raw bytes')
+                    return self.inner.decode(data,final=final)
+            return Decoder
+        with patch.object(stream.codecs,'getincrementaldecoder',
+                          side_effect=bounded_factory):
+            lines=[value async for value in stream._bounded_sse_lines(Response())]
+        self.assertEqual(lines,[logical_line,''])
+        self.assertGreater(len(observed),2)
+        self.assertLessEqual(max(observed),8192)
+
     async def test_unicode_sse_record_limit_is_wire_bytes_not_codepoints(self):
         # A single JSON SSE record can be under 300k characters yet exceed
         # the 300k-byte frame ceiling with UTF-8 emoji. Reject before showing
