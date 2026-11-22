@@ -448,7 +448,7 @@ def install(app, B):
         if len(txt) > 2000:
             return JSONResponse({"status": "HOLD", "reason": "S03_FACT_TOO_LONG",
                                  "saved": False, "s03_readback_verified": False}, status_code=400)
-        if re.search(r"[\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f]", txt) or any(
+        if re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", txt) or any(
                 0xD800 <= ord(c) <= 0xDFFF for c in txt):
             return JSONResponse({"status": "HOLD", "reason": "S03_FACT_INVALID_UNICODE",
                                  "saved": False, "s03_readback_verified": False}, status_code=400)
