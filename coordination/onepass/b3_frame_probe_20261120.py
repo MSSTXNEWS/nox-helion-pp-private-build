@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import pathlib
+import posixpath
 import statistics
 from datetime import datetime, timezone
 from urllib.parse import unquote, urlsplit
@@ -67,6 +68,9 @@ def is_model_chat_endpoint(url):
     path = path.replace('\\', '/').lower()
     while '//' in path:
         path = path.replace('//', '/')
+    # A browser or proxy can resolve decoded dot-segments before routing.
+    # Classify the canonical target rather than the attacker-supplied alias.
+    path = posixpath.normpath(path)
     return any(path == root or path.startswith(root + '/') or
                path.startswith(root + ';')
                for root in ('/api/nox/chat', '/nox/chat'))
