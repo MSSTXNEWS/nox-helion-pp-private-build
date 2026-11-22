@@ -1133,15 +1133,12 @@ async function check(chunks, status=200) {
         for field in ("event_id", "turn_id"):
             original = writer[field]
             for changed in (
-                    " " + original, original + " ", original + "\\t",
-                    original + "\\n", original + "\\u200b",
-                    original + "\\u200e", original + "\\x00"):
-                # The escapes above are decoded to actual characters before
-                # asserting; no literal backslash-only regression alias.
-                decoded = changed.encode("utf-8").decode("unicode_escape") if "\\\\" in changed else changed
-                with self.subTest(identity=field, value=repr(decoded)):
-                    altered_writer = dict(writer, **{field: decoded})
-                    altered_reader = dict(reader, **{field: decoded})
+                    " " + original, original + " ", original + "\t",
+                    original + "\n", original + "\u200b",
+                    original + "\u200e", original + "\x00"):
+                with self.subTest(identity=field, value=repr(changed)):
+                    altered_writer = dict(writer, **{field: changed})
+                    altered_reader = dict(reader, **{field: changed})
                     self.assertFalse(canonical_s03_proof_valid(
                         altered_writer, altered_reader, DIALOG, transcript,
                         require_full_transcript_pin=True))
