@@ -627,6 +627,12 @@ def require_stream_model_identity(frame, previous=None):
         if isinstance(nested, dict):
             fields.extend(nested[key] for key in ('model', 'model_id', 'modelId')
                           if key in nested)
+            # status.status and metadata.status are supported SSE route
+            # envelopes; a foreign model here must poison the whole turn.
+            inner = nested.get('status')
+            if isinstance(inner, dict):
+                fields.extend(inner[key] for key in ('model', 'model_id', 'modelId')
+                              if key in inner)
     if not fields:
         return previous  # Unlabeled legacy frames are not positive model proof.
     if any(type(value) is not str or not 0 < len(value.strip()) <= 256
