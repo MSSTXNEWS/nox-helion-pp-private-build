@@ -2400,5 +2400,57 @@ class ProbeTests(unittest.TestCase):
         self.assertTrue(healthy.closed)
 
 
+
+    def test_http_200_duplicate_page_content_type_must_hold(self):
+        """Conflicting browser HTML/gateway MIME cannot certify page health."""
+        from email.message import Message
+
+        html = b'<html><body>NOX</body></html>'
+
+        class Response:
+            status = 200
+            url = 'http://127.0.0.1:8080/chat'
+
+            def __init__(self, values):
+                self.headers = Message()
+                for value in values:
+                    self.headers.add_header('Content-Type', value)
+                self.closed = False
+                self.reads = 0
+
+            def read(self, limit):
+                self.reads += 1
+                return html
+
+            def close(self):
+                self.closed = True
+
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'):
+            for headers in (
+                ('text/html', 'application/json'),
+                ('application/json', 'text/html'),
+                ('text/html', 'text/html'),
+                ('text/html', 'text/plain'),
+            ):
+                response = Response(headers)
+                with self.subTest(ambiguous=headers), self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_CHAT_PAGE_CONTENT_TYPE_AMBIGUOUS):
+                    probe.page_snapshot(response, expected_path='/chat')
+                self.assertTrue(response.closed)
+                self.assertEqual(response.reads, 1)
+
+            for headers in ((), ('text/html',), ('text/html; charset=utf-8',)):
+                response = Response(headers)
+                with self.subTest(healthy=headers):
+                    self.assertEqual(probe.page_snapshot(
+                        response, expected_path='/chat'), (200, '/chat', html))
+                self.assertTrue(response.closed)
+                self.assertEqual(response.reads, 1)
+
+            invalid = Response(('application/json',))
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PAGE_NOT_HTML):
+                probe.page_snapshot(invalid, expected_path='/chat')
+            self.assertTrue(invalid.closed)
+
 if __name__ == '__main__':
     unittest.main()
