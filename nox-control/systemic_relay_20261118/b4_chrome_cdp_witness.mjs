@@ -177,7 +177,30 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     expectedOrigin=origin.origin;
   }catch{throw Error('BAD_CHAT_ORIGIN');}
   const captureStartedAt=Date.now();
-  const c=await(makeSession?makeSession():new Cdp(ws).open(Math.min(timeoutMs,5000))),active=new Map(),finished=[];
+  let c;
+  if(makeSession){
+    // Injected CDP factories must obey the same bounded pre-capture deadline.
+    // A factory that resolves after the timeout must not leave a live session.
+    let connectTimer,timedOut=false;
+    const pendingSession=Promise.resolve().then(()=>makeSession());
+    pendingSession.then(session=>{
+      if(timedOut){
+        try{Promise.resolve(session?.close?.()).catch(()=>{});}catch{}
+      }
+    },()=>{}); // A late rejection must not become an unhandled rejection.
+    try{
+      c=await Promise.race([
+        pendingSession,
+        new Promise((_,reject)=>{
+          connectTimer=setTimeout(()=>{
+            timedOut=true;
+            reject(Error('CDP_CONNECT_TIMEOUT'));
+          },Math.min(timeoutMs,5000));
+        })
+      ]);
+    }finally{clearTimeout(connectTimer);}
+  }else c=await new Cdp(ws).open(Math.min(timeoutMs,5000));
+  const active=new Map(),finished=[];
   let startedPostCount=0,dialogFrameId=null,dialogLoaderId=null;
   let expectedDocumentURL=null,dialogInitiatorType=null;
   let expectedTargetId=null,mainFrameId=null,mainLoaderId=null,lifecycleArmed=false;
