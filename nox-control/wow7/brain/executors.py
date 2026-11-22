@@ -2,6 +2,7 @@
 Обёртка меряет мс, ловит таймаут/исключение (орган не роняет ход), пишет запись в трассу хода."""
 import asyncio
 import json
+import os
 import re
 import time
 
@@ -22,6 +23,12 @@ except Exception:        # RTE недоступен - минимальные з�
 
     def _canned(text):
         return "Принял, мессир, секунду."
+
+try:
+    import chatset as CS               # c600: длина ответа (max_tokens) из настроек Создателя
+except Exception:
+    CS = None
+INTRO_ON = os.environ.get("NOX_INTRO", "0") == "1"      # c600: вступление «Слышу вас…» выключено; NOX_INTRO=1 вернёт
 
 INTRO_BANK = ("Слышу вас, мессир, сейчас отвечу.", "Принял, мессир, секунду.", "Понял, мессир, собираюсь с мыслями.",
               "Хороший вопрос, мессир, сейчас разберу.", "Принял, мессир, берусь за дело.")
@@ -478,8 +485,16 @@ class Reason(Exec):
 
     async def _glm(self, st):
         core, cfg = self.core, self.core.cfg
-        payload = {"model": "glm", "messages": self.msgs(st, True), "stream": True,
-                   "max_tokens": 3000 if st.path == "deep" else 900, "chat_template_kwargs": {"enable_thinking": st.path == "deep"}}
+        msgs_g = self.msgs(st, True)
+        mt_g = 3000 if st.path == "deep" else 1500          # c600: >=1500, иначе рассуждение съедает бюджет и ответ пустой
+        if CS is not None:
+            try:
+                mt_g = max(mt_g if CS.current(st.speaker) == CS.DEFAULT else 0, CS.effective(st.speaker, st.path == "deep", sum(len(m["content"]) for m in msgs_g)))
+            except Exception:
+                pass
+        st.turn.trace["max_tokens"] = mt_g
+        payload = {"model": "glm", "messages": msgs_g, "stream": True,
+                   "max_tokens": mt_g, "chat_template_kwargs": {"enable_thinking": st.path == "deep"}}
         st.guard = C.StreamGuard(core.conscience, st.cctx())
         writer, first, got = None, True, False
         core.glm_inflight += 1
@@ -544,7 +559,7 @@ class Reason(Exec):
     async def _fast(self, st):
         if st.intro_task is not None and not st.intro_task.done():
             await asyncio.wait({st.intro_task}, timeout=3.0)     # вступление всегда раньше ответа
-        mt = 90 if st.intent == "greeting" else (160 if st.intent == "smalltalk" else 380)
+        mt = 200 if st.intent == "greeting" else (320 if st.intent == "smalltalk" else 900)     # c600: раньше 90/160/380 давали «огрызки»
         tries = [(0.8, mt), (1.0, mt + 80)]
         log = []
         for temp, m in tries:
@@ -565,7 +580,7 @@ class Reason(Exec):
         if st.glm_state == "up" and not st.turn.glm_tried and not self.core.glm_inflight:
             st.turn.glm_tried = True
             try:
-                txt = await self.core.glm_once(self.msgs(st, True), 400, 12.0)
+                txt = await self.core.glm_once(self.msgs(st, True), 1500, 40.0)
                 if txt.strip():
                     st.draft, st.model = txt.strip(), "glm"
                     st.turn.trace["reason_attempts"] = log + ["ok@glm"]

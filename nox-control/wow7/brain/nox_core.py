@@ -29,6 +29,10 @@ from netio import UpstreamError
 import executors as E
 import core_view
 import actions as A
+try:
+    import chatset as CS
+except Exception:
+    CS = None
 
 try:
     import statefile            # COMMON
@@ -382,6 +386,18 @@ class Core:
                 await self.stop_command(st)
                 turn.finish("done")
                 return
+            if CS is not None and st.intent in ("question", "task", "smalltalk"):
+                try:
+                    reply = CS.handle(user_text, st.speaker)
+                except Exception:
+                    reply = None
+                if reply:                                   # c600: «увеличь длину ответа» и т.п. - настройка, не вопрос к модели
+                    turn.control = True
+                    turn.trace["path_code"], turn.trace["path"] = "action", "ДЕЙСТВИЕ"
+                    turn.trace["model"] = "setting"
+                    await turn.emit_text(reply)
+                    turn.finish("done")
+                    return
             await asyncio.gather(E.Attention(self)(st), E.Memory(self)(st), E.Predictive(self)(st))
             await E.Decider(self)(st)
             self.fill_trace(st)
@@ -390,7 +406,7 @@ class Core:
                 turn.control = True
                 await A.ActionReason(self)(st)
             else:
-                if st.want_intro:
+                if st.want_intro and E.INTRO_ON:
                     st.intro_task = asyncio.ensure_future(E.Intuition(self)(st))
                     children.append(st.intro_task)
                 await E.Reason(self)(st)
@@ -726,7 +742,7 @@ class Core:
             while turn.status == "running":
                 await turn.wait(len(turn.events), 5.0)
             meta = {"turn_id": turn.id, "path": turn.trace.get("path"), "trace": "/v1/core/trace/" + turn.id, "status": turn.status,
-                    "stopped": turn.receipt}
+                    "stopped": turn.receipt, "tier": self.tier_info(turn)["tier"]}
             return await netio.send_json(writer, 200, {"id": turn.id, "object": "chat.completion", "created": int(time.time()), "model": "nox",
                                                        "choices": [{"index": 0, "message": {"role": "assistant", "content": turn.text().strip()}, "finish_reason": "stop"}],
                                                        "nox": meta})
@@ -750,7 +766,7 @@ class Core:
                 elif kind == "meta":
                     writer.write(netio.sse("nox_meta", data))
                 elif kind == "done":
-                    writer.write(netio.sse_data(dict(base, choices=[{"index": 0, "delta": {}, "finish_reason": "stop"}])))
+                    writer.write(netio.sse_data(dict(base, choices=[{"index": 0, "delta": {}, "finish_reason": "stop"}], nox=self.tier_info(turn))))
                     writer.write(netio.sse("nox_meta", {"turn_id": turn.id, "path": turn.trace.get("path"), "trace": "/v1/core/trace/" + turn.id, "status": data["status"]}))
                     writer.write(b"data: [DONE]\n\n")
                     await writer.drain()
@@ -758,6 +774,21 @@ class Core:
                 await writer.drain()
         except (ConnectionError, OSError):
             return        # клиент ушёл: ход продолжается и сохранится; остановить можно только STOP
+
+    @staticmethod
+    def tier_info(turn):
+        """c600: метка уровня ответа для веба (nox.tier: glm|fast|fallback + stages, как читает nox-wow.js)."""
+        tr = turn.trace
+        m, deg = tr.get("model"), tr.get("degraded") or []
+        if m == "glm":
+            tier = "glm"
+        elif deg or m is None:
+            tier = "fallback"
+        else:
+            tier = "fast"
+        st = {"deep": {"status": "ok"}} if tier == "glm" else {"fast": {"status": "ok"}}
+        return {"tier": tier, "model": m, "mode": tr.get("path_code"), "stages": st, "degraded": list(deg), "max_tokens": tr.get("max_tokens"),
+                "actual_s": round(tr.get("total_ms", 0) / 1000.0, 1) if tr.get("total_ms") else None}
 
     async def start(self):
         self.server = await asyncio.start_server(self.handle, self.cfg.host, self.cfg.port)
