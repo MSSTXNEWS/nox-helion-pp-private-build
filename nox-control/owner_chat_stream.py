@@ -195,12 +195,15 @@ async def _bounded_sse_lines(response):
     # Preserve all split-codepoint boundaries, but never certify damaged text.
     decoder=codecs.getincrementaldecoder('utf-8')('strict')
     async for raw in response.aiter_bytes():
-        try:
-            chunk=decoder.decode(raw)
-        except UnicodeDecodeError:
-            raise StreamFailure('HOLD_MODEL_SSE_INVALID') from None
-        for offset in range(0,len(chunk),8192):
-            for part in re.split(r'(\r\n|\r|\n)',chunk[offset:offset+8192]):
+        # A provider can coalesce many SSE frames into one large transport
+        # chunk. Decode bounded raw slices to avoid a second giant Unicode
+        # allocation while preserving immediate first-token delivery.
+        for offset in range(0,len(raw),8192):
+            try:
+                chunk=decoder.decode(raw[offset:offset+8192])
+            except UnicodeDecodeError:
+                raise StreamFailure('HOLD_MODEL_SSE_INVALID') from None
+            for part in re.split(r'(\r\n|\r|\n)',chunk):
                 if part in ('\r\n','\r','\n'):
                     if part=='\n' and after_cr:
                         after_cr=False
