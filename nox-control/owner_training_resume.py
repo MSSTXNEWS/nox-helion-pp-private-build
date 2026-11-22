@@ -381,7 +381,9 @@ def patch_permission(source, request_id, source_sha, selfheal=False):
 
 
 def boost_pins(receipt):
-    if (receipt.get('schema') != 'NOX_OWNER_OPTIMIZE_HYBRID_V1'
+    # A non-object native receipt is not authenticated BOOST evidence.
+    # Reject before dereferencing, retaining the existing admission HOLD.
+    if (type(receipt) is not dict or receipt.get('schema') != 'NOX_OWNER_OPTIMIZE_HYBRID_V1'
             or receipt.get('request') != BOOST_REQUEST or receipt.get('source_sha') != BOOST_SOURCE
             or receipt.get('state') != 'TASK_BOOST_SIX_NATIVE_WORKERS_ACTIVE_TRAINING_PAUSED'
             or receipt.get('hold_retained') is not True or receipt.get('training_started') is not False):
