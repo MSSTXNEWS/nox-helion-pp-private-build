@@ -532,6 +532,16 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
                 )
                 quarantined += 1
                 continue
+            # Existing databases keyed earlier observations by title+body
+            # only. Do not invent a duplicate first-seen event when deploying
+            # the new publication-aware identity against unchanged old data.
+            old_digest = hashlib.sha256((record[3] + "\n" + record[4]).encode("utf-8")).hexdigest()
+            old = conn.execute(
+                "SELECT published FROM items WHERE source_id=? AND item_url=? AND content_sha256=?",
+                (record[0], record[1], old_digest),
+            ).fetchone()
+            if old is not None and old[0] == record[5]:
+                continue
             cursor = conn.execute(
                 "INSERT OR IGNORE INTO items "
                 "(source_id,item_url,content_sha256,title,content,published,first_seen_at) "
