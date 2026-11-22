@@ -556,7 +556,7 @@
               }finally{
                 lifecycleSignal.removeEventListener('abort',onReceiptAbort);
               }
-
+            },
             async (receipt,expected)=>{
               if(lifecycleSignal.aborted)
                 hold('HOLD_STREAM_RECONNECT_STOPPED');
