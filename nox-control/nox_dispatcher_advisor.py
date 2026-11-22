@@ -197,6 +197,15 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             add("GPU_RESIDUAL_SERVICE_HOLD", "hold",
                 "OneHost health or S03 readback is unverified. Do not suggest "
                 "residual GPU capacity before serving continuity is restored.")
+        elif util < 35 and isinstance(native, dict) and (
+                native.get("active_claims") is True
+                or native.get("maintenance_busy") is True):
+            # A live owner claim or maintenance window outranks speculative
+            # GPU slack. Do not recommend residual capacity from a quiet
+            # instant while an existing native action owns the resources.
+            add("GPU_RESIDUAL_OWNER_BUSY_HOLD", "hold",
+                "Active native claim or maintenance window: no residual GPU "
+                "capacity hint. Keep the existing owner lease and work intact.")
         elif util < 35:
             # Low compute utilization alone is NOT spare accelerator capacity
             # without fresh VRAM, host I/O and chat latency.
