@@ -10,6 +10,11 @@ import organs as O
 import netio
 
 try:
+    import optlayer as OPTL            # c400: телеметрия, семантический кэш, GLM-судья (необязательно)
+except Exception:
+    OPTL = None
+
+try:
     from bridge_intro import intro_safe, canned as _canned, kind_of, SYSTEM as INTRO_SYSTEM
 except Exception:        # RTE недоступен - минимальные заготовки
     INTRO_SYSTEM, kind_of = None, None
@@ -267,6 +272,14 @@ class Decider(Exec):
     async def run(self, st):
         st.glm_state = await self.core.glm_state()
         it, hint = st.intent, st.hint
+        if it == "telemetry_q" and OPTL is not None:      # c400: вопрос «как сервер?» - отвечать по РЕАЛЬНЫМ замерам (nvidia-smi, /proc)
+            try:
+                tb = OPTL.get().telemetry_block(st.user_text)
+                if tb:
+                    st.advice = tb
+                    st.turn.trace["telemetry"] = "real"
+            except Exception:
+                pass
         if it in ("delete_history", "undo", "confirm", "deny"):
             st.path = "action"
             return
@@ -444,6 +457,18 @@ class Reason(Exec):
         return [{"role": "system", "content": system}] + self.history_msgs(st) + [{"role": "user", "content": st.user_content()}]
 
     async def run(self, st):
+        st.cache_hit = None
+        if OPTL is not None:                                # c400: семантический кэш (explore-попадание: свежий ответ + суд)
+            try:
+                h = OPTL.get().lookup(st, self.core.organs.soul())
+            except Exception:
+                h = None
+            if h is not None and not h.explore:
+                st.draft, st.model = h.answer, "cache"
+                st.turn.trace["cache"] = {"hit": True, "sim": round(h.sim, 3), "exact": h.exact}
+                st.turn.trace["reason_attempts"] = ["cache"]
+                return
+            st.cache_hit = h
         if st.path in ("thought", "deep", "reflex") and st.intent in ("question", "task"):
             await Council(self.core)(st)               # ADV-06: СОВЕТ (явный arm=council или низкая уверенность); сбой не роняет ход
         if st.path in ("thought", "deep") and st.glm_state in ("up", "unknown"):
@@ -650,8 +675,33 @@ class Chronicler(Exec):
                 g.after_turn(turn.id, reply, [])
             except Exception:
                 pass
+        if OPTL is not None and not st.opts.get("eval"):
+            core.bg.once("optpost:" + turn.id, lambda: self._cache_post(st))
         started = core.bg.once("chron:" + turn.id, lambda: self._job(st, reply))
         self.note(st, "scheduled" if started else "duplicate_skipped")
+
+    async def _cache_post(self, st):
+        """c400: положить проверенный ответ в кэш; на explore-попадании судья (GLM :8081, клиент) сравнивает кэш и свежий -> обратная связь порогу."""
+        try:
+            o = OPTL.get()
+            final = (st.final or "").strip()
+            if st.model not in ("fast", "glm") or not final or st.turn.trace.get("conscience", {}).get("verdict") != "pass":
+                return
+            soul = self.core.organs.soul()
+            hit = getattr(st, "cache_hit", None)
+            if hit is not None:
+                loop = asyncio.get_running_loop()
+                p = await asyncio.wait_for(loop.run_in_executor(None, o.judge_sync, st.user_text, hit.answer, final), 150.0)
+                if p is not None:
+                    o.feedback(hit, p >= 0.4)
+                    st.turn.trace["cache"] = {"explore": True, "judge_p_cached_better": round(p, 3)}
+                else:
+                    ok = o.cache.agreed(hit.answer, final)
+                    o.feedback(hit, ok)
+                    st.turn.trace["cache"] = {"explore": True, "judge": "unavailable", "agreed": ok}
+            o.store(st, final, soul)
+        except Exception:
+            pass
 
     async def _job(self, st, reply):
         t0 = time.monotonic()

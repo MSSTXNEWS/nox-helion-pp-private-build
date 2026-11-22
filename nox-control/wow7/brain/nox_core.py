@@ -623,7 +623,16 @@ class Core:
                 "fast": dict(self.fast.stats), "glm": {"state": self._gs[1], "inflight": self.glm_inflight},
                 "turns": len(self.turns), "running": sum(1 for t in self.turns.values() if t.status == "running"),
                 "bg": {k: ("done" if t.done() else "running") for k, t in list(self.bg.tasks.items())[-20:]},
-                "quiet_hours": bool(quiet and quiet.in_quiet()), "planners": [p.kind for p in self.planners]}
+                "quiet_hours": bool(quiet and quiet.in_quiet()), "planners": [p.kind for p in self.planners],
+                "opt": (lambda o: o.status() if o else None)(self._opt())}
+
+    @staticmethod
+    def _opt():
+        try:
+            import optlayer
+            return optlayer.get()
+        except Exception:
+            return None
 
     # ---------- HTTP ----------
     @staticmethod

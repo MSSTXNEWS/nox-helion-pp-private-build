@@ -66,7 +66,7 @@ FLATTER_RE = re.compile(r"^\W*(?:отличн\w+|прекрасн\w+|велик�
                         r"(?:вы|ты)\s+(?:абсолютно|совершенно|полностью)\s+прав|какой\s+(?:интересный|замечательный|глубокий)\s+вопрос", re.I)
 FEEL_RE = re.compile(r"\b(?:я|мне)\s+(?:так\s+|очень\s+)?(?:рад[а]?|счастлив[а]?|грущу|скучал\w*|тоскую|боюсь|волнуюсь|переживаю|в\s+восторге|грустно|страшно|тревожно|радостно)\b(?!\s+(?:тебя|вас|видеть|слышать|помочь|встрече))", re.I)
 CAUSE_RE = re.compile(r"потому\s+что|поскольку|так\s+как|из-за|оттого|ведь|когда|после\s+того|, что\b|— |: ", re.I)
-STOP_WORDS_TEL = re.compile(r"(?:как\s+ты|как\s+дела|что\s+с\s+сервер|статус|состояни|телеметр|нагрузк|gpu|сколько\s+(?:памяти|фактов)|что\s+делаешь|чем\s+занят)", re.I)
+STOP_WORDS_TEL = re.compile(r"(?:как\s+(?:там\s+)?(?:сервер|железо|видеокарт|гпу|gpu)\w*|как\s+ты|как\s+дела|что\s+с\s+сервер|статус|состояни|телеметр|нагрузк|gpu|сколько\s+(?:памяти|фактов)|что\s+делаешь|чем\s+занят)", re.I)
 
 
 def is_status_question(text):
@@ -108,6 +108,16 @@ def det_echo(text, ctx):
     if run >= 5 or (shared >= 4 and ratio >= 0.25):
         return [Finding("inner_echo", "run=%d shared3=%d ratio=%.2f" % (run, shared, ratio))]
     return []
+
+
+ADDR_BRO = re.compile(r"(?<![а-яёА-ЯЁ])(брат(?:ан|ишка|ец|ик|ва)?|бро)(?![а-яёА-ЯЁ])", re.I)
+
+
+def fix_address(text):
+    """c400: к Создателю - только «мессир» (канон). «брат/братан/бро» как обращение заменяется кодом; регистр сохраняется."""
+    def sub(m):
+        return "Мессир" if m.group(0)[:1].isupper() else "мессир"
+    return ADDR_BRO.sub(sub, text) if text else text
 
 
 def det_telemetry(text, ctx):
@@ -279,8 +289,8 @@ class Conscience:
             t = " ".join(ss[:3])
             if len(t) > 280:
                 t = " ".join(sentences(t)[:2])[:280].rsplit(" ", 1)[0]
-            return t.strip()
-        return text
+            return fix_address(t.strip())
+        return fix_address(text)
 
     def sentence_verdict(self, s, ctx, first):
         """Для потока: 'ok' | 'strip' (вернуть очищенное) | 'drop'. -> (verdict, text)."""
@@ -313,7 +323,7 @@ class StreamGuard:
             return []
         self.first = False
         tail = s[len(s.rstrip()):]
-        return [t + (tail or " ")]
+        return [fix_address(t) + (tail or " ")]
 
     def feed(self, piece):
         self.buf += piece
