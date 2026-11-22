@@ -2847,6 +2847,22 @@ test('R22 third printable delta before STOP/DONE cannot certify midstream loadin
   // These are deterministic CDP fixture observations, not a live-browser
   // timing measurement or an independent S03 writer/readback.
 });
+test('R23 Chromium terminal-only sub-ms CDP inversion uses bounded conservative close, never normalizes larger inversions',async()=>{
+  const baseline=await run();
+  assert.equal(baseline.cdp_consistent,true);
+  assert.equal(baseline.turns[1].cdp_terminal_timestamp_adjustment_us,0);
+  const tiny=await run(false,null,null,null,{closeTimestamp:101.0099});
+  assert.equal(tiny.cdp_consistent,true,'100us loadingFinished clock jitter after [DONE] is not a corrupted SSE stream');
+  assert.equal(tiny.ttft_sse_verified,true);
+  assert.equal(tiny.turns[1].cdp_terminal_timestamp_adjustment_us,100);
+  assert.equal(tiny.turns[1].sse_done_to_loading_finished_ms,0);
+  assert.equal(tiny.native_verified,false);
+  const reversed=await run(false,null,null,null,{closeTimestamp:101.009});
+  assert.equal(reversed.cdp_consistent,false,'1ms inversion must remain rejected');
+  assert.equal(reversed.ttft_sse_verified,false);
+  assert.equal(reversed.turns[1].cdp_terminal_timestamp_adjustment_us,null);
+});
+
 test('R23 actual headless Chromium: loopback three-turn SSE/CDP provenance, two-turn compatibility and third abort', {timeout:65000}, async t=>{
   // LOCAL browser + LOCAL synthetic HTTP. This never contacts NOX/model/production.
   const [{createServer},{spawn,spawnSync},{mkdtemp,readFile,rm},
