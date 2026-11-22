@@ -2512,9 +2512,7 @@ class ProbeTests(unittest.TestCase):
             response = Response(rows)
             with self.subTest(expected=expected), patch.object(
                     probe, 'request', return_value=response):
-                with self.assertRaisesRegex(RuntimeError, '^' + expected + '
-    unittest.main()
-):
+                with self.assertRaisesRegex(RuntimeError, '^' + expected + '$'):
                     probe.consume_turn(object(), 'synthetic', did)
             self.assertTrue(response.closed)
 
