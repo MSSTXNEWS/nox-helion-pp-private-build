@@ -215,7 +215,7 @@ sl-dialog.nox-dl{--sl-panel-border-radius:0}
 #drThreads .seg.act{display:flex;width:100%;padding:0}#drThreads .seg.act>button{flex:1;justify-content:center;min-height:44px}
 /* плотность */
 body.tight{font-size:14.5px}body.tight .bubble{padding:10px 14px}body.tight .m{margin:3px 0}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.grain{display:none}}
+/* анимация всегда включена (требование владельца): reduced-motion не отключает фон и переходы */
 .lens .bar,.lens .composer{-webkit-backdrop-filter:url(#nox-lens) blur(12px) saturate(1.4);backdrop-filter:url(#nox-lens) blur(12px) saturate(1.4)}
 
 /* запас: если Shoelace не загрузился, панели всё равно открываются */
@@ -224,3 +224,9 @@ sl-drawer:not(:defined)[open]{display:block;position:fixed;top:0;bottom:0;right:
 sl-dialog:not(:defined)[open]{display:block;position:fixed;left:50%;top:14vh;transform:translateX(-50%);width:min(640px,calc(100vw - 24px));background:rgba(3,6,10,.95);border:1px solid rgba(var(--cy),.4);z-index:2000}
 sl-icon:not(:defined){display:inline-block;width:1em;height:1em}
 body.bgfallback #nxPlanet{left:50%!important;right:auto!important;transform:translateX(-50%)}
+
+/* ---------- общая шапка (страницы и чат): «Резонанс» отдельной кнопкой сверху на телефоне ---------- */
+.toplink{display:none}
+.seg.icons>a{min-width:40px;padding:0 10px;font-size:16px}
+.bar-r .seg.toplink>a{padding:0 12px}
+@media (max-width:760px){.toplink{display:inline-flex}.bar-r .toplink>a{min-height:34px;font-size:10px;letter-spacing:.16em}.brand i{display:none}}

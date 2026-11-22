@@ -1,0 +1,38 @@
+<!doctype html>
+<!-- nox-web-extras: пропустить (у страницы своё меню и панели; marker для deploy1.sh) -->
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02030a">
+<title>NOX HELION · СИСТЕМА</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="./nox-wow.css">
+<link rel="stylesheet" href="./nox-pages.css">
+<link rel="stylesheet" href="./vendor/fx/uPlot.min.css">
+<script src="./nox-theme.js"></script>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
+</head>
+<body data-page="sys" class="boot">
+<div id="app">
+<main class="page" id="page"><div class="wrap">
+<div class="ph"><div><span class="kick mono">Метрики · живые графики</span><h1>Система</h1></div>
+  <div class="acts"><span class="tag" id="sState">ОПРОС КАЖДЫЕ 5 С</span><span class="seg"><button type="button" id="sPause" aria-pressed="false"><sl-icon library="tabler" name="player-pause"></sl-icon><span>Пауза</span></button><button type="button" id="sClear"><sl-icon library="tabler" name="eraser"></sl-icon>Очистить</button><button type="button" id="sCsv"><sl-icon library="tabler" name="download"></sl-icon>CSV</button></span></div></div>
+<div class="grid" id="tiles"></div>
+<div class="grid">
+  <section class="card c6"><h2>Отклик служб, мс <span class="r mono" id="lat1"></span></h2><div id="ch1" class="chart"></div></section>
+  <section class="card c6"><h2>Браузер: кадры/с и память JS <span class="r mono" id="lat2"></span></h2><div id="ch2" class="chart"></div></section>
+  <section class="card c6"><h2>Сервер: ресурсы <span class="r mono">/api/pc-metrics</span></h2><div id="pc" class="muted">Проверка…</div></section>
+  <section class="card c6"><h2>Это устройство</h2><div id="dev" class="muted"></div></section>
+  <section class="card c12"><h2>Журнал событий</h2><ul class="mono-log" id="log"><li class="muted">Событий пока нет</li></ul></section>
+</div>
+</div></main>
+</div>
+<script src="./vendor/fx/uPlot.iife.min.js"></script>
+<script type="module" src="./nox-nav.js"></script>
+<script type="module" src="./nox-p-system.js"></script>
+</body>
+</html>

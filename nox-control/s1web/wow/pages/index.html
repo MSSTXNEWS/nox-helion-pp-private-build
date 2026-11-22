@@ -1,0 +1,36 @@
+<!doctype html>
+<!-- nox-web-extras: пропустить (у страницы своё меню и панели; marker для deploy1.sh) -->
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02030a">
+<title>NOX HELION · ГЛАВНАЯ</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="./nox-wow.css">
+<link rel="stylesheet" href="./nox-pages.css">
+<script src="./nox-theme.js"></script>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
+</head>
+<body data-page="home" class="boot">
+<div id="app">
+<main class="page" id="page"><div class="wrap">
+<div class="ph"><div><span class="kick mono">Палуба · состояние систем</span><h1>Главная</h1></div>
+  <div class="acts"><span class="tag" id="auto">ОПРОС КАЖДЫЕ 15 С</span><span class="seg"><button type="button" id="refresh"><sl-icon library="tabler" name="refresh"></sl-icon>Опросить сейчас</button></span></div></div>
+<section class="card" aria-label="Сводка"><div class="sum"><i class="led" id="sumLed"></i><b id="sumText" style="font:500 14px var(--head);letter-spacing:.12em">ПРОВЕРКА…</b><span class="muted mono" id="sumTime"></span></div></section>
+<div class="grid" id="svc" aria-live="polite"></div>
+<div class="grid">
+  <section class="card c4"><h2>Скорость и кэш <span class="r mono" id="spMs"></span></h2><div id="speed" class="muted">Загрузка…</div></section>
+  <section class="card c4"><h2>Память NOX <a class="tag" href="memory.html">Открыть</a></h2><div id="memBox" class="muted">Загрузка…</div></section>
+  <section class="card c4"><h2>Резюме прошлой сессии</h2><div id="resume" class="muted">Загрузка…</div></section>
+</div>
+<nav class="seg quick" aria-label="Быстрый переход"><a href="chat.html">Резонанс</a><a href="projects.html">Проекты</a><a href="memory.html">Память</a><a href="training.html">Обучение</a><a href="models.html">Ядро</a><a href="system.html">Система</a><a href="settings.html">Настройки</a></nav>
+</div></main>
+</div>
+<script type="module" src="./nox-nav.js"></script>
+<script type="module" src="./nox-p-home.js"></script>
+</body>
+</html>

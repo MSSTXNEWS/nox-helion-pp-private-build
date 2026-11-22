@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="./vendor/driver.js/dist/driver.css">
 <link rel="stylesheet" href="./vendor/swiper/swiper-bundle.min.css">
 <link rel="stylesheet" href="./nox-wow.css">
+<script src="./nox-theme.js"></script>
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
 </head>
 <body data-page="wow-chat">
@@ -39,6 +40,7 @@
     </nav>
     <div class="bar-r">
       <span class="status" id="gwStatus" role="status"><i class="led" id="gwLed"></i><span id="gwText" class="mono">ПРОВЕРКА</span></span>
+      <span class="seg toplink"><a href="chat.html" aria-current="page">Резонанс</a></span>
       <span class="seg icons">
         <button id="btnPalette" type="button" aria-label="Команды, Ctrl+K" title="Команды  Ctrl+K"><sl-icon library="tabler" name="command"></sl-icon></button>
         <button id="btnThreads" type="button" aria-label="Диалоги" title="Диалоги"><sl-icon library="tabler" name="history"></sl-icon></button>
@@ -95,13 +97,12 @@
   <nav class="mnav" id="mnav" aria-label="Разделы (телефон)">
     <div class="swiper"><div class="swiper-wrapper seg">
       <a class="swiper-slide" href="index.html">Главная</a>
-      <a class="swiper-slide" href="chat.html" aria-current="page">Резонанс</a>
-      <a class="swiper-slide" href="projects.html">Проекты</a>
+            <a class="swiper-slide" href="projects.html">Проекты</a>
       <a class="swiper-slide" href="memory.html">Память</a>
       <a class="swiper-slide" href="training.html">Обучение</a>
       <a class="swiper-slide" href="models.html">Ядро</a>
       <a class="swiper-slide" href="system.html">Система</a>
-      <a class="swiper-slide" href="install.html">Установка</a>
+      <a class="swiper-slide" href="settings.html">Настройки</a>
     </div></div>
   </nav>
 </div>
@@ -141,6 +142,7 @@
   <div class="pal-foot mono">↑↓ ВЫБОР · ENTER — ВЫПОЛНИТЬ · ESC — ЗАКРЫТЬ</div>
 </sl-dialog>
 
+<script type="module" src="./nox-notify.js"></script>
 <script type="module" src="./nox-wow.js"></script>
 </body>
 </html>
