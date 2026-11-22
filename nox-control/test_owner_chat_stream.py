@@ -177,6 +177,49 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(len(observed),2)
         self.assertLessEqual(max(observed),8192)
 
+    async def test_sse_done_requires_clean_http_eof_and_no_late_events(self):
+        # 1A03: a [DONE] line cannot authorize S03 postflight if the native
+        # model HTTP stream is truncated or contains later event data. No retry.
+        original={'messages':[{'role':'user','content':'Привет 🌍'}]}
+        real_client=httpx.AsyncClient
+        async def execute(native_stream):
+            requests=[]
+            def reply(request):
+                requests.append(request)
+                return httpx.Response(200,stream=native_stream,request=request)
+            async with real_client(transport=httpx.MockTransport(reply)) as client:
+                events=[row async for row in stream._deadline_model_events(
+                    client,'https://native.invalid/v1/chat/completions',original)]
+            return requests,events
+
+        base=[frame('Hola 🌍'),frame(finish='stop'),b'data: [DONE]\n\n']
+        complete=Chunks(base)
+        requests,events=await execute(complete)
+        self.assertEqual(len(requests),1)
+        self.assertTrue(complete.closed)
+        self.assertEqual(events[-1][0],'message')
+        self.assertEqual(events[-1][1]['content'],'Hola 🌍')
+
+        late=Chunks(base+[frame('unexpected')])
+        with self.assertRaisesRegex(stream.StreamFailure,
+                                    'HOLD_MODEL_SSE_AFTER_DONE'):
+            await execute(late)
+        self.assertTrue(late.closed)
+
+        class TruncatedAfterDone(httpx.AsyncByteStream):
+            def __init__(self):self.closed=False
+            async def __aiter__(self):
+                for item in base:
+                    yield item
+                raise httpx.ReadError('socket closed after DONE')
+            async def aclose(self):self.closed=True
+        truncated=TruncatedAfterDone()
+        with self.assertRaisesRegex(stream.StreamFailure,
+                                    'HOLD_MODEL_TRANSPORT'):
+            await execute(truncated)
+        self.assertTrue(truncated.closed)
+
+
     async def test_unicode_sse_record_limit_is_wire_bytes_not_codepoints(self):
         # A single JSON SSE record can be under 300k characters yet exceed
         # the 300k-byte frame ceiling with UTF-8 emoji. Reject before showing
