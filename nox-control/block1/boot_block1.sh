@@ -49,5 +49,14 @@ for k,v in s.items():
     if v['status'] in('FAIL','PASS'): print(k,v['status'],v['reason'][:130])
 PY
   ;;
+  pareto_viol) ps -eo pid,etimes,args | grep -E 'llama-server|llama-cli' | grep -v grep | sed -E 's#(/[A-Za-z0-9_.-]+)+/##g' | grep -oE '^ *[0-9]+ +[0-9]+|--no-mmap|--mlock|(-ctk|-ctv|--cache-type-[kv]) +[a-z0-9_]+|-m +[^ ]+|--port +[0-9]+|llama-server' | tr '\n' ' ' | cut -c1-900; echo;;
+  pareto_detail) python3 -I - <<'PY'
+import json
+s=json.load(open('/root/nox/state/PARETO_STATUS.json'))
+for k,v in sorted(s.items()):
+    if k[:3] in('D02','D03','D04','D05') and v['status'] in('BLOCKED','FAIL','WAIT_FLASH'): print(k,v['status'],v['script'],v['reason'][:110])
+PY
+  ;;
+  px) bash /root/nox/scripts/lib/px.sh 2>&1 | tail -c 2900;;
   *) echo "unknown mode $MODE";;
 esac
