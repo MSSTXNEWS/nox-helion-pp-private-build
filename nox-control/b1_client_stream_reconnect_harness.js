@@ -11,6 +11,17 @@
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
   const ID=/^[A-Za-z0-9._:-]{1,128}$/;
+  const MAX_SSE_FRAME_BYTES=65536;
+  // The SSE budget is bytes, not UTF-16 code units. In particular, 23k
+  // three-byte characters can evade a naive 64k string.length check.
+  // Fast paths avoid re-encoding ordinary short or ASCII-only fragments.
+  function frameTooLarge(frame){
+    if(frame.length>MAX_SSE_FRAME_BYTES) return true;
+    // A UTF-16 code unit encodes to at most three UTF-8 bytes.
+    if(frame.length<=Math.floor(MAX_SSE_FRAME_BYTES/3)) return false;
+    if(!/[^\x00-\x7f]/.test(frame)) return false;
+    return new TextEncoder().encode(frame).byteLength>MAX_SSE_FRAME_BYTES;
+  }
   class HoldStream extends Error {
     constructor(code){super(code);this.code=code;this.name='HoldStream';}
   }
@@ -170,8 +181,9 @@
             // can legitimately contain many small SSE events totalling >64KiB.
             // STOP is still checked between those individual events.
             if(ctrl.signal.aborted) return stopped();
-            if(e>65536) hold('HOLD_STREAM_FRAME_TOO_LARGE');
+            if(e>MAX_SSE_FRAME_BYTES) hold('HOLD_STREAM_FRAME_TOO_LARGE');
             const frame=buf.slice(0,e);
+            if(frameTooLarge(frame)) hold('HOLD_STREAM_FRAME_TOO_LARGE');
             buf=buf.slice(e+2);
             const lines=frame.split('\n');
             // EventSource removes at most ONE U+0020 from an event field.
@@ -237,7 +249,7 @@
           }
           // The unframed tail, unlike completed events, must be bounded.
           // A single unterminated oversized event is not a valid stream.
-          if(buf.length>65536) hold('HOLD_STREAM_FRAME_TOO_LARGE');
+          if(frameTooLarge(buf)) hold('HOLD_STREAM_FRAME_TOO_LARGE');
           if(part.done){streamComplete=true;break;}
         }
         if(ctrl.signal.aborted) return stopped();
