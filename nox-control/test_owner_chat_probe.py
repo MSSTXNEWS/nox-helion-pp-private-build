@@ -2629,8 +2629,7 @@ class ProbeTests(unittest.TestCase):
                     with self.subTest(kind=kind, container=container,
                                       nested=nested), patch.object(
                             probe, 'request', return_value=response):
-                        with self.assertRaisesRegex(RuntimeError, '^' + error + '    unittest.main()
-):
+                        with self.assertRaisesRegex(RuntimeError, '^' + error + '$'):
                             probe.consume_turn(object(), 'second-turn', did)
                     self.assertTrue(response.closed)
 
