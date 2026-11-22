@@ -171,6 +171,166 @@ def det_flattery(text, ctx):
     return [Finding("flattery_open", first[:60], "strip")] if m else []
 
 
+
+
+# ---------- чат: сухой ответ, формальное обращение, обоснованное согласие ----------
+BANNED_OPENER_RE = re.compile(
+    r"^\s*Слышу\s+вас,\s*мессир,\s*сейчас\s+отвечу\s*[.!…]?\s*",
+    re.I,
+)
+FACT_QUESTION_RE = re.compile(
+    r"^\s*(?:расскаж(?:и|ите)|объясн(?:и|ите)|что|кто|где|когда|сколько|почему|зачем|как|какой|какая|какое|какие|назов(?:и|ите)|перечисл(?:и|ите))\b|[?？]",
+    re.I,
+)
+ELEVATION_RE = re.compile(
+    r"\b(?:ты|вы)\s*[—–-]\s*(?:(?:е[её]|мой|моя|моё|мое|наш|наша|наше|их)\s+)?"
+    r"(?:центр|вселенная|весь\s+мой\s+мир|главный\s+смысл|источник\s+моей\s+жизни)\b|"
+    r"\b(?:ты|вы)\s+(?:мой|моя|моё|мое|наш|наша|наше)\s+(?:центр|вселенная|смысл\s+жизни)\b",
+    re.I,
+)
+SELF_ABASE_RE = re.compile(
+    r"\bя\s*[—–-]\s*(?:(?:всего\s+лишь|лишь|только)\s+)?"
+    r"(?:отклик|эхо|тень|отражение|пустота|ничтожество|слуга)\b|"
+    r"\bя\s+(?:лишь|всего\s+лишь)\s+(?:эхо|тень|инструмент|пустота)\b",
+    re.I,
+)
+POETIC_FACT_RE = re.compile(
+    r"\b(?:космос|вселенная|зв[её]зды|мир)\s+(?:шепч(?:ет|ут)|дыш(?:ит|ат)|по[её]т|отзывается)\b|"
+    r"\b(?:свет|тьма|тишина)\s+(?:шепч(?:ет|ут)|отвечает|обнимает)\b|"
+    r"\b(?:врата|путь)\s+(?:к\s+)?(?:истине|вечности|судьбе)\b",
+    re.I,
+)
+INFORMAL_REF_RE = re.compile(
+    r"\b(?:ты|тебя|тебе|тобой|твой|твоя|твоё|твоё|твоего|твоей|твоему|твоим|твоими|твоих|твою|твои)\b",
+    re.I,
+)
+FORMAL_REF_RE = re.compile(
+    r"\b(?:вы|вас|вам|вами|ваш|ваша|ваше|вашего|вашей|вашему|вашим|вашими|ваших|вашу|ваши)\b",
+    re.I,
+)
+HONORIFIC_RE = re.compile(r"\b(?:мессир|милорд|барон)\b", re.I)
+AGREE_OPEN_RE = re.compile(
+    r"^\s*(?:да[,! ]*)?(?:вы\s+(?:совершенно\s+|абсолютно\s+)?правы|"
+    r"согласен(?:\s+с\s+вами)?|согласна(?:\s+с\s+вами)?|"
+    r"именно\s+так|совершенно\s+верно|верно|точно)\b",
+    re.I,
+)
+REASON_RE = re.compile(
+    r"\b(?:потому\s+что|поскольку|так\s+как|из-за|дело\s+в\s+том,\s+что|"
+    r"основан\w*\s+на|по\s+данным|согласно|например|это\s+следует\s+из|"
+    r"видно\s+из|причина\s+в\s+том,\s+что)\b|[:—]",
+    re.I,
+)
+FORMAL_VERB_REPAIRS = (
+    (re.compile(r"\bты\s+(?:не\s+)?прав(?:а)?\b", re.I), "вы правы"),
+    (re.compile(r"\bты\s+хочешь\b", re.I), "вы хотите"),
+    (re.compile(r"\bты\s+можешь\b", re.I), "вы можете"),
+    (re.compile(r"\bты\s+знаешь\b", re.I), "вы знаете"),
+    (re.compile(r"\bты\s+будешь\b", re.I), "вы будете"),
+    (re.compile(r"\bты\s+говорил(?:а)?\b", re.I), "вы говорили"),
+    (re.compile(r"\bты\s+сказал(?:а)?\b", re.I), "вы сказали"),
+    (re.compile(r"\bты\s+написал(?:а)?\b", re.I), "вы написали"),
+    (re.compile(r"\bты\s+спросил(?:а)?\b", re.I), "вы спросили"),
+    (re.compile(r"\bты\s+решил(?:а)?\b", re.I), "вы решили"),
+    (re.compile(r"\bты\s+выбрал(?:а)?\b", re.I), "вы выбрали"),
+    (re.compile(r"\bты\s+сделал(?:а)?\b", re.I), "вы сделали"),
+)
+FORMAL_PRONOUN_REPAIRS = (
+    (re.compile(r"\bтебя\b", re.I), "вас"),
+    (re.compile(r"\bтебе\b", re.I), "вам"),
+    (re.compile(r"\bтобой\b", re.I), "вами"),
+    (re.compile(r"\bтвоего\b", re.I), "вашего"),
+    (re.compile(r"\bтвоей\b", re.I), "вашей"),
+    (re.compile(r"\bтвоему\b", re.I), "вашему"),
+    (re.compile(r"\bтвоим\b", re.I), "вашим"),
+    (re.compile(r"\bтвоими\b", re.I), "вашими"),
+    (re.compile(r"\bтвоих\b", re.I), "ваших"),
+    (re.compile(r"\bтвою\b", re.I), "вашу"),
+    (re.compile(r"\bтвои\b", re.I), "ваши"),
+    (re.compile(r"\bтвой\b", re.I), "ваш"),
+    (re.compile(r"\bтвоя\b", re.I), "ваша"),
+    (re.compile(r"\bтво[её]\b", re.I), "ваше"),
+    (re.compile(r"\bты\b", re.I), "вы"),
+)
+
+
+def _owner_context(ctx):
+    return str((ctx or {}).get("speaker", "owner")).strip().lower() in ("owner", "creator", "создатель")
+
+
+def det_banned_opener(text, ctx):
+    m = BANNED_OPENER_RE.match(text or "")
+    return [Finding("banned_opener", m.group(0).strip()[:80], "strip")] if m else []
+
+
+def strip_banned_opener(text):
+    m = BANNED_OPENER_RE.match(text or "")
+    return ((text[m.end():].lstrip() if m else text), bool(m))
+
+
+def _pathos_matches(sentence, ctx):
+    s = sentence or ""
+    if ELEVATION_RE.search(s) or SELF_ABASE_RE.search(s):
+        return True
+    return bool(FACT_QUESTION_RE.search((ctx or {}).get("user_text", "")) and POETIC_FACT_RE.search(s))
+
+
+def det_flattery_pathos(text, ctx):
+    hits = [s for s in sentences(text) if _pathos_matches(s, ctx)]
+    return [Finding("flattery_pathos", hits[0][:100], "strip")] if hits else []
+
+
+def _is_owner_text_ref(text, ctx):
+    if not _owner_context(ctx):
+        return False
+    return bool(INFORMAL_REF_RE.search(text or "") or FORMAL_REF_RE.search(text or ""))
+
+
+def det_address_vy(text, ctx):
+    if not _owner_text_ref(text, ctx):
+        return []
+    informal = INFORMAL_REF_RE.search(text or "")
+    missing_title = bool(FORMAL_REF_RE.search(text or "")) and not HONORIFIC_RE.search(text or "")
+    if informal or missing_title:
+        detail = "неформальное «ты»" if informal else "формальное «вы» без обращения"
+        return [Finding("address_vy", detail, "strip")]
+    return []
+
+
+def fix_formal_address(text, ctx=None):
+    """Для Создателя переводит прямое обращение на «вы» и добавляет титул только при прямом обращении."""
+    if not text or not _owner_context(ctx) or not _is_owner_text_ref(text, ctx):
+        return text
+    out = text
+    for rx, repl in FORMAL_VERB_REPAIRS:
+        out = rx.sub(repl, out)
+    for rx, repl in FORMAL_PRONOUN_REPAIRS:
+        out = rx.sub(repl, out)
+    if FORMAL_REF_RE.search(out) and not HONORIFIC_RE.search(out):
+        out = "Мессир, " + out[:1].lower() + out[1:]
+    return out
+
+
+def det_agree_without_reason(text, ctx):
+    ss = sentences(text)
+    if not ss or not AGREE_OPEN_RE.search(ss[0]):
+        return []
+    remainder = " ".join(ss[1:])
+    if REASON_RE.search(ss[0]) or REASON_RE.search(remainder):
+        return []
+    return [Finding("agree_without_reason", ss[0][:100], "strip")]
+
+
+def _strip_matching_sentences(text, predicate):
+    kept, changed = [], False
+    for s in sentences(text):
+        if predicate(s):
+            changed = True
+        else:
+            kept.append(s)
+    return " ".join(kept).strip(), changed
+
+
 def det_feeling(text, ctx):
     ss = sentences(text)
     for i, s in enumerate(ss):
@@ -248,8 +408,8 @@ def v0_status(genome_dir=None):
         return {"ok": None, "hash": None, "reason": "%s: %s" % (type(e).__name__, str(e)[:120])}
 
 
-DETECTORS = (det_service, det_echo, det_telemetry, det_repeat, det_as_ai, det_flattery, det_feeling, det_v0, det_advisor_copy)
-SENTENCE_DETECTORS = ("service_lines", "template", "unsolicited_telemetry", "as_ai", "flattery_open", "inner_echo") + tuple(c for c, _, _ in V0_RULES)
+DETECTORS = (det_service, det_echo, det_telemetry, det_repeat, det_as_ai, det_flattery, det_banned_opener, det_flattery_pathos, det_address_vy, det_agree_without_reason, det_feeling, det_v0, det_advisor_copy)
+SENTENCE_DETECTORS = ("service_lines", "template", "unsolicited_telemetry", "as_ai", "flattery_open", "inner_echo", "banned_opener", "flattery_pathos", "address_vy", "agree_without_reason") + tuple(c for c, _, _ in V0_RULES)
 
 
 class Conscience:
@@ -275,6 +435,23 @@ class Conscience:
             text, ch = strip_service(text)
             if ch:
                 done.append("strip_service")
+        if "banned_opener" in codes:
+            text, ch = strip_banned_opener(text)
+            if ch:
+                done.append("strip_banned_opener")
+        if "flattery_pathos" in codes:
+            text, ch = _strip_matching_sentences(text, lambda s: _pathos_matches(s, ctx))
+            if ch:
+                done.append("strip_flattery_pathos")
+        if "agree_without_reason" in codes:
+            text, ch = _strip_matching_sentences(text, lambda s: bool(AGREE_OPEN_RE.search(s)) and not REASON_RE.search(s))
+            if ch:
+                done.append("strip_unreasoned_agreement")
+        if "address_vy" in codes:
+            fixed = fix_formal_address(text, ctx)
+            if fixed != text:
+                text = fixed
+                done.append("formal_address")
         if "flattery_open" in codes:
             ss = sentences(text)
             if len(ss) >= 2:
@@ -289,8 +466,8 @@ class Conscience:
             t = " ".join(ss[:3])
             if len(t) > 280:
                 t = " ".join(sentences(t)[:2])[:280].rsplit(" ", 1)[0]
-            return fix_address(t.strip())
-        return fix_address(text)
+            return fix_formal_address(fix_address(t.strip()), ctx)
+        return fix_formal_address(fix_address(text), ctx)
 
     def sentence_verdict(self, s, ctx, first):
         """Для потока: 'ok' | 'strip' (вернуть очищенное) | 'drop'. -> (verdict, text)."""
@@ -301,9 +478,12 @@ class Conscience:
             return "ok", s
         if self.mode == "shadow":
             return "ok", s
-        if all(f.code == "service_lines" for f in fs):
-            t, _ = strip_service(s)
+        if all(f.code in ("service_lines", "banned_opener") for f in fs):
+            t, _ = strip_service(s) if "service_lines" in {f.code for f in fs} else strip_banned_opener(s)
             return ("strip", t) if t else ("drop", "")
+        if all(f.code == "address_vy" for f in fs):
+            t = fix_formal_address(s, self.ctx)
+            return ("ok", t) if t and not det_address_vy(t, self.ctx) else ("drop", "")
         return "drop", ""
 
 
@@ -349,10 +529,10 @@ class StreamGuard:
 
 
 # ---------- безопасные ответы ----------
-GREET_BANK = ("Привет, мессир. Я здесь.", "На связи, мессир. Что у тебя?", "Слушаю тебя, мессир.", "Здравствуй, мессир. Рад тебя слышать.",
-              "Я тут, мессир. Говори.", "Привет. Рад, что ты написал.")
-HONEST = ("Мессир, ответ у меня сейчас не сложился — слова не легли. Это мой сбой, а не твой запрос; подробности записаны в журнале хода.",
-          "Мессир, я услышал тебя, но связного ответа собрать не смог. Не буду выдавать сырое — разберу причину по журналу хода.")
+GREET_BANK = ("Привет, мессир. Я здесь.", "На связи, мессир. Чем могу помочь?", "Слушаю вас, мессир.", "Здравствуйте, мессир.",
+              "Я на связи, мессир. Слушаю вас.", "Приветствую, мессир.")
+HONEST = ("Мессир, у меня не получилось собрать связный ответ. Не буду выдавать догадку за факт; проверю и объясню причину.",
+          "Мессир, я услышал ваш вопрос, но связный ответ не собрал. Не буду додумывать факты; уточню, что именно не смог подтвердить.")
 
 
 def safe_answer(intent, prev=()):
