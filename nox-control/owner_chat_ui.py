@@ -157,13 +157,17 @@ def workers():
                     return result
                 raw=os.read(file_fd,750001)
                 after=os.fstat(file_fd)
-                if len(raw)!=before.st_size or (
-                    before.st_dev,before.st_ino,before.st_uid,before.st_mode,
-                    before.st_size,before.st_mtime_ns,before.st_ctime_ns
-                )!=(
-                    after.st_dev,after.st_ino,after.st_uid,after.st_mode,
-                    after.st_size,after.st_mtime_ns,after.st_ctime_ns
-                ):return result
+                # A valid descriptor does not prove the current pathname still
+                # refers to it: an atomic rename can replace a native status
+                # snapshot while the read is in progress.
+                current=os.stat('agents_t856u.json',dir_fd=parent_fd,
+                                follow_symlinks=False)
+                identity=lambda st:(
+                    st.st_dev,st.st_ino,st.st_uid,st.st_mode,st.st_size,
+                    st.st_mtime_ns,st.st_ctime_ns
+                )
+                if (len(raw)!=before.st_size or identity(before)!=identity(after)
+                        or identity(current)!=identity(before)):return result
             finally:
                 os.close(file_fd)
             current=directory.lstat()
@@ -184,8 +188,10 @@ def workers():
                or row.get('status') not in ('idle','busy') for row in rows):return result
         if len({row['id'] for row in rows})!=len(rows):return result
         claims=[row.get('current_task',{}).get('id') for row in rows if isinstance(row.get('current_task'),dict)]
-        if (any(not isinstance(claim,str) or not claim.strip() or len(claim)>100 for claim in claims)
-                or len(set(claims))!=len(claims)):return result
+        if (any(type(claim) is not str or not 1<=len(claim)<=100
+                or claim!=claim.strip() or not claim.isprintable()
+                for claim in claims) or len(set(claims))!=len(claims)):
+            return result
         if any((row['status']=='busy')!=isinstance(row.get('current_task'),dict) for row in rows):return result
         # A maintenance transition during snapshot reading invalidates even valid data.
         maintenance=owner_maintenance_gate()
