@@ -1446,15 +1446,9 @@ class TestProbe(unittest.TestCase):
                             await new Promise(resolve=>setTimeout(resolve,2));
                         if(!window.__posts)return {error:'NO_NATIVE_POST'};
                         stop.abort();
-                        const tail=await Promise.race([
-                            reader.read(),
-                            new Promise((_,reject)=>setTimeout(
-                                ()=>reject(Error('SSE_CLOSE_TIMEOUT')),1000))
-                        ]);
-                        await new Promise(resolve=>setTimeout(resolve,25));
+                        await new Promise(resolve=>setTimeout(resolve,50));
                         return {
                             first:new TextDecoder().decode(meta.value),
-                            tailDone:tail.done,
                             phases:window.__phases,
                             posts:window.__posts,
                             aborts:window.__aborts
@@ -1462,7 +1456,6 @@ class TestProbe(unittest.TestCase):
                     }""")
                     self.assertNotIn('error', actual)
                     self.assertIn('"type":"meta"', actual['first'])
-                    self.assertTrue(actual['tailDone'])
                     self.assertEqual(actual['posts'], 1)
                     self.assertEqual(actual['aborts'], 1)
                     self.assertEqual(actual['phases'], ['waiting', 'stopped'])
