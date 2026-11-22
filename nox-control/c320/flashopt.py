@@ -7,12 +7,24 @@ def log(*a):
     LOGF.write(time.strftime('%H:%M:%S ')+' '.join(map(str,a))+'\n'); LOGF.flush()
 def save(): json.dump(ST,open(O+'/FLASH_OPT.json','w'),ensure_ascii=False,indent=1)
 def sh(c): return subprocess.run(c,shell=True,capture_output=True,text=True).stdout
+def pids(pat):
+    out=[]
+    for d in os.listdir('/proc'):
+        if d.isdigit() and int(d)!=os.getpid():
+            try: c=open('/proc/%s/cmdline'%d).read().replace('\0',' ')
+            except Exception: continue
+            if pat in c and not c.startswith(('sh -c','bash -c','/bin/sh -c')) and 'pgrep' not in c and 'pkill' not in c: out.append(int(d))
+    return out
+def srvpids(): return [x for x in pids('llama-server') if '--port 8081' in open('/proc/%d/cmdline'%x).read().replace('\0',' ')]
 def stop():
-    sh("pkill -f 'llama-server.*--port 8081'")
-    for i in range(60):
-        if not sh("pgrep -f 'llama-server.*--port 8081'").strip(): break
-        time.sleep(1)
-    sh("pkill -9 -f 'llama-server.*--port 8081'"); time.sleep(4)
+    for sig in (signal.SIGTERM,signal.SIGKILL):
+        for x in srvpids():
+            try: os.kill(x,sig)
+            except Exception: pass
+        for i in range(30):
+            if not srvpids(): break
+            time.sleep(1)
+    time.sleep(4)
 def health():
     try: return urllib.request.urlopen(URL+'/health',timeout=3).status==200
     except Exception: return False
@@ -77,7 +89,7 @@ def bench(name,flags,cpus,nice,full=True):
     ST['stages'][name]=R; save(); return R
 def tgs(R): return (R.get('short') or {}).get('tg',0)
 # embed pause
-EP=[int(x) for x in sh("pgrep -f embed_server.py").split()]
+EP=pids('embed_server.py')
 def resume():
     for p in EP:
         try: os.kill(p,signal.SIGCONT)
@@ -88,7 +100,7 @@ for p in EP:
     except Exception: pass
 log('embed paused',EP)
 # current config
-pid=sh("pgrep -f 'llama-server.*--port 8081'").split()[0]
+pid=str(srvpids()[0])
 argv=open('/proc/%s/cmdline'%pid).read().split('\0')
 base=argv[argv.index('8081')+1:]
 base=[x for x in base if x]
