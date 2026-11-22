@@ -19,7 +19,7 @@
  if(issuedRequests.size>=2048)throw Error('HOLD_REQUEST_PIN_CAPACITY');
  issuedRequests.add(rid);
  }
- const claimDialog=id=>{if(activeDialogs.has(id))throw Error('HOLD_DIALOG_INFLIGHT');activeDialogs.add(id);return id;};
+ const claimDialog=id=>{if(activeDialogs.has(id))throw Error('HOLD_DIALOG_INFLIGHT');if(!verifiedChain.has(id)&&verifiedChain.size>=128)throw Error('HOLD_DIALOG_PIN_CAPACITY');activeDialogs.add(id);return id;};
  const errorResponse=(error,status=503)=>new Response(JSON.stringify({
  status:'HOLD',error,history_persisted:false,s03_integrated:false
  }),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
@@ -98,8 +98,6 @@
       u.content!==p.prompt||v.content!==p.answer)
      throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
  }
- if(!verifiedChain.has(id)&&verifiedChain.size>=128)
-   verifiedChain.delete(verifiedChain.keys().next().value);
  verifiedChain.set(id,[...chain,{exchange_id:exchangeId,prompt,answer}]);
  }
  function accepted(done,id) {

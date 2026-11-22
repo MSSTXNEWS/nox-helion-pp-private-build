@@ -762,6 +762,99 @@ class TestProbe(unittest.TestCase):
         asyncio.run(run())
 
 
+
+    def test_verified_dialog_capacity_never_evicts_witnessed_exchange(self):
+        """Actual Chromium with mocked native: 129th dialog must not lose prior proof."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+
+                    async def local_page(route):
+                        await route.fulfill(status=200, content_type='text/html',
+                            body='<html><body><main id="resonance">mock</main></body></html>')
+
+                    await page.route('**/nox-web-v29/pc/resonance.html', local_page)
+                    await page.goto('http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER = true;
+                        window.__capNativePosts = 0;
+                        const lastMessage = new Map();
+                        const pair = (eid, message) => [
+                            {role:'user', content:message, exchange_id:eid},
+                            {role:'assistant', content:'ready', exchange_id:eid}
+                        ];
+                        window.fetch = async (url, opts) => {
+                            if(url === '/api/nox/chat/stream'){
+                                const input = JSON.parse(opts.body);
+                                lastMessage.set(input.dialog_id, input.message);
+                                window.__capNativePosts++;
+                                const eid = input.message === 'again' ? 'cap-two' : 'cap-one';
+                                const frames = [
+                                    {type:'preparing', stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start', model:'pinned-local-mock'},
+                                    {type:'delta', text:'ready'},
+                                    {type:'done', saved:true, s03_integrated:true,
+                                     dialog_id:input.dialog_id, exchange_id:eid}
+                                ].map(JSON.stringify).join('\\n') + '\\n';
+                                return new Response(frames, {status:200});
+                            }
+                            if(String(url).startsWith('/api/ui/memory/dialogs/history?')){
+                                const id = new URL(url, location.href).searchParams.get('dialog_id');
+                                const again = lastMessage.get(id) === 'again';
+                                const messages = [
+                                    ...pair('cap-one', 'hello'),
+                                    ...(again ? pair('cap-two', 'again') : [])
+                                ];
+                                return new Response(JSON.stringify({
+                                    status:'READY', dialog_id:id, messages
+                                }), {status:200, headers:{'Content-Type':'application/json'}});
+                            }
+                            throw Error('UNEXPECTED_TEST_ROUTE');
+                        };
+                    }""")
+                    bridge = (pathlib.Path(__file__).parent /
+                              'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    verdict = await page.evaluate("""async () => {
+                        const ask = async (i, message='hello') => {
+                            const dialog_id = i.toString(16).padStart(32, '0');
+                            const r = await fetch('/api/nox/chat', {
+                                method:'POST',
+                                body:JSON.stringify({
+                                    request_id:'cap-'+i+'-'+message, message, dialog_id
+                                })
+                            });
+                            return await r.text();
+                        };
+                        let bad = null;
+                        for(let i=0;i<128;i++){
+                            const s=await ask(i);
+                            if(!s.includes('"type":"done"')){bad={i,s};break;}
+                        }
+                        const before = window.__capNativePosts;
+                        const denied = await ask(128);
+                        const after = window.__capNativePosts;
+                        const revisited = await ask(0, 'again');
+                        return {bad, before, denied, after, revisited,
+                                total:window.__capNativePosts};
+                    }""")
+                    self.assertIsNone(verdict['bad'])
+                    self.assertEqual(verdict['before'], 128)
+                    self.assertIn('HOLD_DIALOG_PIN_CAPACITY', verdict['denied'])
+                    self.assertNotIn('"type":"done"', verdict['denied'])
+                    self.assertEqual(verdict['after'], 128)
+                    self.assertIn('"type":"done"', verdict['revisited'])
+                    self.assertEqual(verdict['total'], 129)
+                finally:
+                    await browser.close()
+
+        asyncio.run(run())
+
     def test_same_dialog_foreign_interleave_fails_before_accepted_done(self):
         """Real Chromium / synthetic native: third turn must reject alien S03 pair."""
         from playwright.async_api import async_playwright
