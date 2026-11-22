@@ -59,6 +59,10 @@ def _reserve_chat_snapshot_slot():
             return True
     return False
 
+# Reject oversized or non-scalar user/assistant inputs before any model/S03 admission.
+# Explicit HOLD, never silently truncate the canonical conversational context.
+MAX_CHAT_INPUT_UTF8_BYTES = 1024 * 1024
+MAX_CHAT_INPUT_MESSAGES = 512
 # Bound the canonical response before a corrupt upstream can exhaust RAM or S03.
 MAX_CHAT_OUTPUT_UTF8_BYTES = 128 * 1024
 # Increment-only broadcast STOP epoch: a new request cannot clear an older stream's STOP.
@@ -673,6 +677,18 @@ def install(app, B):
         if any(m.get("role") in ("user", "assistant") and
                not isinstance(m.get("content"), str) for m in raw_messages):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_CONTENT"}, status_code=400)
+        if len(raw_messages) > MAX_CHAT_INPUT_MESSAGES:
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INPUT_TOO_MANY_MESSAGES"}, status_code=400)
+        input_bytes = 0
+        for message in raw_messages:
+            if message.get("role") not in ("user", "assistant"):
+                continue
+            try:
+                input_bytes += len(message["content"].encode("utf-8", "strict"))
+            except UnicodeEncodeError:
+                return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_UNICODE"}, status_code=400)
+            if input_bytes > MAX_CHAT_INPUT_UTF8_BYTES:
+                return JSONResponse({"status": "HOLD", "reason": "CHAT_INPUT_TOO_LARGE"}, status_code=400)
         opts = b.get("options", {})
         if not isinstance(opts, dict):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_OPTIONS"}, status_code=400)
