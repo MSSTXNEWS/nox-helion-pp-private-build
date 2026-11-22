@@ -407,6 +407,10 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       }).catch(()=>{x.missing=true;});
     }
     if(method==='Network.dataReceived'){
+      // Network chunks arriving after the terminal close are contradictory.
+      // The stream hash was finalized at close: never feed a late chunk into it.
+      // Revoke even a completed response-body ACK during bounded quiescence.
+      if(x.close!==null){x.missing=true;x.bodyMatchesStream=false;return;}
       if(!chronological(x,p.timestamp))return;
       if(p.data){
         if(!x.streaming)x.missing=true;
