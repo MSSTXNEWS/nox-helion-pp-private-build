@@ -62,5 +62,6 @@ jobs:
           node --test --test-name-pattern='1A02 browser duplicate client request IDs' coordination/onepass/test_v135_resonance_owner_bridge.cjs
           node --test --test-name-pattern='1A02 malformed client request ID' coordination/onepass/test_v135_resonance_owner_bridge.cjs
           node --test --test-name-pattern='1A02 invisible S03 exchange identity' coordination/onepass/test_v135_resonance_owner_bridge.cjs
+          node --test --test-name-pattern='0A03 legacy S03 history never labels malformed' coordination/onepass/test_v135_resonance_owner_bridge.cjs
           echo 'NOX_A1_V175_SOURCE_ONLY=true'
           echo 'NOX_A1_V175_NATIVE_ACCEPTANCE=false'
