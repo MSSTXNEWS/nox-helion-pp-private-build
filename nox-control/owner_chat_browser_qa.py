@@ -322,9 +322,18 @@ def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, f
     pinned_ids = None
     pinned_session = None
     pinned_root_session = None
+    pinned_root_dialog_presence = None
     for history in (before, after):
         if 'dialog_id' in history and history['dialog_id'] != dialog_id:
             return False
+        # Both history GETs must agree whether root dialog provenance is
+        # explicit. One-sided omission is not a stable owner-history witness.
+        # Fully legacy snapshots without the field remain compatible.
+        root_dialog_present = 'dialog_id' in history
+        if (pinned_root_dialog_presence is not None
+                and root_dialog_present != pinned_root_dialog_presence):
+            return False
+        pinned_root_dialog_presence = root_dialog_present
         rows = history.get('messages')
         if (not isinstance(rows, list) or len(rows) != 4
                 or not all(isinstance(row, dict) for row in rows)

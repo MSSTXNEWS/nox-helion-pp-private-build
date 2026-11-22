@@ -1570,6 +1570,27 @@ async function check(chunks, status=200) {
         self.assertIn('canonical_s03_verified=False', caller)
 
 
+    def test_postquiet_root_dialog_presence_cannot_rotate_after_second_turn(self):
+        """Postquiet and reload owner-history GETs must pin root dialog presence."""
+        from owner_chat_browser_qa import postquiet_fourrow_history_stable
+        spanish = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        scoped = {'dialog_id': DIALOG, 'messages': [
+            dict(row, message_id=f'row-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(spanish), 1)]}
+        digest = multiturn_transcript_sha256(scoped['messages'])
+        first_ids = ('row-1', 'row-2')
+        clone = lambda obj: json.loads(json.dumps(obj))
+        legacy = clone(scoped)
+        del legacy['dialog_id']
+        stable = lambda a, b: postquiet_fourrow_history_stable(
+            a, b, DIALOG, digest, first_ids)
+        self.assertTrue(stable(scoped, clone(scoped)))
+        self.assertTrue(stable(legacy, clone(legacy)))
+        # Role/text SHA, row IDs and per-row dialog_id remain identical.
+        # Only root dialog_id field presence rotates between snapshots.
+        self.assertFalse(stable(scoped, legacy))
+        self.assertFalse(stable(legacy, scoped))
+
     def test_postsecond_postquiet_root_session_provenance_is_immutable(self):
         """Root owner session must survive quiet/reload history read-only GETs."""
         from owner_chat_browser_qa import postquiet_fourrow_history_stable
