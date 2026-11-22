@@ -546,6 +546,24 @@ def consistent_explicit_row_session_ids(rows):
             and len(set(values)) == 1)
 
 
+def root_history_session_valid(history, rows):
+    """Fail closed if owner-history root scope contradicts explicit row scope.
+
+    A root session_id is optional for legacy history responses; if present it
+    must be a canonical nonblank owner session and agree with annotated rows.
+    This checks provenance consistency, not authentication or canonical S03.
+    """
+    if not isinstance(history, dict) or not isinstance(rows, list):
+        return False
+    if 'session_id' not in history:
+        return True
+    root = history['session_id']
+    return (isinstance(root, str) and bool(root.strip())
+            and root == root.strip()
+            and all('session_id' not in row or row['session_id'] == root
+                    for row in rows if isinstance(row, dict)))
+
+
 def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
     """Require the first persisted turn to belong to the owner QA dialog.
 
@@ -563,6 +581,7 @@ def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
             or any('dialog_id' in row and row['dialog_id'] != dialog_id for row in rows)
             or not distinct_explicit_message_ids(rows)
             or not consistent_explicit_row_session_ids(rows)
+            or not root_history_session_valid(history, rows)
             or not isinstance(first_answer, str) or not first_answer.strip()):
         return False
     return (rows[0].get('role') == 'user'
@@ -586,7 +605,9 @@ def presecond_firstturn_history_stable(before, after, first_prompt, first_answer
     original_ids = verified_two_turn_firstturn_ids(earlier)
     if (original_ids is None
             or verified_two_turn_firstturn_ids(current) != original_ids
-            or ('dialog_id' in before) != ('dialog_id' in after)):
+            or ('dialog_id' in before) != ('dialog_id' in after)
+            or (('session_id' in before, before.get('session_id')) !=
+                ('session_id' in after, after.get('session_id')))):
         return False
     return all(
         (field in old, old.get(field)) == (field in new, new.get(field))
