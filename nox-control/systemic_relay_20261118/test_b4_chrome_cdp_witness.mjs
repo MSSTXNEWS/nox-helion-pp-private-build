@@ -54,21 +54,30 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
   c.responseBodySettled=options.responseBodySettled;
   c.postAckEvent=options.postAckEvent;
   c.thirdPostAckEvent=options.thirdPostAckEvent;
-  if(options.postDataMode||options.firstPostDataMode){
+  if(options.postDataMode||options.firstPostDataMode||options.thirdPostDataMode){
     const normalSend=c.send.bind(c);
     c.send=(cmd,p={})=>{
       if(cmd!=='Network.getRequestPostData')return normalSend(cmd,p);
       // Scope the asynchronous ACK to its own request; a first-turn ACK
       // must never be mistaken for second-turn POST metadata.
-      const first=p.requestId==='1';
-      const mode=first?(options.firstPostDataMode??options.postDataMode):options.postDataMode;
-      const data=first?(options.firstPostDataText??options.postDataText):options.postDataText;
+      const first=p.requestId==='1',third=p.requestId==='3';
+      const mode=first?(options.firstPostDataMode??options.postDataMode):
+        third?(options.thirdPostDataMode??options.postDataMode):options.postDataMode;
+      const data=first?(options.firstPostDataText??options.postDataText):
+        third?(options.thirdPostDataText??options.postDataText):options.postDataText;
       const delay=first?(options.firstPostDataDelayMs??options.postDataDelayMs??280):
-        (options.postDataDelayMs??280);
+        third?(options.thirdPostDataDelayMs??options.postDataDelayMs??280):
+          (options.postDataDelayMs??280);
       if(mode==='late')return new Promise(resolve=>setTimeout(
         ()=>resolve({postData:'{"fallback":'+JSON.stringify(p.requestId)+'}'}),35));
-      if(mode==='lateCustom')return new Promise(resolve=>setTimeout(
-        ()=>resolve({postData:data}),35));
+      if(mode==='lateCustom')return new Promise(resolve=>setTimeout(()=>{
+        options.postDataSettled?.(p.requestId,'resolved');
+        resolve({postData:data});
+        // A separate late CDP replay is issued AFTER the request-data ACK,
+        // not in its place. This hook belongs only to the deterministic fixture.
+        if(third&&typeof options.thirdRequestReplayOnPostDataAck==='function')
+          setTimeout(()=>options.thirdRequestReplayOnPostDataAck(c),5);
+      },35));
       if(mode==='lateAfterGuard'||mode==='rejectAfterGuard')
         return new Promise((resolve,reject)=>setTimeout(()=>{
           const rejected=mode==='rejectAfterGuard';
@@ -104,7 +113,8 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       ...(i===1&&o.redirectResponse?{redirectResponse:{status:302,url:'http://foreign.invalid/old'}}:{}),
       ...(i===1&&Object.hasOwn(o,'redirectHasExtraInfo')?{redirectHasExtraInfo:o.redirectHasExtraInfo}:{}),
       request:{method:'POST',url:requestUrl,
-      ...((i===1&&o.postDataMode)||(i===0&&options.firstPostDataMode)?{}:
+      ...((i===1&&o.postDataMode)||(i===0&&options.firstPostDataMode)||
+         (i===2&&options.thirdPostDataMode)?{}:
          {postData:i===1&&Object.hasOwn(o,'postDataText')?o.postDataText:'{"secret":"'+i+'"}'})}});
     if(i===1&&typeof options.lifecycleDuringSecond==='function')options.lifecycleDuringSecond(c);
     if(i===1&&options.injectExtraPost)c.emit('Network.requestWillBeSent',{
@@ -2643,4 +2653,72 @@ test('third-turn delayed body ACK and post-terminal quiescence events fail close
   const pair=await run();
   assert.equal(pair.cdp_consistent,true,'count=2 compatibility');
   assert.equal(pair.ttft_sse_verified,true);
+});
+
+test('third request POST-data ACK is bounded and cannot resurrect or cross-certify the triplet',async()=>{
+  const base={count:3,quiescenceMs:110,requestPostDataAckTimeoutMs:95,
+    thirdPostDataMode:'lateCustom',
+    thirdPostDataText:'{"turn":3,"message":"третий 🐈"}'};
+  const seen=[];
+  const healthy=await run(false,null,null,null,{
+    ...base,postDataSettled:(id,status)=>seen.push([id,status])
+  });
+  assert.equal(healthy.cdp_consistent,true,'third guarded metadata ACK can succeed');
+  assert.equal(healthy.ttft_sse_verified,true);
+  assert.deepEqual(seen,[['3','resolved']]);
+  assert.deepEqual(healthy.turns.map(t=>t.cdp_request_id),['1','2','3']);
+  assert.equal(healthy.turns[2].stream_timing_complete,true);
+  assert.match(healthy.turns[2].request_sha256,/^[a-f0-9]{64}$/);
+  const pair=await run();
+  for(let i=0;i<2;i++){
+    for(const field of ['request_sha256','cdp_decoded_body_sha256','visible_text_sha256'])
+      assert.equal(healthy.turns[i][field],pair.turns[i][field],
+        'third ACK cannot change independently observed prior '+field);
+    assert.equal(healthy.turns[i].ttft_ms,pair.turns[i].ttft_ms);
+  }
+  for(const mode of ['lateAfterGuard','rejectAfterGuard']){
+    let settle;
+    const physical=new Promise(resolve=>{settle=resolve;});
+    const failed=await run(false,null,null,null,{
+      ...base,thirdPostDataMode:mode,thirdPostDataText:'{"turn":3,"conflict":true}',
+      thirdPostDataDelayMs:240,requestPostDataAckTimeoutMs:30,
+      postDataSettled:(id,status)=>{if(id==='3')settle([id,status]);}
+    });
+    const sealed=JSON.stringify(failed);
+    assert.equal(failed.cdp_consistent,false,mode);
+    assert.equal(failed.ttft_sse_verified,false,mode);
+    assert.deepEqual(failed.turns.map(t=>t.cdp_request_id),['1','2','3']);
+    assert.equal(failed.turns[2].request_sha256,null,mode);
+    assert.equal(failed.turns[2].ttft_ms,null,mode);
+    assert.equal(failed.turns[2].stream_timing_complete,false,mode);
+    for(let i=0;i<2;i++){
+      assert.equal(failed.turns[i].stream_timing_complete,true,mode);
+      for(const field of ['request_sha256','cdp_decoded_body_sha256','visible_text_sha256'])
+        assert.equal(failed.turns[i][field],healthy.turns[i][field],mode+' '+field);
+    }
+    assert.deepEqual(await physical,['3',mode==='rejectAfterGuard'?'rejected':'resolved']);
+    assert.equal(JSON.stringify(failed),sealed,'late third ACK must not mutate sealed witness');
+    assert.equal(failed.native_verified,false);
+    assert.equal(failed.canonical_s03_verified,false);
+  }
+  const hung=await run(false,null,null,null,{
+    ...base,thirdPostDataMode:'hang',requestPostDataAckTimeoutMs:30
+  });
+  assert.equal(hung.cdp_consistent,false,'unacknowledged third metadata is HOLD');
+  assert.equal(hung.turns[2].request_sha256,null);
+  assert.equal(hung.ttft_sse_verified,false);
+  let replayed=0;
+  await assert.rejects(run(false,null,null,null,{
+    ...base,thirdRequestReplayOnPostDataAck:c=>{
+      replayed++;
+      c.emit('Network.requestWillBeSent',{
+        requestId:'3',timestamp:102.03,frameId:'fixture-frame',
+        loaderId:'fixture-loader',documentURL:'http://localhost/nox/chat',
+        initiator:{type:'script'},request:{method:'POST',
+          url:'http://localhost/api/nox/chat',postData:'{"turn":3,"conflicting":true}'}
+      });
+    }
+  }),/DUPLICATE_CDP_ID/,'conflicting replay after ACK must fail closed');
+  assert.equal(replayed,1,'replay was physically delivered during observation');
+  assert.equal((await run()).ttft_sse_verified,true,'two-turn healthy compatibility');
 });
