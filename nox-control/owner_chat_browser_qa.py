@@ -821,6 +821,14 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     event_id = writer_receipt.get('event_id')
     turn_id = writer_receipt.get('turn_id')
     sequence = writer_receipt.get('sequence')
+    if require_full_transcript_pin and any(
+            not isinstance(value, str) or value != value.strip()
+            or not value.isprintable()
+            for value in (event_id, turn_id)):
+        # Strict RU/ES S03 witnesses must not treat padded or invisible
+        # event/turn aliases as durable identities. The legacy source-only
+        # A1 validation contract remains unchanged.
+        return False
     if (writer_receipt.get('source') != 'canonical_s03'
             or writer_receipt.get('verified') is not True
             or writer_receipt.get('durable') is not True
