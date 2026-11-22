@@ -3023,5 +3023,72 @@ class S03ContentReindexNestedShapeFence(unittest.TestCase):
                     check(row, chain)
 
 
+
+    def test_followup_pointer_sources_fail_closed_on_json_shapes(self):
+        # Run exactly the real helper extracted from the owner's source AST.
+        # This never starts native training or reads/writes server state.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        node = next(n for n in tree.body
+                    if isinstance(n, ast.FunctionDef)
+                    and n.name == "verify_followup_pointer_sources")
+        namespace = {"re": re, "BOOST_REQUEST": "123456"}
+        exec(compile(ast.Module(body=[node], type_ignores=[]),
+                     str(SOURCE), "exec"), namespace)
+        check = namespace["verify_followup_pointer_sources"]
+        stable = Path("/root/nox/scripts/stable.py")
+        wrapper = Path("/root/nox/scripts/owner_wrapper.sh")
+        expected = {stable: "a" * 64, wrapper: "b" * 64}
+        sources = {str(stable): "a" * 64, str(wrapper): "c" * 64}
+        good = {
+            "schema": "NOX_OWNER_TRAINING_ADMISSION_V1",
+            "boost_request": "123456",
+            "request": "123457",
+            "source_sha": "f" * 40,
+            "sources": sources,
+        }
+        self.assertEqual(check(copy.deepcopy(good), expected, {wrapper}),
+                         sources)
+        # Even a request converted via str() is not a safe pathname segment.
+        for malformed in (None, [], "broken", True, 7, 3.5):
+            with self.subTest(root=repr(malformed)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_PREVIOUS_TRAINING_ADMISSION$"):
+                    check(malformed, expected, {wrapper})
+        for field, malformed_values in {
+            "request": (None, True, 123457, [], {}, " 123457", ""),
+            "source_sha": (None, True, 11, [], {}, "a" * 39, "A" * 40),
+        }.items():
+            for invalid in malformed_values:
+                with self.subTest(field=field, bad=repr(invalid)):
+                    changed = copy.deepcopy(good)
+                    changed[field] = invalid
+                    with self.assertRaisesRegex(
+                            RuntimeError, "^HOLD_PREVIOUS_TRAINING_ADMISSION$"):
+                        check(changed, expected, {wrapper})
+        for invalid in (None, [], [str(stable), str(wrapper)],
+                        "paths", True, 0, {str(stable): "a" * 64},
+                        {**sources, "/tmp/foreign.py": "d" * 64}):
+            with self.subTest(sources=repr(invalid)):
+                changed = copy.deepcopy(good)
+                changed["sources"] = invalid
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_PREVIOUS_TRAINING_RECEIPT$"):
+                    check(changed, expected, {wrapper})
+        # Mutable/allowed files still need a real 64-hex SHA-256 string.
+        for invalid in (None, [], {}, True, 10, "not-a-sha"):
+            changed = copy.deepcopy(good)
+            changed["sources"][str(wrapper)] = invalid
+            with self.subTest(hash_value=repr(invalid)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_PREVIOUS_ADMISSION_SOURCE_HASH$"):
+                    check(changed, expected, {wrapper})
+        changed = copy.deepcopy(good)
+        changed["sources"][str(stable)] = "e" * 64
+        with self.assertRaisesRegex(
+                RuntimeError, "^HOLD_PREVIOUS_ADMISSION_STABLE_SOURCE$"):
+            check(changed, expected, {wrapper})
+
+
+
 if __name__ == "__main__":
     unittest.main()
