@@ -1243,6 +1243,12 @@ def install(app, B):
                         # Keep the exact streamed Unicode/whitespace: stripping changes S03 history
                         # relative to the SSE text and its terminal digest.
                         await asyncio.to_thread(S.persist_turn, ("[mini] " + user) if mini else user, full)
+                        # Native and web chat share the bridge recall cache.
+                        # A returned write must revoke prior search results;
+                        # this remains a write-returned, NOT an S03 readback.
+                        invalidate = getattr(B, "invalidate_s03_cache", None)
+                        if callable(invalidate):
+                            invalidate()
                         hist = {"status": "SAVED", "mini": mini, "s03_readback_verified": False}
                     except Exception as e:
                         hist = {"status": "HOLD", "reason": "S03: " + type(e).__name__}
