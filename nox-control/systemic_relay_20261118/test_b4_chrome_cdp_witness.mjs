@@ -2283,8 +2283,11 @@ test('second responseReceived replay midstream fails closed without losing first
       'cdp_decoded_body_sha256','visible_text_sha256','ttft_ms','sse_done_ms',
       'stream_timing_complete','cdp_decoded_body_matches_stream'])
       assert.deepEqual(x.turns[0][k],control.turns[0][k],name+' preserved FIRST '+k);
-    assert.equal(x.turns[1].cdp_streamed_body_sha256,
-      control.turns[1].cdp_streamed_body_sha256,name+' SECOND streamed digest');
+    // Once the replay poisons SECOND provenance, later chunks are deliberately
+    // not consumed; its partial digest is diagnostic, not a full body witness.
+    assert.match(x.turns[1].cdp_streamed_body_sha256,/^[a-f0-9]{64}$/,name);
+    assert.notEqual(x.turns[1].cdp_streamed_body_sha256,
+      control.turns[1].cdp_streamed_body_sha256,name+' partial second digest');
     assert.equal(x.turns[1].cdp_decoded_body_matches_stream,false,name);
     assert.equal(x.turns[1].ttft_ms,null,name);
     assert.equal(x.turns[1].sse_done_ms,null,name);
