@@ -532,13 +532,17 @@ def reject_duplicate_json_keys(pairs):
 
 
 def stream_status_is_failure(value):
-    """Fail closed for known failure labels and HTTP failure status values."""
+    """Fail closed on failed HTTP status and upstream 3xx redirect evidence."""
     if isinstance(value, str):
         status = value.strip().lower()
-        # Textual HTTP status lines are failures too. A subsequent saved=true
-        # terminal must not erase an upstream 4xx/5xx proxy/model response.
+        # Textual HTTP status lines, including 3xx login/gateway redirects,
+        # cannot be erased by a later saved=true terminal receipt.
         # Keep untagged model text (for example '500 tokens') out of this fence.
-        if re.match(r'^http(?:/\d+(?:\.\d+)?)?\s+[45]\d{2}\b', status):
+        if re.match(r'^http(?:/\d+(?:\.\d+)?)?\s+[345]\d{2}\b', status):
+            return True
+        if re.match(r'^3\d{2}\s+(?:multiple choices|moved permanently|found|'
+                    r'see other|not modified|use proxy|temporary redirect|'
+                    r'permanent redirect)\b', status):
             return True
         if re.match(r'^[45]\d{2}\s+(?:bad request|unauthorized|payment required|'
                     r'forbidden|not found|method not allowed|not acceptable|'
@@ -552,17 +556,17 @@ def stream_status_is_failure(value):
         # later saved=true terminal erase such a preterminal failure.
         return status in ('error', 'failed', 'failure', 'cancelled', 'canceled',
                           'aborted', 'timeout', 'timed_out', 'timed-out', 'fatal') or (
-            status.isdecimal() and int(status) >= 400)
-    # JSON encoders may serialize HTTP status as 503.0 rather than 503.
-    # A later saved=true DONE cannot override such a numeric proxy failure.
+            status.isdecimal() and int(status) >= 300)
+    # JSON encoders may serialize HTTP 302/503 as floats rather than ints.
+    # A later saved=true DONE must never override an upstream redirect or error.
     # Exclude bool (a subclass of int); malformed non-finite floats fail closed.
     if type(value) is float:
-        return not math.isfinite(value) or value >= 400
-    return type(value) is int and value >= 400
+        return not math.isfinite(value) or value >= 300
+    return type(value) is int and value >= 300
 
 
 def stream_frame_reports_failure(frame):
-    """Recognize HTTP failures in flat and structured upstream status metadata.
+    """Recognize HTTP redirects/failures in flat and nested upstream metadata.
 
     A downstream saved=true DONE must not erase an earlier 4xx/5xx emitted in
     a status object or an alternate HTTP status field.
