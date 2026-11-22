@@ -166,7 +166,7 @@
      startSeen=true;
      if(Object.prototype.hasOwnProperty.call(e,'model')&&
        (typeof e.model!=='string'||!e.model.trim()||e.model!==e.model.trim()||
-        e.model.length>96||/[\x00-\x1F\x7F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/.test(e.model)))
+        e.model.length>96||/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(e.model)))
        throw Error('HOLD_NATIVE_MODEL_START_LABEL');
      nativeModel=e.model||'UNKNOWN';
    } else if(e.type==='preparing') {
