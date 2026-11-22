@@ -38,10 +38,18 @@ for k in memory.current memory.max memory.events cpu.stat; do
 done
 cur=$(cat /sys/fs/cgroup/memory.current 2>/dev/null || :)
 lim=$(cat /sys/fs/cgroup/memory.max 2>/dev/null || :)
+# This is only the RAM threshold, NOT an owner/CAS/STOP/SSD/VRAM admission.
 if [[ "$cur" =~ ^[0-9]+$ && "$lim" =~ ^[0-9]+$ ]]; then
-  printf 'cgroup_mem_headroom_bytes=%s\n' "$((lim - cur))"
+  headroom=$((lim - cur))
+  printf 'cgroup_mem_headroom_bytes=%s\n' "$headroom"
+  if (( headroom >= 2147483648 )); then
+    echo 'cgroup_ram_2gib_threshold=PASS_THRESHOLD_ONLY'
+  else
+    echo 'cgroup_ram_2gib_threshold=HOLD_LOW_HEADROOM'
+  fi
 else
   echo 'cgroup_mem_headroom_bytes=unavailable'
+  echo 'cgroup_ram_2gib_threshold=HOLD_UNKNOWN'
 fi
 for k in cpu memory io; do
   p="/proc/pressure/$k"
