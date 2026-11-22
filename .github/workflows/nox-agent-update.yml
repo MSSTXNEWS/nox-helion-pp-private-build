@@ -1,6 +1,9 @@
 name: NOX agent update (one click)
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['nox-control/cmd_agent/run_update.py']
 permissions:
   contents: read
 concurrency:
