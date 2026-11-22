@@ -647,7 +647,9 @@ def install(app, B):
         return JSONResponse({
             "status": row["state"], "request_id": request_id,
             "stream_id": stream_id, "event_seq": row["event_seq"],
-            "message": {"role": "assistant", "content": row["text"]},
+            "message": {"role": "assistant", "content": (
+                "".join(row["text_chunks"]) if "text_chunks" in row
+                else row.get("text", ""))},
             "done": row["terminal"],
             # A lossy/incomplete snapshot is never proof of generated output or
             # a durable S03 write, even if the live SSE later completed.
@@ -769,7 +771,8 @@ def install(app, B):
         frame_seq = 0
         if not eph:
             CHAT_SNAPSHOTS[stream_id] = {
-                "request_id": rid, "exchange_id": exchange_id, "event_seq": 0, "text": "",
+                "request_id": rid, "exchange_id": exchange_id, "event_seq": 0,
+                "text_chunks": [],
                 "text_bytes": 0, "state": "ADMITTED", "terminal": False,
                 "completion_receipt": None, "memory_write_receipt": None,
                 "snapshot_hold_reason": None,
@@ -790,7 +793,12 @@ def install(app, B):
                 if isinstance(content, str) and content:
                     added_bytes = len(content.encode("utf-8", "strict"))
                     if row["text_bytes"] + added_bytes <= MAX_CHAT_OUTPUT_UTF8_BYTES:
-                        row["text"] += content
+                        # Append in O(1), rather than copying the entire live
+                        # snapshot for every delta (quadratic CPU under long SSE).
+                        # Upgrade any legacy in-process row without losing text.
+                        if "text_chunks" not in row:
+                            row["text_chunks"] = [row.pop("text", "")]
+                        row["text_chunks"].append(content)
                         row["text_bytes"] += added_bytes
                     else:
                         row["state"] = "HOLD"
