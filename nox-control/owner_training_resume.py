@@ -1143,6 +1143,35 @@ def verify_policy(value):
         raise RuntimeError('HOLD_NATIVE_BOOST_POLICY_CHANGED')
 
 
+
+def verify_followup_pointer_sources(pointer, expected, allowed_changes):
+    """Fail closed before reusing a previous training owner and source lineage.
+
+    The pointer is untrusted JSON. Neither a scalar source_sha nor an iterable
+    non-map 'sources' value can be treated as an installed-source receipt.
+    """
+    if (type(pointer) is not dict
+            or pointer.get('schema') != 'NOX_OWNER_TRAINING_ADMISSION_V1'
+            or pointer.get('boost_request') != BOOST_REQUEST
+            or type(pointer.get('request')) is not str
+            or not re.fullmatch('[0-9]+', pointer['request'])
+            or type(pointer.get('source_sha')) is not str
+            or not re.fullmatch('[0-9a-f]{40}', pointer['source_sha'])):
+        raise RuntimeError('HOLD_PREVIOUS_TRAINING_ADMISSION')
+    sources = pointer.get('sources')
+    if (type(sources) is not dict
+            or set(sources) != {str(path) for path in expected}):
+        raise RuntimeError('HOLD_PREVIOUS_TRAINING_RECEIPT')
+    # Validate all recorded hashes before changing even the in-memory pins.
+    for path in expected:
+        recorded = sources[str(path)]
+        if path not in allowed_changes and recorded != expected[path]:
+            raise RuntimeError('HOLD_PREVIOUS_ADMISSION_STABLE_SOURCE')
+        if type(recorded) is not str or not re.fullmatch('[0-9a-f]{64}', recorded):
+            raise RuntimeError('HOLD_PREVIOUS_ADMISSION_SOURCE_HASH')
+    return sources
+
+
 def verify_training_policy_owner(policy, admission):
     """Require owner-lineage identity on follow-up and continuation."""
     if (type(policy) is not dict or type(admission) is not dict
@@ -1399,11 +1428,8 @@ def main():
         followup = POINTER.exists()
         if followup:
             pointer = read_json(POINTER, 32000)
-            if (pointer.get('schema') != 'NOX_OWNER_TRAINING_ADMISSION_V1'
-                    or pointer.get('boost_request') != BOOST_REQUEST
-                    or not str(pointer.get('request', '')).isdigit()
-                    or not re.fullmatch('[0-9a-f]{40}', pointer.get('source_sha', ''))):
-                raise RuntimeError('HOLD_PREVIOUS_TRAINING_ADMISSION')
+            recorded_sources = verify_followup_pointer_sources(
+                pointer, expected, set(CONTROLS) | {WRAPPER})
             verify_training_policy_owner(policy, pointer)
             previous = read_json(STATE/('owner_maintenance_'+pointer['request']+'.json'))
             if (previous.get('schema') != SCHEMA or previous.get('source_sha') != pointer['source_sha']
@@ -1414,17 +1440,10 @@ def main():
                     or pointer.get('s03_activation') != memory_evidence
                     or previous.get('s03_activation') != memory_evidence
                     or pointer.get('media_acceptance') != media_evidence
-                    or previous.get('media_acceptance') != media_evidence
-                    or set(pointer.get('sources', {})) != {str(path) for path in expected}):
+                    or previous.get('media_acceptance') != media_evidence):
                 raise RuntimeError('HOLD_PREVIOUS_TRAINING_RECEIPT')
-            allowed_changes = set(CONTROLS) | {WRAPPER}
             for path in expected:
-                recorded = pointer.get('sources', {}).get(str(path))
-                if path not in allowed_changes and recorded != expected[path]:
-                    raise RuntimeError('HOLD_PREVIOUS_ADMISSION_STABLE_SOURCE')
-                if not isinstance(recorded, str) or not re.fullmatch('[0-9a-f]{64}', recorded):
-                    raise RuntimeError('HOLD_PREVIOUS_ADMISSION_SOURCE_HASH')
-                expected[path] = recorded
+                expected[path] = recorded_sources[str(path)]
         for path, sha in expected.items():
             if file_sha(path) != sha:
                 raise RuntimeError('HOLD_INSTALLED_TRAINING_SOURCE_CHANGED')
