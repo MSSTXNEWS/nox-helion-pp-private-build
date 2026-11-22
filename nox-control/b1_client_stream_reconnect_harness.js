@@ -487,13 +487,27 @@
           requested_at_ms:Date.now(),freshness_ms:canonicalFreshnessMs
         });
         let ack,freshVerified=false;
+        // Second verifier success is not yet durable ACK-gate confirmation.
+        // Until the gate envelope is accepted, a GET body may be unclaimed.
+        let verifiedReceipt=null,verifiedBodyDiscarded=false;
+        const discardVerifiedBody=()=>{
+          if(verifiedBodyDiscarded||!verifiedReceipt)return;
+          verifiedBodyDiscarded=true;
+          cancelAbandonedGet(verifiedReceipt); // nonblocking, once only
+        };
         try {
           // A signed canonical ACK read still involves external GET and
            // independent verification. Bound the whole trusted wait so a
            // hung GET/verifier cannot pin reconnect forever. ackGate must
            // independently fence late side effects with its durable CAS.
            ack=await boundedGet(
-             lifecycleSignal=>ackGate.requireCanonicalAck(s,witness.projection_event_id,
+             lifecycleSignal=>{
+              // STOP/deadline can win AFTER both verifiers succeed but while
+              // durable ACK-gate CAS is still stalled.
+              const onGateAbort=()=>discardVerifiedBody();
+              lifecycleSignal.addEventListener('abort',onGateAbort,{once:true});
+              return Promise.resolve().then(()=>ackGate.requireCanonicalAck(
+                s,witness.projection_event_id,
             witness.ack_cursor,
             async expected=>{
               // readCanonicalAck MUST be a no-store, authenticated GET. It
@@ -588,21 +602,31 @@
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
                 }
                 if(trusted!==true)discard();
+                else verifiedReceipt=receipt;
                 return trusted;
               }finally{
                 lifecycleSignal.removeEventListener('abort',onAbort);
               }
-            },lifecycleSignal),
+            },lifecycleSignal)).finally(()=>{
+                lifecycleSignal.removeEventListener('abort',onGateAbort);
+              });
+            },
              'HOLD_STREAM_CANONICAL_ACK_TIMEOUT',canonicalAckTimeoutMs,signal);
         }catch(err){
+          discardVerifiedBody();
           if(err&&typeof err.code==='string') throw err;
           hold('HOLD_STREAM_CANONICAL_ACK');
         }
-        if(!freshVerified) hold('HOLD_STREAM_FRESHNESS_UNVERIFIED');
+        if(!freshVerified){
+          discardVerifiedBody();
+          hold('HOLD_STREAM_FRESHNESS_UNVERIFIED');
+        }
         if(!ack||ack.status!=='CANONICAL_ACK_CONFIRMED'||
            ack.authority!=='VERIFIER_CALLBACK_APPROVED'||
-           typeof ack.ack_id!=='string'||!ID.test(ack.ack_id))
+           typeof ack.ack_id!=='string'||!ID.test(ack.ack_id)){
+          discardVerifiedBody();
           hold('HOLD_STREAM_CANONICAL_ACK');
+        }
         return Object.freeze({...witness,canonical_ack_status:ack.status,
           canonical_ack_id:ack.ack_id});
       }
