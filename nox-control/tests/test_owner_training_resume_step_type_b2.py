@@ -875,6 +875,11 @@ class CheckpointStepProvenance(unittest.TestCase):
                 sources["/sys/fs/cgroup/cpu.max"] = "400000 100000"
                 verifier(helper)
                 self.assertEqual(cpu_calls[-1], (4, 4))
+                # More quota than sched_getaffinity does NOT mean 8 usable
+                # CPUs: over-admission can steal budget from live serving.
+                sources["/sys/fs/cgroup/cpu.max"] = "800000 100000"
+                verifier(helper)
+                self.assertEqual(cpu_calls[-1], (4, 4))
                 sources["/sys/fs/cgroup/cpu.max"] = "100000 100000"
                 verifier(helper)
                 self.assertEqual(cpu_calls[-1], (1, 4))

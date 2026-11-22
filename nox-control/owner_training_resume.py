@@ -956,7 +956,10 @@ def resource_admission(helper):
         elif re.fullmatch('[0-9]+', cpu_spec[0]) and int(cpu_spec[0]) >= period:
             # A fractional cgroup CPU cannot be rounded up to an admitted
             # full CPU: that would overstate headroom protecting live chat.
-            quota_cpus = int(cpu_spec[0]) // period
+            # Process affinity can be stricter than the cgroup quota. Never
+            # claim more usable CPUs than the live trainer can schedule, or
+            # the resource budget may over-admit work beside live chat.
+            quota_cpus = min(int(cpu_spec[0]) // period, affinity_cpus)
         else:
             raise ValueError('invalid CPU quota')
     except (OSError, ValueError) as exc:
