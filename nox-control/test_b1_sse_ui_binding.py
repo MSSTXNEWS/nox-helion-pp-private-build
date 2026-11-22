@@ -155,6 +155,43 @@ def main():
           catch(e){return e.code==='HOLD_B1_BINDING_TRUSTED_VERIFIER_REQUIRED';}
         }'''))
         check('DOM turn count remains exactly two', page.evaluate('()=>current().length===2'))
+
+        # Reproduce a real race in the abort-safe DOM adapter: a delta that
+        # fails precommit after terminal intent is reserved must not prevent
+        # the independently authenticated GET-only terminal from projecting.
+        # No new model POST or network ACK is used in this synthetic check.
+        check('failed delta does not poison later canonical terminal UI', page.evaluate('''async () => {
+          const container=document.createElement('section');
+          const s={conversation_id:'delta-rejected',exchange_id:'recovery'};
+          const beforePosts=metrics.posts,beforeAcks=metrics.acks;
+          let terminalHooks=0;
+          const ui=NOXB1AbortSafeUI.createUiAdapter({
+            container,
+            beforeCommit:kind=>{
+              if(kind==='delta') return Promise.reject(Error('delta-precommit-fail'));
+              terminalHooks++;
+              return Promise.resolve();
+            }
+          });
+          const deltaSignal=new AbortController();
+          const terminalSignal=new AbortController();
+          const delta=ui.onDelta(s,'UNCOMMITTED',deltaSignal.signal,
+            'delta-aborted').then(()=>null,e=>e.code);
+          // Reserve the terminal while the older delta is still in flight.
+          const terminal=ui.upsertTerminal(s,'durable-event',terminalSignal.signal);
+          const outcomes=await Promise.allSettled([delta,terminal]);
+          const row=container.firstElementChild;
+          const repeated=await ui.upsertTerminal(s,'durable-event',terminalSignal.signal);
+          return outcomes[0].status==='fulfilled' &&
+            outcomes[0].value==='HOLD_B1_UI_PRECOMMIT' &&
+            outcomes[1].status==='fulfilled' && outcomes[1].value===true &&
+            repeated===true && terminalHooks===1 &&
+            container.children.length===1 &&
+            row.dataset.noxB1State==='terminal' &&
+            row.dataset.noxB1EventId==='durable-event' &&
+            row.textContent==='' &&
+            metrics.posts===beforePosts && metrics.acks===beforeAcks;
+        }'''))
         # A real Chromium caller must be able to select short B1 deadlines;
         # the previous binding silently dropped these values, leaving 30s
         # waits even when a host requested 25ms.
