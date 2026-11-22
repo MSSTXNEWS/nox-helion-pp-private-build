@@ -36,6 +36,8 @@ class Stub {
       const canonical=this.bodies.get(p.requestId).toString('base64');
       if(p.requestId==='2'&&typeof this.postAckEvent==='function')
         setTimeout(()=>this.postAckEvent(this),25);
+      if(p.requestId==='3'&&typeof this.thirdPostAckEvent==='function')
+        setTimeout(()=>this.thirdPostAckEvent(this),25);
       if(typeof this.responseBodyTextMutator==='function')return {body:this.responseBodyTextMutator(this.bodies.get(p.requestId).toString('utf8'),p.requestId),base64Encoded:false};
       return {body:typeof this.responseBodyMutator==='function'?this.responseBodyMutator(canonical,p.requestId):canonical,base64Encoded:true};
     }return {};}
@@ -51,6 +53,7 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
   c.responseBodyRejectAfterDelay=options.responseBodyRejectAfterDelay;
   c.responseBodySettled=options.responseBodySettled;
   c.postAckEvent=options.postAckEvent;
+  c.thirdPostAckEvent=options.thirdPostAckEvent;
   if(options.postDataMode||options.firstPostDataMode){
     const normalSend=c.send.bind(c);
     c.send=(cmd,p={})=>{
@@ -2567,4 +2570,77 @@ test('three serial same-page CDP chat turns retain independent request/body/visi
   await assert.rejects(run(false,null,null,null,{
     ...options,thirdLoaderId:'new-document-loader'
   }),/CDP_MAIN_FRAME_DOCUMENT_CHANGED/);
+});
+
+test('third-turn delayed body ACK and post-terminal quiescence events fail closed without poisoning first two',async()=>{
+  const base={count:3,quiescenceMs:110,responseBodyDelay:{'3':35}};
+  const healthyAck=[];
+  const healthy=await run(false,null,null,null,{
+    ...base,responseBodySettled:(id,state)=>healthyAck.push([id,state])
+  });
+  assert.equal(healthy.cdp_consistent,true,'delayed third ACK is not itself a stream failure');
+  assert.equal(healthy.ttft_sse_verified,true);
+  assert.deepEqual(healthyAck,[['1','resolved'],['2','resolved'],['3','resolved']]);
+  assert.ok(healthy.turns[2].cdp_response_body_ack_latency_ms>=20,
+    'third ACK latency is independently observed after delayed getResponseBody');
+  assert.ok(healthy.turns.every(t=>t.stream_timing_complete));
+  const events=[
+    ['duplicate-data',c=>c.emit('Network.dataReceived',{
+      requestId:'3',timestamp:102.03,data:Buffer.from('duplicate').toString('base64')})],
+    ['duplicate-response',c=>c.emit('Network.responseReceived',{
+      requestId:'3',timestamp:102.03,frameId:'fixture-frame',
+      loaderId:'fixture-loader',hasExtraInfo:false,
+      response:{status:200,mimeType:'text/event-stream',
+        url:'http://localhost/api/nox/chat',headers:{}}})],
+    ['late-http-extra',c=>c.emit('Network.responseReceivedExtraInfo',{
+      requestId:'3',statusCode:304,headers:{}})],
+    ['duplicate-terminal',c=>c.emit('Network.loadingFinished',{
+      requestId:'3',timestamp:102.03})],
+    ['late-cache-flag',c=>c.emit('Network.requestServedFromCache',{requestId:'3'})]
+  ];
+  for(const [name,emit] of events){
+    let delivered=0,thirdAckSeen=false,observedAfterAck=false;
+    const out=await run(false,null,null,null,{
+      ...base,
+      responseBodySettled:(id,state)=>{
+        if(id==='3')thirdAckSeen=state==='resolved';
+      },
+      thirdPostAckEvent:c=>{
+        delivered++;
+        observedAfterAck=thirdAckSeen;
+        emit(c);
+      }
+    });
+    assert.equal(delivered,1,name+' was observed during finite CDP quiescence');
+    assert.equal(observedAfterAck,true,name+' arrived AFTER third getResponseBody ACK');
+    assert.equal(out.cdp_consistent,false,name+' must invalidate third-turn integrity');
+    assert.equal(out.ttft_sse_verified,false,name+' cannot certify full dialogue');
+    assert.equal(out.turns[2].stream_timing_complete,false,name);
+    assert.equal(out.turns[2].cdp_decoded_body_matches_stream,false,name);
+    assert.equal(out.turns[2].ttft_ms,null,name);
+    for(let i=0;i<2;i++){
+      assert.equal(out.turns[i].stream_timing_complete,true,name+' earlier proven turn '+i);
+      assert.equal(out.turns[i].request_sha256,healthy.turns[i].request_sha256);
+      assert.equal(out.turns[i].cdp_decoded_body_sha256,healthy.turns[i].cdp_decoded_body_sha256);
+      assert.equal(out.turns[i].visible_text_sha256,healthy.turns[i].visible_text_sha256);
+    }
+    assert.equal(out.native_verified,false,'CDP fixture is not native proof');
+    assert.equal(out.canonical_s03_verified,false,'CDP fixture is not S03 proof');
+  }
+  const lateSettled=[];
+  const late=await run(false,null,null,null,{
+    count:3,quiescenceMs:110,responseBodyDelay:{'3':70},
+    responseBodyAckTimeoutMs:25,
+    responseBodySettled:(id,state)=>lateSettled.push([id,state])
+  });
+  assert.equal(late.cdp_consistent,false,'third body ACK after guard cannot revive triplet');
+  assert.equal(late.ttft_sse_verified,false);
+  assert.deepEqual(lateSettled.at(-1),['3','resolved'],'late physical ACK was delivered');
+  assert.equal(late.turns[2].stream_timing_complete,false);
+  for(let i=0;i<2;i++)
+    assert.equal(late.turns[i].stream_timing_complete,true,
+      'late third ACK preserves earlier independently proven turns');
+  const pair=await run();
+  assert.equal(pair.cdp_consistent,true,'count=2 compatibility');
+  assert.equal(pair.ttft_sse_verified,true);
 });
