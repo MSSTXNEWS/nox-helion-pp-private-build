@@ -11,7 +11,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 from nox_prime import Prime, default_router  # noqa: E402
 
-SOUL = open(os.path.join(HERE, "soul_prime_v3.txt"), encoding="utf-8").read()
+SOUL = open(os.path.join(HERE, "soul_prime_v4.txt"), encoding="utf-8").read()
 
 
 class FakeAffect:
@@ -37,6 +37,12 @@ class TestPrime(unittest.TestCase):
         self.assertEqual(default_router("почему GLM медленный?")["tier"], "deep_think")
         self.assertEqual(default_router("расскажи про Квебек")["tier"], "deep")
         self.assertTrue(default_router("почему?", {"deep_up": False})["degraded"])
+
+    def test_v4_soul_prioritizes_facts_respect_and_honesty(self):
+        self.assertIn("Отвечай Создателю на «вы»", SOUL)
+        self.assertIn("Не используй пафос", SOUL)
+        self.assertIn("Не соглашайся автоматически", SOUL)
+        self.assertIn("STOP Создателя", SOUL)
 
     def test_static_stable_and_history_clean(self):
         a = FakeAffect()
