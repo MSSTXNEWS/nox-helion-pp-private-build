@@ -1421,6 +1421,63 @@ def main():
           }
           return metrics.posts===afterPosts&&posts===1&&acks===0;
         }'''))
+        # An SSE reader must be cancelled when STOP races a hung UI delta,
+        # or a malformed stream is held. A clean EOF must not be cancelled.
+        # This is source-only Chromium; no live model/ACK/S03 operations.
+        check('STOP and malformed SSE release reader; normal EOF does not', page.evaluate('''async () => {
+          async function one(kind){
+            const s={conversation_id:'reader-finally',exchange_id:kind};
+            let posts=0,acks=0,cancels=0,deltas=0,notify;
+            const entered=new Promise(resolve=>{notify=resolve});
+            const bytes=kind==='invalid'
+              ?new Uint8Array([0xc3,0x28])
+              :new TextEncoder().encode(
+                'event: delta\\nid: frame-1\\ndata: Hello\\n\\n');
+            const stream=new ReadableStream({
+              start(controller){
+                controller.enqueue(bytes);
+                if(kind==='complete')controller.close();
+              },
+              cancel(){cancels++;}
+            });
+            const transport={...opts.transport,
+              async post(){posts++;return {ok:true,body:stream}},
+              async ack(){acks++;return true}
+            };
+            const ui={
+              onDelta(){
+                deltas++;notify();
+                if(kind==='stop')return new Promise(()=>{});
+                return Promise.resolve();
+              },
+              async upsertTerminal(){throw Error('NO_TERMINAL')}
+            };
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:1000
+            });
+            const pending=c.begin(s);
+            if(kind==='stop'){
+              const ready=await Promise.race([
+                entered.then(()=>true),
+                new Promise(r=>setTimeout(()=>r(false),350))
+              ]);
+              if(!ready||!c.stop(s))return false;
+            }
+            const result=await Promise.race([
+              pending.then(v=>v,e=>e.code),
+              new Promise(r=>setTimeout(()=>r('HUNG'),500))
+            ]);
+            await new Promise(r=>setTimeout(r,0));
+            return result===(kind==='stop'?'STOPPED':
+                kind==='invalid'?'HOLD_STREAM_INVALID_UTF8':
+                'STREAM_ENDED_READBACK_REQUIRED') &&
+              cancels===(kind==='complete'?0:1) &&
+              posts===1&&acks===0&&
+              deltas===(kind==='invalid'?0:1);
+          }
+          return await one('stop')&&await one('invalid')&&
+            await one('complete');
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
