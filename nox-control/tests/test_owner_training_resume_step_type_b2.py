@@ -3103,7 +3103,7 @@ class PreviousTrainingReceiptEnvelopeFence(unittest.TestCase):
                     if isinstance(n, ast.FunctionDef)
                     and n.name == "verify_previous_training_receipt")
         ns = {"SCHEMA": "NOX_OWNER_TRAINING_RESUME_V1",
-              "SERVICE": "nox-train-volta-t866u"}
+              "SERVICE": "nox-train-volta-t866u", "re": re}
         exec(compile(ast.Module(body=[node], type_ignores=[]),
                      str(SOURCE), "exec"), ns)
         check = ns["verify_previous_training_receipt"]
@@ -3157,6 +3157,21 @@ class PreviousTrainingReceiptEnvelopeFence(unittest.TestCase):
         with self.assertRaisesRegex(
                 RuntimeError, "^HOLD_PREVIOUS_TRAINING_RECEIPT$"):
             check(previous, pointer, unowned, boost, memory, media)
+
+        # R25: a separately supplied prior admission pointer can be a dict
+        # with no source_sha. That must produce a durable owner-lineage HOLD,
+        # not an uncaught KeyError from pointer['source_sha'].
+        for invalid in ("__MISSING__", None, [], True, "a" * 39,
+                        "A" * 40, "not-a-commit"):
+            with self.subTest(pointer_source_sha=repr(invalid)):
+                changed = copy.deepcopy(pointer)
+                if invalid == "__MISSING__":
+                    changed.pop("source_sha")
+                else:
+                    changed["source_sha"] = invalid
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_PREVIOUS_TRAINING_RECEIPT$"):
+                    check(previous, changed, policy, boost, memory, media)
 
 
 if __name__ == "__main__":
