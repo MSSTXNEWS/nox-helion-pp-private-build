@@ -1714,6 +1714,65 @@ def main():
           }
           return true;
         }'''))
+        # A bridge's returned object can be changed by an async DOM adapter.
+        # Pin both the rendered event and ACK cursor to the verified snapshot,
+        # and HOLD on null/array/bad identifiers before any DOM or ACK effect.
+        check('reconnect witness frozen before async UI/ACK and malformed HOLD', page.evaluate('''async () => {
+          const s={conversation_id:'witness-r20',exchange_id:'mutation'};
+          const candidate={safe_to_ack:true,model_post:false,
+            conversation_id:s.conversation_id,exchange_id:s.exchange_id,
+            projection_event_id:'event-original',ack_cursor:'cursor-original'};
+          let posts=0,gets=0,acks=0,event=null,cursor=null;
+          const transport={...opts.transport,
+            async post(){posts++;throw Error('must not POST')},
+            async readback(){gets++;return {exchange_id:s.exchange_id}},
+            async ack(_s,c){acks++;cursor=c;return true}
+          };
+          const ui={
+            async onDelta(){throw Error('must not delta')},
+            async upsertTerminal(_s,id,signal){
+              if(signal.aborted)throw Error('unexpected stop');
+              event=id;
+              candidate.projection_event_id='event-tampered';
+              candidate.ack_cursor='cursor-tampered';
+              await Promise.resolve();
+              return true;
+            }
+          };
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,ui,
+            bridge:{async acceptTerminal(){return candidate}},
+            reconnectReadTimeoutMs:500
+          });
+          const result=await c.reconnect(s);
+          if(event!=='event-original'||cursor!=='cursor-original'||
+            result.projection_event_id!=='event-original'||
+            result.ack_cursor!=='cursor-original'||posts!==0||
+            gets!==1||acks!==1)return false;
+          const unsafe=[
+            null,[],{...candidate,projection_event_id:''},
+            {...candidate,ack_cursor:null}
+          ];
+          for(let i=0;i<unsafe.length;i++){
+            const bad={conversation_id:'witness-r20',exchange_id:'bad-'+i};
+            let projected=0,sent=0,read=0;
+            const badClient=NOXB1StreamReconnect.createClient({
+              transport:{...transport,
+                async readback(){read++;return {}},
+                async ack(){sent++;return true}
+              },host:opts.host,
+              bridge:{async acceptTerminal(){return unsafe[i]}},
+              ui:{async onDelta(){},async upsertTerminal(){projected++;return true}},
+              reconnectReadTimeoutMs:500
+            });
+            const code=await badClient.reconnect(bad).then(
+              ()=>null,e=>e.code||e.name);
+            if(code!=='HOLD_STREAM_UNSAFE_WITNESS'||
+              projected!==0||sent!==0||read!==1)return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:

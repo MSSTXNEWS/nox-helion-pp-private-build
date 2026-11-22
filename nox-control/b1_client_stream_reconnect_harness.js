@@ -345,9 +345,21 @@
         if(err&&typeof err.code==='string') throw err;
         hold('HOLD_STREAM_READBACK');
       }
-      if(witness.safe_to_ack!==true||witness.model_post!==false||
-         witness.exchange_id!==s.exchange_id||witness.conversation_id!==s.conversation_id)
+      // The bridge is external to this opt-in client. An invalid witness
+      // must HOLD before DOM projection or ACK, not escape as a TypeError.
+      // Capture its complete trust-relevant scalar fields BEFORE awaiting
+      // UI/ACK callbacks: the original bridge object can be mutated while
+      // projection is pending, causing an event/cursor split-brain.
+      if(!witness||typeof witness!=='object'||Array.isArray(witness)||
+         witness.safe_to_ack!==true||witness.model_post!==false||
+         witness.exchange_id!==s.exchange_id||witness.conversation_id!==s.conversation_id||
+         typeof witness.projection_event_id!=='string'||
+         !ID.test(witness.projection_event_id)||
+         typeof witness.ack_cursor!=='string'||
+         witness.ack_cursor.length<1||witness.ack_cursor.length>2048||
+         /[\x00-\x1f\x7f]/.test(witness.ack_cursor))
         hold('HOLD_STREAM_UNSAFE_WITNESS');
+      witness=Object.freeze({...witness});
       // ACK must follow a *successful* idempotent UI projection. A partially
       // written UI may throw; retry must use the same event_id without POST.
       // A hung UI projection must not pin reconnect forever or authorize ACK.
