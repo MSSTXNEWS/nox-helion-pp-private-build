@@ -280,7 +280,15 @@
           // The unframed tail, unlike completed events, must be bounded.
           // A single unterminated oversized event is not a valid stream.
           if(frameTooLarge(buf)) hold('HOLD_STREAM_FRAME_TOO_LARGE');
-          if(part.done){streamComplete=true;break;}
+          // A clean EOF cannot finalize a half-written SSE event. EventSource
+          // discards unterminated data; NOX must surface uncertain delivery as
+          // HOLD and recover by canonical GET, NEVER re-POST the model turn.
+          // Trailing blank separators contain no event and are harmless.
+          if(part.done){
+            if(/[^\n]/.test(buf)) hold('HOLD_STREAM_TRUNCATED_SSE');
+            streamComplete=true;
+            break;
+          }
         }
         if(ctrl.signal.aborted) return stopped();
         return 'STREAM_ENDED_READBACK_REQUIRED';
