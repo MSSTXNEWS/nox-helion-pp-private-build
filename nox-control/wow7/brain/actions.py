@@ -122,6 +122,8 @@ class AnswerSettings:
         length_match = re.search(r"(?:max[_ -]?tokens|токен\w*|длин\w*|ответ\w*)\D{0,24}(\d{2,5})", raw, re.I)
         if length_match is None:
             length_match = re.search(r"\b(\d{3,5})\s*(?:токен\w*)?\b", raw, re.I)
+        if delta_match is not None:
+            length_match = None
         mode = None
         if re.search(r"\b(?:авто|automatic)\b", raw, re.I):
             mode = "auto"
