@@ -664,6 +664,9 @@ class Core:
                 body = json.loads(raw or b"{}")
             except ValueError:
                 return await netio.send_json(writer, 400, {"error": "bad_json"})
+            if path.startswith("/intent/") and getattr(self, "intent", None):       # nox_intent: «Мозг замысла»
+                st, obj = await asyncio.to_thread(self.intent.handle, method, path, qs, body)
+                return await netio.send_json(writer, st, obj)
             if method == "POST" and path == "/v1/core/eval/purge":
                 return await netio.send_json(writer, 200, self.purge_eval(body.get("bench"), body.get("conversation_id")))
             if method == "POST" and path == "/v1/stop":
@@ -749,6 +752,13 @@ class Core:
 
     async def start(self):
         self.server = await asyncio.start_server(self.handle, self.cfg.host, self.cfg.port)
+        try:
+            import nox_intent
+            self.intent = nox_intent.attach()
+            if self.intent:
+                self._intent_task = asyncio.create_task(self.intent.loop())
+        except Exception:
+            self.intent = None
         return self.server
 
 
