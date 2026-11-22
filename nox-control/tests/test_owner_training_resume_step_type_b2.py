@@ -46,6 +46,28 @@ def load_pinned_verifier(output):
 
 
 class CheckpointStepProvenance(unittest.TestCase):
+
+    def test_boost_policy_native_root_snapshot_fail_closed(self):
+        # Execute actual pinned verifier AST; never import or launch trainer.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        node = next((n for n in tree.body if isinstance(n, ast.FunctionDef)
+                     and n.name == "verify_policy"), None)
+        self.assertIsNotNone(node)
+        namespace = {"BOOST_REQUEST": "pinned-request",
+                     "BOOST_SOURCE": "a" * 40}
+        exec(compile(ast.Module(body=[node], type_ignores=[]),
+                     str(SOURCE), "exec"), namespace)
+        verify = namespace["verify_policy"]
+        valid = {"enabled": True, "mode": "TASK_BOOST",
+                 "request": "pinned-request", "source_sha": "a" * 40}
+        self.assertIsNone(verify(valid))
+        for malformed in (None, [], "offline", True, 1, {}, {"enabled": 1},
+                          {"enabled": False, "mode": "TASK_BOOST"}):
+            with self.subTest(snapshot=repr(malformed)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_NATIVE_BOOST_POLICY_CHANGED$"):
+                    verify(malformed)
+
     def test_native_training_process_census_fail_closed_before_admission(self):
         # Execute the actual source AST only; no process, trainer or GPU access.
         tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
