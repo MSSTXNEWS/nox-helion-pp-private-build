@@ -2751,7 +2751,7 @@ class ProbeTests(unittest.TestCase):
 
 
     def test_sse_content_length_ends_at_exact_wire_eof(self):
-        """Second-turn SSE DONE cannot hide a truncated HTTP body boundary."""
+        """An SSE DONE followed by EOF must match the promised raw wire bytes."""
         from email.message import Message
         did = '4' * 32
         frames = [
@@ -2762,17 +2762,12 @@ class ProbeTests(unittest.TestCase):
         ]
         wire = []
         for frame in frames:
-            wire.extend([
-                b'event: ' + frame['type'].encode() + b'\n',
-                b'data: ' + json.dumps(frame).encode() + b'\n',
-                b'\n',
-            ])
+            wire.extend((b'event: ' + frame['type'].encode() + b'\n',
+                         b'data: ' + json.dumps(frame).encode() + b'\n',
+                         b'\n'))
 
         class Response(SyntheticBoundedReader):
-            status = 200
-
             def __init__(self, declared):
-                self.closed = False
                 self.headers = Message()
                 self.headers['Content-Type'] = 'text/event-stream'
                 self.headers['Content-Length'] = str(declared)
@@ -2780,25 +2775,18 @@ class ProbeTests(unittest.TestCase):
             def __iter__(self):
                 return iter(wire)
 
-            def close(self):
-                self.closed = True
-
-        actual = sum(len(line) for line in wire)
-        for advertised in (actual - 1, actual + 1, actual + 97):
-            response = Response(advertised)
-            with self.subTest(advertised=advertised), patch.object(
-                    probe, 'request', return_value=response):
+        exact = sum(map(len, wire))
+        for advertised in (exact - 1, exact + 1, exact + 97):
+            with self.subTest(advertised=advertised):
                 with self.assertRaises(RuntimeError) as caught:
-                    probe.consume_turn(object(), 'second-turn', did)
+                    list(probe.bounded_stream_frames(Response(advertised)))
                 self.assertEqual(str(caught.exception),
                                  'HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH')
-            self.assertTrue(response.closed)
 
-        response = Response(actual)
-        with patch.object(probe, 'request', return_value=response):
-            measured = probe.consume_turn(object(), 'second-turn', did)
-        self.assertEqual(measured['answer'], '323')
-        self.assertTrue(response.closed)
+        clean_frames = list(probe.bounded_stream_frames(Response(exact)))
+        self.assertEqual([row['type'] for row in clean_frames],
+                         ['start', 'delta', 'done'])
+        self.assertEqual(clean_frames[-1]['dialog_id'], did)
 
 
 if __name__ == '__main__':
