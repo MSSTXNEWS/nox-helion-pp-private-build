@@ -74,36 +74,61 @@ def backup(db, bdir, keep=24, now=None):
     if not os.path.isfile(db):
         raise FileNotFoundError("нет базы памяти: %s" % db)
     os.makedirs(bdir, exist_ok=True)
-    now = now or time.time()
-    name = PREFIX + time.strftime("%Y%m%d-%H%M%S", time.gmtime(now)) + EXT
-    final, tmp = os.path.join(bdir, name), os.path.join(bdir, "." + name + ".tmp")
-    if os.path.exists(final):
-        name = name.replace(EXT, "-%d%s" % (int(now * 1000) % 1000, EXT))
+    now = now if now is not None else time.time()
+    stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime(now))
+    # Reserve each filename atomically: two overlapping backup jobs and two
+    # invocations with identical timestamps must never replace a good S03 copy.
+    # The zero-byte reservation is deliberately not a verified backup until
+    # its matching metadata is committed.
+    for serial in range(10000):
+        name = PREFIX + stamp + ("-%d" % serial if serial else "") + EXT
         final = os.path.join(bdir, name)
-    src = sqlite3.connect("file:%s?mode=ro" % db, uri=True)
-    dst = sqlite3.connect(tmp)
+        if os.path.lexists(final + ".json") or os.path.lexists(final + ".json.tmp"):
+            continue
+        try:
+            fd = os.open(final, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            continue
+        os.close(fd)
+        break
+    else:
+        raise RuntimeError("не удалось зарезервировать уникальное имя копии S03")
+
+    tmp = os.path.join(bdir, "." + name + ".tmp")
+    meta_tmp = final + ".json.tmp"
     try:
-        src.backup(dst)
-    finally:
-        dst.close()
-        src.close()
-    try:
+        if os.path.lexists(tmp) or os.path.lexists(meta_tmp):
+            raise RuntimeError("обнаружен незавершённый временный файл копии: HOLD")
+        src = sqlite3.connect("file:%s?mode=ro" % db, uri=True)
+        try:
+            dst = sqlite3.connect(tmp)
+            try:
+                src.backup(dst)
+            finally:
+                dst.close()
+        finally:
+            src.close()
         ok, detail = integrity(tmp)
         if not ok:
             raise RuntimeError("копия не прошла integrity_check: %s" % detail)
-        meta = {"created": now, "sha256": sha256_file(tmp), "size": os.path.getsize(tmp), "source": os.path.abspath(db),
+        meta = {"created": now, "sha256": sha256_file(tmp),
+                "size": os.path.getsize(tmp), "source": os.path.abspath(db),
                 "counts": counts(tmp), "integrity": "ok"}
-        os.replace(tmp, final)
+        with open(meta_tmp, "x", encoding="utf-8") as f:
+            json.dump(meta, f, ensure_ascii=False, indent=1)
+        os.replace(tmp, final)  # replaces only our own exclusive reservation
+        os.replace(meta_tmp, final + ".json")
     except Exception:
-        if os.path.exists(tmp):
-            os.remove(tmp)
+        # Only the filename reserved by this invocation is removed; never
+        # delete an earlier verified copy, its checksum, or a live database.
+        for p in (tmp, meta_tmp, final):
+            try:
+                os.remove(p)
+            except FileNotFoundError:
+                pass
         raise
-    with open(final + ".json.tmp", "w", encoding="utf-8") as f:
-        json.dump(meta, f, ensure_ascii=False, indent=1)
-    os.replace(final + ".json.tmp", final + ".json")
     removed = rotate(bdir, keep)
     return dict(meta, file=name, path=final, rotated_out=removed)
-
 
 def rotate(bdir, keep):
     """Оставить `keep` новейших копий (минимум 1). Возвращает имена удалённых."""
