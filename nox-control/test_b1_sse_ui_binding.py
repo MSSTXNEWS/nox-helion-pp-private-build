@@ -156,6 +156,31 @@ def main():
         }'''))
         check('DOM turn count remains exactly two', page.evaluate('()=>current().length===2'))
 
+        # Reattachment can encounter an older, legacy terminal intent that
+        # was started without AbortSignal. Fresh reconnect STOP must release
+        # its own waiter immediately rather than inheriting the old 350ms
+        # projection wait. The old projection is deliberately never released.
+        check('fresh STOP releases waiter on legacy signal-less terminal', page.evaluate('''async () => {
+          const container=document.createElement('section');
+          const s={conversation_id:'legacy-terminal',exchange_id:'stop-new'};
+          const beforePosts=metrics.posts,beforeAcks=metrics.acks;
+          const ui=NOXB1AbortSafeUI.createUiAdapter({
+            container,terminalTimeoutMs:350,
+            beforeCommit:kind=>kind==='terminal'?new Promise(()=>{}):Promise.resolve()
+          });
+          const legacy=ui.upsertTerminal(s,'canonical-event');
+          // Suppress the intentional old terminal timeout rejection.
+          legacy.catch(()=>{});
+          const signal=new AbortController();
+          const fresh=ui.upsertTerminal(s,'canonical-event',signal.signal);
+          signal.abort();
+          const result=await Promise.race([
+            fresh.then(v=>v,e=>e.code),
+            new Promise(resolve=>setTimeout(()=>resolve('HUNG'),75))
+          ]);
+          return result===false && container.children.length===0 &&
+            metrics.posts===beforePosts && metrics.acks===beforeAcks;
+        }'''))
         # Reproduce a real race in the abort-safe DOM adapter: a delta that
         # fails precommit after terminal intent is reserved must not prevent
         # the independently authenticated GET-only terminal from projecting.

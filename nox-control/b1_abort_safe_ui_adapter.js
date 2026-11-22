@@ -188,7 +188,10 @@
         // an already-aborted terminal projection. Wait for its reservation to
         // settle, then project the same server-verified event via GET-only
         // readback. Never overlap two writers or accept a different event ID.
-        if(signal&&pending.signal&&pending.signal!==signal){
+        // A legacy projection may have NO AbortSignal. A fresh reconnect
+        // waiter still owns its own STOP and must not wait for legacy's
+        // potentially hung precommit/deadline before returning HOLD.
+        if(signal&&pending.signal!==signal){
           // Reconnect can arrive before the old signal gets STOP. A new
           // live signal must observe the old result, then safely retry the
           // same canonical terminal event after an aborted old projection.
@@ -205,7 +208,8 @@
             },
             error=>{
               if(signal.aborted) return false;
-              if(pending.signal.aborted) return upsertTerminal(s,eventId,signal);
+              if(pending.signal&&pending.signal.aborted)
+                return upsertTerminal(s,eventId,signal);
               throw error;
             }
           );
