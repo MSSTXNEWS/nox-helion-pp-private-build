@@ -877,14 +877,29 @@ class TestProbe(unittest.TestCase):
                         const before=window.__nativeDirect.slice();
                         const allowed=await fetch(
                             '/api/nox/history?dialog_id='+id);
+                        // An explicit empty RequestInit body overrides the
+                        // original Request payload; it must NOT reach native.
+                        const oldRequest=new Request(location.origin+'/api/nox/chat',{
+                            method:'POST',body:JSON.stringify({
+                                message:'old-should-not-send',
+                                request_id:'b3-empty-body-override',
+                                dialog_id:id
+                            })
+                        });
+                        const invalid=await fetch(oldRequest,{body:''});
+                        const invalidData=await invalid.json();
                         return {statuses,before,
                             allowedStatus:allowed.status,
+                            emptyBodyStatus:invalid.status,
+                            emptyBodyError:invalidData.error,
                             direct:window.__nativeDirect.slice()};
                     }""")
                     self.assertEqual(result['statuses'],
                         [[422,'HOLD_OWNER_ROUTE_ALIAS']] * 16)
                     self.assertEqual(result['before'], [])
                     self.assertEqual(result['allowedStatus'], 200)
+                    self.assertEqual(result['emptyBodyStatus'], 400)
+                    self.assertEqual(result['emptyBodyError'], 'INVALID_JSON')
                     self.assertEqual(len(result['direct']), 1)
                     self.assertIn('/api/ui/memory/dialogs/history?',
                                   result['direct'][0])
