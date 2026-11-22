@@ -915,6 +915,33 @@ async function check(chunks, status=200) {
         self.assertEqual(owner_session_cookie_pin(legacy),
                          owner_session_cookie_pin([dict(client_ui)]))
 
+    def test_ru_es_owner_secure_cookie_downgrade_cannot_reuse_session_pin(self):
+        """Secure owner cookies must not silently become HTTP-eligible mid-chat."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='unchanged-owner-cookie', httpOnly=True, secure=True)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False, secure=False)
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        self.assertEqual(len(pin), 64)
+        self.assertTrue(owner_session_continuity_valid(200, [ui, signed], pin))
+        self.assertEqual(owner_session_cookie_pin([dict(signed)]), pin)
+        for downgrade in (False, None):
+            changed = dict(signed)
+            if downgrade is None:
+                changed.pop('secure')
+            else:
+                changed['secure'] = downgrade
+            with self.subTest(downgrade=downgrade):
+                self.assertNotEqual(owner_session_cookie_pin([changed]), pin)
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [ui, changed], pin))
+        # Legacy cookies with no Secure metadata retain their old stable pin.
+        legacy = dict(signed)
+        legacy.pop('secure')
+        self.assertEqual(owner_session_cookie_pin([legacy]),
+                         owner_session_cookie_pin([dict(legacy)]))
+
     def test_ru_es_presecond_readonly_history_owner_fence_prevents_stale_post(self):
         """Re-read first turn after composer delays, before Spanish model POST."""
         from types import SimpleNamespace

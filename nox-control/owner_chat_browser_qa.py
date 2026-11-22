@@ -412,7 +412,10 @@ def owner_session_cookie_pin(cookies):
         fields = tuple(cookie.get(key) for key in ('name', 'domain', 'path', 'value'))
         if any(not isinstance(field, str) or not field for field in fields):
             return None
-        fields += (cookie.get('httpOnly') is True,)
+        # A signed Secure cookie downgraded to an HTTP-eligible cookie
+        # must not reuse the same RU/ES owner-session pin.
+        fields += (cookie.get('httpOnly') is True,
+                   cookie.get('secure') is True)
         identity.append(fields)
     if len(set(fields[:3] for fields in identity)) != len(identity):
         return None
