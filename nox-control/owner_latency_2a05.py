@@ -137,8 +137,14 @@ def summarize(receipts: list[dict], *, model_sha256: str, route_sha256: str,
                   'ui_first_ms': stream.get('ui_first_ms'),
                   'first_turn_ms': row.get('elapsed_turn_ms'),
                   'second_turn_ms': row.get('multiturn_second_elapsed_ms')}
+        sample = {name: milliseconds(value) for name, value in sample.items()}
+        # TTFT and first visible token cannot occur after the first-turn
+        # terminal receipt. Reject impossible samples before aggregating p95.
+        require(sample['first_turn_ms'] >= sample['ttft_ms']
+                and sample['first_turn_ms'] >= sample['ui_first_ms'],
+                'INCONSISTENT_FIRST_TURN_TIMING')
         for name, value in sample.items():
-            values[name].append(milliseconds(value))
+            values[name].append(value)
     n = len(receipts)
     # Do not emit any raw receipt fields, IDs, prompts or private paths.
     return {'schema': SCHEMA, 'task_id': '2A05', 'samples': n,
