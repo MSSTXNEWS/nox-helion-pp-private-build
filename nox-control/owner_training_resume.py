@@ -1629,7 +1629,11 @@ def main():
         if (type(result['chat_after']) is not dict
                 or type(result['chat_after'].get('8080')) is not int
                 or result['chat_after']['8080'] != 200):
-            result['chat_health_regression'] = True; success = False
+            # A missing/degraded real chat must not coexist with a completed
+            # training admission receipt. Preserve prior error evidence.
+            result['chat_health_regression'] = True
+            result['state'] = 'HOLD_TRAINING_RESUME'
+            success = False
         save(); helper.emit('native_training_resume_receipt', result); os.close(fd)
     if success:
         print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
