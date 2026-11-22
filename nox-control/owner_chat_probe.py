@@ -594,6 +594,28 @@ def stream_frame_reports_failure(frame):
             return True
     return False
 
+def require_stream_dialog_provenance(frame, dialog_id):
+    """Reject foreign-dialog SSE fragments hidden in nested route metadata.
+
+    A terminal DONE must still bind its top-level identity separately.
+    This is transport provenance, NOT independent canonical S03 proof.
+    """
+    scopes = [frame]
+    for key in ('status', 'metadata', 'meta'):
+        nested = frame.get(key)
+        if isinstance(nested, dict):
+            scopes.append(nested)
+            inner = nested.get('status')
+            if isinstance(inner, dict):
+                scopes.append(inner)
+    for scope in scopes:
+        if 'dialog_id' in scope and scope['dialog_id'] != dialog_id:
+            code = ('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH'
+                    if frame.get('type') == 'done' else
+                    'HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH')
+            raise RuntimeError(code)
+
+
 def require_stream_model_identity(frame, previous=None):
     """Bind any explicitly reported model labels across one complete stream."""
     # Explicit model provenance can also be carried inside metadata or status.
@@ -845,11 +867,9 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             if kind not in ('preparing','start','started','delta','done','error','status','meta'):
                 raise RuntimeError('HOLD_STREAM_FRAME_TYPE')
             model_identity=require_stream_model_identity(frame,model_identity)
-            # A tagged intermediate SSE event from another session must never
-            # be folded into this dialog, even if a later DONE has the right ID.
-            # Legacy intermediate frames without dialog_id are still accepted.
-            if kind != 'done' and 'dialog_id' in frame and frame['dialog_id'] != dialog_id:
-                raise RuntimeError('HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH')
+            # Bind explicit session provenance in every supported SSE envelope.
+            # Untagged legacy intermediate frames remain compatible.
+            require_stream_dialog_provenance(frame, dialog_id)
             # A preterminal failure must poison the entire stream, even if
             # the backend subsequently emits a successful saved=true done.
             if kind not in ('done', 'error') and (
