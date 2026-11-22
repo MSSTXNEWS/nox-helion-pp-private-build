@@ -95,7 +95,9 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
     bodyAckClock:options.bodyAckClock??(()=>performance.now()),onReady:async()=>{
   setTimeout(async()=>{for(let i=0;i<(options.count??2);i++){
     const requestId=String(i+1),o=i===1?options:{},timestamp=Object.hasOwn(o,'requestTimestamp')?o.requestTimestamp:100+i;
-    const chunks=i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):
+    const chunks=Array.isArray(options.turnChunks?.[i])?
+      options.turnChunks[i].map(b=>Buffer.from(b)):
+      i===1&&chunksForSecondTurn?chunksForSecondTurn.map(b=>Buffer.from(b)):
       [Buffer.from(options.turnBodies?.[i]??(i===0&&Object.hasOwn(options,'firstBody')?options.firstBody:body))];
     const captured=Buffer.concat(chunks);
     c.bodies.set(requestId,i===1&&responseBodyForSecondTurn!==null?Buffer.from(responseBodyForSecondTurn):captured);
@@ -144,7 +146,9 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
     else for(const [index,chunk] of chunks.entries()){
       const encoded=chunk.toString('base64');
       const data=i===1&&typeof o.dataBase64Mutator==='function'?o.dataBase64Mutator(encoded,index):encoded;
-      c.emit('Network.dataReceived',{requestId,timestamp:Array.isArray(o.chunkTimestamps)?o.chunkTimestamps[index]:dataTime,data});
+      c.emit('Network.dataReceived',{requestId,timestamp:Array.isArray(options.turnChunkTimestamps?.[i])?
+        options.turnChunkTimestamps[i][index]:
+        Array.isArray(o.chunkTimestamps)?o.chunkTimestamps[index]:dataTime,data});
       // Fixture-only hook: observe an actual second-turn printable chunk BEFORE
       // model finish_reason=stop / [DONE], then simulate the CDP socket loss.
       if(i===1&&index===0&&typeof options.disconnectDuringSecondData==='function')
@@ -172,7 +176,8 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
     });
     if(!((i===0&&options.omitFirstClose)||(i===1&&options.omitSecondClose))){
       const closeFailed=i===0?options.firstLoadingFailed===true:o.loadingFailed===true;
-      const closeTimestamp=i===0&&Object.hasOwn(options,'firstCloseTimestamp')?
+      const closeTimestamp=Number.isFinite(options.turnCloseTimestamps?.[i])?
+        options.turnCloseTimestamps[i]:i===0&&Object.hasOwn(options,'firstCloseTimestamp')?
         options.firstCloseTimestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02;
       c.emit(closeFailed?'Network.loadingFailed':'Network.loadingFinished',
         {requestId,timestamp:closeTimestamp});
@@ -2721,4 +2726,67 @@ test('third request POST-data ACK is bounded and cannot resurrect or cross-certi
   }),/DUPLICATE_CDP_ID/,'conflicting replay after ACK must fail closed');
   assert.equal(replayed,1,'replay was physically delivered during observation');
   assert.equal((await run()).ttft_sse_verified,true,'two-turn healthy compatibility');
+});
+test('R21 third SSE TTFT starts at first completed printable delta, not heartbeat/blank/prefill',async()=>{
+  const delta=text=>'data: '+JSON.stringify({choices:[{delta:{content:text}}]})+'\n\n';
+  const terminal='data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n';
+  const pre=[': keepalive\n\n',delta('   '),delta('\u0301')];
+  const print=Buffer.from(delta('🧠 listo'),'utf8');
+  const emojiAt=print.indexOf(Buffer.from('🧠'));
+  assert.ok(emojiAt>0,'real UTF-8 multibyte printable delta must be split');
+  const thirdChunks=[
+    ...pre.map(x=>Buffer.from(x,'utf8')),
+    print.subarray(0,emojiAt+2),
+    print.subarray(emojiAt+2),
+    Buffer.from(terminal,'utf8')
+  ];
+  const thirdBody=Buffer.concat(thirdChunks).toString('utf8');
+  const observed=await run(false,null,null,null,{
+    count:3,turnBodies:[body,body,thirdBody],
+    turnChunks:{2:thirdChunks},
+    turnChunkTimestamps:{2:[102.010,102.014,102.018,102.023,102.027,102.031]},
+    turnCloseTimestamps:[null,null,102.040]
+  });
+  assert.equal(observed.cdp_consistent,true,'all three serialized bodies match independent hashes');
+  assert.equal(observed.ttft_sse_verified,true,'three-turn timing is complete');
+  assert.deepEqual(observed.turns.map(x=>x.cdp_request_id),['1','2','3']);
+  const third=observed.turns[2];
+  assert.equal(third.first_cdp_data_chunk_ms,10,'heartbeat is not a printable answer');
+  assert.equal(third.sse_first_text_event_ms,14,'whitespace is decoded before visible text');
+  assert.equal(third.sse_text_event_count,3,'whitespace + combining mark + printable delta');
+  assert.equal(third.ttft_ms,27,'partial UTF-8 bytes at 23ms cannot advance visible TTFT');
+  assert.equal(third.sse_last_text_event_ms,27);
+  assert.equal(third.sse_done_ms,31);
+  assert.equal(third.close_ms,40);
+  assert.equal(third.sse_done_to_loading_finished_ms,9);
+  assert.equal(third.sse_output_codepoints,11);
+  assert.equal(third.stream_timing_complete,true);
+  assert.equal(third.cdp_streamed_body_sha256,third.cdp_decoded_body_sha256);
+  const {createHash}=await import('node:crypto');
+  const expected='   ' + '\u0301' + '🧠 listo';
+  assert.equal(third.visible_text_sha256,createHash('sha256').update(expected).digest('hex'));
+  const pair=await run();
+  assert.equal(pair.ttft_sse_verified,true,'two-turn healthy regression control');
+  for(let i=0;i<2;i++){
+    for(const name of ['request_sha256','cdp_decoded_body_sha256','visible_text_sha256'])
+      assert.equal(observed.turns[i][name],pair.turns[i][name],'first two independent '+name);
+    assert.equal(observed.turns[i].ttft_ms,pair.turns[i].ttft_ms);
+  }
+  const noPrintable=pre.join('')+terminal;
+  const rejected=await run(false,null,null,null,{
+    count:3,turnBodies:[body,body,noPrintable]
+  });
+  assert.equal(rejected.cdp_consistent,true,'digest integrity alone must not prove printable timing');
+  assert.equal(rejected.ttft_sse_verified,false,'no printable third delta must fail triplet TTFT');
+  assert.equal(rejected.turns[2].ttft_ms,null,'heartbeats and combining marks cannot become TTFT');
+  assert.equal(rejected.turns[2].sse_done_ms,10,'DONE by itself is not visible output');
+  for(let i=0;i<2;i++)
+    assert.equal(rejected.turns[i].visible_text_sha256,pair.turns[i].visible_text_sha256);
+  for(const proof of [observed,rejected]){
+    assert.equal(proof.native_verified,false);
+    assert.equal(proof.browser_authenticated,false);
+    assert.equal(proof.canonical_s03_verified,false);
+    assert.equal(proof.one_model_post_per_turn_verified,false);
+    assert.doesNotMatch(JSON.stringify(proof),/keepalive|listo|secret|🧠/);
+  }
 });
