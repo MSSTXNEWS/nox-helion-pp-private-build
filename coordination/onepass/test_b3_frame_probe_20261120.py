@@ -76,9 +76,9 @@ class TestProbe(unittest.TestCase):
         # The actual comparison entrypoint must check both evidence directories.
         source = inspect.getsource(_measure_async)
         self.assertLess(source.index('verify_report_screenshots(old, baseline_path.parent)'),
-                        source.index('deltas = compare_baseline(result, old)'))
+                        source.index('deltas = compare_baseline(result, old, transition)'))
         self.assertLess(source.index('verify_report_screenshots(result, out)'),
-                        source.index('deltas = compare_baseline(result, old)'))
+                        source.index('deltas = compare_baseline(result, old, transition)'))
 
     def test_renderer_resource_identity_fail_closed(self):
         a = renderer_resource_identity([('script', 'const NOX = true;')],
