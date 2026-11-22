@@ -758,6 +758,7 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
     event_id = None
     seen_event_ids = set()
     retry_seen = False
+    initial_empty_lines = 0
 
     def parse_payload(payload):
         if payload == b'[DONE]':
@@ -774,6 +775,17 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
             raise RuntimeError('HOLD_STREAM_TRAILING_AFTER_DONE')
         if not isinstance(wire, bytes) or not wire.endswith(b'\n'):
             raise RuntimeError('HOLD_STREAM_MISSING_NEWLINE')
+        if mode is None and sse_allowed:
+            # A valid SSE transport may begin with a UTF-8 BOM and blank
+            # preamble records before its first event. These are not model
+            # evidence: limit them before allowing any stream to proceed.
+            if wire_index == 0 and wire.startswith(b'\xef\xbb\xbf'):
+                wire = wire[3:]
+            if wire in (b'\n', b'\r\n'):
+                initial_empty_lines += 1
+                if initial_empty_lines > 16:
+                    raise RuntimeError('HOLD_STREAM_SSE_PREAMBLE_LIMIT')
+                continue
         if mode is None:
             if sse_allowed and wire.startswith((b'data:', b'event:', b'id:', b'retry:', b':')):
                 mode = 'sse'

@@ -2591,6 +2591,126 @@ class ProbeTests(unittest.TestCase):
             self.assertTrue(response.closed)
 
 
+    def test_sse_utf8_bom_and_bounded_blank_preamble(self):
+        """Legal SSE preambles should not hide a working second-turn stream."""
+        from email.message import Message
+        did = '3' * 32
+        frames = [
+            {'type': 'start', 'dialog_id': did},
+            {'type': 'delta', 'dialog_id': did, 'text': '323'},
+            {'type': 'done', 'dialog_id': did, 'saved': True,
+             's03_integrated': True},
+        ]
+        wire = []
+        for frame in frames:
+            wire.extend([
+                b'event: ' + frame['type'].encode() + b'\n',
+                b'data: ' + json.dumps(frame).encode() + b'\n',
+                b'\n',
+            ])
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, rows, mime='text/event-stream'):
+                self.rows, self.closed = rows, False
+                self.headers = Message()
+                self.headers['Content-Type'] = mime
+
+            def __iter__(self):
+                return iter(self.rows)
+
+            def close(self):
+                self.closed = True
+
+        valid = (
+            [b'\n'] + wire,
+            [b'\r\n'] + wire,
+            [b'\xef\xbb\xbf' + wire[0]] + wire[1:],
+            [b'\xef\xbb\xbf\r\n', b'\r\n'] + wire,
+            [b'\n'] * 16 + wire,
+        )
+        for rows in valid:
+            response = Response(rows)
+            with self.subTest(valid_prefix=rows[:2]), patch.object(
+                    probe, 'request', return_value=response):
+                result = probe.consume_turn(object(), 'second-turn', did)
+            self.assertEqual(result['answer'], '323')
+            self.assertTrue(response.closed)
+
+        invalid = (
+            (Response([b'\n'] * 17 + wire),
+             'HOLD_STREAM_SSE_PREAMBLE_LIMIT'),
+            (Response([b'\n'] + wire, 'application/x-ndjson'),
+             'HOLD_STREAM_ENVELOPE_INVALID'),
+            (Response([b'\n', b'\xef\xbb\xbf' + wire[0]] + wire[1:]),
+             'HOLD_STREAM_ENVELOPE_INVALID'),
+        )
+        for response, expected in invalid:
+            with self.subTest(expected=expected), patch.object(
+                    probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, '^' + expected + '
+        """Foreign nested SSE dialog IDs cannot contaminate a same-dialog answer."""
+        did, foreign = '1' * 32, '2' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        for kind in ('status', 'meta', 'delta', 'done'):
+            for container in ('status', 'metadata', 'meta'):
+                for nested in (False, True):
+                    metadata = ({'status': {'dialog_id': foreign}} if nested
+                                else {'dialog_id': foreign})
+                    fragment = {'type': kind, container: metadata}
+                    if kind == 'delta':
+                        fragment['text'] = '323'
+                    if kind == 'done':
+                        fragment = dict(done, **{container: metadata})
+                        frames = [{'type': 'delta', 'text': '323'}, fragment]
+                    else:
+                        frames = [fragment, {'type': 'delta', 'text': '323'}, done]
+                    response = Response(frames)
+                    error = ('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH'
+                             if kind == 'done' else
+                             'HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH')
+                    with self.subTest(kind=kind, container=container,
+                                      nested=nested), patch.object(
+                            probe, 'request', return_value=response):
+                        with self.assertRaisesRegex(RuntimeError, '^' + error + '$'):
+                            probe.consume_turn(object(), 'second-turn', did)
+                    self.assertTrue(response.closed)
+
+        # Matching nested provenance and untagged legacy frames remain valid.
+        for nested in (True, False):
+            meta = {'meta': {'status': {'dialog_id': did}}} if nested else {}
+            response = Response([dict({'type': 'status'}, **meta),
+                                 {'type': 'delta', 'text': '323'}, done])
+            with self.subTest(valid_nested=nested), patch.object(
+                    probe, 'request', return_value=response):
+                self.assertEqual(
+                    probe.consume_turn(object(), 'second-turn', did)['answer'],
+                    '323')
+            self.assertTrue(response.closed)
+
+
+if __name__ == '__main__':
+    unittest.main()
+):
+                    probe.consume_turn(object(), 'second-turn', did)
+            self.assertTrue(response.closed)
+
+
     def test_nested_sse_dialog_provenance_cannot_mix_foreign_second_turn(self):
         """Foreign nested SSE dialog IDs cannot contaminate a same-dialog answer."""
         did, foreign = '1' * 32, '2' * 32
