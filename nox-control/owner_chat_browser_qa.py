@@ -765,7 +765,8 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     if require_full_transcript_pin:
         row_ids = [row.get('message_id') for row in expected_messages]
         if (any(not isinstance(value, str) or not value.strip()
-                or value != value.strip() for value in row_ids)
+                or value != value.strip() or not value.isprintable()
+                for value in row_ids)
                 or len({value.strip() for value in row_ids}) != len(expected_messages)):
             return False
     if require_full_transcript_pin and any(
