@@ -2819,6 +2819,22 @@ class S03ContentReindexNestedShapeFence(unittest.TestCase):
         self.assertEqual(verified["receipt_sha256"], content["receipt_sha256"])
         self.assertEqual(verified["current_embeddings"], 514)
 
+        # R33: Python False == 0 is not proof of a measured zero counter.
+        # Reject booleans in signed S03 reindex/holdout admission evidence.
+        for field_path in (("status", "stale_embeddings"),
+                           ("indexed_in_action",),
+                           ("legacy_vectors_remaining",),
+                           ("training_examples_accepted",)):
+            with self.subTest(counter=field_path):
+                candidate = copy.deepcopy(valid)
+                target = candidate
+                for key in field_path[:-1]:
+                    target = target[key]
+                target[field_path[-1]] = False
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_S03_CONTENT_REINDEX_CHAIN_REQUIRED$"):
+                    check(candidate, content, chain)
+
         for root in (None, [], "not-a-receipt"):
             with self.subTest(root=repr(root)):
                 with self.assertRaisesRegex(
@@ -2933,6 +2949,12 @@ class S03ContentReindexNestedShapeFence(unittest.TestCase):
         healthy = check(copy.deepcopy(valid), chain)
         self.assertEqual(healthy[lifecycle], scope["S03_PINS"][lifecycle])
         self.assertEqual(len(healthy), 2)
+        # R33: false is a JSON boolean, not an observed zero stale-vector count.
+        candidate = copy.deepcopy(valid)
+        candidate["content_reindex"]["stale_embeddings"] = False
+        with self.assertRaisesRegex(
+                RuntimeError, "^HOLD_S03_VERIFIED_CONTENT_REINDEX_REQUIRED$"):
+            check(candidate, chain)
 
         # A later valid S03 event must not launder an earlier failed event.
         # Repeated identical proof is ambiguous as well. Unrelated periodic

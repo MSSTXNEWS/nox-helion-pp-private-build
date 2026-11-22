@@ -537,7 +537,8 @@ def s03_activation_pins(receipt, upgrade_chain, request=None, source=None):
             or not re.fullmatch('[a-f0-9]{64}', str(content.get('receipt_sha256', '')))
             or type(content.get('current_embeddings')) is not int or content['current_embeddings'] < 514
             or type(content.get('indexed_in_action')) is not int or content['indexed_in_action'] < 0
-            or content.get('stale_embeddings') != 0 or content.get('legacy_vectors_relabelled') is not False):
+            or type(content.get('stale_embeddings')) is not int or content['stale_embeddings'] != 0
+             or content.get('legacy_vectors_relabelled') is not False):
         raise RuntimeError('HOLD_S03_VERIFIED_CONTENT_REINDEX_REQUIRED')
     workers = receipt.get('workers')
     if type(workers) is not dict:
@@ -640,21 +641,27 @@ def s03_content_reindex_proof(receipt, content, upgrade_chain):
             or receipt.get('prepare_receipt_sha256') != S03_PREPARE_RECEIPT_SHA
             or identity.get('content_sha256') != S03_MODEL_CONTENT_SHA or identity.get('identity') != S03_MODEL_IDENTITY
             or identity.get('dimensions') != 1024 or identity.get('full_file_hash_verified') is not True
-            or status.get('model_identity') != S03_MODEL_IDENTITY or status.get('stale_embeddings') != 0
+            or status.get('model_identity') != S03_MODEL_IDENTITY
+             or type(status.get('stale_embeddings')) is not int or status['stale_embeddings'] != 0
             or type(status.get('current_embeddings')) is not int
             or not 514 <= status['current_embeddings'] <= content['current_embeddings']
             or type(status.get('original_history_records_preserved')) is not int
             or status['original_history_records_preserved'] < 1014
             or type(before.get('legacy_identity_vectors')) is not int or before['legacy_identity_vectors'] < 0
-            or receipt.get('indexed_in_action') != content['indexed_in_action']
+            or type(receipt.get('indexed_in_action')) is not int
+             or receipt['indexed_in_action'] != content['indexed_in_action']
             or receipt['indexed_in_action'] < before['legacy_identity_vectors']
-            or receipt.get('legacy_vectors_remaining') != 0 or receipt.get('legacy_vectors_relabelled') is not False
+            or type(receipt.get('legacy_vectors_remaining')) is not int
+             or receipt['legacy_vectors_remaining'] != 0
+             or receipt.get('legacy_vectors_relabelled') is not False
             or receipt.get('historical_model_content_sha_known') is not False
             or receipt.get('canonical_originals_preserved') is not True
             or receipt.get('sources_and_flags_unchanged') is not True
             or receipt.get('training_hold_sha256') != upgrade_chain['training_hold_sha256']
             or receipt.get('training_pause_sha256') != upgrade_chain['training_hold_sha256']
-            or receipt.get('private_text_exported') is not False or receipt.get('training_examples_accepted') != 0
+            or receipt.get('private_text_exported') is not False
+             or type(receipt.get('training_examples_accepted')) is not int
+             or receipt['training_examples_accepted'] != 0
             or receipt.get('services_restarted') != [] or receipt.get('live_sources_changed') is not False
             or type(process.get('pid')) is not int or process['pid'] <= 0
             or type(process.get('starttime')) is not int or process['starttime'] <= 0
