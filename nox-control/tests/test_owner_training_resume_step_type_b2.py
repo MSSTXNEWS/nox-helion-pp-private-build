@@ -2819,6 +2819,18 @@ class S03ContentReindexNestedShapeFence(unittest.TestCase):
         self.assertEqual(verified["receipt_sha256"], content["receipt_sha256"])
         self.assertEqual(verified["current_embeddings"], 514)
 
+        # R35: a JSON float 1024.0 compares equal to the integer 1024 in
+        # Python but is not an authenticated integer embedding dimension.
+        for malformed_dimension in (1024.0, "1024", True, None):
+            with self.subTest(embedding_dimensions=repr(malformed_dimension)):
+                candidate = copy.deepcopy(valid)
+                candidate["content_identity"]["dimensions"] = malformed_dimension
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_S03_CONTENT_REINDEX_CHAIN_REQUIRED$"):
+                    check(candidate, content, chain)
+        # The canonical integer dimension remains accepted.
+        self.assertEqual(check(copy.deepcopy(valid), content, chain)["current_embeddings"], 514)
+
         # R33: Python False == 0 is not proof of a measured zero counter.
         # Reject booleans in signed S03 reindex/holdout admission evidence.
         for field_path in (("status", "stale_embeddings"),

@@ -640,7 +640,8 @@ def s03_content_reindex_proof(receipt, content, upgrade_chain):
             or receipt.get('prepare_source_sha') != '2a09e5975e0bfbd84e22bbaea1c0347a9b41ec63'
             or receipt.get('prepare_receipt_sha256') != S03_PREPARE_RECEIPT_SHA
             or identity.get('content_sha256') != S03_MODEL_CONTENT_SHA or identity.get('identity') != S03_MODEL_IDENTITY
-            or identity.get('dimensions') != 1024 or identity.get('full_file_hash_verified') is not True
+            or type(identity.get('dimensions')) is not int or identity['dimensions'] != 1024
+            or identity.get('full_file_hash_verified') is not True
             or status.get('model_identity') != S03_MODEL_IDENTITY
              or type(status.get('stale_embeddings')) is not int or status['stale_embeddings'] != 0
             or type(status.get('current_embeddings')) is not int
