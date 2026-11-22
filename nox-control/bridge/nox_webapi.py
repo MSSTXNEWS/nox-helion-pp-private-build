@@ -820,7 +820,25 @@ def install(app, B):
                 mem = ""
                 if use_mem:
                     yield fr(message={"role": "assistant", "content": ""}, done=False, nox_status="вспоминаю…", nox_event={"step": "memory", "text": "ищу в памяти S03"})
-                    mem = await asyncio.to_thread(B.memory_block, user)
+                    # S03 context is required when use_memory=True. A failed or
+                    # malformed lookup must HOLD before the model sees a context-
+                    # free prompt; never silently invent continuity or write S03.
+                    try:
+                        mem = await asyncio.to_thread(B.memory_block, user)
+                        if not isinstance(mem, str):
+                            raise TypeError("S03_MEMORY_LOOKUP_NON_TEXT")
+                    except Exception as e:
+                        B.log("web_memory_lookup_failed " + type(e).__name__)
+                        yield fr(status="HOLD", reason="S03_MEMORY_LOOKUP_FAILED",
+                                 done=False,
+                                 completion_receipt={"status": "HOLD", "request_id": rid,
+                                                     "upstream_done": False},
+                                 memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                       "s03_readback_verified": False},
+                                 memory_history={"status": "HOLD",
+                                                 "reason": "S03_MEMORY_LOOKUP_FAILED",
+                                                 "s03_readback_verified": False})
+                        return
                     # STOP can arrive while a slow S03 lookup is running.
                     # Never advance to planning or a new model POST afterward.
                     if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
