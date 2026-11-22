@@ -888,10 +888,39 @@ class TestProbe(unittest.TestCase):
                         });
                         const invalid=await fetch(oldRequest,{body:''});
                         const invalidData=await invalid.json();
+                        // A Request's original signal survives explicit init.body.
+                        // Aborting it must prevent even one native model POST.
+                        const aborter=new AbortController();
+                        const signalRequest=new Request(location.origin+'/api/nox/chat',{
+                            method:'POST',signal:aborter.signal,body:JSON.stringify({
+                                message:'old-model-prompt',
+                                request_id:'b3-signal-old',
+                                dialog_id:id
+                            })
+                        });
+                        aborter.abort();
+                        const stopped=await fetch(signalRequest,{body:JSON.stringify({
+                            message:'new-model-prompt',
+                            request_id:'b3-signal-new',
+                            dialog_id:id
+                        })});
+                        const stoppedFrame=await stopped.text();
+                        const jsonAborter=new AbortController();
+                        const jsonRequest=new Request(location.origin+'/api/nox/chat',{
+                            method:'POST',signal:jsonAborter.signal,
+                            body:JSON.stringify({message:'old-json-prompt'})
+                        });
+                        jsonAborter.abort();
+                        const stoppedJSON=await fetch(jsonRequest,{body:JSON.stringify({
+                            message:'new-json-prompt'
+                        })});
+                        const stoppedJSONData=await stoppedJSON.json();
                         return {statuses,before,
                             allowedStatus:allowed.status,
                             emptyBodyStatus:invalid.status,
                             emptyBodyError:invalidData.error,
+                            stoppedFrame,stoppedJSONStatus:stoppedJSON.status,
+                            stoppedJSONError:stoppedJSONData.error,
                             direct:window.__nativeDirect.slice()};
                     }""")
                     self.assertEqual(result['statuses'],
@@ -900,6 +929,10 @@ class TestProbe(unittest.TestCase):
                     self.assertEqual(result['allowedStatus'], 200)
                     self.assertEqual(result['emptyBodyStatus'], 400)
                     self.assertEqual(result['emptyBodyError'], 'INVALID_JSON')
+                    self.assertIn('"error":"STREAM_STOP_REQUESTED"', result['stoppedFrame'])
+                    self.assertNotIn('"type":"done"', result['stoppedFrame'])
+                    self.assertEqual(result['stoppedJSONStatus'], 503)
+                    self.assertEqual(result['stoppedJSONError'], 'STREAM_STOP_REQUESTED')
                     self.assertEqual(len(result['direct']), 1)
                     self.assertIn('/api/ui/memory/dialogs/history?',
                                   result['direct'][0])
