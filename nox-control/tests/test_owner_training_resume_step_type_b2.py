@@ -2717,5 +2717,147 @@ class S03ContentReindexNestedShapeFence(unittest.TestCase):
                     check(candidate, content, chain)
 
 
+    def test_s03_activation_nested_receipt_shape_fence(self):
+        # Extract the real source without entering training, GPU or production.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        node = next(item for item in tree.body
+                    if isinstance(item, ast.FunctionDef)
+                    and item.name == "s03_activation_pins")
+        root = Path("/root/nox")
+        lifecycle = root / "config/owner_task_lifecycle.json"
+        scope = {
+            "ROOT": root, "re": re,
+            "S03_ACTIVATION_REQUEST": "10001",
+            "S03_ACTIVATION_SOURCE": "a" * 40,
+            "S03_PREPARE_REQUEST": "10002",
+            "S03_PREPARE_RECEIPT_SHA": "b" * 64,
+            "S03_SOURCE_PINS": {"owner_s03_gateway": "c" * 64},
+            "S03_DISPATCHER_SHA": "d" * 64,
+            "S03_AFTER_SHA": "c" * 64,
+            "S03_GATEWAY_SHA": "a" * 64,
+            "S03_MODEL_CONTENT_SHA": "b" * 64,
+            "S03_MODEL_IDENTITY": "test-pinned-model",
+            "S03_PINS": {lifecycle: "f" * 64},
+            "UPGRADE_PINS": {lifecycle: "e" * 64},
+            "S03_BEFORE_SHA": "e" * 64,
+            "S03_PREPARE_GATEWAY_SHA": "d" * 64,
+        }
+        exec(compile(ast.Module(body=[node], type_ignores=[]),
+                     str(SOURCE), "exec"), scope)
+        check = scope["s03_activation_pins"]
+        chain = {"training_hold_sha256": "e" * 64}
+        process = {"pid": 202, "starttime": "700"}
+        valid = {
+            "schema": "NOX_OWNER_S03_ACTIVATION_V1",
+            "request": scope["S03_ACTIVATION_REQUEST"],
+            "source_sha": scope["S03_ACTIVATION_SOURCE"],
+            "state": "LIVE_SHARED_SEMANTIC_MEMORY_AND_NATIVE_INDEX_VERIFIED",
+            "prepare_request": scope["S03_PREPARE_REQUEST"],
+            "prepare_receipt_sha256": scope["S03_PREPARE_RECEIPT_SHA"],
+            "source_pins": scope["S03_SOURCE_PINS"],
+            "dispatcher_after_sha256": scope["S03_DISPATCHER_SHA"],
+            "s03_after_sha256": scope["S03_AFTER_SHA"],
+            "lifecycle_config_sha256": scope["S03_PINS"][lifecycle],
+            "training_hold_sha256": chain["training_hold_sha256"],
+            "rollback": False, "training_started": False,
+            "llama_restarted": False, "private_text_exported": False,
+            "weights_deleted": 0, "memory_records_deleted": 0,
+            "content_reindex": {
+                "schema": "NOX_OWNER_S03_CONTENT_REINDEX_V1",
+                "request": scope["S03_ACTIVATION_REQUEST"],
+                "source_sha": scope["S03_ACTIVATION_SOURCE"],
+                "state": "CONTENT_IDENTITY_AND_REEMBEDDED_INDEX_VERIFIED",
+                "gateway_sha256": scope["S03_GATEWAY_SHA"],
+                "model_identity": scope["S03_MODEL_IDENTITY"],
+                "model_content_sha256": scope["S03_MODEL_CONTENT_SHA"],
+                "receipt_sha256": "f" * 64,
+                "current_embeddings": 514, "indexed_in_action": 0,
+                "stale_embeddings": 0, "legacy_vectors_relabelled": False,
+            },
+            "workers": {"configured": 6, "observed": 6,
+                        "unique_active_claims": 3},
+            "model_process_before": process,
+            "model_process_after": dict(process),
+            "health_after": {"8080": 200, "8081": 200, "8082": 200},
+            "native_index_proof": {
+                "kind": "bounded_native_s03_index",
+                "scope": "BOUNDED_S03_VECTOR_INDEX",
+                "source_sha256": scope["S03_GATEWAY_SHA"],
+                "receipt_sha256": "f" * 64, "indexed": 0,
+                "stale_remaining": 0, "training_examples_accepted": 0,
+            },
+            "steps": [
+                {"kind": "s03_live_proxy_recall",
+                 "data": {"state": "SEMANTIC_LEXICAL_BOUNDED_PINS",
+                          "private_text_exported": False,
+                          "methods": {"semantic": 1, "hybrid": 0, "pin": 0}}},
+                {"kind": "s03_lifecycle_recall",
+                 "data": {"retrieval_kind": "SEMANTIC_LEXICAL_BOUNDED_PINS",
+                          "gateway_source_sha256": scope["S03_GATEWAY_SHA"],
+                          "source_sha256": scope["S03_AFTER_SHA"],
+                          "content_exported": False}},
+            ],
+            "installed_sources": [
+                {"name": lifecycle.name, "before": "e" * 64,
+                 "after": scope["S03_PINS"][lifecycle]},
+                {"name": "owner_senior_gateway.json",
+                 "before": "e" * 64, "after": "f" * 64},
+            ],
+        }
+        healthy = check(copy.deepcopy(valid), chain)
+        self.assertEqual(healthy[lifecycle], scope["S03_PINS"][lifecycle])
+        self.assertEqual(len(healthy), 2)
+
+        with self.assertRaisesRegex(
+                RuntimeError, "HOLD_VERIFIED_S03_ACTIVATION_REQUIRED"):
+            check(copy.deepcopy(valid), ["not-chain"])
+        # Every malformed receipt should return a named HOLD, not a Python
+        # AttributeError, TypeError or a false admission.
+        bad_fields = {
+            "content_reindex": "HOLD_S03_VERIFIED_CONTENT_REINDEX_REQUIRED",
+            "workers": "HOLD_S03_NATIVE_SIX_WORKERS_REQUIRED",
+            "health_after": "HOLD_S03_LIVE_CHAT_PROOF_REQUIRED",
+            "native_index_proof": "HOLD_S03_NATIVE_INDEX_PROOF_REQUIRED",
+            "steps": "HOLD_S03_ACTUAL_SEMANTIC_RECALL_REQUIRED",
+        }
+        for field, reason in bad_fields.items():
+            for malformed in ([], ["crafted"], True, "not-a-map"):
+                with self.subTest(field=field, value=repr(malformed)):
+                    candidate = copy.deepcopy(valid)
+                    candidate[field] = malformed
+                    with self.assertRaisesRegex(RuntimeError, reason):
+                        check(candidate, chain)
+        candidate = copy.deepcopy(valid)
+        candidate["steps"] = ["not-a-row"]
+        with self.assertRaisesRegex(
+                RuntimeError, "HOLD_S03_ACTUAL_SEMANTIC_RECALL_REQUIRED"):
+            check(candidate, chain)
+        for idx in (0, 1):
+            for malformed in ([], ["crafted"], True, "not-a-map"):
+                with self.subTest(step=idx, value=repr(malformed)):
+                    candidate = copy.deepcopy(valid)
+                    candidate["steps"][idx]["data"] = malformed
+                    with self.assertRaisesRegex(
+                            RuntimeError, "HOLD_S03_ACTUAL_SEMANTIC_RECALL_REQUIRED"):
+                        check(candidate, chain)
+        for malformed in ([], ["crafted"], True, "not-a-map"):
+            candidate = copy.deepcopy(valid)
+            candidate["steps"][0]["data"]["methods"] = malformed
+            with self.assertRaisesRegex(
+                    RuntimeError, "HOLD_S03_ACTUAL_SEMANTIC_RECALL_REQUIRED"):
+                check(candidate, chain)
+        for malformed in (True, 200.0):
+            candidate = copy.deepcopy(valid)
+            candidate["health_after"]["8080"] = malformed
+            with self.assertRaisesRegex(
+                    RuntimeError, "HOLD_S03_LIVE_CHAT_PROOF_REQUIRED"):
+                check(candidate, chain)
+        candidate = copy.deepcopy(valid)
+        candidate["installed_sources"][0]["name"] = []
+        with self.assertRaisesRegex(
+                RuntimeError, "HOLD_S03_INSTALLED_SOURCE_SET"):
+            check(candidate, chain)
+
+
 if __name__ == "__main__":
     unittest.main()
