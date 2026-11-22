@@ -39,7 +39,9 @@ class TrainingResumeAttestationTests(unittest.TestCase):
     def snapshot():
         return {
             "stop_active": False,
-            "onehost": {"healthy": True},
+            "onehost": {"healthy": True, "chat_waiting": False,
+                        "chat_p95_ms": 180, "chat_budget_ms": 400,
+                        "chat_metrics_age_sec": 1},
             "s03": {"readback_verified": True},
             "trainer": {
                 "running": False, "ready_for_resume": True,
@@ -91,6 +93,31 @@ class TrainingResumeAttestationTests(unittest.TestCase):
             with self.subTest(path=path, val=val):
                 s = self.snapshot()
                 s[path[0]][path[1]] = val
+                codes = [x["code"] for x in advisor.assess(
+                    s, owner_snapshot_verifier=lambda exact: exact is s)]
+                self.assertIn("TRAIN_RESUME_OWNER_HOLD", codes)
+                self.assertNotIn("TRAIN_RESUME_CANDIDATE", codes)
+
+    def test_chat_precedence_and_fresh_latency_gate_resume(self):
+        # A cached ready_for_resume must never compete with a waiting
+        # conversation, unverified chat status or exhausted latency budget.
+        cases = (
+            ("chat_waiting", True),
+            ("chat_waiting", None),
+            ("chat_waiting", "false"),
+            ("chat_p95_ms", 400),
+            ("chat_p95_ms", 900),
+            ("chat_p95_ms", None),
+            ("chat_p95_ms", 10**500),
+            ("chat_budget_ms", 0),
+            ("chat_budget_ms", None),
+            ("chat_metrics_age_sec", 31),
+            ("chat_metrics_age_sec", None),
+        )
+        for field, value in cases:
+            with self.subTest(field=field, value=str(value)[:20]):
+                s = self.snapshot()
+                s["onehost"][field] = value
                 codes = [x["code"] for x in advisor.assess(
                     s, owner_snapshot_verifier=lambda exact: exact is s)]
                 self.assertIn("TRAIN_RESUME_OWNER_HOLD", codes)
