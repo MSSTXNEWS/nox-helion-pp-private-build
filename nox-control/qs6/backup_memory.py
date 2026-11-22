@@ -177,8 +177,18 @@ def restore(backup_path, db, force=False):
     tmp = db + ".restore.tmp"
     d = os.path.dirname(os.path.abspath(db))
     os.makedirs(d, exist_ok=True)
-    shutil.copyfile(backup_path, tmp)
+    # Never overwrite another restore's staged SQLite snapshot.  The old
+    # copyfile() opened the shared path with truncation, even if it belonged
+    # to an interrupted owner, and could then delete that foreign file.
     try:
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError as exc:
+        raise RuntimeError("restore HOLD: существует чужой временный файл: " + tmp) from exc
+    try:
+        with os.fdopen(fd, "wb") as dst, open(backup_path, "rb") as src:
+            shutil.copyfileobj(src, dst)
+            dst.flush()
+            os.fsync(dst.fileno())
         ok, detail = integrity(tmp)
         with open(backup_path + ".json", encoding="utf-8") as mf:
             want = json.load(mf)["sha256"]
