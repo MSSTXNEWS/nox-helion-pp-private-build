@@ -81,7 +81,7 @@
     // STOP with an unclaimed HTTP response. Its body is read-only; release
     // the socket without waiting on cancel() or projecting/ACKing late data.
     // Only call this for abandoned preflight results, never live witnesses.
-    function cancelAbandonedPreflight(previous){
+    function cancelAbandonedGet(previous){
       try{
         const body=previous&&previous.body;
         if(!body||typeof body.cancel!=='function') return;
@@ -127,7 +127,7 @@
                 if(ctrl.signal.aborted){
                   // Race() may have already returned STOP, but the ignored
                   // GET still owns a body. Cancel it exactly once on settle.
-                  cancelAbandonedPreflight(previous);
+                  cancelAbandonedGet(previous);
                   return {aborted:true};
                 }
                 return {previous};
@@ -145,7 +145,7 @@
         if(preflight.aborted||ctrl.signal.aborted){
           // The GET can resolve immediately before STOP wins the race;
           // release its body here instead of retaining an orphaned socket.
-          if(!preflight.aborted) cancelAbandonedPreflight(preflight.previous);
+          if(!preflight.aborted) cancelAbandonedGet(preflight.previous);
           return stopped();
         }
         if(preflight.storageError) hold('HOLD_STREAM_STORAGE');
@@ -393,14 +393,25 @@
     // when STOP, deadline, or transport failure wins. Never repeat a POST.
     async function boundedGet(thunk,code,deadlineMs,signal){
       const controller=new AbortController();
-      let completed=false;
+      let completed=false,abandoned=false;
       try{
+        // The transport may ignore AbortSignal and resolve after a STOP or
+        // deadline with an unclaimed HTTP response body. Race() prevents
+        // resuming UI/ACK but does not close that late GET connection.
         const answer=await boundedRead(
-          ()=>thunk(controller.signal),code,deadlineMs,signal);
+          ()=>Promise.resolve().then(()=>thunk(controller.signal))
+            .then(value=>{
+              if(abandoned||controller.signal.aborted||
+                 (signal&&signal.aborted)) cancelAbandonedGet(value);
+              return value;
+            }),code,deadlineMs,signal);
         completed=true;
         return answer;
       }finally{
-        if(!completed) controller.abort();
+        if(!completed){
+          abandoned=true;
+          controller.abort();
+        }
       }
     }
     // One in-flight GET/readback + UI projection + ACK per exchange per tab.
