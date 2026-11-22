@@ -375,9 +375,16 @@ def _finish_upload(child):
     require(child.returncode == 0, "STREAM_UPLOAD")
 
 
+def direct_https_opener():
+    """Use trusted HTTPS origin directly; never inherit HTTP(S)_PROXY env."""
+    # urllib otherwise injects a ProxyHandler from the process environment.
+    # A proxy could receive signed source URLs or bypass pinned-origin checks.
+    return urllib.request.build_opener(urllib.request.ProxyHandler({}), VerifiedRedirect())
+
+
 def stream_https(m, target, config):
     """Direct HTTP response -> rclone rcat --size; no complete local spool."""
-    opener = urllib.request.build_opener(VerifiedRedirect())
+    opener = direct_https_opener()
     request = urllib.request.Request(m["source_url"],
                                      headers={"User-Agent": "NOX-Drive-First/1"})
     h = hashlib.sha256()
