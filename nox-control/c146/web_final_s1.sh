@@ -2,8 +2,7 @@
 # c146: итоговая правка веба «Резонанс». Файлы берутся с raw.githubusercontent.com (main). Ничего не удаляется; перед правкой старых страниц делается копия *.bak-c146.
 W=/root/nox/web
 R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/s1web/wow
-# 1) чат: только корневой chat.html (classic/ и pc/ не трогаем); стили и скрипт - везде, где лежат под этим именем
-curl -fsSL $R/chat.html -o /tmp/c146_chat.html && grep -q 'id="btnThreads"' /tmp/c146_chat.html && cp /tmp/c146_chat.html $W/chat.html && echo "patched $W/chat.html"
+# 1) стили и скрипт чата - везде, где лежат под этим именем (chat.html не трогаем: правки только в css/js)
 for f in nox-wow.css nox-wow.js; do for T in $(find $W -name $f -not -path '*/classic/*'); do curl -fsSL $R/$f -o $T && echo "patched $T"; done; done
 curl -fsSL $R/nox-wow-fix.css -o $W/nox-wow-fix.css && echo "put $W/nox-wow-fix.css"
 # 2) lottie для чата (были 404)
