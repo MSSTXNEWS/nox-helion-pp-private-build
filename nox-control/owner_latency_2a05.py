@@ -9,12 +9,15 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
+import stat
 from pathlib import Path
 
 SCHEMA = 'NOX_2A05_LATENCY_BASELINE_V1'
 SHA = re.compile(r'[0-9a-f]{64}\Z')
 MIN_RUNS = 20
+MAX_RECEIPT_BYTES = 5_000_000
 FIELDS = ('ttft_ms', 'ui_first_ms', 'first_turn_ms', 'second_turn_ms')
 
 
@@ -54,6 +57,35 @@ def parse_receipts(raw: str) -> object:
 
     return json.loads(raw, object_pairs_hook=unique_fields,
                       parse_constant=reject_constant)
+
+
+def read_receipt_file(path: Path) -> str:
+    """Read a bounded, stable regular file through one non-following descriptor.
+
+    The old stat-then-read_text sequence could follow a substituted symlink or
+    read a growing/changed file well beyond the intended memory limit.
+    """
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        before = os.fstat(fd)
+        require(stat.S_ISREG(before.st_mode) and 0 <= before.st_size <= MAX_RECEIPT_BYTES,
+                'INPUT_SIZE_OR_TYPE')
+        parts: list[bytes] = []
+        total = 0
+        while total <= MAX_RECEIPT_BYTES:
+            chunk = os.read(fd, min(65536, MAX_RECEIPT_BYTES + 1 - total))
+            if not chunk:
+                break
+            parts.append(chunk)
+            total += len(chunk)
+        after = os.fstat(fd)
+        require(total == before.st_size and total <= MAX_RECEIPT_BYTES
+                and (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns)
+                == (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns),
+                'INPUT_CHANGED')
+        return b''.join(parts).decode('utf-8')
+    finally:
+        os.close(fd)
 
 
 def summarize(receipts: list[dict], *, model_sha256: str, route_sha256: str,
@@ -129,9 +161,7 @@ def main() -> int:
     ap.add_argument('--scenario-sha256', required=True,
                     help='owner-verified SHA-256 of one fixed latency test scenario')
     args = ap.parse_args()
-    require(args.json_file.is_file() and args.json_file.stat().st_size <= 5_000_000,
-            'INPUT_SIZE')
-    raw = args.json_file.read_text(encoding='utf-8')
+    raw = read_receipt_file(args.json_file)
     result = summarize(parse_receipts(raw), model_sha256=args.model_sha256,
                        route_sha256=args.route_sha256,
                        scenario_sha256=args.scenario_sha256)
