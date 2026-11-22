@@ -171,5 +171,6 @@ ab)
   for i in $(seq 1 60); do grep -q "^long" /root/nox/logs/glm_bench.out && break; sleep 3; done
   cat /root/nox/logs/glm_bench.out
   ;;
+glmlog2) pgrep -af "llama-server|python" | cut -c1-140; tail -n 8 /root/nox/logs/glm_server.log | cut -c1-220; curl -s -m2 localhost:8081/health; nvidia-smi --query-gpu=memory.used --format=csv,noheader; uptime;;
 *) echo unknown;;
 esac
