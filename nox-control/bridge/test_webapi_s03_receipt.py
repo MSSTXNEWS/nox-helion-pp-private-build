@@ -1973,6 +1973,8 @@ class FactReceiptTest(unittest.TestCase):
 
         chat = next(route.endpoint for route in self.app.routes
                     if route.path == "/api/chat")
+        snapshot = next(route.endpoint for route in self.app.routes
+                        if route.path == "/api/chat/snapshot")
         bridge = self.bridge
         bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
         bridge.LAST_CHAT, bridge.SOUL = {"t": 0}, None
@@ -1987,14 +1989,25 @@ class FactReceiptTest(unittest.TestCase):
                 "use_memory": False,
                 "messages": [{"role": "user", "content": "Продолжай"}],
             }))
-            return [json.loads(frame) async for frame in response.body_iterator]
+            frames = [json.loads(frame) async for frame in response.body_iterator]
+            sid = frames[0]["stream_id"]
+            snap = await snapshot(stream_id=sid, request_id="many-deltas-utf8")
+            row = W.CHAT_SNAPSHOTS[sid]
+            return (frames, json.loads(snap.body),
+                    len(row.get("text_chunks", [])), "text" in row)
 
         with mock.patch.object(W, "W", None), \
              mock.patch.object(W, "CANCEL", set()), \
              mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
              mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \
              mock.patch.dict(sys.modules, {"s03_memory": memory}):
-            frames = asyncio.run(scenario())
+            frames, saved, chunks, retained_legacy_text = asyncio.run(scenario())
+        self.assertEqual(saved["message"]["content"], expected)
+        self.assertEqual(saved["event_seq"], len(frames))
+        self.assertEqual(saved["snapshot_integrity"], "COMPLETE")
+        self.assertFalse(saved["s03_readback_verified"])
+        self.assertEqual(chunks, len(fragments))
+        self.assertFalse(retained_legacy_text)
         self.assertEqual("".join(f.get("message", {}).get("content", "")
                                  for f in frames), expected)
         self.assertEqual(captured[0]["stream"], True)
