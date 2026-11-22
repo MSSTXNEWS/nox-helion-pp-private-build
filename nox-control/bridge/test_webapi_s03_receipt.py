@@ -941,11 +941,16 @@ class FactReceiptTest(unittest.TestCase):
                 "messages": [{"role": "user", "content": "Вопрос"}]}))
             return [json.loads(chunk) async for chunk in response.body_iterator]
 
-        for verdict, expected_ok in (
-            (RuntimeError("verifier unavailable"), None),
-            (["invalid", "verdict"], None),
-            ({"ok": 1, "doubt": "wrong boolean"}, None),
-            ({"ok": True}, True),
+        for verdict, expected_ok, suffix in (
+            (RuntimeError("verifier unavailable"), None, ""),
+            (["invalid", "verdict"], None, ""),
+            ({"ok": 1, "doubt": "wrong boolean"}, None, ""),
+            ({"ok": True}, True, ""),
+            # Valid decisions can carry unsafe incidental metadata from a plugin.
+            # It must never reach terminal SSE or suppress an S03 persistence.
+            ({"ok": True, "debug": object()}, True, ""),
+            ({"ok": False, "doubt": "сомнение", "debug": object()},
+             False, "\n\n⚠ Скептик: сомнение"),
         ):
             with self.subTest(verdict_type=type(verdict).__name__, expected_ok=expected_ok):
                 writes.clear()
@@ -957,7 +962,9 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertEqual(terminal["completion_receipt"]["status"], "GENERATED")
                 self.assertEqual(terminal["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
                 self.assertFalse(terminal["memory_write_receipt"]["s03_readback_verified"])
-                self.assertEqual(writes, [("Вопрос", "Ответ модели")])
+                self.assertEqual(writes, [("Вопрос", "Ответ модели" + suffix)])
+                if isinstance(verdict, dict) and "debug" in verdict:
+                    self.assertNotIn("debug", terminal["skeptic"])
                 self.assertEqual(terminal["skeptic"]["ok"], expected_ok)
                 if expected_ok is None:
                     self.assertEqual(terminal["skeptic"]["reason"], "SKEPTIC_UNAVAILABLE")
