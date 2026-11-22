@@ -3474,5 +3474,47 @@ async function check(chunks, status=200) {
                 browser.close()
 
 
+    def test_firstturn_and_secondturn_reject_noncanonical_row_ids_before_s03(self):
+        """Explicit row IDs with invisible/padded text cannot prove RU/ES continuity.
+
+        The first history gate must reject them before the Spanish POST, not
+        merely during a later postreload four-row verification. No native POST.
+        """
+        prompt = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        first = [
+            {"role": "user", "content": RU, "message_id": "frío-uno"},
+            {"role": "assistant", "content": FIRST, "message_id": "niño-dos"},
+        ]
+        complete = first + [
+            {"role": "user", "content": prompt, "message_id": "español-tres"},
+            {"role": "assistant", "content": LAST, "message_id": "café-cuatro"},
+        ]
+        self.assertTrue(firstturn_history_valid(
+            {"messages": first}, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            complete, RU, FIRST, prompt, LAST, DIALOG))
+        for malicious in (" padded", "padded ", "word\\tpart",
+                          "word\\npart", "\\u200bhidden", "a\\u2066b",
+                          "a\\u200db", "word\\rpart"):
+            with self.subTest(id=ascii(malicious)):
+                corrupt_first = [dict(row) for row in first]
+                corrupt_first[0]["message_id"] = malicious
+                self.assertFalse(firstturn_history_valid(
+                    {"messages": corrupt_first}, RU, FIRST, DIALOG))
+                corrupt_four = [dict(row) for row in complete]
+                corrupt_four[2]["message_id"] = malicious
+                self.assertFalse(multiturn_history_valid(
+                    corrupt_four, RU, FIRST, prompt, LAST, DIALOG))
+        legacy_first = [{k: v for k, v in row.items() if k != "message_id"}
+                        for row in first]
+        legacy_complete = [{k: v for k, v in row.items() if k != "message_id"}
+                           for row in complete]
+        self.assertTrue(firstturn_history_valid(
+            {"messages": legacy_first}, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            legacy_complete, RU, FIRST, prompt, LAST, DIALOG))
+
+
+
 if __name__ == "__main__":
     unittest.main()

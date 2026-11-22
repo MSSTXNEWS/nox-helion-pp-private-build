@@ -399,7 +399,11 @@ def distinct_explicit_message_ids(rows):
     an ID is explicitly supplied it must be a nonblank string and unique.
     """
     ids = [row['message_id'] for row in rows if 'message_id' in row]
-    return (all(isinstance(mid, str) and bool(mid.strip()) for mid in ids)
+    # A nonblank but padded or invisible identifier is not durable row
+    # provenance. Reject it at the FIRST owner-history gate, before any
+    # Spanish follow-up; preserve valid Unicode and legacy absent IDs.
+    return (all(isinstance(mid, str) and bool(mid)
+                and mid == mid.strip() and mid.isprintable() for mid in ids)
             and len(ids) == len(set(ids)))
 
 
