@@ -16,6 +16,7 @@ class AnswerSettingsTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_plain_increase_uses_bounded_default_step(self):
+        self.assertTrue(self.manager.is_request("увеличь длину ответа"))
         reply = self.manager.process("увеличь длину ответа", "alice")
         self.assertEqual(self.manager.get("alice")[0]["max_tokens"], 2000)
         self.assertIn("2000", reply)
