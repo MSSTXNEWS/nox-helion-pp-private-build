@@ -10,6 +10,22 @@ nvidia-smi --query-gpu=memory.used --format=csv,noheader
 echo '== NOX_D2_RESOURCE_SNAPSHOT_V1 =='
 printf 'sample_utc='; date -u +%Y-%m-%dT%H:%M:%SZ
 printf 'loadavg='; awk '{print $1, $2, $3}' /proc/loadavg
+# Bounded 1s host CPU sample: host-wide busy percentage, not cgroup quota admission.
+if [ -r /proc/stat ]; then
+  read -r _ u1 n1 s1 i1 w1 irq1 sirq1 steal1 rest1 < /proc/stat
+  sleep 1
+  read -r _ u2 n2 s2 i2 w2 irq2 sirq2 steal2 rest2 < /proc/stat
+  if [[ "$u1" =~ ^[0-9]+$ && "$u2" =~ ^[0-9]+$ && "$steal1" =~ ^[0-9]+$ && "$steal2" =~ ^[0-9]+$ ]]; then
+    dtotal=$((u2+n2+s2+i2+w2+irq2+sirq2+steal2-u1-n1-s1-i1-w1-irq1-sirq1-steal1))
+    didle=$((i2+w2-i1-w1))
+    if (( dtotal > 0 && didle >= 0 && didle <= dtotal )); then
+      cpu_tenths=$(((dtotal-didle)*1000/dtotal))
+      printf 'host_cpu_busy_pct_1s=%d.%d\n' "$((cpu_tenths/10))" "$((cpu_tenths%10))"
+    else echo 'host_cpu_busy_pct_1s=unavailable'; fi
+  else echo 'host_cpu_busy_pct_1s=unavailable'; fi
+else
+  echo 'host_cpu_busy_pct_1s=unavailable'
+fi
 awk '/^MemTotal:|^MemAvailable:/ {printf "%s%s_KiB=%s", (NR==1?"":" "), substr($1,1,length($1)-1), $2} END {print ""}' /proc/meminfo
 for k in memory.current memory.max memory.events cpu.stat; do
   p="/sys/fs/cgroup/$k"
