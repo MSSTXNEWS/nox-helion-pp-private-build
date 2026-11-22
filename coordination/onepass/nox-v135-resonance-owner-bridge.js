@@ -382,7 +382,8 @@
           // Legacy history is display-only; malformed roles or content HOLD.
           if(data.messages.some(m=>!m||typeof m!=='object'||Array.isArray(m)||
              (m.role!=='user'&&m.role!=='assistant')||
-             typeof m.content!=='string'||!validUnicodeScalars(m.content)))
+             typeof m.content!=='string'||!validUnicodeScalars(m.content)||
+              !validCorrelationId(m.exchange_id,6)))
             throw Error('HOLD_DIALOG_HISTORY_ROWS');
           return responseJSON({dialog_id:did,messages:data.messages.map(m=>({
             role:m.role,content:m.content,created_at:m.ts||'',status:'saved'
