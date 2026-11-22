@@ -2209,7 +2209,7 @@ class FinalChatHealthReceiptFence(unittest.TestCase):
         main = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
                     and node.name == "main")
         guards = [node for node in ast.walk(main)
-                  if isinstance(node, ast.If) and len(node.body) == 2
+                  if isinstance(node, ast.If) and len(node.body) == 3
                   and isinstance(node.body[0], ast.Assign)
                   and "chat_health_regression" in ast.unparse(node.body[0])]
         self.assertEqual(len(guards), 1)
@@ -2221,15 +2221,21 @@ class FinalChatHealthReceiptFence(unittest.TestCase):
                           {"8080": 200.0}, {"8080": "200"},
                           {"8080": float("nan")}, {"8080": 503}):
             with self.subTest(chat_after=repr(malformed)):
-                scope = {"result": {"chat_after": malformed}, "success": True}
+                scope = {"result": {"chat_after": malformed,
+                                    "state": "CONTINUATION_TARGET_1000_COMPLETED"},
+                         "success": True}
                 exec(code, scope)
                 self.assertFalse(scope["success"])
                 self.assertIs(scope["result"]["chat_health_regression"], True)
+                self.assertEqual(scope["result"]["state"], "HOLD_TRAINING_RESUME")
 
-        scope = {"result": {"chat_after": {"8080": 200}}, "success": True}
+        scope = {"result": {"chat_after": {"8080": 200},
+                            "state": "CONTINUATION_TARGET_1000_COMPLETED"},
+                 "success": True}
         exec(code, scope)
         self.assertTrue(scope["success"])
         self.assertNotIn("chat_health_regression", scope["result"])
+        self.assertEqual(scope["result"]["state"], "CONTINUATION_TARGET_1000_COMPLETED")
 
 
 
