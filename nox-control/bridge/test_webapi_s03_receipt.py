@@ -448,6 +448,69 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertTrue(any(expected_error in msg for msg in bridge.errors))
 
 
+    def test_skeptic_annotation_never_bypasses_s03_utf8_budget(self):
+        """1A03: invalid or oversized optional skeptic text cannot poison S03."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Ответ"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        class Thinking:
+            def __init__(self, doubt): self.doubt = doubt
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return False
+            def mode_hint(self, *args): return ""
+            async def skeptic(self, *args, **kwargs):
+                return {"ok": False, "doubt": self.doubt}
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.NKEEP, bridge.LAST_CHAT = 0, {"t": 0}
+        bridge.SOUL = None
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Проверка"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def scenario():
+            response = await chat(Request({
+                "mode": "thoughtful", "use_memory": False,
+                "messages": [{"role": "user", "content": "Проверка"}]}))
+            return [json.loads(chunk) async for chunk in response.body_iterator]
+
+        for doubt, accepted in (
+            ("x" * W.MAX_CHAT_OUTPUT_UTF8_BYTES, False),
+            ("\ud800", False),
+            (["not", "text"], False),
+            ("Сомневаюсь", True),
+        ):
+            with self.subTest(accepted=accepted, kind=type(doubt).__name__):
+                writes.clear()
+                with mock.patch.object(W, "W", Thinking(doubt)), \
+                     mock.patch.dict(sys.modules, {"s03_memory": memory}):
+                    frames = asyncio.run(scenario())
+                terminal = frames[-1]
+                self.assertTrue(terminal["done"])
+                self.assertEqual(terminal["completion_receipt"]["status"], "GENERATED")
+                self.assertEqual(terminal["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+                self.assertEqual(len(writes), 1)
+                suffix = "\n\n⚠ Скептик: Сомневаюсь" if accepted else ""
+                self.assertEqual(writes[0][1], "Ответ" + suffix)
+                if not accepted:
+                    self.assertEqual(terminal["skeptic"]["reason"],
+                                     "SKEPTIC_ANNOTATION_INVALID_OR_OVERSIZE")
+                self.assertTrue(all(frame.get("status") != "HOLD" for frame in frames))
+
     def test_stop_during_memory_or_prompt_assembly_never_posts_model(self):
         """1A04: accepted STOP after a slow phase must not start GPU inference."""
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
