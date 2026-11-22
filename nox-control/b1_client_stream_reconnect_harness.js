@@ -119,7 +119,9 @@
         const res=posted.res;
         if(!res||res.ok!==true||!res.body||typeof res.body.getReader!=='function')
           hold('HOLD_STREAM_POST_RESPONSE');
-        const reader=res.body.getReader(),decoder=new TextDecoder();
+        // Never silently replace malformed/incomplete UTF-8 with U+FFFD in
+        // a model delta. An ambiguous stream must recover from canonical GET.
+        const reader=res.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
         let buf='',swallowNextLF=false;
         while(true){
           if(ctrl.signal.aborted) return stopped();
@@ -157,8 +159,12 @@
           // immediately (without waiting for another chunk or EOF), but
           // swallow a following LF if CRLF was split between reads. Even
           // zero-character TextDecoder outputs must preserve this fence.
-          let decoded=part.done?decoder.decode():
-            decoder.decode(part.value,{stream:true});
+          let decoded;
+          try{
+            // EOF flush also rejects a truncated final multibyte sequence.
+            decoded=part.done?decoder.decode():
+              decoder.decode(part.value,{stream:true});
+          }catch(_){hold('HOLD_STREAM_INVALID_UTF8');}
           if(swallowNextLF&&decoded.length){
             if(decoded[0]==='\n') decoded=decoded.slice(1);
             swallowNextLF=false;
