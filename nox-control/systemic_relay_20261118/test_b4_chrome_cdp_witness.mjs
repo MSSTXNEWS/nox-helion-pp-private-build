@@ -1890,3 +1890,79 @@ test('late FIRST ExtraInfo after its body ACK during SECOND SSE revokes first on
   assert.equal(beyondCapture,1);
   assert.equal(JSON.stringify(sealed),snapshot);
 });
+
+test('late FIRST responseReceived replay during SECOND SSE revokes first only',async()=>{
+  // Each request ID has independent provenance; a terminal FIRST response
+  // must not be revived or attributed to the still-open SECOND SSE stream.
+  const clean=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  assert.deepEqual(clean.turns.map(t=>t.cdp_request_id),['1','2']);
+  for(const [name,response] of [
+    ['identical-replay',{status:200,mimeType:'text/event-stream',
+      url:'http://localhost/api/nox/chat',headers:{}}],
+    ['contradictory-503',{status:503,mimeType:'text/event-stream',
+      url:'http://localhost/api/nox/chat',headers:{}}],
+    ['compressed-replay',{status:200,mimeType:'text/event-stream',
+      url:'http://localhost/api/nox/chat',headers:{'Content-Encoding':'gzip'}}],
+    ['cached-replay',{status:200,mimeType:'text/event-stream',
+      url:'http://localhost/api/nox/chat',headers:{},fromDiskCache:true}]
+  ]){
+    let firstAck=false,ackBeforeSecond=false,delivered=0;
+    const observed=await run(false,null,null,null,{
+      quiescenceMs:80,
+      responseBodySettled:(id,status)=>{
+        if(id==='1'&&status==='resolved')firstAck=true;
+      },
+      lifecycleDuringSecond:session=>{
+        ackBeforeSecond=firstAck;
+        delivered++;
+        session.emit('Network.responseReceived',{
+          requestId:'1',timestamp:100.04,frameId:'fixture-frame',
+          loaderId:'fixture-loader',response,hasExtraInfo:false});
+      }
+    });
+    assert.equal(ackBeforeSecond,true,name+' FIRST response body ACK precedes SECOND');
+    assert.equal(delivered,1,name+' FIRST replay reached CDP while SECOND in flight');
+    assert.equal(observed.cdp_consistent,false,name+' pair must fail closed');
+    assert.equal(observed.ttft_sse_verified,false,name);
+    assert.deepEqual(observed.turns.map(t=>t.cdp_request_id),['1','2']);
+    const first=observed.turns[0],second=observed.turns[1];
+    for(const key of ['request_sha256','cdp_streamed_body_sha256',
+      'cdp_decoded_body_sha256'])
+      assert.deepEqual(first[key],clean.turns[0][key],name+' first '+key);
+    assert.equal(first.cdp_decoded_body_matches_stream,false,name);
+    assert.equal(first.ttft_ms,null,name);
+    assert.equal(first.sse_done_ms,null,name);
+    assert.equal(first.visible_text_sha256,null,name);
+    assert.equal(first.stream_timing_complete,false,name);
+    for(const key of ['cdp_request_id','request_sha256','cdp_streamed_body_sha256',
+      'cdp_decoded_body_sha256','cdp_decoded_body_matches_stream',
+      'visible_text_sha256','ttft_ms','sse_done_ms',
+      'sse_done_to_loading_finished_ms','stream_timing_complete'])
+      assert.deepEqual(second[key],clean.turns[1][key],name+' second '+key);
+    assert.equal(second.stream_timing_complete,true,name);
+    assert.equal(second.ttft_ms,10,name+' synthetic CDP only');
+    assert.doesNotMatch(JSON.stringify(observed),/secret|Hello|data:/,name);
+  }
+  // The returned witness is sealed: a later Chrome notification cannot
+  // retroactively certify or poison it, and no lifetime guarantee is made.
+  let afterCapture=0;
+  const sealed=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      afterCapture++;
+      session.emit('Network.responseReceived',{
+        requestId:'1',timestamp:100.04,frameId:'fixture-frame',
+        loaderId:'fixture-loader',hasExtraInfo:false,
+        response:{status:503,mimeType:'text/event-stream',
+          url:'http://localhost/api/nox/chat',headers:{}}});
+    },90)
+  });
+  assert.equal(sealed.cdp_consistent,true);
+  assert.equal(afterCapture,0);
+  const snapshot=JSON.stringify(sealed);
+  await new Promise(resolve=>setTimeout(resolve,125));
+  assert.equal(afterCapture,1);
+  assert.equal(JSON.stringify(sealed),snapshot);
+});
