@@ -376,6 +376,12 @@
           const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+did+'&limit='+limit,init);
           if(data.status!=='READY'||data.dialog_id!==did||!Array.isArray(data.messages))
             throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
+          // Do not render untrusted/non-text S03 rows as successful saved chat.
+          // Legacy history is display-only; malformed roles or content HOLD.
+          if(data.messages.some(m=>!m||typeof m!=='object'||Array.isArray(m)||
+             (m.role!=='user'&&m.role!=='assistant')||
+             typeof m.content!=='string'||!validUnicodeScalars(m.content)))
+            throw Error('HOLD_DIALOG_HISTORY_ROWS');
           return responseJSON({dialog_id:did,messages:data.messages.map(m=>({
             role:m.role,content:m.content,created_at:m.ts||'',status:'saved'
           }))});
