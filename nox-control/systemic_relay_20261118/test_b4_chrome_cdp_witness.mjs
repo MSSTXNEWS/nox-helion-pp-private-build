@@ -2106,3 +2106,64 @@ test('late FIRST requestWillBeSent replay during SECOND stream revokes first not
   assert.equal(afterCapture,1);
   assert.equal(JSON.stringify(sealed),snapshot);
 });
+
+test('SECOND midstream abort before DONE rejects pair but retains independently proven FIRST',async()=>{
+  const clean=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  assert.equal(clean.turns[0].stream_timing_complete,true);
+  assert.equal(clean.turns[1].stream_timing_complete,true);
+  const visibleOnly=body.slice(0,body.indexOf('data: {"choices":[{"delta":{}'));
+  const stoppedWithoutDone=body.slice(0,body.indexOf('data: [DONE]'));
+  assert.ok(visibleOnly.includes('Hello')&&!visibleOnly.includes('[DONE]'));
+  assert.ok(stoppedWithoutDone.includes('finish_reason')&&!stoppedWithoutDone.includes('[DONE]'));
+  for(const [name,partialBody,loadingFailed] of [
+    ['aborted-network-after-visible',visibleOnly,true],
+    ['aborted-network-after-stop-no-DONE',stoppedWithoutDone,true],
+    ['clean-HTTP-close-after-visible-only',visibleOnly,false],
+    ['clean-HTTP-close-after-stop-no-DONE',stoppedWithoutDone,false]
+  ]){
+    // The browser saw a printable answer delta before the second transport
+    // stopped. It is not proof of a completed or durable model response.
+    const seen=await run(false,[Buffer.from(partialBody)],null,null,
+      {loadingFailed,quiescenceMs:80});
+    assert.deepEqual(seen.turns.map(t=>t.cdp_request_id),['1','2'],name);
+    assert.equal(seen.cdp_consistent,false,name+' pair body must fail closed');
+    assert.equal(seen.ttft_sse_verified,false,name+' pair timing must fail closed');
+    const [first,second]=seen.turns;
+    for(const key of ['request_sha256','cdp_streamed_body_sha256',
+      'cdp_decoded_body_sha256','cdp_decoded_body_matches_stream',
+      'visible_text_sha256','ttft_ms','sse_done_ms',
+      'sse_done_to_loading_finished_ms','stream_timing_complete'])
+      assert.deepEqual(first[key],clean.turns[0][key],name+' FIRST '+key);
+    assert.equal(first.stream_timing_complete,true,name);
+    assert.equal(first.ttft_ms,10,name+' FIRST fixture CDP timing');
+    assert.equal(second.cdp_decoded_body_matches_stream,false,name);
+    assert.equal(second.ttft_ms,null,name);
+    assert.equal(second.sse_done_ms,null,name);
+    assert.equal(second.visible_text_sha256,null,name);
+    assert.equal(second.stream_timing_complete,false,name);
+    assert.equal(second.sse_done_to_loading_finished_ms,null,name);
+    assert.ok(second.request_sha256,name+' SECOND request diagnostic retained');
+    assert.ok(second.cdp_streamed_body_sha256,name+' SECOND partial streamed digest');
+    assert.ok(second.cdp_decoded_body_sha256,name+' SECOND partial decoded digest');
+    assert.notEqual(second.cdp_streamed_body_sha256,
+      clean.turns[1].cdp_streamed_body_sha256,name+' body was truncated');
+    assert.doesNotMatch(JSON.stringify(seen),/secret|Hello|data:/,name);
+  }
+  // Finite capture evidence cannot rule out notifications outside its window.
+  let lateEvents=0;
+  const sealed=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      lateEvents++;
+      session.emit('Network.loadingFailed',{requestId:'2',timestamp:101.04});
+    },90)
+  });
+  assert.equal(sealed.cdp_consistent,true);
+  assert.equal(lateEvents,0);
+  const pinned=JSON.stringify(sealed);
+  await new Promise(resolve=>setTimeout(resolve,130));
+  assert.equal(lateEvents,1);
+  assert.equal(JSON.stringify(sealed),pinned);
+});

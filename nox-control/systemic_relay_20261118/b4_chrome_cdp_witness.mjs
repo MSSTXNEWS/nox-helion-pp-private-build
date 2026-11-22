@@ -458,6 +458,13 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       if(!x.streaming||x.extraExpected===null||
          (x.extraExpected===true&&x.extraSeen!==1)||
          (x.extraExpected===false&&x.extraSeen!==0))x.missing=true;
+      // HTTP loadingFinished only closes the transport. Visible SSE text
+      // without both model finish_reason=stop and terminal [DONE] is NOT a
+      // completed answer, even when getResponseBody matches the stream.
+      // Keep the earlier turn independently intact when turn two aborts.
+      if(!x.finishStop||x.done===null||!validTime(x.finishStopAt)||
+         !validTime(x.doneAt)||!validTime(x.closeAt)||
+         x.finishStopAt>x.doneAt||x.doneAt>x.closeAt)x.missing=true;
       try{x.partial+=x.decoder.decode();}catch{x.missing=true;}
       if(x.partial.length!==0)x.missing=true;
       x.streamDigest=x.streamHasher.digest('hex');
