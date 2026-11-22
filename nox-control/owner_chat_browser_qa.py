@@ -564,6 +564,33 @@ def root_history_session_valid(history, rows):
                     for row in rows if isinstance(row, dict)))
 
 
+
+def firstturn_root_session_continuity_valid(first_history, completed_history):
+    """Keep the root owner-session provenance pinned through the Spanish turn.
+
+    The initial RU history and the completed RU/ES history can each be
+    individually well formed while belonging to different root sessions.
+    Even identical persisted message IDs and row texts do not make a
+    wholesale root scope switch safe. Entirely legacy unscoped envelopes
+    remain compatible; a root pin cannot silently appear or disappear.
+    This is browser-history proof only, not canonical S03 acceptance.
+    """
+    if not isinstance(first_history, dict) or not isinstance(completed_history, dict):
+        return False
+    first_rows = first_history.get('messages')
+    completed_rows = completed_history.get('messages')
+    if (not isinstance(first_rows, list) or len(first_rows) != 2
+            or not isinstance(completed_rows, list) or len(completed_rows) != 4
+            or not consistent_explicit_row_session_ids(first_rows)
+            or not consistent_explicit_row_session_ids(completed_rows)
+            or not root_history_session_valid(first_history, first_rows)
+            or not root_history_session_valid(completed_history, completed_rows)):
+        return False
+    return (('session_id' in first_history, first_history.get('session_id'))
+            == ('session_id' in completed_history,
+                completed_history.get('session_id')))
+
+
 def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
     """Require the first persisted turn to belong to the owner QA dialog.
 
@@ -1804,6 +1831,8 @@ async def browser_run(report, directory, available):
                 second_scope_valid=('dialog_id' not in second_history
                                     or second_history['dialog_id']==did)
                 second_saved=(second_scope_valid
+                              and firstturn_root_session_continuity_valid(
+                                  history, second_history)
                               and firstturn_session_continuity_valid(
                                   rows, second_rows)
                               and firstturn_prefix_identity_valid(
