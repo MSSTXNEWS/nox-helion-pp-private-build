@@ -21,7 +21,9 @@ def snapshot():
             "cpu_io": {"cpu_busy_pct": 40, "io_wait_pct": 2, "age_sec": 1},
             "disk": {"free_gib": 100},
             "native_queue": {"active_claims": False, "maintenance_busy": False,
-                             "resource_headroom_bytes": 3*1024**3}}
+                             "resource_headroom_bytes": 3*1024**3,
+                             "owner_evidence_age_sec": 2,
+                             "owner_lease_cas_verified": True}}
 
 
 def codes(s):
@@ -159,6 +161,28 @@ class GpuSourceEvidenceTests(unittest.TestCase):
                 s["native_queue"][field] = value
                 observed = codes(s)
                 self.assertIn("GPU_RESIDUAL_OWNER_UNVERIFIED", observed)
+                self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", observed)
+
+    def test_low_gpu_utilization_does_not_override_cgroup_or_owner_gates(self):
+        # 6A04: even owner-attested low utilization must not contradict
+        # native RAM pressure or stale/missing owner authorization.
+        for field, value in (
+            ("resource_headroom_bytes", None),
+            ("resource_headroom_bytes", 0),
+            ("resource_headroom_bytes", 2 * 1024**3 - 1),
+            ("resource_headroom_bytes", True),
+            ("owner_evidence_age_sec", None),
+            ("owner_evidence_age_sec", 31),
+            ("owner_evidence_age_sec", True),
+            ("owner_lease_cas_verified", False),
+            ("owner_lease_cas_verified", None),
+        ):
+            with self.subTest(field=field, value=value):
+                s = snapshot()
+                s["native_queue"][field] = value
+                observed = [x["code"] for x in mod.assess(
+                    s, owner_snapshot_verifier=lambda exact: exact is s)]
+                self.assertIn("GPU_RESIDUAL_RESOURCE_HOLD", observed)
                 self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", observed)
 
     def test_high_valid_utilization_is_not_admission(self):
