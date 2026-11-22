@@ -153,11 +153,18 @@
           }
           if(outcome.readError) hold('HOLD_STREAM_POST_OR_READ');
           const part=outcome.part;
-          if(part.done) break;
-          // Decode and normalize the WHOLE buffered tail. A network chunk may
-          // end with CR while the next starts with LF: normalizing each chunk
-          // separately leaves CRLF intact and silently drops valid SSE deltas.
-          buf=(buf+decoder.decode(part.value,{stream:true})).replace(/\r\n/g,'\n');
+          // EventSource permits CR, LF and CRLF line endings. Keep a trailing
+          // CR unresolved until the next network read: it might be the first
+          // half of CRLF, and treating it as LF early would create a false
+          // blank line when the next chunk starts with LF.
+          // At EOF flush the decoder and the final pending CR so a CR-only
+          // blank line at the end of a stream can dispatch its frame.
+          if(part.done){
+            buf=(buf+decoder.decode()).replace(/\r\n?|\r/g,'\n');
+          }else{
+            buf=(buf+decoder.decode(part.value,{stream:true}))
+              .replace(/\r\n|\r(?=[\s\S])/g,'\n');
+          }
           let e;
           while((e=buf.indexOf('\n\n'))>=0){
             // Bound EACH frame, not the aggregate transport read. One chunk
@@ -215,6 +222,7 @@
           // The unframed tail, unlike completed events, must be bounded.
           // A single unterminated oversized event is not a valid stream.
           if(buf.length>65536) hold('HOLD_STREAM_FRAME_TOO_LARGE');
+          if(part.done) break;
         }
         if(ctrl.signal.aborted) return stopped();
         return 'STREAM_ENDED_READBACK_REQUIRED';
