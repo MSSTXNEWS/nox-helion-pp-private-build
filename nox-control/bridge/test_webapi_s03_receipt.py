@@ -173,6 +173,69 @@ class FactReceiptTest(unittest.TestCase):
         self.assertNotIn("expired", snapshots)
         self.assertIn("fresh", snapshots)
 
+    def test_1a02_completed_request_retry_cannot_duplicate_s03_turn(self):
+        """A recent request ID is one non-ephemeral generation, not a new S03 write."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT = {"t": 0}
+        writes, model_calls = [], []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        class Upstream:
+            status_code = 200
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                return False
+
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"готово"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs):
+                model_calls.append(1)
+                return Upstream()
+
+        bridge.hc = lambda: Client()
+        body = {"request_id": "stable-req-1a02", "mini": True, "use_memory": False,
+                "messages": [{"role": "user", "content": "Проверка повторного POST"}]}
+
+        async def scenario():
+            first = await chat(Request(body))
+            first_frames = [json.loads(x) async for x in first.body_iterator]
+            second = await chat(Request(body))
+            second_status = second.status_code
+            second_body = json.loads(second.body)
+            # TTL/eviction is deliberately NOT durable idempotency. Once the
+            # bounded entry expires, a new request may be admitted again.
+            W.CHAT_SNAPSHOTS[first_frames[0]["stream_id"]]["updated_at"] = (
+                W.time.monotonic() - W.CHAT_SNAPSHOT_TTL_S - 1)
+            third = await chat(Request(body))
+            third_frames = [json.loads(x) async for x in third.body_iterator]
+            return first_frames, second_status, second_body, third_frames
+
+        with (mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
+              mock.patch.object(W, "W", None),
+              mock.patch.dict(sys.modules, {"s03_memory": memory})):
+            first_frames, status, rejected, third_frames = asyncio.run(scenario())
+        self.assertTrue(first_frames[-1]["done"])
+        self.assertEqual(status, 409)
+        self.assertEqual(rejected, {
+            "status": "HOLD", "reason": "CHAT_REQUEST_ID_RECENTLY_USED",
+            "retry_same_id": False, "snapshot_scope": "PROCESS_LOCAL",
+            "s03_readback_verified": False,
+        })
+        self.assertTrue(third_frames[-1]["done"])
+        self.assertEqual(len(model_calls), 2)
+        self.assertEqual(len(writes), 2)
+
     def test_missing_legacy_request_id_is_unique_and_stop_addressable(self):
         # A real chat endpoint first frame, without any model POST or S03 write.
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
