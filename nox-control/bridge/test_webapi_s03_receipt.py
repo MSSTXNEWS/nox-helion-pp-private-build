@@ -529,5 +529,53 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(pending, known)
 
 
+    def test_1a04_live_scoped_stop_survives_unknown_id_capacity(self):
+        """A real admitted chat remains stoppable when unknown tombstones fill the cap."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
+        known = {f"pending-{i}" for i in range(W.MAX_PENDING_SCOPED_STOPS)}
+        writes = []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        def request(rid):
+            return Request({"request_id": rid, "mini": True, "use_memory": False,
+                            "messages": [{"role": "user", "content": "please stop"}]})
+
+        async def scenario():
+            live_a = await chat(request("live-a"))
+            live_b = await chat(request("live-b"))
+            # Both IDs are admitted BEFORE a single SSE frame is consumed.
+            admitted = set(W.ACTIVE_CHAT_IDS)
+            duplicate = await chat(request("live-a"))
+            denied_unknown = await stop(Request({"scope": "generation", "request_id": "never-seen"}))
+            stopped_a = await stop(Request({"scope": "generation", "request_id": "live-a"}))
+            other_untouched = "live-b" not in W.CANCEL
+            frames = [json.loads(x) async for x in live_a.body_iterator]
+            first_b = json.loads(await live_b.body_iterator.__anext__())
+            await live_b.body_iterator.aclose()
+            return admitted, duplicate, denied_unknown, stopped_a, other_untouched, frames, first_b, set(W.ACTIVE_CHAT_IDS)
+
+        with mock.patch.object(W, "CANCEL", set(known)), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            admitted, duplicate, denied, issued, untouched, frames, first_b, active_after = asyncio.run(scenario())
+        self.assertEqual(admitted, {"live-a", "live-b"})
+        self.assertEqual(duplicate.status_code, 409)
+        self.assertEqual(json.loads(duplicate.body)["reason"], "CHAT_DUPLICATE_INFLIGHT_REQUEST_ID")
+        self.assertEqual(denied.status_code, 429)
+        self.assertEqual(issued["status"], "STOPPING")
+        self.assertEqual(issued["target_request_id"], "live-a")
+        self.assertTrue(untouched)
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
+        self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+        self.assertEqual(frames[-1]["memory_history"]["status"], "SKIPPED")
+        self.assertEqual(first_b["request_id"], "live-b")
+        self.assertEqual(active_after, set())
+        self.assertEqual(writes, [])
+
+
+
 if __name__ == "__main__":
     unittest.main()
