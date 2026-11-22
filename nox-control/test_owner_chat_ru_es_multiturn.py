@@ -360,6 +360,28 @@ async function check(chunks, status=200) {
                         matching_writer, matching_reader, DIALOG, aliased,
                         require_full_transcript_pin=True))
 
+    def test_strict_s03_rejects_invisible_control_row_ids(self):
+        """Matched witness hashes cannot legitimize invisible message identities."""
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        clean = [dict(row, message_id=f"msg-{i}")
+                 for i, row in enumerate(rows(es))]
+        writer, reader = s03_proof(clean)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, clean, require_full_transcript_pin=True))
+        for index in range(4):
+            for suffix in ("\\u200b", "\\u2060", "\\u202e", "\\x00"):
+                with self.subTest(row=index, suffix=repr(suffix)):
+                    bad = [dict(row) for row in clean]
+                    bad[index]["message_id"] += suffix
+                    matched_writer, matched_reader = s03_proof(bad)
+                    self.assertFalse(canonical_s03_proof_valid(
+                        matched_writer, matched_reader, DIALOG, bad,
+                        require_full_transcript_pin=True))
+        # Exact existing legacy, non-strict 4-row validation is not tightened.
+        legacy_writer, legacy_reader = s03_proof(clean)
+        self.assertTrue(canonical_s03_proof_valid(
+            legacy_writer, legacy_reader, DIALOG, clean))
+
     def test_firstturn_message_ids_survive_spanish_followup_readback(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         final_rows = [
