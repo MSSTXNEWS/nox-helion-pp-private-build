@@ -25,6 +25,8 @@ MAX_PENDING_SCOPED_STOPS = 4096
 # An active request's targeted STOP must never be denied by unknown tombstones.
 ACTIVE_CHAT_IDS = set()
 MAX_ACTIVE_CHAT_IDS = 128
+# Bound the canonical response before a corrupt upstream can exhaust RAM or S03.
+MAX_CHAT_OUTPUT_UTF8_BYTES = 128 * 1024
 # Increment-only broadcast STOP epoch: a new request cannot clear an older stream's STOP.
 CANCEL_ALL_EPOCH = 0
 _lock = None
@@ -585,6 +587,7 @@ def install(app, B):
         async def gen():
             t0, n, shown = time.time(), 0, 0
             full = ""
+            output_utf8_bytes = 0
             yield fr(message={"role": "assistant", "content": ""}, done=False, nox_status="слушаю тебя…",
                      request_receipt={"status": "RECEIVED", "request_id": rid, "native_admission_verified": False})
             async with (_lock_mini if mini else _lock):
@@ -705,6 +708,16 @@ def install(app, B):
                                 if not isinstance(t, str):
                                     upstream_failure = "UPSTREAM_CONTENT_INVALID"
                                     break
+                                # A JSON escaped lone surrogate is a Python str,
+                                # but not valid UTF-8 for SSE or durable S03.
+                                try:
+                                    t_utf8_bytes = len(t.encode("utf-8"))
+                                except UnicodeEncodeError:
+                                    upstream_failure = "UPSTREAM_CONTENT_UNICODE_INVALID"
+                                    break
+                                if output_utf8_bytes + t_utf8_bytes > MAX_CHAT_OUTPUT_UTF8_BYTES:
+                                    upstream_failure = "UPSTREAM_OUTPUT_LIMIT"
+                                    break
                                 # A later content delta after a model-level stop
                                 # is not part of a verifiable completed response.
                                 if t and upstream_stop_seen:
@@ -716,6 +729,7 @@ def install(app, B):
                                     upstream_stop_seen = True
                                 if t:
                                     full += t
+                                    output_utf8_bytes += t_utf8_bytes
                                     n += 1
                                     yield fr(message={"role": "assistant", "content": t}, done=False)
                                     if plan and "\n" in t:
