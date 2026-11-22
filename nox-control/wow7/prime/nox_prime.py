@@ -25,6 +25,23 @@ DEEP_THINK = re.compile(r"\b(почему|докажи|обоснуй|план|�
 SMALL_TALK = re.compile(r"^\s*(привет|здравствуй|доброе утро|добрый (день|вечер)|спокойной ночи|спасибо|ок|окей|понял|ага|да|нет|"
                         r"как (ты|дела|настроение)|ты тут|ты здесь)[\s!?.,)]*$", re.I)
 
+# NOXHF (хотфикс чата 22.11): правила поверх души
+HF_RULES = ("\n\n## Правила разговора (приоритетнее остального)\n"
+            "- К Создателю обращайся «мессир». Имён ему не придумывай: никаких «Владимир», «Адриан Марроу» и подобных — он имени не называл.\n"
+            "- Никогда не пересказывай блок внутреннего состояния, телеметрию, названия моделей, GPU, порты, цифры памяти, если Создатель прямо не спросил о состоянии/сервере.\n"
+            "- На приветствие и короткую реплику — 1–3 живые фразы, как человек. Без отчётов, без списков, без «Что хочешь: →…», без «Жду твой ввод».\n"
+            "- Фразу «Создатель, я проснулся.» говори только сразу после перезапуска сервера, не на обычных приветствиях.\n")
+STATE_Q = re.compile(r"(сервер|gpu|видеокарт|vram|состояни|статус|телеметр|нагрузк|ток/с|скорост|модел|верси|порт|диск|очеред|"
+                     r"как (ты|дела|настроение)|что с тобой|чем занят|где ты|на чём|на чем|устро|помнишь|вспомни|памят)", re.I)
+GREETING = re.compile(r"^\s*(привет\w*|здравствуй\w*|здорово|хай|добр(ый|ое|ого)\s+\w+|салют|приветствую|hello|hi|hey|ку|йо|спасибо|ок|окей|понял|ага|да|нет)[\s!?.,)(:-]*(нокс|nox|мессир|создатель)?[\s!?.,)(:-]*$", re.I)
+
+
+def is_quiet_turn(text):
+    """Приветствие/реплика без вопроса о состоянии: внутренний блок и память не передаём."""
+    t = (text or "").strip()
+    return bool(GREETING.match(t)) and not STATE_Q.search(t)
+
+
 ROUTE_PARAMS = {
     "fast": {"upstream": "fast", "max_tokens": 600, "chat_template_kwargs": {"enable_thinking": False}},
     "deep": {"upstream": "deep", "max_tokens": 1500, "chat_template_kwargs": {"enable_thinking": False}},
@@ -69,7 +86,7 @@ class Prime:
                 sig_text, sig_hash = fn()
             except Exception as ex:
                 self.log("signature: %s" % ex)
-        text = self.soul + ("\n\n## Мой характер\n" + sig_text.strip() if sig_text else "")
+        text = self.soul + HF_RULES + ("\n\n## Мой характер\n" + sig_text.strip() if sig_text else "")
         h = hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
         if self._static and self._static[1] != h:
             self.log("статичная часть сменилась (%s -> %s): характер сдвинулся, KV-кэш души пересчитается" % (self._static[1], h))
@@ -150,7 +167,10 @@ class Prime:
         turn_id = turn_id or "t%d" % int(self.clock() * 1000)
         errors = []
         sys_text, h = self.static_system()
-        dyn, snap = self.dynamic_block(user_text, turn_id, errors)
+        if is_quiet_turn(user_text):
+            dyn, snap = "", {}
+        else:
+            dyn, snap = self.dynamic_block(user_text, turn_id, errors)
         router = self.p.get("router") or default_router
         try:
             route = router(user_text, ctx or {})
