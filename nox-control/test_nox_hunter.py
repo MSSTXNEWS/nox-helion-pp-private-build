@@ -213,7 +213,30 @@ class HunterURLSafetyTests(unittest.TestCase):
                          ["Bad DOI", "Bad object DOI", "Valid fallback", "Explicit URL"])
         self.assertEqual([item["url"] for item in got], [
             "", "", "https://doi.org/10.1234/real",
-            "https://doi.org/10.1234/explicit",
+            "https://doi.org/10.1234/override",
+        ])
+
+    def test_crossref_conflicting_url_cannot_override_valid_doi(self):
+        # Crossref's DOI is the persistent record identity. Its URL field
+        # sometimes points elsewhere or is corrupt; never attribute evidence
+        # for DOI A to a different DOI B or an unrelated host.
+        rows = [
+            {"DOI": "10.1234/actual", "title": ["Actual"],
+             "URL": "https://doi.org/10.1234/other"},
+            {"DOI": "10.1234/actual-2", "title": ["Publisher"],
+             "URL": "https://example.net/unrelated"},
+            {"DOI": "10.1234/actual-3", "title": ["Malformed URL"],
+             "URL": "https://localhost/private"},
+            {"DOI": None, "title": ["URL only"],
+             "URL": "https://example.org/no-doi"},
+        ]
+        got = hunter._crossref_items(json.dumps(
+            {"message": {"items": rows}}).encode("utf-8"))
+        self.assertEqual([row["url"] for row in got], [
+            "https://doi.org/10.1234/actual",
+            "https://doi.org/10.1234/actual-2",
+            "https://doi.org/10.1234/actual-3",
+            "https://example.org/no-doi",
         ])
 
     def test_crossref_malformed_text_doi_does_not_forge_provenance(self):
