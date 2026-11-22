@@ -256,10 +256,17 @@ class FactReceiptTest(unittest.TestCase):
 
         async def scenario():
             first = await chat(Request(body))
+            # A second request ID cannot sidestep an admitted exchange, even
+            # before the first response produces its initial SSE frame.
+            changed_id = dict(body, request_id="other-request-same-exchange")
+            in_flight = await chat(Request(changed_id))
+            in_flight_status = in_flight.status_code
             first_frames = [json.loads(x) async for x in first.body_iterator]
             second = await chat(Request(body))
             second_status = second.status_code
             second_body = json.loads(second.body)
+            after_done = await chat(Request(changed_id))
+            after_done_status = after_done.status_code
             # TTL/eviction is deliberately NOT durable idempotency. Once the
             # bounded entry expires, a new request may be admitted again.
             W.CHAT_SNAPSHOTS[first_frames[0]["stream_id"]]["updated_at"] = (
@@ -274,15 +281,19 @@ class FactReceiptTest(unittest.TestCase):
             was_readmitted = hasattr(readmitted, "body_iterator")
             if was_readmitted:
                 await readmitted.body_iterator.aclose()
-            return first_frames, second_status, second_body, third_frames, was_readmitted
+            return (first_frames, in_flight_status, second_status,
+                    second_body, after_done_status, third_frames, was_readmitted)
 
         with (mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
               mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
               mock.patch.object(W, "W", None),
               mock.patch.dict(sys.modules, {"s03_memory": memory})):
-            first_frames, status, rejected, third_frames, was_readmitted = asyncio.run(scenario())
+            (first_frames, in_flight_status, status, rejected,
+             after_done_status, third_frames, was_readmitted) = asyncio.run(scenario())
         self.assertTrue(first_frames[-1]["done"])
+        self.assertEqual(in_flight_status, 409)
         self.assertEqual(status, 409)
+        self.assertEqual(after_done_status, 409)
         self.assertEqual(rejected, {
             "status": "HOLD", "reason": "CHAT_EXCHANGE_RECENTLY_USED",
             "retry_same_id": False, "snapshot_scope": "PROCESS_LOCAL",

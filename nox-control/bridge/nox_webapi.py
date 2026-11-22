@@ -721,16 +721,17 @@ def install(app, B):
         # second simultaneous generation under an indistinguishable ID.
         if rid in ACTIVE_CHAT_IDS:
             return JSONResponse({"status": "HOLD", "reason": "CHAT_DUPLICATE_INFLIGHT_REQUEST_ID"}, status_code=409)
-        # A retry after a completed/disconnected non-ephemeral stream must not
-        # generate another answer or append the same turn to S03. The existing
-        # bounded process-local snapshot is a recent-ID tombstone, not a replay
-        # or durable idempotency promise across process restarts/TTL eviction.
-        # Ephemeral requests intentionally retain no post-stream identity.
+        # Exchange identity (not the transport request ID) fences a second
+        # model/S03 call, including a distinct request ID while the first
+        # generation is ADMITTED but has not emitted its first SSE frame.
+        # An unstarted stream released without a frame may be retried.
+        # This bounded process-local fence is not durable across restart,
+        # eviction or TTL. Ephemeral requests retain no post-stream identity.
         if not eph and exchange_id is not None:
             _prune_chat_snapshots()
-            if any(row.get("request_id") == rid and
-                   row.get("exchange_id") == exchange_id and
-                   row.get("event_seq", 0) > 0
+            if any(row.get("exchange_id") == exchange_id and
+                   (row.get("request_id") in ACTIVE_CHAT_IDS or
+                    row.get("event_seq", 0) > 0)
                    for row in CHAT_SNAPSHOTS.values()):
                 return JSONResponse({"status": "HOLD", "reason": "CHAT_EXCHANGE_RECENTLY_USED",
                                      "retry_same_id": False, "snapshot_scope": "PROCESS_LOCAL",
