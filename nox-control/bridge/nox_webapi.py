@@ -666,11 +666,9 @@ def install(app, B):
                                     break
                                 choice = choices[0]
                                 finish_reason = choice.get("finish_reason")
-                                if finish_reason is not None:
-                                    if finish_reason != "stop":
-                                        upstream_failure = "UPSTREAM_NONSTOP_FINISH"
-                                        break
-                                    upstream_stop_seen = True
+                                if finish_reason is not None and finish_reason != "stop":
+                                    upstream_failure = "UPSTREAM_NONSTOP_FINISH"
+                                    break
                                 delta = choice.get("delta") or {}
                                 if not isinstance(delta, dict):
                                     upstream_failure = "UPSTREAM_DELTA_INVALID"
@@ -679,6 +677,15 @@ def install(app, B):
                                 if not isinstance(t, str):
                                     upstream_failure = "UPSTREAM_CONTENT_INVALID"
                                     break
+                                # A later content delta after a model-level stop
+                                # is not part of a verifiable completed response.
+                                if t and upstream_stop_seen:
+                                    upstream_failure = "UPSTREAM_AFTER_STOP_FINISH"
+                                    break
+                                # A final token carried on the same stop event
+                                # remains valid; only *subsequent* deltas fail.
+                                if finish_reason == "stop":
+                                    upstream_stop_seen = True
                                 if t:
                                     full += t
                                     n += 1
