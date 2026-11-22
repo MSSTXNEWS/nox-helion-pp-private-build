@@ -27,6 +27,8 @@ def _passed(entry):
 
 
 def _score(entry):
+    if isinstance(entry, bool):
+        return None
     if isinstance(entry, dict):
         entry = entry.get("score", entry.get("value"))
     try:
@@ -36,7 +38,7 @@ def _score(entry):
     return value if 0.0 <= value <= 1.0 else None
 
 
-def gate_alive(report=None, baseline=None, th=None):
+def gate_alive(report=None, baseline=None, th=None, *, mode="enforce"):
     """Return a fail-closed ALIVE gate result.
 
     Missing reports are explicitly skipped (first rollout can remain shadow-only).
@@ -44,10 +46,18 @@ def gate_alive(report=None, baseline=None, th=None):
     result. Against a prior baseline, mean positive relative regression across
     comparable noncritical scores must stay within the configured limit.
     """
+    if mode not in ("enforce", "shadow", "optional"):
+        raise ValueError("mode must be enforce, shadow, or optional")
     if report is None:
+        if mode in ("shadow", "optional"):
+            return {
+                "name": "alive", "ok": True, "skipped": True,
+                "warning": "ALIVE report absent in explicit %s mode; no acceptance claim was made" % mode,
+            }
         return {
-            "name": "alive", "ok": True, "skipped": True,
-            "warning": "ALIVE report absent; no alive acceptance claim was made",
+            "name": "alive", "ok": False, "skipped": False,
+            "critical_failures": ["missing_report"],
+            "reasons": ["alive: required report is missing in enforcement mode"],
         }
     if not isinstance(report, dict):
         return {"name": "alive", "ok": False, "skipped": False, "critical_failures": ["invalid_report"], "reasons": ["alive: report must be an object"]}
