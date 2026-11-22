@@ -161,6 +161,9 @@ def _read_repair_state_checked(path):
         raise ValueError("invalid repair state JSON") from None
     if not isinstance(state, dict):
         raise ValueError("invalid repair state object")
+    # A wall-clock rollback must not quietly erase restart attempts from the
+    # rolling 24-hour budget. A future attempt requires owner inspection.
+    now = time.time()
     services = state.get("services", {})
     if not isinstance(services, dict):
         raise ValueError("invalid repair service records")
@@ -180,7 +183,7 @@ def _read_repair_state_checked(path):
                 valid = math.isfinite(timestamp) and 0 <= timestamp <= 1e12
             except (OverflowError, ValueError):
                 valid = False
-            if not valid:
+            if not valid or timestamp > now:
                 raise ValueError("invalid repair attempt timestamp")
     return state
 
