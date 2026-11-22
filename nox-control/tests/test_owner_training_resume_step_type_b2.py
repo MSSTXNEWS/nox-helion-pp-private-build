@@ -3385,6 +3385,58 @@ class EmbeddedOwnerBoostPolicyDepthFence(unittest.TestCase):
             self.assertIs(allowed(), True)
 
 
+class SignedTrainerStateParentPathFence(unittest.TestCase):
+    def test_parent_symlink_rebind_same_inode_is_named_hold(self):
+        # Extract the real read_json AST; no trainer or live S03 is started.
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            approved = base / "approved"
+            approved.mkdir()
+            displaced = base / "displaced"
+            state = approved / "trainer_state.json"
+            payload = b'{"global_step":5}'
+            digest = hashlib.sha256(payload).hexdigest()
+            state.write_bytes(payload)
+            read_json = load_pinned_verifier(base)["read_json"]
+            self.assertEqual(read_json(state, expected_sha256=digest),
+                             {"global_step": 5})
+
+            # A pre-existing parent symlink is not an owner-approved path.
+            approved.rename(displaced)
+            approved.symlink_to(displaced, target_is_directory=True)
+            with self.assertRaisesRegex(
+                    RuntimeError, "^HOLD_STATE_FILE_MUTATED$"):
+                read_json(state, expected_sha256=digest)
+            approved.unlink()
+            displaced.rename(approved)
+            self.assertEqual(read_json(state, expected_sha256=digest),
+                             {"global_step": 5})
+
+            # Replace the original parent between FD read and named os.stat:
+            # both the byte SHA and named inode remain identical.
+            original_stat = os.stat
+            pivoted = False
+
+            def pivot_on_named_stat(target, *args, **kwargs):
+                nonlocal pivoted
+                if (not pivoted and os.fspath(target) == os.fspath(state)
+                        and kwargs.get("follow_symlinks") is False):
+                    approved.rename(displaced)
+                    approved.symlink_to(displaced, target_is_directory=True)
+                    pivoted = True
+                return original_stat(target, *args, **kwargs)
+
+            with mock.patch("os.stat", side_effect=pivot_on_named_stat):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_STATE_FILE_MUTATED$"):
+                    read_json(state, expected_sha256=digest)
+            self.assertTrue(pivoted)
+            approved.unlink()
+            displaced.rename(approved)
+            self.assertEqual(read_json(state, expected_sha256=digest),
+                             {"global_step": 5})
+
+
 class MediaOutputRehashPathFence(unittest.TestCase):
     def test_removed_and_rebound_media_get_named_hold(self):
         # Run the actual reviewed verifier AST; no native GPU or media job.

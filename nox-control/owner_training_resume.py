@@ -121,6 +121,10 @@ def read_json(path, limit=4_000_000, expected_sha256=None, include_mtime=False):
     path = Path(path)
     if type(limit) is not int or limit < 0:
         raise RuntimeError('HOLD_BOUNDED_STATE_READ')
+    # O_NOFOLLOW protects the leaf only. A signed trainer-state pathname
+    # is invalid when any parent is a symlink, even if it targets the same inode.
+    if any(item.is_symlink() for item in (path, *path.parents)):
+        raise RuntimeError('HOLD_STATE_FILE_MUTATED')
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
     except OSError as exc:
@@ -142,6 +146,11 @@ def read_json(path, limit=4_000_000, expected_sha256=None, include_mtime=False):
             named = os.stat(path, follow_symlinks=False)
         except OSError as exc:
             raise RuntimeError('HOLD_STATE_FILE_MUTATED') from exc
+        # A parent directory may be renamed and replaced with a symlink
+        # during the descriptor read. os.stat(path) can still report the
+        # original inode, so require path provenance again before admission.
+        if any(item.is_symlink() for item in (path, *path.parents)):
+            raise RuntimeError('HOLD_STATE_FILE_MUTATED')
         fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
         if (len(raw) != info.st_size
                 or any(getattr(info, field) != getattr(after, field)
