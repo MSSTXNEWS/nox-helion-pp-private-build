@@ -873,7 +873,22 @@ def install(app, B):
                 srcs = []
                 for i, l in enumerate(lines[:8]):
                     SRC[str(i + 1)] = l
-                    srcs.append(dict({"id": i + 1, "source": "S03", "category": "memory", "text": l[:300]}, **(W.provenance(l) if W else {})))
+                    # Provenance is optional display metadata, not the verified
+                    # S03 context. A corrupt owner-fact tail must not interrupt
+                    # an otherwise valid model answer or its S03 write.
+                    try:
+                        meta = W.provenance(l) if W else {}
+                        if not isinstance(meta, dict):
+                            raise TypeError("S03_PROVENANCE_NOT_MAPPING")
+                        # Never let an advisory override the authenticated
+                        # source identity or inject arbitrary JSON keys.
+                        meta = {k: meta[k] for k in ("provenance", "origin", "t") if k in meta}
+                        json.dumps(meta, ensure_ascii=False, allow_nan=False).encode("utf-8", "strict")
+                    except Exception as e:
+                        B.log("web_memory_provenance_unavailable " + type(e).__name__)
+                        meta = {"provenance": "UNVERIFIED", "origin": "s03"}
+                    srcs.append({"id": i + 1, "source": "S03", "category": "memory",
+                                 "text": l[:300], **meta})
                 yield fr(message={"role": "assistant", "content": ""}, done=False, nox_sources=srcs, memory_reason=("найдено %d фрагм." % len(lines)) if lines else "в памяти ничего близкого", nox_status="чувствую…",
                          nox_event={"step": "memory", "text": ("найдено %d фрагм. памяти" % len(lines)) if lines else ("память не использовалась" if not use_mem else "в памяти ничего близкого")})
                 extra, plan, rem = "", [], None
