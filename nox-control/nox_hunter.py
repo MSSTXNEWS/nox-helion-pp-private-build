@@ -24,7 +24,7 @@ import sys
 import time
 from typing import Any, Callable, Iterable
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 import xml.etree.ElementTree as ET
 
@@ -288,9 +288,15 @@ def _crossref_items(body: bytes) -> list[dict[str, str]]:
         # arrays or objects invents DOI-like links that never existed.
         doi_value = record.get("DOI")
         doi = doi_value.strip() if isinstance(doi_value, str) else ""
+        # A text value is not necessarily a DOI. Do not construct credible
+        # doi.org evidence from arbitrary strings, missing prefix/suffix, or
+        # JSON-escaped invalid Unicode. Encode DOI reserved characters as
+        # path data, never as URL query or fragment delimiters.
+        if not re.fullmatch(r"10\\.[0-9]{4,9}/[!-~]+", doi, flags=re.IGNORECASE):
+            doi = ""
         url_value = record.get("URL")
         link = url_value.strip() if isinstance(url_value, str) else ""
-        url = link or (f"https://doi.org/{doi}" if doi else "")
+        url = link or (f"https://doi.org/{quote(doi, safe='/-._~;()')}" if doi else "")
         # Crossref abstracts are text/HTML strings. Do not turn malformed JSON
         # arrays/objects into fabricated Python-repr "evidence" in the catalog.
         abstract_value = record.get("abstract")
