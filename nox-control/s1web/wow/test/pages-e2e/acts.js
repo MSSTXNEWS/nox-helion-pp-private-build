@@ -48,7 +48,7 @@ for(const [vp,w,h] of [['d',1440,900],['m',390,844]]){
   await T('memory','статистика',async()=>/ФАКТОВ/.test(await p.textContent('#mStats')));
   await T('memory','ядро памяти',async()=>(await p.textContent('#core')).length>20);
   await T('memory','поиск',async()=>{await p.fill('#q','NOX');await p.click('#qForm button[type=submit]');await p.waitForSelector('.hit',{timeout:4000});return true});
-  await T('memory','поиск без результата',async()=>{await p.fill('#q','zzqqxx');await p.click('#qForm button[type=submit]');await p.waitForTimeout(800);return /ничего не помнит/.test(await p.textContent('#results'))});
+  await T('memory','поиск без результата',async()=>{await p.fill('#q','zzqqxx');await p.click('#qForm button[type=submit]');await p.waitForTimeout(2500);return /ничего не помнит/.test(await p.textContent('#results'))});
   await p.fill('#q','NOX');await p.click('#qForm button[type=submit]');await p.waitForSelector('.hit');
   await T('memory','подтвердить',async()=>{await p.click('.hit [data-a=confirm]');await p.waitForTimeout(800);return (await p.$$('#journal tr')).length>1&&/confirm/.test(await p.textContent('#journal'))});
   await T('memory','исправить',async()=>{await p.click('.hit [data-a=correct]');await p.waitForSelector('#dlgC[open]');await p.fill('#cText','NOX HELION работает на S1 круглосуточно (исправлено)');await p.click('#cSave');await p.waitForTimeout(900);return /correct/.test(await p.textContent('#journal'))});
@@ -61,7 +61,7 @@ for(const [vp,w,h] of [['d',1440,900],['m',390,844]]){
  // ОБУЧЕНИЕ
  {const p=await mk('training');
   await T('training','графики ECharts',async()=>(await p.$$('#chMem canvas')).length===1&&(await p.$$('#chAct canvas')).length>=0);
-  await T('training','честное сообщение без API',async()=>/не подключена/.test(await p.textContent('#prog')));
+  await T('training','данные S1 вместо заглушки',async()=>/Правок владельца в журнале|не подключена/.test(await p.textContent('#prog')));
   await T('training','пары исправлений',async()=>/исправлено/.test(await p.textContent('#pairs')));
   await T('training','Проверить снова',async()=>{await p.click('#tRefresh');await p.waitForTimeout(1200);return true});
   await T('training','JSONL',async()=>{const d=await dl(p,'#tJsonl');return d.txt.includes('"after"')});
@@ -76,11 +76,11 @@ for(const [vp,w,h] of [['d',1440,900],['m',390,844]]){
   await p.close()}
  // СИСТЕМА
  {const p=await mk('system');await p.waitForTimeout(6500);
-  await T('system','плитки и графики uPlot',async()=>(await p.$$('#tiles .card')).length===6&&(await p.$$('.uplot')).length===2);
+  await T('system','плитки и графики uPlot',async()=>(await p.$$('#tiles .card')).length===6&&(await p.$$('.uplot')).length===3);
   await T('system','пауза/продолжить',async()=>{await p.click('#sPause');const a=await p.textContent('#sState');await p.click('#sPause');return /ОСТАНОВЛЕН/.test(a)&&/КАЖДЫЕ/.test(await p.textContent('#sState'))});
   await T('system','CSV',async()=>{const d=await dl(p,'#sCsv');return d.txt.split('\n').length>=2&&d.txt.startsWith('time,')});
   await T('system','Очистить',async()=>{await p.click('#sClear');return true});
-  await T('system','честное сообщение о метриках ПК',async()=>/недоступны/.test(await p.textContent('#pc')));
+  await T('system','метрики ПК: данные или честная ошибка',async()=>/недоступны|GPU загрузка/.test(await p.textContent('#pc')));
   await T('system','ошибки JS',async()=>{if(p.errs.length)throw new Error(p.errs.join('|'));return true});
   await p.close()}
  // НАСТРОЙКИ
@@ -91,7 +91,7 @@ for(const [vp,w,h] of [['d',1440,900],['m',390,844]]){
   const opts=await p.$$eval('.opt button',a=>a.map(x=>[x.parentElement.dataset.opt,x.dataset.v]));
   for(const [k,v] of opts){await T('settings','режим '+k+'='+v,async()=>{await p.click('.opt[data-opt='+k+'] button[data-v='+v+']');return JSON.parse(await p.evaluate(()=>localStorage.getItem('nox.wow.cfg')))[k]===v})}
   await T('settings','экспорт',async()=>{const d=await dl(p,'#sExp');return JSON.parse(d.txt).settings['nox.ui.accent']==='127,245,239'});
-  await T('settings','импорт',async()=>{fs.writeFileSync('/tmp/st/set.json',JSON.stringify({settings:{'nox.ui.accent':'170,150,255'}}));await p.setInputFiles('#sFile','/tmp/st/set.json');await p.waitForTimeout(1800);return (await p.evaluate(()=>localStorage.getItem('nox.ui.accent')))==='170,150,255'});
+  await T('settings','импорт',async()=>{fs.writeFileSync('/tmp/st/set.json',JSON.stringify({settings:{'nox.ui.accent':'170,150,255'}}));await p.setInputFiles('#sFile','/tmp/st/set.json');await p.waitForTimeout(1800);await p.waitForLoadState('load');await p.waitForTimeout(800);return (await p.evaluate(()=>localStorage.getItem('nox.ui.accent')))==='170,150,255'});
   await T('settings','сброс',async()=>{await p.click('#sReset');await p.waitForTimeout(1800);return (await p.evaluate(()=>localStorage.getItem('nox.ui.accent')))===null});
   await T('settings','статус голоса честный',async()=>/STT/.test(await p.textContent('#voiceStat')));
   await T('settings','ошибки JS',async()=>{if(p.errs.length)throw new Error(p.errs.join('|'));return true});

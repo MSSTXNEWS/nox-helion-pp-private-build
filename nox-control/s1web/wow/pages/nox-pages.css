@@ -188,3 +188,12 @@ details.nodata .err{color:#d0b9c0;font-size:12.5px;padding:0 14px 12px;margin:0}
 .page .leaflet-container{background:#0a1018;font-family:var(--sans)}.leaflet-control-attribution{background:rgba(4,8,13,.7)!important;color:#9eaab6!important}.page .leaflet-control-attribution a{color:rgb(var(--cy))!important}
 .page .leaflet-bar a{min-width:44px;min-height:44px;line-height:44px!important}
 #wg{align-items:start}
+
+/* ---- c171: Mini-NOX ---- */
+.mini-fab{position:fixed;z-index:70;right:18px;bottom:20px;width:52px;height:52px;border-radius:50%;background:rgba(4,8,13,.78);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid rgba(var(--am),.7);color:rgb(var(--am));box-shadow:0 0 14px rgba(var(--am),.35)}
+.mini-fab:hover{box-shadow:0 0 22px rgba(var(--am),.6)}.mini-fab .mono{font-size:10px;letter-spacing:.18em}
+.mini-pan{position:fixed;z-index:71;right:18px;bottom:82px;width:min(400px,calc(100vw - 24px));max-height:min(520px,70vh);display:flex;flex-direction:column;gap:8px;padding:10px;background:rgba(4,8,13,.84);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);border:1px solid rgba(var(--cy),.3);box-shadow:0 18px 50px rgba(0,0,0,.6)}
+.mini-pan[hidden]{display:none}.mini-pan header{display:flex;align-items:center;justify-content:space-between;color:var(--mu)}
+.mini-out{overflow:auto;min-height:60px;max-height:260px;font-size:14px;line-height:1.5}.mini-out .mq{color:rgb(var(--am));margin-bottom:6px}.mini-out .ma{white-space:pre-wrap}
+.mini-pan textarea{width:100%;min-height:56px}.mini-pan form{display:flex;flex-direction:column;gap:8px}.mini-pan form .seg{align-self:flex-end}
+@media (max-width:760px){.mini-fab{bottom:calc(58px + env(safe-area-inset-bottom,0px));right:12px}.mini-pan{right:12px;bottom:calc(120px + env(safe-area-inset-bottom,0px))}}

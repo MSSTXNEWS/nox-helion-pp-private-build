@@ -298,3 +298,11 @@ body[data-page="wow-chat"] .composer{-webkit-backdrop-filter:blur(10px) saturate
 .page .tbl a,.page .tbl td a{display:inline-flex;align-items:center;min-height:44px}.bar-r .seg.toplink>a,.bar-r .seg.toplink{min-height:44px}.bar-r .seg{min-height:44px}.tag{display:inline-flex;align-items:center;min-height:44px}
 .page .card p a,.page .svc-st a{display:inline-flex;align-items:center;min-height:44px;padding:0}
 .hint{color:#b9c7d2}.edge-l,.edge-r{max-width:230px}@media (max-height:760px){.edge{display:none}}
+
+/* ---- c171: split-view файл рядом с чатом, черновик ---- */
+.split{position:fixed;z-index:20;right:20px;top:64px;bottom:24px;width:min(440px,36vw);display:flex;flex-direction:column;background:rgba(4,8,13,.72);-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3);border:1px solid var(--line2);box-shadow:0 14px 50px rgba(0,0,0,.5)}
+.split[hidden]{display:none}.split header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 0 0 12px;border-bottom:1px solid var(--line);min-height:44px}.split header .mono{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.split pre{margin:0;padding:12px;overflow:auto;flex:1;font:400 12.5px/1.55 var(--mono);white-space:pre-wrap;word-break:break-word;color:#dbe6ee}
+body.splitopen .col,body.splitopen .dock{width:min(var(--colw),calc(100% - min(440px,36vw) - 60px));margin-left:20px;margin-right:auto}
+@media (max-width:900px){.split{left:8px;right:8px;top:56px;bottom:auto;width:auto;height:34vh}body.splitopen .col,body.splitopen .dock{width:calc(100% - 24px);margin:0 auto}body.splitopen .feed{padding-top:calc(34vh + 8px)}}
+.draft{position:absolute;right:16px;top:-9px;padding:2px 8px;background:#06101a;border:1px solid rgba(var(--am),.4);color:rgb(var(--am));font-size:9px}

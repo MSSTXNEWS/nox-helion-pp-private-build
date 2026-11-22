@@ -61,7 +61,7 @@
           <button type="button" class="chip" id="recCancel" aria-label="Отменить запись"><sl-icon library="tabler" name="x"></sl-icon></button>
           <button type="button" class="chip ok" id="recDone" aria-label="Закончить запись и распознать"><sl-icon library="tabler" name="check"></sl-icon></button>
         </div>
-        <textarea id="input" rows="1" maxlength="12000" placeholder="Сообщение NOX…" aria-label="Сообщение NOX"></textarea>
+        <span class="mono draft" id="draftHint" hidden>ЧЕРНОВИК ВОССТАНОВЛЕН</span><textarea id="input" rows="1" maxlength="12000" placeholder="Сообщение NOX…" aria-label="Сообщение NOX"></textarea>
         <div class="row">
           <span class="seg tools">
             <button type="button" id="btnAttach" aria-label="Прикрепить текстовый файл" title="Прикрепить текстовый файл"><sl-icon library="tabler" name="paperclip"></sl-icon></button>
@@ -76,6 +76,7 @@
       </div>
     </form>
 
+    <aside class="split" id="split" hidden aria-label="Файл рядом с чатом"><header><span class="mono" id="splitName">ФАЙЛ</span><span class="seg"><button type="button" id="splitQuote" title="Цитировать выделенное (или начало файла) в поле ввода">Цитата</button><button type="button" id="splitClose" aria-label="Закрыть файл"><sl-icon library="tabler" name="x"></sl-icon></button></span></header><pre id="splitBody"></pre></aside>
     <aside class="edge edge-l mono" id="edgeL" aria-label="Состояние"><span id="clock" class="hud-clock">—</span><span id="eModel">УРОВНИ —</span><span id="eLast">ОТВЕТИЛ —</span><span id="eGpu">GPU —</span><span id="eVram">VRAM —</span><span id="eCpu">ЦП —</span><span id="eRam">ОЗУ —</span><span id="eProto">ПРОТОКОЛ —</span></aside>
     <aside class="edge edge-r mono" id="edgeR" aria-label="Метрики последнего ответа"><span id="eTtft">ТТФТ —</span><span id="eRate">ЧАНК/С —</span><span id="eVoice">ГОЛОС —</span></aside>
   </main>
@@ -97,6 +98,7 @@
     <section><h3 class="mono">Голос</h3>
       <div class="seg opt" data-opt="speak" role="radiogroup" aria-label="Озвучка ответов"><button role="radio" data-v="off">Озвучка выкл</button><button role="radio" data-v="on">Озвучка вкл</button></div>
       <div class="seg opt" data-opt="lang" role="radiogroup" aria-label="Язык распознавания"><button role="radio" data-v="auto">Авто</button><button role="radio" data-v="ru">RU</button><button role="radio" data-v="es">ES</button></div>
+      <div class="seg opt" data-opt="barge" role="radiogroup" aria-label="Перебивание озвучки голосом"><button role="radio" data-v="off">Не перебивать</button><button role="radio" data-v="on">Перебить голосом</button></div>
       <div class="seg opt" data-opt="auto" role="radiogroup" aria-label="Автоотправка"><button role="radio" data-v="off">Текст в поле</button><button role="radio" data-v="on">Сразу отправлять</button></div>
       <p class="note mono" id="voiceStat">STT — · TTS —</p></section>
     <section><h3 class="mono">Интерфейс</h3>

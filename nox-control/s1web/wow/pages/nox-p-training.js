@@ -7,7 +7,16 @@ const kv = (o, d = 0) => '<dl class="kv">' + Object.keys(o).slice(0, 40).map((k)
 async function progress(force) {
   const box = $('#prog'), st = $('#pState'); box.textContent = 'Проверка…'; st.textContent = '';
   const a = await apiProbe(force);
-  if (!a.ok) { st.textContent = 'API НЕТ'; box.innerHTML = '<div class="err">Панель S2 (/api) не подключена: ' + esc(a.error) + '.</div><p class="muted">Процента обучения здесь нет намеренно: без данных от тренера любая цифра была бы выдумкой. Когда панель S2 подключится, прогресс появится сам.</p>'; return; }
+  if (!a.ok) {
+    /* S2 не подключена: показываем реальные данные S1 - что накоплено для обучения (память s03, правки владельца, скорость шлюза) */
+    const [h, j, g] = await Promise.all([call('/memory/health'), memory({ op: 'journal', limit: 500 }), call('/glm/v1/nox/stats')]);
+    const S = h.ok && h.data && h.data.stats, C = j.ok && j.data && j.data.ok ? j.data.changes : null, pr = C ? C.filter((x) => x.action === 'correct' && x.old && x.new) : null, sp = g.ok && g.data && g.data.speed;
+    const row = (k, v) => '<dt>' + k + '</dt><dd>' + esc(v) + '</dd>', last = pr && pr.length ? when(Math.max(...pr.map((x) => x.ts || 0))) : '—';
+    st.textContent = 'ДАННЫЕ S1';
+    box.innerHTML = '<div class="big">' + (pr ? pr.length : '—') + '<small>ПАР «БЫЛО → СТАЛО» ГОТОВО К ДООБУЧЕНИЮ</small></div><dl class="kv" style="margin-top:8px">'
+      + row('Фактов в памяти', S ? S.facts : 'недоступно') + row('Эпизодов', S ? S.episodes : 'недоступно') + row('Правок владельца в журнале', C ? C.length : 'недоступно') + row('Последняя правка', last)
+      + row('Скорость глубокого (GLM)', sp && sp.deep ? sp.deep.tps + ' ток/с' : 'нет данных') + row('Скорость быстрого', sp && sp.fast ? sp.fast.tps + ' ток/с' : 'нет данных') + '</dl>'
+      + '<p class="muted" style="font-size:12.5px;margin:8px 0 0">Процент выполнения самого обучения появится, когда подключится панель S2 (RunPod): цифра не выдумывается. Пары можно выгрузить кнопкой «Правки как JSONL».</p>'; return; }
   for (const p of ['/api/nox/progress', '/api/nox/training/status', '/api/training/status']) {
     const r = await call(p); if (!r.ok || !r.data || typeof r.data !== 'object') continue; const d = r.data;
     const done = d.completedSteps != null ? d.completedSteps : d.step, tot = d.targetSteps != null ? d.targetSteps : d.total_steps;

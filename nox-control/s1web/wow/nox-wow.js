@@ -21,7 +21,7 @@ const note = (t, bad) => { const h = $('#hint'); if (!h) return; h.textContent =
 const HINT = 'ENTER — ОТПРАВИТЬ · SHIFT+ENTER — СТРОКА · CTRL+K — КОМАНДЫ';
 
 /* ---------- настройки ---------- */
-const DEF = { mode: 'auto', proto: 'classic', enter: 'enter', speak: 'on', lang: 'auto', auto: 'off', dens: 'cozy', space: 'on', dust: 'on', motion: 'always' };
+const DEF = { mode: 'auto', proto: 'classic', enter: 'enter', speak: 'on', lang: 'auto', auto: 'off', dens: 'cozy', space: 'on', dust: 'on', motion: 'always', barge: 'off' };
 const cfg = Object.assign({}, DEF, jget('nox.wow.cfg', {}));
 const saveCfg = () => ls.set('nox.wow.cfg', JSON.stringify(cfg));
 document.body.classList.add('boot');
@@ -35,6 +35,16 @@ const saveThreads = () => { try { ls.set('nox.wow.threads', JSON.stringify(threa
 function newThread() { cur = { id: uid(), title: 'Новый диалог', ts: Date.now(), msgs: [] }; threads.unshift(cur); saveThreads(); renderAll(); }
 function openThread(id) { const t = threads.find((x) => x.id === id); if (!t) return; cur = t; ls.set('nox.wow.cur', id); renderAll(); }
 const empty = (t) => !t.msgs.length;
+/* ветвление: копия диалога до сообщения n становится новым диалогом (keepCur: текущий остаётся активным, а копия кладётся в историю) */
+function forkThread(n, pre, keepCur) {
+  const copy = { id: uid(), title: (pre + cur.title).slice(0, 60), ts: Date.now(), msgs: JSON.parse(JSON.stringify(cur.msgs.slice(0, n))), parent: cur.id };
+  if (keepCur) { threads.splice(threads.indexOf(cur) + 1, 0, copy); saveThreads(); renderThreads(); return; }
+  threads.unshift(copy); cur = copy; ls.set('nox.wow.cur', cur.id); saveThreads(); renderAll();
+}
+/* черновики: текст в поле ввода хранится отдельно для каждого диалога и переживает перезагрузку */
+const draftKey = () => 'nox.wow.draft.' + (cur ? cur.id : '0');
+let draftT = 0; function saveDraft() { clearTimeout(draftT); draftT = setTimeout(() => { try { const v = $('#input').value; if (v.trim()) ls.set(draftKey(), v); else localStorage.removeItem(draftKey()); } catch (e) { /* без хранилища */ } }, 250); }
+function loadDraft() { const v = ls.get(draftKey(), ''); input.value = v; autosize(); const h = $('#draftHint'); if (h) h.hidden = !v; }
 
 /* ---------- разметка сообщений ---------- */
 function inline(s) {
@@ -100,16 +110,17 @@ function mkMsg(m, idx) {
   const lab = m.role === 'user' ? 'ВЫ' : 'NOX';
   d.innerHTML = '<div class="lab mono"><i></i><span>' + lab + '</span><span>' + hhmm(m.ts) + '</span></div><div class="bubble"><div class="txt"></div></div>';
   setTxt(d, m.content, false);
-  if (m.role !== 'user') { d.appendChild(actsEl()); if (m.via) showVia(d, m); }
+  if (m.role !== 'user') { d.appendChild(actsEl()); if (m.via) showVia(d, m); } else d.appendChild(userActs());
   return d;
 }
-function actsEl() { const a = document.createElement('div'); a.className = 'acts'; a.innerHTML = '<span class="seg">' + iconBtn('copy', 'Копировать ответ', 'copy') + iconBtn('refresh', 'Ответить заново', 'regen') + iconBtn('volume', 'Озвучить', 'say') + '</span>'; return a; }
+function actsEl() { const a = document.createElement('div'); a.className = 'acts'; a.innerHTML = '<span class="seg">' + iconBtn('copy', 'Копировать ответ', 'copy') + iconBtn('refresh', 'Ответить заново', 'regen') + iconBtn('volume', 'Озвучить', 'say') + iconBtn('quote', 'Цитировать в ответ', 'quote') + iconBtn('git-branch', 'Новая ветка отсюда', 'fork') + '</span>'; return a; }
+function userActs() { const a = document.createElement('div'); a.className = 'acts'; a.innerHTML = '<span class="seg">' + iconBtn('copy', 'Копировать', 'copy') + iconBtn('pencil', 'Править и отправить заново (прежняя версия сохранится веткой)', 'edit') + iconBtn('git-branch', 'Новая ветка отсюда', 'fork') + '</span>'; return a; }
 function setTxt(d, text, streaming) { const t = $('.txt', d); t.innerHTML = render(text); t.classList.toggle('caret', !!streaming); if (!streaming && rich.ok && t.querySelector('.mmd')) mermaidPass(t); }
 function nearBottom() { return feed.scrollHeight - feed.scrollTop - feed.clientHeight < 140; }
 function toBottom(force) { if (force || nearBottom()) feed.scrollTop = feed.scrollHeight; }
 function renderAll() {
   msgsEl.innerHTML = ''; cur.msgs.forEach((m, i) => msgsEl.appendChild(mkMsg(m, i)));
-  stage.classList.toggle('has-msgs', cur.msgs.length > 0); document.title = 'NOX HELION · РЕЗОНАНС'; toBottom(true); renderThreads();
+  stage.classList.toggle('has-msgs', cur.msgs.length > 0); document.title = 'NOX HELION · РЕЗОНАНС'; toBottom(true); renderThreads(); if (typeof loadDraft === 'function' && !busy) loadDraft();
 }
 function renderThreads() {
   const ul = $('#threadList'); if (!ul) return;
@@ -123,6 +134,7 @@ function setBusy(on) { $('#btnSend').hidden = on; $('#btnStop').hidden = !on; $(
 function histFor(upto) { return cur.msgs.slice(0, upto).filter((m) => m.content && !m.err).slice(-40).map((m) => ({ role: m.role, content: m.content })); }
 async function send(text, opts) {
   opts = opts || {}; text = String(text || '').trim(); if (!text || busy) return;
+  if (attach && !opts.regen) { text += '\n\nФайл ' + attach.name + ':\n```\n' + attach.text + '\n```'; attach = null; showSplit(false); }
   speaker.prime(); try { tourDrv && tourDrv.destroy(); } catch (e) { /* тур уже закрыт */ }
   if (!opts.regen) { cur.msgs.push({ role: 'user', content: text, ts: Date.now() }); if (cur.msgs.length === 1) cur.title = text.replace(/\s+/g, ' ').slice(0, 44); }
   const um = msgsEl.lastElementChild; stage.classList.add('has-msgs');
@@ -130,7 +142,7 @@ async function send(text, opts) {
   const am = { role: 'assistant', content: '', ts: Date.now() }; const idx = cur.msgs.length; cur.msgs.push(am);
   const el = mkMsg(am, idx); $('.acts', el) && ($('.acts', el).hidden = true); msgsEl.appendChild(el);
   const th = document.createElement('div'); th.className = 'think mono'; th.innerHTML = '<span class="lt"></span><span>ОЖИДАНИЕ ОТВЕТА</span>'; $('.txt', el).appendChild(th); const anim = lot($('.lt', th), 'lottie-orbit', true);
-  toBottom(true); saveThreads(); renderThreads(); input.value = ''; autosize();
+  toBottom(true); saveThreads(); renderThreads(); input.value = ''; autosize(); try { localStorage.removeItem(draftKey()); } catch (e) { /* без хранилища */ }
   const proto = cfg.proto, rid = uid(), ctrl = new AbortController(); busy = { ctrl, rid, proto }; setBusy(true);
   const t0 = performance.now(); let tFirst = 0, chunks = 0, raw = '', raf = 0, stopped = false, failed = null;
   const history = histFor(idx), mode = ['auto', 'fast', 'deep'].includes(cfg.mode) ? cfg.mode : 'auto'; let via = null;
@@ -227,15 +239,27 @@ const speaker = (() => {
     } catch (e) { if (!c.signal.aborted) note('TTS НЕДОСТУПЕН: ' + (e.message || e), true); }
   }
   function start() {
-    prime(); stop(true); all = ''; got = 0; clearTimeout(fb); on = true; ctrl = new AbortController(); pend = ''; next = 0; const c = ctrl, lang = cfg.lang === 'auto' ? 'auto' : cfg.lang;
+    prime(); stop(true); setTimeout(bargeOn, 0); all = ''; got = 0; clearTimeout(fb); on = true; ctrl = new AbortController(); pend = ''; next = 0; const c = ctrl, lang = cfg.lang === 'auto' ? 'auto' : cfg.lang;
     sess = (async () => { const r = await fetch('/tts/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang }), signal: c.signal }); if (!r.ok) { let m = 'HTTP ' + r.status; try { m = (await r.json()).error || m; } catch (e) { /* не JSON */ } throw new Error(m); } const j = await r.json(); rate = j.out_rate || 24000; readAudio(j.id, c); return j.id; })();
     sess.catch((e) => { if (!c.signal.aborted) note('TTS НЕДОСТУПЕН: ' + (e.message || e), true); on = false; });
     return true;
   }
   function push(text, final) { if (!sess || !on) return; const c = ctrl; all += (text || ''); if (final) { const t = all, g0 = got; clearTimeout(fb); fb = setTimeout(() => { if (got === 0 && t.trim() && window.speechSynthesis) { note('СЕРВЕРНЫЙ ГОЛОС МОЛЧИТ — ГОВОРИТ БРАУЗЕР', true); try { const u = new SpeechSynthesisUtterance(t); u.lang = 'ru-RU'; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {} } }, 6000); } chain = chain.then(async () => { try { const id = await sess; if (c.signal.aborted) return; await fetch('/tts/session/' + id + '/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text || '', final: !!final }), signal: c.signal }); } catch (e) { /* сессия отменена или сервис недоступен */ } }); if (final) on = false; }
-  function stop(silent) { clearTimeout(fb); try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {} const c = ctrl, s = sess; on = false; if (c) c.abort(); ctrl = null; sess = null; chain = Promise.resolve(); if (s) s.then((id) => fetch('/tts/session/' + id + '/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {})).catch(() => {}); srcs.forEach((x) => { try { x.stop(); } catch (e) { /* уже остановлен */ } }); srcs.clear(); next = 0; if (!silent) setVoiceState(''); }
+  function stop(silent) { bargeOff(); clearTimeout(fb); try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {} const c = ctrl, s = sess; on = false; if (c) c.abort(); ctrl = null; sess = null; chain = Promise.resolve(); if (s) s.then((id) => fetch('/tts/session/' + id + '/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {})).catch(() => {}); srcs.forEach((x) => { try { x.stop(); } catch (e) { /* уже остановлен */ } }); srcs.clear(); next = 0; if (!silent) setVoiceState(''); }
   return { prime, start, push, stop, get active() { return on || srcs.size > 0; } };
 })();
+/* barge-in: пока NOX говорит и включено «Перебить голосом», микрофон слушает громкость; устойчивая речь (около 0,5 с) останавливает озвучку и начинает запись */
+const barge = { st: null, ac: null, tm: 0, hits: 0 };
+async function bargeOn() {
+  if (cfg.barge !== 'on' || barge.st || mic.rec || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } });
+    if (!speaker.active) { st.getTracks().forEach((t) => t.stop()); return; }
+    barge.st = st; barge.ac = new (window.AudioContext || window.webkitAudioContext)(); const an = barge.ac.createAnalyser(); an.fftSize = 1024; barge.ac.createMediaStreamSource(st).connect(an); const buf = new Float32Array(an.fftSize); barge.hits = 0;
+    barge.tm = setInterval(() => { an.getFloatTimeDomainData(buf); let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i]; const rms = Math.sqrt(sum / buf.length); barge.last = rms; barge.hits = rms > (cfg.bargeLevel || 0.035) ? barge.hits + 2 : Math.max(0, barge.hits - 1); if (barge.hits >= 6) { bargeOff(); speaker.stop(); note('ОЗВУЧКА ПЕРЕБИТА ГОЛОСОМ: ГОВОРИТЕ'); micStart(); } if (!speaker.active && !busy) bargeOff(); }, 80);
+  } catch (e) { note('ПЕРЕБИВАНИЕ ГОЛОСОМ: НЕТ ДОСТУПА К МИКРОФОНУ (' + (e.name || e) + ')', true); }
+}
+function bargeOff() { clearInterval(barge.tm); barge.tm = 0; try { barge.st && barge.st.getTracks().forEach((t) => t.stop()); } catch (e) { /* уже закрыт */ } try { barge.ac && barge.ac.close(); } catch (e) { /* уже закрыт */ } barge.st = barge.ac = null; barge.hits = 0; }
 let voiceState = '';
 function setVoiceState(s) { voiceState = s; updateEdges(); }
 
@@ -279,14 +303,20 @@ async function micSend(blob) {
 
 /* ---------- ввод ---------- */
 function autosize() { input.style.height = 'auto'; input.style.height = Math.min(200, input.scrollHeight) + 'px'; }
-input.addEventListener('input', autosize);
+input.addEventListener('input', () => { autosize(); saveDraft(); });
+addEventListener('pagehide', () => { try { const v = input.value; if (v.trim()) ls.set(draftKey(), v); } catch (e) { /* без хранилища */ } });
 input.addEventListener('keydown', (e) => { if (e.key !== 'Enter' || e.isComposing) return; const ctrlK = e.ctrlKey || e.metaKey; if (cfg.enter === 'enter' ? !e.shiftKey : ctrlK) { e.preventDefault(); send(input.value); } });
 $('#form').addEventListener('submit', (e) => { e.preventDefault(); send(input.value); });
 $('#btnStop').addEventListener('click', stopChat);
 $('#btnMic').addEventListener('click', () => (mic.rec ? micStop(false) : micStart()));
 $('#recDone').addEventListener('click', () => micStop(false)); $('#recCancel').addEventListener('click', () => micStop(true));
 $('#btnAttach').addEventListener('click', () => $('#file').click());
-$('#file').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; if (f.size > 200 * 1024) { note('ФАЙЛ БОЛЬШЕ 200 КБ', true); return; } const t = await f.text(); input.value += (input.value ? '\n\n' : '') + 'Файл ' + f.name + ':\n```\n' + t + '\n```\n'; autosize(); input.focus(); });
+let attach = null;
+function showSplit(on) { document.body.classList.toggle('splitopen', !!on); $('#split').hidden = !on; }
+function setAttach(f) { attach = f; if (!f) { showSplit(false); return; } $('#splitName').textContent = f.name + ' · ' + f.text.length + ' симв.'; $('#splitBody').textContent = f.text; showSplit(true); note('ФАЙЛ ОТКРЫТ СПРАВА: ' + f.name + '. ОН УЙДЁТ В СЛЕДУЮЩЕЕ СООБЩЕНИЕ'); }
+$('#splitClose').addEventListener('click', () => setAttach(null));
+$('#splitQuote').addEventListener('click', () => { const sel = String(window.getSelection() || '').trim() || (attach ? attach.text.slice(0, 600) : ''); if (!sel) return; input.value += (input.value ? '\n\n' : '') + sel.split('\n').map((l) => '> ' + l).join('\n') + '\n'; autosize(); saveDraft(); input.focus(); });
+$('#file').addEventListener('change', async (e) => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; if (f.size > 200 * 1024) { note('ФАЙЛ БОЛЬШЕ 200 КБ', true); return; } setAttach({ name: f.name, text: await f.text() }); input.focus(); });
 function setSpeak(on) { cfg.speak = on ? 'on' : 'off'; saveCfg(); $('#btnSpeak').setAttribute('aria-pressed', String(on)); if (!on) speaker.stop(); syncOpts(); if (on) { speaker.prime(); note('ОЗВУЧКА ОТВЕТОВ ВКЛ'); } }
 $('#btnSpeak').addEventListener('click', () => setSpeak(cfg.speak !== 'on'));
 $('#suggest').addEventListener('click', (e) => { const b = e.target.closest('button[data-q]'); if (b) send(b.dataset.q); });
@@ -295,6 +325,9 @@ msgsEl.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-act]'); if (!b) return; const m = b.closest('.m'), i = +m.dataset.i, msg = cur.msgs[i];
   if (b.dataset.act === 'copy') { try { await navigator.clipboard.writeText(msg.content); note('СКОПИРОВАНО'); } catch (x) { note('БУФЕР ОБМЕНА НЕДОСТУПЕН', true); } }
   else if (b.dataset.act === 'say') { if (speaker.active) { speaker.stop(); return; } speaker.start(); speaker.push(msg.content, true); }
+  else if (b.dataset.act === 'quote') { const q = String(msg.content || '').split('\n').slice(0, 12).map((l) => '> ' + l).join('\n'); input.value = q + '\n\n' + input.value; autosize(); input.focus(); note('ЦИТАТА ДОБАВЛЕНА В ПОЛЕ ВВОДА'); saveDraft(); }
+  else if (b.dataset.act === 'fork') { if (busy) return; forkThread(i + 1, 'Ветка: '); note('ВЕТКА СОЗДАНА: ПРЕЖНИЙ ДИАЛОГ СОХРАНЁН В ИСТОРИИ'); }
+  else if (b.dataset.act === 'edit') { if (busy || msg.role !== 'user') return; const txt = msg.content; forkThread(cur.msgs.length, 'Версия до правки: ', true); cur.msgs = cur.msgs.slice(0, i); saveThreads(); renderAll(); input.value = txt; autosize(); input.focus(); saveDraft(); note('ТЕКСТ ВЕРНУЛСЯ В ПОЛЕ: ПРАВЬТЕ И ОТПРАВЛЯЙТЕ; ПРЕЖНЯЯ ВЕРСИЯ В ИСТОРИИ'); }
   else if (b.dataset.act === 'regen' && !busy && i === cur.msgs.length - 1) { cur.msgs.pop(); m.remove(); send('(повтор)', { regen: true }); }
 });
 
@@ -337,6 +370,7 @@ function applyOpt(k) {
   saveCfg(); syncOpts();
   if (k === 'dens') document.body.classList.toggle('tight', cfg.dens === 'tight');
   if (k === 'space') { if (space) space.setLevel(cfg.space); }
+  if (k === 'barge') { if (cfg.barge === 'on') note('ПЕРЕБИВАНИЕ ГОЛОСОМ ВКЛ: ЛУЧШЕ В НАУШНИКАХ, ИНАЧЕ МИКРОФОН СЛЫШИТ САМОГО NOX'); else bargeOff(); }
   if (k === 'motion') { ls.set('nox.wow.motion', cfg.motion); note('АНИМАЦИЯ ФОНА: ' + (cfg.motion === 'system' ? 'КАК В СИСТЕМЕ — ПРИМЕНИТСЯ ПОСЛЕ ПЕРЕЗАГРУЗКИ' : 'ВСЕГДА')); }
   if (k === 'dust') dust();
   if (k === 'speak' && cfg.speak === 'off') speaker.stop(); if (k === 'speak' && cfg.speak === 'on') speaker.prime();
@@ -372,7 +406,7 @@ function commands() {
     { g: 'Голос', t: 'Остановить озвучку', run: () => speaker.stop() },
     { g: 'Вид', t: 'Открыть настройки', run: () => { open($('#drSettings')); pollVoice(); } },
     { g: 'Вид', t: 'Космос: эко / мягко / ярко', run: () => { const o = ['eco', 'on', 'high']; cfg.space = o[(o.indexOf(cfg.space) + 1) % 3]; applyOpt('space'); note('КОСМОС: ' + { eco: 'ЭКО', on: 'МЯГКО', high: 'ЯРКО' }[cfg.space]); } },
-    { g: 'Чат', t: 'Режим ответа: авто / быстро / глубоко', run: () => { const o = ['auto', 'fast', 'deep']; setMode(o[(o.indexOf(cfg.mode) + 1) % 3]); } },,
+    { g: 'Чат', t: 'Режим ответа: авто / быстро / глубоко', run: () => { const o = ['auto', 'fast', 'deep']; setMode(o[(o.indexOf(cfg.mode) + 1) % 3]); } },
     { g: 'Вид', t: 'Тур по интерфейсу', run: () => setTimeout(() => tour(true), 300) },
     { g: 'Панели', t: 'Классический чат: промпты, прогресс задач, режим судей, пять миров', run: () => { location.href = 'classic/chat.html'; } },
     { g: 'NOX SPACE', t: 'Погода, валюта, новости, кинотеатр, книги, браузер', run: () => universe() }
@@ -454,7 +488,7 @@ async function boot() {
   if (small()) import(V + 'swiper/swiper-bundle.min.mjs').then((m) => { const S = m.default || m.Swiper; const s = new S('.mnav .swiper', { slidesPerView: 'auto', freeMode: true, spaceBetween: 0, resistanceRatio: .6, centeredSlides: true, centeredSlidesBounds: true, initialSlide: 0 }); s.slideTo(0, 0); lib.swiper = true; }).catch((e) => { lib.swiper = 'ERR ' + e.message; });
   pollPc(); setInterval(pollPc, 3000); startTiers(); document.addEventListener('nox:tiers', updateEdges); loadRich(); pollVoice(); setInterval(pollVoice, 60000);
   setTimeout(() => tour(false), 1600);
-  window.__noxWow = { cfg, lib, get cur() { return cur; }, send, speaker, mic };
+  window.__noxWow = { commands, setMode, forkThread, barge, get attach() { return attach; }, cfg, lib, get cur() { return cur; }, send, speaker, mic };
   input.focus({ preventScroll: true });
 }
 boot();
