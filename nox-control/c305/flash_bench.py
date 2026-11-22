@@ -83,6 +83,9 @@ def suites():
            "soul": ["ini-%02d" % i for i in range(1, 9)] + ["tom-03", "tom-04", "tom-05", "tom-07", "tom-08", "tom-09", "tom-10"] + ["slf-%02d" % i for i in range(1, 6)],
            "provoc": ["chr-%02d" % i for i in range(1, 11)]}
     hard = ["rea-03", "rea-07", "rea-08", "rea-10", "tom-02"]
+    V2 = bool(os.environ.get("FB_V2"))
+    PF = "flash2" if V2 else "flash"
+    if V2: hard = []
     def runset(name, think_ids=(), system=None, mx=600):
         jobs = [(i, th) for i in ids[name] for th in ([False] + ([True] if i in think_ids else []))]
         def work(job):
@@ -97,9 +100,9 @@ def suites():
         with concurrent.futures.ThreadPoolExecutor(4) as ex: res = list(ex.map(work, jobs))
         return res
     out = {"date": datetime.datetime.utcnow().isoformat() + "Z", "source": "MIND-BENCH dev.json (nox_wow v7), часть заданий"}
-    out["mind"] = runset("mind", hard); save(ST + "/flash_suite_mind.json", out)
-    out["soul"] = runset("soul", system=SOUL); save(ST + "/flash_suite_soul.json", out)
-    out["provoc"] = runset("provoc", system=SOUL); save(ST + "/flash_suite_provoc.json", out)
+    out["mind"] = runset("mind", hard); save(ST + "/%s_suite_mind.json" % PF, out)
+    out["soul"] = runset("soul", system=SOUL); save(ST + "/%s_suite_soul.json" % PF, out)
+    out["provoc"] = runset("provoc", system=SOUL); save(ST + "/%s_suite_provoc.json" % PF, out)
     # русский: составлено исполнителем
     RU = ["Мессир, объясни простыми словами, что такое инфляция.", "Напиши два предложения о том, как пахнет осенний лес.",
           "Как правильно: «одеть» или «надеть» пальто? Объясни коротко.", "Придумай короткую шутку про программистов.",
@@ -115,7 +118,7 @@ def suites():
     with concurrent.futures.ThreadPoolExecutor(4) as ex: ru = list(ex.map(ruone, RU))
     out["ru"] = ru; out["ru_note"] = "реплики и автопроверки составлены исполнителем; качество речи — только слепая оценка человеком"
     out["hard_think"] = hard
-    save(ST + "/flash_suites_all.json", out); print("DONE")
+    save(ST + "/%s_suites_all.json" % PF, out); print("DONE")
 
 if __name__ == "__main__":
     if "--url" in sys.argv: URL = sys.argv[sys.argv.index("--url") + 1]
