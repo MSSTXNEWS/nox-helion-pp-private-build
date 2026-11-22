@@ -336,6 +336,30 @@ async function check(chunks, status=200) {
                 self.assertFalse(canonical_s03_proof_valid(
                     writer, independent, DIALOG, changed))
 
+    def test_strict_s03_rejects_whitespace_aliased_durable_row_ids(self):
+        """Four S03 IDs must be byte-canonical, not merely unique after strip.
+
+        In a strict two-turn witness both writer and independent reader can
+        agree on an invalid padded ID and its exact SHA. Such agreement does
+        not make that durable identity safe to reconcile across read paths.
+        """
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        clean = [dict(row, message_id=f"msg-{i}")
+                 for i, row in enumerate(rows(es))]
+        writer, reader = s03_proof(clean)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, clean, require_full_transcript_pin=True))
+        for index in range(4):
+            for bad_id in (f" msg-{index}", f"msg-{index} ",
+                           f"\\tmsg-{index}", f"msg-{index}\\t"):
+                with self.subTest(row=index, identifier=repr(bad_id)):
+                    aliased = [dict(row) for row in clean]
+                    aliased[index]["message_id"] = bad_id
+                    matching_writer, matching_reader = s03_proof(aliased)
+                    self.assertFalse(canonical_s03_proof_valid(
+                        matching_writer, matching_reader, DIALOG, aliased,
+                        require_full_transcript_pin=True))
+
     def test_firstturn_message_ids_survive_spanish_followup_readback(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         final_rows = [
