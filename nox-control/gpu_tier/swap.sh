@@ -23,5 +23,16 @@ P
   echo "== кандидаты Flash на HF"
   for q in "GLM-5.3-Flash" "GLM-5.3-Flash-GGUF"; do curl -s -m20 "https://huggingface.co/api/models?search=$q&limit=15" | python3 -c 'import sys,json;[print(x["id"],x.get("downloads"),x.get("tags",[])[:3]) for x in json.load(sys.stdin)]'; done
   ;;
+swap1a)
+  echo "== кто держит/перезапускает :8081"
+  for p in $(pgrep -f "llama-server.*8081"); do echo "pid $p ppid $(ps -o ppid= -p $p) $(tr '\0' ' ' < /proc/$p/cmdline | cut -c1-120)"; ps -o pid,ppid,etime,cmd -p $(ps -o ppid= -p $p) | cut -c1-160; done
+  pgrep -af "watchdog|monitor|redo_worker|glm_|sweep|supervis|services" | grep -v pgrep | cut -c1-150
+  echo "== где упомянут 8081/glm_start в автозапуске"
+  grep -rlE "8081|glm_start|ik_llama" /etc/cron.d /root/nox/services.d /root/nox/scripts/lib /root/nox/boot_s1.sh /root/nox/gpu_tier /etc/supervisor* 2>/dev/null | head -12
+  crontab -l 2>/dev/null | head -5; ls /root/nox/services.d | head
+  echo "== манифест"; python3 -c "import json;m=json.load(open('/root/nox/models/manifests/glm53_ud_q4kxl.json'));print(len(m['shards']),sum(1 for s in m['shards'] if s.get('hf') and s['hf'].get('sha256')),'sha');print([s['name'][-14:] for s in m['shards']])"
+  wc -c /root/nox/models/manifests/glm53_ud_q4kxl.json /root/nox/logs/MODEL_SWAP.json
+  df -h /dev/shm /root | cat
+  ;;
 *) echo "unknown stage $S";;
 esac
