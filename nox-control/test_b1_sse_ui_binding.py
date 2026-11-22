@@ -1941,7 +1941,7 @@ def main():
               transport,host:opts.host,bridge:opts.bridge,
               ui:{async onDelta(){throw Error('no delta')},
                 async upsertTerminal(){projects++;return true}},
-              reconnectReadTimeoutMs:500
+              reconnectReadTimeoutMs:500,strictAckNoReplay:true
             });
             const first=await c.reconnect(s).then(x=>x,e=>e.code);
             const next=await c.reconnect(s).then(x=>x,e=>e.code);
