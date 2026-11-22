@@ -158,12 +158,13 @@
           // end with CR while the next starts with LF: normalizing each chunk
           // separately leaves CRLF intact and silently drops valid SSE deltas.
           buf=(buf+decoder.decode(part.value,{stream:true})).replace(/\r\n/g,'\n');
-          if(buf.length>65536) hold('HOLD_STREAM_FRAME_TOO_LARGE');
           let e;
           while((e=buf.indexOf('\n\n'))>=0){
-            // One chunk can contain multiple deltas. STOP inside an awaited UI
-            // callback must fence ALL later frames, even in that same chunk.
+            // Bound EACH frame, not the aggregate transport read. One chunk
+            // can legitimately contain many small SSE events totalling >64KiB.
+            // STOP is still checked between those individual events.
             if(ctrl.signal.aborted) return stopped();
+            if(e>65536) hold('HOLD_STREAM_FRAME_TOO_LARGE');
             const frame=buf.slice(0,e);
             buf=buf.slice(e+2);
             const lines=frame.split('\n');
@@ -211,6 +212,9 @@
             // Terminal SSE frames are deliberately NOT sufficient to ACK;
             // only a separately authenticated durable readback is accepted.
           }
+          // The unframed tail, unlike completed events, must be bounded.
+          // A single unterminated oversized event is not a valid stream.
+          if(buf.length>65536) hold('HOLD_STREAM_FRAME_TOO_LARGE');
         }
         if(ctrl.signal.aborted) return stopped();
         return 'STREAM_ENDED_READBACK_REQUIRED';
