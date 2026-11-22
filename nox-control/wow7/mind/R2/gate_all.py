@@ -90,7 +90,7 @@ def _call(x):
 
 def run_gate(kind, change_id="chg", *, fid_cand=None, fid_base=None, bench_cand=None, bench_base=None, contam=None,
              train_paths=(), frozen_tasks=None, frozen_texts=(), train_rows=(), focus=(), bench_policy=None, fid_policy=None,
-             meta=None, sig_dir=None, ledger_path=None, now=None, sycophancy=None, require_sycophancy=False, alive_run=None, alive_baseline=None, alive_thresholds=None):
+             meta=None, sig_dir=None, ledger_path=None, now=None, sycophancy=None, require_sycophancy=False, alive_run=None, alive_baseline=None, alive_thresholds=None, alive_mode="enforce"):
     """Любой из fid_cand/bench_cand может быть callable (ленивый дорогой прогон). -> результат ворот (см. модуль)."""
     if kind not in KINDS and kind != "persona":
         raise ValueError("неизвестный вид изменения: %s" % kind)
@@ -161,7 +161,7 @@ def run_gate(kind, change_id="chg", *, fid_cand=None, fid_base=None, bench_cand=
     try:
         alive_report = _call(alive_run) if alive_run is not None else None
         alive_base = _call(alive_baseline) if alive_baseline is not None else None
-        alive_result = gate_alive(alive_report, alive_base, alive_thresholds)
+        alive_result = gate_alive(alive_report, alive_base, alive_thresholds, mode=alive_mode)
     except Exception as e:
         alive_result = {"name": "alive", "ok": False, "skipped": False,
                         "critical_failures": ["report_error"],
