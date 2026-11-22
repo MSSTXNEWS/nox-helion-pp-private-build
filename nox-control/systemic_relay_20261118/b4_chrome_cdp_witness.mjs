@@ -372,7 +372,11 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       return;
     }
     const x=active.get(p.requestId);if(!x)return;
-    if(method==='Network.requestServedFromCache'){x.missing=true;return;}
+    if(method==='Network.requestServedFromCache'){
+      // Cache provenance arriving after terminal close and body ACK revokes
+      // an already-matched stream during bounded CDP quiescence.
+      x.missing=true;x.bodyMatchesStream=false;return;
+    }
     // ExtraInfo can precede OR follow responseReceived; cached 200 can hide a 304.
     if(method==='Network.responseReceivedExtraInfo'){
       // Extra HTTP provenance after terminal close/body ACK cannot certify an
