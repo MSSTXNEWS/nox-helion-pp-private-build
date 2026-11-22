@@ -1,0 +1,35 @@
+name: NOX P0 1A03 clean HTTP EOF regression gate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/owner_chat_stream.py'
+      - 'nox-control/test_owner_chat_stream.py'
+      - '.github/workflows/nox-p0-sse-eof-guard.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'nox-control/owner_chat_stream.py'
+      - 'nox-control/test_owner_chat_stream.py'
+      - '.github/workflows/nox-p0-sse-eof-guard.yml'
+permissions: {contents: read}
+concurrency:
+  group: sse-eof-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  one-sse-eof-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Guard original 1A03 completion against post-DONE data and truncated EOF
+        run: |
+          set -euo pipefail
+          python3 -m pip install -q "httpx==0.28.1" "fastapi==0.128.2"
+          python3 -m py_compile nox-control/owner_chat_stream.py nox-control/test_owner_chat_stream.py
+          PYTHONPATH=nox-control python3 -m unittest -v \
+            test_owner_chat_stream.StreamTests.test_sse_done_requires_clean_http_eof_and_no_late_events
+          echo 'SOURCE_ONLY=true NATIVE_ACCEPTED=false'
