@@ -206,6 +206,15 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             add("GPU_RESIDUAL_OWNER_BUSY_HOLD", "hold",
                 "Active native claim or maintenance window: no residual GPU "
                 "capacity hint. Keep the existing owner lease and work intact.")
+        elif util < 35 and (not isinstance(native, dict)
+                              or native.get("active_claims") is not False
+                              or native.get("maintenance_busy") is not False):
+            # Missing or malformed owner-claim/maintenance evidence is not
+            # evidence of idle resources. In particular, 0/1/string/None
+            # must not silently bypass the exact-boolean owner gate.
+            add("GPU_RESIDUAL_OWNER_UNVERIFIED", "hold",
+                "Owner claims or maintenance clearance is missing or non-boolean. "
+                "Low GPU utilization cannot imply spare capacity; no new GPU admission.")
         elif util < 35:
             # Low compute utilization alone is NOT spare accelerator capacity
             # without fresh VRAM, host I/O and chat latency.
