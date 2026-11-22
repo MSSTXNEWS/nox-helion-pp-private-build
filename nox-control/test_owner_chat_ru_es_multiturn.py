@@ -1570,6 +1570,62 @@ async function check(chunks, status=200) {
         self.assertIn('canonical_s03_verified=False', caller)
 
 
+    def test_postsecond_postquiet_root_session_provenance_is_immutable(self):
+        """Root owner session must survive quiet/reload history read-only GETs."""
+        from owner_chat_browser_qa import postquiet_fourrow_history_stable
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        base = {'dialog_id': DIALOG, 'session_id': 'owner-session-A',
+                'messages': [
+                    dict(row, message_id=f'row-{i}', dialog_id=DIALOG,
+                         session_id='owner-session-A')
+                    for i, row in enumerate(rows(es), 1)]}
+        sha = multiturn_transcript_sha256(base['messages'])
+        first_ids = ('row-1', 'row-2')
+        clone = lambda obj: json.loads(json.dumps(obj))
+        assert_stable = lambda a, b: postquiet_fourrow_history_stable(
+            a, b, DIALOG, sha, first_ids)
+        self.assertTrue(assert_stable(base, clone(base)))
+        for mode in ('rotate-root-only', 'drop-root', 'null-root', 'padded-root',
+                     'wrong-root-type', 'drop-row-scope'):
+            later = clone(base)
+            if mode == 'rotate-root-only':
+                later['session_id'] = 'owner-session-B'
+            elif mode == 'drop-root':
+                del later['session_id']
+            elif mode == 'null-root':
+                later['session_id'] = None
+            elif mode == 'padded-root':
+                later['session_id'] = ' owner-session-A '
+            elif mode == 'wrong-root-type':
+                later['session_id'] = 99
+            else:
+                del later['messages'][2]['session_id']
+            with self.subTest(mode=mode):
+                self.assertEqual(
+                    multiturn_transcript_sha256(later['messages']), sha)
+                self.assertEqual(
+                    [r['message_id'] for r in later['messages']],
+                    [r['message_id'] for r in base['messages']])
+                self.assertFalse(assert_stable(base, later))
+        # Root-only owner sessions are valid when all rows are legacy unscoped.
+        root_only = clone(base)
+        for row in root_only['messages']:
+            row.pop('session_id')
+        self.assertTrue(assert_stable(root_only, clone(root_only)))
+        changed_root = clone(root_only)
+        changed_root['session_id'] = 'owner-session-B'
+        self.assertFalse(assert_stable(root_only, changed_root))
+        # Entirely unscoped legacy history remains backward-compatible.
+        legacy = clone(root_only)
+        legacy.pop('session_id')
+        self.assertTrue(assert_stable(legacy, clone(legacy)))
+        self.assertFalse(assert_stable(legacy, root_only))
+        caller = inspect.getsource(browser_run)
+        self.assertLess(caller.index('QA_POSTQUIET_PERSISTED_HISTORY'),
+                        caller.index('QA_RELOAD_SAME_DIALOG_FOURROW'))
+        self.assertLess(caller.index('QA_POSTQUIET_PERSISTED_HISTORY'),
+                        caller.index("multiturn_browser_acceptance_verified']=True"))
+
     def test_ru_es_reload_history_recheck_cannot_rotate_row_session_metadata(self):
         """Stable four-message IDs/text must not hide an owner-session switch."""
         from types import SimpleNamespace
