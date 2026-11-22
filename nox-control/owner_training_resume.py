@@ -569,8 +569,16 @@ def s03_activation_pins(receipt, upgrade_chain, request=None, source=None):
     steps = receipt.get('steps')
     if type(steps) is not list or any(type(row) is not dict for row in steps):
         raise RuntimeError('HOLD_S03_ACTUAL_SEMANTIC_RECALL_REQUIRED')
-    events = {row.get('kind'): row.get('data') for row in steps
-              if isinstance(row.get('kind'), str)}
+    # Each S03 recall proof is single-valued. A later valid-looking event
+    # must never overwrite an earlier contradictory event in the same receipt.
+    events = {}
+    for row in steps:
+        kind = row.get('kind')
+        if type(kind) is str:
+            if (kind in ('s03_live_proxy_recall', 's03_lifecycle_recall')
+                    and kind in events):
+                raise RuntimeError('HOLD_S03_ACTUAL_SEMANTIC_RECALL_REQUIRED')
+            events[kind] = row.get('data')
     live, recall = events.get('s03_live_proxy_recall'), events.get('s03_lifecycle_recall')
     if type(live) is not dict or type(recall) is not dict:
         raise RuntimeError('HOLD_S03_ACTUAL_SEMANTIC_RECALL_REQUIRED')

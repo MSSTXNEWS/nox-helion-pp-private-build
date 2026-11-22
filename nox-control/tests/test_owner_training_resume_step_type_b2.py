@@ -2934,6 +2934,30 @@ class S03ContentReindexNestedShapeFence(unittest.TestCase):
         self.assertEqual(healthy[lifecycle], scope["S03_PINS"][lifecycle])
         self.assertEqual(len(healthy), 2)
 
+        # A later valid S03 event must not launder an earlier failed event.
+        # Repeated identical proof is ambiguous as well. Unrelated periodic
+        # progress events are permitted to repeat.
+        for index, kind in enumerate(
+                ("s03_live_proxy_recall", "s03_lifecycle_recall")):
+            for duplicate_data in ({"state": "FAILED"},
+                                   copy.deepcopy(valid["steps"][index]["data"])):
+                candidate = copy.deepcopy(valid)
+                candidate["steps"].insert(index, {
+                    "kind": kind, "data": duplicate_data,
+                })
+                with self.subTest(kind=kind, duplicate=duplicate_data):
+                    with self.assertRaisesRegex(
+                            RuntimeError,
+                            "^HOLD_S03_ACTUAL_SEMANTIC_RECALL_REQUIRED$"):
+                        check(candidate, chain)
+        repeated_unrelated = copy.deepcopy(valid)
+        repeated_unrelated["steps"].extend([
+            {"kind": "progress", "data": {"step": 1}},
+            {"kind": "progress", "data": {"step": 2}},
+        ])
+        self.assertEqual(check(repeated_unrelated, chain)[lifecycle],
+                         scope["S03_PINS"][lifecycle])
+
         with self.assertRaisesRegex(
                 RuntimeError, "HOLD_VERIFIED_S03_ACTIVATION_REQUIRED"):
             check(copy.deepcopy(valid), ["not-chain"])
