@@ -776,6 +776,56 @@ class FactReceiptTest(unittest.TestCase):
                         str(f.get("nox_event", {}).get("text", "")) for f in frames))
                 self.assertFalse(any(f.get("status") == "HOLD" for f in frames))
 
+    def test_optional_factual_classifier_failure_keeps_completed_answer(self):
+        """1A01: a failed optional classifier cannot erase DONE or skip S03."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Ответ"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        class Thinking:
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return False
+            def mode_hint(self, *args): return ""
+            def is_factual(self, *args):
+                raise RuntimeError("classifier unavailable")
+            async def skeptic(self, *args, **kwargs):
+                raise AssertionError("no second model on classifier failure")
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.NKEEP, bridge.LAST_CHAT, bridge.SOUL = 0, {"t": 0}, None
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Вопрос"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def collect():
+            response = await chat(Request({
+                "mode": "auto", "use_memory": False,
+                "messages": [{"role": "user", "content": "Вопрос"}]}))
+            return [json.loads(chunk) async for chunk in response.body_iterator]
+
+        with mock.patch.object(W, "W", Thinking()), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            frames = asyncio.run(collect())
+        self.assertEqual(writes, [("Вопрос", "Ответ")])
+        self.assertTrue(frames[-1]["done"])
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "GENERATED")
+        self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+        self.assertIsNone(frames[-1]["skeptic"])
+        self.assertFalse(any(f.get("status") == "HOLD" for f in frames))
+
     def test_stop_during_memory_or_prompt_assembly_never_posts_model(self):
         """1A04: accepted STOP after a slow phase must not start GPU inference."""
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")

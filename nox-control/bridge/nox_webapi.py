@@ -972,7 +972,15 @@ def install(app, B):
                     return
                 hist = {"status": "HOLD", "reason": "ответ пуст или остановлен"}
                 sk = None
-                if W and not mini and not stopped and full.strip() and mode != "fast" and (mode == "thoughtful" or W.is_factual(user)):
+                # Factual classification is optional. If it fails after a fully
+                # completed model stream, keep the primary answer and S03 write.
+                needs_skeptic = False
+                if W and not mini and not stopped and full.strip() and mode != "fast":
+                    try:
+                        needs_skeptic = mode == "thoughtful" or bool(W.is_factual(user))
+                    except Exception as e:
+                        B.log("web_skeptic_classifier_unavailable " + type(e).__name__)
+                if needs_skeptic:
                     yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": "проверяю факты (скептик)"})
                     # The emitted check event is an async yield point. A STOP
                     # received there must fence a second model call (skeptic).
