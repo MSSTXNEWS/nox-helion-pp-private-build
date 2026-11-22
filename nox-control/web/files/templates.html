@@ -51,4 +51,6 @@ Split(['#sl','#sr'],{sizes:[40,60],gutterSize:6});
 /* виджеты */
 var gs=GridStack.init({cellHeight:90,margin:6},'.grid-stack');
 gs.load([{x:0,y:0,w:4,h:2,content:'<b>Память</b><br>факты и воспоминания'},{x:4,y:0,w:4,h:2,content:'<b>Состояние</b><br>настроение, энергия'},{x:8,y:0,w:4,h:2,content:'<b>Задачи</b><br>из канбана'}]);
+if(/embed/.test(location.search)){document.querySelector('header').style.display='none';document.body.style.background='transparent'}
+var h0=location.hash.slice(1);if(h0){var tb=document.querySelector('.tab[data-t="'+h0+'"]');if(tb)tb.click()}
 </script></body></html>
