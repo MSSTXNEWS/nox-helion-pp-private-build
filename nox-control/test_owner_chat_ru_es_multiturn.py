@@ -392,6 +392,34 @@ async function check(chunks, status=200) {
         self.assertIn('postquiet_fourrow_history_stable(',
                       inspect.getsource(browser_run))
 
+    def test_rootless_browser_fourrow_cannot_mix_explicit_dialog_scopes(self):
+        """Optional root parameter must never permit cross-dialog RU/ES rows."""
+        from owner_chat_browser_qa import coherent_row_dialog_scope
+        import copy
+        es = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        legacy = [dict(row, message_id=f'rootless-row-{i}')
+                  for i, row in enumerate(rows(es), 1)]
+        scoped = [dict(row, dialog_id=DIALOG) for row in legacy]
+
+        def without_root(sample):
+            return multiturn_history_valid(sample, RU, FIRST, es, LAST)
+
+        self.assertTrue(coherent_row_dialog_scope(legacy))
+        self.assertTrue(without_root(legacy))
+        self.assertTrue(coherent_row_dialog_scope(scoped))
+        self.assertTrue(without_root(scoped))
+        self.assertTrue(multiturn_history_valid(
+            scoped, RU, FIRST, es, LAST, DIALOG))
+        for index in range(4):
+            for foreign in ('foreign-dialog', None, '', ' bad ', '\\u200b', 42):
+                with self.subTest(row=index, scope=repr(foreign)):
+                    mixed = copy.deepcopy(scoped)
+                    mixed[index]['dialog_id'] = foreign
+                    self.assertFalse(coherent_row_dialog_scope(mixed))
+                    self.assertFalse(without_root(mixed))
+        self.assertFalse(coherent_row_dialog_scope(
+            [dict(scoped[0]), dict(scoped[1], dialog_id=None)]))
+
     def test_explicit_message_ids_do_not_replay_one_row_as_multiple_ru_es_turns(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         legacy = rows(es)

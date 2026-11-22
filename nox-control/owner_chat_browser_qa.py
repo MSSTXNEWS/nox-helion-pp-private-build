@@ -309,15 +309,23 @@ def stable_second_turn_quiescence(before, after, admitted, native_answer_equal):
 
 
 def coherent_row_dialog_scope(rows):
-    """Browser-history rows must be all scoped or all legacy unscoped.
+    """Browser-history rows must be one explicitly coherent or legacy dialog.
 
-    Partially annotated rows do not prove one RU/ES dialog even when content,
-    message identities, and explicit per-row dialog IDs otherwise agree.
+    Presence alone is insufficient: a rootless four-row RU/ES validator must
+    not accept different explicit dialog_id values as one conversation.
     """
     if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
         return False
     scope = ['dialog_id' in row for row in rows]
-    return not any(scope) or all(scope)
+    if not any(scope):
+        return True  # Fully unscoped legacy history.
+    if not all(scope):
+        return False
+    ids = [row['dialog_id'] for row in rows]
+    return (all(isinstance(value, str) and bool(value)
+                and value == value.strip() and value.isprintable()
+                for value in ids)
+            and len(set(ids)) == 1)
 
 
 def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, firstturn_ids):
