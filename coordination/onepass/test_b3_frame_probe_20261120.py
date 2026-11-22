@@ -1455,5 +1455,101 @@ class TestProbe(unittest.TestCase):
         self.assertIn("upstreamAbort.abort();\n    stopPhase();", bridge)
 
 
+
+    def test_json_escaped_lone_surrogate_fails_before_s03(self):
+        """Real Chromium with synthetic native, not a production readback."""
+        from playwright.async_api import async_playwright
+        async def run():
+            async with async_playwright() as pw:
+                browser=await pw.chromium.launch(
+                    headless=True,executable_path='/usr/bin/chromium')
+                try:
+                    page=await browser.new_page()
+                    async def fixture(route):
+                        await route.fulfill(status=200,content_type='text/html',
+                                            body='<html>B3 scalar fixture</html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html',fixture)
+                    await page.goto(
+                        'http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__reads=0;window.__posts=0;const state={};
+                        window.fetch=async (url,init)=>{
+                            if(url==='/api/nox/chat/stream'){
+                                window.__posts++;
+                                const d=JSON.parse(init.body),m=d.message;
+                                const parts=m==='bad-high'?['A',String.fromCharCode(0xD800)]
+                                    :m==='bad-low'?['A',String.fromCharCode(0xDC00)]
+                                    :m==='good-split'?[String.fromCharCode(0xD83D),
+                                        String.fromCharCode(0xDE80)]:['Ж','🧠'];
+                                const exchange='ex-b3-'+m;
+                                state[d.dialog_id]=[m,parts.join(''),exchange];
+                                const frames=[
+                                    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start',model:'fixed-native-fixture'},
+                                    ...parts.map(text=>({type:'delta',text})),
+                                    {type:'done',saved:true,s03_integrated:true,
+                                     dialog_id:d.dialog_id,exchange_id:exchange}];
+                                return new Response(
+                                    frames.map(JSON.stringify).join('\\n')+'\\n',
+                                    {status:200});
+                            }
+                            if(String(url).startsWith('/api/ui/memory/dialogs/history?')){
+                                window.__reads++;
+                                const id=new URL(url,'http://localhost')
+                                    .searchParams.get('dialog_id');
+                                const s=state[id];
+                                return new Response(JSON.stringify({
+                                    status:'READY',dialog_id:id,messages:[
+                                        {role:'user',content:s[0],exchange_id:s[2]},
+                                        {role:'assistant',content:s[1],exchange_id:s[2]}
+                                    ]}),{status:200});
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE');
+                        };
+                    }""")
+                    bridge=(pathlib.Path(__file__).parent/
+                            'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    rows=await page.evaluate("""async () => {
+                        const rows=[];
+                        for(const [i,m] of
+                             ['bad-high','bad-low','good-split','good-utf8'].entries()){
+                            const prior=window.__reads;
+                            const r=await fetch('/api/nox/chat',{
+                                method:'POST',body:JSON.stringify({
+                                    dialog_id:String(i+1).repeat(32),
+                                    request_id:'b3-scalar-'+m,message:m
+                                })
+                            });
+                            const events=(await r.text()).split('\\n\\n')
+                                .filter(Boolean).map(x=>JSON.parse(x.slice(6)));
+                            rows.push({mode:m,reads:window.__reads-prior,
+                                done:events.filter(x=>x.type==='done'),
+                                errors:events.filter(x=>x.type==='error'),
+                                text:events.filter(x=>x.type==='token')
+                                    .map(x=>x.t).join('')});
+                        }
+                        return {rows,posts:window.__posts};
+                    }""")
+                    self.assertEqual(rows['posts'],4)
+                    for r in rows['rows']:
+                        if r['mode'].startswith('bad'):
+                            self.assertEqual(r['reads'],0)
+                            self.assertEqual(r['done'],[])
+                            self.assertEqual(len(r['errors']),1)
+                            self.assertIn('HOLD_NATIVE_SURROGATE',
+                                          r['errors'][0]['error'])
+                        else:
+                            self.assertEqual(r['reads'],1)
+                            self.assertEqual(r['errors'],[])
+                            self.assertEqual(len(r['done']),1)
+                            self.assertEqual(r['text'],
+                                '🚀' if r['mode']=='good-split' else 'Ж🧠')
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
 if __name__ == '__main__':
     unittest.main()
