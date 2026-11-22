@@ -31,7 +31,7 @@ stage_apply() {
 }
 stage_health() {
   v7_health_regress || return 1
-  v7_http http://127.0.0.1:8082/health 10 || return 1
+  v7_http http://127.0.0.1:8082/v1/nox/stats 10 || return 1
   pgrep -f 'qs6\.recall_server' >/dev/null && { v7_http http://127.0.0.1:8095/health 5 || { say "recall не здоров"; return 1; }; }
   v7_chat_probe fast 40 120 "привет" | tee "$V7_RUN/p5_hi.json" | cut -c1-200; grep -q '"ok": true' "$V7_RUN/p5_hi.json" || return 1
   v7_chat_probe fast 60 120 "Что ты помнишь обо мне? Если не знаешь - скажи честно." | tee "$V7_RUN/p5_mem.json" | cut -c1-200; grep -q '"ok": true' "$V7_RUN/p5_mem.json" || return 1

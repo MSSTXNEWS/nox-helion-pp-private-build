@@ -49,7 +49,7 @@ stage_apply() {
   V7_RESULT=$(for o in $ORGANS; do printf '%s=%s;' "$o" "${ORG[$o]:-?}"; done)
   v7_receipt running organs="$(python3 -I -c 'import json,sys;print(json.dumps(dict(kv.split("=",1) for kv in sys.argv[1].split(";") if kv)))' "$V7_RESULT")"
 }
-stage_health() { v7_health_regress && v7_http http://127.0.0.1:8082/health 10 && { v7_chat_probe fast 40 120 "привет" | tee "$V7_RUN/p6_hi.json" | cut -c1-200; grep -q '"ok": true' "$V7_RUN/p6_hi.json"; }; }
+stage_health() { v7_health_regress && v7_http http://127.0.0.1:8082/v1/nox/stats 10 && { v7_chat_probe fast 40 120 "привет" | tee "$V7_RUN/p6_hi.json" | cut -c1-200; grep -q '"ok": true' "$V7_RUN/p6_hi.json"; }; }
 stage_rollback() { rm -f /etc/cron.d/nox-world; v7_flag unset NOX_INNER; pkill -f 'nox_inner_loop\.py --daemon' 2>/dev/null; v7_restart gateway; return 0; }
 
 V7_SELF="${BASH_SOURCE[0]}"; V7_SELF_DIR=$(cd "$(dirname "$V7_SELF")" && pwd)

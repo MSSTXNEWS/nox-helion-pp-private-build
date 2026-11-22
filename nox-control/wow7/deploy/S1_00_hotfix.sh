@@ -30,7 +30,7 @@ PY
 }
 stage_apply() {
   local s before="$V7_RUN/$SID.hi_before" f
-  v7_http http://127.0.0.1:8082/health && { hi_probe "$before"; V7_BEFORE=$(hi_check "$before" 2>&1 | tail -1); say "ДО: $V7_BEFORE"; }
+  v7_http http://127.0.0.1:8082/v1/nox/stats && { hi_probe "$before"; V7_BEFORE=$(hi_check "$before" 2>&1 | tail -1); say "ДО: $V7_BEFORE"; }
   for s in common prime hotfix; do v7_sync_set "$s" || return 1; done
   v7_links; v7_bk_file "$V7_STATE/v7_flags.json"
   v7_flag set NOX_PRIME=1 "NOX_WOW7=$V7_W"
@@ -42,7 +42,7 @@ stage_apply() {
 }
 stage_health() {
   v7_health_regress || return 1
-  v7_http http://127.0.0.1:8082/health 10 || { say "шлюз не отвечает"; return 1; }
+  v7_http http://127.0.0.1:8082/v1/nox/stats 10 || { say "шлюз не отвечает"; return 1; }
   local after="$V7_RUN/$SID.hi_after" r; hi_probe "$after"; r=$(hi_check "$after" 2>&1 | tail -1); say "ПОСЛЕ: $r"; V7_RESULT="$r"
   hi_check "$after" >/dev/null 2>&1
 }
