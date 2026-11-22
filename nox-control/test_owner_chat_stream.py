@@ -313,7 +313,9 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             ('request-timeout',408,'HOLD_MODEL_HTTP_TIMEOUT'),
             ('rate-limited',429,'HOLD_MODEL_RATE_LIMIT'),
             ('unavailable',503,'HOLD_MODEL_UNAVAILABLE'),
-            ('other',502,'HOLD_MODEL_HTTP'),
+            ('bad-gateway',502,'HOLD_MODEL_GATEWAY'),
+            ('gateway-timeout',504,'HOLD_MODEL_HTTP_TIMEOUT'),
+            ('other',418,'HOLD_MODEL_HTTP'),
             ('read-timeout',None,'HOLD_MODEL_TRANSPORT_TIMEOUT'),
             ('connection-reset',None,'HOLD_MODEL_TRANSPORT'),
         ]
