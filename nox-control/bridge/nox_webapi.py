@@ -25,6 +25,19 @@ MAX_PENDING_SCOPED_STOPS = 4096
 # An active request's targeted STOP must never be denied by unknown tombstones.
 ACTIVE_CHAT_IDS = set()
 MAX_ACTIVE_CHAT_IDS = 128
+# Short-lived, bounded, process-local reconciliation only. Never store ephemeral
+# turns, and never present this as durable replay or an S03 readback.
+CHAT_SNAPSHOTS = {}
+MAX_CHAT_SNAPSHOTS = 24
+CHAT_SNAPSHOT_TTL_S = 120
+
+
+def _prune_chat_snapshots():
+    cutoff = time.time() - CHAT_SNAPSHOT_TTL_S
+    for key, row in list(CHAT_SNAPSHOTS.items()):
+        if row["updated_at"] < cutoff:
+            CHAT_SNAPSHOTS.pop(key, None)
+
 # Bound the canonical response before a corrupt upstream can exhaust RAM or S03.
 MAX_CHAT_OUTPUT_UTF8_BYTES = 128 * 1024
 # Increment-only broadcast STOP epoch: a new request cannot clear an older stream's STOP.
@@ -596,6 +609,27 @@ def install(app, B):
                 "target_request_id": target, "stop_confirmed": False,
                 "media_stopped": False, "task_cancelled": False, "owner_stop": False}
 
+    @app.get("/api/chat/snapshot")
+    async def a_chat_snapshot(stream_id: str = "", request_id: str = ""):
+        # The random 128-bit stream identifier is an unguessable read capability.
+        # Existing web-token middleware also applies where configured.
+        if not re.fullmatch(r"[0-9a-f]{32}", stream_id) or not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", request_id):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_SNAPSHOT_INVALID_CURSOR"}, status_code=400)
+        _prune_chat_snapshots()
+        row = CHAT_SNAPSHOTS.get(stream_id)
+        if row is None or row["request_id"] != request_id:
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_SNAPSHOT_NOT_FOUND"}, status_code=404)
+        return JSONResponse({
+            "status": row["state"], "request_id": request_id,
+            "stream_id": stream_id, "event_seq": row["event_seq"],
+            "message": {"role": "assistant", "content": row["text"]},
+            "done": row["terminal"],
+            "completion_receipt": row["completion_receipt"],
+            "memory_write_receipt": row["memory_write_receipt"],
+            "s03_readback_verified": False,
+            "snapshot_scope": "PROCESS_LOCAL", "replay_supported": False,
+        }, headers={"Cache-Control": "no-store"})
+
     @app.post("/api/chat")
     async def a_chat(request: Request):
         # Capture before body parsing: STOP during request admission is binding.
@@ -662,10 +696,43 @@ def install(app, B):
         # increasing frame cursor. This is NOT a durable replay/acceptance receipt.
         stream_id = secrets.token_hex(16)
         frame_seq = 0
+        if not eph:
+            _prune_chat_snapshots()
+            while len(CHAT_SNAPSHOTS) >= MAX_CHAT_SNAPSHOTS:
+                CHAT_SNAPSHOTS.pop(next(iter(CHAT_SNAPSHOTS)))
+            CHAT_SNAPSHOTS[stream_id] = {
+                "request_id": rid, "event_seq": 0, "text": "",
+                "text_bytes": 0, "state": "ADMITTED", "terminal": False,
+                "completion_receipt": None, "memory_write_receipt": None,
+                "updated_at": time.time(),
+            }
 
         def fr(**k):
             nonlocal frame_seq
             frame_seq += 1
+            row = CHAT_SNAPSHOTS.get(stream_id)
+            if row is not None:
+                row["event_seq"] = frame_seq
+                row["updated_at"] = time.time()
+                if row["state"] == "ADMITTED":
+                    row["state"] = "STREAMING"
+                message = k.get("message")
+                content = message.get("content") if isinstance(message, dict) else None
+                if isinstance(content, str) and content:
+                    added_bytes = len(content.encode("utf-8", "strict"))
+                    if row["text_bytes"] + added_bytes <= MAX_CHAT_OUTPUT_UTF8_BYTES:
+                        row["text"] += content
+                        row["text_bytes"] += added_bytes
+                    else:
+                        row["state"] = "HOLD"
+                if k.get("status") == "HOLD":
+                    row["state"] = "HOLD"
+                if k.get("done") is True:
+                    row["terminal"] = True
+                    row["state"] = ("STOPPED" if k.get("done_reason") == "stopped" else "GENERATED")
+                for receipt in ("completion_receipt", "memory_write_receipt"):
+                    if isinstance(k.get(receipt), dict):
+                        row[receipt] = k[receipt].copy()
             d = {"model": TAG, "request_id": rid, "stream_id": stream_id,
                  "event_seq": frame_seq,
                  "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
@@ -963,6 +1030,11 @@ def install(app, B):
         def release_chat_admission():
             ACTIVE_CHAT_IDS.discard(rid)
             CANCEL.discard(rid)
+            row = CHAT_SNAPSHOTS.get(stream_id)
+            if row is not None and not row["terminal"] and row["state"] not in ("HOLD", "STOPPED"):
+                # A disconnected transport is not evidence of model completion.
+                row["state"] = "INTERRUPTED"
+                row["updated_at"] = time.time()
 
         class TrackedChatBody:
             """Release admission on normal EOF, early aclose, error or cancellation."""

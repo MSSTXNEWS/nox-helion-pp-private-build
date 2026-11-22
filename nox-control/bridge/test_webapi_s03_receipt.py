@@ -72,6 +72,74 @@ class FactReceiptTest(unittest.TestCase):
                 payload = json.loads(response.body)
                 self.assertEqual(payload, {"status": "HOLD", "reason": code})
 
+    def test_1a03_process_local_snapshot_reconciles_utf8_and_disconnect(self):
+        """Snapshot is bounded, non-replaying and never certifies S03 readback."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        snapshot = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/snapshot")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT = {"t": 0}
+        writes = []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                return False
+            async def aiter_lines(self):
+                yield 'data: ' + json.dumps({"choices": [{"delta": {"content": "Привет 🌌"}}]}, ensure_ascii=False)
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs):
+                return Upstream()
+
+        bridge.hc = lambda: Client()
+        def request(rid, ephemeral=False):
+            return Request({"request_id": rid, "mini": True, "use_memory": False,
+                            "ephemeral": ephemeral,
+                            "messages": [{"role": "user", "content": "Проверить Unicode"}]})
+
+        async def scenario():
+            response = await chat(request("snap-complete"))
+            frames = [json.loads(part) async for part in response.body_iterator]
+            sid = frames[0]["stream_id"]
+            finished = await snapshot(stream_id=sid, request_id="snap-complete")
+            wrong = await snapshot(stream_id=sid, request_id="snap-other")
+            disconnected = await chat(request("snap-interrupted"))
+            first = json.loads(await disconnected.body_iterator.__anext__())
+            await disconnected.body_iterator.aclose()
+            partial = await snapshot(stream_id=first["stream_id"], request_id="snap-interrupted")
+            private = await chat(request("snap-private", ephemeral=True))
+            private_id = json.loads(await private.body_iterator.__anext__())["stream_id"]
+            await private.body_iterator.aclose()
+            unavailable = await snapshot(stream_id=private_id, request_id="snap-private")
+            return frames, finished, wrong, partial, unavailable
+
+        with (mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.object(W, "W", None),
+              mock.patch.dict(sys.modules, {"s03_memory": memory})):
+            frames, finished, wrong, partial, unavailable = asyncio.run(scenario())
+        self.assertEqual(finished.status_code, 200)
+        saved = json.loads(finished.body)
+        self.assertEqual(saved["message"]["content"], "Привет 🌌")
+        self.assertEqual(saved["event_seq"], len(frames))
+        self.assertEqual(saved["status"], "GENERATED")
+        self.assertTrue(saved["done"])
+        self.assertFalse(saved["s03_readback_verified"])
+        self.assertFalse(saved["replay_supported"])
+        self.assertEqual(saved["snapshot_scope"], "PROCESS_LOCAL")
+        self.assertEqual(saved["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+        self.assertEqual(wrong.status_code, 404)
+        self.assertEqual(json.loads(partial.body)["status"], "INTERRUPTED")
+        self.assertFalse(json.loads(partial.body)["done"])
+        self.assertEqual(unavailable.status_code, 404)
+        self.assertEqual(len(writes), 1)
+
     def test_missing_legacy_request_id_is_unique_and_stop_addressable(self):
         # A real chat endpoint first frame, without any model POST or S03 write.
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
