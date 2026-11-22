@@ -86,8 +86,11 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(len(set(ids)), 2)
         for frame in frames:
             self.assertRegex(frame["request_id"], r"^[0-9a-f]{32}$")
+            self.assertRegex(frame["stream_id"], r"^[0-9a-f]{32}$")
+            self.assertEqual(frame["event_seq"], 1)
             self.assertEqual(frame["request_receipt"]["request_id"], frame["request_id"])
             self.assertEqual(frame["request_receipt"]["status"], "RECEIVED")
+        self.assertNotEqual(frames[0]["stream_id"], frames[1]["stream_id"])
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -195,6 +198,7 @@ class FactReceiptTest(unittest.TestCase):
             response = await endpoint(Request(body))
             return [json.loads(part) async for part in response.body_iterator]
 
+        seen_stream_ids = set()
         for complete, status, finish_reason, error_event, after_done, expected_ok in (
             (False, 200, None, False, None, False),
             (True, 503, None, False, None, False),
@@ -215,6 +219,17 @@ class FactReceiptTest(unittest.TestCase):
                                            error_event, after_done)
                 with mock.patch.dict(sys.modules, {"s03_memory": module}), mock.patch.object(W, "W", None):
                     frames = asyncio.run(get_frames())
+                # Every NDJSON frame (including incomplete HOLD) carries
+                # the unique server stream ID and a gap-detectable cursor.
+                stream_ids = {v.get("stream_id") for v in frames}
+                self.assertEqual(len(stream_ids), 1)
+                stream_id = next(iter(stream_ids))
+                self.assertRegex(stream_id, r"^[0-9a-f]{32}$")
+                self.assertNotIn(stream_id, seen_stream_ids)
+                seen_stream_ids.add(stream_id)
+                self.assertEqual([v.get("event_seq") for v in frames],
+                                 list(range(1, len(frames) + 1)))
+                self.assertTrue(all(v["request_id"] == "r-test" for v in frames))
                 terminal = [v for v in frames if v.get("done") is True]
                 self.assertEqual(frames[0]["request_receipt"]["status"], "RECEIVED")
                 self.assertFalse(frames[0]["request_receipt"]["native_admission_verified"])

@@ -594,8 +594,17 @@ def install(app, B):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_ACTIVE_CAPACITY"}, status_code=503)
         ACTIVE_CHAT_IDS.add(rid)
 
+        # Each HTTP stream has its own server-assigned identity and monotonically
+        # increasing frame cursor. This is NOT a durable replay/acceptance receipt.
+        stream_id = secrets.token_hex(16)
+        frame_seq = 0
+
         def fr(**k):
-            d = {"model": TAG, "request_id": rid, "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+            nonlocal frame_seq
+            frame_seq += 1
+            d = {"model": TAG, "request_id": rid, "stream_id": stream_id,
+                 "event_seq": frame_seq,
+                 "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
             d.update(k)
             return json.dumps(d, ensure_ascii=False) + "\n"
 
@@ -790,15 +799,16 @@ def install(app, B):
                 if not stopped and (err or upstream_failure or not upstream_done or not full.strip()):
                     B.log("web_stream_incomplete " + (err or upstream_failure or "MISSING_DONE_OR_EMPTY"))
                     CANCEL.discard(rid)
-                    yield json.dumps({"status": "HOLD", "reason": "MODEL_STREAM_INCOMPLETE",
-                                      "error": "ответ модели не завершён — можно повторить запрос",
-                                      "request_id": rid, "done": False,
-                                      "memory_history": {"status": "HOLD", "reason": "UPSTREAM_NOT_COMPLETE", "s03_readback_verified": False},
-                                       "completion_receipt": {"status": "HOLD", "request_id": rid,
-                                                              "upstream_done": upstream_done},
-                                       "memory_write_receipt": {"status": "SKIPPED", "request_id": rid,
-                                                                "s03_readback_verified": False}},
-                                     ensure_ascii=False) + "\n"
+                    # Error frames must share the same sequence as all prior
+                    # tokens/status frames, so clients can detect a lost final event.
+                    yield fr(status="HOLD", reason="MODEL_STREAM_INCOMPLETE",
+                             error="ответ модели не завершён — можно повторить запрос",
+                             done=False,
+                             memory_history={"status": "HOLD", "reason": "UPSTREAM_NOT_COMPLETE", "s03_readback_verified": False},
+                             completion_receipt={"status": "HOLD", "request_id": rid,
+                                                 "upstream_done": upstream_done},
+                             memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                   "s03_readback_verified": False})
                     return
                 hist = {"status": "HOLD", "reason": "ответ пуст или остановлен"}
                 sk = None
