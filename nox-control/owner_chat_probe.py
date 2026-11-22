@@ -539,26 +539,28 @@ def stream_frame_reports_failure(frame):
     incomplete = ('length', 'max_tokens', 'max_length', 'content_filter',
                   'error', 'failed', 'cancelled', 'canceled', 'aborted',
                   'timeout', 'timed_out')
-    for metadata in (frame, status if isinstance(status, dict) else {}):
+    # A model/proxy may put explicit failures in metadata/meta rather than
+    # status. A subsequent saved=true DONE must not launder those flags.
+    scopes = [frame]
+    for container in ('status', 'metadata', 'meta'):
+        nested = frame.get(container)
+        if isinstance(nested, dict):
+            scopes.append(nested)
+            nested_status = nested.get('status')
+            if isinstance(nested_status, dict):
+                scopes.append(nested_status)
+    for metadata in scopes:
         for key in ('finish_reason', 'finishReason', 'stop_reason', 'stopReason'):
             reason = metadata.get(key)
             if isinstance(reason, str) and reason.strip().lower() in incomplete:
                 return True
-    if stream_status_is_failure(status):
-        return True
-    if isinstance(status, dict):
-        # A structured status can carry an upstream failure without HTTP code.
-        # Do not let a later saved=true done erase nested error/success=false.
-        if (status.get('error') not in (None, '', False)
-                or status.get('success') is False or status.get('ok') is False):
+        if (metadata.get('error') not in (None, '', False)
+                or metadata.get('success') is False or metadata.get('ok') is False):
             return True
-        if any(stream_status_is_failure(status.get(key))
+        if any(stream_status_is_failure(metadata.get(key))
                for key in (*keys, 'status', 'state')):
             return True
-    # A flat state=timeout is equally fatal; nested status.state is checked
-    # above. Do not reject normal progress labels such as running/done/stop.
-    return any(stream_status_is_failure(frame.get(key)) for key in (*keys, 'state'))
-
+    return False
 
 def require_stream_model_identity(frame, previous=None):
     """Bind any explicitly reported model labels across one complete stream."""
