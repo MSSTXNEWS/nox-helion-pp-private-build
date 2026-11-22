@@ -97,22 +97,28 @@ nice0=os.getpriority(os.PRIO_PROCESS,int(pid))
 ST['start_flags']=' '.join(base); ST['start_cpus']=cpus0; ST['start_nice']=nice0; save()
 log('base',base,cpus0,nice0)
 if cpus0 in ('0-111','0-223'): cpus0=None
-# stage1 MTP
+# stage1 MTP x ngl
 A=bench('A_ngl40_np2',base,cpus0,nice0)
 SP=['--spec-type','draft-mtp','--spec-draft-n-max','3']
-B=bench('B_mtp3',base+SP,cpus0,nice0)
-cur=base; best=A
-if 'error' not in B and tgs(B)>tgs(A)*1.05 and B.get('short_text','')[:40]==A.get('short_text','')[:40]:
-    cur=base+SP; best=B
-elif 'error' not in B and tgs(B)>tgs(A)*1.05: cur=base+SP; best=B; ST['mtp_text_differs']=True
-ST['mtp_kept']=(cur!=base); save()
-if cur!=base:
+best=A; cur=base; bestngl=40; ST['mtp_kept']=False
+for ngl in (40,36,32,28):
+    fb=setf(base,'-ngl',ngl)
+    if ngl!=40:
+        N=bench('A_ngl%d_np2'%ngl,fb,cpus0,nice0,full=False)
+        if 'error' not in N and tgs(N)>tgs(best)*1.03 and not ST['mtp_kept']: best=N; cur=fb
+    B=bench('B_mtp3_ngl%d'%ngl,fb+SP,cpus0,nice0,full=(ngl==40))
+    if 'error' not in B:
+        if tgs(B)>tgs(best)*1.03: best=B; cur=fb+SP; ST['mtp_kept']=True; ST['mtp_text_same']=(B.get('short_text','')[:60]==A.get('short_text','')[:60])
+        break
+if ST['mtp_kept']:
     for k in ('2','4'):
         R=bench('B_mtp'+k,setf(cur,'--spec-draft-n-max',k),cpus0,nice0,full=False)
-        if tgs(R)>tgs(best)*1.03: best=R; cur=setf(cur,'--spec-draft-n-max',k)
+        if 'error' not in R and tgs(R)>tgs(best)*1.03: best=R; cur=setf(cur,'--spec-draft-n-max',k)
+ST['stage1_flags']=' '.join(cur); save()
 # stage2 kvu np4 c32768
 C=None
-for ngl in (40,36,32):
+ng0=int(cur[cur.index('-ngl')+1])
+for ngl in [x for x in (40,36,32,28,24) if x<=ng0]:
     f=setf(setf(setf(setf(cur,'--parallel',4),'-c',32768),'-ngl',ngl),'-kvu')
     C=bench('C_np4_kvu_ngl%d'%ngl,f,cpus0,nice0)
     if 'error' not in C: cur=f; break
