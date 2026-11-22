@@ -440,7 +440,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
             !validTime(previous.closeAt)||previous.close===null?'PRIOR_NO_LOADING_FINISHED':
             previous.doneAt>previous.closeAt?'PRIOR_DONE_AFTER_CLOSE':
             p.timestamp<=previous.closeAt?'POST_OVERLAP':'UNSPECIFIED';
-          invalidate(Error('CDP_NON_SERIAL_CHAT_POST:'+reason));return;
+          invalidate(Error('CDP_NON_SERIAL_CHAT_POST:'+reason+':line'+(previous?.firstMissingSourceLine||'NONE')));return;
         }
         previousBodyAckPendingAtStart=previous.bodyAckPending;
       }
@@ -448,6 +448,19 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       // Keep a missing POST-body digest distinct from an invalid CDP stream;
       // the former fails total integrity without proving the turns overlap.
       x.postDataLookupFailed=false;
+      // R23 source-only diagnostic: record the FIRST missing-integrity setter
+      // as a code location, never data, prompts, URLs or response contents.
+      let missingState=x.missing;
+      Object.defineProperty(x,'missing',{
+        get(){return missingState;},
+        set(value){
+          if(value&&!missingState){
+            const locations=[...String(new Error().stack).matchAll(/b4_chrome_cdp_witness\.mjs:(\d+):/g)];
+            x.firstMissingSourceLine=locations[1]?.[1]||'UNKNOWN';
+          }
+          missingState=value;
+        }
+      });
       x.postDoneStreamFault=false;
       x.closeSucceeded=false;
       active.set(p.requestId,x);
