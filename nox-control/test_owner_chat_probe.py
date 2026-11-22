@@ -2789,5 +2789,28 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual(clean_frames[-1]['dialog_id'], did)
 
 
+    def test_live_multiturn_missing_model_tag_holds_before_third_post_and_complete(self):
+        """An untagged route is compatible transport, never positive model proof."""
+        known = {'stream_model_identity': 'GLM-5.3'}
+        unknown = {'stream_model_identity': None}
+        self.assertFalse(probe.require_multiturn_model_route(unknown, unknown))
+        self.assertFalse(probe.require_multiturn_model_route(unknown, unknown, unknown))
+        self.assertTrue(probe.require_multiturn_model_route(known, known))
+        self.assertTrue(probe.require_multiturn_model_route(known, known, known))
+
+        main = path.read_text().split('def main():', 1)[1]
+        preflight = "if not require_multiturn_model_route(turn,follow):"
+        postflight = "if not model_route_verified:"
+        third_post = 'turn3=admitted_consume_turn('
+        complete = "print('NOX_MAINT_REPAIR_COMPLETE=true'"
+        self.assertEqual(main.count(preflight), 1)
+        self.assertEqual(main.count(postflight), 1)
+        self.assertEqual(main.count(
+            "raise RuntimeError('HOLD_CHAT_MULTITURN_MODEL_IDENTITY_MISSING')"), 2)
+        self.assertLess(main.index(preflight), main.index(third_post))
+        self.assertLess(main.index(third_post), main.index(postflight))
+        self.assertLess(main.index(postflight), main.index(complete))
+
+
 if __name__ == '__main__':
     unittest.main()
