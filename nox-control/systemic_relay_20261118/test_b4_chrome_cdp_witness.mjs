@@ -1452,3 +1452,59 @@ test('second duplicate or contradictory close during post-ACK quiescence fails c
   assert.equal(beyondWindow,1,'fixture deliberately emits after capture');
   assert.equal(JSON.stringify(limited),sealed,'post-capture event cannot alter returned evidence');
 });
+
+
+test('late second CDP data chunk after body ACK fails closed within bounded quiescence',async()=>{
+  const firstKeys=['cdp_request_id','request_sha256','cdp_decoded_body_sha256',
+    'cdp_streamed_body_sha256','visible_text_sha256','ttft_ms','sse_done_ms',
+    'stream_timing_complete'];
+  const control=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  // Network.dataReceived after loadingFinished must not update a finalized
+  // crypto hash or turn an already ACK-matched stream into a false PASS.
+  for(const data of [
+    Buffer.from('data: [DONE]\n\n').toString('base64'),
+    Buffer.from('unexpected extra bytes').toString('base64'),
+    ''
+  ]){
+    let delivered=0;
+    const observed=await run(false,null,null,null,{
+      quiescenceMs:80,
+      postAckEvent:session=>{
+        delivered++;
+        session.emit('Network.dataReceived',{requestId:'2',timestamp:101.03,data});
+      }
+    });
+    assert.equal(delivered,1,'event reached attached observer before seal');
+    assert.equal(observed.cdp_consistent,false,'late chunk revokes stream/body match');
+    assert.equal(observed.ttft_sse_verified,false);
+    for(const key of firstKeys)
+      assert.deepEqual(observed.turns[0][key],control.turns[0][key],key);
+    assert.equal(observed.turns[1].request_sha256,control.turns[1].request_sha256);
+    assert.equal(observed.turns[1].cdp_streamed_body_sha256,
+      control.turns[1].cdp_streamed_body_sha256);
+    assert.equal(observed.turns[1].cdp_decoded_body_matches_stream,false);
+    assert.equal(observed.turns[1].ttft_ms,null);
+    assert.equal(observed.turns[1].sse_done_ms,null);
+    assert.equal(observed.turns[1].visible_text_sha256,null);
+    assert.equal(observed.turns[1].stream_timing_complete,false);
+  }
+  // Explicit finite-boundary limitation: events outside the capture window
+  // cannot alter a returned snapshot; no unlimited delivery guarantee.
+  let outOfWindow=0;
+  const limited=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      outOfWindow++;
+      session.emit('Network.dataReceived',{requestId:'2',timestamp:101.04,
+        data:Buffer.from('late').toString('base64')});
+    },90)
+  });
+  assert.equal(outOfWindow,0);
+  assert.equal(limited.cdp_consistent,true);
+  const sealed=JSON.stringify(limited);
+  await new Promise(resolve=>setTimeout(resolve,110));
+  assert.equal(outOfWindow,1);
+  assert.equal(JSON.stringify(limited),sealed);
+});
