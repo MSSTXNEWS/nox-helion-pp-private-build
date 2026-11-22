@@ -135,6 +135,9 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       // model finish_reason=stop / [DONE], then simulate the CDP socket loss.
       if(i===1&&index===0&&typeof options.disconnectDuringSecondData==='function')
         options.disconnectDuringSecondData(c,chunk);
+      // Fixture: replay HTTP metadata after visible text but before SSE finish.
+      if(i===1&&index===0&&typeof options.responseReplayDuringSecondData==='function')
+        options.responseReplayDuringSecondData(c,chunk);
     }
     if(o.extraBeforeFinish)emitExtra();
     // Inject an actual second CDP POST before the first loadingFinished,
@@ -2243,4 +2246,49 @@ test('CDP session disconnect after first printable SECOND delta rejects entire p
   await new Promise(resolve=>setTimeout(resolve,130));
   assert.equal(outsideCapture,1);
   assert.equal(JSON.stringify(sealed),pinned);
+});
+
+test('second responseReceived replay midstream fails closed without losing first-turn proof',async()=>{
+  const wire=Buffer.from(body,'utf8');
+  const split=Buffer.byteLength('data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n');
+  const chunks=[wire.subarray(0,split),wire.subarray(split)];
+  const chunkTimestamps=[101.01,101.018];
+  const control=await run(false,chunks,null,null,{chunkTimestamps});
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  for(const [name,overrides] of [
+    ['identical-http200',{}],
+    ['contradictory-http503',{status:503}],
+    ['compressed-encoding',{headers:{'Content-Encoding':'gzip'}}],
+    ['cache-provenance',{fromDiskCache:true}]
+  ]){
+    let emitted=0;
+    const x=await run(false,chunks,null,null,{
+      chunkTimestamps,
+      responseReplayDuringSecondData:session=>{
+        emitted++;
+        session.emit('Network.responseReceived',{
+          requestId:'2',timestamp:101.012,
+          frameId:'fixture-frame',loaderId:'fixture-loader',hasExtraInfo:false,
+          response:{status:200,mimeType:'text/event-stream',
+            url:'http://localhost/api/nox/chat',headers:{},...overrides}
+        });
+      }
+    });
+    assert.equal(emitted,1,name+' replay reached observer after visible SSE');
+    assert.equal(x.cdp_consistent,false,name+' cannot certify duplicate HTTP response');
+    assert.equal(x.ttft_sse_verified,false,name);
+    assert.deepEqual(x.turns.map(t=>t.cdp_request_id),['1','2']);
+    for(const k of ['request_sha256','cdp_streamed_body_sha256',
+      'cdp_decoded_body_sha256','visible_text_sha256','ttft_ms','sse_done_ms',
+      'stream_timing_complete','cdp_decoded_body_matches_stream'])
+      assert.deepEqual(x.turns[0][k],control.turns[0][k],name+' preserved FIRST '+k);
+    assert.equal(x.turns[1].cdp_streamed_body_sha256,
+      control.turns[1].cdp_streamed_body_sha256,name+' SECOND streamed digest');
+    assert.equal(x.turns[1].cdp_decoded_body_matches_stream,false,name);
+    assert.equal(x.turns[1].ttft_ms,null,name);
+    assert.equal(x.turns[1].sse_done_ms,null,name);
+    assert.equal(x.turns[1].stream_timing_complete,false,name);
+    assert.doesNotMatch(JSON.stringify(x),/secret|Hello|data:/,name);
+  }
 });
