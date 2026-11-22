@@ -203,7 +203,8 @@ class FactReceiptTest(unittest.TestCase):
                 return Upstream()
 
         bridge.hc = lambda: Client()
-        body = {"request_id": "stable-req-1a02", "mini": True, "use_memory": False,
+        body = {"request_id": "stable-req-1a02", "exchange_id": "stable-ex-1a02",
+                "mini": True, "use_memory": False,
                 "messages": [{"role": "user", "content": "Проверка повторного POST"}]}
 
         async def scenario():
@@ -228,7 +229,7 @@ class FactReceiptTest(unittest.TestCase):
         self.assertTrue(first_frames[-1]["done"])
         self.assertEqual(status, 409)
         self.assertEqual(rejected, {
-            "status": "HOLD", "reason": "CHAT_REQUEST_ID_RECENTLY_USED",
+            "status": "HOLD", "reason": "CHAT_EXCHANGE_RECENTLY_USED",
             "retry_same_id": False, "snapshot_scope": "PROCESS_LOCAL",
             "s03_readback_verified": False,
         })
