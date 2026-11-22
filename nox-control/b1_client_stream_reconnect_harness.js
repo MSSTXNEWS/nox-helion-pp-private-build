@@ -64,6 +64,17 @@
        !Number.isSafeInteger(canonicalAckTimeoutMs)||
        canonicalAckTimeoutMs<1||canonicalAckTimeoutMs>600000)
       hold('HOLD_STREAM_HOST_CONTRACT');
+    // STOP/timeout may win while an uncooperative model POST is pending.
+    // A successful late response otherwise leaks an unclaimed SSE socket.
+    // Never await cancel(), and never project or ACK an abandoned POST.
+    function cancelAbandonedPost(res){
+      try{
+        const body=res&&res.body;
+        if(!body||typeof body.cancel!=='function')return;
+        const pending=body.cancel();
+        if(pending&&typeof pending.catch==='function')pending.catch(()=>{});
+      }catch(_){}
+    }
     const started=new Set(),reconnectSeen=new Set(),active=new Map(),reconnecting=new Map(),
       reconnectControllers=new Map();
     async function begin(raw){
@@ -116,7 +127,10 @@
         try{
           posted=await Promise.race([
             Promise.resolve().then(()=>transport.post(s,ctrl.signal))
-              .then(res=>({res}),()=>({postError:true})),
+              .then(res=>{
+                if(ctrl.signal.aborted)cancelAbandonedPost(res);
+                return {res};
+              },()=>({postError:true})),
             new Promise(resolve=>{
               onPostAbort=()=>resolve({aborted:true});
               ctrl.signal.addEventListener('abort',onPostAbort,{once:true});
@@ -126,7 +140,11 @@
         }finally{
           if(onPostAbort) ctrl.signal.removeEventListener('abort',onPostAbort);
         }
-        if(posted.aborted||ctrl.signal.aborted) return stopped();
+        if(posted.aborted||ctrl.signal.aborted){
+          // The response can also settle just before the abort check.
+          if(posted.res)cancelAbandonedPost(posted.res);
+          return stopped();
+        }
         if(posted.postError) hold('HOLD_STREAM_POST_OR_READ');
         const res=posted.res;
         if(!res||res.ok!==true||!res.body||typeof res.body.getReader!=='function')

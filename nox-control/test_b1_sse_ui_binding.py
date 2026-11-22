@@ -837,6 +837,40 @@ def main():
             deltas.length===1 && deltas[0][0]===' indented  \\n spaced  ' &&
             deltas[0][1]==='space-123';
         }'''))
+        # An uncooperative POST can resolve AFTER the STOP/timeout race.
+        # Cancel its unlocked late stream body; never repost or ACK.
+        check('late model POST body canceled after STOP or timeout', page.evaluate('''async () => {
+          async function trial(kind){
+            const s={conversation_id:'late-post-body',exchange_id:kind};
+            let release,posts=0,acks=0,deltas=0,cancels=0;
+            const transport={...opts.transport,
+              post(){posts++;return new Promise(resolve=>{release=resolve})},
+              async ack(){acks++;return true}};
+            const ui={async onDelta(){deltas++},async upsertTerminal(){return true}};
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host:{...opts.host,async readCommitted(){return null}},
+              bridge:opts.bridge,ui,timeoutMs:kind==='timeout'?35:2000
+            });
+            const pending=c.begin(s);
+            for(let i=0;i<50&&!release;i++)
+              await new Promise(r=>setTimeout(r,0));
+            if(!release||posts!==1)return false;
+            const didStop=kind==='stop'?c.stop(s):false;
+            const result=await Promise.race([
+              pending,new Promise(r=>setTimeout(()=>r('HUNG'),450))
+            ]);
+            const body=new ReadableStream({cancel(){cancels++}});
+            release({ok:true,body});
+            for(let i=0;i<50&&cancels<1;i++)
+              await new Promise(r=>setTimeout(r,0));
+            const noRepost=await c.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            return (kind!=='stop'||didStop===true)&&
+              result===(kind==='stop'?'STOPPED':'STOPPED_TIMEOUT')&&
+              cancels===1&&posts===1&&acks===0&&deltas===0&&noRepost;
+          }
+          return await trial('stop')&&await trial('timeout');
+        }'''))
         check('STOP interrupts hung model POST without retry or late UI commit', page.evaluate('''async () => {
           const s={conversation_id:'hung-post',exchange_id:'stop-1'};
           let posts=0,acks=0,deltas=0,release;
