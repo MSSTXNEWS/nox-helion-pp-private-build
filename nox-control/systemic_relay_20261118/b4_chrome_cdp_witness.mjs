@@ -440,7 +440,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
             !validTime(previous.closeAt)||previous.close===null?'PRIOR_NO_LOADING_FINISHED':
             previous.doneAt>previous.closeAt?'PRIOR_DONE_AFTER_CLOSE':
             p.timestamp<=previous.closeAt?'POST_OVERLAP':'UNSPECIFIED';
-          invalidate(Error('CDP_NON_SERIAL_CHAT_POST:'+reason+':line'+(previous?.firstMissingSourceLine||'NONE')));return;
+          invalidate(Error('CDP_NON_SERIAL_CHAT_POST:'+reason));return;
         }
         previousBodyAckPendingAtStart=previous.bodyAckPending;
       }
@@ -448,19 +448,6 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       // Keep a missing POST-body digest distinct from an invalid CDP stream;
       // the former fails total integrity without proving the turns overlap.
       x.postDataLookupFailed=false;
-      // R23 source-only diagnostic: record the FIRST missing-integrity setter
-      // as a code location, never data, prompts, URLs or response contents.
-      let missingState=x.missing;
-      Object.defineProperty(x,'missing',{
-        get(){return missingState;},
-        set(value){
-          if(value&&!missingState){
-            const locations=[...String(new Error().stack).matchAll(/b4_chrome_cdp_witness\.mjs:(\d+):/g)];
-            x.firstMissingSourceLine=locations[1]?.[1]||'UNKNOWN';
-          }
-          missingState=value;
-        }
-      });
       x.postDoneStreamFault=false;
       x.closeSucceeded=false;
       active.set(p.requestId,x);
@@ -574,8 +561,23 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       // Revoke an already-matched body witness as well as timing proof:
       // setting missing alone would leave cdp_consistent incorrectly true.
       if(x.close!==null){x.missing=true;x.bodyMatchesStream=false;return;}
-      if(chronological(x,p.timestamp)){
-        x.close=millis(x,p.timestamp);x.closeAt=p.timestamp;
+      // Real Chromium sometimes timestamps a terminal event tens of
+      // microseconds BEFORE the immediately preceding decoded SSE data event,
+      // despite delivering loadingFinished after that data. An R23 loopback
+      // observed 71us inversion. Normalize ONLY successful terminal events,
+      // ONLY after explicit model stop and [DONE], by at most 500us, to the
+      // last previously observed CDP timestamp (a conservative upper bound).
+      // Larger inversions and any data/request inversion remain invalid.
+      let terminalTime=p.timestamp;
+      if(method==='Network.loadingFinished'&&x.finishStop&&x.done!==null&&
+         validTime(p.timestamp)&&validTime(x.lastTimestamp)&&
+         p.timestamp<x.lastTimestamp&&x.lastTimestamp-p.timestamp<=0.0005){
+        const adjustment=Math.round((x.lastTimestamp-p.timestamp)*1_000_000);
+        x.cdpTerminalClockAdjustmentUs=adjustment;
+        terminalTime=x.lastTimestamp;
+      }
+      if(chronological(x,terminalTime)){
+        x.close=millis(x,terminalTime);x.closeAt=terminalTime;
         x.closeSucceeded=method==='Network.loadingFinished';
       }
       if(method==='Network.loadingFailed')x.missing=true;
@@ -783,6 +785,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       sse_last_text_to_done_cross_chunk:tailToDoneMs===null?null:x.doneChunk>lastTextChunk,
       sse_finish_stop_to_done_ms:stopToDoneMs,
       sse_finish_stop_to_done_cross_chunk:stopToDoneMs===null?null:x.doneChunk>x.finishStopChunk,
+      cdp_terminal_timestamp_adjustment_us:!x.missing?(x.cdpTerminalClockAdjustmentUs??0):null,
       sse_done_to_loading_finished_ms:doneToLoadingFinishedMs,
       sse_done_to_loading_finished_source:doneToLoadingFinishedMs===null?null:'CDP:Network.loadingFinished',
        cdp_previous_turn_body_ack_pending_at_post_start:!x.missing?x.previousBodyAckPendingAtStart:null,
