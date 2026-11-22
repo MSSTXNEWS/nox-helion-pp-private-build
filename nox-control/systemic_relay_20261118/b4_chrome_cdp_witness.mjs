@@ -352,10 +352,10 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
         // poisons FIRST/pair certification, but must not erase independently
         // observed SECOND SSE digests/timing. A redirected replay is fatal.
         if(prior.order===1&&startedPostCount===count&&prior.close!==null&&
-           !p.redirectResponse&&p.redirectHasExtraInfo===undefined){
+           !p.redirectResponse&&p.redirectHasExtraInfo!==true){
           prior.missing=true;prior.bodyMatchesStream=false;return;
         }
-        invalidate(Error(p.redirectResponse||p.redirectHasExtraInfo!==undefined?
+        invalidate(Error(p.redirectResponse||p.redirectHasExtraInfo===true?
           'CDP_CHAT_REDIRECT':'DUPLICATE_CDP_ID'));return;
       }
       let requestUrl;
@@ -364,8 +364,11 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       if(requestUrl.origin!==expectedOrigin){
         invalidate(Error('CHAT_POST_ORIGIN_MISMATCH'));return;
       }
+      // Chromium may include redirectHasExtraInfo=false on an ordinary non-redirect
+      // requestWillBeSent. False is NOT a redirect; a redirectResponse or true
+      // redirect metadata remains an untrusted chain and must fail closed.
       // A redirect chain cannot attest which origin initiated inference.
-      if(p.redirectResponse||p.redirectHasExtraInfo!==undefined){
+      if(p.redirectResponse||p.redirectHasExtraInfo===true){
         invalidate(Error('CDP_CHAT_REDIRECT'));return;
       }
       // Once two POSTs were observed, even a malformed third request must
