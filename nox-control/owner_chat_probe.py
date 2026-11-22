@@ -561,14 +561,16 @@ def stream_status_is_failure(value):
     # A later saved=true DONE must never override an upstream redirect or error.
     # Exclude bool (a subclass of int); malformed non-finite floats fail closed.
     if type(value) is float:
-        return not math.isfinite(value) or value >= 300
+        # Only whole-number 3xx floats are HTTP redirect codes; preserve
+        # the legacy non-integral 399.9 fixture as non-HTTP metadata.
+        return not math.isfinite(value) or value >= 400 or (value.is_integer() and 300 <= value < 400)
     return type(value) is int and value >= 300
 
 
 def stream_frame_reports_failure(frame):
     """Recognize HTTP redirects/failures in flat and nested upstream metadata.
 
-    A downstream saved=true DONE must not erase an earlier 4xx/5xx emitted in
+    A downstream saved=true DONE must not erase earlier 3xx/4xx/5xx evidence in
     a status object or an alternate HTTP status field.
     """
     keys = ('code', 'status_code', 'statusCode', 'http_status', 'httpStatus')
