@@ -2014,6 +2014,13 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     transition=stream._executor_status_reply(question,path)
                 self.assertIn('не могу подтвердить',transition)
                 self.assertNotIn('настроено',transition)
+                # A failed second owner-gate read must return an explicit
+                # unverified status, never a 500 or stale worker count.
+                with patch.object(ui,'owner_maintenance_gate',
+                                  side_effect=['ABSENT',RuntimeError('owner gate unreadable')]):
+                    unreadable=stream._executor_status_reply(question,path)
+                self.assertIn('не могу подтвердить',unreadable)
+                self.assertNotIn('настроено',unreadable)
 
     @unittest.skipUnless(hasattr(os,'mkfifo') and hasattr(os,'O_NONBLOCK'),
                          'POSIX FIFO nonblocking admission regression')
