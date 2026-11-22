@@ -619,7 +619,7 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
   const start=JSON.stringify({type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'})+'\n'+
     JSON.stringify({type:'start',model:'NOX HELION'})+'\n';
   const clean=await attempt(start+delta+done+'\n');
-  assert.equal(clean.status,200,'native done plus blank line is permitted');
+  assert.equal(clean.status,200,'native done plus blank line is permitted: '+JSON.stringify(clean));
   assert.equal(clean.body.history_persisted,true);
   assert(clean.called.includes('/api/ui/memory/dialogs/history'));
   const bad=await attempt(start+delta+done+unexpected);
