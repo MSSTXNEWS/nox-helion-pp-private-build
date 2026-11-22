@@ -368,6 +368,36 @@ class HunterURLSafetyTests(unittest.TestCase):
                              ["2026-11-20", "2026-11-21"])
             self.assertEqual(len({v[1] for v in versions}), 2)
 
+    def test_publication_provenance_upgrade_does_not_duplicate_legacy_rows(self):
+        source = hunter._validate_source({
+            "id": "feed", "kind": "rss", "url": "https://example.org/rss",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        item = {"title": "Stable", "url": "/article",
+                "content": "Abstract", "published": "2026-11-20"}
+        old_digest = hunter.hashlib.sha256(b"Stable\nAbstract").hexdigest()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "hunter.sqlite"
+            with sqlite3.connect(state) as conn:
+                hunter._init_db(conn)
+                conn.execute(
+                    "INSERT INTO items VALUES(?,?,?,?,?,?,?)",
+                    ("feed", "https://example.org/article", old_digest,
+                     "Stable", "Abstract", "2026-11-20", 900.0),
+                )
+                conn.commit()
+            with patch.object(hunter, "_fetch",
+                              return_value=(b"stub", None, None, "application/rss+xml", False)), \
+                 patch.object(hunter, "_parse", side_effect=[[item], [{**item, "published": "2026-11-21"}]]):
+                unchanged = hunter.poll_due([source], state, now=1000.0)
+                corrected = hunter.poll_due([source], state, now=1100.0)
+            self.assertEqual(unchanged[0]["added"], 0)
+            self.assertEqual(corrected[0]["added"], 1)
+            with sqlite3.connect(state) as conn:
+                dates = [x[0] for x in conn.execute(
+                    "SELECT published FROM items ORDER BY first_seen_at")]
+            self.assertEqual(dates, ["2026-11-20", "2026-11-21"])
+
     def test_html_page_uses_its_real_source_url(self):
         source = hunter._validate_source({
             "id": "page", "kind": "html_page", "url": "https://example.org/page",
