@@ -330,6 +330,63 @@ class FactReceiptTest(unittest.TestCase):
 
 
 
+    def test_1a01_optional_skeptic_failure_preserves_completed_stream_and_s03_attempt(self):
+        """An optional verifier cannot turn a finished model response into a 500."""
+        endpoint = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT = {"t": 0}
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": args[1]}]
+        bridge.adapt_tokens = lambda *args: 100
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Проверенный ответ"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        class Skeptic:
+            def __init__(self, outcome): self.outcome = outcome
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return False
+            def mode_hint(self, *args): return ""
+            def is_factual(self, *args): return True
+            async def skeptic(self, *args, **kwargs):
+                if isinstance(self.outcome, Exception): raise self.outcome
+                return self.outcome
+
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def get_frames():
+            response = await endpoint(Request({
+                "messages": [{"role": "user", "content": "Факт"}],
+                "mode": "thoughtful", "use_memory": False}))
+            return [json.loads(frame) async for frame in response.body_iterator]
+
+        for outcome in (OSError("skeptic offline"), None, {"ok": False}, {"ok": False, "doubt": 3}):
+            with self.subTest(skeptic_outcome=str(outcome)):
+                writes.clear()
+                with mock.patch.object(W, "W", Skeptic(outcome)), mock.patch.dict(sys.modules, {"s03_memory": memory}):
+                    frames = asyncio.run(get_frames())
+                terminals = [f for f in frames if f.get("done") is True]
+                self.assertEqual(len(terminals), 1)
+                self.assertEqual(terminals[0]["completion_receipt"]["status"], "GENERATED")
+                self.assertEqual(terminals[0]["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+                self.assertFalse(terminals[0]["memory_write_receipt"]["s03_readback_verified"])
+                self.assertEqual(len(writes), 1)
+                self.assertEqual(writes[0][1], "Проверенный ответ")
+                self.assertTrue(any(f.get("nox_event", {}).get("text") == "проверка недоступна" for f in frames))
+
     def test_1a03_ambiguous_sse_json_never_certifies_s03(self):
         """Duplicate/nonfinite/multi-choice model envelopes must fail closed."""
         invalid_events = (
