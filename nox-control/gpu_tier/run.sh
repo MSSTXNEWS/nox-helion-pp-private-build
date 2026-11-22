@@ -128,5 +128,12 @@ glmlog)
   grep -E "n_layer|n_expert|n_embd |n_ff|n_head|file size|model params|n_ctx_train|arch |expert_used|override|nextn|dsa|indexer" $L | cut -c1-170 | head -24
   grep -c "buffer type overrides\|overriding" $L; grep -E "assigned|CPU_Mapped|CUDA0 model buffer|offloading" $L | cut -c1-170 | head -8
   ;;
+tier4b)
+  pkill -f "port 8083"; sleep 3
+  nohup setsid /root/nox/llama.cpp/build/bin/llama-server -m /root/nox/dl/hf/qwen3_4b/Qwen3-4B-Instruct-2507-Q4_K_M.gguf --host 127.0.0.1 --port 8083 -c 8192 -ngl 99 -fa on --parallel 2 --jinja >> /root/nox/logs/fast_server.log 2>&1 < /dev/null &
+  for i in $(seq 1 30); do curl -s -m2 localhost:8083/health | grep -q ok && break; sleep 3; done
+  curl -s -m3 localhost:8083/health; nvidia-smi --query-gpu=memory.used --format=csv,noheader; nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader
+  pgrep -af llama-server | cut -c1-120; free -g | sed -n 2p; uptime
+  ;;
 *) echo unknown;;
 esac
