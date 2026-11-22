@@ -2567,6 +2567,13 @@ class BoostInstalledReceiptDuplicateFence(unittest.TestCase):
             ],
         }
         self.assertEqual(verify(copy.deepcopy(good)), pinned)
+        # Native evidence readers can return a malformed JSON root. Such a
+        # receipt must be a named HOLD, not an uncaught AttributeError.
+        for malformed_root in (None, [], ["spoof"], "spoof", False, 0, 200.0):
+            with self.subTest(root=repr(malformed_root)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_VERIFIED_NATIVE_BOOST_REQUIRED"):
+                    verify(malformed_root)
         # Both directions of the duplicate matter: last-write-wins is unsafe.
         a = str(next(iter(pinned)))
         contradicted = {"kind": "source_installed",
