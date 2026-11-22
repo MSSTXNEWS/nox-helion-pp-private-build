@@ -25,6 +25,7 @@ except Exception:  # pragma: no cover - standalone import fallback
 SPEAKERS = ("owner", "nox")
 PRIVACY = "owner_only"
 SRC_KINDS = ("nox_generated", "nox_inferred", "owner_stated", "owner_choice", "import")
+OWNER_SOURCE_KINDS = frozenset(("owner", "owner_stated", "owner_choice"))
 
 
 def _sha(text):
@@ -51,6 +52,40 @@ def _source(store, ref):
     return text, rec.get("status", "active")
 
 
+def _owner_source_ok(store, ref):
+    """Require actual owner provenance for an owner-scoped premise.
+
+    A speaker label describes the advice scope; it does not promote arbitrary S03
+    content to owner evidence. Facts use the Riverse evidence ladder, profiles use
+    their stored source, and episodes are not treated as owner-confirmed evidence.
+    """
+    try:
+        rec = store.get(ref)
+    except (KeyError, LookupError, ValueError, TypeError):
+        return False
+    if not rec or rec.get("status", "active") != "active":
+        return False
+    if rec.get("type") == "profile":
+        return rec.get("source") in OWNER_SOURCE_KINDS and rec.get("section") == "owner"
+    if rec.get("type") == "episode":
+        return False
+    if rec.get("type") not in (None, "fact"):
+        return False
+    if rec.get("owner_confirmed"):
+        return True
+    ladder_id = rec.get("ladder_id")
+    if ladder_id:
+        try:
+            kinds = [r[0] for r in store.db.execute(
+                "SELECT kind FROM evidence WHERE fact_id=? AND polarity>0", (ladder_id,)
+            ).fetchall()]
+        except Exception:
+            kinds = []
+        if kinds:
+            return any(kind in OWNER_SOURCE_KINDS for kind in kinds)
+    return rec.get("source_kind") in OWNER_SOURCE_KINDS or rec.get("source") in OWNER_SOURCE_KINDS
+
+
 def _check_text(text, label):
     if not isinstance(text, str) or not text.strip():
         raise ValueError("%s: пустой текст" % label)
@@ -74,9 +109,14 @@ def _default_journal(store, clock):
 def _journal_event(store, journal, clock, text, data):
     journal = journal if journal is not None else _default_journal(store, clock)
     if journal is None:
-        return False
-    journal.append("event", text, "zamysel", data=data, ts=clock())
-    return True
+        return {"ok": False, "error": "journal_unavailable"}
+    try:
+        journal.append("event", text, "zamysel", data=data, ts=clock())
+        return {"ok": True, "error": None}
+    except Exception as exc:
+        # The S03 transaction has already committed. Surface the journal failure
+        # as metadata instead of claiming the write itself failed.
+        return {"ok": False, "error": type(exc).__name__}
 
 
 def _get_advice(store, advice_id, speaker):
@@ -110,7 +150,12 @@ def record_advice(store, text, premises, speaker="owner", breakers=None, free_pr
         raise ValueError("speaker должен быть owner или nox")
     if src_kind not in SRC_KINDS:
         raise ValueError("неизвестный src_kind")
-    if not isinstance(premises, (list, tuple)) or not premises:
+    premises = list(premises or [])
+    for item in free_premises or []:
+        if not isinstance(item, dict) or not item.get("ref"):
+            raise ValueError("свободная посылка должна иметь ref+SHA; текст без источника запрещён")
+        premises.append(item)
+    if not premises:
         raise ValueError("нужна хотя бы одна адресуемая посылка ref+sha")
     checked = []
     seen = set()
@@ -124,6 +169,8 @@ def record_advice(store, text, premises, speaker="owner", breakers=None, free_pr
         current_text, status = _source(store, ref)
         if current_text is None or status != "active":
             raise ValueError("посылка %s недоступна или отозвана" % ref)
+        if speaker == "owner" and not _owner_source_ok(store, ref):
+            raise ValueError("посылка %s не имеет подтверждённого owner_* происхождения" % ref)
         current_text = _check_text(str(current_text), "посылка")
         current_sha = _sha(current_text)
         supplied_sha = item.get("sha")
@@ -134,7 +181,9 @@ def record_advice(store, text, premises, speaker="owner", breakers=None, free_pr
             raise ValueError("текст посылки %s не совпадает с S03" % ref)
         checked.append({"ref": ref, "sha": current_sha, "text": current_text})
     safe_breakers = [_check_text(str(x), "условие пересмотра") for x in (breakers or [])]
-    safe_free = [_check_text(str(x), "свободная посылка") for x in (free_premises or [])]
+    # Legacy column remains empty for schema compatibility. All evidence is stored
+    # in premises as ref+SHA records.
+    safe_free = []
     now = float(clock())
     ev = now if t_event is None else float(t_event)
     learned = now if t_learned is None else float(t_learned)
@@ -149,10 +198,11 @@ def record_advice(store, text, premises, speaker="owner", breakers=None, free_pr
     )
     advice_id = int(cur.lastrowid)
     commit(store)
-    _journal_event(store, journal, clock, "Создан совет с адресуемыми основаниями",
-                   {"advice_id": advice_id, "speaker": speaker,
-                    "premises": [{"ref": p["ref"], "sha": p["sha"]} for p in checked]})
-    return advice_id
+    journal_status = _journal_event(store, journal, clock, "Создан совет с адресуемыми основаниями",
+                                    {"advice_id": advice_id, "speaker": speaker,
+                                     "premises": [{"ref": p["ref"], "sha": p["sha"]} for p in checked]})
+    return {"id": advice_id, "journaled": journal_status["ok"],
+            "journal_error": journal_status["error"]}
 
 
 def _stale_reason(store, premise, created):
@@ -211,10 +261,15 @@ def refresh_stale_advice(store, speaker="owner", ref=None, clock=time.time, jour
         changed.append({"id": int(advice_id), "reason": reason})
     if changed:
         commit(store)
+        journal_failures = []
         for item in changed:
-            _journal_event(store, journal, clock, "Совет устарел после изменения основания",
-                           {"advice_id": item["id"], "speaker": str(speaker), **item["reason"]})
-    return {"checked": len(rows), "stale": changed}
+            result = _journal_event(store, journal, clock, "Совет устарел после изменения основания",
+                                    {"advice_id": item["id"], "speaker": str(speaker), **item["reason"]})
+            if not result["ok"]:
+                journal_failures.append({"advice_id": item["id"], "error": result["error"]})
+    else:
+        journal_failures = []
+    return {"checked": len(rows), "stale": changed, "journal_failures": journal_failures}
 
 
 def explain_advice(store, advice_id, speaker="owner"):
