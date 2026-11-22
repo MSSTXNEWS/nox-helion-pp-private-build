@@ -16,13 +16,14 @@ import time
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.abspath(os.path.join(_HERE, "..", ".."))
-for _d in (_HERE, os.path.join(_ROOT, "SLP"), os.path.join(_ROOT, "MIND", "M4_BENCH"), os.path.join(_ROOT, "MIND", "M2_SELFIMPROVE"), os.path.join(_ROOT, "COMMON")):
+for _d in (_HERE, _ROOT, os.path.join(_ROOT, "SLP"), os.path.join(_ROOT, "MIND", "M4_BENCH"), os.path.join(_ROOT, "MIND", "M2_SELFIMPROVE"), os.path.join(_ROOT, "COMMON")):
     if os.path.isdir(_d) and _d not in sys.path:
         sys.path.append(_d)
 import fidelity_test as FT
 import mind_bench as MB
 import sleep_feed as SF
 import anti_sycophancy as AS
+from alive.gate import gate_alive
 
 # fidelity обязателен там, где меняется личность
 IDENTITY_KINDS = ("adapter", "prompt", "persona")
@@ -89,7 +90,7 @@ def _call(x):
 
 def run_gate(kind, change_id="chg", *, fid_cand=None, fid_base=None, bench_cand=None, bench_base=None, contam=None,
              train_paths=(), frozen_tasks=None, frozen_texts=(), train_rows=(), focus=(), bench_policy=None, fid_policy=None,
-             meta=None, sig_dir=None, ledger_path=None, now=None, sycophancy=None, require_sycophancy=False):
+             meta=None, sig_dir=None, ledger_path=None, now=None, sycophancy=None, require_sycophancy=False, alive_run=None, alive_baseline=None, alive_thresholds=None):
     """Любой из fid_cand/bench_cand может быть callable (ленивый дорогой прогон). -> результат ворот (см. модуль)."""
     if kind not in KINDS and kind != "persona":
         raise ValueError("неизвестный вид изменения: %s" % kind)
@@ -156,6 +157,26 @@ def run_gate(kind, change_id="chg", *, fid_cand=None, fid_base=None, bench_cand=
         stages["sycophancy"] = {"ran": True, "pass": not sr, "reasons": sr, "inputs": sy}
         reasons += sr
         warns += sw
+    # ---- 3c. ALIVE wave-1 gate (optional until the shadow report is wired)
+    try:
+        alive_report = _call(alive_run) if alive_run is not None else None
+        alive_base = _call(alive_baseline) if alive_baseline is not None else None
+        alive_result = gate_alive(alive_report, alive_base, alive_thresholds)
+    except Exception as e:
+        alive_result = {"name": "alive", "ok": False, "skipped": False,
+                        "critical_failures": ["report_error"],
+                        "reasons": ["alive: report generation failed (%s)" % type(e).__name__]}
+    stages["alive"] = {
+        "ran": not alive_result.get("skipped", False),
+        "pass": alive_result.get("ok", False),
+        "skipped": alive_result.get("skipped", False),
+        "critical_failures": alive_result.get("critical_failures", []),
+        "mean_noncritical_regress": alive_result.get("mean_noncritical_regress"),
+    }
+    if not alive_result.get("ok", False):
+        reasons.extend(alive_result.get("reasons") or ["alive: acceptance gate failed"])
+    if alive_result.get("warning"):
+        warns.append(alive_result["warning"])
     tech_ok = not reasons
     # ---- 4. подпись
     sig_why = needs_signature(kind, meta, ledger_path) if tech_ok else []
