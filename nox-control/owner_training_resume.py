@@ -462,10 +462,13 @@ def dispatcher_upgrade_pins(receipt, request=None, source=None):
     reports = plan.get('owner_reports')
     if (type(proofs) is not list or type(reports) is not list
             or len(proofs) != 7 or any(not isinstance(row, dict) for row in proofs)
+            # JSON arrays/objects are unhashable: validate each ID before set().
+            or any(type(row.get('id')) is not str for row in proofs)
             or {row.get('id') for row in proofs} != task_ids
             or any(not isinstance(row.get('receipt_sha256'), str)
                    or not re.fullmatch('[0-9a-f]{64}', row['receipt_sha256']) for row in proofs)
             or len(reports) != 7 or any(not isinstance(row, dict) for row in reports)
+            or any(type(row.get('task_id')) is not str for row in reports)
             or {row.get('task_id') for row in reports} != task_ids
             or any(row.get('kind') != 'task_verified' or not isinstance(row.get('claim'), str)
                    or not re.fullmatch('[0-9a-f]{24}', row['claim']) for row in reports)
