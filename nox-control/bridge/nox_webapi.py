@@ -19,6 +19,12 @@ WEBROOT = "/opt/nox-web"
 M = {"t": 0, "gpu": [], "cpu": None, "ram": None, "disk": None}
 SRC = {}
 CANCEL = set()
+# Cap unresolved scoped STOP signals: unknown IDs must not exhaust host RAM.
+MAX_PENDING_SCOPED_STOPS = 4096
+# Track validated chat requests from admission through final generator cleanup.
+# An active request's targeted STOP must never be denied by unknown tombstones.
+ACTIVE_CHAT_IDS = set()
+MAX_ACTIVE_CHAT_IDS = 128
 # Increment-only broadcast STOP epoch: a new request cannot clear an older stream's STOP.
 CANCEL_ALL_EPOCH = 0
 _lock = None
@@ -498,6 +504,11 @@ def install(app, B):
             # A broadcast applies only to previously admitted requests.
             CANCEL_ALL_EPOCH += 1
         else:
+            # Never evict a real pending STOP to accept another unverified ID.
+            # Repeating an existing ID remains idempotent at the capacity bound.
+            if (target not in CANCEL and target not in ACTIVE_CHAT_IDS
+                    and len(CANCEL) >= MAX_PENDING_SCOPED_STOPS):
+                return JSONResponse({"status": "HOLD", "reason": "STOP_PENDING_CAPACITY"}, status_code=429)
             CANCEL.add(target)
         # Signal queued is not evidence that generation actually stopped.
         return {"status": "STOPPING", "scope": "generation",
@@ -556,6 +567,15 @@ def install(app, B):
         if mode == "fast": npred = min(npred, 300)
         if mini:
             use_mem, npred = False, min(npred, 400)
+
+        # Register before streaming begins: a STOP racing the first SSE frame
+        # must still address this already-admitted request. Do not admit a
+        # second simultaneous generation under an indistinguishable ID.
+        if rid in ACTIVE_CHAT_IDS:
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_DUPLICATE_INFLIGHT_REQUEST_ID"}, status_code=409)
+        if len(ACTIVE_CHAT_IDS) >= MAX_ACTIVE_CHAT_IDS:
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_ACTIVE_CAPACITY"}, status_code=503)
+        ACTIVE_CHAT_IDS.add(rid)
 
         def fr(**k):
             d = {"model": TAG, "request_id": rid, "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
@@ -759,7 +779,52 @@ def install(app, B):
                          digest=hashlib.sha256(full.encode()).hexdigest(), frames=n, memory_history=hist, nox_mode=mode, skeptic=sk, plan=plan or None,
                          total_duration=int((time.time() - t0) * 1e9), eval_count=n)
 
-        return StreamingResponse(gen(), media_type="application/x-ndjson", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+        def release_chat_admission():
+            ACTIVE_CHAT_IDS.discard(rid)
+            CANCEL.discard(rid)
+
+        class TrackedChatBody:
+            """Release admission on normal EOF, early aclose, error or cancellation."""
+            def __init__(self):
+                self._stream = gen()
+                self._closed = False
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if self._closed:
+                    raise StopAsyncIteration
+                try:
+                    return await self._stream.__anext__()
+                except BaseException:
+                    await self.aclose()
+                    raise
+
+            async def aclose(self):
+                if self._closed:
+                    return
+                self._closed = True
+                try:
+                    await self._stream.aclose()
+                finally:
+                    # An unstarted generator's finally never executes on aclose.
+                    release_chat_admission()
+
+        class TrackedChatResponse(StreamingResponse):
+            async def __call__(self, scope, receive, send):
+                try:
+                    return await super().__call__(scope, receive, send)
+                finally:
+                    # ASGI disconnect may happen before the first body iteration.
+                    await self.body_iterator.aclose()
+
+        try:
+            return TrackedChatResponse(TrackedChatBody(), media_type="application/x-ndjson",
+                                       headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+        except BaseException:
+            release_chat_admission()
+            raise
 
     @app.get("/app")
     async def a_app():
