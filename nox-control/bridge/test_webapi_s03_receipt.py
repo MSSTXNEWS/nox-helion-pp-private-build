@@ -2162,6 +2162,11 @@ class FactReceiptTest(unittest.TestCase):
             self.assertNotIn(
                 bridge.hashlib.md5("второй вопрос".encode()).hexdigest(), bridge._RC)
 
+            memory.recall = lambda q: ["invalid-output"]
+            memory.format_for_prompt = lambda rows: {"not": "text"}
+            with self.assertRaisesRegex(RuntimeError, "S03_MEMORY_LOOKUP_FAILED"):
+                bridge.memory_block("память неверного типа")
+
             memory.recall = mock.Mock(side_effect=OSError("private S03 unavailable"))
             with self.assertRaisesRegex(RuntimeError, "S03_MEMORY_LOOKUP_FAILED"):
                 bridge.memory_block("нужна память")
