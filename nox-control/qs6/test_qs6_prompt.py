@@ -29,6 +29,17 @@ class SoulT(unittest.TestCase):
         self.assertIn("Не льсти", full)
         self.assertIn("мессир", main)
 
+    def test_living_profile_applies_to_regular_messages(self):
+        history = [{"role": "assistant", "content": "Предыдущее решение принято."}]
+        messages = build_messages("Продолжим?", history=history, recalled=["Решение исправлено"])
+        system = messages[0]["content"]
+        for rule in ("подтверждённую поправку", "по свежим данным", "после проверки"):
+            self.assertIn(rule, system)
+        self.assertIn("Решение исправлено", system)
+        self.assertEqual(messages[1:-1], history)
+        self.assertEqual(messages[-1]["content"], "Продолжим?")
+        self.assertNotIn("подтверждённую поправку", load_soul()[1])
+
     def test_builder_composition_and_repeat(self):
         out = build_system_prompt("Ядро:\n- я NOX", ["Мессир любит кофе"], "сервер: S1", "Тон обычный.")
         t = out["text"]
