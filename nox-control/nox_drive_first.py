@@ -254,6 +254,11 @@ def run_rclone(args, config, *, timeout=8 * 3600):
     newly asserted STOP. Poll the owned child without shell or captured logs.
     """
     stop_clear()
+    # During a long copy/move the raw cgroup headroom can fall after admission.
+    # Only the heavy, mutable transfer verbs need periodic resource fencing.
+    heavy = bool(args and args[0] in ("copyto", "moveto"))
+    if heavy:
+        cgroup_admit()
     require(bool(shutil.which("rclone")), "RCLONE_MISSING")
     try:
         # Never print subprocess output, command, signed URLs or token-bearing config.
@@ -266,6 +271,8 @@ def run_rclone(args, config, *, timeout=8 * 3600):
     try:
         while proc.poll() is None:
             stop_clear()
+            if heavy:
+                cgroup_admit()
             require(time.monotonic() < deadline, "RCLONE_TIMEOUT")
             time.sleep(0.5)
         require(proc.returncode == 0, "RCLONE_FAILED")
