@@ -1508,3 +1508,63 @@ test('late second CDP data chunk after body ACK fails closed within bounded quie
   assert.equal(outOfWindow,1);
   assert.equal(JSON.stringify(limited),sealed);
 });
+
+test('late second HTTP ExtraInfo after body ACK revokes stream proof, first turn isolated',async()=>{
+  const firstKeys=['cdp_request_id','request_sha256','cdp_decoded_body_sha256',
+    'cdp_streamed_body_sha256','visible_text_sha256','ttft_ms','sse_done_ms',
+    'stream_timing_complete'];
+  const control=await run(false,null,null,null,{
+    hasExtraInfo:true,extraBefore:true,quiescenceMs:80
+  });
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  assert.equal(control.turns[1].cdp_decoded_body_matches_stream,true);
+  // All arrive 25ms AFTER second getResponseBody ACK, while capture is attached.
+  for(const [name,info] of [
+    ['duplicate',{statusCode:200,headers:{}}],
+    ['cache-status-alias',{statusCode:304,headers:{}}],
+    ['compressed-encoding',{statusCode:200,headers:{'Content-Encoding':'gzip'}}],
+    ['cache-provenance',{statusCode:200,headers:{},fromDiskCache:true}]
+  ]){
+    let delivered=0;
+    const observed=await run(false,null,null,null,{
+      hasExtraInfo:true,extraBefore:true,quiescenceMs:80,
+      postAckEvent:session=>{
+        delivered++;
+        session.emit('Network.responseReceivedExtraInfo',{requestId:'2',...info});
+      }
+    });
+    assert.equal(delivered,1,name+' ExtraInfo reached live observer');
+    assert.equal(observed.cdp_consistent,false,name);
+    assert.equal(observed.ttft_sse_verified,false,name);
+    assert.deepEqual(observed.turns.map(x=>x.cdp_request_id),['1','2']);
+    for(const key of firstKeys)
+      assert.deepEqual(observed.turns[0][key],control.turns[0][key],name+' first '+key);
+    assert.equal(observed.turns[1].request_sha256,control.turns[1].request_sha256);
+    assert.equal(observed.turns[1].cdp_streamed_body_sha256,
+      control.turns[1].cdp_streamed_body_sha256);
+    assert.equal(observed.turns[1].cdp_decoded_body_matches_stream,false,name);
+    assert.equal(observed.turns[1].visible_text_sha256,null,name);
+    assert.equal(observed.turns[1].ttft_ms,null,name);
+    assert.equal(observed.turns[1].sse_done_ms,null,name);
+    assert.equal(observed.turns[1].stream_timing_complete,false,name);
+    assert.doesNotMatch(JSON.stringify(observed),/secret|Hello|data:/);
+  }
+  // Bounded capture limitation: an event emitted after return cannot rewrite
+  // the returned digest receipt. No indefinite CDP delivery is claimed.
+  let beyond=0;
+  const limited=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      beyond++;
+      session.emit('Network.responseReceivedExtraInfo',{
+        requestId:'2',statusCode:304,headers:{}});
+    },90)
+  });
+  assert.equal(limited.cdp_consistent,true);
+  assert.equal(beyond,0);
+  const sealed=JSON.stringify(limited);
+  await new Promise(resolve=>setTimeout(resolve,110));
+  assert.equal(beyond,1);
+  assert.equal(JSON.stringify(limited),sealed);
+});
