@@ -502,10 +502,23 @@
               // timed-out or stopped late reply cannot resume gate CAS.
               if(lifecycleSignal.aborted)
                 hold('HOLD_STREAM_RECONNECT_STOPPED');
-              const receipt=await transport.readCanonicalAck(
-                s,expected,challenge,lifecycleSignal);
-              if(lifecycleSignal.aborted)
+              // A canonical receipt GET can ignore AbortSignal and deliver
+              // an OPEN body after STOP/deadline. The enclosing gate Promise
+              // may never resolve to boundedGet, so dispose here at the
+              // transport boundary. Never resume verifier/CAS or model POST.
+              let disposedLateReceipt=false;
+              const receipt=await Promise.resolve(transport.readCanonicalAck(
+                s,expected,challenge,lifecycleSignal)).then(value=>{
+                  if(lifecycleSignal.aborted){
+                    disposedLateReceipt=true;
+                    cancelAbandonedGet(value); // best effort, nonblocking
+                  }
+                  return value;
+                });
+              if(lifecycleSignal.aborted){
+                if(!disposedLateReceipt) cancelAbandonedGet(receipt);
                 hold('HOLD_STREAM_RECONNECT_STOPPED');
+              }
               const now=Date.now();
               if(!receipt||typeof receipt!=='object'||Array.isArray(receipt)||
                  receipt.request_nonce!==challenge.request_nonce||
