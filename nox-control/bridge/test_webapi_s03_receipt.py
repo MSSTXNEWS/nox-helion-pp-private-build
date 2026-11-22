@@ -749,10 +749,10 @@ class FactReceiptTest(unittest.TestCase):
                         "scope": "generation", "request_id": "stop-before-plan-model"}))
             return frames, stop_result
 
-        with mock.patch.object(W, "CANCEL", set()), \\
-             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \\
-             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \\
-             mock.patch.object(W, "W", Thinking()), \\
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "W", Thinking()), \
              mock.patch.dict(sys.modules, {"s03_memory": memory}):
             frames, signal = asyncio.run(scenario())
         self.assertEqual(signal["status"], "STOPPING")
