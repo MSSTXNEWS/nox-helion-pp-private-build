@@ -30,10 +30,21 @@ def codes(s):
 
 class GpuSourceEvidenceTests(unittest.TestCase):
     def test_observed_upper_bound_is_not_admission(self):
-        result = mod.assess(snapshot())
+        s = snapshot()
+        result = mod.assess(s, owner_snapshot_verifier=lambda exact: exact is s)
         self.assertEqual([x["code"] for x in result], ["GPU_RESIDUAL_OBSERVED_NOT_ADMITTED"])
         self.assertIn("70", result[0]["advice"])
         self.assertIn("no admission", result[0]["advice"])
+
+    def test_unattested_owner_flags_cannot_label_spare_gpu_measured(self):
+        s = snapshot()
+        for verifier in (None, lambda exact: True if False else 1,
+                         lambda exact: exact is not s):
+            with self.subTest(verifier=verifier):
+                found = [x["code"] for x in mod.assess(
+                    s, owner_snapshot_verifier=verifier)]
+                self.assertIn("GPU_RESIDUAL_SOURCE_UNATTESTED", found)
+                self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", found)
 
     def test_missing_host_or_vram_stays_hold(self):
         for field in ("cpu_io",):
