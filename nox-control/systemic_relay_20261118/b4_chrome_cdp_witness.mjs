@@ -428,7 +428,19 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
            !validTime(previous.doneAt)||!validTime(previous.closeAt)||
            previous.done===null||previous.close===null||
            previous.doneAt>previous.closeAt||p.timestamp<=previous.closeAt){
-          invalidate(Error('CDP_NON_SERIAL_CHAT_POST'));return;
+          // Operator-only causal refusal codes (no prompt, output or URL).
+          // Preserve strict rejection: CDP event arrival is never proof of
+          // a serial completed answer unless all previous boundaries hold.
+          const reason=!previous?'MISSING_PRIOR':
+            previous.missing&&!previous.postDataLookupFailed&&!previous.postDoneStreamFault?
+              'PRIOR_MISSING_INTEGRITY':
+            !previous.closeSucceeded?'PRIOR_NOT_CLOSED':
+            !previous.finishStop?'PRIOR_NO_MODEL_STOP':
+            !validTime(previous.doneAt)||previous.done===null?'PRIOR_NO_SSE_DONE':
+            !validTime(previous.closeAt)||previous.close===null?'PRIOR_NO_LOADING_FINISHED':
+            previous.doneAt>previous.closeAt?'PRIOR_DONE_AFTER_CLOSE':
+            p.timestamp<=previous.closeAt?'POST_OVERLAP':'UNSPECIFIED';
+          invalidate(Error('CDP_NON_SERIAL_CHAT_POST:'+reason));return;
         }
         previousBodyAckPendingAtStart=previous.bodyAckPending;
       }
