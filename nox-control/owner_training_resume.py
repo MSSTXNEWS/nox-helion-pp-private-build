@@ -572,12 +572,22 @@ def s03_activation_pins(receipt, upgrade_chain, request=None, source=None):
 
 def s03_content_reindex_proof(receipt, content, upgrade_chain):
     """Bind real reembedding, stable model content and retained original history."""
-    identity = receipt.get('content_identity') or {}
-    status = receipt.get('status') or {}
-    before = receipt.get('before_index') or {}
-    process = receipt.get('bge_process_before') or {}
-    recall = receipt.get('public_recall') or {}
-    methods = recall.get('methods') or {}
+    # A truthy non-map nested field must not crash admission before its HOLD
+    # receipt is recorded. The same strict fence covers the optional synthetics.
+    shape_keys = ('content_identity', 'status', 'before_index',
+                  'bge_process_before', 'public_recall',
+                  'synthetic_retrieval_acceptance')
+    if (not isinstance(receipt, dict) or
+            any(not isinstance(receipt.get(key), dict) for key in shape_keys)):
+        raise RuntimeError('HOLD_S03_CONTENT_REINDEX_CHAIN_REQUIRED')
+    identity = receipt['content_identity']
+    status = receipt['status']
+    before = receipt['before_index']
+    process = receipt['bge_process_before']
+    recall = receipt['public_recall']
+    methods = recall.get('methods')
+    if not isinstance(methods, dict):
+        raise RuntimeError('HOLD_S03_CONTENT_REINDEX_CHAIN_REQUIRED')
     if (receipt.get('schema') != 'NOX_OWNER_S03_CONTENT_REINDEX_V1'
             or receipt.get('request') != content['request'] or receipt.get('source_sha') != content['source_sha']
             or receipt.get('state') != 'CONTENT_IDENTITY_AND_REEMBEDDED_INDEX_VERIFIED'
