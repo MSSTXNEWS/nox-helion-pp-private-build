@@ -53,8 +53,16 @@ def obj(response,limit=100000):
     """Bounded owner JSON readback; always release its HTTP response/socket."""
     try:
         if response.status!=200:raise RuntimeError('HOLD_HTTP_'+str(response.status))
+        # Owner status, worker identity and dialog history are acceptance
+        # evidence: a syntactically valid JSON prefix is not a complete HTTP
+        # readback when the peer promised more body bytes.
+        require_stream_http_framing(response)
         raw=response.read(limit+1)
         if len(raw)>limit:raise RuntimeError('HOLD_RESPONSE_LIMIT')
+        headers=getattr(response, 'headers', None)
+        declared=headers.get('Content-Length') if headers is not None else None
+        if declared is not None and len(raw)!=int(declared.strip()):
+            raise RuntimeError('HOLD_OWNER_JSON_BODY_LENGTH_MISMATCH')
         return json.loads(raw, parse_constant=reject_owner_nonfinite_json_constant,
                           parse_float=reject_owner_nonfinite_json_float,
                           object_pairs_hook=reject_owner_duplicate_json_keys)
