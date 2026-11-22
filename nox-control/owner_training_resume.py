@@ -1181,7 +1181,11 @@ def verify_previous_training_receipt(previous, pointer, policy,
                                      media_evidence):
     """Fail closed on an untrusted prior owner receipt before reusing its lineage."""
     if (type(previous) is not dict or type(pointer) is not dict
-            or type(policy) is not dict):
+            or type(policy) is not dict
+            # This validator may be called on a separately loaded JSON pointer:
+            # missing/ill-shaped owner SHA must HOLD, never escape as KeyError.
+            or type(pointer.get('source_sha')) is not str
+            or not re.fullmatch('[0-9a-f]{40}', pointer['source_sha'])):
         raise RuntimeError('HOLD_PREVIOUS_TRAINING_RECEIPT')
     if (previous.get('schema') != SCHEMA
             or previous.get('source_sha') != pointer['source_sha']
