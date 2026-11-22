@@ -242,6 +242,11 @@ def reject_auth_meta_refresh(raw, response_url):
         def handle_starttag(self, tag, attrs):
             if tag != 'meta':
                 return
+            # A browser uses the first duplicate HTML attribute, but dict(attrs)
+            # would retain the last: a second value must not hide a redirect.
+            if any(sum(key == name for key, _ in attrs) > 1
+                   for name in ('http-equiv', 'content')):
+                raise RuntimeError('HOLD_CHAT_META_REFRESH_DUPLICATE_ATTRIBUTE')
             fields = dict(attrs)
             if str(fields.get('http-equiv', '')).strip().casefold() != 'refresh':
                 return
