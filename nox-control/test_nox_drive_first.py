@@ -162,6 +162,27 @@ class DriveFirstTests(unittest.TestCase):
         with self.assertRaisesRegex(m.Hold,"URL_REDIRECT"):
             red.redirect_request(None,None,302,"redirect",{},"https://localhost/a")
 
+    def test_ingest_https_opener_never_inherits_proxy_environment(self):
+        # A source URL is pinned by manifest SHA/host, but an inherited proxy
+        # could intercept owner-signed URLs or change the actual destination.
+        with patch.dict(os.environ, {
+            "HTTPS_PROXY": "http://127.0.0.1:65432",
+            "https_proxy": "http://127.0.0.1:65432",
+        }):
+            insecure = m.urllib.request.build_opener(m.VerifiedRedirect())
+            self.assertTrue(any(
+                isinstance(h, m.urllib.request.ProxyHandler) and h.proxies
+                for h in insecure.handlers
+            ))
+            approved = m.direct_https_opener()
+        self.assertFalse(any(
+            isinstance(h, m.urllib.request.ProxyHandler) and h.proxies
+            for h in approved.handlers
+        ))
+        self.assertTrue(any(
+            isinstance(h, m.VerifiedRedirect) for h in approved.handlers
+        ))
+
     def test_config_must_have_google_auth_and_exact_chunker_overlay(self):
         with self.assertRaisesRegex(m.Hold,"FILE"):
             m.validate_config(self.conf)
