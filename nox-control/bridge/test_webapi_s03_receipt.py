@@ -161,7 +161,7 @@ class FactReceiptTest(unittest.TestCase):
     def test_0a03_s03_persists_exact_streamed_unicode_and_whitespace(self):
         """Successful canonical writer call receives exact SSE text, not stripped text."""
         import hashlib
-        reply = "  Привет 🌌\\n"
+        reply = "  Привет 🌌\n"
         writes = []
         memory = types.ModuleType("s03_memory")
         memory.persist_turn = lambda *args: writes.append(args)
@@ -172,7 +172,7 @@ class FactReceiptTest(unittest.TestCase):
             async def __aexit__(self, *args): return False
             async def aiter_lines(self):
                 yield 'data: ' + json.dumps({"choices": [{"delta": {"content": "  Привет 🌌"}}]}, ensure_ascii=False)
-                yield 'data: ' + json.dumps({"choices": [{"delta": {"content": "\\n"}}]}, ensure_ascii=False)
+                yield 'data: ' + json.dumps({"choices": [{"delta": {"content": "\n"}}]}, ensure_ascii=False)
                 yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
                 yield 'data: [DONE]'
 
