@@ -116,6 +116,9 @@ class AnswerSettings:
             except OSError as e:
                 return "Мессир, не удалось сохранить настройки по умолчанию: %s." % type(e).__name__
             return "Настройки ответа возвращены к значениям по умолчанию: 1500 токенов, режим — авто."
+        increase = bool(re.search(r"увелич\w*|больш\w*|длинн\w*|добав\w*", raw, re.I))
+        decrease = bool(re.search(r"уменьш\w*|короч\w*|сократ\w*", raw, re.I))
+        delta_match = re.search(r"(?:на\s*)\+?\s*(\d{1,4})\s*(?:токен\w*)?", raw, re.I) if (increase or decrease) else None
         length_match = re.search(r"(?:max[_ -]?tokens|токен\w*|длин\w*|ответ\w*)\D{0,24}(\d{2,5})", raw, re.I)
         if length_match is None:
             length_match = re.search(r"\b(\d{3,5})\s*(?:токен\w*)?\b", raw, re.I)
@@ -126,12 +129,25 @@ class AnswerSettings:
             mode = "fast"
         elif re.search(r"\b(?:глубоко|глубокий|deep)\b", raw, re.I):
             mode = "deep"
-        if length_match is None and mode is None:
+        if length_match is None and mode is None and (increase or decrease) and delta_match is None:
+            step = 500
+            next_tokens = max(300, min(3000, current["max_tokens"] + (step if increase else -step)))
+            length_match = None
+        else:
+            next_tokens = None
+        if length_match is None and mode is None and next_tokens is None:
             source = "сохранены" if stored else "не сохранены"
             return "Мессир, отдельные настройки ответа %s; действуют %d токенов и режим «%s»." % (
                 source, current["max_tokens"], self._mode_label(current["mode"]))
         max_tokens = current["max_tokens"]
-        if length_match is not None:
+        if delta_match is not None:
+            delta = int(delta_match.group(1))
+            if delta <= 0:
+                return "Укажи положительное изменение длины; настройки не изменены."
+            max_tokens = max(300, min(3000, current["max_tokens"] + (delta if increase else -delta)))
+        elif next_tokens is not None:
+            max_tokens = next_tokens
+        elif length_match is not None:
             requested = int(length_match.group(1))
             if not 300 <= requested <= 3000:
                 return "Длина ответа должна быть от 300 до 3000 токенов; настройки не изменены."
