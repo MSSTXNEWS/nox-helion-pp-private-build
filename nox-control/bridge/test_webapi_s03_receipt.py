@@ -120,9 +120,9 @@ class FactReceiptTest(unittest.TestCase):
             unavailable = await snapshot(stream_id=private_id, request_id="snap-private")
             return frames, finished, wrong, partial, unavailable
 
-        with mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \\
-             mock.patch.object(W, "W", None), \\
-             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+        with (mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.object(W, "W", None),
+              mock.patch.dict(sys.modules, {"s03_memory": memory})):
             frames, finished, wrong, partial, unavailable = asyncio.run(scenario())
         self.assertEqual(finished.status_code, 200)
         saved = json.loads(finished.body)
