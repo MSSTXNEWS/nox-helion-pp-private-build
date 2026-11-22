@@ -2735,9 +2735,7 @@ class ProbeTests(unittest.TestCase):
                 with self.subTest(container=container, field=field), patch.object(
                         probe, 'request', return_value=response):
                     with self.assertRaisesRegex(
-                            RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT
-    unittest.main()
-):
+                            RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
                         probe.consume_turn(object(), 'second-turn', did)
                 self.assertTrue(response.closed)
             good = Response([
