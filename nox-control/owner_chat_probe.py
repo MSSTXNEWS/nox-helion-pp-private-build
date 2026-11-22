@@ -272,7 +272,17 @@ def reject_auth_meta_refresh(raw, response_url):
 def reject_auth_refresh_header(response):
     """HTTP Refresh: navigation to login is not proof of a healthy chat UI."""
     headers = getattr(response, 'headers', None)
-    refresh = headers.get('Refresh', '') if headers is not None else ''
+    if headers is None:
+        refresh = ''
+    elif callable(getattr(headers, 'get_all', None)):
+        # Real HTTPMessage can contain several independent Refresh headers.
+        # A browser may follow any one of them: no ambiguous 200 UI proof.
+        fields = headers.get_all('Refresh') or []
+        if not isinstance(fields, (list, tuple)) or len(fields) > 1:
+            raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_DUPLICATE')
+        refresh = fields[0] if fields else ''
+    else:
+        refresh = headers.get('Refresh', '')
     if not isinstance(refresh, str) or len(refresh) > 2048:
         raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_INVALID')
     if not refresh:
