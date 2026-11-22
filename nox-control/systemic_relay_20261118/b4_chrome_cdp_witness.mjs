@@ -384,6 +384,10 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
       return;
     }
     if(method==='Network.responseReceived'){
+      // Duplicate/contradictory HTTP response after network close cannot
+      // re-certify a body already matched by getResponseBody. Do not restart
+      // streamResourceContent for a terminal CDP request.
+      if(x.close!==null){x.missing=true;x.bodyMatchesStream=false;return;}
       // Response metadata must agree with the original POST's document.
       // Missing frame/loader identifiers are not proof of provenance.
       if(p.frameId!==x.frameId||p.loaderId!==x.loaderId)x.missing=true;
