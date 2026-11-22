@@ -259,6 +259,18 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             elif host["cpu_busy_pct"] >= 85 or host["io_wait_pct"] >= 10:
                 add("GPU_HOST_PIPELINE_PRESSURE", "hold",
                     "Host CPU/I/O pressure blocks further GPU work despite low compute utilization.")
+            elif (type(native.get("resource_headroom_bytes")) is not int
+                    or native["resource_headroom_bytes"] < 2 * 1024**3
+                    or type(native.get("owner_evidence_age_sec")) is not int
+                    or not 0 <= native["owner_evidence_age_sec"] <= 30
+                    or native.get("owner_lease_cas_verified") is not True):
+                # A quiet GPU with cgroup pressure or stale/unknown owner
+                # authority is not capacity. Keep the cgroup floor consistent
+                # with the existing 6A02/0A01 native owner review gates.
+                add("GPU_RESIDUAL_RESOURCE_HOLD", "hold",
+                    "Low utilization is not spare GPU capacity while raw cgroup "
+                    "headroom is below 2 GiB or the attested owner lease/CAS "
+                    "evidence is stale or absent. No new GPU work admitted.")
             elif not _owner_snapshot_attested(snapshot, owner_snapshot_verifier):
                 # Raw JSON claims of idle leases and fresh sensors are not
                 # authenticated owner evidence. Never call these "measured"
