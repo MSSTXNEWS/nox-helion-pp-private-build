@@ -17,7 +17,7 @@ class _LiveOwnerAssetScanner(HTMLParser):
     """Only executable, non-inert HTML tags can satisfy owner asset checks."""
     def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.inert_depth=0
+        self.inert_stack=[]
         self.raw_text_tag=None
         self.has_build=False
         self.scripts=set()
@@ -31,12 +31,12 @@ class _LiveOwnerAssetScanner(HTMLParser):
             self.raw_text_tag=tag
             return
         # Nested inert elements remain inert until their *matching* close.
-        # Count nested templates/noscript before skipping all other tags;
-        # otherwise an inner </template> exposes scripts in its outer parent.
+        # Track exact inert tag names, not just a depth. An unmatched closing
+        # </noscript> inside <template> must not expose a fake executable asset.
         if tag in ('template', 'noscript'):
-            self.inert_depth+=1
+            self.inert_stack.append(tag)
             return
-        if self.inert_depth:
+        if self.inert_stack:
             return
         attributes=dict(attrs)
         if tag=='meta' and attributes.get('name','').lower()=='nox-live-build':
@@ -56,8 +56,8 @@ class _LiveOwnerAssetScanner(HTMLParser):
             if tag==self.raw_text_tag:
                 self.raw_text_tag=None
             return
-        if tag in ('template', 'noscript') and self.inert_depth:
-            self.inert_depth-=1
+        if self.inert_stack and tag==self.inert_stack[-1]:
+            self.inert_stack.pop()
 
 def decorate_html(raw,path):
     if path.lstrip('/') not in PAGES:return raw
