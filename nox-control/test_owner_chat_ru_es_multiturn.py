@@ -419,6 +419,62 @@ async function check(chunks, status=200) {
             caller.index("and firstturn_session_continuity_valid("),
             caller.index("report['multiturn_browser_acceptance_verified']=True"))
 
+    def test_presecond_owner_history_root_session_cannot_rotate_or_disagree(self):
+        """History-root session provenance must survive the last pre-ES GET.
+
+        Valid row IDs and UTF-8 text cannot authorize a Spanish model POST
+        when the history envelope silently changes owner session.
+        This regression is browser-history-only, never native S03 proof.
+        """
+        from owner_chat_browser_qa import (
+            presecond_firstturn_history_stable,
+            root_history_session_valid,
+        )
+        import copy
+        initial = {
+            'dialog_id': DIALOG,
+            'session_id': 'owner-session-A',
+            'messages': [
+                {'role': 'user', 'content': RU, 'message_id': 'first-user',
+                 'dialog_id': DIALOG, 'session_id': 'owner-session-A'},
+                {'role': 'assistant', 'content': FIRST, 'message_id': 'first-answer',
+                 'dialog_id': DIALOG, 'session_id': 'owner-session-A'},
+            ],
+        }
+        check = lambda a, b: presecond_firstturn_history_stable(
+            a, b, RU, FIRST, DIALOG)
+        self.assertTrue(root_history_session_valid(
+            initial, initial['messages']))
+        self.assertTrue(check(initial, copy.deepcopy(initial)))
+        for rotated in ('owner-session-B', None, '', ' ', 'owner-session-A ', 42):
+            with self.subTest(root_session=repr(rotated)):
+                changed = copy.deepcopy(initial)
+                changed['session_id'] = rotated
+                self.assertFalse(check(initial, changed))
+                self.assertFalse(firstturn_history_valid(
+                    changed, RU, FIRST, DIALOG))
+        lost = copy.deepcopy(initial)
+        lost.pop('session_id')
+        self.assertFalse(check(initial, lost),
+                         'root provenance cannot disappear before POST')
+        self.assertFalse(check(lost, initial),
+                         'a new root scope cannot silently appear')
+        self.assertTrue(check(lost, copy.deepcopy(lost)),
+                        'fully legacy root metadata remains valid')
+        root_only = copy.deepcopy(lost)
+        for row in root_only['messages']:
+            row.pop('session_id')
+        root_only['session_id'] = 'root-only-A'
+        self.assertTrue(check(root_only, copy.deepcopy(root_only)))
+        shifted = copy.deepcopy(root_only)
+        shifted['session_id'] = 'root-only-B'
+        self.assertFalse(check(root_only, shifted))
+        # Both the ordinary first-turn check and actual last-presecond fence
+        # use the hardened validator; no extra generation POST is introduced.
+        owner_fence = inspect.getsource(
+            __import__('owner_chat_browser_qa').presecond_owner_history_fence)
+        self.assertIn('presecond_firstturn_history_stable(', owner_fence)
+
     def test_second_ru_es_post_needs_two_persisted_firstturn_identities(self):
         # Matching role/text without two durable identities cannot admit POST 2.
         first = [
