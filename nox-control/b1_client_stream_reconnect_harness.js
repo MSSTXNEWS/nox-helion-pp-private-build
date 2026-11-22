@@ -185,7 +185,9 @@
               rawEvent.startsWith(' ')?rawEvent.slice(1):rawEvent;
             if(event!==undefined&&event.trim()==='delta'&&event!=='delta')
               hold('HOLD_STREAM_EVENT_TYPE');
-            const data=lines.filter(l=>l.startsWith('data:'))
+            // A colonless `data` line is a valid empty SSE data field.
+            // Dropping it removes an intentional newline from multiline deltas.
+            const data=lines.filter(l=>l==='data'||l.startsWith('data:'))
                // SSE removes at most one U+0020 separator after ':'. Literal
                // leading/trailing spaces are model output, not padding.
                .map(l=>l.slice(5).replace(/^ /,'')).join('\n');

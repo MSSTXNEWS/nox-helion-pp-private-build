@@ -1567,6 +1567,51 @@ def main():
           }
           return true;
         }'''))
+        # EventSource treats a colonless bare "data" as an empty data field.
+        # The empty field must participate in multiline joining, including
+        # after/between nonempty lines; no extra POST/ACK is permitted.
+        check('SSE bare data lines preserve empty multiline fields without repost', page.evaluate('''async () => {
+          const variants=[
+            ['middle','data: FIRST\\ndata\\ndata: LAST','FIRST\\n\\nLAST'],
+            ['first','data\\ndata: LAST','\\nLAST'],
+            ['last','data: FIRST\\ndata','FIRST\\n'],
+            ['only','data','']
+          ];
+          for(const [name,dataWire,expected] of variants){
+            const scope={conversation_id:'bare-data',exchange_id:name};
+            let posts=0,acks=0,deltas=0,seen=null,seenId=null;
+            const raw='event: delta\\nid: bare-'+name+'\\n'+
+              dataWire.replace(/\\\\n/g,'\\n')+'\\n\\n';
+            const bytes=new TextEncoder().encode(raw);
+            const transport={...opts.transport,
+              async post(){
+                posts++;
+                return {ok:true,body:new ReadableStream({start(controller){
+                  controller.enqueue(bytes);controller.close();
+                }})};
+              },
+              async ack(){acks++;return true}
+            };
+            const ui={
+              async onDelta(_s,value,signal,id){
+                if(signal.aborted)throw Error('unexpected STOP');
+                deltas++;seen=value;seenId=id;
+              },
+              async upsertTerminal(){throw Error('no terminal')}
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:3000
+            });
+            const result=await client.begin(scope).then(v=>v,e=>e.code);
+            const noRepost=await client.begin(scope).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(result!=='STREAM_ENDED_READBACK_REQUIRED'||
+              seen!==expected.replace(/\\\\n/g,'\\n')||
+              seenId!=='bare-'+name||deltas!==1||posts!==1||
+              acks!==0||!noRepost)return false;
+          }
+          return true;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
