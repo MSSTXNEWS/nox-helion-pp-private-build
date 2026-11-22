@@ -3090,5 +3090,69 @@ class S03ContentReindexNestedShapeFence(unittest.TestCase):
 
 
 
+class PreviousTrainingReceiptEnvelopeFence(unittest.TestCase):
+    def test_previous_receipt_root_and_owner_lineage_fail_closed(self):
+        # Actual source AST, without launching any native trainer or server job.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        node = next(n for n in tree.body
+                    if isinstance(n, ast.FunctionDef)
+                    and n.name == "verify_previous_training_receipt")
+        ns = {"SCHEMA": "NOX_OWNER_TRAINING_RESUME_V1",
+              "SERVICE": "nox-train-volta-t866u"}
+        exec(compile(ast.Module(body=[node], type_ignores=[]),
+                     str(SOURCE), "exec"), ns)
+        check = ns["verify_previous_training_receipt"]
+        boost, memory, media = ({"request": "boost"},
+                                {"request": "s03"}, {"request": "media"})
+        pointer = {
+            "source_sha": "a" * 40,
+            "dispatcher_upgrade": boost,
+            "s03_activation": memory,
+            "media_acceptance": media,
+        }
+        policy = {
+            "training_allowed": True,
+            "training_service": ns["SERVICE"],
+        }
+        previous = {
+            "schema": ns["SCHEMA"],
+            "source_sha": pointer["source_sha"],
+            "admission": copy.deepcopy(pointer),
+            "dispatcher_upgrade": copy.deepcopy(boost),
+            "s03_activation": copy.deepcopy(memory),
+            "media_acceptance": copy.deepcopy(media),
+        }
+        self.assertTrue(check(copy.deepcopy(previous), pointer, policy,
+                              boost, memory, media))
+        for invalid in (None, [], ["receipt"], True, False, 17, 1.5,
+                        "receipt"):
+            with self.subTest(invalid=repr(invalid)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_PREVIOUS_TRAINING_RECEIPT$"):
+                    check(invalid, pointer, policy, boost, memory, media)
+        for key in ("schema", "source_sha", "admission",
+                    "dispatcher_upgrade", "s03_activation", "media_acceptance"):
+            with self.subTest(missing=key):
+                changed = copy.deepcopy(previous)
+                changed.pop(key)
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_PREVIOUS_TRAINING_RECEIPT$"):
+                    check(changed, pointer, policy, boost, memory, media)
+        for invalid in (None, [], True):
+            with self.subTest(pointer=repr(invalid)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_PREVIOUS_TRAINING_RECEIPT$"):
+                    check(previous, invalid, policy, boost, memory, media)
+            with self.subTest(policy=repr(invalid)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_PREVIOUS_TRAINING_RECEIPT$"):
+                    check(previous, pointer, invalid, boost, memory, media)
+        unowned = copy.deepcopy(policy)
+        unowned["training_allowed"] = 1
+        with self.assertRaisesRegex(
+                RuntimeError, "^HOLD_PREVIOUS_TRAINING_RECEIPT$"):
+            check(previous, pointer, unowned, boost, memory, media)
+
+
 if __name__ == "__main__":
     unittest.main()
