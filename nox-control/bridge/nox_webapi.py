@@ -804,26 +804,36 @@ def install(app, B):
                 sk = None
                 if W and not mini and not stopped and full.strip() and mode != "fast" and (mode == "thoughtful" or W.is_factual(user)):
                     yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": "проверяю факты (скептик)"})
-                    sk = await W.skeptic(lambda m, n_: B.ask(m, n_, slot=1), user, full, record=not eph)
+                    # Secondary checking is advisory. A verifier outage, malformed
+                    # response or missing explanation must not erase an already
+                    # complete primary stream or prevent its S03 write attempt.
+                    try:
+                        sk = await W.skeptic(lambda m, n_: B.ask(m, n_, slot=1), user, full, record=not eph)
+                    except Exception as e:
+                        B.log("web_skeptic_unavailable " + type(e).__name__)
+                        sk = {"ok": None, "reason": "SKEPTIC_UNAVAILABLE"}
+                    if not isinstance(sk, dict):
+                        B.log("web_skeptic_result_invalid")
+                        sk = {"ok": None, "reason": "SKEPTIC_RESULT_INVALID"}
                     if sk.get("ok") is False:
-                        # A secondary verifier cannot bypass the upstream 128 KiB
-                        # UTF-8 budget or add malformed Unicode to the S03 turn.
-                        # Keep the already-complete model response intact and
-                        # degrade only the optional skeptic annotation.
                         doubt = sk.get("doubt")
-                        add = "\n\n⚠ Скептик: " + doubt if isinstance(doubt, str) else None
-                        try:
-                            add_bytes = len(add.encode("utf-8")) if add is not None else None
-                        except UnicodeEncodeError:
-                            add_bytes = None
-                        if add_bytes is None or output_utf8_bytes + add_bytes > MAX_CHAT_OUTPUT_UTF8_BYTES:
-                            B.log("web_skeptic_annotation_discarded")
+                        if not isinstance(doubt, str) or not doubt.strip():
                             sk = {"ok": None, "reason": "SKEPTIC_ANNOTATION_INVALID_OR_OVERSIZE"}
                         else:
-                            output_utf8_bytes += add_bytes
-                            full += add
-                            yield fr(message={"role": "assistant", "content": add}, done=False)
-                    yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": ("сомнение: " + sk["doubt"]) if sk.get("ok") is False else "проверка пройдена" if sk.get("ok") else "проверка недоступна", "ok": sk.get("ok")})
+                            add = "\n\n⚠ Скептик: " + doubt
+                            try:
+                                add_bytes = len(add.encode("utf-8")) if len(doubt) <= MAX_CHAT_OUTPUT_UTF8_BYTES else None
+                            except UnicodeEncodeError:
+                                add_bytes = None
+                            if add_bytes is None or output_utf8_bytes + add_bytes > MAX_CHAT_OUTPUT_UTF8_BYTES:
+                                B.log("web_skeptic_annotation_discarded")
+                                sk = {"ok": None, "reason": "SKEPTIC_ANNOTATION_INVALID_OR_OVERSIZE"}
+                            else:
+                                output_utf8_bytes += add_bytes
+                                full += add
+                                yield fr(message={"role": "assistant", "content": add}, done=False)
+                    check_text = ("сомнение: " + sk["doubt"]) if sk.get("ok") is False else "проверка пройдена" if sk.get("ok") else "проверка недоступна"
+                    yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": check_text, "ok": sk.get("ok")})
                 # STOP may arrive while the post-generation skeptic awaits. Never
                 # persist a cancelled answer using the stale pre-skeptic flag.
                 stopped = stopped or rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch
