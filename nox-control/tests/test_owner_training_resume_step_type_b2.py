@@ -539,6 +539,19 @@ class CheckpointStepProvenance(unittest.TestCase):
             safe.write_text('{"global_step": 1}', encoding="utf-8")
             self.assertEqual(read_json(safe, limit=64), {"global_step": 1})
 
+            # A correct SHA-256 signs bytes, not their JSON validity. Corrupt
+            # native checkpoint state must HOLD instead of leaking decoder errors.
+            malformed = root / "malformed-signed-state.json"
+            for raw in (b'{"global_step":', b'{"global_step": 1,}',
+                        b'\xff{"global_step": 1}'):
+                with self.subTest(signed_malformed=repr(raw)):
+                    malformed.write_bytes(raw)
+                    signed_sha = hashlib.sha256(raw).hexdigest()
+                    with self.assertRaisesRegex(
+                            RuntimeError, "^HOLD_INVALID_STATE_JSON$"):
+                        read_json(malformed, limit=128,
+                                  expected_sha256=signed_sha)
+
             # Byte-for-byte matching SHA is insufficient if JSON is ambiguous.
             duplicate = root / "duplicate-step.json"
             duplicate.write_text('{"global_step": 0, "global_step": 1}', encoding="utf-8")
