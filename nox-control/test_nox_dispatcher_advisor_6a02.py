@@ -151,6 +151,23 @@ class NativeRefillSourceGateTests(unittest.TestCase):
             self.assertEqual(json.loads(output.read_text(encoding="utf8")), report)
             self.assertEqual(list(root.glob(".advisor.json.*.tmp")), [])
 
+    def test_owner_snapshot_reader_refuses_symlinks_and_unbounded_data(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            safe = root / "current.json"
+            data = snapshot()
+            safe.write_text(json.dumps(data), encoding="utf8")
+            self.assertEqual(mod._read_snapshot_json(safe), data)
+            symlink = root / "alias.json"
+            symlink.symlink_to(safe)
+            with self.assertRaisesRegex(SystemExit, "HOLD_OWNER_TELEMETRY_JSON_INVALID"):
+                mod._read_snapshot_json(symlink)
+            oversize = root / "oversize.json"
+            with oversize.open("wb") as handle:
+                handle.truncate(mod.MAX_OWNER_SNAPSHOT_BYTES + 1)
+            with self.assertRaisesRegex(SystemExit, "HOLD_OWNER_TELEMETRY_JSON_INVALID"):
+                mod._read_snapshot_json(oversize)
+
     def test_missing_stop_is_higher_priority(self):
         s = snapshot()
         s.pop("stop_active")

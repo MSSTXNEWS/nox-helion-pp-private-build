@@ -9,6 +9,7 @@ import json
 import math
 import os
 import tempfile
+import stat
 from pathlib import Path
 
 
@@ -303,16 +304,47 @@ def _reject_json_constant(value):
     raise ValueError("nonfinite owner telemetry JSON constant")
 
 
+MAX_OWNER_SNAPSHOT_BYTES = 4 * 1024 * 1024
+
+
 def _read_snapshot_json(path):
+    """Read bounded owner evidence from one regular inode, never follow a final symlink.
+
+    This is only untrusted advisory input; even a valid file does not attest
+    STOP/lease/CAS or authorize a native action.
+    """
     try:
+        if not hasattr(os, "O_NOFOLLOW"):
+            raise ValueError("safe no-follow read unavailable")
+        flags = (os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+                 | getattr(os, "O_NONBLOCK", 0))
+        fd = os.open(path, flags)
+        try:
+            before = os.fstat(fd)
+            if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_OWNER_SNAPSHOT_BYTES:
+                raise ValueError("owner snapshot must be a bounded regular file")
+            raw = bytearray()
+            while len(raw) <= MAX_OWNER_SNAPSHOT_BYTES:
+                part = os.read(fd, min(65536, MAX_OWNER_SNAPSHOT_BYTES + 1 - len(raw)))
+                if not part:
+                    break
+                raw.extend(part)
+            if len(raw) > MAX_OWNER_SNAPSHOT_BYTES:
+                raise ValueError("owner snapshot exceeds size bound")
+            after = os.fstat(fd)
+            identity = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
+            if identity(before) != identity(after):
+                raise ValueError("owner snapshot changed during read")
+        finally:
+            os.close(fd)
         data = json.loads(
-            Path(path).read_text(encoding="utf8"),
+            raw.decode("utf8"),
             object_pairs_hook=_unique_json_pairs,
             parse_constant=_reject_json_constant,
         )
     except (OSError, UnicodeError, ValueError):
-        # Do not create a seemingly trusted advice receipt for ambiguous
-        # STOP, owner lease/CAS or corrupted telemetry.
+        # Neither malformed, oversized nor raced input can yield advice that
+        # might be mistaken for owner-attested permission to write.
         raise SystemExit("HOLD_OWNER_TELEMETRY_JSON_INVALID") from None
     if not isinstance(data, dict):
         raise SystemExit("HOLD_OWNER_TELEMETRY_JSON_INVALID")
