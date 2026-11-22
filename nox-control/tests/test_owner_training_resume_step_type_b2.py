@@ -2640,5 +2640,82 @@ class DispatcherUpgradeReceiptShapeFence(unittest.TestCase):
                     verifier(copy.deepcopy(receipt))
 
 
+
+class S03ContentReindexNestedShapeFence(unittest.TestCase):
+    def test_malformed_reindex_receipt_maps_hold_without_crashing(self):
+        """Execute real source proof AST only; no S03, GPU or native service."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        node = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                    and n.name == "s03_content_reindex_proof")
+        scope = {"S03_GATEWAY_SHA": "a" * 64,
+                 "S03_PREPARE_REQUEST": "10001",
+                 "S03_PREPARE_RECEIPT_SHA": "b" * 64,
+                 "S03_MODEL_CONTENT_SHA": "c" * 64,
+                 "S03_MODEL_IDENTITY": "pinned-bge-identity"}
+        exec(compile(ast.Module(body=[node], type_ignores=[]), str(SOURCE), "exec"), scope)
+        check = scope["s03_content_reindex_proof"]
+        content = {"request": "10002", "source_sha": "d" * 40,
+                   "receipt_sha256": "e" * 64,
+                   "current_embeddings": 514, "indexed_in_action": 0}
+        chain = {"training_hold_sha256": "f" * 64}
+        proc = {"pid": 202, "starttime": 333}
+        valid = {
+            "schema": "NOX_OWNER_S03_CONTENT_REINDEX_V1",
+            "request": content["request"], "source_sha": content["source_sha"],
+            "state": "CONTENT_IDENTITY_AND_REEMBEDDED_INDEX_VERIFIED",
+            "gateway_sha256": scope["S03_GATEWAY_SHA"],
+            "prepare_request": scope["S03_PREPARE_REQUEST"],
+            "prepare_source_sha": "2a09e5975e0bfbd84e22bbaea1c0347a9b41ec63",
+            "prepare_receipt_sha256": scope["S03_PREPARE_RECEIPT_SHA"],
+            "content_identity": {"content_sha256": scope["S03_MODEL_CONTENT_SHA"],
+                                 "identity": scope["S03_MODEL_IDENTITY"],
+                                 "dimensions": 1024, "full_file_hash_verified": True},
+            "status": {"model_identity": scope["S03_MODEL_IDENTITY"],
+                       "stale_embeddings": 0, "current_embeddings": 514,
+                       "original_history_records_preserved": 1014},
+            "before_index": {"legacy_identity_vectors": 0},
+            "indexed_in_action": 0, "legacy_vectors_remaining": 0,
+            "legacy_vectors_relabelled": False,
+            "historical_model_content_sha_known": False,
+            "canonical_originals_preserved": True,
+            "sources_and_flags_unchanged": True,
+            "training_hold_sha256": chain["training_hold_sha256"],
+            "training_pause_sha256": chain["training_hold_sha256"],
+            "private_text_exported": False, "training_examples_accepted": 0,
+            "services_restarted": [], "live_sources_changed": False,
+            "bge_process_before": proc, "bge_process_after": dict(proc),
+            "synthetic_retrieval_acceptance":
+                {"state": "SYNTHETIC_SEMANTIC_FIXTURES_VERIFIED"},
+            "public_recall": {"state": "SEMANTIC_LEXICAL_BOUNDED_PINS",
+                              "methods": {"semantic": 1, "hybrid": 0, "pin": 0}},
+        }
+        verified = check(copy.deepcopy(valid), content, chain)
+        self.assertEqual(verified["receipt_sha256"], content["receipt_sha256"])
+        self.assertEqual(verified["current_embeddings"], 514)
+
+        for root in (None, [], "not-a-receipt"):
+            with self.subTest(root=repr(root)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_S03_CONTENT_REINDEX_CHAIN_REQUIRED"):
+                    check(root, content, chain)
+        for field in ("content_identity", "status", "before_index",
+                      "bge_process_before", "public_recall",
+                      "synthetic_retrieval_acceptance"):
+            for malformed in ([], ["crafted"], True, "not-a-map"):
+                with self.subTest(field=field, malformed=repr(malformed)):
+                    candidate = copy.deepcopy(valid)
+                    candidate[field] = malformed
+                    with self.assertRaisesRegex(
+                            RuntimeError, "HOLD_S03_CONTENT_REINDEX_CHAIN_REQUIRED"):
+                        check(candidate, content, chain)
+        for malformed in ([], ["crafted"], True, "not-a-map"):
+            candidate = copy.deepcopy(valid)
+            candidate["public_recall"]["methods"] = malformed
+            with self.subTest(methods=repr(malformed)):
+                with self.assertRaisesRegex(
+                        RuntimeError, "HOLD_S03_CONTENT_REINDEX_CHAIN_REQUIRED"):
+                    check(candidate, content, chain)
+
+
 if __name__ == "__main__":
     unittest.main()
