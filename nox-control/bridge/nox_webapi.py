@@ -1266,7 +1266,7 @@ def install(app, B):
 
         try:
             return TrackedChatResponse(TrackedChatBody(), media_type="application/x-ndjson",
-                                       headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+                                       headers={"Cache-Control": "private, no-store, max-age=0", "X-Accel-Buffering": "no"})
         except BaseException:
             release_chat_admission()
             raise
