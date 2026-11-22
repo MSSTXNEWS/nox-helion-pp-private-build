@@ -490,7 +490,7 @@ class FactReceiptTest(unittest.TestCase):
 
         for doubt, accepted in (
             ("x" * W.MAX_CHAT_OUTPUT_UTF8_BYTES, False),
-            ("\u005cud800", False),
+            ("\ud800", False),
             (["not", "text"], False),
             ("Сомневаюсь", True),
         ):
@@ -504,7 +504,7 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertEqual(terminal["completion_receipt"]["status"], "GENERATED")
                 self.assertEqual(terminal["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
                 self.assertEqual(len(writes), 1)
-                suffix = "\\n\\n⚠ Скептик: Сомневаюсь" if accepted else ""
+                suffix = "\n\n⚠ Скептик: Сомневаюсь" if accepted else ""
                 self.assertEqual(writes[0][1], "Ответ" + suffix)
                 if not accepted:
                     self.assertEqual(terminal["skeptic"]["reason"],
