@@ -562,7 +562,15 @@ def stream_frame_reports_failure(frame):
 
 def require_stream_model_identity(frame, previous=None):
     """Bind any explicitly reported model labels across one complete stream."""
+    # Explicit model provenance can also be carried inside metadata or status.
+    # A nested route label must not disagree with a top-level or earlier SSE
+    # label while a later saved=true DONE attempts to certify the same turn.
     fields = [frame[key] for key in ('model', 'model_id', 'modelId') if key in frame]
+    for container in ('status', 'metadata', 'meta'):
+        nested = frame.get(container)
+        if isinstance(nested, dict):
+            fields.extend(nested[key] for key in ('model', 'model_id', 'modelId')
+                          if key in nested)
     if not fields:
         return previous  # Unlabeled legacy frames are not positive model proof.
     if any(type(value) is not str or not 0 < len(value.strip()) <= 256
