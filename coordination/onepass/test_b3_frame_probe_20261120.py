@@ -1277,6 +1277,9 @@ class TestProbe(unittest.TestCase):
                                 if(mode==='blankstart')frames[1].model='  ';
                                 if(mode==='bidistart')frames[1].model='existing-\\u202e-model';
                                 if(mode==='zerostart')frames[1].model='existing-\\u200b-model';
+                                 if(mode==='softstart')frames[1].model='existing-\\u00ad-model';
+                                 if(mode==='joinstart')frames[1].model='existing-\\u2060-model';
+                                 if(mode==='graphemestart')frames[1].model='existing-\\u034f-model';
                                 return new Response(frames.map(JSON.stringify).join('\\n')+'\\n',{
                                     status:200
                                 });
@@ -1304,7 +1307,8 @@ class TestProbe(unittest.TestCase):
                         const rows=[];
                         for(const [i,mode] of
                             ['mismatch','match','absent','malformed','paddedstart',
-                             'longstart','controlstart','blankstart','bidistart','zerostart'].entries()){
+                             'longstart','controlstart','blankstart','bidistart','zerostart',
+                              'softstart','joinstart','graphemestart'].entries()){
                             const postsBefore=window.__posts;
                             const readsBefore=window.__reads;
                             const id=String(i).repeat(32);
@@ -1328,7 +1332,7 @@ class TestProbe(unittest.TestCase):
                         }
                         return rows;
                     }""")
-                    self.assertEqual(len(result), 10)
+                    self.assertEqual(len(result), 13)
                     for row in result:
                         self.assertEqual(row['posts'], 1)
                         # A terminal HOLD can withhold its last carried grapheme;
@@ -1336,7 +1340,8 @@ class TestProbe(unittest.TestCase):
                         self.assertTrue(('answer:'+row['mode']).startswith(row['tokens']))
                         if row['mode'] in ('mismatch', 'malformed', 'paddedstart',
                                            'longstart', 'controlstart', 'blankstart',
-                                           'bidistart', 'zerostart'):
+                                           'bidistart', 'zerostart', 'softstart',
+                                            'joinstart', 'graphemestart'):
                             self.assertEqual(row['reads'], 0)
                             self.assertEqual(row['done'], [])
                             self.assertEqual(len(row['errors']), 1)
