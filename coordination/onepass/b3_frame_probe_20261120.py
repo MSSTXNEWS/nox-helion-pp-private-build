@@ -76,9 +76,18 @@ def is_model_chat_endpoint(url):
         path = path.replace('//', '/')
     # Classify the canonical target rather than the attacker-supplied alias.
     path = posixpath.normpath(path)
+    # Also fence common OpenAI-compatible and local inference routes.
+    # Their presence in this denylist does NOT assert that the installed NOX
+    # model exposes them; this opt-in observer may not initiate inference.
     return any(path == root or path.startswith(root + '/') or
                path.startswith(root + ';')
-               for root in ('/api/nox/chat', '/nox/chat'))
+               for root in (
+                   '/api/nox/chat', '/nox/chat',
+                   '/v1/chat/completions', '/v1/completions', '/v1/responses',
+                   '/api/v1/chat/completions', '/api/v1/completions',
+                   '/api/v1/responses', '/api/chat', '/api/generate',
+                   '/v1/embeddings', '/api/embed', '/api/embeddings',
+                   '/completion', '/generate'))
 
 
 def evidence_hash(value):

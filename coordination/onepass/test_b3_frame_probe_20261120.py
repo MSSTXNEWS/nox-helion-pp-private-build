@@ -155,6 +155,19 @@ class TestProbe(unittest.TestCase):
             'http://127.0.0.1:18877/assets/../api;sid=1/nox;v=2/chat',
             'http://127.0.0.1:18877/%3Bsid=1/api/nox/chat',
             'http://127.0.0.1:18877/api%253Bsid=1/nox/chat',
+            # Common model-serving API shapes must never be probed via GET.
+            # These routes are guarded defensively, not asserted installed.
+            'http://127.0.0.1:18877/v1/chat/completions',
+            'http://127.0.0.1:18877/v1/completions',
+            'http://127.0.0.1:18877/v1/responses',
+            'http://127.0.0.1:18877/api/v1/chat/completions',
+            'http://127.0.0.1:18877/api/chat',
+            'http://127.0.0.1:18877/api/generate',
+            'http://127.0.0.1:18877/v1/embeddings',
+            'http://127.0.0.1:18877/api/embed',
+            'http://127.0.0.1:18877/assets/%2e%2e/v1/chat/completions',
+            'http://127.0.0.1:18877/v1;rev=1/chat/completions',
+            'http://127.0.0.1:18877/v1%252fresponses',
         ):
             with self.subTest(block=url):
                 self.assertTrue(is_model_chat_endpoint(url))
@@ -167,6 +180,11 @@ class TestProbe(unittest.TestCase):
             'http://127.0.0.1:18877/NOX/CHATTER',
             'http://127.0.0.1:18877/assets;rev=1/chat.css',
             'http://127.0.0.1:18877/api/nox/chat.html;v=2',
+            'http://127.0.0.1:18877/v1/models',
+            'http://127.0.0.1:18877/v1/chat/completions.html',
+            'http://127.0.0.1:18877/api/chat.html',
+            'http://127.0.0.1:18877/api/generate-ui',
+            'http://127.0.0.1:18877/assets/v1/completions.css',
         ):
             with self.subTest(allow=url):
                 self.assertFalse(is_model_chat_endpoint(url))
