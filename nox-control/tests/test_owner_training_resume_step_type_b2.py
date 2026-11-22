@@ -3093,6 +3093,26 @@ class S03ContentReindexNestedShapeFence(unittest.TestCase):
         self.assertEqual([x["kind"] for x in check(copy.deepcopy(base), chain)],
                          ["image", "video"])
 
+        # A signed 400-digit JSON integer is valid input data, but
+        # math.isfinite(10**400) raises OverflowError. Every decoded numeric
+        # metric must fail closed as HOLD, not crash admission. Exercise the
+        # real verifier AST without launching media, trainer or GPU.
+        for index, keys in (
+                (0, ("max_channel_range", "max_channel_variance")),
+                (1, ("max_channel_range", "decoded_fps",
+                     "timestamp_span_seconds",
+                     "max_frame_interval_error_seconds"))):
+            for key in keys:
+                for huge in (10**400, -(10**400)):
+                    bad_receipt = copy.deepcopy(base)
+                    bad_receipt["artifacts"][index]["decode"][key] = huge
+                    with self.subTest(kind=index, metric=key,
+                                      negative=huge < 0):
+                        with self.assertRaisesRegex(
+                                RuntimeError,
+                                "^HOLD_MEDIA_ACCEPTANCE_FINITE_DECODE$"):
+                            check(bad_receipt, chain)
+
         for invalid in (None, [], ["spoof"], True, "not-chain"):
             with self.subTest(chain=repr(invalid)):
                 with self.assertRaisesRegex(

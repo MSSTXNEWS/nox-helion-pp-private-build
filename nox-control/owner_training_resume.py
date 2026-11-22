@@ -749,7 +749,15 @@ def media_acceptance_proof(receipt, upgrade_chain):
             raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_ARTIFACT_PROOF')
         numeric = ('max_channel_range', 'max_channel_variance') if kind == 'image' else (
             'max_channel_range', 'decoded_fps', 'timestamp_span_seconds', 'max_frame_interval_error_seconds')
-        if any(type(proof.get(key)) not in (int, float) or not math.isfinite(proof[key]) for key in numeric):
+        # Signed but implausibly huge JSON integers can pass type checks while
+        # math.isfinite() raises OverflowError converting them to float.
+        # Classify corrupt media proof as the documented admission HOLD.
+        try:
+            finite_metrics = all(type(proof.get(key)) in (int, float)
+                                 and math.isfinite(proof[key]) for key in numeric)
+        except OverflowError:
+            finite_metrics = False
+        if not finite_metrics:
             raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_FINITE_DECODE')
         dimensions = (512, 512, 1, 'png') if kind == 'image' else (256, 256, 9, 'vp9')
         if (any(type(proof.get(key)) is not int for key in ('width', 'height', 'frames'))
