@@ -156,11 +156,37 @@ def restore(backup_path, db, force=False):
             if not force and _in_use(db):
                 raise RuntimeError("база занята (идёт запись); остановите сервис или используйте --force")
             kept = "%s.before-restore-%s" % (db, time.strftime("%Y%m%d-%H%M%S"))
-            os.replace(db, kept)
-            for ext in ("-wal", "-shm"):
-                if os.path.exists(db + ext):
-                    os.replace(db + ext, kept + ext)
-        os.replace(tmp, db)
+            # A second restore in the same second must never overwrite the
+            # previous pre-restore database (or either of its SQLite sidecars).
+            if any(os.path.lexists(kept + ext) for ext in ("", "-wal", "-shm")):
+                raise RuntimeError("предыдущая копия перед восстановлением уже существует: " + kept)
+            moved = []
+            try:
+                for ext in ("", "-wal", "-shm"):
+                    if os.path.lexists(db + ext):
+                        os.replace(db + ext, kept + ext)
+                        moved.append(ext)
+                os.replace(tmp, db)
+            except OSError as exc:
+                # If installation failed after moving the original away,
+                # recover only into vacant paths. Never overwrite another
+                # process's newly created database during an ambiguous race.
+                if os.path.lexists(db):
+                    raise RuntimeError("восстановление прервано: проверьте прежнюю базу в " + kept) from exc
+                failures = []
+                for ext in reversed(moved):
+                    try:
+                        os.replace(kept + ext, db + ext)
+                    except OSError:
+                        failures.append(ext or "db")
+                if failures:
+                    raise RuntimeError("откат неполный (%s): прежняя база в %s" % (",".join(failures), kept)) from exc
+                raise
+        else:
+            # Orphaned WAL/SHM must not attach to a newly restored main DB.
+            if any(os.path.lexists(db + ext) for ext in ("-wal", "-shm")):
+                raise RuntimeError("осиротевшие SQLite WAL/SHM без основной базы: HOLD")
+            os.replace(tmp, db)
     except Exception:
         if os.path.exists(tmp):
             os.remove(tmp)
