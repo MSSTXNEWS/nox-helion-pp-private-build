@@ -5,7 +5,7 @@ No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
 import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 60509551  # S2 (США); S1 (Квебек) = 61825960, выбирается маркером #S1 в начале REMOTE
 KEY = os.environ["NOX2"]
-REMOTE = '#S1\ncurl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c309/ab.sh -o /tmp/sr.sh && bash /tmp/sr.sh 2>&1 | tail -c 3000 # 1795327548.660411'
+REMOTE = '#S1\ncurl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c305/speed.sh -o /tmp/sr.sh && bash /tmp/sr.sh 2>&1 | tail -c 3000 # 1795327603.9558132'
 
 if REMOTE.startswith("#S1"):
     INSTANCE = 61825960
