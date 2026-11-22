@@ -817,6 +817,9 @@ def install(app, B):
         async def gen():
             t0, n, shown = time.time(), 0, 0
             full = ""
+            # Assemble SSE deltas once. Incremental str concatenation can become
+            # quadratic for a long answer split into tiny model token frames.
+            full_chunks = []
             output_utf8_bytes = 0
             yield fr(message={"role": "assistant", "content": ""}, done=False, nox_status="слушаю тебя…",
                      request_receipt={"status": "RECEIVED", "request_id": rid, "native_admission_verified": False})
@@ -1099,18 +1102,21 @@ def install(app, B):
                                 if finish_reason == "stop":
                                     upstream_stop_seen = True
                                 if t:
-                                    full += t
+                                    full_chunks.append(t)
                                     output_utf8_bytes += t_utf8_bytes
                                     n += 1
                                     yield fr(message={"role": "assistant", "content": t}, done=False)
                                     if plan and "\n" in t:
-                                        k = len(re.findall(r"(?m)^\s*(?:Шаг\s*)?\d+[.)]", full))
+                                        k = len(re.findall(r"(?m)^\s*(?:Шаг\s*)?\d+[.)]", "".join(full_chunks)))
                                         if k > shown and k <= len(plan):
                                             shown = k
                                             yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "шаг %d/%d: %s" % (k, len(plan), plan[k - 1]), "index": k, "total": len(plan)})
                 except Exception as e:
                     err = type(e).__name__
                     B.log("web_stream_error %s" % err)
+                # The final answer, digest and S03 write use the exact emitted
+                # text, including Unicode, line breaks and whitespace.
+                full = "".join(full_chunks)
                 if not mini:
                     B.LAST_CHAT["t"] = time.time()
                 stopped = rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch

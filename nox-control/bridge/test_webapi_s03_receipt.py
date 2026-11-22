@@ -1947,5 +1947,66 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual((admitted, released, readmitted, clean),
                          (True, True, True, True))
 
+
+    def test_1a01_many_small_sse_deltas_reconstruct_exact_s03_answer(self):
+        """Long live token streams retain exact ordered UTF-8, receipt and S03."""
+        expected = "Ж🌌" * 700
+        fragments = ["Ж", "🌌"] * 700
+        captured = []
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                for part in fragments:
+                    yield 'data: ' + json.dumps(
+                        {"choices": [{"delta": {"content": part}}]},
+                        ensure_ascii=False)
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs):
+                captured.append(kwargs["json"])
+                return Upstream()
+
+        chat = next(route.endpoint for route in self.app.routes
+                    if route.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT, bridge.SOUL = {"t": 0}, None
+        bridge.hc = lambda: Client()
+        writes = []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def scenario():
+            response = await chat(Request({
+                "request_id": "many-deltas-utf8", "mini": True,
+                "use_memory": False,
+                "messages": [{"role": "user", "content": "Продолжай"}],
+            }))
+            return [json.loads(frame) async for frame in response.body_iterator]
+
+        with mock.patch.object(W, "W", None), \
+             mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            frames = asyncio.run(scenario())
+        self.assertEqual("".join(f.get("message", {}).get("content", "")
+                                 for f in frames), expected)
+        self.assertEqual(captured[0]["stream"], True)
+        self.assertEqual(writes, [("[mini] Продолжай", expected)])
+        terminal = frames[-1]
+        self.assertTrue(terminal["done"])
+        self.assertEqual(terminal["completion_receipt"]["status"], "GENERATED")
+        self.assertEqual(terminal["memory_write_receipt"]["status"],
+                         "WRITE_RETURNED_UNVERIFIED")
+        self.assertEqual(terminal["digest"],
+                         W.hashlib.sha256(expected.encode("utf-8")).hexdigest())
+
+
 if __name__ == "__main__":
     unittest.main()
