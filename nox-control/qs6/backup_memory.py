@@ -96,18 +96,23 @@ def backup(db, bdir, keep=24, now=None):
 
     tmp = os.path.join(bdir, "." + name + ".tmp")
     meta_tmp = final + ".json.tmp"
+    tmp_owned = False
+    meta_owned = False
     try:
         if os.path.lexists(tmp) or os.path.lexists(meta_tmp):
             raise RuntimeError("обнаружен незавершённый временный файл копии: HOLD")
         src = sqlite3.connect("file:%s?mode=ro" % db, uri=True)
         try:
             dst = sqlite3.connect(tmp)
+            tmp_owned = True
             try:
                 src.backup(dst)
             finally:
                 dst.close()
         finally:
             src.close()
+        # SQLite's default umask must not expose private S03 backup bytes.
+        os.chmod(tmp, 0o600)
         ok, detail = integrity(tmp)
         if not ok:
             raise RuntimeError("копия не прошла integrity_check: %s" % detail)
@@ -115,17 +120,20 @@ def backup(db, bdir, keep=24, now=None):
                 "size": os.path.getsize(tmp), "source": os.path.abspath(db),
                 "counts": counts(tmp), "integrity": "ok"}
         with open(meta_tmp, "x", encoding="utf-8") as f:
+            meta_owned = True
             json.dump(meta, f, ensure_ascii=False, indent=1)
         os.replace(tmp, final)  # replaces only our own exclusive reservation
+        tmp_owned = False
         os.replace(meta_tmp, final + ".json")
+        meta_owned = False
     except Exception:
-        # Only the filename reserved by this invocation is removed; never
-        # delete an earlier verified copy, its checksum, or a live database.
-        for p in (tmp, meta_tmp, final):
-            try:
-                os.remove(p)
-            except FileNotFoundError:
-                pass
+        # Never unlink a pre-existing temporary file owned by another run.
+        for p, owned in ((tmp, tmp_owned), (meta_tmp, meta_owned), (final, True)):
+            if owned:
+                try:
+                    os.remove(p)
+                except FileNotFoundError:
+                    pass
         raise
     removed = rotate(bdir, keep)
     return dict(meta, file=name, path=final, rotated_out=removed)
