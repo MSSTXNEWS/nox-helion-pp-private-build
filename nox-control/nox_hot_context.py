@@ -70,8 +70,12 @@ def plan_two_stage_retrieval(*, candidates, owner_persona_id, s03_revision,
         # Only score normalized evidence; do not copy untrusted source text
         # into model instructions, and do not imply a live vector index exists.
         score = round(.55 * scores[0] + .45 * scores[1], 8)
-        ranked.append({"id": ident, "source_sha256": sha,
-                       "first_pass_score": score})
+        # No first-pass evidence means no relevant fact. A zero-only pool
+        # must not fill the prompt with arbitrary ID-sorted memories or ask
+        # a GPU reranker to distinguish equally irrelevant results.
+        if score > 0:
+            ranked.append({"id": ident, "source_sha256": sha,
+                           "first_pass_score": score})
     ranked.sort(key=lambda x: (-x["first_pass_score"], x["id"]))
     top = ranked[:shortlist_limit]
     # Ask an existing owner-admitted multilingual GPU reranker only when the
