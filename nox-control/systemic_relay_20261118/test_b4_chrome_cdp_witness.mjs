@@ -1747,3 +1747,73 @@ test('late FIRST cache provenance during second POST revokes first only, retaini
   assert.equal(afterCapture,1);
   assert.equal(JSON.stringify(sealed),snapshot);
 });
+
+
+test('late FIRST data after body ACK during SECOND stream cannot poison independent second SSE',async()=>{
+  const clean=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  assert.deepEqual(clean.turns.map(t=>t.cdp_request_id),['1','2']);
+  // The first body lookup must have resolved before the second logical POST.
+  // The CDP listener still receives events for BOTH request IDs.
+  for(const [name,data] of [
+    ['duplicate-DONE',Buffer.from('data: [DONE]\n\n').toString('base64')],
+    ['altered-bytes',Buffer.from('unexpected late SSE payload').toString('base64')],
+    ['empty-data','']
+  ]){
+    let firstAck=false,ackBeforeSecond=false,delivered=0;
+    const observed=await run(false,null,null,null,{
+      quiescenceMs:80,
+      responseBodySettled:(id,status)=>{
+        if(id==='1'&&status==='resolved')firstAck=true;
+      },
+      lifecycleDuringSecond:session=>{
+        ackBeforeSecond=firstAck;
+        delivered++;
+        // FIRST closed at 100.02; SECOND request started at 101.
+        // The event is delivered while the second stream remains in flight.
+        session.emit('Network.dataReceived',{requestId:'1',timestamp:100.03,data});
+      }
+    });
+    assert.equal(ackBeforeSecond,true,name+' first body ACK before second');
+    assert.equal(delivered,1,name+' late first chunk reached attached CDP listener');
+    assert.equal(observed.cdp_consistent,false,name+' pair cannot certify');
+    assert.equal(observed.ttft_sse_verified,false,name);
+    assert.deepEqual(observed.turns.map(t=>t.cdp_request_id),['1','2']);
+    const first=observed.turns[0],second=observed.turns[1];
+    assert.equal(first.request_sha256,clean.turns[0].request_sha256,name);
+    assert.equal(first.cdp_streamed_body_sha256,clean.turns[0].cdp_streamed_body_sha256,name);
+    assert.equal(first.cdp_decoded_body_sha256,clean.turns[0].cdp_decoded_body_sha256,name);
+    assert.equal(first.cdp_decoded_body_matches_stream,false,name);
+    assert.equal(first.ttft_ms,null,name);
+    assert.equal(first.sse_done_ms,null,name);
+    assert.equal(first.visible_text_sha256,null,name);
+    assert.equal(first.stream_timing_complete,false,name);
+    for(const key of ['cdp_request_id','request_sha256',
+      'cdp_decoded_body_sha256','cdp_streamed_body_sha256','visible_text_sha256',
+      'ttft_ms','sse_done_ms','sse_done_to_loading_finished_ms',
+      'stream_timing_complete','cdp_decoded_body_matches_stream']){
+      assert.deepEqual(second[key],clean.turns[1][key],name+' second '+key);
+    }
+    assert.equal(second.stream_timing_complete,true,name);
+    assert.equal(second.ttft_ms,10,name);
+    assert.doesNotMatch(JSON.stringify(observed),/secret|Hello|data:/,name);
+  }
+  // An event beyond the finite CDP capture is NOT retrospectively attested.
+  let afterCapture=0;
+  const sealed=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      afterCapture++;
+      session.emit('Network.dataReceived',{
+        requestId:'1',timestamp:100.04,
+        data:Buffer.from('late after observer seal').toString('base64')});
+    },90)
+  });
+  assert.equal(sealed.cdp_consistent,true);
+  assert.equal(afterCapture,0);
+  const snapshot=JSON.stringify(sealed);
+  await new Promise(resolve=>setTimeout(resolve,125));
+  assert.equal(afterCapture,1);
+  assert.equal(JSON.stringify(sealed),snapshot);
+});
