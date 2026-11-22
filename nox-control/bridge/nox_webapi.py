@@ -693,7 +693,12 @@ def install(app, B):
                                 if not isinstance(delta, dict):
                                     upstream_failure = "UPSTREAM_DELTA_INVALID"
                                     break
-                                t = delta.get("content") or ""
+                                # A falsey JSON value (0, false, [], {}) is NOT
+                                # an empty token. Only missing/null content is
+                                # legitimate no-text SSE metadata.
+                                t = delta.get("content", "")
+                                if t is None:
+                                    t = ""
                                 if not isinstance(t, str):
                                     upstream_failure = "UPSTREAM_CONTENT_INVALID"
                                     break
