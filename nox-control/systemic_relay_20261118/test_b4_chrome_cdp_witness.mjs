@@ -2909,22 +2909,28 @@ test('R23 actual headless Chromium: loopback three-turn SSE/CDP provenance, two-
   const pageUrl=origin+'/nox/chat';
   let chrome=null,profile=null;
   try{
-    profile=await mkdtemp(join(tmpdir(),'nox-b4-chrome-r23-'));
-    chrome=spawn(browser,[
-      '--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage',
-      '--disable-background-networking','--no-first-run','--no-default-browser-check',
-      '--no-proxy-server','--remote-debugging-port=0','--user-data-dir='+profile,
-      pageUrl
-    ],{stdio:'ignore'});
     let debugPort=null;
-    for(let attempt=0;attempt<130;attempt++){
-      try{
-        const lines=(await readFile(join(profile,'DevToolsActivePort'),'utf8')).split('\n');
-        debugPort=Number(lines[0]);
-        if(Number.isInteger(debugPort)&&debugPort>0)break;
-      }catch{}
-      if(chrome.exitCode!==null)throw Error('CHROMIUM_EXITED_BEFORE_CDP');
-      await sleep(100);
+    for(let launchAttempt=0;launchAttempt<2&&!debugPort;launchAttempt++){
+      // Hosted runners sometimes expose the Chrome binary before the browser
+      // becomes ready. Never pass a silent absence off as a successful smoke.
+      if(chrome){try{chrome.kill('SIGKILL');}catch{}await sleep(150);}
+      if(profile)await rm(profile,{recursive:true,force:true,maxRetries:3,retryDelay:100});
+      profile=await mkdtemp(join(tmpdir(),'nox-b4-chrome-r23-'));
+      chrome=spawn(browser,[
+        '--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage',
+        '--disable-background-networking','--no-first-run','--no-default-browser-check',
+        '--no-proxy-server','--remote-debugging-port=0','--user-data-dir='+profile,
+        pageUrl
+      ],{stdio:'ignore'});
+      for(let attempt=0;attempt<130;attempt++){
+        try{
+          const lines=(await readFile(join(profile,'DevToolsActivePort'),'utf8')).split('\n');
+          const port=Number(lines[0]);
+          if(Number.isInteger(port)&&port>0){debugPort=port;break;}
+        }catch{}
+        if(chrome.exitCode!==null)break;
+        await sleep(100);
+      }
     }
     assert.ok(debugPort,'CHROMIUM_DEBUG_PORT_UNAVAILABLE');
     let target=null;
