@@ -2459,3 +2459,52 @@ test('Cdp.send synchronous WebSocket throw frees pending and keeps later SSE hea
   assert.equal(healthy.turns.length,2);
   assert.equal(healthy.native_verified,false,'source fixture is not a native acceptance');
 });
+
+test('Cdp open socket no-ACK has bounded pending lifetime and preserves healthy SSE',async()=>{
+  const original=globalThis.WebSocket;
+  let socket;
+  class SilentSocket {
+    constructor(){
+      socket=this;this.readyState=0;this.handlers=new Map();
+      queueMicrotask(()=>{this.readyState=1;this.emit('open',{});});
+    }
+    addEventListener(name,fn){
+      if(!this.handlers.has(name))this.handlers.set(name,new Set());
+      this.handlers.get(name).add(fn);
+    }
+    removeEventListener(name,fn){this.handlers.get(name)?.delete(fn);}
+    emit(name,data){for(const fn of [...(this.handlers.get(name)??[])])
+      fn(name==='message'?{data:JSON.stringify(data)}:{type:name});}
+    send(wire){
+      const command=JSON.parse(wire);
+      if(command.method==='Page.enable')
+        queueMicrotask(()=>this.emit('message',{id:command.id,result:{ok:true}}));
+    }
+    close(){this.readyState=3;this.emit('close',{});}
+  }
+  try{
+    globalThis.WebSocket=SilentSocket;
+    const client=await new Cdp('ws://127.0.0.1:9222/devtools/page/b4').open(100);
+    await assert.rejects(client.send('Network.enable',{},40),/CDP_ACK_TIMEOUT/);
+    assert.equal(client.pending.size,0,'never-ACKed command must expire');
+    socket.emit('message',{id:1,result:{late:true}});
+    assert.equal(client.pending.size,0,'late ACK cannot resurrect expired command');
+    await assert.rejects(client.send('Browser.getVersion',{},24),/BAD_CDP_ACK_TIMEOUT/);
+    assert.equal(client.pending.size,0,'invalid deadline never registers pending');
+    assert.deepEqual(await client.send('Page.enable',{},100),{ok:true},
+      'subsequent healthy ACK remains independent');
+    assert.equal(client.pending.size,0);
+    const pending=client.send('Network.getResponseBody',{},1000);
+    assert.equal(client.pending.size,1);
+    client.close();
+    await assert.rejects(pending,/CDP_CLOSED|CDP_DISCONNECTED/);
+    assert.equal(client.pending.size,0,'close flushes pending without stale entries');
+    socket.emit('message',{id:3,result:{late:true}});
+    assert.equal(client.pending.size,0,'post-close ACK cannot revive pending');
+  }finally{globalThis.WebSocket=original;}
+  const healthy=await run();
+  assert.equal(healthy.cdp_consistent,true,'healthy two-turn SSE stays consistent');
+  assert.equal(healthy.ttft_sse_verified,true,'SSE TTFT remains independently measured');
+  assert.equal(healthy.turns.length,2);
+  assert.equal(healthy.native_verified,false,'fixture is not native attestation');
+});

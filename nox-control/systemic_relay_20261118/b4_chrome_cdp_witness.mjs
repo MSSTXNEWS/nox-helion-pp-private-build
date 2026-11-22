@@ -78,19 +78,35 @@ export class Cdp {
     });
     this.ws.addEventListener('close',()=>{for(const x of this.pending.values())x.no(Error('CDP_DISCONNECTED'));this.pending.clear();this.listener?.('CDP_DISCONNECTED',{});});return this;
   }
-  send(method,params={}){return new Promise((yes,no)=>{
-    const id=++this.next;
-    this.pending.set(id,{yes,no});
-    try{this.ws.send(JSON.stringify({id,method,params}));}
-    catch(error){
-      // Promise rejects on synchronous WebSocket.send failure, but its
-      // pending entry must also be removed (no later ACK can revive it).
-      this.pending.delete(id);
-      no(error);
-    }
-  });}
+  send(method,params={},ackTimeoutMs=5000){
+    // A connected socket may never acknowledge a CDP command. Bound each
+    // pending entry independently of the overall browser capture deadline.
+    if(!Number.isInteger(ackTimeoutMs)||ackTimeoutMs<25||ackTimeoutMs>60000)
+      return Promise.reject(Error('BAD_CDP_ACK_TIMEOUT'));
+    return new Promise((yes,no)=>{
+      const id=++this.next;
+      let timer;
+      const settle=(fn,value)=>{
+        if(!this.pending.has(id))return;
+        this.pending.delete(id);
+        clearTimeout(timer);
+        fn(value);
+      };
+      this.pending.set(id,{
+        yes:value=>settle(yes,value),
+        no:error=>settle(no,error)
+      });
+      timer=setTimeout(()=>settle(no,Error('CDP_ACK_TIMEOUT')),ackTimeoutMs);
+      try{this.ws.send(JSON.stringify({id,method,params}));}
+      catch(error){settle(no,error);}
+    });
+  }
   on(fn){this.listener=fn;}
-  close(){this.ws?.close();}
+  close(){
+    // Even a socket that never emits its close event cannot retain commands.
+    for(const x of [...this.pending.values()])x.no(Error('CDP_CLOSED'));
+    this.ws?.close();
+  }
 }
 // CDP Headers are normalized even for HTTP/2; headersText may be absent.
 function ambiguousEncoding(headers){
