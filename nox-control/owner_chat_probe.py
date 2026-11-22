@@ -209,6 +209,13 @@ def page_snapshot(response, limit=200000, expected_path=None):
         # Status and same-origin routing alone never prove that the web UI exists.
         if status == 200:
             headers = getattr(response, 'headers', None)
+            # An HTML-looking prefix is not proof of a complete browser page.
+            # Reuse the strict identity HTTP framing guard already exercised
+            # for chat streams; an inconsistent EOF must fail before UI PASS.
+            require_stream_http_framing(response)
+            declared_length = headers.get('Content-Length') if headers is not None else None
+            if declared_length is not None and len(raw) != int(declared_length.strip()):
+                raise RuntimeError('HOLD_CHAT_PAGE_BODY_LENGTH_MISMATCH')
             # HTTPMessage.get() hides repeated Content-Type headers. A browser
             # must not certify ambiguous HTML/gateway MIME as healthy NOX UI.
             get_all = getattr(headers, 'get_all', None)

@@ -2812,5 +2812,63 @@ class ProbeTests(unittest.TestCase):
         self.assertLess(main.index(postflight), main.index(complete))
 
 
+    def test_http_200_html_page_requires_exact_body_eof_and_unambiguous_framing(self):
+        """A truncated 200 HTML prefix cannot certify a healthy Resonance page."""
+        from email.message import Message
+        html = b'<html><body>NOX Resonance</body></html>'
+
+        class Response:
+            status = 200
+            url = 'http://127.0.0.1:8080/chat'
+
+            def __init__(self, fields=()):
+                self.headers = Message()
+                self.headers.add_header('Content-Type', 'text/html; charset=utf-8')
+                for name, value in fields:
+                    self.headers.add_header(name, str(value))
+                self.closed = False
+
+            def read(self, limit):
+                return html
+
+            def close(self):
+                self.closed = True
+
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'):
+            for length in (len(html) - 1, len(html) + 1, len(html) + 120):
+                response = Response((('Content-Length', length),))
+                with self.subTest(length=length):
+                    with self.assertRaisesRegex(RuntimeError,
+                                                '^HOLD_CHAT_PAGE_BODY_LENGTH_MISMATCH
+):
+                        probe.page_snapshot(response, expected_path='/chat')
+                self.assertTrue(response.closed)
+
+            for fields in (
+                (('Content-Length', len(html)), ('Transfer-Encoding', 'chunked')),
+                (('Content-Length', len(html)), ('Content-Length', len(html))),
+                (('Transfer-Encoding', 'gzip'),),
+                (('Content-Encoding', 'gzip'),),
+            ):
+                response = Response(fields)
+                with self.subTest(ambiguous=fields):
+                    with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_HTTP_FRAMING
+):
+                        probe.page_snapshot(response, expected_path='/chat')
+                self.assertTrue(response.closed)
+
+            for fields in (
+                (),
+                (('Content-Length', len(html)),),
+                (('Transfer-Encoding', 'chunked'),),
+                (('Content-Encoding', 'identity'),),
+            ):
+                response = Response(fields)
+                with self.subTest(healthy=fields):
+                    self.assertEqual(probe.page_snapshot(
+                        response, expected_path='/chat'), (200, '/chat', html))
+                self.assertTrue(response.closed)
+
+
 if __name__ == '__main__':
     unittest.main()
