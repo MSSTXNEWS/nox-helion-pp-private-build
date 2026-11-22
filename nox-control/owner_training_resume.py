@@ -494,7 +494,8 @@ def s03_activation_pins(receipt, upgrade_chain, request=None, source=None):
     if (not isinstance(request, str) or not request.isdigit()
             or not isinstance(source, str) or not re.fullmatch('[0-9a-f]{40}', source)):
         raise RuntimeError('HOLD_PINNED_S03_ACTIVATION_CONTEXT_REQUIRED')
-    if (not isinstance(receipt, dict) or receipt.get('schema') != 'NOX_OWNER_S03_ACTIVATION_V1'
+    if (not isinstance(upgrade_chain, dict) or not isinstance(receipt, dict)
+            or receipt.get('schema') != 'NOX_OWNER_S03_ACTIVATION_V1'
             or receipt.get('request') != request or receipt.get('source_sha') != source
             or receipt.get('state') != 'LIVE_SHARED_SEMANTIC_MEMORY_AND_NATIVE_INDEX_VERIFIED'
             or receipt.get('prepare_request') != S03_PREPARE_REQUEST
@@ -509,7 +510,9 @@ def s03_activation_pins(receipt, upgrade_chain, request=None, source=None):
             or any(type(receipt.get(key)) is not int or receipt[key] != 0
                    for key in ('weights_deleted', 'memory_records_deleted'))):
         raise RuntimeError('HOLD_VERIFIED_S03_ACTIVATION_REQUIRED')
-    content = receipt.get('content_reindex') or {}
+    content = receipt.get('content_reindex')
+    if type(content) is not dict:
+        raise RuntimeError('HOLD_S03_VERIFIED_CONTENT_REINDEX_REQUIRED')
     if (content.get('schema') != 'NOX_OWNER_S03_CONTENT_REINDEX_V1'
             or content.get('request') != request or content.get('source_sha') != source
             or content.get('state') != 'CONTENT_IDENTITY_AND_REEMBEDDED_INDEX_VERIFIED'
@@ -521,18 +524,26 @@ def s03_activation_pins(receipt, upgrade_chain, request=None, source=None):
             or type(content.get('indexed_in_action')) is not int or content['indexed_in_action'] < 0
             or content.get('stale_embeddings') != 0 or content.get('legacy_vectors_relabelled') is not False):
         raise RuntimeError('HOLD_S03_VERIFIED_CONTENT_REINDEX_REQUIRED')
-    workers = receipt.get('workers') or {}
+    workers = receipt.get('workers')
+    if type(workers) is not dict:
+        raise RuntimeError('HOLD_S03_NATIVE_SIX_WORKERS_REQUIRED')
     if (workers.get('configured') != 6 or workers.get('observed') != 6
             or type(workers.get('unique_active_claims')) is not int
             or not 0 <= workers['unique_active_claims'] <= 6):
         raise RuntimeError('HOLD_S03_NATIVE_SIX_WORKERS_REQUIRED')
     before, after = receipt.get('model_process_before'), receipt.get('model_process_after')
+    health = receipt.get('health_after')
+    if type(health) is not dict:
+        raise RuntimeError('HOLD_S03_LIVE_CHAT_PROOF_REQUIRED')
     if (not isinstance(before, dict) or before != after
             or type(before.get('pid')) is not int or before['pid'] <= 0
             or not str(before.get('starttime', '')).isdigit()
-            or any((receipt.get('health_after') or {}).get(port) != 200 for port in ('8080', '8081', '8082'))):
+            or any(type(health.get(port)) is not int or health[port] != 200
+                   for port in ('8080', '8081', '8082'))):
         raise RuntimeError('HOLD_S03_LIVE_CHAT_PROOF_REQUIRED')
-    proof = receipt.get('native_index_proof') or {}
+    proof = receipt.get('native_index_proof')
+    if type(proof) is not dict:
+        raise RuntimeError('HOLD_S03_NATIVE_INDEX_PROOF_REQUIRED')
     if (proof.get('kind') != 'bounded_native_s03_index' or proof.get('scope') != 'BOUNDED_S03_VECTOR_INDEX'
             or proof.get('source_sha256') != S03_GATEWAY_SHA
             or not re.fullmatch('[0-9a-f]{64}', str(proof.get('receipt_sha256', '')))
@@ -540,9 +551,17 @@ def s03_activation_pins(receipt, upgrade_chain, request=None, source=None):
             or type(proof.get('stale_remaining')) is not int or proof['stale_remaining'] != 0
             or type(proof.get('training_examples_accepted')) is not int or proof['training_examples_accepted'] != 0):
         raise RuntimeError('HOLD_S03_NATIVE_INDEX_PROOF_REQUIRED')
-    events = {row.get('kind'): row.get('data') for row in receipt.get('steps', []) if isinstance(row, dict)}
-    live, recall = events.get('s03_live_proxy_recall') or {}, events.get('s03_lifecycle_recall') or {}
-    methods = live.get('methods') or {}
+    steps = receipt.get('steps')
+    if type(steps) is not list or any(type(row) is not dict for row in steps):
+        raise RuntimeError('HOLD_S03_ACTUAL_SEMANTIC_RECALL_REQUIRED')
+    events = {row.get('kind'): row.get('data') for row in steps
+              if isinstance(row.get('kind'), str)}
+    live, recall = events.get('s03_live_proxy_recall'), events.get('s03_lifecycle_recall')
+    if type(live) is not dict or type(recall) is not dict:
+        raise RuntimeError('HOLD_S03_ACTUAL_SEMANTIC_RECALL_REQUIRED')
+    methods = live.get('methods')
+    if type(methods) is not dict:
+        raise RuntimeError('HOLD_S03_ACTUAL_SEMANTIC_RECALL_REQUIRED')
     if (live.get('state') != 'SEMANTIC_LEXICAL_BOUNDED_PINS' or live.get('private_text_exported') is not False
             or not all(type(methods.get(key)) is int and methods[key] >= 0 for key in ('semantic', 'hybrid', 'pin'))
             or methods['semantic'] + methods['hybrid'] < 1 or methods['pin'] > 2
@@ -554,8 +573,9 @@ def s03_activation_pins(receipt, upgrade_chain, request=None, source=None):
     required = {path.name: (path, sha) for path, sha in S03_PINS.items()}
     required_names = set(required) | {'owner_senior_gateway.json'}
     if (not isinstance(rows, list) or len(rows) != len(required_names)
-            or any(not isinstance(row, dict) for row in rows)
-            or {row.get('name') for row in rows} != required_names):
+            or any(type(row) is not dict or type(row.get('name')) is not str for row in rows)
+            or len({row['name'] for row in rows}) != len(rows)
+            or {row['name'] for row in rows} != required_names):
         raise RuntimeError('HOLD_S03_INSTALLED_SOURCE_SET')
     previous = {path.name: sha for path, sha in UPGRADE_PINS.items()}
     previous.update({'s03_memory.py': S03_BEFORE_SHA, 'owner_s03_gateway.py': S03_PREPARE_GATEWAY_SHA})
