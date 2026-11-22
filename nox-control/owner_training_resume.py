@@ -1180,7 +1180,23 @@ def verify_previous_training_receipt(previous, pointer, policy,
                                      upgrade_evidence, memory_evidence,
                                      media_evidence):
     """Fail closed on an untrusted prior owner receipt before reusing its lineage."""
+    # A prior source hash and owner ID do not make a failed or incomplete
+    # native maintenance receipt a valid predecessor. Recheck the actual
+    # accepted owner state before following its training admission pointer.
+    allowed_predecessor_states = (
+        'BOUNDED_TRAINING_RUNNING_ACCEPTANCE_PENDING',
+        'EXISTING_CONTINUATION_RUNNING',
+        'TRAINING_CHECKPOINTED_BY_NEW_PAUSE',
+        'FIVE_STEPS_VERIFIED_CONTINUATION_DEFERRED',
+        'FIVE_STEPS_VERIFIED_OWNER_PAUSE_RETAINED',
+        'FIVE_STEPS_VERIFIED_CONTINUATION_STARTED',
+        'CONTINUATION_CHECKPOINTED_BY_OWNER_PAUSE',
+        'CONTINUATION_TARGET_1000_COMPLETED',
+    )
     if (type(previous) is not dict or type(pointer) is not dict
+            or type(previous.get('state')) is not str
+            or previous['state'] not in allowed_predecessor_states
+            or previous.get('training_started') is not True
             or type(policy) is not dict
             # This validator may be called on a separately loaded JSON pointer:
             # missing/ill-shaped owner SHA must HOLD, never escape as KeyError.
