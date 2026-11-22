@@ -25,6 +25,23 @@ class ReflectionInputAdmission(unittest.TestCase):
             with self.subTest(path=path):
                 with self.assertRaisesRegex(ReflectionError, "credential-like"):
                     _https_reference("https://example.org" + path, "test.url")
+        # Four nested percent-encoding layers bypassed the former
+        # three-pass decoder, letting credential-like path evidence through.
+        from urllib.parse import quote
+        for depth in (4, 8):
+            encoded = "ghp%5f" + "A" * 24  # Synthetic marker only.
+            for _ in range(depth - 1):
+                encoded = quote(encoded, safe="")
+            with self.subTest(nesting_depth=depth):
+                with self.assertRaisesRegex(ReflectionError, "credential-like"):
+                    _https_reference("https://example.org/evidence/" + encoded, "test.url")
+        # Even pathological encoding depth must HOLD, not pass still-hidden
+        # evidence or spend unbounded CPU decoding it.
+        deeply_nested = "ghp%5f" + "A" * 24
+        for _ in range(40):
+            deeply_nested = quote(deeply_nested, safe="")
+        with self.assertRaisesRegex(ReflectionError, "nested URL encoding"):
+            _https_reference("https://example.org/evidence/" + deeply_nested, "test.url")
         self.assertEqual(
             _https_reference("https://github.com/org/repo/actions/runs/123?token=fake", "test.url"),
             "https://github.com/org/repo/actions/runs/123",
