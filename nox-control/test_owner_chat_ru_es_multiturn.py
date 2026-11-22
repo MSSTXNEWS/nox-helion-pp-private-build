@@ -369,7 +369,7 @@ async function check(chunks, status=200) {
         self.assertTrue(canonical_s03_proof_valid(
             writer, reader, DIALOG, clean, require_full_transcript_pin=True))
         for index in range(4):
-            for suffix in ("\\u200b", "\\u2060", "\\u202e", "\\x00"):
+            for suffix in ("\u200b", "\u2060", "\u202e", "\x00"):
                 with self.subTest(row=index, suffix=repr(suffix)):
                     bad = [dict(row) for row in clean]
                     bad[index]["message_id"] += suffix
