@@ -619,6 +619,46 @@ def require_stream_response_mime(response):
         raise RuntimeError('HOLD_STREAM_RESPONSE_MIME')
 
 
+def require_stream_http_framing(response):
+    """Reject ambiguous HTTP body boundaries before parsing a model stream.
+
+    A client can accept a body despite disagreeing Content-Length and
+    Transfer-Encoding metadata. It cannot then certify a single complete turn.
+    Headerless offline fixtures remain compatible, never production evidence.
+    """
+    headers = getattr(response, 'headers', None)
+    if headers is None:
+        return
+
+    def values(name):
+        get_all = getattr(headers, 'get_all', None)
+        if callable(get_all):
+            fields = get_all(name)
+        else:
+            field = headers.get(name)
+            fields = [] if field is None else [field]
+        if fields is None:
+            fields = []
+        if not isinstance(fields, (list, tuple)) or any(
+                not isinstance(field, str) for field in fields):
+            raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+        return fields
+
+    lengths = values('Content-Length')
+    transfers = values('Transfer-Encoding')
+    encodings = values('Content-Encoding')
+    if any(len(fields) > 1 for fields in (lengths, transfers, encodings)):
+        raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+    if lengths:
+        length = lengths[0].strip()
+        if not re.fullmatch(r'[0-9]{1,18}', length) or int(length) == 0:
+            raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+    if transfers and (transfers[0].strip().casefold() != 'chunked' or lengths):
+        raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+    if encodings and encodings[0].strip().casefold() not in ('', 'identity'):
+        raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+
+
 def bounded_stream_lines(response, max_line=100000):
     """Bound each network read; iteration can buffer a huge NDJSON line before a length check."""
     readline = getattr(response, 'readline', None)
@@ -643,6 +683,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
     try:
         require_exact_stream_target(response)
         require_stream_response_mime(response)
+        require_stream_http_framing(response)
         for index,line in enumerate(bounded_stream_lines(response)):
             if index>2000 or len(line)>100000 or time.monotonic()-started>timeout+5:
                 raise RuntimeError('HOLD_BOUNDED_STREAM')
