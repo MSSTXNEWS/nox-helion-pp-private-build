@@ -134,6 +134,32 @@ def renderer_resource_identity(inline, network):
             'count': len(entries)}
 
 
+async def capture_render_resource(response, network_assets, *, timeout=8.0,
+                                  max_bytes=8 * 1024 * 1024):
+    """Bound passive JS/CSS readback; never promote stalled assets to frame proof.
+
+    Content-Length can describe *compressed* bytes, so it is a preflight
+    upper bound only. The returned (possibly decoded) body is checked again.
+    """
+    if response.status >= 400:
+        raise ValueError('HOLD_LIVE_RENDER_RESOURCE_HTTP')
+    declared = response.headers.get('content-length')
+    if declared is not None:
+        if type(declared) is not str or not declared.isascii() or not declared.isdecimal():
+            raise ValueError('HOLD_LIVE_RENDER_RESOURCE_LENGTH')
+        if int(declared) > max_bytes:
+            raise ValueError('HOLD_LIVE_RENDER_RESOURCE_OVERSIZE')
+    try:
+        raw = await asyncio.wait_for(response.body(), timeout=timeout)
+    except asyncio.TimeoutError as exc:
+        raise ValueError('HOLD_LIVE_RENDER_RESOURCE_TIMEOUT') from exc
+    if not isinstance(raw, bytes):
+        raise ValueError('HOLD_LIVE_RENDER_RESOURCE_INVALID')
+    if len(raw) > max_bytes:
+        raise ValueError('HOLD_LIVE_RENDER_RESOURCE_OVERSIZE')
+    network_assets.append((response.request.resource_type, response.url, raw))
+
+
 def verify_report_screenshots(report, directory):
     """Bind a saved baseline to the six on-disk Chromium PNGs.
 
@@ -431,11 +457,7 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                         page.set_default_timeout(12000)
                         network_assets, response_tasks = [], []
                         async def capture_resource(response):
-                            if response.status >= 400:
-                                raise ValueError('HOLD_LIVE_RENDER_RESOURCE_HTTP')
-                            raw = await response.body()
-                            network_assets.append((response.request.resource_type,
-                                                   response.url, raw))
+                            await capture_render_resource(response, network_assets)
 
                         def on_response(response):
                             if response.request.resource_type in ('script', 'stylesheet'):

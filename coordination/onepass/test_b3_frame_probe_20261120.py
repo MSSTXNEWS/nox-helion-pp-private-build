@@ -7,7 +7,7 @@ import pathlib
 import tempfile
 import unittest
 
-from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames, evidence_hash, url_identity_sha256, is_model_chat_endpoint, verify_report_screenshots
+from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames, evidence_hash, url_identity_sha256, is_model_chat_endpoint, verify_report_screenshots, capture_render_resource
 
 
 class TestProbe(unittest.TestCase):
@@ -79,6 +79,48 @@ class TestProbe(unittest.TestCase):
                         source.index('deltas = compare_baseline(result, old, transition)'))
         self.assertLess(source.index('verify_report_screenshots(result, out)'),
                         source.index('deltas = compare_baseline(result, old, transition)'))
+
+    def test_render_asset_body_size_and_deadline_fail_closed(self):
+        # Passive asset capture previously awaited response.body() forever
+        # and accepted unbounded decompressed JS/CSS bytes.
+        class Asset:
+            def __init__(self, payload=b'body', length=None, delay=0, status=200):
+                self.status = status
+                self.url = 'http://127.0.0.1:18775/renderer.css'
+                self.headers = {} if length is None else {'content-length': length}
+                self.request = type('Request', (), {'resource_type': 'stylesheet'})()
+                self.payload, self.delay, self.called = payload, delay, False
+
+            async def body(self):
+                self.called = True
+                if self.delay:
+                    await asyncio.sleep(self.delay)
+                return self.payload
+
+        async def check():
+            captured = []
+            await capture_render_resource(Asset(length='4'), captured,
+                                          max_bytes=8, timeout=0.01)
+            self.assertEqual(captured[0][2], b'body')
+            self.assertEqual(len(captured), 1)
+            too_big = Asset(length='9')
+            with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_RENDER_RESOURCE_OVERSIZE'):
+                await capture_render_resource(too_big, captured, max_bytes=8)
+            self.assertFalse(too_big.called)
+            with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_RENDER_RESOURCE_OVERSIZE'):
+                await capture_render_resource(Asset(payload=b'x' * 9), captured,
+                                              max_bytes=8)
+            with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_RENDER_RESOURCE_TIMEOUT'):
+                await capture_render_resource(Asset(delay=0.05), captured,
+                                              max_bytes=8, timeout=0.005)
+            with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_RENDER_RESOURCE_LENGTH'):
+                await capture_render_resource(Asset(length='9junk'), captured,
+                                              max_bytes=8)
+            with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_RENDER_RESOURCE_HTTP'):
+                await capture_render_resource(Asset(status=404), captured,
+                                              max_bytes=8)
+            self.assertEqual(len(captured), 1)
+        asyncio.run(check())
 
     def test_renderer_resource_identity_fail_closed(self):
         a = renderer_resource_identity([('script', 'const NOX = true;')],
