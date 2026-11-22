@@ -1489,6 +1489,70 @@ def main():
             aborted.stop===1 && aborted.deadline===1 &&
             reads===2&&posts===0&&acks===0&&projects===0;
         }'''))
+        # A noncooperative readback GET can resolve with an OPEN response
+        # body after STOP/deadline. Its request signal is already aborted,
+        # but the late unclaimed body still needs nonblocking cancellation.
+        # Valid in-time readbacks must never be canceled. No model POST.
+        check('late reconnect readback GET body canceled once after STOP/timeout; GET-only retry works', page.evaluate('''async () => {
+          async function one(kind){
+            const s={conversation_id:'r28',exchange_id:kind};
+            let resolveRead,entered,reads=0,cancels=0,healthyCancels=0;
+            let posts=0,acks=0,projects=0,bridges=0,signal;
+            const started=new Promise(resolve=>entered=resolve);
+            const transport={
+              post(){posts++;throw Error('NO_MODEL_POST')},
+              readback(_s,getSignal){
+                reads++;signal=getSignal;
+                if(reads===1){
+                  entered();
+                  return new Promise(resolve=>{resolveRead=resolve});
+                }
+                return Promise.resolve({...s,body:{
+                  cancel(){healthyCancels++;return Promise.resolve()}
+                }});
+              },
+              ack(){acks++;return true}
+            };
+            const bridge={async acceptTerminal(_packet,scope){
+              bridges++;
+              return {safe_to_ack:true,model_post:false,
+                conversation_id:scope.conversation_id,
+                exchange_id:scope.exchange_id,
+                projection_event_id:'ev-'+kind,
+                ack_cursor:'cursor-'+kind};
+            }};
+            const ui={onDelta(){throw Error('NO_DELTA')},
+              async upsertTerminal(){projects++;return true}};
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge,ui,
+              reconnectReadTimeoutMs:kind==='timeout'?30:300
+            });
+            const first=c.reconnect(s);
+            await started;
+            const didStop=kind==='stop'?c.stop(s):false;
+            const firstCode=await Promise.race([
+              first.then(()=>null,e=>e.code),
+              new Promise(resolve=>setTimeout(()=>resolve('HUNG'),450))
+            ]);
+            if((kind==='stop'&&(!didStop||
+              firstCode!=='HOLD_STREAM_RECONNECT_STOPPED'))||
+              (kind==='timeout'&&firstCode!=='HOLD_STREAM_READBACK_TIMEOUT')||
+              !signal.aborted)return false;
+            resolveRead({body:{cancel(){
+              cancels++;
+              return kind==='stop'?Promise.reject(Error('cancel failed')):
+                new Promise(()=>{});
+            }}});
+            await new Promise(resolve=>setTimeout(resolve,0));
+            if(cancels!==1||posts||acks||projects||bridges)return false;
+            const recovered=await c.reconnect(s);
+            return recovered.projection_event_id==='ev-'+kind&&
+              reads===2&&cancels===1&&healthyCancels===0&&
+              posts===0&&acks===1&&projects===1&&bridges===1;
+          }
+          return await one('stop')&&await one('timeout');
+        }'''))
+
         check('STOP/timeout abort canonical ACK GET and fence late gate completion', page.evaluate('''async () => {
           async function one(kind){
             const s={conversation_id:'canonical-abort',exchange_id:kind};
