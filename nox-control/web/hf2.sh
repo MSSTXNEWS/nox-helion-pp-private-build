@@ -28,5 +28,5 @@ for l in sys.stdin:
     if o.get('nox_phase') or m.get('nox_phase'): ph.append('phase')
     if o.get('error'): t+='[ERR '+str(o['error'])[:80]+']'
 print(repr(t[:320]),ph)"; }
-for q in "привет" "привет" "привет" "как сервер?" "удали прошлые запросы"; do echo "Q:$q -> $(ask "$q")"; done
+for q in "привет" "привет" "привет" "как сервер?"; do echo "Q:$q -> $(ask "$q")"; done
 echo "rollback: bash /root/nox/hotfix_rollback.sh (backup $W.bak_hotfix_$TS)"
