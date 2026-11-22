@@ -200,6 +200,8 @@ class FactReceiptTest(unittest.TestCase):
             (True, 503, None, False, None, False),
             (True, 200, "length", False, None, False),
             (True, 200, None, True, None, False),
+            # [DONE] with visible content but no model stop finish is incomplete.
+            (True, 200, None, False, None, False),
             # A successful DONE is only valid after a clean HTTP stream EOF.
             (True, 200, "stop", False, 'data: {"error":"late"}', False),
             (True, 200, "stop", False, OSError("reset after DONE"), False),
@@ -246,6 +248,7 @@ class FactReceiptTest(unittest.TestCase):
                 return False
             async def aiter_lines(self):
                 yield 'data: {"choices":[{"delta":{"content":"Ответ"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
                 yield 'data: [DONE]'
 
         class Client:
@@ -302,6 +305,7 @@ class FactReceiptTest(unittest.TestCase):
                 return False
             async def aiter_lines(self):
                 yield 'data: {"choices":[{"delta":{"content":"Ответ"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
                 yield 'data: [DONE]'
 
         class Client:
@@ -358,6 +362,7 @@ class FactReceiptTest(unittest.TestCase):
             async def __aexit__(self, *ignored): return False
             async def aiter_lines(self):
                 yield 'data: {"choices":[{"delta":{"content":"Ответ"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
                 yield 'data: [DONE]'
 
         class Client:
