@@ -286,13 +286,26 @@ def reject_auth_refresh_header(response):
     if not isinstance(refresh, str) or len(refresh) > 2048:
         raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_INVALID')
     if not refresh:
+        if headers is not None and headers.get('Refresh') is not None:
+            raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
         return
-    match = re.fullmatch(r'(?is)\s*\d+(?:\.\d+)?\s*;\s*url\s*=\s*(.*?)\s*', refresh)
+    match = re.fullmatch(
+        r'(?is)\s*\d+(?:\.\d+)?(?:\s*;\s*url\s*=\s*(.*?)\s*)?', refresh)
     if not match:
-        return
+        raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
+    if match.group(1) is None:
+        return  # Valid numeric-only reload.
     target = match.group(1).strip()
-    if len(target) >= 2 and target[0] in ('"', "'") and target[-1] == target[0]:
+    if not target:
+        raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
+    if target[0] in ('"', "'"):
+        if len(target) < 2 or target[-1] != target[0]:
+            raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
         target = target[1:-1]
+    elif target[-1] in ('"', "'"):
+        raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
+    if not target:
+        raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
     resolved = require_same_origin_refresh_target(response.url, target)
     path = urllib.parse.unquote(resolved.path).rstrip('/').casefold()
     if path in ('/chat/login', '/login', '/auth/login', '/signin', '/sign-in'):
