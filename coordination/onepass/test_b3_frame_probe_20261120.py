@@ -1388,5 +1388,88 @@ class TestProbe(unittest.TestCase):
 
 
 
+
+    def test_native_abort_signal_keeps_stopped_phase_without_error_sse(self):
+        """Actual Chromium with a synthetic upstream; no production/S03 writes."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+
+                    async def fixture(route):
+                        await route.fulfill(
+                            status=200, content_type='text/html',
+                            body='<html><body>B3 abort-signal fixture</body></html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                    await page.goto(
+                        'http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__phases=[];
+                        window.__posts=0;
+                        window.__aborts=0;
+                        window.addEventListener('nox:native-phase',
+                            e=>window.__phases.push(e.detail.phase));
+                        window.fetch=(url,init)=>{
+                            if(url==='/api/nox/chat/stream'){
+                                window.__posts++;
+                                return new Promise((resolve,reject)=>{
+                                    init.signal.addEventListener('abort',()=>{
+                                        window.__aborts++;
+                                        reject(Error('SYNTHETIC_LATE_NATIVE_ABORT'));
+                                    },{once:true});
+                                });
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE:'+url);
+                        };
+                    }""")
+                    bridge=(pathlib.Path(__file__).parent /
+                            'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    actual=await page.evaluate("""async () => {
+                        const stop=new AbortController();
+                        const response=await fetch('/api/nox/chat',{
+                            method:'POST',signal:stop.signal,
+                            body:JSON.stringify({
+                                dialog_id:'a'.repeat(32),
+                                request_id:'b3-abort-signal-terminal-stop',
+                                message:'stop by AbortController'
+                            })
+                        });
+                        const reader=response.body.getReader();
+                        const meta=await reader.read();
+                        for(let i=0;i<100&&!window.__posts;i++)
+                            await new Promise(resolve=>setTimeout(resolve,2));
+                        if(!window.__posts)return {error:'NO_NATIVE_POST'};
+                        stop.abort();
+                        const tail=await Promise.race([
+                            reader.read(),
+                            new Promise((_,reject)=>setTimeout(
+                                ()=>reject(Error('SSE_CLOSE_TIMEOUT')),1000))
+                        ]);
+                        await new Promise(resolve=>setTimeout(resolve,25));
+                        return {
+                            first:new TextDecoder().decode(meta.value),
+                            tailDone:tail.done,
+                            phases:window.__phases,
+                            posts:window.__posts,
+                            aborts:window.__aborts
+                        };
+                    }""")
+                    self.assertNotIn('error', actual)
+                    self.assertIn('"type":"meta"', actual['first'])
+                    self.assertTrue(actual['tailDone'])
+                    self.assertEqual(actual['posts'], 1)
+                    self.assertEqual(actual['aborts'], 1)
+                    self.assertEqual(actual['phases'], ['waiting', 'stopped'])
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
 if __name__ == '__main__':
     unittest.main()
