@@ -205,6 +205,11 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
   let expectedDocumentURL=null,dialogInitiatorType=null;
   let expectedTargetId=null,mainFrameId=null,mainLoaderId=null,lifecycleArmed=false;
   let yes,no;const completion=new Promise((a,b)=>{yes=a;no=b;});
+  // The capture deadline can fire before bootstrap reaches await completion.
+  void completion.catch(()=>{});
+  let rejectBootstrap;
+  const bootstrapFailure=new Promise((_,reject)=>{rejectBootstrap=reject;});
+  void bootstrapFailure.catch(()=>{});
   const deadline=captureStartedAt+timeoutMs;
   // A resolved body-count promise cannot be rejected again. Preserve a
   // separate failure channel through metadata ACK and post-capture quiescence.
@@ -212,9 +217,19 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
   const invalidate=error=>{
     if(fatal===null)fatal=error;
     no(fatal);
+    rejectBootstrap(fatal);
     quiescenceReject?.(fatal);
   };
   const timer=setTimeout(()=>invalidate(Error('CDP_TIMEOUT')),Math.max(0,deadline-Date.now()));
+  // The global deadline must interrupt each pre-capture CDP command and
+  // onReady; otherwise timeout rejects completion while these awaits hang.
+  const bootstrap=async step=>{
+    if(fatal)throw fatal;
+    if(Date.now()>=deadline)throw Error('CDP_TIMEOUT');
+    const result=await Promise.race([Promise.resolve().then(step),bootstrapFailure]);
+    if(fatal)throw fatal;
+    return result;
+  };
   const validTime=t=>typeof t==='number'&&Number.isFinite(t)&&t>=0;
   const millis=(x,t)=>{
     if(!validTime(x.start)||!validTime(t)||t<x.start){x.missing=true;return null;}
@@ -576,12 +591,12 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     }
   });
   try{
-    await c.send('Network.enable');
-    await c.send('Page.enable');
-    await c.send('Target.setDiscoverTargets',{discover:true});
-    const version=await c.send('Browser.getVersion');
+    await bootstrap(()=>c.send('Network.enable'));
+    await bootstrap(()=>c.send('Page.enable'));
+    await bootstrap(()=>c.send('Target.setDiscoverTargets',{discover:true}));
+    const version=await bootstrap(()=>c.send('Browser.getVersion'));
     // A browser/worker/iframe target websocket cannot attest one chat tab.
-    const target=await c.send('Target.getTargetInfo');
+    const target=await bootstrap(()=>c.send('Target.getTargetInfo'));
     if(target?.targetInfo?.type!=='page'||
        typeof target.targetInfo.targetId!=='string'||!target.targetInfo.targetId)
       throw Error('CDP_PAGE_TARGET_REQUIRED');
@@ -590,7 +605,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     expectedDocumentURL=normalizePageDocumentURL(target.targetInfo.url);
     if(!expectedDocumentURL)throw Error('CDP_PAGE_DOCUMENT_REQUIRED');
     // Pin primary frame and loader; a same-URL reload must not retain evidence.
-    const initial=await c.send('Page.getFrameTree');
+    const initial=await bootstrap(()=>c.send('Page.getFrameTree'));
     const frame=initial?.frameTree?.frame;
     if(typeof frame?.id!=='string'||!frame.id||
        typeof frame.loaderId!=='string'||!frame.loaderId)
@@ -600,7 +615,7 @@ export async function capture({ws,count=2,timeoutMs=45000,quiescenceMs=200,expec
     expectedTargetId=target.targetInfo.targetId;
     mainFrameId=frame.id;mainLoaderId=frame.loaderId;
     lifecycleArmed=true;
-    if(onReady)await onReady(c);
+    if(onReady)await bootstrap(()=>onReady(c));
     const records=(await completion).slice().sort((a,b)=>a.order-b.order);
     // Response-body completion may beat request-data ACK. Each request metadata
     // lookup has already been issue-time bounded and sealed once; join only
