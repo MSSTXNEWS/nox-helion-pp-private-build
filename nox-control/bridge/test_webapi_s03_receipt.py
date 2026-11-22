@@ -118,12 +118,20 @@ class FactReceiptTest(unittest.TestCase):
             private_id = json.loads(await private.body_iterator.__anext__())["stream_id"]
             await private.body_iterator.aclose()
             unavailable = await snapshot(stream_id=private_id, request_id="snap-private")
-            return frames, finished, wrong, partial, unavailable
+            # Force a snapshot-specific budget exhaustion after admission.
+            # The actual SSE is still able to finish, but a reconnect must
+            # never reconstruct incomplete bytes as GENERATED or S03-proven.
+            overflow = await chat(request("snap-overflow"))
+            first_overflow = json.loads(await overflow.body_iterator.__anext__())
+            W.CHAT_SNAPSHOTS[first_overflow["stream_id"]]["text_bytes"] = W.MAX_CHAT_OUTPUT_UTF8_BYTES
+            overflow_tail = [json.loads(part) async for part in overflow.body_iterator]
+            held = await snapshot(stream_id=first_overflow["stream_id"], request_id="snap-overflow")
+            return frames, finished, wrong, partial, unavailable, overflow_tail, held
 
         with (mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
               mock.patch.object(W, "W", None),
               mock.patch.dict(sys.modules, {"s03_memory": memory})):
-            frames, finished, wrong, partial, unavailable = asyncio.run(scenario())
+            frames, finished, wrong, partial, unavailable, overflow_tail, held = asyncio.run(scenario())
         self.assertEqual(finished.status_code, 200)
         saved = json.loads(finished.body)
         self.assertEqual(saved["message"]["content"], "Привет 🌌")
@@ -138,7 +146,17 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(json.loads(partial.body)["status"], "INTERRUPTED")
         self.assertFalse(json.loads(partial.body)["done"])
         self.assertEqual(unavailable.status_code, 404)
-        self.assertEqual(len(writes), 1)
+        self.assertTrue(any(frame.get("done") for frame in overflow_tail))
+        self.assertEqual(held.status_code, 200)
+        unsafe_snapshot = json.loads(held.body)
+        self.assertEqual(unsafe_snapshot["status"], "HOLD")
+        self.assertEqual(unsafe_snapshot["snapshot_integrity"], "HOLD")
+        self.assertEqual(unsafe_snapshot["snapshot_hold_reason"], "CHAT_SNAPSHOT_TEXT_OVERFLOW")
+        self.assertFalse(unsafe_snapshot["done"])
+        self.assertIsNone(unsafe_snapshot["completion_receipt"])
+        self.assertIsNone(unsafe_snapshot["memory_write_receipt"])
+        self.assertFalse(unsafe_snapshot["s03_readback_verified"])
+        self.assertEqual(len(writes), 2)
 
     def test_1a03_snapshot_ttl_not_extended_by_wall_clock_rollback(self):
         """A backward wall-clock jump must never retain chat snapshots past TTL."""
