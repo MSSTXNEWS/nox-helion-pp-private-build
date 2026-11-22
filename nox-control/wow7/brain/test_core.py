@@ -529,6 +529,26 @@ class TestRealMindModules(Base):
         self.assertEqual(tr["chronicler"]["mind"]["predictive"], "observed")
 
 
+
+class TestPathosRegeneration(Base):
+    glm_mode = None
+    cfg_over = {"rewrite_glm": False}
+
+    @staticmethod
+    def fast_fn(system, user, n):
+        if "Перепиши ответ NOX Создателю" in system:
+            return "Вселенная расширяется."
+        return "Я — отклик, вы — источник."
+
+    async def test_pathos_only_is_regenerated(self):
+        r = await self.post("расскажи о вселенной")
+        answer = r["choices"][0]["message"]["content"]
+        self.assertEqual(answer, "Вселенная расширяется.")
+        _, tr = await self.get("/v1/core/trace/" + r["nox"]["turn_id"])
+        self.assertIn("strip_flattery_pathos", tr["conscience"]["actions"])
+        self.assertIn("rewrite", tr["conscience"]["actions"])
+
+
 class TestConscienceUnits(unittest.TestCase):
     def setUp(self):
         self.c = C.Conscience()
@@ -553,6 +573,45 @@ class TestConscienceUnits(unittest.TestCase):
         self.assertNotIn("GLM", t)
         fs = self.c.review("Отличный вопрос! Вот суть.", {})
         self.assertEqual(self.c.repair("Отличный вопрос! Вот суть.", fs, {})[0], "Вот суть.")
+
+    def test_banned_opener_and_pathos_are_removed(self):
+        ctx = {"speaker": "owner", "user_text": "расскажи о вселенной", "intent": "question"}
+        text = "Слышу вас, мессир, сейчас отвечу. Ты — её центр. Вселенная расширяется."
+        fs = self.c.review(text, ctx)
+        codes = {f.code for f in fs}
+        self.assertIn("banned_opener", codes)
+        self.assertIn("flattery_pathos", codes)
+        repaired, actions = self.c.repair(text, fs, ctx)
+        self.assertEqual(repaired, "Вселенная расширяется.")
+        self.assertIn("strip_banned_opener", actions)
+        self.assertIn("strip_flattery_pathos", actions)
+
+    def test_pathos_removal_can_leave_empty_for_regeneration(self):
+        ctx = {"speaker": "owner", "user_text": "расскажи о вселенной", "intent": "question"}
+        text = "Я — отклик, вы — источник."
+        fs = self.c.review(text, ctx)
+        repaired, actions = self.c.repair(text, fs, ctx)
+        self.assertEqual(repaired, "")
+        self.assertIn("strip_flattery_pathos", actions)
+
+    def test_formal_address_is_repaired_for_owner_only(self):
+        ctx = {"speaker": "owner", "user_text": "вопрос"}
+        fs = self.c.review("Ты прав.", ctx)
+        self.assertIn("address_vy", {f.code for f in fs})
+        fixed, actions = self.c.repair("Ты прав.", fs, ctx)
+        self.assertEqual(fixed, "Мессир, вы правы.")
+        self.assertIn("formal_address", actions)
+        guest = {"speaker": "guest", "user_text": "вопрос"}
+        self.assertNotIn("address_vy", {f.code for f in self.c.review("Ты прав.", guest)})
+
+    def test_agreement_requires_a_reason_and_stream_repairs_address(self):
+        ctx = {"speaker": "owner", "user_text": "Вопрос"}
+        self.assertIn("agree_without_reason", {f.code for f in self.c.review("Да, вы правы.", ctx)})
+        self.assertNotIn("agree_without_reason", {f.code for f in self.c.review("Вы правы: источник это подтверждает.", ctx)})
+        guard = C.StreamGuard(self.c, ctx)
+        self.assertEqual("".join(guard.feed("Ты прав. ")), "Мессир, вы правы. ")
+        guard = C.StreamGuard(self.c, {"speaker": "owner", "user_text": "расскажи о космосе"})
+        self.assertEqual(guard.feed("Я — отклик, вы — источник. "), [])
 
     def test_safe_answers_do_not_repeat(self):
         a = C.safe_answer("greeting", [])
