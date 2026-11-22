@@ -478,6 +478,77 @@ async function check(chunks, status=200) {
         self.assertLess(caller.index("HOLD_MULTITURN_OWNER_SESSION_CHANGED"),
                         caller.index("second_permitted=True"))
 
+    def test_ru_es_presecond_readonly_history_owner_fence_prevents_stale_post(self):
+        """Re-read first turn after composer delays, before Spanish model POST."""
+        from types import SimpleNamespace
+        from owner_chat_browser_qa import (
+            presecond_firstturn_history_stable, presecond_owner_history_fence,
+            owner_session_cookie_pin, PAGE,
+        )
+        baseline = {'dialog_id': DIALOG, 'messages': [
+            {'role': 'user', 'content': RU, 'message_id': 'first-user',
+             'dialog_id': DIALOG, 'session_id': 'owner-session-A'},
+            {'role': 'assistant', 'content': FIRST, 'message_id': 'first-answer',
+             'dialog_id': DIALOG, 'session_id': 'owner-session-A'}]}
+        copy = lambda value: json.loads(json.dumps(value, ensure_ascii=False))
+        self.assertTrue(presecond_firstturn_history_stable(
+            baseline, copy(baseline), RU, FIRST, DIALOG))
+        legacy = copy(baseline)
+        for row in legacy['messages']:
+            row.pop('session_id')
+        self.assertTrue(presecond_firstturn_history_stable(
+            legacy, copy(legacy), RU, FIRST, DIALOG))
+        mutations = (
+            lambda v: v['messages'][0].update(message_id='replaced-user'),
+            lambda v: v['messages'][1].update(content=FIRST+'ñ'),
+            lambda v: v['messages'][1].update(role='user'),
+            lambda v: v['messages'][0].update(session_id='owner-session-B'),
+            lambda v: v['messages'][0].pop('session_id'),
+            lambda v: v['messages'][1].update(dialog_id='foreign-dialog'),
+            lambda v: v.pop('dialog_id'),
+        )
+        for mutate in mutations:
+            later = copy(baseline)
+            mutate(later)
+            with self.subTest(changed=later):
+                self.assertFalse(presecond_firstturn_history_stable(
+                    baseline, later, RU, FIRST, DIALOG))
+
+        cookies = [{'name': 'owner', 'domain': '127.0.0.1',
+                    'path': '/', 'value': 'signed-A', 'httpOnly': True}]
+        pin = owner_session_cookie_pin(cookies)
+        def probe(fresh, cookie_values, selected=True):
+            response = SimpleNamespace(
+                status=200, body=AsyncMock(return_value=json.dumps(
+                    fresh, ensure_ascii=False).encode('utf-8')))
+            session = SimpleNamespace(status=200)
+            request = SimpleNamespace(get=AsyncMock(
+                side_effect=[response, session]))
+            context = SimpleNamespace(
+                request=request, cookies=AsyncMock(return_value=cookie_values))
+            page = SimpleNamespace(
+                url='http://127.0.0.1:18775'+PAGE,
+                evaluate=AsyncMock(return_value=selected))
+            result = asyncio.run(presecond_owner_history_fence(
+                context, 'http://127.0.0.1:18775', pin,
+                page, 'QA dialog', baseline, RU, FIRST, DIALOG))
+            self.assertLessEqual(request.get.await_count, 2)
+            self.assertFalse(hasattr(request, 'post'), 'must be GET-only')
+            return result
+        self.assertTrue(probe(copy(baseline), cookies))
+        overwritten = copy(baseline)
+        overwritten['messages'][0]['message_id'] = 'replaced-user'
+        self.assertFalse(probe(overwritten, cookies))
+        self.assertFalse(probe(copy(baseline),
+                               [dict(cookies[0], value='signed-B')]))
+        self.assertFalse(probe(copy(baseline), cookies, selected=False))
+        caller = inspect.getsource(browser_run)
+        self.assertLess(caller.index("QA_PRESECOND_HISTORY_OWNER_FENCE"),
+                        caller.index('second_permitted=True'))
+        self.assertLess(caller.index('second_permitted=True'),
+                        caller.index('await click_send(page,report,expected_before=1)'))
+        self.assertIn('HOLD_MULTITURN_PRESECOND_HISTORY_OWNER_DRIFT', caller)
+
     def test_postsecond_owner_session_pin_precedes_four_row_history_readback(self):
         owner = [dict(name='nox_owner', domain='owner.example', path='/',
                       value='original-signed-session', httpOnly=True)]
