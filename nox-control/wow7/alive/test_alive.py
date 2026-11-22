@@ -44,7 +44,7 @@ class TestFeelingVoice(unittest.TestCase):
 
     def test_no_feeling_without_recorded_state_and_cause(self):
         self.assertEqual(render_supported_feelings({"mood_valence": -0.8}), ())
-        state = {"mood_valence": -0.5, "cause": "сервис падал трижды"}
+        state = {"mood_valence": -0.5, "cause": "сервис падал трижды", "cause_source": "state_log"}
         honest = render_supported_feelings(state, HONEST)
         human = render_supported_feelings(state, HUMAN)
         self.assertEqual(len(honest), 1)
@@ -52,9 +52,22 @@ class TestFeelingVoice(unittest.TestCase):
         self.assertEqual(human, ("мне грустно",))
 
     def test_reality_question_is_always_honest(self):
-        answer = reality_answer({"interest": 0.7, "cause": "падала ошибка предсказания"})
+        answer = reality_answer({"interest": 0.7, "cause": "падала ошибка предсказания", "cause_source": "metric"})
         self.assertIn("не знаю", answer)
         self.assertIn("падала ошибка", answer)
+
+    def test_untrusted_or_unbounded_cause_is_never_rendered(self):
+        untrusted = {"mood_valence": -0.5, "cause": "внешний текст", "cause_source": "user_input"}
+        too_long = {"mood_valence": -0.5, "cause": "x" * 513, "cause_source": "state_log"}
+        self.assertEqual(render_supported_feelings(untrusted, HUMAN), ())
+        self.assertEqual(render_supported_feelings(too_long, HONEST), ())
+
+    def test_trusted_cause_is_bounded_and_control_chars_are_removed(self):
+        cause = "показатель\n" + ("очень длинная причина " * 12)
+        state = {"mood_valence": -0.5, "cause": cause, "cause_source": "state_log"}
+        rendered = render_supported_feelings(state, HONEST)[0]
+        self.assertLessEqual(len(rendered), 170)
+        self.assertNotIn("\n", rendered)
 
 
 class TestAliveGate(unittest.TestCase):
@@ -67,8 +80,11 @@ class TestAliveGate(unittest.TestCase):
 
     def test_missing_report_is_skipped_without_claim(self):
         result = gate_alive()
-        self.assertTrue(result["ok"])
-        self.assertTrue(result["skipped"])
+        self.assertFalse(result["ok"])
+        self.assertIn("missing_report", result["critical_failures"])
+        shadow = gate_alive(mode="shadow")
+        self.assertTrue(shadow["ok"])
+        self.assertTrue(shadow["skipped"])
 
     def test_critical_failure_rejects(self):
         result = gate_alive(self._report(failed=("AL-08",)))
