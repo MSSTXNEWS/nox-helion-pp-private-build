@@ -942,6 +942,37 @@ async function check(chunks, status=200) {
         self.assertEqual(owner_session_cookie_pin([legacy]),
                          owner_session_cookie_pin([dict(legacy)]))
 
+    def test_ru_es_owner_cookie_samesite_downgrade_cannot_reuse_session_pin(self):
+        """RU/ES owner continuity must pin explicit SameSite on signed cookies."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='owner-cookie-unchanged', httpOnly=True,
+                      secure=True, sameSite='Strict')
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False, sameSite='None')
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        self.assertTrue(owner_session_continuity_valid(200, [ui, signed], pin))
+        self.assertEqual(owner_session_cookie_pin([dict(signed)]), pin)
+        for replacement in ('Lax', 'None', None):
+            downgraded = dict(signed)
+            if replacement is None:
+                downgraded.pop('sameSite')
+            else:
+                downgraded['sameSite'] = replacement
+            with self.subTest(same_site=replacement):
+                self.assertNotEqual(owner_session_cookie_pin([downgraded]), pin)
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [ui, downgraded], pin))
+        for malformed in ('unsafe', True, 0, [], {}):
+            with self.subTest(malformed=repr(malformed)):
+                self.assertIsNone(owner_session_cookie_pin(
+                    [dict(signed, sameSite=malformed)]))
+        # Stable legacy cookies with no SameSite metadata remain comparable.
+        legacy = dict(signed)
+        legacy.pop('sameSite')
+        self.assertEqual(owner_session_cookie_pin([legacy]),
+                         owner_session_cookie_pin([dict(legacy)]))
+
     def test_ru_es_presecond_readonly_history_owner_fence_prevents_stale_post(self):
         """Re-read first turn after composer delays, before Spanish model POST."""
         from types import SimpleNamespace
