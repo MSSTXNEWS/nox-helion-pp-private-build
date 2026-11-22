@@ -643,7 +643,9 @@ class TestProbe(unittest.TestCase):
                                 window.__nativePosts++;
                                 const frames = [
                                     {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
-                                    {type:'start',model:window.__nativeCase==='labeldrift'?'other-local-mock':'pinned-local-mock'},
+                                    {type:'start',...(window.__nativeCase==='modelless'?{}:{model:
+                                         window.__nativeCase==='labeldrift'?'other-local-mock':
+                                         window.__nativeCase==='unknownlabel'?'UNKNOWN':'pinned-local-mock'})},
                                     {type:'delta',text:'world'},
                                     {type:'done',saved:true,s03_integrated:true,
                                      dialog_id:id,exchange_id:(window.__nativeCase === 'keep' ? 'ex00002' : window.__nativeCase === 'keep3' ? 'ex00004' : ['lostfirst','labeldrift'].includes(window.__nativeCase) ? 'ex00005' : ['lost','reordered'].includes(window.__nativeCase) ? 'ex00003' : eid)}
@@ -763,6 +765,12 @@ class TestProbe(unittest.TestCase):
                     self.assertNotIn('"type":"done"', drift['sse'])
                     self.assertEqual(drift['posts'], 9)
                     self.assertEqual(drift['reads'], 7)
+                    for idx, mode in enumerate(('modelless', 'unknownlabel'), 10):
+                        missing = await exchange(mode)
+                        self.assertIn('HOLD_NATIVE_MODEL_START_LABEL', missing['sse'])
+                        self.assertNotIn('"type":"done"', missing['sse'])
+                        self.assertEqual(missing['posts'], idx)
+                        self.assertEqual(missing['reads'], 7)
                 finally:
                     await browser.close()
         asyncio.run(run())

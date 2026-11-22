@@ -163,11 +163,10 @@ const r=await nativePost('/api/ui/memory/dialogs/create',{
      if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
      if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
      startSeen=true;
-     if(Object.prototype.hasOwnProperty.call(e,'model')&&
-       (typeof e.model!=='string'||!e.model.trim()||e.model!==e.model.trim()||
-        e.model.length>96||/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(e.model)))
+     if(typeof e.model!=='string'||!e.model.trim()||e.model!==e.model.trim()||
+        e.model.length>96||e.model==='UNKNOWN'||/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(e.model))
        throw Error('HOLD_NATIVE_MODEL_START_LABEL');
-     nativeModel=e.model||'UNKNOWN';
+     nativeModel=e.model;
    } else if(e.type==='preparing') {
      if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
      if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
