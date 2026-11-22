@@ -569,7 +569,7 @@ def consistent_explicit_row_session_ids(rows):
         return False
     values = [row['session_id'] for row in rows]
     return (all(isinstance(value, str) and bool(value.strip())
-                and value == value.strip() for value in values)
+                and value == value.strip() and value.isprintable() for value in values)
             and len(set(values)) == 1)
 
 
@@ -586,7 +586,7 @@ def root_history_session_valid(history, rows):
         return True
     root = history['session_id']
     return (isinstance(root, str) and bool(root.strip())
-            and root == root.strip()
+            and root == root.strip() and root.isprintable()
             and all('session_id' not in row or row['session_id'] == root
                     for row in rows if isinstance(row, dict)))
 

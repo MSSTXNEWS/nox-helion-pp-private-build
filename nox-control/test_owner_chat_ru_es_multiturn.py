@@ -495,6 +495,85 @@ async function check(chunks, status=200) {
         self.assertLess(caller.index('postquiet_fourrow_history_stable('),
                         caller.index("report['multiturn_browser_acceptance_verified']=True"))
 
+    def test_browser_ru_es_session_metadata_rejects_invisible_unicode(self):
+        """Owner-history session metadata must agree with strict S03 identity.
+
+        Browser-only checks used to accept fully matching poisoned session
+        identifiers even when canonical S03 rejects them. This is synthetic
+        history verification only, not a live S03 writer/readback acceptance.
+        """
+        from owner_chat_browser_qa import (
+            consistent_explicit_row_session_ids,
+            root_history_session_valid,
+            postquiet_fourrow_history_stable,
+        )
+        import copy
+
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        scoped_rows = [
+            dict(row, message_id=f"session-row-{i}", session_id="owner-ñ")
+            for i, row in enumerate(rows(es), 1)
+        ]
+        complete = {"dialog_id": DIALOG, "session_id": "owner-ñ",
+                    "messages": scoped_rows}
+        first = {"dialog_id": DIALOG, "session_id": "owner-ñ",
+                 "messages": copy.deepcopy(scoped_rows[:2])}
+        transcript_sha = multiturn_transcript_sha256(scoped_rows)
+        ids = ("session-row-1", "session-row-2")
+        stable = lambda h: postquiet_fourrow_history_stable(
+            h, copy.deepcopy(h), DIALOG, transcript_sha, ids)
+        self.assertTrue(firstturn_history_valid(first, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            scoped_rows, RU, FIRST, es, LAST, DIALOG))
+        self.assertTrue(stable(complete))
+        self.assertTrue(firstturn_session_continuity_valid(
+            first["messages"], scoped_rows))
+        self.assertTrue(root_history_session_valid(complete, scoped_rows))
+
+        # Whole owner-history snapshots are identical: drift-only fences
+        # cannot catch noncanonical, invisible identity aliases.
+        for invisible in ("\u200b", "\u2060", "\u202e", "\x00"):
+            with self.subTest(invisible=repr(invisible), source="both_scopes"):
+                poisoned = copy.deepcopy(complete)
+                poisoned["session_id"] += invisible
+                for row in poisoned["messages"]:
+                    row["session_id"] += invisible
+                self.assertFalse(consistent_explicit_row_session_ids(
+                    poisoned["messages"]))
+                self.assertFalse(root_history_session_valid(
+                    poisoned, poisoned["messages"]))
+                self.assertFalse(multiturn_history_valid(
+                    poisoned["messages"], RU, FIRST, es, LAST, DIALOG))
+                self.assertFalse(stable(poisoned))
+                self.assertFalse(firstturn_history_valid(
+                    {"dialog_id": DIALOG, "session_id": poisoned["session_id"],
+                     "messages": poisoned["messages"][:2]},
+                    RU, FIRST, DIALOG))
+            with self.subTest(invisible=repr(invisible), source="root_only"):
+                poisoned_root = copy.deepcopy(complete)
+                poisoned_root["session_id"] += invisible
+                self.assertFalse(root_history_session_valid(
+                    poisoned_root, poisoned_root["messages"]))
+                self.assertFalse(stable(poisoned_root))
+
+        # Absence of optional session annotations remains legacy-compatible.
+        legacy_rows = [{k: v for k, v in row.items() if k != "session_id"}
+                       for row in scoped_rows]
+        legacy = {"dialog_id": DIALOG, "messages": legacy_rows}
+        self.assertTrue(firstturn_history_valid(
+            {"dialog_id": DIALOG, "messages": legacy_rows[:2]},
+            RU, FIRST, DIALOG))
+        self.assertTrue(stable(legacy))
+        self.assertTrue(multiturn_history_valid(
+            legacy_rows, RU, FIRST, es, LAST, DIALOG))
+        caller = inspect.getsource(browser_run)
+        self.assertLess(
+            caller.index("firstturn_session_continuity_valid("),
+            caller.index("report['multiturn_browser_acceptance_verified']=True"))
+        self.assertLess(
+            caller.index("postquiet_fourrow_history_stable("),
+            caller.index("report['multiturn_browser_acceptance_verified']=True"))
+
     def test_first_to_second_ru_es_session_scope_does_not_rotate(self):
         # Even homogeneous snapshots are unsafe if the first RU turn was
         # saved in owner session A and the completed RU/ES history is session B.
