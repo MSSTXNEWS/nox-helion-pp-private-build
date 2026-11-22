@@ -182,7 +182,7 @@ def verify_report_screenshots(report, directory):
         raise ValueError('HOLD_BASELINE_SCREENSHOT_COVERAGE')
 
 
-def compare_baseline(current, prior):
+def compare_baseline(current, prior, approved_render_transition=None):
     """Fail closed if an old screenshot/frame report is not comparable.
 
     A matching browser URL is not a native/S03 identity proof. This is
@@ -241,6 +241,22 @@ def compare_baseline(current, prior):
                 raise ValueError('HOLD_BASELINE_SERVICE_WORKER_GUARD_MISSING')
     expected = {(width, height, mode) for width, height in SIZES
                 for mode in ('normal', 'reduced')}
+    # Source optimizations change JS/CSS fingerprints. Preserve fail-closed
+    # default, but allow a separately reviewed exact six-viewport transition.
+    transition_rows = None
+    if approved_render_transition is not None:
+        if current['synthetic_fixture'] is not False:
+            raise ValueError('HOLD_RENDER_TRANSITION_REQUIRES_LIVE')
+        if (type(approved_render_transition) is not dict or
+                set(approved_render_transition) != {'schema', 'rows'} or
+                approved_render_transition.get('schema') !=
+                    'NOX_B3_RENDER_TRANSITION_PINS_V1' or
+                type(approved_render_transition.get('rows')) is not dict):
+            raise ValueError('HOLD_RENDER_TRANSITION_MANIFEST')
+        transition_rows = approved_render_transition['rows']
+        expected_names = {f'{w}x{h}_{mode}' for w, h, mode in expected}
+        if set(transition_rows) != expected_names:
+            raise ValueError('HOLD_RENDER_TRANSITION_COVERAGE')
 
     def index(rows):
         if not isinstance(rows, list) or len(rows) != len(expected):
@@ -273,7 +289,19 @@ def compare_baseline(current, prior):
                     or type(previous_count) is not int or previous_count < 1
                     or type(current_count) is not int or current_count < 1):
                 raise ValueError('HOLD_BASELINE_RENDER_IDENTITY_MISSING')
-            if previous_resource != current_resource or previous_count != current_count:
+            if transition_rows is not None:
+                pin = transition_rows[f'{key[0]}x{key[1]}_{key[2]}']
+                if (type(pin) is not dict or
+                        set(pin) != {'before_sha256', 'after_sha256',
+                                     'before_count', 'after_count'} or
+                        pin['before_sha256'] != previous_resource or
+                        pin['after_sha256'] != current_resource or
+                        type(pin['before_count']) is not int or
+                        type(pin['after_count']) is not int or
+                        pin['before_count'] != previous_count or
+                        pin['after_count'] != current_count):
+                    raise ValueError('HOLD_RENDER_TRANSITION_PIN_MISMATCH')
+            elif previous_resource != current_resource or previous_count != current_count:
                 raise ValueError('HOLD_BASELINE_RENDER_IDENTITY_DRIFT')
         previous = old[key].get('frame_time')
         measured = new[key].get('frame_time')
@@ -305,9 +333,16 @@ async def sample_frames(page, timeout_seconds=15.0):
         raise ValueError('HOLD_FRAME_SAMPLE_TIMEOUT') from exc
 
 
-async def _measure_async(url, output, chromium, baseline, fixture_html, expected_selector):
+async def _measure_async(url, output, chromium, baseline, fixture_html, expected_selector,
+                         render_transition_manifest=None):
     from playwright.async_api import async_playwright
     verify_url(url)
+    transition_bytes = (pathlib.Path(render_transition_manifest).read_bytes()
+                        if render_transition_manifest else None)
+    if transition_bytes is not None and not baseline:
+        raise ValueError('HOLD_RENDER_TRANSITION_BASELINE_REQUIRED')
+    transition = (json.loads(transition_bytes.decode('utf8'))
+                  if transition_bytes is not None else None)
     if fixture_html is None and not expected_selector:
         raise ValueError('HOLD_LIVE_SELECTOR_REQUIRED')
     out = pathlib.Path(output)
@@ -448,21 +483,27 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
         # Verify both screenshot sets BEFORE accepting a frame-time delta.
         verify_report_screenshots(old, baseline_path.parent)
         verify_report_screenshots(result, out)
-        deltas = compare_baseline(result, old)
+        deltas = compare_baseline(result, old, transition)
         for row in result['runs']:
             key = (row['width'], row['height'], row['mode'])
             row['before_after_p95_delta_ms'] = deltas[key]
         result['baseline_sha256'] = hashlib.sha256(baseline_bytes).hexdigest()
-        result['comparison_scope'] = ('SYNTHETIC_ONLY' if result['synthetic_fixture']
-                                      else 'LIVE_BROWSER_FRAMES_ONLY_NOT_S03')
+        result['render_transition_manifest_sha256'] = (hashlib.sha256(transition_bytes).hexdigest()
+                                                        if transition_bytes else None)
+        result['comparison_scope'] = ('LIVE_BROWSER_CHANGED_RENDER_REVIEW_ONLY_NOT_S03'
+                                      if transition is not None else
+                                      ('SYNTHETIC_ONLY' if result['synthetic_fixture']
+                                       else 'LIVE_BROWSER_FRAMES_ONLY_NOT_S03'))
         result['comparison_admissible'] = True
     report = out / 'b3_frame_report.json'
     report.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf8')
     return result
 
 
-def measure(url, output, chromium=None, baseline=None, fixture_html=None, expected_selector=None):
-    return asyncio.run(_measure_async(url, output, chromium, baseline, fixture_html, expected_selector))
+def measure(url, output, chromium=None, baseline=None, fixture_html=None, expected_selector=None,
+            render_transition_manifest=None):
+    return asyncio.run(_measure_async(url, output, chromium, baseline, fixture_html,
+                                      expected_selector, render_transition_manifest))
 
 
 def main():
@@ -472,8 +513,12 @@ def main():
     parser.add_argument('--chromium', help='Optional local Chromium executable')
     parser.add_argument('--baseline', help='Local previous probe report for comparison')
     parser.add_argument('--expected-selector', help='Visible NOX UI selector to prevent login-page false PASS')
+    parser.add_argument('--render-transition-manifest',
+                        help='Reviewed six-viewport exact before/after JS/CSS resource pins (browser only)')
     args = parser.parse_args()
-    result = measure(args.url, args.output, args.chromium, args.baseline, expected_selector=args.expected_selector)
+    result = measure(args.url, args.output, args.chromium, args.baseline,
+                     expected_selector=args.expected_selector,
+                     render_transition_manifest=args.render_transition_manifest)
     print(json.dumps({'runs': len(result['runs']), 'blocked_model_posts': result['blocked_model_posts'],
         'blocked_model_read_requests': result['blocked_model_read_requests'],
         'blocked_mutating_requests': result['blocked_mutating_requests'],

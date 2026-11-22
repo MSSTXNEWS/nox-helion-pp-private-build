@@ -307,6 +307,36 @@ class TestProbe(unittest.TestCase):
         changed_count['runs'][0]['renderer_resource_count'] = 1
         with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_RENDER_IDENTITY_DRIFT'):
             compare_baseline(measured, changed_count)
+        # Real optimized JS/CSS changes resource fingerprints. A six-viewport
+        # exact owner-reviewed transition may be compared, never synthesized.
+        reviewed = {'schema': 'NOX_B3_RENDER_TRANSITION_PINS_V1', 'rows': {
+            f'{w}x{h}_{mode}': {
+                'before_sha256': ('b' if (w, mode) == (320, 'normal') else 'a') * 64,
+                'after_sha256': 'a' * 64, 'before_count': 2, 'after_count': 2,
+            }
+            for w, h in ((320, 720), (390, 844), (1440, 900))
+            for mode in ('normal', 'reduced')
+        }}
+        self.assertEqual(len(compare_baseline(measured, drift, reviewed)), 6)
+        incomplete = copy.deepcopy(reviewed)
+        incomplete['rows'].pop('1440x900_reduced')
+        with self.assertRaisesRegex(ValueError, 'HOLD_RENDER_TRANSITION_COVERAGE'):
+            compare_baseline(measured, drift, incomplete)
+        wrong_pin = copy.deepcopy(reviewed)
+        wrong_pin['rows']['320x720_normal']['before_sha256'] = 'f' * 64
+        with self.assertRaisesRegex(ValueError, 'HOLD_RENDER_TRANSITION_PIN_MISMATCH'):
+            compare_baseline(measured, drift, wrong_pin)
+        wrong_count = copy.deepcopy(reviewed)
+        wrong_count['rows']['320x720_normal']['after_count'] = True
+        with self.assertRaisesRegex(ValueError, 'HOLD_RENDER_TRANSITION_PIN_MISMATCH'):
+            compare_baseline(measured, drift, wrong_count)
+        with self.assertRaisesRegex(ValueError, 'HOLD_RENDER_TRANSITION_MANIFEST'):
+            compare_baseline(measured, drift, {'schema': 'NOX_B3_RENDER_TRANSITION_PINS_V1'})
+        synthetic_review = copy.deepcopy(measured)
+        synthetic_review['synthetic_fixture'] = True
+        synthetic_review['fixture_html_sha256'] = evidence_hash('<main>same-fixture</main>')
+        with self.assertRaisesRegex(ValueError, 'HOLD_RENDER_TRANSITION_REQUIRES_LIVE'):
+            compare_baseline(synthetic_review, synthetic_review, reviewed)
         missing = copy.deepcopy(baseline)
         missing['runs'].pop()
         with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_FRAME_COVERAGE'):
