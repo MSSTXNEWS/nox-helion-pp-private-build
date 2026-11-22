@@ -633,6 +633,81 @@ def main():
             deltas.length===1 && deltas[0][0]==='SPLIT' &&
             deltas[0][1]==='event-123';
         }'''))
+        # Strict incremental UTF-8 must reject an ill-formed complete sequence
+        # and a truncated final sequence BEFORE a model token reaches the UI.
+        # Recovery is GET-only; a rejected exchange must never be re-POSTed.
+        check('invalid complete UTF-8 SSE event fails closed without repost', page.evaluate('''async () => {
+          const s={conversation_id:'utf8-validation',exchange_id:'bad-complete'};
+          const prefix=new TextEncoder().encode('id: invalid\\nevent: delta\\ndata: ');
+          const suffix=new TextEncoder().encode('\\n\\n');
+          const bytes=Uint8Array.from([...prefix,0xc3,0x28,...suffix]);
+          let posts=0,acks=0,deltas=0;
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({start(c){
+              c.enqueue(bytes);c.close();
+            }})};
+          },async ack(){acks++;return true}};
+          const ui={async onDelta(){deltas++},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:5000
+          });
+          const code=await c.begin(s).then(()=>null,e=>e.code);
+          const noRepost=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return code==='HOLD_STREAM_INVALID_UTF8' && noRepost &&
+            posts===1 && acks===0 && deltas===0;
+        }'''))
+        check('truncated final UTF-8 SSE data holds before DOM commit', page.evaluate('''async () => {
+          const s={conversation_id:'utf8-validation',exchange_id:'bad-final'};
+          const prefix=new TextEncoder().encode('id: truncated\\nevent: delta\\ndata: ');
+          let posts=0,acks=0,deltas=0;
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({start(c){
+              c.enqueue(Uint8Array.from([...prefix,0xe2]));
+              c.enqueue(Uint8Array.from([0x82])); // UTF-8 final byte missing
+              c.close();
+            }})};
+          },async ack(){acks++;return true}};
+          const ui={async onDelta(){deltas++},async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:5000
+          });
+          const code=await c.begin(s).then(()=>null,e=>e.code);
+          const noRepost=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return code==='HOLD_STREAM_INVALID_UTF8' && noRepost &&
+            posts===1 && acks===0 && deltas===0;
+        }'''))
+        check('valid split multi-byte SSE delta still streams once', page.evaluate('''async () => {
+          const s={conversation_id:'utf8-validation',exchange_id:'valid-split'};
+          const prefix=new TextEncoder().encode('id: emoji\\nevent: delta\\ndata: ');
+          const suffix=new TextEncoder().encode('\\n\\n');
+          let posts=0,acks=0;
+          const deltas=[];
+          const transport={...opts.transport,async post(){
+            posts++;
+            return {ok:true,body:new ReadableStream({start(c){
+              c.enqueue(prefix);
+              for(const byte of [0xf0,0x9f,0x98,0x80])
+                c.enqueue(Uint8Array.from([byte]));
+              c.enqueue(suffix);c.close();
+            }})};
+          },async ack(){acks++;return true}};
+          const ui={async onDelta(scope,data,signal,id){
+            if(!signal.aborted)deltas.push([data,id]);
+          },async upsertTerminal(){return true}};
+          const c=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:5000
+          });
+          const done=await c.begin(s);
+          const noRepost=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return done==='STREAM_ENDED_READBACK_REQUIRED' && noRepost &&
+            posts===1 && acks===0 && deltas.length===1 &&
+            deltas[0][0]==='😀' && deltas[0][1]==='emoji';
+        }'''))
         check('SSE preserves literal leading/trailing spaces in multi-line delta', page.evaluate('''async () => {
           const s={conversation_id:'literal-whitespace',exchange_id:'one'};
           let posts=0,acks=0;
