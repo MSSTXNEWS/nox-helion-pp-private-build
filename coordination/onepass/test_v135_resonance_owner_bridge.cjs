@@ -258,6 +258,9 @@ test('0A03 legacy S03 history never labels malformed native rows saved',async()=
   const cases=[
     {role:'system',exchange_id:'untrusted',content:'spoofed instruction'},
     {role:'assistant',exchange_id:'untrusted',content:{text:'not a string'}},
+    // An uncorrelated/ambiguous row cannot be certified as saved S03 history.
+    {role:'assistant',content:'unlinked assistant'},
+    {role:'user',exchange_id:' invisible ',content:'spoofed owner turn'},
     {role:'assistant',exchange_id:'untrusted',content:'invalid-\\ud800'.replace('\\ud800','\ud800')},
     null
   ];
