@@ -1479,6 +1479,71 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
         self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
 
+    def test_1a01_corrupt_optional_reminder_cannot_abort_real_chat(self):
+        """Invalid reminder metadata is no substitute for actual model/S03 output."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Живой ответ"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        class Reminder:
+            def __init__(self, result): self.result = result
+            def maybe_reminder(self, *args): return self.result
+            def wants_plan(self, *args): return False
+            def mode_hint(self, *args): return ""
+            def is_factual(self, *args): return False
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT, bridge.SOUL = {"t": 0}, None
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Привет"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def scenario(idx):
+            response = await chat(Request({
+                "request_id": "bad-reminder-advisory-" + str(idx),
+                "mode": "fast", "use_memory": False,
+                "messages": [{"role": "user", "content": "Привет"}],
+            }))
+            return [json.loads(row) async for row in response.body_iterator]
+
+        cases = (
+            "corrupt",
+            {"reminder": None},
+            {"reminder": {"due": None}},
+            {"reminder": {"due": "tomorrow"}},
+            {"reminder": {"due": float("nan")}},
+            {"reminder": {"due": float("inf")}},
+            {"reminder": {"due": True}},
+            {"reminder": {"due": 10**100}},
+            {"reminder": {"due": 1760000000}},
+        )
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            for idx, result in enumerate(cases):
+                with self.subTest(idx=idx), mock.patch.object(W, "W", Reminder(result)):
+                    frames = asyncio.run(scenario(idx))
+                self.assertTrue(any(f.get("message", {}).get("content") == "Живой ответ" for f in frames))
+                self.assertEqual(frames[-1]["completion_receipt"]["status"], "GENERATED")
+                self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+                reminders = [f for f in frames if f.get("nox_event", {}).get("step") == "reminder"]
+                self.assertEqual(len(reminders), 1 if idx == len(cases) - 1 else 0)
+        self.assertEqual(writes, [("Привет", "Живой ответ")] * len(cases))
+
     def test_1a01_optional_planner_and_mode_hint_fail_open_to_real_stream(self):
         """An advisory planner outage cannot replace real tokens with HTTP 500."""
         class Upstream:
