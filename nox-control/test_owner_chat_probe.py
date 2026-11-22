@@ -2788,9 +2788,10 @@ class ProbeTests(unittest.TestCase):
             response = Response(advertised)
             with self.subTest(advertised=advertised), patch.object(
                     probe, 'request', return_value=response):
-                with self.assertRaisesRegex(
-                        RuntimeError, '^HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH
+                with self.assertRaises(RuntimeError) as caught:
                     probe.consume_turn(object(), 'second-turn', did)
+                self.assertEqual(str(caught.exception),
+                                 'HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH')
             self.assertTrue(response.closed)
 
         response = Response(actual)
