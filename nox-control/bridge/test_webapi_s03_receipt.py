@@ -34,6 +34,43 @@ class Request:
 
 
 class FactReceiptTest(unittest.TestCase):
+    def test_3a02_s03_context_lookup_fail_closed_before_model(self):
+        """A missing canonical context must not produce invented continuity."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        calls = []
+        bridge.hc = lambda: calls.append("model")  # never reached
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: calls.append("write")
+
+        async def run_case(idx):
+            response = await chat(Request({
+                "request_id": "s03-read-hold-" + str(idx),
+                "use_memory": True,
+                "messages": [{"role": "user", "content": "Продолжи наш разговор"}],
+            }))
+            return [json.loads(x) async for x in response.body_iterator]
+
+        with (mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
+              mock.patch.object(W, "W", None),
+              mock.patch.dict(sys.modules, {"s03_memory": memory})):
+            for idx, outcome in enumerate(("raises", "nontext")):
+                if outcome == "raises":
+                    bridge.memory_block = mock.Mock(side_effect=RuntimeError("S03 offline"))
+                else:
+                    bridge.memory_block = mock.Mock(return_value={"wrong": "shape"})
+                frames = asyncio.run(run_case(idx))
+                self.assertEqual(frames[-1]["status"], "HOLD")
+                self.assertEqual(frames[-1]["reason"], "S03_MEMORY_LOOKUP_FAILED")
+                self.assertFalse(frames[-1]["done"])
+                self.assertEqual(frames[-1]["completion_receipt"]["status"], "HOLD")
+                self.assertFalse(frames[-1]["completion_receipt"]["upstream_done"])
+                self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+                self.assertFalse(frames[-1]["memory_history"]["s03_readback_verified"])
+        self.assertEqual(calls, [])
+        self.assertEqual(len(bridge.errors), 2)
+
     def test_0a03_malformed_chat_never_starts_stream_or_memory(self):
         # Real FastAPI route callback; all cases return before the model/S03
         # generator is created. No fake successful stream receipt.
