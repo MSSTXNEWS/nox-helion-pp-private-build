@@ -1,0 +1,27 @@
+/* NOX web extras: планета фона, нижнее меню-слайдер (моб.), панели */
+#nxw-planet-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background-repeat:no-repeat;background-position:78% 70%;background-size:min(70vmin,620px);opacity:.55;filter:saturate(1.1);border-radius:50%;mask-image:radial-gradient(circle at 78% 70%,#000 0,#000 28vmin,transparent 36vmin);-webkit-mask-image:radial-gradient(circle at 78% 70%,#000 0,#000 28vmin,transparent 36vmin);animation:nxwSpin 240s linear infinite}
+@keyframes nxwSpin{to{background-position:calc(78% + 40px) 70%}}
+.nxw-card{margin:16px auto;max-width:980px;padding:16px 18px;border-radius:18px;background:rgba(14,18,30,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.12);color:#e8ecf6;font:14px/1.45 system-ui,sans-serif}
+.nxw-card h3{margin:0 0 10px;font-size:15px;letter-spacing:.04em}
+.nxw-pl{display:flex;gap:10px;flex-wrap:wrap}
+.nxw-pl button{width:64px;height:64px;border-radius:50%;border:2px solid transparent;background-size:cover;background-position:center;cursor:pointer;position:relative}
+.nxw-pl button[aria-pressed=true]{border-color:#7fd0ff;box-shadow:0 0 14px #7fd0ff88}
+.nxw-pl button span{position:absolute;left:0;right:0;bottom:-18px;font-size:10px;text-align:center;color:#cfd8ea}
+.nxw-pl{padding-bottom:20px}
+.nxw-fact{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.nxw-fact div[contenteditable]{flex:1;outline:none;padding:2px 6px;border-radius:6px}
+.nxw-fact div[contenteditable]:focus{background:rgba(255,255,255,.08)}
+.nxw-card button.nxw-b{background:rgba(127,208,255,.14);color:#cfeaff;border:1px solid rgba(127,208,255,.35);border-radius:10px;padding:4px 10px;cursor:pointer}
+.nxw-eta{margin-left:8px;font-size:11px;opacity:.8;white-space:nowrap;align-self:center}
+#nxw-bnav{display:none}
+@media (max-width:820px){
+ #nxw-bnav{display:flex;position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483000;gap:6px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:8px;border-radius:20px;background:rgba(12,16,28,.72);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.14);scrollbar-width:none}
+ #nxw-bnav::-webkit-scrollbar{display:none}
+ #nxw-bnav a{flex:0 0 auto;scroll-snap-align:center;min-width:72px;padding:6px 10px;border-radius:14px;text-align:center;color:#cfd8ea;text-decoration:none;font:11px system-ui,sans-serif}
+ #nxw-bnav a b{display:block;font-size:20px;font-weight:400;line-height:1.1}
+ #nxw-bnav a.on{background:rgba(127,208,255,.18);color:#fff}
+ body{padding-bottom:84px!important}
+}
+#nxw-mic{position:fixed;right:16px;bottom:96px;z-index:2147482000;width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(12,16,28,.7);color:#fff;font-size:20px;cursor:pointer;backdrop-filter:blur(10px)}
+#nxw-mic.rec{background:#c33;animation:nxwP 1s infinite}
+@keyframes nxwP{50%{box-shadow:0 0 0 10px #c3333355}}

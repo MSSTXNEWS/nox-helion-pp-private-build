@@ -1,0 +1,54 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NOX — Шаблоны</title>
+<link rel="stylesheet" href="./vendor/gridstack/gridstack.min.css">
+<style>
+html,body{margin:0;min-height:100%;background:#070a12;color:#e8ecf6;font:14px/1.45 system-ui,sans-serif}
+header{display:flex;gap:8px;align-items:center;padding:12px 16px;position:sticky;top:0;background:rgba(7,10,18,.8);backdrop-filter:blur(12px);z-index:5}
+header a{color:#9fd8ff;text-decoration:none;margin-right:12px}
+.tab{background:rgba(127,208,255,.1);color:#cfeaff;border:1px solid rgba(127,208,255,.3);border-radius:12px;padding:6px 14px;cursor:pointer}.tab.on{background:rgba(127,208,255,.3)}
+section{display:none;padding:14px 16px}section.on{display:block}
+.col{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px;min-height:120px}
+#board{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.col h4{margin:0 0 8px}.card{background:rgba(20,28,48,.9);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 10px;margin-bottom:8px;cursor:grab}
+input,button.b{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:6px 10px}
+#cy{height:60vh;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.03)}
+#cal{background:#fff;color:#111;border-radius:14px;padding:8px}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.gal img{width:100%;border-radius:12px;cursor:zoom-in}
+.grid-stack-item-content{background:rgba(20,28,48,.9);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px;overflow:auto}
+#split{display:flex;height:50vh}#split>div{overflow:auto;padding:8px}.gutter{background:rgba(127,208,255,.25);cursor:col-resize;width:6px}
+</style></head><body>
+<header><a href="index.html">← NOX</a><button class="tab on" data-t="kb">Канбан</button><button class="tab" data-t="cl">Календарь</button><button class="tab" data-t="gr">Граф</button><button class="tab" data-t="md">Медиа</button><button class="tab" data-t="wd">Виджеты</button></header>
+<section id="kb" class="on"><p><input id="nc" placeholder="Новая карточка"> <button class="b" id="ad">Добавить</button></p><div id="board"></div></section>
+<section id="cl"><div id="cal"></div></section>
+<section id="gr"><p><input id="gn" placeholder="Узел"> <button class="b" id="ga">Добавить связанный с выбранным</button></p><div id="cy"></div></section>
+<section id="md"><div id="split"><div id="sl"><div class="gal" id="gal"></div></div><div id="sr"><b>Просмотр</b><div id="pv">Выбери изображение слева</div></div></div></section>
+<section id="wd"><div class="grid-stack"></div></section>
+<script src="./vendor/dexie/dexie.min.js"></script><script src="./pc/vendor/nox-ux/Sortable.min.js"></script>
+<script src="./pc/vendor/nox-extra/fullcalendar.global.min.js"></script><script src="./vendor/cytoscape/dist/cytoscape.min.js"></script>
+<script src="./vendor/split.js/split.min.js"></script><script src="./vendor/gridstack/gridstack-all.js"></script>
+<script>
+var db=new Dexie('nox_templates');db.version(1).stores({cards:'++id,col,pos',events:'++id'});
+var $=function(s){return document.querySelector(s)};
+document.querySelectorAll('.tab').forEach(function(b){b.onclick=function(){document.querySelectorAll('.tab,section').forEach(function(x){x.classList.remove('on')});b.classList.add('on');$('#'+b.dataset.t).classList.add('on');if(b.dataset.t==='cl'&&window.cal)cal.render();if(b.dataset.t==='gr'&&window.cy)cy.resize().fit()}});
+/* канбан */
+var COLS=[['todo','Сделать'],['doing','В работе'],['done','Готово']];
+function board(){db.cards.toArray().then(function(all){var h='';COLS.forEach(function(c){h+='<div class="col"><h4>'+c[1]+'</h4><div class="lst" data-col="'+c[0]+'">'+all.filter(function(x){return x.col===c[0]}).sort(function(a,b){return a.pos-b.pos}).map(function(x){return '<div class="card" data-id="'+x.id+'">'+x.t.replace(/</g,'&lt;')+'</div>'}).join('')+'</div></div>'});$('#board').innerHTML=h;
+ document.querySelectorAll('.lst').forEach(function(l){Sortable.create(l,{group:'kb',animation:150,onEnd:function(){document.querySelectorAll('.lst').forEach(function(L){[].forEach.call(L.children,function(c,i){db.cards.update(+c.dataset.id,{col:L.dataset.col,pos:i})})})}})})})}
+$('#ad').onclick=function(){var t=$('#nc').value.trim();if(t){db.cards.add({t:t,col:'todo',pos:9999}).then(function(){$('#nc').value='';board()})}};board();
+/* календарь */
+window.cal=new FullCalendar.Calendar($('#cal'),{initialView:'dayGridMonth',locale:'ru',firstDay:1,height:'auto',editable:true,selectable:true,headerToolbar:{left:'prev,next today',center:'title',right:'dayGridMonth,timeGridWeek,listWeek'},
+ select:function(i){var t=prompt('Событие');if(t)db.events.add({title:t,start:i.startStr,end:i.endStr}).then(function(id){cal.addEvent({id:id,title:t,start:i.startStr,end:i.endStr})})},
+ eventClick:function(i){if(confirm('Удалить «'+i.event.title+'»?')){db.events.delete(+i.event.id);i.event.remove()}},
+ eventChange:function(i){db.events.update(+i.event.id,{start:i.event.startStr,end:i.event.endStr})}});
+cal.render();db.events.toArray().then(function(a){a.forEach(function(e){cal.addEvent(e)})});
+/* граф */
+window.cy=cytoscape({container:$('#cy'),elements:[{data:{id:'nox',label:'NOX'}},{data:{id:'mem',label:'Память'}},{data:{id:'chat',label:'Чат'}},{data:{id:'e1',source:'nox',target:'mem'}},{data:{id:'e2',source:'nox',target:'chat'}}],
+ style:[{selector:'node',style:{label:'data(label)',color:'#fff','background-color':'#2b8fd6','text-valign':'bottom','font-size':11}},{selector:'edge',style:{width:2,'line-color':'#7fd0ff55'}},{selector:':selected',style:{'background-color':'#ffd166'}}],layout:{name:'cose'}});
+$('#ga').onclick=function(){var n=$('#gn').value.trim();if(!n)return;var s=cy.$(':selected').first(),id='n'+Date.now();cy.add({data:{id:id,label:n}});if(s.length)cy.add({data:{id:'e'+id,source:s.id(),target:id}});cy.layout({name:'cose'}).run();$('#gn').value=''};
+/* медиа */
+var imgs=['earth','mars','jupiter','saturn','venus','mercury','uranus','neptune'];$('#gal').innerHTML=imgs.map(function(p){return '<img loading="lazy" src="assets/nox-approved/planets/'+p+'.jpg" alt="'+p+'">'}).join('');
+$('#gal').onclick=function(e){if(e.target.tagName==='IMG')$('#pv').innerHTML='<img style="max-width:100%;border-radius:12px" src="'+e.target.src+'">'};
+Split(['#sl','#sr'],{sizes:[40,60],gutterSize:6});
+/* виджеты */
+var gs=GridStack.init({cellHeight:90,margin:6},'.grid-stack');
+gs.load([{x:0,y:0,w:4,h:2,content:'<b>Память</b><br>факты и воспоминания'},{x:4,y:0,w:4,h:2,content:'<b>Состояние</b><br>настроение, энергия'},{x:8,y:0,w:4,h:2,content:'<b>Задачи</b><br>из канбана'}]);
+</script></body></html>
