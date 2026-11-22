@@ -71,6 +71,21 @@ class OwnerLiveAssetTests(unittest.TestCase):
                 self.assertIn('content="NOX_OWNER_LIVE_RESONANCE_20261116"',result)
                 self.assertEqual(self.decorate(result,'pc/resonance.html'),result)
 
+    def test_html5_selfclosing_nonvoid_keeps_fallback_inert(self):
+        # A trailing slash does not close non-void HTML elements in browsers.
+        # HTMLParser's default startend handler incorrectly opens AND closes.
+        for inert in ('template', 'noscript'):
+            with self.subTest(inert=inert):
+                content=(f'<{inert}/>'
+                         '<script src="/nox-web-v29/owner-chat-ui.js"></script>'
+                         '<meta name="nox-live-build" content="inert-fake">'
+                         f'</{inert}>')
+                result=self.rendered(content)
+                self.assertEqual(result.count('src="/nox-web-v29/owner-chat-ui.js"'),2)
+                self.assertEqual(result.count('data-nox-live-owner="1"'),4)
+                self.assertIn('content="NOX_OWNER_LIVE_RESONANCE_20261116"',result)
+                self.assertEqual(self.decorate(result,'pc/resonance.html'),result)
+
     def test_noscript_and_nonexecuting_script_cannot_satisfy_live_asset(self):
         content=('<noscript><script src="/nox-web-v29/owner-presence.js"></script></noscript>'
                  '<script type="application/json" src="/nox-web-v29/owner-chat-ui.js"></script>')
