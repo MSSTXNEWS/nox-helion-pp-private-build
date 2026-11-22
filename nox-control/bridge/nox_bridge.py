@@ -182,8 +182,10 @@ def memory_block(text):
     try:
         import s03_memory as M
         res = M.recall(text)
-        out = M.format_for_prompt(res)
-        out = trim_mem(out) if isinstance(out, str) else ""
+        formatted = M.format_for_prompt(res)
+        if not isinstance(formatted, str):
+            raise TypeError("S03_MEMORY_FORMAT_NON_TEXT")
+        out = trim_mem(formatted)
     except Exception as e:
         log("recall_error %s" % type(e).__name__)
         # A failed canonical S03 read is not an empty memory result. The
