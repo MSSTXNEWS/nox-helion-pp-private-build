@@ -172,5 +172,11 @@ ab)
   cat /root/nox/logs/glm_bench.out
   ;;
 glmlog2) pgrep -af "llama-server|python" | cut -c1-140; tail -n 8 /root/nox/logs/glm_server.log | cut -c1-220; curl -s -m2 localhost:8081/health; nvidia-smi --query-gpu=memory.used --format=csv,noheader; uptime;;
+sweep)
+  ls -t /root/nox/logs | grep -i -E "sweep|ik|bench" | head -6
+  head -c 1500 /root/nox/glm_sweep.py | head -30
+  for f in $(ls -t /root/nox/logs/*sweep* 2>/dev/null | head -2); do echo "## $f"; tail -n 25 $f | cut -c1-230; done
+  pgrep -af "glm_sweep|ik_llama" | cut -c1-260; curl -s -m2 localhost:8081/health
+  ;;
 *) echo unknown;;
 esac
