@@ -140,6 +140,21 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(unavailable.status_code, 404)
         self.assertEqual(len(writes), 1)
 
+    def test_1a03_snapshot_ttl_not_extended_by_wall_clock_rollback(self):
+        """A backward wall-clock jump must never retain chat snapshots past TTL."""
+        snapshots = {
+            "expired": {"updated_at": 300.0},
+            "fresh": {"updated_at": 499.0},
+        }
+        # Ten minutes of monotonic time have passed, but system time jumps
+        # backward. The cache is a privacy-limited process-local buffer.
+        with (mock.patch.object(W, "CHAT_SNAPSHOTS", snapshots),
+              mock.patch.object(W.time, "monotonic", return_value=500.0),
+              mock.patch.object(W.time, "time", return_value=-9999999.0)):
+            W._prune_chat_snapshots()
+        self.assertNotIn("expired", snapshots)
+        self.assertIn("fresh", snapshots)
+
     def test_missing_legacy_request_id_is_unique_and_stop_addressable(self):
         # A real chat endpoint first frame, without any model POST or S03 write.
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
