@@ -2024,8 +2024,8 @@ class FactReceiptTest(unittest.TestCase):
 
     def test_1a01_long_multiline_plan_stream_keeps_progress_and_s03_exact(self):
         """Incremental plan progress must not lose tokens or repeat step events."""
-        expected = "1. Начало 🌌\\n2. Итог\\n" + "Примечание\\n" * 600
-        fragments = ["1. Начало 🌌\\n", "2. Итог\\n"] + ["Примечание\\n"] * 600
+        expected = "1. Начало 🌌\n2. Итог\n" + "Примечание\n" * 600
+        fragments = ["1. Начало 🌌\n", "2. Итог\n"] + ["Примечание\n"] * 600
         writes = []
 
         class Upstream:
@@ -2069,10 +2069,10 @@ class FactReceiptTest(unittest.TestCase):
             }))
             return [json.loads(f) async for f in response.body_iterator]
 
-        with mock.patch.object(W, "W", Planner()), \\
-             mock.patch.object(W, "CANCEL", set()), \\
-             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \\
-             mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \\
+        with mock.patch.object(W, "W", Planner()), \
+             mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \
              mock.patch.dict(sys.modules, {"s03_memory": memory}):
             frames = asyncio.run(scenario())
 
