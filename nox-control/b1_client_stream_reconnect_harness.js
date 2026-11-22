@@ -558,13 +558,40 @@
               }
             },
             async (receipt,expected)=>{
-              if(lifecycleSignal.aborted)
-                hold('HOLD_STREAM_RECONNECT_STOPPED');
-              const trusted=await host.verifyCanonicalAck(
-                receipt,expected,s,lifecycleSignal);
-              if(lifecycleSignal.aborted)
-                hold('HOLD_STREAM_RECONNECT_STOPPED');
-              return trusted;
+              // Freshness is only the first proof. A rejected, throwing,
+              // stalled or stopped second verifier can abandon the same
+              // canonical GET response body. Close it once without awaiting.
+              // A fully verified response remains owned by its caller.
+              let discarded=false;
+              const discard=()=>{
+                if(discarded)return;
+                discarded=true;
+                cancelAbandonedGet(receipt);
+              };
+              const onAbort=()=>discard();
+              lifecycleSignal.addEventListener('abort',onAbort,{once:true});
+              try{
+                if(lifecycleSignal.aborted){
+                  discard();
+                  hold('HOLD_STREAM_RECONNECT_STOPPED');
+                }
+                let trusted;
+                try{
+                  trusted=await host.verifyCanonicalAck(
+                    receipt,expected,s,lifecycleSignal);
+                }catch(err){
+                  discard();
+                  throw err;
+                }
+                if(lifecycleSignal.aborted){
+                  discard();
+                  hold('HOLD_STREAM_RECONNECT_STOPPED');
+                }
+                if(trusted!==true)discard();
+                return trusted;
+              }finally{
+                lifecycleSignal.removeEventListener('abort',onAbort);
+              }
             },lifecycleSignal),
              'HOLD_STREAM_CANONICAL_ACK_TIMEOUT',canonicalAckTimeoutMs,signal);
         }catch(err){
