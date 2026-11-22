@@ -2452,5 +2452,71 @@ class ProbeTests(unittest.TestCase):
                 probe.page_snapshot(invalid, expected_path='/chat')
             self.assertTrue(invalid.closed)
 
+
+    def test_genuine_sse_envelope_multi_frame_requires_clean_terminal(self):
+        """SSE data envelopes prove canonical frames, not a mere HTTP 200."""
+        from email.message import Message
+        did = 'offline-sse-envelope'
+        start = {'type': 'start', 'dialog_id': did}
+        delta = {'type': 'delta', 'text': '323', 'dialog_id': did}
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+
+        def payload(frame):
+            return json.dumps(frame, separators=(',', ':')).encode()
+
+        def event(kind, frame):
+            return [b'event: ' + kind.encode() + b'\n',
+                    b'data: ' + payload(frame) + b'\n', b'\n']
+
+        valid = ([b': heartbeat\n'] + event('start', start) +
+                 event('delta', delta) + event('done', done))
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, rows):
+                self.rows = rows
+                self.closed = False
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream; charset=utf-8'
+
+            def __iter__(self):
+                return iter(self.rows)
+
+            def close(self):
+                self.closed = True
+
+        response = Response(valid)
+        with patch.object(probe, 'request', return_value=response):
+            measured = probe.consume_turn(object(), 'synthetic', did)
+        self.assertEqual(measured['answer'], '323')
+        self.assertEqual(measured['delta_count'], 1)
+        self.assertTrue(response.closed)
+
+        failed = (
+            (event('start', start) + event('error', delta),
+             'HOLD_STREAM_SSE_EVENT_MISMATCH'),
+            (event('start', start) + event('delta', delta) +
+             [b'data: ' + payload(done) + b'\n'],
+             'HOLD_STREAM_SSE_UNTERMINATED'),
+            (event('start', start) + [payload(delta) + b'\n'],
+             'HOLD_STREAM_SSE_FIELD'),
+            (valid + [b': extra after done\n'],
+             'HOLD_STREAM_TRAILING_AFTER_DONE'),
+            (event('start', start) + event('delta', delta) +
+             [b'data: [DONE]\n', b'\n'],
+             'HOLD_STREAM_SSE_SENTINEL_WITHOUT_RECEIPT'),
+        )
+        for rows, expected in failed:
+            response = Response(rows)
+            with self.subTest(expected=expected), patch.object(
+                    probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, '^' + expected + '
+    unittest.main()
+):
+                    probe.consume_turn(object(), 'synthetic', did)
+            self.assertTrue(response.closed)
+
 if __name__ == '__main__':
     unittest.main()

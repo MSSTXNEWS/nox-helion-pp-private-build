@@ -714,6 +714,94 @@ def bounded_stream_lines(response, max_line=100000):
         yield line
 
 
+
+def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadline=None):
+    """Decode bounded NDJSON or genuine SSE JSON events, never MIME-as-proof.
+
+    Older text/event-stream responses containing plain NDJSON remain compatible,
+    but wire formats cannot be mixed within one model turn. This is transport
+    evidence only; canonical S03 durability needs separate native readback.
+    """
+    headers = getattr(response, 'headers', None)
+    ctype = headers.get('Content-Type', '') if headers is not None else ''
+    sse_allowed = (isinstance(ctype, str) and
+                   ctype.split(';', 1)[0].strip().lower() == 'text/event-stream')
+    mode = None
+    data_lines = []
+    data_size = 0
+    event_name = None
+    terminal = False
+
+    def parse_payload(payload):
+        if payload == b'[DONE]':
+            raise RuntimeError('HOLD_STREAM_SSE_SENTINEL_WITHOUT_RECEIPT')
+        return json.loads(payload, parse_constant=reject_nonfinite_json_constant,
+                          parse_float=reject_nonfinite_json_float,
+                          object_pairs_hook=reject_duplicate_json_keys)
+
+    for wire_index, wire in enumerate(bounded_stream_lines(response, max_line)):
+        if (wire_index >= max_wire_lines or
+                (deadline is not None and time.monotonic() > deadline)):
+            raise RuntimeError('HOLD_BOUNDED_STREAM')
+        if terminal:
+            raise RuntimeError('HOLD_STREAM_TRAILING_AFTER_DONE')
+        if not isinstance(wire, bytes) or not wire.endswith(b'\n'):
+            raise RuntimeError('HOLD_STREAM_MISSING_NEWLINE')
+        if mode is None:
+            if sse_allowed and wire.startswith((b'data:', b'event:', b':')):
+                mode = 'sse'
+            elif wire.lstrip().startswith(b'{'):
+                mode = 'ndjson'
+            else:
+                raise RuntimeError('HOLD_STREAM_ENVELOPE_INVALID')
+        if mode == 'ndjson':
+            if not wire.lstrip().startswith(b'{'):
+                raise RuntimeError('HOLD_STREAM_ENVELOPE_MIXED')
+            frame = parse_payload(wire)
+            terminal = isinstance(frame, dict) and frame.get('type') == 'done'
+            yield frame
+            continue
+
+        line = wire[:-1]
+        if line.endswith(b'\r'):
+            line = line[:-1]
+        if not line:
+            if not data_lines:
+                if event_name is not None:
+                    raise RuntimeError('HOLD_STREAM_SSE_EMPTY_EVENT')
+                continue
+            frame = parse_payload(b'\n'.join(data_lines))
+            if (event_name is not None and event_name != 'message' and
+                    (not isinstance(frame, dict) or frame.get('type') != event_name)):
+                raise RuntimeError('HOLD_STREAM_SSE_EVENT_MISMATCH')
+            terminal = isinstance(frame, dict) and frame.get('type') == 'done'
+            data_lines, data_size, event_name = [], 0, None
+            yield frame
+            continue
+        if line.startswith(b':'):
+            continue  # Bounded SSE keepalive; never evidence of model output.
+        field, separator, value = line.partition(b':')
+        if not separator:
+            raise RuntimeError('HOLD_STREAM_SSE_FIELD')
+        if value.startswith(b' '):
+            value = value[1:]
+        if field == b'data':
+            data_size += len(value) + (1 if data_lines else 0)
+            if data_size > max_line:
+                raise RuntimeError('HOLD_BOUNDED_STREAM')
+            data_lines.append(value)
+        elif field == b'event':
+            if event_name is not None or not value.isascii():
+                raise RuntimeError('HOLD_STREAM_SSE_EVENT')
+            event_name = value.decode('ascii')
+            if event_name not in ('message', 'preparing', 'start', 'started',
+                                  'delta', 'done', 'error', 'status', 'meta'):
+                raise RuntimeError('HOLD_STREAM_SSE_EVENT')
+        else:
+            raise RuntimeError('HOLD_STREAM_SSE_FIELD')
+    if mode == 'sse' and (data_lines or event_name is not None):
+        raise RuntimeError('HOLD_STREAM_SSE_UNTERMINATED')
+
 def consume_turn(client,prompt,dialog_id,timeout=95):
     started=time.monotonic()
     response=request(client,'/api/nox/chat/stream','POST',
@@ -725,15 +813,11 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
         require_exact_stream_target(response)
         require_stream_response_mime(response)
         require_stream_http_framing(response)
-        for index,line in enumerate(bounded_stream_lines(response)):
-            if index>2000 or len(line)>100000 or time.monotonic()-started>timeout+5:
+        for index,frame in enumerate(bounded_stream_frames(
+                response, deadline=started+timeout+5)):
+            if index>2000 or time.monotonic()-started>timeout+5:
                 raise RuntimeError('HOLD_BOUNDED_STREAM')
             if done is not None:raise RuntimeError('HOLD_STREAM_TRAILING_AFTER_DONE')
-            if not isinstance(line, bytes) or not line.endswith(b'\n'):
-                raise RuntimeError('HOLD_STREAM_MISSING_NEWLINE')
-            frame=json.loads(line, parse_constant=reject_nonfinite_json_constant,
-                             parse_float=reject_nonfinite_json_float,
-                             object_pairs_hook=reject_duplicate_json_keys)
             if not isinstance(frame,dict):raise RuntimeError('HOLD_STREAM_FRAME_SCHEMA')
             kind=frame.get('type');elapsed=round((time.monotonic()-started)*1000)
             if kind not in ('preparing','start','started','delta','done','error','status','meta'):
