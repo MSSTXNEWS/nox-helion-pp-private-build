@@ -1551,7 +1551,7 @@ test('1A02 malformed client request ID holds before any native side effect',asyn
 });
 
 test('1A02 invisible S03 exchange identity fails closed before readback',async()=>{
-  for(const exchange_id of ['valid-01\\u202e'.replace('\\u202e','\u202e'),
+  for(const exchange_id of ['valid-01\u202e',
     'valid-01\u200b',' valid-01','valid-01 ','valid-01\n']){
     const calls=[];
     const original=async path=>{
