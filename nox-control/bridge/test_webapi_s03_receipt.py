@@ -1599,6 +1599,78 @@ class FactReceiptTest(unittest.TestCase):
         self.assertTrue(any("web_plan_classifier_unavailable RuntimeError" in msg for msg in bridge.errors))
         self.assertTrue(any("web_mode_hint_unavailable ValueError" in msg for msg in bridge.errors))
 
+    def test_1a01_optional_mode_hint_strict_utf8_budget_keeps_real_chat(self):
+        """Untrusted advisory hints never break a real model/S03 turn."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Живой ответ 🌌"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        class Hint:
+            def __init__(self, value): self.value = value
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return False
+            def mode_hint(self, *args): return self.value
+            def is_factual(self, *args): return False
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT, bridge.SOUL = {"t": 0}, None
+        bridge.self_vol = lambda user: ""
+        model_contexts = []
+        def build_msgs(*args):
+            model_contexts.append(args[-1])
+            return [{"role": "user", "content": "Привет"}]
+        bridge.build_msgs = build_msgs
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def attempt(number):
+            response = await chat(Request({
+                "request_id": "hint-budget-" + str(number),
+                "mode": "auto", "use_memory": False,
+                "messages": [{"role": "user", "content": "Привет"}],
+            }))
+            return [json.loads(frame) async for frame in response.body_iterator]
+
+        # 512 four-byte Unicode scalars meet the 2048-byte boundary;
+        # lone surrogate and 2049+ bytes must discard ONLY the hint.
+        cases = (("\ud800", True), ("🚀" * 513, True), ("🧠" * 512, False))
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            for idx, (value, invalid) in enumerate(cases):
+                bridge.errors.clear()
+                with mock.patch.object(W, "W", Hint(value)):
+                    frames = asyncio.run(attempt(idx))
+                self.assertTrue(frames[-1]["done"])
+                self.assertEqual(frames[-1]["completion_receipt"]["status"], "GENERATED")
+                self.assertEqual(frames[-1]["memory_write_receipt"]["status"],
+                                 "WRITE_RETURNED_UNVERIFIED")
+                self.assertTrue(any(f.get("message", {}).get("content") == "Живой ответ 🌌"
+                                    for f in frames))
+                if invalid:
+                    self.assertEqual(model_contexts[-1], "\n")
+                    self.assertTrue(any("web_mode_hint_unavailable" in e
+                                        for e in bridge.errors))
+                else:
+                    self.assertIn(value, model_contexts[-1])
+                    self.assertFalse(any("web_mode_hint_unavailable" in e
+                                         for e in bridge.errors))
+        self.assertEqual(writes, [("Привет", "Живой ответ 🌌")] * len(cases))
+
     def test_1a01_malformed_optional_plan_keeps_real_stream_and_s03_attempt(self):
         """Bad advisory plan payload must never abort the primary SSE stream."""
         class Upstream:
