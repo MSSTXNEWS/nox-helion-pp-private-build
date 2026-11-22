@@ -39,7 +39,7 @@ def _prune_chat_snapshots():
     for key, row in list(CHAT_SNAPSHOTS.items()):
         # In-flight model streams can be silent longer than the privacy TTL.
         # They still own their snapshot until their actual generator exits.
-        if row["updated_at"] < cutoff and row["request_id"] not in ACTIVE_CHAT_IDS:
+        if row["updated_at"] < cutoff and row.get("request_id") not in ACTIVE_CHAT_IDS:
             CHAT_SNAPSHOTS.pop(key, None)
 
 
@@ -54,7 +54,7 @@ def _reserve_chat_snapshot_slot():
     if len(CHAT_SNAPSHOTS) < MAX_CHAT_SNAPSHOTS:
         return True
     for key, row in list(CHAT_SNAPSHOTS.items()):
-        if row["request_id"] not in ACTIVE_CHAT_IDS:
+        if row.get("request_id") not in ACTIVE_CHAT_IDS:
             CHAT_SNAPSHOTS.pop(key, None)
             return True
     return False
