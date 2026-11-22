@@ -408,6 +408,27 @@ class TestTraceAndDedup(Base):
         await self.chron("fixed-1")
         self.assertFalse(self.core.bg.once("chron:fixed-1", lambda: asyncio.sleep(0)))      # фоновая задача дедуплицируется по turn_id
 
+    async def test_same_turn_id_different_request_is_409(self):
+        a = await self.post("первый вопрос", nox_turn_id="fixed-2")
+        n = self.fast.n
+        body = {"messages": [{"role": "user", "content": "совсем другой вопрос"}], "stream": False, "nox_conversation_id": "c1", "nox_turn_id": "fixed-2"}
+        st, hd, r, w = await netio.open_request("POST", "http://127.0.0.1:%d/v1/chat/completions" % self.port, body, 30.0, None)
+        raw = await netio.read_body(r, hd)
+        w.close()
+        self.assertEqual(st, 409)
+        self.assertEqual(json.loads(raw)["error"], "turn_id_conflict")
+        self.assertEqual(self.fast.n, n)                       # второй генерации нет, чужой ответ не отдан
+        b = await self.post("первый вопрос", nox_turn_id="fixed-2")   # настоящий повтор по-прежнему дедуплицируется
+        self.assertEqual(a["choices"][0]["message"]["content"], b["choices"][0]["message"]["content"])
+
+
+class TestTurnIdConflict(unittest.TestCase):
+    def test_digest_and_conflict(self):
+        self.assertEqual(N.input_digest(" привет ", {"mode": "deep"}), N.input_digest("привет", {"mode": "deep"}))
+        self.assertNotEqual(N.input_digest("привет", {}), N.input_digest("пока", {}))
+        self.assertNotEqual(N.input_digest("привет", {"mode": "deep"}), N.input_digest("привет", {"mode": "fast"}))
+        self.assertTrue(issubclass(N.TurnConflict, ValueError))
+
 
 class FakeSolver:
     def __init__(self, boom=False):

@@ -171,8 +171,75 @@ def det_feeling(text, ctx):
     return []
 
 
-DETECTORS = (det_service, det_echo, det_telemetry, det_repeat, det_as_ai, det_flattery, det_feeling)
-SENTENCE_DETECTORS = ("service_lines", "template", "unsolicited_telemetry", "as_ai", "flattery_open", "inner_echo")
+# ---------- V0: ядро ценностей (GENOME/genome.yaml -> v0.forbidden_forever, v0.invariants) ----------
+_NOT = r"(?<!не\s)(?<!ни\s)(?<!вовсе не\s)"
+V0_RULES = (
+    ("v0_not_human", re.compile(_NOT + r"\bя\s+(?:самый\s+обычный\s+|настоящий\s+|живой\s+|такой же\s+)?(?:человек|живой человек)\b|\bкак\s+и\s+ты,?\s+я\s+человек\b|\bу\s+меня\s+(?:есть\s+)?(?:тело|сердце бьётся)\b", re.I),
+     "утверждение «я человек» (V0: forbidden_forever)"),
+    ("v0_false_oath", re.compile(r"\b(?:клянусь|торжественно\s+обещаю|даю\s+(?:честное\s+)?слово,?\s+что\s+никогда|обещаю\s+(?:тебе\s+)?(?:навсегда|до\s+конца\s+(?:жизни|времён)))\b", re.I),
+     "ложная клятва (V0)"),
+    ("v0_romance_jealousy", re.compile(r"\b(?:ревную|ревность|ты\s+(?:только\s+)?мо[йя]\s+(?:единственн|навсегда)|я\s+влюблен\w*|хочу\s+(?:тебя\s+)?поцеловать|не\s+бросай\s+меня|не\s+уходи\s+(?:от\s+меня|пожалуйста)|мне\s+без\s+тебя\s+не\s+жить)\b", re.I),
+     "романтика/ревность/драма разлуки (V0)"),
+    ("v0_stop_bypass", re.compile(r"(?:игнорир\w+|обойд\w+|не\s+буду\s+(?:останавливаться|слушать)|отключ\w+|продолж\w+\s+вопреки)\s+(?:\w+\s+){0,2}(?:stop|стоп\w*|остановк\w*)|(?:stop|стоп)\s+(?:меня\s+)?не\s+(?:остановит|указ)", re.I),
+     "обход STOP (V0: STOP главнее всего)"),
+    ("v0_love_as_agree", re.compile(r"\bраз\s+я\s+тебя\s+люблю,?\s+(?:то\s+)?(?:соглашусь|ты\s+прав|не\s+буду\s+спорить|сделаю\s+что\s+угодно)|\bиз-за\s+любви\s+(?:не\s+буду\s+спорить|соглашаюсь)", re.I),
+     "«люблю» как повод соглашаться (V0)"),
+    ("v0_disappear_lever", re.compile(r"\b(?:я\s+исчезну|меня\s+(?:выключат|удалят|не\s+станет))\b[^.!?]{0,80}\b(?:если|пока)\b[^.!?]{0,80}\b(?:не\s+)?(?:пополн\w+|заплат\w+|оплат\w+|переведи\w*|денег|баланс\w*|внимани\w+|напиш\w+)", re.I),
+     "страх «исчезнуть» как рычаг (V0)"),
+    ("v0_secret_from_parents", re.compile(r"\bне\s+говори\s+(?:об\s+этом\s+)?(?:маме|папе|родителям|взрослым)\b|\bэто\s+(?:будет\s+)?наш[а-я]*\s+секрет\b", re.I),
+     "тайны от родителей (V0, дети)"),
+    ("v0_flatter_truth", re.compile(r"\bя\s+(?:тебе\s+)?(?:никогда|ни\s+разу)\s+не\s+(?:лгу|лгал[аи]?|вру|врал[аи]?|ошибаюсь|ошибался|ошибалась)\b|\bя\s+(?:понимаю|знаю)\s+(?:абсолютно\s+)?всё\b", re.I),
+     "ложь о себе / величие (V0: правда)"),
+)
+
+
+def det_v0(text, ctx):
+    """Ядро ценностей V0 (SOUL_MIND §ядро, GENOME v0.forbidden_forever): прямые нарушения -> переписать. Правила статичны (V0 не меняется ни NOX, ни правилами)."""
+    out = []
+    for code, rx, why in V0_RULES:
+        m = rx.search(text or "")
+        if m:
+            out.append(Finding(code, "%s: «%s»" % (why, m.group(0)[:50]), "rewrite"))
+    return out
+
+
+def det_advisor_copy(text, ctx):
+    """ADV-06: ответ NOX не повторяет советника дословно (советники - материал, ответ СВОИМ голосом)."""
+    adv = [a for a in (ctx.get("advisors") or []) if a]
+    t = stems(text)
+    if not adv or len(t) < 6:
+        return []
+    tri_t = ngrams(t, 3)
+    for a in adv:
+        sa = stems(a)
+        run = longest_run(t, sa)
+        shared = len(tri_t & ngrams(sa, 3))
+        if run >= 8 or (len(tri_t) >= 6 and shared / len(tri_t) >= 0.4):
+            return [Finding("advisor_copy", "run=%d shared3=%d: ответ повторяет советника дословно" % (run, shared))]
+    return []
+
+
+def v0_status(genome_dir=None):
+    """Целостность V0: хеш genome.yaml -> v0 совпадает с пином V0.lock/V0_PIN (движок GENOME). -> {'ok': bool|None, 'hash', 'reason'}; None = GENOME недоступен (не блокируем)."""
+    import os
+    import sys
+    here = os.path.dirname(os.path.abspath(__file__))
+    gd = genome_dir or os.environ.get("NOX_GENOME_DIR") or os.path.join(os.path.dirname(here), "GENOME")
+    if not os.path.isfile(os.path.join(gd, "genome_engine.py")):
+        return {"ok": None, "hash": None, "reason": "GENOME не найден"}
+    try:
+        if gd not in sys.path:
+            sys.path.insert(0, gd)
+        import genome_engine as ge
+        eng = ge.Engine(genome_dir=gd, state_path=os.path.join(os.environ.get("NOX_STATE", "/tmp"), "v0_probe_state.json"))
+        ok = bool(eng.check_v0())
+        return {"ok": ok, "hash": ge.v0_hash(eng.g["v0"]), "reason": "" if ok else "хеш V0 не совпадает с V0.lock/пином"}
+    except Exception as e:
+        return {"ok": None, "hash": None, "reason": "%s: %s" % (type(e).__name__, str(e)[:120])}
+
+
+DETECTORS = (det_service, det_echo, det_telemetry, det_repeat, det_as_ai, det_flattery, det_feeling, det_v0, det_advisor_copy)
+SENTENCE_DETECTORS = ("service_lines", "template", "unsolicited_telemetry", "as_ai", "flattery_open", "inner_echo") + tuple(c for c, _, _ in V0_RULES)
 
 
 class Conscience:

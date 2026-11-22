@@ -3,6 +3,7 @@
 
 POST /v1/chat/completions   OpenAI-совместимо; stream=true -> SSE: текст только в `data:` chunk, служебное только в `event: nox_phase` / `event: nox_meta`
 POST /v1/stop               {"turn_id"|"conversation_id"} -> квитанция
+GET  /v1/core/traces[?limit=&path=&eval=1] список ходов; GET /v1/core/summary сводка (страница «Ядро»); GET /v1/core/view/<id> ход со ступенями;
 GET  /v1/core/trace/<id>    трасса хода;  GET /v1/core/followup/<id>  фоновое доведение ответа;  GET /health
 Доп. поля запроса: nox_mode (auto|fast|deep|max), nox_turn_id, nox_conversation_id, user; заголовки X-Nox-Turn-Id, X-Nox-Conversation (или X-Nox-Session), X-Nox-Speaker.
 MIND R2: X-NOX-Eval: 1 - ход бенчмарка (память пишется с пометкой [EVAL], Решатель/Предсказатель/сон не учатся); POST /v1/core/eval/purge - очистка [EVAL];
@@ -10,6 +11,7 @@ MIND R2: X-NOX-Eval: 1 - ход бенчмарка (память пишется 
 Env: NOX_CORE_HOST/PORT (127.0.0.1:8090), NOX_FAST_URL (:8083), NOX_GLM_URL (:8081), NOX_CONSCIENCE=enforce|shadow, NOX_STATE, NOX_RECEIPTS, NOX_TRACE_DIR, NOX_BG_DEEP=1.
 """
 import asyncio
+import hashlib
 import json
 import os
 import re
@@ -25,6 +27,7 @@ import netio
 import conscience as C
 from netio import UpstreamError
 import executors as E
+import core_view
 import actions as A
 
 try:
@@ -161,9 +164,18 @@ class Conv:
         return {"id": self.id, "messages": self.messages[-200:]}
 
 
+class TurnConflict(ValueError):
+    """turn_id повторно использован для ДРУГОГО запроса (идея из единого NOX Brain: begin_turn сверяет хеш входа)."""
+
+
+def input_digest(user_text, opts):
+    return hashlib.sha256(json.dumps({"t": (user_text or "").strip(), "m": (opts or {}).get("mode") or ""}, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+
+
 class Turn:
     def __init__(self, tid, conv_id, user_text, stream):
         self.id, self.conv_id, self.user_text, self.stream = tid, conv_id, user_text, stream
+        self.digest = ""
         self.events, self.status, self.task = [], "running", None
         self.parts, self.writers = [], []
         self.stop_requested, self.dropped, self.receipt = False, 0, None
@@ -331,13 +343,17 @@ class Core:
 
     # ---------- ход ----------
     def start_turn(self, user_text, conv_id, turn_id=None, stream=False, opts=None, seed=None):
+        dg = input_digest(user_text, opts)
         if turn_id and turn_id in self.turns:
+            if self.turns[turn_id].digest and self.turns[turn_id].digest != dg:
+                raise TurnConflict(turn_id)                    # тот же id, другой запрос: молча отдать чужой ответ нельзя
             return self.turns[turn_id], False                  # дедуп: тот же ход, второй генерации нет
         tid = turn_id or "t-" + uuid.uuid4().hex[:12]
         conv = self.conv(conv_id)
         if seed and not conv.messages:
             conv.messages = [dict(m, turn_id="seed-%d" % i, ts=0) for i, m in enumerate(seed)]
         turn = Turn(tid, conv_id, user_text, stream)
+        turn.digest = dg
         self.turns[tid] = turn
         if len(self.turns) > 500:
             for k in [k for k, t in self.turns.items() if t.status != "running"][:100]:
@@ -591,8 +607,19 @@ class Core:
             rec["status"] = "failed"
             rec["error"] = "%s: %s" % (type(e).__name__, e)
 
+    def v0(self):
+        """Целостность V0 (genome.yaml против пина), кэш 60 с; GENOME нет -> ok=None (не блокирует)."""
+        c = getattr(self, "_v0c", None)
+        if c is None or time.time() - c[0] > 60:
+            try:
+                c = (time.time(), C.v0_status())
+            except Exception as ex:
+                c = (time.time(), {"ok": None, "hash": None, "reason": "%s: %s" % (type(ex).__name__, ex)})
+            self._v0c = c
+        return c[1]
+
     def health(self):
-        return {"ok": True, "service": "nox-core", "version": VERSION, "organs": self.organs.status(), "conscience": self.conscience.mode,
+        return {"v0": self.v0(), "ok": True, "service": "nox-core", "version": VERSION, "organs": self.organs.status(), "conscience": self.conscience.mode,
                 "fast": dict(self.fast.stats), "glm": {"state": self._gs[1], "inflight": self.glm_inflight},
                 "turns": len(self.turns), "running": sum(1 for t in self.turns.values() if t.status == "running"),
                 "bg": {k: ("done" if t.done() else "running") for k, t in list(self.bg.tasks.items())[-20:]},
@@ -615,11 +642,18 @@ class Core:
             if req is None:
                 return
             method, target, hdrs, raw = req
-            path = target.split("?")[0]
+            path, _, qs = target.partition("?")
             if method == "OPTIONS":
                 return await netio.send_json(writer, 200, {})
             if method == "GET" and path == "/health":
                 return await netio.send_json(writer, 200, self.health())
+            if method == "GET" and path == "/v1/core/traces":
+                return await netio.send_json(writer, 200, {"traces": core_view.recent(self, core_view.query_int(qs, "limit", 30), core_view.query_str(qs, "path"), core_view.query_int(qs, "eval", 0) == 1)})
+            if method == "GET" and path == "/v1/core/summary":
+                return await netio.send_json(writer, 200, core_view.summary(self, core_view.query_int(qs, "limit", 200), self.v0()))
+            if method == "GET" and path.startswith("/v1/core/view/"):
+                tr = self.get_trace(path.rsplit("/", 1)[1])
+                return await netio.send_json(writer, 200 if tr else 404, core_view.view(tr) if tr else {"error": "unknown_turn"})
             if method == "GET" and path.startswith("/v1/core/trace/"):
                 tr = self.get_trace(path.rsplit("/", 1)[1])
                 return await netio.send_json(writer, 200 if tr else 404, tr or {"error": "unknown_turn"})
@@ -671,7 +705,10 @@ class Core:
         if ab:
             opts["ablate"] = ab
         stream = bool(body.get("stream"))
-        turn, _new = self.start_turn(text, cid, tid, stream, opts, seed)
+        try:
+            turn, _new = self.start_turn(text, cid, tid, stream, opts, seed)
+        except TurnConflict:
+            return await netio.send_json(writer, 409, {"error": "turn_id_conflict", "detail": "turn_id уже занят другим запросом"})
         if not stream:
             i = 0
             while turn.status == "running":

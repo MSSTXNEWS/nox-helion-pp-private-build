@@ -8,7 +8,7 @@ export PYTHONDONTWRITEBYTECODE=1 NOX_WOW_SRC="$W"
 FAIL=0; N=0
 ok()  { N=$((N+1)); printf 'OK    %s\n' "$1"; }
 bad() { N=$((N+1)); FAIL=$((FAIL+1)); printf 'FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '%s\n' "$2" | tail -15 | sed 's/^/      /'; }
-for d in COMMON ACT CON CTX DSP EMO MEM PER RTE SELF SLP SPD TOP TRAITS WORLD WOW; do
+for d in COMMON ACT ADV BRAIN CON CTX DSP EMO IMG MEM MIND/M1_ARCH MIND/M2_SELFIMPROVE MIND/M3_CONSCIOUS MIND/M4_BENCH MIND/M5_GROWTH MIND/R2 PER RTE SELF SLP SPD TOP TRAITS WORLD WOW; do
   for t in "$W/$d"/test_*.py "$W/$d"/tests/test_*.py; do
     [ -f "$t" ] || continue
     dd="$(dirname "$t")"; m="$(basename "$t" .py)"

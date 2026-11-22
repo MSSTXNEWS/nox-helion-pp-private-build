@@ -89,9 +89,9 @@ async def iter_sse_data(reader, hdrs):
                 yield line[5:].strip().decode("utf-8", "replace")
 
 
-async def json_call(method, url, body=None, timeout=10.0):
+async def json_call(method, url, body=None, timeout=10.0, headers=None):
     """-> (status, obj|None). Сетевые исключения пробрасываются."""
-    status, hdrs, reader, writer = await open_request(method, url, body, timeout)
+    status, hdrs, reader, writer = await open_request(method, url, body, timeout, headers)
     try:
         raw = await asyncio.wait_for(read_body(reader, hdrs), timeout)
     finally:

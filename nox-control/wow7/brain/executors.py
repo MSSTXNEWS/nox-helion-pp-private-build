@@ -92,6 +92,8 @@ class State:
         self.action = None
         self.arm, self.model, self.pred = None, None, None
         self.messages_extra = None
+        self.council = False
+        self.advice, self.advisors = "", []        # ADV-06: compose_prompt советников и их тексты (для детектора advisor_copy)
 
     @property
     def prev(self):
@@ -118,16 +120,16 @@ class State:
 
     def user_content(self):
         b = self.block_for_model()
-        t = self.user_text
+        t = self.advice or self.user_text       # СОВЕТ: рамка <данные> с мнениями советников + исходный вопрос (compose_prompt)
         if b:
-            t = "<внутреннее_состояние>\n%s\n%s\n</внутреннее_состояние>\n\n%s" % (b, O.BLOCK_RULE, self.user_text)
+            t = "<внутреннее_состояние>\n%s\n%s\n</внутреннее_состояние>\n\n%s" % (b, O.BLOCK_RULE, self.advice or self.user_text)
         if self.intro_text:
             t += INTRO_NOTE
         return t
 
     def cctx(self):
         return {"block": self.block_full(), "user_text": self.user_text, "intent": self.intent, "prev": self.prev,
-                "asked_status": self.intent == "telemetry_q"}
+                "asked_status": self.intent == "telemetry_q", "advisors": list(self.advisors)}
 
 
 # ---------------------------------------------------------------- 1. Восприятие
@@ -285,7 +287,7 @@ class Decider(Exec):
                 st.arm = arm
                 want = {"reflex": "reflex", "thought": "thought", "deep": "deep", "council": "deep"}[arm]
                 if arm == "council":
-                    st.degraded.append("council_not_implemented")
+                    st.council = True            # ADV-04/06: Reason позовёт Council до генерации
                 st.path = want
                 st.block_policy = "full"
                 if want in ("thought", "deep"):
@@ -372,6 +374,62 @@ class Intuition(Exec):
         return None
 
 
+# ---------------------------------------------------------------- 5b. Совет (ADV-04/06)
+class Council(Exec):
+    """Путь СОВЕТ: спросить внешних советников через хаб (ADV/advisor_hub, `/v1/advisors/ask`), результат - материал в рамке <данные>.
+    Зовёт: (а) arm=council от Решателя; (б) авто: уверенность прогноза < порога (AutoGate хаба сам решает по лимитам в час/сутки и privacy=private).
+    Не зовёт: РЕФЛЕКС/ДЕЙСТВИЕ, телеметрия, eval-ходы, личная память (хаб тоже отказывает). Нет NOX_ADV_URL или хаб лежит -> ход идёт без советников (degraded)."""
+    name, budget_s = "council", 28.0
+    PERSONAL = re.compile(r"помнишь|напомни|мой пароль|моя семья|паспорт|из памяти|мо[йяеи]\s+(?:жена|муж|дет|сын|дочь|мам|пап)", re.I)
+
+    def url(self):
+        return (getattr(self.core.cfg, "adv_url", None) or __import__("os").environ.get("NOX_ADV_URL") or "").rstrip("/")
+
+    def confidence(self, st):
+        try:
+            return float(st.pred["pred"]["outcome"]["success_p"]) if st.pred else None
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    async def run(self, st):
+        explicit = bool(getattr(st, "council", False))
+        base = self.url()
+        conf = self.confidence(st)
+        if st.opts.get("eval") or st.path == "action" or st.intent not in ("question", "task"):
+            return self.note(st, "skipped")
+        if not base:
+            if explicit:
+                st.degraded.append("council_no_hub")
+            return self.note(st, "skipped")
+        if not explicit and (conf is None or conf >= 0.55 or (st.path == "reflex" and not st.degraded) or len(st.user_text.split()) < 4):
+            return self.note(st, "skipped")
+        body = {"question": st.user_text[:1500], "path": st.path, "privacy": "private", "source": "core" if explicit else "auto", "deadline_s": 20,
+                "contains_memory": bool(self.PERSONAL.search(st.user_text))}
+        if explicit:
+            body["n"] = 2
+        else:
+            body["confidence"] = conf
+        tok = __import__("os").environ.get("NOX_ADV_TOKEN")
+        status, obj = await netio.json_call("POST", base + "/v1/advisors/ask", body, 24.0, {"Authorization": "Bearer " + tok} if tok else None)
+        if status != 200 or not isinstance(obj, dict):
+            st.degraded.append("council_http_%s" % status)
+            return self.note(st, "http_%s" % status)
+        if not obj.get("ok"):
+            return self.note(st, "skipped:%s" % (obj.get("skipped") or obj.get("error") or obj.get("reason") or "no"))
+        answers = [a for a in obj.get("answers", []) if a.get("text")]
+        if not answers or not obj.get("compose_prompt"):
+            return self.note(st, "no_answers")
+        st.advice = obj["compose_prompt"]
+        st.advisors = [a["text"] for a in answers]
+        st.turn.trace["council"] = {"source": body["source"], "advisors": [a.get("advisor") for a in answers], "n": len(answers), "confidence": conf,
+                                    "agreement": (obj.get("agreement") or {}).get("label")}
+        st.turn.emit_meta("phase", {"phase": "council", "advisors": [a.get("advisor") for a in answers]})
+        self.note(st, "advisors=%d" % len(answers))
+
+    def degraded(self, st):
+        st.degraded.append("council_failed")
+
+
 # ---------------------------------------------------------------- 6. Разум
 class Reason(Exec):
     name, budget_s = "reason", None
@@ -386,6 +444,8 @@ class Reason(Exec):
         return [{"role": "system", "content": system}] + self.history_msgs(st) + [{"role": "user", "content": st.user_content()}]
 
     async def run(self, st):
+        if st.path in ("thought", "deep", "reflex") and st.intent in ("question", "task"):
+            await Council(self.core)(st)               # ADV-06: СОВЕТ (явный arm=council или низкая уверенность); сбой не роняет ход
         if st.path in ("thought", "deep") and st.glm_state in ("up", "unknown"):
             if await self._glm(st):
                 return
@@ -550,7 +610,8 @@ class ConscienceExec(Exec):
         draft = st.draft.strip()
         if st.streamed:
             fs = self.core.conscience.review(draft, st.cctx())
-            fs = [f for f in fs if f.code in ("repeat_turns", "feeling_no_cause", "inner_echo", "unsolicited_telemetry", "template", "as_ai", "service_lines", "flattery_open")]
+            fs = [f for f in fs if f.code in ("repeat_turns", "feeling_no_cause", "inner_echo", "unsolicited_telemetry", "template", "as_ai", "service_lines", "flattery_open", "advisor_copy")
+                  or f.code.startswith("v0_")]
             if not fs or self.core.conscience.mode == "shadow":
                 st.turn.trace["conscience"]["findings"] = [f.to_dict() for f in fs]
                 st.final = draft

@@ -85,6 +85,11 @@ FEARS = {
 
 FEAR_ON, DRIVE_ON = 0.5, 0.7
 
+# Скользящие счётчики «за час» (tasks_done_1h, new_facts_1h): в tick() переводятся в ПРИРОСТ с прошлого снимка, иначе повторный снимок
+# с тем же числом утоляет влечение снова и снова (двойной счёт; найдено при сверке с единым NOX Brain). Убывание (окно сдвинулось / сброс)
+# даёт прирост 0 и новую точку отсчёта: консервативно — событие не засчитывается дважды, но и не теряется навсегда.
+COUNTERS = ("tasks_done_1h", "new_facts_1h")
+
 
 class Drives:
     def __init__(self, path=None, clock=time.time):
@@ -94,6 +99,7 @@ class Drives:
         self.fear = {k: 0.0 for k in FEARS}
         self.ts = clock()
         self.errs = {}          # тема -> последние ошибки предсказания (EMO)
+        self.counters = {}      # последний снимок скользящих счётчиков (см. COUNTERS)
         self._load()
 
     # ---- хранение ----
@@ -105,19 +111,25 @@ class Drives:
             self.fear.update({k: float(v) for k, v in d.get("fear", {}).items() if k in FEARS})
             self.ts = float(d.get("ts", self.ts))
             self.errs = {str(k): [float(x) for x in v][-20:] for k, v in d.get("errs", {}).items()}
+            self.counters = {str(k): float(v) for k, v in d.get("counters", {}).items() if k in COUNTERS}
         except (OSError, ValueError):
             pass
 
     def save(self):
         try:
-            statefile.save(self.path, {"level": self.level, "fear": self.fear, "ts": self.ts, "errs": self.errs})
+            statefile.save(self.path, {"level": self.level, "fear": self.fear, "ts": self.ts, "errs": self.errs, "counters": self.counters})
         except OSError:
             pass
 
     # ---- динамика ----
     def tick(self, signals=None, now=None):
         """Рост влечений со временем, утоление по сигналам, пересчёт страхов. -> список событий для PadState."""
-        s = signals or {}
+        s = dict(signals or {})
+        for c in COUNTERS:                                  # скользящий счётчик -> прирост (идемпотентно к повторным снимкам)
+            if s.get(c) is not None:
+                cur = float(s[c])
+                s[c] = max(0.0, cur - self.counters.get(c, 0.0))
+                self.counters[c] = cur
         now = self.clock() if now is None else now
         dh = max(0.0, (now - self.ts) / 3600.0)
         before_fear = dict(self.fear)
