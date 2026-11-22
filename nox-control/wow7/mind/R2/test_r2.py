@@ -1,5 +1,6 @@
 import json, os, sys, tempfile, time, unittest
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -11,6 +12,7 @@ import curiosity as CU
 import mind_bridge as MB_
 import sleep_feed as SF
 import gate_all as GA
+from alive.gate import ALL_ALIVE_IDS, CRITICAL_ALIVE_IDS
 import self_dev_cycle as SD
 import cycle_cli as CC
 import mind_bench as MB
@@ -422,6 +424,24 @@ class TestCycleCli(unittest.TestCase):
             base = EV.Variant(kind="prompt", payload="x")
             r = CC.run_evolve(td, loop, steps=1, kinds=("prompt",), baseline={"prompt": base})
             self.assertEqual(r["accepted"], 1)
+
+
+class TestAliveGateIntegration(unittest.TestCase):
+    def test_critical_alive_failure_rejects_final_gate_decision(self):
+        scores = {}
+        for case_id in ALL_ALIVE_IDS:
+            scores[case_id] = {
+                "pass": case_id != "AL-08",
+                "score": 1.0 if case_id in CRITICAL_ALIVE_IDS else 0.9,
+            }
+        passing_bench = {"pass": True, "decision": "accept", "reasons": [], "warnings": []}
+        with patch.object(GA.MB, "gate", return_value=passing_bench):
+            result = GA.run_gate("patch", bench_cand={"overall": 1.0},
+                                 alive_run={"scores": scores})
+        self.assertFalse(result["pass"])
+        self.assertEqual(result["decision"], "reject")
+        self.assertIn("AL-08", result["stages"]["alive"]["critical_failures"])
+        self.assertTrue(any(reason.startswith("alive:") for reason in result["reasons"]))
 
 
 if __name__ == "__main__":
