@@ -1,12 +1,14 @@
 """Focused source-only 4A02 partition provenance regressions (no native tasks)."""
 import copy
+import json
+import os
 import random
 import tempfile
 import unittest
 from pathlib import Path
 
 from owner_training_dataset_splits_4a02 import (
-    LANGUAGES, DOMAINS, SCHEMA, SplitHold, split_manifest, write_manifest,
+    LANGUAGES, DOMAINS, SCHEMA, SplitHold, main, split_manifest, write_manifest,
 )
 
 
@@ -137,6 +139,22 @@ class DatasetSplitTests(unittest.TestCase):
             other.symlink_to(destination)
             with self.assertRaisesRegex(SplitHold, "HOLD_OUTPUT_SYMLINK"):
                 write_manifest(other, output)
+
+
+    def test_cli_never_overwrites_its_input_dataset_via_inode_alias(self):
+        record = rows_fixture()[0]
+        original = json.dumps(record, ensure_ascii=False) + "\n"
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "dataset.jsonl"
+            source.write_text(original, encoding="utf-8")
+            hardlink = Path(folder) / "dataset-alias.jsonl"
+            os.link(source, hardlink)
+            for output in (source, hardlink):
+                with self.subTest(output=output.name):
+                    with self.assertRaisesRegex(SplitHold, "HOLD_INPUT_OUTPUT_ALIAS"):
+                        main(["--input", str(source), "--output", str(output)])
+                    self.assertEqual(source.read_text(encoding="utf-8"), original)
+                    self.assertEqual(hardlink.read_text(encoding="utf-8"), original)
 
 
 if __name__ == "__main__":

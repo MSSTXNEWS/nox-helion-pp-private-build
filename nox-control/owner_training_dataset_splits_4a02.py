@@ -189,6 +189,14 @@ def main(argv=None):
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--seed", default="nox-4a02-v1")
     args = parser.parse_args(argv)
+    # Never replace the source JSONL with its own output manifest.  Resolve
+    # regular paths, symlinks and hard-link aliases by inode before reading.
+    # A different existing output path keeps the current atomic replace policy.
+    try:
+        if args.input.samefile(args.output):
+            raise SplitHold("HOLD_INPUT_OUTPUT_ALIAS")
+    except FileNotFoundError:
+        pass  # A new output file has no inode alias to the existing source.
     def rows():
         with args.input.open("r", encoding="utf-8") as source:
             for line in source:
