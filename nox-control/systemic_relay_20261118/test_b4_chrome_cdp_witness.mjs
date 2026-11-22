@@ -1568,3 +1568,65 @@ test('late second HTTP ExtraInfo after body ACK revokes stream proof, first turn
   assert.equal(beyond,1);
   assert.equal(JSON.stringify(limited),sealed);
 });
+
+test('second responseReceived replay after body ACK fails closed without first-turn contamination',async()=>{
+  const firstKeys=['cdp_request_id','request_sha256','cdp_decoded_body_sha256',
+    'cdp_streamed_body_sha256','visible_text_sha256','ttft_ms','sse_done_ms',
+    'stream_timing_complete'];
+  const control=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(control.cdp_consistent,true);
+  assert.equal(control.ttft_sse_verified,true);
+  // A duplicate responseReceived after loadingFinished and successful body ACK
+  // cannot re-certify the same response, regardless of its reported status.
+  for(const [name,response] of [
+    ['identical',{status:200,mimeType:'text/event-stream',url:'http://localhost/api/nox/chat',headers:{}}],
+    ['contradictory-status',{status:503,mimeType:'text/event-stream',url:'http://localhost/api/nox/chat',headers:{}}],
+    ['contradictory-encoding',{status:200,mimeType:'text/event-stream',url:'http://localhost/api/nox/chat',headers:{'Content-Encoding':'gzip'}}],
+    ['cached-replay',{status:200,mimeType:'text/event-stream',url:'http://localhost/api/nox/chat',headers:{},fromDiskCache:true}]
+  ]){
+    let delivered=0;
+    const result=await run(false,null,null,null,{
+      quiescenceMs:80,
+      postAckEvent:session=>{
+        delivered++;
+        session.emit('Network.responseReceived',{
+          requestId:'2',timestamp:101.03,frameId:'fixture-frame',
+          loaderId:'fixture-loader',response,hasExtraInfo:false});
+      }
+    });
+    assert.equal(delivered,1,name+' replay must be observed during quiescence');
+    assert.equal(result.cdp_consistent,false,name+' cannot keep cdp_consistent');
+    assert.equal(result.ttft_sse_verified,false,name);
+    assert.deepEqual(result.turns.map(t=>t.cdp_request_id),['1','2']);
+    for(const key of firstKeys)
+      assert.deepEqual(result.turns[0][key],control.turns[0][key],name+' first '+key);
+    assert.equal(result.turns[1].request_sha256,control.turns[1].request_sha256);
+    assert.equal(result.turns[1].cdp_streamed_body_sha256,
+      control.turns[1].cdp_streamed_body_sha256);
+    assert.equal(result.turns[1].cdp_decoded_body_matches_stream,false,name);
+    assert.equal(result.turns[1].ttft_ms,null,name);
+    assert.equal(result.turns[1].sse_done_ms,null,name);
+    assert.equal(result.turns[1].visible_text_sha256,null,name);
+    assert.equal(result.turns[1].stream_timing_complete,false,name);
+    assert.doesNotMatch(JSON.stringify(result),/secret|Hello|data:/);
+  }
+  // An event outside the finite observer window is not retrospectively attested.
+  let beyond=0;
+  const boundary=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      beyond++;
+      session.emit('Network.responseReceived',{
+        requestId:'2',timestamp:101.03,frameId:'fixture-frame',
+        loaderId:'fixture-loader',hasExtraInfo:false,
+        response:{status:503,mimeType:'text/event-stream',
+          url:'http://localhost/api/nox/chat',headers:{}}});
+    },90)
+  });
+  assert.equal(boundary.cdp_consistent,true);
+  assert.equal(beyond,0);
+  const sealed=JSON.stringify(boundary);
+  await new Promise(resolve=>setTimeout(resolve,110));
+  assert.equal(beyond,1);
+  assert.equal(JSON.stringify(boundary),sealed);
+});
