@@ -1,0 +1,27 @@
+name: NOX A6 3A04 self-model source truth
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/bridge/nox_soul.py'
+      - 'nox-control/bridge/test_soul_self_state.py'
+      - '.github/workflows/nox-a6-3a04-self-state.yml'
+permissions:
+  contents: read
+jobs:
+  self-model-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: One isolated source regression (no host/model)
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/bridge/nox_soul.py nox-control/bridge/test_soul_self_state.py
+          python3 -m unittest discover -s nox-control/bridge -p test_soul_self_state.py -v
+          echo "SOURCE_ONLY=true NATIVE_ACCEPTED=false"
