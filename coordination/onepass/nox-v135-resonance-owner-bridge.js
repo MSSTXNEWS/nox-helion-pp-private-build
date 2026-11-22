@@ -374,7 +374,7 @@
  (url.pathname==='/api/nox/dialogs/new'&&method!=='POST')||
  (url.pathname==='/api/nox/dialog/rename'&&method!=='POST'))
  return Promise.resolve(errorResponse('HOLD_OWNER_ROUTE_ALIAS',422));
- if(input instanceof Request&&!init?.body){
+ if(input instanceof Request&&init?.body===undefined){
    const bridged=(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search)||
      (url.pathname==='/api/nox/history'&&method==='GET')||
      (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
