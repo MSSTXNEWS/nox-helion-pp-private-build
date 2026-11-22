@@ -513,6 +513,9 @@ class FactReceiptTest(unittest.TestCase):
         for complete, status, finish_reason, error_event, after_done, expected_ok in (
             (False, 200, None, False, None, False),
             (True, 503, None, False, None, False),
+            (True, 429, None, False, None, False),
+            (True, 502, None, False, None, False),
+            (True, 504, None, False, None, False),
             (True, 200, "length", False, None, False),
             (True, 200, None, True, None, False),
             # [DONE] with visible content but no model stop finish is incomplete.
@@ -558,6 +561,10 @@ class FactReceiptTest(unittest.TestCase):
                     self.assertEqual(terminal, [])
                     self.assertEqual(frames[-1]["status"], "HOLD")
                     self.assertEqual(frames[-1]["reason"], "MODEL_STREAM_INCOMPLETE")
+                    if status != 200:
+                        expected = {429: "UPSTREAM_RATE_LIMIT", 502: "UPSTREAM_GATEWAY",
+                                    503: "UPSTREAM_UNAVAILABLE", 504: "UPSTREAM_TIMEOUT"}
+                        self.assertEqual(frames[-1]["upstream_hold_code"], expected[status])
                     self.assertFalse(frames[-1]["done"])
                     self.assertEqual(frames[-1]["completion_receipt"]["status"], "HOLD")
                     self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "SKIPPED")

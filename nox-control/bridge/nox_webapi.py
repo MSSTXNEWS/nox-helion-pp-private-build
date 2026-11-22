@@ -1011,6 +1011,14 @@ def install(app, B):
                     if True:
                         async with B.hc().stream("POST", B.MODEL, json=body) as r:
                             if r.status_code != 200:
+                                # Do not replay an uncertain model POST. Expose only a
+                                # bounded HTTP category, never upstream body or secrets.
+                                upstream_failure = {
+                                    401: "UPSTREAM_AUTH", 403: "UPSTREAM_AUTH",
+                                    408: "UPSTREAM_TIMEOUT", 429: "UPSTREAM_RATE_LIMIT",
+                                    502: "UPSTREAM_GATEWAY", 503: "UPSTREAM_UNAVAILABLE",
+                                    504: "UPSTREAM_TIMEOUT",
+                                }.get(r.status_code, "UPSTREAM_HTTP_NON_200")
                                 raise RuntimeError("UPSTREAM_HTTP_NON_200")
                             async for line in _bounded_upstream_sse_lines(r):
                                 if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
@@ -1113,6 +1121,8 @@ def install(app, B):
                     # Error frames must share the same sequence as all prior
                     # tokens/status frames, so clients can detect a lost final event.
                     yield fr(status="HOLD", reason="MODEL_STREAM_INCOMPLETE",
+                             # Legacy reason remains stable for existing clients.
+                             upstream_hold_code=upstream_failure or "UPSTREAM_NOT_COMPLETE",
                              error="ответ модели не завершён — можно повторить запрос",
                              done=False,
                              memory_history={"status": "HOLD", "reason": "UPSTREAM_NOT_COMPLETE", "s03_readback_verified": False},
