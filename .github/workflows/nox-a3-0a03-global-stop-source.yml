@@ -6,11 +6,15 @@ on:
     paths:
       - nox-control/bridge/nox_webapi.py
       - nox-control/bridge/test_webapi_s03_receipt.py
+      - coordination/onepass/nox-v135-resonance-owner-bridge.js
+      - coordination/onepass/test_v135_resonance_owner_bridge.cjs
       - .github/workflows/nox-a3-0a03-global-stop-source.yml
   pull_request:
     paths:
       - nox-control/bridge/nox_webapi.py
       - nox-control/bridge/test_webapi_s03_receipt.py
+      - coordination/onepass/nox-v135-resonance-owner-bridge.js
+      - coordination/onepass/test_v135_resonance_owner_bridge.cjs
       - .github/workflows/nox-a3-0a03-global-stop-source.yml
 permissions:
   contents: read
@@ -31,3 +35,16 @@ jobs:
         run: |
           set -euo pipefail
           python -B -m unittest discover -s nox-control/bridge -p test_webapi_s03_receipt.py -v
+
+  browser-s03-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: One native-bridge browser S03 history integrity regression
+        run: node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
