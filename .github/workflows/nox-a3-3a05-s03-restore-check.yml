@@ -1,0 +1,22 @@
+name: NOX A3 3A05 S03 restore source gate
+on:
+  pull_request:
+    paths:
+      - 'nox-control/qs6/backup_memory.py'
+      - 'nox-control/qs6/test_qs6_backup.py'
+      - '.github/workflows/nox-a3-3a05-s03-restore-check.yml'
+permissions:
+  contents: read
+jobs:
+  restore-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: One real S03 backup/restore regression
+        run: python -B nox-control/qs6/test_qs6_backup.py
