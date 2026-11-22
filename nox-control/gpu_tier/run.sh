@@ -160,5 +160,16 @@ diag)
   nvidia-smi --query-gpu=utilization.gpu,clocks.sm,pcie.link.gen.current,pcie.link.width.current --format=csv,noheader
   grep -E "n_threads|threadpool|cpu_moe|op_offload|offload" /root/nox/logs/glm_server.log | cut -c1-160 | head -5
   ;;
+ab)
+  A="$(gh_raw GLM_ARGS)"; echo "args: $A"; echo "$A" > /root/nox/gpu_tier/glm.args
+  sed -i 's/\*70/*35/' /root/nox/gpu_tier/bench_glm.py
+  pkill -f bench_glm; : > /root/nox/logs/glm_server.log
+  nohup setsid /root/nox/gpu_tier/glm_start.sh > /dev/null 2>&1 < /dev/null &
+  for i in $(seq 1 60); do curl -s -m2 localhost:8081/health | grep -q ok && break; sleep 3; done
+  curl -s -m2 localhost:8081/health; echo; nvidia-smi --query-gpu=memory.used --format=csv,noheader
+  nohup setsid python3 /root/nox/gpu_tier/bench_glm.py > /root/nox/logs/glm_bench.out 2>&1 < /dev/null &
+  for i in $(seq 1 60); do grep -q "^long" /root/nox/logs/glm_bench.out && break; sleep 3; done
+  cat /root/nox/logs/glm_bench.out
+  ;;
 *) echo unknown;;
 esac
