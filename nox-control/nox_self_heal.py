@@ -6,6 +6,7 @@ import argparse
 import datetime as datetime
 import fcntl
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -130,6 +131,60 @@ def _unit_confirmed_inactive(service):
         return False
 
 
+def _reject_repair_state_duplicate_keys(pairs):
+    """A later JSON key may not erase prior restart attempts or failure counts."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate repair state JSON key")
+        result[key] = value
+    return result
+
+
+def _read_repair_state_checked(path):
+    """An invalid EXISTING state must not silently reset restart safety budgets.
+
+    A missing state is valid for first boot. A corrupt one requires an owner
+    repair; preserve its original bytes, do not probe or restart anything.
+    """
+    try:
+        raw = path.read_text(encoding="utf8")
+    except FileNotFoundError:
+        if path.is_symlink():  # broken symlink is not an absent trusted state
+            raise ValueError("invalid repair state symlink") from None
+        return {}
+    except (OSError, UnicodeError):
+        raise ValueError("unreadable repair state") from None
+    try:
+        state = json.loads(raw, object_pairs_hook=_reject_repair_state_duplicate_keys)
+    except (ValueError, TypeError):
+        raise ValueError("invalid repair state JSON") from None
+    if not isinstance(state, dict):
+        raise ValueError("invalid repair state object")
+    services = state.get("services", {})
+    if not isinstance(services, dict):
+        raise ValueError("invalid repair service records")
+    for unit, entry in services.items():
+        if not isinstance(unit, str) or not isinstance(entry, dict):
+            raise ValueError("invalid repair service entry")
+        failures = entry.get("failures")
+        attempts = entry.get("attempts")
+        if type(failures) is not int or not 0 <= failures <= 1000000000:
+            raise ValueError("invalid repair failure counter")
+        if not isinstance(attempts, list) or len(attempts) > 10000:
+            raise ValueError("invalid repair attempt list")
+        for timestamp in attempts:
+            if type(timestamp) not in (int, float):
+                raise ValueError("invalid repair attempt timestamp")
+            try:
+                valid = math.isfinite(timestamp) and 0 <= timestamp <= 1e12
+            except (OverflowError, ValueError):
+                valid = False
+            if not valid:
+                raise ValueError("invalid repair attempt timestamp")
+    return state
+
+
 def repair_cycle(policy, state_path, dry_run=False):
     """Run one repair observation under an exclusive, nonblocking state lease.
 
@@ -158,7 +213,15 @@ def repair_cycle(policy, state_path, dry_run=False):
 
 
 def _repair_cycle_locked(policy, state_path, dry_run=False):
-    state = load(state_path)
+    try:
+        state = _read_repair_state_checked(state_path)
+    except ValueError:
+        # Preserve bad state for owner recovery. Never reset counters or
+        # restart from a fabricated empty state; no file write on this path.
+        return [{"unit": service["unit"], "healthy_before": None,
+                 "action": "state_invalid_hold",
+                 "question": "Restore reviewed repair-state bytes before retry."}
+                for service in policy["services"]]
     services = state.setdefault("services", {})
     if not isinstance(services, dict):
         services = state["services"] = {}
