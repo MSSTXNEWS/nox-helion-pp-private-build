@@ -2,8 +2,9 @@
 # Загрузка блока 1 (D01-01..20) на сервер и запуск по режиму из MODE: dry | check | run | status
 R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/block1
 mkdir -p /root/nox/scripts /root/nox/logs /root/nox/receipts
-curl -fsSL "$R/NOX_BLOCK1.tgz" -o /tmp/b1.tgz && tar xzf /tmp/b1.tgz -C /root/nox/ || { echo "download/extract failed"; exit 1; }
-MODE="$(curl -fsSL "$R/MODE?t=$RANDOM" | tr -d '[:space:]')"
+A=https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/contents/nox-control/block1
+curl -fsSL -H "Accept: application/vnd.github.raw" "$A/NOX_BLOCK1.tgz?ref=main" -o /tmp/b1.tgz && tar xzf /tmp/b1.tgz -C /root/nox/ || { echo "download/extract failed"; exit 1; }
+MODE="$(curl -fsSL -H "Accept: application/vnd.github.raw" "$A/MODE?ref=main" | tr -d '[:space:]')"
 chmod +x /root/nox/scripts/*.sh /root/nox/scripts/lib/*.sh 2>/dev/null
 [ -f /root/nox/nox.env ] || printf 'NOX_SERVER=S1\nNOX_S1_SSH="-p 62281 root@174.88.252.223"\n' > /root/nox/nox.env
 SRV=S1; nvidia-smi -L 2>/dev/null | grep -q V100 && SRV=S2
@@ -30,5 +31,23 @@ case "$MODE" in
   stopik) for p in $(pgrep -f "ik_llama/build/bin/llama-server"); do echo "kill $p"; kill "$p"; done; for i in 1 2 3 4 5 6 7 8 9 10 11 12; do pgrep -f "ik_llama/build/bin/llama-server" >/dev/null || break; sleep 5; done; echo "--after:"; pgrep -af "llama-server" | cut -c1-120; curl -s -m3 -o /dev/null -w "8081=%{http_code}\n" http://127.0.0.1:8081/health; nvidia-smi --query-gpu=memory.used --format=csv,noheader;;
   s1state) echo "--shards shm:"; ls -la /dev/shm/nox_glm 2>/dev/null | tail -14; echo "--disk:"; ls -la /root/nox/glm53_disk 2>/dev/null | tail -4; echo "--procs:"; pgrep -af "llama-server|glm_redo|aria2|hf_transfer|curl.*gguf|nox" | cut -c1-140 | head -12; echo "--health:"; curl -s -m3 http://127.0.0.1:8081/health; echo; curl -s -m3 http://127.0.0.1:8082/health | head -c 200; echo; tail -n 6 /root/nox/logs/glm_server.log 2>/dev/null | cut -c1-160; tail -n 4 /root/nox/logs/glm_redo*.log 2>/dev/null | cut -c1-160; free -g | head -2; cat /root/nox/run/server_probe.json 2>/dev/null | head -c 200;;
   gpu) curl -fsSL -H "Accept: application/vnd.github.raw" "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/contents/nox-control/gpu_tier/run.sh?ref=main" -o /tmp/gpu_run.sh && bash /tmp/gpu_run.sh 2>&1 | tail -c 2900;;
+  pareto_probe) echo "--receipts:"; ls /root/nox/receipts | wc -l; ls /root/nox/receipts | tr '\n' ' ' | cut -c1-600; echo; echo "--state:"; ls /root/nox/state 2>/dev/null | head; echo "--stop:"; ls /run/nox 2>/dev/null | head -5; echo "--ports:"; ss -ltn 2>/dev/null | awk 'NR>1{print $4}' | sed 's/.*://' | sort -un | tr '\n' ' '; echo; free -g | sed -n 2p; df -h / | tail -1; uptime; nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader; ls /root/nox/scripts | wc -l; ls /root/nox/scripts/lib/pareto_run.py;;
+  pareto_run) NOX_ONLY_UNSET=1; nohup setsid nice -n 19 python3 -I /root/nox/scripts/lib/pareto_run.py > /root/nox/logs/pareto_run.log 2>&1 < /dev/null & sleep 60; tail -c 2600 /root/nox/logs/pareto_run.log;;
+  pareto_status) pgrep -f pareto_run.py >/dev/null && echo RUNNING || echo DONE; tail -n 25 /root/nox/logs/pareto_run.log | cut -c1-170 | tail -c 2700;;
+  pareto_table) python3 -I /root/nox/scripts/lib/pareto_run.py summary 2>&1 | tail -c 1200; python3 -I - <<'PY'
+import json,collections
+s=json.load(open('/root/nox/state/PARETO_STATUS.json'));c=collections.Counter()
+for v in s.values():
+    c[(v['status'],v['reason'][:70])]+=1
+for k,n in c.most_common(18): print(n,k)
+PY
+  ;;
+  pareto_fail) python3 -I - <<'PY'
+import json
+s=json.load(open('/root/nox/state/PARETO_STATUS.json'))
+for k,v in s.items():
+    if v['status'] in('FAIL','PASS'): print(k,v['status'],v['reason'][:130])
+PY
+  ;;
   *) echo "unknown mode $MODE";;
 esac
