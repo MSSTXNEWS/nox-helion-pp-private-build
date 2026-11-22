@@ -142,6 +142,15 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         # advisor does not schedule or resume training.
         resume_evidence_ok = (
             onehost.get("healthy") is True
+            # First live chat outranks a merely cached training-resume flag.
+            # Unverified/waiting chat or stale/over-budget p95 is a HOLD.
+            and onehost.get("chat_waiting") is False
+            and _finite_nonnegative(onehost.get("chat_p95_ms"))
+            and _finite_nonnegative(onehost.get("chat_budget_ms"))
+            and onehost["chat_budget_ms"] > 0
+            and onehost["chat_p95_ms"] < onehost["chat_budget_ms"]
+            and _finite_nonnegative(onehost.get("chat_metrics_age_sec"))
+            and onehost["chat_metrics_age_sec"] <= 30
             and s03.get("readback_verified") is True
             and trainer.get("checkpoint_recent") is True
             and gpu.get("temperature_sensor_valid") is True
@@ -171,8 +180,9 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             add("TRAIN_RESUME_OWNER_HOLD", "hold",
                 "Cached ready_for_resume is not training admission. Require "
                 "independent current owner attestation, verified S03/checkpoint, "
-                "SAFE70 sensor, disk and >=2 GiB cgroup headroom, idle claims and "
-                "maintenance clearance; do not enqueue or resume.")
+                "SAFE70 sensor, disk, fresh under-budget idle chat, and >=2 GiB "
+                "cgroup headroom, idle claims and maintenance clearance; "
+                "do not enqueue or resume.")
     if onehost.get("chat_waiting") is True and trainer.get("running") is True:
         add("CHAT_PRIORITY", "optimize", "Request cooperative trainer yield at next safe checkpoint; do not kill process.")
     if trainer.get("running") is True:
