@@ -2044,19 +2044,16 @@ class ProbeTests(unittest.TestCase):
                     {'type': 'done', container: {'model': 'GLM-5.3'}}, 'GLM-5.3'),
                     'GLM-5.3')
                 with self.assertRaisesRegex(
-                        RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT    unittest.main()
-):
+                        RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
                     probe.require_stream_model_identity(
                         {'type': 'status', 'model': 'GLM-5.3',
                          container: {'model_id': 'other'}}, None)
                 with self.assertRaisesRegex(
-                        RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT    unittest.main()
-):
+                        RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
                     probe.require_stream_model_identity(
                         {'type': 'meta', container: {'model': 'other'}}, 'GLM-5.3')
                 with self.assertRaisesRegex(
-                        RuntimeError, '^HOLD_STREAM_MODEL_IDENTITY_INVALID    unittest.main()
-):
+                        RuntimeError, '^HOLD_STREAM_MODEL_IDENTITY_INVALID$'):
                     probe.require_stream_model_identity(
                         {'type': 'status', container: {'model': True}}, None)
 
@@ -2065,7 +2062,7 @@ class ProbeTests(unittest.TestCase):
             def __init__(self, frames):
                 self.frames, self.closed = frames, False
             def __iter__(self):
-                return iter(json.dumps(frame).encode() + b'\\n' for frame in self.frames)
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
             def close(self):
                 self.closed = True
 
@@ -2085,8 +2082,7 @@ class ProbeTests(unittest.TestCase):
             {'type': 'status', 'metadata': {'model': 'different'}},
             {'type': 'delta', 'text': '323'}, done])
         with patch.object(probe, 'request', return_value=poisoned):
-            with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT    unittest.main()
-):
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
                 probe.consume_turn(object(), 'synthetic', did)
         self.assertTrue(poisoned.closed)
         unlabeled = Response([{'type': 'delta', 'text': '323'}, done])
