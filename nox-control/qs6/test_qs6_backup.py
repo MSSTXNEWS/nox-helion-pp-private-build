@@ -59,6 +59,19 @@ class BackupT(unittest.TestCase):
         self.assertEqual(len(B.list_backups(self.bdir)), 1)
         self.assertFalse(any(n.endswith(".tmp") for n in os.listdir(self.bdir)))
 
+    def test_foreign_stale_temp_file_is_never_deleted_on_hold(self):
+        now = 1_700_000_000
+        good = B.backup(self.db, self.bdir, now=now)
+        # Derive the exact expected next name using the actual timestamp.
+        stamp = B.time.strftime("%Y%m%d-%H%M%S", B.time.gmtime(now))
+        colliding = os.path.join(self.bdir, ".memory-" + stamp + "-1.sqlite3.tmp")
+        with open(colliding, "wb") as f:
+            f.write(b"previous process recovery marker")
+        with self.assertRaisesRegex(RuntimeError, "HOLD"):
+            B.backup(self.db, self.bdir, now=now)
+        self.assertEqual(open(colliding, "rb").read(), b"previous process recovery marker")
+        self.assertTrue(B.verify(good["path"])[0])
+
     def test_backup_while_open_for_write(self):
         s = Store(self.db)
         s.add_fact("Ещё факт")
