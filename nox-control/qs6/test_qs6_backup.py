@@ -30,6 +30,48 @@ class BackupT(unittest.TestCase):
         self.assertTrue(ok, msg)
         self.assertEqual(r["counts"]["mem_facts"], 1)
 
+    def test_backup_same_timestamp_never_overwrites_previous_copy(self):
+        """Both repeated and concurrent-name collisions preserve the first copy."""
+        now = 1_700_000_000.125
+        first = B.backup(self.db, self.bdir, keep=5, now=now)
+        first_bytes = open(first["path"], "rb").read()
+        first_meta = open(first["path"] + ".json", "rb").read()
+        s = Store(self.db)
+        s.add_fact("Более новое содержимое")
+        s.close()
+        second = B.backup(self.db, self.bdir, keep=5, now=now)
+        third = B.backup(self.db, self.bdir, keep=5, now=now)
+        self.assertEqual(len({first["file"], second["file"], third["file"]}), 3)
+        self.assertEqual(open(first["path"], "rb").read(), first_bytes)
+        self.assertEqual(open(first["path"] + ".json", "rb").read(), first_meta)
+        for r in (first, second, third):
+            self.assertTrue(B.verify(r["path"])[0])
+        self.assertEqual(B.counts(first["path"])["mem_facts"], 1)
+        self.assertEqual(B.counts(second["path"])["mem_facts"], 2)
+
+    def test_failed_backup_cleans_own_reservation_only(self):
+        from unittest.mock import patch
+        good = B.backup(self.db, self.bdir, now=1_700_000_000)
+        with patch.object(B, "integrity", side_effect=RuntimeError("injected backup error")):
+            with self.assertRaisesRegex(RuntimeError, "injected backup error"):
+                B.backup(self.db, self.bdir, now=1_700_000_000)
+        self.assertTrue(B.verify(good["path"])[0])
+        self.assertEqual(len(B.list_backups(self.bdir)), 1)
+        self.assertFalse(any(n.endswith(".tmp") for n in os.listdir(self.bdir)))
+
+    def test_foreign_stale_temp_file_is_never_deleted_on_hold(self):
+        now = 1_700_000_000
+        good = B.backup(self.db, self.bdir, now=now)
+        # Derive the exact expected next name using the actual timestamp.
+        stamp = B.time.strftime("%Y%m%d-%H%M%S", B.time.gmtime(now))
+        colliding = os.path.join(self.bdir, ".memory-" + stamp + "-1.sqlite3.tmp")
+        with open(colliding, "wb") as f:
+            f.write(b"previous process recovery marker")
+        with self.assertRaisesRegex(RuntimeError, "HOLD"):
+            B.backup(self.db, self.bdir, now=now)
+        self.assertEqual(open(colliding, "rb").read(), b"previous process recovery marker")
+        self.assertTrue(B.verify(good["path"])[0])
+
     def test_backup_while_open_for_write(self):
         s = Store(self.db)
         s.add_fact("Ещё факт")
