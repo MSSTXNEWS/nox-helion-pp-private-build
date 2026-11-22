@@ -1521,6 +1521,52 @@ def main():
           return await one('stop')&&await one('invalid')&&
             await one('complete');
         }'''))
+        # EventSource event names may drop one ASCII space, not arbitrary
+        # whitespace. Reject delta-like aliases and duplicate event fields
+        # before UI onDelta. The other names are not projected as deltas.
+        check('SSE event-type exactness prevents alias projection and repost', page.evaluate('''async () => {
+          const variants=[
+            ['canonical-space','event: delta','STREAM_ENDED_READBACK_REQUIRED',1],
+            ['canonical-tight','event:delta','STREAM_ENDED_READBACK_REQUIRED',1],
+            ['trailing-space','event: delta ','HOLD_STREAM_EVENT_TYPE',0],
+            ['double-leading','event:  delta','HOLD_STREAM_EVENT_TYPE',0],
+            ['leading-tab','event:\\tdelta','HOLD_STREAM_EVENT_TYPE',0],
+            ['duplicate','event: delta\\nevent: heartbeat','HOLD_STREAM_EVENT_TYPE',0],
+            ['other-name','event: heartbeat','STREAM_ENDED_READBACK_REQUIRED',0]
+          ];
+          for(const [name,eventWire,expected,expectedDeltas] of variants){
+            const scope={conversation_id:'event-wire',exchange_id:name};
+            let posts=0,acks=0,deltas=0;
+            const bytes=new TextEncoder().encode(
+              'id: ev-1\\n'+eventWire+'\\ndata: HELLO\\n\\n');
+            const transport={...opts.transport,
+              async post(){
+                posts++;
+                return {ok:true,body:new ReadableStream({start(c){
+                  c.enqueue(bytes);c.close();
+                }})};
+              },
+              async ack(){acks++;return true}
+            };
+            const ui={
+              async onDelta(_s,value,signal,id){
+                if(signal.aborted||value!=='HELLO'||id!=='ev-1')
+                  throw Error('bad delta');
+                deltas++;
+              },
+              async upsertTerminal(){throw Error('no terminal')}
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:3000
+            });
+            const result=await client.begin(scope).then(v=>v,e=>e.code);
+            const noRepost=await client.begin(scope).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(result!==expected||posts!==1||acks!==0||
+               deltas!==expectedDeltas||!noRepost)return false;
+          }
+          return true;
+        }'''))
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
