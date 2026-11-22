@@ -837,6 +837,33 @@ def main():
             deltas.length===1 && deltas[0][0]===' indented  \\n spaced  ' &&
             deltas[0][1]==='space-123';
         }'''))
+        # A successful HTTP response may synchronously throw on reader
+        # acquisition; its otherwise unlocked body must not leak after HOLD.
+        check('getReader acquisition throws: cancel abandoned body and fence POST', page.evaluate('''async () => {
+          const s={conversation_id:'reader-throw',exchange_id:'r23'};
+          let posts=0,acks=0,deltas=0,cancels=0,readCalls=0;
+          const body={
+            getReader(){readCalls++;throw new Error('reader acquisition failed')},
+            cancel(){cancels++;return Promise.resolve()}
+          };
+          const transport={...opts.transport,
+            async post(){posts++;return {ok:true,body}},
+            async ack(){acks++;return true}
+          };
+          const c=NOXB1StreamReconnect.createClient({
+            transport,
+            host:{...opts.host,async readCommitted(){return null}},
+            bridge:opts.bridge,
+            ui:{async onDelta(){deltas++},async upsertTerminal(){return true}},
+            timeoutMs:2000
+          });
+          const code=await c.begin(s).then(x=>x,e=>e.code);
+          const noRepost=await c.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return code==='HOLD_STREAM_POST_OR_READ'&&
+            posts===1&&acks===0&&deltas===0&&cancels===1&&
+            readCalls===1&&noRepost;
+        }'''))
         # A failed HTTP response may still own an open SSE socket. Malformed
         # response bodies must be discarded before a fail-closed HOLD.
         check('rejected POST response releases body without repost or ACK', page.evaluate('''async () => {

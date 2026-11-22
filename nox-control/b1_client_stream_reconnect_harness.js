@@ -155,7 +155,15 @@
         }
         // Never silently replace malformed/incomplete UTF-8 with U+FFFD in
         // a model delta. An ambiguous stream must recover from canonical GET.
-        reader=res.body.getReader();
+        // Even an HTTP-OK stream can throw while acquiring its reader. An
+        // unclaimed body must be released before a fail-closed HOLD; never
+        // retry the model POST or admit late SSE deltas/ACK.
+        try{
+          reader=res.body.getReader();
+        }catch(_){
+          cancelAbandonedPost(res);
+          hold('HOLD_STREAM_POST_OR_READ');
+        }
         const decoder=new TextDecoder('utf-8',{fatal:true});
         let buf='',swallowNextLF=false;
         while(true){
