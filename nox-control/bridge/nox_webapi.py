@@ -785,6 +785,20 @@ def install(app, B):
                          nox_event={"step": "memory", "text": ("найдено %d фрагм. памяти" % len(lines)) if lines else ("память не использовалась" if not use_mem else "в памяти ничего близкого")})
                 extra, plan, rem = "", [], None
                 if W and not eph:
+                    # STOP may arrive on the memory/source SSE frame. A reminder
+                    # is a persistent side effect: never create one for a request
+                    # already cancelled before this point.
+                    if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                        CANCEL.discard(rid)
+                        yield fr(message={"role": "assistant", "content": ""}, done=True,
+                                 done_reason="stopped",
+                                 completion_receipt={"status": "STOPPED", "request_id": rid,
+                                                     "upstream_done": False},
+                                 memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                       "s03_readback_verified": False},
+                                 memory_history={"status": "SKIPPED", "reason": "USER_STOP",
+                                                 "s03_readback_verified": False})
+                        return
                     try: rem = W.maybe_reminder(user, "mini" if mini else "chat")
                     except Exception: rem = None
                     if rem:
