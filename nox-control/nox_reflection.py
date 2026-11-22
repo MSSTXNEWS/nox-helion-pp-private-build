@@ -129,13 +129,18 @@ def _https_reference(value: Any, field: str) -> str:
     # Query/fragment are discarded below; a credential hidden inside the
     # retained path (including URL-encoded spelling) must fail closed.
     decoded = parts.path
-    for _ in range(3):
+    # Percent-encoding can be nested more than three layers. Unwrap until
+    # stable, with a hard limit: excessive nesting is rejected rather than
+    # publishing a still-obfuscated credential-like URL path.
+    for _ in range(32):
         if SECRET_PATTERN.search(decoded):
             raise ReflectionError(f"{field} contains credential-like path material")
         newer = unquote(decoded)
         if newer == decoded:
             break
         decoded = newer
+    else:
+        raise ReflectionError(f"{field} contains excessive nested URL encoding")
     if SECRET_PATTERN.search(decoded):
         raise ReflectionError(f"{field} contains credential-like path material")
     return urlunsplit(("https", host, parts.path or "/", "", ""))
