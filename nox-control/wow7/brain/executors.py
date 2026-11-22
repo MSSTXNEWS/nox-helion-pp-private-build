@@ -2,6 +2,7 @@
 Обёртка меряет мс, ловит таймаут/исключение (орган не роняет ход), пишет запись в трассу хода."""
 import asyncio
 import json
+import os
 import re
 import time
 
@@ -23,8 +24,8 @@ except Exception:        # RTE недоступен - минимальные з�
     def _canned(text):
         return "Принял, мессир, секунду."
 
-INTRO_BANK = ("Слышу вас, мессир, сейчас отвечу.", "Принял, мессир, секунду.", "Понял, мессир, собираюсь с мыслями.",
-              "Хороший вопрос, мессир, сейчас разберу.", "Принял, мессир, берусь за дело.")
+INTRO_BANK = ("Мессир, мне нужно чуть больше времени.", "Мессир, ответ задерживается — проверяю его.",
+              "Мессир, я ещё собираю факты.", "Мессир, потребуется немного времени.")
 INTRO_NOTE = "\n\n[Мессиру уже показана короткая фраза-отклик. Не начинай с подтверждения и приветствия, сразу к содержанию ответа.]"
 
 GREET = re.compile(r"^\W*(привет\w*|здравствуй\w*|добр\w+ (?:день|вечер|утро|ночи)|хай|салют|приветствую)\W*$", re.I)
@@ -99,6 +100,8 @@ class State:
         self.messages_extra = None
         self.council = False
         self.advice, self.advisors = "", []        # ADV-06: compose_prompt советников и их тексты (для детектора advisor_copy)
+        self.reply_settings = {"max_tokens": 1500, "mode": "auto"}
+        self.first_visible_token = asyncio.Event()
 
     @property
     def prev(self):
@@ -144,8 +147,23 @@ class Perception(Exec):
     async def run(self, st):
         t = st.user_text.strip()
         conv = st.conv
+        try:
+            from actions import AnswerSettings
+            settings_request = AnswerSettings.is_request(t)
+        except Exception:
+            settings_request = False
         st.lang = "ru" if re.search(r"[а-яё]", t, re.I) else ("en" if re.search(r"[a-z]", t, re.I) else "ru")
         st.speaker = st.opts.get("speaker") or self.core.cfg.default_speaker
+        try:
+            from actions import AnswerSettings
+            st.reply_settings, _ = AnswerSettings(self.core).get(st.speaker)
+        except Exception:
+            st.reply_settings = {"max_tokens": 1500, "mode": "auto"}
+        st.opts = dict(st.opts or {})
+        if st.opts.get("mode") in (None, "", "auto"):
+            st.opts["mode"] = st.reply_settings.get("mode", "auto")
+        if st.opts.get("max_tokens") is None:
+            st.opts["max_tokens"] = st.reply_settings.get("max_tokens", 1500)
         st.emotion = "irritated" if ANGER.search(t) else ("warm" if JOY.search(t) else "neutral")
         st.hint = {"fast": "reflex", "deep": "thought", "max": "deep"}.get(st.opts.get("mode"))
         if FAST_KW.search(t):
@@ -171,6 +189,8 @@ class Perception(Exec):
             st.intent = "smalltalk"
         elif C.is_status_question(t) and len(t.split()) <= 12:
             st.intent = "telemetry_q"
+        elif settings_request:
+            st.intent = "answer_settings"
         elif TASK_RE.match(t):
             st.intent = "task"
         else:
@@ -280,7 +300,7 @@ class Decider(Exec):
                     st.turn.trace["telemetry"] = "real"
             except Exception:
                 pass
-        if it in ("delete_history", "undo", "confirm", "deny"):
+        if it in ("delete_history", "undo", "confirm", "deny", "answer_settings"):
             st.path = "action"
             return
         if it in ("greeting", "smalltalk"):
@@ -361,6 +381,18 @@ class Intuition(Exec):
         return INTRO_BANK[len(st.prev) % len(INTRO_BANK)]
 
     async def run(self, st):
+        # Intro is off by default. When enabled, it is temporary and shown only if no answer token arrives in 4 s.
+        if os.environ.get("RTE_INTRO", "0").strip().lower() not in ("1", "true", "yes", "on"):
+            self.note(st, "disabled")
+            return
+        try:
+            await asyncio.wait_for(st.first_visible_token.wait(), timeout=4.0)
+            self.note(st, "skipped:first_token<=4s")
+            return
+        except asyncio.TimeoutError:
+            if st.draft.strip() or st.turn.parts or st.turn.stop_requested:
+                self.note(st, "skipped:answer_started")
+                return
         text, src = None, "canned"
         if INTRO_SYSTEM and intro_safe:
             k = kind_of(st.user_text)
@@ -378,6 +410,7 @@ class Intuition(Exec):
                 pass
         st.intro_text = text or self.pick(st)
         self.note(st, src)
+        st.turn.trace["intro_text"] = st.intro_text
         await st.turn.emit_text(st.intro_text + "\n\n")
         st.turn.emit_meta("phase", {"phase": "intro", "source": src})
 
@@ -478,8 +511,14 @@ class Reason(Exec):
 
     async def _glm(self, st):
         core, cfg = self.core, self.core.cfg
+        try:
+            requested_tokens = int(st.opts.get("max_tokens", 1500))
+        except (TypeError, ValueError):
+            requested_tokens = 1500
+        # Thinking may remain enabled in some server builds; keep enough output budget for that fallback.
+        glm_tokens = max(1500, min(3000, requested_tokens))
         payload = {"model": "glm", "messages": self.msgs(st, True), "stream": True,
-                   "max_tokens": 3000 if st.path == "deep" else 900, "chat_template_kwargs": {"enable_thinking": st.path == "deep"}}
+                   "max_tokens": glm_tokens, "chat_template_kwargs": {"enable_thinking": False}}
         st.guard = C.StreamGuard(core.conscience, st.cctx())
         writer, first, got = None, True, False
         core.glm_inflight += 1
@@ -513,6 +552,7 @@ class Reason(Exec):
                 piece = d.get("content") or ""          # reasoning_content намеренно игнорируется: думание не текст
                 if not piece:
                     continue
+                st.first_visible_token.set()
                 first = False
                 got = True
                 if st.intro_task is not None and not st.intro_task.done():
@@ -544,8 +584,11 @@ class Reason(Exec):
     async def _fast(self, st):
         if st.intro_task is not None and not st.intro_task.done():
             await asyncio.wait({st.intro_task}, timeout=3.0)     # вступление всегда раньше ответа
-        mt = 90 if st.intent == "greeting" else (160 if st.intent == "smalltalk" else 380)
-        tries = [(0.8, mt), (1.0, mt + 80)]
+        try:
+            mt = max(300, min(3000, int(st.opts.get("max_tokens", 1500))))
+        except (TypeError, ValueError):
+            mt = 1500
+        tries = [(0.8, mt), (1.0, mt)]
         log = []
         for temp, m in tries:
             try:
@@ -565,7 +608,7 @@ class Reason(Exec):
         if st.glm_state == "up" and not st.turn.glm_tried and not self.core.glm_inflight:
             st.turn.glm_tried = True
             try:
-                txt = await self.core.glm_once(self.msgs(st, True), 400, 12.0)
+                txt = await self.core.glm_once(self.msgs(st, True), max(1500, mt), 12.0)
                 if txt.strip():
                     st.draft, st.model = txt.strip(), "glm"
                     st.turn.trace["reason_attempts"] = log + ["ok@glm"]
