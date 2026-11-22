@@ -3121,6 +3121,8 @@ class PreviousTrainingReceiptEnvelopeFence(unittest.TestCase):
         }
         previous = {
             "schema": ns["SCHEMA"],
+            "state": "TRAINING_CHECKPOINTED_BY_NEW_PAUSE",
+            "training_started": True,
             "source_sha": pointer["source_sha"],
             "admission": copy.deepcopy(pointer),
             "dispatcher_upgrade": copy.deepcopy(boost),
@@ -3129,13 +3131,44 @@ class PreviousTrainingReceiptEnvelopeFence(unittest.TestCase):
         }
         self.assertTrue(check(copy.deepcopy(previous), pointer, policy,
                               boost, memory, media))
+        # A durable HOLD or an unrecognized/missing predecessor state must not
+        # be reusable as a successful owner source/optimizer lineage.
+        for invalid_state in ("HOLD_TRAINING_RESUME", "HOLD_OWNER_STOP",
+                              "TRAINING_ACCEPTED", "UNVERIFIED_COMPLETE",
+                              None, [], {}, True, 1000):
+            with self.subTest(previous_state=repr(invalid_state)):
+                changed = copy.deepcopy(previous)
+                changed["state"] = invalid_state
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_PREVIOUS_TRAINING_RECEIPT$"):
+                    check(changed, pointer, policy, boost, memory, media)
+        for bad_started in (False, None, 1, "true", []):
+            with self.subTest(training_started=repr(bad_started)):
+                changed = copy.deepcopy(previous)
+                changed["training_started"] = bad_started
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_PREVIOUS_TRAINING_RECEIPT$"):
+                    check(changed, pointer, policy, boost, memory, media)
+        for accepted in (
+                "BOUNDED_TRAINING_RUNNING_ACCEPTANCE_PENDING",
+                "EXISTING_CONTINUATION_RUNNING",
+                "FIVE_STEPS_VERIFIED_CONTINUATION_DEFERRED",
+                "FIVE_STEPS_VERIFIED_OWNER_PAUSE_RETAINED",
+                "FIVE_STEPS_VERIFIED_CONTINUATION_STARTED",
+                "CONTINUATION_CHECKPOINTED_BY_OWNER_PAUSE",
+                "CONTINUATION_TARGET_1000_COMPLETED"):
+            with self.subTest(accepted_state=accepted):
+                changed = copy.deepcopy(previous)
+                changed["state"] = accepted
+                self.assertTrue(check(changed, pointer, policy, boost, memory,
+                                      media))
         for invalid in (None, [], ["receipt"], True, False, 17, 1.5,
                         "receipt"):
             with self.subTest(invalid=repr(invalid)):
                 with self.assertRaisesRegex(
                         RuntimeError, "^HOLD_PREVIOUS_TRAINING_RECEIPT$"):
                     check(invalid, pointer, policy, boost, memory, media)
-        for key in ("schema", "source_sha", "admission",
+        for key in ("schema", "state", "training_started", "source_sha", "admission",
                     "dispatcher_upgrade", "s03_activation", "media_acceptance"):
             with self.subTest(missing=key):
                 changed = copy.deepcopy(previous)
