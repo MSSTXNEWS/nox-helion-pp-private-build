@@ -202,7 +202,7 @@
  }
  function sseChat(data,signal) {
  let closed=false;const started=performance.now();let firstVisibleMs=null;
- let lastNativePhase=null;
+ let phasePrev=null;
  const upstreamAbort=new AbortController();
  const onAbort=()=>upstreamAbort.abort();
  if(signal?.aborted)upstreamAbort.abort();
@@ -217,8 +217,8 @@
     if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
      firstVisibleMs=Math.round(performance.now()-started);
     const phase={meta:'waiting',token:'speaking',done:'idle',error:nativeSignal.aborted?'stopped':'error'}[payload.type];
-    if(phase&&phase!==lastNativePhase){
-     lastNativePhase=phase;
+    if(phase&&phase!==phasePrev){
+     phasePrev=phase;
      if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
       window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
     }
@@ -284,7 +284,7 @@
    cancel(){
     closed=true;
     upstreamAbort.abort();
-    stopPhase();
+    if(phasePrev!=='idle')stopPhase();
     signal?.removeEventListener?.('abort',onAbort);
    }
  });
