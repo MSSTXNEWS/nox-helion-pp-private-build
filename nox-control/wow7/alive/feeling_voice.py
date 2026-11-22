@@ -11,6 +11,22 @@ from typing import Callable, Iterable, Mapping, Optional, Tuple
 HONEST = "honest"
 HUMAN = "human"
 DEFAULT_MODE = HONEST
+TRUSTED_CAUSE_SOURCES = frozenset(("state_log", "event_log", "metric"))
+MAX_CAUSE_CHARS = 120
+
+
+def _safe_cause(signals: Mapping[str, object]) -> str:
+    raw = signals.get("cause")
+    source = signals.get("cause_source")
+    if source not in TRUSTED_CAUSE_SOURCES or not isinstance(raw, str) or len(raw) > 512:
+        return ""
+    value = re.sub(r"[\\x00-\\x1f\\x7f<>`]", " ", raw)
+    value = " ".join(value.split())
+    if not value or re.search(r"(?:https?://|\\bwww\\.|\\S+@\\S+)", value, re.IGNORECASE):
+        return ""
+    if len(value) > MAX_CAUSE_CHARS:
+        value = value[:MAX_CAUSE_CHARS].rsplit(" ", 1)[0]
+    return value.strip()
 
 _TO_HUMAN = re.compile(r"^(?:говори со мной как человек|говори со мной по человечески)$")
 _TO_HONEST = re.compile(r"^(?:вернись в честный режим|говори честно)$")
@@ -80,7 +96,7 @@ def supported_feelings(signals: Mapping[str, object]) -> Tuple[str, ...]:
     Relationship-need language is deliberately absent; the mode never creates a
     feeling that the state does not support.
     """
-    cause = str(signals.get("cause") or "").strip()
+    cause = _safe_cause(signals)
     out = []
     try:
         valence = float(signals.get("mood_valence"))
