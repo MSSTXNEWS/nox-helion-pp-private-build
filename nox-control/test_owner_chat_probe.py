@@ -2922,5 +2922,80 @@ class ProbeTests(unittest.TestCase):
                         probe.consume_turn(object(), 'offline synthetic', did)
                 self.assertTrue(response.closed)
 
+    def test_unknown_explicit_finish_reason_blocks_false_second_turn_completion(self):
+        """Unknown/tool finish markers cannot be laundered by saved=true DONE."""
+        did = 'offline-unfinished-tool-handoff'
+        done = {'type': 'done', 'dialog_id': did, 'saved': True,
+                's03_integrated': True, 'model': 'GLM-5.3'}
+        start = {'type': 'start', 'model': 'GLM-5.3'}
+        delta = {'type': 'delta', 'text': '323'}
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, frames):
+                self.frames = frames
+                self.closed = False
+
+            def __iter__(self):
+                return iter(json.dumps(item).encode() + b'\n'
+                            for item in self.frames)
+
+            def close(self):
+                self.closed = True
+
+        wrappers = (
+            lambda field, value: {field: value},
+            lambda field, value: {'metadata': {field: value}},
+            lambda field, value: {'status': {'status': {field: value}}},
+        )
+        bad_reasons = (
+            ('finish_reason', 'tool_calls'),
+            ('finishReason', 'function_call'),
+            ('stop_reason', 'incomplete'),
+            ('stopReason', ' pending '),
+            ('finish_reason', 'UNKNOWN'),
+            ('finishReason', False),
+            ('stop_reason', 1),
+            ('stopReason', ''),
+            ('finish_reason', 'content_filter'),
+        )
+        for field, value in bad_reasons:
+            for wrap in wrappers:
+                evidence = wrap(field, value)
+                for terminal in (False, True):
+                    frame = dict(done if terminal else {'type': 'status'},
+                                 **evidence)
+                    frames = ([start, delta, frame] if terminal else
+                              [start, delta, frame, done])
+                    response = Response(frames)
+                    with self.subTest(field=field, reason=value,
+                                      nested=evidence, terminal=terminal):
+                        with patch.object(probe, 'request',
+                                          return_value=response):
+                            with self.assertRaisesRegex(
+                                    RuntimeError, 'HOLD_STREAM_(TERMINAL|PRETERMINAL)_FAILURE'):
+                                probe.consume_turn(object(), 'offline', did)
+                        self.assertTrue(response.closed)
+
+        for value in ('stop', ' STOP ', 'end_of_turn', 'end_turn',
+                      'eos', 'eot_id', 'stop_sequence', 'completed'):
+            response = Response([start, delta, dict(done, finish_reason=value)])
+            with self.subTest(valid=value), patch.object(
+                    probe, 'request', return_value=response):
+                self.assertEqual(
+                    probe.consume_turn(object(), 'offline', did)['answer'],
+                    '323')
+            self.assertTrue(response.closed)
+        # Missing or explicit null stays neutral for older native streams;
+        # it is not independently sufficient for model/S03 acceptance.
+        for done_extra in ({}, {'finish_reason': None}):
+            response = Response([start, delta, dict(done, **done_extra)])
+            with patch.object(probe, 'request', return_value=response):
+                self.assertEqual(
+                    probe.consume_turn(object(), 'offline', did)['answer'],
+                    '323')
+            self.assertTrue(response.closed)
+
 if __name__ == '__main__':
     unittest.main()

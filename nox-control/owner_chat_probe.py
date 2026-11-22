@@ -594,11 +594,19 @@ def stream_frame_reports_failure(frame):
             nested_status = nested.get('status')
             if isinstance(nested_status, dict):
                 scopes.append(nested_status)
+    # If a proxy explicitly reports a finish reason, only known completed
+    # generation endings are acceptable. A tool handoff, unknown/future code
+    # or malformed reason must not become a valid saved=true chat completion.
+    # Absent/null legacy metadata stays neutral, never positive proof.
+    completed = ('stop', 'end_of_turn', 'end_turn', 'eos', 'eos_token',
+                 'eot', 'eot_id', 'stop_sequence', 'complete', 'completed', 'done')
     for metadata in scopes:
         for key in ('finish_reason', 'finishReason', 'stop_reason', 'stopReason'):
-            reason = metadata.get(key)
-            if isinstance(reason, str) and reason.strip().lower() in incomplete:
-                return True
+            if key in metadata and metadata[key] is not None:
+                reason = metadata[key]
+                if (type(reason) is not str or
+                        reason.strip().casefold() not in completed):
+                    return True
         if (metadata.get('error') not in (None, '', False)
                 or metadata.get('success') is False or metadata.get('ok') is False):
             return True
