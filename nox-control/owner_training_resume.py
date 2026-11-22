@@ -675,7 +675,15 @@ def media_acceptance_proof(receipt, upgrade_chain):
             or receipt.get('state') != 'GENERATED_DECODED_AND_GPU_RELEASED'
             or receipt.get('pixels_exported') is not False):
         raise RuntimeError('HOLD_VERIFIED_MEDIA_ACCEPTANCE_REQUIRED')
-    release = receipt.get('release') or {}; trainer = release.get('trainer') or {}; gpu = release.get('gpu1') or {}
+    # A malformed proof must yield a durable named HOLD, never raw .get()
+    # failures or permissive coercion of non-map owner/lease evidence.
+    if type(upgrade_chain) is not dict:
+        raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_GPU_AND_TRAINER_RELEASE')
+    release = receipt.get('release')
+    if (type(release) is not dict or type(release.get('trainer')) is not dict
+            or type(release.get('gpu1')) is not dict):
+        raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_GPU_AND_TRAINER_RELEASE')
+    trainer = release['trainer']; gpu = release['gpu1']
     if (any(release.get(key) is not True for key in
             ('forge_lease_reacquired', 'forge_lease_released', 'original_flags_preserved'))
             or release.get('training_started') is not False
@@ -685,13 +693,19 @@ def media_acceptance_proof(receipt, upgrade_chain):
             or type(gpu.get('free_mib')) is not int or gpu['free_mib'] < 30000):
         raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_GPU_AND_TRAINER_RELEASE')
     rows = receipt.get('artifacts')
-    if (not isinstance(rows, list) or len(rows) != 2 or any(not isinstance(row, dict) for row in rows)
+    if (not isinstance(rows, list) or len(rows) != 2 or any(type(row) is not dict for row in rows)
+            or any(type(row.get('kind')) is not str for row in rows)
             or {row.get('kind') for row in rows} != {'image', 'video'}):
         raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_TWO_DECODED_OUTPUTS')
     artifacts = []
     for row in rows:
-        job_id = row.get('job_id'); kind = row['kind']; proof = row.get('decode') or {}
-        path = Path(row.get('path', ''))
+        job_id = row.get('job_id'); kind = row['kind']; proof = row.get('decode')
+        if type(proof) is not dict:
+            raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_FINITE_DECODE')
+        raw_path = row.get('path')
+        if type(raw_path) is not str:
+            raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_ARTIFACT_PROOF')
+        path = Path(raw_path)
         extension, media_type = ('.png', 'image/png') if kind == 'image' else ('.webm', 'video/webm')
         if (not isinstance(job_id, str) or not re.fullmatch('[0-9a-f]{32}', job_id)
                 or path.parent != ROOT/'media/outputs/nox'/job_id or path.suffix != extension
