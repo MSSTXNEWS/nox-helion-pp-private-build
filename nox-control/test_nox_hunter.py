@@ -338,6 +338,36 @@ class HunterURLSafetyTests(unittest.TestCase):
                 ("string-date", ""),
             ])
 
+    def test_publication_date_correction_preserves_prior_candidate_version(self):
+        # Publication metadata is part of evidence provenance. Preserve both
+        # observations even when a feed changes only its publication date.
+        source = hunter._validate_source({
+            "id": "feed", "kind": "rss", "url": "https://example.org/rss",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        first = {"title": "Stable title", "url": "/article",
+                 "content": "Same abstract", "published": "2026-11-20"}
+        corrected = {**first, "published": "2026-11-21"}
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "hunter.sqlite"
+            with patch.object(hunter, "_fetch",
+                              return_value=(b"stub", None, None, "application/rss+xml", False)), \
+                 patch.object(hunter, "_parse",
+                              side_effect=[[first], [corrected], [corrected]]):
+                one = hunter.poll_due([source], state, now=1000.0)
+                two = hunter.poll_due([source], state, now=1100.0)
+                three = hunter.poll_due([source], state, now=1200.0)
+            self.assertEqual([x[0]["added"] for x in (one, two, three)],
+                             [1, 1, 0])
+            with sqlite3.connect(state) as conn:
+                versions = conn.execute(
+                    "SELECT published,content_sha256 FROM items "
+                    "WHERE source_id='feed' ORDER BY first_seen_at"
+                ).fetchall()
+            self.assertEqual([v[0] for v in versions],
+                             ["2026-11-20", "2026-11-21"])
+            self.assertEqual(len({v[1] for v in versions}), 2)
+
     def test_html_page_uses_its_real_source_url(self):
         source = hunter._validate_source({
             "id": "page", "kind": "html_page", "url": "https://example.org/page",
