@@ -2407,6 +2407,90 @@ def main():
             healthyCancels===0&&healthyPosts===0;
         }'''))
 
+        # After both canonical verifiers succeed, an invalid durable ACK
+        # envelope or late failed gate CAS still owns an abandoned GET body.
+        # Release it once nonblocking, without a repeated model POST/ACK.
+        check('post-verifier ACK envelope rejection/STOP/timeout cancels unclaimed GET body once', page.evaluate('''async () => {
+          const cases=['status','authority','ackid','throws','timeout','stop','healthy'];
+          for(const kind of cases){
+            const s={conversation_id:'r32',exchange_id:kind};
+            let gets=0,posts=0,acks=0,cancels=0,goodCancels=0,projections=0;
+            let verified=0,finish;
+            const entered=new Promise(resolve=>finish=resolve);
+            const transport={...opts.transport,
+              post(){posts++;throw Error('DUPLICATE_MODEL_POST')},
+              ack(){acks++;throw Error('DUPLICATE_ACK')},
+              async readback(){return {...s}},
+              readCanonicalAck(_s,_expected,challenge){
+                const which=++gets,now=Date.now();
+                return {request_nonce:challenge.request_nonce,issued_at_ms:now,
+                  expires_at_ms:now+1000,ack_id:'ack-r32-'+kind,
+                  body:{cancel(){
+                    if(which>1||kind==='healthy')goodCancels++;
+                    else cancels++;
+                    if(kind==='throws')return Promise.reject(Error('cancel rejection'));
+                    if(kind==='timeout')return new Promise(()=>{});
+                    return Promise.resolve();
+                  }}};
+              }
+            };
+            const host={...opts.host,
+              verifyFreshCanonicalAck(){return true},
+              verifyCanonicalAck(){verified++;return true}
+            };
+            const gate={
+              async reserve(){return {status:'ALREADY_ACKED'}},
+              async beginSend(){throw Error('NO_NEW_ACK')},
+              async confirm(){throw Error('NO_LOCAL_ACK')},
+              async requireCanonicalAck(_s,event,cursor,read,verify){
+                const expected={event_id:event,ack_cursor:cursor};
+                const receipt=await read(expected);
+                if(await verify(receipt,expected)!==true)
+                  throw Error('BAD_VERIFIER');
+                if(gets===1)finish();
+                if(gets>1||kind==='healthy')
+                  return {status:'CANONICAL_ACK_CONFIRMED',
+                    authority:'VERIFIER_CALLBACK_APPROVED',ack_id:receipt.ack_id};
+                if(kind==='throws')throw Error('CAS_FAILURE');
+                if(kind==='timeout'||kind==='stop')return new Promise(()=>{});
+                return {status:kind==='status'?'ACKED':'CANONICAL_ACK_CONFIRMED',
+                  authority:kind==='authority'?'WRONG':'VERIFIER_CALLBACK_APPROVED',
+                  ack_id:kind==='ackid'?'bad ack id':receipt.ack_id};
+              }
+            };
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host,bridge:opts.bridge,ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){projections++;return true}},
+              canonicalAckTimeoutMs:kind==='timeout'?40:450
+            });
+            const pending=c.reconnect(s);
+            const ready=await Promise.race([entered.then(()=>true),
+              new Promise(resolve=>setTimeout(()=>resolve(false),250))]);
+            if(!ready)return false;
+            const stopped=kind==='stop'?c.stop(s):false;
+            const first=await Promise.race([pending.then(v=>v,e=>e.code),
+              new Promise(resolve=>setTimeout(()=>resolve('HUNG'),650))]);
+            const expect=kind==='stop'?'HOLD_STREAM_RECONNECT_STOPPED':
+              kind==='timeout'?'HOLD_STREAM_CANONICAL_ACK_TIMEOUT':
+              kind==='healthy'?null:'HOLD_STREAM_CANONICAL_ACK';
+            if(kind==='healthy'){
+              if(!first||first.canonical_ack_status!=='CANONICAL_ACK_CONFIRMED')
+                return false;
+            } else if(first!==expect||(kind==='stop'&&!stopped))return false;
+            await new Promise(resolve=>setTimeout(resolve,0));
+            if(cancels!==(kind==='healthy'?0:1)||goodCancels!==0||
+              gets!==1||posts!==0||acks!==0||verified!==1||projections!==1)
+              return false;
+            if(kind!=='healthy'){
+              const recovered=await c.reconnect(s);
+              if(recovered.canonical_ack_status!=='CANONICAL_ACK_CONFIRMED'||
+                gets!==2||cancels!==1||goodCancels!==0||
+                posts!==0||acks!==0||projections!==2) return false;
+            }
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
