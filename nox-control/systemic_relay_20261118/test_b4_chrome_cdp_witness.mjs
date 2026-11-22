@@ -2960,15 +2960,38 @@ test('R23 actual headless Chromium: loopback three-turn SSE/CDP provenance, two-
         responseBodyAckTimeoutMs:1500,requestPostDataAckTimeoutMs:1500,
         makeSession:async()=>{
           const session=await new Cdp(target.webSocketDebuggerUrl).open();
+          const postFrames=new Map();
+          const originalSend=session.send.bind(session);
+          session.send=async(cmd,params)=>{
+            try{
+              const result=await originalSend(cmd,params);
+              if(cdplog.length<50&&cmd==='Network.streamResourceContent')
+                cdplog.push(['streamResourceContent',params?.requestId,
+                  Boolean(result?.bufferedData),result?.bufferedData?.length||0]);
+              return result;
+            }catch(e){
+              if(cdplog.length<50&&cmd==='Network.streamResourceContent')
+                cdplog.push(['streamResourceContentRejected',params?.requestId,
+                  String(e?.message).slice(0,45)]);
+              throw e;
+            }
+          };
           const realOn=session.on.bind(session);
           session.on=listener=>realOn((method,p)=>{
-            if(cdplog.length<45){
-              if(method==='Network.requestWillBeSent'&&p.request?.method==='POST')
+            if(cdplog.length<50){
+              if(method==='Network.requestWillBeSent'&&p.request?.method==='POST'){
+                postFrames.set(p.requestId,{frame:p.frameId,loader:p.loaderId});
                 cdplog.push(['POST',p.requestId,p.redirectHasExtraInfo,p.redirectResponse?true:false]);
-              else if(['Network.responseReceived','Network.dataReceived',
-                'Network.loadingFinished','Network.loadingFailed',
-                'Network.responseReceivedExtraInfo'].includes(method))
-                cdplog.push([method,p.requestId,Boolean(p.data),p.response?.status||p.statusCode||null]);
+              }else if(method==='Network.responseReceived'){
+                const old=postFrames.get(p.requestId);
+                cdplog.push(['Network.responseReceived',p.requestId,
+                  p.response?.status,old?old.frame===p.frameId:null,
+                  old?old.loader===p.loaderId:null,
+                  p.hasExtraInfo,p.response?.mimeType]);
+              }else if(['Network.dataReceived','Network.loadingFinished',
+                'Network.loadingFailed','Network.responseReceivedExtraInfo'].includes(method))
+                cdplog.push([method,p.requestId,Boolean(p.data),
+                  p.data?String(p.data).length:0,p.statusCode??null]);
             }
             listener(method,p);
           });
