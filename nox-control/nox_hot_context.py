@@ -208,7 +208,7 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
             ident, sha, score = row["id"], row["source_sha256"], row["first_pass_score"]
             _guard(type(ident) is str and ident not in seen_ids and
                    type(sha) is str and type(score) in (int, float) and
-                   0 <= score <= 1 and math.isfinite(score),
+                   0 < score <= 1 and math.isfinite(score),
                    "RETRIEVAL_PLAN")
             # Producer's contract is descending score, then ascending ID.
             # Reject shuffled results before the token budget can favor a
@@ -228,6 +228,14 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
                and len(set(rerank)) == len(rerank) and
                retrieval_plan["requires_owner_gpu_resource_and_lease_gate"] is bool(rerank),
                "RETRIEVAL_PLAN")
+        # The producer only proposes a GPU rerank for a genuinely ambiguous
+        # highest-ranked positive shortlist. Reject forged/reordered plans
+        # instead of presenting an unrelated owner-GPU resource request.
+        if rerank:
+            _guard(len(rerank) >= 2 and len(rows) >= 2 and
+                   rerank == [row["id"] for row in rows[:len(rerank)]] and
+                   rows[0]["first_pass_score"] - rows[1]["first_pass_score"] <= .08,
+                   "RETRIEVAL_RERANK_CONTRACT")
     def count(messages):
         n=token_counter(messages)
         _guard(type(n) is int and n>=0, "TOKEN_COUNT")
