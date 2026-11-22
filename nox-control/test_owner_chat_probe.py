@@ -2092,5 +2092,54 @@ class ProbeTests(unittest.TestCase):
         self.assertTrue(unlabeled.closed)
 
 
+    def test_nested_sse_metadata_failures_cannot_be_laundered_by_saved_done(self):
+        """Explicit metadata/meta failures must HOLD before S03-style success."""
+        did = '1' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        delta = {'type': 'delta', 'text': '323'}
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        bad = (
+            {'metadata': {'ok': False}},
+            {'meta': {'success': False}},
+            {'metadata': {'error': {'message': 'proxy unavailable'}}},
+            {'meta': {'http_status': 503}},
+            {'metadata': {'status': 'timeout'}},
+            {'meta': {'status': {'code': 503}}},
+            {'metadata': {'finish_reason': 'length'}},
+        )
+        for fields in bad:
+            for placement in ('preterminal', 'terminal'):
+                frames = ([dict({'type': 'status'}, **fields), delta, done]
+                          if placement == 'preterminal'
+                          else [delta, dict(done, **fields)])
+                expected = ('HOLD_STREAM_PRETERMINAL_FAILURE'
+                            if placement == 'preterminal'
+                            else 'HOLD_STREAM_TERMINAL_FAILURE')
+                response = Response(frames)
+                with self.subTest(fields=fields, placement=placement), patch.object(
+                        probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, '^' + expected + '$'):
+                        probe.consume_turn(object(), 'synthetic', did)
+                self.assertTrue(response.closed)
+
+        healthy = Response([
+            {'type': 'meta', 'metadata': {'http_status': 200, 'status': 'running'}},
+            delta,
+            dict(done, meta={'ok': True, 'status': {'code': 200}})])
+        with patch.object(probe, 'request', return_value=healthy):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+        self.assertTrue(healthy.closed)
+
+
 if __name__ == '__main__':
     unittest.main()
