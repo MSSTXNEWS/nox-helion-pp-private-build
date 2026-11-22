@@ -505,5 +505,29 @@ class FactReceiptTest(unittest.TestCase):
         self.assertFalse(valid["task_cancelled"])
         self.assertFalse(valid["owner_stop"])
 
+    def test_1a04_pending_scoped_stop_is_bounded_without_broadcast(self):
+        """Excess unknown IDs HOLD; existing STOP and explicit broadcast still work."""
+        stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
+        known = {f"pending-{i}" for i in range(W.MAX_PENDING_SCOPED_STOPS)}
+
+        async def scenario():
+            denied = await stop(Request({"scope": "generation", "request_id": "new-id"}))
+            repeat = await stop(Request({"scope": "generation", "request_id": "pending-0"}))
+            epoch_before = W.CANCEL_ALL_EPOCH
+            broadcast = await stop(Request({"scope": "generation", "request_id": "*"}))
+            return denied, repeat, broadcast, epoch_before, W.CANCEL_ALL_EPOCH, set(W.CANCEL)
+
+        with mock.patch.object(W, "CANCEL", set(known)), mock.patch.object(W, "CANCEL_ALL_EPOCH", 0):
+            denied, repeat, broadcast, before, after, pending = asyncio.run(scenario())
+        self.assertEqual(denied.status_code, 429)
+        self.assertEqual(json.loads(denied.body), {"status": "HOLD", "reason": "STOP_PENDING_CAPACITY"})
+        self.assertEqual(repeat["status"], "STOPPING")
+        self.assertFalse(repeat["stop_confirmed"])
+        self.assertEqual(repeat["target_request_id"], "pending-0")
+        self.assertEqual(broadcast["target_request_id"], "*")
+        self.assertEqual((before, after), (0, 1))
+        self.assertEqual(pending, known)
+
+
 if __name__ == "__main__":
     unittest.main()
