@@ -127,7 +127,7 @@
   function validCorrelationId(value,minLength) {
     return typeof value==='string'&&value.length>=minLength&&value.length<=160&&
       value===value.trim()&&validUnicodeScalars(value)&&
-      !/[\x00-\x1f\x7f\p{Cf}]/u.test(value);
+      !/[\x00-\x1f\x7f\p{Cf}\p{White_Space}]/u.test(value);
   }
   function accepted(done,id) {
     return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
