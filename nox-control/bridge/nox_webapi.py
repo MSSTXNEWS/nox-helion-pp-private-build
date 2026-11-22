@@ -804,7 +804,17 @@ def install(app, B):
                 sk = None
                 if W and not mini and not stopped and full.strip() and mode != "fast" and (mode == "thoughtful" or W.is_factual(user)):
                     yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": "проверяю факты (скептик)"})
-                    sk = await W.skeptic(lambda m, n_: B.ask(m, n_, slot=1), user, full, record=not eph)
+                    # A nonessential verifier must not erase a complete model
+                    # answer or abort its independent S03 write. Never report a
+                    # malformed/failed verifier as a passed factual check.
+                    try:
+                        verdict = await W.skeptic(lambda m, n_: B.ask(m, n_, slot=1), user, full, record=not eph)
+                        if not isinstance(verdict, dict) or type(verdict.get("ok")) is not bool:
+                            raise ValueError("SKEPTIC_INVALID_VERDICT")
+                        sk = verdict
+                    except Exception as e:
+                        B.log("web_skeptic_unavailable " + type(e).__name__)
+                        sk = {"ok": None, "reason": "SKEPTIC_UNAVAILABLE"}
                     if sk.get("ok") is False:
                         # A secondary verifier cannot bypass the upstream 128 KiB
                         # UTF-8 budget or add malformed Unicode to the S03 turn.
