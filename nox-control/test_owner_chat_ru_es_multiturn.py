@@ -351,7 +351,7 @@ async function check(chunks, status=200) {
             writer, reader, DIALOG, clean, require_full_transcript_pin=True))
         for index in range(4):
             for bad_id in (f" msg-{index}", f"msg-{index} ",
-                           f"\\tmsg-{index}", f"msg-{index}\\t"):
+                           f"\tmsg-{index}", f"msg-{index}\t"):
                 with self.subTest(row=index, identifier=repr(bad_id)):
                     aliased = [dict(row) for row in clean]
                     aliased[index]["message_id"] = bad_id
