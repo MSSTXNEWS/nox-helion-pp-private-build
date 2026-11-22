@@ -292,7 +292,7 @@ def _crossref_items(body: bytes) -> list[dict[str, str]]:
         # doi.org evidence from arbitrary strings, missing prefix/suffix, or
         # JSON-escaped invalid Unicode. Encode DOI reserved characters as
         # path data, never as URL query or fragment delimiters.
-        if not re.fullmatch(r"10\\.[0-9]{4,9}/[!-~]+", doi, flags=re.IGNORECASE):
+        if not re.fullmatch(r"10\.[0-9]{4,9}/[!-~]+", doi, flags=re.IGNORECASE):
             doi = ""
         url_value = record.get("URL")
         link = url_value.strip() if isinstance(url_value, str) else ""
