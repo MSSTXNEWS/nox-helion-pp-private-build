@@ -1191,6 +1191,8 @@ def owned_flag(path, prefix):
 
 def verify_paused_result(helper, result, max_step=5, allow_completed=False):
     """A user/media pause is evidence only after its checkpoint is rehashed."""
+    if type(result) is not dict:
+        raise RuntimeError('HOLD_PAUSED_OPTIMIZER_RECEIPT')
     step = result.get('global_step')
     allowed_states = ('CHECKPOINTED_OWNER_STOP', 'VERIFIED_BOUNDED_ADAPTER_UPDATE') if allow_completed else ('CHECKPOINTED_OWNER_STOP',)
     if (result.get('state') not in allowed_states or result.get('native_sha256') != NATIVE_SHA

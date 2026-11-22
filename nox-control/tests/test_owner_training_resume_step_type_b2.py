@@ -137,6 +137,16 @@ class CheckpointStepProvenance(unittest.TestCase):
             check = verifier["verify_paused_result"]
             self.assertTrue(check(helper, receipt))
 
+            # JSON receipts may decode to a scalar, array or null. The
+            # optimizer proof must return a named durable HOLD, never crash
+            # before recording the root evidence fault.
+            for malformed_root in (None, [], ["spoof"], "checkpoint", False,
+                                   0, 1.5):
+                with self.subTest(receipt_root=repr(malformed_root)):
+                    with self.assertRaisesRegex(
+                            RuntimeError, "^HOLD_PAUSED_OPTIMIZER_RECEIPT$"):
+                        check(helper, malformed_root)
+
             # A concurrent writer can change the JSON after the checkpoint
             # hash sweep. The parsed bytes must still match the signed receipt,
             # even when both old/new documents claim the same global_step.
