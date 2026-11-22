@@ -185,7 +185,9 @@ def read_json(path, limit=4_000_000, expected_sha256=None, include_mtime=False):
         value = json.loads(raw, object_pairs_hook=unique_object,
                            parse_constant=finite_json_constant,
                            parse_float=finite_json_float)
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as exc:
+        # Python 3.11+ limits decimal-to-int conversion (default 4300 digits).
+        # Even SHA-matching JSON may exceed that bound: classify it as HOLD.
         raise RuntimeError('HOLD_INVALID_STATE_JSON') from exc
     if not isinstance(value, dict):
         raise RuntimeError('HOLD_STATE_OBJECT_REQUIRED')
