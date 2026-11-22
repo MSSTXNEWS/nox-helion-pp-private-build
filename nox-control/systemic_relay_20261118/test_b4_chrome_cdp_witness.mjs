@@ -156,6 +156,10 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       // Fixture: replay HTTP metadata after visible text but before SSE finish.
       if(i===1&&index===0&&typeof options.responseReplayDuringSecondData==='function')
         options.responseReplayDuringSecondData(c,chunk);
+      // Third-turn source-only abort AFTER first printable SSE frame, BEFORE
+      // stop/[DONE]/Network.loadingFinished; never a native browser assertion.
+      if(i===2&&index===0&&typeof options.thirdDisconnectAfterPrintable==='function')
+        options.thirdDisconnectAfterPrintable(c,chunk);
     }
     if(o.extraBeforeFinish)emitExtra();
     // Inject an actual second CDP POST before the first loadingFinished,
@@ -175,7 +179,8 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
         url:'http://localhost/api/nox/chat',postData:'{"earlyThird":true}'}
     });
     if(!((i===0&&options.omitFirstClose)||(i===1&&options.omitSecondClose))){
-      const closeFailed=i===0?options.firstLoadingFailed===true:o.loadingFailed===true;
+      const closeFailed=i===0?options.firstLoadingFailed===true:
+        i===2?options.thirdLoadingFailed===true:o.loadingFailed===true;
       const closeTimestamp=Number.isFinite(options.turnCloseTimestamps?.[i])?
         options.turnCloseTimestamps[i]:i===0&&Object.hasOwn(options,'firstCloseTimestamp')?
         options.firstCloseTimestamp:Object.hasOwn(o,'closeTimestamp')?o.closeTimestamp:timestamp+.02;
@@ -2789,4 +2794,52 @@ test('R21 third SSE TTFT starts at first completed printable delta, not heartbea
     assert.equal(proof.one_model_post_per_turn_verified,false);
     assert.doesNotMatch(JSON.stringify(proof),/keepalive|listo|secret|🧠/);
   }
+});
+
+
+test('R22 third printable delta before STOP/DONE cannot certify midstream loadingFailed or CDP disconnect',async()=>{
+  const clean=await run(false,null,null,null,{count:3});
+  assert.equal(clean.cdp_consistent,true);
+  assert.equal(clean.ttft_sse_verified,true);
+  const protectedKeys=['cdp_request_id','request_sha256','cdp_decoded_body_sha256',
+    'cdp_streamed_body_sha256','visible_text_sha256','ttft_ms','sse_done_ms',
+    'stream_timing_complete','cdp_decoded_body_matches_stream'];
+  const partial='data: '+JSON.stringify({choices:[{delta:{content:'third-printable 🐈'}}]})+'\\n\\n';
+  for(const [name,flag] of [
+    ['third-Network.loadingFailed',{thirdLoadingFailed:true}],
+    ['third-loadingFinished-without-SSE-DONE',{}]
+  ]){
+    const result=await run(false,null,null,null,{
+      count:3,turnBodies:[body,body,partial],...flag
+    });
+    assert.equal(result.cdp_consistent,false,name);
+    assert.equal(result.ttft_sse_verified,false,name);
+    assert.equal(result.turns.length,3,name);
+    for(let turn=0;turn<2;turn++){
+      for(const field of protectedKeys)
+        assert.deepEqual(result.turns[turn][field],clean.turns[turn][field],
+          name+' earlier turn '+(turn+1)+' '+field);
+      assert.equal(result.turns[turn].stream_timing_complete,true,name);
+    }
+    assert.equal(result.turns[2].request_sha256!==null,true,name);
+    assert.equal(result.turns[2].first_cdp_data_chunk_ms!==null,true,name);
+    assert.equal(result.turns[2].ttft_ms,null,name);
+    assert.equal(result.turns[2].sse_done_ms,null,name);
+    assert.equal(result.turns[2].visible_text_sha256,null,name);
+    assert.equal(result.turns[2].stream_timing_complete,false,name);
+    assert.equal(result.native_verified,false,name);
+    assert.equal(result.canonical_s03_verified,false,name);
+    assert.doesNotMatch(JSON.stringify(result),/third-printable|Hello|secret|data:/,name);
+  }
+  let printableObserved=false;
+  await assert.rejects(run(false,null,null,null,{
+    count:3,turnBodies:[body,body,partial],
+    thirdDisconnectAfterPrintable:(session,chunk)=>{
+      printableObserved=chunk.toString('utf8').includes('third-printable');
+      session.emit('CDP_DISCONNECTED',{});
+    }
+  }),/CDP_DISCONNECTED/);
+  assert.equal(printableObserved,true,'socket drops after third printable SSE chunk');
+  // These are deterministic CDP fixture observations, not a live-browser
+  // timing measurement or an independent S03 writer/readback.
 });
