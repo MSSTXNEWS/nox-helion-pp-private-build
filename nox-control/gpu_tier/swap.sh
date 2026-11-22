@@ -131,5 +131,6 @@ swapE)
   ls /root/nox/logs | grep -iE "gateway|gw|8082" ; tail -n 12 /root/nox/logs/gateway.log 2>/dev/null | cut -c1-220
   ls /root/nox/glm53_disk | head; ls /root/nox/state/MODEL_SWAP
   ;;
+sh_*) curl -fsSL -H "Accept: application/vnd.github.raw" "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/contents/nox-control/gpu_tier/sh/${S#sh_}.sh?ref=main" > /tmp/stage.sh && bash /tmp/stage.sh 2>&1 | cut -c1-300;;
 *) echo "unknown stage $S";;
 esac
