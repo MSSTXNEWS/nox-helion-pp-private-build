@@ -705,6 +705,19 @@ def install(app, B):
                 if W and not mini:
                     if W.wants_plan(user, mode):
                         yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "разбиваю задачу на шаги"})
+                        # The client can STOP at this yield; do not dispatch a second
+                        # GPU/model request through make_plan after that STOP.
+                        if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                            CANCEL.discard(rid)
+                            yield fr(message={"role": "assistant", "content": ""}, done=True,
+                                     done_reason="stopped",
+                                     completion_receipt={"status": "STOPPED", "request_id": rid,
+                                                         "upstream_done": False},
+                                     memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                           "s03_readback_verified": False},
+                                     memory_history={"status": "SKIPPED", "reason": "USER_STOP",
+                                                     "s03_readback_verified": False})
+                            return
                         try: plan = await W.make_plan(lambda m, n: B.ask(m, n, slot=1), user)
                         except Exception: plan = []
                         if plan:
