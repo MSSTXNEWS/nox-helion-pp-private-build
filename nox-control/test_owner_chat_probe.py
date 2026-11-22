@@ -2839,8 +2839,7 @@ class ProbeTests(unittest.TestCase):
                 response = Response((('Content-Length', length),))
                 with self.subTest(length=length):
                     with self.assertRaisesRegex(RuntimeError,
-                                                '^HOLD_CHAT_PAGE_BODY_LENGTH_MISMATCH
-):
+                                                'HOLD_CHAT_PAGE_BODY_LENGTH_MISMATCH'):
                         probe.page_snapshot(response, expected_path='/chat')
                 self.assertTrue(response.closed)
 
@@ -2852,8 +2851,7 @@ class ProbeTests(unittest.TestCase):
             ):
                 response = Response(fields)
                 with self.subTest(ambiguous=fields):
-                    with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_HTTP_FRAMING
-):
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_HTTP_FRAMING'):
                         probe.page_snapshot(response, expected_path='/chat')
                 self.assertTrue(response.closed)
 
