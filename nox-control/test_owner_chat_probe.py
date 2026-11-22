@@ -2649,65 +2649,9 @@ class ProbeTests(unittest.TestCase):
         for response, expected in invalid:
             with self.subTest(expected=expected), patch.object(
                     probe, 'request', return_value=response):
-                with self.assertRaisesRegex(RuntimeError, '^' + expected + '
-        """Foreign nested SSE dialog IDs cannot contaminate a same-dialog answer."""
-        did, foreign = '1' * 32, '2' * 32
-
-        class Response(SyntheticBoundedReader):
-            status = 200
-
-            def __init__(self, frames):
-                self.frames, self.closed = frames, False
-
-            def __iter__(self):
-                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
-
-            def close(self):
-                self.closed = True
-
-        done = {'type': 'done', 'dialog_id': did,
-                'saved': True, 's03_integrated': True}
-        for kind in ('status', 'meta', 'delta', 'done'):
-            for container in ('status', 'metadata', 'meta'):
-                for nested in (False, True):
-                    metadata = ({'status': {'dialog_id': foreign}} if nested
-                                else {'dialog_id': foreign})
-                    fragment = {'type': kind, container: metadata}
-                    if kind == 'delta':
-                        fragment['text'] = '323'
-                    if kind == 'done':
-                        fragment = dict(done, **{container: metadata})
-                        frames = [{'type': 'delta', 'text': '323'}, fragment]
-                    else:
-                        frames = [fragment, {'type': 'delta', 'text': '323'}, done]
-                    response = Response(frames)
-                    error = ('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH'
-                             if kind == 'done' else
-                             'HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH')
-                    with self.subTest(kind=kind, container=container,
-                                      nested=nested), patch.object(
-                            probe, 'request', return_value=response):
-                        with self.assertRaisesRegex(RuntimeError, '^' + error + '$'):
-                            probe.consume_turn(object(), 'second-turn', did)
-                    self.assertTrue(response.closed)
-
-        # Matching nested provenance and untagged legacy frames remain valid.
-        for nested in (True, False):
-            meta = {'meta': {'status': {'dialog_id': did}}} if nested else {}
-            response = Response([dict({'type': 'status'}, **meta),
-                                 {'type': 'delta', 'text': '323'}, done])
-            with self.subTest(valid_nested=nested), patch.object(
-                    probe, 'request', return_value=response):
-                self.assertEqual(
-                    probe.consume_turn(object(), 'second-turn', did)['answer'],
-                    '323')
-            self.assertTrue(response.closed)
-
-
-if __name__ == '__main__':
-    unittest.main()
-):
+                with self.assertRaises(RuntimeError) as caught:
                     probe.consume_turn(object(), 'second-turn', did)
+            self.assertEqual(str(caught.exception), expected)
             self.assertTrue(response.closed)
 
 
