@@ -49,6 +49,48 @@ def _finite_sse_constant(value):
     raise ValueError("non-finite SSE JSON constant")
 
 
+# Bound raw upstream model framing, not just the decoded answer. httpx
+# aiter_lines() may buffer an arbitrarily long line before yielding it and
+# silently replace malformed UTF-8; either can undermine the S03 guard.
+MAX_UPSTREAM_SSE_LINE_BYTES = MAX_CHAT_OUTPUT_UTF8_BYTES + 8192
+
+
+async def _bounded_upstream_sse_lines(response):
+    """Read real HTTP byte streams with a hard per-line cap and strict UTF-8.
+
+    Some source-only route fixtures expose only aiter_lines; apply the same
+    byte-size guard there, but real httpx streams always use bounded bytes.
+    """
+    byte_reader = getattr(response, "aiter_bytes", None)
+    if not callable(byte_reader):
+        async for line in response.aiter_lines():
+            if len(line.encode("utf-8", "strict")) > MAX_UPSTREAM_SSE_LINE_BYTES:
+                raise ValueError("UPSTREAM_SSE_LINE_TOO_LONG")
+            yield line
+        return
+
+    pending = bytearray()
+    last_was_cr = False
+    async for chunk in byte_reader(chunk_size=4096):
+        if not isinstance(chunk, (bytes, bytearray)):
+            raise ValueError("UPSTREAM_SSE_NON_BYTES")
+        for byte in chunk:
+            if byte in (10, 13):  # LF, CR; CRLF is one delimiter
+                if byte == 10 and last_was_cr:
+                    last_was_cr = False
+                    continue
+                yield pending.decode("utf-8", "strict")
+                pending.clear()
+                last_was_cr = (byte == 13)
+            else:
+                last_was_cr = False
+                if len(pending) >= MAX_UPSTREAM_SSE_LINE_BYTES:
+                    raise ValueError("UPSTREAM_SSE_LINE_TOO_LONG")
+                pending.append(byte)
+    if pending:
+        yield pending.decode("utf-8", "strict")
+
+
 def _read(p):
     try:
         return open(p).read().strip()
@@ -701,7 +743,7 @@ def install(app, B):
                         async with B.hc().stream("POST", B.MODEL, json=body) as r:
                             if r.status_code != 200:
                                 raise RuntimeError("UPSTREAM_HTTP_NON_200")
-                            async for line in r.aiter_lines():
+                            async for line in _bounded_upstream_sse_lines(r):
                                 if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
                                     break
                                 # [DONE] alone is not clean HTTP EOF: consume

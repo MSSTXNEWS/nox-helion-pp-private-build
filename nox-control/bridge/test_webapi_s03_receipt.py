@@ -463,6 +463,68 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertTrue(any(expected_error in msg for msg in bridge.errors))
 
 
+    def test_1a03_raw_sse_line_limit_and_utf8_fence_s03(self):
+        """Real byte-stream parser rejects malformed/oversize frames before S03."""
+        class BytesUpstream:
+            status_code = 200
+            def __init__(self, wire):
+                self.wire = wire
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *ignored):
+                return False
+            async def aiter_bytes(self, chunk_size=4096):
+                # Split inside the UTF-8 multi-byte character too.
+                for off in range(0, len(self.wire), 3):
+                    yield self.wire[off:off + 3]
+
+        async def lines(wire):
+            return [line async for line in W._bounded_upstream_sse_lines(BytesUpstream(wire))]
+
+        healthy = 'data: {"content":"А"}\\r\\ndata: [DONE]\\r\\n'.replace('\\r', '\r').replace('\\n', '\n').encode("utf-8")
+        self.assertEqual(asyncio.run(lines(healthy)), [
+            'data: {"content":"А"}', 'data: [DONE]'])
+        with self.assertRaises(UnicodeDecodeError):
+            asyncio.run(lines(b'data: {"bad":"\\xff"}\n'.replace(b'\\xff', b'\xff')))
+        with self.assertRaisesRegex(ValueError, "UPSTREAM_SSE_LINE_TOO_LONG"):
+            asyncio.run(lines(b'data: ' + b'x' * W.MAX_UPSTREAM_SSE_LINE_BYTES))
+
+        class Client:
+            def __init__(self, wire):
+                self.wire = wire
+            def stream(self, *args, **kwargs):
+                return BytesUpstream(self.wire)
+
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT = {"t": 0}
+        endpoint = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        writes = []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+        async def frames():
+            response = await endpoint(Request({
+                "messages": [{"role": "user", "content": "Проверить сырые SSE bytes"}],
+                "request_id": "raw-sse-limit", "mini": True, "use_memory": False}))
+            return [json.loads(chunk) async for chunk in response.body_iterator]
+
+        good_prefix = b'data: {"choices":[{"delta":{"content":"ok"}}]}\n'
+        for malformed in (
+            good_prefix + b'data: {"choices":\xff}\n',
+            good_prefix + b'data: ' + b'z' * (W.MAX_UPSTREAM_SSE_LINE_BYTES + 1),
+        ):
+            with self.subTest(payload_bytes=len(malformed)):
+                writes.clear()
+                bridge.errors.clear()
+                bridge.hc = lambda malformed=malformed: Client(malformed)
+                with mock.patch.dict(sys.modules, {"s03_memory": memory}), mock.patch.object(W, "W", None):
+                    observed = asyncio.run(frames())
+                self.assertFalse(any(frame.get("done") is True for frame in observed))
+                self.assertEqual(observed[-1].get("status"), "HOLD")
+                self.assertEqual(observed[-1].get("reason"), "MODEL_STREAM_INCOMPLETE")
+                self.assertEqual(observed[-1]["memory_write_receipt"]["status"], "SKIPPED")
+                self.assertEqual(writes, [])
+
     def test_skeptic_annotation_never_bypasses_s03_utf8_budget(self):
         """1A03: invalid or oversized optional skeptic text cannot poison S03."""
         class Upstream:
