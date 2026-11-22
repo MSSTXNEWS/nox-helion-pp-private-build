@@ -358,7 +358,7 @@ class DriveFirstTests(unittest.TestCase):
         child = FakeChild()
         child.stdout = os.fdopen(reader, "rb", buffering=0)
         with patch.object(m.subprocess, "Popen", return_value=child), \
-             patch.object(m, "stop_clear"):
+             patch.object(m, "stop_clear"), patch.object(m, "cgroup_admit"):
             m.verify_remote("noxchunks:STAGING/test.gguf", config=self.conf,
                             size=len(self.data), digest=self.digest)
         self.assertTrue(child.stdout.closed)
@@ -374,6 +374,7 @@ class DriveFirstTests(unittest.TestCase):
                 raise m.Hold("HOLD_DRIVE_FIRST_STOP")
         with patch.object(m.subprocess, "Popen", return_value=child), \
              patch.object(m.select, "select", return_value=([], [], [])), \
+             patch.object(m, "cgroup_admit"), \
              patch.object(m, "stop_clear", side_effect=owner_stop):
             with self.assertRaisesRegex(m.Hold, "STOP"):
                 m.verify_remote("noxchunks:STAGING/test.gguf", config=self.conf,
@@ -382,10 +383,46 @@ class DriveFirstTests(unittest.TestCase):
         self.assertTrue(child.stdout.closed)
 
     def test_remote_sha_readback_fails_closed_if_rclone_missing(self):
-        with patch.object(m.subprocess, "Popen", side_effect=OSError("missing")):
+        with patch.object(m.subprocess, "Popen", side_effect=OSError("missing")), \
+             patch.object(m, "cgroup_admit"):
             with self.assertRaisesRegex(m.Hold, "RCLONE_EXECUTION"):
                 m.verify_remote("noxchunks:STAGING/test.gguf", config=self.conf,
                                 size=len(self.data), digest=self.digest)
+
+    def test_finalize_upload_midflight_ram_loss_holds(self):
+        # The final rcat commit can remain pending after the last source byte.
+        child = FakeChild()
+        child.returncode = None
+        samples = [0]
+        def headroom():
+            samples[0] += 1
+            if samples[0] >= 2:
+                raise m.Hold("HOLD_DRIVE_FIRST_CGROUP_BUSY")
+        with patch.object(m, "stop_clear"), \
+             patch.object(m, "cgroup_admit", side_effect=headroom), \
+             patch.object(m.time, "sleep"):
+            with self.assertRaisesRegex(m.Hold, "CGROUP_BUSY"):
+                m._finish_upload(child)
+        self.assertEqual(samples[0], 2)
+
+    def test_remote_readback_ram_loss_terminates_only_owned_cat(self):
+        child = FakeChild()
+        child.returncode = None
+        samples = [0]
+        def headroom():
+            samples[0] += 1
+            if samples[0] >= 3:
+                raise m.Hold("HOLD_DRIVE_FIRST_CGROUP_BUSY")
+        with patch.object(m.subprocess, "Popen", return_value=child), \
+             patch.object(m.select, "select", return_value=([], [], [])), \
+             patch.object(m, "stop_clear"), \
+             patch.object(m, "cgroup_admit", side_effect=headroom):
+            with self.assertRaisesRegex(m.Hold, "CGROUP_BUSY"):
+                m.verify_remote("noxchunks:STAGING/test.gguf", config=self.conf,
+                                size=len(self.data), digest=self.digest)
+        self.assertEqual(samples[0], 3)
+        self.assertEqual(child.returncode, -15)
+        self.assertTrue(child.stdout.closed)
 
     def test_stream_direct_http_into_rclone_with_exact_size_no_spool(self):
         self.configure()

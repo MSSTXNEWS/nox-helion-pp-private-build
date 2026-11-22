@@ -294,6 +294,7 @@ def verify_remote(remote, *, config, size, digest):
     stopped producing data. select() polls at 1 second without busy-spinning;
     the child is terminated on STOP, timeout, or invalid remote bytes.
     """
+    cgroup_admit()
     h = hashlib.sha256()
     n = 0
     try:
@@ -306,6 +307,7 @@ def verify_remote(remote, *, config, size, digest):
     try:
         while True:
             stop_clear()
+            cgroup_admit()
             require(time.monotonic() - last_progress <= 180, "REMOTE_STALLED")
             try:
                 ready, _, _ = select.select([proc.stdout], [], [], 1.0)
@@ -377,6 +379,7 @@ def _finish_upload(child):
     deadline = time.monotonic() + 120
     while child.poll() is None:
         stop_clear()
+        cgroup_admit()
         require(time.monotonic() < deadline, "STREAM_UPLOAD_TIMEOUT")
         time.sleep(1)
     require(child.returncode == 0, "STREAM_UPLOAD")
