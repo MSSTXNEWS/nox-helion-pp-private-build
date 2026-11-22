@@ -131,6 +131,10 @@ async function run(missing=false,chunksForSecondTurn=null,responseBodyForSecondT
       const encoded=chunk.toString('base64');
       const data=i===1&&typeof o.dataBase64Mutator==='function'?o.dataBase64Mutator(encoded,index):encoded;
       c.emit('Network.dataReceived',{requestId,timestamp:Array.isArray(o.chunkTimestamps)?o.chunkTimestamps[index]:dataTime,data});
+      // Fixture-only hook: observe an actual second-turn printable chunk BEFORE
+      // model finish_reason=stop / [DONE], then simulate the CDP socket loss.
+      if(i===1&&index===0&&typeof options.disconnectDuringSecondData==='function')
+        options.disconnectDuringSecondData(c,chunk);
     }
     if(o.extraBeforeFinish)emitExtra();
     // Inject an actual second CDP POST before the first loadingFinished,
@@ -2168,5 +2172,75 @@ test('SECOND midstream abort before DONE rejects pair but retains independently 
   const pinned=JSON.stringify(sealed);
   await new Promise(resolve=>setTimeout(resolve,130));
   assert.equal(lateEvents,1);
+  assert.equal(JSON.stringify(sealed),pinned);
+});
+
+
+test('CDP session disconnect after first printable SECOND delta rejects entire pair',async()=>{
+  const clean=await run(false,null,null,null,{quiescenceMs:80});
+  assert.equal(clean.cdp_consistent,true,'normal two-turn control');
+  assert.equal(clean.ttft_sse_verified,true,'normal two-turn timings');
+  assert.equal(clean.turns.length,2);
+  assert.equal(clean.browser_authenticated,false);
+  assert.equal(clean.native_verified,false);
+  assert.equal(clean.canonical_s03_verified,false);
+  assert.equal(clean.remote_attested,false);
+
+  // The model has visibly started the SECOND answer, but has NOT yet sent
+  // finish_reason=stop or [DONE]. This is a CDP socket disconnect, not an
+  // HTTP Network.loadingFailed event.
+  const cut=body.indexOf('data: {"choices":[{"delta":{}');
+  assert.ok(cut>0);
+  const partial=body.slice(0,cut),terminal=body.slice(cut);
+  assert.match(partial,/Hello/);
+  assert.doesNotMatch(partial,/finish_reason|\\[DONE\\]/);
+  assert.match(terminal,/finish_reason/);
+  assert.match(terminal,/\\[DONE\\]/);
+  let firstAck=false,firstWasAckedAtDrop=false,observedDelta=0;
+  await assert.rejects(run(false,[Buffer.from(partial),Buffer.from(terminal)],
+    null,null,{
+      quiescenceMs:80,
+      responseBodySettled:(id,status)=>{
+        if(id==='1'&&status==='resolved')firstAck=true;
+      },
+      disconnectDuringSecondData:(session,chunk)=>{
+        observedDelta++;
+        firstWasAckedAtDrop=firstAck;
+        assert.equal(chunk.toString('utf8'),partial);
+        session.emit('CDP_DISCONNECTED',{});
+      }
+    }),error=>error?.message==='CDP_DISCONNECTED',
+    'never return accepted pair or partial FIRST receipt after CDP loss');
+  assert.equal(observedDelta,1,'disconnect injected only after first SECOND data');
+  assert.equal(firstWasAckedAtDrop,true,'FIRST independent response already ACKed');
+
+  // Even AFTER both bodies were ACKed, loss inside bounded post-ACK
+  // quiescence cannot produce a false accepted two-turn witness.
+  let duringQuiescence=0;
+  await assert.rejects(run(false,null,null,null,{
+    quiescenceMs:80,
+    postAckEvent:session=>{
+      duringQuiescence++;
+      session.emit('CDP_DISCONNECTED',{});
+    }
+  }),error=>error?.message==='CDP_DISCONNECTED');
+  assert.equal(duringQuiescence,1);
+
+  // The finite observer window is explicit: after capture returns and closes
+  // CDP, a synthetic late notification cannot mutate its sealed receipt.
+  let outsideCapture=0;
+  const sealed=await run(false,null,null,null,{
+    quiescenceMs:50,
+    postAckEvent:session=>setTimeout(()=>{
+      outsideCapture++;
+      session.emit('CDP_DISCONNECTED',{});
+    },90)
+  });
+  assert.equal(sealed.cdp_consistent,true);
+  assert.equal(sealed.ttft_sse_verified,true);
+  assert.equal(outsideCapture,0);
+  const pinned=JSON.stringify(sealed);
+  await new Promise(resolve=>setTimeout(resolve,130));
+  assert.equal(outsideCapture,1);
   assert.equal(JSON.stringify(sealed),pinned);
 });
