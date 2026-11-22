@@ -160,6 +160,45 @@ async def capture_render_resource(response, network_assets, *, timeout=8.0,
     network_assets.append((response.request.resource_type, response.url, raw))
 
 
+async def capture_render_resources(responses, network_assets, *, max_responses=128,
+                                   max_total_bytes=32 * 1024 * 1024, parallel=4,
+                                   timeout=8.0, max_bytes=8 * 1024 * 1024):
+    """Bound aggregate passive render capture; fail closed, never publish partial proof.
+
+    A bounded number of long-lived response references are collected by the
+    event callback; only four response bodies are materialized concurrently.
+    Each worker updates the byte budget without an intervening await.
+    """
+    if len(responses) > max_responses:
+        raise ValueError('HOLD_LIVE_RENDER_RESOURCE_COUNT')
+    original_len = len(network_assets)
+    total_bytes = sum(len(entry[2]) for entry in network_assets)
+    if total_bytes > max_total_bytes:
+        raise ValueError('HOLD_LIVE_RENDER_RESOURCE_TOTAL_OVERSIZE')
+    cursor = iter(responses)
+
+    async def worker():
+        nonlocal total_bytes
+        for response in cursor:
+            entry = []
+            await capture_render_resource(response, entry, timeout=timeout, max_bytes=max_bytes)
+            body_bytes = len(entry[0][2])
+            if total_bytes + body_bytes > max_total_bytes:
+                raise ValueError('HOLD_LIVE_RENDER_RESOURCE_TOTAL_OVERSIZE')
+            total_bytes += body_bytes
+            network_assets.extend(entry)
+
+    tasks = [asyncio.create_task(worker()) for _ in range(min(parallel, len(responses)))]
+    try:
+        await asyncio.gather(*tasks)
+    except BaseException:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        del network_assets[original_len:]
+        raise
+
+
 def verify_report_screenshots(report, directory):
     """Bind a saved baseline to the six on-disk Chromium PNGs.
 
@@ -455,13 +494,16 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                         await context.route_web_socket('**/*', guard_socket)
                         page = await context.new_page()
                         page.set_default_timeout(12000)
-                        network_assets, response_tasks = [], []
-                        async def capture_resource(response):
-                            await capture_render_resource(response, network_assets)
+                        network_assets, render_responses = [], []
+                        render_response_overflow = False
 
                         def on_response(response):
+                            nonlocal render_response_overflow
                             if response.request.resource_type in ('script', 'stylesheet'):
-                                response_tasks.append(asyncio.create_task(capture_resource(response)))
+                                if len(render_responses) >= 128:
+                                    render_response_overflow = True
+                                else:
+                                    render_responses.append(response)
 
                         if fixture_html is None:
                             page.on('response', on_response)
@@ -492,8 +534,10 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                             result['landing_url_verified'] = True
                         renderer_proof = None
                         if fixture_html is None:
-                            if response_tasks:
-                                await asyncio.gather(*response_tasks)
+                            page.remove_listener('response', on_response)
+                            if render_response_overflow:
+                                raise ValueError('HOLD_LIVE_RENDER_RESOURCE_COUNT')
+                            await capture_render_resources(render_responses, network_assets)
                             inline_assets = await page.evaluate("""() =>
                                 [...document.querySelectorAll('script:not([src]),style')]
                                     .map(e => [e.tagName.toLowerCase(), e.textContent || ''])

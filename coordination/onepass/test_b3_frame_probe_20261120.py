@@ -7,7 +7,7 @@ import pathlib
 import tempfile
 import unittest
 
-from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames, evidence_hash, url_identity_sha256, is_model_chat_endpoint, verify_report_screenshots, capture_render_resource
+from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames, evidence_hash, url_identity_sha256, is_model_chat_endpoint, verify_report_screenshots, capture_render_resource, capture_render_resources
 
 
 class TestProbe(unittest.TestCase):
@@ -121,6 +121,62 @@ class TestProbe(unittest.TestCase):
                                               max_bytes=8)
             self.assertEqual(len(captured), 1)
         asyncio.run(check())
+
+    def test_render_resource_aggregate_count_concurrency_and_cancel_budget(self):
+        """Deterministic source budget; no native model or network calls."""
+        class Asset:
+            active = 0
+            peak = 0
+
+            def __init__(self, payload=b'xx', delay=0.002, status=200):
+                self.status, self.payload, self.delay = status, payload, delay
+                self.headers = {}
+                self.url = 'http://127.0.0.1:18775/renderer.js'
+                self.request = type('Request', (), {'resource_type': 'script'})()
+                self.called = False
+
+            async def body(self):
+                self.called = True
+                Asset.active += 1
+                Asset.peak = max(Asset.peak, Asset.active)
+                try:
+                    await asyncio.sleep(self.delay)
+                    return self.payload
+                finally:
+                    Asset.active -= 1
+
+        async def check():
+            assets = [Asset() for _ in range(6)]
+            saved = []
+            await capture_render_resources(assets, saved, max_responses=8,
+                                           max_total_bytes=16, parallel=2, max_bytes=4)
+            self.assertEqual(len(saved), 6)
+            self.assertLessEqual(Asset.peak, 2)
+            self.assertEqual(Asset.active, 0)
+
+            overflow = [Asset() for _ in range(3)]
+            with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_RENDER_RESOURCE_COUNT'):
+                await capture_render_resources(overflow, [], max_responses=2)
+            self.assertTrue(all(not a.called for a in overflow))
+
+            partial = []
+            with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_RENDER_RESOURCE_TOTAL_OVERSIZE'):
+                await capture_render_resources([Asset(payload=b'xxxx') for _ in range(3)],
+                                               partial, max_total_bytes=7,
+                                               parallel=1, max_bytes=4)
+            self.assertEqual(partial, [])
+            failed = []
+            with self.assertRaisesRegex(ValueError, 'HOLD_LIVE_RENDER_RESOURCE_HTTP'):
+                await capture_render_resources([Asset(status=404), Asset(delay=0.1)],
+                                               failed, parallel=2)
+            self.assertEqual(failed, [])
+            self.assertEqual(Asset.active, 0)
+
+        asyncio.run(check())
+        wiring = inspect.getsource(_measure_async)
+        self.assertIn('await capture_render_resources(render_responses, network_assets)', wiring)
+        self.assertIn('render_response_overflow', wiring)
+        self.assertNotIn('asyncio.create_task(capture_resource(response))', wiring)
 
     def test_renderer_resource_identity_fail_closed(self):
         a = renderer_resource_identity([('script', 'const NOX = true;')],
