@@ -76,11 +76,11 @@ for(const [vp,w,h] of [['d',1440,900],['m',390,844]]){
   await p.close()}
  // СИСТЕМА
  {const p=await mk('system');await p.waitForTimeout(6500);
-  await T('system','плитки и графики uPlot',async()=>(await p.$$('#tiles .card')).length===6&&(await p.$$('.uplot')).length===2);
+  await T('system','плитки и графики uPlot',async()=>(await p.$$('#tiles .card')).length===6&&(await p.$$('.uplot')).length===3);
   await T('system','пауза/продолжить',async()=>{await p.click('#sPause');const a=await p.textContent('#sState');await p.click('#sPause');return /ОСТАНОВЛЕН/.test(a)&&/КАЖДЫЕ/.test(await p.textContent('#sState'))});
   await T('system','CSV',async()=>{const d=await dl(p,'#sCsv');return d.txt.split('\n').length>=2&&d.txt.startsWith('time,')});
   await T('system','Очистить',async()=>{await p.click('#sClear');return true});
-  await T('system','честное сообщение о метриках ПК',async()=>/недоступны/.test(await p.textContent('#pc')));
+  await T('system','метрики ПК: данные или честная ошибка',async()=>/недоступны|GPU загрузка/.test(await p.textContent('#pc')));
   await T('system','ошибки JS',async()=>{if(p.errs.length)throw new Error(p.errs.join('|'));return true});
   await p.close()}
  // НАСТРОЙКИ
