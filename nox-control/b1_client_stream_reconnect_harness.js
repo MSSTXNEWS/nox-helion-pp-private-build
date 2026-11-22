@@ -120,7 +120,7 @@
         if(!res||res.ok!==true||!res.body||typeof res.body.getReader!=='function')
           hold('HOLD_STREAM_POST_RESPONSE');
         const reader=res.body.getReader(),decoder=new TextDecoder();
-        let buf='';
+        let buf='',swallowNextLF=false;
         while(true){
           if(ctrl.signal.aborted) return stopped();
           // reader.read() is not guaranteed to settle when a custom transport
@@ -153,11 +153,18 @@
           }
           if(outcome.readError) hold('HOLD_STREAM_POST_OR_READ');
           const part=outcome.part;
-          if(part.done) break;
-          // Decode and normalize the WHOLE buffered tail. A network chunk may
-          // end with CR while the next starts with LF: normalizing each chunk
-          // separately leaves CRLF intact and silently drops valid SSE deltas.
-          buf=(buf+decoder.decode(part.value,{stream:true})).replace(/\r\n/g,'\n');
+          // EventSource allows CR, LF, and CRLF. Dispatch a lone CR
+          // immediately (without waiting for another chunk or EOF), but
+          // swallow a following LF if CRLF was split between reads. Even
+          // zero-character TextDecoder outputs must preserve this fence.
+          let decoded=part.done?decoder.decode():
+            decoder.decode(part.value,{stream:true});
+          if(swallowNextLF&&decoded.length){
+            if(decoded[0]==='\n') decoded=decoded.slice(1);
+            swallowNextLF=false;
+          }
+          if(decoded.endsWith('\r')) swallowNextLF=true;
+          buf+=decoded.replace(/\r\n?/g,'\n');
           let e;
           while((e=buf.indexOf('\n\n'))>=0){
             // Bound EACH frame, not the aggregate transport read. One chunk
@@ -215,6 +222,7 @@
           // The unframed tail, unlike completed events, must be bounded.
           // A single unterminated oversized event is not a valid stream.
           if(buf.length>65536) hold('HOLD_STREAM_FRAME_TOO_LARGE');
+          if(part.done) break;
         }
         if(ctrl.signal.aborted) return stopped();
         return 'STREAM_ENDED_READBACK_REQUIRED';
