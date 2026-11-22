@@ -1,5 +1,16 @@
 name: NOX A2 current-main model and tool evidence gate
 on:
+  # Catch regressions reintroduced by overlapping branch merges on main.
+  push:
+    branches: [main]
+    paths:
+      - 'nox-control/owner_chat_stream.py'
+      - 'nox-control/owner_chat_evidence.py'
+      - 'nox-control/test_owner_chat_stream.py'
+      - '.github/workflows/nox-a2-fallback-context-ci.yml'
+  # If the repository uses GitHub's merge queue, check the merged candidate.
+  merge_group:
+    types: [checks_requested]
   pull_request:
     paths:
       - 'nox-control/owner_chat_stream.py'
