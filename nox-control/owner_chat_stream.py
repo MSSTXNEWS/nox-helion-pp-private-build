@@ -281,7 +281,8 @@ async def _model_events(client, url, payload):
             raise StreamFailure({
                 401:'HOLD_MODEL_AUTH',403:'HOLD_MODEL_AUTH',
                 408:'HOLD_MODEL_HTTP_TIMEOUT',429:'HOLD_MODEL_RATE_LIMIT',
-                503:'HOLD_MODEL_UNAVAILABLE',
+                502:'HOLD_MODEL_GATEWAY',503:'HOLD_MODEL_UNAVAILABLE',
+                504:'HOLD_MODEL_HTTP_TIMEOUT',
             }.get(response.status_code,'HOLD_MODEL_HTTP'))
         # A data: line is a field, not an event; dispatch only on a blank line.
         # Preserve valid multi-line JSON without allowing unbounded frames.
@@ -297,8 +298,8 @@ async def _model_events(client, url, payload):
                 first_line=False
                 if line.startswith('\ufeff'):
                     line=line[1:]
-            # [DONE] is not a successful end-of-HTTP proof. Read through EOF;
-            # never accept trailing model events or a transport failure as S03 final.
+            # [DONE] is a protocol marker, not proof of clean HTTP EOF.
+            # Reject later data and transport errors before S03 postflight.
             if complete:
                 if line:
                     raise StreamFailure('HOLD_MODEL_SSE_AFTER_DONE')
