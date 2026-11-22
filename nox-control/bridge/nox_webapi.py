@@ -607,6 +607,19 @@ def install(app, B):
                 if use_mem:
                     yield fr(message={"role": "assistant", "content": ""}, done=False, nox_status="вспоминаю…", nox_event={"step": "memory", "text": "ищу в памяти S03"})
                     mem = await asyncio.to_thread(B.memory_block, user)
+                    # STOP can arrive while a slow S03 lookup is running.
+                    # Never advance to planning or a new model POST afterward.
+                    if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                        CANCEL.discard(rid)
+                        yield fr(message={"role": "assistant", "content": ""}, done=True,
+                                 done_reason="stopped",
+                                 completion_receipt={"status": "STOPPED", "request_id": rid,
+                                                     "upstream_done": False},
+                                 memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                       "s03_readback_verified": False},
+                                 memory_history={"status": "SKIPPED", "reason": "USER_STOP",
+                                                 "s03_readback_verified": False})
+                        return
                 lines = [l for l in mem.splitlines() if l.strip()] if mem else []
                 SRC.clear()
                 srcs = []
@@ -642,6 +655,19 @@ def install(app, B):
                     mm = B.build_msgs(msgs_in, user, mem, vol, "\n" + extra if extra else "")
                 body = {"messages": mm, "max_tokens": max(64, min(npred, 900, (400 if mini else (900 if mode == "thoughtful" else B.adapt_tokens(user, 900))))), "temperature": 0.4 if mode == "thoughtful" else 0.6, "id_slot": 1 if mini else 0, "cache_prompt": True, "n_keep": B.NKEEP, "stream": True,
                         "chat_template_kwargs": {"enable_thinking": False}}
+                # STOP may also arrive while self-model or planning awaits.
+                # Check again immediately before opening an upstream model request.
+                if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                    CANCEL.discard(rid)
+                    yield fr(message={"role": "assistant", "content": ""}, done=True,
+                             done_reason="stopped",
+                             completion_receipt={"status": "STOPPED", "request_id": rid,
+                                                 "upstream_done": False},
+                             memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                   "s03_readback_verified": False},
+                             memory_history={"status": "SKIPPED", "reason": "USER_STOP",
+                                             "s03_readback_verified": False})
+                    return
                 err = None
                 upstream_done = False
                 upstream_stop_seen = False

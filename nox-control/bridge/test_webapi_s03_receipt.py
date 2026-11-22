@@ -386,6 +386,65 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertTrue(any(expected_error in msg for msg in bridge.errors))
 
 
+    def test_stop_during_memory_or_prompt_assembly_never_posts_model(self):
+        """1A04: accepted STOP after a slow phase must not start GPU inference."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.SOUL = None
+        bridge.LAST_CHAT = {"t": 0}
+        bridge.NKEEP = 0
+        bridge.adapt_tokens = lambda *_: 64
+        bridge.self_vol = lambda _: ""
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        for stage in ("memory", "pre-model"):
+            with self.subTest(stage=stage):
+                rid = "a6-stop-before-" + stage
+                model_calls = []
+                writes.clear()
+                W.CANCEL.discard(rid)
+
+                def memory_block(_):
+                    if stage == "memory":
+                        W.CANCEL.add(rid)
+                    return ""
+
+                def build_msgs(*_):
+                    if stage == "pre-model":
+                        W.CANCEL.add(rid)
+                    return [{"role": "user", "content": "Do not start after STOP"}]
+
+                def client():
+                    model_calls.append("POST_ATTEMPT")
+                    raise AssertionError("model client must not be constructed")
+
+                bridge.memory_block = memory_block
+                bridge.build_msgs = build_msgs
+                bridge.hc = client
+
+                async def collect():
+                    response = await chat(Request({
+                        "messages": [{"role": "user", "content": "STOP during preparation"}],
+                        "request_id": rid, "mini": False,
+                        "use_memory": stage == "memory",
+                    }))
+                    return [json.loads(chunk) async for chunk in response.body_iterator]
+
+                with mock.patch.dict(sys.modules, {"s03_memory": memory}), mock.patch.object(W, "W", None):
+                    frames = asyncio.run(collect())
+
+                self.assertEqual(model_calls, [])
+                self.assertEqual(writes, [])
+                self.assertEqual(frames[-1]["done_reason"], "stopped")
+                self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
+                self.assertFalse(frames[-1]["completion_receipt"]["upstream_done"])
+                self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+                self.assertNotIn(rid, W.ACTIVE_CHAT_IDS)
+                self.assertNotIn(rid, W.CANCEL)
+
+
     def test_broadcast_stop_survives_new_chat_and_does_not_stop_future_chats(self):
         """New request must not clear a STOP already sent to an older stream."""
         class Upstream:
