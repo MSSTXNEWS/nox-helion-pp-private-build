@@ -660,7 +660,11 @@ test('CDP binds chat POSTs to expected serving origin and fails closed on redire
     await assert.rejects(run(false,null,null,null,{requestUrl:wrongOrigin}),/CHAT_POST_ORIGIN_MISMATCH/);
   }
   await assert.rejects(run(false,null,null,null,{redirectResponse:true}),/CDP_CHAT_REDIRECT/);
-  await assert.rejects(run(false,null,null,null,{redirectHasExtraInfo:false}),/CDP_CHAT_REDIRECT/);
+  const explicitNoRedirect=await run(false,null,null,null,{redirectHasExtraInfo:false});
+  assert.equal(explicitNoRedirect.cdp_consistent,true,
+    'real Chromium can include redirectHasExtraInfo=false for an initial POST');
+  assert.equal(explicitNoRedirect.ttft_sse_verified,true);
+  await assert.rejects(run(false,null,null,null,{redirectHasExtraInfo:true}),/CDP_CHAT_REDIRECT/);
   const responseMismatch=await run(false,null,null,null,{responseUrl:'http://foreign.invalid/api/nox/chat'});
   assert.equal(responseMismatch.cdp_consistent,false);
   assert.equal(responseMismatch.ttft_sse_verified,false);
