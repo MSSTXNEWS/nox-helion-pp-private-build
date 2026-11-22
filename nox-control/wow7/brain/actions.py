@@ -3,9 +3,11 @@
   planner.kind, planner.match(text)->plan|None, planner.preview(plan)->str, planner.irreversible(plan)->bool, async planner.execute(plan)->str
 TaskRunnerPlanner оборачивает ACT/task_runner.Runner (карточка -> submit/run/receipt)."""
 import asyncio
+import json
 import os
 import re
 import secrets
+import tempfile
 import time
 
 from executors import Exec, NUMW
@@ -30,6 +32,118 @@ def _hm(ts):
     return time.strftime("%H:%M", time.localtime(ts)) if ts else "--:--"
 
 
+
+
+ANSWER_SETTINGS_REQUEST_RE = re.compile(
+    r"(?:настройк\w*\s+ответ\w*|длин[ауы]\s+ответ\w*|режим\s+(?:авто|быстр\w*|глубок\w*|fast|deep)|"
+    r"верни\w*\s+(?:всё\s+)?по\s+умолчанию|сброси\w*\s+настройк\w*)",
+    re.I,
+)
+ANSWER_SETTINGS_DEFAULTS = {"max_tokens": 1500, "mode": "auto"}
+
+
+class AnswerSettings:
+    """Настройки длины и режима ответа на каждого speaker; defaults never imply a stored preference."""
+
+    def __init__(self, core):
+        self.core = core
+
+    @staticmethod
+    def is_request(text):
+        return bool(ANSWER_SETTINGS_REQUEST_RE.search(text or ""))
+
+    @property
+    def path(self):
+        state_dir = getattr(getattr(self.core, "cfg", None), "state_dir", None)
+        return os.path.join(state_dir, "answer_settings.json") if state_dir else None
+
+    def _load(self):
+        path = self.path
+        if not path:
+            return {}
+        try:
+            with open(path, encoding="utf-8") as f:
+                obj = json.load(f)
+            return obj if isinstance(obj, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def get(self, speaker):
+        key = str(speaker or "owner")[:120]
+        value = self._load().get(key)
+        if not isinstance(value, dict):
+            return dict(ANSWER_SETTINGS_DEFAULTS), False
+        try:
+            max_tokens = int(value.get("max_tokens", ANSWER_SETTINGS_DEFAULTS["max_tokens"]))
+        except (TypeError, ValueError):
+            max_tokens = ANSWER_SETTINGS_DEFAULTS["max_tokens"]
+        max_tokens = max(300, min(3000, max_tokens))
+        mode = value.get("mode") if value.get("mode") in ("auto", "fast", "deep") else "auto"
+        return {"max_tokens": max_tokens, "mode": mode}, True
+
+    def _save(self, data):
+        path = self.path
+        if not path:
+            raise OSError("state_dir недоступен")
+        directory = os.path.dirname(path)
+        os.makedirs(directory, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(prefix=".answer_settings.", suffix=".tmp", dir=directory, text=True)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, sort_keys=True)
+                f.write("\n")
+            os.replace(tmp, path)
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
+
+    @staticmethod
+    def _mode_label(mode):
+        return {"auto": "авто", "fast": "быстро", "deep": "глубоко"}.get(mode, "авто")
+
+    def process(self, text, speaker):
+        key = str(speaker or "owner")[:120]
+        raw = text or ""
+        data = self._load()
+        current, stored = self.get(key)
+        if re.search(r"верни\w*\s+(?:всё\s+)?по\s+умолчанию|сброси\w*\s+настройк\w*", raw, re.I):
+            data.pop(key, None)
+            try:
+                self._save(data)
+            except OSError as e:
+                return "Мессир, не удалось сохранить настройки по умолчанию: %s." % type(e).__name__
+            return "Настройки ответа возвращены к значениям по умолчанию: 1500 токенов, режим — авто."
+        length_match = re.search(r"(?:max[_ -]?tokens|токен\w*|длин\w*|ответ\w*)\D{0,24}(\d{2,5})", raw, re.I)
+        if length_match is None:
+            length_match = re.search(r"\b(\d{3,5})\s*(?:токен\w*)?\b", raw, re.I)
+        mode = None
+        if re.search(r"\b(?:авто|automatic)\b", raw, re.I):
+            mode = "auto"
+        elif re.search(r"\b(?:быстро|быстрый|быстрый\s+режим|fast)\b", raw, re.I):
+            mode = "fast"
+        elif re.search(r"\b(?:глубоко|глубокий|deep)\b", raw, re.I):
+            mode = "deep"
+        if length_match is None and mode is None:
+            source = "сохранены" if stored else "не сохранены"
+            return "Мессир, отдельные настройки ответа %s; действуют %d токенов и режим «%s»." % (
+                source, current["max_tokens"], self._mode_label(current["mode"]))
+        max_tokens = current["max_tokens"]
+        if length_match is not None:
+            requested = int(length_match.group(1))
+            if not 300 <= requested <= 3000:
+                return "Длина ответа должна быть от 300 до 3000 токенов; настройки не изменены."
+            max_tokens = requested
+        updated = {"max_tokens": max_tokens, "mode": mode or current["mode"]}
+        data[key] = updated
+        try:
+            self._save(data)
+        except OSError as e:
+            return "Мессир, не удалось сохранить настройки: %s. Текущие значения не подтверждаю." % type(e).__name__
+        return "Сохранено: %d токенов, режим «%s»." % (updated["max_tokens"], self._mode_label(updated["mode"]))
+
 class ActionReason(Exec):
     name, budget_s = "reason", 15.0
 
@@ -39,6 +153,8 @@ class ActionReason(Exec):
         if it == "deny":
             st.conv.pending = None
             st.draft = "Хорошо, ничего не меняю."
+        elif it == "answer_settings":
+            st.draft = AnswerSettings(core).process(st.user_text, st.speaker)
         elif it == "undo":
             st.draft = self.undo(st)
         elif it == "confirm":
