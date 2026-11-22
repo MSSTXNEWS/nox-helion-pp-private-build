@@ -59,8 +59,8 @@ class TestPrime(unittest.TestCase):
 
     def test_broken_organ_does_not_break_chat(self):
         p = Prime(SOUL, parts={"affect": Boom(), "router": lambda t, c: 1 / 0})
-        r = p.build("привет", [], "t3")
-        self.assertEqual(r["messages"][-1]["content"], "привет")
+        r = p.build("как дела", [], "t3")
+        self.assertEqual(r["messages"][-1]["content"], "как дела")
         self.assertTrue(any("affect" in e for e in r["info"]["errors"]))
         self.assertTrue(any("router" in e for e in r["info"]["errors"]))
         self.assertEqual(r["route"]["tier"], "fast")
