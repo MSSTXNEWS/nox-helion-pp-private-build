@@ -2903,10 +2903,15 @@ test('R23 actual headless Chromium: loopback three-turn SSE/CDP provenance, two-
       }
       requests.push({scenario:p.scenario,ordinal,bodySha:sha256(body)});
       const chunks=frames(answers[ordinal-1]);
+      // Synthetic loopback intentionally delays headers, like a real model
+      // generation prefill; this ensures Chrome has emitted the request POST
+      // metadata before delivering any early HTTP response ExtraInfo. A fast
+      // ambiguous observer stream must fail closed, not be silently accepted.
+      await sleep(90);
       res.writeHead(200,{'Content-Type':'text/event-stream; charset=utf-8',
         'Cache-Control':'no-store, no-transform','X-Accel-Buffering':'no'});
       res.flushHeaders();
-      await sleep(90); // let Chrome subscribe via Network.streamResourceContent
+      await sleep(90); // CDP streamResourceContent subscribed before first SSE byte
       res.write(chunks[0]);await sleep(28);
       res.write(chunks[1]);await sleep(28);
       if(p.scenario==='aborted3'&&ordinal===3){
