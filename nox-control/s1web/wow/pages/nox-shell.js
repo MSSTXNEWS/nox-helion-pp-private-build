@@ -35,6 +35,7 @@ export function mountShell(app, cur) {
   b.addEventListener('click', (e) => { e.stopPropagation(); const open = m.hidden; if (open) { const r = b.getBoundingClientRect(), br = bar.getBoundingClientRect(); m.style.left = Math.max(8, Math.min(innerWidth - 248, r.right - 240 - br.left)) + 'px'; } m.hidden = !open; b.setAttribute('aria-expanded', String(open)); });
   document.addEventListener('click', (e) => { if (!m.contains(e.target)) close(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  if (cur !== 'chat') import('./nox-mini.js').then((m) => m.mountMini()).catch((e) => console.warn('mini-nox:', e.message));
   return bar;
 }
 
