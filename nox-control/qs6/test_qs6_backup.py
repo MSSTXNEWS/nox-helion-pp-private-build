@@ -60,6 +60,54 @@ class BackupT(unittest.TestCase):
         self.assertEqual(old.stats()["facts"], 2)
         old.close()
 
+    def test_restore_refuses_same_second_backup_collision_without_overwrite(self):
+        r = B.backup(self.db, self.bdir)
+        s = Store(self.db)
+        s.add_fact("Факт до запрещённого восстановления")
+        s.close()
+        old_contents = open(self.db, "rb").read()
+        occupied = "%s.before-restore-%s" % (
+            self.db, B.time.strftime("%Y%m%d-%H%M%S"))
+        with open(occupied, "wb") as f:
+            f.write(b"preserved previous checkpoint")
+        with self.assertRaisesRegex(RuntimeError, "уже существует"):
+            B.restore(r["path"], self.db)
+        self.assertEqual(open(occupied, "rb").read(), b"preserved previous checkpoint")
+        self.assertEqual(open(self.db, "rb").read(), old_contents)
+        self.assertFalse(os.path.exists(self.db + ".restore.tmp"))
+
+    def test_restore_failed_atomic_swap_rolls_back_original(self):
+        from unittest.mock import patch
+
+        r = B.backup(self.db, self.bdir)
+        s = Store(self.db)
+        s.add_fact("Факт, который нельзя терять при ошибке")
+        s.close()
+        real_replace = os.replace
+
+        def fail_only_install(src, dst):
+            if src == self.db + ".restore.tmp" and dst == self.db:
+                raise OSError("injected disk rename failure")
+            return real_replace(src, dst)
+
+        with patch.object(B.os, "replace", side_effect=fail_only_install):
+            with self.assertRaisesRegex(OSError, "injected"):
+                B.restore(r["path"], self.db)
+        self.assertFalse(os.path.exists(self.db + ".restore.tmp"))
+        s = Store(self.db)
+        self.assertEqual(s.stats()["facts"], 2)
+        s.close()
+
+    def test_restore_refuses_orphan_wal_before_install(self):
+        r = B.backup(self.db, self.bdir)
+        new = os.path.join(self.td.name, "orphan.db")
+        with open(new + "-wal", "wb") as f:
+            f.write(b"orphan WAL")
+        with self.assertRaisesRegex(RuntimeError, "осиротевшие"):
+            B.restore(r["path"], new)
+        self.assertFalse(os.path.exists(new))
+        self.assertEqual(open(new + "-wal", "rb").read(), b"orphan WAL")
+
     def test_restore_into_new_path(self):
         r = B.backup(self.db, self.bdir)
         new = os.path.join(self.td.name, "sub", "new.db")
