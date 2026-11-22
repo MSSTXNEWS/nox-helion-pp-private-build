@@ -147,8 +147,12 @@
         }
         if(posted.postError) hold('HOLD_STREAM_POST_OR_READ');
         const res=posted.res;
-        if(!res||res.ok!==true||!res.body||typeof res.body.getReader!=='function')
+        if(!res||res.ok!==true||!res.body||typeof res.body.getReader!=='function'){
+          // A non-2xx or malformed POST can still own an open response body.
+          // Dispose of it without blocking STOP, or touching UI, ACK or POST.
+          cancelAbandonedPost(res);
           hold('HOLD_STREAM_POST_RESPONSE');
+        }
         // Never silently replace malformed/incomplete UTF-8 with U+FFFD in
         // a model delta. An ambiguous stream must recover from canonical GET.
         reader=res.body.getReader();

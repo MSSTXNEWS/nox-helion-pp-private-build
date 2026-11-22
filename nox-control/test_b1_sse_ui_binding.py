@@ -837,6 +837,45 @@ def main():
             deltas.length===1 && deltas[0][0]===' indented  \\n spaced  ' &&
             deltas[0][1]==='space-123';
         }'''))
+        # A failed HTTP response may still own an open SSE socket. Malformed
+        # response bodies must be discarded before a fail-closed HOLD.
+        check('rejected POST response releases body without repost or ACK', page.evaluate('''async () => {
+          for(const kind of ['http-500','missing-reader','valid']){
+            const s={conversation_id:'post-body-hold',exchange_id:kind};
+            let posts=0,acks=0,deltas=0,cancels=0;
+            const body=kind==='missing-reader'?
+              {cancel(){cancels++;return Promise.resolve()}}:
+              new ReadableStream({
+                start(controller){
+                  if(kind==='valid'){
+                    controller.enqueue(new TextEncoder().encode(
+                      'event: delta\\nid: valid-event\\ndata: GOOD\\n\\n'
+                    ));
+                    controller.close();
+                  }
+                },
+                cancel(){cancels++}
+              });
+            const transport={...opts.transport,
+              async post(){posts++;return {ok:kind!=='http-500',body}},
+              async ack(){acks++;return true}
+            };
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host:{...opts.host,async readCommitted(){return null}},
+              bridge:opts.bridge,
+              ui:{async onDelta(){deltas++},async upsertTerminal(){return true}},
+              timeoutMs:2000
+            });
+            const result=await c.begin(s).then(x=>x,e=>e.code);
+            const noRepost=await c.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(result!==(kind==='valid'?
+              'STREAM_ENDED_READBACK_REQUIRED':'HOLD_STREAM_POST_RESPONSE')||
+              posts!==1||acks!==0||deltas!==(kind==='valid'?1:0)||
+              cancels!==(kind==='valid'?0:1)||!noRepost)return false;
+          }
+          return true;
+        }'''))
         # An uncooperative POST can resolve AFTER the STOP/timeout race.
         # Cancel its unlocked late stream body; never repost or ACK.
         check('late model POST body canceled after STOP or timeout', page.evaluate('''async () => {
