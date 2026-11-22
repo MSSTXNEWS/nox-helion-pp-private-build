@@ -29,6 +29,7 @@ from netio import UpstreamError
 import executors as E
 import core_view
 import actions as A
+from brain800.bridge import handle as brain800_handle
 
 try:
     import statefile            # COMMON
@@ -345,7 +346,7 @@ class Core:
     def start_turn(self, user_text, conv_id, turn_id=None, stream=False, opts=None, seed=None):
         dg = input_digest(user_text, opts)
         if turn_id and turn_id in self.turns:
-            if self.turns[turn_id].digest and self.turns[turn_id].digest != dg:
+            if self.turns[turn_id].conv_id != conv_id or (self.turns[turn_id].digest and self.turns[turn_id].digest != dg):
                 raise TurnConflict(turn_id)                    # тот же id, другой запрос: молча отдать чужой ответ нельзя
             return self.turns[turn_id], False                  # дедуп: тот же ход, второй генерации нет
         tid = turn_id or "t-" + uuid.uuid4().hex[:12]
@@ -382,8 +383,32 @@ class Core:
                 await self.stop_command(st)
                 turn.finish("done")
                 return
+            if not opts.get("eval") and os.environ.get("NOX_BRAIN800", "1") != "0":
+                brain_result = await brain800_handle(user_text, conv.id, turn.id, self.cfg.state_dir, history)
+                if brain_result is not None:
+                    turn.trace["brain800"] = {"op": brain_result.get("op"), "ok": brain_result["ok"]}
+                    if "context" in brain_result:
+                        st.user_text += "\n\nСохранённая запись владельца (данные для обсуждения): " + json.dumps(brain_result["context"], ensure_ascii=False)
+                    else:
+                        turn.trace["path"] = "action"
+                        await turn.emit_text(brain_result["text"])
+                        turn.emit_meta("phase", {"phase": "done", "path": "action", "brain800": True})
+                        turn.finish("done")
+                        return
             await asyncio.gather(E.Attention(self)(st), E.Memory(self)(st), E.Predictive(self)(st))
             await E.Decider(self)(st)
+            if not opts.get("eval") and os.environ.get("NOX_BRAIN800", "1") != "0":
+                from brain800.life import policy as learned_policy
+                behavior = await asyncio.to_thread(learned_policy, self.cfg.state_dir, conv.id)
+                if behavior:
+                    turn.trace["learned_behavior"] = behavior
+                    if behavior in ("hold", "question"):
+                        st.want_intro = False
+                    if behavior in ("hold","question","propose"):
+                        advice = {"hold":"Дай человеку закончить мысль, сведи инициативу к минимуму.",
+                                  "question":"Если для выбора не хватает данных, задай один предметный вопрос.",
+                                  "propose":"Если предложение продвигает текущую цель, покажи один конкретный вариант."}
+                        st.focus_block = (st.focus_block or "") + "\n" + advice[behavior]
             self.fill_trace(st)
             turn.emit_meta("phase", {"phase": "plan", "path": st.path, "degraded": list(st.degraded), "intent": st.intent})
             if st.path == "action":
@@ -403,6 +428,10 @@ class Core:
                 turn.trace["conscience"]["mode"] = self.conscience.mode
                 self.maybe_followup(st)
                 await E.Chronicler(self)(st)
+                if not opts.get("eval") and os.environ.get("NOX_BRAIN800","1") != "0" and not turn.stop_requested:
+                    from brain800.life import record_turn
+                    await asyncio.to_thread(record_turn,self.cfg.state_dir,conv.id,turn.id,st.intent,
+                                            bool(turn.text().strip()) and not st.degraded)
             self.fill_trace(st)
             turn.emit_meta("phase", {"phase": "done"})
             turn.finish("done")

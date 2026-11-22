@@ -1,0 +1,29 @@
+{
+  "kind": "base",
+  "base_parameters": 10000,
+  "extra_adapter_parameters": 0,
+  "seed": 1807,
+  "epochs": 130,
+  "learning_rate": 0.25,
+  "weak_catalog_descriptions": 800,
+  "user_verified_labels": 0,
+  "authored_or_optin_train": 52,
+  "distinct_train_ops": 800,
+  "nonzero_input_columns": 119,
+  "holdout_distinct_ops": 13,
+  "holdout_before": {
+    "top1": 0,
+    "top5": 0,
+    "n": 13
+  },
+  "holdout_after": {
+    "top1": 5,
+    "top5": 13,
+    "n": 13
+  },
+  "last_minibatch_loss": 3.030808860688031,
+  "catalog_fingerprint": "3a764ea57497daba554a14a9abac363676e0de72dd8b71e282c8a767410ebafd",
+  "encoder_fingerprint": "32ba3bf9b3991574fe548a40242b6459d2f91bada931216424a012dea0a551d0",
+  "checkpoint_sha256": "893c11a5256a6e762d0f4ce66e028ef78de0441254f6a4363fb0e9eee23a3004",
+  "mode": "suggest_only"
+}

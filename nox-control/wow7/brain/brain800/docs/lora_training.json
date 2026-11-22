@@ -1,0 +1,29 @@
+{
+  "kind": "adapter",
+  "base_parameters": 10000,
+  "extra_adapter_parameters": 3240,
+  "seed": 1807,
+  "epochs": 60,
+  "learning_rate": 0.18,
+  "weak_catalog_descriptions": 0,
+  "user_verified_labels": 0,
+  "authored_or_optin_train": 52,
+  "distinct_train_ops": 13,
+  "nonzero_input_columns": 89,
+  "holdout_distinct_ops": 13,
+  "holdout_before": {
+    "top1": 5,
+    "top5": 13,
+    "n": 13
+  },
+  "holdout_after": {
+    "top1": 5,
+    "top5": 13,
+    "n": 13
+  },
+  "last_minibatch_loss": 0.04271039927544541,
+  "catalog_fingerprint": "3a764ea57497daba554a14a9abac363676e0de72dd8b71e282c8a767410ebafd",
+  "encoder_fingerprint": "32ba3bf9b3991574fe548a40242b6459d2f91bada931216424a012dea0a551d0",
+  "checkpoint_sha256": "cda4742523ced9e352275d71e50404bbab16eb4789a827df4b6ebd56de194a7d",
+  "mode": "suggest_only"
+}
