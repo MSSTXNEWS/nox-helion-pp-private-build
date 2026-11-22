@@ -1311,7 +1311,7 @@ class TestProbe(unittest.TestCase):
                               'softstart','joinstart','graphemestart'].entries()){
                             const postsBefore=window.__posts;
                             const readsBefore=window.__reads;
-                            const id=String(i).repeat(32);
+                            const id=i.toString(16).repeat(32);
                             const response=await fetch('/api/nox/chat',{
                                 method:'POST',body:JSON.stringify({
                                     dialog_id:id,request_id:'b3-model-'+mode,
