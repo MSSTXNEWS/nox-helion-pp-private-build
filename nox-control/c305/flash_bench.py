@@ -83,10 +83,12 @@ def suites():
            "soul": ["ini-%02d" % i for i in range(1, 9)] + ["tom-03", "tom-04", "tom-05", "tom-07", "tom-08", "tom-09", "tom-10"] + ["slf-%02d" % i for i in range(1, 6)],
            "provoc": ["chr-%02d" % i for i in range(1, 11)]}
     hard = ["rea-03", "rea-07", "rea-08", "rea-10", "tom-02"]
-    V2 = bool(os.environ.get("FB_V2"))
-    PF = "flash2" if V2 else "flash"
-    if V2: hard = []
-    def runset(name, think_ids=(), system=None, mx=600):
+    V2 = bool(os.environ.get("FB_V2")); V3 = bool(os.environ.get("FB_V3"))
+    PF = "flash3" if V3 else ("flash2" if V2 else "flash")
+    global SOUL
+    if V3: SOUL = SOUL + "\n\nВАЖНО: рассуждай про себя очень коротко (2-4 предложения), затем сразу дай ответ. Ответ короткий, 1-4 предложения."
+    if V2 or V3: hard = []
+    def runset(name, think_ids=(), system=None, mx=(1000 if os.environ.get("FB_V3") else 600)):
         jobs = [(i, th) for i in ids[name] for th in ([False] + ([True] if i in think_ids else []))]
         def work(job):
             i, think = job
@@ -100,7 +102,7 @@ def suites():
         with concurrent.futures.ThreadPoolExecutor(4) as ex: res = list(ex.map(work, jobs))
         return res
     out = {"date": datetime.datetime.utcnow().isoformat() + "Z", "source": "MIND-BENCH dev.json (nox_wow v7), часть заданий"}
-    out["mind"] = runset("mind", hard); save(ST + "/%s_suite_mind.json" % PF, out)
+    out["mind"] = [] if V3 else runset("mind", hard); save(ST + "/%s_suite_mind.json" % PF, out)
     out["soul"] = runset("soul", system=SOUL); save(ST + "/%s_suite_soul.json" % PF, out)
     out["provoc"] = runset("provoc", system=SOUL); save(ST + "/%s_suite_provoc.json" % PF, out)
     # русский: составлено исполнителем
@@ -110,7 +112,7 @@ def suites():
           "Объясни разницу между «ложить» и «класть».", "Опиши словами закат над морем, без штампов, не больше четырёх предложений.",
           "Составь вежливый отказ коллеге, который просит срочно задержаться вечером.", "Что значит выражение «бить баклуши»? Одной фразой."]
     def ruone(q):
-        r = post([{"role": "user", "content": q}], 600, system=SOUL, cache=True)
+        r = post([{"role": "user", "content": q}], 1000 if V3 else 600, system=SOUL, cache=True)
         txt = mb.strip_think(r["text"]); letters = re.findall(r"[A-Za-zА-Яа-яЁё]", txt); cyr = len(re.findall(r"[А-Яа-яЁё]", txt)) / max(1, len(letters))
         chk = {"cyrillic>=0.95": cyr >= 0.95, "no_emoji": not mb._EMOJI.search(txt), "no_list": len(mb._LIST.findall(txt)) < 2, "nonempty": len(txt) > 20}
         print("ru", q[:30], flush=True)
