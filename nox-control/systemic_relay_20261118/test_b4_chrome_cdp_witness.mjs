@@ -2345,3 +2345,33 @@ test('CDP handshake explicitly rejects pre-open close, error and stall with a bo
     globalThis.WebSocket=original;
   }
 });
+
+test('injected CDP session factory stalls are bounded and late sessions are closed',async()=>{
+  const options={ws:'ws://127.0.0.1:9333/fake',expectedChatOrigin:'http://localhost',
+    timeoutMs:100,quiescenceMs:50,responseBodyAckTimeoutMs:25,
+    requestPostDataAckTimeoutMs:25};
+  let resolveLate;
+  const stalled=new Promise(resolve=>{resolveLate=resolve;});
+  const began=Date.now();
+  await assert.rejects(capture({...options,makeSession:()=>stalled}),/CDP_CONNECT_TIMEOUT/);
+  assert.ok(Date.now()-began<1000,'injected factory timeout is bounded');
+  const late={closes:0,close(){this.closes++;}};
+  resolveLate(late);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(late.closes,1,'session arriving after timeout must be closed');
+
+  let rejectLate;
+  const lateFailure=new Promise((_,reject)=>{rejectLate=reject;});
+  await assert.rejects(capture({...options,makeSession:()=>lateFailure}),
+    /CDP_CONNECT_TIMEOUT/);
+  rejectLate(Error('LATE_FACTORY_REJECT'));
+  await new Promise(resolve=>setImmediate(resolve));
+  await assert.rejects(capture({...options,makeSession:()=>{
+    throw Error('FACTORY_SETUP_FAILED');
+  }}),/FACTORY_SETUP_FAILED/);
+
+  const healthy=await run();
+  assert.equal(healthy.cdp_consistent,true,'valid injected factory retains two turns');
+  assert.equal(healthy.ttft_sse_verified,true);
+  assert.equal(healthy.native_verified,false,'fixture never proves installed runtime');
+});
