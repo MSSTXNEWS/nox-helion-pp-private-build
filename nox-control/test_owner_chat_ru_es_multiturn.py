@@ -382,6 +382,31 @@ async function check(chunks, status=200) {
         self.assertTrue(canonical_s03_proof_valid(
             legacy_writer, legacy_reader, DIALOG, clean))
 
+    def test_strict_s03_rejects_nonprintable_owner_session_even_if_witnesses_match(self):
+        """Identical Unicode-control session IDs are not a canonical owner pin."""
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        clean = [dict(row, message_id=f"msg-{i}", session_id="owner-session")
+                 for i, row in enumerate(rows(es))]
+        writer, readback = s03_proof(clean)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, clean, require_full_transcript_pin=True))
+        for suffix in ("\u200b", "\u2060", "\u202e", "\x00"):
+            # All four rows and both synthetic witnesses agree; a text/hash
+            # match still must not certify a malformed session identity.
+            poisoned = [dict(row, session_id="owner-session" + suffix)
+                        for row in clean]
+            matched_writer, matched_readback = s03_proof(poisoned)
+            with self.subTest(suffix=repr(suffix)):
+                self.assertFalse(canonical_s03_proof_valid(
+                    matched_writer, matched_readback, DIALOG, poisoned,
+                    require_full_transcript_pin=True))
+        # Historical rows without any session metadata keep their contract.
+        legacy = [dict(row, message_id=f"msg-{i}")
+                  for i, row in enumerate(rows(es))]
+        old_writer, old_reader = s03_proof(legacy)
+        self.assertTrue(canonical_s03_proof_valid(
+            old_writer, old_reader, DIALOG, legacy))
+
     def test_firstturn_message_ids_survive_spanish_followup_readback(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         final_rows = [

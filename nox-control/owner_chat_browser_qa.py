@@ -778,7 +778,8 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
         # This alone is NOT an owner-cookie or independent writer proof.
         session_ids = [row.get('session_id') for row in expected_messages]
         if (any(not isinstance(value, str) or not value.strip()
-                or value != value.strip() for value in session_ids)
+                or value != value.strip() or not value.isprintable()
+                for value in session_ids)
                 or len(set(session_ids)) != 1):
             return False
     if (not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict)
