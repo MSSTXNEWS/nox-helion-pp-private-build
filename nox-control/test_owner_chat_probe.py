@@ -665,7 +665,8 @@ class ProbeTests(unittest.TestCase):
                 probe.consume_turn(object(), 'synthetic', '1' * 32)
         self.assertTrue(missing.closed)
         source = path.read_text()
-        self.assertIn('for index,line in enumerate(bounded_stream_lines(response)):', source)
+        self.assertIn('for index,frame in enumerate(bounded_stream_frames(', source)
+        self.assertIn('for wire_index, wire in enumerate(bounded_stream_lines(response, max_line)):', source)
         self.assertIn('readline(max_line + 1)', source)
 
 
