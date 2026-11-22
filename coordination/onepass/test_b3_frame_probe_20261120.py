@@ -122,6 +122,14 @@ class TestProbe(unittest.TestCase):
             'http://127.0.0.1:18877/nox/chat;rev=2',
             'http://127.0.0.1:18877/api/nox/chat%3Bsession=1',
             'http://127.0.0.1:18877/api//nox///chat/stream',
+            # RFC dot-segments and encoded aliases can be normalized by
+            # the browser/proxy before dispatch to the existing serving route.
+            'http://127.0.0.1:18877/assets/../api/nox/chat',
+            'http://127.0.0.1:18877/assets/%2e%2e/api/nox/chat/stream',
+            'http://127.0.0.1:18877/api/./nox/chat',
+            'http://127.0.0.1:18877/api/%2e/nox/chat/stream',
+            'http://127.0.0.1:18877/assets/%252e%252e/nox/chat',
+            'http://127.0.0.1:18877/assets/../nox/chat;rev=3',
         ):
             with self.subTest(block=url):
                 self.assertTrue(is_model_chat_endpoint(url))
