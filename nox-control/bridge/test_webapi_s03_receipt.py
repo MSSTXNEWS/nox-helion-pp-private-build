@@ -429,6 +429,7 @@ class FactReceiptTest(unittest.TestCase):
             async def __aexit__(self, *ignored): return False
             async def aiter_lines(self):
                 yield 'data: {"choices":[{"delta":{"content":"Сохранённый ответ"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
                 yield 'data: [DONE]'
 
         class Client:
