@@ -42,7 +42,14 @@ function onDrop() {
   tasks = order.concat(tasks.filter((t) => !shown.has(t.id))); save(); renderAll(); refetch();
 }
 const refetch = () => { if (cal) cal.refetchEvents(); };
-function renderAll() { renderChips(); renderBoard(); }
+function renderSum() {
+  const b = board(), t0 = today(), wk = ymd(new Date(Date.now() + 7 * 864e5)), act = visible(b), open = act.filter((t) => t.col !== 'done');
+  const cells = [['Всего', act.length], ['В работе', act.filter((t) => t.col === 'doing').length], ['Просрочено', open.filter((t) => t.due && t.due < t0).length], ['Срок на неделе', open.filter((t) => t.due && t.due >= t0 && t.due <= wk).length], ['Готово', act.filter((t) => t.col === 'done').length]];
+  const nxt = open.filter((t) => t.due && t.due >= t0).sort((x, y) => x.due.localeCompare(y.due)).slice(0, 5);
+  $('#psum').innerHTML = cells.map((c) => '<div class="clk"><span class="mono">' + c[0] + '</span><b>' + c[1] + '</b></div>').join('');
+  $('#pnext').innerHTML = act.length ? (nxt.length ? nxt.map((t) => '<li><span class="mono">' + esc(t.due.slice(8) + '.' + t.due.slice(5, 7)) + '</span> ' + esc(t.title) + (t.project ? ' <span class="muted">· ' + esc(t.project) + '</span>' : '') + '</li>').join('') : '<li class="muted">Задачи без срока: назначьте дату в карточке.</li>') : '<li class="muted">Задач пока нет: добавьте первую в форме выше.</li>';
+}
+function renderAll() { renderChips(); renderBoard(); renderSum(); }
 
 /* ---------- диалог ---------- */
 const kindUi = () => { const ev = $('#dKind').value === 'event'; $('#dTimeW').hidden = !ev; $('#dColW').hidden = ev; };
@@ -83,14 +90,14 @@ function mkCal() {
     initialView: 'dayGridMonth', locale: 'ru', firstDay: 1, height: 'auto', fixedWeekCount: false, editable: true, dayMaxEvents: 3, eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
     headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
     buttonText: { today: 'Сегодня', month: 'Месяц', list: 'Список' }, noEventsText: 'Нет событий и сроков в этом месяце',
-    events: (_i, ok) => ok(visible().filter((t) => t.due).map((t) => ({ id: t.id, title: (t.kind === 'event' ? '' : '▣ ') + t.title, start: t.kind === 'event' && t.time ? t.due + 'T' + t.time : t.due, allDay: !(t.kind === 'event' && t.time), classNames: [t.col === 'done' ? 'done' : '', t.kind === 'event' ? 'ev' : 'dl'] }))),
+    events: (_i, ok) => ok(visible().filter((t) => t.due).map((t) => ({ id: t.id, title: t.title, start: t.kind === 'event' && t.time ? t.due + 'T' + t.time : t.due, allDay: !(t.kind === 'event' && t.time), classNames: [t.col === 'done' ? 'done' : '', t.kind === 'event' ? 'ev' : 'dl'] }))),
     dateClick: (i) => openDlg(null, i.dateStr, 'event'), eventClick: (i) => openDlg(i.event.id),
     eventDrop: (i) => { const t = tasks.find((x) => x.id === i.event.id); if (t) { t.due = ymd(i.event.start); save(); renderAll(); toast('Дата перенесена на ' + t.due); } }
   });
   cal.render();
 }
 function setView(v) {
-  $('#vBoardBox').hidden = v !== 'board'; $('#vCalBox').hidden = v !== 'cal';
+  $('#vBoardBox').hidden = v !== 'board'; $('#vSumBox').hidden = v !== 'board'; $('#vCalBox').hidden = v !== 'cal';
   $('#vBoard').setAttribute('aria-pressed', String(v === 'board')); $('#vCal').setAttribute('aria-pressed', String(v === 'cal'));
   if (v === 'cal') { if (!cal) mkCal(); else { cal.refetchEvents(); cal.updateSize(); } }
 }

@@ -1,0 +1,40 @@
+<!doctype html>
+<!-- nox-web-extras: пропустить (у страницы своё меню и панели; marker для deploy1.sh) -->
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02030a">
+<title>NOX HELION · ВИДЖЕТЫ</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="./nox-wow.css">
+<link rel="stylesheet" href="./nox-pages.css">
+<link rel="stylesheet" href="./vendor/nox-extra/leaflet.css">
+<script src="./nox-theme.js"></script>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
+</head>
+<body data-page="wid" class="boot">
+<div id="app">
+<main class="page" id="page"><div class="wrap">
+<div class="ph"><div><span class="kick mono">Только настоящие данные · перетаскивайте карточки за заголовок</span><h1>Виджеты</h1></div>
+  <div class="acts"><span class="seg"><button type="button" id="wReset"><sl-icon library="tabler" name="refresh"></sl-icon>Порядок по умолчанию</button></span></div></div>
+<div class="grid" id="wg">
+  <section class="card c6" data-w="clock"><h2 class="wh">Часы мира <span class="r mono">Intl</span></h2><div id="clocks" class="clocks"></div></section>
+  <section class="card c6" data-w="map"><h2 class="wh">Карта <span class="r mono" id="mapSt"></span></h2>
+    <div class="frow" style="margin-bottom:8px"><label class="fld grow"><span>Город</span><select id="city"></select></label></div><div id="map" style="height:260px"></div>
+    <p class="muted" id="mapNote" style="font-size:12px;margin:6px 0 0"></p></section>
+  <section class="card c6" data-w="svc"><h2 class="wh">Службы <span class="r mono" id="svcT"></span></h2><ul class="lines" id="svc"></ul></section>
+  <section class="card c6" data-w="tasks"><h2 class="wh">Задачи <span class="r mono" id="tkT"></span></h2><div id="tk"></div></section>
+  <section class="card c12" data-w="note"><h2 class="wh">Заметка <span class="r mono" id="noteT">сохраняется в браузере</span></h2><textarea id="note" maxlength="4000" placeholder="Короткая заметка на сегодня" aria-label="Заметка"></textarea></section>
+</div>
+</div></main>
+</div>
+<script src="./vendor/nox-wow/sortablejs/Sortable.min.js"></script>
+<script src="./vendor/nox-extra/leaflet.js"></script>
+<script type="module" src="./nox-nav.js"></script>
+<script type="module" src="./nox-p-widgets.js"></script>
+</body>
+</html>

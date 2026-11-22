@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- nox-web-extras: пропустить (у страницы своё меню и панели; marker для deploy1.sh) -->
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02030a">
+<title>NOX HELION · ИНТЕГРАЦИИ ДИСКА</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="./nox-wow.css">
+<link rel="stylesheet" href="./nox-pages.css">
+<script src="./nox-theme.js"></script>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
+</head>
+<body data-page="integ" class="boot">
+<div id="app">
+<main class="page" id="page"><div class="wrap">
+<div class="ph"><div><span class="kick mono">Что из библиотек Диска подключено, что лежит, чего нет</span><h1>Интеграции Диска</h1></div>
+  <div class="acts"><span class="seg"><button type="button" id="rescan"><sl-icon library="tabler" name="refresh"></sl-icon>Проверить снова</button></span></div></div>
+<section class="card"><h2>Сводка <span class="r mono" id="sumT">проверка…</span></h2><p class="muted" style="margin:0;font-size:12.5px">Статус считается в браузере по факту: «подключено» значит, что файл отвечает 200 и его имя найдено в исходниках страниц; «лежит» — файл есть, но ни одна страница его не использует; «нет» — файла в сборке нет. Ничего не придумано.</p></section>
+<div id="groups" class="grid"></div>
+<details class="card fold" id="absent"><summary><span>Не получено в сборке</span><span class="r mono" id="absN"></span></summary><div id="absBox"></div></details>
+</div></main>
+</div>
+<script type="module" src="./nox-nav.js"></script>
+<script type="module" src="./nox-p-integrations.js"></script>
+</body>
+</html>

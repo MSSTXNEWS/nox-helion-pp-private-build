@@ -41,6 +41,11 @@ class T(unittest.TestCase):
         s, d = self.req("GET", "/web/chat.html"); self.assertEqual(s, 200); self.assertIn(b"ok", d)
         self.assertIn(self.req("GET", "/web/../x")[0], (403, 404))
         self.assertEqual(self.req("GET", "/api/status")[0], 503)
+    def test_pc_metrics(self):
+        s, d = self.req("GET", "/api/pc-metrics"); self.assertEqual(s, 200); j = json.loads(d)
+        self.assertIn("percent", j["cpu"]); self.assertGreater(j["ram"]["total_bytes"], 0); self.assertIn("gpu", j)
+        self.assertTrue("name" in j["gpu"] or "error" in j["gpu"])
+        s, d = self.req("GET", "/api/health"); self.assertEqual(s, 200); self.assertFalse(json.loads(d)["panel_s2"])
     def test_chat_ndjson(self):
         s, d = self.req("POST", "/api/chat", json.dumps({"request_id": "r1", "model": "x", "messages": [{"role": "user", "content": "hi"}]}))
         self.assertEqual(s, 200); fr = [json.loads(l) for l in d.decode().strip().split("\n")]

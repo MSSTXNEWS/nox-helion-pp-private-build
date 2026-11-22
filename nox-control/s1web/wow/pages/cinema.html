@@ -1,0 +1,34 @@
+<!doctype html>
+<!-- nox-web-extras: пропустить (у страницы своё меню и панели; marker для deploy1.sh) -->
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02030a">
+<title>NOX HELION · КИНОЗАЛ</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="./nox-wow.css">
+<link rel="stylesheet" href="./nox-pages.css">
+<link rel="stylesheet" href="./vendor/nox-lib/plyr/plyr.css">
+<script src="./nox-theme.js"></script>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
+</head>
+<body data-page="cinema" class="boot">
+<div id="app">
+<main class="page" id="page"><div class="wrap">
+<div class="ph"><div><span class="kick mono">Локальное видео и аудио · файл не уходит на сервер</span><h1>Кинозал</h1></div>
+  <div class="acts"><span class="seg"><button type="button" id="pickV"><sl-icon library="tabler" name="movie"></sl-icon>Открыть файл</button><button type="button" id="pickS"><sl-icon library="tabler" name="badge-cc"></sl-icon>Субтитры</button><button type="button" id="clearP"><sl-icon library="tabler" name="trash"></sl-icon>Забыть позиции</button></span></div></div>
+<input type="file" id="fV" accept="video/*,audio/*" hidden><input type="file" id="fS" accept=".vtt,.srt,text/vtt" hidden>
+<section class="card" id="stage"><div id="drop" class="drop"><p class="mono" id="dropT">Перетащите видео или аудио сюда или нажмите «Открыть файл»</p></div>
+  <video id="vid" playsinline controls crossorigin="anonymous" hidden></video><p class="muted" id="info" style="font-size:12.5px;margin:8px 0 0">Позиция запоминается в этом браузере: чтобы продолжить с того же места, откройте тот же файл.</p></section>
+<details class="card fold" id="recentBox"><summary><span>Недавние (позиции)</span><span class="r mono" id="recN"></span></summary><ul class="lines" id="recent"></ul></details>
+</div></main>
+</div>
+<script src="./vendor/nox-lib/plyr/plyr.min.js"></script>
+<script type="module" src="./nox-nav.js"></script>
+<script type="module" src="./nox-p-cinema.js"></script>
+</body>
+</html>

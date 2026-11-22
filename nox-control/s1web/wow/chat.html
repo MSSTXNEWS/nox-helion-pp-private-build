@@ -25,29 +25,7 @@
 <div class="grain" aria-hidden="true"></div><div class="vignette" aria-hidden="true"></div>
 
 <div id="app">
-  <header class="bar" id="bar">
-    <div class="bar-l">
-      <a class="brand" href="index.html" aria-label="NOX HELION, главная"><span class="mark" aria-hidden="true"></span><b>NOX&nbsp;HELION</b><i>РЕЗОНАНС</i></a>
-    </div>
-    <nav class="seg nav" id="nav" aria-label="Разделы">
-      <a href="index.html" data-k="home">Главная</a>
-      <a href="chat.html" data-k="chat" aria-current="page">Резонанс</a>
-      <a href="projects.html" data-k="proj">Проекты</a>
-      <a href="memory.html" data-k="mem">Память</a>
-      <a href="training.html" data-k="train">Обучение</a>
-      <a href="models.html" data-k="core">Ядро</a>
-      <a href="system.html" data-k="sys">Система</a>
-    </nav>
-    <div class="bar-r">
-      <span class="status" id="gwStatus" role="status"><i class="led" id="gwLed"></i><span id="gwText" class="mono">ПРОВЕРКА</span></span>
-      <span class="seg toplink"><a href="chat.html" aria-current="page">Резонанс</a></span>
-      <span class="seg icons">
-        <button id="btnPalette" type="button" aria-label="Команды, Ctrl+K" title="Команды  Ctrl+K"><sl-icon library="tabler" name="command"></sl-icon></button>
-        <button id="btnThreads" type="button" aria-label="Диалоги" title="Диалоги"><sl-icon library="tabler" name="history"></sl-icon></button>
-        <button id="btnSettings" type="button" aria-label="Настройки" title="Настройки"><sl-icon library="tabler" name="settings"></sl-icon></button>
-      </span>
-    </div>
-  </header>
+  <header class="bar" id="bar"></header>
 
   <main class="stage" id="stage">
     <section class="feed" id="feed" aria-label="Диалог" tabindex="-1">
@@ -67,6 +45,14 @@
     </section>
 
     <form class="dock" id="form" autocomplete="off">
+      <div class="ctb" id="ctb">
+        <div class="seg modes" id="modes" role="radiogroup" aria-label="Режим ответа"><button type="button" role="radio" data-m="auto" title="Авто: шлюз сам выбирает уровень">Авто</button><button type="button" role="radio" data-m="fast" title="Быстро: только быстрый уровень">Быстро</button><button type="button" role="radio" data-m="deep" title="Глубоко: быстрый такт, затем GLM-5.3">Глубоко</button></div>
+        <span class="seg tb2">
+          <button id="btnThreads" type="button" aria-label="Диалоги" title="Диалоги"><sl-icon library="tabler" name="history"></sl-icon></button>
+          <button id="btnPalette" type="button" aria-label="Команды, Ctrl+K" title="Команды  Ctrl+K"><sl-icon library="tabler" name="command"></sl-icon></button>
+          <button id="btnSettings" type="button" aria-label="Параметры чата" title="Параметры чата: планета, голос, протокол"><sl-icon library="tabler" name="adjustments-horizontal"></sl-icon></button>
+        </span>
+      </div>
       <div class="composer" id="composer">
         <i class="br tl"></i><i class="br tr"></i><i class="br bl"></i><i class="br brr"></i>
         <div class="wavebox" id="wavebox" hidden>
@@ -90,21 +76,11 @@
       </div>
     </form>
 
-    <aside class="edge edge-l mono" id="edgeL" aria-label="Состояние"><span id="clock" class="hud-clock">—</span><span id="eModel">МОДЕЛЬ —</span><span id="eProto">ПРОТОКОЛ —</span></aside>
+    <aside class="edge edge-l mono" id="edgeL" aria-label="Состояние"><span id="clock" class="hud-clock">—</span><span id="eModel">УРОВНИ —</span><span id="eLast">ОТВЕТИЛ —</span><span id="eGpu">GPU —</span><span id="eVram">VRAM —</span><span id="eCpu">ЦП —</span><span id="eRam">ОЗУ —</span><span id="eProto">ПРОТОКОЛ —</span></aside>
     <aside class="edge edge-r mono" id="edgeR" aria-label="Метрики последнего ответа"><span id="eTtft">ТТФТ —</span><span id="eRate">ЧАНК/С —</span><span id="eVoice">ГОЛОС —</span></aside>
   </main>
 
-  <nav class="mnav" id="mnav" aria-label="Разделы (телефон)">
-    <div class="swiper"><div class="swiper-wrapper seg">
-      <a class="swiper-slide" href="index.html">Главная</a>
-            <a class="swiper-slide" href="projects.html">Проекты</a>
-      <a class="swiper-slide" href="memory.html">Память</a>
-      <a class="swiper-slide" href="training.html">Обучение</a>
-      <a class="swiper-slide" href="models.html">Ядро</a>
-      <a class="swiper-slide" href="system.html">Система</a>
-      <a class="swiper-slide" href="settings.html">Настройки</a>
-    </div></div>
-  </nav>
+  <nav class="mnav" id="mnav" aria-label="Разделы (телефон)"></nav>
 </div>
 
 <!-- Настройки (shoelace drawer) -->
@@ -112,7 +88,8 @@
   <div class="set">
     <section><h3 class="mono">Планета</h3><div class="planets" id="planets" role="radiogroup" aria-label="Планета"></div><p class="note" id="planetNote"></p></section>
     <section><h3 class="mono">Космос</h3>
-      <div class="seg opt" data-opt="space" role="radiogroup" aria-label="Яркость космоса"><button role="radio" data-v="off">Стоп</button><button role="radio" data-v="on">Мягко</button><button role="radio" data-v="high">Ярко</button></div>
+      <div class="seg opt" data-opt="space" role="radiogroup" aria-label="Яркость космоса"><button role="radio" data-v="eco">Эко</button><button role="radio" data-v="on">Мягко</button><button role="radio" data-v="high">Ярко</button></div>
+      <div class="seg opt" data-opt="motion" role="radiogroup" aria-label="Анимация фона"><button role="radio" data-v="always">Анимация всегда</button><button role="radio" data-v="system">Как в системе</button></div>
       <div class="seg opt" data-opt="dust" role="radiogroup" aria-label="Звёздная пыль"><button role="radio" data-v="off">Пыль выкл</button><button role="radio" data-v="on">Пыль вкл</button></div></section>
     <section><h3 class="mono">Чат</h3>
       <div class="seg opt" data-opt="proto" role="radiogroup" aria-label="Протокол чата"><button role="radio" data-v="classic">Классический /api/chat</button><button role="radio" data-v="glm">Шлюз GLM-5.3</button></div>

@@ -230,3 +230,71 @@ body.bgfallback #nxPlanet{left:50%!important;right:auto!important;transform:tran
 .seg.icons>a{min-width:40px;padding:0 10px;font-size:16px}
 .bar-r .seg.toplink>a{padding:0 12px}
 @media (max-width:760px){.toplink{display:inline-flex}.bar-r .toplink>a{min-height:34px;font-size:10px;letter-spacing:.16em}.brand i{display:none}}
+
+/* ---- c170: чат — светлее фон, читаемый HUD, мягче стекло ---- */
+body[data-page="wow-chat"] .vignette{background:radial-gradient(ellipse at 50% 42%,transparent 66%,rgba(0,0,0,.34) 100%)}
+body[data-page="wow-chat"]{--glass:rgba(6,10,16,.28);--glass2:rgba(8,12,18,.44)}
+body[data-page="wow-chat"] .bubble{-webkit-backdrop-filter:blur(5px) saturate(1.25);backdrop-filter:blur(5px) saturate(1.25);text-shadow:0 1px 8px rgba(0,0,0,.55)}
+body[data-page="wow-chat"] .composer{-webkit-backdrop-filter:blur(10px) saturate(1.3);backdrop-filter:blur(10px) saturate(1.3)}
+.edge{color:#e3edf4;font-size:11px;padding:8px 12px;background:rgba(3,6,12,.58);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:2px;text-shadow:none}
+@media (max-width:1240px){.edge{display:none}}
+
+/* ---- c170: лазерный перелив надписей и в покое (медленно), без :hover — работает и на тач-устройствах ---- */
+@keyframes laser{from{background-position:0% 0,0 0}to{background-position:-240% 0,0 0}}
+.seg>a,.seg>button,.seg>.more>button{
+  background-image:linear-gradient(100deg,#9db0bd 0%,#9db0bd 22%,#f4fdff 38%,#c4fbe9 50%,#f4fdff 62%,#9db0bd 78%,#9db0bd 100%),linear-gradient(transparent,transparent)!important;
+  background-size:240% 100%,100% 100%!important;background-repeat:repeat,no-repeat!important;
+  -webkit-background-clip:text,border-box!important;background-clip:text,border-box!important;-webkit-text-fill-color:transparent;
+  animation:laser 11s linear infinite!important;filter:none}
+.seg>a:hover,.seg>button:hover{background-image:linear-gradient(100deg,#c9f3ff 0%,#f0fbff 38%,#cdfbe6 62%,#c9f3ff 100%),linear-gradient(rgba(var(--cy),.05),rgba(var(--cy),.05))!important;animation:laser 3.2s linear infinite!important;filter:drop-shadow(0 0 5px rgba(var(--cy),.55))}
+.seg>[aria-current],.seg>[aria-checked=true],.seg>[aria-pressed=true],.seg>.on{
+  background-image:linear-gradient(100deg,#6cf0e8 0%,#6cf0e8 20%,#ffffff 38%,#b7fff8 50%,#ffffff 62%,#6cf0e8 80%,#6cf0e8 100%),linear-gradient(180deg,rgba(var(--cy),.015),rgba(var(--cy),.10))!important;
+  text-shadow:none!important;filter:drop-shadow(0 0 4px rgba(var(--cy),.75));animation-duration:8s!important}
+.seg>a.send,.seg>.nolaser{-webkit-text-fill-color:currentColor;background-image:none!important;animation:none!important}
+.mnav .swiper-slide{background-image:linear-gradient(100deg,#9db0bd 0%,#9db0bd 22%,#f4fdff 38%,#c4fbe9 50%,#f4fdff 62%,#9db0bd 78%,#9db0bd 100%)!important;background-size:240% 100%!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent;animation:laser 11s linear infinite}
+.mnav .swiper-slide[aria-current]{background-image:linear-gradient(100deg,#6cf0e8 0%,#6cf0e8 20%,#fff 38%,#b7fff8 50%,#fff 62%,#6cf0e8 80%,#6cf0e8 100%)!important;text-shadow:none!important;filter:drop-shadow(0 0 4px rgba(var(--cy),.75))}
+@media (prefers-reduced-motion:reduce){.seg>a,.seg>button,.mnav .swiper-slide{animation-duration:60s!important}}
+
+/* ---- c170: общая шапка — состояние двух уровней, меню «Ещё» ---- */
+.tiers{display:inline-flex;align-items:center;gap:14px;white-space:nowrap}
+.tier{display:inline-flex;align-items:center;gap:7px;color:var(--mu)}
+.tier .tt{font-size:10px;color:#cfdae2}.tier .ts{font-size:9.5px;color:var(--mu);letter-spacing:.1em}
+.tier .led.warn+.tt+.ts{color:rgb(var(--am))}.tier .led.bad+.tt+.ts{color:#ff9db8}
+.moreb::after{display:none}
+.bar{position:relative}
+.more-m{position:absolute;top:calc(100% - 2px);width:240px;z-index:60;display:flex;flex-direction:column;background:rgba(4,8,13,.78);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);border:1px solid rgba(var(--cy),.28);box-shadow:0 18px 50px rgba(0,0,0,.55),0 0 18px rgba(var(--cy),.12)}
+.more-m[hidden]{display:none}
+.more-m a{display:flex;align-items:center;min-height:44px;padding:0 16px;font:500 11px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:#cfdae2;border-bottom:1px solid rgba(150,225,235,.08)}
+.more-m a:last-child{border-bottom:0}.more-m a:hover{background:rgba(var(--cy),.08);color:#fff}.more-m a[aria-current]{color:rgb(var(--cy))}
+@media (max-width:1240px) and (min-width:761px){.tier .ts{display:none}.tiers{gap:10px}}
+@media (max-width:760px){.tier .ts{display:none}.tiers{gap:8px}.more-m{display:none}}
+
+/* ---- c170: панель режимов чата и подпись уровня под ответом ---- */
+.ctb{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 8px}
+.ctb .seg>button{min-height:44px;padding:0 14px}.ctb .tb2>button{min-width:44px;padding:0 10px;font-size:17px}
+.via{margin-top:10px;padding-top:8px;border-top:1px solid rgba(150,225,235,.10);font-size:9.5px;letter-spacing:.14em;color:#b6c3cd;text-transform:uppercase}
+.via.glm{color:rgb(var(--cy))}.via.fast{color:rgb(var(--am))}
+.edge-l{max-width:260px}
+@media (max-width:760px){.ctb{margin-bottom:6px}.ctb .modes>button{padding:0 11px;letter-spacing:.12em}.tier .tt{font-size:0}.tier .tt::before{content:attr(data-s);font-size:9px;letter-spacing:.05em}}
+.brand i{text-transform:uppercase}
+.edge-l{max-width:200px}
+
+/* ---- c170: богатые ответы (Markdown, таблицы, формулы, диаграммы) ---- */
+.txt li{white-space:normal}.txt h1,.txt h2,.txt h3,.txt h4{font:600 15px/1.4 var(--head);margin:.9em 0 .4em;letter-spacing:.04em}.txt h1{font-size:18px}.txt h2{font-size:16.5px}
+.txt blockquote{margin:.7em 0;padding:2px 14px;border-left:2px solid rgba(var(--am),.7);color:#cfdae2;background:rgba(0,0,0,.25)}
+.txt table{border-collapse:collapse;margin:.8em 0;display:block;max-width:100%;overflow:auto}.txt th,.txt td{border:1px solid var(--line2);padding:6px 10px;text-align:left;font-size:14px}.txt th{background:rgba(var(--cy),.07)}
+.txt hr{border:0;border-top:1px solid var(--line2);margin:1em 0}
+.txt .katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}.txt .katex{font-size:1.08em}
+.txt .mmd{margin:.8em 0;padding:10px;background:rgba(0,0,0,.35);border:1px solid var(--line);overflow:auto}.txt .mmd.ok svg{max-width:100%;height:auto;display:block;margin:0 auto}.txt .mmd pre{margin:0;border:0;background:none;padding:0}
+
+/* ---- c170: тап-цели не меньше 44 px ---- */
+.seg>a,.seg>button,.seg.icons>a,.seg.icons>button,.bar .nav>a,.bar .nav>button,.acts .seg>button,.send,.chip,.suggest>button,.set .seg>button,.seg.tools>button{min-height:44px}
+.seg.icons>a,.seg.icons>button,.seg.tools>button,.acts .seg>button{min-width:44px}
+.brand{min-height:44px}.bar{min-height:48px}
+.tier{min-height:44px}
+.page .seg>a,.page .seg>button,.page .tag,button.tag,.fc .fc-button,.fc a.fc-daygrid-day-number,.fc .fc-list-event a,.page a.btnlink{min-height:44px}
+.fc a.fc-daygrid-day-number{display:inline-flex;align-items:center;justify-content:flex-end;min-width:44px;padding:0 8px}
+.hit .seg>button,.task .tb button,.acts .seg{min-height:44px}.task .tb button{width:44px;height:44px}
+.page .tbl a,.page .tbl td a{display:inline-flex;align-items:center;min-height:44px}.bar-r .seg.toplink>a,.bar-r .seg.toplink{min-height:44px}.bar-r .seg{min-height:44px}.tag{display:inline-flex;align-items:center;min-height:44px}
+.page .card p a,.page .svc-st a{display:inline-flex;align-items:center;min-height:44px;padding:0}
+.hint{color:#b9c7d2}.edge-l,.edge-r{max-width:230px}@media (max-height:760px){.edge{display:none}}

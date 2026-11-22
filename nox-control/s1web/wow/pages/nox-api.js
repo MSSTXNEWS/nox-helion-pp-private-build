@@ -34,7 +34,8 @@ export const memory = (req) => call('/memory/api', { method: 'POST', body: req }
 export async function apiProbe(force) {
   const c = ls.json('nox.apiprobe', null);
   if (!force && c && Date.now() - c.t < 600000) return c.r;
-  const r = await call('/api/health', { timeout: 4000 }); const s = { ok: r.ok, status: r.status, ms: r.ms, error: r.error, data: r.ok ? r.data : null };
+  const r = await call('/api/health', { timeout: 4000 }); const s2 = r.ok && !(r.data && r.data.panel_s2 === false); /* веб S1 отвечает /api/health сам: это не панель S2 */
+  const s = { ok: s2, status: r.status, ms: r.ms, error: s2 ? r.error : (r.ok ? 'панель S2 не подключена (отвечает только веб-сервер S1)' : r.error), data: r.ok ? r.data : null };
   ls.setJson('nox.apiprobe', { t: Date.now(), r: s }); return s;
 }
 export async function probeAll(force) {

@@ -1,0 +1,5 @@
+Текстуры планет: Solar System Scope (https://www.solarsystemscope.com/textures/), основаны на данных NASA.
+Лицензия: Creative Commons Attribution 4.0 International (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/
+Использование, адаптация и распространение разрешены, в том числе коммерческие, при указании авторства «Solar System Scope».
+Изменения: перекодирование в progressive JPEG (качество 84), размер 2048x1024 сохранён; Земля/Луна 1024x512 в сборке уменьшены вдвое.
+Зеркало на случай недоступности сайта: https://github.com/homer-jay/solar-system-textures

@@ -1,0 +1,34 @@
+<!doctype html>
+<!-- nox-web-extras: пропустить (у страницы своё меню и панели; marker для deploy1.sh) -->
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02030a">
+<title>NOX HELION · ДИСПЕТЧЕР</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="./nox-wow.css">
+<link rel="stylesheet" href="./nox-pages.css">
+<script src="./nox-theme.js"></script>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
+</head>
+<body data-page="disp" class="boot">
+<div id="app">
+<main class="page" id="page"><div class="wrap">
+<div class="ph"><div><span class="kick mono">Запросы к шлюзу · журнал ответов · задачи панели</span><h1>Диспетчер</h1></div>
+  <div class="acts"><span class="seg"><button type="button" id="dRef"><sl-icon library="tabler" name="refresh"></sl-icon>Обновить</button></span></div></div>
+<div class="grid">
+  <section class="card c6"><h2>Шлюз сейчас <span class="r mono" id="gwT"></span></h2><div id="gw"></div></section>
+  <section class="card c6"><h2>Скорость и кэш</h2><div id="speed"></div></section>
+  <section class="card c12"><h2>Журнал ответов чата <span class="r mono" id="logN"></span></h2><p class="muted" style="font-size:12px;margin:0 0 6px">Берётся из диалогов этого браузера; уровень — по ответу шлюза, не по состоянию шапки.</p><div class="scroll-x"><table class="tbl" id="logT"></table></div></section>
+</div>
+<div id="s2"></div>
+</div></main>
+</div>
+<script type="module" src="./nox-nav.js"></script>
+<script type="module" src="./nox-p-dispatcher.js"></script>
+</body>
+</html>
