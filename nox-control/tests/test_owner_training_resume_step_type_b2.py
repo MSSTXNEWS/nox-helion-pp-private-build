@@ -2639,6 +2639,24 @@ class DispatcherUpgradeReceiptShapeFence(unittest.TestCase):
              "HOLD_DISPATCHER_UPGRADE_DURABLE_REPORTS_REQUIRED"),
             ({**good, "native_plan": {**plan, "owner_reports": True}},
              "HOLD_DISPATCHER_UPGRADE_DURABLE_REPORTS_REQUIRED"),
+            # Malformed JSON ID arrays/objects used to raise raw TypeError
+            # at set comprehensions, bypassing the named owner HOLD.
+            ({**good, "native_plan": {**plan, "proofs": [
+                {**plan["proofs"][0], "id": ["not-hashable"]},
+                *plan["proofs"][1:]]}},
+             "HOLD_DISPATCHER_UPGRADE_DURABLE_REPORTS_REQUIRED"),
+            ({**good, "native_plan": {**plan, "proofs": [
+                {**plan["proofs"][0], "id": {"foreign": True}},
+                *plan["proofs"][1:]]}},
+             "HOLD_DISPATCHER_UPGRADE_DURABLE_REPORTS_REQUIRED"),
+            ({**good, "native_plan": {**plan, "owner_reports": [
+                {**plan["owner_reports"][0], "task_id": ["not-hashable"]},
+                *plan["owner_reports"][1:]]}},
+             "HOLD_DISPATCHER_UPGRADE_DURABLE_REPORTS_REQUIRED"),
+            ({**good, "native_plan": {**plan, "owner_reports": [
+                {**plan["owner_reports"][0], "task_id": {"foreign": True}},
+                *plan["owner_reports"][1:]]}},
+             "HOLD_DISPATCHER_UPGRADE_DURABLE_REPORTS_REQUIRED"),
         ]
         for receipt, reason in cases:
             with self.subTest(receipt=repr(receipt)[:120]):
