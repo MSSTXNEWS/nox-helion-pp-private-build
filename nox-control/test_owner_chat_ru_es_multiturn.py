@@ -411,7 +411,7 @@ async function check(chunks, status=200) {
         self.assertTrue(multiturn_history_valid(
             scoped, RU, FIRST, es, LAST, DIALOG))
         for index in range(4):
-            for foreign in ('foreign-dialog', None, '', ' bad ', '\\u200b', 42):
+            for foreign in ('foreign-dialog', None, '', ' bad ', '\u200b', 42):
                 with self.subTest(row=index, scope=repr(foreign)):
                     mixed = copy.deepcopy(scoped)
                     mixed[index]['dialog_id'] = foreign
