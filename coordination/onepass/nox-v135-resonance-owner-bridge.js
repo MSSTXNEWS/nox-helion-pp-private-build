@@ -8,7 +8,7 @@
  const nativeFetch=window.fetch.bind(window);
  const enc=new TextEncoder();
  const ID=/^[a-f0-9]{32}$/;
- const verifiedDialogTail=new Map();
+ const verifiedDialogChain=new Map();
  const activeDialogs=new Set();
  const issuedRequests=new Set();
  function pinRequest(data) {
@@ -87,20 +87,25 @@
     pair[0].content!==prompt||pair[1].content!==answer||
     pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
    throw Error('HOLD_DIALOG_HISTORY_READBACK');
- const previous=verifiedDialogTail.get(id);
- if(previous){
-   if(previous.exchange_id===exchangeId)
-     throw Error('HOLD_DIALOG_EXCHANGE_REPLAY');
-   const prior=data.messages.filter(m=>m&&m.exchange_id===previous.exchange_id);
-   const priorAt=data.messages.indexOf(prior[0]);
-   if(prior.length!==2||priorAt+2!==currentAt||data.messages[priorAt+1]!==prior[1]||
-      prior[0].role!=='user'||prior[1].role!=='assistant'||
-      prior[0].content!==previous.prompt||prior[1].content!==previous.answer)
+ // Verify all locally observed ancestors; checking only the last pair
+ // previously allowed a fourth turn to hide the loss of the first.
+ const chain=verifiedDialogChain.get(id)||[];
+ // Native history readback is capped at 100 messages = 50 full pairs.
+ if(chain.length>=50)throw Error('HOLD_DIALOG_HISTORY_WINDOW_EXHAUSTED');
+ const chainStart=currentAt-chain.length*2;
+ if(chainStart<0)throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
+ for(let i=0;i<chain.length;i++){
+   const prior=chain[i], user=data.messages[chainStart+i*2],
+     assistant=data.messages[chainStart+i*2+1];
+   if(!user||!assistant||user.role!=='user'||assistant.role!=='assistant'||
+      user.exchange_id!==prior.exchange_id||
+      assistant.exchange_id!==prior.exchange_id||
+      user.content!==prior.prompt||assistant.content!==prior.answer)
      throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
  }
- if(!verifiedDialogTail.has(id)&&verifiedDialogTail.size>=128)
-   verifiedDialogTail.delete(verifiedDialogTail.keys().next().value);
- verifiedDialogTail.set(id,{exchange_id:exchangeId,prompt,answer});
+ if(!verifiedDialogChain.has(id)&&verifiedDialogChain.size>=128)
+   verifiedDialogChain.delete(verifiedDialogChain.keys().next().value);
+ verifiedDialogChain.set(id,[...chain,{exchange_id:exchangeId,prompt,answer}]);
  }
  function accepted(done,id) {
  return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&

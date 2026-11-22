@@ -646,7 +646,7 @@ class TestProbe(unittest.TestCase):
                                     {type:'start',model:'pinned-local-mock'},
                                     {type:'delta',text:'world'},
                                     {type:'done',saved:true,s03_integrated:true,
-                                     dialog_id:id,exchange_id:(window.__nativeCase === 'keep' ? 'ex00002' : ['lost','reordered'].includes(window.__nativeCase) ? 'ex00003' : eid)}
+                                     dialog_id:id,exchange_id:(window.__nativeCase === 'keep' ? 'ex00002' : window.__nativeCase === 'keep3' ? 'ex00004' : window.__nativeCase === 'lostfirst' ? 'ex00005' : ['lost','reordered'].includes(window.__nativeCase) ? 'ex00003' : eid)}
                                 ].map(JSON.stringify).join('\\n') + '\\n';
                                 const kind = window.__nativeCase;
                                 const bytes = new TextEncoder();
@@ -669,6 +669,8 @@ class TestProbe(unittest.TestCase):
                                 window.__historyGets++;
                                 const kind=window.__nativeCase;
                                 const currentId=kind === 'keep' ? 'ex00002' :
+                                    kind === 'keep3' ? 'ex00004' :
+                                    kind === 'lostfirst' ? 'ex00005' :
                                     (kind === 'lost' || kind === 'reordered') ? 'ex00003' : eid;
                                 const priorId=['reordered','badutf8'].includes(kind) ? 'ex00002' : eid;
                                 const current=[
@@ -679,9 +681,19 @@ class TestProbe(unittest.TestCase):
                                     {role:'user',content:'hello',exchange_id:priorId},
                                     {role:'assistant',content:'world',exchange_id:priorId}
                                 ];
+                                const second=[
+                                    {role:'user',content:'hello',exchange_id:'ex00002'},
+                                    {role:'assistant',content:'world',exchange_id:'ex00002'}
+                                ];
+                                const third=[
+                                    {role:'user',content:'hello',exchange_id:'ex00004'},
+                                    {role:'assistant',content:'world',exchange_id:'ex00004'}
+                                ];
                                 // 'keep' is a valid second turn retaining the first;
                                 // 'lost' is a later turn with its previous pair gone.
                                 return pack({status:'READY',dialog_id:id,messages:
+                                    kind === 'keep3' ? [...previous,...second,...current] :
+                                    kind === 'lostfirst' ? [...second,...third,...current] :
                                     ['keep','badutf8'].includes(kind) ? [...previous,...current] :
                                     kind === 'reordered' ? [...current,...previous] : current});
                             }
@@ -721,21 +733,30 @@ class TestProbe(unittest.TestCase):
                     self.assertIn('"type":"done"', retained['sse'])
                     self.assertEqual(retained['posts'], 3)
                     self.assertEqual(retained['reads'], 2)
+                    third = await exchange('keep3')
+                    self.assertIn('"type":"done"', third['sse'])
+                    self.assertEqual(third['posts'], 4)
+                    self.assertEqual(third['reads'], 3)
+                    missing_ancestor = await exchange('lostfirst')
+                    self.assertIn('HOLD_DIALOG_PRIOR_EXCHANGE_LOST', missing_ancestor['sse'])
+                    self.assertNotIn('"type":"done"', missing_ancestor['sse'])
+                    self.assertEqual(missing_ancestor['posts'], 5)
+                    self.assertEqual(missing_ancestor['reads'], 4)
                     reordered = await exchange('reordered')
                     self.assertIn('HOLD_DIALOG_PRIOR_EXCHANGE_LOST', reordered['sse'])
                     self.assertNotIn('"type":"done"', reordered['sse'])
-                    self.assertEqual(reordered['posts'], 4)
-                    self.assertEqual(reordered['reads'], 3)
+                    self.assertEqual(reordered['posts'], 6)
+                    self.assertEqual(reordered['reads'], 5)
                     lost = await exchange('lost')
                     self.assertIn('HOLD_DIALOG_PRIOR_EXCHANGE_LOST', lost['sse'])
                     self.assertNotIn('"type":"done"', lost['sse'])
-                    self.assertEqual(lost['posts'], 5)
-                    self.assertEqual(lost['reads'], 4)
+                    self.assertEqual(lost['posts'], 7)
+                    self.assertEqual(lost['reads'], 6)
                     corrupted = await exchange('badutf8')
                     self.assertIn('"type":"error"', corrupted['sse'])
                     self.assertNotIn('"type":"done"', corrupted['sse'])
-                    self.assertEqual(corrupted['posts'], 6)
-                    self.assertEqual(corrupted['reads'], 4)
+                    self.assertEqual(corrupted['posts'], 8)
+                    self.assertEqual(corrupted['reads'], 6)
                 finally:
                     await browser.close()
         asyncio.run(run())
