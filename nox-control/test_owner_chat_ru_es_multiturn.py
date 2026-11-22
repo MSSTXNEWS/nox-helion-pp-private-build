@@ -309,6 +309,40 @@ async function check(chunks, status=200) {
                     self.assertFalse(canonical_s03_proof_valid(
                         writer, readback, DIALOG, forged))
 
+    def test_strict_s03_rejects_partially_scoped_four_row_dialog_provenance(self):
+        """One missing per-row dialog_id cannot attest a single RU/ES dialog.
+
+        Source-only synthetic receipts; native S03 writer/readback still HOLD.
+        Fully scoped and entirely legacy rows remain compatible.
+        """
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        legacy = [
+            dict(row, message_id=f"scope-row-{index}")
+            for index, row in enumerate(rows(es), 1)
+        ]
+
+        def strict(sample):
+            writer, reader = s03_proof(sample)
+            return canonical_s03_proof_valid(
+                writer, reader, DIALOG, sample, require_full_transcript_pin=True)
+
+        scoped = [dict(row, dialog_id=DIALOG) for row in legacy]
+        self.assertTrue(strict(legacy))
+        self.assertTrue(strict(scoped))
+        for missing in range(4):
+            with self.subTest(missing_row=missing):
+                partial = [dict(row) for row in scoped]
+                del partial[missing]["dialog_id"]
+                self.assertFalse(strict(partial))
+        for included in range(4):
+            with self.subTest(only_scoped_row=included):
+                partial = [dict(row) for row in legacy]
+                partial[included]["dialog_id"] = DIALOG
+                self.assertFalse(strict(partial))
+        foreign = [dict(row) for row in scoped]
+        foreign[2]["dialog_id"] = "foreign-dialog"
+        self.assertFalse(strict(foreign))
+
     def test_explicit_message_ids_do_not_replay_one_row_as_multiple_ru_es_turns(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         legacy = rows(es)

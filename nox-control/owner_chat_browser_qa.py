@@ -795,6 +795,12 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
             or any('dialog_id' in row and row['dialog_id'] != dialog_id
                    for row in expected_messages)):
         return False
+    if require_full_transcript_pin:
+        # A partial row-level dialog scope is not a coherent four-turn S03
+        # provenance witness. Preserve wholly legacy unscoped histories.
+        row_dialog_presence = ['dialog_id' in row for row in expected_messages]
+        if any(row_dialog_presence) and not all(row_dialog_presence):
+            return False
     transcript_sha = multiturn_transcript_sha256(expected_messages)
     if transcript_sha is None:
         return False
