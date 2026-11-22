@@ -1,6 +1,9 @@
 """One focused 2A05 receipt-contract regression, no inference or host effects."""
+import os
+import tempfile
 import unittest
-from owner_latency_2a05 import parse_receipts, summarize
+from pathlib import Path
+from owner_latency_2a05 import parse_receipts, read_receipt_file, summarize
 
 M = 'a' * 64
 R = 'b' * 64
@@ -67,6 +70,22 @@ class NativeLatencyContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'HOLD_2A05_NONFINITE_JSON'):
             parse_receipts('[{"stream":{"native_first_ms":NaN}}]')
         self.assertEqual(parse_receipts('[{"state":"HOLD"}]'), [{'state': 'HOLD'}])
+
+    def test_read_receipt_file_is_bounded_and_does_not_follow_symlink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / 'receipt.json'
+            target.write_text('[{"state":"HOLD"}]', encoding='utf-8')
+            self.assertEqual(parse_receipts(read_receipt_file(target)), [{'state': 'HOLD'}])
+            alias = Path(tmp) / 'alias.json'
+            alias.symlink_to(target)
+            with self.assertRaises(OSError):
+                read_receipt_file(alias)
+            target.write_bytes(b'x' * (5_000_000 + 1))
+            with self.assertRaisesRegex(ValueError, 'HOLD_2A05_INPUT_SIZE_OR_TYPE'):
+                read_receipt_file(target)
+            target.write_bytes(b'\\xff')
+            with self.assertRaises(UnicodeDecodeError):
+                read_receipt_file(target)
 
     def test_invalid_scenario_pin_is_hold(self):
         for pin in ('', '0' * 63, 'A' * 64, None):
