@@ -475,6 +475,71 @@ async function check(chunks, status=200) {
             __import__('owner_chat_browser_qa').presecond_owner_history_fence)
         self.assertIn('presecond_firstturn_history_stable(', owner_fence)
 
+    def test_postsecond_root_session_provenance_cannot_rotate_from_first_ru_turn(self):
+        """The four-row response must preserve the first root owner-session.
+
+        The prior pre-second fence pins root scope only before the second POST.
+        Valid rows with unchanged IDs, text and per-row scope cannot justify
+        a second history carrying a different envelope root session.
+        """
+        from owner_chat_browser_qa import (
+            firstturn_root_session_continuity_valid, root_history_session_valid,
+        )
+        import copy
+        es = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        completed = [dict(row, message_id=f'persisted-{index}')
+                     for index, row in enumerate(rows(es))]
+        scoped = [dict(row, session_id='owner-A') for row in completed]
+        first = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                 'messages': copy.deepcopy(scoped[:2])}
+        final = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                 'messages': copy.deepcopy(scoped)}
+        check = firstturn_root_session_continuity_valid
+        self.assertTrue(check(first, final))
+        self.assertTrue(firstturn_history_valid(first, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            final['messages'], RU, FIRST, es, LAST, dialog_id=DIALOG))
+        self.assertTrue(firstturn_prefix_identity_valid(
+            ('persisted-0', 'persisted-1'), final['messages']))
+        for bad_root in ('owner-B', None, '', ' ', 'owner-A ', 19):
+            with self.subTest(root=repr(bad_root)):
+                replaced = copy.deepcopy(final)
+                replaced['session_id'] = bad_root
+                self.assertFalse(check(first, replaced))
+        vanished = copy.deepcopy(final)
+        vanished.pop('session_id')
+        self.assertFalse(check(first, vanished))
+        self.assertFalse(check(vanished, final))
+        # A root-only history is valid on each individual read. This is
+        # the essential false-PASS case: A -> B with unchanged row payloads.
+        root_only_first = copy.deepcopy(first)
+        root_only_final = copy.deepcopy(final)
+        for record in (root_only_first, root_only_final):
+            for row in record['messages']:
+                row.pop('session_id')
+        self.assertTrue(root_history_session_valid(
+            root_only_first, root_only_first['messages']))
+        self.assertTrue(root_history_session_valid(
+            root_only_final, root_only_final['messages']))
+        self.assertTrue(check(root_only_first, root_only_final))
+        root_only_final['session_id'] = 'owner-B'
+        self.assertTrue(root_history_session_valid(
+            root_only_final, root_only_final['messages']))
+        self.assertFalse(check(root_only_first, root_only_final))
+        # Both fully unscoped legacy responses remain source-compatible.
+        root_only_first.pop('session_id')
+        root_only_final.pop('session_id')
+        self.assertTrue(check(root_only_first, root_only_final))
+        self.assertFalse(check({}, root_only_final))
+        self.assertFalse(check(root_only_first, {'messages': []}))
+        caller = inspect.getsource(browser_run)
+        self.assertIn(
+            'and firstturn_root_session_continuity_valid(\\n'
+            '                                  history, second_history)', caller)
+        self.assertLess(
+            caller.index('and firstturn_root_session_continuity_valid('),
+            caller.index("report['multiturn_browser_acceptance_verified']=True"))
+
     def test_second_ru_es_post_needs_two_persisted_firstturn_identities(self):
         # Matching role/text without two durable identities cannot admit POST 2.
         first = [
