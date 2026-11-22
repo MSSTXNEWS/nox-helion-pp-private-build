@@ -799,6 +799,10 @@ def verify_media_artifact(row):
             if count > row['bytes']:
                 raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_OUTPUT_SIZE_CHANGED')
         after = os.fstat(fd); named = path.stat(follow_symlinks=False)
+        # A parent can be atomically replaced by a symlink mid-hash.
+        # The original FD still hashes the same inode: recheck path safety.
+        if any(item.is_symlink() for item in (path, *path.parents)):
+            raise RuntimeError('HOLD_MEDIA_ACCEPTANCE_OUTPUT_PATH_CHANGED')
         keys = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
         if (count != row['bytes'] or value.hexdigest() != row['sha256']
                 or any(getattr(before, key) != getattr(after, key) or getattr(before, key) != getattr(named, key) for key in keys)):

@@ -3420,5 +3420,45 @@ class MediaOutputRehashPathFence(unittest.TestCase):
                 verify(row)
 
 
+    def test_parent_atomic_rename_to_symlink_during_rehash_is_held(self):
+        # Run the actual owner function AST: no services, no GPU.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        node = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                    and n.name == "verify_media_artifact")
+        namespace = {"Path": Path, "os": os, "stat": stat, "hashlib": hashlib}
+        exec(compile(ast.Module(body=[node], type_ignores=[]),
+                     str(SOURCE), "exec"), namespace)
+        verify = namespace["verify_media_artifact"]
+        with tempfile.TemporaryDirectory() as folder:
+            approved = Path(folder) / "approved"
+            approved.mkdir()
+            displaced = Path(folder) / "displaced"
+            path = approved / "signed-video.webm"
+            data = b"previously approved bounded media artifact"
+            path.write_bytes(data)
+            row = {"path": str(path), "bytes": len(data),
+                   "sha256": hashlib.sha256(data).hexdigest()}
+            self.assertIsNone(verify(row))
+            original_read = os.read
+            pivoted = False
+
+            def pivot_while_hashing(fd, count):
+                nonlocal pivoted
+                if not pivoted:
+                    approved.rename(displaced)
+                    approved.symlink_to(displaced, target_is_directory=True)
+                    pivoted = True
+                return original_read(fd, count)
+
+            with mock.patch("os.read", side_effect=pivot_while_hashing):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_MEDIA_ACCEPTANCE_OUTPUT_PATH_CHANGED$"):
+                    verify(row)
+            self.assertTrue(pivoted)
+            approved.unlink()
+            displaced.rename(approved)
+            self.assertIsNone(verify(row))
+
+
 if __name__ == "__main__":
     unittest.main()
