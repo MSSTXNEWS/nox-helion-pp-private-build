@@ -479,7 +479,7 @@ def _item_record(source: dict[str, Any], item: dict[str, str], now: float) -> tu
         raise HunterError("item publication date must be text")
     try:
         (title + "\n" + content + "\n" + published).encode("utf-8")
-        digest = hashlib.sha256((title + "\n" + content).encode("utf-8")).hexdigest()
+        # A corrected publication date is a new provenance version. The\n        # title/abstract may be unchanged, but INSERT OR IGNORE must retain\n        # both dated observations for the chronology instead of losing the\n        # correction under the old (source, URL, title+content) identity.\n        digest = hashlib.sha256((title + "\n" + content + "\n" + published).encode("utf-8")).hexdigest()
     except UnicodeEncodeError as exc:
         # Quarantine this item only; never roll back healthy sibling records.
         raise HunterError("item contains invalid Unicode") from exc
