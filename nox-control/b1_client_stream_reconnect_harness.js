@@ -34,7 +34,8 @@
     return Object.freeze({conversation_id:s.conversation_id,exchange_id:s.exchange_id});
   }
   const key=s=>s.conversation_id+'\u0000'+s.exchange_id;
-  function createClient({transport,host,bridge,ui,ackGate=null,timeoutMs=120000,
+  function createClient({transport,host,bridge,ui,ackGate=null,
+    strictAckNoReplay=false,timeoutMs=120000,
     canonicalFreshnessMs=30000,reconnectReadTimeoutMs=30000,
     uiProjectionTimeoutMs=30000,ackSendTimeoutMs=30000,
     canonicalAckTimeoutMs=30000}={}){
@@ -46,6 +47,7 @@
        typeof bridge.acceptTerminal!=='function'||
        typeof ui.onDelta!=='function'||
        typeof ui.upsertTerminal!=='function'||
+       typeof strictAckNoReplay!=='boolean'||
        (ackGate && (typeof ackGate.reserve!=='function'||
          typeof ackGate.beginSend!=='function'||typeof ackGate.confirm!=='function'||
          typeof ackGate.requireCanonicalAck!=='function'||
@@ -75,7 +77,8 @@
         if(pending&&typeof pending.catch==='function')pending.catch(()=>{});
       }catch(_){}
     }
-    const started=new Set(),reconnectSeen=new Set(),active=new Map(),reconnecting=new Map(),
+    const started=new Set(),reconnectSeen=new Set(),ackAttempted=new Set(),
+      active=new Map(),reconnecting=new Map(),
       reconnectControllers=new Map();
     async function begin(raw){
       const s=snap(raw),k=key(s);
@@ -529,6 +532,18 @@
           hold('HOLD_STREAM_ACK_GATE');
         }
       }
+      // Strict acknowledgment is an opt-in transport contract. Legacy ACK
+      // callbacks may fulfill with undefined after an HTTP success, so enabling
+      // strict true by default would break existing native adapters.
+      // In strict mode without a durable gate, any ACK attempt is ambiguous
+      // after reconnect. Fence same-tab replays before a second network ACK.
+      // Cross-tab/reload safety STILL requires the supplied durable ackGate.
+      if(strictAckNoReplay&&!ackGate){
+        const attemptKey=key(s);
+        if(ackAttempted.has(attemptKey))
+          hold('HOLD_STREAM_ACK_UNCERTAIN_GET_ONLY');
+        ackAttempted.add(attemptKey);
+      }
       try{
         // ACK may be accepted by the server even if its Promise never
         // settles. Bound this wait, but DO NOT cancel/retry a potentially
@@ -537,7 +552,11 @@
         const acked=await boundedRead(
           ()=>transport.ack(s,witness.ack_cursor),
           'HOLD_STREAM_ACK_SEND_TIMEOUT',ackSendTimeoutMs,signal);
-        if(acked===false) hold('HOLD_STREAM_ACK_UNCONFIRMED');
+        // Strict opt-in transports must explicitly attest true. Legacy
+        // transports preserve their prior void-success contract; only false
+        // means explicitly unconfirmed. Neither result is canonical proof.
+        if(strictAckNoReplay ? acked!==true : acked===false)
+          hold('HOLD_STREAM_ACK_UNCONFIRMED');
         // Leave IndexedDB SENDING until a signed canonical GET proves ACKED.
         // A local confirm() would create ACKED without a server proof digest
         // and permanently block requireCanonicalAck() as unverified.

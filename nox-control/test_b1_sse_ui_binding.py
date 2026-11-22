@@ -1920,6 +1920,41 @@ def main():
           return true;
         }'''))
 
+        # Without a durable ACK gate, the browser must not call the network
+        # ACK twice for an exchange. Ambiguous result types cannot be treated
+        # as a positive transport result or grant a retry after GET-only readback.
+        check('ACK transport strictly true; uncertain GET-only retry never resends', page.evaluate('''async () => {
+          const replies=[
+            ['undefined',undefined],['null',null],['false',false],
+            ['zero',0],['string','accepted'],['object',{ok:true}],
+            ['true',true]
+          ];
+          for(const [name,reply] of replies){
+            const s={conversation_id:'ack-r25',exchange_id:name};
+            let posts=0,gets=0,acks=0,projects=0;
+            const transport={...opts.transport,
+              post(){posts++;throw Error('MODEL_POST_FORBIDDEN')},
+              async readback(){gets++;return {...s}},
+              async ack(){acks++;return reply}
+            };
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge:opts.bridge,
+              ui:{async onDelta(){throw Error('no delta')},
+                async upsertTerminal(){projects++;return true}},
+              reconnectReadTimeoutMs:500,strictAckNoReplay:true
+            });
+            const first=await c.reconnect(s).then(x=>x,e=>e.code);
+            const next=await c.reconnect(s).then(x=>x,e=>e.code);
+            if((reply===true
+                 ? (!first||first.safe_to_ack!==true)
+                 : first!=='HOLD_STREAM_ACK_UNCONFIRMED')||
+                next!=='HOLD_STREAM_ACK_UNCERTAIN_GET_ONLY'||
+                posts!==0||gets!==2||acks!==1||projects!==2)
+              return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
