@@ -479,7 +479,11 @@ def _item_record(source: dict[str, Any], item: dict[str, str], now: float) -> tu
         raise HunterError("item publication date must be text")
     try:
         (title + "\n" + content + "\n" + published).encode("utf-8")
-        digest = hashlib.sha256((title + "\n" + content).encode("utf-8")).hexdigest()
+        # A corrected publication date is a new provenance version. The
+        # title/abstract may be unchanged, but INSERT OR IGNORE must retain
+        # both dated observations for the chronology instead of losing the
+        # correction under the old (source, URL, title+content) identity.
+        digest = hashlib.sha256((title + "\n" + content + "\n" + published).encode("utf-8")).hexdigest()
     except UnicodeEncodeError as exc:
         # Quarantine this item only; never roll back healthy sibling records.
         raise HunterError("item contains invalid Unicode") from exc
@@ -527,6 +531,16 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
                     (source["id"], digest, "INVALID_ITEM_URL", now),
                 )
                 quarantined += 1
+                continue
+            # Existing databases keyed earlier observations by title+body
+            # only. Do not invent a duplicate first-seen event when deploying
+            # the new publication-aware identity against unchanged old data.
+            old_digest = hashlib.sha256((record[3] + "\n" + record[4]).encode("utf-8")).hexdigest()
+            old = conn.execute(
+                "SELECT published FROM items WHERE source_id=? AND item_url=? AND content_sha256=?",
+                (record[0], record[1], old_digest),
+            ).fetchone()
+            if old is not None and old[0] == record[5]:
                 continue
             cursor = conn.execute(
                 "INSERT OR IGNORE INTO items "
