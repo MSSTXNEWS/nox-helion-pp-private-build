@@ -1527,6 +1527,76 @@ class FactReceiptTest(unittest.TestCase):
         self.assertTrue(any("web_plan_classifier_unavailable RuntimeError" in msg for msg in bridge.errors))
         self.assertTrue(any("web_mode_hint_unavailable ValueError" in msg for msg in bridge.errors))
 
+    def test_1a01_optional_s03_provenance_failure_keeps_real_model_and_write(self):
+        """Malformed advisory provenance must never abort a valid S03-backed answer."""
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Ответ сохранён 🌌"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        class Optional:
+            def __init__(self, outcome): self.outcome = outcome
+            def provenance(self, line):
+                if self.outcome == "error":
+                    raise RuntimeError("owner metadata offline")
+                return {"source": "WRONG", "id": 999, "provenance": "OWNER",
+                        "origin": object()}
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return False
+            def mode_hint(self, *args): return ""
+            def is_factual(self, *args): return False
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT, bridge.SOUL = {"t": 0}, None
+        bridge.memory_block = lambda user: "S03: проверенный контекст"
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Продолжай"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def scenario(idx):
+            response = await chat(Request({
+                "request_id": "provenance-fallback-" + str(idx),
+                "use_memory": True,
+                "messages": [{"role": "user", "content": "Продолжай"}],
+            }))
+            return [json.loads(part) async for part in response.body_iterator]
+
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            for idx, outcome in enumerate(("error", "invalid")):
+                with mock.patch.object(W, "W", Optional(outcome)):
+                    frames = asyncio.run(scenario(idx))
+                sources = next(f["nox_sources"] for f in frames if "nox_sources" in f)
+                self.assertEqual(len(sources), 1)
+                self.assertEqual(sources[0]["source"], "S03")
+                self.assertEqual(sources[0]["id"], 1)
+                self.assertEqual(sources[0]["provenance"], "UNVERIFIED")
+                self.assertEqual(sources[0]["origin"], "s03")
+                self.assertTrue(any(f.get("message", {}).get("content") == "Ответ сохранён 🌌"
+                                    for f in frames))
+                self.assertEqual(frames[-1]["completion_receipt"]["status"], "GENERATED")
+                self.assertEqual(frames[-1]["memory_write_receipt"]["status"],
+                                 "WRITE_RETURNED_UNVERIFIED")
+        self.assertEqual(writes, [("Продолжай", "Ответ сохранён 🌌")] * 2)
+        self.assertEqual(sum("web_memory_provenance_unavailable" in err
+                             for err in bridge.errors), 2)
+
     def test_stop_scope_and_bad_json_cannot_cancel_all(self):
         """Invalid or non-generation commands cannot trigger an implicit broadcast."""
         stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
