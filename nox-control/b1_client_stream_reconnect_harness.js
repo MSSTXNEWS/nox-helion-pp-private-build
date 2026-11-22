@@ -186,7 +186,12 @@
               // Reject malformed/ambiguous IDs BEFORE any UI side effect.
               const ids=lines.filter(l=>l==='id'||l.startsWith('id:'));
               if(ids.length>1) hold('HOLD_STREAM_DELTA_EVENT_ID');
-              const eventId=ids.length===1?ids[0].slice(3).trim():undefined;
+              // The SSE spec permits removing ONE U+0020 after the colon.
+              // Do not trim the ID: different wire IDs must never collide
+              // after normalization in DOM delta replay deduplication.
+              const rawEventId=ids.length===1?ids[0].slice(3):undefined;
+              const eventId=rawEventId===undefined?undefined:
+                rawEventId.startsWith(' ')?rawEventId.slice(1):rawEventId;
               if(eventId!==undefined&&!ID.test(eventId))
                 hold('HOLD_STREAM_DELTA_EVENT_ID');
               // UI handlers that await MUST check this signal immediately

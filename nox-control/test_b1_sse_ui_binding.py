@@ -485,6 +485,49 @@ def main():
             nodes.length===2 && row('same')?.textContent==='ONE' &&
             row('conflict')?.textContent==='SAFE' && !row('malformed');
         }'''))
+        # SSE parsing allows ONE U+0020 after 'id:', never trimming the
+        # actual identifier. Otherwise two distinct wire IDs can collapse
+        # into a single replay token and silently suppress an SSE delta.
+        check('SSE exact ID rejects whitespace aliases before DOM commit', page.evaluate('''async () => {
+          const variants=[
+            ['trailing','id: exact-001 '],
+            ['double-leading','id:  exact-001'],
+            ['tab-leading','id:\\texact-001'],
+            ['canonical','id: exact-001']
+          ];
+          for(const [kind,wireId] of variants){
+            const scope={conversation_id:'id-exact',exchange_id:kind};
+            const container=document.createElement('section');
+            let posts=0,acks=0,commits=0;
+            const first='id: exact-001\\nevent: delta\\ndata: SAFE\\n\\n';
+            const second=wireId+'\\nevent: delta\\ndata: MUTATED\\n\\n';
+            const frames=first+(kind==='canonical'?'':second);
+            const transport={...opts.transport,
+              async post(){
+                posts++;
+                return {ok:true,body:new ReadableStream({start(c){
+                  c.enqueue(new TextEncoder().encode(frames));c.close();
+                }})};
+              },
+              async ack(){acks++;return true;}
+            };
+            const ui=NOXB1AbortSafeUI.createUiAdapter({
+              container,beforeCommit:async type=>{
+                if(type==='delta')commits++;
+              }
+            });
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:3000
+            });
+            const actual=await c.begin(scope).then(v=>v,e=>e.code);
+            const expected=kind==='canonical'?
+              'STREAM_ENDED_READBACK_REQUIRED':'HOLD_STREAM_DELTA_EVENT_ID';
+            if(actual!==expected||posts!==1||acks!==0||commits!==1||
+               container.children.length!==1||
+               container.children[0].textContent!=='SAFE')return false;
+          }
+          return true;
+        }'''))
         # A proxy may batch >64KiB of individually valid, small SSE frames
         # into ONE read(). Reject oversized individual frames, not large reads.
         # This is a source-only Chromium transport/DOM regression.
