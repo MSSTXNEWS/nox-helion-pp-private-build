@@ -24,6 +24,7 @@ class Cfg:
         self.intro_deadline_s = float(e("RTE_INTRO_DEADLINE_S", "1.8"))
         self.first_token_max_s = float(e("RTE_FIRST_TOKEN_MAX_S", "240"))   # дольше GLM без токена -> запасной быстрый ответ
         self.hb_s = float(e("RTE_HB_S", "3"))
+        self.intro_on = e("RTE_INTRO", "0") == "1"          # c600: вступление «Слышу вас…» выключено; RTE_INTRO=1 вернёт
         self.default_deep_tps = float(e("NOX_DEFAULT_TPS_DEEP", "1.5"))
         self.settle_s = float(e("RTE_STOP_SETTLE_S", "4"))
         self.__dict__.update(kw)
@@ -81,7 +82,7 @@ class Pipeline:
             return await self._fast_answer(turn, messages, "fast")
         q = asyncio.Queue()
         deep = asyncio.ensure_future(self._pump_deep(turn, messages, plan, q))
-        intro_task = asyncio.ensure_future(BI.make_intro(user, cfg.fast, deadline_s=cfg.intro_deadline_s)) if plan.intro else None
+        intro_task = asyncio.ensure_future(BI.make_intro(user, cfg.fast, deadline_s=cfg.intro_deadline_s)) if (plan.intro and cfg.intro_on) else None
         intro_text = None
         try:
             first = asyncio.ensure_future(q.get())
@@ -114,6 +115,7 @@ class Pipeline:
                 elif kind == "end":
                     if val.get("tokens"):
                         self.tps_deep = 0.7 * self.tps_deep + 0.3 * val["tokens"] / max(val["secs"], 0.5)
+                    await turn.publish("meta", nox={"tier": "glm", "stages": {"deep": {"status": "ok"}}})   # c600: метка уровня
                     return
                 else:   # error
                     self.deep_down_until = time.time() + 20.0 if not got_any else 0.0
@@ -128,7 +130,7 @@ class Pipeline:
 
     async def _pump_deep(self, turn, messages, plan, q):
         cfg = self.cfg
-        msgs = BI.with_intro_note(messages) if plan.intro else messages   # GLM стартует сразу, не дожидаясь вступления
+        msgs = BI.with_intro_note(messages) if (plan.intro and cfg.intro_on) else messages   # GLM стартует сразу, не дожидаясь вступления
         body = dict(plan.gateway_fields(), messages=msgs, stream=True, nox_session=turn.conv_id)
         writer, t0, n = None, time.time(), 0
         try:
@@ -169,7 +171,8 @@ class Pipeline:
         cfg = self.cfg
         if not cfg.fast:
             return await turn.publish("error", code="no_upstream", message="ни GLM, ни быстрый слой не доступны")
-        body = {"model": "fast", "messages": messages, "stream": True, "max_tokens": 512, "temperature": 0.7, "cache_prompt": True,
+        await turn.publish("meta", nox={"tier": "fallback" if stage == "fallback" else "fast", "stages": {"fast": {"status": "ok"}}})   # c600
+        body = {"model": "fast", "messages": messages, "stream": True, "max_tokens": 1500, "temperature": 0.7, "cache_prompt": True,
                 "chat_template_kwargs": {"enable_thinking": False}}
         writer = None
         try:
