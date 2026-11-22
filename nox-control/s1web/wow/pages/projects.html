@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- nox-web-extras: пропустить (у страницы своё меню и панели; marker для deploy1.sh) -->
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02030a">
+<title>NOX HELION · ПРОЕКТЫ</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="./nox-wow.css">
+<link rel="stylesheet" href="./nox-pages.css">
+<script src="./vendor/nox-wow/sortablejs/Sortable.min.js"></script>
+<script src="./vendor/nox-extra/fullcalendar.global.min.js"></script>
+<script src="./vendor/dexie/dexie.min.js"></script>
+<script src="./nox-theme.js"></script>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
+</head>
+<body data-page="proj" class="boot">
+<div id="app">
+<main class="page" id="page"><div class="wrap">
+<div class="ph"><div><span class="kick mono">Задачи · сроки · календарь</span><h1>Проекты</h1></div>
+  <div class="acts"><span class="seg" role="group" aria-label="Вид"><button type="button" id="vBoard" aria-pressed="true"><sl-icon library="tabler" name="layout-kanban"></sl-icon>Доска</button><button type="button" id="vCal" aria-pressed="false"><sl-icon library="tabler" name="calendar"></sl-icon>Календарь</button></span>
+  <span class="seg" role="group" aria-label="Данные"><button type="button" id="exp"><sl-icon library="tabler" name="download"></sl-icon>JSON</button><button type="button" id="expIcs"><sl-icon library="tabler" name="calendar-down"></sl-icon>ICS</button><button type="button" id="imp"><sl-icon library="tabler" name="upload"></sl-icon>Импорт</button></span></div></div>
+<input type="file" id="impFile" accept=".json,application/json" hidden>
+<form class="card" id="addForm" autocomplete="off"><div class="frow">
+  <label class="fld grow" style="flex:3 1 220px"><span>Новая задача</span><input type="text" id="aTitle" maxlength="200" placeholder="Что нужно сделать" required></label>
+  <label class="fld grow"><span>Проект</span><input type="text" id="aProj" maxlength="40" list="projList" placeholder="Общий"></label>
+  <label class="fld grow"><span>Владелец</span><input type="text" id="aOwner" maxlength="40" list="ownList" placeholder="Кто отвечает"></label>
+  <label class="fld"><span>Срок</span><input type="date" id="aDue"></label>
+  <label class="fld"><span>Колонка</span><select id="aCol"></select></label>
+  <span class="seg" style="align-self:flex-end"><button type="submit"><sl-icon library="tabler" name="plus"></sl-icon>Добавить</button></span></div>
+  <datalist id="projList"></datalist><datalist id="ownList"></datalist></form>
+<div class="card flat"><div class="frow"><span class="mono muted">Проект:</span><span id="chips" class="frow"></span><span style="flex:1"></span><button type="button" class="tag" id="ntag">УВЕДОМЛЕНИЯ</button><span class="tag" id="apiTag">API ЗАДАЧ: ПРОВЕРКА</span><span class="seg" id="apiAct" hidden><button type="button" id="apiImp">Импорт из NOX</button></span></div></div>
+<div class="board" id="vBoardBox"></div>
+<section class="card" id="vCalBox" hidden><div id="cal"></div><p class="muted" style="margin:8px 0 0;font-size:12px">Клик по дню создаёт событие или задачу; события и сроки карточек можно перетаскивать на другой день.</p></section>
+<sl-dialog id="dlg" class="nox-dl" label="Задача"><form class="dlg" id="dForm" autocomplete="off">
+  <div class="frow"><label class="fld"><span>Тип</span><select id="dKind"><option value="task">Задача</option><option value="event">Событие</option></select></label><label class="fld grow"><span>Название</span><input type="text" id="dTitle" maxlength="200" required></label></div>
+  <div class="frow"><label class="fld grow"><span>Проект</span><input type="text" id="dProj" maxlength="40" list="projList"></label><label class="fld grow"><span>Владелец</span><input type="text" id="dOwner" maxlength="40" list="ownList"></label></div>
+  <div class="frow"><label class="fld"><span>Срок / дата</span><input type="date" id="dDue"></label><label class="fld" id="dTimeW"><span>Время</span><input type="time" id="dTime"></label><label class="fld" id="dColW"><span>Колонка</span><select id="dCol"></select></label></div>
+  <label class="fld"><span>Заметка</span><textarea id="dNote" maxlength="2000"></textarea></label>
+  <button type="submit" hidden></button></form>
+  <div class="seg" slot="footer"><button type="button" id="dSave">Сохранить</button><button type="button" id="dDel" style="color:rgb(var(--mg))">Удалить</button><button type="button" id="dCancel">Отмена</button></div></sl-dialog>
+</div></main>
+</div>
+<script type="module" src="./nox-nav.js"></script>
+<script type="module" src="./nox-p-projects.js"></script>
+</body>
+</html>

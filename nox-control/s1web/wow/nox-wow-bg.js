@@ -46,7 +46,7 @@ export async function startSpace(opts) {
   const cv = o.canvas;
   const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, alpha: false, powerPreference: 'high-performance' });
   if (!renderer.capabilities.isWebGL2) throw new Error('нужен WebGL2');
-  const state = { level: lsGet(KEYQ, 'on'), planet: lsGet(KEY, 'earth'), px: 0, py: 0, tx: 0, ty: 0, run: true, texStatus: {} };
+  const state = { level: lsGet(KEYQ, 'on') === 'off' ? 'on' : lsGet(KEYQ, 'on'), planet: lsGet(KEY, 'earth'), px: 0, py: 0, tx: 0, ty: 0, run: true, texStatus: {} };
   let dprCap = small() ? 1 : 1.5;
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, dprCap));
   renderer.setClearColor(0x02030a, 1);
@@ -138,7 +138,7 @@ export async function startSpace(opts) {
   if (!reduce && state.level !== 'off') requestAnimationFrame(loop); else state.run = false;
   const api = {
     state, setPlanet,
-    setLevel(l) { state.level = l; lsSet(KEYQ, l); applyLevel(); if (l === 'off') { state.run = false; frame(performance.now(), true); } else if (!state.run && !reduce) { state.run = true; requestAnimationFrame(loop); } },
+    setLevel(l) { if (l === 'off') l = 'on'; state.level = l; lsSet(KEYQ, l); applyLevel(); if (l === 'off') { state.run = false; frame(performance.now(), true); } else if (!state.run && !reduce) { state.run = true; requestAnimationFrame(loop); } },
     snapshot() { frame(performance.now(), true); }
   };
   window.__noxWowSpace = api;
