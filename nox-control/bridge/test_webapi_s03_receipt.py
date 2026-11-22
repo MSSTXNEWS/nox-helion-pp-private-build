@@ -2021,5 +2021,75 @@ class FactReceiptTest(unittest.TestCase):
                          W.hashlib.sha256(expected.encode("utf-8")).hexdigest())
 
 
+
+    def test_1a01_long_multiline_plan_stream_keeps_progress_and_s03_exact(self):
+        """Incremental plan progress must not lose tokens or repeat step events."""
+        expected = "1. Начало 🌌\\n2. Итог\\n" + "Примечание\\n" * 600
+        fragments = ["1. Начало 🌌\\n", "2. Итог\\n"] + ["Примечание\\n"] * 600
+        writes = []
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                for part in fragments:
+                    yield "data: " + json.dumps(
+                        {"choices": [{"delta": {"content": part}}]},
+                        ensure_ascii=False)
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        class Planner:
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return True
+            async def make_plan(self, *args, **kwargs): return ["Начало", "Итог"]
+            def mode_hint(self, *args): return ""
+            def is_factual(self, *args): return False
+
+        chat = next(route.endpoint for route in self.app.routes
+                    if route.path == "/api/chat")
+        bridge = self.bridge
+        bridge.NKEEP, bridge.LAST_CHAT, bridge.SOUL = 0, {"t": 0}, None
+        bridge.self_vol = lambda *args: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Шаги"}]
+        bridge.adapt_tokens = lambda *args: 300
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def scenario():
+            response = await chat(Request({
+                "request_id": "linear-plan-progress",
+                "use_memory": False,
+                "messages": [{"role": "user", "content": "Дай два шага"}],
+            }))
+            return [json.loads(f) async for f in response.body_iterator]
+
+        with mock.patch.object(W, "W", Planner()), \\
+             mock.patch.object(W, "CANCEL", set()), \\
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \\
+             mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \\
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            frames = asyncio.run(scenario())
+
+        progress = [f["nox_event"]["index"] for f in frames
+                    if f.get("nox_event", {}).get("step") == "plan"
+                    and "index" in f["nox_event"]]
+        self.assertEqual(progress, [1, 2])
+        self.assertEqual("".join(f.get("message", {}).get("content", "")
+                                 for f in frames), expected)
+        self.assertEqual(writes, [("Дай два шага", expected)])
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "GENERATED")
+        self.assertEqual(frames[-1]["memory_write_receipt"]["status"],
+                         "WRITE_RETURNED_UNVERIFIED")
+        self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
+        self.assertEqual(frames[-1]["digest"],
+                         W.hashlib.sha256(expected.encode("utf-8")).hexdigest())
+
+
 if __name__ == "__main__":
     unittest.main()
