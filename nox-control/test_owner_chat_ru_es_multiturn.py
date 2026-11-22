@@ -996,7 +996,7 @@ async function check(chunks, status=200) {
                 self.assertFalse(owner_session_continuity_valid(
                     200, [ui, drift], baseline))
         for malformed in ('', ' https://owner.example', 'https://owner.example ',
-                          'https://owner.example\\u200b', 17, False, None, [], {}):
+                          'https://owner.example\u200b', 17, False, None, [], {}):
             with self.subTest(malformed=repr(malformed)):
                 self.assertIsNone(owner_session_cookie_pin(
                     [dict(signed, partitionKey=malformed)]))
