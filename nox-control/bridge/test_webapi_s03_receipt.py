@@ -149,9 +149,9 @@ class FactReceiptTest(unittest.TestCase):
     def test_partial_upstream_never_claims_done_or_persists_s03(self):
         """One endpoint-level check for complete, truncated and HTTP-failed streams."""
         class Upstream:
-            def __init__(self, complete, status, finish_reason=None, error_event=False):
+            def __init__(self, complete, status, finish_reason=None, error_event=False, after_done=None):
                 self.complete, self.status_code = complete, status
-                self.finish_reason, self.error_event = finish_reason, error_event
+                self.finish_reason, self.error_event, self.after_done = finish_reason, error_event, after_done
 
             async def __aenter__(self):
                 return self
@@ -167,14 +167,19 @@ class FactReceiptTest(unittest.TestCase):
                     yield 'data: {"error":{"message":"upstream worker failed"}}'
                 if self.complete:
                     yield 'data: [DONE]'
+                    if isinstance(self.after_done, Exception):
+                        raise self.after_done
+                    if self.after_done is not None:
+                        yield self.after_done
 
         class Client:
-            def __init__(self, complete, status, finish_reason=None, error_event=False):
+            def __init__(self, complete, status, finish_reason=None, error_event=False, after_done=None):
                 self.complete, self.status = complete, status
-                self.finish_reason, self.error_event = finish_reason, error_event
+                self.finish_reason, self.error_event, self.after_done = finish_reason, error_event, after_done
 
             def stream(self, method, url, json):
-                return Upstream(self.complete, self.status, self.finish_reason, self.error_event)
+                return Upstream(self.complete, self.status, self.finish_reason,
+                                self.error_event, self.after_done)
 
         endpoint = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
         module = types.ModuleType("s03_memory")
@@ -190,17 +195,22 @@ class FactReceiptTest(unittest.TestCase):
             response = await endpoint(Request(body))
             return [json.loads(part) async for part in response.body_iterator]
 
-        for complete, status, finish_reason, error_event, expected_ok in (
-            (False, 200, None, False, False),
-            (True, 503, None, False, False),
-            (True, 200, "length", False, False),
-            (True, 200, None, True, False),
-            (True, 200, "stop", False, True),
+        for complete, status, finish_reason, error_event, after_done, expected_ok in (
+            (False, 200, None, False, None, False),
+            (True, 503, None, False, None, False),
+            (True, 200, "length", False, None, False),
+            (True, 200, None, True, None, False),
+            # A successful DONE is only valid after a clean HTTP stream EOF.
+            (True, 200, "stop", False, 'data: {"error":"late"}', False),
+            (True, 200, "stop", False, OSError("reset after DONE"), False),
+            (True, 200, "stop", False, None, True),
         ):
             with self.subTest(complete=complete, status=status,
-                              finish_reason=finish_reason, error_event=error_event):
+                              finish_reason=finish_reason, error_event=error_event,
+                              after_done=str(after_done)):
                 writes.clear()
-                bridge.hc = lambda: Client(complete, status, finish_reason, error_event)
+                bridge.hc = lambda: Client(complete, status, finish_reason,
+                                           error_event, after_done)
                 with mock.patch.dict(sys.modules, {"s03_memory": module}), mock.patch.object(W, "W", None):
                     frames = asyncio.run(get_frames())
                 terminal = [v for v in frames if v.get("done") is True]

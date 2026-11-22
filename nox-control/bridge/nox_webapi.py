@@ -630,12 +630,20 @@ def install(app, B):
                             async for line in r.aiter_lines():
                                 if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
                                     break
+                                # [DONE] alone is not clean HTTP EOF: consume
+                                # the remaining upstream stream before S03 write.
+                                # A late event or reset makes this turn HOLD.
+                                if upstream_done:
+                                    if line.strip():
+                                        upstream_failure = "UPSTREAM_AFTER_DONE"
+                                        break
+                                    continue
                                 if not line.startswith("data:"):
                                     continue
                                 d = line[5:].strip()
                                 if d == "[DONE]":
                                     upstream_done = True
-                                    break
+                                    continue
                                 # A model can send [DONE] after a truncated finish or
                                 # an explicit SSE error. Neither is a completed answer.
                                 try:
