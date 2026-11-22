@@ -829,6 +829,10 @@ def install(app, B):
             # quadratic for a long answer split into tiny model token frames.
             full_chunks = []
             output_utf8_bytes = 0
+            # Incrementally inspect plan-step lines without rescanning all
+            # emitted tokens after each newline (quadratic on long answers).
+            plan_pending_parts = []
+            plan_completed_steps = 0
             yield fr(message={"role": "assistant", "content": ""}, done=False, nox_status="слушаю тебя…",
                      request_receipt={"status": "RECEIVED", "request_id": rid, "native_admission_verified": False})
             async with (_lock_mini if mini else _lock):
@@ -1114,11 +1118,21 @@ def install(app, B):
                                     output_utf8_bytes += t_utf8_bytes
                                     n += 1
                                     yield fr(message={"role": "assistant", "content": t}, done=False)
-                                    if plan and "\n" in t:
-                                        k = len(re.findall(r"(?m)^\s*(?:Шаг\s*)?\d+[.)]", "".join(full_chunks)))
-                                        if k > shown and k <= len(plan):
-                                            shown = k
-                                            yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "шаг %d/%d: %s" % (k, len(plan), plan[k - 1]), "index": k, "total": len(plan)})
+                                    if plan:
+                                        plan_pending_parts.append(t)
+                                        if "\n" in t:
+                                            # Only completed lines plus the current tail
+                                            # can introduce newly numbered plan steps.
+                                            fresh = "".join(plan_pending_parts)
+                                            completed, _, tail = fresh.rpartition("\n")
+                                            plan_completed_steps += len(re.findall(
+                                                r"(?m)^\s*(?:Шаг\s*)?\d+[.)]", completed))
+                                            plan_pending_parts = [tail]
+                                            k = plan_completed_steps + bool(re.search(
+                                                r"^\s*(?:Шаг\s*)?\d+[.)]", tail))
+                                            if k > shown and k <= len(plan):
+                                                shown = k
+                                                yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "шаг %d/%d: %s" % (k, len(plan), plan[k - 1]), "index": k, "total": len(plan)})
                 except Exception as e:
                     err = type(e).__name__
                     B.log("web_stream_error %s" % err)
