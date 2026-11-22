@@ -818,7 +818,7 @@ def install(app, B):
                     if sk.get("ok") is False:
                         doubt = sk.get("doubt")
                         if not isinstance(doubt, str) or not doubt.strip():
-                            sk = {"ok": None, "reason": "SKEPTIC_DOUBT_INVALID"}
+                            sk = {"ok": None, "reason": "SKEPTIC_ANNOTATION_INVALID_OR_OVERSIZE"}
                         else:
                             add = "\n\n⚠ Скептик: " + doubt
                             try:
