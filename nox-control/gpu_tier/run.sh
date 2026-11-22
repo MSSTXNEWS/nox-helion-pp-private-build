@@ -153,5 +153,12 @@ for k,v in st.items(): print(k,"first@",v[0],"|",v[1][:150].replace("\n"," "))
   ;;
 bstart) nohup setsid python3 /root/nox/gpu_tier/bench_glm.py > /root/nox/logs/glm_bench.out 2>&1 < /dev/null & sleep 2; ps aux | grep -c "[b]ench_glm" ;;
 bshow) cat /root/nox/logs/glm_bench.out; ps aux | grep -c "[b]ench_glm"; top -bn1 | head -12 | tail -6; vmstat 1 2 | tail -1;;
+diag)
+  cat /root/nox/logs/glm_bench.out; cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/cpu.stat 2>/dev/null | head -8
+  P=$(pgrep -f "port 8081" | head -1); taskset -cp $P; grep -E "Cpus_allowed_list|Threads" /proc/$P/status
+  top -H -bn1 -p $P | head -16 | tail -10
+  nvidia-smi --query-gpu=utilization.gpu,clocks.sm,pcie.link.gen.current,pcie.link.width.current --format=csv,noheader
+  grep -E "n_threads|threadpool|cpu_moe|op_offload|offload" /root/nox/logs/glm_server.log | cut -c1-160 | head -5
+  ;;
 *) echo unknown;;
 esac
