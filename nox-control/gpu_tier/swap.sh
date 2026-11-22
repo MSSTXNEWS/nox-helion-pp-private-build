@@ -34,5 +34,39 @@ swap1a)
   wc -c /root/nox/models/manifests/glm53_ud_q4kxl.json /root/nox/logs/MODEL_SWAP.json
   df -h /dev/shm /root | cat
   ;;
+swapA)
+  echo "== A: стоп GLM + манифест + размер/лицензия Flash (удалений нет)"
+  pkill -f "/root/nox/exp_driver_B.py"; pkill -f "/root/nox/glm_watch.sh"; sleep 1
+  for p in $(pgrep -f "llama-server.*--port 8081"); do kill -TERM $p; done
+  for i in $(seq 1 24); do pgrep -f "llama-server.*--port 8081" >/dev/null || break; sleep 5; done
+  pgrep -af "llama-server|exp_driver|glm_watch" | cut -c1-110; curl -s -m3 -o /dev/null -w "8081=%{http_code}\n" localhost:8081/health; curl -s -m3 -o /dev/null -w "8083=%{http_code}\n" localhost:8083/health
+  mkdir -p /root/nox/state/MODEL_SWAP; D=/root/nox/state/MODEL_SWAP
+  GD=/dev/shm/nox_glm; ls -l --block-size=1 $GD/*.gguf /root/nox/glm53_disk/*.gguf > $D/glm53_manifest.txt 2>&1
+  python3 - <<'P'
+import json,urllib.request
+m=json.load(open("/root/nox/models/manifests/glm53_ud_q4kxl.json"))
+info=json.load(urllib.request.urlopen("https://huggingface.co/api/models/unsloth/GLM-5.3-GGUF",timeout=30))
+with open("/root/nox/state/MODEL_SWAP/glm53_manifest.txt","a") as f:
+    f.write("\nHF repo: unsloth/GLM-5.3-GGUF revision: %s\n"%info.get("sha"))
+    for s in m["shards"]:
+        f.write("%s %s sha256=%s where=%s\n"%(s["name"],s["size"],(s.get("hf") or {}).get("sha256"),s["where"]))
+print("manifest lines",sum(1 for _ in open("/root/nox/state/MODEL_SWAP/glm53_manifest.txt")),"rev",info.get("sha"))
+for r in ("unsloth/GLM-5.3-Flash-GGUF","ggml-org/GLM-5.3-Flash-GGUF"):
+    try:
+        i=json.load(urllib.request.urlopen("https://huggingface.co/api/models/"+r,timeout=30)); print("==",r,"license:",(i.get("cardData") or {}).get("license"),"rev",i.get("sha"))
+        tot=0
+        for sub in ("","UD-Q4_K_XL"):
+            u="https://huggingface.co/api/models/%s/tree/main%s"%(r,("/"+sub) if sub else "")
+            try: tr=json.load(urllib.request.urlopen(u,timeout=30))
+            except Exception as e: continue
+            for x in tr:
+                n=x["path"]
+                if x["type"]=="file" and (("Q4_K_XL" in n) or ("mmproj" in n.lower()) or ("Q4_K_M" in n)) and n.endswith(".gguf"):
+                    print(n,x.get("size")); 
+                if x["type"]=="directory": print("dir",n)
+    except Exception as e: print(r,"err",e)
+P
+  df -h /dev/shm | tail -1
+  ;;
 *) echo "unknown stage $S";;
 esac
