@@ -130,6 +130,13 @@ class TestProbe(unittest.TestCase):
             'http://127.0.0.1:18877/api/%2e/nox/chat/stream',
             'http://127.0.0.1:18877/assets/%252e%252e/nox/chat',
             'http://127.0.0.1:18877/assets/../nox/chat;rev=3',
+            # Proxies may remove matrix qualifiers from an ancestor segment.
+            'http://127.0.0.1:18877/api;trace=7/nox/chat',
+            'http://127.0.0.1:18877/api/nox;rev=2/chat',
+            'http://127.0.0.1:18877/nox;session=1/chat/stream',
+            'http://127.0.0.1:18877/assets/../api;sid=1/nox;v=2/chat',
+            'http://127.0.0.1:18877/%3Bsid=1/api/nox/chat',
+            'http://127.0.0.1:18877/api%253Bsid=1/nox/chat',
         ):
             with self.subTest(block=url):
                 self.assertTrue(is_model_chat_endpoint(url))
@@ -140,6 +147,8 @@ class TestProbe(unittest.TestCase):
             'http://127.0.0.1:18877/assets/chat.css',
             'http://127.0.0.1:18877/api/nox/chat.html',
             'http://127.0.0.1:18877/NOX/CHATTER',
+            'http://127.0.0.1:18877/assets;rev=1/chat.css',
+            'http://127.0.0.1:18877/api/nox/chat.html;v=2',
         ):
             with self.subTest(allow=url):
                 self.assertFalse(is_model_chat_endpoint(url))

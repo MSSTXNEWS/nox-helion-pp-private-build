@@ -69,6 +69,11 @@ def is_model_chat_endpoint(url):
     while '//' in path:
         path = path.replace('//', '/')
     # A browser or proxy can resolve decoded dot-segments before routing.
+    # Some proxies strip ;matrix qualifiers on every segment before routing.
+    # Strip them before dot-segment resolution, including empty segments.
+    path = '/'.join(segment.split(';', 1)[0] for segment in path.split('/'))
+    while '//' in path:
+        path = path.replace('//', '/')
     # Classify the canonical target rather than the attacker-supplied alias.
     path = posixpath.normpath(path)
     return any(path == root or path.startswith(root + '/') or
