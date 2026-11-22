@@ -577,6 +577,60 @@ def main():
           return code==='HOLD_STREAM_FRAME_TOO_LARGE' &&
             posts===1 && acks===0 && deltas===0;
         }'''))
+        # The 64KiB SSE frame limit is a UTF-8 byte budget, not a JavaScript
+        # UTF-16 string-length budget. A 23k CJK-character single frame or
+        # unfinished tail must fail BEFORE DOM. Many small CJK frames packed
+        # into one >64KiB network read must still be accepted without repost.
+        check('SSE UTF-8 byte budget enforces complete/tail and permits batched frames', page.evaluate('''async () => {
+          const nl=String.fromCharCode(10);
+          const big='界'.repeat(23000);
+          const small='界'.repeat(900);
+          const oversized=['id: bytes-large','event: delta','data: '+big,'',''].join(nl);
+          const tail=['id: bytes-tail','event: delta','data: '+big].join(nl);
+          const batched=Array.from({length:24},(_,i)=>
+            ['id: bytes-'+i,'event: delta','data: '+small,'',''].join(nl)
+          ).join('');
+          const encoder=new TextEncoder();
+          if(oversized.length>65536||encoder.encode(oversized).length<=65536||
+             tail.length>65536||encoder.encode(tail).length<=65536||
+             encoder.encode(batched).length<=65536)return false;
+          for(const [name,wire,shouldHold] of [
+            ['complete',oversized,true],
+            ['tail',tail,true],
+            ['batched',batched,false]
+          ]){
+            const scope={conversation_id:'utf8-bytes',exchange_id:name};
+            const container=document.createElement('section');
+            const ui=NOXB1AbortSafeUI.createUiAdapter({container});
+            let posts=0,acks=0;
+            const transport={...opts.transport,
+              async post(){
+                posts++;
+                return {ok:true,body:new ReadableStream({start(c){
+                  c.enqueue(encoder.encode(wire)); c.close();
+                }})};
+              },
+              async ack(){acks++;return true}
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge:opts.bridge,ui,timeoutMs:6000
+            });
+            const code=await client.begin(scope).then(v=>v,e=>e.code);
+            const noRepost=await client.begin(scope).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(posts!==1||acks!==0||!noRepost)return false;
+            if(shouldHold){
+              if(code!=='HOLD_STREAM_FRAME_TOO_LARGE'||
+                 container.children.length!==0)return false;
+            }else{
+              if(code!=='STREAM_ENDED_READBACK_REQUIRED'||
+                 container.children.length!==1||
+                 container.firstElementChild.textContent!==small.repeat(24))
+                return false;
+            }
+          }
+          return true;
+        }'''))
         # EventSource allows CR by itself as a line ending (HTML Living
         # Standard); split reads and EOF must not drop the final CR-only
         # empty line or accidentally create duplicate model turns.
