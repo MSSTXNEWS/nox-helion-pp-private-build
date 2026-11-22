@@ -765,6 +765,17 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
     seen_event_ids = set()
     retry_seen = False
     initial_empty_lines = 0
+    # Valid terminal JSON is not proof that HTTP completed its advertised
+    # identity-encoded body. Count wire bytes including SSE BOM/CRLF framing.
+    declared_bytes = None
+    if headers is not None:
+        raw_length = headers.get('Content-Length')
+        if raw_length is not None:
+            if (not isinstance(raw_length, str) or
+                    not re.fullmatch(r'[0-9]{1,18}', raw_length.strip())):
+                raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+            declared_bytes = int(raw_length.strip())
+    observed_bytes = 0
 
     def parse_payload(payload):
         if payload == b'[DONE]':
@@ -774,6 +785,9 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
                           object_pairs_hook=reject_duplicate_json_keys)
 
     for wire_index, wire in enumerate(bounded_stream_lines(response, max_line)):
+        observed_bytes += len(wire)
+        if declared_bytes is not None and observed_bytes > declared_bytes:
+            raise RuntimeError('HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH')
         if (wire_index >= max_wire_lines or
                 (deadline is not None and time.monotonic() > deadline)):
             raise RuntimeError('HOLD_BOUNDED_STREAM')
@@ -863,6 +877,8 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
     if mode == 'sse' and (data_lines or event_name is not None
                           or event_id is not None or retry_seen):
         raise RuntimeError('HOLD_STREAM_SSE_UNTERMINATED')
+    if declared_bytes is not None and observed_bytes != declared_bytes:
+        raise RuntimeError('HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH')
 
 def consume_turn(client,prompt,dialog_id,timeout=95):
     started=time.monotonic()
