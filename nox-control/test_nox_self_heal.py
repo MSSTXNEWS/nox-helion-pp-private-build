@@ -137,6 +137,29 @@ class SafeRepairTests(unittest.TestCase):
             self.assertEqual(canary.read_text(encoding="utf8"), "DO_NOT_CHANGE")
             self.assertFalse(state.exists())
 
+    def test_invalid_existing_state_holds_without_overwriting_or_restart(self):
+        # Malformed state must not reset recorded attempts or trigger a restart.
+        bad_states = (
+            "{broken json",
+            '{"services":{"nox-dispatcher.service":{"failures":2,"attempts":"bad"}}}',
+            '{"services":{"nox-dispatcher.service":{"failures":true,"attempts":[]}}}',
+            '{"services":{"nox-dispatcher.service":{"failures":2,"attempts":[],"attempts":[1]}}}',
+            '{"services":{"nox-dispatcher.service":{"failures":2,"attempts":[NaN]}}}',
+        )
+        for raw in bad_states:
+            with self.subTest(raw=raw), tempfile.TemporaryDirectory() as root:
+                state = Path(root) / "state.json"
+                state.write_text(raw, encoding="utf8")
+                with patch.object(healer, "alive") as alive, patch.object(
+                        healer.subprocess, "run") as run:
+                    result = healer.repair_cycle(
+                        self.policy(Path(root) / "STOP"), state)
+                    self.assertEqual(result[0]["action"], "state_invalid_hold")
+                    self.assertIsNone(result[0]["healthy_before"])
+                    alive.assert_not_called()
+                    run.assert_not_called()
+                self.assertEqual(state.read_text(encoding="utf8"), raw)
+
     def test_stop_blocks_restart(self):
         with tempfile.TemporaryDirectory() as t:
             stop=Path(t)/"STOP"
