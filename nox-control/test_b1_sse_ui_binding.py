@@ -1955,6 +1955,48 @@ def main():
           return true;
         }'''))
 
+        check('preflight STOP aborts owner GET; no late GET or model POST', page.evaluate('''async () => {
+          let reads=0,posts=0,signal;
+          const mk=(host,timeoutMs=200)=>NOXB1StreamReconnect.createClient({
+            transport:{
+              async post(){posts++; throw Error('unexpected model POST')},
+              async readback(){throw Error('unused')},
+              async ack(){return true}
+            },
+            host,bridge:{async acceptTerminal(){throw Error('unused')}},
+            ui:{async onDelta(){},async upsertTerminal(){return true}},
+            timeoutMs
+          });
+          const first=mk({async readCommitted(){reads++;return null}});
+          const a={conversation_id:'r26',exchange_id:'immediate'};
+          const early=first.begin(a);
+          const stopped=first.stop(a);
+          const earlyResult=await early;
+          if(!stopped||earlyResult!=='STOPPED'||reads!==0||posts!==0)return false;
+
+          let entered;
+          const dispatched=new Promise(resolve=>entered=resolve);
+          const pending=mk({readCommitted:(_c,_e,sig)=>{
+            reads++;signal=sig;entered();return new Promise(()=>{});
+          }});
+          const b={conversation_id:'r26',exchange_id:'pending'};
+          const waiting=pending.begin(b);
+          await dispatched;
+          const lateStop=pending.stop(b);
+          const pendingResult=await waiting;
+          if(!lateStop||pendingResult!=='STOPPED'||!signal.aborted||
+             reads!==1||posts!==0)return false;
+
+          let timeoutSignal;
+          const deadline=mk({readCommitted:(_c,_e,sig)=>{
+            reads++;timeoutSignal=sig;return new Promise(()=>{});
+          }},30);
+          const timeoutResult=await deadline.begin(
+            {conversation_id:'r26',exchange_id:'deadline'});
+          return timeoutResult==='STOPPED_TIMEOUT'&&
+            timeoutSignal.aborted===true&&reads===2&&posts===0;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
