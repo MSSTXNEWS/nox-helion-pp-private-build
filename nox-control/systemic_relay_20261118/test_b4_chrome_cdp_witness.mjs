@@ -2193,9 +2193,9 @@ test('CDP session disconnect after first printable SECOND delta rejects entire p
   assert.ok(cut>0);
   const partial=body.slice(0,cut),terminal=body.slice(cut);
   assert.match(partial,/Hello/);
-  assert.doesNotMatch(partial,/finish_reason|\\[DONE\\]/);
+  assert.doesNotMatch(partial,/finish_reason|\[DONE\]/);
   assert.match(terminal,/finish_reason/);
-  assert.match(terminal,/\\[DONE\\]/);
+  assert.match(terminal,/\[DONE\]/);
   let firstAck=false,firstWasAckedAtDrop=false,observedDelta=0;
   await assert.rejects(run(false,[Buffer.from(partial),Buffer.from(terminal)],
     null,null,{
