@@ -2981,17 +2981,17 @@ test('R23 actual headless Chromium: loopback three-turn SSE/CDP provenance, two-
             if(cdplog.length<50){
               if(method==='Network.requestWillBeSent'&&p.request?.method==='POST'){
                 postFrames.set(p.requestId,{frame:p.frameId,loader:p.loaderId});
-                cdplog.push(['POST',p.requestId,p.redirectHasExtraInfo,p.redirectResponse?true:false]);
+                cdplog.push(['POST',p.requestId,p.timestamp,p.redirectHasExtraInfo,p.redirectResponse?true:false]);
               }else if(method==='Network.responseReceived'){
                 const old=postFrames.get(p.requestId);
                 cdplog.push(['Network.responseReceived',p.requestId,
                   p.response?.status,old?old.frame===p.frameId:null,
                   old?old.loader===p.loaderId:null,
-                  p.hasExtraInfo,p.response?.mimeType]);
+                  p.hasExtraInfo,p.response?.mimeType,p.timestamp]);
               }else if(['Network.dataReceived','Network.loadingFinished',
                 'Network.loadingFailed','Network.responseReceivedExtraInfo'].includes(method))
                 cdplog.push([method,p.requestId,Boolean(p.data),
-                  p.data?String(p.data).length:0,p.statusCode??null]);
+                  p.data?String(p.data).length:0,p.statusCode??null,p.timestamp??null]);
             }
             listener(method,p);
           });
