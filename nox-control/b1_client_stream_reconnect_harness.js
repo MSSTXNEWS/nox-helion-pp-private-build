@@ -77,6 +77,18 @@
         if(pending&&typeof pending.catch==='function')pending.catch(()=>{});
       }catch(_){}
     }
+    // A readCommitted() callback may ignore AbortSignal and resolve AFTER
+    // STOP with an unclaimed HTTP response. Its body is read-only; release
+    // the socket without waiting on cancel() or projecting/ACKing late data.
+    // Only call this for abandoned preflight results, never live witnesses.
+    function cancelAbandonedPreflight(previous){
+      try{
+        const body=previous&&previous.body;
+        if(!body||typeof body.cancel!=='function') return;
+        const pending=body.cancel();
+        if(pending&&typeof pending.catch==='function')pending.catch(()=>{});
+      }catch(_){}
+    }
     const started=new Set(),reconnectSeen=new Set(),ackAttempted=new Set(),
       active=new Map(),reconnecting=new Map(),
       reconnectControllers=new Map();
@@ -112,6 +124,12 @@
               try{
                 const previous=await host.readCommitted(
                   s.conversation_id,s.exchange_id,ctrl.signal);
+                if(ctrl.signal.aborted){
+                  // Race() may have already returned STOP, but the ignored
+                  // GET still owns a body. Cancel it exactly once on settle.
+                  cancelAbandonedPreflight(previous);
+                  return {aborted:true};
+                }
                 return {previous};
               }catch(_){return {storageError:true};}
             }),
@@ -124,7 +142,12 @@
         }finally{
           if(onAbort) ctrl.signal.removeEventListener('abort',onAbort);
         }
-        if(preflight.aborted||ctrl.signal.aborted) return stopped();
+        if(preflight.aborted||ctrl.signal.aborted){
+          // The GET can resolve immediately before STOP wins the race;
+          // release its body here instead of retaining an orphaned socket.
+          if(!preflight.aborted) cancelAbandonedPreflight(preflight.previous);
+          return stopped();
+        }
         if(preflight.storageError) hold('HOLD_STREAM_STORAGE');
         if(preflight.previous) hold('HOLD_STREAM_RECONNECT_ONLY');
         if(priorReconnect) hold('HOLD_STREAM_NO_REPOST');
