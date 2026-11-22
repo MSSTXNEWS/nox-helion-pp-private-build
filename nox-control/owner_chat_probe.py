@@ -199,6 +199,28 @@ def require_browser_asset_mime(response, path):
         raise RuntimeError('HOLD_RESONANCE_ASSET_MIME')
 
 
+
+def complete_runtime_asset_body(response, sample, limit=8 * 1024 * 1024):
+    """Bounded full JS/CSS GET; 512-byte MIME sample is not asset health proof.
+
+    Require an unambiguous identity body and exact advertised byte count,
+    then preserve a content checksum without exporting the asset itself.
+    This is HTTP health evidence, never a substitute for browser rendering.
+    """
+    require_stream_http_framing(response)
+    headers = getattr(response, 'headers', None)
+    length = headers.get('Content-Length') if headers is not None else None
+    if len(sample) > limit or (length is not None and int(length.strip()) > limit):
+        raise RuntimeError('HOLD_RESONANCE_ASSET_LIMIT')
+    raw = sample + response.read(limit + 1 - len(sample))
+    if len(raw) > limit:
+        raise RuntimeError('HOLD_RESONANCE_ASSET_LIMIT')
+    if length is not None and len(raw) != int(length.strip()):
+        raise RuntimeError('HOLD_RESONANCE_ASSET_BODY_LENGTH_MISMATCH')
+    if not raw:
+        raise RuntimeError('HOLD_RESONANCE_ASSET_EMPTY')
+    return len(raw), digest(raw)
+
 def page_snapshot(response, limit=200000, expected_path=None):
     """Read a complete bounded owner HTML page and always close its socket."""
     try:
@@ -1200,7 +1222,12 @@ def main():
                         if asset.status == 200 and local.lower().endswith(('.js', '.mjs', '.css')):
                             require_not_html_asset(asset, sample)
                             require_browser_asset_mime(asset, local)
-                        report['assets'].append({'path':local,'status':asset.status,'bytes_sampled':len(sample)})
+                            body_bytes, asset_sha256 = complete_runtime_asset_body(asset, sample)
+                        else:
+                            body_bytes, asset_sha256 = None, None
+                        report['assets'].append({'path':local,'status':asset.status,
+                            'bytes_sampled':len(sample),'bytes_complete':body_bytes,
+                            'sha256':asset_sha256})
         unauth=urllib.request.build_opener(urllib.request.ProxyHandler({}))
         report['anonymous_http']={}
         for path in ('/api/nox/status','/api/ui/executors','/api/ui/events'):

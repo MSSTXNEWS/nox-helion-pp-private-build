@@ -3050,5 +3050,66 @@ class ProbeTests(unittest.TestCase):
                     '323')
             self.assertTrue(response.closed)
 
+    def test_runtime_js_css_asset_requires_complete_bounded_http_body(self):
+        """A 200 JS prefix cannot certify a truncated critical runtime asset."""
+        from email.message import Message
+
+        body = b'window.NOX=' + b'x' * 780
+
+        class Response:
+            def __init__(self, fields):
+                self.headers = Message()
+                for name, value in fields:
+                    self.headers.add_header(name, value)
+                self.position = 0
+                self.reads = 0
+
+            def read(self, amount):
+                self.reads += 1
+                chunk = body[self.position:self.position + amount]
+                self.position += len(chunk)
+                return chunk
+
+        for fields in ([], [('Content-Length', str(len(body)))],
+                       [('Transfer-Encoding', 'chunked')]):
+            response = Response(fields)
+            sample = response.read(512)
+            with self.subTest(valid=fields):
+                self.assertEqual(
+                    probe.complete_runtime_asset_body(response, sample),
+                    (len(body), probe.digest(body)))
+                self.assertEqual(response.reads, 2)
+
+        for fields, reason in (
+            ([('Content-Length', str(len(body) + 1))],
+             'HOLD_RESONANCE_ASSET_BODY_LENGTH_MISMATCH'),
+            ([('Content-Length', str(len(body) - 1))],
+             'HOLD_RESONANCE_ASSET_BODY_LENGTH_MISMATCH'),
+            ([('Content-Length', str(len(body))),
+              ('Content-Length', str(len(body)))], 'HOLD_STREAM_HTTP_FRAMING'),
+            ([('Content-Encoding', 'gzip')], 'HOLD_STREAM_HTTP_FRAMING'),
+        ):
+            response = Response(fields)
+            sample = response.read(512)
+            with self.subTest(rejected=fields), self.assertRaisesRegex(
+                    RuntimeError, '^' + reason + '
+    unittest.main()
+):
+                probe.complete_runtime_asset_body(response, sample)
+
+        for fields in ([], [('Content-Length', str(len(body)))],
+                       [('Content-Length', '999999')]):
+            response = Response(fields)
+            sample = response.read(512)
+            with self.subTest(limit=fields), self.assertRaisesRegex(
+                    RuntimeError, '^HOLD_RESONANCE_ASSET_LIMIT
+    unittest.main()
+):
+                probe.complete_runtime_asset_body(response, sample, limit=700)
+
+        source = path.read_text()
+        self.assertIn('complete_runtime_asset_body(asset, sample)', source)
+
+
 if __name__ == '__main__':
     unittest.main()
