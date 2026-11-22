@@ -219,13 +219,21 @@ class FactReceiptTest(unittest.TestCase):
                 W.time.monotonic() - W.CHAT_SNAPSHOT_TTL_S - 1)
             third = await chat(Request(body))
             third_frames = [json.loads(x) async for x in third.body_iterator]
-            return first_frames, second_status, second_body, third_frames
+            unstarted_body = dict(body, request_id="aborted-before-first-frame",
+                                  exchange_id="aborted-exchange")
+            unstarted = await chat(Request(unstarted_body))
+            await unstarted.body_iterator.aclose()
+            readmitted = await chat(Request(unstarted_body))
+            was_readmitted = hasattr(readmitted, "body_iterator")
+            if was_readmitted:
+                await readmitted.body_iterator.aclose()
+            return first_frames, second_status, second_body, third_frames, was_readmitted
 
         with (mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
               mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
               mock.patch.object(W, "W", None),
               mock.patch.dict(sys.modules, {"s03_memory": memory})):
-            first_frames, status, rejected, third_frames = asyncio.run(scenario())
+            first_frames, status, rejected, third_frames, was_readmitted = asyncio.run(scenario())
         self.assertTrue(first_frames[-1]["done"])
         self.assertEqual(status, 409)
         self.assertEqual(rejected, {
@@ -234,6 +242,7 @@ class FactReceiptTest(unittest.TestCase):
             "s03_readback_verified": False,
         })
         self.assertTrue(third_frames[-1]["done"])
+        self.assertTrue(was_readmitted)  # no frame, no model call or S03 write
         self.assertEqual(len(model_calls), 2)
         self.assertEqual(len(writes), 2)
 
