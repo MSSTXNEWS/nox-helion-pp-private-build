@@ -118,5 +118,18 @@ swapD)
   grep -E "verdict|вердикт|PASS|FAIL" /root/nox/state/MODEL_SWAP.json 2>/dev/null | head -3 | cut -c1-160
   tail -n 2 /root/nox/logs/flash.log | cut -c1-120
   ;;
+swapE)
+  echo "== E: диагностика шлюза и Flash"
+  pgrep -af "llama-server|gateway|uvicorn" | grep -v pgrep | cut -c1-420
+  grep -n "FLASH FAILED" -B3 -A3 /root/nox/logs/flash.log | cut -c1-200 | tail -14
+  tail -n 4 /root/nox/logs/flash.log | cut -c1-200
+  curl -s -m5 localhost:8082/health | head -c 300; echo
+  curl -s -m20 localhost:8082/v1/chat/completions -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"привет"}],"nox_mode":"fast","max_tokens":20}' | head -c 300; echo
+  G=$(ls /root/nox/repo/nox-control/glm53/gateway.py /root/nox/nox-control/glm53/gateway.py 2>/dev/null | head -1); echo "gw=$G"
+  grep -nE "8081|8083|UPSTREAM|GLM-5|glm53|timeout|MODEL" $G | cut -c1-170 | head -40
+  pgrep -f "gateway.py" | head -1 | xargs -I{} sh -c 'tr "\0" "\n" < /proc/{}/environ | grep -E "NOX_|UPSTREAM|GLM" | cut -c1-120; ls -l /proc/{}/cwd'
+  ls /root/nox/logs | grep -iE "gateway|gw|8082" ; tail -n 12 /root/nox/logs/gateway.log 2>/dev/null | cut -c1-220
+  ls /root/nox/glm53_disk | head; ls /root/nox/state/MODEL_SWAP
+  ;;
 *) echo "unknown stage $S";;
 esac
