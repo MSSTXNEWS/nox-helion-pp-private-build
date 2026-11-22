@@ -296,7 +296,11 @@ def _crossref_items(body: bytes) -> list[dict[str, str]]:
             doi = ""
         url_value = record.get("URL")
         link = url_value.strip() if isinstance(url_value, str) else ""
-        url = link or (f"https://doi.org/{quote(doi, safe='/-._~;()')}" if doi else "")
+        # The DOI field is the record's persistent identity. A conflicting
+        # URL (including an unrelated doi.org link) is not stronger evidence:
+        # use the encoded DOI whenever that identity is valid. Only DOI-less
+        # records may fall back to the supplied landing URL.
+        url = (f"https://doi.org/{quote(doi, safe='/-._~;()')}" if doi else link)
         # Crossref abstracts are text/HTML strings. Do not turn malformed JSON
         # arrays/objects into fabricated Python-repr "evidence" in the catalog.
         abstract_value = record.get("abstract")
