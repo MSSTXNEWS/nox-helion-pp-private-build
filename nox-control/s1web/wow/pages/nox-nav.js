@@ -1,12 +1,11 @@
 /* NOX · общая оболочка страниц: фон (три.js планета/звёзды), верхнее меню с подписями, нижнее меню-слайдер на телефоне, статус шлюза.
    Страница даёт <body data-page="home|proj|mem|train|core|sys|set"> и <main class="page">; остальное строится здесь. */
-import { call, esc } from './nox-api.js';
+import './nox-api.js';
+import './nox-glass.js';
 import './nox-notify.js';
 const V = './vendor/';
-const NAV = [['home', 'Главная', 'index.html'], ['chat', 'Резонанс', 'chat.html'], ['proj', 'Проекты', 'projects.html'], ['mem', 'Память', 'memory.html'], ['train', 'Обучение', 'training.html'], ['core', 'Ядро', 'models.html'], ['sys', 'Система', 'system.html']];
-const SET = ['set', 'Настройки', 'settings.html'];
+import { NAV, MORE, SET, mountShell, startTiers } from './nox-shell.js';
 const cur = document.body.dataset.page;
-const here = cur === 'set' ? SET : NAV.find((n) => n[0] === cur) || NAV[0];
 const loadScript = (src) => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('не загрузился ' + src)); document.head.appendChild(s); });
 const small = () => innerWidth <= 760;
 const cfgGet = () => { try { return JSON.parse(localStorage.getItem('nox.wow.cfg') || '{}'); } catch (e) { return {}; } };
@@ -17,25 +16,8 @@ back.innerHTML = '<svg width="0" height="0" style="position:absolute" aria-hidde
   + '<canvas id="space" aria-hidden="true"></canvas><div id="dust" aria-hidden="true"></div><div class="grain" aria-hidden="true"></div><div class="vignette" aria-hidden="true"></div>';
 document.body.prepend(...back.childNodes);
 const app = document.getElementById('app');
-const link = (n, cls) => '<a href="' + n[2] + '" data-k="' + n[0] + '"' + (n[0] === cur ? ' aria-current="page"' : '') + (cls ? ' class="' + cls + '"' : '') + '>' + n[1] + '</a>';
-const bar = document.createElement('header'); bar.className = 'bar'; bar.id = 'bar';
-bar.innerHTML = '<div class="bar-l"><a class="brand" href="index.html" aria-label="NOX HELION, главная"><span class="mark" aria-hidden="true"></span><b>NOX&nbsp;HELION</b><i>' + esc(here[1]) + '</i></a></div>'
-  + '<nav class="seg nav" id="nav" aria-label="Разделы">' + NAV.map((n) => link(n)).join('') + '</nav>'
-  + '<div class="bar-r"><span class="status" id="gwStatus" role="status"><i class="led" id="gwLed"></i><span id="gwText" class="mono">ПРОВЕРКА</span></span>'
-  + '<span class="seg toplink"><a href="chat.html">Резонанс</a></span>'
-  + '<span class="seg icons"><a href="settings.html" aria-label="Настройки" title="Настройки"' + (cur === 'set' ? ' aria-current="page"' : '') + '><sl-icon library="tabler" name="settings"></sl-icon></a></span></div>';
-app.prepend(bar);
-const mnav = document.createElement('nav'); mnav.className = 'mnav'; mnav.id = 'mnav'; mnav.setAttribute('aria-label', 'Разделы (телефон)');
-mnav.innerHTML = '<div class="swiper"><div class="swiper-wrapper seg">' + NAV.filter((n) => n[0] !== 'chat').concat([SET]).map((n) => '<a class="swiper-slide" href="' + n[2] + '"' + (n[0] === cur ? ' aria-current="page"' : '') + '>' + n[1] + '</a>').join('') + '</div></div>';
-app.append(mnav);
-
-/* ---------- статус шлюза ---------- */
-async function pollGw() {
-  const r = await call('/glm/v1/models', { timeout: 5000 }), led = document.getElementById('gwLed'), tx = document.getElementById('gwText');
-  const m = r.ok && r.data && r.data.data && r.data.data[0];
-  led.className = 'led ' + (m ? 'ok' : 'bad'); tx.textContent = m ? 'GLM-5.3 · ОНЛАЙН' : 'ШЛЮЗ НЕДОСТУПЕН'; document.getElementById('gwStatus').title = m ? 'Шлюз отвечает: ' + m.id : 'Шлюз: ' + r.error;
-}
-pollGw(); setInterval(pollGw, 30000);
+mountShell(app, cur);
+startTiers();
 
 /* ---------- Shoelace (диалоги, иконки Tabler) ---------- */
 export const ready = (async () => {
@@ -61,3 +43,18 @@ if (small()) import(V + 'swiper/swiper-bundle.min.mjs').then((m) => {
   const S = m.default || m.Swiper, idx = Math.max(0, [...document.querySelectorAll('.mnav .swiper-slide')].findIndex((a) => a.hasAttribute('aria-current')));
   new S('.mnav .swiper', { slidesPerView: 'auto', freeMode: true, spaceBetween: 0, resistanceRatio: .6, centeredSlides: true, centeredSlidesBounds: true, initialSlide: idx });
 }).catch((e) => console.warn('swiper:', e.message));
+
+/* ---------- «нет данных» вместо больших красных блоков: длинное сообщение об ошибке сворачивается в честную строку с раскрытием ---------- */
+{
+  const esc2 = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const foldErr = (n) => {
+    if (n.dataset.folded || n.closest('details.fold') || n.closest('.svc') || n.closest('sl-dialog')) return;
+    const t = n.textContent.trim(); if (t.length < 70) return; n.dataset.folded = '1';
+    const head = t.split(/[:.(;]/)[0].trim().slice(0, 64) || 'Нет данных';
+    const d = document.createElement('details'); d.className = 'fold nodata'; const sm = document.createElement('summary'); sm.innerHTML = '<i class="led warn"></i>' + esc2(head) + '<span class="mono">нет данных · подробнее</span>';
+    n.replaceWith(d); d.append(sm, n);
+  };
+  const scanErr = () => document.querySelectorAll('.page .err:not([data-folded])').forEach(foldErr);
+  let tm = 0; new MutationObserver(() => { clearTimeout(tm); tm = setTimeout(scanErr, 60); }).observe(document.getElementById('page') || document.body, { childList: true, subtree: true });
+  scanErr();
+}

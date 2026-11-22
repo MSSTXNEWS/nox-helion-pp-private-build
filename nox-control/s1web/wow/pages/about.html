@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- nox-web-extras: пропустить (у страницы своё меню и панели; marker для deploy1.sh) -->
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02030a">
+<title>NOX HELION · О СБОРКЕ И ЛИЦЕНЗИИ</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="./nox-wow.css">
+<link rel="stylesheet" href="./nox-pages.css">
+<script src="./nox-theme.js"></script>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
+</head>
+<body data-page="about" class="boot">
+<div id="app">
+<main class="page" id="page"><div class="wrap">
+<div class="ph"><div><span class="kick mono">Лицензии · атрибуции · происхождение ассетов</span><h1>О сборке и лицензии</h1></div></div>
+<section class="card"><h2>Атрибуции</h2>
+  <p>Текстуры планет — <a href="https://www.solarsystemscope.com/textures/" target="_blank" rel="noopener">Solar System Scope</a> (данные NASA), лицензия <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Изменения: перекодирование в progressive JPEG без смены размера 2048x1024; Луна и прежняя Земля в сборке уменьшены до 1024x512.</p>
+  <p>Каталог звёзд — HYG Database v4.1, David Nash (<a href="https://www.astronexus.com/projects/hyg" target="_blank" rel="noopener">astronexus</a>), <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>; в сборке оставлены 5200 ярчайших звёзд.</p>
+  <p>HDRI Machine Shop 01 — <a href="https://polyhaven.com/a/machine_shop_01" target="_blank" rel="noopener">Poly Haven</a>, CC0; PBR-материал Metal012 — <a href="https://ambientcg.com/a/Metal012" target="_blank" rel="noopener">ambientCG</a>, CC0. Они одобрены в сборке, но веб «Резонанс» их не использует.</p>
+  <p>Анимации Lottie (значок «ответ завершён», индикатор ожидания) нарисованы для NOX и сторонних материалов не содержат.</p></section>
+<section class="card"><h2>Ассеты в сборке <span class="r mono" id="assN"></span></h2><div class="scroll-x"><table class="tbl" id="assT"></table></div></section>
+<section class="card"><h2>Шрифты</h2><div class="scroll-x"><table class="tbl" id="fontT"></table></div><p class="muted" style="font-size:12px;margin:8px 0 0">Шрифты отдаются локально из vendor, без обращения к CDN.</p></section>
+<section class="card"><h2>Библиотеки <span class="r mono" id="libN"></span></h2><div class="scroll-x"><table class="tbl" id="libT"></table></div><p class="muted" style="font-size:12px;margin:8px 0 0">Ссылка ведёт на текст лицензии. GSAP распространяется не по MIT (лицензия GreenSock), поэтому не используется.</p></section>
+</div></main>
+</div>
+<script type="module" src="./nox-nav.js"></script>
+<script type="module" src="./nox-p-about.js"></script>
+</body>
+</html>

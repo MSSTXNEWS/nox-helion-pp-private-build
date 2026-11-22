@@ -2,6 +2,8 @@
    Чат: старый протокол POST /api/chat (NDJSON) или шлюз GLM /glm/v1 (SSE). Голос: микрофон -> /stt/transcribe, ответ -> /tts/session (SSE/PCM).
    Библиотеки из /web/vendor: three+postprocessing (nox-wow-bg.js), motion, tsparticles, lottie-web, wavesurfer, driver.js, swiper, Shoelace, Tabler. Каждая подключается отдельно: сбой одной не ломает чат. */
 import { PLANETS, byId } from './nox-wow-data.js';
+import { NAV, MORE, SET, mountShell, startTiers, tiers } from './nox-shell.js';
+mountShell(document.getElementById('app'), 'chat');
 const V = './vendor/';
 const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const mem = {};
@@ -19,7 +21,7 @@ const note = (t, bad) => { const h = $('#hint'); if (!h) return; h.textContent =
 const HINT = 'ENTER — ОТПРАВИТЬ · SHIFT+ENTER — СТРОКА · CTRL+K — КОМАНДЫ';
 
 /* ---------- настройки ---------- */
-const DEF = { proto: 'classic', enter: 'enter', speak: 'on', lang: 'auto', auto: 'off', dens: 'cozy', space: 'on', dust: 'on' };
+const DEF = { mode: 'auto', proto: 'classic', enter: 'enter', speak: 'on', lang: 'auto', auto: 'off', dens: 'cozy', space: 'on', dust: 'on', motion: 'always' };
 const cfg = Object.assign({}, DEF, jget('nox.wow.cfg', {}));
 const saveCfg = () => ls.set('nox.wow.cfg', JSON.stringify(cfg));
 document.body.classList.add('boot');
@@ -40,7 +42,35 @@ function inline(s) {
   s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
   return s.replace(/(https?:\/\/[^\s<)]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
 }
+/* богатые ответы: marked (Markdown) + DOMPurify (очистка) + KaTeX (формулы) + Mermaid (диаграммы); подключаются лениво из vendor/nox-lib, без них работает простой разбор */
+const rich = { ok: false, math: false, mm: null };
+const mathCache = new Map();
+function ksub(tex, disp) { const k = (disp ? 'D' : 'I') + tex; if (!mathCache.has(k)) { let h; try { h = window.katex.renderToString(tex, { displayMode: disp, throwOnError: false, output: 'htmlAndMathml' }); } catch (e) { h = '<code>' + esc(tex) + '</code>'; } mathCache.set(k, h); } return mathCache.get(k); }
+function richRender(text) {
+  const maths = []; const ph = (tex, disp) => { maths.push([tex, disp]); return 'NOXMATH' + (maths.length - 1) + 'X'; };
+  let t = String(text);
+  if (rich.math) t = t.split(/(```[\s\S]*?(?:```|$)|`[^`\n]*`)/).map((seg, i) => (i % 2 ? seg : seg.replace(/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]/g, (m, a, b) => ph(a || b, true)).replace(/\\\(([\s\S]+?)\\\)/g, (m, a) => ph(a, false)).replace(/(^|[^\\$\w])\$(\S(?:[^$\n]*?\S)?)\$(?![\d\w])/g, (m, pre, a) => pre + ph(a, false)))).join('');
+  const rd = new window.marked.Renderer();
+  rd.code = (code, lang) => { const l = String(lang || '').split(/\s/)[0].replace(/[^\w+-]/g, ''); if (l === 'mermaid') return '<div class="mmd"><pre><code>' + esc(code) + '</code></pre></div>'; return '<pre><button type="button" class="copy" data-copy>КОПИЯ</button><code' + (l ? ' class="language-' + l + '"' : '') + '>' + esc(String(code).replace(/\n$/, '')) + '</code></pre>'; };
+  let h = window.marked.parse(t, { renderer: rd, gfm: true, breaks: true, async: false });
+  h = h.replace(/NOXMATH(\d+)X/g, (m, i) => (maths[+i] ? ksub(maths[+i][0], maths[+i][1]) : m));
+  return window.DOMPurify.sanitize(h, { ADD_ATTR: ['target', 'data-code', 'data-copy'] });
+}
+async function mermaidPass(root) {
+  const nodes = $$('.mmd:not([data-done])', root); if (!nodes.length) return;
+  try {
+    if (!window.mermaid) await loadScript(V + 'nox-lib/mermaid/mermaid.min.js');
+    if (!rich.mm) { window.mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict', fontFamily: 'Inter, sans-serif' }); rich.mm = 1; }
+    for (const n of nodes) { n.dataset.done = '1'; const id = 'mm' + uid().replace(/\W/g, ''); try { const r = await window.mermaid.render(id, (n.querySelector('code') || n).textContent); n.innerHTML = r.svg; n.classList.add('ok'); } catch (e) { n.insertAdjacentHTML('beforeend', '<div class="meta mono">ДИАГРАММА НЕ РАЗОБРАНА: ' + esc(String(e.message || e).split('\n')[0].slice(0, 120)) + '</div>'); const bad = document.getElementById('d' + id); bad && bad.remove(); } }
+  } catch (e) { nodes.forEach((n) => { n.dataset.done = '1'; n.insertAdjacentHTML('beforeend', '<div class="meta mono">MERMAID НЕ ЗАГРУЗИЛСЯ: ' + esc(e.message || e) + '</div>'); }); }
+}
+async function loadRich() {
+  try { await loadScript(V + 'nox-lib/marked/marked.min.js'); await loadScript(V + 'nox-lib/dompurify/purify.min.js'); rich.ok = !!(window.marked && window.DOMPurify); lib.marked = rich.ok; if (rich.ok) window.DOMPurify.addHook('afterSanitizeAttributes', (n) => { if (n.tagName === 'A') { n.setAttribute('target', '_blank'); n.setAttribute('rel', 'noopener noreferrer'); } }); } catch (e) { lib.marked = 'ERR ' + (e.message || e); }
+  try { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = V + 'nox-lib/katex/katex.min.css'; document.head.appendChild(l); await loadScript(V + 'nox-lib/katex/katex.min.js'); rich.math = !!window.katex; lib.katex = rich.math; } catch (e) { lib.katex = 'ERR ' + (e.message || e); }
+  if (rich.ok && !busy && cur) renderAll();
+}
 function render(text) {
+  if (rich.ok) { try { return richRender(text); } catch (e) { /* простой разбор ниже */ } }
   const parts = String(text).split(/```/); let out = '';
   parts.forEach((p, i) => {
     if (i % 2) { const nl = p.indexOf('\n'); const code = nl >= 0 ? p.slice(nl + 1) : p; out += '<pre><button type="button" class="copy" data-copy>КОПИЯ</button><code>' + esc(code.replace(/\n$/, '')) + '</code></pre>'; return; }
@@ -70,11 +100,11 @@ function mkMsg(m, idx) {
   const lab = m.role === 'user' ? 'ВЫ' : 'NOX';
   d.innerHTML = '<div class="lab mono"><i></i><span>' + lab + '</span><span>' + hhmm(m.ts) + '</span></div><div class="bubble"><div class="txt"></div></div>';
   setTxt(d, m.content, false);
-  if (m.role !== 'user') d.appendChild(actsEl());
+  if (m.role !== 'user') { d.appendChild(actsEl()); if (m.via) showVia(d, m); }
   return d;
 }
 function actsEl() { const a = document.createElement('div'); a.className = 'acts'; a.innerHTML = '<span class="seg">' + iconBtn('copy', 'Копировать ответ', 'copy') + iconBtn('refresh', 'Ответить заново', 'regen') + iconBtn('volume', 'Озвучить', 'say') + '</span>'; return a; }
-function setTxt(d, text, streaming) { const t = $('.txt', d); t.innerHTML = render(text); t.classList.toggle('caret', !!streaming); }
+function setTxt(d, text, streaming) { const t = $('.txt', d); t.innerHTML = render(text); t.classList.toggle('caret', !!streaming); if (!streaming && rich.ok && t.querySelector('.mmd')) mermaidPass(t); }
 function nearBottom() { return feed.scrollHeight - feed.scrollTop - feed.clientHeight < 140; }
 function toBottom(force) { if (force || nearBottom()) feed.scrollTop = feed.scrollHeight; }
 function renderAll() {
@@ -93,7 +123,7 @@ function setBusy(on) { $('#btnSend').hidden = on; $('#btnStop').hidden = !on; $(
 function histFor(upto) { return cur.msgs.slice(0, upto).filter((m) => m.content && !m.err).slice(-40).map((m) => ({ role: m.role, content: m.content })); }
 async function send(text, opts) {
   opts = opts || {}; text = String(text || '').trim(); if (!text || busy) return;
-  speaker.prime();
+  speaker.prime(); try { tourDrv && tourDrv.destroy(); } catch (e) { /* тур уже закрыт */ }
   if (!opts.regen) { cur.msgs.push({ role: 'user', content: text, ts: Date.now() }); if (cur.msgs.length === 1) cur.title = text.replace(/\s+/g, ' ').slice(0, 44); }
   const um = msgsEl.lastElementChild; stage.classList.add('has-msgs');
   if (!opts.regen) msgsEl.appendChild(mkMsg(cur.msgs[cur.msgs.length - 1], cur.msgs.length - 1));
@@ -103,7 +133,7 @@ async function send(text, opts) {
   toBottom(true); saveThreads(); renderThreads(); input.value = ''; autosize();
   const proto = cfg.proto, rid = uid(), ctrl = new AbortController(); busy = { ctrl, rid, proto }; setBusy(true);
   const t0 = performance.now(); let tFirst = 0, chunks = 0, raw = '', raf = 0, stopped = false, failed = null;
-  const history = histFor(idx);
+  const history = histFor(idx), mode = ['auto', 'fast', 'deep'].includes(cfg.mode) ? cfg.mode : 'auto'; let via = null;
   const say = cfg.speak === 'on' ? speaker.start() : null;
   let spoken = 0;
   const paint = (fin) => { raf = 0; const vis = splitThink(raw); am.content = vis; setTxt(el, vis || (fin ? '' : ''), !fin); if (!vis && !fin) $('.txt', el).appendChild(th); toBottom(false); };
@@ -113,47 +143,69 @@ async function send(text, opts) {
     if (say) { const vis = splitThink(raw); const add = vis.slice(spoken); const cut = Math.max(add.lastIndexOf('. '), add.lastIndexOf('! '), add.lastIndexOf('? '), add.lastIndexOf('\n'), add.lastIndexOf(', ')); if (cut >= 24 || add.length > 140) { const k = cut >= 24 ? cut + 1 : add.length; speaker.push(add.slice(0, k)); spoken += k; } }
   };
   try {
-    if (proto === 'glm') await streamGlm(history, ctrl, onDelta, (h) => { busy.glmRid = h; });
-    else await streamClassic(history, ctrl, rid, onDelta);
-  } catch (e) { if (ctrl.signal.aborted) stopped = true; else failed = e; }
+    if (proto === 'glm') via = await streamGlm(history, ctrl, onDelta, (h) => { busy.glmRid = h; }, mode);
+    else via = await streamClassic(history, ctrl, rid, onDelta, mode);
+  } catch (e) { via = (e && e.via) || via; if (ctrl.signal.aborted) stopped = true; else failed = e; }
   if (raf) cancelAnimationFrame(raf);
   const tEnd = performance.now(); anim && anim.destroy(); th.remove();
   const vis = splitThink(raw); am.content = vis;
   if (failed) { am.err = String(failed.message || failed); setTxt(el, vis, false); $('.bubble', el).classList.add('err'); const e = document.createElement('div'); e.className = 'meta mono'; e.textContent = 'ОШИБКА: ' + am.err; $('.bubble', el).appendChild(e); }
   else { setTxt(el, vis + (stopped ? '' : ''), false); if (stopped) { const e = document.createElement('div'); e.className = 'meta mono'; e.textContent = 'ОСТАНОВЛЕНО' + (vis ? ' · ЧАСТИЧНЫЙ ОТВЕТ' : ''); $('.bubble', el).appendChild(e); } else if (!vis) { setTxt(el, '(пустой ответ)', false); } }
   if (!failed && !stopped && vis) { const mk = document.createElement('span'); mk.className = 'okmark'; $('.lab', el).appendChild(mk); lot(mk, 'lottie-ok', false); }
+  am.via = tierLabel(via, mode); am.mode = mode; showVia(el, am); lastVia = am.via;
   if ($('.acts', el)) $('.acts', el).hidden = false;
   if (say) { speaker.push(vis.slice(spoken), true); }
   if (!failed && !stopped && vis) { try { document.dispatchEvent(new CustomEvent('nox:reply-done', { detail: { text: vis.slice(0, 140) } })); } catch (e) { /* без уведомления */ } }
   if (tFirst) { metrics.ttft = tFirst - t0; metrics.rate = chunks / Math.max(.2, (tEnd - tFirst) / 1000); updateEdges(); }
   busy = null; setBusy(false); saveThreads(); renderThreads(); toBottom(false);
 }
-async function streamClassic(history, ctrl, rid, onDelta) {
-  const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal, body: JSON.stringify({ model: 'nox-helion:latest', messages: history, stream: true, request_id: rid, options: { num_predict: 2048 } }) });
+/* честная подпись уровня: берётся из ответа шлюза (nox.stages в последнем кадре, nox_stage у кусков текста), а не из состояния шапки */
+let lastVia = '';
+const newVia = () => ({ seen: new Set(), stages: null, info: null, local: false, hdrMode: '' });
+function viaNox(nx, n) { if (n.mode || n.tier) nx.info = Object.assign(nx.info || {}, { mode: n.mode, tier: n.tier, effort: n.effort }); if (n.stages) nx.stages = n.stages; if (n.skipped_model || n.source === 'session_summary') nx.local = true; if (n.fast === 'skipped') nx.fastSkipped = true; if (n.actual_s != null) nx.actual = n.actual_s; }
+const MODE_RU = { auto: 'АВТО', fast: 'БЫСТРО', deep: 'ГЛУБОКО' };
+function tierLabel(nx, mode) {
+  const m = 'РЕЖИМ ' + (MODE_RU[mode] || 'АВТО');
+  if (!nx) return 'УРОВЕНЬ НЕ ПЕРЕДАН · ' + m;
+  if (nx.local) return 'БЕЗ МОДЕЛИ: ИЗ ПАМЯТИ СЕССИИ · ' + m;
+  const ok = nx.stages ? Object.keys(nx.stages).filter((k) => nx.stages[k] && nx.stages[k].status === 'ok') : Array.from(nx.seen);
+  const f = ok.includes('fast'), d = ok.includes('deep'), t = nx.actual != null ? ' · ' + nx.actual + ' С' : '';
+  if (f && d) return 'ОТВЕТИЛИ: БЫСТРЫЙ УРОВЕНЬ, ЗАТЕМ GLM · ' + m + t;
+  if (d) return 'ОТВЕТИЛ: GLM (ГЛУБОКИЙ УРОВЕНЬ)' + (nx.fastSkipped ? ' · БЫСТРЫЙ НЕДОСТУПЕН' : '') + ' · ' + m + t;
+  if (f) return 'ОТВЕТИЛ: БЫСТРЫЙ УРОВЕНЬ (НЕ GLM) · ' + m + t;
+  return 'УРОВЕНЬ НЕ ПЕРЕДАН · ' + m;
+}
+function showVia(el, m) { if (!m.via || !el) return; let v = $('.via', el); if (!v) { v = document.createElement('div'); v.className = 'via mono'; $('.bubble', el).appendChild(v); } v.textContent = m.via; v.classList.toggle('glm', /GLM/.test(m.via) && !/НЕ GLM/.test(m.via)); v.classList.toggle('fast', /БЫСТРЫЙ УРОВЕНЬ \(НЕ GLM\)/.test(m.via)); }
+async function streamClassic(history, ctrl, rid, onDelta, mode) {
+  const nx = newVia();
+  const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal, body: JSON.stringify({ model: 'nox-helion:latest', messages: history, stream: true, request_id: rid, options: { num_predict: 2048 }, nox_mode: mode }) });
   if (!r.ok) { let m = 'HTTP ' + r.status; try { const j = await r.json(); m = j.error || j.reason || m; } catch (e) { /* не JSON */ } throw new Error(m); }
   const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '', done = false;
   for (;;) {
     const { value, done: d } = await rd.read(); if (d) break; buf += dec.decode(value, { stream: true });
     let k; while ((k = buf.indexOf('\n')) >= 0) {
       const line = buf.slice(0, k).trim(); buf = buf.slice(k + 1); if (!line) continue; let o; try { o = JSON.parse(line); } catch (e) { continue; }
-      if (o.error) throw new Error(o.error); if (o.message && o.message.content) onDelta(o.message.content); if (o.done) done = true;
+      if (o.error) { const er = new Error(o.error); er.via = nx; throw er; } if (o.nox) viaNox(nx, o.nox); if (o.nox_stage && o.message && o.message.content) nx.seen.add(o.nox_stage); if (o.message && o.message.content) onDelta(o.message.content); if (o.done) done = true;
     }
   }
-  if (!done) throw new Error('поток оборвался до завершения');
+  if (!done) { const er = new Error('поток оборвался до завершения'); er.via = nx; throw er; }
+  return nx;
 }
-async function streamGlm(history, ctrl, onDelta, onRid) {
-  const r = await fetch('/glm/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal, body: JSON.stringify({ messages: history, stream: true }) });
-  onRid && onRid(r.headers.get('X-NOX-Request-Id'));
+async function streamGlm(history, ctrl, onDelta, onRid, mode) {
+  const nx = newVia();
+  const r = await fetch('/glm/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-NOX-Mode': mode }, signal: ctrl.signal, body: JSON.stringify({ messages: history, stream: true, nox_mode: mode }) });
+  onRid && onRid(r.headers.get('X-NOX-Request-Id')); nx.hdrMode = r.headers.get('X-NOX-Mode') || '';
   if (!r.ok) { let m = 'HTTP ' + r.status; try { const j = await r.json(); m = (j.error && (j.error.message || j.error)) || m; } catch (e) { /* не JSON */ } throw new Error(m); }
   const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '', done = false;
   for (;;) {
     const { value, done: d } = await rd.read(); if (d) break; buf += dec.decode(value, { stream: true });
     let k; while ((k = buf.indexOf('\n')) >= 0) {
       const line = buf.slice(0, k).trim(); buf = buf.slice(k + 1); if (!line.startsWith('data:')) continue; const p = line.slice(5).trim(); if (p === '[DONE]') { done = true; continue; }
-      let j; try { j = JSON.parse(p); } catch (e) { continue; } const c = (j.choices || [{}])[0] || {}; if (c.delta && c.delta.content) onDelta(c.delta.content); if (c.finish_reason) done = true;
+      let j; try { j = JSON.parse(p); } catch (e) { continue; } if (j.error) { const er = new Error(j.error.message || String(j.error)); er.via = nx; throw er; } if (j.nox) viaNox(nx, j.nox); const c = (j.choices || [{}])[0] || {}; if (c.delta && c.delta.nox_stage && c.delta.content) nx.seen.add(c.delta.nox_stage); if (c.delta && c.delta.content) onDelta(c.delta.content); if (c.finish_reason) done = true;
     }
   }
-  if (!done) throw new Error('поток оборвался до завершения');
+  if (!done) { const er = new Error('поток оборвался до завершения'); er.via = nx; throw er; }
+  return nx;
 }
 function stopChat() {
   if (!busy) return; const b = busy; speaker.stop();
@@ -248,21 +300,35 @@ msgsEl.addEventListener('click', async (e) => {
 
 /* ---------- статусы, часы, края ---------- */
 function tick() { const d = new Date(); $('#clock').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }
-let gw = { ok: null, model: '', why: '' }, stt = null, tts = null;
-async function pollGw() {
-  const h = await health('/glm/v1/models'); const led = $('#gwLed'), tx = $('#gwText');
-  if (h.ok) { gw = { ok: true, model: ((h.j.data || [])[0] || {}).id || 'GLM', why: '' }; led.className = 'led ok'; tx.textContent = 'GLM-5.3 · ОНЛАЙН'; }
-  else { gw = { ok: false, model: '', why: h.why }; led.className = 'led bad'; tx.textContent = 'ШЛЮЗ НЕДОСТУПЕН'; }
-  updateEdges();
-}
+let stt = null, tts = null;
+const gw = { get ok() { return tiers.gw; }, get model() { return tiers.deep.ok ? tiers.deep.id : ''; } };
 async function pollVoice() { const a = await health('/stt/health'), b = await health('/tts/health'); stt = a.ok ? { ready: a.j.ready !== false, note: a.j.ready_note, model: (a.j.model && (a.j.model.name || a.j.model.model)) || '' } : { ready: false, note: a.why, down: true }; tts = b.ok ? { ready: b.j.ready !== false, note: b.j.ready_note, backends: ((b.j.backends || []).filter((x) => x.available).map((x) => x.name)).join('+') } : { ready: false, note: b.why, down: true }; updateEdges(); }
+/* датчики сервера: /api/pc-metrics раз в 3 с (реальные цифры; нет источника - «—» и причина во всплывающей подсказке) */
+async function pollPc() {
+  if (document.hidden) return; const h = await health('/api/pc-metrics'), set = (id, t, why) => { const n = $(id); if (n) { n.textContent = t; n.title = why || ''; } };
+  if (!h.ok) { ['#eGpu', '#eVram', '#eCpu', '#eRam'].forEach((i) => set(i, i.slice(2).toUpperCase() + ' —', h.why)); return; }
+  const d = h.j, g = d.gpu || {}, G = (m) => (m / 1024).toFixed(1);
+  set('#eGpu', 'GPU ' + (g.error ? '—' : Math.round(g.util_percent) + '%' + (g.temp_c != null ? ' ' + Math.round(g.temp_c) + '°' : '')), g.error || g.name);
+  set('#eVram', 'VRAM ' + (g.error ? '—' : G(g.vram_used_mib) + '/' + G(g.vram_total_mib) + ' ГБ'), g.error || '');
+  set('#eCpu', 'ЦП ' + (d.cpu && !d.cpu.error ? Math.round(d.cpu.percent) + '%' : '—') + (d.cpu_temp && d.cpu_temp.celsius != null ? ' ' + Math.round(d.cpu_temp.celsius) + '°' : ''), (d.cpu && d.cpu.error) || '');
+  set('#eRam', 'ОЗУ ' + (d.ram && !d.ram.error ? (d.ram.used_bytes / 1073741824).toFixed(1) + '/' + (d.ram.total_bytes / 1073741824).toFixed(1) + ' ГБ' : '—'), (d.ram && d.ram.error) || '');
+}
 function updateEdges() {
-  $('#eModel').textContent = 'МОДЕЛЬ ' + (gw.ok ? gw.model.toUpperCase() : '—'); $('#eProto').textContent = 'ПРОТОКОЛ ' + (cfg.proto === 'glm' ? 'GLM /v1' : 'API /chat');
+  $('#eModel').textContent = 'УРОВНИ ' + (tiers.gw == null ? '…' : 'Б ' + (tiers.fast.ok ? '●' : '○') + ' · GLM ' + (tiers.deep.ok ? '●' : '○')); $('#eLast').textContent = 'ОТВЕТ ' + (!lastVia ? '—' : /ИЗ ПАМЯТИ/.test(lastVia) ? 'БЕЗ МОДЕЛИ' : /БЫСТРЫЙ УРОВЕНЬ, ЗАТЕМ/.test(lastVia) ? 'Б → GLM' : /GLM/.test(lastVia) && !/НЕ GLM/.test(lastVia) ? 'GLM' : /БЫСТРЫЙ/.test(lastVia) ? 'БЫСТРЫЙ' : '—'); $('#eProto').textContent = 'ПРОТОКОЛ ' + (cfg.proto === 'glm' ? 'GLM /v1' : 'API /chat');
   $('#eTtft').textContent = 'ТТФТ ' + (metrics.ttft == null ? '—' : (metrics.ttft / 1000).toFixed(2) + ' С'); $('#eRate').textContent = 'ЧАНК/С ' + (metrics.rate == null ? '—' : metrics.rate.toFixed(1));
   $('#eVoice').textContent = voiceState ? 'ГОЛОС · ' + voiceState : 'ГОЛОС STT ' + (stt == null ? '…' : stt.ready ? '●' : '○') + ' TTS ' + (tts == null ? '…' : tts.ready ? '●' : '○');
   const vs = $('#voiceStat'); if (vs) vs.textContent = 'STT ' + (stt == null ? 'ПРОВЕРКА' : stt.ready ? 'ГОТОВ' + (stt.model ? ' · ' + stt.model : '') : (stt.down ? 'НЕ ЗАПУЩЕН' : 'НЕ ГОТОВ')) + ' · TTS ' + (tts == null ? 'ПРОВЕРКА' : tts.ready ? 'ГОТОВ' + (tts.backends ? ' · ' + tts.backends : '') : (tts.down ? 'НЕ ЗАПУЩЕН' : 'НЕ ГОТОВ'));
 }
 
+/* ---------- режим ответа: Авто · Быстро · Глубоко (шлюзу: заголовок X-NOX-Mode и поле nox_mode) ---------- */
+function syncModes() { $$('#modes button').forEach((b) => { const on = b.dataset.m === cfg.mode; b.setAttribute('aria-checked', String(on)); b.classList.toggle('on', on); }); }
+function setMode(m) {
+  if (!['auto', 'fast', 'deep'].includes(m)) m = 'auto'; cfg.mode = m; saveCfg(); syncModes();
+  const hint = { auto: 'АВТО: шлюз сам выбирает быстрый или глубокий уровень', fast: 'БЫСТРО: отвечает быстрый уровень, без GLM', deep: 'ГЛУБОКО: быстрый такт, затем GLM-5.3' }[m];
+  note('РЕЖИМ ' + MODE_RU[m] + ' · ' + hint.split(': ')[1] + (m === 'deep' && tiers.gw && !tiers.deep.ok ? ' · GLM СЕЙЧАС НЕ ЗАГРУЖЕН' : ''), m === 'deep' && tiers.gw && !tiers.deep.ok);
+}
+$('#modes').addEventListener('click', (e) => { const b = e.target.closest('button[data-m]'); if (b) setMode(b.dataset.m); });
+syncModes();
 /* ---------- настройки / панели ---------- */
 const open = (el) => (el.show ? el.show() : el.setAttribute('open', '')), close = (el) => (el.hide ? el.hide() : el.removeAttribute('open'));
 function syncOpts() { $$('.opt').forEach((g) => { const v = cfg[g.dataset.opt]; $$('button', g).forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === v))); }); $('#btnSpeak').setAttribute('aria-pressed', String(cfg.speak === 'on')); }
@@ -271,6 +337,7 @@ function applyOpt(k) {
   saveCfg(); syncOpts();
   if (k === 'dens') document.body.classList.toggle('tight', cfg.dens === 'tight');
   if (k === 'space') { if (space) space.setLevel(cfg.space); }
+  if (k === 'motion') { ls.set('nox.wow.motion', cfg.motion); note('АНИМАЦИЯ ФОНА: ' + (cfg.motion === 'system' ? 'КАК В СИСТЕМЕ — ПРИМЕНИТСЯ ПОСЛЕ ПЕРЕЗАГРУЗКИ' : 'ВСЕГДА')); }
   if (k === 'dust') dust();
   if (k === 'speak' && cfg.speak === 'off') speaker.stop(); if (k === 'speak' && cfg.speak === 'on') speaker.prime();
   if (k === 'proto') updateEdges();
@@ -292,7 +359,7 @@ $('#btnClassic').addEventListener('click', () => { location.href = 'classic/chat
 $('#btnTour').addEventListener('click', () => { close($('#drSettings')); setTimeout(() => tour(true), 450); });
 
 /* ---------- палитра Ctrl+K ---------- */
-const PAGES = [['Главная', 'index.html'], ['Проекты', 'projects.html'], ['Память', 'memory.html'], ['Обучение', 'training.html'], ['Ядро NOX', 'models.html'], ['Система', 'system.html'], ['Установка', 'install.html'], ['Виджеты', 'widgets.html'], ['Кинотеатр', 'cinema.html'], ['Диспетчер задач', 'dispatcher.html'], ['Загрузки', 'downloads.html'], ['Настройки (страница)', 'settings.html']];
+const PAGES = NAV.concat(MORE, [SET]).filter((n) => n[0] !== 'chat').map((n) => [n[1], n[2]]);
 function commands() {
   const c = [
     { g: 'Чат', t: 'Новый диалог', run: () => { if (!empty(cur)) newThread(); input.focus(); } },
@@ -304,7 +371,8 @@ function commands() {
     { g: 'Голос', t: 'Озвучка ответов: включить / выключить', run: () => setSpeak(cfg.speak !== 'on') },
     { g: 'Голос', t: 'Остановить озвучку', run: () => speaker.stop() },
     { g: 'Вид', t: 'Открыть настройки', run: () => { open($('#drSettings')); pollVoice(); } },
-    { g: 'Вид', t: 'Космос: ярко / мягко / стоп', run: () => { const o = ['on', 'high', 'off']; cfg.space = o[(o.indexOf(cfg.space) + 1) % 3]; applyOpt('space'); note('КОСМОС: ' + { on: 'МЯГКО', high: 'ЯРКО', off: 'СТОП' }[cfg.space]); } },
+    { g: 'Вид', t: 'Космос: эко / мягко / ярко', run: () => { const o = ['eco', 'on', 'high']; cfg.space = o[(o.indexOf(cfg.space) + 1) % 3]; applyOpt('space'); note('КОСМОС: ' + { eco: 'ЭКО', on: 'МЯГКО', high: 'ЯРКО' }[cfg.space]); } },
+    { g: 'Чат', t: 'Режим ответа: авто / быстро / глубоко', run: () => { const o = ['auto', 'fast', 'deep']; setMode(o[(o.indexOf(cfg.mode) + 1) % 3]); } },,
     { g: 'Вид', t: 'Тур по интерфейсу', run: () => setTimeout(() => tour(true), 300) },
     { g: 'Панели', t: 'Классический чат: промпты, прогресс задач, режим судей, пять миров', run: () => { location.href = 'classic/chat.html'; } },
     { g: 'NOX SPACE', t: 'Погода, валюта, новости, кинотеатр, книги, браузер', run: () => universe() }
@@ -336,8 +404,9 @@ async function universe() {
 }
 
 /* ---------- тур driver.js ---------- */
+let tourDrv = null;
 async function tour(force) {
-  if (!force && ls.get('nox.wow.tour', '') === '1') return;
+  if (!force && (ls.get('nox.wow.tour', '') === '1' || (cur && cur.msgs.length) || busy)) return; /* авто-тур только в пустом диалоге, один раз */
   try {
     const { driver } = await import(V + 'driver.js/dist/driver.js.mjs');
     const steps = [
@@ -346,8 +415,8 @@ async function tour(force) {
       { element: small() ? '#btnPalette' : '#btnPalette', popover: { title: 'Команды Ctrl+K', description: 'Все остальное спрятано здесь: страницы, планеты, протокол, классический чат со всеми панелями.' } },
       { element: '#btnSettings', popover: { title: 'Настройки', description: 'Планета за интерфейсом, яркость космоса, голос, протокол чата, плотность.' } }
     ];
-    const d = driver({ showProgress: true, allowClose: true, popoverClass: 'nox-tour', nextBtnText: 'Далее', prevBtnText: 'Назад', doneBtnText: 'Готово', progressText: '{{current}} / {{total}}', steps, onDestroyed: () => ls.set('nox.wow.tour', '1') });
-    lib.driver = true; d.drive();
+    const d = driver({ showProgress: true, allowClose: true, popoverClass: 'nox-tour', nextBtnText: 'Далее', prevBtnText: 'Назад', doneBtnText: 'Готово', progressText: '{{current}} / {{total}}', steps, onDestroyed: () => { tourDrv = null; ls.set('nox.wow.tour', '1'); } });
+    ls.set('nox.wow.tour', '1'); tourDrv = d; lib.driver = true; d.drive();
   } catch (e) { lib.driver = 'ERR ' + (e.message || e); }
 }
 
@@ -383,7 +452,7 @@ async function boot() {
   dust();
   /* нижнее меню-ползунок на телефоне */
   if (small()) import(V + 'swiper/swiper-bundle.min.mjs').then((m) => { const S = m.default || m.Swiper; const s = new S('.mnav .swiper', { slidesPerView: 'auto', freeMode: true, spaceBetween: 0, resistanceRatio: .6, centeredSlides: true, centeredSlidesBounds: true, initialSlide: 0 }); s.slideTo(0, 0); lib.swiper = true; }).catch((e) => { lib.swiper = 'ERR ' + e.message; });
-  pollGw(); setInterval(pollGw, 30000); pollVoice(); setInterval(pollVoice, 60000);
+  pollPc(); setInterval(pollPc, 3000); startTiers(); document.addEventListener('nox:tiers', updateEdges); loadRich(); pollVoice(); setInterval(pollVoice, 60000);
   setTimeout(() => tour(false), 1600);
   window.__noxWow = { cfg, lib, get cur() { return cur; }, send, speaker, mic };
   input.focus({ preventScroll: true });

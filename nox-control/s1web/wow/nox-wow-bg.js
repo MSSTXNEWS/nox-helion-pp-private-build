@@ -41,12 +41,14 @@ function procRing() {
 
 export async function startSpace(opts) {
   const o = Object.assign({ canvas: null, onstate: () => {} }, opts || {});
-  const reduce = false;
+  /* движение: по умолчанию фон живой всегда (решение владельца c138). Настройка nox.wow.motion = 'system' включает prefers-reduced-motion. */
+  const reduce = lsGet('nox.wow.motion', 'always') === 'system' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const chatMode = () => document.body.dataset.page === 'wow-chat';
   const small = () => innerWidth <= 820 || matchMedia('(pointer:coarse)').matches;
   const cv = o.canvas;
   const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, alpha: false, powerPreference: 'high-performance' });
   if (!renderer.capabilities.isWebGL2) throw new Error('нужен WebGL2');
-  const state = { level: lsGet(KEYQ, 'on') === 'off' ? 'on' : lsGet(KEYQ, 'on'), planet: lsGet(KEY, 'earth'), px: 0, py: 0, tx: 0, ty: 0, run: true, texStatus: {} };
+  const state = { level: ['eco', 'high'].includes(lsGet(KEYQ, 'on')) ? lsGet(KEYQ, 'on') : 'on', planet: lsGet(KEY, 'earth'), px: 0, py: 0, tx: 0, ty: 0, run: true, texStatus: {} };
   let dprCap = small() ? 1 : 1.5;
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, dprCap));
   renderer.setClearColor(0x02030a, 1);
@@ -73,14 +75,19 @@ export async function startSpace(opts) {
 
   /* планета */
   const pg = new THREE.Group(); scene.add(pg); const tilt = new THREE.Group(); pg.add(tilt);
-  const sun = new THREE.DirectionalLight(0xfff1de, 3.6); sun.position.set(-4, 3.2, 4); scene.add(sun); scene.add(new THREE.AmbientLight(0x1a2236, .7));
+  const sun = new THREE.DirectionalLight(0xfff1de, 3.6); sun.position.set(-4, 3.2, 4); scene.add(sun); const amb = new THREE.AmbientLight(0x2a3552, .7); scene.add(amb);
   let body = null, ringMesh = null, atmo = null, planetId = null, loadTok = 0;
   const loader = new THREE.TextureLoader();
   let manifest = null; const getManifest = async () => { if (manifest) return manifest; try { const r = await fetch(TEXDIR + 'manifest.json', { cache: 'no-store' }); manifest = r.ok ? new Set((await r.json()).files || []) : new Set(['*']); } catch (e) { manifest = new Set(['*']); } return manifest; };
   const loadFirst = async (all) => { const mf = await getManifest(), names = mf.has('*') ? all : all.filter((n) => mf.has(n)); return loadFirst0(names); };
   const loadFirst0 = (names) => new Promise((res) => { let i = 0; const next = () => { if (i >= names.length) return res(null); const u = TEXDIR + names[i++]; loader.load(u, (t) => res({ t, name: names[i - 1] }), undefined, next); }; next(); });
   function disposeBody() { [body, ringMesh, atmo].forEach((m) => { if (!m) return; m.parent && m.parent.remove(m); m.geometry && m.geometry.dispose(); const mt = m.material; if (mt) { mt.map && mt.map.dispose(); mt.alphaMap && mt.alphaMap.dispose(); mt.dispose(); } }); body = ringMesh = atmo = null; }
-  const atmoMat = (col, k) => new THREE.ShaderMaterial({ transparent: true, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false, uniforms: { uC: { value: new THREE.Color(col[0], col[1], col[2]) }, uK: { value: k } }, vertexShader: 'varying vec3 vN;varying vec3 vP;void main(){vN=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.);vP=mv.xyz;gl_Position=projectionMatrix*mv;}', fragmentShader: 'uniform vec3 uC;uniform float uK;varying vec3 vN;varying vec3 vP;void main(){float f=pow(1.-abs(dot(normalize(vN),normalize(-vP))),3.4);gl_FragColor=vec4(uC*f*uK*1.1,f);}' });
+  /* атмосфера: оболочка радиуса S, яркость максимальна у лимба планеты и плавно гаснет к краю оболочки (без жёсткого контура) */
+  const ATM_S = 1.17, ATM_LIMB = Math.sqrt(1 - 1 / (ATM_S * ATM_S));
+  const atmoMat = (col, k) => new THREE.ShaderMaterial({ transparent: true, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false, uniforms: { uC: { value: new THREE.Color(col[0], col[1], col[2]) }, uK: { value: k }, uL: { value: ATM_LIMB } },
+    vertexShader: 'varying vec3 vN;varying vec3 vP;varying vec3 vO;void main(){vN=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.);vP=mv.xyz;vO=(modelViewMatrix*vec4(0.,0.,0.,1.)).xyz;gl_Position=projectionMatrix*mv;}',
+    fragmentShader: 'uniform vec3 uC;uniform float uK,uL;varying vec3 vN;varying vec3 vP;varying vec3 vO;void main(){float d=abs(dot(normalize(vN),normalize(-vP)));float t=clamp(d/uL,0.,1.);float f=pow(t,2.4)*(1.-pow(t,6.)*.0);'
+      + 'vec2 r=normalize(vP.xy-vO.xy+1e-4);float lit=clamp(dot(r,normalize(vec2(-.65,.55)))*.5+.62,.18,1.);float a=f*lit*uK;gl_FragColor=vec4(uC*a*1.1,a*.8);}' });
   async function setPlanet(id) {
     const p = byId(id), tok = ++loadTok; state.planet = p.id; lsSet(KEY, p.id); planetId = p.id; disposeBody();
     if (p.id === 'none') { layout(); o.onstate(state); return; }
@@ -88,7 +95,7 @@ export async function startSpace(opts) {
     let map; if (got) { map = got.t; map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 4; state.texStatus[p.id] = 'photo:' + got.name; } else { map = procTexture(p); state.texStatus[p.id] = 'procedural'; }
     body = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 96), new THREE.MeshStandardMaterial({ map, roughness: .92, metalness: 0 }));
     tilt.rotation.set(p.ring ? -.32 : -.7, 0, p.ring ? .1 : .3); tilt.add(body);
-    const al = p.atm || [.4, .6, 1]; atmo = new THREE.Mesh(new THREE.SphereGeometry(1.05, 96, 64), atmoMat(al, p.atmK == null ? 1 : p.atmK)); pg.add(atmo);
+    const al = p.atm || [.4, .6, 1]; atmo = new THREE.Mesh(new THREE.SphereGeometry(ATM_S, 96, 64), atmoMat(al, p.atmK == null ? 1 : p.atmK)); pg.add(atmo);
     if (p.ring) {
       const rg = new THREE.RingGeometry(1.32, 2.45, 160, 1), pos = rg.attributes.position, uv = rg.attributes.uv; for (let i = 0; i < pos.count; i++) { const r = Math.hypot(pos.getX(i), pos.getY(i)); uv.setXY(i, (r - 1.32) / (2.45 - 1.32), .5); }
       const rt = await loadFirst([p.ring]); if (tok !== loadTok) return; let rtex; if (rt) { rtex = rt.t; rtex.colorSpace = THREE.SRGBColorSpace; state.texStatus[p.id] += '+ring:' + rt.name; } else { rtex = procRing(); state.texStatus[p.id] += '+ring:procedural'; }
@@ -101,9 +108,16 @@ export async function startSpace(opts) {
   /* компоновка: планета - горизонт по центру внизу (симметрия), на телефоне крупнее */
   function layout() {
     const W = innerWidth, H = innerHeight, m = small(), d = 10, hw = 2 * d * Math.tan(cam.fov * Math.PI / 360), wpp = hw / H, p = byId(state.planet);
-    let Rpx = m ? Math.max(W * 1.05, 420) : Math.min(Math.max(W * .62, 640), 1100), top = m ? H * .80 : H * .73;
-    if (p.ring) { Rpx = m ? W * .30 : Math.min(W * .17, 300); top = m ? H * .80 : H * .76; }
-    const R = Rpx * wpp; pg.scale.setScalar(R); pg.position.set(0, (H / 2 - (top + Rpx)) * wpp, 0);
+    let Rpx, top, cx = 0;
+    if (chatMode()) { /* чат: крупная планета справа/в центре, не под композером */
+      if (m) { Rpx = Math.max(W * .95, 360); top = H * .30; } else { Rpx = Math.min(Math.max(W * .42, 520), 800); top = H * .34; cx = W * .2; }
+      if (p.ring) { Rpx = m ? W * .42 : Math.min(W * .22, 360); top = H * .26; if (!m) cx = W * .22; }
+    } else {
+      Rpx = m ? Math.max(W * 1.05, 420) : Math.min(Math.max(W * .62, 640), 1100); top = m ? H * .80 : H * .73;
+      if (p.ring) { Rpx = m ? W * .30 : Math.min(W * .17, 300); top = m ? H * .80 : H * .76; }
+    }
+    const R = Rpx * wpp; pg.scale.setScalar(R); pg.position.set(0, (H / 2 - (top + Rpx)) * wpp, 0); state.ox = cx * wpp;
+    sun.intensity = chatMode() ? 4.6 : 3.6; amb.intensity = chatMode() ? 1.15 : .7;
   }
   /* пост-обработка: bloom + виньетка */
   const composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType });
@@ -113,24 +127,24 @@ export async function startSpace(opts) {
   composer.addPass(new EffectPass(cam, bloom, vig));
 
   function resize() {
-    const W = innerWidth, H = innerHeight; dprCap = small() ? 1 : 1.5; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, dprCap)); renderer.setSize(W, H, false); composer.setSize(W, H, false);
+    const W = innerWidth, H = innerHeight; dprCap = (small() || state.level === 'eco') ? 1 : 1.5; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, dprCap)); renderer.setSize(W, H, false); composer.setSize(W, H, false);
     cam.aspect = W / H; cam.updateProjectionMatrix(); const dpr = renderer.getPixelRatio(), bw = Math.round(W * dpr), bh = Math.round(H * dpr);
     nebRT.setSize(Math.max(64, Math.round(bw / (small() ? 3 : 4))), Math.max(48, Math.round(bh / (small() ? 3 : 4)))); nebMat.uniforms.uRes.value.set(nebRT.width, nebRT.height); lastNeb = -1e9;
     compMat.uniforms.uRes.value.set(bw, bh); starMat.uniforms.uRes.value.set(bw, bh); starMat.uniforms.uDpr.value = dpr * (small() ? .55 : 1); layout();
   }
   let lastNeb = -1e9, t0 = performance.now(), last = 0, fpsN = 0, fpsT = 0; state.fps = 0;
-  function applyLevel() { const l = state.level; bloom.intensity = l === 'high' ? 1.5 : l === 'off' ? 0 : .85; state.paused = l === 'off' && false; }
+  function applyLevel() { const l = state.level; bloom.intensity = l === 'high' ? 1.5 : l === 'eco' ? .4 : .85; dprCap = (l === 'eco' || small()) ? 1 : 1.5; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, dprCap)); if (typeof resize === 'function') resize(); }
   function frame(now, force) {
     const T = (now - t0) / 1000;
-    if (force || now - lastNeb > (small() ? 400 : 250)) { renderer.setRenderTarget(nebRT); renderer.render(nebScene, cam); renderer.setRenderTarget(null); nebMat.uniforms.uT.value = reduce ? 40 : T + 40; lastNeb = now; }
+    if (force || now - lastNeb > (small() ? 400 : 250)) { renderer.setRenderTarget(nebRT); renderer.render(nebScene, cam); renderer.setRenderTarget(null); nebMat.uniforms.uT.value = reduce ? 40 : T * 2.2 + 40; lastNeb = now; }
     state.px += (state.tx - state.px) * .04; state.py += (state.ty - state.py) * .04;
     compMat.uniforms.uPar.value.set(state.px * .012, state.py * .012); compMat.uniforms.uExp.value = .34 + .03 * Math.sin(T * .12);
     starMat.uniforms.uPar.value.set(state.px * .02, state.py * .02); starMat.uniforms.uRa.value = reduce ? 0 : T * .00035; starMat.uniforms.uTime.value = reduce ? 0 : T;
-    if (body) { body.rotation.y = reduce ? 1.1 : T * .02 + 1.1; if (atmo) atmo.rotation.y = body.rotation.y; }
-    pg.position.x = state.px * .0 + 0; sun.position.x = -4 + state.px * .6;
+    if (body) { body.rotation.y = reduce ? 1.1 : T * .05 + 1.1; if (atmo) atmo.rotation.y = body.rotation.y; }
+    pg.position.x = state.ox || 0; sun.position.x = -4 + state.px * .6;
     composer.render();
   }
-  function loop(now) { if (!state.run) return; requestAnimationFrame(loop); if (now - last < (small() ? 33 : 16)) return; last = now; fpsN++; if (!fpsT) fpsT = now; if (now - fpsT >= 1000) { state.fps = fpsN; fpsN = 0; fpsT = now; } try { frame(now, false); } catch (e) { /* кадр пропущен */ } }
+  function loop(now) { if (!state.run) return; requestAnimationFrame(loop); if (now - last < (small() || state.level === 'eco' ? 33 : 16)) return; last = now; fpsN++; if (!fpsT) fpsT = now; if (now - fpsT >= 1000) { state.fps = fpsN; fpsN = 0; fpsT = now; } try { frame(now, false); } catch (e) { /* кадр пропущен */ } }
   addEventListener('pointermove', (e) => { state.tx = (e.clientX / innerWidth - .5) * 2; state.ty = -(e.clientY / innerHeight - .5) * 2; }, { passive: true });
   let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { resize(); frame(performance.now(), true); }, 120); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) state.run = false; else if (!state.run && state.level !== 'off' && !reduce) { state.run = true; requestAnimationFrame(loop); } });
@@ -138,7 +152,7 @@ export async function startSpace(opts) {
   if (!reduce && state.level !== 'off') requestAnimationFrame(loop); else state.run = false;
   const api = {
     state, setPlanet,
-    setLevel(l) { if (l === 'off') l = 'on'; state.level = l; lsSet(KEYQ, l); applyLevel(); if (l === 'off') { state.run = false; frame(performance.now(), true); } else if (!state.run && !reduce) { state.run = true; requestAnimationFrame(loop); } },
+    setLevel(l) { if (l === 'off') l = 'on'; state.level = (l === 'eco' || l === 'high') ? l : 'on'; lsSet(KEYQ, state.level); applyLevel(); if (l === 'off') { state.run = false; frame(performance.now(), true); } else if (!state.run && !reduce) { state.run = true; requestAnimationFrame(loop); } },
     snapshot() { frame(performance.now(), true); }
   };
   window.__noxWowSpace = api;

@@ -34,6 +34,7 @@
   <span class="seg" style="align-self:flex-end"><button type="submit"><sl-icon library="tabler" name="plus"></sl-icon>Добавить</button></span></div>
   <datalist id="projList"></datalist><datalist id="ownList"></datalist></form>
 <div class="card flat"><div class="frow"><span class="mono muted">Проект:</span><span id="chips" class="frow"></span><span style="flex:1"></span><button type="button" class="tag" id="ntag">УВЕДОМЛЕНИЯ</button><span class="tag" id="apiTag">API ЗАДАЧ: ПРОВЕРКА</span><span class="seg" id="apiAct" hidden><button type="button" id="apiImp">Импорт из NOX</button></span></div></div>
+<section class="card" id="vSumBox"><h2>Сводка <span class="r mono">по выбранному проекту</span></h2><div class="clocks" id="psum"></div><h2 style="margin-top:12px">Ближайшие сроки</h2><ul class="lines soon" id="pnext"></ul></section>
 <div class="board" id="vBoardBox"></div>
 <section class="card" id="vCalBox" hidden><div id="cal"></div><p class="muted" style="margin:8px 0 0;font-size:12px">Клик по дню создаёт событие или задачу; события и сроки карточек можно перетаскивать на другой день.</p></section>
 <sl-dialog id="dlg" class="nox-dl" label="Задача"><form class="dlg" id="dForm" autocomplete="off">
