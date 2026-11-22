@@ -110,13 +110,13 @@ P
   ;;
 swapD)
   echo "== D: ТОЛЬКО ЧТЕНИЕ. состояние замены"
-  date; pgrep -af "llama-server|flash.py|cmake|curl.*gguf|exp_driver" | grep -v pgrep | cut -c1-150 | head -8
-  for p in 8081 8082 8083 8091; do echo -n "$p "; curl -s -m4 -o /dev/null -w "%{http_code}\n" http://127.0.0.1:$p/health; done
-  ls -la /dev/shm | head; ls -la /dev/shm/glm53f /dev/shm/nox_glmflash 2>/dev/null | awk '{print $5,$9}' | tail -8
-  df -h /dev/shm /root | cat; free -g | sed -n 2p; nvidia-smi --query-gpu=memory.used --format=csv,noheader
-  ls -la /root/nox/state/MODEL_SWAP/ 2>/dev/null | cut -c1-100
-  head -c 1500 /root/nox/state/MODEL_SWAP.json 2>/dev/null; head -c 1500 /root/nox/logs/MODEL_SWAP.json
-  tail -n 6 /root/nox/logs/flash*.log 2>/dev/null | cut -c1-180
+  date +%T; pgrep -af "llama-server|flash.py|cmake|curl.*gguf|exp_driver" | grep -v pgrep | cut -c1-110 | head -5
+  for p in 8081 8082 8083 8091; do echo -n "$p="; curl -s -m4 -o /dev/null -w "%{http_code} " http://127.0.0.1:$p/health; done; echo
+  df -h /dev/shm /root | awk 'NR>1{print $6,$3,$4}'; free -g | sed -n 2p | awk '{print "RAM used",$3,"free",$4}'
+  ls /root/nox/state/MODEL_SWAP/ 2>/dev/null | tr '\n' ' '; echo
+  tail -n 3 /root/nox/logs/glm_8081.log 2>/dev/null | cut -c1-160
+  grep -E "verdict|вердикт|PASS|FAIL" /root/nox/state/MODEL_SWAP.json 2>/dev/null | head -3 | cut -c1-160
+  tail -n 2 /root/nox/logs/flash.log | cut -c1-120
   ;;
 *) echo "unknown stage $S";;
 esac
