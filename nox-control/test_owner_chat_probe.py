@@ -2434,7 +2434,7 @@ class ProbeTests(unittest.TestCase):
             ):
                 response = Response(headers)
                 with self.subTest(ambiguous=headers), self.assertRaisesRegex(
-                        RuntimeError, '^HOLD_CHAT_PAGE_CONTENT_TYPE_AMBIGUOUS):
+                        RuntimeError, 'HOLD_CHAT_PAGE_CONTENT_TYPE_AMBIGUOUS'):
                     probe.page_snapshot(response, expected_path='/chat')
                 self.assertTrue(response.closed)
                 self.assertEqual(response.reads, 1)
@@ -2448,7 +2448,7 @@ class ProbeTests(unittest.TestCase):
                 self.assertEqual(response.reads, 1)
 
             invalid = Response(('application/json',))
-            with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PAGE_NOT_HTML):
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PAGE_NOT_HTML'):
                 probe.page_snapshot(invalid, expected_path='/chat')
             self.assertTrue(invalid.closed)
 
