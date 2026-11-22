@@ -181,6 +181,64 @@ def main():
           return result===false && container.children.length===0 &&
             metrics.posts===beforePosts && metrics.acks===beforeAcks;
         }'''))
+        # A legacy terminal precommit without AbortSignal can expire after a
+        # fresh GET-only reconnect joins its pending intent. This is not an
+        # unsafe precommit failure: allow one new projection of the exact same
+        # canonical event after old timeout, without a second model POST/ACK.
+        check('legacy terminal timeout allows fresh canonical reconnect', page.evaluate('''async () => {
+          const container=document.createElement('section');
+          const s={conversation_id:'legacy-terminal',exchange_id:'retry-timeout'};
+          const beforePosts=metrics.posts,beforeAcks=metrics.acks;
+          let terminals=0;
+          const ui=NOXB1AbortSafeUI.createUiAdapter({
+            container,terminalTimeoutMs:45,
+            beforeCommit:kind=>{
+              if(kind==='terminal'&&++terminals===1)
+                return new Promise(()=>{});
+              return Promise.resolve();
+            }
+          });
+          const original=ui.upsertTerminal(s,'canonical-v1');
+          const oldResult=original.then(()=>null,e=>e.code);
+          const freshSignal=new AbortController();
+          const fresh=ui.upsertTerminal(s,'canonical-v1',freshSignal.signal);
+          const [oldCode,restored]=await Promise.race([
+            Promise.all([oldResult,fresh]),
+            new Promise(resolve=>setTimeout(()=>resolve(['HUNG',false]),450))
+          ]);
+          const row=container.firstElementChild;
+          let conflicting;
+          try{await ui.upsertTerminal(s,'canonical-v2',freshSignal.signal)}
+          catch(e){conflicting=e.code}
+          const repeated=await ui.upsertTerminal(s,'canonical-v1',freshSignal.signal);
+          return oldCode==='HOLD_B1_UI_TERMINAL_TIMEOUT' &&
+            restored===true && repeated===true && terminals===2 &&
+            conflicting==='HOLD_B1_UI_CONFLICTING_TERMINAL' &&
+            container.children.length===1 &&
+            row.dataset.noxB1EventId==='canonical-v1' &&
+            row.dataset.noxB1State==='terminal' &&
+            metrics.posts===beforePosts && metrics.acks===beforeAcks;
+        }'''))
+        # Non-timeout UI errors remain a HOLD rather than automatically
+        # replaying potentially unsafe side effects on reconnect.
+        check('legacy terminal arbitrary precommit failure does not retry', page.evaluate('''async () => {
+          const container=document.createElement('section');
+          const s={conversation_id:'legacy-terminal',exchange_id:'unsafe-error'};
+          let calls=0;
+          const ui=NOXB1AbortSafeUI.createUiAdapter({
+            container,terminalTimeoutMs:80,
+            beforeCommit:()=>{
+              calls++;
+              throw Error('unsafe-beforeCommit');
+            }
+          });
+          const old=ui.upsertTerminal(s,'canonical-v1').then(()=>null,e=>e.message);
+          const fresh=ui.upsertTerminal(s,'canonical-v1',
+            new AbortController().signal).then(()=>null,e=>e.message);
+          const [a,b]=await Promise.all([old,fresh]);
+          return a==='unsafe-beforeCommit' && b==='unsafe-beforeCommit' &&
+            calls===1 && container.children.length===0;
+        }'''))
         # Reproduce a real race in the abort-safe DOM adapter: a delta that
         # fails precommit after terminal intent is reserved must not prevent
         # the independently authenticated GET-only terminal from projecting.
