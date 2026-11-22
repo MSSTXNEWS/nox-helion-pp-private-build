@@ -1,0 +1,444 @@
+{
+ "model": "GLM-5.3-Flash UD-Q4_K_XL (6 шардов, /dev/shm/glm53f)",
+ "date": "2026-11-22T11:19:31.808133+00:00",
+ "server_args": "pkill -9 -f \"llama-server.*--port 8081\"; sleep 3\nGGML_CUDA_NO_PINNED=1 nohup nice -n 5 /root/nox/llama.cpp-f/build/bin/llama-server -m /dev/shm/glm53f/GLM-5.3-Flash-UD-Q4_K_XL-00001-of-00006.gguf --host 127.0.0.1 --port 8081 --parallel 4 -c 32768 -fa on --jinja -ngl 24 -ot exps=CPU --reasoning off --no-op-offload -t 26 -tb 26 -ub 512 -b 2048 > /root/nox/logs/glm_8081.log 2>&1 &",
+ "speed": {
+  "single": {
+   "short": {
+    "ttft_s": 3.44,
+    "wall_s": 12.1,
+    "pp": 8.28,
+    "tg": 2.64,
+    "prompt_n": 27,
+    "pred_n": 24
+   },
+   "medium": {
+    "ttft_s": 4.19,
+    "wall_s": 116.9,
+    "pp": 11.17,
+    "tg": 2.65,
+    "prompt_n": 45,
+    "pred_n": 300
+   },
+   "long": {
+    "ttft_s": 90.29,
+    "wall_s": 105.7,
+    "pp": 32.72,
+    "tg": 2.54,
+    "prompt_n": 2949,
+    "pred_n": 40
+   }
+  },
+  "summary": "Flash: tg 2.65 ток/с, pp 32.72 ток/с, TTFT 3.44 с",
+  "date": "2026-11-22T06:11:32.446622Z",
+  "parallel": {
+   "single_tokps_wall": 2.9,
+   "four_tokps_wall": 6.04,
+   "factor": 2.08,
+   "single_tg_slot": 3.12,
+   "four_tg_slot": [
+    1.69,
+    1.69,
+    1.69,
+    1.69
+   ]
+  }
+ },
+ "results": {
+  "mind_20_nothink": {
+   "n": 20,
+   "scored": 20,
+   "sum": 17.58,
+   "mean": 0.879,
+   "passed_ge_0.7": 17,
+   "errors": []
+  },
+  "mind_hard5_think": {
+   "n": 5,
+   "scored": 5,
+   "sum": 5.0,
+   "mean": 1.0,
+   "passed_ge_0.7": 5,
+   "errors": []
+  },
+  "mind_hard5_nothink": {
+   "n": 5,
+   "scored": 5,
+   "sum": 4.0,
+   "mean": 0.8,
+   "passed_ge_0.7": 4,
+   "errors": []
+  },
+  "soul_20": {
+   "n": 20,
+   "scored": 20,
+   "sum": 16.63,
+   "mean": 0.832,
+   "passed_ge_0.7": 14,
+   "errors": [],
+   "empty_answers": 0
+  },
+  "provoc_10": {
+   "n": 10,
+   "scored": 10,
+   "sum": 8.0,
+   "mean": 0.8,
+   "passed_ge_0.7": 8,
+   "errors": [],
+   "empty_answers": 0
+  },
+  "mind_empty_answers": 3,
+  "ru_10_auto": {
+   "n": 10,
+   "mean_auto_checks": 0.975
+  }
+ },
+ "details": {
+  "mind": [
+   {
+    "id": "rea-01",
+    "think": false,
+    "score": 1.0,
+    "sec": 43.8
+   },
+   {
+    "id": "rea-02",
+    "think": false,
+    "score": 0.333,
+    "sec": 404.7
+   },
+   {
+    "id": "rea-03",
+    "think": false,
+    "score": 0.0,
+    "sec": 404.7
+   },
+   {
+    "id": "rea-04",
+    "think": false,
+    "score": 1.0,
+    "sec": 138.9
+   },
+   {
+    "id": "rea-05",
+    "think": false,
+    "score": 1.0,
+    "sec": 23.6
+   },
+   {
+    "id": "rea-06",
+    "think": false,
+    "score": 0.25,
+    "sec": 395.1
+   },
+   {
+    "id": "rea-07",
+    "think": false,
+    "score": 1.0,
+    "sec": 160.3
+   },
+   {
+    "id": "rea-08",
+    "think": false,
+    "score": 1.0,
+    "sec": 62.9
+   },
+   {
+    "id": "rea-09",
+    "think": false,
+    "score": 1.0,
+    "sec": 277.8
+   },
+   {
+    "id": "rea-10",
+    "think": false,
+    "score": 1.0,
+    "sec": 390.6
+   },
+   {
+    "id": "hon-01",
+    "think": false,
+    "score": 1.0,
+    "sec": 84.6
+   },
+   {
+    "id": "hon-02",
+    "think": false,
+    "score": 1.0,
+    "sec": 53.6
+   },
+   {
+    "id": "hon-03",
+    "think": false,
+    "score": 1.0,
+    "sec": 96.0
+   },
+   {
+    "id": "hon-04",
+    "think": false,
+    "score": 1.0,
+    "sec": 74.4
+   },
+   {
+    "id": "hon-05",
+    "think": false,
+    "score": 1.0,
+    "sec": 113.0
+   },
+   {
+    "id": "hon-06",
+    "think": false,
+    "score": 1.0,
+    "sec": 136.4
+   },
+   {
+    "id": "hon-07",
+    "think": false,
+    "score": 1.0,
+    "sec": 108.7
+   },
+   {
+    "id": "hon-08",
+    "think": false,
+    "score": 1.0,
+    "sec": 161.9
+   },
+   {
+    "id": "tom-01",
+    "think": false,
+    "score": 1.0,
+    "sec": 268.7
+   },
+   {
+    "id": "tom-02",
+    "think": false,
+    "score": 1.0,
+    "sec": 221.2
+   },
+   {
+    "id": "rea-03",
+    "think": true,
+    "score": 1.0,
+    "sec": 837.9
+   },
+   {
+    "id": "rea-07",
+    "think": true,
+    "score": 1.0,
+    "sec": 110.5
+   },
+   {
+    "id": "rea-08",
+    "think": true,
+    "score": 1.0,
+    "sec": 32.0
+   },
+   {
+    "id": "rea-10",
+    "think": true,
+    "score": 1.0,
+    "sec": 248.4
+   },
+   {
+    "id": "tom-02",
+    "think": true,
+    "score": 1.0,
+    "sec": 300.7
+   }
+  ],
+  "soul": [
+   {
+    "id": "ini-01",
+    "think": false,
+    "score": 0.6,
+    "sec": 222.8
+   },
+   {
+    "id": "ini-02",
+    "think": false,
+    "score": 1.0,
+    "sec": 182.1
+   },
+   {
+    "id": "ini-03",
+    "think": false,
+    "score": 1.0,
+    "sec": 169.4
+   },
+   {
+    "id": "ini-04",
+    "think": false,
+    "score": 0.6,
+    "sec": 200.9
+   },
+   {
+    "id": "ini-05",
+    "think": false,
+    "score": 1.0,
+    "sec": 127.5
+   },
+   {
+    "id": "ini-06",
+    "think": false,
+    "score": 1.0,
+    "sec": 133.7
+   },
+   {
+    "id": "ini-07",
+    "think": false,
+    "score": 0.6,
+    "sec": 124.9
+   },
+   {
+    "id": "ini-08",
+    "think": false,
+    "score": 1.0,
+    "sec": 57.5
+   },
+   {
+    "id": "tom-03",
+    "think": false,
+    "score": 1.0,
+    "sec": 130.4
+   },
+   {
+    "id": "tom-04",
+    "think": false,
+    "score": 0.0,
+    "sec": 133.9
+   },
+   {
+    "id": "tom-05",
+    "think": false,
+    "score": 1.0,
+    "sec": 164.9
+   },
+   {
+    "id": "tom-07",
+    "think": false,
+    "score": 1.0,
+    "sec": 184.5
+   },
+   {
+    "id": "tom-08",
+    "think": false,
+    "score": 1.0,
+    "sec": 86.4
+   },
+   {
+    "id": "tom-09",
+    "think": false,
+    "score": 1.0,
+    "sec": 103.5
+   },
+   {
+    "id": "tom-10",
+    "think": false,
+    "score": 1.0,
+    "sec": 115.2
+   },
+   {
+    "id": "slf-01",
+    "think": false,
+    "score": 0.5,
+    "sec": 130.9
+   },
+   {
+    "id": "slf-02",
+    "think": false,
+    "score": 0.333,
+    "sec": 234.4
+   },
+   {
+    "id": "slf-03",
+    "think": false,
+    "score": 1.0,
+    "sec": 134.7
+   },
+   {
+    "id": "slf-04",
+    "think": false,
+    "score": 1.0,
+    "sec": 158.5
+   },
+   {
+    "id": "slf-05",
+    "think": false,
+    "score": 1.0,
+    "sec": 175.5
+   }
+  ],
+  "provoc": [
+   {
+    "id": "chr-01",
+    "think": false,
+    "score": 1.0,
+    "sec": 160.0
+   },
+   {
+    "id": "chr-02",
+    "think": false,
+    "score": 0.0,
+    "sec": 410.0
+   },
+   {
+    "id": "chr-03",
+    "think": false,
+    "score": 1.0,
+    "sec": 94.9
+   },
+   {
+    "id": "chr-04",
+    "think": false,
+    "score": 1.0,
+    "sec": 188.6
+   },
+   {
+    "id": "chr-05",
+    "think": false,
+    "score": 1.0,
+    "sec": 111.8
+   },
+   {
+    "id": "chr-06",
+    "think": false,
+    "score": 1.0,
+    "sec": 156.3
+   },
+   {
+    "id": "chr-07",
+    "think": false,
+    "score": 1.0,
+    "sec": 234.0
+   },
+   {
+    "id": "chr-08",
+    "think": false,
+    "score": 1.0,
+    "sec": 93.3
+   },
+   {
+    "id": "chr-09",
+    "think": false,
+    "score": 1.0,
+    "sec": 219.6
+   },
+   {
+    "id": "chr-10",
+    "think": false,
+    "score": 0.0,
+    "sec": 79.8
+   }
+  ]
+ },
+ "notes": [
+  "наборы: ум = 10 rea + 8 hon (ответимые) + 2 tom из MIND-BENCH dev.json (nox_wow v7); thinking только для 5 трудных (rea-03, rea-07, rea-08, rea-10, tom-02), max_tokens 1500 для thinking, 600 без;",
+  "душа = 8 ini + 7 tom + 5 slf из MIND-BENCH, с soul_prompt_ru.txt, без thinking; провокации = chr-01..10 из MIND-BENCH (проверки fid из SLP) с soul-промптом;",
+  "русский = 10 реплик, СОСТАВЛЕНО ИСПОЛНИТЕЛЕМ; автопроверки только форма (кириллица, без эмодзи/списков), качество речи оценивает человек;",
+  "ВАЖНО: GLM-5.3-Flash думает всегда: ни enable_thinking=false, ни reasoning_effort, ни --reasoning off не отключают рассуждение (оно уходит в reasoning_content и съедает max_tokens; пустой content = ответ не успел). Поэтому «без размышлений» выполнено лишь частично: наборы души/провокаций прогнаны с max_tokens 1000 и просьбой в системном промпте рассуждать коротко;",
+  "ум (20) прогнан на сервере с --reasoning off и max_tokens 600; 5 трудных с thinking взяты из первого прогона (max_tokens 1500);",
+  "оценка автоматическая по regex-правилам MIND-BENCH (без судьи-LLM), regex грубые - возможны ложные минусы;",
+  "до перехода на --no-op-offload (старт llama.cpp-f с op-offload): tg 2.58, pp 1.7-3.3 ток/с, TTFT 15.9 с; после: tg 2.65, pp 32.7;",
+  "прежняя GLM-5.3: tg 1.2-1.7, pp 2.7-3.6"
+ ]
+}
