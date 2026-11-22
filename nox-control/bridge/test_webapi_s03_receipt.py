@@ -163,8 +163,8 @@ class FactReceiptTest(unittest.TestCase):
             ({"content": ["wrong"]}, "S03_FACT_INVALID_CONTENT"),
             ({"content": "   "}, "пустой факт"),
             ({"content": "A" * 2001}, "S03_FACT_TOO_LONG"),
-            ({"content": "A\\x00B"}, "S03_FACT_INVALID_UNICODE"),
-            ({"content": "A\\ud800B"}, "S03_FACT_INVALID_UNICODE"),
+            ({"content": "A\x00B"}, "S03_FACT_INVALID_UNICODE"),
+            ({"content": "A\ud800B"}, "S03_FACT_INVALID_UNICODE"),
         )
         with mock.patch.dict(sys.modules, {"s03_memory": m}):
             for body, reason in cases:
