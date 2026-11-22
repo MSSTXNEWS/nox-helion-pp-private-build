@@ -203,6 +203,25 @@ class CheckpointStepProvenance(unittest.TestCase):
                 redirected_check(helper, redirected)
 
 
+    def test_signed_checkpoint_json_huge_integer_is_named_hold(self):
+        # Python 3.11+ may raise ValueError during json.loads when a signed
+        # decimal integer exceeds sys.get_int_max_str_digits() (default 4300).
+        # Exercise the *actual* read_json function, not an imitation.
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "trainer_state.json"
+            read_json = load_pinned_verifier(Path(folder))["read_json"]
+            huge = b'{"global_step":' + b'9' * 5000 + b'}'
+            source.write_bytes(huge)
+            signed_hash = hashlib.sha256(huge).hexdigest()
+            with self.assertRaisesRegex(
+                    RuntimeError, "^HOLD_INVALID_STATE_JSON$"):
+                read_json(source, expected_sha256=signed_hash)
+            valid = b'{"global_step":2}'
+            source.write_bytes(valid)
+            self.assertEqual(
+                read_json(source, expected_sha256=hashlib.sha256(valid).hexdigest()),
+                {"global_step": 2})
+
     def test_negative_cross_entropy_loss_denied_even_with_valid_checkpoint_hashes(self):
         # Signed SHA bytes and a positive optimizer step cannot legitimate a
         # finite negative cross-entropy loss. No service or trainer is run.
