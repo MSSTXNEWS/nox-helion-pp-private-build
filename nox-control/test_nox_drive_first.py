@@ -382,6 +382,22 @@ class DriveFirstTests(unittest.TestCase):
         self.assertEqual(child.returncode, -15)
         self.assertTrue(child.stdout.closed)
 
+    def test_remote_sha_readback_has_absolute_deadline(self):
+        # A nonterminating rclone must not reserve the Drive worker forever;
+        # even regular partial progress cannot extend the total deadline.
+        child = FakeChild()
+        child.returncode = None
+        with patch.object(m.subprocess, "Popen", return_value=child), \
+             patch.object(m.select, "select", return_value=([], [], [])), \
+             patch.object(m, "cgroup_admit"), patch.object(m, "stop_clear"), \
+             patch.object(m.time, "monotonic",
+                          side_effect=[0, 1, m.MAX_VERIFY_SECONDS + 1]):
+            with self.assertRaisesRegex(m.Hold, "REMOTE_TOTAL_TIMEOUT"):
+                m.verify_remote("noxchunks:STAGING/test.gguf", config=self.conf,
+                                size=len(self.data), digest=self.digest)
+        self.assertEqual(child.returncode, -15)
+        self.assertTrue(child.stdout.closed)
+
     def test_remote_sha_readback_fails_closed_if_rclone_missing(self):
         with patch.object(m.subprocess, "Popen", side_effect=OSError("missing")), \
              patch.object(m, "cgroup_admit"):
