@@ -626,8 +626,12 @@ def install(app, B):
             "stream_id": stream_id, "event_seq": row["event_seq"],
             "message": {"role": "assistant", "content": row["text"]},
             "done": row["terminal"],
-            "completion_receipt": row["completion_receipt"],
-            "memory_write_receipt": row["memory_write_receipt"],
+            # A lossy/incomplete snapshot is never proof of generated output or
+            # a durable S03 write, even if the live SSE later completed.
+            "completion_receipt": row["completion_receipt"] if row["state"] != "HOLD" else None,
+            "memory_write_receipt": row["memory_write_receipt"] if row["state"] != "HOLD" else None,
+            "snapshot_integrity": "HOLD" if row["state"] == "HOLD" else ("COMPLETE" if row["terminal"] else "PARTIAL"),
+            "snapshot_hold_reason": row.get("snapshot_hold_reason"),
             "s03_readback_verified": False,
             "snapshot_scope": "PROCESS_LOCAL", "replay_supported": False,
         }, headers={"Cache-Control": "no-store"})
@@ -706,6 +710,7 @@ def install(app, B):
                 "request_id": rid, "event_seq": 0, "text": "",
                 "text_bytes": 0, "state": "ADMITTED", "terminal": False,
                 "completion_receipt": None, "memory_write_receipt": None,
+                "snapshot_hold_reason": None,
                 "updated_at": time.monotonic(),
             }
 
@@ -727,9 +732,14 @@ def install(app, B):
                         row["text_bytes"] += added_bytes
                     else:
                         row["state"] = "HOLD"
+                        row["snapshot_hold_reason"] = "CHAT_SNAPSHOT_TEXT_OVERFLOW"
                 if k.get("status") == "HOLD":
                     row["state"] = "HOLD"
-                if k.get("done") is True:
+                    row["snapshot_hold_reason"] = str(k.get("reason") or "CHAT_STREAM_HOLD")[:128]
+                # Do not relabel an incomplete or previously held snapshot as
+                # GENERATED on a later terminal frame. The live stream receipt
+                # belongs to the SSE consumer, not to missing snapshot bytes.
+                if k.get("done") is True and row["state"] != "HOLD":
                     row["terminal"] = True
                     row["state"] = ("STOPPED" if k.get("done_reason") == "stopped" else "GENERATED")
                 for receipt in ("completion_receipt", "memory_write_receipt"):
