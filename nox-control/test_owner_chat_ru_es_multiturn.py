@@ -3270,6 +3270,69 @@ async function check(chunks, status=200) {
 
 
 
+    def test_ru_es_reload_nested_opacity_zero_text_must_not_pass_chromium(self):
+        """Opacity-zero child text is not a visibly restored RU/ES message.
+
+        Chromium DOM regression only; no model POST or S03 writer/readback.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'nested-opacity-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda request: posts.append(request.url)
+                        if request.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items) {
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body';
+                        body.textContent=row.content;
+                        bubble.append(body);root.append(bubble);
+                    }
+                }""", transcript)
+                witness = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(witness(), True)
+                body = page.locator('#messages .v24-msg .body').nth(3)
+                body.evaluate("""node => {
+                    const child=document.createElement('span');
+                    child.textContent=node.textContent;
+                    node.replaceChildren(child);
+                }""")
+                self.assertIs(witness(), True, 'ordinary nested spans remain valid')
+                child=body.locator('span')
+                child.evaluate("(node)=>node.style.opacity='0'")
+                self.assertIs(
+                    page.evaluate("""() => {
+                        const node=document.querySelector(
+                            '#messages .v24-msg:last-child .body');
+                        return node.innerText===node.textContent;
+                    }"""), True, 'the hidden child preserves text equality')
+                self.assertIs(witness(), False,
+                              'hidden descendant cannot attest a painted fourth row')
+                child.evaluate("(node)=>node.style.opacity=''")
+                self.assertIs(witness(), True, 'visible child restores proof')
+                child.evaluate("(node)=>node.style.visibility='hidden'")
+                self.assertIs(witness(), False, 'hidden nested text fails closed')
+                child.evaluate("(node)=>node.style.visibility=''")
+                self.assertIs(witness(), True)
+                self.assertEqual(posts, [], 'render check must never generate')
+            finally:
+                browser.close()
+
+
     def test_ru_es_reload_conflicting_dom_row_ids_rejected_in_chromium(self):
         """Both visible DOM ID attributes must agree with the durable history.
 

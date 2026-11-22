@@ -1296,7 +1296,11 @@ RENDERED_FOURROW_JS = r"""expected => {
       const ownsText=[...el.childNodes].some(child=>
         child.nodeType===3&&/\S/.test(child.nodeValue||''));
       // font-size:0 preserves DOM bytes but paints no RU/ES glyphs.
-      if(ownsText&&(!Number.isFinite(parseFloat(style.fontSize))||
+      // A child span can be transparent/hidden while its parent .body
+      // remains visible and innerText/textContent still match persisted text.
+      // Verify every text-owning descendant, not just bubble/body ancestors.
+      if(ownsText&&(!visible(el)||!el.getClientRects().length||
+         !Number.isFinite(parseFloat(style.fontSize))||
          parseFloat(style.fontSize)<=0||invisibleColor(style.color)||
          invisibleColor(style.webkitTextFillColor)))return false;
       for(const pseudo of ['::before','::after']){
