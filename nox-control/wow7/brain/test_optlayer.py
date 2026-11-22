@@ -8,7 +8,7 @@ import nox_core
 
 class St:
     intent, opts, council, advice, speaker, user_text = "question", {}, False, "", "owner", "расскажи подробно как устроена память ядра"
-    def block_full(self): return "память: A"
+    mem = {"core": "память: A"}
 
 
 class T(unittest.TestCase):
@@ -35,7 +35,7 @@ class T(unittest.TestCase):
         self.assertTrue(o.store(st, "Память ядра - это слои фактов и эпизодов."))
         h = o.lookup(st)
         self.assertTrue(h and h.exact)
-        st.block_full = lambda: "память: B"                  # другая память хода -> другой ключ -> промаха
+        st.mem = {"core": "память: B"}                  # другая память хода -> другой ключ -> промаха
         self.assertIsNone(o.lookup(st))
         st2 = St(); st2.opts = {"eval": True}
         self.assertIsNone(o.lookup(st2))

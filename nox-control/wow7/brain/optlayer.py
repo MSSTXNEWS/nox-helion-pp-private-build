@@ -206,7 +206,8 @@ class OptLayer:
     # --- кэш
     @staticmethod
     def _skey(st, soul=""):
-        mem = st.block_full() if hasattr(st, "block_full") else ""
+        m = getattr(st, "mem", None) or {}
+        mem = str(m.get("core") or "")          # стабильное ядро памяти; всплывшие эпизоды меняются каждый ход и ключ не должны ломать
         return SC.make_ctx_key(hashlib.sha256((soul or "").encode()).hexdigest()[:16], hashlib.sha256(mem.encode()).hexdigest()[:16], "", "nox")
 
     def cacheable(self, st):
