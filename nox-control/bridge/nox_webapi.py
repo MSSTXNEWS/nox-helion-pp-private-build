@@ -711,7 +711,7 @@ def install(app, B):
             _prune_chat_snapshots()
             if any(row.get("request_id") == rid and
                    row.get("exchange_id") == exchange_id and
-                   row.get("state") != "ADMITTED"
+                   row.get("event_seq", 0) > 0
                    for row in CHAT_SNAPSHOTS.values()):
                 return JSONResponse({"status": "HOLD", "reason": "CHAT_EXCHANGE_RECENTLY_USED",
                                      "retry_same_id": False, "snapshot_scope": "PROCESS_LOCAL",
