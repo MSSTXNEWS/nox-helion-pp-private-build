@@ -308,9 +308,12 @@ def compare_baseline(current, prior, approved_render_transition=None):
         try:
             if not isinstance(previous, dict) or not isinstance(measured, dict):
                 raise ValueError()
-            frames = previous['frames']
-            if frames != 90 or frames != measured['frames']:
-                raise ValueError()
+            # Frame receipts contain numeric JSON, never booleans or
+            # numeric-looking strings. float(True) would forge a 1ms p95.
+            for frame in (previous, measured):
+                if (type(frame.get('frames')) is not int or frame['frames'] != 90
+                        or type(frame.get('p95_ms')) not in (int, float)):
+                    raise ValueError()
             p95 = float(previous['p95_ms'])
             now_p95 = float(measured['p95_ms'])
             if not (math.isfinite(p95) and math.isfinite(now_p95)

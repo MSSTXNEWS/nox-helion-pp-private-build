@@ -341,6 +341,17 @@ class TestProbe(unittest.TestCase):
         missing['runs'].pop()
         with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_FRAME_COVERAGE'):
             compare_baseline(measured, missing)
+        # A forged True or numeric-looking string used to coerce into a
+        # legitimate p95; reject it on both sides of a six-mode comparison.
+        for field, bogus in (('p95_ms', True), ('p95_ms', '16.0'),
+                             ('p95_ms', None), ('frames', 90.0)):
+            for side in ('current', 'prior'):
+                forged = copy.deepcopy(baseline)
+                forged['runs'][0]['frame_time'][field] = bogus
+                with self.subTest(field=field, bogus=bogus, side=side), self.assertRaisesRegex(
+                        ValueError, 'HOLD_BASELINE_FRAME_INVALID'):
+                    compare_baseline(forged, baseline) if side == 'current' else compare_baseline(
+                        baseline, forged)
         broken = copy.deepcopy(baseline)
         broken['runs'][0]['frame_time']['p95_ms'] = float('nan')
         with self.assertRaisesRegex(ValueError, 'HOLD_BASELINE_FRAME_INVALID'):
