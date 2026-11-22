@@ -571,6 +571,53 @@ def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
             and rows[1].get('content') == first_answer)
 
 
+
+def presecond_firstturn_history_stable(before, after, first_prompt, first_answer, dialog_id):
+    """Revalidate first persisted RU turn immediately before Spanish POST.
+
+    Two valid individual snapshots can hide an intervening row rewrite or a
+    wholesale owner/session switch. Preserve exact durable IDs, literal UTF-8
+    text, and explicit metadata presence across both read-only owner GETs.
+    """
+    if (not firstturn_history_valid(before, first_prompt, first_answer, dialog_id)
+            or not firstturn_history_valid(after, first_prompt, first_answer, dialog_id)):
+        return False
+    earlier, current = before['messages'], after['messages']
+    original_ids = verified_two_turn_firstturn_ids(earlier)
+    if (original_ids is None
+            or verified_two_turn_firstturn_ids(current) != original_ids
+            or ('dialog_id' in before) != ('dialog_id' in after)):
+        return False
+    return all(
+        (field in old, old.get(field)) == (field in new, new.get(field))
+        for old, new in zip(earlier, current)
+        for field in ('dialog_id', 'session_id')
+    )
+
+
+async def presecond_owner_history_fence(context, base, owner_pin, page, title,
+                                        first_history, prompt, answer, dialog_id):
+    """Last read-only history+owner+visible dialog fence before POST admission.
+
+    No inference POST is made here. A rewritten first turn, redirected GET,
+    rotated owner cookie, or changed visible dialog must fail closed.
+    """
+    try:
+        url = (base + '/api/ui/memory/dialogs/history?dialog_id='
+               + urllib.parse.quote(dialog_id, safe='') + '&limit=6')
+        fresh = await json_response(await context.request.get(
+            url, max_redirects=0, timeout=6000))
+        if not presecond_firstturn_history_stable(
+                first_history, fresh, prompt, answer, dialog_id):
+            return False
+        if not await postreload_owner_session_recheck(context, base, owner_pin):
+            return False
+        return (urllib.parse.urlsplit(page.url).path == PAGE
+                and await page.evaluate(ACTIVE_QA_DIALOG_JS, title) is True)
+    except Exception:
+        return False
+
+
 def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, second_answer,
                             dialog_id=None):
     """Require four exact role/text turns; reject cross-dialog row metadata."""
@@ -1675,12 +1722,23 @@ async def browser_run(report, directory, available):
                         or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
                     raise RuntimeError('HOLD_MULTITURN_ACTIVE_DIALOG_CHANGED_BEFORE_SECOND_POST')
                 report['multiturn_presecond_active_dialog_verified']=True
-                second_permitted=True
                 if stop_present():
                     raise RuntimeError('HOLD_OWNER_STOP')
                 idle_slots()
                 await page.locator('#prompt').fill(second_prompt)
                 await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
+                # Screenshots, layout checks and composer waits can outlast the
+                # original two-row read. Never admit Spanish generation against
+                # a mutated history or a newly authenticated/selected dialog.
+                report['browser_stage']='QA_PRESECOND_HISTORY_OWNER_FENCE'
+                if not await presecond_owner_history_fence(
+                        context, base, owner_session_pin, page, title,
+                        history, prompt, answer, did):
+                    raise RuntimeError('HOLD_MULTITURN_PRESECOND_HISTORY_OWNER_DRIFT')
+                report['multiturn_presecond_fresh_history_verified']=True
+                if stop_present():
+                    raise RuntimeError('HOLD_OWNER_STOP')
+                second_permitted=True
                 report['browser_stage']='QA_SECOND_TURN_SEND'
                 second_started=time.monotonic()
                 await click_send(page,report,expected_before=1)
