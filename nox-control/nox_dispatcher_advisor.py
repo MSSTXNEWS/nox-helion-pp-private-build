@@ -7,6 +7,8 @@ import argparse
 import datetime as dt
 import json
 import math
+import os
+import tempfile
 from pathlib import Path
 
 
@@ -287,6 +289,33 @@ def _read_snapshot_json(path):
     return data
 
 
+def _write_report(snapshot_path, output_path, report):
+    """Write a complete advisor receipt or none; never replace its evidence."""
+    source = Path(snapshot_path)
+    path = Path(output_path)
+    if path.resolve() == source.resolve():
+        raise SystemExit("HOLD_OWNER_ADVICE_OUTPUT_COLLISION")
+    if path.is_symlink() or (path.exists() and not path.is_file()):
+        raise SystemExit("HOLD_OWNER_ADVICE_OUTPUT_UNSAFE")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pending = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf8", dir=path.parent,
+            prefix="." + path.name + ".", suffix=".tmp", delete=False
+        ) as handle:
+            pending = Path(handle.name)
+            handle.write(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        # A consumer sees either the previous complete JSON receipt or the
+        # new complete receipt. A failed writer leaves the old one intact.
+        os.replace(pending, path)
+    finally:
+        if pending is not None:
+            pending.unlink(missing_ok=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--snapshot", required=True)
@@ -295,9 +324,7 @@ def main():
     data = _read_snapshot_json(args.snapshot)
     report = {"schema_version":1,"observed_at":dt.datetime.now(dt.timezone.utc).isoformat(),
               "mode":"read_only", "advice": assess(data)}
-    path = Path(args.output)
-    path.parent.mkdir(parents=True,exist_ok=True)
-    path.write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf8")
+    _write_report(args.snapshot, args.output, report)
     print(json.dumps(report,ensure_ascii=False))
 
 if __name__ == "__main__":
