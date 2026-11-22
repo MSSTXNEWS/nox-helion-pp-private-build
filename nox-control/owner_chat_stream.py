@@ -297,6 +297,13 @@ async def _model_events(client, url, payload):
                 first_line=False
                 if line.startswith('\ufeff'):
                     line=line[1:]
+            # A provider [DONE] is a marker, not proof that the underlying
+            # HTTP response finished cleanly. A dropped socket or extra frames
+            # after it must not certify a successful browser/S03 final.
+            if complete:
+                if line:
+                    raise StreamFailure('HOLD_MODEL_SSE_AFTER_DONE')
+                continue
             if line:
                 # A legal stream may send keepalives, but an unbounded single
                 # record of comments/ids can otherwise starve chat indefinitely.
@@ -349,7 +356,7 @@ async def _model_events(client, url, payload):
                 raise StreamFailure('HOLD_MODEL_SSE_FRAME')
             if wire=='[DONE]':
                 complete=True
-                break
+                continue
             if len(wire.encode('utf-8','strict'))>300000:
                 raise StreamFailure('HOLD_MODEL_SSE_SIZE')
             try:
