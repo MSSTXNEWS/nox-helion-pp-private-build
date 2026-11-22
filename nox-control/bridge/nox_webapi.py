@@ -34,6 +34,21 @@ _lock_mini = None
 _cpu_prev = [None]
 
 
+def _unique_sse_object(pairs):
+    """Reject ambiguous JSON keys before SSE completion or S03 persistence."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate SSE JSON key")
+        result[key] = value
+    return result
+
+
+def _finite_sse_constant(value):
+    """NaN and Infinity are not valid JSON wire values."""
+    raise ValueError("non-finite SSE JSON constant")
+
+
 def _read(p):
     try:
         return open(p).read().strip()
@@ -702,7 +717,9 @@ def install(app, B):
                                 # A model can send [DONE] after a truncated finish or
                                 # an explicit SSE error. Neither is a completed answer.
                                 try:
-                                    event = json.loads(d)
+                                    event = json.loads(
+                                        d, object_pairs_hook=_unique_sse_object,
+                                        parse_constant=_finite_sse_constant)
                                 except (TypeError, ValueError):
                                     upstream_failure = "INVALID_SSE_JSON"
                                     break
@@ -710,7 +727,7 @@ def install(app, B):
                                     upstream_failure = "UPSTREAM_ERROR_EVENT"
                                     break
                                 choices = event.get("choices")
-                                if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+                                if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
                                     upstream_failure = "UPSTREAM_CHOICES_INVALID"
                                     break
                                 choice = choices[0]
