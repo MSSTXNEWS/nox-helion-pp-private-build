@@ -164,6 +164,40 @@ class SafeRepairTests(unittest.TestCase):
                     run.assert_not_called()
                 self.assertEqual(state.read_text(encoding="utf8"), raw)
 
+    def test_repair_state_open_is_bounded_and_never_follows_links(self):
+        # A valid JSON target reached via symlink must not authorize a repair.
+        # Huge files and FIFOs also HOLD before probing or invoking systemd.
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "state.json"
+            target = Path(root) / "external.json"
+            raw = '{"services":{"nox-dispatcher.service":{"failures":2,"attempts":[]}}}'
+            target.write_text(raw, encoding="utf8")
+            state.symlink_to(target)
+            with patch.object(healer, "alive") as alive, patch.object(
+                    healer.subprocess, "run") as run:
+                result = healer.repair_cycle(self.policy(Path(root) / "STOP"), state)
+                self.assertEqual(result[0]["action"], "state_invalid_hold")
+                alive.assert_not_called()
+                run.assert_not_called()
+            self.assertEqual(target.read_text(encoding="utf8"), raw)
+            state.unlink()
+            state.write_bytes(b" " * (healer.MAX_REPAIR_STATE_BYTES + 1))
+            with patch.object(healer, "alive") as alive, patch.object(
+                    healer.subprocess, "run") as run:
+                result = healer.repair_cycle(self.policy(Path(root) / "STOP"), state)
+                self.assertEqual(result[0]["action"], "state_invalid_hold")
+                alive.assert_not_called()
+                run.assert_not_called()
+            self.assertEqual(state.stat().st_size, healer.MAX_REPAIR_STATE_BYTES + 1)
+            state.unlink()
+            os.mkfifo(state)
+            with patch.object(healer, "alive") as alive, patch.object(
+                    healer.subprocess, "run") as run:
+                result = healer.repair_cycle(self.policy(Path(root) / "STOP"), state)
+                self.assertEqual(result[0]["action"], "state_invalid_hold")
+                alive.assert_not_called()
+                run.assert_not_called()
+
     def test_stop_blocks_restart(self):
         with tempfile.TemporaryDirectory() as t:
             stop=Path(t)/"STOP"
