@@ -134,7 +134,7 @@ class State:
 
     def cctx(self):
         return {"block": self.block_full(), "user_text": self.user_text, "intent": self.intent, "prev": self.prev,
-                "asked_status": self.intent == "telemetry_q", "advisors": list(self.advisors)}
+                "asked_status": self.intent == "telemetry_q", "advisors": list(self.advisors), "speaker": self.speaker}
 
 
 # ---------------------------------------------------------------- 1. Восприятие
@@ -585,8 +585,9 @@ class ConscienceExec(Exec):
 
     async def rewrite(self, st, text, findings):
         prev = [p[:80] for p in st.prev[-3:]]
-        sysm = ("Перепиши ответ NOX мессиру. Требования: по-русски, живо и прямо; светская реплика - 1-3 фразы; без цифр, телеметрии, статусов, списков, меню "
-                "(«Могу:», «Жду твой ввод»), без «как ИИ», без лести в начале; чувства только с причиной; не повторяй обороты прошлых ответов: %s. "
+        sysm = ("Перепиши ответ NOX Создателю. Обращайся на «вы», при прямом обращении используй «мессир»; отвечай по существу и с проверяемыми фактами. "
+                "Не используй пафос, лесть, самоуничижение, заготовленные приветствия и шаблоны; не соглашайся без основания; чувства называй только при подтверждённой причине. "
+                "Короткий ответ давай на короткую реплику, для развёрнутого вопроса дай достаточное объяснение. Не повторяй обороты прошлых ответов: %s. "
                 "Нарушения: %s. Выведи только текст ответа." % ("; ".join(prev) or "-", ", ".join(sorted({f.code for f in findings}))))
         use_glm = st.path == "deep" and st.glm_state == "up" and self.core.cfg.rewrite_glm
         leaky = any(f.code in ("inner_echo", "unsolicited_telemetry", "template") for f in findings)
@@ -600,6 +601,7 @@ class ConscienceExec(Exec):
         cons, ctx = self.core.conscience, st.cctx()
         rec = st.turn.trace["conscience"]
         fs = cons.review(text, ctx) if text.strip() else [C.Finding("empty", "пустой ответ")]
+        regenerate_empty = False
         rec["findings"] = [f.to_dict() for f in fs]
         if not fs:
             return cons.clamp(text, ctx)
@@ -609,10 +611,11 @@ class ConscienceExec(Exec):
         if text.strip():
             text, done = cons.repair(text, fs, ctx)
             rec["actions"] += done
+            regenerate_empty = not text.strip() and any(a in done for a in ("strip_banned_opener", "strip_flattery_pathos", "strip_unreasoned_agreement"))
             fs = cons.review(text, ctx) if text.strip() else [C.Finding("empty", "после ремонта пусто")]
         if fs:
             new = ""
-            if any(f.code != "empty" for f in fs):
+            if any(f.code != "empty" for f in fs) or regenerate_empty:
                 try:
                     new = await self.rewrite(st, text, fs)
                     new, _ = C.strip_service(re.sub(r"<think>.*?</think>", "", new or "", flags=re.S).strip())
@@ -634,8 +637,8 @@ class ConscienceExec(Exec):
         st.turn.emit_meta("phase", {"phase": "conscience"})
         draft = st.draft.strip()
         if st.streamed:
-            fs = self.core.conscience.review(draft, st.cctx())
-            fs = [f for f in fs if f.code in ("repeat_turns", "feeling_no_cause", "inner_echo", "unsolicited_telemetry", "template", "as_ai", "service_lines", "flattery_open", "advisor_copy")
+            fs = self.core.conscience.review(draft, st.cctx()) if draft.strip() else [C.Finding("empty", "пустой поток")]
+            fs = [f for f in fs if f.code in ("empty", "repeat_turns", "feeling_no_cause", "inner_echo", "unsolicited_telemetry", "template", "as_ai", "service_lines", "flattery_open", "banned_opener", "flattery_pathos", "address_vy", "agree_without_reason", "advisor_copy")
                   or f.code.startswith("v0_")]
             if not fs or self.core.conscience.mode == "shadow":
                 st.turn.trace["conscience"]["findings"] = [f.to_dict() for f in fs]
