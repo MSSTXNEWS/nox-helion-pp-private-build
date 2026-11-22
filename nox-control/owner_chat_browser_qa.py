@@ -321,6 +321,7 @@ def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, f
         return False
     pinned_ids = None
     pinned_session = None
+    pinned_root_session = None
     for history in (before, after):
         if 'dialog_id' in history and history['dialog_id'] != dialog_id:
             return False
@@ -331,6 +332,7 @@ def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, f
                        for row in rows)
                 or not firstturn_prefix_identity_valid(firstturn_ids, rows)
                 or not consistent_explicit_row_session_ids(rows)
+                or not root_history_session_valid(history, rows)
                 or multiturn_transcript_sha256(rows) != transcript_sha):
             return False
         ids = tuple(row.get('message_id') for row in rows)
@@ -347,6 +349,13 @@ def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, f
         session_pin = ('session_id' in rows[0], rows[0].get('session_id'))
         if pinned_session is not None and session_pin != pinned_session:
             return False
+        # The envelope owner session is independent provenance. A server can
+        # rotate the root session without changing any row ID/text/session.
+        # Do not certify a postquiet/reload snapshot across that rotation.
+        root_pin = ('session_id' in history, history.get('session_id'))
+        if pinned_root_session is not None and root_pin != pinned_root_session:
+            return False
+        pinned_root_session = root_pin
         pinned_session = session_pin
         pinned_ids = ids
     return pinned_ids is not None
