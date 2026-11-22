@@ -1446,6 +1446,91 @@ class TestProbe(unittest.TestCase):
 
 
 
+    def test_cancel_from_accepted_idle_does_not_rewrite_stopped(self):
+        """Real Chromium + synthetic native; accepted DONE stays idle."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+                    async def fixture(route):
+                        await route.fulfill(status=200, content_type='text/html',
+                                            body='<html>B3 idle terminal</html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                    await page.goto(
+                        'http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                        window.NOX_NATIVE_OWNER=true;
+                        window.__phases=[];window.__posts=0;
+                        window.__reads=0;window.__cancels=0;
+                        window.addEventListener('nox:native-phase',e=>{
+                            window.__phases.push(e.detail.phase);
+                            if(e.detail.phase==='idle'&&window.__reader){
+                                window.__cancels++;
+                                window.__reader.cancel('CLIENT_SEES_ACCEPTED_IDLE');
+                            }
+                        });
+                        window.fetch=async (url,init)=>{
+                            if(url==='/api/nox/chat/stream'){
+                                window.__posts++;
+                                const d=JSON.parse(init.body);
+                                const frames=[
+                                    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                    {type:'start',model:'fixed-native-fixture'},
+                                    {type:'delta',text:'Готово 🧠'},
+                                    {type:'done',saved:true,s03_integrated:true,
+                                     dialog_id:d.dialog_id,exchange_id:'b3-idle-accepted-1'}
+                                ];
+                                return new Response(
+                                    frames.map(JSON.stringify).join('\\n')+'\\n');
+                            }
+                            if(String(url).startsWith(
+                                '/api/ui/memory/dialogs/history?')){
+                                window.__reads++;
+                                return new Response(JSON.stringify({
+                                    status:'READY',dialog_id:'a'.repeat(32),
+                                    messages:[
+                                        {role:'user',content:'Проверка',
+                                         exchange_id:'b3-idle-accepted-1'},
+                                        {role:'assistant',content:'Готово 🧠',
+                                         exchange_id:'b3-idle-accepted-1'}
+                                    ]
+                                }),{status:200});
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE:'+url);
+                        };
+                    }""")
+                    bridge=(pathlib.Path(__file__).parent /
+                            'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    actual=await page.evaluate("""async () => {
+                        const r=await fetch('/api/nox/chat',{
+                            method:'POST',body:JSON.stringify({
+                                dialog_id:'a'.repeat(32),
+                                request_id:'b3-accepted-idle-cancel',
+                                message:'Проверка'
+                            })
+                        });
+                        window.__reader=r.body.getReader();
+                        await window.__reader.read();
+                        for(let n=0;n<100&&!window.__cancels;n++)
+                            await new Promise(resolve=>setTimeout(resolve,3));
+                        return {phases:window.__phases,posts:window.__posts,
+                            reads:window.__reads,cancels:window.__cancels};
+                    }""")
+                    self.assertEqual(actual['posts'],1)
+                    self.assertEqual(actual['reads'],1)
+                    self.assertEqual(actual['cancels'],1)
+                    self.assertEqual(actual['phases'],
+                                     ['waiting','speaking','idle'])
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
     def test_native_abort_signal_terminal_phase_source_contract(self):
         """Preserve SSE STOP receipt while keeping browser phase stopped."""
         bridge = (pathlib.Path(__file__).parent /
