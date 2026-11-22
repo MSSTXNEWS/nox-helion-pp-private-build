@@ -600,7 +600,9 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
           {role:'user',exchange_id:'v157-receipt-001',content:prompt},{role:'assistant',exchange_id:'v157-receipt-001',content:answer}]});
       if(u.pathname==='/api/nox/chat/stream')
         return new Response(new ReadableStream({start(c){
-          c.enqueue(new TextEncoder().encode(payload));c.close();
+          for(const part of (Array.isArray(payload)?payload:[payload]))
+            c.enqueue(new TextEncoder().encode(part));
+          c.close();
         }}),{headers:{'content-type':'application/x-ndjson'}});
       return new Response('NO_MATCH',{status:404});
     };
@@ -626,6 +628,17 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
   assert.equal(bad.body.history_persisted,false,'never claim persisted on invalid protocol');
   assert(!bad.called.includes('/api/ui/memory/dialogs/history'),
     'reject before accepting an invalid terminal receipt');
+  // A second NDJSON chunk after a verified-looking done was ignored when
+  // consume() stopped reading immediately. No S03 READY before native EOF.
+  for(const trailing of [unexpected,
+      JSON.stringify({type:'delta',text:'surprise-after-done'})+'\\n']){
+    const split=await attempt([start+delta+done,trailing]);
+    assert.equal(split.status,503,'post-done chunk must fail closed');
+    assert.match(split.body.error,/HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE/);
+    assert.equal(split.body.history_persisted,false);
+    assert(!split.called.includes('/api/ui/memory/dialogs/history'),
+      'separate-chunk trailer cannot certify S03');
+  }
 });
 
 
