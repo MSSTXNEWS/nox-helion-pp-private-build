@@ -437,11 +437,13 @@ def history_matches_turns(messages, turns, dialog_id=None):
     # History JSON is NOT independent canonical S03 writer/readback evidence.
     # When the API provides row IDs, repeated/invalid IDs must not pass as
     # distinct user/assistant turns; legacy untagged history stays compatible.
+    # Check every row returned by this bounded owner-history GET, not only
+    # the expected tail: an older row may reuse a claimed durable S03 ID.
     # An API may expose id/message_id/s03_id as aliases for a durable row.
     # Same-row aliases are fine, but an ID on two different rows cannot
     # establish that these are distinct user and assistant messages.
     seen_row_ids = {}
-    for row_index, row in enumerate(tail):
+    for row_index, row in enumerate(messages):
         if not isinstance(row, dict):
             return False
         for key in ('id', 'message_id', 's03_id'):

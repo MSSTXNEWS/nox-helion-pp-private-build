@@ -3107,5 +3107,39 @@ class ProbeTests(unittest.TestCase):
         self.assertIn('complete_runtime_asset_body(asset, sample)', source)
 
 
+    def test_owner_history_row_ids_unique_across_complete_read_window(self):
+        """Earlier owner-history rows cannot reuse IDs from six accepted rows."""
+        did = 'f' * 32
+        turns = [('alpha', 'one'), ('beta', 'two'), ('gamma', 'three')]
+        older = [
+            {'role': 'user', 'content': 'old-question', 'id': 'old-u'},
+            {'role': 'assistant', 'content': 'old-answer', 'message_id': 'old-a'},
+        ]
+        tail = []
+        for index, (prompt, answer) in enumerate(turns):
+            tail.extend([
+                {'role': 'user', 'content': prompt, 'id': 'u' + str(index)},
+                {'role': 'assistant', 'content': answer, 's03_id': 'a' + str(index)},
+            ])
+        history = {'dialog_id': did, 'messages': older + tail}
+        self.assertTrue(probe.scoped_history_matches_turns(history, turns, did))
+        self.assertTrue(probe.history_matches_turns(history['messages'], turns))
+        for index, key, reused_id in (
+                (0, 's03_id', 'a2'),
+                (1, 'id', 'u1'),
+                (0, 'message_id', 'a0')):
+            changed = [dict(row) for row in history['messages']]
+            changed[index][key] = reused_id
+            with self.subTest(older_row=index, alias=key):
+                self.assertFalse(probe.scoped_history_matches_turns(
+                    {'dialog_id': did, 'messages': changed}, turns, did))
+                self.assertFalse(probe.history_matches_turns(changed, turns))
+        legacy = [dict(row) for row in history['messages']]
+        legacy[0].pop('id')
+        legacy[1].pop('message_id')
+        self.assertTrue(probe.scoped_history_matches_turns(
+            {'dialog_id': did, 'messages': legacy}, turns, did))
+
+
 if __name__ == '__main__':
     unittest.main()
