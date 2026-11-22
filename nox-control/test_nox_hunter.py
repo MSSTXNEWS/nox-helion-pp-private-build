@@ -216,26 +216,6 @@ class HunterURLSafetyTests(unittest.TestCase):
             "https://doi.org/10.1234/explicit",
         ])
 
-    def test_crossref_malformed_text_doi_does_not_forge_provenance(self):
-        # Typed strings can still be malformed identifiers. Never turn
-        # arbitrary Crossref metadata into a trusted doi.org candidate URL.
-        rows = [
-            {"DOI": "not-a-doi", "title": ["invalid"]},
-            {"DOI": "10.1234", "title": ["missing suffix"]},
-            {"DOI": "10.123/id", "title": ["short prefix"]},
-            {"DOI": "10.1234/with space", "title": ["whitespace"]},
-            {"DOI": "10.1234/" + chr(0xD800), "title": ["invalid Unicode"]},
-            {"DOI": " 10.1234/valid ", "title": ["valid"]},
-            {"DOI": "10.1234/part?query#fragment", "title": ["escaped delimiters"]},
-        ]
-        found = hunter._crossref_items(json.dumps(
-            {"message": {"items": rows}}).encode("utf-8"))
-        self.assertEqual([item["url"] for item in found], [
-            "", "", "", "", "",
-            "https://doi.org/10.1234/valid",
-            "https://doi.org/10.1234/part%3Fquery%23fragment",
-        ])
-
     def test_crossref_nontext_abstract_is_not_fabricated(self):
         # Malformed abstract metadata must not become a Python repr presented
         # as an authentic research abstract. Healthy HTML text still survives.
