@@ -561,7 +561,7 @@ class FactReceiptTest(unittest.TestCase):
         ):
             with self.subTest(verdict_type=type(verdict).__name__, expected_ok=expected_ok):
                 writes.clear()
-                with mock.patch.object(W, "W", Thinking(verdict)), \\
+                with mock.patch.object(W, "W", Thinking(verdict)), \
                      mock.patch.dict(sys.modules, {"s03_memory": memory}):
                     frames = asyncio.run(collect())
                 terminal = frames[-1]
