@@ -10,7 +10,9 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import re
+import stat
 import sys
 import time
 import urllib.request
@@ -18,6 +20,43 @@ from urllib.error import HTTPError, URLError
 
 URL = "http://127.0.0.1:8091/api/chat"
 PROMPT = "Объясни в четырёх предложениях, как кэш промпта улучшает скорость ответа NOX."
+# The WEB guard requires X-NOX-Token when this existing owner file is present.
+# Credentials never belong in URLs, CLI arguments or measurement receipts.
+OWNER_WEB_TOKEN_FILE = "/root/nox/state/web_token"
+MAX_OWNER_WEB_TOKEN_BYTES = 4096
+
+
+def _owner_web_token():
+    """Read the private local WEB token once, before any benchmark POST.
+
+    Missing token file permits the WEB guard's unauthenticated local path.
+    Unreadable, symlinked, oversized or invalid token data must fail closed.
+    """
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NONBLOCK", 0)
+    if not hasattr(os, "O_NOFOLLOW"):
+        raise ValueError("HOLD_WEB_TOKEN_NOFOLLOW_UNAVAILABLE")
+    try:
+        fd = os.open(OWNER_WEB_TOKEN_FILE, flags | os.O_NOFOLLOW)
+    except FileNotFoundError:
+        return None
+    except OSError:
+        raise ValueError("HOLD_WEB_TOKEN_UNVERIFIED") from None
+    try:
+        meta = os.fstat(fd)
+        if not stat.S_ISREG(meta.st_mode) or meta.st_size > MAX_OWNER_WEB_TOKEN_BYTES:
+            raise ValueError("HOLD_WEB_TOKEN_UNVERIFIED")
+        raw = os.read(fd, MAX_OWNER_WEB_TOKEN_BYTES + 1)
+        if len(raw) > MAX_OWNER_WEB_TOKEN_BYTES:
+            raise ValueError("HOLD_WEB_TOKEN_UNVERIFIED")
+        token = raw.decode("ascii", "strict").strip()
+        if token and any(not 33 <= ord(ch) <= 126 for ch in token):
+            raise ValueError("HOLD_WEB_TOKEN_UNVERIFIED")
+        return token or None
+    except (OSError, UnicodeError):
+        raise ValueError("HOLD_WEB_TOKEN_UNVERIFIED") from None
+    finally:
+        os.close(fd)
+
 
 
 class UnsafeEphemeralWriteReceipt(ValueError):
@@ -31,13 +70,16 @@ def _percentile(values, percentile):
     return ordered[max(0, math.ceil(percentile * len(ordered)) - 1)]
 
 
-def _sample(index, clock=time.perf_counter, opener=urllib.request.urlopen):
+def _sample(index, clock=time.perf_counter, opener=urllib.request.urlopen, auth_token=None):
     request_id = f"bench2a05-{index}-{time.monotonic_ns()}"
     data = {"request_id": request_id, "ephemeral": True, "use_memory": True,
             "messages": [{"role": "user", "content": PROMPT}],
             "options": {"num_predict": 200}, "mode": "auto"}
+    headers = {"Content-Type": "application/json", "Accept": "application/x-ndjson"}
+    if auth_token:
+        headers["X-NOX-Token"] = auth_token
     req = urllib.request.Request(URL, data=json.dumps(data, ensure_ascii=False).encode("utf-8"),
-                                 headers={"Content-Type": "application/json", "Accept": "application/x-ndjson"})
+                                 headers=headers)
     started = clock()
     first = None
     chunks = []
@@ -129,6 +171,15 @@ def main(argv=None):
             not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", a.s03_revision) or
             not 20 <= a.samples <= 200):
         ap.error("owner pins must be valid; samples 20..200 for comparable p50/p95")
+    # Preflight local WEB authentication BEFORE sending an ephemeral model POST.
+    # Never publish the token, including on a failed or incomplete measurement.
+    try:
+        auth_token = _owner_web_token()
+    except ValueError:
+        print(json.dumps({"status": "HOLD_WEB_TOKEN_UNVERIFIED",
+                          "original_task_id": "2A05", "planned": a.samples,
+                          "completed": 0, "native_acceptance": False}, sort_keys=True))
+        return 2
     observations = []
     errors = []
     unsafe_write = False
@@ -138,7 +189,7 @@ def main(argv=None):
     ambiguous_outcome = False
     for index in range(a.samples):
         try:
-            observations.append(_sample(index))
+            observations.append(_sample(index, auth_token=auth_token))
         except UnsafeEphemeralWriteReceipt:
             errors.append({"sample": index + 1, "error": "UnsafeEphemeralWriteReceipt",
                            "reason": "BENCH_EPHEMERAL_WRITE_RISK"})
