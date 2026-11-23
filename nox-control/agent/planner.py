@@ -115,6 +115,10 @@ class Planner:
             t = self._norm(r, "kanban", {"queued": "pending", "pending": "pending"})
             if t: items.append(t)
         items += self._calendar_tasks(now)
+        # Existing inbox/kanban may refer to the same TaskID. Rank candidates
+        # before ID deduplication so an earlier low-priority copy cannot hide
+        # the higher-priority one. This does not create or claim any native job.
+        items.sort(key=lambda t: (t["priority"], t["due"] if t["due"] is not None else 9e18, t["ts"]))
         seen, out = set(), []
         for t in items:
             if t["id"] in seen: continue
