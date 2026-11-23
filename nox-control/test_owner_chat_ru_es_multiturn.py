@@ -4421,5 +4421,60 @@ async function check(chunks, status=200) {
         self.assertIn("canonical_s03_verified=False", inspect.getsource(browser_run))
 
 
+    def test_pinned_s03_third_turn_requires_independent_prior_prefix(self):
+        prior = [dict(row, message_id=f"row-{i}", session_id="owner-session",
+                      dialog_id=DIALOG)
+                 for i, row in enumerate(rows("Sigue en español 🪐"), 1)]
+        current = [dict(row) for row in prior] + [
+            dict(role="user", content="¿Y ahora qué recuerdas? 🪐",
+                 message_id="row-5", session_id="owner-session", dialog_id=DIALOG),
+            dict(role="assistant", content="Помню весь диалог. Sí.",
+                 message_id="row-6", session_id="owner-session", dialog_id=DIALOG)]
+        def wire(obj):
+            return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
+        def pin(raw):
+            return hashlib.sha256(raw).hexdigest()
+        def witnesses(history, sequence=3):
+            full = pin(json.dumps(
+                [{"role": x["role"], "content": x["content"]} for x in history],
+                ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode())
+            ids = pin(wire([x["message_id"] for x in history]))
+            common = dict(source="canonical_s03", event_id="evt-03",
+                          turn_id="turn-03", sequence=sequence, dialog_id=DIALOG,
+                          session_id="owner-session", full_transcript_sha256=full,
+                          message_ids_sha256=ids)
+            return (wire(dict(common, verified=True, durable=True)),
+                    wire(dict(common, independent=True, messages=history,
+                              full_answer_sha256=pin(history[-1]["content"].encode()))))
+        def check(history=current, old=prior, sequence=3, receipt_sequence=3):
+            w, r = witnesses(history, receipt_sequence)
+            return canonical_s03_pinned_evidence_valid(
+                w, r, pin(w), pin(r), DIALOG, history,
+                expected_session_id="owner-session", expected_sequence=sequence,
+                expected_prior_messages=old)
+        self.assertTrue(check())
+        self.assertFalse(check(old=None))
+        self.assertFalse(check(old=prior[:2]))
+        self.assertFalse(check(history=current[2:]))
+        self.assertFalse(check(sequence=2))
+        self.assertFalse(check(sequence=True))
+        self.assertFalse(check(receipt_sequence=2))
+        replaced = [dict(x) for x in current]
+        replaced[1]["content"] = "Rewritten prior answer"
+        self.assertFalse(check(history=replaced))
+        replaced = [dict(x) for x in current]
+        replaced[0]["message_id"] = "replacement-row"
+        self.assertFalse(check(history=replaced))
+        duplicate = [dict(x) for x in current]
+        duplicate[-1]["message_id"] = prior[0]["message_id"]
+        self.assertFalse(check(history=duplicate))
+        foreign = [dict(x) for x in current]
+        foreign[-1]["dialog_id"] = "foreign-dialog"
+        self.assertFalse(check(history=foreign))
+        self.assertIsNone(multiturn_transcript_sha256(current))
+        self.assertIsNotNone(multiturn_transcript_sha256(current, expected_sequence=3))
+        self.assertIn("canonical_s03_verified=False", inspect.getsource(browser_run))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -842,13 +842,15 @@ def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, sec
                for row, (role, content) in zip(rows, expected))
 
 
-def multiturn_transcript_sha256(rows):
-    """Fingerprint all four full UTF-8 browser-history messages, not S03 proof.
+def multiturn_transcript_sha256(rows, *, expected_sequence=2):
+    """Fingerprint full UTF-8 browser-history messages, not S03 proof.
 
     Canonical writer provenance still requires a separate trusted receipt
     and independent readback. Never truncate or normalize message content.
     """
-    roles = ('user', 'assistant', 'user', 'assistant')
+    if type(expected_sequence) is not int or expected_sequence not in (2, 3):
+        return None
+    roles = ('user', 'assistant') * expected_sequence
     if not isinstance(rows, list) or len(rows) != len(roles):
         return None
     if any(not isinstance(row, dict) or row.get('role') != role
@@ -876,8 +878,8 @@ def multiturn_transcript_sha256(rows):
 
 
 def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, expected_messages,
-                              require_full_transcript_pin=False):
-    """Match independent S03 witnesses; B5 two-turn acceptance must require four-row pins.
+                              require_full_transcript_pin=False, *, expected_sequence=2):
+    """Match independent S03 witnesses; strict B5 requires full transcript pins.
 
     The legacy A1 source contract does not include full_transcript_sha256.
     Preserve that source-only compatibility, never treat it as a strict
@@ -886,13 +888,16 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     # A single native chat exchange is not a two-turn continuity witness.
     # Reject malformed transcript structure before evaluating receipt metadata:
     # a matching final-answer hash alone does not establish four ordered turns.
-    if (not isinstance(dialog_id, str) or not dialog_id.strip()
-            or not isinstance(expected_messages, list) or len(expected_messages) != 4):
+    if (type(expected_sequence) is not int or expected_sequence not in (2, 3)
+            or (expected_sequence == 3 and require_full_transcript_pin is not True)
+            or not isinstance(dialog_id, str) or not dialog_id.strip()
+            or not isinstance(expected_messages, list)
+            or len(expected_messages) != 2 * expected_sequence):
         return False
     if any(not isinstance(row, dict) or row.get('role') != role
            or not isinstance(row.get('content'), str)
            for row, role in zip(expected_messages,
-                                ('user', 'assistant', 'user', 'assistant'))):
+                                ('user', 'assistant') * expected_sequence)):
         return False
     # A witness scoped to this dialog cannot legitimize a foreign session's
     # individual S03 rows, even when all four role/text values are identical.
@@ -907,7 +912,8 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
         row_dialog_presence = ['dialog_id' in row for row in expected_messages]
         if any(row_dialog_presence) and not all(row_dialog_presence):
             return False
-    transcript_sha = multiturn_transcript_sha256(expected_messages)
+    transcript_sha = multiturn_transcript_sha256(
+        expected_messages, expected_sequence=expected_sequence)
     if transcript_sha is None:
         return False
     # Text/digest equality alone cannot establish four distinct persisted S03
@@ -987,7 +993,7 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
             or writer_receipt.get('durable') is not True
             or not isinstance(event_id, str) or not event_id.strip()
             or not isinstance(turn_id, str) or not turn_id.strip()
-            or type(sequence) is not int or sequence != 2
+            or type(sequence) is not int or sequence != expected_sequence
             or writer_receipt.get('dialog_id') != dialog_id):
         return False
     if (independent_readback.get('source') != 'canonical_s03'
@@ -1756,22 +1762,26 @@ async def owner_history_json_response(response):
 def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
                                         writer_sha256, readback_sha256,
                                         dialog_id, expected_messages, *,
-                                        expected_session_id):
-    """Verify exact immutable bytes before the strict four-row S03 contract.
+                                        expected_session_id, expected_sequence=2,
+                                        expected_prior_messages=None):
+    """Verify immutable bytes for the strict two-/three-turn S03 contract.
 
     The caller MUST obtain both expected hashes independently from the
     authorized owner/immutable-verifier path, not from the candidate files.
     The expected session ID must also come from authenticated owner context,
     independently of the candidate receipts and transcript.
+    For turn three the caller must independently obtain the prior four
+    authenticated rows before the next request, not from either new witness.
     This pure adapter cannot establish that authority or native admission.
     It never reads S03, accepts a browser history as a writer, or issues POST.
     """
-    if (not isinstance(expected_session_id, str)
+    if (type(expected_sequence) is not int or expected_sequence not in (2, 3)
+            or not isinstance(expected_session_id, str)
             or not expected_session_id.strip()
             or expected_session_id != expected_session_id.strip()
             or not expected_session_id.isprintable()
             or not isinstance(expected_messages, list)
-            or len(expected_messages) != 4
+            or len(expected_messages) != 2 * expected_sequence
             or any(not isinstance(row, dict) or
                    row.get('session_id') != expected_session_id
                    for row in expected_messages)
@@ -1785,6 +1795,14 @@ def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
             or digest(writer_raw) != writer_sha256
             or digest(readback_raw) != readback_sha256):
         return False
+    if expected_sequence == 3:
+        if (not isinstance(expected_prior_messages, list)
+                or len(expected_prior_messages) != 4
+                or expected_messages[:4] != expected_prior_messages
+                or any(row.get('dialog_id') != dialog_id for row in expected_messages)):
+            return False
+    elif expected_prior_messages is not None:
+        return False
     try:
         writer = strict_owner_json_bytes(writer_raw)
         readback = strict_owner_json_bytes(readback_raw)
@@ -1794,7 +1812,7 @@ def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
             return False
         return canonical_s03_proof_valid(
             writer, readback, dialog_id, expected_messages,
-            require_full_transcript_pin=True)
+            require_full_transcript_pin=True, expected_sequence=expected_sequence)
     except (RuntimeError, ValueError, TypeError, UnicodeError, RecursionError):
         return False
 
