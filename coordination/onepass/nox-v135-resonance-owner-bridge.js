@@ -6,6 +6,7 @@ window.__NOX_V135_OWNER_RESONANCE)return;
 window.__NOX_V135_OWNER_RESONANCE='OWNER_NATIVE_ONLY';
 const F=window.fetch.bind(window);
 const enc=new TextEncoder();
+let segmenter;
 const ID=/^[a-f0-9]{32}$/;
 const verifiedChain=new Map();
 const activeDialogs=new Set();
@@ -228,12 +229,12 @@ function sseChat(data,signal){
     claimedId=claimDialog(id);
     event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
      answer_source:'NATIVE_PENDING',model_identity_verified:false});
-    const upstream=await nativePost('/api/nox/chat/stream',{
+const upstream=await nativePost('/api/nox/chat/stream',{
      message:data.message,dialog_id:id,task:'general',history:[]
     },nativeSignal);
-    const segmenter=Intl.Segmenter?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
-    let trailing='';
-    const emitPieces=async t=>{
+    segmenter??=Intl.Segmenter?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
+let trailing='';
+const emitPieces=async t=>{
      if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
      if(t)event({type:'token',t});
     };

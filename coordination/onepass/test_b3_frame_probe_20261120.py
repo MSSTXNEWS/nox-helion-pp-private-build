@@ -2734,5 +2734,83 @@ class TestProbe(unittest.TestCase):
                     await browser.close()
         asyncio.run(run())
 
+
+    def test_r43_segmenter_constructed_once_for_two_turns(self):
+        """Synthetic Chromium two-turn stream: shared grapheme segmenter, no live serving."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+                    async def fixture(route):
+                        await route.fulfill(status=200, content_type='text/html',
+                                            body='<html>R43 segmenter fixture</html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                    await page.goto('http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                      window.NOX_NATIVE_OWNER=true;
+                      const NativeSegmenter=Intl.Segmenter;
+                      window.__segmenterCalls=0;
+                      Intl.Segmenter=function(...args){
+                        window.__segmenterCalls++;
+                        return new NativeSegmenter(...args);
+                      };
+                      window.__posts=0;window.__hist=0;window.__rows=[];
+                      const id='a'.repeat(32);
+                      window.fetch=async path=>{
+                        if(path==='/api/nox/chat/stream'){
+                          const n=++window.__posts,ex='r43-exchange-'+n;
+                          window.__rows.push(
+                            {role:'user',content:'turn '+n,exchange_id:ex},
+                            {role:'assistant',content:'response '+n,exchange_id:ex}
+                          );
+                          return new Response([
+                            {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                            {type:'start',model:'GLM-5.3-Flash'},
+                            {type:'delta',text:'response '+n},
+                            {type:'done',saved:true,s03_integrated:true,
+                             dialog_id:id,exchange_id:ex}
+                          ].map(JSON.stringify).join('\\n')+'\\n');
+                        }
+                        if(String(path).startsWith('/api/ui/memory/dialogs/history?')){
+                          window.__hist++;
+                          return new Response(JSON.stringify({
+                            status:'READY',dialog_id:id,messages:window.__rows
+                          }));
+                        }
+                        throw Error('UNEXPECTED_NATIVE_ROUTE '+path);
+                      };
+                    }""")
+                    bridge=(pathlib.Path(__file__).parent /
+                            'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    actual=await page.evaluate("""async () => {
+                      const turns=[];
+                      for(let n=1;n<=2;n++){
+                        const r=await fetch('/api/nox/chat',{method:'POST',
+                          body:JSON.stringify({dialog_id:'a'.repeat(32),
+                            request_id:'r43-'+n,message:'turn '+n})});
+                        const events=(await r.text()).split('\\n\\n')
+                          .filter(Boolean).map(s=>JSON.parse(s.slice(6)));
+                        turns.push({done:events.filter(e=>e.type==='done').length,
+                          errors:events.filter(e=>e.type==='error'),
+                          answer:events.filter(e=>e.type==='token').map(e=>e.t).join('')});
+                      }
+                      return {turns,posts:window.__posts,hist:window.__hist,
+                        segmenters:window.__segmenterCalls};
+                    }""")
+                    self.assertEqual(actual['posts'],2)
+                    self.assertEqual(actual['hist'],2)
+                    self.assertEqual(actual['segmenters'],1)
+                    self.assertEqual(actual['turns'],[
+                        {'done':1,'errors':[],'answer':'response 1'},
+                        {'done':1,'errors':[],'answer':'response 2'}])
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
 if __name__ == '__main__':
     unittest.main()
