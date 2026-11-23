@@ -548,6 +548,11 @@ async def chat_stream(req: Request):
         return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_UNICODE"}, status_code=400)
     if not any(m["role"] == "user" and m["content"].strip() for m in messages):
         return JSONResponse({"status": "HOLD", "reason": "CHAT_MISSING_USER"}, status_code=400)
+    # A completed assistant tail is not a new user turn: replaying the prior
+    # user prompt would create a duplicate generation and S03 write attempt.
+    # Do not trim or rewrite valid history; reject only an invalid final turn.
+    if messages[-1]["role"] != "user" or not messages[-1]["content"].strip():
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_LAST_USER_REQUIRED"}, status_code=400)
     if CH is not None: CH.mark_chat()
     return StreamingResponse(stream_chat(messages), media_type="text/event-stream", headers={"Cache-Control": "private, no-store, max-age=0", "X-Accel-Buffering": "no"})
 
