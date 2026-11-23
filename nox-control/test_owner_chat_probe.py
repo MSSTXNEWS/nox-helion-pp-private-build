@@ -3513,7 +3513,7 @@ class ProbeTests(unittest.TestCase):
                     with patch.object(probe, 'request', return_value=response):
                         with patch.object(probe, 'bounded_stream_frames') as parser:
                             with self.assertRaisesRegex(
-                                    RuntimeError, '^HOLD_STREAM_CACHED_REPLAY):
+                                    RuntimeError, '^HOLD_STREAM_CACHED_REPLAY$'):
                                 probe.consume_turn('client', 'offline probe', did)
                             parser.assert_not_called()
                 self.assertTrue(response.closed)
