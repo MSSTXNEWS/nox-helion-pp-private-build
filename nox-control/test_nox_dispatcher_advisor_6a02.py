@@ -131,6 +131,32 @@ class NativeRefillSourceGateTests(unittest.TestCase):
         self.assertIn("NO_UNVERIFIED_TUNING",
                       codes(s, lambda exact: exact is s))
 
+    def test_exhausted_census_cannot_hide_started_or_active_worker(self):
+        # An old catalog-exhausted tag cannot coexist with a live cursor
+        # or already-started native work and produce a false clean receipt.
+        for jobs_started, current_task in ((1, None), (0, "6A02")):
+            with self.subTest(jobs_started=jobs_started, current_task=current_task):
+                s = snapshot()
+                s["native_queue"].update(
+                    jobs_started=jobs_started,
+                    workers=[{"state": "RUNNING", "current_task": current_task}],
+                    owner_evidence_age_sec=0,
+                    owner_lease_cas_verified=True,
+                    immutable_task_source_verified=True,
+                )
+                observed = codes(s, lambda exact: exact is s)
+                self.assertIn("NATIVE_QUEUE_UNVERIFIED", observed)
+                self.assertNotIn("NO_UNVERIFIED_TUNING", observed)
+                self.assertNotIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED", observed)
+        s = snapshot()
+        s["native_queue"].update(
+            owner_evidence_age_sec=0,
+            owner_lease_cas_verified=True,
+            immutable_task_source_verified=True,
+        )
+        self.assertIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED",
+                      codes(s, lambda exact: exact is s))
+
     def test_idle_without_lease_and_source_is_hold(self):
         result = mod.assess(snapshot())
         self.assertIn("NATIVE_REFILL_OWNER_HOLD", [r["code"] for r in result])
