@@ -35,6 +35,81 @@ class Request:
 
 class FactReceiptTest(unittest.TestCase):
 
+    def test_1a01_optional_plan_and_skeptic_timeouts_keep_real_chat(self):
+        """Timed-out optional model calls must not prevent primary SSE or S03."""
+        chat = next(route.endpoint for route in self.app.routes if route.path == "/api/chat")
+        bridge = self.bridge
+        bridge.SOUL, bridge.NKEEP, bridge.LAST_CHAT = None, 0, {"t": 0}
+        bridge.self_vol = lambda user: "[SELF]"
+        bridge.build_msgs = lambda history, user, mem, vol, extra="": [
+            {"role": "user", "content": user + extra}
+        ]
+        bridge.adapt_tokens = lambda user, limit: limit
+        bridge.invalidate_s03_cache = lambda: None
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Готово 🌟"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        class Advisory:
+            cancelled = 0
+            def maybe_reminder(self, *args): return None
+            def wants_plan(self, *args): return True
+            def mode_hint(self, *args): return ""
+            def is_factual(self, *args): return True
+            async def make_plan(self, *args, **kwargs):
+                try:
+                    await asyncio.sleep(3600)
+                except asyncio.CancelledError:
+                    self.cancelled += 1
+                    raise
+            async def skeptic(self, *args, **kwargs):
+                try:
+                    await asyncio.sleep(3600)
+                except asyncio.CancelledError:
+                    self.cancelled += 1
+                    raise
+
+        bridge.hc = lambda: Client()
+        writes = []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+        advisory = Advisory()
+
+        async def exercise():
+            response = await chat(Request({
+                "request_id": "a1-optional-timeouts",
+                "use_memory": False,
+                "messages": [{"role": "user", "content": "Спланируй и проверь факт"}],
+            }))
+            return [json.loads(frame) async for frame in response.body_iterator]
+
+        with (mock.patch.object(W, "W", advisory),
+              mock.patch.object(W, "ADVISORY_PLAN_TIMEOUT_SECONDS", 0.01),
+              mock.patch.object(W, "ADVISORY_SKEPTIC_TIMEOUT_SECONDS", 0.01),
+              mock.patch.object(W, "CANCEL", set()),
+              mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
+              mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.dict(sys.modules, {"s03_memory": memory})):
+            frames = asyncio.run(exercise())
+        final = frames[-1]
+        self.assertTrue(final["done"])
+        self.assertEqual(final["completion_receipt"]["status"], "GENERATED")
+        self.assertEqual(final["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+        self.assertEqual(final["skeptic"]["reason"], "SKEPTIC_UNAVAILABLE")
+        self.assertEqual(advisory.cancelled, 2)
+        self.assertEqual(writes, [("Спланируй и проверь факт", "Готово 🌟")])
+        self.assertEqual("".join(f["message"]["content"] for f in frames
+                         if f.get("message") and f["message"]["content"]), "Готово 🌟")
+
     def test_1a03_skeptic_unicode_delta_matches_terminal_frames_and_snapshot(self):
         """A post-model skeptic annotation counts as a real emitted text frame."""
         import hashlib

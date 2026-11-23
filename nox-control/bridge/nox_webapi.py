@@ -96,6 +96,12 @@ def _finite_sse_constant(value):
 # aiter_lines() may buffer an arbitrarily long line before yielding it and
 # silently replace malformed UTF-8; either can undermine the S03 guard.
 MAX_UPSTREAM_SSE_LINE_BYTES = MAX_CHAT_OUTPUT_UTF8_BYTES + 8192
+# Optional secondary model calls must not keep a valid chat waiting indefinitely.
+# On timeout the primary model response (or its pending start) continues; no
+# secondary verdict is presented as verified. These are not resource leases.
+ADVISORY_PLAN_TIMEOUT_SECONDS = 40
+ADVISORY_SKEPTIC_TIMEOUT_SECONDS = 25
+
 # Bounded output tokens alone do not bound upstream traffic: a broken provider
 # can stream unlimited empty JSON/SSE comments or metadata forever. The generous
 # total wire budget preserves even extremely fragmented 128 KiB token output.
@@ -1219,7 +1225,9 @@ def install(app, B):
                                                      "s03_readback_verified": False})
                             return
                         try:
-                            plan = await W.make_plan(lambda m, n: B.ask(m, n, slot=1), user)
+                            plan = await asyncio.wait_for(
+                                W.make_plan(lambda m, n: B.ask(m, n, slot=1), user),
+                                timeout=ADVISORY_PLAN_TIMEOUT_SECONDS)
                             # This optional model output is not trusted JSON. A
                             # malformed item must not kill the *primary* stream.
                             # The built-in planner returns <=5 text steps, <=100
@@ -1536,7 +1544,9 @@ def install(app, B):
                         # answer or abort its independent S03 write. Never report a
                         # malformed/failed verifier as a passed factual check.
                         try:
-                            verdict = await W.skeptic(lambda m, n_: B.ask(m, n_, slot=1), user, full, record=not eph)
+                            verdict = await asyncio.wait_for(
+                                W.skeptic(lambda m, n_: B.ask(m, n_, slot=1), user, full, record=not eph),
+                                timeout=ADVISORY_SKEPTIC_TIMEOUT_SECONDS)
                             if not isinstance(verdict, dict) or type(verdict.get("ok")) is not bool:
                                 raise ValueError("SKEPTIC_INVALID_VERDICT")
                             # Verifier metadata is untrusted: extra keys may be
