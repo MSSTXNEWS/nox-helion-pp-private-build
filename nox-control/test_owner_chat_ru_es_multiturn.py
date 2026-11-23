@@ -3872,6 +3872,10 @@ async function check(chunks, status=200) {
         valid[3]["content"] += " café"
         self.assertRegex(multiturn_transcript_sha256(valid), r"^[0-9a-f]{64}$")
         writer, reader = s03_proof(valid)
+        # The shared fixture hashes the fixed numeric LAST; this UTF-8
+        # control intentionally changes the fourth answer to accented text.
+        reader["full_answer_sha256"] = hashlib.sha256(
+            valid[-1]["content"].encode("utf-8")).hexdigest()
         self.assertTrue(canonical_s03_proof_valid(
             writer, reader, DIALOG, valid, require_full_transcript_pin=True))
         baseline_writer, baseline_reader = s03_proof(original)
