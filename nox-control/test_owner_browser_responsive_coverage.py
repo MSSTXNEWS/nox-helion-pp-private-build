@@ -492,10 +492,16 @@ const observer = %s;
 const cases=[
   [{type:'delta',text:'1'},{type:'done',saved:true,s03_integrated:true,dialog_id:'qa-demo'}],
   [{type:'delta',text:'1'},{type:'heartbeat',status:'OK'},{type:'done',saved:true,s03_integrated:true,dialog_id:'qa-demo'}],
-  [{type:'delta',text:'1'},[],{type:'done',saved:true,s03_integrated:true,dialog_id:'qa-demo'}]
+  [{type:'delta',text:'1'},[],{type:'done',saved:true,s03_integrated:true,dialog_id:'qa-demo'}],
+  // Raw JSONL is essential: JSON.stringify(object) would erase duplicates.
+  ['{"type":"error","type":"done","saved":true,"s03_integrated":true,"dialog_id":"qa-demo"}'],
+  ['{"type":"done","saved":false,"saved":true,"s03_integrated":true,"dialog_id":"qa-demo"}'],
+  ['{"type":"delta","text":"1","text":"2"}',{type:'done',saved:true,s03_integrated:true,dialog_id:'qa-demo'}],
+  ['{"type":"delta","text":"1","meta":{"count":1,"count":2}}',{type:'done',saved:true,s03_integrated:true,dialog_id:'qa-demo'}],
+  ['{"type":"delta","\\u0074ype":"delta","text":"1"}',{type:'done',saved:true,s03_integrated:true,dialog_id:'qa-demo'}]
 ];
 async function one(frames){
-  const bytes=new TextEncoder().encode(frames.map(x=>JSON.stringify(x)).join('\n')+'\n');
+  const bytes=new TextEncoder().encode(frames.map(x=>typeof x==='string'?x:JSON.stringify(x)).join('\n')+'\n');
   window.fetch=async()=>({
     body:{getReader(){let remaining=1;return {
       async read(){return remaining--?{done:false,value:bytes}:{done:true};},
@@ -518,7 +524,8 @@ async function one(frames){
         self.assertEqual(json.loads(result.stdout),
                          [[None, True, 1, 1],
                           ['HOLD_QA_STREAM_UNKNOWN_FRAME', False, 0, 1],
-                          ['HOLD_QA_STREAM_UNKNOWN_FRAME', False, 0, 1]])
+                          ['HOLD_QA_STREAM_UNKNOWN_FRAME', False, 0, 1]] +
+                         [['HOLD_QA_STREAM_DUPLICATE_KEY', False, 0, 1]]*5)
 
 
 class BrowserWriteScopeContract(unittest.TestCase):
