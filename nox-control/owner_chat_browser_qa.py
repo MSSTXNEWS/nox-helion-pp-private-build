@@ -1654,6 +1654,11 @@ async def json_response(response, limit=200000):
         if any(value != 'utf-8' for value in charsets):
             raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
     raw=await response.body()
+    return strict_owner_json_bytes(raw, limit)
+
+
+def strict_owner_json_bytes(raw, limit=200000):
+    """Decode bounded UTF-8 JSON without ambiguous wire representations."""
     if len(raw)>limit:
         raise RuntimeError('HOLD_OWNER_HTTP_SIZE')
     # The owner history is an RFC 8259 UTF-8 wire witness. json.loads(bytes)
@@ -1746,6 +1751,36 @@ async def owner_history_json_response(response):
     if not isinstance(document, dict):
         raise RuntimeError('HOLD_OWNER_HTTP_JSON_ROOT')
     return document
+
+
+def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
+                                        writer_sha256, readback_sha256,
+                                        dialog_id, expected_messages):
+    """Verify exact immutable bytes before the strict four-row S03 contract.
+
+    The caller MUST obtain both expected hashes independently from the
+    authorized owner/immutable-verifier path, not from the candidate files.
+    This pure adapter cannot establish that authority or native admission.
+    It never reads S03, accepts a browser history as a writer, or issues POST.
+    """
+    if (type(writer_raw) is not bytes or type(readback_raw) is not bytes
+            or not 0 < len(writer_raw) <= 200000
+            or not 0 < len(readback_raw) <= 200000
+            or any(not isinstance(pin, str) or
+                   re.fullmatch(r'[a-f0-9]{64}', pin) is None
+                   for pin in (writer_sha256, readback_sha256))
+            or writer_sha256 == readback_sha256
+            or digest(writer_raw) != writer_sha256
+            or digest(readback_raw) != readback_sha256):
+        return False
+    try:
+        writer = strict_owner_json_bytes(writer_raw)
+        readback = strict_owner_json_bytes(readback_raw)
+        return canonical_s03_proof_valid(
+            writer, readback, dialog_id, expected_messages,
+            require_full_transcript_pin=True)
+    except (RuntimeError, ValueError, TypeError, UnicodeError, RecursionError):
+        return False
 
 
 async def capture_private_screenshot(page, report, directory, name, masks, content,

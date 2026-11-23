@@ -17,6 +17,7 @@ from owner_chat_browser_qa import (
     allowed_qa_stream_url,
     native_chat_route_candidate,
     canonical_s03_proof_valid,
+    canonical_s03_pinned_evidence_valid,
     click_send,
     json_response,
     owner_history_json_response,
@@ -4343,6 +4344,55 @@ async function check(chunks, status=200) {
                 with self.assertRaisesRegex(RuntimeError,
                                             "HOLD_OWNER_HTTP_JSON_ROOT"):
                     read(bad)
+
+
+    def test_s03_exact_independent_witness_bytes_before_fourrow_proof(self):
+        """Source adapter only: the owner must supply independently trusted pins."""
+        transcript = rows("Sigue en español 🪐")
+        transcript[0]["content"] = "Привет 🧠"
+        for index, row in enumerate(transcript):
+            row.update(message_id=f"row-{index}", dialog_id=DIALOG,
+                       session_id="owner-session")
+        writer, reader = s03_proof(transcript)
+        def wire(value):
+            return json.dumps(value, ensure_ascii=False,
+                              separators=(",", ":")).encode("utf-8")
+        def pin(raw):
+            return hashlib.sha256(raw).hexdigest()
+        w, r = wire(writer), wire(reader)
+        wp, rp = pin(w), pin(r)
+        def check(wire_w=w, wire_r=r, hash_w=wp, hash_r=rp,
+                  history=transcript):
+            return canonical_s03_pinned_evidence_valid(
+                wire_w, wire_r, hash_w, hash_r, DIALOG, history)
+        self.assertTrue(check())
+        # Same semantic JSON with changed bytes must not reuse a pinned receipt.
+        for kwargs in (
+            {"wire_w": w+b" "}, {"wire_r": r+b" "},
+            {"hash_w": None}, {"hash_r": "0"*64}, {"hash_w": wp.upper()},
+            {"wire_w": bytearray(w)}, {"wire_r": w, "hash_r": wp},
+            {"wire_w": r, "wire_r": w, "hash_w": rp, "hash_r": wp},
+        ):
+            with self.subTest(kwargs=repr(kwargs)):
+                self.assertFalse(check(**kwargs))
+        # Even an independently pinned ambiguous or invalid JSON document
+        # cannot satisfy the canonical S03 contract.
+        for bad in (
+            b'{"verified":false,'+w[1:], b'[]', b'null',
+            b'\xef\xbb\xbf'+w, b'\xff', b'['*65+b']'*65,
+            b' '*200001,
+        ):
+            with self.subTest(bad=repr(bad[:60])):
+                self.assertFalse(check(wire_w=bad, hash_w=pin(bad)))
+        foreign = dict(reader, session_id="different-session")
+        altered = wire(foreign)
+        self.assertFalse(check(wire_r=altered, hash_r=pin(altered)))
+        # The adapter cannot accept browser-history-only or omit row IDs.
+        legacy = rows("Sigue en español 🪐")
+        lw, lr = map(wire, s03_proof(legacy))
+        self.assertFalse(check(wire_w=lw, wire_r=lr,
+                               hash_w=pin(lw), hash_r=pin(lr), history=legacy))
+        self.assertIn("canonical_s03_verified=False", inspect.getsource(browser_run))
 
 
 if __name__ == "__main__":
