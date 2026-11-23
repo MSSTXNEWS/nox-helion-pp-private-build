@@ -4175,8 +4175,7 @@ class ProbeTests(unittest.TestCase):
 
         shadowed = ShadowedRead1()
         with self.assertRaisesRegex(
-                RuntimeError, '^HOLD_STREAM_BOUNDED_READER_UNAVAILABLE    unittest.main()
-):
+                RuntimeError, '^HOLD_STREAM_BOUNDED_READER_UNAVAILABLE$'):
             list(probe.bounded_stream_lines(
                 shadowed, deadline=time.monotonic() + 2))
         self.assertEqual(shadowed.read_calls, 0)
@@ -4199,8 +4198,7 @@ class ProbeTests(unittest.TestCase):
 
             wrapped = SocketWrapper()
             with self.assertRaisesRegex(
-                    RuntimeError, '^HOLD_STREAM_UNBOUNDED_SOCKET_READER    unittest.main()
-):
+                    RuntimeError, '^HOLD_STREAM_UNBOUNDED_SOCKET_READER$'):
                 list(probe.bounded_stream_lines(
                     wrapped, deadline=time.monotonic() + 2))
             self.assertEqual(wrapped.read_calls, 0)
