@@ -117,5 +117,29 @@ class ProviderOrphanRecovery(TestCase):
             with self.assertRaisesRegex(RuntimeError, "RECOVERY_READBACK_SHAPE"):
                 mod.locate_uploaded_key_id(PUB)
 
+    def test_duplicate_registration_identity_never_dispatches_ssh(self):
+        # Two keys with the same public fingerprint: the first match is NOT
+        # sufficient permission to execute a remote action.
+        folder = Path(tempfile.mkdtemp())
+        key_path = folder / "k"
+        instance = {"actual_status": "running", "public_ipaddr": "127.0.0.1",
+                    "ports": {"22/tcp": [{"HostPort": "2222"}]}}
+        duplicates = {"ssh_keys": [{"id": ID, "ssh_key": PUB},
+                                   {"id": ID + 1, "ssh_key": PUB}]}
+        def stub_run(args, **kwargs):
+            self.assertEqual(args[0], "ssh-keygen", "ambiguous key identity must fence SSH")
+            key_path.write_text("OFFLINE_PRIVATE_TEST_KEY", encoding="utf-8")
+            (folder / "k.pub").write_text(PUB, encoding="utf-8")
+            return subprocess.CompletedProcess(args, 0)
+        # GET instance, POST key, first GET ambiguity, final recovery GET.
+        with patch.object(mod, "api", side_effect=[instance, {}, duplicates, duplicates]) as fake_api, \
+             patch.object(mod.tempfile, "mkdtemp", return_value=str(folder)), \
+             patch.object(mod.subprocess, "run", side_effect=stub_run) as fake_run:
+            with self.assertRaises(SystemExit):
+                mod.main()
+        self.assertEqual(fake_run.call_count, 1)
+        self.assertEqual([c.args[0] for c in fake_api.call_args_list], ["GET", "POST", "GET", "GET"])
+        self.assertFalse(folder.exists(), "private key directory must still be removed")
+
 if __name__ == "__main__":
     main()
