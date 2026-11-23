@@ -588,3 +588,74 @@ test('R32 real TCP truncated Content-Length after stop+DONE cannot verify second
     process.off('unhandledRejection',onUnhandled);
   }
 });
+
+
+// R33: HTTP/1.1 chunked framing is not complete until a real 0-chunk + EOF.
+// A printable third turn with stop and [DONE] but a broken TCP transfer is NOT accepted.
+const r33Event=choice=>'data: '+JSON.stringify({choices:[choice]})+'\n\n';
+const r33Visible=['Привет 🌍','Hola, мир 🌈','Третий ответ ✨'];
+const r33Hash=s=>createHash('sha256').update(s).digest('hex');
+function r33Gate(){let resolve;const promise=new Promise(r=>{resolve=r;});return {promise,resolve};}
+async function r33Bound(p,ms=1500){
+  let timer;try{return await Promise.race([p,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('B4_R33_HUNG')),ms);})]);}
+  finally{clearTimeout(timer);}
+}
+
+test('R33 real TCP chunked missing zero terminator cannot verify second/third SSE; healthy, total deadline, abort, no replay',async()=>{
+  const chunkSent=r33Gate();
+  const observed=[];const unhandled=[];
+  const onUnhandled=e=>unhandled.push(e);
+  process.on('unhandledRejection',onUnhandled);
+  const server=createServer(async(req,res)=>{
+    if(req.method!=='POST'||req.url!=='/nox/chat'){res.writeHead(404).end();return;}
+    let input='';for await(const part of req)input+=part;
+    const {turn,mode}=JSON.parse(input);observed.push({turn,mode});
+    const body=r33Event({delta:{content:r33Visible[turn-1]},finish_reason:null})+
+      r33Event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n';
+    res.writeHead(200,{'content-type':'text/event-stream',
+      'cache-control':'no-store','transfer-encoding':'chunked'});
+    res.flushHeaders();
+    res.write(body,()=>{
+      if(mode==='truncated')setTimeout(()=>res.destroy(),18); // NO terminating 0\r\n\r\n
+      if(mode==='healthy')res.end(); // Node actually writes the zero chunk and EOF
+      if(mode==='abort')chunkSent.resolve();
+      // stall/abort keep the transfer open even after stop and [DONE]
+    });
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const url='http://127.0.0.1:'+server.address().port+'/nox/chat';
+  const post=(turn,mode,signal,options={})=>measureSseFetch(url,{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({turn,mode}),signal
+  },{startedAt:performance.now(),totalTimeoutMs:950,idleTimeoutMs:600,...options});
+  try{
+    const proof=await r33Bound(post(1,'healthy'));
+    assert.equal(proof.verified,true);
+    assert.equal(proof.visible_text_sha256,r33Hash(r33Visible[0]));
+    assert.ok(proof.first_byte_ms<=proof.ttft_ms&&proof.ttft_ms<=proof.sse_done_ms);
+    assert.ok(proof.sse_done_ms<=proof.completion_ms);
+    assert.equal(proof.native_verified,false);
+    assert.equal(proof.browser_authenticated,false);
+    assert.equal(proof.canonical_s03_verified,false);
+    for(const turn of [2,3]){
+      await assert.rejects(r33Bound(post(turn,'truncated')),
+        e=>e?.code==='B4_FETCH_FAILED','turn '+turn+': stop+[DONE] must not override missing chunked terminal');
+    }
+    await assert.rejects(r33Bound(post(3,'stall',undefined,{totalTimeoutMs:105,idleTimeoutMs:500})),
+      e=>e?.code==='B4_TOTAL_TIMEOUT','[DONE] cannot defeat request-start deadline while TCP has no 0-chunk');
+    const controller=new AbortController();
+    const aborted=post(3,'abort',controller.signal);
+    await r33Bound(chunkSent.promise);
+    controller.abort();
+    await assert.rejects(r33Bound(aborted),e=>e?.code==='B4_FETCH_ABORTED');
+    await new Promise(resolve=>setTimeout(resolve,12));
+    assert.deepEqual(observed,[
+      {turn:1,mode:'healthy'},{turn:2,mode:'truncated'},
+      {turn:3,mode:'truncated'},{turn:3,mode:'stall'},
+      {turn:3,mode:'abort'}
+    ],'one POST per explicit action, no implicit replay');
+    assert.deepEqual(unhandled,[],'no unhandled late transport rejection');
+  }finally{
+    server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
+    process.off('unhandledRejection',onUnhandled);
+  }
+});
