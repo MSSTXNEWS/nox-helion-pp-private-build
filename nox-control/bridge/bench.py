@@ -1,31 +1,149 @@
-"""Бенчмарк чата: TTFT и ток/с через /v1/chat/stream. Запуск: python bench.py <тег>. Результат печатается построчно."""
-import json, sys, time, urllib.request
-Q = ["Кто ты? Ответь в двух предложениях.",
-     "Что ты помнишь о нашем проекте NOX HELION? Три предложения.",
-     "Объясни простыми словами, чем кэш промпта помогает скорости. Четыре предложения."]
-sys.stdout.reconfigure(line_buffering=True)
-tag = sys.argv[1] if len(sys.argv) > 1 else "run"
-res = []
-for q in Q:
-    t0 = time.time(); ttft = None; ntok = 0
-    try:
-        req = urllib.request.Request("http://127.0.0.1:8091/v1/chat/stream", data=json.dumps({"messages": [{"role": "user", "content": q}]}).encode(), headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=400) as r:
-            for raw in r:
-                ln = raw.decode("utf-8", "ignore").strip()
-                if not ln.startswith("data:"): continue
-                try: o = json.loads(ln[5:])
-                except Exception: continue
-                if o.get("type") == "token":
-                    ntok += 1
-                    if ttft is None: ttft = time.time() - t0
-                elif o.get("type") == "done": break
-        tot = time.time() - t0
-        gen = max(tot - (ttft or 0), 0.001)
-        res.append((ttft, ntok / gen if ntok > 1 else 0))
-        print("%s Q%d ttft=%.1fs tokens=%d tok/s=%.1f total=%.1fs" % (tag, len(res), ttft or -1, ntok, ntok / gen, tot))
-    except Exception as e:
-        print("%s Q%d ERR %s %s" % (tag, len(res) + 1, type(e).__name__, str(e)[:80]))
-ok = [x for x in res if x[0]]
-if ok: print("%s AVG ttft=%.1fs tok/s=%.1f" % (tag, sum(x[0] for x in ok) / len(ok), sum(x[1] for x in ok) / len(ok)))
-print("BENCH_DONE")
+"""NOX 2A05: comparable read-only-of-S03 live chat latency samples.
+
+Run explicitly on the owner host, *only after* current STOP/lease/resource admission:
+  python bench.py --model-sha SHA256 --route-sha SHA1 --s03-revision REV --samples 20
+
+Each request is ephemeral: reads normal S03 context but must never persist a turn.
+This measures observed SSE chunks/s, NOT model tokens/s (chunks are not tokens).
+"""
+import argparse
+import hashlib
+import json
+import math
+import re
+import sys
+import time
+import urllib.request
+from urllib.error import HTTPError, URLError
+
+URL = "http://127.0.0.1:8091/api/chat"
+PROMPT = "Объясни в четырёх предложениях, как кэш промпта улучшает скорость ответа NOX."
+
+
+def _percentile(values, percentile):
+    """Nearest-rank empirical quantile: no interpolation/fabricated observations."""
+    ordered = sorted(values)
+    return ordered[max(0, math.ceil(percentile * len(ordered)) - 1)]
+
+
+def _sample(index, clock=time.perf_counter, opener=urllib.request.urlopen):
+    request_id = f"bench2a05-{index}-{time.monotonic_ns()}"
+    data = {"request_id": request_id, "ephemeral": True, "use_memory": True,
+            "messages": [{"role": "user", "content": PROMPT}],
+            "options": {"num_predict": 200}, "mode": "auto"}
+    req = urllib.request.Request(URL, data=json.dumps(data, ensure_ascii=False).encode("utf-8"),
+                                 headers={"Content-Type": "application/json", "Accept": "application/x-ndjson"})
+    started = clock()
+    first = None
+    chunks = []
+    seq = 0
+    stream_id = None
+    terminal = None
+    with opener(req, timeout=400) as response:
+        if getattr(response, "status", 200) != 200:
+            raise ValueError("HTTP_NOT_OK")
+        # Production /api/chat emits exactly one complete NDJSON object per line.
+        # A partial final line or invalid UTF-8 is never a successful sample.
+        for raw in response:
+            if len(raw) > 1024 * 1024:
+                raise ValueError("OVERSIZED_FRAME")
+            if not raw.endswith(b"\n"):
+                raise ValueError("TRUNCATED_FRAME")
+            frame = json.loads(raw.decode("utf-8", "strict"))
+            if not isinstance(frame, dict):
+                raise ValueError("INVALID_FRAME")
+            if frame.get("request_id") != request_id:
+                raise ValueError("REQUEST_ID_MISMATCH")
+            if not isinstance(frame.get("stream_id"), str):
+                raise ValueError("MISSING_STREAM_ID")
+            if stream_id is None:
+                stream_id = frame["stream_id"]
+            elif stream_id != frame["stream_id"]:
+                raise ValueError("STREAM_ID_CHANGED")
+            if type(frame.get("event_seq")) is not int or frame["event_seq"] != seq + 1:
+                raise ValueError("CURSOR_GAP_OR_DUPLICATE")
+            seq += 1
+            if terminal is not None:
+                raise ValueError("FRAME_AFTER_TERMINAL")
+            if frame.get("status") == "HOLD":
+                raise ValueError("STREAM_HOLD")
+            message = frame.get("message")
+            content = message.get("content") if isinstance(message, dict) else None
+            if content:
+                if not isinstance(content, str):
+                    raise ValueError("NON_TEXT_CONTENT")
+                if first is None:
+                    first = clock()
+                chunks.append(content)
+            if frame.get("done") is True:
+                terminal = frame
+    ended = clock()
+    if terminal is None or first is None or not chunks:
+        raise ValueError("INCOMPLETE_STREAM")
+    receipt = terminal.get("completion_receipt") or {}
+    memory = terminal.get("memory_history") or {}
+    write = terminal.get("memory_write_receipt") or {}
+    if (terminal.get("done_reason") != "stop" or
+            receipt.get("status") != "GENERATED" or receipt.get("upstream_done") is not True or
+            memory.get("status") != "SKIPPED" or memory.get("reason") != "ephemeral" or
+            write.get("s03_write_returned") is True or write.get("s03_readback_verified") is True):
+        raise ValueError("TERMINAL_RECEIPT_NOT_EPHEMERAL_GENERATED")
+    full = "".join(chunks)
+    if hashlib.sha256(full.encode("utf-8", "strict")).hexdigest() != terminal.get("digest"):
+        raise ValueError("OUTPUT_DIGEST_MISMATCH")
+    if terminal.get("frames") != len(chunks):
+        raise ValueError("OUTPUT_CHUNK_COUNT_MISMATCH")
+    total = ended - started
+    ttft = first - started
+    if not (total > ttft >= 0):
+        raise ValueError("INVALID_TIMING")
+    return {"ttft_s": round(ttft, 4), "total_s": round(total, 4),
+            "chunks_per_s": round(len(chunks) / (ended - first), 4),
+            "chunks": len(chunks), "output_utf8_bytes": len(full.encode("utf-8")),
+            "token_per_s": None, "s03_write": "SKIPPED_EPHEMERAL",
+            "model_reported": terminal.get("model")}
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--model-sha", required=True, help="Owner-verified installed model SHA-256 (not checked here)")
+    ap.add_argument("--route-sha", required=True, help="Owner-verified installed bridge source git blob SHA-1")
+    ap.add_argument("--s03-revision", required=True, help="Owner-verified S03 revision label")
+    ap.add_argument("--samples", type=int, default=20)
+    a = ap.parse_args(argv)
+    if (not re.fullmatch(r"[0-9a-f]{64}", a.model_sha) or
+            not re.fullmatch(r"[0-9a-f]{40}", a.route_sha) or
+            not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", a.s03_revision) or
+            not 20 <= a.samples <= 200):
+        ap.error("owner pins must be valid; samples 20..200 for comparable p50/p95")
+    observations = []
+    errors = []
+    for index in range(a.samples):
+        try:
+            observations.append(_sample(index))
+        except (HTTPError, URLError, OSError, ValueError, UnicodeError, TypeError) as exc:
+            # No retry: an ambiguous POST may have generated a response.
+            errors.append({"sample": index + 1, "error": type(exc).__name__,
+                           "reason": str(exc)[:80] if isinstance(exc, ValueError) else "TRANSPORT_UNAVAILABLE"})
+    models = {x["model_reported"] for x in observations}
+    ok = len(observations) == a.samples and len(models) == 1
+    result = {"status": "MEASURED_SOURCE_ONLY_PINS_UNVERIFIED" if ok else "HOLD_INCOMPARABLE",
+              "original_task_id": "2A05", "model_sha_claim": a.model_sha,
+              "route_sha_claim": a.route_sha, "s03_revision_claim": a.s03_revision,
+              "model_reported": next(iter(models)) if len(models) == 1 else None,
+              "endpoint": "/api/chat", "scenario_id": "NOX_2A05_CACHE_4_SENTENCES_V1",
+              "ephemeral": True, "s03_reads": True, "s03_writes": False,
+              "planned": a.samples, "completed": len(observations), "errors": errors,
+              "tokens_per_second": None,
+              "latency_s": ({name: {"p50": _percentile([v[name] for v in observations], .50),
+                                     "p95": _percentile([v[name] for v in observations], .95)}
+                             for name in ("ttft_s", "total_s")}) if ok else None,
+              "observed_chunks_per_s": ({"p50": _percentile([v["chunks_per_s"] for v in observations], .50),
+                                         "p95": _percentile([v["chunks_per_s"] for v in observations], .95)}) if ok else None,
+              "native_acceptance": False}
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+    return 0 if ok else 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
