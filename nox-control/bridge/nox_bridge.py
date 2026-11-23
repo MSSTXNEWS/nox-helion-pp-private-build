@@ -266,22 +266,26 @@ def remember(user, answer):
         import s03_memory as M
         # An explicit rejection is not a successful S03 write. A returned
         # None remains compatible with the existing persist_turn contract.
-        # Invalidate even on rejection: a downstream writer may have mutated
-        # S03 before returning an ambiguous negative result.
         result = M.persist_turn(user, answer)
-        invalidate_s03_cache()
         if result is False:
             log("persist_explicitly_rejected")
             return False
         return True
     except Exception as e:
+        # A writer may commit before raising. It is not safe to retry or
+        # return the previously cached S03 recall on the next question.
         log("persist_error %s %s" % (type(e).__name__, str(e)[:120]))
         return False
+    finally:
+        invalidate_s03_cache()
 
 def remember_fact(u, a):
     import s03_memory as M
-    M.persist_turn(u, a)
-    invalidate_s03_cache()
+    try:
+        M.persist_turn(u, a)
+    finally:
+        # Same ambiguous-commit rule as remember(), including raised writers.
+        invalidate_s03_cache()
 
 async def ask(messages, max_tokens, slot=0):
     max_tokens = min(max_tokens, 700)
