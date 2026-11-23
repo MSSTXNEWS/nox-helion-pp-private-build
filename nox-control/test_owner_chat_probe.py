@@ -2506,10 +2506,11 @@ class ProbeTests(unittest.TestCase):
                             probe.anonymous_owner_scope_status('unauth', owner_path)
                     http.assert_called_once()
                 self.assertTrue(denial.closed)
-        self.assertIn(
-            'require_exact_owner_readback_target(response, requested_path)\\n'
-            '        # Match the owner/logout readback freshness fence.',
-            path.read_text())
+        # Assert the freshness fence is in THIS anonymous check, not another helper.
+        anonymous_block = path.read_text().split(
+            'def anonymous_owner_scope_status(', 1)[1].split(
+            'def require_not_html_asset(', 1)[0]
+        self.assertIn('require_fresh_owner_readback(response)', anonymous_block)
 
     def test_owner_readbacks_bind_exact_origin_path_and_query(self):
         """Do not certify third-turn owner/S03 evidence from redirected HTTP 200 JSON."""
