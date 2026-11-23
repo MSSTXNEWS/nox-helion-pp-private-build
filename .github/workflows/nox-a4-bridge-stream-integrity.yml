@@ -5,6 +5,7 @@ on:
       - 'nox-control/bridge/nox_bridge.py'
       - 'nox-control/bridge/test_bridge_stream_integrity.py'
       - 'nox-control/bridge/test_legacy_ui_turn_commit_1a03.py'
+      - 'nox-control/bridge/test_legacy_nonstream_tool_1a03.py'
       - '.github/workflows/nox-a4-bridge-stream-integrity.yml'
 permissions: {contents: read}
 jobs:
@@ -22,6 +23,7 @@ jobs:
           python3 -m py_compile nox-control/bridge/nox_bridge.py nox-control/bridge/test_bridge_stream_integrity.py
           python3 -m unittest discover -s nox-control/bridge -p test_bridge_stream_integrity.py -v
           python3 -m unittest discover -s nox-control/bridge -p test_bridge_nonstream_integrity.py -v
+          python3 -m unittest discover -s nox-control/bridge -p test_legacy_nonstream_tool_1a03.py -v
           python3 -m unittest discover -s nox-control/bridge -p test_legacy_ui_turn_commit_1a03.py -v
           python3 -m unittest discover -s nox-control/bridge -p test_build_msgs_current_user.py -v
           echo 'SOURCE_ONLY=true NATIVE_ACCEPTED=false'
