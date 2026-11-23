@@ -29,7 +29,7 @@ def main():
                 try:
                     rq = urllib.request.Request(u, headers={"Authorization": "Bearer " + KEY, "Accept": "application/json"})
                     with urllib.request.urlopen(rq, timeout=30) as rr: body = rr.read().decode()[:700]
-                    print("VAST_TRY", u, body)
+                    print("VAST_TRY", u, body) if "v1/instances/" not in u or u.endswith("/61825960/") else print("VAST_V1", [{k: i.get(k) for k in ("id","label","actual_status","gpu_name","num_gpus","gpu_ram","cpu_ram","disk_space","geolocation","public_ipaddr","dph_total","start_date","image_uuid","status_msg")} for i in json.loads(urllib.request.urlopen(rq, timeout=30).read()).get("instances", [])])
                 except Exception as e: print("VAST_TRY", u, "ERR", e)
             L = []
             print("VAST_LIST", [(i.get("id"), i.get("actual_status"), i.get("intended_status"), (i.get("gpu_name") or ""), i.get("num_gpus"), str(i.get("status_msg"))[:80], i.get("geolocation")) for i in L])
