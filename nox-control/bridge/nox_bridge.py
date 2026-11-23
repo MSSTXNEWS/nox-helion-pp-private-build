@@ -317,10 +317,20 @@ async def stream_chat(history):
         return
     n = mem.count("\n") + 1 if mem else 0
     yield _sse({"type": "status", "text": ("вспоминаю: нашёл %d фрагм. памяти" % n) if mem else "вспоминаю: в памяти ничего близкого"})
-    vol = await vol_t
-    st = affect_update("")
-    yield _sse({"type": "status", "text": "чувствую: " + affect_words(st)})
-    msgs = build_msgs(history, user, mem, vol)
+    try:
+        vol = await vol_t
+        st = affect_update("")
+        mood = affect_words(st)
+        msgs = build_msgs(history, user, mem, vol)
+    except Exception as exc:
+        # The self-state/identity preflight is mandatory model context. A
+        # failure here must yield an explicit terminal HOLD, never a silent EOF.
+        log("premodel_context_error " + type(exc).__name__)
+        yield _sse({"type": "error", "reason": "PREMODEL_CONTEXT_UNAVAILABLE",
+                    "generation_complete": False, "s03_readback_verified": False,
+                    "text": "Контекст состояния недоступен; модель не запускалась"})
+        return
+    yield _sse({"type": "status", "text": "чувствую: " + mood})
     yield _sse({"type": "status", "text": "формулирую ответ…"})
     full = ""
     received_done = False
