@@ -39,7 +39,8 @@ class FakeResponse:
 
 class BridgeStreamIntegrity(unittest.TestCase):
     def run_stream(self, lines, status=200, write_ok=True,
-                   memory_error=False, soul_error=False):
+                   memory_error=False, soul_error=False,
+                   vol_error=False, affect_error=False):
         writes, soul_logs, notices = [], [], []
         response = FakeResponse(lines, status)
         class Client:
@@ -61,6 +62,16 @@ class BridgeStreamIntegrity(unittest.TestCase):
                 raise RuntimeError("S03_RECALL_FAULT")
             return ""
 
+        def self_state(_text):
+            if vol_error:
+                raise RuntimeError("SELF_STATE_FAULT")
+            return ""
+
+        def affect(_text):
+            if affect_error:
+                raise RuntimeError("AFFECT_FAULT")
+            return {}
+
         scope = {
             "asyncio": asyncio,
             "json": json,
@@ -70,8 +81,8 @@ class BridgeStreamIntegrity(unittest.TestCase):
             "NKEEP": 0,
             "_sse": lambda payload: "data: " + json.dumps(payload) + "\n\n",
             "memory_block": recall,
-            "self_vol": lambda _: "",
-            "affect_update": lambda _: {},
+            "self_vol": self_state,
+            "affect_update": affect,
             "affect_words": lambda _: "steady",
             "build_msgs": lambda *_: [],
             "adapt_tokens": lambda _: 64,
@@ -180,6 +191,23 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(writes, [])
         self.assertEqual(logs, [])
         self.assertEqual(last["t"], 0)
+
+    def test_failed_premodel_state_emits_terminal_hold_without_memory(self):
+        complete = [self.chunk("would-not-run"), self.chunk(finish="stop"),
+                    "data: [DONE]"]
+        for condition in ("vol_error", "affect_error"):
+            with self.subTest(condition=condition):
+                events, writes, logs, last = self.run_stream(
+                    complete, **{condition: True})
+                self.assertEqual(events[-1]["type"], "error")
+                self.assertEqual(events[-1]["reason"], "PREMODEL_CONTEXT_UNAVAILABLE")
+                self.assertFalse(events[-1]["generation_complete"])
+                self.assertFalse(events[-1]["s03_readback_verified"])
+                self.assertNotIn("done", [x["type"] for x in events])
+                self.assertNotIn("token", [x["type"] for x in events])
+                self.assertEqual(writes, [])
+                self.assertEqual(logs, [])
+                self.assertEqual(last["t"], 0)
 
     def test_failed_optional_soul_log_keeps_exact_s03_receipt(self):
         events, writes, logs, _ = self.run_stream([
