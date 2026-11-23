@@ -664,6 +664,14 @@
                 if(!receipt||typeof receipt!=='object'||Array.isArray(receipt))
                   hold('HOLD_STREAM_RECEIPT_FRESHNESS');
                 signedIdentity=captureSignedIdentity(receipt);
+                // An untrusted receipt getter may synchronously trigger STOP
+                // while its identity is captured. Fence that reentrant abort
+                // BEFORE giving this GET to the freshness verifier: otherwise
+                // a host callback runs after STOP and can double-own the body.
+                if(lifecycleSignal.aborted){
+                  discardReceipt(receipt); // shared once-only abort disposal
+                  hold('HOLD_STREAM_RECONNECT_STOPPED');
+                }
                 signedReceipt=receipt;
                 if(canonicalCallbacksInvalid){
                   discardSignedBody();
