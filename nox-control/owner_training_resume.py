@@ -1465,6 +1465,12 @@ def final_observation_snapshots(helper):
             # A nonempty map can still be an unusable native observation.
             # Recheck the established Supervisor state and GPU census shapes
             # before labeling their final readbacks as successful.
+            # A nonempty map is not proof that the actual chat proxy remains
+            # healthy. The retired port 8081 cannot substitute for 8080.
+            if key == 'chat_after':
+                status = value.get('8080')
+                if type(status) is not int or status != 200:
+                    raise RuntimeError('HOLD_FINAL_CHAT_HEALTH')
             if key == 'service_after':
                 if (type(value.get('state')) is not str
                         or value['state'] not in

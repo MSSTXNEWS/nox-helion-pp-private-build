@@ -4155,3 +4155,40 @@ class SharedGpu1LeasePathNoCreate(unittest.TestCase):
             state.symlink_to(other, target_is_directory=True)
             with self.assertRaisesRegex(RuntimeError, "HOLD_SHARED_GPU1_LEASE_PATH"):
                 probe()
+
+
+class FinalChatProxy8080ReadbackStrict(unittest.TestCase):
+    def test_final_health_must_read_actual_8080_not_retired_8081(self):
+        """Exercise real owner final-observation function with no native calls."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        matches = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+                   and n.name == "final_observation_snapshots"]
+        self.assertEqual(len(matches), 1)
+        scope = {"re": re, "math": math}
+        exec(compile(ast.Module(body=matches, type_ignores=[]), str(SOURCE), "exec"), scope)
+        final = scope["final_observation_snapshots"]
+
+        def capture(health):
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "RUNNING"},
+                health=lambda: health,
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 28000}]},
+                progress=lambda: {"step": 5, "loss": 0.5})
+            return final(helper)
+
+        for good in ({"8080": 200},
+                     {"8080": 200, "8081": "ConnectionRefusedError"}):
+            with self.subTest(healthy=repr(good)):
+                readings, errors = capture(good)
+                self.assertEqual(errors, {})
+                self.assertEqual(readings["chat_after"], good)
+        for bad in ({"8081": 200}, {"8080": 503, "8081": 200},
+                    {"8080": "ConnectionRefusedError"}, {"8080": True},
+                    {"8080": 200.0}, {"8080": "200"},
+                    {"8080": None}, {"8080": []}):
+            with self.subTest(degraded=repr(bad)):
+                readings, errors = capture(bad)
+                self.assertIsNone(readings["chat_after"])
+                self.assertEqual(errors, {"chat_after": "HOLD_FINAL_CHAT_HEALTH"})
+                self.assertEqual(readings["service_after"], {"state": "RUNNING"})
+                self.assertEqual(readings["progress_after"], {"step": 5, "loss": 0.5})
