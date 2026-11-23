@@ -40,7 +40,8 @@ class FakeResponse:
 class BridgeStreamIntegrity(unittest.TestCase):
     def run_stream(self, lines, status=200, write_ok=True,
                    memory_error=False, soul_error=False,
-                   vol_error=False, affect_error=False, write_raises=False):
+                   vol_error=False, affect_error=False, write_raises=False,
+                   token_hint=64):
         writes, soul_logs, notices = [], [], []
         response = FakeResponse(lines, status)
         class Client:
@@ -87,7 +88,8 @@ class BridgeStreamIntegrity(unittest.TestCase):
             "affect_update": affect,
             "affect_words": lambda _: "steady",
             "build_msgs": lambda *_: [],
-            "adapt_tokens": lambda _: 64,
+            "adapt_tokens": (lambda _: (_ for _ in ()).throw(token_hint)
+                             if isinstance(token_hint, Exception) else token_hint),
             "remember": write,
             "SOUL": Soul(),
             "LAST_CHAT": {"t": 0},
@@ -106,6 +108,21 @@ class BridgeStreamIntegrity(unittest.TestCase):
             "choices": [{"delta": {"content": text} if text is not None else {},
                          "finish_reason": finish}]
         }) 
+
+    def test_failed_advisory_token_hint_keeps_sse_and_one_s03_write_attempt(self):
+        # Optional token sizing must not strand an accepted request between
+        # the status frame and the first model token.
+        for hint in (RuntimeError("tokenizer down"), None, True, "700",
+                     -1, 50000, float("nan")):
+            with self.subTest(hint=repr(hint)):
+                events, writes, soul, _ = self.run_stream([
+                    self.chunk("Сохраняю 🌍"), self.chunk(finish="stop"),
+                    "data: [DONE]"], token_hint=hint)
+                self.assertEqual(events[-1]["type"], "done")
+                self.assertTrue(events[-1]["generation_complete"])
+                self.assertFalse(events[-1]["memory_write_receipt"]["s03_readback_verified"])
+                self.assertEqual(writes, [("Привет", "Сохраняю 🌍")])
+                self.assertEqual(soul, writes)
 
     def test_complete_stop_done_writes_once_but_never_certifies_s03_readback(self):
         events, writes, logs, _ = self.run_stream([
