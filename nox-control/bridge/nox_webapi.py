@@ -719,6 +719,11 @@ def install(app, B):
         target = b.get("request_id")
         if not isinstance(target, str) or re.fullmatch(r"(?:[*]|[A-Za-z0-9._:-]{1,128})", target) is None:
             return JSONResponse({"status": "HOLD", "reason": "STOP_INVALID_REQUEST_ID"}, status_code=400)
+        # The command ACK reports a signal, never a confirmed generator stop.
+        # Distinguish already-admitted work from a tombstone for an unknown ID;
+        # otherwise the UI can misleadingly present an idle STOP as real work.
+        active_at_signal = (len(ACTIVE_CHAT_IDS) if target == "*"
+                            else int(target in ACTIVE_CHAT_IDS))
         if target == "*":
             # A broadcast applies only to previously admitted requests.
             CANCEL_ALL_EPOCH += 1
@@ -732,6 +737,11 @@ def install(app, B):
         # Signal queued is not evidence that generation actually stopped.
         return {"status": "STOPPING", "scope": "generation",
                 "target_request_id": target, "stop_confirmed": False,
+                "active_requests_at_signal": active_at_signal,
+                "signal_receipt": (
+                    "BROADCAST_EPOCH_SET" if target == "*" else
+                    "ADMITTED_REQUEST_SIGNALLED" if active_at_signal else
+                    "PENDING_UNKNOWN_REQUEST_ID"),
                 "media_stopped": False, "task_cancelled": False, "owner_stop": False}
 
     @app.get("/api/chat/snapshot")
