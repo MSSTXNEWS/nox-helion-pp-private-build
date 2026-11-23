@@ -73,9 +73,21 @@ def main():
         api("POST", "/instances/%d/ssh/" % INSTANCE, {"ssh_key": pub})
         for _ in range(8):
             rows = api("GET", "/instances/%d/ssh/" % INSTANCE)
-            rows = rows if isinstance(rows, list) else rows.get("ssh_keys", rows.get("keys", []))
-            hit = [r for r in rows if isinstance(r, dict) and pub.split()[1] in json.dumps(r)]
-            if hit: key_id = hit[0].get("id"); break
+            if isinstance(rows, dict):
+                rows = rows.get("ssh_keys", rows.get("keys"))
+            if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+                raise RuntimeError("HOLD_EPHEMERAL_KEY_REGISTRATION_READBACK_SHAPE")
+            hit = [row for row in rows if pub.split()[1] in json.dumps(row)]
+            # A duplicate provider identity cannot authorize SSH; even if
+            # DELETE later fails closed, executing first would be unsafe.
+            if len(hit) > 1:
+                raise RuntimeError("HOLD_EPHEMERAL_KEY_REGISTRATION_NOT_UNIQUE")
+            if len(hit) == 1:
+                candidate_id = hit[0].get("id")
+                if not str(candidate_id).isdecimal() or int(candidate_id) <= 0:
+                    raise RuntimeError("HOLD_EPHEMERAL_KEY_REGISTRATION_INVALID_ID")
+                key_id = int(candidate_id)
+                break
             time.sleep(2)
         # Do not dispatch SSH until the ephemeral provider key is confirmed.
         # One remote command only: an SSH failure may hide an action that ran.
