@@ -714,6 +714,14 @@ async def _run(native,url,payload,user_text):
             tools_wire=json.dumps(native_tools,sort_keys=True,
                                   ensure_ascii=False,allow_nan=False,
                                   separators=(',',':')).encode('utf-8','strict')
+            # Cache preparation may tune caching, but cannot rewrite the
+            # caller's serving budget, stream contract or model slot. Preserve
+            # both values and key presence before native model admission.
+            runtime_controls=('max_tokens','temperature','id_slot','n_keep','stream')
+            runtime_wire=json.dumps({key:req[key] for key in runtime_controls
+                                     if key in req},sort_keys=True,
+                                    ensure_ascii=False,allow_nan=False,
+                                    separators=(',',':')).encode('utf-8','strict')
         except (TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
             raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
         pool_input=dict(req,messages=json.loads(context_wire),
@@ -734,11 +742,17 @@ async def _run(native,url,payload,user_text):
             after_tools_wire=json.dumps(prepared.get('tools'),sort_keys=True,
                                         ensure_ascii=False,allow_nan=False,
                                         separators=(',',':')).encode('utf-8','strict')
+            after_runtime_wire=json.dumps({key:prepared[key] for key in runtime_controls
+                                           if key in prepared},sort_keys=True,
+                                          ensure_ascii=False,allow_nan=False,
+                                          separators=(',',':')).encode('utf-8','strict')
         except (KeyError,TypeError,ValueError,UnicodeError,OverflowError,RecursionError):
             raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY') from None
         if after_wire!=context_wire:
             raise StreamFailure('HOLD_MODEL_CONTEXT_FIDELITY')
         if after_control_wire!=control_wire:
+            raise StreamFailure('HOLD_MODEL_CONTROL_FIDELITY')
+        if after_runtime_wire!=runtime_wire:
             raise StreamFailure('HOLD_MODEL_CONTROL_FIDELITY')
         if after_tools_wire!=tools_wire:
             raise StreamFailure('HOLD_MODEL_TOOL_SCHEMA_FIDELITY')
