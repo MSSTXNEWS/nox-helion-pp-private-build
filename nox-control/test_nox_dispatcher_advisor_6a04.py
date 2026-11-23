@@ -98,6 +98,7 @@ class GpuSourceEvidenceTests(unittest.TestCase):
         s["trainer"].update(
             yield_boundary="optimizer_step", yield_boundary_complete=True,
             yield_step=42, resume_cursor_sha256="a" * 64,
+            checkpoint_step=42, checkpoint_resume_cursor_sha256="a" * 64,
             checkpoint_readback_verified=True,
             yield_owner_lease_cas_verified=True,
         )
@@ -123,6 +124,11 @@ class GpuSourceEvidenceTests(unittest.TestCase):
             ("trainer", "yield_boundary_complete", False),
             ("trainer", "yield_step", True),
             ("trainer", "resume_cursor_sha256", "broken"),
+            ("trainer", "checkpoint_step", 41),
+            ("trainer", "checkpoint_step", True),
+            ("trainer", "checkpoint_step", None),
+            ("trainer", "checkpoint_resume_cursor_sha256", "b" * 64),
+            ("trainer", "checkpoint_resume_cursor_sha256", None),
             ("trainer", "checkpoint_readback_verified", None),
             ("trainer", "yield_owner_lease_cas_verified", False),
             ("native_queue", "maintenance_busy", True),
@@ -135,6 +141,7 @@ class GpuSourceEvidenceTests(unittest.TestCase):
                 s["trainer"].update(
                     yield_boundary="optimizer_step", yield_boundary_complete=True,
                     yield_step=42, resume_cursor_sha256="a" * 64,
+                    checkpoint_step=42, checkpoint_resume_cursor_sha256="a" * 64,
                     checkpoint_readback_verified=True,
                     yield_owner_lease_cas_verified=True,
                 )
@@ -147,6 +154,31 @@ class GpuSourceEvidenceTests(unittest.TestCase):
         s["stop_active"] = True
         s["onehost"]["chat_waiting"] = True
         self.assertEqual([x["code"] for x in mod.assess(s)], ["STOP_ACTIVE"])
+
+    def test_6a03_checkpoint_and_boundary_must_share_exact_step_cursor(self):
+        s = snapshot()
+        s["onehost"]["chat_waiting"] = True
+        s["trainer"].update(
+            yield_boundary="embedding_batch", yield_boundary_complete=True,
+            yield_step=118, resume_cursor_sha256="c" * 64,
+            checkpoint_step=117, checkpoint_resume_cursor_sha256="c" * 64,
+            checkpoint_readback_verified=True, yield_owner_lease_cas_verified=True,
+        )
+        verify = lambda exact: exact is s
+        for step, checkpoint_cursor in ((117, "c" * 64),
+                                        (118, "d" * 64),
+                                        (True, "c" * 64)):
+            with self.subTest(step=step, checkpoint_cursor=checkpoint_cursor[:4]):
+                s["trainer"]["checkpoint_step"] = step
+                s["trainer"]["checkpoint_resume_cursor_sha256"] = checkpoint_cursor
+                result = [x for x in mod.assess(s, owner_snapshot_verifier=verify)
+                          if x["code"] == "CHAT_PRIORITY"][0]
+                self.assertEqual(result["urgency"], "hold")
+        s["trainer"]["checkpoint_step"] = 118
+        s["trainer"]["checkpoint_resume_cursor_sha256"] = "c" * 64
+        result = [x for x in mod.assess(s, owner_snapshot_verifier=verify)
+                  if x["code"] == "CHAT_PRIORITY"][0]
+        self.assertEqual(result["urgency"], "review")
 
     def test_cpu_io_pressure_blocks(self):
         s=snapshot(); s["cpu_io"]["io_wait_pct"]=20

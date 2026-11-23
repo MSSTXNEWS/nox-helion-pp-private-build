@@ -223,6 +223,9 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         # owner review. No signals, scheduler changes or resumes here.
         import re
         cursor = trainer.get("resume_cursor_sha256")
+        # Verified restore data must belong to this exact completed boundary:
+        # a stale, separately verified checkpoint is not a safe-yield witness.
+        checkpoint_cursor = trainer.get("checkpoint_resume_cursor_sha256")
         safe_yield_review = (
             trainer.get("yield_boundary") in ("optimizer_step", "embedding_batch")
             and trainer.get("yield_boundary_complete") is True
@@ -230,6 +233,9 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             and trainer["yield_step"] >= 0
             and isinstance(cursor, str)
             and re.fullmatch(r"[0-9a-f]{64}", cursor) is not None
+            and type(trainer.get("checkpoint_step")) is int
+            and trainer["checkpoint_step"] == trainer["yield_step"]
+            and checkpoint_cursor == cursor
             and trainer.get("checkpoint_readback_verified") is True
             and trainer.get("yield_owner_lease_cas_verified") is True
             and isinstance(native, dict)
@@ -248,8 +254,9 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         else:
             add("CHAT_PRIORITY", "hold",
                 "Chat takes priority, but a completed optimizer-step or embedding "
-                "batch, checkpoint readback, resume cursor and current owner "
-                "lease/CAS attestation are unverified. No signal, hard STOP, "
+                "batch, step-matched checkpoint readback, matching resume "
+                "cursor and current owner lease/CAS attestation are unverified. "
+                "No signal, hard STOP, "
                 "trainer restart or cursor advance; await a safe boundary.")
     if trainer.get("running") is True:
         # Original TaskID 6A04: missing/malformed utilization is a HOLD,
