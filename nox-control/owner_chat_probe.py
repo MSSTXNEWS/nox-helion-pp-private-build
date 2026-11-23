@@ -613,6 +613,25 @@ def scoped_history_matches_turns(history, turns, dialog_id):
 
 
 
+def require_preturn_dialog_prefix(client, previous, turns, dialog_id):
+    """Read-only later-turn fence: never POST against an advanced or rewritten dialog.
+
+    This is a fresh owner-dialog snapshot comparison, not atomic native CAS,
+    independent S03 proof, or permission to replay an uncertain request.
+    """
+    if (not isinstance(dialog_id, str) or not re.fullmatch(r'[a-f0-9]{32}', dialog_id)
+            or len(turns) not in (1, 2)
+            or not scoped_history_matches_turns(previous, turns, dialog_id)
+            or len(previous['messages']) != 2 * len(turns)):
+        raise RuntimeError('HOLD_CHAT_PRETURN_DIALOG_PREFIX')
+    current = owner_readback_json(
+        client, '/api/ui/memory/dialogs/history?dialog_id=' + dialog_id + '&limit=8')
+    if (not scoped_history_matches_turns(current, turns, dialog_id)
+            or current['messages'] != previous['messages']):
+        raise RuntimeError('HOLD_CHAT_PRETURN_DIALOG_PREFIX')
+    return True
+
+
 def stable_postquiet_three_turn_history(client, original, turns, dialog_id):
     """Re-read six owner-dialog rows after quiescence; never claim canonical S03 proof.
 
@@ -1624,6 +1643,7 @@ def main():
         require_latency_target(turn, 'FIRST_TURN', 8000)
         if os.environ.get('NOX_PROBE_SECOND_TURN')=='1':
             followup='Какое число ты только что получил? Ответь только этим числом.'
+            require_preturn_dialog_prefix(client, history, [(prompt, answer)], did)
             follow=admitted_consume_turn(client,followup,did);answer2=follow['answer'];done=follow['done']
             stored=owner_readback_json(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6')
             passed=bool(done and done.get('saved') is True and done.get('s03_integrated') is True
@@ -1645,6 +1665,7 @@ def main():
             require_latency_target(follow, 'SECOND_TURN', 5000)
             require_executor_turn_budget(time.monotonic()-probe_started)
             question='Сколько сейчас исполнителей и агентов у NOX?'
+            require_preturn_dialog_prefix(client, stored, [(prompt, answer), (followup, answer2)], did)
             turn3=admitted_consume_turn(client,question,did,timeout=30)
             text=turn3['answer'];end=turn3['done']
             fresh=owner_readback_json(client,'/api/ui/executors')

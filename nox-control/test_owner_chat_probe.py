@@ -2511,6 +2511,48 @@ class ProbeTests(unittest.TestCase):
             self.assertTrue(response.closed)
 
 
+    def test_later_turn_preturn_dialog_prefix_fences_advanced_or_rewritten_history(self):
+        did = '1' * 32
+        pairs = [('first', '323'), ('second', '323')]
+        rows = []
+        for index, (question, answer) in enumerate(pairs):
+            rows.extend([
+                {'id': index * 2 + 1, 'role': 'user', 'content': question, 'dialog_id': did},
+                {'id': index * 2 + 2, 'role': 'assistant', 'content': answer, 'dialog_id': did},
+            ])
+        for n in (1, 2):
+            prior = {'dialog_id': did, 'messages': rows[:2 * n]}
+            def copy_prior():
+                return json.loads(json.dumps(prior))
+            with patch.object(probe, 'owner_readback_json', return_value=copy_prior()) as fetch:
+                self.assertTrue(probe.require_preturn_dialog_prefix('client', prior, pairs[:n], did))
+                fetch.assert_called_once_with(
+                    'client', '/api/ui/memory/dialogs/history?dialog_id=' + did + '&limit=8')
+            changed = copy_prior()
+            changed['messages'][0]['id'] = 99
+            advanced = copy_prior()
+            advanced['messages'].append({'id': 100, 'role': 'user', 'content': 'already sent'})
+            missing = copy_prior()
+            missing['messages'].pop()
+            foreign = copy_prior()
+            foreign['dialog_id'] = '2' * 32
+            for poisoned in (changed, advanced, missing, foreign):
+                with self.subTest(n=n, poisoned=poisoned), patch.object(
+                        probe, 'owner_readback_json', return_value=poisoned), patch.object(
+                        probe, 'consume_turn') as post:
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PRETURN_DIALOG_PREFIX'):
+                        probe.require_preturn_dialog_prefix('client', prior, pairs[:n], did)
+                    post.assert_not_called()
+            with patch.object(probe, 'owner_readback_json') as fetch:
+                with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PRETURN_DIALOG_PREFIX'):
+                    probe.require_preturn_dialog_prefix('client', advanced, pairs[:n], did)
+                fetch.assert_not_called()
+        main = path.read_text().split('def main():', 1)[1]
+        self.assertLess(main.index('require_preturn_dialog_prefix(client, history,'),
+                        main.index('follow=admitted_consume_turn('))
+        self.assertLess(main.index('require_preturn_dialog_prefix(client, stored,'),
+                        main.index('turn3=admitted_consume_turn('))
+
     def test_third_turn_six_row_postquiet_readback_stays_identical(self):
         """Two exact same-dialog GET snapshots, no extra POST and no S03 assertion."""
         did = '1' * 32
