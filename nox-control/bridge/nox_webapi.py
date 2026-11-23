@@ -64,6 +64,8 @@ def _reserve_chat_snapshot_slot():
 # Bound raw HTTP JSON (including padding, metadata and chunked uploads) before
 # parsing. This is separate from the decoded 1 MiB conversational text limit.
 MAX_CHAT_WIRE_BYTES = 8 * 1024 * 1024
+# STOP must remain cheap and responsive even while a client streams junk.
+MAX_STOP_WIRE_BYTES = 4096
 MAX_CHAT_INPUT_UTF8_BYTES = 1024 * 1024
 MAX_CHAT_INPUT_MESSAGES = 512
 # Bound the canonical response before a corrupt upstream can exhaust RAM or S03.
@@ -625,7 +627,28 @@ def install(app, B):
         # Malformed input must never escalate into an implicit broadcast STOP.
         # This API is generation-only: media/task/OWNER STOP have separate fences.
         try:
-            b = await request.json()
+            if hasattr(request, "stream"):
+                declared = request.headers.get("content-length")
+                if declared is not None:
+                    if not declared.isdecimal():
+                        return JSONResponse({"status": "HOLD", "reason": "STOP_INVALID_CONTENT_LENGTH"},
+                                            status_code=400)
+                    if int(declared) > MAX_STOP_WIRE_BYTES:
+                        return JSONResponse({"status": "HOLD", "reason": "STOP_WIRE_TOO_LARGE"},
+                                            status_code=413)
+                wire = bytearray()
+                async for chunk in request.stream():
+                    if len(chunk) > MAX_STOP_WIRE_BYTES - len(wire):
+                        return JSONResponse({"status": "HOLD", "reason": "STOP_WIRE_TOO_LARGE"},
+                                            status_code=413)
+                    wire.extend(chunk)
+                # STOP is safety-critical: reject duplicate scope/request IDs
+                # and nonfinite values instead of accepting last-key-wins JSON.
+                b = json.loads(wire, object_pairs_hook=_unique_sse_object,
+                               parse_constant=_finite_sse_constant)
+            else:
+                # Test-only request doubles; real FastAPI Request has stream().
+                b = await request.json()
         except Exception:
             return JSONResponse({"status": "HOLD", "reason": "STOP_INVALID_JSON"}, status_code=400)
         if not isinstance(b, dict):
