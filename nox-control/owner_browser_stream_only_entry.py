@@ -24,10 +24,10 @@ except NameError:
 ROOT = Path('/root/nox')
 AREA = ROOT / 'browser_qa'
 PINS = {
-    'owner_chat_browser_qa.py': 'a63971d7a3a36e8c292840b1a68cd50c14440e7723cf41ed5d3fa140f05a969f',
-    'owner_chat_browser_transport_qa.py': '2376d23a72e90debd280330bc1120637164afb3641c7c5874cd1cc1a4372d48e',
-    'owner_chat_browser_release_qa.py': '5538b03fe083cbf271b24238aabf2903c9a4d01d6136750e4a75d288996fd043',
-    'owner_chat_stream_only_qa.py': '5869edf5070c351202061db41b1bde64a7df5e3420fbfe153f3b6c2f73c2e137',
+    'owner_chat_browser_qa.py': '9ed8c3e46e17271dd5722071561f466f10edbd10ccd59cd6a752918dae30bcf2',
+    'owner_chat_browser_transport_qa.py': '3579068bc364fdafb946052e04e21e410e083a61009948764113d6edf4b7376c',
+    'owner_chat_browser_release_qa.py': '5b12b4d1c92821db0d32f29a6782930af80c50a81d7b84e5026cbcf06e1e4b55',
+    'owner_chat_stream_only_qa.py': '4eb86152781f4293fab6590888ff1adbe4fe87385a15bc4a40309b084ab5c51a',
 }
 ENV_SPEC = {'schema': 'NOX_OWNER_BROWSER_ENV_V1', 'playwright': '1.65.2',
             'base_python': '/root/nox/venv/bin/python', 'torch_modified': False}
