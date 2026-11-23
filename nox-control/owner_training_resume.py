@@ -318,6 +318,10 @@ def _nox_owner_training_allowed():
     _p = ROOT / "state/task_boost_mode.json"
     _fd = -1
     try:
+        # A leaf O_NOFOLLOW cannot authenticate the signed policy when its
+        # parent directory is a symlink to foreign or replayed owner state.
+        if any(_part.is_symlink() for _part in (_p, *_p.parents)):
+            return False
         # Authorize exactly the stable regular file named at this path, not
         # a symlink/fifo rebound between the old is_symlink/stat/read_text.
         _fd = _os.open(_p, _os.O_RDONLY | _os.O_NOFOLLOW | _os.O_NONBLOCK | _os.O_CLOEXEC)
@@ -327,6 +331,10 @@ def _nox_owner_training_allowed():
         _raw = _os.read(_fd, 16001)
         _after = _os.fstat(_fd)
         _named = _os.stat(_p, follow_symlinks=False)
+        # A directory rename followed by a symlink to the SAME inode evades
+        # the descriptor/named stat comparison unless ancestors are rechecked.
+        if any(_part.is_symlink() for _part in (_p, *_p.parents)):
+            return False
         _fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
         if (len(_raw) != _before.st_size
                 or any(getattr(_before, key) != getattr(_after, key)

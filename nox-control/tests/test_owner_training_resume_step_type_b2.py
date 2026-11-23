@@ -1576,6 +1576,64 @@ class CheckpointStepProvenance(unittest.TestCase):
             self.assertEqual(json.loads(previous.read_text(encoding="utf-8")), valid)
 
 
+
+    def test_embedded_training_permission_rejects_parent_symlink_and_atomic_pivot(self):
+        # Exercise the actual injected permission helper; no live services run.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        item = next(node for node in tree.body
+                    if isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name) and
+                            target.id == "PERMISSION_HELPER" for target in node.targets))
+        embedded = ast.literal_eval(item.value)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            state = root / "state"
+            state.mkdir()
+            displaced = root / "signed-state"
+            policy = state / "task_boost_mode.json"
+            valid = {"enabled": True, "mode": "TASK_BOOST",
+                     "training_allowed": True,
+                     "training_service": "nox-train-volta-t866u",
+                     "training_request": "__NOX_OWNER_REQUEST_ID__",
+                     "training_source_sha": "__NOX_OWNER_SOURCE_SHA__"}
+            policy.write_text(json.dumps(valid), encoding="utf-8")
+            scope = {"ROOT": root}
+            exec(compile(embedded, "<isolated-permission-helper>", "exec"), scope)
+            allowed = scope["_nox_owner_training_allowed"]
+            self.assertTrue(allowed())
+
+            # The unchanged signed bytes and inode do NOT make an aliased
+            # owner-state directory an admissible policy path.
+            state.rename(displaced)
+            state.symlink_to(displaced, target_is_directory=True)
+            self.assertFalse(allowed())
+            state.unlink()
+            displaced.rename(state)
+            self.assertTrue(allowed())
+
+            # Pivot only after the stable descriptor has been read.  The
+            # named stat still sees the original inode via the symlink.
+            native_fstat = os.fstat
+            fstat_calls = 0
+            pivoted = False
+
+            def pivot_after_policy_read(fd):
+                nonlocal fstat_calls, pivoted
+                fstat_calls += 1
+                if fstat_calls == 2 and not pivoted:
+                    state.rename(displaced)
+                    state.symlink_to(displaced, target_is_directory=True)
+                    pivoted = True
+                return native_fstat(fd)
+
+            with mock.patch("os.fstat", side_effect=pivot_after_policy_read):
+                self.assertFalse(allowed())
+            self.assertTrue(pivoted)
+            state.unlink()
+            displaced.rename(state)
+            self.assertTrue(allowed())
+
+
     def test_permission_helper_rejects_duplicate_authority_keys(self):
         # Strict parser: a valid owner policy succeeds, while last-value-wins
         # duplicates must not authorize a training service.
