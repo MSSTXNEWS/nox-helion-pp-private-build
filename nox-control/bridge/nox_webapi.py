@@ -64,6 +64,9 @@ def _reserve_chat_snapshot_slot():
 # Bound raw HTTP JSON (including padding, metadata and chunked uploads) before
 # parsing. This is separate from the decoded 1 MiB conversational text limit.
 MAX_CHAT_WIRE_BYTES = 8 * 1024 * 1024
+# Owner facts have a much smaller valid payload than full multi-turn chat.
+# Apply this to raw chunked HTTP bytes before parsing or reaching SQLite.
+MAX_S03_FACT_WIRE_BYTES = 64 * 1024
 # STOP must remain cheap and responsive even while a client streams junk.
 MAX_STOP_WIRE_BYTES = 4096
 MAX_CHAT_INPUT_UTF8_BYTES = 1024 * 1024
@@ -552,7 +555,30 @@ def install(app, B):
         # secondary log write. Stringifying a dict/None or silently truncating
         # content would fabricate a different memory than the user supplied.
         try:
-            b = await request.json()
+            if hasattr(request, "stream"):
+                # request.json() buffers an unbounded body first; an attacker
+                # can exhaust RAM before the 2,000-character fact limit runs.
+                declared = request.headers.get("content-length")
+                if declared is not None:
+                    if not declared.isdecimal():
+                        return JSONResponse({"status": "HOLD", "reason": "S03_FACT_INVALID_CONTENT_LENGTH",
+                                             "saved": False, "s03_readback_verified": False}, status_code=400)
+                    if int(declared) > MAX_S03_FACT_WIRE_BYTES:
+                        return JSONResponse({"status": "HOLD", "reason": "S03_FACT_WIRE_TOO_LARGE",
+                                             "saved": False, "s03_readback_verified": False}, status_code=413)
+                wire = bytearray()
+                async for chunk in request.stream():
+                    if len(chunk) > MAX_S03_FACT_WIRE_BYTES - len(wire):
+                        return JSONResponse({"status": "HOLD", "reason": "S03_FACT_WIRE_TOO_LARGE",
+                                             "saved": False, "s03_readback_verified": False}, status_code=413)
+                    wire.extend(chunk)
+                # Two content/source keys or NaN must not silently reinterpret
+                # what the owner asked the canonical writer to remember.
+                b = json.loads(wire, object_pairs_hook=_unique_sse_object,
+                               parse_constant=_finite_sse_constant)
+            else:
+                # Source-only request doubles can expose json() without stream().
+                b = await request.json()
         except Exception:
             return JSONResponse({"status": "HOLD", "reason": "S03_FACT_INVALID_JSON",
                                  "saved": False, "s03_readback_verified": False}, status_code=400)
