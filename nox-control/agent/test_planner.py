@@ -26,6 +26,29 @@ class TestPlanner(unittest.TestCase):
         self.assertEqual(self.p.next(accept=lambda t: t["source"] == "kanban")["id"], "k1")
         with open(self.cfg.inbox, encoding="utf-8") as f: self.assertEqual(f.read().count("\n"), 3)    # источник не изменён
 
+    def test_same_task_id_from_two_sources_keeps_global_highest_priority(self):
+        jl(self.cfg.inbox, [
+            {"id": "shared", "title": "old inbox", "status": "pending", "priority": "low", "ts": 1},
+            {"id": "normal", "title": "other task", "status": "pending", "priority": "normal", "ts": 2},
+        ])
+        jl(self.cfg.queue, [
+            {"id": "shared", "title": "updated kanban", "status": "queued", "priority": "high", "ts": 3},
+        ])
+        tasks = self.p.tasks()
+        self.assertEqual([t["id"] for t in tasks], ["shared", "normal"])
+        self.assertEqual(tasks[0]["source"], "kanban")
+        self.assertEqual(self.p.next()["id"], "shared")
+        self.p.mark("shared", "done")
+        self.assertEqual(self.p.next()["id"], "normal")
+        self.assertEqual(len([t for t in self.p.tasks() if t["id"] == "shared"]), 1)
+
+    def test_original_p0_p1_priority_labels_keep_order(self):
+        jl(self.cfg.inbox, [
+            {"id": "p1", "title": "later", "status": "pending", "priority": "P1", "ts": 1},
+            {"id": "p0", "title": "critical", "status": "pending", "priority": "P0", "ts": 2},
+        ])
+        self.assertEqual([t["id"] for t in self.p.tasks()], ["p0", "p1"])
+
     def test_state_overlay_and_retries(self):
         jl(self.cfg.inbox, [{"id": "a", "title": "t1", "status": "pending", "ts": 1}, {"id": "b", "title": "t2", "status": "pending", "ts": 2}])
         self.p.mark("a", "running"); self.p.mark("a", "interrupted")
