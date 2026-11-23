@@ -2238,6 +2238,51 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn('_agent_final',payload)
 
 
+    async def test_pool_preserves_serving_budget_and_stream_controls(self):
+        # Pool cache preparation must never silently change model token budget,
+        # decoding temperature, physical model slot or the streaming contract.
+        # Cache-only optimization is allowed and still reaches the model.
+        changes=('max_tokens','temperature','id_slot','n_keep','stream',
+                 'drop_max_tokens','cache_only')
+        for change in changes:
+            with self.subTest(change=change):
+                native=self.native()
+                native['_POOL']=True
+                native['try_deterministic']=lambda user:None
+                replacements={'max_tokens':8,'temperature':0.9,'id_slot':3,
+                              'n_keep':1,'stream':False}
+                def prepare(req,cache):
+                    if change=='drop_max_tokens':
+                        req.pop('max_tokens',None)
+                    elif change=='cache_only':
+                        req['cache_prompt']=False
+                    else:
+                        req[change]=replacements[change]
+                    return req
+                native['prepare_payload']=prepare
+                payload={'model':'nox-existing',
+                         'messages':[{'role':'user','content':'Say ready'}],
+                         'max_tokens':128,'temperature':0.4,'id_slot':1,'n_keep':32}
+                allowed=(change=='cache_only')
+                streams=[Chunks([frame('ready'),frame(finish='stop'),
+                                 b'data: [DONE]\\n\\n'])] if allowed else []
+                requests,factory=self.transport(streams)
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Say ready',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                if allowed:
+                    self.assertEqual(len(requests),1)
+                    self.assertIs(requests[0]['cache_prompt'],False)
+                    self.assertEqual(payload.get('_agent_final'),'ready')
+                    self.assertIn('[DONE]',wire)
+                else:
+                    self.assertEqual(requests,[])
+                    self.assertIn('HOLD_MODEL_CONTROL_FIDELITY',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+                    self.assertEqual(self.dispatched,[])
+
     async def test_pool_cannot_disable_tool_choice_or_reenable_thinking(self):
         # Caching cannot silently disable all native tools or reenable slow
         # deliberation. An in-place mutation of a nested template also HOLDS.
