@@ -1,0 +1,17 @@
+{
+  "owner_explicitly_enabled": false,
+  "stop_contract_verified": false,
+  "existing_dispatcher_owner_cas_verified": false,
+  "expected_owner": "REPLACE_WITH_VERIFIED_LEASE_OWNER",
+  "stop_paths": ["/root/nox/STOP.flag", "/root/nox/state/MAINTENANCE.lock"],
+  "lease_evidence_file": "/root/nox/state/verified_writer_lease.json",
+  "resource_evidence_file": "/root/nox/state/verified_resource_snapshot.json",
+  "health_evidence_file": "/root/nox/state/verified_service_health.json",
+  "resource_max_age_seconds": 90,
+  "health_max_age_seconds": 90,
+  "max_attempts_per_hour": 4,
+  "max_backoff_seconds": 1800,
+  "services": [
+    {"name":"nox-dispatcher", "allowlisted":false, "restart_argv":["supervisorctl","restart","nox-dispatcher"]}
+  ]
+}
