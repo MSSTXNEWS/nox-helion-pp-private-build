@@ -23,7 +23,12 @@ def main():
     inst = inst.get("instances", inst)
     if isinstance(inst, list): inst = next(i for i in inst if i.get("id") == INSTANCE)
     print("VAST_STATUS", {k: inst.get(k) for k in ("actual_status","cur_state","intended_status","status_msg","next_state","dph_total","end_date")} if isinstance(inst, dict) else repr(inst)[:300])
-    if not isinstance(inst, dict) or not inst.get("public_ipaddr"): sys.exit("no ip")
+    if not isinstance(inst, dict) or not inst.get("public_ipaddr"):
+        try:
+            L = api("GET", "/instances/").get("instances") or []
+            print("VAST_LIST", [(i.get("id"), i.get("actual_status"), i.get("intended_status"), (i.get("gpu_name") or ""), i.get("num_gpus"), str(i.get("status_msg"))[:80], i.get("geolocation")) for i in L])
+        except Exception as e: print("VAST_LIST_ERR", e)
+        sys.exit("no ip")
     ip = inst["public_ipaddr"]
     ports = [int(m["HostPort"]) for m in inst.get("ports", {}).get("22/tcp", []) if str(m.get("HostPort", "")).isdigit()]
     if inst.get("actual_status") != "running" or not ports: sys.exit("instance not running / no ssh port: id=%s actual_status=%s cur_state=%s intended=%s msg=%s" % (INSTANCE, inst.get("actual_status"), inst.get("cur_state"), inst.get("intended_status"), str(inst.get("status_msg"))[:200]))
