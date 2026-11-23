@@ -102,7 +102,7 @@ throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
 verifiedChain.set(id,[...chain,{exchange_id:exchangeId,prompt,answer,model}]);
 }
 function accepted(done,id) {
-return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
+return done?.type==='done'&&!done.error&&(!('status'in done)||/^(done|ready|success|completed)$/i.test(done.status))&&done.saved===true&&done.s03_integrated===true&&
 done.dialog_id===id&&typeof done.exchange_id==='string'&&
 done.exchange_id.length>=6&&done.exchange_id.length<=160;
 }
@@ -139,27 +139,27 @@ const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:tr
 let buf='',answer='',done,doneSeen=false,startSeen=false,preparingSeen=false;
 let nativeModel;
 const line=async str=>{
-  if(!str.trim())return;
-  let e;
-  try{e=JSON.parse(str);}catch{throw Error('HOLD_NATIVE_FRAME_JSON');}
-  if(!e||typeof e!=='object'||Array.isArray(e))throw Error('HOLD_NATIVE_FRAME_TYPE');
-  if(doneSeen){
-    if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
-     throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
-   }
-   if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
-   if(e.type==='delta'){
-     if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-     if(typeof e.text!=='string'||answer.length+e.text.length>200000)throw Error('HOLD_NATIVE_DELTA');
-     answer+=e.text;await emit(e.text);
-   } else if(e.type==='done') {
-     if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-     for(const k of ['model','model_label','modelLabel'])
-      if(k in e&&e[k]!==nativeModel)
-       throw Error('HOLD_NATIVE_MODEL_RECEIPT_DRIFT');
-     doneSeen=true;done=e;
-   } else if(e.type==='start') {
-     if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
+if(!str.trim())return;
+let e;
+try{e=JSON.parse(str);}catch{throw Error('HOLD_NATIVE_FRAME_JSON');}
+if(!e||typeof e!=='object'||Array.isArray(e))throw Error('HOLD_NATIVE_FRAME_TYPE');
+if(doneSeen){
+if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
+throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
+}
+if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
+if(e.type==='delta'){
+if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
+if(typeof e.text!=='string'||answer.length+e.text.length>200000)throw Error('HOLD_NATIVE_DELTA');
+answer+=e.text;await emit(e.text);
+} else if(e.type==='done') {
+if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
+for(const k of ['model','model_label','modelLabel'])
+if(k in e&&e[k]!==nativeModel)
+throw Error('HOLD_NATIVE_MODEL_RECEIPT_DRIFT');
+doneSeen=true;done=e;
+} else if(e.type==='start') {
+   if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
      if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
      startSeen=true;
      if(!validNativeModelLabel(e.model)||['model_label','modelLabel'].some(k=>k in e&&e[k]!==e.model))throw Error('HOLD_NATIVE_MODEL_START_LABEL');
