@@ -35,6 +35,85 @@ class Request:
 
 class FactReceiptTest(unittest.TestCase):
 
+    def test_1a03_skeptic_unicode_delta_matches_terminal_frames_and_snapshot(self):
+        """A post-model skeptic annotation counts as a real emitted text frame."""
+        import hashlib
+
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        snapshot = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/snapshot")
+        bridge = self.bridge
+        bridge.SOUL = None
+        bridge.MODEL = "http://127.0.0.1:8098/v1/chat/completions"
+        bridge.NKEEP, bridge.LAST_CHAT = 0, {"t": 0}
+        bridge.self_vol = lambda user: "[SELF]"
+        bridge.build_msgs = lambda history, user, mem, vol, extra="": [
+            {"role": "user", "content": user}
+        ]
+        bridge.adapt_tokens = lambda user, limit: limit
+        bridge.invalidate_s03_cache = lambda: None
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Ответ 🧠"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs):
+                return Upstream()
+
+        class Advisory:
+            def maybe_reminder(self, *args):
+                return None
+            def wants_plan(self, *args):
+                return False
+            def mode_hint(self, *args):
+                return ""
+            def is_factual(self, *args):
+                return True
+            async def skeptic(self, *args, **kwargs):
+                return {"ok": False, "doubt": "нужна ссылка"}
+
+        bridge.hc = lambda: Client()
+        writes = []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def exercise():
+            response = await chat(Request({
+                "request_id": "skeptic-frame-1a03",
+                "use_memory": False,
+                "messages": [{"role": "user", "content": "Уточни факт"}],
+            }))
+            frames = [json.loads(frame) async for frame in response.body_iterator]
+            self.assertTrue(frames[-1]["done"])
+            readback = await snapshot(frames[-1]["stream_id"], "skeptic-frame-1a03")
+            return frames, json.loads(readback.body)
+
+        with (mock.patch.object(W, "W", Advisory()),
+              mock.patch.object(W, "CANCEL", set()),
+              mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
+              mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.object(W, "SRC", {}),
+              mock.patch.dict(sys.modules, {"s03_memory": memory})):
+            frames, snap = asyncio.run(exercise())
+
+        deltas = [f["message"]["content"] for f in frames
+                  if isinstance(f.get("message"), dict) and f["message"].get("content")]
+        expected = "Ответ 🧠\n\n⚠ Скептик: нужна ссылка"
+        self.assertEqual("".join(deltas), expected)
+        self.assertEqual(len(deltas), 2)
+        self.assertEqual(frames[-1]["frames"], len(deltas))
+        self.assertEqual(frames[-1]["digest"], hashlib.sha256(expected.encode()).hexdigest())
+        self.assertEqual(snap["message"]["content"], expected)
+        self.assertTrue(snap["terminal_digest_verified"])
+        self.assertEqual(snap["snapshot_integrity"], "COMPLETE")
+        self.assertFalse(snap["s03_readback_verified"])
+        self.assertEqual(writes, [("Уточни факт", expected)])
+
     def test_2a05_stream_metrics_do_not_invent_provider_tokens(self):
         """Chunks are not tokens; duration must use monotonic time."""
         chat = next(route.endpoint for route in self.app.routes if route.path == "/api/chat")
