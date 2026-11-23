@@ -2917,6 +2917,748 @@ class ProbeTests(unittest.TestCase):
             self.assertTrue(response.closed)
 
 
+    def test_camelcase_sse_dialog_alias_rejects_foreign_later_turns(self):
+        """A foreign dialogId on any SSE envelope cannot pass as turn 2/3."""
+        did, foreign = '1' * 32, '2' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        for turn in ('second-turn', 'third-turn'):
+            for kind in ('delta', 'status', 'done'):
+                for scope in ('top', 'status', 'meta', 'metadata', 'meta.status'):
+                    frame = {'type': kind}
+                    if kind == 'delta':
+                        frame['text'] = '323'
+                    if kind == 'done':
+                        frame.update(done)
+                    if scope == 'top':
+                        frame['dialogId'] = foreign
+                    elif scope == 'meta.status':
+                        frame['meta'] = {'status': {'dialogId': foreign}}
+                    else:
+                        frame[scope] = {'dialogId': foreign}
+                    if kind == 'done':
+                        frames = [{'type': 'delta', 'text': '323'}, frame]
+                    elif kind == 'delta':
+                        frames = [frame, done]
+                    else:
+                        frames = [frame, {'type': 'delta', 'text': '323'}, done]
+                    expected = ('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH'
+                                if kind == 'done' else
+                                'HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH')
+                    response = Response(frames)
+                    with self.subTest(turn=turn, kind=kind, scope=scope), \\
+                            patch.object(probe, 'request', return_value=response):
+                        with self.assertRaisesRegex(RuntimeError, '^' + expected + '
+        """Foreign nested SSE dialog IDs cannot contaminate a same-dialog answer."""
+        did, foreign = '1' * 32, '2' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        for kind in ('status', 'meta', 'delta', 'done'):
+            for container in ('status', 'metadata', 'meta'):
+                for nested in (False, True):
+                    metadata = ({'status': {'dialog_id': foreign}} if nested
+                                else {'dialog_id': foreign})
+                    fragment = {'type': kind, container: metadata}
+                    if kind == 'delta':
+                        fragment['text'] = '323'
+                    if kind == 'done':
+                        fragment = dict(done, **{container: metadata})
+                        frames = [{'type': 'delta', 'text': '323'}, fragment]
+                    else:
+                        frames = [fragment, {'type': 'delta', 'text': '323'}, done]
+                    response = Response(frames)
+                    error = ('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH'
+                             if kind == 'done' else
+                             'HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH')
+                    with self.subTest(kind=kind, container=container,
+                                      nested=nested), patch.object(
+                            probe, 'request', return_value=response):
+                        with self.assertRaisesRegex(RuntimeError, '^' + error + '$'):
+                            probe.consume_turn(object(), 'second-turn', did)
+                    self.assertTrue(response.closed)
+
+        # Matching nested provenance and untagged legacy frames remain valid.
+        for nested in (True, False):
+            meta = {'meta': {'status': {'dialog_id': did}}} if nested else {}
+            response = Response([dict({'type': 'status'}, **meta),
+                                 {'type': 'delta', 'text': '323'}, done])
+            with self.subTest(valid_nested=nested), patch.object(
+                    probe, 'request', return_value=response):
+                self.assertEqual(
+                    probe.consume_turn(object(), 'second-turn', did)['answer'],
+                    '323')
+            self.assertTrue(response.closed)
+
+
+    def test_nested_status_model_provenance_cannot_launder_second_turn_route(self):
+        """A foreign model inside metadata.status cannot hide under a good DONE."""
+        did = '4' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        for container in ('status', 'metadata', 'meta'):
+            for field in ('model', 'model_id', 'modelId'):
+                poison = {'type': 'status', container:
+                          {'status': {field: 'foreign-route'}}}
+                response = Response([
+                    {'type': 'start', 'model': 'GLM-5.3'}, poison,
+                    {'type': 'delta', 'text': '323'}, done])
+                with self.subTest(container=container, field=field), patch.object(
+                        probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
+                        probe.consume_turn(object(), 'second-turn', did)
+                self.assertTrue(response.closed)
+            good = Response([
+                {'type': 'start', 'model': 'GLM-5.3'},
+                {'type': 'status', container:
+                 {'status': {'model_id': 'GLM-5.3'}}},
+                {'type': 'delta', 'text': '323'}, done])
+            with self.subTest(good_container=container), patch.object(
+                    probe, 'request', return_value=good):
+                result = probe.consume_turn(object(), 'second-turn', did)
+            self.assertEqual(result['stream_model_identity'], 'GLM-5.3')
+            self.assertTrue(good.closed)
+
+
+    def test_sse_content_length_ends_at_exact_wire_eof(self):
+        """An SSE DONE followed by EOF must match the promised raw wire bytes."""
+        from email.message import Message
+        did = '4' * 32
+        frames = [
+            {'type': 'start', 'dialog_id': did},
+            {'type': 'delta', 'dialog_id': did, 'text': '323'},
+            {'type': 'done', 'dialog_id': did, 'saved': True,
+             's03_integrated': True},
+        ]
+        wire = []
+        for frame in frames:
+            wire.extend((b'event: ' + frame['type'].encode() + b'\n',
+                         b'data: ' + json.dumps(frame).encode() + b'\n',
+                         b'\n'))
+
+        class Response(SyntheticBoundedReader):
+            def __init__(self, declared):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream'
+                self.headers['Content-Length'] = str(declared)
+
+            def __iter__(self):
+                return iter(wire)
+
+        exact = sum(map(len, wire))
+        for advertised in (exact - 1, exact + 1, exact + 97):
+            with self.subTest(advertised=advertised):
+                with self.assertRaises(RuntimeError) as caught:
+                    list(probe.bounded_stream_frames(Response(advertised)))
+                self.assertEqual(str(caught.exception),
+                                 'HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH')
+
+        clean_frames = list(probe.bounded_stream_frames(Response(exact)))
+        self.assertEqual([row['type'] for row in clean_frames],
+                         ['start', 'delta', 'done'])
+        self.assertEqual(clean_frames[-1]['dialog_id'], did)
+
+
+    def test_live_multiturn_missing_model_tag_holds_before_third_post_and_complete(self):
+        """An untagged route is compatible transport, never positive model proof."""
+        known = {'stream_model_identity': 'GLM-5.3'}
+        unknown = {'stream_model_identity': None}
+        self.assertFalse(probe.require_multiturn_model_route(unknown, unknown))
+        self.assertFalse(probe.require_multiturn_model_route(unknown, unknown, unknown))
+        self.assertTrue(probe.require_multiturn_model_route(known, known))
+        self.assertTrue(probe.require_multiturn_model_route(known, known, known))
+
+        main = path.read_text().split('def main():', 1)[1]
+        preflight = "if not require_multiturn_model_route(turn,follow):"
+        postflight = "if not model_route_verified:"
+        third_post = 'turn3=admitted_consume_turn('
+        complete = "print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'"
+        self.assertEqual(main.count(preflight), 1)
+        self.assertEqual(main.count(postflight), 1)
+        self.assertEqual(main.count(
+            "raise RuntimeError('HOLD_CHAT_MULTITURN_MODEL_IDENTITY_MISSING')"), 2)
+        self.assertLess(main.index(preflight), main.index(third_post))
+        self.assertLess(main.index(third_post), main.index(postflight))
+        self.assertLess(main.index(postflight), main.index(complete))
+
+
+    def test_http_200_html_page_requires_exact_body_eof_and_unambiguous_framing(self):
+        """A truncated 200 HTML prefix cannot certify a healthy Resonance page."""
+        from email.message import Message
+        html = b'<html><body>NOX Resonance</body></html>'
+
+        class Response:
+            status = 200
+            url = 'http://127.0.0.1:8080/chat'
+
+            def __init__(self, fields=()):
+                self.headers = Message()
+                self.headers.add_header('Content-Type', 'text/html; charset=utf-8')
+                for name, value in fields:
+                    self.headers.add_header(name, str(value))
+                self.closed = False
+
+            def read(self, limit):
+                return html
+
+            def close(self):
+                self.closed = True
+
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'):
+            for length in (len(html) - 1, len(html) + 1, len(html) + 120):
+                response = Response((('Content-Length', length),))
+                with self.subTest(length=length):
+                    with self.assertRaisesRegex(RuntimeError,
+                                                'HOLD_CHAT_PAGE_BODY_LENGTH_MISMATCH'):
+                        probe.page_snapshot(response, expected_path='/chat')
+                self.assertTrue(response.closed)
+
+            for fields in (
+                (('Content-Length', len(html)), ('Transfer-Encoding', 'chunked')),
+                (('Content-Length', len(html)), ('Content-Length', len(html))),
+                (('Transfer-Encoding', 'gzip'),),
+                (('Content-Encoding', 'gzip'),),
+            ):
+                response = Response(fields)
+                with self.subTest(ambiguous=fields):
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_HTTP_FRAMING'):
+                        probe.page_snapshot(response, expected_path='/chat')
+                self.assertTrue(response.closed)
+
+            for fields in (
+                (),
+                (('Content-Length', len(html)),),
+                (('Transfer-Encoding', 'chunked'),),
+                (('Content-Encoding', 'identity'),),
+            ):
+                response = Response(fields)
+                with self.subTest(healthy=fields):
+                    self.assertEqual(probe.page_snapshot(
+                        response, expected_path='/chat'), (200, '/chat', html))
+                self.assertTrue(response.closed)
+
+
+
+    def test_upstream_http_redirect_poison_cannot_be_laundered_by_sse_done(self):
+        """An authenticated model turn cannot turn upstream HTTP 3xx into OK."""
+        did = 'f' * 32
+        for value in ('HTTP/1.1 301 Moved Permanently', 'HTTP 302 Found',
+                      '303 See Other', 'HTTP/2 307 Temporary Redirect',
+                      '308 Permanent Redirect', 302, 307.0, '308'):
+            with self.subTest(redirect=value):
+                self.assertTrue(probe.stream_status_is_failure(value))
+        for value in ('ready', '323 tokens', 200, 'HTTP/1.1 200 OK', '200',
+                      None, True):
+            with self.subTest(healthy=value):
+                self.assertFalse(probe.stream_status_is_failure(value))
+
+        healthy_done = {'type': 'done', 'dialog_id': did, 'saved': True,
+                        's03_integrated': True, 'model': 'GLM-5.3'}
+        cases = [
+            {'type': 'status', 'status': 'HTTP/1.1 302 Found'},
+            {'type': 'status', 'metadata': {'status': {'httpStatus': 307}}},
+            {'type': 'meta', 'meta': {'status_code': '308'}},
+            {'type': 'status', 'code': 301.0},
+            dict(healthy_done, metadata={'http_status': 303}),
+        ]
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, frames):
+                self.frames = frames
+                self.closed = False
+
+            def __iter__(self):
+                return iter(json.dumps(row).encode() + b'\n'
+                            for row in self.frames)
+
+            def close(self):
+                self.closed = True
+
+        for poisoned in cases:
+            frames = [{'type': 'start', 'model': 'GLM-5.3'},
+                      {'type': 'delta', 'text': '323'}]
+            if poisoned['type'] == 'done':
+                frames.append(poisoned)
+                expected = 'HOLD_STREAM_TERMINAL_FAILURE'
+            else:
+                frames.extend((poisoned, healthy_done))
+                expected = 'HOLD_STREAM_PRETERMINAL_FAILURE'
+            response = Response(frames)
+            with self.subTest(frame=poisoned):
+                with patch.object(probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, expected):
+                        probe.consume_turn(object(), 'offline synthetic', did)
+                self.assertTrue(response.closed)
+
+    def test_unknown_explicit_finish_reason_blocks_false_second_turn_completion(self):
+        """Unknown/tool finish markers cannot be laundered by saved=true DONE."""
+        did = 'offline-unfinished-tool-handoff'
+        done = {'type': 'done', 'dialog_id': did, 'saved': True,
+                's03_integrated': True, 'model': 'GLM-5.3'}
+        start = {'type': 'start', 'model': 'GLM-5.3'}
+        delta = {'type': 'delta', 'text': '323'}
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, frames):
+                self.frames = frames
+                self.closed = False
+
+            def __iter__(self):
+                return iter(json.dumps(item).encode() + b'\n'
+                            for item in self.frames)
+
+            def close(self):
+                self.closed = True
+
+        wrappers = (
+            lambda field, value: {field: value},
+            lambda field, value: {'metadata': {field: value}},
+            lambda field, value: {'status': {'status': {field: value}}},
+        )
+        bad_reasons = (
+            ('finish_reason', 'tool_calls'),
+            ('finishReason', 'function_call'),
+            ('stop_reason', 'incomplete'),
+            ('stopReason', ' pending '),
+            ('finish_reason', 'UNKNOWN'),
+            ('finishReason', False),
+            ('stop_reason', 1),
+            ('stopReason', ''),
+            ('finish_reason', 'content_filter'),
+        )
+        for field, value in bad_reasons:
+            for wrap in wrappers:
+                evidence = wrap(field, value)
+                for terminal in (False, True):
+                    frame = dict(done if terminal else {'type': 'status'},
+                                 **evidence)
+                    frames = ([start, delta, frame] if terminal else
+                              [start, delta, frame, done])
+                    response = Response(frames)
+                    with self.subTest(field=field, reason=value,
+                                      nested=evidence, terminal=terminal):
+                        with patch.object(probe, 'request',
+                                          return_value=response):
+                            with self.assertRaisesRegex(
+                                    RuntimeError, 'HOLD_STREAM_(TERMINAL|PRETERMINAL)_FAILURE'):
+                                probe.consume_turn(object(), 'offline', did)
+                        self.assertTrue(response.closed)
+
+        for value in ('stop', ' STOP ', 'end_of_turn', 'end_turn',
+                      'eos', 'eot_id', 'stop_sequence', 'completed'):
+            response = Response([start, delta, dict(done, finish_reason=value)])
+            with self.subTest(valid=value), patch.object(
+                    probe, 'request', return_value=response):
+                self.assertEqual(
+                    probe.consume_turn(object(), 'offline', did)['answer'],
+                    '323')
+            self.assertTrue(response.closed)
+        # Missing or explicit null stays neutral for older native streams;
+        # it is not independently sufficient for model/S03 acceptance.
+        for done_extra in ({}, {'finish_reason': None}):
+            response = Response([start, delta, dict(done, **done_extra)])
+            with patch.object(probe, 'request', return_value=response):
+                self.assertEqual(
+                    probe.consume_turn(object(), 'offline', did)['answer'],
+                    '323')
+            self.assertTrue(response.closed)
+
+    def test_runtime_js_css_asset_requires_complete_bounded_http_body(self):
+        """A 200 JS prefix cannot certify a truncated critical runtime asset."""
+        from email.message import Message
+
+        body = b'window.NOX=' + b'x' * 780
+
+        class Response:
+            def __init__(self, fields):
+                self.headers = Message()
+                for name, value in fields:
+                    self.headers.add_header(name, value)
+                self.position = 0
+                self.reads = 0
+
+            def read(self, amount):
+                self.reads += 1
+                chunk = body[self.position:self.position + amount]
+                self.position += len(chunk)
+                return chunk
+
+        for fields in ([], [('Content-Length', str(len(body)))],
+                       [('Transfer-Encoding', 'chunked')]):
+            response = Response(fields)
+            sample = response.read(512)
+            with self.subTest(valid=fields):
+                self.assertEqual(
+                    probe.complete_runtime_asset_body(response, sample),
+                    (len(body), probe.digest(body)))
+                self.assertEqual(response.reads, 2)
+
+        for fields, reason in (
+            ([('Content-Length', str(len(body) + 1))],
+             'HOLD_RESONANCE_ASSET_BODY_LENGTH_MISMATCH'),
+            ([('Content-Length', str(len(body) - 1))],
+             'HOLD_RESONANCE_ASSET_BODY_LENGTH_MISMATCH'),
+            ([('Content-Length', str(len(body))),
+              ('Content-Length', str(len(body)))], 'HOLD_STREAM_HTTP_FRAMING'),
+            ([('Content-Encoding', 'gzip')], 'HOLD_STREAM_HTTP_FRAMING'),
+        ):
+            response = Response(fields)
+            sample = response.read(512)
+            with self.subTest(rejected=fields), self.assertRaisesRegex(
+                    RuntimeError, '^' + reason + '$'):
+                probe.complete_runtime_asset_body(response, sample)
+
+        for fields in ([], [('Content-Length', str(len(body)))],
+                       [('Content-Length', '999999')]):
+            response = Response(fields)
+            sample = response.read(512)
+            with self.subTest(limit=fields), self.assertRaisesRegex(
+                    RuntimeError, '^HOLD_RESONANCE_ASSET_LIMIT$'):
+                probe.complete_runtime_asset_body(response, sample, limit=700)
+
+        source = path.read_text()
+        self.assertIn('complete_runtime_asset_body(asset, sample)', source)
+
+
+    def test_owner_history_row_ids_unique_across_complete_read_window(self):
+        """Earlier owner-history rows cannot reuse IDs from six accepted rows."""
+        did = 'f' * 32
+        turns = [('alpha', 'one'), ('beta', 'two'), ('gamma', 'three')]
+        older = [
+            {'role': 'user', 'content': 'old-question', 'id': 'old-u'},
+            {'role': 'assistant', 'content': 'old-answer', 'message_id': 'old-a'},
+        ]
+        tail = []
+        for index, (prompt, answer) in enumerate(turns):
+            tail.extend([
+                {'role': 'user', 'content': prompt, 'id': 'u' + str(index)},
+                {'role': 'assistant', 'content': answer, 's03_id': 'a' + str(index)},
+            ])
+        history = {'dialog_id': did, 'messages': older + tail}
+        self.assertTrue(probe.scoped_history_matches_turns(history, turns, did))
+        self.assertTrue(probe.history_matches_turns(history['messages'], turns))
+        for index, key, reused_id in (
+                (0, 's03_id', 'a2'),
+                (1, 'id', 'u1'),
+                (0, 'message_id', 'a0')):
+            changed = [dict(row) for row in history['messages']]
+            changed[index][key] = reused_id
+            with self.subTest(older_row=index, alias=key):
+                self.assertFalse(probe.scoped_history_matches_turns(
+                    {'dialog_id': did, 'messages': changed}, turns, did))
+                self.assertFalse(probe.history_matches_turns(changed, turns))
+        legacy = [dict(row) for row in history['messages']]
+        legacy[0].pop('id')
+        legacy[1].pop('message_id')
+        self.assertTrue(probe.scoped_history_matches_turns(
+            {'dialog_id': did, 'messages': legacy}, turns, did))
+
+
+    def test_stream_post_explicit_sse_accept_keeps_owner_json_routes(self):
+        """A three-turn stream probe must ask for SSE, not silently negotiate JSON."""
+        class Client:
+            def __init__(self):
+                self.requests = []
+
+            def open(self, request, timeout):
+                self.requests.append((request, timeout))
+                return object()
+
+        client = Client()
+        probe.request(client, '/api/nox/chat/stream', 'POST',
+                      {'message': 'offline', 'dialog_id': 'f' * 32}, timeout=12)
+        stream, timeout = client.requests[-1]
+        headers = {key.lower(): value for key, value in stream.header_items()}
+        self.assertEqual(stream.get_method(), 'POST')
+        self.assertEqual(timeout, 12)
+        self.assertEqual(headers['accept'], 'text/event-stream')
+        self.assertEqual(headers['content-type'], 'application/json')
+        self.assertTrue(stream.full_url.endswith('/api/nox/chat/stream'))
+        self.assertIn(b'"message": "offline"', stream.data)
+
+        for path, method, payload in (
+                ('/api/nox/status', 'GET', None),
+                ('/api/ui/memory/dialogs/create', 'POST', {'confirmed': True}),
+                ('/api/nox/chat/stream', 'GET', None)):
+            with self.subTest(path=path, method=method):
+                probe.request(client, path, method, payload)
+                current, _ = client.requests[-1]
+                request_headers = {key.lower(): value
+                                   for key, value in current.header_items()}
+                self.assertEqual(request_headers['accept'], 'application/json')
+                self.assertEqual(request_headers['content-type'], 'application/json')
+
+
+    def test_owner_history_full_window_dialog_scope_before_three_turn_acceptance(self):
+        """A foreign earlier row cannot hide behind six correct same-dialog tail rows."""
+        did, foreign = 'a' * 32, 'b' * 32
+        turns = [('first', '323'), ('second', '323'), ('third', '3 workers')]
+        tail = []
+        for prompt, answer in turns:
+            tail.extend((
+                {'role': 'user', 'content': prompt, 'dialog_id': did},
+                {'role': 'assistant', 'content': answer, 'dialog_id': did},
+            ))
+        older = [
+            {'role': 'user', 'content': 'older question', 'dialog_id': did},
+            {'role': 'assistant', 'content': 'older answer', 'dialog_id': did},
+        ]
+        healthy = {'dialog_id': did, 'messages': older + tail}
+        self.assertTrue(probe.scoped_history_matches_turns(healthy, turns, did))
+        self.assertTrue(probe.stable_postquiet_three_turn_history(
+            object(), {'dialog_id': foreign, 'messages': older + tail}, turns, did) is False)
+        # Legacy untagged rows are permissible within the same scoped response.
+        legacy = [dict(row) for row in older + tail]
+        legacy[0].pop('dialog_id')
+        legacy[1].pop('dialog_id')
+        self.assertTrue(probe.scoped_history_matches_turns(
+            {'dialog_id': did, 'messages': legacy}, turns, did))
+        for earlier_index in (0, 1):
+            for invalid in (foreign, None, ''):
+                poisoned = [dict(row) for row in older + tail]
+                poisoned[earlier_index]['dialog_id'] = invalid
+                history = {'dialog_id': did, 'messages': poisoned}
+                with self.subTest(older_row=earlier_index, dialog=invalid):
+                    self.assertFalse(probe.scoped_history_matches_turns(
+                        history, turns, did))
+                    self.assertFalse(probe.stable_postquiet_three_turn_history(
+                        object(), history, turns, did))
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED$'):
+                        probe.require_executor_witness(
+                            {'saved': True, 's03_integrated': True},
+                            history, turns, True, True, did)
+
+
+    def test_owner_dialog_completion_cannot_claim_native_repair(self):
+        """A bounded owner-dialog readback is not production acceptance."""
+        source = path.read_text()
+        main = source.split('def main():', 1)[1]
+        self.assertNotIn('NOX_MAINT_REPAIR_COMPLETE=true', main)
+        self.assertIn("print('NOX_MAINT_REPAIR_COMPLETE=false'", main)
+        self.assertIn("print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'", main)
+        self.assertIn("if executor_question_receipt is None:", main)
+        self.assertIn("raise RuntimeError('HOLD_OWNER_DIALOG_PROBE_INCOMPLETE')", main)
+        self.assertIn("'scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'", main)
+        self.assertIn("'browser_multiturn_accepted':False", main)
+        self.assertIn("'native_s03_independently_verified':False", main)
+        self.assertIn("'production_accepted':False", main)
+        final_gate = main.rindex('require_executor_turn_budget(time.monotonic()-probe_started)')
+        scoped = main.index("print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'")
+        self.assertLess(final_gate, scoped)
+        self.assertLess(main.index('require_logout_revoked(client)'), scoped)
+        self.assertLess(main.index("emit('chat_probe_acceptance_scope'"), scoped)
+        self.assertLess(scoped, main.index("print('NOX_MAINT_REPAIR_COMPLETE=false'"))
+
+
+    def test_postthird_worker_pid_startticks_reuse_fails_closed(self):
+        """Same worker ID cannot conceal a restarted process when PID/ticks are given."""
+        witnessed = {'schema': 'NOX_OWNER_EXECUTORS_V1', 'state': 'OBSERVED',
+                     'configured': 2, 'workers': [
+                         {'id': 'a', 'pid': 101, 'start_ticks': 2001},
+                         {'id': 2, 'pid': 102, 'start_ticks': 2002}]}
+        reordered = dict(witnessed, workers=[
+            {'id': ' 2 ', 'pid': '102', 'start_ticks': '2002'},
+            {'id': 'a', 'pid': '101', 'start_ticks': '2001'}])
+        with patch.object(probe, 'owner_readback_json', return_value=reordered):
+            self.assertTrue(probe.require_postturn_executor_identity('client', witnessed))
+        bad = (
+            {'id': 'a', 'pid': 103, 'start_ticks': 2001},
+            {'id': 'a', 'pid': 101, 'start_ticks': 2999},
+            {'id': 'a', 'pid': 101},
+            {'id': 'a', 'pid': 'bad', 'start_ticks': 2001},
+            {'id': 'a', 'pid': True, 'start_ticks': 2001},
+            {'id': 'a', 'pid': 0, 'start_ticks': 2001},
+            {'id': 'a', 'pid': 101, 'start_ticks': None},
+        )
+        for replacement in bad:
+            current = dict(witnessed, workers=[replacement, witnessed['workers'][1]])
+            with self.subTest(replacement=replacement), patch.object(
+                    probe, 'owner_readback_json', return_value=current):
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT'):
+                    probe.require_postturn_executor_identity('client', witnessed)
+        legacy = dict(witnessed, workers=[{'id': 'a'}, {'id': 2}])
+        with patch.object(probe, 'owner_readback_json', return_value=legacy):
+            self.assertTrue(probe.require_postturn_executor_identity('client', legacy))
+
+
+    def test_stream_post_cached_replay_cannot_certify_later_sse_turn(self):
+        """A cached 200/DONE is not live second-/third-turn stream evidence."""
+        from email.message import Message
+
+        class Response:
+            status = 200
+            url = probe.BASE + '/api/nox/chat/stream'
+
+            def __init__(self, extra):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream'
+                for name, value in extra:
+                    self.headers[name] = value
+                self.closed = False
+
+            def close(self):
+                self.closed = True
+
+        cached = (
+            [('Age', '12')],
+            [('X-Cache', 'HIT')],
+            [('CF-Cache-Status', 'STALE')],
+            [('Cache-Status', 'gateway; hit')],
+            [('Age', 'not-a-number')],
+            [('Age', '0'), ('Age', '0')],
+        )
+        for label in ('second', 'third'):
+            did = 'offline-' + label
+            for fields in cached:
+                response = Response(fields)
+                with self.subTest(turn=label, headers=fields):
+                    with patch.object(probe, 'request', return_value=response):
+                        with patch.object(probe, 'bounded_stream_frames') as parser:
+                            with self.assertRaisesRegex(
+                                    RuntimeError, '^HOLD_STREAM_CACHED_REPLAY$'):
+                                probe.consume_turn('client', 'offline probe', did)
+                            parser.assert_not_called()
+                self.assertTrue(response.closed)
+
+            # Age:0 with a cache MISS is allowed to reach the existing
+            # strict SSE frame/terminal validation (not native acceptance).
+            fresh = Response([('Age', '0'), ('X-Cache', 'MISS')])
+            frames = iter((
+                {'type': 'start', 'model': 'same-route'},
+                {'type': 'delta', 'text': 'Ответ получен', 'model': 'same-route'},
+                {'type': 'done', 'dialog_id': did, 'model': 'same-route',
+                 'saved': True, 's03_integrated': True},
+            ))
+            with patch.object(probe, 'request', return_value=fresh):
+                with patch.object(probe, 'bounded_stream_frames', return_value=frames) as parser:
+                    reply = probe.consume_turn('client', 'offline probe', did)
+                    parser.assert_called_once()
+            self.assertTrue(fresh.closed)
+            self.assertEqual(reply['done']['dialog_id'], did)
+            self.assertEqual(reply['stream_model_identity'], 'same-route')
+
+
+
+
+    def test_sse_cache_policy_replay_fence_before_later_turn_frames(self):
+        """A public/cacheable 200 SSE cannot certify a fresh turn2/turn3 DONE."""
+        from email.message import Message
+
+        class Client:
+            def __init__(self):
+                self.requests = []
+            def open(self, request, timeout):
+                self.requests.append(request)
+                return object()
+
+        client = Client()
+        probe.request(client, '/api/nox/chat/stream', 'POST',
+                      {'dialog_id': 'f' * 32, 'message': 'offline only'})
+        headers = {key.lower(): value for key, value in
+                   client.requests[-1].header_items()}
+        self.assertIn('no-store', headers['cache-control'])
+        self.assertIn('no-cache', headers['cache-control'])
+        self.assertEqual(headers['pragma'], 'no-cache')
+        self.assertEqual(headers['accept'], 'text/event-stream')
+
+        class Response:
+            status = 200
+            url = probe.BASE + '/api/nox/chat/stream'
+            def __init__(self, fields):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream'
+                for name, value in fields:
+                    self.headers[name] = value
+                self.closed = False
+            def close(self):
+                self.closed = True
+
+        poisoned = (
+            ([('Cache-Control', 'public')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'max-age=120')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 's-maxage=30')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'immutable')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'stale-while-revalidate=30')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'stale-if-error=60')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'no-store'), ('Cache-Control', 'public')],
+             'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'max-age=bad')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'no-store,')], 'HOLD_STREAM_CACHED_REPLAY'),
+        )
+        for label in ('second', 'third'):
+            for fields, reason in poisoned:
+                response = Response(fields)
+                with self.subTest(turn=label, policy=fields):
+                    with patch.object(probe, 'request', return_value=response):
+                        with patch.object(probe, 'bounded_stream_frames') as parser:
+                            with self.assertRaisesRegex(RuntimeError, '^' + reason + '$'):
+                                probe.consume_turn(client, 'offline', 'f' * 32)
+                            parser.assert_not_called()
+                self.assertTrue(response.closed)
+        for policy in ('no-store, no-cache', 'private, max-age=0',
+                       'no-cache, must-revalidate'):
+            response = Response([('Cache-Control', policy), ('Age', '0'),
+                                 ('X-Cache', 'MISS')])
+            with self.subTest(fresh=policy):
+                probe.require_fresh_owner_readback(response)
+
+
+
+if __name__ == '__main__':
+    unittest.main()
+):
+                            probe.consume_turn(object(), turn, did)
+                    self.assertTrue(response.closed)
+
+        for frame in (
+            {'type': 'delta', 'text': '323', 'dialogId': did},
+            {'type': 'delta', 'text': '323'},
+        ):
+            response = Response([frame, done])
+            with patch.object(probe, 'request', return_value=response):
+                self.assertEqual(
+                    probe.consume_turn(object(), 'third-turn', did)['answer'], '323')
+            self.assertTrue(response.closed)
+
     def test_nested_sse_dialog_provenance_cannot_mix_foreign_second_turn(self):
         """Foreign nested SSE dialog IDs cannot contaminate a same-dialog answer."""
         did, foreign = '1' * 32, '2' * 32

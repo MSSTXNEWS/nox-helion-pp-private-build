@@ -767,7 +767,10 @@ def require_stream_dialog_provenance(frame, dialog_id):
             if isinstance(inner, dict):
                 scopes.append(inner)
     for scope in scopes:
-        if 'dialog_id' in scope and scope['dialog_id'] != dialog_id:
+        # Stream fragments may use camelCase even when canonical DONE uses
+        # dialog_id; a conflicting alias must not pass as same-dialog evidence.
+        if any(key in scope and scope[key] != dialog_id
+               for key in ('dialog_id', 'dialogId')):
             code = ('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH'
                     if frame.get('type') == 'done' else
                     'HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH')
