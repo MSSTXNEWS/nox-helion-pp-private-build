@@ -4181,7 +4181,12 @@ class ProbeTests(unittest.TestCase):
                 shadowed, deadline=time.monotonic() + 2))
         self.assertEqual(shadowed.read_calls, 0)
 
-        with socket.socketpair() as (left, right):
+        from contextlib import ExitStack
+        with ExitStack() as cleanup:
+            left, right = socket.socketpair()
+            cleanup.enter_context(left)
+            cleanup.enter_context(right)
+
             class SocketWrapper:
                 fp = SimpleNamespace(raw=SimpleNamespace(_sock=left))
 
