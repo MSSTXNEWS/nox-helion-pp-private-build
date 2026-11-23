@@ -427,14 +427,14 @@ async def stream_chat(history):
     # A persistence call may commit before raising. Never blindly repeat it.
     write_exception = False
     try:
-        write_returned = remember(user, full.strip())
+        write_returned = remember(user, full)
     except Exception as exc:
         log("s03_write_error " + type(exc).__name__)
         write_returned = False
         write_exception = True
     if SOUL and write_returned:
         try:
-            SOUL.log_turn(user, full.strip())
+            SOUL.log_turn(user, full)
         except Exception as exc:
             # Optional soul telemetry cannot remove the final SSE receipt after
             # an already attempted S03 commit (which must never be retried here).
