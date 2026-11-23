@@ -221,9 +221,36 @@ def _is_artifact_link(value: str) -> bool:
         return False
 
 
+def _visible_feed_fragment(node: ET.Element) -> str:
+    """Read visible text from nested XHTML/XML, not hidden script payloads.
+
+    Atom permits real XHTML children inside <content>. Flattening itertext()
+    first erases the tags and makes script/style/template text look like the
+    author's factual prose. Encoded HTML remains filtered by _plain().
+    """
+    parts: list[str] = []
+    hidden = _VisibleText._hidden | {"template", "head"}
+
+    def visit(element: ET.Element) -> None:
+        if _local(element.tag) not in hidden:
+            if element.text:
+                parts.append(element.text)
+            for child in element:
+                visit(child)
+        # A hidden subtree's tail belongs to the surrounding visible parent.
+        if element.tail:
+            parts.append(element.tail)
+
+    visit(node)
+    return " ".join(" ".join(parts).split())
+
+
 def _child_text(node: ET.Element, names: set[str]) -> str:
     for child in list(node):
-        if _local(child.tag) in names:
+        tag = _local(child.tag)
+        if tag in names:
+            if tag in {"content", "encoded", "summary", "description"}:
+                return _visible_feed_fragment(child)
             return " ".join(" ".join(child.itertext()).split())
     return ""
 
