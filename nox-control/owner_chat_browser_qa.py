@@ -753,14 +753,19 @@ async def verify_saved_browser_refresh(page, report, title, answer, html_pin, fi
             await page.locator('[data-action="toggle-rail"]').first.click(timeout=3500)
         await item.first.click(timeout=3500)
     await page.wait_for_function("""expected => {
-        const normalize = text => text.replace(/\s+/g,'');
+        // Whitespace may reflow across HTML nodes, but deleting it can turn
+        // different answers ("1 2" vs "12") into the same false witness.
+        const normalize = text => text.replace(/\s+/g,' ').trim();
         const bodies = [...document.querySelectorAll('#messages .v24-msg.nox .body')];
         const matches = (node, value) => !!node && !!node.getClientRects().length
           && typeof node.innerText === 'string'
           && normalize(node.innerText) === normalize(value);
         // In a two-turn dialog both assistant replies must survive the
         // browser reload, not just the second one rendered at the bottom.
-        return matches(bodies.at(-1), expected.last)
+        // A two-turn reload must have exactly two visible assistant bodies,
+        // not merely the right two suffixes after an unexpected extra answer.
+        return bodies.length === (expected.first === null ? 1 : 2)
+          && matches(bodies.at(-1), expected.last)
           && (expected.first === null || matches(bodies.at(-2), expected.first));
     }""", arg={'last': answer, 'first': first_answer}, timeout=15000)
     observer = await page.evaluate(SNAPSHOT_JS)
