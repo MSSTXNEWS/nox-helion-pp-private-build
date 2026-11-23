@@ -1422,7 +1422,12 @@ def final_observation_snapshots(helper):
     snapshots, errors = {}, {}
     for key, readback in getters:
         try:
-            snapshots[key] = readback()
+            value = readback()
+            # A transport returning null or an empty/malformed payload has not
+            # produced a native/serving observation: record a named HOLD.
+            if type(value) is not dict or not value:
+                raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
+            snapshots[key] = value
         except Exception as exc:
             snapshots[key] = None
             code = str(exc)

@@ -2488,6 +2488,36 @@ class FinalReadbackReceiptContinuity(unittest.TestCase):
                         code.rindex("save()"))
 
 
+    def test_missing_or_malformed_final_readback_is_a_named_hold(self):
+        # Actual owner AST: no Supervisor, GPU, server or model is contacted.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        fn = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                  and node.name == "final_observation_snapshots")
+        namespace = {"re": re}
+        exec(compile(ast.Module(body=[fn], type_ignores=[]),
+                     str(SOURCE), "exec"), namespace)
+        snapshot = namespace["final_observation_snapshots"]
+        keys = ("service_after", "chat_after", "gpu_after", "progress_after")
+        healthy = ({"state": "RUNNING"}, {"8080": 200},
+                   {"gpus": []}, {"step": 5})
+        for field in range(len(keys)):
+            for malformed in (None, "", "OK", 0, False, [], {}, [1]):
+                with self.subTest(field=keys[field], malformed=repr(malformed)):
+                    replies = list(healthy)
+                    replies[field] = malformed
+                    getters = [lambda value=value: value for value in replies]
+                    helper = types.SimpleNamespace(
+                        service_state=getters[0], health=getters[1],
+                        gpu=getters[2], progress=getters[3])
+                    values, errors = snapshot(helper)
+                    self.assertIsNone(values[keys[field]])
+                    self.assertEqual(errors, {
+                        keys[field]: "HOLD_FINAL_READBACK_MALFORMED"})
+                    for index, name in enumerate(keys):
+                        if index != field:
+                            self.assertEqual(values[name], healthy[index])
+
+
 
 class LegacyHeavyServiceReadbackFence(unittest.TestCase):
     def test_malformed_legacy_service_snapshot_cannot_authorize_training(self):
