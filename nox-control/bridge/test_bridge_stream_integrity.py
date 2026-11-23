@@ -470,6 +470,37 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(writes, [("Привет", "saved")])
         self.assertEqual(logs, [])
 
+    def test_ambiguous_s03_commit_revokes_cache_even_when_writer_raises(self):
+        # Source-only: the real S03 writer can commit before raising, so a
+        # follow-up recall must not reuse an obsolete process-local answer.
+        import sys
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        nodes = [n for n in TREE.body if isinstance(n, ast.FunctionDef)
+                 and n.name in ("remember", "remember_fact")]
+        self.assertEqual(len(nodes), 2)
+        code = compile(ast.fix_missing_locations(
+            ast.Module(body=nodes, type_ignores=[])), "nox_bridge.py", "exec")
+        calls, invalidations, notices = [], [], []
+
+        def uncertain_writer(user, answer):
+            calls.append((user, answer))
+            raise OSError("COMMIT_RETURN_LOST")
+
+        scope = {"invalidate_s03_cache": lambda: invalidations.append(True),
+                 "log": notices.append}
+        with patch.dict(sys.modules, {
+            "s03_memory": SimpleNamespace(persist_turn=uncertain_writer)
+        }):
+            exec(code, scope)
+            self.assertFalse(scope["remember"]("first", "reply"))
+            with self.assertRaisesRegex(OSError, "COMMIT_RETURN_LOST"):
+                scope["remember_fact"]("fact", "value")
+        self.assertEqual(calls, [("first", "reply"), ("fact", "value")])
+        self.assertEqual(invalidations, [True, True])
+        self.assertEqual(len(notices), 1)
+
     def test_explicit_s03_rejection_and_nonstream_soul_mirror(self):
         # Exercise the actual remember() and smart() AST functions offline:
         # no live S03 writes, GPU requests or service imports.
