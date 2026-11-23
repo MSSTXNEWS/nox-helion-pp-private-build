@@ -352,6 +352,19 @@ def _sse(o):
 
 async def stream_chat(history):
     """Only a complete upstream generation can become a completed S03 turn."""
+    def unique_sse_pairs(pairs):
+        # A provider may send contradictory duplicated keys at any depth.
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("UPSTREAM_DUPLICATE_JSON_KEY")
+            result[key] = value
+        return result
+
+    def reject_nonfinite_sse(_value):
+        # Python accepts NaN/Infinity by default although JSON does not.
+        raise ValueError("UPSTREAM_NONFINITE_JSON")
+
     user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
     yield _sse({"type": "status", "text": "слушаю тебя…"})
     mem_t = asyncio.create_task(asyncio.to_thread(memory_block, user))
@@ -420,11 +433,12 @@ async def stream_chat(history):
                     received_done = True
                     continue
                 try:
-                    payload = json.loads(raw)
+                    payload = json.loads(raw, object_pairs_hook=unique_sse_pairs,
+                                         parse_constant=reject_nonfinite_sse)
                     if not isinstance(payload, dict) or payload.get("error"):
                         raise ValueError("UPSTREAM_ERROR_FRAME")
                     choices = payload["choices"]
-                    if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+                    if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
                         raise ValueError("UPSTREAM_CHOICES_INVALID")
                     choice = choices[0]
                     finish = choice.get("finish_reason")
