@@ -19,13 +19,14 @@ compiled = compile(ast.fix_missing_locations(ast.Module(body=functions, type_ign
 
 
 class NonstreamCompletionFence(unittest.TestCase):
-    def invoke(self, finish_reason, content="finished"):
+    def invoke(self, finish_reason, content="finished", reasoning_content=None):
         writes = []
         class Response:
             status_code = 200
             def json(self):
                 return {"choices": [{"finish_reason": finish_reason,
-                                     "message": {"content": content}}]}
+                                     "message": {"content": content,
+                                                 "reasoning_content": reasoning_content}}]}
         class Client:
             async def post(self, *args, **kwargs):
                 return Response()
@@ -58,6 +59,17 @@ class NonstreamCompletionFence(unittest.TestCase):
         self.assertEqual(reply, ("finished", False))
         self.assertEqual(writes, [("question", "finished")])
         self.assertGreater(clock["t"], 0)
+
+    def test_empty_visible_answer_never_persists_private_reasoning(self):
+        # Both upstream attempts can terminate normally but contain only a
+        # hidden reasoning field. Neither text nor fake S03 turn is accepted.
+        for visible in ("", "   ", None):
+            with self.subTest(visible=visible):
+                result, writes, clock = self.invoke(
+                    "stop", content=visible, reasoning_content="private model reasoning")
+                self.assertEqual(result, "UPSTREAM_EMPTY_VISIBLE_COMPLETION")
+                self.assertEqual(writes, [])
+                self.assertEqual(clock["t"], 0)
 
     def test_length_tool_or_unknown_finish_never_reaches_s03(self):
         for reason in ("length", "tool_calls", "content_filter", None):
