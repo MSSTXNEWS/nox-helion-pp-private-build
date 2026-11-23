@@ -489,6 +489,36 @@ OBSERVER_JS = r"""
  }
  addEventListener('DOMContentLoaded',watch,{once:true});
  const fetch0=window.fetch.bind(window);
+ // JSON.parse silently accepts duplicate object keys ("saved":false,
+ // "saved":true). Detect them, including escaped aliases/nested metadata,
+ // before any browser acceptance receipt can trust the frame.
+ function jsonKeysUnique(raw){
+   const stack=[];
+   for(let i=0;i<raw.length;i++){
+     const ch=raw[i];
+     if(ch==='"'){
+       const start=i;
+       for(i++;i<raw.length;i++){
+         if(raw[i]==='\\'){i++;continue;}
+         if(raw[i]==='"')break;
+       }
+       if(i>=raw.length)return false;
+       const keys=stack.at(-1);
+       if(keys instanceof Set){
+         let next=i+1;
+         while(next<raw.length&&/\s/.test(raw[next]))next++;
+         if(raw[next]===':'){
+           const key=JSON.parse(raw.slice(start,i+1));
+           if(keys.has(key))return false;
+           keys.add(key);
+         }
+       }
+     }else if(ch==='{')stack.push(new Set());
+     else if(ch==='[')stack.push(null);
+     else if(ch==='}'||ch===']')stack.pop();
+   }
+   return true;
+ }
  async function observe(response){
    if(!response.body){q.error='HOLD_NO_NATIVE_RESPONSE_BODY';return;}
    const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
@@ -503,6 +533,7 @@ OBSERVER_JS = r"""
        while((end=buffer.indexOf('\n'))>=0){
          const line=buffer.slice(0,end);buffer=buffer.slice(end+1);
          if(!line.trim())continue;
+         if(!jsonKeysUnique(line))throw Error('HOLD_QA_STREAM_DUPLICATE_KEY');
          const frame=JSON.parse(line);
          // Browser acceptance must fail closed on unknown native JSONL frames.
          // Ignoring a foreign event could hide a failed/partial generation.
