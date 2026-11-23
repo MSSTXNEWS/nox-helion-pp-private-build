@@ -570,7 +570,7 @@ async def postrender_owner_history_recheck(context, base, before, dialog_id,
                +urllib.parse.quote(dialog_id, safe='')+'&limit=6')
         response = await context.request.get(
             url, max_redirects=0, timeout=6000)
-        after = await json_response(response)
+        after = await owner_history_json_response(response)
         return postquiet_fourrow_history_stable(
             before, after, dialog_id, transcript_sha, firstturn_ids)
     except Exception:
@@ -807,7 +807,7 @@ async def presecond_owner_history_fence(context, base, owner_pin, page, title,
     try:
         url = (base + '/api/ui/memory/dialogs/history?dialog_id='
                + urllib.parse.quote(dialog_id, safe='') + '&limit=6')
-        fresh = await json_response(await context.request.get(
+        fresh = await owner_history_json_response(await context.request.get(
             url, max_redirects=0, timeout=6000))
         if not presecond_firstturn_history_stable(
                 first_history, fresh, prompt, answer, dialog_id):
@@ -1733,6 +1733,16 @@ async def json_response(response, limit=200000):
                               parse_int=bounded_int)
     except json.JSONDecodeError:
         raise RuntimeError('HOLD_OWNER_HTTP_JSON_ROOT') from None
+    return document
+
+
+async def owner_history_json_response(response):
+    """Owner-history root fence; generic JSON API endpoints may return arrays.
+
+    Require one object BEFORE browser continuity and S03 candidate readback.
+    Other JSON representations retain their established generic semantics.
+    """
+    document = await json_response(response)
     if not isinstance(document, dict):
         raise RuntimeError('HOLD_OWNER_HTTP_JSON_ROOT')
     return document
@@ -1957,7 +1967,7 @@ async def browser_run(report, directory, available):
             await page.wait_for_function("title=>[...document.querySelectorAll('#nativeChats button[role=listitem]')].some(b=>b.getAttribute('aria-current')==='true'&&b.querySelector('.t')?.textContent===title)",arg=title,timeout=7000)
             report['browser_stage']='QA_DIALOG_HISTORY'
             await page.wait_for_timeout(350)
-            initial=await json_response(await context.request.get(
+            initial=await owner_history_json_response(await context.request.get(
                 base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))
             if not empty_dialog_history_valid(initial, did):
                 raise RuntimeError('HOLD_SYNTHETIC_DIALOG_NOT_EMPTY')
@@ -2006,7 +2016,7 @@ async def browser_run(report, directory, available):
             report['browser_stage']='QA_SEND_RELEASE'
             await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
             report['browser_stage']='QA_PERSISTED_HISTORY'
-            history=await json_response(await context.request.get(
+            history=await owner_history_json_response(await context.request.get(
                 base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))
             rows=history.get('messages')
             candidate=(rows[1].get('content') if isinstance(rows,list)
@@ -2126,7 +2136,7 @@ async def browser_run(report, directory, available):
                         owner_session_pin):
                     raise RuntimeError('HOLD_MULTITURN_OWNER_SESSION_CHANGED')
                 report['multiturn_postsecond_owner_session_verified']=True
-                second_history=await json_response(await context.request.get(
+                second_history=await owner_history_json_response(await context.request.get(
                     base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
                     max_redirects=0,timeout=6000))
                 second_rows=second_history.get('messages')
@@ -2209,7 +2219,7 @@ async def browser_run(report, directory, available):
                 # The first four-row history read predates the screenshot and
                 # quiescence. Re-read only owner history, never generate again.
                 report['browser_stage']='QA_POSTQUIET_PERSISTED_HISTORY'
-                postquiet_history=await json_response(await context.request.get(
+                postquiet_history=await owner_history_json_response(await context.request.get(
                     base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
                     max_redirects=0,timeout=6000))
                 if not postquiet_fourrow_history_stable(
@@ -2291,7 +2301,7 @@ async def browser_run(report, directory, available):
                 if (urllib.parse.urlsplit(page.url).path!=PAGE
                         or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
                     raise RuntimeError('HOLD_MULTITURN_RELOAD_ACTIVE_DIALOG_CHANGED')
-                reloaded_history=await json_response(await context.request.get(
+                reloaded_history=await owner_history_json_response(await context.request.get(
                     base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
                     max_redirects=0,timeout=6000))
                 if not postquiet_fourrow_history_stable(

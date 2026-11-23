@@ -19,6 +19,7 @@ from owner_chat_browser_qa import (
     canonical_s03_proof_valid,
     click_send,
     json_response,
+    owner_history_json_response,
     firstturn_history_valid,
     firstturn_prefix_identity_valid,
     firstturn_session_continuity_valid,
@@ -4324,7 +4325,8 @@ async function check(chunks, status=200) {
                 return self.raw
 
         def read(wire):
-            return asyncio.run(json_response(Response(wire.encode("utf-8"))))
+            return asyncio.run(owner_history_json_response(
+                Response(wire.encode("utf-8"))))
 
         good = {"dialog_id": DIALOG, "messages": [
             {"role": "user", "content": "Привет 🧠"},
