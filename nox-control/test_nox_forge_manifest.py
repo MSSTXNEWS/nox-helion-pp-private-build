@@ -69,7 +69,7 @@ class ForgeContentDedupeTests(unittest.TestCase):
                 "source_id": sid,
                 "origin_kind": "VERIFIED_KNOWLEDGE",
                 "source_url": f"https://example.org/{sid}",
-                "source_sha256": sha,
+                "source_sha256": ("1" if sid == "s1" else "2") * 64,
                 "license_id": "MIT",
                 "license_url": "https://example.org/license",
                 "license_sha256": sha,
