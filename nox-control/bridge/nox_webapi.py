@@ -735,6 +735,8 @@ def install(app, B):
         return JSONResponse({
             "status": row["state"], "request_id": request_id,
             "stream_id": stream_id, "event_seq": row["event_seq"],
+            **({"conversation_id": row["conversation_id"]}
+               if row.get("conversation_id") is not None else {}),
             "message": {"role": "assistant", "content": (
                 "".join(row["text_chunks"]) if "text_chunks" in row
                 else row.get("text", ""))},
@@ -853,6 +855,15 @@ def install(app, B):
                 not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", exchange_id)):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_EXCHANGE_ID"},
                                 status_code=400)
+        # The conversation cursor is client-owned metadata, not an S03
+        # acceptance or authentication receipt. Reject ambiguous identities
+        # rather than losing the thread across stream/snapshot reconciliation.
+        conversation_id = b.get("conversation_id")
+        if "conversation_id" in b and (
+                not isinstance(conversation_id, str) or
+                not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", conversation_id)):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_CONVERSATION_ID"},
+                                status_code=400)
         msgs_in = [m for m in raw_messages if m.get("role") in ("user", "assistant")]
         user = next((m["content"] for m in reversed(msgs_in) if m["role"] == "user"), "")
         if not user.strip():
@@ -912,7 +923,8 @@ def install(app, B):
         frame_seq = 0
         if not eph:
             CHAT_SNAPSHOTS[stream_id] = {
-                "request_id": rid, "exchange_id": exchange_id, "event_seq": 0,
+                "request_id": rid, "exchange_id": exchange_id,
+                "conversation_id": conversation_id, "event_seq": 0,
                 "text_chunks": [],
                 "text_bytes": 0, "state": "ADMITTED", "terminal": False,
                 "completion_receipt": None, "memory_write_receipt": None,
@@ -929,6 +941,7 @@ def install(app, B):
             d = {"model": TAG, "request_id": rid, "stream_id": stream_id,
                  "event_seq": next_seq,
                  **({"exchange_id": exchange_id} if exchange_id is not None else {}),
+                 **({"conversation_id": conversation_id} if conversation_id is not None else {}),
                  "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
             d.update(k)
             payload = json.dumps(d, ensure_ascii=False, allow_nan=False) + "\n"

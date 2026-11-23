@@ -34,6 +34,44 @@ class Request:
 
 
 class FactReceiptTest(unittest.TestCase):
+
+    def test_1a02_conversation_id_cursor_reconciles_stream_and_snapshot(self):
+        """A client-visible conversation identifier must not be lost or coerced."""
+        chat = next(route.endpoint for route in self.app.routes if route.path == "/api/chat")
+        snapshot = next(route.endpoint for route in self.app.routes if route.path == "/api/chat/snapshot")
+        original = {"request_id": "conversation-cursor-request-01",
+                    "exchange_id": "conversation-cursor-exchange-01",
+                    "mini": True, "use_memory": False,
+                    "messages": [{"role": "user", "content": "Привет, NOX"}]}
+        async def scenario():
+            invalid = (None, True, 7, {}, [], "", "a b", "x" * 129, "\\ud800")
+            for value in invalid:
+                response = await chat(Request({**original, "conversation_id": value}))
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(json.loads(response.body)["reason"], "CHAT_INVALID_CONVERSATION_ID")
+            response = await chat(Request({**original, "conversation_id": "resonance-thread-01"}))
+            first = json.loads(await response.body_iterator.__anext__())
+            row = await snapshot(first["stream_id"], first["request_id"])
+            saved = json.loads(row.body)
+            await response.body_iterator.aclose()
+            legacy = await chat(Request({**original, "request_id": "legacy-no-cursor-01",
+                                         "exchange_id": "legacy-exchange-01"}))
+            legacy_first = json.loads(await legacy.body_iterator.__anext__())
+            await legacy.body_iterator.aclose()
+            return first, saved, legacy_first
+        with (mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
+              mock.patch.object(W, "CANCEL", set())):
+            first, saved, legacy_first = asyncio.run(scenario())
+            self.assertEqual(W.ACTIVE_CHAT_IDS, set())
+        self.assertEqual(first["conversation_id"], "resonance-thread-01")
+        self.assertEqual(first["exchange_id"], original["exchange_id"])
+        self.assertEqual(saved["conversation_id"], first["conversation_id"])
+        self.assertEqual(saved["event_seq"], first["event_seq"])
+        self.assertEqual(saved["snapshot_integrity"], "PARTIAL")
+        self.assertFalse(saved["s03_readback_verified"])
+        self.assertNotIn("conversation_id", legacy_first)
+
     def test_3a02_s03_context_lookup_fail_closed_before_model(self):
         """A missing canonical context must not produce invented continuity."""
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
