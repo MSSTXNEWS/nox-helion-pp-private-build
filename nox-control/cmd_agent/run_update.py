@@ -56,6 +56,22 @@ def locate_uploaded_key_id(pub):
     return int(raw_id)
 
 
+def redact_remote_output(output):
+    """Redact exact owner credentials before truncating untrusted SSH output.
+
+    Truncating first can split a credential and defeat prefix-based redaction.
+    Never include the NOX2 provider bearer or optional auth input in Actions logs.
+    """
+    if not isinstance(output, str):
+        return ""
+    for name in ("NOX2", "TS_AUTHKEY"):
+        value = os.environ.get(name, "")
+        if value:
+            output = output.replace(value, "***")
+    output = re.sub(r"(github_pat_\w+|tskey-[\w-]+)", "***", output)
+    return output[-3000:]
+
+
 def main():
     inst = api("GET", "/instances/%d/" % INSTANCE)
     inst = inst.get("instances", inst)
@@ -100,7 +116,7 @@ def main():
             "root@" + ip, "bash -o pipefail -c " + shlex.quote(REMOTE)], capture_output=True, text=True, errors="replace", timeout=295,
             input=(os.environ.get("TS_AUTHKEY","") + "\n"))
         print("ssh rc=%d" % r.returncode)
-        print(re.sub(r"(github_pat_\w+|tskey-[\w-]+)", "***", r.stdout[-3000:]))
+        print(redact_remote_output(r.stdout))
         if r.returncode != 0:
             sys.exit("HOLD_AMBIGUOUS_SSH_REMOTE_OUTCOME; no automatic replay, owner readback required")
 
