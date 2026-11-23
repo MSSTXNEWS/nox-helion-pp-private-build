@@ -831,6 +831,11 @@ def multiturn_transcript_sha256(rows):
            or not isinstance(row.get('content'), str) or not row['content'].strip()
            for row, role in zip(rows, roles)):
         return None
+    # Owner browser-history JSON reads are bounded to 200000 bytes by
+    # json_response(). An oversized witness cannot be independently read
+    # through that route. Reject it; never truncate or normalize RU/ES text.
+    if any(len(row['content']) > 200000 for row in rows):
+        return None
     transcript = [{'role': role, 'content': row['content']}
                   for row, role in zip(rows, roles)]
     try:
@@ -840,6 +845,8 @@ def multiturn_transcript_sha256(rows):
         raw = json.dumps(transcript, ensure_ascii=False, sort_keys=True,
                          separators=(',', ':'), allow_nan=False).encode('utf-8')
     except UnicodeEncodeError:
+        return None
+    if len(raw) > 200000:
         return None
     return digest(raw)
 

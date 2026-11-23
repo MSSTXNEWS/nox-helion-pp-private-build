@@ -3890,5 +3890,48 @@ async function check(chunks, status=200) {
                         require_full_transcript_pin=True))
 
 
+    def test_canonical_s03_utf8_transport_bound_never_truncates_ru_es(self):
+        """Reject oversized four-role S03 fingerprints, while pinning full in-bound bytes.
+
+        The browser owner's json_response has a 200000-byte response limit.
+        This is a witness limit, NOT conversation/model-context truncation.
+        No native writer/readback or model POST is involved.
+        """
+        spanish = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        baseline = [dict(row, message_id=f"bounded-row-{index}")
+                    for index, row in enumerate(rows(spanish), 1)]
+
+        def raw_bytes(messages):
+            payload = [{"role": row["role"], "content": row["content"]}
+                       for row in messages]
+            return json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                              separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+        remaining = 200000 - len(raw_bytes(baseline))
+        self.assertGreater(remaining, 10000)
+        exactly_bounded = [dict(row) for row in baseline]
+        exactly_bounded[0]["content"] += "x" * remaining
+        self.assertEqual(len(raw_bytes(exactly_bounded)), 200000)
+        expected = hashlib.sha256(raw_bytes(exactly_bounded)).hexdigest()
+        self.assertEqual(multiturn_transcript_sha256(exactly_bounded), expected)
+        writer, reader = s03_proof(exactly_bounded)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, exactly_bounded,
+            require_full_transcript_pin=True))
+
+        original_writer, original_reader = s03_proof(baseline)
+        for index in range(4):
+            # ASCII +1 byte and UTF-8 multibyte overflow must both HOLD.
+            for extra in ("x" * (remaining + 1),
+                          "ñ" * (remaining // 2 + 1)):
+                with self.subTest(row=index, kind="utf8" if extra[0] == "ñ" else "ascii"):
+                    oversized = [dict(row) for row in baseline]
+                    oversized[index]["content"] += extra
+                    self.assertGreater(len(raw_bytes(oversized)), 200000)
+                    self.assertIsNone(multiturn_transcript_sha256(oversized))
+                    self.assertFalse(canonical_s03_proof_valid(
+                        original_writer, original_reader, DIALOG, oversized,
+                        require_full_transcript_pin=True))
+
 if __name__ == "__main__":
     unittest.main()
