@@ -2505,7 +2505,7 @@ class FinalReadbackReceiptContinuity(unittest.TestCase):
         snapshot = namespace["final_observation_snapshots"]
         keys = ("service_after", "chat_after", "gpu_after", "progress_after")
         healthy = ({"state": "RUNNING"}, {"8080": 200},
-                   {"gpus": []}, {"step": 5})
+                   {"gpus": [{"index": 1, "free_mib": 28000}]}, {"step": 5})
 
         def failure():
             raise RuntimeError("HOLD_FINAL_READBACK_OFFLINE")
@@ -2557,7 +2557,7 @@ class FinalReadbackReceiptContinuity(unittest.TestCase):
         snapshot = namespace["final_observation_snapshots"]
         keys = ("service_after", "chat_after", "gpu_after", "progress_after")
         healthy = ({"state": "RUNNING"}, {"8080": 200},
-                   {"gpus": []}, {"step": 5})
+                   {"gpus": [{"index": 1, "free_mib": 28000}]}, {"step": 5})
         for field in range(len(keys)):
             for malformed in (None, "", "OK", 0, False, [], {}, [1]):
                 with self.subTest(field=keys[field], malformed=repr(malformed)):
@@ -2620,6 +2620,45 @@ class FinalReadbackReceiptContinuity(unittest.TestCase):
                     if key != field:
                         self.assertEqual(observed[key], healthy[keys.index(key)])
 
+
+
+    def test_final_gpu1_census_missing_is_not_a_successful_readback(self):
+        """Run the actual owner AST; no GPU or serving endpoints are contacted."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        fn = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                  and node.name == "final_observation_snapshots")
+        scope = {"re": re}
+        exec(compile(ast.Module(body=[fn], type_ignores=[]),
+                     str(SOURCE), "exec"), scope)
+        capture = scope["final_observation_snapshots"]
+
+        def observe(gpu):
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "RUNNING"},
+                health=lambda: {"8080": 200},
+                gpu=lambda: gpu,
+                progress=lambda: {"step": 5})
+            return capture(helper)
+
+        for good in (
+            {"gpus": [{"index": 1, "free_mib": 28000}]},
+            {"gpus": [{"index": 0, "free_mib": 100},
+                      {"index": 1, "free_mib": 0}]}):
+            with self.subTest(good=repr(good)):
+                observed, errors = observe(good)
+                self.assertEqual(errors, {})
+                self.assertEqual(observed["gpu_after"], good)
+
+        for bad in (
+            {"gpus": []},
+            {"gpus": [{"index": 0, "free_mib": 28000}]},
+            {"gpus": [{"index": 2, "free_mib": 28000}]}):
+            with self.subTest(bad=repr(bad)):
+                observed, errors = observe(bad)
+                self.assertIsNone(observed["gpu_after"])
+                self.assertEqual(errors,
+                                 {"gpu_after": "HOLD_FINAL_READBACK_MALFORMED"})
+                self.assertEqual(observed["chat_after"], {"8080": 200})
 
 
     def test_final_progress_observation_requires_typed_optimizer_step(self):

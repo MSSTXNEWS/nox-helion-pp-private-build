@@ -1445,7 +1445,12 @@ def final_observation_snapshots(helper):
                     raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
             if key == 'gpu_after':
                 rows = value.get('gpus')
+                # A well-typed but empty/foreign GPU list is not evidence that
+                # the pinned training GPU1 survived the owner operation.
                 if (type(rows) is not list
+                        or not any(type(row) is dict
+                                   and type(row.get('index')) is int
+                                   and row['index'] == 1 for row in rows)
                         or any(type(row) is not dict
                                or type(row.get('index')) is not int or row['index'] < 0
                                or type(row.get('free_mib')) is not int or row['free_mib'] < 0
