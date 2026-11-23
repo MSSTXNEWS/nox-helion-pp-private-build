@@ -218,8 +218,15 @@ def remember(user, answer):
     """Attempt S03 write. True is a returned write, NOT verified readback."""
     try:
         import s03_memory as M
-        M.persist_turn(user, answer)
+        # An explicit rejection is not a successful S03 write. A returned
+        # None remains compatible with the existing persist_turn contract.
+        # Invalidate even on rejection: a downstream writer may have mutated
+        # S03 before returning an ambiguous negative result.
+        result = M.persist_turn(user, answer)
         invalidate_s03_cache()
+        if result is False:
+            log("persist_explicitly_rejected")
+            return False
         return True
     except Exception as e:
         log("persist_error %s %s" % (type(e).__name__, str(e)[:120]))
@@ -275,8 +282,10 @@ async def smart(history, max_tokens=1500):
             log("selfcheck_error %s" % type(e).__name__)
     LAST_CHAT["t"] = time.time()
     if ans:
-        remember(user, ans)
-        if SOUL: SOUL.log_turn(user, ans)
+        write_returned = remember(user, ans)
+        # Optional soul telemetry must never claim an S03 turn rejected by
+        # the canonical writer. An ambiguous failure is not retry-safe.
+        if SOUL and write_returned: SOUL.log_turn(user, ans)
     return ans, bool(mem)
 
 @app.get("/health")
