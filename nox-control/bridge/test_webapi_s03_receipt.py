@@ -2206,9 +2206,25 @@ class FactReceiptTest(unittest.TestCase):
                 return ["old-version"]
 
             memory.recall = concurrent_recall
-            bridge.memory_block("второй вопрос")
+            with self.assertRaisesRegex(RuntimeError, "S03_MEMORY_CHANGED_DURING_LOOKUP"):
+                bridge.memory_block("второй вопрос")
             self.assertNotIn(
                 bridge.hashlib.md5("второй вопрос".encode()).hexdigest(), bridge._RC)
+
+            # If only one write intervenes, discard the first recalled text
+            # and return the newer generation instead of an obsolete prompt.
+            generations = []
+            def revoke_once(q):
+                generations.append(q)
+                if len(generations) == 1:
+                    bridge.invalidate_s03_cache()
+                    return ["obsolete-source-version"]
+                return ["fresh-source-version"]
+
+            memory.recall = revoke_once
+            memory.format_for_prompt = lambda rows: rows[0]
+            self.assertEqual(bridge.memory_block("третий вопрос"), "fresh-source-version")
+            self.assertEqual(len(generations), 2)
 
             memory.recall = lambda q: ["invalid-output"]
             memory.format_for_prompt = lambda rows: {"not": "text"}
