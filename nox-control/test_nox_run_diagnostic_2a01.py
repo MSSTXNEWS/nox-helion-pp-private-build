@@ -66,8 +66,8 @@ class HardwareInventoryTest(unittest.TestCase):
                     result.stdout = rows if "--query-gpu=" in argv[1] else "GPU0 GPU1\nGPU0 X NV2\nGPU1 NV2 X\n"
                     return result
 
-                with mock.patch.object(module.subprocess, "run", fake_run), \\
-                     mock.patch.object(module.os, "statvfs", side_effect=OSError), \\
+                with mock.patch.object(module.subprocess, "run", fake_run), \
+                     mock.patch.object(module.os, "statvfs", side_effect=OSError), \
                      mock.patch.object(module.Path, "read_text", return_value="1000"):
                     snapshot = module.hardware_2a01_snapshot()
                 self.assertEqual(len(snapshot["gpu"]), 2)
