@@ -16,4 +16,6 @@ jobs:
         with:
           python-version: '3.11'
       - name: One real source-level regression; no native host access
-        run: python -m unittest discover -s nox-control/bridge -p 'test_build_msgs_current_user.py' -v
+        run: |
+          python -m unittest discover -s nox-control/bridge -p 'test_build_msgs_current_user.py' -v
+          python -m unittest discover -s nox-control/bridge -p 'test_body_ram_cgroup_6a05.py' -v
