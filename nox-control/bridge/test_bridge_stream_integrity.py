@@ -128,10 +128,24 @@ class BridgeStreamIntegrity(unittest.TestCase):
         events, writes, logs, _ = self.run_stream(lines)
         actual = "".join(e["text"] for e in events if e["type"] == "token")
         self.assertEqual(actual, "".join(pieces))
-        self.assertEqual(writes, [("Привет", actual.strip())])
+        self.assertEqual(writes, [("Привет", actual)])
         self.assertEqual(logs, writes)
         self.assertEqual(events[-1]["type"], "done")
         self.assertTrue(events[-1]["generation_complete"])
+        self.assertFalse(events[-1]["memory_write_receipt"]["s03_readback_verified"])
+
+    def test_s03_receives_exact_visible_bytes_including_edge_whitespace(self):
+        # A visually complete SSE turn must not silently normalize the
+        # assistant answer before the canonical persistence attempt.
+        pieces = ["  ", "Привет", "\\n", "🙂", "  "]
+        events, writes, logs, _ = self.run_stream(
+            [self.chunk(part) for part in pieces] +
+            [self.chunk(finish="stop"), "data: [DONE]"])
+        displayed = "".join(e["text"] for e in events if e["type"] == "token")
+        self.assertEqual(displayed, "".join(pieces))
+        self.assertEqual(writes, [("Привет", displayed)])
+        self.assertEqual(logs, writes)
+        self.assertEqual(events[-1]["type"], "done")
         self.assertFalse(events[-1]["memory_write_receipt"]["s03_readback_verified"])
 
     def test_early_eof_cannot_become_done_or_memory(self):
