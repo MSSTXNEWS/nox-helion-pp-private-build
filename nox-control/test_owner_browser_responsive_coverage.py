@@ -495,7 +495,7 @@ const cases=[
   [{type:'delta',text:'1'},[],{type:'done',saved:true,s03_integrated:true,dialog_id:'qa-demo'}]
 ];
 async function one(frames){
-  const bytes=new TextEncoder().encode(frames.map(x=>JSON.stringify(x)).join('\\n')+'\\n');
+  const bytes=new TextEncoder().encode(frames.map(x=>JSON.stringify(x)).join('\n')+'\n');
   window.fetch=async()=>({
     body:{getReader(){let remaining=1;return {
       async read(){return remaining--?{done:false,value:bytes}:{done:true};},
@@ -509,7 +509,7 @@ async function one(frames){
   for(let i=0;i<8&&!q.nativeClosed&&!q.error;i++)await new Promise(setImmediate);
   return [q.error,q.nativeClosed,q.nativeTerminals,q.nativeCalls];
 }
-(async()=>{console.log(JSON.stringify(await Promise.all(cases.map(one))));})()
+(async()=>{console.log(JSON.stringify(await (async()=>{const rows=[];for(const c of cases)rows.push(await one(c));return rows;})()));})()
  .catch(e=>{console.error(e);process.exitCode=1;});
 """ % json.dumps(OBSERVER_JS.replace('__CONFIG__', '{"did":"qa-demo"}'))
         result = subprocess.run([node, '-e', code], capture_output=True, text=True,
