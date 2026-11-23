@@ -1143,6 +1143,12 @@ def install(app, B):
                                         upstream_failure = "UPSTREAM_AFTER_DONE"
                                         break
                                     continue
+                                # An SSE named error without a data payload is
+                                # still a provider failure; never certify S03
+                                # from a later stop/[DONE] pair.
+                                if line.startswith("event:") and line[6:].strip().lower() == "error":
+                                    upstream_failure = "UPSTREAM_ERROR_EVENT"
+                                    break
                                 if not line.startswith("data:"):
                                     continue
                                 d = line[5:].strip()
