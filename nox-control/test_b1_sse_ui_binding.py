@@ -3175,6 +3175,92 @@ def main():
           return true;
         }'''))
 
+        # R45: canonical ACK HOLD must release the ORIGINAL terminal GET,
+        # not just a separately verified signed-ACK GET response. All three
+        # paths into canonicalCompletion() share this ownership boundary.
+        check('R45 canonical HOLD releases original GET once and GET-only recovery', page.evaluate('''async () => {
+          for(const kind of ['already','uncertain','send','timeout','stop','healthy']){
+            const s={conversation_id:'r45',exchange_id:'canonical-'+kind};
+            let reads=0,cancels=0,posts=0,acks=0,gateCalls=0,recovery=false;
+            let gateEntered;
+            const entered=new Promise(resolve=>gateEntered=resolve);
+            const transport={...opts.transport,
+              post(){posts++;throw Error('DUPLICATE_MODEL_POST')},
+              async readback(){reads++;return {...s,body:{cancel(){
+                cancels++;return Promise.reject(Error('cancel nonblocking'));
+              }}}},
+              ack(){acks++;return true},
+              readCanonicalAck(_s,_expected,challenge){
+                const now=Date.now();return {
+                  request_nonce:challenge.request_nonce,
+                  issued_at_ms:now,expires_at_ms:now+1000,
+                  ack_id:'ack-r45-'+kind
+                };
+              }
+            };
+            const gate={
+              reserve(){
+                if(kind==='uncertain'&&!recovery)
+                  throw Object.assign(Error('ACK_PENDING'),
+                    {code:'HOLD_CROSSTAB_ACK_UNCERTAIN'});
+                return {status:kind==='send'&&!recovery?'RESERVED':'ALREADY_ACKED'};
+              },
+              beginSend(){return 'SENDING'},
+              confirm(){throw Error('NO_UNVERIFIED_CONFIRM')},
+              async requireCanonicalAck(_s,event,cursor,read,verify){
+                gateCalls++;gateEntered();
+                if(!recovery&&kind!=='healthy'){
+                  if(kind==='timeout'||kind==='stop')return new Promise(()=>{});
+                  throw Error('CANONICAL_GATE_UNAVAILABLE');
+                }
+                const expected={event_id:event,ack_cursor:cursor};
+                const receipt=await read(expected);
+                if(await verify(receipt,expected)!==true)
+                  throw Error('UNVERIFIED_CANONICAL_ACK');
+                return {status:'CANONICAL_ACK_CONFIRMED',
+                  authority:'VERIFIER_CALLBACK_APPROVED',ack_id:receipt.ack_id};
+              }
+            };
+            const host={...opts.host,
+              verifyFreshCanonicalAck(){return true},
+              verifyCanonicalAck(){return true}
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host,bridge:opts.bridge,ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){return true}},
+              canonicalAckTimeoutMs:kind==='timeout'?40:500
+            });
+            const pending=client.reconnect(s);
+            if(kind==='stop'){
+              await Promise.race([entered,new Promise(r=>setTimeout(r,250))]);
+              if(!client.stop(s))return false;
+            }
+            const result=await Promise.race([
+              pending.then(v=>v,e=>e.code),
+              new Promise(r=>setTimeout(()=>r('HUNG'),750))
+            ]);
+            if(kind==='healthy'){
+              if(!result||result.canonical_ack_id!=='ack-r45-healthy'||
+                 cancels!==0||reads!==1||acks!==0||posts!==0)return false;
+              continue;
+            }
+            const expected=kind==='stop'?'HOLD_STREAM_RECONNECT_STOPPED':
+              kind==='timeout'?'HOLD_STREAM_CANONICAL_ACK_TIMEOUT':
+              'HOLD_STREAM_CANONICAL_ACK';
+            if(result!==expected||reads!==1||cancels!==1||
+               posts!==0||acks!==(kind==='send'?1:0)||gateCalls!==1)return false;
+            const noRepost=await client.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(!noRepost||posts!==0)return false;
+            recovery=true;
+            const recovered=await client.reconnect(s);
+            if(!recovered||recovered.canonical_ack_id!=='ack-r45-'+kind||
+               reads!==2||cancels!==1||posts!==0||
+               acks!==(kind==='send'?1:0)||gateCalls!==2)return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
