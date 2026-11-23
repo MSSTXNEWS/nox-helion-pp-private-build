@@ -1343,9 +1343,9 @@ async function check(chunks, status=200) {
         self.assertIn("signed_after_second=await context.request.get(", caller)
         self.assertIn("multiturn_postsecond_owner_session_verified", caller)
         self.assertLess(caller.index("signed_after_second=await context.request.get("),
-                        caller.index("second_history=await json_response("))
+                        caller.index("second_history=await owner_history_json_response("))
         self.assertLess(caller.index("multiturn_postsecond_owner_session_verified"),
-                        caller.index("second_history=await json_response("))
+                        caller.index("second_history=await owner_history_json_response("))
         self.assertLess(caller.index("signed_after_second=await context.request.get("),
                         caller.index("multiturn_browser_acceptance_verified"))
 
@@ -2452,7 +2452,7 @@ async function check(chunks, status=200) {
         self.assertFalse(stable_second_turn_quiescence(
             quiet, dict(quiet), 2, False))
         caller = inspect.getsource(browser_run)
-        history = caller.index("postquiet_history=await json_response(")
+        history = caller.index("postquiet_history=await owner_history_json_response(")
         session = caller.index("signed_precert=await context.request.get(")
         runtime = caller.index("if not clean_two_turn_browser_runtime(")
         final = caller.index("postread_snapshot=await page.evaluate(SNAPSHOT_JS)")
@@ -2823,7 +2823,7 @@ async function check(chunks, status=200) {
         caller = inspect.getsource(browser_run)
         reload_point=caller.index("report['browser_stage']='QA_RELOAD_SAME_DIALOG_FOURROW'")
         prehistory_session=caller.index("signed_reload=await context.request.get(",reload_point)
-        history=caller.index('reloaded_history=await json_response(',reload_point)
+        history=caller.index('reloaded_history=await owner_history_json_response(',reload_point)
         stable=caller.index('postquiet_fourrow_history_stable(',history)
         posthistory_session=caller.index('postreload_owner_session_recheck(',history)
         runtime=caller.index('HOLD_MULTITURN_RELOAD_RUNTIME_OR_POST',posthistory_session)
@@ -2883,7 +2883,7 @@ async function check(chunks, status=200) {
                 browser.close()
 
         caller = inspect.getsource(browser_run)
-        reloaded_history = caller.index('reloaded_history=await json_response(')
+        reloaded_history = caller.index('reloaded_history=await owner_history_json_response(')
         session = caller.index('postreload_owner_session_recheck(', reloaded_history)
         runtime = caller.index('HOLD_MULTITURN_RELOAD_RUNTIME_OR_POST', session)
         guard = caller.index(
@@ -2969,7 +2969,7 @@ async function check(chunks, status=200) {
             finally:
                 browser.close()
         caller = inspect.getsource(browser_run)
-        history = caller.index('reloaded_history=await json_response(')
+        history = caller.index('reloaded_history=await owner_history_json_response(')
         final_ui = caller.index(
             'HOLD_MULTITURN_RELOAD_POSTHISTORY_ACTIVE_DIALOG_CHANGED', history)
         rendered = caller.index(
