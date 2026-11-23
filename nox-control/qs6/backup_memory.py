@@ -234,7 +234,18 @@ def restore(backup_path, db, force=False):
         if os.path.exists(tmp):
             os.remove(tmp)
         raise
-    return {"restored_from": backup_path, "db": db, "previous_kept_as": kept, "check": verify(backup_path)[1]}
+    # The backup's validity is not proof that its installed postimage is intact.
+    # Read back the actual target independently after the atomic rename.  A
+    # concurrent writer or failed storage operation must never yield a false
+    # restore-success receipt.  Preserve the previous copy for owner recovery.
+    installed_sha256 = sha256_file(db)
+    installed_ok, installed_detail = integrity(db)
+    if installed_sha256 != want or not installed_ok:
+        raise RuntimeError("restore HOLD: installed S03 postimage differs from the verified backup; "
+                           "preserve previous copy and inspect owner STOP/lease "
+                           "(sha_match=%s, integrity=%s)" % (installed_sha256 == want, installed_detail))
+    return {"restored_from": backup_path, "db": db, "previous_kept_as": kept,
+            "installed_sha256": installed_sha256, "check": "installed SHA-256 and integrity_check ok"}
 
 
 def _in_use(db):
