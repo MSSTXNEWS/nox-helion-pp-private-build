@@ -3019,6 +3019,18 @@ class S03ContentReindexNestedShapeFence(unittest.TestCase):
         healthy = check(copy.deepcopy(valid), chain)
         self.assertEqual(healthy[lifecycle], scope["S03_PINS"][lifecycle])
         self.assertEqual(len(healthy), 2)
+        # R43: 6.0 == 6 is True in Python, but a signed S03 worker census
+        # must report integer quantities, not float-coerced fake counts.
+        for key in ("configured", "observed"):
+            for malformed in (6.0, "6", True, None):
+                with self.subTest(worker_count=key, invalid=repr(malformed)):
+                    candidate = copy.deepcopy(valid)
+                    candidate["workers"][key] = malformed
+                    with self.assertRaisesRegex(
+                            RuntimeError, "^HOLD_S03_NATIVE_SIX_WORKERS_REQUIRED$"):
+                        check(candidate, chain)
+        self.assertEqual(check(copy.deepcopy(valid), chain)[lifecycle],
+                         scope["S03_PINS"][lifecycle])
         # R33: false is a JSON boolean, not an observed zero stale-vector count.
         candidate = copy.deepcopy(valid)
         candidate["content_reindex"]["stale_embeddings"] = False

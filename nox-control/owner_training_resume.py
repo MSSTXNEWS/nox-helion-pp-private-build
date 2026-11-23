@@ -567,7 +567,8 @@ def s03_activation_pins(receipt, upgrade_chain, request=None, source=None):
     workers = receipt.get('workers')
     if type(workers) is not dict:
         raise RuntimeError('HOLD_S03_NATIVE_SIX_WORKERS_REQUIRED')
-    if (workers.get('configured') != 6 or workers.get('observed') != 6
+    if (type(workers.get('configured')) is not int or workers['configured'] != 6
+            or type(workers.get('observed')) is not int or workers['observed'] != 6
             or type(workers.get('unique_active_claims')) is not int
             or not 0 <= workers['unique_active_claims'] <= 6):
         raise RuntimeError('HOLD_S03_NATIVE_SIX_WORKERS_REQUIRED')
