@@ -41,9 +41,16 @@ class BridgeStreamIntegrity(unittest.TestCase):
     def run_stream(self, lines, status=200, write_ok=True,
                    memory_error=False, soul_error=False,
                    vol_error=False, affect_error=False, write_raises=False,
-                   token_hint=64):
+                   token_hint=64, byte_chunks=None):
         writes, soul_logs, notices = [], [], []
         response = FakeResponse(lines, status)
+        if byte_chunks is not None:
+            async def raw_bytes(chunk_size=4096):
+                for chunk in byte_chunks:
+                    if isinstance(chunk, Exception):
+                        raise chunk
+                    yield chunk
+            response.aiter_bytes = raw_bytes
         class Client:
             def stream(self, *_args, **_kwargs):
                 return response
@@ -253,6 +260,32 @@ class BridgeStreamIntegrity(unittest.TestCase):
                 self.assertFalse(events[-1]["memory_write_receipt"]["s03_readback_verified"])
                 self.assertEqual(writes, [("Привет", "Сохраняю 🌍")])
                 self.assertEqual(soul, writes)
+
+    def test_real_http_bytes_are_bounded_and_unicode_exact(self):
+        # Actual httpx exposes aiter_bytes, not the fixture-only aiter_lines.
+        # CRLF/UTF-8 can cross arbitrary transport chunks without changing S03.
+        raw = ("data: " + json.dumps(
+            {"choices": [{"delta": {"content": "Привет 🌍"},
+                          "finish_reason": None}]}, ensure_ascii=False
+        ) + "\r\n\r\n" + self.chunk(finish="stop") +
+            "\n\ndata: [DONE]\r\n\r\n").encode("utf-8")
+        chunks = [raw[i:i+3] for i in range(0, len(raw), 3)]
+        events, writes, soul, _ = self.run_stream([], byte_chunks=chunks)
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertEqual(writes, [("Привет", "Привет 🌍")])
+        self.assertEqual(soul, writes)
+        # Malformed UTF-8 must not be decoded with replacement characters
+        # and then certified as a factual S03 reply.
+        bad, bad_writes, bad_soul, _ = self.run_stream(
+            [], byte_chunks=[b"data: " + bytes([0xff]) + b"\\n\\n"])
+        self.assertEqual(bad[-1]["type"], "error")
+        self.assertEqual((bad_writes, bad_soul), ([], []))
+        # A provider that never sends a newline cannot force unbounded
+        # httpx line buffering before the stream is rejected.
+        huge, huge_writes, huge_soul, _ = self.run_stream(
+            [], byte_chunks=[b"data: " + b"x" * (1024 * 1024 + 1)])
+        self.assertEqual(huge[-1]["type"], "error")
+        self.assertEqual((huge_writes, huge_soul), ([], []))
 
     def test_complete_stop_done_writes_once_but_never_certifies_s03_readback(self):
         events, writes, logs, _ = self.run_stream([
