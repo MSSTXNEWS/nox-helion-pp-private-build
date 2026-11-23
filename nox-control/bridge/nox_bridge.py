@@ -408,7 +408,16 @@ async def stream_chat(history):
     full_chars = 0
     received_done = False
     finish_stop = False
-    body = {"messages": msgs, "max_tokens": adapt_tokens(user), "temperature": 0.6, "id_slot": 0, "cache_prompt": True, "n_keep": NKEEP, "stream": True,
+    # Token sizing is an optional latency hint, not an upstream/S03 gate.
+    # A failed hook must not abandon the admitted SSE without a terminal event.
+    try:
+        token_budget = adapt_tokens(user)
+        if type(token_budget) is not int or not (1 <= token_budget <= 4096):
+            raise ValueError("INVALID_TOKEN_HINT")
+    except Exception as exc:
+        log("stream_token_hint_fallback " + type(exc).__name__)
+        token_budget = 700
+    body = {"messages": msgs, "max_tokens": token_budget, "temperature": 0.6, "id_slot": 0, "cache_prompt": True, "n_keep": NKEEP, "stream": True,
             "chat_template_kwargs": {"enable_thinking": False}}
     try:
         async with hc().stream("POST", MODEL, json=body) as r:
