@@ -170,10 +170,34 @@ def verify(path):
     return True, "ok: sha256 совпала, integrity_check ok, строки: %s" % meta.get("counts")
 
 
+def _restore_persona_id(path):
+    """Read an explicit active PersonaID from a QS6 SQLite snapshot, if present.
+
+    Legacy databases without PersonaID cannot be certified as identity-bound.
+    Conflicting aliases or an unreadable profile fail closed. Never log the ID.
+    """
+    con = sqlite3.connect("file:%s?mode=ro" % path, uri=True)
+    try:
+        try:
+            rows = con.execute(
+                "SELECT value FROM mem_profile WHERE status='active' "
+                "AND lower(key) IN ('personaid', 'persona_id')"
+            ).fetchall()
+        except sqlite3.Error as exc:
+            raise RuntimeError("restore HOLD: PersonaID profile unreadable") from exc
+    finally:
+        con.close()
+    values = {v[0].strip() for v in rows if isinstance(v[0], str) and v[0].strip()}
+    if len(values) != len(rows) or len(values) > 1:
+        raise RuntimeError("restore HOLD: missing or conflicting active PersonaID aliases")
+    return next(iter(values)) if values else None
+
+
 def restore(backup_path, db, force=False):
     ok, msg = verify(backup_path)
     if not ok:
         raise RuntimeError("восстановление отменено: " + msg)
+    source_persona = _restore_persona_id(backup_path)
     tmp = db + ".restore.tmp"
     d = os.path.dirname(os.path.abspath(db))
     os.makedirs(d, exist_ok=True)
@@ -195,7 +219,18 @@ def restore(backup_path, db, force=False):
         if not ok or sha256_file(tmp) != want:
             raise RuntimeError("копия повредилась при копировании")
         kept = None
+        if os.path.islink(db):
+            raise RuntimeError("restore HOLD: destination S03 is a symbolic link")
         if os.path.exists(db):
+            # An open WAL/SHM or rollback journal may still be owned by a live
+            # SQLite writer. --force does not authorize a split-brain restore.
+            if any(os.path.lexists(db + ext) for ext in ("-wal", "-shm", "-journal")):
+                raise RuntimeError("restore HOLD: live or orphan SQLite sidecar present")
+            # Identity check applies only to explicit PersonaID values. Legacy
+            # databases remain clearly unverified; a one-sided ID is unsafe.
+            target_persona = _restore_persona_id(db)
+            if (source_persona is not None or target_persona is not None) and source_persona != target_persona:
+                raise RuntimeError("restore HOLD: PersonaID missing or mismatched")
             if not force and _in_use(db):
                 raise RuntimeError("база занята (идёт запись); остановите сервис или используйте --force")
             kept = "%s.before-restore-%s" % (db, time.strftime("%Y%m%d-%H%M%S"))
@@ -244,8 +279,14 @@ def restore(backup_path, db, force=False):
         raise RuntimeError("restore HOLD: installed S03 postimage differs from the verified backup; "
                            "preserve previous copy and inspect owner STOP/lease "
                            "(sha_match=%s, integrity=%s)" % (installed_sha256 == want, installed_detail))
+    if source_persona is not None and _restore_persona_id(db) != source_persona:
+        raise RuntimeError("restore HOLD: installed PersonaID postimage mismatch")
+    persona_scope = ("MATCHED_PREIMAGE_AND_POSTIMAGE" if source_persona is not None and kept
+                     else "SOURCE_ONLY_NEW_DB" if source_persona is not None
+                     else "UNVERIFIED_LEGACY_NO_PERSONA_ID")
     return {"restored_from": backup_path, "db": db, "previous_kept_as": kept,
-            "installed_sha256": installed_sha256, "check": "installed SHA-256 and integrity_check ok"}
+            "installed_sha256": installed_sha256, "check": "installed SHA-256 and integrity_check ok",
+            "persona_scope": persona_scope}
 
 
 def _in_use(db):
