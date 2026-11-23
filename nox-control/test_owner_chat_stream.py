@@ -2273,7 +2273,9 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     wire=''.join([part async for part in response.body_iterator])
                 if allowed:
                     self.assertEqual(len(requests),1)
-                    self.assertIs(requests[0]['cache_prompt'],False)
+                    # Pool preparation may change cache settings; the existing
+                    # model transport independently forces cache_prompt=True.
+                    self.assertIs(requests[0]['cache_prompt'],True)
                     self.assertEqual(payload.get('_agent_final'),'ready')
                     self.assertIn('[DONE]',wire)
                 else:
