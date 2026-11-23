@@ -791,6 +791,11 @@ class CheckpointStepProvenance(unittest.TestCase):
                                     side_effect=fake_read_text),
                   mock.patch("os.sched_getaffinity", return_value={0, 1, 2, 3})):
                 self.assertEqual(admit(helper)["gpu1"]["free_mib"], 30000)
+                # A genuine two-GPU census is valid before malformed-row checks.
+                helper.gpu = lambda: {"gpus": [{"index": 0, "free_mib": 100},
+                                              {"index": 1, "free_mib": 30000}]}
+                self.assertEqual(admit(helper)["gpu1"]["index"], 1)
+                helper.gpu = lambda: {"gpus": [{"index": 1, "free_mib": 30000}]}
                 for malformed in (None, [], {}, {"state": None},
                                   {"state": True}, {"state": ["STOPPED"]}):
                     with self.subTest(supervisor=malformed):
@@ -809,6 +814,10 @@ class CheckpointStepProvenance(unittest.TestCase):
                     {"gpus": [{"index": 1, "free_mib": -1}]},
                     {"gpus": [{"index": 0, "free_mib": 30000}]},
                     {"gpus": [valid, valid]},
+                    # Pre-R51 admission incorrectly accepted both below.
+                    {"gpus": [valid, {"index": 0, "free_mib": 30000},
+                              {"index": 0, "free_mib": 30000}]},
+                    {"gpus": [valid, {"index": -1, "free_mib": 30000}]},
                 ):
                     with self.subTest(gpu=malformed):
                         helper.gpu = lambda value=malformed: value
@@ -4084,7 +4093,7 @@ class SignedCheckpointStateRootTypeFence(unittest.TestCase):
                         for name in names
                     }
                     with self.assertRaisesRegex(
-                            RuntimeError, "^HOLD_PAUSED_CHECKPOINT_STEP$"):
+                            RuntimeError, "^HOLD_STATE_OBJECT_REQUIRED$"):
                         verify(helper, receipt)
             # A signed valid object remains admissible on the same path.
             state.write_text('{"global_step":1}', encoding="utf-8")

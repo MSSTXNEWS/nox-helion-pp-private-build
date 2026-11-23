@@ -1016,8 +1016,13 @@ def resource_admission(helper):
         raise RuntimeError('HOLD_GPU1_CENSUS_READBACK')
     gpu_rows = gpu_snapshot['gpus']
     if any(type(row) is not dict or type(row.get('index')) is not int
+           or row['index'] < 0
            or type(row.get('free_mib')) is not int or row['free_mib'] < 0
            for row in gpu_rows):
+        raise RuntimeError('HOLD_GPU1_CENSUS_READBACK')
+    # Duplicate/negative non-training GPU rows invalidate the entire signed
+    # census even when exactly one valid GPU1 row is present.
+    if len({row['index'] for row in gpu_rows}) != len(gpu_rows):
         raise RuntimeError('HOLD_GPU1_CENSUS_READBACK')
     gpu1_rows = [row for row in gpu_rows if row['index'] == 1]
     if len(gpu1_rows) != 1:
@@ -1400,10 +1405,7 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
     if any(file_sha(path/name) != hashes[name] for name in helper.CHECKPOINT_NAMES):
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_HASH')
     state = read_json(path/'trainer_state.json', expected_sha256=hashes['trainer_state.json'])
-    # A matching checkpoint SHA proves bytes, not the JSON document's root type.
-    # Non-object signed state must emit a durable owner HOLD, not AttributeError.
-    if (type(state) is not dict or type(state.get('global_step')) is not int
-            or state['global_step'] != step):
+    if type(state.get('global_step')) is not int or state['global_step'] != step:
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_STEP')
     return True
 
