@@ -2657,6 +2657,81 @@ def main():
           return true;
         }'''))
 
+        # An in-time GET can return a still-open response before the external
+        # terminal witness rejects, hangs, or is stopped. Bounded GET has
+        # already completed, so the witness HOLD must close that packet once.
+        # Healthy witnesses retain ownership; recovery remains GET-only.
+        check('abandoned readback witness body canceled once; GET-only retry preserves good packet', page.evaluate('''async () => {
+          const modes=['unsafe','throws','stop','timeout','healthy'];
+          for(const mode of modes){
+            const s={conversation_id:'r37',exchange_id:mode};
+            let reads=0,posts=0,acks=0,projections=0,cancels=0;
+            let goodCancels=0,calls=0,release,entered;
+            const started=new Promise(resolve=>entered=resolve);
+            const witness={safe_to_ack:true,model_post:false,
+              conversation_id:s.conversation_id,exchange_id:s.exchange_id,
+              projection_event_id:'ev-'+mode,ack_cursor:'cursor-'+mode};
+            const transport={...opts.transport,
+              post(){posts++;throw Error('NO_MODEL_POST')},
+              async readback(){
+                reads++;
+                return {...s,body:{cancel(){
+                  if(reads>1)goodCancels++;else cancels++;
+                  if(mode==='unsafe')return Promise.reject(Error('cancel failure'));
+                  if(mode==='timeout')return new Promise(()=>{});
+                  return Promise.resolve();
+                }}};
+              },
+              async ack(){acks++;return true}
+            };
+            const bridge={acceptTerminal(){
+              calls++;
+              if(calls>1||mode==='healthy')return Promise.resolve(witness);
+              if(mode==='unsafe')return Promise.resolve({...witness,safe_to_ack:false});
+              if(mode==='throws')return Promise.reject(Error('bridge refused'));
+              entered();
+              return new Promise(resolve=>{release=()=>resolve(witness)});
+            }};
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge,
+              ui:{async onDelta(){throw Error('NO_DELTA')},
+                async upsertTerminal(){projections++;return true}},
+              reconnectReadTimeoutMs:mode==='timeout'?35:500
+            });
+            const pending=client.reconnect(s);
+            if(mode==='stop'||mode==='timeout')await started;
+            const didStop=mode==='stop'?client.stop(s):false;
+            const result=await Promise.race([
+              pending.then(v=>v,e=>e.code),
+              new Promise(resolve=>setTimeout(()=>resolve('HUNG'),650))
+            ]);
+            const expected=mode==='unsafe'?'HOLD_STREAM_UNSAFE_WITNESS':
+              mode==='throws'?'HOLD_STREAM_READBACK':
+              mode==='stop'?'HOLD_STREAM_RECONNECT_STOPPED':
+              'HOLD_STREAM_WITNESS_TIMEOUT';
+            if(mode==='healthy'){
+              if(!result||result.safe_to_ack!==true||cancels!==0||
+                 goodCancels!==0||reads!==1||calls!==1||acks!==1||
+                 projections!==1||posts!==0)return false;
+              continue;
+            }
+            if((mode==='stop'&&!didStop)||result!==expected||
+               cancels!==1||goodCancels!==0||reads!==1||calls!==1||
+               acks!==0||projections!==0||posts!==0)return false;
+            // Late bridge completion must not revive an abandoned turn.
+            if(release)release();
+            await new Promise(resolve=>setTimeout(resolve,0));
+            const noRepost=await client.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(!noRepost||acks!==0||projections!==0||cancels!==1)return false;
+            const retry=await client.reconnect(s);
+            if(!retry||retry.safe_to_ack!==true||reads!==2||
+               calls!==2||acks!==1||projections!==1||posts!==0||
+               cancels!==1||goodCancels!==0)return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
