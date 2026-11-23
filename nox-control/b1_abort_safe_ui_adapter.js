@@ -123,7 +123,7 @@
       if(terminalRow&&terminalRow.dataset.noxB1State==='terminal')
         return false;
       const previous=deltaTails.get(k)||Promise.resolve();
-      let reservation=null;
+      let reservation=null,projected=false;
       const job=previous.catch(()=>{}).then(async()=>{
         if(signal.aborted) return false;
         let onAbort,timeoutId=null;
@@ -156,6 +156,7 @@
         if(!el) el=create(s);
         // textContent, never innerHTML: arbitrary model text cannot inject DOM.
         el.textContent+=delta;
+        projected=true;
         if(reservation) reservation.committed=true;
         return true;
       });
@@ -172,7 +173,17 @@
           deltaEvents.delete(replayKey);
       };
       job.then(release,release);
-      return job;
+      // Caller STOP must not wait behind an unrelated live FIFO precommit.
+      // Keep the internal job/tail reserved until it drains in order.
+      let onCallerAbort;
+      const callerStopped=new Promise(resolve=>{
+        onCallerAbort=()=>{if(!projected) resolve(false);};
+        signal.addEventListener('abort',onCallerAbort,{once:true});
+        if(signal.aborted) onCallerAbort();
+      });
+      return Promise.race([job,callerStopped]).finally(()=>{
+        signal.removeEventListener('abort',onCallerAbort);
+      });
     }
     // The SSE caller may pass the exchange STOP signal. Legacy callers still
     // have a finite precommit timeout and cannot commit after it has expired.
