@@ -253,8 +253,10 @@ async def ask(messages, max_tokens, slot=0):
                 return txt
             log("empty_answer finish=%s keys=%s reasoning_len=%d attempt=%d" % (ch.get("finish_reason"), list(m.keys()), len(m.get("reasoning_content") or ""), attempt))
             max_tokens = min(max_tokens * 2, 700)
-        rc = (m.get("reasoning_content") or "").strip()
-        return rc[-600:] if rc else ""
+        # Private reasoning is not an assistant reply. Returning it here used
+        # to turn an empty visible completion into a false S03 fact/episode.
+        # Fail closed after the bounded two-attempt visible-answer retry.
+        raise ValueError("UPSTREAM_EMPTY_VISIBLE_COMPLETION")
 
 async def smart(history, max_tokens=1500):
     user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
