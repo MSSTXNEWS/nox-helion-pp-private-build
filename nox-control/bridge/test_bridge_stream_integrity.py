@@ -147,6 +147,10 @@ class BridgeStreamIntegrity(unittest.TestCase):
                 ([b'{"messages":{}}'], "CHAT_INVALID_MESSAGES"),
                 ([b'{"messages":[{"role":"user","content":3}]}'], "CHAT_INVALID_MESSAGES"),
                 ([b'{"messages":[{"role":"assistant","content":"only"}]}'], "CHAT_MISSING_USER"),
+                # Prior completed exchange cannot accidentally replay the old
+                # user prompt and attempt a duplicate S03 write.
+                ([b'{"messages":[{"role":"user","content":"old"},{"role":"assistant","content":"done"}]}'], "CHAT_LAST_USER_REQUIRED"),
+                ([b'{"messages":[{"role":"user","content":"old"},{"role":"assistant","content":"done"},{"role":"user","content":"   "}]}'], "CHAT_LAST_USER_REQUIRED"),
                 ([b'{"messages":[{"role":"user","content":"\\ud800"}]}'], "CHAT_INVALID_UNICODE")):
             with self.subTest(payload=payload):
                 result = invoke(payload)
