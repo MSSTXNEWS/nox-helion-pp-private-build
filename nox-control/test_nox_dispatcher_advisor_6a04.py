@@ -23,7 +23,15 @@ def snapshot():
             "native_queue": {"active_claims": False, "maintenance_busy": False,
                              "resource_headroom_bytes": 3*1024**3,
                              "owner_evidence_age_sec": 2,
-                             "owner_lease_cas_verified": True}}
+                             "owner_lease_cas_verified": True,
+                             "immutable_task_source_verified": True,
+                             "admission_state": "OWNER_REVIEWED",
+                             "jobs_started": 0,
+                             "workers": [
+                                 {"state": "RUNNING", "current_task": None},
+                                 {"state": "RUNNING", "current_task": None},
+                                 {"state": "RUNNING", "current_task": None},
+                             ]}}
 
 
 def codes(s):
@@ -37,6 +45,20 @@ class GpuSourceEvidenceTests(unittest.TestCase):
         self.assertEqual([x["code"] for x in result], ["GPU_RESIDUAL_OBSERVED_NOT_ADMITTED"])
         self.assertIn("70", result[0]["advice"])
         self.assertIn("no admission", result[0]["advice"])
+
+    def test_incomplete_native_queue_never_labels_gpu_spare_as_measured(self):
+        # Even a snapshot signature and low GPU utilization cannot certify
+        # available accelerator resources when lease/worker/source evidence
+        # is only a partial JSON dictionary.
+        for field in ("workers", "admission_state", "jobs_started",
+                      "immutable_task_source_verified"):
+            with self.subTest(field=field):
+                s = snapshot()
+                s["native_queue"].pop(field)
+                found = [x["code"] for x in mod.assess(
+                    s, owner_snapshot_verifier=lambda exact: exact is s)]
+                self.assertIn("GPU_RESIDUAL_RESOURCE_HOLD", found)
+                self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", found)
 
     def test_unattested_owner_flags_cannot_label_spare_gpu_measured(self):
         s = snapshot()
