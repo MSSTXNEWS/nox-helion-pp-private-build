@@ -1755,15 +1755,27 @@ async def owner_history_json_response(response):
 
 def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
                                         writer_sha256, readback_sha256,
-                                        dialog_id, expected_messages):
+                                        dialog_id, expected_messages, *,
+                                        expected_session_id):
     """Verify exact immutable bytes before the strict four-row S03 contract.
 
     The caller MUST obtain both expected hashes independently from the
     authorized owner/immutable-verifier path, not from the candidate files.
+    The expected session ID must also come from authenticated owner context,
+    independently of the candidate receipts and transcript.
     This pure adapter cannot establish that authority or native admission.
     It never reads S03, accepts a browser history as a writer, or issues POST.
     """
-    if (type(writer_raw) is not bytes or type(readback_raw) is not bytes
+    if (not isinstance(expected_session_id, str)
+            or not expected_session_id.strip()
+            or expected_session_id != expected_session_id.strip()
+            or not expected_session_id.isprintable()
+            or not isinstance(expected_messages, list)
+            or len(expected_messages) != 4
+            or any(not isinstance(row, dict) or
+                   row.get('session_id') != expected_session_id
+                   for row in expected_messages)
+            or type(writer_raw) is not bytes or type(readback_raw) is not bytes
             or not 0 < len(writer_raw) <= 200000
             or not 0 < len(readback_raw) <= 200000
             or any(not isinstance(pin, str) or
@@ -1776,6 +1788,10 @@ def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
     try:
         writer = strict_owner_json_bytes(writer_raw)
         readback = strict_owner_json_bytes(readback_raw)
+        if (not isinstance(writer, dict) or not isinstance(readback, dict)
+                or writer.get('session_id') != expected_session_id
+                or readback.get('session_id') != expected_session_id):
+            return False
         return canonical_s03_proof_valid(
             writer, readback, dialog_id, expected_messages,
             require_full_transcript_pin=True)

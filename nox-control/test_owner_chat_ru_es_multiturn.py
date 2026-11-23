@@ -4362,9 +4362,10 @@ async function check(chunks, status=200) {
         w, r = wire(writer), wire(reader)
         wp, rp = pin(w), pin(r)
         def check(wire_w=w, wire_r=r, hash_w=wp, hash_r=rp,
-                  history=transcript):
+                  history=transcript, session="owner-session"):
             return canonical_s03_pinned_evidence_valid(
-                wire_w, wire_r, hash_w, hash_r, DIALOG, history)
+                wire_w, wire_r, hash_w, hash_r, DIALOG, history,
+                expected_session_id=session)
         self.assertTrue(check())
         # Same semantic JSON with changed bytes must not reuse a pinned receipt.
         for kwargs in (
@@ -4387,6 +4388,31 @@ async function check(chunks, status=200) {
         foreign = dict(reader, session_id="different-session")
         altered = wire(foreign)
         self.assertFalse(check(wire_r=altered, hash_r=pin(altered)))
+        # Even two internally coherent, pinned receipts cannot identify the
+        # authenticated owner session unless it is independently supplied.
+        for invalid in (None, '', ' owner-session', 'owner-session\\n', 'foreign-session'):
+            with self.subTest(session=invalid):
+                self.assertFalse(check(session=invalid))
+        unscoped = [dict(row) for row in transcript]
+        for row in unscoped:
+            row.pop('session_id')
+        uw, ur = map(wire, s03_proof(unscoped))
+        self.assertFalse(check(wire_w=uw, wire_r=ur, hash_w=pin(uw),
+                               hash_r=pin(ur), history=unscoped))
+        foreign_rows = [dict(row, session_id='foreign-session') for row in transcript]
+        fw, fr = map(wire, s03_proof(foreign_rows))
+        self.assertFalse(check(wire_w=fw, wire_r=fr, hash_w=pin(fw),
+                               hash_r=pin(fr), history=foreign_rows))
+        self.assertTrue(check(wire_w=fw, wire_r=fr, hash_w=pin(fw),
+                              hash_r=pin(fr), history=foreign_rows,
+                              session='foreign-session'))
+        for key, obj in (("writer", writer), ("reader", reader)):
+            absent = dict(obj)
+            absent.pop('session_id')
+            raw = wire(absent)
+            args = ({'wire_w': raw, 'hash_w': pin(raw)} if key == 'writer'
+                    else {'wire_r': raw, 'hash_r': pin(raw)})
+            self.assertFalse(check(**args))
         # The adapter cannot accept browser-history-only or omit row IDs.
         legacy = rows("Sigue en español 🪐")
         lw, lr = map(wire, s03_proof(legacy))
