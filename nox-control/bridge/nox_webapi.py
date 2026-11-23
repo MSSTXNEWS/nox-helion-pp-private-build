@@ -96,6 +96,10 @@ def _finite_sse_constant(value):
 # aiter_lines() may buffer an arbitrarily long line before yielding it and
 # silently replace malformed UTF-8; either can undermine the S03 guard.
 MAX_UPSTREAM_SSE_LINE_BYTES = MAX_CHAT_OUTPUT_UTF8_BYTES + 8192
+# Bounded output tokens alone do not bound upstream traffic: a broken provider
+# can stream unlimited empty JSON/SSE comments or metadata forever. The generous
+# total wire budget preserves even extremely fragmented 128 KiB token output.
+MAX_UPSTREAM_SSE_TOTAL_BYTES = 16 * 1024 * 1024
 
 
 async def _bounded_upstream_sse_lines(response):
@@ -105,10 +109,15 @@ async def _bounded_upstream_sse_lines(response):
     byte-size guard there, but real httpx streams always use bounded bytes.
     """
     byte_reader = getattr(response, "aiter_bytes", None)
+    total_bytes = 0
     if not callable(byte_reader):
         async for line in response.aiter_lines():
-            if len(line.encode("utf-8", "strict")) > MAX_UPSTREAM_SSE_LINE_BYTES:
+            size = len(line.encode("utf-8", "strict"))
+            if size > MAX_UPSTREAM_SSE_LINE_BYTES:
                 raise ValueError("UPSTREAM_SSE_LINE_TOO_LONG")
+            total_bytes += size + 1  # Count one conservative wire line delimiter.
+            if total_bytes > MAX_UPSTREAM_SSE_TOTAL_BYTES:
+                raise ValueError("UPSTREAM_SSE_TOTAL_TOO_LONG")
             yield line
         return
 
@@ -117,6 +126,9 @@ async def _bounded_upstream_sse_lines(response):
     async for chunk in byte_reader(chunk_size=4096):
         if not isinstance(chunk, (bytes, bytearray)):
             raise ValueError("UPSTREAM_SSE_NON_BYTES")
+        total_bytes += len(chunk)
+        if total_bytes > MAX_UPSTREAM_SSE_TOTAL_BYTES:
+            raise ValueError("UPSTREAM_SSE_TOTAL_TOO_LONG")
         for byte in chunk:
             if byte in (10, 13):  # LF, CR; CRLF is one delimiter
                 if byte == 10 and last_was_cr:
