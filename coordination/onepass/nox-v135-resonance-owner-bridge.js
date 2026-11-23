@@ -154,10 +154,9 @@ async function consume(response,emit,signal){
      answer+=e.text;await emit(e.text);
    } else if(e.type==='done') {
      if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-     if(Object.prototype.hasOwnProperty.call(e,'model')){
-       if(!validNativeModelLabel(e.model)||e.model!==nativeModel)
-         throw Error('HOLD_NATIVE_MODEL_RECEIPT_DRIFT');
-     }
+     for(const k of ['model','model_label'])
+      if(k in e&&(!validNativeModelLabel(e[k])||e[k]!==nativeModel))
+       throw Error('HOLD_NATIVE_MODEL_RECEIPT_DRIFT');
      doneSeen=true;done=e;
    } else if(e.type==='start') {
      if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');

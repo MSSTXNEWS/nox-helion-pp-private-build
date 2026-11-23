@@ -2568,5 +2568,75 @@ class TestProbe(unittest.TestCase):
                     await browser.close()
         asyncio.run(run())
 
+
+    def test_r37_native_done_model_label_drift(self):
+        """Synthetic Chromium: explicitly conflicting DONE label must fail closed."""
+        from playwright.async_api import async_playwright
+        async def run():
+            async with async_playwright() as pw:
+                browser=await pw.chromium.launch(headless=True,executable_path='/usr/bin/chromium')
+                try:
+                    for mode in ('drift','invalid','match','absent'):
+                        page=await browser.new_page()
+                        async def fixture(route):
+                            await route.fulfill(status=200,content_type='text/html',
+                                                body='<html>R37 done identity fixture</html>')
+                        await page.route('**/nox-web-v29/pc/resonance.html',fixture)
+                        await page.goto('http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                        await page.evaluate("""mode=>{
+                          window.NOX_NATIVE_OWNER=true;window.__posts=0;window.__hist=0;
+                          const id='a'.repeat(32),ex='r37-'+mode;
+                          window.fetch=async path=>{
+                            if(path==='/api/nox/chat/stream'){
+                              window.__posts++;
+                              const done={type:'done',saved:true,s03_integrated:true,
+                                dialog_id:id,exchange_id:ex};
+                              if(mode!=='absent')done.model_label=
+                                mode==='drift'?'Qwen3-8B':mode==='invalid'?'???':'GLM-5.3-Flash';
+                              return new Response([
+                                {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                {type:'start',model:'GLM-5.3-Flash'},
+                                {type:'delta',text:'GLM answer'},done
+                              ].map(JSON.stringify).join('\\n')+'\\n');
+                            }
+                            if(String(path).startsWith('/api/ui/memory/dialogs/history?')){
+                              window.__hist++;
+                              return new Response(JSON.stringify({
+                                status:'READY',dialog_id:id,messages:[
+                                  {role:'user',content:'hello',exchange_id:ex},
+                                  {role:'assistant',content:'GLM answer',exchange_id:ex}]
+                              }));
+                            }
+                            throw Error('UNEXPECTED_ROUTE '+path);
+                          };
+                        }""",mode)
+                        bridge=(pathlib.Path(__file__).parent /
+                                'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                        await page.add_script_tag(content=bridge)
+                        got=await page.evaluate("""async mode=>{
+                          const r=await fetch('/api/nox/chat',{method:'POST',
+                            body:JSON.stringify({dialog_id:'a'.repeat(32),
+                              request_id:'r37-'+mode,message:'hello'})});
+                          const ev=(await r.text()).split('\\n\\n').filter(Boolean)
+                            .map(s=>JSON.parse(s.slice(6)));
+                          return {posts:window.__posts,hist:window.__hist,
+                            done:ev.filter(e=>e.type==='done'),
+                            errors:ev.filter(e=>e.type==='error')};
+                        }""",mode)
+                        self.assertEqual(got['posts'],1,mode)
+                        if mode in ('drift','invalid'):
+                            self.assertEqual(len(got['done']),0,mode)
+                            self.assertEqual(got['hist'],0,mode)
+                            self.assertEqual([e['error'] for e in got['errors']],
+                                             ['HOLD_NATIVE_MODEL_RECEIPT_DRIFT'],mode)
+                        else:
+                            self.assertEqual(len(got['done']),1,mode)
+                            self.assertEqual(got['hist'],1,mode)
+                            self.assertEqual(got['errors'],[],mode)
+                        await page.close()
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
 if __name__ == '__main__':
     unittest.main()
