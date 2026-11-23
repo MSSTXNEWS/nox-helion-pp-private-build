@@ -457,8 +457,19 @@ def install(app, B):
 
     @app.get("/api/s03/export")
     async def a_export(category: str = "history"):
-        rows = [{"id": i + 1, "title": t.get("u", "")[:80], "content": t.get("a", ""), "source": "S03"} for i, t in enumerate(reversed(_jl(ST + "/turns.jsonl", 50)))]
-        return {"status": "OK", "rows": rows, "next": None}
+        # turns.jsonl is a local auxiliary mirror, not an independently
+        # verified readback of the canonical SQLite S03 transaction.
+        # Keep the legacy rows/next payload, but never attest provenance
+        # that this route has not established.
+        rows = [{"id": i + 1, "title": t.get("u", "")[:80],
+                 "content": t.get("a", ""), "source": "LOCAL_TURNS_MIRROR",
+                 "s03_readback_verified": False}
+                for i, t in enumerate(reversed(_jl(ST + "/turns.jsonl", 50)))]
+        return JSONResponse(
+            {"status": "OK", "rows": rows, "next": None,
+             "source_scope": "LOCAL_TURNS_MIRROR",
+             "s03_readback_verified": False},
+            headers={"Cache-Control": "private, no-store, max-age=0"})
 
     @app.get("/api/nox/history")
     async def a_hist():

@@ -6,6 +6,7 @@ on:
     paths:
       - nox-control/bridge/nox_webapi.py
       - nox-control/bridge/test_webapi_s03_receipt.py
+      - nox-control/bridge/test_s03_export_provenance_0a03.py
       - coordination/onepass/nox-v135-resonance-owner-bridge.js
       - coordination/onepass/test_v135_resonance_owner_bridge.cjs
       - .github/workflows/nox-a3-0a03-global-stop-source.yml
@@ -13,6 +14,7 @@ on:
     paths:
       - nox-control/bridge/nox_webapi.py
       - nox-control/bridge/test_webapi_s03_receipt.py
+      - nox-control/bridge/test_s03_export_provenance_0a03.py
       - coordination/onepass/nox-v135-resonance-owner-bridge.js
       - coordination/onepass/test_v135_resonance_owner_bridge.cjs
       - .github/workflows/nox-a3-0a03-global-stop-source.yml
@@ -35,6 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           python -B -m unittest discover -s nox-control/bridge -p test_webapi_s03_receipt.py -v
+          python -B -m unittest discover -s nox-control/bridge -p test_s03_export_provenance_0a03.py -v
 
   browser-s03-history:
     runs-on: ubuntu-latest
