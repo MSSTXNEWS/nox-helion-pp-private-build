@@ -1173,7 +1173,7 @@ def install(app, B):
                         adaptive_limit = proposed_limit
                     except Exception as e:
                         B.log("web_adaptive_token_budget_unavailable " + type(e).__name__)
-                body = {"messages": mm, "max_tokens": max(64, min(npred, 900, (400 if mini else adaptive_limit))), "temperature": 0.4 if mode == "thoughtful" else 0.6, "id_slot": 1 if mini else 0, "cache_prompt": True, "n_keep": B.NKEEP, "stream": True,
+                body = {"messages": mm, "max_tokens": min(npred, 900, (400 if mini else adaptive_limit)), "temperature": 0.4 if mode == "thoughtful" else 0.6, "id_slot": 1 if mini else 0, "cache_prompt": True, "n_keep": B.NKEEP, "stream": True,
                         "chat_template_kwargs": {"enable_thinking": False}}
                 # STOP may also arrive while self-model or planning awaits.
                 # Check again immediately before opening an upstream model request.
