@@ -665,18 +665,33 @@
           discardVerifiedBody();
           hold('HOLD_STREAM_FRESHNESS_UNVERIFIED');
         }
-        if(!ack||ack.status!=='CANONICAL_ACK_CONFIRMED'||
-           ack.authority!=='VERIFIER_CALLBACK_APPROVED'||
-           typeof ack.ack_id!=='string'||!ID.test(ack.ack_id)||
-           typeof verifiedAckId!=='string'||!ID.test(verifiedAckId)||
-           ack.ack_id!==verifiedAckId){
-          // A syntactically valid ACK for another exchange is NOT proof
-          // for this verifier-approved GET receipt. Cancel its body once.
+        // A durable gate can return an object with throwing or changing
+        // property getters. Read each envelope field exactly once, within
+        // the same failure fence that disposes the signed canonical GET.
+        // A getter exception must not strand that response body or revive
+        // the exchange on a later read. Never repeat network ACK/model POST.
+        let canonicalStatus,canonicalAuthority,canonicalAckId;
+        let validEnvelope=false;
+        try{
+          if(ack&&typeof ack==='object'&&!Array.isArray(ack)){
+            canonicalStatus=ack.status;
+            canonicalAuthority=ack.authority;
+            canonicalAckId=ack.ack_id;
+            validEnvelope=canonicalStatus==='CANONICAL_ACK_CONFIRMED'&&
+              canonicalAuthority==='VERIFIER_CALLBACK_APPROVED'&&
+              typeof canonicalAckId==='string'&&ID.test(canonicalAckId)&&
+              typeof verifiedAckId==='string'&&ID.test(verifiedAckId)&&
+              canonicalAckId===verifiedAckId;
+          }
+        }catch(_){validEnvelope=false;}
+        if(!validEnvelope){
+          // No canonical proof: close its verified GET body once, then the
+          // original terminal readback GET at the enclosing HOLD boundary.
           discardVerifiedBody();
           hold('HOLD_STREAM_CANONICAL_ACK');
         }
-        return Object.freeze({...witness,canonical_ack_status:ack.status,
-          canonical_ack_id:ack.ack_id});
+        return Object.freeze({...witness,canonical_ack_status:canonicalStatus,
+          canonical_ack_id:canonicalAckId});
       }
       // A failed canonical proof leaves the original terminal readback GET
       // unclaimed even if the separate signed-ACK GET was disposed. Release
