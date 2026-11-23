@@ -4070,9 +4070,7 @@ class ProbeTests(unittest.TestCase):
 
         raw = b'{"type":"delta","text":"323"}' + bytes([10])
         expired = CountReader(raw)
-        with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_DEADLINE_EXCEEDED
-    unittest.main()
-):
+        with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_DEADLINE_EXCEEDED$'):
             list(probe.bounded_stream_frames(
                 expired, deadline=time.monotonic() - 1))
         self.assertEqual(expired.read_calls, 0)
@@ -4105,9 +4103,7 @@ class ProbeTests(unittest.TestCase):
                 raise TimeoutError('synthetic stalled upstream')
 
         stalled = StalledReader()
-        with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_DEADLINE_EXCEEDED
-    unittest.main()
-):
+        with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_DEADLINE_EXCEEDED$'):
             list(probe.bounded_stream_frames(
                 stalled, deadline=time.monotonic() + 0.25))
         self.assertTrue(sock.set_calls)
