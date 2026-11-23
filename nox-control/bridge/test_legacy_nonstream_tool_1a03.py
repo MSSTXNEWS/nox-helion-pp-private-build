@@ -63,7 +63,7 @@ class NonstreamCompletionFence(unittest.IsolatedAsyncioTestCase):
                 "role": "assistant", "content": "Not certified"}})
 
     async def test_invalid_content_and_ambiguous_choices_rejected(self):
-        for bad in (0, False, [], {"text": "not a string"}, "\\ud800"):
+        for bad in (0, False, [], {"text": "not a string"}, chr(0xD800)):
             with self.subTest(bad=repr(bad)):
                 with self.assertRaisesRegex(ValueError, "UPSTREAM_CONTENT_INVALID"):
                     await self.run_response({"finish_reason": "stop", "message": {
