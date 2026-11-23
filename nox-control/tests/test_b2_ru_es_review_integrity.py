@@ -126,5 +126,50 @@ class ReviewIntegrityContract(unittest.TestCase):
                              "HOLD_B2_REVIEW_DUPLICATE_KEY")
 
 
+    def test_blank_independent_review_packet_cli_and_round_trip(self):
+        with tempfile.TemporaryDirectory() as folder:
+            cap = Path(folder) / "capture.json"
+            raw = json.dumps(self.capture, ensure_ascii=False).encode("utf-8")
+            cap.write_bytes(raw)
+            out = io.StringIO()
+            with redirect_stdout(out):
+                self.assertEqual(probe.main(["probe.py", "--prepare-review", str(cap)]), 0)
+            packet = json.loads(out.getvalue())
+            self.assertEqual(packet["native_acceptance"], probe.holdout.HOLD)
+            self.assertEqual(packet["quality_grade"], "NOT_INDEPENDENTLY_VERIFIED")
+            submission = packet["submission"]
+            self.assertEqual(submission["capture_sha256"], hashlib.sha256(raw).hexdigest())
+            self.assertEqual(len(submission["reviewers"]), 1)
+            self.assertIsNone(submission["reviewers"][0]["reviewer_id"])
+            self.assertEqual(len(packet["evidence"]), 12)
+            decisions = submission["reviewers"][0]["decisions"]
+            self.assertEqual(len(decisions), 12)
+            for row, decision in zip(packet["evidence"], decisions):
+                self.assertIsNone(decision["verdict"])
+                self.assertEqual(decision["reason"], "")
+                self.assertEqual(decision["answer_sha256"], hashlib.sha256(
+                    row["answer"].encode("utf-8")).hexdigest())
+                self.assertEqual((row["case_id"], row["turn"]),
+                                 (decision["case_id"], decision["turn"]))
+                self.assertEqual(len(row["history"]), row["turn"] * 2 - 1)
+            self.assertIn("21 euros", packet["evidence"][2]["criteria"])
+            self.assertIn("36 евро", packet["evidence"][5]["criteria"])
+            self.assertIn("no inventar", packet["evidence"][8]["criteria"])
+            with self.assertRaisesRegex(probe.ReviewHold, "HOLD_B2_REVIEW_TWO_REVIEWERS"):
+                probe.verify(self.capture, submission, self.digest)
+            # Simulate two completed independent sheets only for interface testing.
+            combined = copy.deepcopy(submission)
+            combined["reviewers"].append(copy.deepcopy(combined["reviewers"][0]))
+            for idx, reviewer in enumerate(combined["reviewers"]):
+                reviewer["reviewer_id"] = f"fixture-{idx}"
+                for decision in reviewer["decisions"]:
+                    decision.update(verdict="uncertain", reason="Fixture interface check")
+            result = probe.verify(self.capture, combined, self.digest)
+            self.assertEqual(result["decisions_bound"], 24)
+            self.assertEqual(result["review_summary"], "ADJUDICATION_REQUIRED")
+            self.assertEqual(result["native_acceptance"], probe.holdout.HOLD)
+            self.assertEqual(cap.read_bytes(), raw)
+
+
 if __name__ == "__main__":
     unittest.main()

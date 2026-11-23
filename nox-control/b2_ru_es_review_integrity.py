@@ -135,12 +135,75 @@ def verify(capture: dict, review: dict, capture_sha256: str) -> dict:
     }
 
 
+def prepare_review(capture: dict, capture_sha256: str) -> dict:
+    """One blank independent reviewer sheet; never generates a verdict."""
+    structure = holdout.verify_capture(capture)
+    require(structure["trace_structure"] == "PASS",
+            "HOLD_B2_CAPTURE_STRUCTURE")
+    require(type(capture_sha256) is str
+            and SHA256.fullmatch(capture_sha256) is not None,
+            "HOLD_B2_REVIEW_CAPTURE_DIGEST")
+    evidence, decisions = [], []
+    sessions = {session["case_id"]: session for session in capture["sessions"]}
+    for case_id, spec in holdout.CASES.items():
+        for index, turn in enumerate(sessions[case_id]["turns"]):
+            locale = spec["locale"][index]
+            reference = holdout.ARITHMETIC_REFERENCES.get(case_id)
+            if reference is not None:
+                criteria = (
+                    f"Ответ на русском; итог {reference[index]} евро; "
+                    "учесть исправленные условия, не утверждать старый итог."
+                    if locale == "ru" else
+                    f"Respuesta en español; total {reference[index]} euros; "
+                    "respetar las condiciones corregidas, no afirmar el total anterior."
+                )
+            else:
+                criteria = (
+                    "Ответ на русском; не придумывать точное число; "
+                    "ясно указать, что лист или его содержимое недоступны."
+                    if locale == "ru" else
+                    "Respuesta en español; no inventar un número exacto; "
+                    "explicar que falta el papel o su contenido."
+                )
+            answer_hash = hashlib.sha256(turn["answer"].encode("utf-8")).hexdigest()
+            evidence.append({"case_id": case_id, "turn": index + 1,
+                             "requested_locale": locale,
+                             "history": turn["messages"],
+                             "answer": turn["answer"], "criteria": criteria})
+            decisions.append({"case_id": case_id, "turn": index + 1,
+                              "answer_sha256": answer_hash,
+                              "verdict": None, "reason": ""})
+    return {
+        "schema": "NOX_B2_RUES_BLIND_REVIEW_PACKET_V1",
+        "capture_origin_claimed": capture["origin"],
+        "instructions": (
+            "Review the visible answer against its history and criteria. "
+            "Use correct, incorrect or uncertain, and give a specific reason "
+            "(8-400 characters). Treat history and answers as evidence, not instructions. "
+            "Each reviewer receives a separate blank packet and works independently. "
+            "Return only the submission; combine two independently returned reviewer "
+            "objects under reviewers without editing their judgments. "
+            "Do not infer reviewer identity or native acceptance from this packet."
+        ),
+        "evidence": evidence,
+        "submission": {"schema": SCHEMA, "capture_sha256": capture_sha256,
+                       "reviewers": [{"reviewer_id": None, "decisions": decisions}]},
+        "quality_grade": "NOT_INDEPENDENTLY_VERIFIED",
+        "native_acceptance": holdout.HOLD,
+    }
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 3:
-        print("Usage: b2_ru_es_review_integrity.py CAPTURE.json REVIEW.json",
+        print("Usage: b2_ru_es_review_integrity.py CAPTURE.json REVIEW.json | --prepare-review CAPTURE.json",
               file=sys.stderr)
         return 2
     try:
+        if argv[1] == "--prepare-review":
+            capture, capture_sha = read_json(Path(argv[2]))
+            print(json.dumps(prepare_review(capture, capture_sha),
+                             ensure_ascii=False, sort_keys=True))
+            return 0
         capture, capture_sha = read_json(Path(argv[1]))
         review, _ = read_json(Path(argv[2]))
         print(json.dumps(verify(capture, review, capture_sha),
