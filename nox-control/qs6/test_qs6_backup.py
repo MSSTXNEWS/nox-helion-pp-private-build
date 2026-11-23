@@ -249,6 +249,33 @@ class BackupT(unittest.TestCase):
         self.assertEqual(open(wal_path, "rb").read(), b"foreign owner sidecar; never move")
         self.assertFalse(os.path.lexists(self.db + ".restore.tmp"))
 
+    def test_restore_refuses_rollback_journal_with_existing_db(self):
+        # Even normal-mode restore cannot move a possibly hot rollback journal.
+        snapshot = B.backup(self.db, self.bdir)
+        original_sha = B.sha256_file(self.db)
+        sidecar = self.db + "-journal"
+        with open(sidecar, "wb") as f:
+            f.write(b"unowned rollback journal")
+        with self.assertRaisesRegex(RuntimeError, "SQLite rollback journal present"):
+            B.restore(snapshot["path"], self.db)
+        self.assertEqual(B.sha256_file(self.db), original_sha)
+        with open(sidecar, "rb") as f:
+            self.assertEqual(f.read(), b"unowned rollback journal")
+        self.assertFalse(os.path.lexists(self.db + ".restore.tmp"))
+
+    def test_restore_refuses_orphan_rollback_journal_without_db(self):
+        snapshot = B.backup(self.db, self.bdir)
+        target = os.path.join(self.td.name, "new-s03.db")
+        sidecar = target + "-journal"
+        with open(sidecar, "wb") as f:
+            f.write(b"orphan rollback journal")
+        with self.assertRaisesRegex(RuntimeError, "осиротевшие SQLite WAL/SHM"):
+            B.restore(snapshot["path"], target)
+        self.assertFalse(os.path.lexists(target))
+        self.assertFalse(os.path.lexists(target + ".restore.tmp"))
+        with open(sidecar, "rb") as f:
+            self.assertEqual(f.read(), b"orphan rollback journal")
+
     def test_restore_legacy_identity_is_explicitly_unverified(self):
         snapshot = B.backup(self.db, self.bdir)
         restored = B.restore(snapshot["path"], self.db)

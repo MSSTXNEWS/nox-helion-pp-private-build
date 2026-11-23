@@ -222,6 +222,10 @@ def restore(backup_path, db, force=False):
         if os.path.islink(db):
             raise RuntimeError("restore HOLD: destination S03 is a symbolic link")
         if os.path.exists(db):
+            # A rollback journal can be hot even without a WAL/SHM file.
+            # Never detach the main DB while its journal may be in use.
+            if os.path.lexists(db + "-journal"):
+                raise RuntimeError("restore HOLD: SQLite rollback journal present")
             # A force override must never move a possibly live WAL/SHM or
             # rollback journal. In normal mode the existing SQLite lock probe
             # below still controls admission; some valid offline WAL snapshots
@@ -265,8 +269,8 @@ def restore(backup_path, db, force=False):
                 raise
         else:
             # Orphaned WAL/SHM must not attach to a newly restored main DB.
-            if any(os.path.lexists(db + ext) for ext in ("-wal", "-shm")):
-                raise RuntimeError("осиротевшие SQLite WAL/SHM без основной базы: HOLD")
+            if any(os.path.lexists(db + ext) for ext in ("-wal", "-shm", "-journal")):
+                raise RuntimeError("осиротевшие SQLite WAL/SHM/journal без основной базы: HOLD")
             os.replace(tmp, db)
     except Exception:
         if os.path.exists(tmp):
