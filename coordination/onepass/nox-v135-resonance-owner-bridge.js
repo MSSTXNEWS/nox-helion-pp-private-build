@@ -132,7 +132,7 @@ timer=setTimeout(()=>reject(Error('HOLD_NATIVE_TERMINAL_EOF_TIMEOUT')),2500);
 ]);
 }finally{clearTimeout(timer);}
 }
-const validNativeModelLabel=v=>typeof v==='string'&&v.length<=96&&v===v.trim()&&!/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(v)&&!/^(unknown|na|none|null|undefined|unavailable|notavailable|unset|nomodel)?$/i.test(v.replace(/[\s/_-]+/g,''));
+const validNativeModelLabel=v=>typeof v==='string'&&v.length<=96&&v===v.trim()&&/[\p{L}\p{N}]/u.test(v)&&!/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(v)&&!/^(unknown|na|none|null|undefined|unavailable|notavailable|unset|nomodel)?$/i.test(v.replace(/[\s/_-]+/g,''));
  async function consume(response,emit,signal) {
  if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
  const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});

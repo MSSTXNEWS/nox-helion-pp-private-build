@@ -1641,6 +1641,8 @@ class TestProbe(unittest.TestCase):
                                  if(mode==='softstart')frames[1].model='existing-\\u00ad-model';
                                  if(mode==='joinstart')frames[1].model='existing-\\u2060-model';
                                  if(mode==='graphemestart')frames[1].model='existing-\\u034f-model';
+                                if(mode==='punctstart')frames[1].model='???';
+                                if(mode==='emojistart')frames[1].model='🧠';
                                 return new Response(frames.map(JSON.stringify).join('\\n')+'\\n',{
                                     status:200
                                 });
@@ -1669,7 +1671,8 @@ class TestProbe(unittest.TestCase):
                         for(const [i,mode] of
                             ['mismatch','match','absent','malformed','paddedstart',
                              'longstart','controlstart','blankstart','bidistart','zerostart',
-                              'softstart','joinstart','graphemestart'].entries()){
+                              'softstart','joinstart','graphemestart',
+                              'punctstart','emojistart'].entries()){
                             const postsBefore=window.__posts;
                             const readsBefore=window.__reads;
                             const id=i.toString(16).repeat(32);
@@ -1693,7 +1696,7 @@ class TestProbe(unittest.TestCase):
                         }
                         return rows;
                     }""")
-                    self.assertEqual(len(result), 13)
+                    self.assertEqual(len(result), 15)
                     for row in result:
                         self.assertEqual(row['posts'], 1)
                         # A terminal HOLD can withhold its last carried grapheme;
@@ -1702,7 +1705,8 @@ class TestProbe(unittest.TestCase):
                         if row['mode'] in ('mismatch', 'malformed', 'paddedstart',
                                            'longstart', 'controlstart', 'blankstart',
                                            'bidistart', 'zerostart', 'softstart',
-                                            'joinstart', 'graphemestart'):
+                                            'joinstart', 'graphemestart',
+                                           'punctstart', 'emojistart'):
                             self.assertEqual(row['reads'], 0)
                             self.assertEqual(row['done'], [])
                             self.assertEqual(len(row['errors']), 1)
