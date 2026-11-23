@@ -4078,5 +4078,50 @@ async function check(chunks, status=200) {
                         decode(wire)
 
 
+    def test_owner_history_json_depth_bound_preserves_ru_es_escaped_text(self):
+        """Owner GET nesting cannot exhaust Python's JSON decoder stack.
+
+        A 64-level witness remains legal; 65+ is a controlled HOLD, and
+        thousands of textual brackets/escaped quotes are never depth.
+        No model POST, content slicing, or canonical S03 write.
+        """
+        class Response:
+            status = 200
+            def __init__(self, raw):
+                self.raw = raw
+            async def body(self):
+                return self.raw
+
+        def decode(wire):
+            return asyncio.run(json_response(Response(wire.encode('utf-8'))))
+
+        tricky = ('[' * 160 + ']' * 160 + ' {json} "quoted" ' +
+                  'slash \\' + ' ¿Cómo estás? Привет 🧠')
+        history = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": tricky},
+            {"role": "assistant", "content": "Hola, español 🪐"},
+            {"role": "user", "content": "Продолжи en español"},
+            {"role": "assistant", "content": "Claro, seguimos"},
+        ]}
+        self.assertEqual(decode(json.dumps(history, ensure_ascii=False)), history)
+
+        for level in (1, 4, 64):
+            with self.subTest(accepted_depth=level):
+                wire = '[' * level + '0' + ']' * level
+                value = decode(wire)
+                for _ in range(level):
+                    self.assertIsInstance(value, list)
+                    value = value[0]
+                self.assertEqual(value, 0)
+
+        for level in (65, 1001, 12000):
+            with self.subTest(rejected_depth=level):
+                wire = '[' * level + '0' + ']' * level
+                self.assertLess(len(wire.encode('utf-8')), 200000)
+                with self.assertRaisesRegex(RuntimeError,
+                                            'HOLD_OWNER_HTTP_JSON_DEPTH'):
+                    decode(wire)
+
+
 if __name__ == "__main__":
     unittest.main()

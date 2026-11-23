@@ -1620,6 +1620,30 @@ async def json_response(response, limit=200000):
         raise RuntimeError('HOLD_OWNER_HTTP_UTF8_WIRE') from None
     if decoded.startswith('\ufeff'):
         raise RuntimeError('HOLD_OWNER_HTTP_UTF8_WIRE')
+    # Bounded GET bodies can still contain enough nested containers to
+    # exhaust Python's JSON decoder stack, concealing a malformed owner-
+    # history witness behind an unclassified RecursionError. Preflight the
+    # structure without counting brackets inside quoted/escaped RU/ES text.
+    # This is a wire-evidence guard, NOT a model context/token limit.
+    depth = 0
+    in_string = False
+    escaped = False
+    for char in decoded:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == '\\':
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+        elif char in '[{':
+            depth += 1
+            if depth > 64:
+                raise RuntimeError('HOLD_OWNER_HTTP_JSON_DEPTH')
+        elif char in ']}':
+            depth -= 1
     # Browser history and S03 candidate witnesses must not accept ambiguous
     # JSON objects: json.loads normally keeps the last duplicate key, allowing
     # conflicting dialog/message identities to be silently overwritten.
