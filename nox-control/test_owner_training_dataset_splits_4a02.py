@@ -61,6 +61,26 @@ class DatasetSplitTests(unittest.TestCase):
         result = split_manifest(rows + [duplicate])
         self.assertEqual(result["counts"], {"input": 61, "deduplicated": 1, "kept": 60})
 
+    def test_normalized_duplicate_representative_is_order_independent(self):
+        # Different raw strings / IDs can normalize to the same text. The
+        # manifest must not depend on which duplicate arrived first.
+        rows = rows_fixture()
+        duplicate = dict(rows[0], id="AA-canonical-first",
+                         text="  UNIQUE  RU  MEMORY  0  EXAMPLE ",
+                         license=" mit ")
+        forward = split_manifest(rows + [duplicate])
+        reverse = split_manifest([duplicate] + list(reversed(rows)))
+        self.assertEqual(forward, reverse)
+        self.assertEqual(forward["counts"],
+                         {"input": 61, "deduplicated": 1, "kept": 60})
+        canonical = [r for bucket in forward["splits"].values() for r in bucket
+                     if r["normalized_sha256"] == (
+                         __import__("hashlib").sha256(
+                             "unique ru memory 0 example".encode()).hexdigest())]
+        self.assertEqual(len(canonical), 1)
+        self.assertEqual(canonical[0]["record_id"], "AA-canonical-first")
+        self.assertEqual(canonical[0]["license_claim"], " mit ")
+
     def test_same_group_conflicting_license_must_hold_even_if_deduplicated(self):
         original = rows_fixture()
         for text in (original[0]["text"], "different content same origin and goal"):
