@@ -761,7 +761,7 @@ class HunterURLSafetyTests(unittest.TestCase):
             "<svg><text>Private annotation</text></svg>"
             "</body></html>"
         )
-        page = H._page_items(raw.encode("utf-8"), "https://example.org/release")
+        page = hunter._page_items(raw.encode("utf-8"), "https://example.org/release")
         self.assertEqual(page, [{
             "title": "Verified release 🧠",
             "content": "Verified release 🧠",
@@ -772,20 +772,20 @@ class HunterURLSafetyTests(unittest.TestCase):
             "<head>Hidden premise</head><template>False certainty</template>"
             "<p>Source-linked answer</p>"
         )
-        self.assertEqual(H._plain(escaped_html), "Source-linked answer")
+        self.assertEqual(hunter._plain(escaped_html), "Source-linked answer")
         feed = (
             "<rss><channel><item><title>Article</title>"
             "<link>https://example.org/article</link>"
             "<description><![CDATA[" + escaped_html + "]]></description>"
             "</item></channel></rss>"
         )
-        self.assertEqual(H._feed_items(feed.encode("utf-8"))[0]["content"],
+        self.assertEqual(hunter._feed_items(feed.encode("utf-8"))[0]["content"],
                          "Source-linked answer")
         crossref = (
             b'{"message":{"items":[{"DOI":"10.1234/test","title":["Article"],'
             b'"abstract":"<head>Private draft</head><p>Published only</p>"}]}}'
         )
-        self.assertEqual(H._crossref_items(crossref)[0]["content"], "Published only")
+        self.assertEqual(hunter._crossref_items(crossref)[0]["content"], "Published only")
 
 
 if __name__ == "__main__":
