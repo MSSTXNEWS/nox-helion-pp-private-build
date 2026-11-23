@@ -60,8 +60,16 @@ def policy_validate(p):
         raise ValueError("invalid local policy")
     if len(p["services"]) > 16:
         raise ValueError("too many services")
+    # A string such as "false" is truthy in Python and could silently turn
+    # on a repair route. Only literal JSON booleans may authorize restarts.
+    if "enabled" in p and type(p["enabled"]) is not bool:
+        raise ValueError("invalid repair policy enabled flag")
     units = []
     for svc in p["services"]:
+        if not isinstance(svc, dict):
+            raise ValueError("invalid repair service entry")
+        if "restart_enabled" in svc and type(svc["restart_enabled"]) is not bool:
+            raise ValueError("invalid service restart flag")
         name = svc.get("unit", "")
         if not isinstance(name, str) or not UNIT_PATTERN.fullmatch(name) or name in units:
             raise ValueError("invalid or duplicate NOX unit")
