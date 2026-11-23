@@ -236,6 +236,24 @@ class SafeRepairTests(unittest.TestCase):
                 result=healer.repair_cycle(p,state)
                 self.assertEqual(result[0]["action"],"stop_lock")
                 run.assert_not_called()
+    def test_dangling_stop_link_and_unreadable_marker_fail_closed(self):
+        # Path.exists() returns False for a dangling STOP symlink; never
+        # interpret that as owner permission to restart a failed unit.
+        with tempfile.TemporaryDirectory() as t:
+            stop = Path(t) / "STOP"
+            stop.symlink_to(Path(t) / "absent-target")
+            state = Path(t) / "repair.json"
+            with patch.object(healer, "alive", return_value=False), patch.object(
+                    healer.subprocess, "run") as run:
+                policy = self.policy(stop)
+                healer.repair_cycle(policy, state)
+                result = healer.repair_cycle(policy, state)
+                self.assertEqual(result[0]["action"], "stop_lock")
+                run.assert_not_called()
+            # An uninspectable STOP is also never considered safely absent.
+            with patch.object(healer.os, "lstat", side_effect=PermissionError("denied")):
+                self.assertTrue(healer._stop_marker_present_or_unknown(stop))
+
     def test_disabled_default_does_not_restart(self):
         with tempfile.TemporaryDirectory() as t:
             state=Path(t)/"s.json"
