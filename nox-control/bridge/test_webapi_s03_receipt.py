@@ -253,8 +253,17 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertEqual(json.loads(response.body)["reason"], "CHAT_INVALID_CONVERSATION_ID")
             response = await chat(Request({**original, "conversation_id": "resonance-thread-01"}))
             first = json.loads(await response.body_iterator.__anext__())
-            row = await snapshot(first["stream_id"], first["request_id"])
+            row = await snapshot(first["stream_id"], first["request_id"],
+                                 original["exchange_id"])
             saved = json.loads(row.body)
+            wrong = await snapshot(first["stream_id"], first["request_id"],
+                                   "different-exchange")
+            invalid = await snapshot(first["stream_id"], first["request_id"], "bad exchange")
+            self.assertEqual(wrong.status_code, 409)
+            self.assertEqual(json.loads(wrong.body)["reason"], "CHAT_SNAPSHOT_EXCHANGE_MISMATCH")
+            self.assertNotIn("message", json.loads(wrong.body))
+            self.assertEqual(invalid.status_code, 400)
+            self.assertEqual(json.loads(invalid.body)["reason"], "CHAT_SNAPSHOT_INVALID_EXCHANGE_ID")
             await response.body_iterator.aclose()
             legacy = await chat(Request({**original, "request_id": "legacy-no-cursor-01",
                                          "exchange_id": "legacy-exchange-01"}))
@@ -269,6 +278,7 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(first["conversation_id"], "resonance-thread-01")
         self.assertEqual(first["exchange_id"], original["exchange_id"])
         self.assertEqual(saved["conversation_id"], first["conversation_id"])
+        self.assertEqual(saved["exchange_id"], first["exchange_id"])
         self.assertEqual(saved["event_seq"], first["event_seq"])
         self.assertEqual(saved["snapshot_integrity"], "PARTIAL")
         self.assertFalse(saved["s03_readback_verified"])
