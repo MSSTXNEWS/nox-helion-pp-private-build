@@ -4,11 +4,31 @@ import unittest
 from io import BytesIO
 from urllib.error import URLError
 from unittest.mock import patch
+from owner_chat_browser_qa import public_numeric_answer as core_public_numeric_answer
+from owner_chat_browser_transport_qa import public_numeric_answer as transport_public_numeric_answer
 from owner_chat_browser_qa import (COMPOSER_JS, RESPONSIVE_LAYOUT_CASES,
     allowed_qa_request, fresh_qa_post_admission, post_admission_hold_reason,
     browser_route_method_allowed, check_report_layout, click_send, verify_saved_browser_refresh,
     idle_slots, MODEL_SLOTS_URL, pinned_served_html_hash, qa_scoped_stop_request_id, qa_scoped_stop_receipt_valid,
     native_stream_envelope_valid, progressive_stream_valid, canonical_s03_proof_valid, OBSERVER_JS, SNAPSHOT_JS)
+
+class NumericTokenIntegrityContract(unittest.TestCase):
+    def test_digits_separated_by_whitespace_cannot_pass_as_a_single_number(self):
+        for parser in (core_public_numeric_answer, transport_public_numeric_answer):
+            with self.subTest(parser=parser.__module__):
+                # Baseline QA has a 100-char contract; the transport probe
+                # intentionally supports the longer forty-number challenge.
+                limit = 11 if parser is core_public_numeric_answer else 41
+                expected = ','.join(map(str, range(1, limit)))
+                self.assertEqual(parser('  1,  2,\n3  '), '1,2,3')
+                self.assertEqual(parser(expected), expected)
+                corrupt = expected.split(',')
+                corrupt[9] = '1 0'
+                self.assertIsNone(parser(','.join(corrupt)))
+                corrupt[9] = '1\n0'
+                self.assertIsNone(parser(','.join(corrupt)))
+                for malformed in ('1 0,9', '1,,2', '1,2,', '1 2', '1,2x'):
+                    self.assertIsNone(parser(malformed))
 
 class FakePage:
     def __init__(self, bad_width=None, reported_width=None, reported_height=None):

@@ -17,7 +17,7 @@ import stat
 import time
 import urllib.parse
 
-BASE_SHA='6d36396630f1555530202b00932daf2eaaa6ad014d29d1763874ae6c02a61637'
+BASE_SHA='670295f8257635cf5e1b385693e4ad91fcb701773f9cb8f84df16a4e6b7b5bec'
 # Includes both exact PROXY_CHANGES from installed training binding91df0894.
 PROXY_FUNCTION_SHA='f849432d675eb3732076634b359ebbb6e516c3361ddba441def7f6dc7e355daf'
 STREAM_SHA='5b7bafde0c25fa26d6b8f98dfbb4958f0faa42ee77292da561834a63097a2e8e'
@@ -32,8 +32,10 @@ def replace_once(source,old,new):
 
 
 def public_numeric_answer(value):
-    if not isinstance(value,str) or len(value)>512 or not re.fullmatch(r'[0-9,\s]+',value):return None
-    return re.sub(r'\s+','',value)
+    # Do not join digits separated by spaces/newlines into a false integer.
+    if (not isinstance(value,str) or len(value)>512
+            or not re.fullmatch(r'\s*[0-9]+(?:\s*,\s*[0-9]+)*\s*',value)):return None
+    return ','.join(part.strip() for part in value.strip().split(','))
 
 
 VIEWPORT_JS=r"""() => ({
