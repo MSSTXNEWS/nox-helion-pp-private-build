@@ -317,15 +317,27 @@ async def stream_chat(history):
         return
     n = mem.count("\n") + 1 if mem else 0
     yield _sse({"type": "status", "text": ("вспоминаю: нашёл %d фрагм. памяти" % n) if mem else "вспоминаю: в памяти ничего близкого"})
-    vol = await vol_t
-    st = affect_update("")
-    yield _sse({"type": "status", "text": "чувствую: " + affect_words(st)})
-    msgs = build_msgs(history, user, mem, vol)
+    # Model admission depends on every context component.  A failing
+    # self-model, affect calculation, message builder or budget cannot end
+    # this SSE stream silently or allow a partial turn to reach S03.
+    try:
+        vol = await vol_t
+        st = affect_update("")
+        affect_status = affect_words(st)
+        msgs = build_msgs(history, user, mem, vol)
+        token_budget = adapt_tokens(user)
+    except Exception as exc:
+        log("context_preflight_error " + type(exc).__name__)
+        yield _sse({"type": "error", "reason": "CHAT_CONTEXT_PREPARE_FAILED",
+                    "generation_complete": False, "s03_readback_verified": False,
+                    "text": "Подготовка контекста не завершена; модель и память не изменены"})
+        return
+    yield _sse({"type": "status", "text": "чувствую: " + affect_status})
     yield _sse({"type": "status", "text": "формулирую ответ…"})
     full = ""
     received_done = False
     finish_stop = False
-    body = {"messages": msgs, "max_tokens": adapt_tokens(user), "temperature": 0.6, "id_slot": 0, "cache_prompt": True, "n_keep": NKEEP, "stream": True,
+    body = {"messages": msgs, "max_tokens": token_budget, "temperature": 0.6, "id_slot": 0, "cache_prompt": True, "n_keep": NKEEP, "stream": True,
             "chat_template_kwargs": {"enable_thinking": False}}
     try:
         async with hc().stream("POST", MODEL, json=body) as r:
