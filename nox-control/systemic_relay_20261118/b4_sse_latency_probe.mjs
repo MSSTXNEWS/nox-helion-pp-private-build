@@ -35,7 +35,7 @@ export async function measureSseResponse(response,options={}){
   const decoder=new TextDecoder('utf-8',{fatal:true});
   const rawHash=createHash('sha256');
   let total=0,firstByte=null,ttft=null,sseDone=null,close=null;
-  let line='',frame=[],frameBytes=0,seenStop=false,seenDone=false,visible='';
+  let line='',lineBytes=0,frame=[],frameBytes=0,seenStop=false,seenDone=false,visible='';
   const nowMs=()=>Math.max(0,clock()-startedAt);
   function acceptFrame(){
     const lines=frame;frame=[];frameBytes=0;
@@ -77,14 +77,21 @@ export async function measureSseResponse(response,options={}){
         if(c==='\n')continue;
       }
       if(c==='\r'||c==='\n'){
-        const current=line;
-        line='';
+        const current=line,currentBytes=lineBytes;
+        line='';lineBytes=0;
         if(current==='')acceptFrame();
-        else frame.push(current);
+        else {
+          frame.push(current);
+          // SSE multi-field payloads contribute one LF between field lines.
+          frameBytes+=currentBytes+(frame.length>1?1:0);
+        }
         if(c==='\r')skipNextLF=true;
-        if(frame.length)frameBytes=Buffer.byteLength(frame.join('\n'),'utf8');
-      }else line+=c;
-      if(Buffer.byteLength(line,'utf8')+frameBytes>maxEventBytes)
+      }else {
+        line+=c;
+        // Iteration is by Unicode code point, not by UTF-16 code unit.
+        lineBytes+=Buffer.byteLength(c,'utf8');
+      }
+      if(lineBytes+frameBytes>maxEventBytes)
         throw fail('B4_EVENT_TOO_LARGE');
     }
   }

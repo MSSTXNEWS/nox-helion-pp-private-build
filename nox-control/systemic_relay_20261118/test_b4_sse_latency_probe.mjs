@@ -1014,3 +1014,53 @@ test('R38 source-exact three serial SSE TTFT completion and post-DONE gzip fence
     await new Promise(resolve=>server.close(resolve));
   }
 });
+
+
+test('R40 linear 128KiB UTF-8 SSE HTTP: split Unicode, TTFT, exact byte cap and EOF',async()=>{
+  const visible='a'.repeat(131072)+'🌍é終';
+  const first=event({delta:{content:visible}});
+  const payload=first+event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n';
+  const bytes=Buffer.from(payload);
+  let posts=0;
+  const server=createServer(async(req,res)=>{
+    posts++;
+    for await (const _ of req){}
+    res.writeHead(200,{'content-type':'text/event-stream','cache-control':'no-store'});
+    const pos=bytes.indexOf(Buffer.from('🌍'));
+    assert.ok(pos>0);
+    res.write(bytes.subarray(0,pos+1));
+    await sleep(3);
+    res.end(bytes.subarray(pos+1));
+  });
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));
+  try{
+    const startedAt=performance.now();
+    const response=await fetch('http://127.0.0.1:'+server.address().port,{
+      method:'POST',headers:{'content-type':'application/json'},body:'{"turn":2}'
+    });
+    const proof=await measureSseResponse(response,{startedAt,totalTimeoutMs:20000,idleTimeoutMs:5000});
+    assert.equal(proof.verified,true);
+    assert.equal(proof.body_bytes,bytes.length);
+    assert.equal(proof.visible_text_sha256,hash(visible));
+    assert.equal(posts,1);
+    assert.ok(proof.ttft_ms>=proof.first_byte_ms);
+    assert.ok(proof.completion_ms>=proof.sse_done_ms);
+    assert.equal(proof.browser_authenticated,false);
+    assert.equal(proof.native_verified,false);
+    assert.equal(proof.canonical_s03_verified,false);
+    const frame=event({delta:{content:'é'.repeat(64)+'🌍'.repeat(64)}});
+    const exact=Buffer.byteLength(frame.split('\n')[0],'utf8');
+    assert.ok(exact>=128);
+    const shortWire=frame+event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n';
+    const responseFor=()=>new Response(shortWire,{status:200,headers:{'content-type':'text/event-stream'}});
+    assert.equal((await measureSseResponse(responseFor(),{maxEventBytes:exact})).verified,true);
+    await assert.rejects(measureSseResponse(responseFor(),{maxEventBytes:exact-1}),/B4_EVENT_TOO_LARGE/);
+    console.log('B4_R40_SYNTHETIC_PROFILE',JSON.stringify({body_bytes:proof.body_bytes,
+      first_byte_ms:proof.first_byte_ms,ttft_ms:proof.ttft_ms,
+      completion_ms:proof.completion_ms,exact_event_boundary_bytes:exact,
+      genuine_glm:false,genuine_browser:false}));
+  }finally{
+    server.closeAllConnections();
+    await new Promise(r=>server.close(r));
+  }
+});
