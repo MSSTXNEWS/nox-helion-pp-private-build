@@ -1062,7 +1062,7 @@ async function check(chunks, status=200) {
         self.assertEqual(owner_session_cookie_pin([signed, ui]), pin)
         self.assertTrue(owner_session_continuity_valid(200, [signed, ui], pin))
         for field in ('name', 'domain', 'path', 'value'):
-            for invalid in ('\\ud800', '\\udfff'):
+            for invalid in ('\ud800', '\udfff'):
                 with self.subTest(field=field, codepoint=repr(invalid)):
                     bad_signed = dict(signed, **{field: invalid})
                     bad_ui = dict(ui, **{field: invalid})
