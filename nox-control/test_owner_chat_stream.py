@@ -74,8 +74,8 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         # index/role is still supported by the existing fixture tests.
         async def collect(choice):
             packet=('data: '+json.dumps({'choices':[choice]},
-                    ensure_ascii=False)+'\\n\\n').encode()
-            native_stream=Chunks([packet,frame(finish='stop'),b'data: [DONE]\\n\\n'])
+                    ensure_ascii=False)+'\n\n').encode()
+            native_stream=Chunks([packet,frame(finish='stop'),b'data: [DONE]\n\n'])
             def respond(request):
                 return httpx.Response(200,stream=native_stream,request=request)
             async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
