@@ -375,7 +375,13 @@ def install(app, B):
     @app.get("/api/nox/status")
     async def a_nstatus():
         alive = _model_ok()
-        d = {"status": "READY" if alive else "HOLD", "model": TAG, "digest": digest, "backend": "NOX_BRIDGE", "primary_model": "DeepSeek V4.1 Flash IQ2_XXS",
+        d = {"status": "READY" if alive else "HOLD", "model": TAG, "digest": digest, "backend": "NOX_BRIDGE",
+             # Health on a configured endpoint verifies reachability, NOT the loaded
+             # model's name or weight identity. Never advertise a stale hardcoded
+             # DeepSeek label as the active OneHost brain.
+             "primary_model": None, "model_identity_verified": False,
+             "model_identity_hold": "OWNER_MODEL_ID_NOT_ATTESTED",
+             "digest_is_weight_sha": False,
              "memory": {"status": "S03 подключена (мост)"}, "reason": None if alive else "модель :8098 не отвечает",
              "native_p02_bound": False, "core_path": "identity+S03+affect+self"}
         d.update(_status_flat())
