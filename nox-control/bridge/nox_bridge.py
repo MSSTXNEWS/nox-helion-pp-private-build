@@ -352,6 +352,13 @@ async def stream_chat(history):
             if r.status_code != 200:
                 raise ValueError("UPSTREAM_HTTP_STATUS")
             async for line in r.aiter_lines():
+                # [DONE] is a provisional sentinel until a clean HTTP EOF.
+                # Do not attest S03 from a stream with trailing bytes, reset
+                # or a late provider error after a model-level stop.
+                if received_done:
+                    if line.strip():
+                        raise ValueError("UPSTREAM_AFTER_DONE")
+                    continue
                 # An SSE named error may carry no data frame. It invalidates
                 # the upstream turn even after finish_reason=stop.
                 if line.startswith("event:") and line[6:].strip() == "error":
@@ -361,7 +368,7 @@ async def stream_chat(history):
                 raw = line[5:].strip()
                 if raw == "[DONE]":
                     received_done = True
-                    break
+                    continue
                 try:
                     payload = json.loads(raw)
                     if not isinstance(payload, dict) or payload.get("error"):
