@@ -2492,8 +2492,11 @@ def main():
           });
           const hold=await healthy.begin({conversation_id:'r27',
             exchange_id:'healthy'}).then(()=>null,e=>e.code);
+          // A committed preflight record forbids model re-POST, but its
+          // GET response body is NOT handed to an active consumer. The
+          // client must release that idle socket exactly once on HOLD.
           return hold==='HOLD_STREAM_RECONNECT_ONLY'&&
-            healthyCancels===0&&healthyPosts===0;
+            healthyCancels===1&&healthyPosts===0;
         }'''))
 
         # After both canonical verifiers succeed, an invalid durable ACK
