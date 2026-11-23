@@ -78,7 +78,6 @@
         hold('HOLD_B1_UI_DELTA_EVENT_ID');
       if(signal.aborted) return false;
       const k=s.conversation_id+'\u0000'+s.exchange_id;
-      if(terminalIntents.has(k)) return false;
       // SSE reconnect may replay the final event. Reserve the event ID before
       // the first await, across all adapters sharing this DOM container.
       // Equal IDs with different payloads are corrupt: fail closed.
@@ -87,7 +86,8 @@
         const known=deltaEvents.get(replayKey);
         if(known){
           if(known.delta!==delta) hold('HOLD_B1_UI_REPLAY_PAYLOAD');
-          if(known.committed) return false;
+          // A pending terminal forbids new projection, not integrity checks.
+          if(terminalIntents.has(k)||known.committed) return false;
           // An overlapping reconnect must observe its OWN STOP. Waiting only
           // on the original in-flight delta could otherwise delay cancellation
           // until that adapter's precommit timeout, even after fresh STOP.
@@ -116,6 +116,7 @@
           });
         }
       }
+      if(terminalIntents.has(k)) return false;
       // A canonical terminal already committed to this DOM is immutable.
       // Late transport deltas must not call an untrusted/hung precommit again.
       // Preserve known event-ID conflict/replay checks above this fast path.
