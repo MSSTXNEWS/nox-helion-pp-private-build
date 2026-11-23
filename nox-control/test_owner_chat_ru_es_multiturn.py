@@ -1048,8 +1048,9 @@ async function check(chunks, status=200) {
                   value='dark', httpOnly=False)
         signed_pin = owner_session_cookie_pin([signed])
         self.assertEqual(owner_session_cookie_pin([signed, ui]), signed_pin)
-        self.assertEqual(owner_session_cookie_pin([signed, dict(legacy)]),
-                         signed_pin)
+        # An unsigned shadow with the signed cookie's identical scope is
+        # ambiguous browser-session provenance, not a benign UI preference.
+        self.assertIsNone(owner_session_cookie_pin([signed, dict(legacy)]))
         self.assertNotEqual(signed_pin, legacy_pin)
 
     def test_ru_es_owner_cookie_invalid_utf8_snapshot_holds(self):
@@ -4211,6 +4212,49 @@ async function check(chunks, status=200) {
                 with self.assertRaisesRegex(RuntimeError,
                                             "HOLD_OWNER_HTTP_CONTENT_TYPE"):
                     asyncio.run(json_response(Response(media)))
+
+
+    def test_ru_es_shadow_cookie_cannot_reuse_signed_session_pin(self):
+        """Shadowing a signed cookie with identical scope fails before ES POST."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='signed-session-stable', httpOnly=True)
+        legitimate_ui = dict(name='theme', domain='owner.example', path='/',
+                             value='dark', httpOnly=False)
+        baseline = owner_session_cookie_pin([signed])
+        self.assertIsInstance(baseline, str)
+        self.assertEqual(len(baseline), 64)
+        self.assertEqual(owner_session_cookie_pin([signed, legitimate_ui]), baseline)
+        self.assertTrue(owner_session_continuity_valid(
+            200, [legitimate_ui, signed], baseline))
+        # A signed pin is not enough if another row can shadow the owner
+        # name/domain/path in the request cookie header. Check both orders.
+        for attacker in (
+            dict(signed, value='shadow-user', httpOnly=False),
+            dict(signed, value='shadow-user'),
+            dict(signed, value='signed-session-stable', httpOnly=False),
+        ):
+            for snapshot in (
+                [signed, attacker],
+                [attacker, signed],
+                [legitimate_ui, signed, attacker],
+                [attacker, legitimate_ui, signed],
+            ):
+                with self.subTest(shadow=repr(attacker), order=repr(snapshot)[:90]):
+                    self.assertIsNone(owner_session_cookie_pin(snapshot))
+                    self.assertFalse(owner_session_continuity_valid(
+                        200, snapshot, baseline))
+        # Duplicate unsigned browser preferences are ambiguous too; distinct
+        # scopes remain legal and do not alter the signed owner identity.
+        self.assertIsNone(owner_session_cookie_pin(
+            [signed, legitimate_ui, dict(legitimate_ui, value='light')]))
+        for valid_ui in (
+            dict(legitimate_ui, name='locale', value='es'),
+            dict(legitimate_ui, domain='other.example'),
+            dict(legitimate_ui, path='/settings'),
+        ):
+            self.assertEqual(owner_session_cookie_pin([signed, valid_ui]),
+                             baseline)
+        self.assertEqual(owner_session_cookie_pin([signed]), baseline)
 
 if __name__ == "__main__":
     unittest.main()

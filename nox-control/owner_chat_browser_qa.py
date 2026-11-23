@@ -442,6 +442,11 @@ def owner_session_cookie_pin(cookies):
     # whichever signed owner cookie gets selected for the identity hash.
     # Malformed unsigned UI attributes must not disappear beside a valid
     # HttpOnly owner cookie and falsely certify RU/ES continuity.
+    # A shadow cookie with the same (name, domain, path) may be used by a
+    # subsequent HTTP request while the selected signed-cookie pin stays
+    # unchanged. Cookie snapshots with duplicate scopes are not unambiguous
+    # authenticated RU/ES session evidence, even when one row is HttpOnly.
+    seen_cookie_scopes = set()
     for row in cookies:
         # Validate the complete owner cookie snapshot, not only signed rows.
         # Ordinary unsigned preferences may have an empty string value, but
@@ -459,6 +464,10 @@ def owner_session_cookie_pin(cookies):
                 row[key].encode('utf-8')
         except UnicodeEncodeError:
             return None
+        scope = (row['name'], row['domain'], row['path'])
+        if scope in seen_cookie_scopes:
+            return None
+        seen_cookie_scopes.add(scope)
         if 'secure' in row and type(row['secure']) is not bool:
             return None
         same_site = row.get('sameSite')
