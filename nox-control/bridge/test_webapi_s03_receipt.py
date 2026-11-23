@@ -2436,7 +2436,7 @@ class FactReceiptTest(unittest.TestCase):
             }))
             frames = [json.loads(f) async for f in response.body_iterator]
             after = await record("1")
-            return before, frames, after
+            return json.loads(before.body), frames, json.loads(after.body)
 
         with mock.patch.object(W, "SRC", {"1": "Проверенная ссылка из основного чата"}), \
              mock.patch.object(W, "W", None), \
