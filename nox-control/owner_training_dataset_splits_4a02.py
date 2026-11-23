@@ -215,7 +215,13 @@ def main(argv=None):
         pass  # A new output file has no inode alias to the existing source.
     def rows():
         with args.input.open("r", encoding="utf-8") as source:
-            for line in source:
+            # Bound a single JSONL read *before* materializing the line.
+            # Iteration over a text file otherwise buffers a complete hostile
+            # unterminated line in RAM before the size check can run.
+            while True:
+                line = source.readline(300001)
+                if not line:
+                    break
                 if len(line) > 300000:
                     raise SplitHold("HOLD_INPUT_LINE_SIZE")
                 if line.strip():

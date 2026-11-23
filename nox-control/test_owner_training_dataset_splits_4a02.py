@@ -6,6 +6,7 @@ import random
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from owner_training_dataset_splits_4a02 import (
     LANGUAGES, DOMAINS, SCHEMA, SplitHold, main, split_manifest, write_manifest,
@@ -187,6 +188,31 @@ class DatasetSplitTests(unittest.TestCase):
                         main(["--input", str(source), "--output", str(output)])
                     self.assertEqual(source.read_text(encoding="utf-8"), original)
                     self.assertEqual(hardlink.read_text(encoding="utf-8"), original)
+
+
+    def test_cli_bounded_readline_before_oversized_jsonl_allocation(self):
+        class OversizedLine:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return False
+
+            def readline(self, size=-1):
+                # A raw file iterator (or unbounded readline) must not be used.
+                self_size = 300001
+                if size != self_size:
+                    raise AssertionError("HOLD_UNBOUNDED_DATASET_READ")
+                return "x" * self_size
+
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "dataset.jsonl"
+            source.write_text("placeholder", encoding="utf-8")
+            output = Path(folder) / "splits.json"
+            with mock.patch.object(Path, "open", return_value=OversizedLine()):
+                with self.assertRaisesRegex(SplitHold, "HOLD_INPUT_LINE_SIZE"):
+                    main(["--input", str(source), "--output", str(output)])
+            self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":
