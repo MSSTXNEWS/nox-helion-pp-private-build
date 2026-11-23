@@ -98,7 +98,7 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
 
     def test_cumulative_wire_bytes_and_frame_count_are_bounded(self):
         # Thousands of individually legal frames must not accumulate in RAM.
-        small = b'{"event_seq":1}\\n'.replace(b'\\\\n', b'\\n')
+        small = json.dumps({"event_seq": 1}).encode("ascii") + bytes([10])
         with mock.patch.object(bench, "MAX_NDJSON_STREAM_BYTES", len(small) * 2):
             response = BoundedReadResponse(small * 3)
             with self.assertRaisesRegex(ValueError, "OVERSIZED_STREAM"):
