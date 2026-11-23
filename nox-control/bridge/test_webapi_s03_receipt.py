@@ -256,6 +256,37 @@ class FactReceiptTest(unittest.TestCase):
         self.assertFalse(unsafe_snapshot["s03_readback_verified"])
         self.assertEqual(len(writes), 2)
 
+    def test_1a03_stopped_snapshot_must_not_claim_complete_recovery(self):
+        """A terminal STOP is not a completed model turn or canonical S03 proof."""
+        snapshot = next(r.endpoint for r in self.app.routes
+                        if r.path == "/api/chat/snapshot")
+        stream_id = "a" * 32
+        request_id = "stop-snapshot"
+        row = {
+            "request_id": request_id, "event_seq": 3,
+            "text_chunks": ["Частичный 🌌"], "state": "STOPPED",
+            "terminal": True, "updated_at": W.time.monotonic(),
+            "completion_receipt": {"status": "STOPPED", "upstream_done": False},
+            "memory_write_receipt": {"status": "SKIPPED"},
+            "snapshot_hold_reason": None,
+        }
+        with mock.patch.object(W, "CHAT_SNAPSHOTS", {stream_id: row}):
+            stopped = json.loads(asyncio.run(snapshot(
+                stream_id=stream_id, request_id=request_id)).body)
+            self.assertTrue(stopped["done"])
+            self.assertEqual(stopped["status"], "STOPPED")
+            self.assertEqual(stopped["snapshot_integrity"], "PARTIAL")
+            self.assertFalse(stopped["s03_readback_verified"])
+            row["state"], row["terminal"] = "INTERRUPTED", False
+            interrupted = json.loads(asyncio.run(snapshot(
+                stream_id=stream_id, request_id=request_id)).body)
+            self.assertEqual(interrupted["snapshot_integrity"], "PARTIAL")
+            row["state"], row["terminal"] = "GENERATED", True
+            completed = json.loads(asyncio.run(snapshot(
+                stream_id=stream_id, request_id=request_id)).body)
+            self.assertEqual(completed["snapshot_integrity"], "COMPLETE")
+            self.assertFalse(completed["s03_readback_verified"])
+
     def test_0a03_s03_persists_exact_streamed_unicode_and_whitespace(self):
         """Successful canonical writer call receives exact SSE text, not stripped text."""
         import hashlib
