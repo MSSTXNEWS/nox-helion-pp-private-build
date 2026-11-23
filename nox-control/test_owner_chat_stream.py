@@ -68,6 +68,44 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_model_sse_rejects_nonassistant_role_and_choice_splicing(self):
+        # 1A03: an upstream role/index must not silently become an assistant
+        # completion in the browser or the S03 postflight. Legacy omitted
+        # index/role is still supported by the existing fixture tests.
+        async def collect(choice):
+            packet=('data: '+json.dumps({'choices':[choice]},
+                    ensure_ascii=False)+'\n\n').encode()
+            native_stream=Chunks([packet,frame(finish='stop'),b'data: [DONE]\n\n'])
+            def respond(request):
+                return httpx.Response(200,stream=native_stream,request=request)
+            async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+                result=[event async for event in stream._model_events(
+                    client,'https://native.invalid/v1/chat/completions',
+                    {'messages':[{'role':'user','content':'hello'}]})]
+            self.assertTrue(native_stream.closed)
+            return result
+
+        ok=await collect({'index':0,'delta':{'role':'assistant','content':'Hola'},
+                          'finish_reason':None})
+        self.assertEqual(ok[0],('token','Hola'))
+        self.assertEqual(ok[-1][0],'message')
+
+        for choice in (
+            {'index':1,'delta':{'role':'assistant','content':'wrong choice'},
+             'finish_reason':None},
+            {'index':True,'delta':{'role':'assistant','content':'bool choice'},
+             'finish_reason':None},
+            {'index':0,'delta':{'role':'tool','content':'spoofed tool'},
+             'finish_reason':None},
+            {'index':0,'delta':{'role':None,'content':'unknown role'},
+             'finish_reason':None},
+            {'index':0,'delta':{'role':'user','content':'spoofed user'},
+             'finish_reason':None},
+        ):
+            with self.subTest(choice=choice), self.assertRaisesRegex(
+                    stream.StreamFailure,'HOLD_MODEL_SSE_INVALID'):
+                await collect(choice)
+
     async def test_total_answer_limit_across_model_and_tool_cycles(self):
         # Count UTF-8 bytes, not codepoints: RU/ES + emoji can exceed RAM
         # even while Python len() stays below the numeric limit.

@@ -381,10 +381,21 @@ async def _model_events(client, url, payload):
                 if not isinstance(choices,list) or len(choices)!=1:
                     raise ValueError('choices')
                 choice=choices[0]
+                # A native model response is one assistant choice. An explicit
+                # nonzero/bool index could splice a different choice into the
+                # single browser/S03 transcript. Keep index-less legacy frames.
+                if 'index' in choice and (type(choice['index']) is not int or
+                                          choice['index'] != 0):
+                    raise ValueError('choice index')
                 delta=choice.get('delta')
                 if delta is None:delta={}
                 if not isinstance(delta,dict):
                     raise ValueError('delta')
+                # Never relabel a model-supplied user/system/tool delta as an
+                # assistant token or allow it to reach the S03 postflight.
+                # OpenAI-style servers may omit role after the first delta.
+                if 'role' in delta and delta['role'] != 'assistant':
+                    raise ValueError('delta role')
                 # A valid terminal choice closes the model's content/tool delta.
                 # Usage-only epilogues remain legal, but no content after finish
                 # may be shown to the browser or certified by the S03 postflight.
