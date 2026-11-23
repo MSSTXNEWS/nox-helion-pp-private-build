@@ -174,6 +174,32 @@ class BackupT(unittest.TestCase):
         self.assertFalse(os.path.exists(new))
         self.assertEqual(open(new + "-wal", "rb").read(), b"orphan WAL")
 
+    def test_restore_installed_postimage_requires_independent_readback(self):
+        """A valid source copy must not certify a corrupted installed target."""
+        from unittest.mock import patch
+
+        copy = B.backup(self.db, self.bdir)
+        original_sha = B.sha256_file
+        def corrupted_installed_digest(path):
+            if path == self.db:
+                return "0" * 64
+            return original_sha(path)
+        with patch.object(B, "sha256_file", side_effect=corrupted_installed_digest):
+            with self.assertRaisesRegex(RuntimeError, "installed S03 postimage differs"):
+                B.restore(copy["path"], self.db)
+        # A false completion receipt is prevented; the original S03 survives.
+        prior = [name for name in os.listdir(self.td.name) if ".before-restore-" in name]
+        self.assertEqual(len(prior), 1)
+        self.assertTrue(os.path.exists(os.path.join(self.td.name, prior[0])))
+        self.assertFalse(os.path.exists(self.db + ".restore.tmp"))
+
+    def test_restore_receipt_binds_actual_installed_sha(self):
+        copy = B.backup(self.db, self.bdir)
+        new = os.path.join(self.td.name, "readback.db")
+        result = B.restore(copy["path"], new)
+        self.assertEqual(result["installed_sha256"], B.sha256_file(new))
+        self.assertEqual(result["installed_sha256"], copy["sha256"])
+
     def test_restore_into_new_path(self):
         r = B.backup(self.db, self.bdir)
         new = os.path.join(self.td.name, "sub", "new.db")
