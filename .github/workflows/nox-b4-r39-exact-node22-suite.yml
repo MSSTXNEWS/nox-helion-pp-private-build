@@ -1,4 +1,4 @@
-name: NOX B4 R46 Exact Node22 SSE Suite
+name: NOX B4 R47 Exact Node22 SSE Suite
 on:
   push:
     branches:
@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: nox-b4-r46-source-only
+  group: nox-b4-r47-source-only
   cancel-in-progress: false
 jobs:
   full-exact-b4-suite:
@@ -27,11 +27,11 @@ jobs:
         run: |
           set -euo pipefail
           cd nox-control/systemic_relay_20261118
-          test "$(git hash-object b4_sse_latency_probe.mjs)" = "6d54f5706ec020887224cae7e2b58d9daf60372c"
-          test "$(git hash-object test_b4_sse_latency_probe.mjs)" = "a8d4b331ea1a8854a5eec5fbf010c2a55cf92e0c"
-          printf 'B4_R46_EXACT_SOURCE_PROBE_SHA256='
+          test "$(git hash-object b4_sse_latency_probe.mjs)" = "fd261c8d782fd965f325bdea9d12684e31bdc489"
+          test "$(git hash-object test_b4_sse_latency_probe.mjs)" = "810ad817dc216664583ee12845baffb4c3be5ee0"
+          printf 'B4_R47_EXACT_SOURCE_PROBE_SHA256='
           sha256sum b4_sse_latency_probe.mjs
-          printf 'B4_R46_EXACT_SOURCE_TEST_SHA256='
+          printf 'B4_R47_EXACT_SOURCE_TEST_SHA256='
           sha256sum test_b4_sse_latency_probe.mjs
           node --version
           node --test test_b4_sse_latency_probe.mjs

@@ -1450,3 +1450,49 @@ test('R46 monotonic absolute deadline fences settled read and true EOF before su
     late_finalization:'REJECTED',healthy_eof_ms:proof.completion_ms,clock:'injected'
   }));
 });
+
+
+test('R47 monotonic per-read idle deadline fences settled data and physical EOF',async()=>{
+  const body=Buffer.from(event({delta:{content:'Hola 🌈'}})+
+    event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n');
+  function fixture(dataAt,eofAt){
+    let elapsed=0,reads=0,cancels=0,releases=0;
+    const reader={
+      async read(){
+        reads++;
+        if(reads===1){elapsed=dataAt;return {done:false,value:body};}
+        elapsed=eofAt;return {done:true};
+      },
+      cancel(){cancels++;},
+      releaseLock(){releases++;}
+    };
+    const response={status:200,headers:new Headers({'content-type':'text/event-stream'}),
+      body:{getReader:()=>reader}};
+    return {run:()=>measureSseResponse(response,{startedAt:0,clock:()=>elapsed,
+      totalTimeoutMs:100,idleTimeoutMs:20}),stats:()=>({reads,cancels,releases})};
+  }
+  for(const [name,dataAt,eofAt,code,reads] of [
+    ['late data',21,22,'B4_IDLE_TIMEOUT',1],
+    ['exact data boundary',20,21,'B4_IDLE_TIMEOUT',1],
+    ['late EOF',5,26,'B4_IDLE_TIMEOUT',2],
+    ['exact EOF boundary',5,25,'B4_IDLE_TIMEOUT',2],
+    ['total precedence',5,100,'B4_TOTAL_TIMEOUT',2]
+  ]){
+    const f=fixture(dataAt,eofAt);
+    await assert.rejects(f.run(),e=>e.code===code,name);
+    assert.deepEqual(f.stats(),{reads,cancels:1,releases:1},name);
+  }
+  const f=fixture(19,38),proof=await f.run();
+  assert.equal(proof.verified,true);
+  assert.equal(proof.ttft_ms,19);
+  assert.equal(proof.completion_ms,38);
+  assert.equal(proof.visible_text_sha256,hash('Hola 🌈'));
+  assert.equal(proof.body_sha256,hash(body));
+  assert.equal(proof.native_verified,false);
+  assert.deepEqual(f.stats(),{reads:2,cancels:0,releases:1});
+  console.log('B4_R47_SOURCE_ONLY '+JSON.stringify({
+    idle_ms:20,total_ms:100,late_data:'REJECTED',exact_data:'REJECTED',
+    late_eof:'REJECTED',exact_eof:'REJECTED',total_precedence:'PASS',
+    healthy_ttft_ms:proof.ttft_ms,healthy_eof_ms:proof.completion_ms,clock:'injected'
+  }));
+});

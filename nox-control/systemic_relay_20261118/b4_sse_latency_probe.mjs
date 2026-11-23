@@ -145,13 +145,24 @@ export async function measureSseResponse(response,options={}){
   }
   async function boundedRead(){
     let timer;
-    const remaining=totalTimeoutMs-(clock()-startedAt);
+    const readStartedAt=clock();
+    const remaining=totalTimeoutMs-(readStartedAt-startedAt);
     if(remaining<=0)throw fail('B4_TOTAL_TIMEOUT');
     const wait=Math.min(idleTimeoutMs,remaining);
-    try{return await Promise.race([
-      reader.read(),
-      new Promise((_,reject)=>{timer=setTimeout(()=>reject(fail(wait===remaining?'B4_TOTAL_TIMEOUT':'B4_IDLE_TIMEOUT')),wait);})
-    ]);}finally{clearTimeout(timer);}
+    try{
+      const result=await Promise.race([
+        reader.read(),
+        new Promise((_,reject)=>{timer=setTimeout(()=>reject(fail(
+          wait===remaining||clock()-startedAt>=totalTimeoutMs?'B4_TOTAL_TIMEOUT':'B4_IDLE_TIMEOUT'
+        )),wait);})
+      ]);
+      // A fulfilled read may win the race against a delayed timer callback.
+      // Both deadlines apply to EOF as well as data; total has precedence.
+      const settledAt=clock();
+      if(settledAt-startedAt>=totalTimeoutMs)throw fail('B4_TOTAL_TIMEOUT');
+      if(settledAt-readStartedAt>=idleTimeoutMs)throw fail('B4_IDLE_TIMEOUT');
+      return result;
+    }finally{clearTimeout(timer);}
   }
   try{
     for(;;){
