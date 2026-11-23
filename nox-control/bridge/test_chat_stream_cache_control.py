@@ -78,6 +78,7 @@ class StreamCachePolicyTest(unittest.TestCase):
 
         context = {
             "CH": None,
+            "Request": Request,
             "StreamingResponse": StreamingResponse,
             "stream_chat": never_consume,
         }
