@@ -31,7 +31,10 @@ export async function measureSseResponse(response,options={}){
   const nowMs=()=>Math.max(0,clock()-startedAt);
   function acceptFrame(){
     const lines=frame;frame=[];frameBytes=0;
-    const payload=lines.filter(x=>x.startsWith('data:')).map(x=>x.slice(5).replace(/^ /,'')).join('\n');
+    // SSE fields allow both `data:` and the valueless `data` form.
+    // Multiple data fields form one payload with a literal LF between values.
+    const payload=lines.filter(x=>x==='data'||x.startsWith('data:'))
+      .map(x=>x==='data'?'':x.slice(5).replace(/^ /,'')).join('\n');
     if(!payload)return;
     if(seenDone)throw fail('B4_POST_DONE_EVENT');
     if(payload==='[DONE]'){
@@ -53,17 +56,25 @@ export async function measureSseResponse(response,options={}){
       seenStop=true;
     }
   }
+  // CR, LF and CRLF are each a single SSE line terminator. The pending
+  // CRLF suffix is tracked across UTF-8 decoder / HTTP transport chunks.
+  let skipNextLF=false;
   function feedText(text){
     for(const c of text){
-      if(c==='\n'){
-        const current=line.endsWith('\r')?line.slice(0,-1):line;
+      if(skipNextLF){
+        skipNextLF=false;
+        if(c==='\n')continue;
+      }
+      if(c==='\r'||c==='\n'){
+        const current=line;
         line='';
         if(current==='')acceptFrame();
         else frame.push(current);
+        if(c==='\r')skipNextLF=true;
+        if(frame.length)frameBytes=Buffer.byteLength(frame.join('\n'),'utf8');
       }else line+=c;
       if(Buffer.byteLength(line,'utf8')+frameBytes>maxEventBytes)
         throw fail('B4_EVENT_TOO_LARGE');
-      if(c==='\n'&&frame.length)frameBytes=Buffer.byteLength(frame.join('\n'),'utf8');
     }
   }
   async function boundedRead(){
