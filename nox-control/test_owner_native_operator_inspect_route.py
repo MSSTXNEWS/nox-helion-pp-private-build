@@ -97,6 +97,11 @@ class OwnerInspectRouteTests(unittest.TestCase):
                 (b'{"instances":{"id":1}}', 'HOLD_EXACT_INSTANCE_IDENTITY'),
                 (b'{"success":false}', 'HOLD_PROVIDER_RESPONSE'),
                 (b'not json', 'HOLD_PROVIDER_RESPONSE'),
+                (b'{"instances":{"id":60509551,"actual_status":"stopped","actual_status":"running"}}', 'HOLD_PROVIDER_RESPONSE'),
+                (b'{"instances":{"id":1,"id":60509551}}', 'HOLD_PROVIDER_RESPONSE'),
+                (b'{"instances":[],"instances":{"id":60509551}}', 'HOLD_PROVIDER_RESPONSE'),
+                (b'{"success":false,"success":true,"instances":{"id":60509551}}', 'HOLD_PROVIDER_RESPONSE'),
+                (b'{"instances":{"id":60509551,"ports":{"22/tcp":[],"22/tcp":[]}}}', 'HOLD_PROVIDER_RESPONSE'),
             ):
                 answer(body)
                 with self.assertRaisesRegex(RuntimeError, error):
