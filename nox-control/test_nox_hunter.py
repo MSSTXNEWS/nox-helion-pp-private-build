@@ -526,5 +526,48 @@ class HunterURLSafetyTests(unittest.TestCase):
             self.assertFalse(state.exists())
 
 
+    def test_oversized_candidate_count_holds_before_partial_persistence(self):
+        # Even compact 25 MiB-or-less sources may contain thousands of entries.
+        # Reject the whole response: never silently truncate provenance,
+        # partially insert candidates or cache an unprocessed feed.
+        limit = hunter.MAX_ITEMS_PER_POLL
+        over_xml = (b"<rss><channel>" +
+                    b"<item><title>x</title><link>https://example.org/x</link></item>" * (limit + 1) +
+                    b"</channel></rss>")
+        with self.assertRaisesRegex(hunter.HunterError, "item count budget"):
+            hunter._feed_items(over_xml)
+        over_releases = json.dumps([{"tag_name": "v"}] * (limit + 1)).encode()
+        with self.assertRaisesRegex(hunter.HunterError, "item count budget"):
+            hunter._github_items(over_releases)
+        over_crossref = json.dumps({"message": {"items": [{}] * (limit + 1)}}).encode()
+        with self.assertRaisesRegex(hunter.HunterError, "item count budget"):
+            hunter._crossref_items(over_crossref)
+
+        source = hunter._validate_source({
+            "id": "feed", "kind": "rss", "url": "https://example.org/rss",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "hunter.sqlite"
+            with patch.object(hunter, "_fetch", return_value=(
+                over_xml, None, None, "application/rss+xml", False
+            )):
+                failed = hunter.poll_due([source], state, now=1000)[0]
+            self.assertEqual(failed["status"], "error")
+            self.assertEqual(failed["error"], "HunterError: source exceeds item count budget")
+            with sqlite3.connect(state) as conn:
+                self.assertEqual(conn.execute("SELECT count(*) FROM items").fetchone()[0], 0)
+                self.assertEqual(conn.execute("SELECT count(*) FROM http_cache").fetchone()[0], 0)
+
+            good_xml = (b"<rss><channel><item><title>healthy</title>"
+                        b"<link>https://example.org/good</link></item></channel></rss>")
+            with patch.object(hunter, "_fetch", return_value=(
+                good_xml, None, None, "application/rss+xml", False
+            )):
+                recovered = hunter.poll_due([source], state, now=1100)[0]
+            self.assertEqual(recovered["status"], "polled")
+            self.assertEqual(recovered["added"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
