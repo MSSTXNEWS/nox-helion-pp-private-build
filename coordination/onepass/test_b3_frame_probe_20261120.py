@@ -7,7 +7,7 @@ import pathlib
 import tempfile
 import unittest
 
-from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames, evidence_hash, url_identity_sha256, is_model_chat_endpoint, verify_report_screenshots, capture_render_resource, capture_render_resources
+from b3_frame_probe_20261120 import _measure_async, compare_baseline, measure, summarize, verify_url, require_landing_url, renderer_resource_identity, sample_frames, evidence_hash, url_identity_sha256, is_model_chat_endpoint, verify_report_screenshots, capture_render_resource, capture_render_resources, guard_readonly_request
 
 
 class TestProbe(unittest.TestCase):
@@ -307,6 +307,56 @@ class TestProbe(unittest.TestCase):
             'http://127.0.0.1:18877/assets/resonance.css'))
 
 
+    def test_readonly_redirect_hop_cannot_reach_serving_endpoint(self):
+        # A benign-looking GET that redirects into /nox/chat must not be
+        # followed by Playwright's internal network client.
+        class Response:
+            def __init__(self, status):
+                self.status = status
+
+        class Route:
+            def __init__(self, method, url, status=200):
+                self.request = type('Req', (), {'method': method, 'url': url})()
+                self.status = status
+                self.calls = []
+
+            async def fetch(self, *, max_redirects):
+                self.calls.append(('fetch', max_redirects))
+                return Response(self.status)
+
+            async def abort(self, reason):
+                self.calls.append(('abort', reason))
+
+            async def fulfill(self, *, response):
+                self.calls.append(('fulfill', response.status))
+
+        async def scenario():
+            url = 'http://127.0.0.1:18877/assets/resonance.css'
+            report = dict(blocked_mutating_requests=0, blocked_model_posts=0,
+                          blocked_model_read_requests=0, blocked_redirect_requests=0)
+            ok = Route('GET', url, status=200)
+            await guard_readonly_request(ok, report)
+            self.assertEqual(ok.calls, [('fetch', 0), ('fulfill', 200)])
+            for status in (301, 302, 303, 307, 308):
+                hop = Route('GET', url, status=status)
+                await guard_readonly_request(hop, report)
+                self.assertEqual(hop.calls, [('fetch', 0), ('abort', 'blockedbyclient')])
+            self.assertEqual(report['blocked_redirect_requests'], 5)
+            for method in ('GET', 'HEAD', 'OPTIONS'):
+                forbidden = Route(method, 'http://127.0.0.1:18877/nox/chat', 200)
+                await guard_readonly_request(forbidden, report)
+                self.assertEqual(forbidden.calls, [('abort', 'blockedbyclient')])
+            self.assertEqual(report['blocked_model_read_requests'], 3)
+            for url, model in ((url, False), ('http://127.0.0.1:18877/nox/chat', True)):
+                post = Route('POST', url)
+                await guard_readonly_request(post, report)
+                self.assertEqual(post.calls, [('abort', 'blockedbyclient')])
+            self.assertEqual(report['blocked_mutating_requests'], 2)
+            self.assertEqual(report['blocked_model_posts'], 1)
+
+        asyncio.run(scenario())
+
+
     def test_post_screenshot_spa_route_fence_wired(self):
         code = inspect.getsource(_measure_async)
         self.assertGreater(code.rfind('require_landing_url(url, page.url)'),
@@ -333,7 +383,8 @@ class TestProbe(unittest.TestCase):
             'expected_selector_checked': True,
             'expected_selector_sha256': evidence_hash('#resonance'), 'landing_url_verified': True,
             'blocked_mutating_requests': 0, 'blocked_model_posts': 0,
-            'blocked_model_read_requests': 0, 'blocked_websocket_connections': 0, 'service_workers_blocked': True,
+            'blocked_model_read_requests': 0, 'blocked_redirect_requests': 0,
+            'blocked_websocket_connections': 0, 'service_workers_blocked': True,
             'runs': rows,
         }
         measured = copy.deepcopy(baseline)
@@ -371,7 +422,8 @@ class TestProbe(unittest.TestCase):
         # A functioning-looking screenshot is not evidence that the
         # model/stream route works if this read-only probe had to block it.
         for counter in ('blocked_mutating_requests', 'blocked_model_posts',
-                        'blocked_model_read_requests', 'blocked_websocket_connections'):
+                        'blocked_model_read_requests', 'blocked_redirect_requests',
+                        'blocked_websocket_connections'):
             for invalid in (1, True, None):
                 unsafe = copy.deepcopy(baseline)
                 unsafe[counter] = invalid
@@ -379,7 +431,8 @@ class TestProbe(unittest.TestCase):
                         ValueError, 'HOLD_BASELINE_LIVE_TRANSPORT_BLOCKED'):
                     compare_baseline(measured, unsafe)
         for counter in ('blocked_mutating_requests', 'blocked_model_posts',
-                        'blocked_model_read_requests', 'blocked_websocket_connections'):
+                        'blocked_model_read_requests', 'blocked_redirect_requests',
+                        'blocked_websocket_connections'):
             missing = copy.deepcopy(measured)
             missing.pop(counter)
             with self.subTest(missing=counter), self.assertRaisesRegex(

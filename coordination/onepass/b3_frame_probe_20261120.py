@@ -302,7 +302,8 @@ def compare_baseline(current, prior, approved_render_transition=None):
         # interface became faster. Never compare such live measurements.
         for report in (current, prior):
             for key in ('blocked_mutating_requests', 'blocked_model_posts',
-                        'blocked_model_read_requests', 'blocked_websocket_connections'):
+                        'blocked_model_read_requests', 'blocked_redirect_requests',
+                        'blocked_websocket_connections'):
                 value = report.get(key)
                 if type(value) is not int or value != 0:
                     raise ValueError('HOLD_BASELINE_LIVE_TRANSPORT_BLOCKED')
@@ -404,6 +405,33 @@ def compare_baseline(current, prior, approved_render_transition=None):
         deltas[key] = round(now_p95 - p95, 3)
     return deltas
 
+async def guard_readonly_request(route, report):
+    """Never follow an apparently safe GET into an unguarded model endpoint.
+
+    Playwright route.continue_() handles redirect hops without reliably
+    invoking the interception callback for each URL. Resolve each safe
+    response once with redirects disabled; fail closed for all 3xx replies.
+    This observer never posts to or changes the serving model.
+    """
+    request = route.request
+    model_path = is_model_chat_endpoint(request.url)
+    if model_path and request.method in ('GET', 'HEAD', 'OPTIONS'):
+        report['blocked_model_read_requests'] += 1
+        await route.abort('blockedbyclient')
+    elif request.method not in ('GET', 'HEAD', 'OPTIONS'):
+        report['blocked_mutating_requests'] += 1
+        if model_path:
+            report['blocked_model_posts'] += 1
+        await route.abort('blockedbyclient')
+    else:
+        response = await route.fetch(max_redirects=0)
+        if 300 <= response.status < 400:
+            report['blocked_redirect_requests'] += 1
+            await route.abort('blockedbyclient')
+        else:
+            await route.fulfill(response=response)
+
+
 async def sample_frames(page, timeout_seconds=15.0):
     """Bound frame sampling so a suspended rAF cannot hang the B3 browser probe.
 
@@ -442,7 +470,8 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
         'time_utc': datetime.now(timezone.utc).isoformat(),
         'sample_js': '90 consecutive real requestAnimationFrame intervals',
         'runs': [], 'blocked_mutating_requests': 0, 'blocked_model_posts': 0,
-        'blocked_model_read_requests': 0, 'blocked_websocket_connections': 0,
+        'blocked_model_read_requests': 0, 'blocked_redirect_requests': 0,
+        'blocked_websocket_connections': 0,
         'service_workers_blocked': True,
         'native_s03_verified': False, 'installed_model_identity_verified': False,
         'synthetic_fixture': fixture_html is not None,
@@ -467,22 +496,7 @@ async def _measure_async(url, output, chromium, baseline, fixture_html, expected
                         device_scale_factor=1, service_workers='block')
                     try:
                         async def guard(route):
-                            request = route.request
-                            model_path = is_model_chat_endpoint(request.url)
-                            # A GET/HEAD/OPTIONS route is not proof of a read-only
-                            # model endpoint. Protect the existing NOX /nox/chat
-                            # and /api/nox/chat paths, including encoded aliases,
-                            # without changing the production routing contract.
-                            if model_path and request.method in ('GET', 'HEAD', 'OPTIONS'):
-                                result['blocked_model_read_requests'] += 1
-                                await route.abort('blockedbyclient')
-                            elif request.method not in ('GET', 'HEAD', 'OPTIONS'):
-                                result['blocked_mutating_requests'] += 1
-                                if model_path:
-                                    result['blocked_model_posts'] += 1
-                                await route.abort('blockedbyclient')
-                            else:
-                                await route.continue_()
+                            await guard_readonly_request(route, result)
 
                         async def guard_socket(route):
                             result['blocked_websocket_connections'] += 1
