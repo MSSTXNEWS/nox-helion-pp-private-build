@@ -198,11 +198,14 @@ def main(argv: list[str]) -> int:
         return 2
     try:
         path = Path(argv[1])
-        require(path.stat().st_size <= MAX_CAPTURE_BYTES, "HOLD_B2_CAPTURE_OVERSIZE")
-        with path.open("r", encoding="utf-8") as stream:
-            evidence = json.load(stream, object_pairs_hook=unique_keys,
-                                 parse_constant=lambda _: (_ for _ in ()).throw(
-                                     CaptureHold("HOLD_B2_NONFINITE_JSON")))
+        # Enforce the limit on the bytes actually opened, not a stale stat()
+        # size: evidence can grow or be replaced between metadata and read.
+        with path.open("rb") as stream:
+            raw = stream.read(MAX_CAPTURE_BYTES + 1)
+        require(len(raw) <= MAX_CAPTURE_BYTES, "HOLD_B2_CAPTURE_OVERSIZE")
+        evidence = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_keys,
+                              parse_constant=lambda _: (_ for _ in ()).throw(
+                                  CaptureHold("HOLD_B2_NONFINITE_JSON")))
         result = verify_capture(evidence)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0

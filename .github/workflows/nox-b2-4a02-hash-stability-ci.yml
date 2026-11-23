@@ -29,8 +29,8 @@ jobs:
           test "$(git hash-object nox-control/tests/test_owner_training_resume_step_type_b2.py)" = "0425ec904d14a23573d4528cd1cf6092f6ea151c"
       - name: Verify pinned B2 RU-ES quality holdout probe and offline tests
         run: |
-          test "$(git hash-object nox-control/b2_ru_es_3turn_holdout.py)" = "7d7390e0529b96b1511f970300ea77359af15c25"
-          test "$(git hash-object nox-control/tests/test_b2_ru_es_3turn_holdout.py)" = "026013dbc8b846734c499f8fc05238781435bd60"
+          test "$(git hash-object nox-control/b2_ru_es_3turn_holdout.py)" = "cf0af2c954b7704dfb83dff88fef83baa1077fac"
+          test "$(git hash-object nox-control/tests/test_b2_ru_es_3turn_holdout.py)" = "e531a7d427cf61635f9916e288c3253e451d9dbe"
           python -B -m py_compile nox-control/b2_ru_es_3turn_holdout.py nox-control/tests/test_b2_ru_es_3turn_holdout.py
           python -B -m unittest discover -s nox-control/tests -p 'test_b2_ru_es_3turn_holdout.py' -v
       - name: Syntax and bounded non-native checkpoint regression

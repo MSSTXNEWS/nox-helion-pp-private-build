@@ -126,5 +126,53 @@ class ThreeTurnHoldoutContract(unittest.TestCase):
 
 
 
+    def test_cli_rejects_oversize_actual_bytes_even_if_stat_said_small(self):
+        # Reproduce a time-of-check/time-of-use change of the captured file.
+        # Old CLI trusts Path.stat() and reports a false structural PASS.
+        import contextlib
+        import io
+        import json
+        import tempfile
+        from types import SimpleNamespace
+        from unittest import mock
+
+        oversized = fixture()
+        oversized["padding"] = "x" * probe.MAX_CAPTURE_BYTES
+        with tempfile.TemporaryDirectory() as folder:
+            capture_path = Path(folder) / "ru_es_capture.json"
+            capture_path.write_text(json.dumps(oversized, ensure_ascii=False),
+                                    encoding="utf-8")
+            output = io.StringIO()
+            # Simulates a tiny preflight stat before a larger file is read.
+            with mock.patch.object(Path, "stat",
+                                   return_value=SimpleNamespace(st_size=128)):
+                with contextlib.redirect_stdout(output):
+                    status = probe.main(["b2_ru_es_3turn_holdout.py",
+                                         str(capture_path)])
+            self.assertEqual(status, 2)
+            self.assertEqual(json.loads(output.getvalue())["reason"],
+                             "HOLD_B2_CAPTURE_OVERSIZE")
+
+    def test_cli_bounded_read_keeps_complete_ru_es_unicode_evidence(self):
+        import contextlib
+        import io
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as folder:
+            capture_path = Path(folder) / "ru_es_unicode.json"
+            capture_path.write_text(json.dumps(fixture(), ensure_ascii=False),
+                                    encoding="utf-8")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                status = probe.main(["b2_ru_es_3turn_holdout.py",
+                                     str(capture_path)])
+            result = json.loads(output.getvalue())
+            self.assertEqual(status, 0)
+            self.assertEqual(result["trace_structure"], "PASS")
+            self.assertEqual(result["quality_grade"], "NOT_MEASURED")
+            self.assertEqual(result["native_acceptance"], probe.HOLD)
+
+
 if __name__ == "__main__":
     unittest.main()
