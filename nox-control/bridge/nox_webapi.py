@@ -806,7 +806,18 @@ def install(app, B):
 
         def fr(**k):
             nonlocal frame_seq
-            frame_seq += 1
+            # Admit a cursor only after constructing a wire-valid NDJSON frame.
+            # Optional advisory exceptions must not create phantom sequence
+            # numbers or mutate the reconnect snapshot for unsent frames.
+            next_seq = frame_seq + 1
+            d = {"model": TAG, "request_id": rid, "stream_id": stream_id,
+                 "event_seq": next_seq,
+                 **({"exchange_id": exchange_id} if exchange_id is not None else {}),
+                 "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+            d.update(k)
+            payload = json.dumps(d, ensure_ascii=False, allow_nan=False) + "\n"
+            payload.encode("utf-8", "strict")
+            frame_seq = next_seq
             row = CHAT_SNAPSHOTS.get(stream_id)
             if row is not None:
                 row["event_seq"] = frame_seq
@@ -840,12 +851,7 @@ def install(app, B):
                 for receipt in ("completion_receipt", "memory_write_receipt"):
                     if isinstance(k.get(receipt), dict):
                         row[receipt] = k[receipt].copy()
-            d = {"model": TAG, "request_id": rid, "stream_id": stream_id,
-                 "event_seq": frame_seq,
-                 **({"exchange_id": exchange_id} if exchange_id is not None else {}),
-                 "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
-            d.update(k)
-            return json.dumps(d, ensure_ascii=False) + "\n"
+            return payload
 
         async def gen():
             t0, n, shown = time.time(), 0, 0
