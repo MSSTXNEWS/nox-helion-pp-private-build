@@ -98,9 +98,11 @@ def safe_route(url):
 
 
 def public_numeric_answer(value):
-    if not isinstance(value,str) or len(value)>100 or not re.fullmatch(r'[0-9,\s]+',value):
+    # Preserve digit boundaries: '1 0' must never masquerade as '10'.
+    if (not isinstance(value, str) or len(value) > 100
+            or not re.fullmatch(r'\s*[0-9]+(?:\s*,\s*[0-9]+)*\s*', value)):
         return None
-    return re.sub(r'\s+','',value)
+    return ','.join(part.strip() for part in value.strip().split(','))
 
 
 def qa_scoped_stop_request_id(body, dialog_id):
