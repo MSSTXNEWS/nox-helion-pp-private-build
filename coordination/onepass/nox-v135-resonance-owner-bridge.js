@@ -181,10 +181,11 @@ const chunk=doneSeen ? await readNativeEofAfterDone(reader,signal)
 : await readNativeOrAbort(reader,signal);
 if(chunk.done)break;
 buf+=decoder.decode(chunk.value,{stream:true});
-let j;while((j=buf.indexOf('\n'))>=0){
-if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
-await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
+let j,i=0;while((j=buf.indexOf('\n',i))>=0){
+if(j-i>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
+await line(buf.slice(i,j).trim());i=j+1;
 }
+buf=buf.slice(i);
 if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
 if(doneSeen&&buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
 }
