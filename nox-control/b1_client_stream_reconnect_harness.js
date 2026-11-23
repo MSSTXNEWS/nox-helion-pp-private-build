@@ -777,10 +777,23 @@
                   hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
                 }
                 if(trusted!==true)discard();
-                else if(!sameCanonicalProjection(receipt)){
-                  discard();
-                  hold('HOLD_STREAM_RECEIPT_MUTATED');
-                }else{
+                else{
+                  // An untrusted normalized proof getter can invoke STOP on
+                  // the SECOND comparison, after the host verifier returned.
+                  // Never transfer verified GET ownership after that abort.
+                  const stillMatches=sameCanonicalProjection(receipt);
+                  if(lifecycleSignal.aborted||signal.aborted){
+                    discard();
+                    hold('HOLD_STREAM_RECONNECT_STOPPED');
+                  }
+                  if(canonicalGateClosed||canonicalCallbacksInvalid){
+                    discard();
+                    hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
+                  }
+                  if(!stillMatches){
+                    discard();
+                    hold('HOLD_STREAM_RECEIPT_MUTATED');
+                  }
                   verifiedReceipt=signedReceipt;
                   verifiedAckId=signedIdentity.ack_id;
                 }
@@ -829,6 +842,13 @@
               canonicalAckId===verifiedAckId;
           }
         }catch(_){validEnvelope=false;}
+        // A gate envelope is untrusted too: its synchronous status/authority
+        // getter can STOP after boundedGet() has already resolved. Recheck
+        // the outer STOP before accepting the ACK or retaining either GET.
+        if(signal.aborted){
+          discardVerifiedBody();
+          hold('HOLD_STREAM_RECONNECT_STOPPED');
+        }
         if(!validEnvelope){
           // No canonical proof: close its verified GET body once, then the
           // original terminal readback GET at the enclosing HOLD boundary.
