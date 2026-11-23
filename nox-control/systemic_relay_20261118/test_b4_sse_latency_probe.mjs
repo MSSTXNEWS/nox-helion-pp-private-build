@@ -434,3 +434,78 @@ test('R30 external abort before/during headers and SSE, HTTP cleanup, transport 
   assert.equal(canceled,1);assert.equal(released,1);
 });
 }
+
+
+// R31: Real TCP loopback HTTP, not synthetic ReadableStream/HTTP fixtures.
+// A canceled second request (preheaders) or third request (mid UTF-8 frame)
+// must NEVER produce an accepted answer, conceal socket failure, or replay POST.
+const r31Event=choice=>'data: '+JSON.stringify({choices:[choice]})+'\n\n';
+function r31Gate(){let resolve;const promise=new Promise(r=>{resolve=r;});return {promise,resolve};}
+async function r31Bound(p,ms=900){
+  let timer;
+  try{return await Promise.race([
+    p,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('B4_R31_SOCKET_TIMEOUT')),ms);})
+  ]);}finally{clearTimeout(timer);}
+}
+test('R31 true TCP HTTP second preheader abort and third mid-UTF8 SSE abort: no false completion, no replay',async()=>{
+  const secondArrived=r31Gate(),thirdStarted=r31Gate(),secondClosed=r31Gate(),thirdClosed=r31Gate();
+  const received=[];const unhandled=[];
+  const onUnhandled=e=>unhandled.push(e);
+  process.on('unhandledRejection',onUnhandled);
+  const server=createServer(async(req,res)=>{
+    if(req.method!=='POST'||req.url!=='/nox/chat'){res.writeHead(404).end();return;}
+    let body='';for await(const chunk of req)body+=chunk;
+    const {turn}=JSON.parse(body);received.push(turn);
+    if(turn===2){res.once('close',()=>secondClosed.resolve());secondArrived.resolve();return;}
+    res.writeHead(200,{'content-type':'text/event-stream','cache-control':'no-store'});res.flushHeaders();
+    if(turn===1){
+      res.end(r31Event({delta:{content:'Привет 🌍'},finish_reason:null})+
+        r31Event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n');
+      return;
+    }
+    if(turn===3){
+      res.once('close',()=>thirdClosed.resolve());
+      res.write(r31Event({delta:{content:'Hola 🌈'},finish_reason:null}));
+      const emoji=Buffer.from(r31Event({delta:{content:'Третий ✨'},finish_reason:null}));
+      const cut=emoji.indexOf(Buffer.from('✨'));
+      assert.ok(cut>0);
+      res.write(emoji.subarray(0,cut+1)); // incomplete multibyte UTF-8 in actual TCP response
+      thirdStarted.resolve();
+      return; // no stop, no DONE, no EOF until caller aborts
+    }
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const url='http://127.0.0.1:'+server.address().port+'/nox/chat';
+  const post=(turn,signal)=>measureSseFetch(url,{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({turn}),signal
+  },{startedAt:performance.now(),totalTimeoutMs:700,idleTimeoutMs:450});
+  try{
+    const first=await r31Bound(post(1));
+    assert.equal(first.verified,true);
+    assert.equal(first.browser_authenticated,false);
+    assert.equal(first.native_verified,false);
+    assert.equal(first.canonical_s03_verified,false);
+
+    const before=new AbortController();
+    const p2=post(2,before.signal);
+    await r31Bound(secondArrived.promise);
+    before.abort();
+    await assert.rejects(r31Bound(p2),e=>e?.code==='B4_FETCH_ABORTED');
+    await r31Bound(secondClosed.promise);
+
+    const during=new AbortController();
+    const p3=post(3,during.signal);
+    await r31Bound(thirdStarted.promise);
+    await sleep(15);
+    during.abort();
+    await assert.rejects(r31Bound(p3),e=>e?.code==='B4_FETCH_ABORTED');
+    await r31Bound(thirdClosed.promise);
+    await sleep(0);await sleep(0);
+    assert.deepEqual(received,[1,2,3],'one POST per turn, no retry');
+    assert.deepEqual(unhandled,[],'no late uncaught Promise rejection');
+  }finally{
+    server.closeAllConnections();
+    await new Promise(resolve=>server.close(resolve));
+    process.off('unhandledRejection',onUnhandled);
+  }
+});
