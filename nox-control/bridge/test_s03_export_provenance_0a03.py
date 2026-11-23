@@ -81,12 +81,15 @@ class S03ExportProvenanceTest(unittest.TestCase):
                     else:
                         fake_s03.persist_turn = lambda *args: writes.append(args)
                     fact_path = str(Path(tempdir) / ("fact_" + variant + ".jsonl"))
-                    with (mock.patch.object(W.threading.Thread, "start"),
-                          mock.patch.object(W.os.path, "isdir", return_value=False),
-                          mock.patch.object(W, "FACTS", fact_path),
+                    # Mock the sampler threads only while installing routes.
+                    # asyncio.to_thread() must retain a real Thread.start during
+                    # the S03 writer invocation, or the test deadlocks forever.
+                    with (mock.patch.object(W, "FACTS", fact_path),
                           mock.patch.dict(sys.modules, {"s03_memory": fake_s03})):
-                        app = FastAPI()
-                        W.install(app, bridge)
+                        with (mock.patch.object(W.threading.Thread, "start"),
+                              mock.patch.object(W.os.path, "isdir", return_value=False)):
+                            app = FastAPI()
+                            W.install(app, bridge)
                         endpoint = next(route.endpoint for route in app.routes
                                         if route.path == "/api/s03/remember")
                         response = asyncio.run(endpoint(FactRequest()))
