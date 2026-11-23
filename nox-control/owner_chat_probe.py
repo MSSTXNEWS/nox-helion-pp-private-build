@@ -955,7 +955,9 @@ def bounded_stream_lines(response, max_line=100000, deadline=None):
     if not callable(readline):
         raise RuntimeError('HOLD_STREAM_BOUNDED_READER_UNAVAILABLE')
     read1 = getattr(response, 'read1', None)
-    incremental = callable(read1)
+    # BytesIO test doubles expose read1 too; preserve their readline contract.
+    from http.client import HTTPResponse
+    incremental = callable(read1) and isinstance(response, HTTPResponse)
     pending = b''
     while True:
         remaining = None
