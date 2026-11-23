@@ -110,6 +110,27 @@ class NativeRefillSourceGateTests(unittest.TestCase):
         self.assertNotIn("NATIVE_QUEUE_UNVERIFIED",
                          codes(s, lambda exact: exact is s))
 
+    def test_duplicate_native_worker_task_cursor_is_unverified(self):
+        # A duplicate original TaskID in two worker slots is not evidence
+        # of two distinct owner claims, even with a trusted snapshot callback.
+        s = snapshot()
+        s["native_queue"].update(
+            admission_state="NATIVE_QUEUE_RUNNING",
+            owner_lease_cas_verified=True,
+            immutable_task_source_verified=True,
+            owner_evidence_age_sec=0,
+        )
+        s["native_queue"]["workers"] = [
+            {"state": "RUNNING", "current_task": "6A02"},
+            {"state": "RUNNING", "current_task": " 6A02 "},
+        ]
+        found = codes(s, lambda exact: exact is s)
+        self.assertIn("NATIVE_QUEUE_UNVERIFIED", found)
+        self.assertNotIn("NO_UNVERIFIED_TUNING", found)
+        s["native_queue"]["workers"][1]["current_task"] = "1A03"
+        self.assertIn("NO_UNVERIFIED_TUNING",
+                      codes(s, lambda exact: exact is s))
+
     def test_idle_without_lease_and_source_is_hold(self):
         result = mod.assess(snapshot())
         self.assertIn("NATIVE_REFILL_OWNER_HOLD", [r["code"] for r in result])
