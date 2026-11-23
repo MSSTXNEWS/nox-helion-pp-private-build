@@ -167,7 +167,8 @@ class _SafeRedirect(HTTPRedirectHandler):
 
 
 class _VisibleText(HTMLParser):
-    _hidden = {"script", "style", "noscript", "svg"}
+    # HTML page and escaped feed evidence must not flatten template/head text.
+    _hidden = {"script", "style", "noscript", "svg", "template", "head"}
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
