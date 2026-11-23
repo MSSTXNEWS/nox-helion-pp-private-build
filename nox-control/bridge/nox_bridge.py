@@ -451,7 +451,7 @@ async def stream_chat(history):
 async def chat_stream(req: Request):
     b = await req.json()
     if CH is not None: CH.mark_chat()
-    return StreamingResponse(stream_chat(b.get("messages") or []), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return StreamingResponse(stream_chat(b.get("messages") or []), media_type="text/event-stream", headers={"Cache-Control": "private, no-store, max-age=0", "X-Accel-Buffering": "no"})
 
 @app.post("/feedback")
 async def feedback(req: Request):
