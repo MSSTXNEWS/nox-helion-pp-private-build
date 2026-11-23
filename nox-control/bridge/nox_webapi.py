@@ -1301,11 +1301,13 @@ def install(app, B):
                 if eph:
                     hist = {"status": "SKIPPED", "reason": "ephemeral"}
                 elif full.strip() and not stopped:
+                    s03_write_returned = False
                     try:
                         import s03_memory as S
                         # Keep the exact streamed Unicode/whitespace: stripping changes S03 history
                         # relative to the SSE text and its terminal digest.
                         await asyncio.to_thread(S.persist_turn, ("[mini] " + user) if mini else user, full)
+                        s03_write_returned = True
                         # Native and web chat share the bridge recall cache.
                         # A returned write must revoke prior search results;
                         # this remains a write-returned, NOT an S03 readback.
@@ -1314,7 +1316,14 @@ def install(app, B):
                             invalidate()
                         hist = {"status": "SAVED", "mini": mini, "s03_readback_verified": False}
                     except Exception as e:
-                        hist = {"status": "HOLD", "reason": "S03: " + type(e).__name__}
+                        # Persist may have committed despite a raised exception.
+                        # If it returned but cache revocation failed, a replay can
+                        # duplicate a durable S03 turn. Preserve that distinction.
+                        hist = {"status": "HOLD",
+                                "reason": ("S03_CACHE_INVALIDATION_FAILED"
+                                           if s03_write_returned else "S03: " + type(e).__name__),
+                                "s03_write_returned": s03_write_returned,
+                                "retry_unsafe": True, "s03_readback_verified": False}
                     # STOP can arrive while S03 persistence runs in a thread.
                     # An already-started write cannot be rolled back here; retain
                     # its unverified receipt, but do not report generated success
@@ -1333,7 +1342,9 @@ def install(app, B):
                          completion_receipt={"status": "STOPPED" if stopped else "GENERATED",
                                              "request_id": rid, "upstream_done": bool(upstream_done and not stopped)},
                          memory_write_receipt={"status": "WRITE_RETURNED_UNVERIFIED" if hist["status"] == "SAVED" else hist["status"],
-                                               "request_id": rid, "s03_readback_verified": False},
+                                               "request_id": rid, "s03_readback_verified": False,
+                                               "s03_write_returned": bool(hist.get("s03_write_returned", hist["status"] == "SAVED")),
+                                               "retry_unsafe": bool(hist.get("retry_unsafe", False))},
                          digest=hashlib.sha256(full.encode()).hexdigest(), frames=n, memory_history=hist, nox_mode=mode, skeptic=sk, plan=plan or None,
                          total_duration=int((time.time() - t0) * 1e9), eval_count=n)
 
