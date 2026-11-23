@@ -106,6 +106,33 @@ class SafeRepairTests(unittest.TestCase):
             self.assertEqual(rows[0]["action"], "healthy")
             self.assertEqual(healer.load(state)["services"]["nox-dispatcher.service"]["failures"], 0)
 
+    def test_unsafe_writer_lock_holds_before_service_probe(self):
+        # A FIFO or world-writable sidecar cannot serialize a trusted restart.
+        # Neither case may reach health probing, systemctl or state mutation.
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "repair.json"
+            lock = state.with_name(state.name + ".writer.lock")
+            stop = Path(root) / "STOP"
+            policy = self.policy(stop)
+            lock.write_text("untrusted", encoding="utf8")
+            lock.chmod(0o666)
+            with patch.object(healer, "alive") as alive, patch.object(
+                    healer.subprocess, "run") as run:
+                with self.assertRaisesRegex(ValueError, "unsafe repair writer lock"):
+                    healer.repair_cycle(policy, state)
+                alive.assert_not_called()
+                run.assert_not_called()
+            self.assertFalse(state.exists())
+            lock.unlink()
+            os.mkfifo(lock)
+            with patch.object(healer, "alive") as alive, patch.object(
+                    healer.subprocess, "run") as run:
+                with self.assertRaisesRegex(ValueError, "unsafe repair writer lock"):
+                    healer.repair_cycle(policy, state)
+                alive.assert_not_called()
+                run.assert_not_called()
+            self.assertFalse(state.exists())
+
     def test_dry_run_has_no_lock_or_directory_side_effects(self):
         # Read-only inspection on an absent state path must not create
         # the directory, writer lock, state, or any extra local files.
