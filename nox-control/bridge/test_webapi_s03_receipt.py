@@ -466,6 +466,39 @@ class FactReceiptTest(unittest.TestCase):
         self.assertFalse(row["s03_readback_verified"])
         self.assertEqual(hit.headers["cache-control"], "no-store")
 
+    def test_0a03_local_history_and_facts_are_not_canonical_s03(self):
+        # All values come from process-local JSONL, not independent S03.
+        history = next(r.endpoint for r in self.app.routes if r.path == "/api/nox/history")
+        facts = next(r.endpoint for r in self.app.routes if r.path == "/api/nox/memory/facts")
+
+        def local_tail(path, limit):
+            if str(path).endswith("/turns.jsonl"):
+                return [{"t": 10, "u": "Привет 🌌", "a": "Помню"}]
+            if str(path) == str(self.fact_path):
+                return [{"t": 11, "key": "owner", "content": "Запомни", "source": "owner"}]
+            return []
+
+        with mock.patch.object(W, "_jl", side_effect=local_tail), mock.patch.object(W, "W", None):
+            h = asyncio.run(history())
+            f = asyncio.run(facts(limit=20))
+        self.assertEqual(h.status_code, 200)
+        self.assertEqual(f.status_code, 200)
+        for response in (h, f):
+            self.assertEqual(response.headers["cache-control"], "private, no-store, max-age=0")
+            self.assertFalse(json.loads(response.body)["s03_readback_verified"])
+        h_body = json.loads(h.body)
+        self.assertEqual(h_body["source_scope"], "LOCAL_TURNS_MIRROR")
+        self.assertEqual(h_body["messages"], [
+            {"role": "user", "content": "Привет 🌌"},
+            {"role": "assistant", "content": "Помню"}])
+        f_body = json.loads(f.body)
+        self.assertEqual(f_body["source_scope"], "AUXILIARY_LOCAL_MIRRORS")
+        facts_by_kind = {row["kind"]: row for row in f_body["facts"]}
+        self.assertEqual(facts_by_kind["dialog_turn"]["provenance"], "LOCAL_TURNS_MIRROR")
+        self.assertEqual(facts_by_kind["owner_fact"]["source_scope"], "LOCAL_FACTS_MIRROR")
+        self.assertFalse(facts_by_kind["dialog_turn"]["s03_readback_verified"])
+        self.assertFalse(facts_by_kind["owner_fact"]["s03_readback_verified"])
+
     def test_failed_s03_does_not_publish_mirror_or_saved_receipt(self):
         m = types.ModuleType("s03_memory")
         def fail(*a):
