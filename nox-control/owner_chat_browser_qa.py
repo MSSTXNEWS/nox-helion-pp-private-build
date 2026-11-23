@@ -720,7 +720,7 @@ async def check_report_layout(page,report):
         raise RuntimeError('HOLD_QA_REPORTS_SCROLL')
 
 
-async def verify_saved_browser_refresh(page, report, title, answer, html_pin):
+async def verify_saved_browser_refresh(page, report, title, answer, html_pin, first_answer=None):
     """Require a real authenticated page reload to render the saved answer.
 
     Never call the form or native model here. A cached in-memory streamed answer
@@ -729,6 +729,8 @@ async def verify_saved_browser_refresh(page, report, title, answer, html_pin):
     """
     if not isinstance(answer, str) or not answer:
         raise RuntimeError('HOLD_QA_REFRESH_EXPECTED_ANSWER')
+    if first_answer is not None and (not isinstance(first_answer, str) or not first_answer):
+        raise RuntimeError('HOLD_QA_REFRESH_EXPECTED_FIRST_ANSWER')
     response = await page.reload(wait_until='domcontentloaded', timeout=20000)
     if (response is None or response.status != 200
             or urllib.parse.urlsplit(page.url).path != PAGE):
@@ -753,11 +755,14 @@ async def verify_saved_browser_refresh(page, report, title, answer, html_pin):
     await page.wait_for_function("""expected => {
         const normalize = text => text.replace(/\s+/g,'');
         const bodies = [...document.querySelectorAll('#messages .v24-msg.nox .body')];
-        const last = bodies.at(-1);
-        return !!last && !!last.getClientRects().length
-          && typeof last.innerText === 'string'
-          && normalize(last.innerText) === normalize(expected);
-    }""", arg=answer, timeout=15000)
+        const matches = (node, value) => !!node && !!node.getClientRects().length
+          && typeof node.innerText === 'string'
+          && normalize(node.innerText) === normalize(value);
+        // In a two-turn dialog both assistant replies must survive the
+        // browser reload, not just the second one rendered at the bottom.
+        return matches(bodies.at(-1), expected.last)
+          && (expected.first === null || matches(bodies.at(-2), expected.first));
+    }""", arg={'last': answer, 'first': first_answer}, timeout=15000)
     observer = await page.evaluate(SNAPSHOT_JS)
     if not isinstance(observer, dict) or observer.get('native_calls') != 0:
         raise RuntimeError('HOLD_QA_REFRESH_DUPLICATE_NATIVE_POST')
@@ -1183,7 +1188,8 @@ async def browser_run(report, directory, available):
                 # real browser reload restores the second saved message.
                 report['browser_stage']='QA_SECOND_TURN_REFRESH'
                 await verify_saved_browser_refresh(
-                    page, report, title, second_answer, expected_html_sha256)
+                    page, report, title, second_answer, expected_html_sha256,
+                    first_answer=answer)
                 if not canonical_s03_verified:
                     raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
                 if stream_admitted!=2:
