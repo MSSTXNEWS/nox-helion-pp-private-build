@@ -486,6 +486,9 @@
           'HOLD_STREAM_UI_PROJECTION_TIMEOUT',uiProjectionTimeoutMs,signal);
       }catch(err){
         projectionCtrl.abort();
+        // A failed, timed-out or stopped DOM upsert has NOT assumed ownership
+        // of the read-only terminal GET. Release its body before GET-only retry.
+        discardReadback();
         if(err&&(err.code==='HOLD_STREAM_UI_PROJECTION_TIMEOUT'||
           err.code==='HOLD_STREAM_RECONNECT_STOPPED')) throw err;
         hold('HOLD_STREAM_UI_PROJECTION');
@@ -493,7 +496,10 @@
       // Only an explicit positive DOM commit witness may precede ACK. A
       // missing return (undefined), null, string, or numeric truthy value
       // is not proof that the terminal row was actually projected.
-      if(projected!==true) hold('HOLD_STREAM_UI_NOT_CONFIRMED');
+      if(projected!==true){
+        discardReadback();
+        hold('HOLD_STREAM_UI_NOT_CONFIRMED');
+      }
       // Origin-local, cross-tab durable fence is opt-in. RESERVE and SENDING
       // must commit in IndexedDB BEFORE network ACK. An uncertain ACK is never
       // sent again after reload; recovery requires an independent server receipt.
