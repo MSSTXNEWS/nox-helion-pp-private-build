@@ -287,6 +287,26 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(huge[-1]["type"], "error")
         self.assertEqual((huge_writes, huge_soul), ([], []))
 
+    def test_unterminated_done_wire_never_certifies_s03(self):
+        # A model-level stop is provisional: even a fully spelled [DONE]
+        # without a final wire line delimiter is not a complete SSE reply.
+        prefix = (self.chunk("Живой ответ") + "\n\n" +
+                  self.chunk(finish="stop") + "\n\n").encode("utf-8")
+        for trailing in ([b"data: [DONE]"], [b"data: [DO", b"NE]"]):
+            with self.subTest(trailing=trailing):
+                events, writes, soul, _ = self.run_stream(
+                    [], byte_chunks=[prefix] + trailing)
+                self.assertEqual(events[-1]["type"], "error")
+                self.assertEqual(events[-1]["reason"], "UPSTREAM_STREAM_ERROR")
+                self.assertFalse(events[-1]["generation_complete"])
+                self.assertEqual((writes, soul), ([], []))
+        # The canonical CRLF-delimited terminal sentinel still succeeds.
+        good, writes, soul, _ = self.run_stream(
+            [], byte_chunks=[prefix, b"data: [DONE]\r\n\r\n"])
+        self.assertEqual(good[-1]["type"], "done")
+        self.assertEqual(writes, [("Привет", "Живой ответ")])
+        self.assertEqual(soul, writes)
+
     def test_complete_stop_done_writes_once_but_never_certifies_s03_readback(self):
         events, writes, logs, _ = self.run_stream([
             self.chunk("¡Привет! 🌍"), self.chunk(finish="stop"), "data: [DONE]"
