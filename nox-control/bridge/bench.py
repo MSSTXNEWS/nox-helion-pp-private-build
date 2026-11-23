@@ -132,6 +132,10 @@ def main(argv=None):
     observations = []
     errors = []
     unsafe_write = False
+    # Any error after a POST may hide a completed S03 write. Even when the
+    # response is truncated before a receipt, never send the next probe:
+    # a different request_id is NOT a safe retry.
+    ambiguous_outcome = False
     for index in range(a.samples):
         try:
             observations.append(_sample(index))
@@ -141,12 +145,16 @@ def main(argv=None):
             unsafe_write = True
             break
         except (HTTPError, URLError, OSError, ValueError, UnicodeError, TypeError) as exc:
-            # No retry: an ambiguous POST may have generated a response.
+            # A failed/truncated/invalid response cannot attest ephemeral
+            # non-persistence. Continuing the batch would issue another POST.
             errors.append({"sample": index + 1, "error": type(exc).__name__,
                            "reason": str(exc)[:80] if isinstance(exc, ValueError) else "TRANSPORT_UNAVAILABLE"})
+            ambiguous_outcome = True
+            break
     models = {x["model_reported"] for x in observations}
     ok = len(observations) == a.samples and len(models) == 1
     result = {"status": ("HOLD_EPHEMERAL_WRITE_RISK" if unsafe_write else
+                         "HOLD_PROBE_OUTCOME_UNKNOWN" if ambiguous_outcome else
                          "MEASURED_SOURCE_ONLY_PINS_UNVERIFIED" if ok else
                          "HOLD_INCOMPARABLE"),
               "original_task_id": "2A05", "model_sha_claim": a.model_sha,
