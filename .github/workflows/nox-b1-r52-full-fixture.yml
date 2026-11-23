@@ -1,0 +1,33 @@
+name: NOX B1 R52 full exact-source Chromium legacy fixture
+on:
+  push:
+    branches: [b1/r52-committed-preflight-get-regression-20261123]
+  pull_request:
+    paths:
+      - nox-control/test_b1_sse_ui_binding.py
+      - .github/workflows/nox-b1-r52-full-fixture.yml
+permissions:
+  contents: read
+jobs:
+  full-b1-fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Pinned Playwright with actual runner Chrome
+        run: |
+          python -m pip install 'playwright==1.56.0'
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -n "$CHROME_BIN" ]; then
+            "$CHROME_BIN" --version
+            if [ ! -e /usr/bin/chromium ]; then sudo ln -s "$CHROME_BIN" /usr/bin/chromium; fi
+          else
+            python -m playwright install chromium
+          fi
+      - name: Unfiltered B1 full Chrome SSE STOP resume fixture
+        run: |
+          python -m py_compile nox-control/test_b1_sse_ui_binding.py
+          NOX_B1_R52_ONLY=1 python nox-control/test_b1_sse_ui_binding.py
