@@ -79,6 +79,37 @@ class NativeRefillSourceGateTests(unittest.TestCase):
         self.assertIn("NO_UNVERIFIED_TUNING",
                       codes(s, lambda exact: exact is s))
 
+    def test_failed_workers_and_malformed_task_cursors_are_not_clean(self):
+        # A partial worker witness used to satisfy native_complete when the
+        # lease/source flags were true, yielding NO_UNVERIFIED_TUNING.
+        s = snapshot()
+        s["native_queue"].update(
+            admission_state="NATIVE_QUEUE_RUNNING",
+            owner_lease_cas_verified=True,
+            immutable_task_source_verified=True,
+            owner_evidence_age_sec=0,
+        )
+        for worker in (
+            {"state": "FAILED", "current_task": None},
+            {"state": "STOPPED", "current_task": None},
+            {"state": "RUNNING", "current_task": []},
+            {"state": "RUNNING", "current_task": ""},
+            {"state": "RUNNING", "current_task": "  "},
+        ):
+            with self.subTest(worker=worker):
+                s["native_queue"]["workers"] = [worker]
+                found = codes(s, lambda exact: exact is s)
+                self.assertIn("NATIVE_QUEUE_UNVERIFIED", found)
+                self.assertNotIn("NO_UNVERIFIED_TUNING", found)
+                self.assertNotIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED", found)
+
+        # A nonempty task cursor is still a correctly shaped busy worker.
+        s["native_queue"]["workers"] = [
+            {"state": "RUNNING", "current_task": "original-295-task"}
+        ]
+        self.assertNotIn("NATIVE_QUEUE_UNVERIFIED",
+                         codes(s, lambda exact: exact is s))
+
     def test_idle_without_lease_and_source_is_hold(self):
         result = mod.assess(snapshot())
         self.assertIn("NATIVE_REFILL_OWNER_HOLD", [r["code"] for r in result])
