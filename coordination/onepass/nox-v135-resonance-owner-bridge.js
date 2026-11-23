@@ -6,6 +6,7 @@ window.__NOX_V135_OWNER_RESONANCE)return;
 window.__NOX_V135_OWNER_RESONANCE='OWNER_NATIVE_ONLY';
 const F=window.fetch.bind(window);
 const enc=new TextEncoder();
+const modelKeys=['model','model_label','modelLabel','native_model_label'];
 let segmenter;
 const ID=/^[a-f0-9]{32}$/;
 const verifiedChain=new Map();
@@ -80,7 +81,7 @@ return data.dialog_id;
 async function checkHistory(id,prompt,answer,exchangeId,signal,model) {
 const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
 if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
-if(data.messages.some(m=>m&&(m.dialog_id!==undefined&&m.dialog_id!==id||m.role==='assistant'&&['model','model_label','modelLabel','native_model_label'].some(k=>k in m&&m[k]!==model))))throw Error('HOLD_DIALOG_HISTORY_SCOPE');
+if(data.messages.some(m=>m&&(m.dialog_id!==undefined&&m.dialog_id!==id||m.role==='assistant'&&modelKeys.some(k=>k in m&&m[k]!==model))))throw Error('HOLD_DIALOG_HISTORY_SCOPE');
 const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
 const currentAt=data.messages.indexOf(pair[0]);
 if(pair.length!==2||currentAt!==data.messages.length-2||
@@ -151,12 +152,12 @@ throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
 if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
 if(e.type==='delta'){
 if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-if(['model','model_label','modelLabel'].some(k=>k in e&&e[k]!==nativeModel))throw Error('HOLD_NATIVE_MODEL_DELTA_DRIFT');
+if(modelKeys.some(k=>k in e&&e[k]!==nativeModel))throw Error('HOLD_NATIVE_MODEL_DELTA_DRIFT');
 if(typeof e.text!=='string'||answer.length+e.text.length>200000)throw Error('HOLD_NATIVE_DELTA');
 answer+=e.text;await emit(e.text);
 } else if(e.type==='done') {
 if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-for(const k of ['model','model_label','modelLabel','native_model_label'])
+for(const k of modelKeys)
 if(k in e&&e[k]!==nativeModel)
 throw Error('HOLD_NATIVE_MODEL_RECEIPT_DRIFT');
 doneSeen=true;done=e;
@@ -164,7 +165,7 @@ doneSeen=true;done=e;
 if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
 if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
 startSeen=true;
-if(!validNativeModelLabel(e.model)||['model_label','modelLabel'].some(k=>k in e&&e[k]!==e.model))throw Error('HOLD_NATIVE_MODEL_START_LABEL');
+if(!validNativeModelLabel(e.model)||modelKeys.some(k=>k in e&&e[k]!==e.model))throw Error('HOLD_NATIVE_MODEL_START_LABEL');
 nativeModel=e.model;
 } else if(e.type==='preparing') {
 if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
