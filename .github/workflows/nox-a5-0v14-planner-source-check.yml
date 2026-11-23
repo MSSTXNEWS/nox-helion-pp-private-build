@@ -1,0 +1,25 @@
+name: NOX A5 0V14 existing priority source regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/agent/planner.py'
+      - 'nox-control/agent/test_planner.py'
+      - '.github/workflows/nox-a5-0v14-planner-source-check.yml'
+permissions:
+  contents: read
+jobs:
+  focused-0v14:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run exact incumbent planner priority tests
+        run: |
+          set -euo pipefail
+          cd nox-control
+          python3 -m unittest -v agent.test_planner
+          echo 'NOX_0V14_SOURCE_ONLY=true'
+          echo 'NOX_0V14_NATIVE_ACCEPTANCE=false'
