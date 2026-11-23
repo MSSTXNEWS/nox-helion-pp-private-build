@@ -206,7 +206,7 @@ class BridgeStreamIntegrity(unittest.TestCase):
                            {"role": "assistant", "content": "done"}]}, "CHAT_LAST_USER_REQUIRED"),
             ({"messages": [{"role": "user", "content": "   "}]}, "CHAT_MISSING_USER"),
             ({"messages": [{"role": "user", "content": 5}]}, "CHAT_INVALID_MESSAGES"),
-            ({"messages": [{"role": "user", "content": "\\ud800"}]}, "CHAT_INVALID_UNICODE"),
+            ({"messages": [{"role": "user", "content": chr(0xD800)}]}, "CHAT_INVALID_UNICODE"),
         ):
             with self.subTest(reason=reason):
                 result = invoke(payload)
