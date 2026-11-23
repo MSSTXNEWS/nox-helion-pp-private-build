@@ -1493,6 +1493,8 @@ class FactReceiptTest(unittest.TestCase):
         for malformed in (
             good_prefix + b'data: {"choices":\xff}\n',
             good_prefix + b'data: ' + b'z' * (W.MAX_UPSTREAM_SSE_LINE_BYTES + 1),
+            good_prefix + b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n'
+                        + b'data: [DONE]',
         ):
             with self.subTest(payload_bytes=len(malformed)):
                 writes.clear()
