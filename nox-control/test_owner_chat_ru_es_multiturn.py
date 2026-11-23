@@ -1026,6 +1026,33 @@ async function check(chunks, status=200) {
         self.assertEqual(owner_session_cookie_pin(legacy),
                          owner_session_cookie_pin([dict(client_ui)]))
 
+    def test_ru_es_owner_cookie_httponly_type_fence_before_fallback(self):
+        """Malformed HttpOnly flags never masquerade as legacy owner cookies."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='owner-stable', httpOnly=True)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        baseline = owner_session_cookie_pin([signed])
+        self.assertIsInstance(baseline, str)
+        self.assertEqual(owner_session_cookie_pin([ui, signed]), baseline)
+        self.assertTrue(owner_session_continuity_valid(200, [signed], baseline))
+        for malformed in ('true', 1, None, [], {}):
+            with self.subTest(httpOnly=repr(malformed)):
+                corrupted = dict(signed, httpOnly=malformed)
+                self.assertIsNone(owner_session_cookie_pin([corrupted]))
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [corrupted], baseline))
+                # An invalid ancillary cookie must not be silently ignored
+                # merely because a valid signed owner cookie also exists.
+                self.assertIsNone(owner_session_cookie_pin(
+                    [signed, dict(ui, httpOnly=malformed)]))
+        legacy = dict(signed)
+        del legacy['httpOnly']
+        self.assertEqual(owner_session_cookie_pin([legacy]),
+                         owner_session_cookie_pin([dict(legacy)]))
+        self.assertIsInstance(owner_session_cookie_pin([legacy]), str)
+        self.assertIsInstance(owner_session_cookie_pin([ui]), str)
+
     def test_ru_es_owner_secure_cookie_downgrade_cannot_reuse_session_pin(self):
         """Secure owner cookies must not silently become HTTP-eligible mid-chat."""
         signed = dict(name='nox_owner', domain='owner.example', path='/',

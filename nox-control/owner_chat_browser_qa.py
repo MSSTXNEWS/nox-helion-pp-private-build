@@ -425,6 +425,13 @@ def owner_session_cookie_pin(cookies):
     """
     if not isinstance(cookies, list) or not cookies:
         return None
+    # An explicit but nonboolean HttpOnly flag is not an authenticated
+    # cookie claim. Reject it BEFORE the legacy unsigned-cookie fallback,
+    # even when another valid HttpOnly cookie is also present. Truly absent
+    # legacy metadata and explicit booleans retain their prior semantics.
+    if any(isinstance(row, dict) and 'httpOnly' in row
+           and type(row['httpOnly']) is not bool for row in cookies):
+        return None
     signed = [row for row in cookies
               if isinstance(row, dict) and row.get('httpOnly') is True]
     selected = signed if signed else cookies
