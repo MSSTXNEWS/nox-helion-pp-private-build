@@ -298,14 +298,29 @@ async def ask(messages, max_tokens, slot=0):
             if r.status_code >= 400:
                 log("upstream %s %s" % (r.status_code, r.text[:300].replace("\n", " ")))
                 r.raise_for_status()
-            ch = r.json()["choices"][0]
-            # Non-stream responses also need a terminal stop before they can
-            # become an answer or an S03 memory write. A length/tool result is
-            # not a completed assistant turn even if it contains some text.
+            payload = r.json()
+            if not isinstance(payload, dict) or "error" in payload:
+                raise ValueError("UPSTREAM_RESPONSE_INVALID")
+            choices = payload.get("choices")
+            if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
+                raise ValueError("UPSTREAM_CHOICES_INVALID")
+            ch = choices[0]
+            # The non-stream and SSE paths share the same text-only trust
+            # boundary: neither may record visible text alongside unexecuted
+            # tool calls, a non-assistant role or an incomplete generation.
             if ch.get("finish_reason") != "stop":
                 raise ValueError("UPSTREAM_NONSTOP_COMPLETION")
-            m = ch["message"]
-            txt = (m.get("content") or "").strip()
+            m = ch.get("message")
+            if not isinstance(m, dict) or ("role" in m and m["role"] != "assistant"):
+                raise ValueError("UPSTREAM_MESSAGE_INVALID")
+            if any(k in ch or k in m for k in ("tool_calls", "function_call")):
+                raise ValueError("UPSTREAM_UNEXECUTED_TOOL_CALL")
+            txt = m.get("content")
+            if txt is None:
+                txt = ""
+            if not isinstance(txt, str) or any(0xD800 <= ord(c) <= 0xDFFF for c in txt):
+                raise ValueError("UPSTREAM_CONTENT_INVALID")
+            txt = txt.strip()
             if txt:
                 return txt
             log("empty_answer finish=%s keys=%s reasoning_len=%d attempt=%d" % (ch.get("finish_reason"), list(m.keys()), len(m.get("reasoning_content") or ""), attempt))
