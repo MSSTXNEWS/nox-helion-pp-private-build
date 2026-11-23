@@ -58,5 +58,28 @@ class FullCurrentTurnTests(unittest.TestCase):
         self.assertTrue(out[-1]["content"].endswith(user))
 
 
+    def test_recalled_memory_is_not_silently_sliced_to_500_chars(self):
+        memory = "Источник S03: " + ("важный полный контекст 🌍" * 80) + "\nПроверенный хвост 9b82"
+        user = "Учитывай всю подтверждённую память"
+        out = self.build([{"role": "user", "content": user}], user, memory, "")
+        self.assertIn("Память: " + memory + "\n", out[-1]["content"])
+        self.assertEqual(out[-1]["content"].count("Проверенный хвост 9b82"), 1)
+
+    def test_s03_memory_admission_preserves_full_unicode_and_holds_on_overflow(self):
+        source = Path(__file__).with_name("nox_bridge.py").read_text(encoding="utf-8")
+        function = next(node for node in ast.parse(source).body
+                        if isinstance(node, ast.FunctionDef) and node.name == "trim_mem")
+        env = {}
+        exec(compile(ast.Module(body=[function], type_ignores=[]),
+                     "nox_bridge.py", "exec"), env)
+        admit = env["trim_mem"]
+        data = ("М1 — память 🌍 и источник\n" * 500) + "Завершение ✔"
+        self.assertEqual(admit(data), data)
+        with self.assertRaisesRegex(ValueError, "S03_MEMORY_CONTEXT_OVER_BUDGET"):
+            admit("п" * 17000)
+        with self.assertRaisesRegex(TypeError, "S03_MEMORY_FORMAT_NON_TEXT"):
+            admit(["wrong", "type"])
+
+
 if __name__ == "__main__":
     unittest.main()
