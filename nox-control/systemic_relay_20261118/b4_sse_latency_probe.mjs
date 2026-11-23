@@ -127,8 +127,9 @@ export async function measureSseResponse(response,options={}){
   }
 }
 
-// R29: include the HTTP response-header wait in the *same* absolute
-// request-start deadline as SSE reads. No retry, replay or production POST.
+// R30: both the HTTP preheader wait and SSE body share one absolute deadline.
+// External abort races BOTH phases and quarantines late fetch/reader outcomes.
+// Never retry or replay a POST; all cleanup is best-effort and nonblocking.
 export async function measureSseFetch(url,init={},options={}){
   const {startedAt=performance.now(),clock=()=>performance.now(),
     totalTimeoutMs=60000,fetchImpl=globalThis.fetch}=options;
@@ -136,32 +137,49 @@ export async function measureSseFetch(url,init={},options={}){
   if(!Number.isInteger(totalTimeoutMs)||totalTimeoutMs<10||totalTimeoutMs>1800000)
     throw fail('B4_INVALID_totalTimeoutMs');
   if(typeof fetchImpl!=='function')throw fail('B4_INVALID_FETCH_IMPL');
-  const owner=new AbortController();
   const externalSignal=init?.signal;
+  if(externalSignal!=null&&!(externalSignal instanceof AbortSignal))
+    throw fail('B4_INVALID_EXTERNAL_SIGNAL');
+  if(externalSignal?.aborted)throw fail('B4_FETCH_ABORTED');
+  const remaining=totalTimeoutMs-(clock()-startedAt);
+  if(remaining<=0)throw fail('B4_TOTAL_TIMEOUT');
+  const owner=new AbortController();
   const signal=externalSignal?AbortSignal.any([externalSignal,owner.signal]):owner.signal;
-  let expired=false,headerTimer,response;
+  let expired=false,headerTimer,response,rejectExternal;
   function disposeLate(bodyResponse){
     try{Promise.resolve(bodyResponse?.body?.cancel?.()).catch(()=>{});}catch{}
   }
-  // Attach late settlement handlers before awaiting the race: even a fetch
-  // implementation that ignores AbortSignal cannot revive an expired result.
+  const externalAbort=new Promise((_,reject)=>{rejectExternal=reject;});
+  const onExternalAbort=()=>{
+    expired=true;
+    try{owner.abort();}catch{}
+    rejectExternal(fail('B4_FETCH_ABORTED'));
+  };
+  externalSignal?.addEventListener('abort',onExternalAbort,{once:true});
+  // Late fetch settlement is observed even if the fetch implementation ignores
+  // abort. Its body cannot be used as a successful verification after failure.
   const pending=Promise.resolve().then(()=>fetchImpl(url,{...init,signal}));
   pending.then(value=>{if(expired)disposeLate(value);},()=>{});
   try{
-    const remaining=totalTimeoutMs-(clock()-startedAt);
-    if(remaining<=0)throw fail('B4_TOTAL_TIMEOUT');
     response=await Promise.race([
-      pending,
+      pending,externalAbort,
       new Promise((_,reject)=>{headerTimer=setTimeout(()=>reject(fail('B4_TOTAL_TIMEOUT')),remaining);})
     ]);
     clearTimeout(headerTimer);
+    if(externalSignal?.aborted)throw fail('B4_FETCH_ABORTED');
     if(clock()-startedAt>=totalTimeoutMs)throw fail('B4_TOTAL_TIMEOUT');
-    return await measureSseResponse(response,{...options,startedAt,clock,totalTimeoutMs});
+    return await Promise.race([
+      measureSseResponse(response,{...options,startedAt,clock,totalTimeoutMs}),
+      externalAbort
+    ]);
   }catch(error){
     expired=true;
     try{owner.abort();}catch{}
     if(response)disposeLate(response);
     if(error?.code)throw error;
     throw fail(externalSignal?.aborted?'B4_FETCH_ABORTED':'B4_FETCH_FAILED');
-  }finally{clearTimeout(headerTimer);}
+  }finally{
+    clearTimeout(headerTimer);
+    externalSignal?.removeEventListener('abort',onExternalAbort);
+  }
 }

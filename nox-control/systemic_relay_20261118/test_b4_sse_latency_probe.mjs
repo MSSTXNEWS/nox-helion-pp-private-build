@@ -357,3 +357,80 @@ test('R29 pre-header absolute deadline rejects stall/late settle; real loopback 
     server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
   }
 });
+
+// R30: isolated regression for external AbortSignal and upstream fetch errors.
+// Deliberately use a scope to keep helper symbols separate from earlier rounds.
+{
+const event=x=>'data: '+JSON.stringify({choices:[x]})+'\n\n';
+const healthy=()=>new Response(new ReadableStream({start(c){
+  c.enqueue(new TextEncoder().encode(event({delta:{content:'Привет!'},finish_reason:null})+
+    event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n'));c.close();
+}}),{status:200,headers:{'content-type':'text/event-stream'}});
+const opts=fetchImpl=>({fetchImpl,totalTimeoutMs:400,idleTimeoutMs:120,startedAt:performance.now()});
+const rejectedCode=(promise,code)=>assert.rejects(promise,e=>e?.code===code);
+const freshWait=()=>sleep(0);
+
+test('R30 external abort before/during headers and SSE, HTTP cleanup, transport rejection and success',async()=>{
+  let calls=0;
+  const before=new AbortController();before.abort();
+  await rejectedCode(measureSseFetch('loopback',{signal:before.signal},opts(()=>{calls++;return healthy();})),'B4_FETCH_ABORTED');
+  assert.equal(calls,0,'pre-aborted request never sends POST');
+  await rejectedCode(measureSseFetch('loopback',{}, {...opts(()=>{calls++;return healthy();}),startedAt:performance.now()-1000,totalTimeoutMs:50}),'B4_TOTAL_TIMEOUT');
+  assert.equal(calls,0,'stale-startedAt request never sends POST');
+
+  const ctrl=new AbortController();
+  let resolveHeaders,seenSignal,bodyCanceled=0;
+  const headers=new Promise(resolve=>{resolveHeaders=resolve;});
+  const duringHeaders=measureSseFetch('loopback',{method:'POST',signal:ctrl.signal},opts((_url,init)=>{
+    calls++;seenSignal=init.signal;return headers;
+  }));
+  await freshWait();assert.equal(calls,1);
+  assert.notEqual(seenSignal,ctrl.signal,'composed signal passed to fetch');
+  ctrl.abort();
+  await rejectedCode(duringHeaders,'B4_FETCH_ABORTED');
+  assert.equal(seenSignal.aborted,true);
+  resolveHeaders({body:{cancel(){bodyCanceled++;return Promise.resolve();}}});
+  await freshWait();await freshWait();
+  assert.equal(bodyCanceled,1,'late fetch body disposed exactly once');
+
+  const mid=new AbortController();let canceled=0,released=0;
+  let startedFetch=false;
+  const streaming=measureSseFetch('loopback',{signal:mid.signal},opts(()=>{
+    startedFetch=true;
+    return {status:200,headers:new Headers({'content-type':'text/event-stream'}),body:{
+      getReader(){return {read:()=>new Promise(()=>{}),cancel(){canceled++;return Promise.resolve();},releaseLock(){released++;}};},
+      cancel(){return Promise.reject(new TypeError('locked'));}
+    }};
+  }));
+  await freshWait();assert.equal(startedFetch,true);
+  mid.abort();
+  await rejectedCode(streaming,'B4_FETCH_ABORTED');
+
+  for(const kind of ['throw','reject']){
+    let count=0;
+    const fetchImpl=()=>{count++;if(kind==='throw')throw new Error('transport');return Promise.reject(new Error('network'));};
+    await rejectedCode(measureSseFetch('loopback',{},opts(fetchImpl)),'B4_FETCH_FAILED');
+    assert.equal(count,1,'no automatic replay on transport error');
+  }
+  for(const [status,contentType] of [[503,'text/event-stream'],[200,'text/plain']]){
+    let cleaned=0,count=0;
+    const response={status,headers:new Headers({'content-type':contentType}),body:{
+      getReader(){throw new Error('reader should not be called');},
+      cancel(){cleaned++;return Promise.resolve();}
+    }};
+    await rejectedCode(measureSseFetch('loopback',{},opts(()=>{count++;return response;})),'B4_NOT_SSE_200');
+    assert.equal(count,1);assert.equal(cleaned,1,'non-SSE body canceled');
+  }
+  const active=new AbortController();let successCalls=0;
+  const measured=await measureSseFetch('loopback',{signal:active.signal},opts(()=>{successCalls++;return healthy();}));
+  assert.equal(successCalls,1);assert.equal(measured.verified,true);
+  assert.ok(measured.completion_ms>=measured.sse_done_ms);
+  assert.ok(measured.sse_done_ms>=measured.ttft_ms);
+  assert.equal(measured.native_verified,false);
+  assert.equal(measured.browser_authenticated,false);
+  assert.equal(measured.canonical_s03_verified,false);
+  assert.equal(measured.model_tokens_per_second,null);
+  await sleep(125); // let nonsettling fake SSE reader hit its OWN idle bound
+  assert.equal(canceled,1);assert.equal(released,1);
+});
+}
