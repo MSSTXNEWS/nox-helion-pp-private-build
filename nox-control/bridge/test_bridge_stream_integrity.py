@@ -39,11 +39,14 @@ class FakeResponse:
 
 class BridgeStreamIntegrity(unittest.TestCase):
     def run_stream(self, lines, status=200, write_ok=True,
-                   memory_error=False, soul_error=False):
+                   memory_error=False, soul_error=False,
+                   self_model_error=False, message_build_error=False):
         writes, soul_logs, notices = [], [], []
         response = FakeResponse(lines, status)
         class Client:
             def stream(self, *_args, **_kwargs):
+                if self_model_error or message_build_error:
+                    raise AssertionError("MODEL_MUST_NOT_BE_CALLED_ON_CONTEXT_HOLD")
                 return response
 
         def write(user, answer):
@@ -61,6 +64,16 @@ class BridgeStreamIntegrity(unittest.TestCase):
                 raise RuntimeError("S03_RECALL_FAULT")
             return ""
 
+        def self_model(_text):
+            if self_model_error:
+                raise RuntimeError("SELF_MODEL_FAULT")
+            return ""
+
+        def build_messages(*_args):
+            if message_build_error:
+                raise RuntimeError("CHAT_MSG_BUILD_FAULT")
+            return []
+
         scope = {
             "asyncio": asyncio,
             "json": json,
@@ -70,10 +83,10 @@ class BridgeStreamIntegrity(unittest.TestCase):
             "NKEEP": 0,
             "_sse": lambda payload: "data: " + json.dumps(payload) + "\n\n",
             "memory_block": recall,
-            "self_vol": lambda _: "",
+            "self_vol": self_model,
             "affect_update": lambda _: {},
             "affect_words": lambda _: "steady",
-            "build_msgs": lambda *_: [],
+            "build_msgs": build_messages,
             "adapt_tokens": lambda _: 64,
             "remember": write,
             "SOUL": Soul(),
@@ -180,6 +193,25 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(writes, [])
         self.assertEqual(logs, [])
         self.assertEqual(last["t"], 0)
+
+    def test_preflight_faults_are_terminal_holds_before_model_and_s03(self):
+        valid_upstream = [
+            self.chunk("must not reach model"),
+            self.chunk(finish="stop"),
+            "data: [DONE]",
+        ]
+        for flags in ({"self_model_error": True}, {"message_build_error": True}):
+            with self.subTest(flags=flags):
+                events, writes, logs, last = self.run_stream(
+                    valid_upstream, **flags)
+                self.assertEqual(events[-1]["type"], "error")
+                self.assertEqual(events[-1]["reason"], "CHAT_CONTEXT_PREPARE_FAILED")
+                self.assertFalse(events[-1]["generation_complete"])
+                self.assertFalse(events[-1]["s03_readback_verified"])
+                self.assertNotIn("done", [e["type"] for e in events])
+                self.assertEqual(writes, [])
+                self.assertEqual(logs, [])
+                self.assertEqual(last["t"], 0)
 
     def test_failed_optional_soul_log_keeps_exact_s03_receipt(self):
         events, writes, logs, _ = self.run_stream([
