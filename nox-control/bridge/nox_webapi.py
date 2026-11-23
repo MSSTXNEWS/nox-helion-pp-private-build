@@ -191,7 +191,16 @@ def _gpu():
         for l in o:
             i, u, mu, mt, t, pw = [x.strip() for x in l.split(",")]
             f = lambda x: float(x) if x.replace(".", "", 1).isdigit() else None
-            out.append({"index": int(i), "util": f(u), "mem_used_gib": round(float(mu) / 1024, 2), "mem_total_gib": round(float(mt) / 1024, 2), "temp_c": f(t), "power_w": f(pw)})
+            mem_used, mem_total = float(mu), float(mt)
+            # A corrupt or partial GPU memory sample cannot be evidence of
+            # spare VRAM for another worker. Reject the *whole* GPU census.
+            if not (math.isfinite(mem_used) and math.isfinite(mem_total)
+                    and 0 <= mem_used <= mem_total and mem_total > 0):
+                return []
+            out.append({"index": int(i), "util": f(u),
+                        "mem_used_gib": round(mem_used / 1024, 2),
+                        "mem_total_gib": round(mem_total / 1024, 2),
+                        "temp_c": f(t), "power_w": f(pw)})
         return out
     except Exception:
         return []
