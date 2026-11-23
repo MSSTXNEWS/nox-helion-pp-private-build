@@ -1155,7 +1155,19 @@ def install(app, B):
                                                  "reason": "PREMODEL_CONTEXT_UNAVAILABLE",
                                                  "s03_readback_verified": False})
                         return
-                body = {"messages": mm, "max_tokens": max(64, min(npred, 900, (400 if mini else (900 if mode == "thoughtful" else B.adapt_tokens(user, 900))))), "temperature": 0.4 if mode == "thoughtful" else 0.6, "id_slot": 1 if mini else 0, "cache_prompt": True, "n_keep": B.NKEEP, "stream": True,
+                # The adaptive token hint is advisory, not a required model/S03
+                # precondition. A broken hint must not leave SSE without a
+                # terminal receipt or silently discard the user's request.
+                adaptive_limit = 900
+                if not mini and mode != "thoughtful":
+                    try:
+                        proposed_limit = B.adapt_tokens(user, 900)
+                        if type(proposed_limit) is not int or not 0 < proposed_limit <= 900:
+                            raise ValueError("ADAPTIVE_TOKEN_LIMIT_INVALID")
+                        adaptive_limit = proposed_limit
+                    except Exception as e:
+                        B.log("web_adaptive_token_budget_unavailable " + type(e).__name__)
+                body = {"messages": mm, "max_tokens": max(64, min(npred, 900, (400 if mini else adaptive_limit))), "temperature": 0.4 if mode == "thoughtful" else 0.6, "id_slot": 1 if mini else 0, "cache_prompt": True, "n_keep": B.NKEEP, "stream": True,
                         "chat_template_kwargs": {"enable_thinking": False}}
                 # STOP may also arrive while self-model or planning awaits.
                 # Check again immediately before opening an upstream model request.
