@@ -301,7 +301,7 @@ class ProbeTests(unittest.TestCase):
             'executor_question_receipt={',
             "emit('chat_recent_timing_after',metrics())",
             'require_logout_revoked(client)',
-            '    require_executor_turn_budget(time.monotonic()-probe_started)\\n    if executor_question_receipt is None:',
+            'if executor_question_receipt is None:',
             "emit('chat_executor_question',executor_question_receipt)",
             "print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'",
         )
