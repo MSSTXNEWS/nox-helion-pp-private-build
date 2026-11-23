@@ -208,7 +208,40 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                 "cgroup headroom, idle claims and maintenance clearance; "
                 "do not enqueue or resume.")
     if onehost.get("chat_waiting") is True and trainer.get("running") is True:
-        add("CHAT_PRIORITY", "optimize", "Request cooperative trainer yield at next safe checkpoint; do not kill process.")
+        # 6A03: chat priority is not a license to preempt a live optimizer.
+        # Only an authenticated, completed optimizer-step/embedding-batch
+        # boundary with a durable checkpoint+cursor may be suggested for
+        # owner review. No signals, scheduler changes or resumes here.
+        import re
+        cursor = trainer.get("resume_cursor_sha256")
+        safe_yield_review = (
+            trainer.get("yield_boundary") in ("optimizer_step", "embedding_batch")
+            and trainer.get("yield_boundary_complete") is True
+            and type(trainer.get("yield_step")) is int
+            and trainer["yield_step"] >= 0
+            and isinstance(cursor, str)
+            and re.fullmatch(r"[0-9a-f]{64}", cursor) is not None
+            and trainer.get("checkpoint_readback_verified") is True
+            and trainer.get("yield_owner_lease_cas_verified") is True
+            and isinstance(native, dict)
+            and native.get("maintenance_busy") is False
+            and native.get("owner_lease_cas_verified") is True
+            and type(native.get("owner_evidence_age_sec")) is int
+            and 0 <= native["owner_evidence_age_sec"] <= 30
+            and _owner_snapshot_attested(snapshot, owner_snapshot_verifier)
+        )
+        if safe_yield_review:
+            add("CHAT_PRIORITY", "review",
+                "Completed cooperative boundary with owner-attested checkpoint "
+                "and resume cursor: owner may review ONE soft yield of the "
+                "existing training claim. Recheck live STOP, PID/startticks, "
+                "lease/CAS and cursor before acting; no automatic action.")
+        else:
+            add("CHAT_PRIORITY", "hold",
+                "Chat takes priority, but a completed optimizer-step or embedding "
+                "batch, checkpoint readback, resume cursor and current owner "
+                "lease/CAS attestation are unverified. No signal, hard STOP, "
+                "trainer restart or cursor advance; await a safe boundary.")
     if trainer.get("running") is True:
         # Original TaskID 6A04: missing/malformed utilization is a HOLD,
         # not silent evidence of capacity or an unhandled huge-int overflow.
