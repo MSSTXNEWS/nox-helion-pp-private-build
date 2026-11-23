@@ -2622,6 +2622,45 @@ class FinalReadbackReceiptContinuity(unittest.TestCase):
 
 
 
+    def test_final_progress_observation_requires_typed_optimizer_step(self):
+        # Execute the exact shipped owner AST without starting native work.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        fn = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                  and node.name == "final_observation_snapshots")
+        scope = {"re": re}
+        exec(compile(ast.Module(body=[fn], type_ignores=[]), str(SOURCE), "exec"),
+             scope)
+        capture = scope["final_observation_snapshots"]
+
+        def observe(progress):
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "RUNNING"},
+                health=lambda: {"8080": 200},
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 28000}]},
+                progress=lambda: progress)
+            return capture(helper)
+
+        for good in ({"step": 0}, {"step": 5},
+                     {"global_step": 7}, {"step": 9, "global_step": 9}):
+            with self.subTest(good=repr(good)):
+                values, errors = observe(good)
+                self.assertEqual(errors, {})
+                self.assertEqual(values["progress_after"], good)
+        for bad in ({"status": "ok"}, {"step": True},
+                    {"step": False}, {"step": "5"},
+                    {"step": 5.0}, {"step": -1},
+                    {"step": None}, {"step": []},
+                    {"global_step": True},
+                    {"step": 5, "global_step": 6},
+                    {"step": 5, "global_step": "5"}):
+            with self.subTest(bad=repr(bad)):
+                values, errors = observe(bad)
+                self.assertIsNone(values["progress_after"])
+                self.assertEqual(errors, {
+                    "progress_after": "HOLD_FINAL_READBACK_MALFORMED"})
+                self.assertEqual(values["chat_after"], {"8080": 200})
+
+
 class LegacyHeavyServiceReadbackFence(unittest.TestCase):
     def test_malformed_legacy_service_snapshot_cannot_authorize_training(self):
         # Exercise actual source gate AST, not a duplicate in the test.

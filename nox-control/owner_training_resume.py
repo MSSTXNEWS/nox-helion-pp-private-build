@@ -1452,6 +1452,15 @@ def final_observation_snapshots(helper):
                                for row in rows)
                         or len({row['index'] for row in rows}) != len(rows)):
                     raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
+            if key == 'progress_after':
+                # Nonempty readback is not optimizer-step proof: reject bool
+                # (a JSON integer lookalike), negative and conflicting aliases.
+                native_step = value.get('step', value.get('global_step'))
+                if (type(native_step) is not int or native_step < 0
+                        or ('step' in value and 'global_step' in value
+                            and (type(value['global_step']) is not int
+                                 or value['global_step'] != native_step))):
+                    raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
             snapshots[key] = value
         except Exception as exc:
             snapshots[key] = None
