@@ -582,6 +582,61 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(len(writes), 4)
         self.assertEqual(len(bridge.errors), 4)
 
+    def test_1a01_explicit_low_num_predict_is_not_raised_to_64(self):
+        """A validated small completion ceiling must reach the actual model call."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT, bridge.SOUL = {"t": 0}, None
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Вопрос"}]
+        bridge.adapt_tokens = lambda *args: 900
+        posted_limits, persisted = [], []
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Ок"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs):
+                posted_limits.append(kwargs["json"]["max_tokens"])
+                return Upstream()
+
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: persisted.append(args)
+        cases = ((False, "auto", 1), (False, "auto", 63),
+                 (False, "auto", 64), (False, "auto", 700),
+                 (False, "fast", 1), (True, "auto", 1))
+
+        async def collect(index, mini, mode, ceiling):
+            response = await chat(Request({
+                "request_id": "low-ceiling-" + str(index),
+                "mini": mini, "mode": mode, "use_memory": False,
+                "options": {"num_predict": ceiling},
+                "messages": [{"role": "user", "content": "Вопрос"}],
+            }))
+            return [json.loads(frame) async for frame in response.body_iterator]
+
+        with (mock.patch.object(W, "W", None),
+              mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
+              mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.dict(sys.modules, {"s03_memory": memory})):
+            for index, (mini, mode, ceiling) in enumerate(cases):
+                frames = asyncio.run(collect(index, mini, mode, ceiling))
+                self.assertTrue(frames[-1]["done"])
+                self.assertEqual(frames[-1]["completion_receipt"]["status"], "GENERATED")
+                self.assertEqual(frames[-1]["memory_write_receipt"]["status"],
+                                 "WRITE_RETURNED_UNVERIFIED")
+                self.assertNotIn("low-ceiling-" + str(index), W.ACTIVE_CHAT_IDS)
+        self.assertEqual(posted_limits, [1, 63, 64, 700, 1, 1])
+        self.assertEqual(len(persisted), len(cases))
+
     def test_1v14_01_ephemeral_turn_does_not_persist_emotional_signal(self):
         """Private chat keeps the real model stream, but never updates affect."""
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
