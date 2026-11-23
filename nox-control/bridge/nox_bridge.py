@@ -242,6 +242,11 @@ async def ask(messages, max_tokens, slot=0):
                 log("upstream %s %s" % (r.status_code, r.text[:300].replace("\n", " ")))
                 r.raise_for_status()
             ch = r.json()["choices"][0]
+            # Non-stream responses also need a terminal stop before they can
+            # become an answer or an S03 memory write. A length/tool result is
+            # not a completed assistant turn even if it contains some text.
+            if ch.get("finish_reason") != "stop":
+                raise ValueError("UPSTREAM_NONSTOP_COMPLETION")
             m = ch["message"]
             txt = (m.get("content") or "").strip()
             if txt:
