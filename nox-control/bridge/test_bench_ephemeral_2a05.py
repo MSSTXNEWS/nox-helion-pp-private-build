@@ -4,6 +4,8 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
+import tempfile
 from pathlib import Path
 import unittest
 from urllib.error import URLError
@@ -30,7 +32,7 @@ class FakeResponse:
         return iter(self.lines)
 
 
-def run_sample(write=None):
+def run_sample(write=None, token=None):
     text = "Ответ NOX 👍"
     digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
     receipts = {"status": "SKIPPED", "s03_write_returned": False, "s03_readback_verified": False}
@@ -39,6 +41,8 @@ def run_sample(write=None):
 
     def opener(request, timeout):
         assert timeout == 400
+        if token is not None:
+            assert request.get_header('X-nox-token') == token
         rid = json.loads(request.data)["request_id"]
         common = {"request_id": rid, "stream_id": "a" * 32}
         a = {**common, "event_seq": 1, "message": {"content": text}, "done": False}
@@ -51,7 +55,7 @@ def run_sample(write=None):
                              for row in (a, b)])
 
     clock = iter((10.0, 11.0, 12.0))
-    return bench._sample(0, clock=lambda: next(clock), opener=opener)
+    return bench._sample(0, clock=lambda: next(clock), opener=opener, auth_token=token)
 
 
 class EphemeralBenchmarkGuardTest(unittest.TestCase):
@@ -60,6 +64,42 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
         self.assertEqual(result["s03_write"], "SKIPPED_EPHEMERAL")
         self.assertEqual(result["chunks"], 1)
         self.assertEqual(result["ttft_s"], 1.0)
+
+    def test_private_owner_web_token_header_is_not_logged_or_returned(self):
+        token = "private-bench-credential-no-log"
+        result = run_sample(token=token)
+        self.assertEqual(result["s03_write"], "SKIPPED_EPHEMERAL")
+        self.assertNotIn(token, json.dumps(result))
+
+    def test_local_owner_token_file_missing_valid_and_symlink(self):
+        with tempfile.TemporaryDirectory() as folder:
+            token_file = Path(folder) / "web_token"
+            with mock.patch.object(bench, "OWNER_WEB_TOKEN_FILE", str(token_file)):
+                self.assertIsNone(bench._owner_web_token())
+                token_file.write_text("sealed-owner-token\n", encoding="ascii")
+                self.assertEqual(bench._owner_web_token(), "sealed-owner-token")
+                token_file.unlink()
+                target = Path(folder) / "other_file"
+                target.write_text("never-follow-this-token", encoding="ascii")
+                os.symlink(target, token_file)
+                with self.assertRaisesRegex(ValueError, "HOLD_WEB_TOKEN_UNVERIFIED"):
+                    bench._owner_web_token()
+
+    def test_owner_token_hold_prevents_all_benchmark_posts(self):
+        output = io.StringIO()
+        with mock.patch.object(bench, "_owner_web_token",
+                               side_effect=ValueError("HOLD_WEB_TOKEN_UNVERIFIED")), \
+             mock.patch.object(bench, "_sample") as sampler:
+            with contextlib.redirect_stdout(output):
+                code = bench.main(["--model-sha", "a" * 64,
+                                   "--route-sha", "b" * 40,
+                                   "--s03-revision", "S03-1", "--samples", "20"])
+        self.assertEqual(code, 2)
+        sampler.assert_not_called()
+        report = json.loads(output.getvalue())
+        self.assertEqual(report["status"], "HOLD_WEB_TOKEN_UNVERIFIED")
+        self.assertEqual(report["completed"], 0)
+        self.assertFalse(report["native_acceptance"])
 
     def test_confirmed_write_risk_fails_closed(self):
         with self.assertRaisesRegex(bench.UnsafeEphemeralWriteReceipt,
@@ -77,7 +117,8 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
         for failure in (URLError("connection reset"), ValueError("TRUNCATED_FRAME")):
             with self.subTest(failure=type(failure).__name__):
                 output = io.StringIO()
-                with mock.patch.object(bench, "_sample", side_effect=failure) as sampler:
+                with mock.patch.object(bench, "_owner_web_token", return_value=None), \
+                     mock.patch.object(bench, "_sample", side_effect=failure) as sampler:
                     with contextlib.redirect_stdout(output):
                         code = bench.main(["--model-sha", "a" * 64,
                                            "--route-sha", "b" * 40,
@@ -92,7 +133,8 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
 
     def test_batch_stops_on_first_possible_write(self):
         output = io.StringIO()
-        with mock.patch.object(bench, "_sample",
+        with mock.patch.object(bench, "_owner_web_token", return_value=None), \
+             mock.patch.object(bench, "_sample",
                                side_effect=bench.UnsafeEphemeralWriteReceipt("BENCH_EPHEMERAL_WRITE_RISK")) as sampler:
             with contextlib.redirect_stdout(output):
                 code = bench.main(["--model-sha", "a" * 64,
