@@ -228,13 +228,14 @@ def _feed_items(body: bytes) -> list[dict[str, str]]:
         for child in list(node):
             if _local(child.tag) == "link":
                 href = child.attrib.get("href", "").strip()
-                rel = child.attrib.get("rel", "alternate").lower()
+                rel = child.attrib.get("rel", "alternate").strip().lower()
                 text = " ".join(" ".join(child.itertext()).split())
-                if href and rel in {"alternate", ""}:
-                    link = href
-                    break
-                if not link and (href or text):
+                # Only an alternate (article) link is provenance for an
+                # entry. Atom self/enclosure/related links are metadata or
+                # attachments, not independently citable item URLs.
+                if rel in {"alternate", ""} and (href or text):
                     link = href or text
+                    break
         content = _child_text(node, {"content", "encoded", "summary", "description"})
         published = _child_text(node, {"published", "updated", "pubdate", "date"})
         if title or content or link:
