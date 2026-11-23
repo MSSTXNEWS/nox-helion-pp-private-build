@@ -1,9 +1,52 @@
 #!/bin/bash
 date -u +%T; echo health=$(curl -s -m 5 -o /dev/null -w "%{http_code}" http://127.0.0.1:8081/health)
-tail -n 3 /root/nox/logs/flash.log | cut -c1-150; ls -l /dev/shm/glm53f/*00005* | cut -c20-90
-ps -eo pid,etimes,args | grep -E "flash.py|llama-server" | grep -v grep | cut -c1-120
-for f in /root/nox/logs/bench_*.log /root/nox/logs/glm_8081.log; do echo "== $f"; tail -n 8 $f 2>/dev/null | cut -c1-220; done
-cat /root/nox/state/FLASH_SPEED.json 2>/dev/null | head -c 1200
+# Owner diagnostic output is an allowlist, not a raw log or argv export.
+# File presence is useful; file names, paths, log text and command arguments are not.
+printf 'flash_log_present='; if [ -f /root/nox/logs/flash.log ]; then echo yes; else echo no; fi
+printf 'flash_speed_file_present='; if [ -f /root/nox/state/FLASH_SPEED.json ]; then echo yes; else echo no; fi
+ps -eo pid=,etimes=,comm= 2>/dev/null | awk '
+  NF == 3 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ &&
+  ($3 == "llama-server" || $3 == "flash.py") {
+    printf "process_pid=%s elapsed_seconds=%s executable=%s\n", $1, $2, $3
+  }'
+# Read only a bounded regular metrics file. Emit fixed keys and finite numeric
+# values, never arbitrary keys, strings, nested objects or parse error details.
+if command -v python3 >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1; then
+  timeout -k 1s 3s python3 - 2>/dev/null <<'PYFLASH' || echo 'flash_speed_metrics=unavailable'
+import json
+import math
+import os
+import stat
+try:
+    fd = os.open("/root/nox/state/FLASH_SPEED.json",
+                 os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, "rb") as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise ValueError("not a regular file")
+        raw = stream.read(16385)
+    if len(raw) > 16384:
+        raise ValueError("oversized metrics")
+    obj = json.loads(raw)
+    if not isinstance(obj, dict):
+        raise ValueError("not an object")
+    keys = ("tg", "pp", "ttft", "ttft_s", "tg_tps", "pp_tps",
+            "tokens_per_second", "prompt_tokens_per_second",
+            "generation_tokens_per_second", "p50_ms", "p95_ms")
+    values = []
+    for key in keys:
+        value = obj.get(key)
+        if type(value) in (int, float) and 0 <= value <= 1e9 and math.isfinite(value):
+            values.append((key, value))
+    if not values:
+        raise ValueError("no numeric metrics")
+    for key, value in values:
+        print("flash_speed_" + key + "=" + str(value))
+except (OSError, ValueError, OverflowError, RecursionError):
+    print("flash_speed_metrics=unavailable")
+PYFLASH
+else
+  echo 'flash_speed_metrics=unavailable'
+fi
 # One bounded NVML probe for legacy used-only and detailed telemetry.
 # A stalled GPU driver must not stall the owner readback; unknown is never admission.
 gpu_rows=''
@@ -58,10 +101,10 @@ awk '/^MemTotal:|^MemAvailable:/ {printf "%s%s_KiB=%s", (NR==1?"":" "), substr($
 for k in memory.current memory.max memory.events cpu.stat; do
   p="/sys/fs/cgroup/$k"
   if [ -r "$p" ]; then
-    printf 'cgroup_%s=' "$k"
+    printf 'observer_root_cgroup_%s=' "$k"
     if [ "$k" = memory.events ] || [ "$k" = cpu.stat ]; then tr '\n' ';' < "$p"; printf '\n'; else cat "$p"; fi
   else
-    printf 'cgroup_%s=unavailable\n' "$k"
+    printf 'observer_root_cgroup_%s=unavailable\n' "$k"
   fi
 done
 # Inspect the actual Flash listener, never the observer's root cgroup.
