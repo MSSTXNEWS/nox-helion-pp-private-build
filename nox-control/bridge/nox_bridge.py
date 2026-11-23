@@ -423,6 +423,48 @@ async def stream_chat(history):
         # Python accepts NaN/Infinity by default although JSON does not.
         raise ValueError("UPSTREAM_NONFINITE_JSON")
 
+    async def bounded_upstream_lines(response):
+        """Cap model SSE wire bytes before decoding; never replace broken UTF-8.
+
+        Real httpx streams are consumed as bounded bytes (unlike aiter_lines,
+        which may buffer an unbounded line). Source fixtures without a byte
+        iterator retain the same strict line/total checks.
+        """
+        max_line_bytes, max_wire_bytes = 1024 * 1024, 64 * 1024 * 1024
+        total = 0
+        byte_reader = getattr(response, "aiter_bytes", None)
+        if not callable(byte_reader):
+            async for line in response.aiter_lines():
+                size = len(line.encode("utf-8", "strict"))
+                total += size + 1
+                if size > max_line_bytes or total > max_wire_bytes:
+                    raise ValueError("UPSTREAM_SSE_WIRE_LIMIT")
+                yield line
+            return
+        pending = bytearray()
+        last_cr = False
+        async for chunk in byte_reader(chunk_size=4096):
+            if not isinstance(chunk, (bytes, bytearray)):
+                raise ValueError("UPSTREAM_SSE_NOT_BYTES")
+            total += len(chunk)
+            if total > max_wire_bytes:
+                raise ValueError("UPSTREAM_SSE_WIRE_LIMIT")
+            for byte in chunk:
+                if byte in (10, 13):
+                    if byte == 10 and last_cr:
+                        last_cr = False
+                        continue
+                    yield pending.decode("utf-8", "strict")
+                    pending.clear()
+                    last_cr = (byte == 13)
+                else:
+                    last_cr = False
+                    if len(pending) >= max_line_bytes:
+                        raise ValueError("UPSTREAM_SSE_LINE_TOO_LONG")
+                    pending.append(byte)
+        if pending:
+            yield pending.decode("utf-8", "strict")
+
     user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
     yield _sse({"type": "status", "text": "слушаю тебя…"})
     mem_t = asyncio.create_task(asyncio.to_thread(memory_block, user))
@@ -481,7 +523,7 @@ async def stream_chat(history):
         async with hc().stream("POST", MODEL, json=body) as r:
             if r.status_code != 200:
                 raise ValueError("UPSTREAM_HTTP_STATUS")
-            async for line in r.aiter_lines():
+            async for line in bounded_upstream_lines(r):
                 # [DONE] is a provisional sentinel until a clean HTTP EOF.
                 # Do not attest S03 from a stream with trailing bytes, reset
                 # or a late provider error after a model-level stop.
