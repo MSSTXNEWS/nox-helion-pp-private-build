@@ -2891,6 +2891,84 @@ def main():
           return true;
         }'''))
 
+        # R41: an ACK reservation that fails before network ACK never owns the
+        # successful terminal GET response. Release it once and retry GET-only.
+        check('ACK reserve HOLD closes abandoned readback body; GET-only retry', page.evaluate('''async () => {
+          const kinds=['reject','null','array','unknown','getter','stop','timeout'];
+          for(const kind of kinds){
+            const s={conversation_id:'r41',exchange_id:kind};
+            let reads=0,cancels=0,posts=0,acks=0,sends=0,upserts=0;
+            let entered;
+            const started=new Promise(resolve=>entered=resolve);
+            const poisoned={};
+            Object.defineProperty(poisoned,'status',{get(){throw Error('POISON')}});
+            const transport={...opts.transport,
+              post(){posts++;throw Error('NO_MODEL_POST')},
+              async readback(){
+                reads++;
+                return {...s,body:{cancel(){
+                  cancels++;
+                  return Promise.resolve();
+                }}};
+              },
+              ack(){acks++;throw Error('NO_NETWORK_ACK')},
+              readCanonicalAck(){throw Error('NO_CANONICAL_GET')}
+            };
+            const gate={
+              reserve(){
+                if(kind==='reject')return Promise.reject(Error('reserve failed'));
+                if(kind==='null')return null;
+                if(kind==='array')return [];
+                if(kind==='unknown')return {status:'REJECTED'};
+                if(kind==='getter')return poisoned;
+                if(kind==='timeout')return new Promise(()=>{});
+                if(kind==='stop'&&reads===1){
+                  entered();
+                  return new Promise(()=>{});
+                }
+                return {status:'REJECTED'};
+              },
+              beginSend(){sends++;throw Error('NO_BEGIN_SEND')},
+              confirm(){throw Error('NO_CONFIRM')},
+              requireCanonicalAck(){throw Error('NO_CANONICAL_GATE')}
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge:{async acceptTerminal(){
+                return {safe_to_ack:true,model_post:false,
+                  conversation_id:s.conversation_id,exchange_id:s.exchange_id,
+                  projection_event_id:'ev-'+kind,ack_cursor:'cursor-'+kind};
+              }},ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){
+                upserts++;return true;
+              }},
+              reconnectReadTimeoutMs:kind==='timeout'?40:500
+            });
+            const firstPending=client.reconnect(s);
+            if(kind==='stop'){
+              await started;
+              if(!client.stop(s))return false;
+            }
+            const first=await Promise.race([
+              firstPending.then(v=>v,e=>e.code),
+              new Promise(resolve=>setTimeout(()=>resolve('HUNG'),700))
+            ]);
+            const expected=kind==='stop'?'HOLD_STREAM_RECONNECT_STOPPED':
+              kind==='timeout'?'HOLD_STREAM_ACK_RESERVE_TIMEOUT':
+              'HOLD_STREAM_ACK_GATE';
+            if(first!==expected||reads!==1||cancels!==1||posts!==0||
+               acks!==0||sends!==0||upserts!==1)return false;
+            const second=await client.reconnect(s).then(v=>v,e=>e.code);
+            const expectedSecond=kind==='timeout'?'HOLD_STREAM_ACK_RESERVE_TIMEOUT':
+              'HOLD_STREAM_ACK_GATE';
+            if(second!==expectedSecond||reads!==2||cancels!==2||
+               posts!==0||acks!==0||sends!==0||upserts!==2)return false;
+            const noRepost=await client.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(!noRepost||posts!==0)return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
