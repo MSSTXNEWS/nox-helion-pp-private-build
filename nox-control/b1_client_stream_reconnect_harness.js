@@ -419,12 +419,24 @@
     // recovery. NEVER start another model POST for an uncertain exchange.
     async function reconnectOnce(s,signal){
       let packet,witness;
+      // Once the GET has returned, the witness bridge can reject, hang,
+      // or lose STOP. The pending packet may still own an OPEN readback
+      // response; a read timeout no longer aborts that already-finished GET.
+      // Release ONLY rejected/abandoned packets; a verified witness retains
+      // ownership. Never block recovery on body.cancel().
+      let discardedReadback=false;
+      const discardReadback=()=>{
+        if(discardedReadback||!packet)return;
+        discardedReadback=true;
+        cancelAbandonedGet(packet);
+      };
       try{
         packet=await boundedGet(getSignal=>transport.readback(s,getSignal),
           'HOLD_STREAM_READBACK_TIMEOUT',reconnectReadTimeoutMs,signal); // GET only; never model POST
         witness=await boundedRead(()=>bridge.acceptTerminal(packet,s,host),
           'HOLD_STREAM_WITNESS_TIMEOUT',reconnectReadTimeoutMs,signal); // verification only; no side effects
       }catch(err){
+        discardReadback();
         if(err&&typeof err.code==='string') throw err;
         hold('HOLD_STREAM_READBACK');
       }
@@ -440,8 +452,10 @@
          !ID.test(witness.projection_event_id)||
          typeof witness.ack_cursor!=='string'||
          witness.ack_cursor.length<1||witness.ack_cursor.length>2048||
-         /[\x00-\x1f\x7f]/.test(witness.ack_cursor))
+         /[\x00-\x1f\x7f]/.test(witness.ack_cursor)){
+        discardReadback();
         hold('HOLD_STREAM_UNSAFE_WITNESS');
+      }
       witness=Object.freeze({...witness});
       // ACK must follow a *successful* idempotent UI projection. A partially
       // written UI may throw; retry must use the same event_id without POST.
