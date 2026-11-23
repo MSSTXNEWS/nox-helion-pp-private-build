@@ -133,6 +133,23 @@ class NativeRefillSourceGateTests(unittest.TestCase):
                          codes(s, authenticated_owner_verifier))
         self.assertEqual(observed, [True, True])
 
+    def test_attested_refill_holds_when_onehost_or_s03_is_unhealthy(self):
+        # A correctly attested queue and RAM are still insufficient when
+        # real chat or its durable memory has not been verified healthy.
+        for section, field in (("onehost", "healthy"),
+                               ("s03", "readback_verified")):
+            for value in (False, None, "true"):
+                with self.subTest(section=section, value=value):
+                    s = snapshot()
+                    s["native_queue"].update(
+                        owner_lease_cas_verified=True,
+                        immutable_task_source_verified=True,
+                        owner_evidence_age_sec=0)
+                    s[section][field] = value
+                    found = codes(s, lambda exact: exact is s)
+                    self.assertIn("NATIVE_REFILL_OWNER_HOLD", found)
+                    self.assertNotIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED", found)
+
     def test_unverified_or_failed_owner_callback_holds(self):
         s = snapshot()
         s["native_queue"].update(owner_lease_cas_verified=True,

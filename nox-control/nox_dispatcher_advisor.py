@@ -112,6 +112,10 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                 snapshot, owner_snapshot_verifier)
             reviewable = (
                 owner_attested
+                # Refill is never safe to *review* while the serving path
+                # or canonical S03 readback is degraded or unknown.
+                and onehost.get("healthy") is True
+                and s03.get("readback_verified") is True
                 and native.get("maintenance_busy") is False
                 and native.get("active_claims") is False
                 and type(headroom) is int and headroom >= 2*1024**3
