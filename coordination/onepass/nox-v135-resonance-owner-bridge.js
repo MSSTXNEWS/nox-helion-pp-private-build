@@ -150,6 +150,7 @@ if(doneSeen){
 if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
 throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
 }
+if(e.type!=='done'&&'dialog_id'in e&&e.dialog_id!==id)throw Error('HOLD_NATIVE_FRAME_DIALOG_SCOPE');
 if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
 if(e.type==='delta'){
 if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');

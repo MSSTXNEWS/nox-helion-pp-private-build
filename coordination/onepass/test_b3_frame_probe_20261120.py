@@ -2711,7 +2711,8 @@ class TestProbe(unittest.TestCase):
             async with async_playwright() as pw:
                 browser=await pw.chromium.launch(headless=True,executable_path='/usr/bin/chromium')
                 try:
-                    for mode in ('drift','invalid','match','absent','native_drift','native_match','native_null'):
+                    for mode in ('drift','invalid','match','absent','native_drift','native_match','native_null',
+                                 'scope_preparing','scope_start','scope_delta','scope_match','scope_null'):
                         page=await browser.new_page()
                         async def fixture(route):
                             await route.fulfill(status=200,content_type='text/html',
@@ -2727,13 +2728,16 @@ class TestProbe(unittest.TestCase):
                               const done={type:'done',saved:true,s03_integrated:true,
                                 dialog_id:id,exchange_id:ex};
                               if(mode.startsWith('native_'))done.native_model_label=mode==='native_drift'?'Qwen3-8B':mode==='native_null'?null:'GLM-5.3-Flash';
-                               else if(mode!=='absent')done.model_label=
+                               else if(mode!=='absent'&&!mode.startsWith('scope_'))done.model_label=
                                 mode==='drift'?'Qwen3-8B':mode==='invalid'?'???':'GLM-5.3-Flash';
-                              return new Response([
+                              const frames=[
                                 {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
                                 {type:'start',model:'GLM-5.3-Flash'},
-                                {type:'delta',text:'GLM answer'},done
-                              ].map(JSON.stringify).join('\\n')+'\\n');
+                                {type:'delta',text:'GLM answer'},done];
+                              if(mode==='scope_match')frames.slice(0,3).forEach(e=>e.dialog_id=id);
+                              else if(mode==='scope_null')frames[2].dialog_id=null;
+                              else if(mode.startsWith('scope_'))frames.find(e=>e.type===mode.slice(6)).dialog_id='b'.repeat(32);
+                              return new Response(frames.map(JSON.stringify).join('\\n')+'\\n');
                             }
                             if(String(path).startsWith('/api/ui/memory/dialogs/history?')){
                               window.__hist++;
@@ -2756,11 +2760,17 @@ class TestProbe(unittest.TestCase):
                           const ev=(await r.text()).split('\\n\\n').filter(Boolean)
                             .map(s=>JSON.parse(s.slice(6)));
                           return {posts:window.__posts,hist:window.__hist,
-                            done:ev.filter(e=>e.type==='done'),
+                            done:ev.filter(e=>e.type==='done'),tokens:ev.filter(e=>e.type==='token'),
                             errors:ev.filter(e=>e.type==='error')};
                         }""",mode)
                         self.assertEqual(got['posts'],1,mode)
-                        if mode in ('drift','invalid','native_drift','native_null'):
+                        if mode in ('scope_preparing','scope_start','scope_delta','scope_null'):
+                            self.assertEqual(got['tokens'],[],mode)
+                            self.assertEqual(got['done'],[],mode)
+                            self.assertEqual(got['hist'],0,mode)
+                            self.assertEqual([e['error'] for e in got['errors']],
+                                             ['HOLD_NATIVE_FRAME_DIALOG_SCOPE'],mode)
+                        elif mode in ('drift','invalid','native_drift','native_null'):
                             self.assertEqual(len(got['done']),0,mode)
                             self.assertEqual(got['hist'],0,mode)
                             self.assertEqual([e['error'] for e in got['errors']],
