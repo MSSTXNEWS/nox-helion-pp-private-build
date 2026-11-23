@@ -20,6 +20,11 @@ URL = "http://127.0.0.1:8091/api/chat"
 PROMPT = "Объясни в четырёх предложениях, как кэш промпта улучшает скорость ответа NOX."
 
 
+class UnsafeEphemeralWriteReceipt(ValueError):
+    """An ephemeral benchmark may have written S03; never send another probe."""
+
+
+
 def _percentile(values, percentile):
     """Nearest-rank empirical quantile: no interpolation/fabricated observations."""
     ordered = sorted(values)
@@ -83,10 +88,19 @@ def _sample(index, clock=time.perf_counter, opener=urllib.request.urlopen):
     receipt = terminal.get("completion_receipt") or {}
     memory = terminal.get("memory_history") or {}
     write = terminal.get("memory_write_receipt") or {}
+    # A benchmark is observational, not training or chat history. If the
+    # supposedly ephemeral request may have committed S03, stop the entire
+    # sampling batch immediately instead of issuing another POST.
+    if (write.get("s03_write_returned") is True or
+            write.get("status") in ("SAVED", "WRITE_RETURNED_UNVERIFIED") or
+            memory.get("status") == "SAVED"):
+        raise UnsafeEphemeralWriteReceipt("BENCH_EPHEMERAL_WRITE_RISK")
     if (terminal.get("done_reason") != "stop" or
             receipt.get("status") != "GENERATED" or receipt.get("upstream_done") is not True or
             memory.get("status") != "SKIPPED" or memory.get("reason") != "ephemeral" or
-            write.get("s03_write_returned") is True or write.get("s03_readback_verified") is True):
+            write.get("status") != "SKIPPED" or
+            write.get("s03_write_returned") is not False or
+            write.get("s03_readback_verified") is not False):
         raise ValueError("TERMINAL_RECEIPT_NOT_EPHEMERAL_GENERATED")
     full = "".join(chunks)
     if hashlib.sha256(full.encode("utf-8", "strict")).hexdigest() != terminal.get("digest"):
@@ -118,16 +132,24 @@ def main(argv=None):
         ap.error("owner pins must be valid; samples 20..200 for comparable p50/p95")
     observations = []
     errors = []
+    unsafe_write = False
     for index in range(a.samples):
         try:
             observations.append(_sample(index))
+        except UnsafeEphemeralWriteReceipt:
+            errors.append({"sample": index + 1, "error": "UnsafeEphemeralWriteReceipt",
+                           "reason": "BENCH_EPHEMERAL_WRITE_RISK"})
+            unsafe_write = True
+            break
         except (HTTPError, URLError, OSError, ValueError, UnicodeError, TypeError) as exc:
             # No retry: an ambiguous POST may have generated a response.
             errors.append({"sample": index + 1, "error": type(exc).__name__,
                            "reason": str(exc)[:80] if isinstance(exc, ValueError) else "TRANSPORT_UNAVAILABLE"})
     models = {x["model_reported"] for x in observations}
     ok = len(observations) == a.samples and len(models) == 1
-    result = {"status": "MEASURED_SOURCE_ONLY_PINS_UNVERIFIED" if ok else "HOLD_INCOMPARABLE",
+    result = {"status": ("HOLD_EPHEMERAL_WRITE_RISK" if unsafe_write else
+                         "MEASURED_SOURCE_ONLY_PINS_UNVERIFIED" if ok else
+                         "HOLD_INCOMPARABLE"),
               "original_task_id": "2A05", "model_sha_claim": a.model_sha,
               "route_sha_claim": a.route_sha, "s03_revision_claim": a.s03_revision,
               "model_reported": next(iter(models)) if len(models) == 1 else None,
