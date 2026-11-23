@@ -473,10 +473,15 @@ def install(app, B):
 
     @app.get("/api/nox/history")
     async def a_hist():
+        # Auxiliary turns.jsonl is not an independently verified canonical
+        # S03 readback. Preserve the legacy message shape, mark its scope.
         msgs = []
         for t in _jl(ST + "/turns.jsonl", 40):
             msgs += [{"role": "user", "content": t.get("u", "")}, {"role": "assistant", "content": t.get("a", "")}]
-        return {"status": "OK", "messages": msgs, "next": None}
+        return JSONResponse({"status": "OK", "messages": msgs, "next": None,
+                             "source_scope": "LOCAL_TURNS_MIRROR",
+                             "s03_readback_verified": False},
+                            headers={"Cache-Control": "private, no-store, max-age=0"})
 
     @app.get("/api/s03/record")
     async def a_record(id: str = ""):
@@ -551,16 +556,25 @@ def install(app, B):
     @app.get("/api/nox/memory/facts")
     async def a_facts(limit: int = 20):
         limit = max(1, min(limit, 100))
+        # FACTS and turns.jsonl are auxiliary mirrors; neither proves an
+        # independent canonical S03 readback or exact-source verification.
         rows = [{"kind": "owner_fact", "t": f.get("t"), "key": f.get("key"), "content": f.get("content"), "provenance": f.get("source") or "OWNER",
+                 "source_scope": "LOCAL_FACTS_MIRROR", "s03_readback_verified": False,
                  "confidence": None} for f in _jl(FACTS, limit)]
-        rows += [{"kind": "dialog_turn", "t": t.get("t"), "key": None, "content": (t.get("u", "")[:160] + " → " + t.get("a", "")[:160]), "provenance": "S03:dialog",
+        rows += [{"kind": "dialog_turn", "t": t.get("t"), "key": None, "content": (t.get("u", "")[:160] + " → " + t.get("a", "")[:160]), "provenance": "LOCAL_TURNS_MIRROR",
+                  "source_scope": "LOCAL_TURNS_MIRROR", "s03_readback_verified": False,
                   "confidence": None} for t in _jl(ST + "/turns.jsonl", limit)]
         if W:
             for sl in W.tail(W.F["sleep"], limit):
                 rows += [{"kind": "sleep_fact", "t": sl.get("t"), "key": None, "content": f, "provenance": "SLEEP", "confidence": None,
+                          "source_scope": "LOCAL_SLEEP_MIRROR", "s03_readback_verified": False,
                           "lora_after": sl.get("lora_after")} for f in sl.get("facts", [])]
         rows.sort(key=lambda r: r.get("t") or 0, reverse=True)
-        return {"status": "OK", "facts": rows[:limit], "note": "confidence не измеряется (null = Н/Д)"}
+        return JSONResponse({"status": "OK", "facts": rows[:limit],
+                             "source_scope": "AUXILIARY_LOCAL_MIRRORS",
+                             "s03_readback_verified": False,
+                             "note": "confidence не измеряется (null = Н/Д)"},
+                            headers={"Cache-Control": "private, no-store, max-age=0"})
 
     @app.get("/api/nox/unknown")
     async def a_unknown(limit: int = 40):
