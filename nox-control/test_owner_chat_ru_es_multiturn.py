@@ -3782,5 +3782,43 @@ async function check(chunks, status=200) {
 
 
 
+    def test_ru_es_malformed_ancillary_cookie_security_metadata_must_hold(self):
+        """Signed owner must not mask invalid security attributes on UI cookies.
+
+        Pure source-side owner pin check, not a live session or S03 acceptance.
+        """
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='same-signed-owner', httpOnly=True,
+                      secure=True, sameSite='Lax')
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), pin)
+        self.assertTrue(owner_session_continuity_valid(200, [ui, signed], pin))
+        bad_attributes = [
+            dict(ui, secure='false'),
+            dict(ui, secure=None),
+            dict(ui, secure=1),
+            dict(ui, sameSite='Invalid'),
+            dict(ui, sameSite=[]),
+            dict(ui, partitionKey=''),
+            dict(ui, partitionKey=42),
+            dict(ui, partitionKey='https://owner.example\\u200b'),
+        ]
+        for bad in bad_attributes:
+            with self.subTest(metadata=repr(bad)):
+                for cookies in ([signed, bad], [bad, signed], [signed, ui, bad]):
+                    self.assertIsNone(owner_session_cookie_pin(cookies))
+                    self.assertFalse(owner_session_continuity_valid(
+                        200, cookies, pin))
+        for good in (dict(ui, secure=False),
+                     dict(ui, sameSite='Lax'),
+                     dict(ui, partitionKey='https://owner.example')):
+            self.assertEqual(owner_session_cookie_pin([signed, good]), pin)
+            self.assertTrue(owner_session_continuity_valid(
+                200, [good, signed], pin))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -437,6 +437,21 @@ def owner_session_cookie_pin(cookies):
     if any(isinstance(row, dict) and 'httpOnly' in row
            and type(row['httpOnly']) is not bool for row in cookies):
         return None
+    # Security metadata is part of the WHOLE browser snapshot, not only
+    # whichever signed owner cookie gets selected for the identity hash.
+    # Malformed unsigned UI attributes must not disappear beside a valid
+    # HttpOnly owner cookie and falsely certify RU/ES continuity.
+    for row in cookies:
+        if 'secure' in row and type(row['secure']) is not bool:
+            return None
+        same_site = row.get('sameSite')
+        if same_site is not None and same_site not in ('Strict', 'Lax', 'None'):
+            return None
+        if 'partitionKey' in row:
+            part = row['partitionKey']
+            if (not isinstance(part, str) or not part
+                    or part != part.strip() or not part.isprintable()):
+                return None
     signed = [row for row in cookies
               if isinstance(row, dict) and row.get('httpOnly') is True]
     selected = signed if signed else cookies
