@@ -6,6 +6,7 @@ import io
 import json
 from pathlib import Path
 import unittest
+from urllib.error import URLError
 from unittest import mock
 
 spec = importlib.util.spec_from_file_location("bench_2a05", Path(__file__).with_name("bench.py"))
@@ -69,6 +70,25 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
     def test_unknown_receipt_is_not_success(self):
         with self.assertRaisesRegex(bench.UnsafeEphemeralWriteReceipt, "BENCH_EPHEMERAL_WRITE_RISK"):
             run_sample({"status": "SKIPPED", "s03_readback_verified": False})
+
+    def test_batch_stops_on_ambiguous_post_even_without_a_receipt(self):
+        # A transport error or an incomplete NDJSON frame may arrive AFTER
+        # S03 was written. Neither permits issuing another benchmark POST.
+        for failure in (URLError("connection reset"), ValueError("TRUNCATED_FRAME")):
+            with self.subTest(failure=type(failure).__name__):
+                output = io.StringIO()
+                with mock.patch.object(bench, "_sample", side_effect=failure) as sampler:
+                    with contextlib.redirect_stdout(output):
+                        code = bench.main(["--model-sha", "a" * 64,
+                                           "--route-sha", "b" * 40,
+                                           "--s03-revision", "S03-1", "--samples", "20"])
+                self.assertEqual(code, 2)
+                self.assertEqual(sampler.call_count, 1)
+                result = json.loads(output.getvalue())
+                self.assertEqual(result["status"], "HOLD_PROBE_OUTCOME_UNKNOWN")
+                self.assertEqual(result["completed"], 0)
+                self.assertEqual(result["errors"][0]["sample"], 1)
+                self.assertFalse(result["native_acceptance"])
 
     def test_batch_stops_on_first_possible_write(self):
         output = io.StringIO()
