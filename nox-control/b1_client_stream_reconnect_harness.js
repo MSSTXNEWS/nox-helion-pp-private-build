@@ -714,10 +714,17 @@
           // commit with true or resolve void. Reject all other results
           // before the network ACK escapes, including false and malformed.
           if(sendReceipt!=='SENDING' &&
-             sendReceipt!==true && sendReceipt!==undefined)
+             sendReceipt!==true && sendReceipt!==undefined){
+            // beginSend rejected the durable transition: nobody owns the
+            // terminal readback GET. Release it before any network ACK.
+            discardReadback();
             hold('HOLD_STREAM_ACK_GATE');
+          }
         }
         catch(err){
+          // Rejection, STOP or timeout can abandon this same GET body.
+          // The disposal fence makes the explicit-HOLD path idempotent.
+          discardReadback();
           if(err&&typeof err.code==='string') throw err;
           hold('HOLD_STREAM_ACK_GATE');
         }
