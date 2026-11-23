@@ -34,6 +34,51 @@ def codes(data, verifier=None):
 
 
 class NativeRefillSourceGateTests(unittest.TestCase):
+    def test_missing_native_queue_is_explicit_hold(self):
+        # Before this guard, a healthy-looking snapshot without any native
+        # owner evidence could return NO_UNVERIFIED_TUNING instead of HOLD.
+        for value in (None, False, [], "RUNNING"):
+            with self.subTest(value=value):
+                s = snapshot()
+                s["native_queue"] = value
+                found = codes(s)
+                self.assertIn("NATIVE_QUEUE_UNVERIFIED", found)
+                self.assertNotIn("NO_UNVERIFIED_TUNING", found)
+                self.assertNotIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED", found)
+
+    def test_partial_dict_or_unattested_native_queue_is_hold(self):
+        # Reproduces 6A02 fail-open reported in review #6015396417.
+        s = snapshot()
+        partials = ({}, {"resource_headroom_bytes": 3*1024**3},
+                    {"resource_headroom_bytes": 3*1024**3,
+                     "workers": [{"state": "RUNNING"}]},
+                    {"resource_headroom_bytes": 3*1024**3,
+                     "workers": [], "active_claims": False})
+        for partial in partials:
+            with self.subTest(partial=partial):
+                s["native_queue"] = partial
+                found = codes(s, lambda exact: exact is s)
+                # A missing cgroup byte count already emits its own HOLD.
+                # A partial dict with valid cgroup bytes must emit the new
+                # native-queue HOLD instead of an apparently clean report.
+                if "resource_headroom_bytes" in partial:
+                    self.assertIn("NATIVE_QUEUE_UNVERIFIED", found)
+                else:
+                    self.assertIn("NATIVE_CGROUP_MEMORY_UNVERIFIED", found)
+                self.assertNotIn("NO_UNVERIFIED_TUNING", found)
+                self.assertNotIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED", found)
+        # Even a shape-complete, idle source cannot self-attest through JSON.
+        s["native_queue"] = snapshot()["native_queue"]
+        s["native_queue"].update(
+            admission_state="NATIVE_QUEUE_RUNNING",
+            owner_lease_cas_verified=True,
+            immutable_task_source_verified=True,
+            owner_evidence_age_sec=0)
+        self.assertIn("NATIVE_QUEUE_UNVERIFIED", codes(s))
+        self.assertNotIn("NO_UNVERIFIED_TUNING", codes(s))
+        self.assertIn("NO_UNVERIFIED_TUNING",
+                      codes(s, lambda exact: exact is s))
+
     def test_idle_without_lease_and_source_is_hold(self):
         result = mod.assess(snapshot())
         self.assertIn("NATIVE_REFILL_OWNER_HOLD", [r["code"] for r in result])

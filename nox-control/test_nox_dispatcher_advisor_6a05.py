@@ -26,8 +26,9 @@ def codes(data):
 
 
 class ReliableOwnerTelemetryTests(unittest.TestCase):
-    def test_valid_evidence_remains_observation_only(self):
-        self.assertEqual(codes(snapshot()), ["NO_UNVERIFIED_TUNING"])
+    def test_valid_services_without_native_owner_evidence_hold(self):
+        # Service and disk readings alone cannot attest native lease/CAS.
+        self.assertEqual(codes(snapshot()), ["NATIVE_QUEUE_UNVERIFIED"])
 
     def test_invalid_disk_free_space_never_passes_as_capacity(self):
         for invalid in (True, False, "25", float("nan"), float("inf"), -1, 10**400, [], {}):
