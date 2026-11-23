@@ -136,6 +136,31 @@ class DriveFirstTests(unittest.TestCase):
         with self.assertRaisesRegex(m.Hold,"MANIFEST_APPROVAL"):
             m.load_manifest(file,sha)
 
+    def test_manifest_replacement_after_owner_precheck_fails_closed(self):
+        # Even if a valid inode passed initial permission checks, do not
+        # trust its pathname again after another actor swaps the directory entry.
+        original_private_file = m.private_file
+        for kind in ("same_bytes_symlink", "oversized_regular"):
+            file, sha = self.manifest()
+            def replace_after_check(path, **kwargs):
+                p = original_private_file(path, **kwargs)
+                if kind == "same_bytes_symlink":
+                    target = self.root / "replacement.json"
+                    target.write_bytes(p.read_bytes())
+                    target.chmod(0o600)
+                    p.unlink()
+                    p.symlink_to(target)
+                else:
+                    p.unlink()
+                    p.write_bytes(b"X" * (m.MAX_MANIFEST + 1))
+                    p.chmod(0o600)
+                return p
+            with self.subTest(kind=kind), patch.object(
+                    m, "private_file", side_effect=replace_after_check):
+                with self.assertRaisesRegex(m.Hold, "MANIFEST_FILE"):
+                    m.load_manifest(file, sha)
+            file.unlink()
+
     def test_manifest_rejects_shadowed_approval_and_nonfinite_json(self):
         # Even an exactly SHA-pinned file cannot contain ambiguous approvals.
         valid=json.dumps(self.asset, separators=(",", ":"))
