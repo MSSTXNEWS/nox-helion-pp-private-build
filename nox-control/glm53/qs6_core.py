@@ -1,5 +1,6 @@
 """NOX Быстрый запуск v6, блок «Мозг и чат»: роутер тиров, режимы, ETA, STOP, апстрим со стримом, сшивка двух тактов. Только stdlib."""
 import json, os, re, socket, threading, time, uuid, hashlib, http.client
+import math
 from collections import deque
 from urllib.parse import urlparse
 import glm_profile as P
@@ -132,6 +133,22 @@ def cache_from(obj):
     prompt_n = t.get("prompt_n")
     if cached is None and prompt_n is None: return None
     return (cached or 0), (cached or 0) + (prompt_n or 0)
+
+def engine_metrics(timings):
+    """Use llama-server token counts and phase times; SSE frames are not tokens."""
+    if not isinstance(timings, dict):
+        return {}
+    measures = {}
+    for phase, field in (("prefill", "prompt"), ("decode", "predicted")):
+        count = timings.get(field + "_n")
+        duration = timings.get(field + "_ms")
+        if (type(count) is int and count >= 0 and type(duration) in (int, float)
+                and math.isfinite(duration) and duration > 0):
+            measures[phase] = {
+                "tokens": count, "ms": duration,
+                "tokens_per_second": round(count * 1000 / duration, 3),
+            }
+    return measures
 
 # ---------- D04-01 / D15 STOP ----------
 class Req:
@@ -297,38 +314,63 @@ def build_fast(body, plan, cfg, stream, first_part):
 # ---------- поток от апстрима в очередь ----------
 def pump(cfg, meter, cache, tier, base, body, req, q, max_sentences=None):
     """Читает SSE апстрима, кладёт ("delta", текст) и в конце ("end", info) или ("error", (сообщение, был_ли_текст))."""
-    text = ""; ntok = 0; t_first = None; t_last = None; timings = None; usage = None; finish = None; conn = None
-    tf = ThinkFilter(); start = time.time()
+    text = ""; first_generated = None; first_visible = None; timings = None; usage = None
+    finish = None; framed_end = False; saw_tool_call = False; conn = None
+    tf = ThinkFilter(); start = time.monotonic()
     try:
         conn, resp = open_upstream(base, "/v1/chat/completions", body, req, cfg.connect_timeout, cfg.fast_timeout if tier == "fast" else cfg.deep_timeout)
         for ev in iter_sse(resp):
             if req.cancelled.is_set(): break
-            if ev == "[DONE]": break
+            if ev == "[DONE]":
+                framed_end = True
+                break
             try: o = json.loads(ev)
             except Exception: continue
+            if o.get("error"):
+                error = o["error"]
+                detail = error.get("message") if isinstance(error, dict) else str(error)
+                raise UpstreamError(detail or "upstream stream error")
             if o.get("timings"): timings = o["timings"]
             if o.get("usage"): usage = o["usage"]
             ch = (o.get("choices") or [None])[0] or {}
-            if ch.get("finish_reason"): finish = ch["finish_reason"]
+            if ch.get("finish_reason"):
+                finish = ch["finish_reason"]
+                if finish == "error":
+                    raise UpstreamError("upstream stream finished with an error")
             d = ch.get("delta") or {}
             piece = d.get("content") or ""; reas = d.get("reasoning_content") or ""
-            if piece or reas:
-                ntok += 1; t_last = time.time(); t_first = t_first or t_last
+            saw_tool_call = saw_tool_call or bool(d.get("tool_calls") or d.get("function_call"))
+            if first_generated is None and (piece or reas):
+                first_generated = time.monotonic() - start
             vis = tf.feed(piece) if piece else ""
             if vis:
+                if first_visible is None and vis.strip():
+                    first_visible = time.monotonic() - start
                 text += vis; q.put((tier, "delta", vis))
                 if max_sentences and len(re.findall(r"[.!?…]+(?=\s|$)", text)) >= max_sentences:
                     finish = "nox_sentence_limit"; break
-        tail = tf.flush()
-        if tail: text += tail; q.put((tier, "delta", tail))
         if req.cancelled.is_set(): q.put((tier, "end", {"cancelled": True, "text": text})); return
-        n, secs = ntok, (t_last - t_first) if t_first and t_last else 0
-        if timings and timings.get("predicted_n") and timings.get("predicted_ms"): n, secs = timings["predicted_n"], timings["predicted_ms"] / 1000.0
-        meter.record(tier, n, secs)
+        if finish != "nox_sentence_limit" and (not framed_end or not finish):
+            raise UpstreamError("upstream stream ended without a complete terminal frame")
+        tail = tf.flush()
+        if tail:
+            if first_visible is None and tail.strip():
+                first_visible = time.monotonic() - start
+            text += tail; q.put((tier, "delta", tail))
+        if not text.strip() and not saw_tool_call:
+            raise UpstreamError("upstream finished without visible answer or tool calls")
+        phases = engine_metrics(timings)
+        decode = phases.get("decode")
+        n = decode["tokens"] if decode else (usage or {}).get("completion_tokens")
+        if decode and finish != "nox_sentence_limit":
+            meter.record(tier, decode["tokens"], decode["ms"] / 1000)
         cs = cache_from({"timings": timings}) if timings else None
         if cs and tier == "deep": cache.record(*cs)
         if finish == "nox_sentence_limit" and conn is not None: Req.close(conn)     # лишнее не генерируем
-        q.put((tier, "end", {"text": text, "tokens": n, "ttft_s": round(t_first - start, 2) if t_first else None, "finish": finish,
+        q.put((tier, "end", {"text": text, "tokens": n,
+                             "ttft_s": round(first_visible, 3) if first_visible is not None else None,
+                             "first_generated_s": round(first_generated, 3) if first_generated is not None else None,
+                             "timings": phases, "finish": finish,
                              "cache": {"tokens_cached": cs[0], "prompt_tokens": cs[1]} if cs else None}))
     except Exception as e:
         if req.cancelled.is_set(): q.put((tier, "end", {"cancelled": True, "text": text}))

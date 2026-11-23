@@ -172,8 +172,14 @@ def make_handler(st):
                     b, effort = C.build_deep(body, plan, cfg, False); info["effort"] = effort
                     resp = call("deep", b)
                 dt = time.time() - t0
-                u = resp.get("usage") or {}; n = u.get("completion_tokens") or 0
-                st.meter.record(tier, n, dt)
+                if resp.get("error") or not resp.get("choices"):
+                    raise C.UpstreamError("upstream returned no completion")
+                phases = C.engine_metrics(resp.get("timings"))
+                if phases:
+                    info["timings"] = phases
+                decode = phases.get("decode")
+                if decode:
+                    st.meter.record(tier, decode["tokens"], decode["ms"] / 1000)
                 cs = C.cache_from(resp)
                 if cs and tier == "deep": st.cache.record(*cs); info["cache"] = {"tokens_cached": cs[0], "prompt_tokens": cs[1]}
                 resp = P.postprocess(resp, user)
@@ -240,6 +246,7 @@ def make_handler(st):
                         if kind == "delta": fast_text += val; emit("fast", val)
                         elif kind == "end":
                             fast_done = True; fast_info = val; stages["fast"] = {"tokens": val.get("tokens"), "ttft_s": val.get("ttft_s"), "status": "ok"}
+                            if val.get("timings"): stages["fast"]["timings"] = val["timings"]
                             if val.get("cancelled"): break
                             become_fast_done()
                         else:
@@ -257,6 +264,9 @@ def make_handler(st):
                             if val.get("cancelled"): break
                             if fast_done and stitch: emit_deep(stitch.finish())
                             stages["deep"] = {"tokens": val.get("tokens"), "ttft_s": val.get("ttft_s"), "status": "ok", "cache": val.get("cache")}
+                            if val.get("timings"): stages["deep"]["timings"] = val["timings"]
+                            if val.get("first_generated_s") is not None:
+                                stages["deep"]["first_generated_s"] = val["first_generated_s"]
                             if val.get("cache"): info["cache"] = val["cache"]
                         else:
                             deep_done = True; deep_err = val[0]; stages["deep"] = {"status": "error", "reason": val[0]}
