@@ -82,7 +82,11 @@ def plan_two_stage_retrieval(*, candidates, owner_persona_id, s03_revision,
     # cheap stage cannot confidently separate the best two results.
     ambiguous = (len(top) > 1 and
                  top[0]["first_pass_score"] - top[1]["first_pass_score"] <= .08)
-    rerank_ids = [x["id"] for x in top[:rerank_limit]] if ambiguous else []
+    # Only rerank the ambiguous top-score cluster. A distant FTS/vector
+    # hit must not consume scarce GPU time merely because slots are available.
+    rerank_ids = ([x["id"] for x in top[:rerank_limit]
+                   if top[0]["first_pass_score"] - x["first_pass_score"] <= .08]
+                  if ambiguous else [])
     return {"schema": "NOX_RETRIEVAL_SHORTLIST_SOURCE_V1",
             "first_pass": top, "optional_multilingual_rerank_ids": rerank_ids,
             "requires_owner_gpu_resource_and_lease_gate": bool(rerank_ids),
@@ -234,7 +238,9 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
         if rerank:
             _guard(len(rerank) >= 2 and len(rows) >= 2 and
                    rerank == [row["id"] for row in rows[:len(rerank)]] and
-                   rows[0]["first_pass_score"] - rows[1]["first_pass_score"] <= .08,
+                   rows[0]["first_pass_score"] - rows[1]["first_pass_score"] <= .08 and
+                   all(rows[0]["first_pass_score"] - row["first_pass_score"] <= .08
+                       for row in rows[:len(rerank)]),
                    "RETRIEVAL_RERANK_CONTRACT")
     def count(messages):
         n=token_counter(messages)

@@ -34,6 +34,12 @@ class HotContextTests(unittest.TestCase):
         self.assertFalse(result["gpu_reranker_executed"])
         self.assertFalse(result["native_installed"])
         self.assertFalse(result["independent_s03_readback_verified"])
+        # Third result is far below the ambiguous top pair: it must not
+        # occupy the GPU reranker or inflate the narrow candidate set.
+        selective=m.plan_two_stage_retrieval(
+            candidates=rows,owner_persona_id="owner-1",
+            s03_revision="a"*64,shortlist_limit=3,rerank_limit=3)
+        self.assertEqual(selective["optional_multilingual_rerank_ids"],["a","b"])
         # A confidently separated first-pass winner must not spend GPU.
         certain=m.plan_two_stage_retrieval(
             candidates=[row("a",1,1),row("b",0,0)],
