@@ -302,7 +302,7 @@ class BridgeStreamIntegrity(unittest.TestCase):
                 self.assertEqual((writes, soul), ([], []))
         # The canonical CRLF-delimited terminal sentinel still succeeds.
         good, writes, soul, _ = self.run_stream(
-            [], byte_chunks=[prefix, b"data: [DONE]\\r\\n\\r\\n".replace(b"\\\\", b"\\")])
+            [], byte_chunks=[prefix, b"data: [DONE]\r\n\r\n"])
         self.assertEqual(good[-1]["type"], "done")
         self.assertEqual(writes, [("Привет", "Живой ответ")])
         self.assertEqual(soul, writes)
