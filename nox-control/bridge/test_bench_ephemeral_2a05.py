@@ -32,6 +32,28 @@ class FakeResponse:
         return iter(self.lines)
 
 
+class BoundedReadResponse:
+    """Simulate the public urllib HTTPResponse.readline(size) interface."""
+    status = 200
+
+    def __init__(self, raw):
+        self.source = io.BytesIO(raw)
+        self.read_limits = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def readline(self, size=-1):
+        self.read_limits.append(size)
+        return self.source.readline(size)
+
+    def __iter__(self):
+        raise AssertionError("unbounded wire iterator must not be consumed")
+
+
 def run_sample(write=None, token=None):
     text = "Ответ NOX 👍"
     digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -59,6 +81,21 @@ def run_sample(write=None, token=None):
 
 
 class EphemeralBenchmarkGuardTest(unittest.TestCase):
+    def test_real_http_reader_enforces_wire_cap_before_parsing(self):
+        normal = BoundedReadResponse(b'{"event_seq":1}\n')
+        self.assertEqual(list(bench._bounded_ndjson_lines(normal)),
+                         [b'{"event_seq":1}\n'])
+        self.assertEqual(normal.read_limits,
+                         [bench.MAX_NDJSON_FRAME_BYTES + 1] * 2)
+
+        # One malformed upstream line is larger than the declared 1 MiB
+        # budget. Never allocate/read an unbounded HTTPResponse.__iter__ line.
+        giant = BoundedReadResponse(b'x' * (bench.MAX_NDJSON_FRAME_BYTES + 100))
+        with self.assertRaisesRegex(ValueError, "OVERSIZED_FRAME"):
+            list(bench._bounded_ndjson_lines(giant))
+        self.assertEqual(giant.read_limits,
+                         [bench.MAX_NDJSON_FRAME_BYTES + 1])
+
     def test_valid_receipt_measures_without_s03_write(self):
         result = run_sample()
         self.assertEqual(result["s03_write"], "SKIPPED_EPHEMERAL")
