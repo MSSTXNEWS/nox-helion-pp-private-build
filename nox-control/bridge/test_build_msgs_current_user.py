@@ -59,10 +59,10 @@ class FullCurrentTurnTests(unittest.TestCase):
 
 
     def test_recalled_memory_is_not_silently_sliced_to_500_chars(self):
-        memory = "Источник S03: " + ("важный полный контекст 🌍" * 80) + "\\nПроверенный хвост 9b82"
+        memory = "Источник S03: " + ("важный полный контекст 🌍" * 80) + "\nПроверенный хвост 9b82"
         user = "Учитывай всю подтверждённую память"
         out = self.build([{"role": "user", "content": user}], user, memory, "")
-        self.assertIn("Память: " + memory + "\\n", out[-1]["content"])
+        self.assertIn("Память: " + memory + "\n", out[-1]["content"])
         self.assertEqual(out[-1]["content"].count("Проверенный хвост 9b82"), 1)
 
     def test_s03_memory_admission_preserves_full_unicode_and_holds_on_overflow(self):
@@ -73,7 +73,7 @@ class FullCurrentTurnTests(unittest.TestCase):
         exec(compile(ast.Module(body=[function], type_ignores=[]),
                      "nox_bridge.py", "exec"), env)
         admit = env["trim_mem"]
-        data = ("М1 — память 🌍 и источник\\n" * 900) + "Завершение ✔"
+        data = ("М1 — память 🌍 и источник\n" * 900) + "Завершение ✔"
         self.assertEqual(admit(data), data)
         with self.assertRaisesRegex(ValueError, "S03_MEMORY_CONTEXT_OVER_BUDGET"):
             admit("п" * 17000)
