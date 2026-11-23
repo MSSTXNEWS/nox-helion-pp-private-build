@@ -432,9 +432,17 @@ def exact_owner_instance(key: str):
         raise RuntimeError("HOLD_PROVIDER_TRANSPORT") from None
     if len(raw) > 1048576:
         raise RuntimeError("HOLD_PROVIDER_RESPONSE_SIZE")
+    def unique_object(pairs):
+        obj = {}
+        for name, value in pairs:
+            if name in obj:
+                raise ValueError("duplicate provider JSON key")
+            obj[name] = value
+        return obj
+
     try:
-        data = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, ValueError):
+        data = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_object)
+    except (UnicodeDecodeError, ValueError, RecursionError):
         raise RuntimeError("HOLD_PROVIDER_RESPONSE") from None
     if not isinstance(data, dict) or data.get("success") is False:
         raise RuntimeError("HOLD_PROVIDER_RESPONSE")
