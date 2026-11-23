@@ -83,6 +83,36 @@ class SelfModelInputAdmission(unittest.TestCase):
                     model._load_input(str(path))
             self.assertTrue(extended[0])
 
+    def test_reference_host_aliases_and_malformed_authority_hold(self):
+        # These are metadata only: none must be accepted as external proof.
+        unsafe = (
+            "https://localhost./evidence",
+            "https://127.0.0.1./evidence",
+            "https://2130706433/evidence",
+            "https://0x7f000001/evidence",
+            "https://ⓛⓞⓒⓐⓛⓗⓞⓢⓣ/evidence",
+            "https://[not-ip]/evidence",
+            "https://a／b.example.com/evidence",
+            "https://@example.com/evidence",
+        )
+        for value in unsafe:
+            with self.subTest(value=value), self.assertRaises(model.SelfModelError):
+                model._reference_url(value, "proof")
+
+    def test_reference_host_canonicalization_preserves_valid_provenance(self):
+        self.assertEqual(
+            model._reference_url("https://EXAMPLE.COM./release/notes?utm_source=x", "proof"),
+            "https://example.com/release/notes",
+        )
+        self.assertEqual(
+            model._reference_url("https://[2001:4860:4860::8888]/release", "proof"),
+            "https://[2001:4860:4860::8888]/release",
+        )
+        self.assertEqual(
+            model._reference_url("https://bücher.example/notice", "proof"),
+            "https://xn--bcher-kva.example/notice",
+        )
+
     def test_rejected_input_emits_one_bounded_hold(self):
         with tempfile.TemporaryDirectory() as root:
             path = Path(root) / "ambiguous.json"

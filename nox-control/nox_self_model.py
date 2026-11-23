@@ -92,17 +92,25 @@ def _timestamp(value: Any, field: str) -> str:
 
 def _reference_url(value: Any, field: str) -> str:
     raw = _text(value, field, 2048)
-    parts = urlsplit(raw)
-    if parts.scheme.lower() != "https" or not parts.hostname or parts.username or parts.password:
-        raise SelfModelError(f"{field} must be an HTTPS reference without credentials")
+    # Malformed IPv6 brackets and NFKC-unsafe authorities raise ValueError
+    # from urlsplit/hostname. Return one bounded HOLD rather than a traceback.
     try:
+        parts = urlsplit(raw)
+        raw_host = parts.hostname
         port = parts.port
     except ValueError as exc:
-        raise SelfModelError(f"{field} has an invalid port") from exc
+        raise SelfModelError(f"{field} has a malformed HTTPS authority") from exc
+    if parts.scheme.lower() != "https" or not raw_host or "@" in parts.netloc:
+        raise SelfModelError(f"{field} must be an HTTPS reference without credentials")
     if port not in (None, 443):
         raise SelfModelError(f"{field} may not use a non-default HTTPS port")
-    host = parts.hostname.lower()
-    if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
+    # Trailing DNS dots and IDNA aliases must not bypass local-host checks.
+    # This field is provenance metadata, not an authorization to fetch URLs.
+    try:
+        host = raw_host.encode("idna").decode("ascii").lower().rstrip(".")
+    except UnicodeError as exc:
+        raise SelfModelError(f"{field} has an invalid hostname") from exc
+    if not host or host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
         raise SelfModelError(f"{field} may not point to a local host")
     try:
         address = ipaddress.ip_address(host)
@@ -110,6 +118,10 @@ def _reference_url(value: Any, field: str) -> str:
         address = None
     if address is not None and not address.is_global:
         raise SelfModelError(f"{field} may not point to a non-public IP")
+    # Common resolver aliases for loopback (integer, abbreviated and hex IPv4)
+    # are not valid external provenance hosts even when ipaddress rejects them.
+    if address is None and re.fullmatch(r"(?:0x[0-9a-f]+|[0-9]+)(?:\.(?:0x[0-9a-f]+|[0-9]+))*", host):
+        raise SelfModelError(f"{field} may not use an ambiguous numeric host")
     for key, _ in parse_qsl(parts.query, keep_blank_values=True):
         decoded_key = key
         for _ in range(8):
@@ -157,7 +169,7 @@ def _reference_url(value: Any, field: str) -> str:
     # References are metadata only; strip safe query values and all fragments
     # so a caller cannot accidentally persist signed or session-bearing URLs.
     normalized_path = quote(decoded_path or "/", safe="/:@-._~!$&'()*+,;=")
-    return urlunsplit(("https", host, normalized_path, "", ""))
+    return urlunsplit(("https", f"[{host}]" if ":" in host else host, normalized_path, "", ""))
 
 
 def _sha(value: Any, field: str) -> str:
