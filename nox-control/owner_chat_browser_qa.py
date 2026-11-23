@@ -251,6 +251,17 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     return bool(expected_hash and independent_readback.get('full_answer_sha256') == expected_hash)
 
 
+
+def dialog_history_evidence(saved, native_equal):
+    """Owner UI dialog-history is not an independent canonical S03 readback.
+
+    A completed browser/model stream and matching authenticated UI history
+    prove dialog persistence only. Canonical S03 needs a separate trusted
+    writer receipt and independent four-message readback.
+    """
+    return {'dialog_history_verified': bool(saved and native_equal),
+            's03_readback_verified': False}
+
 def native_stream_envelope_valid(value):
     """A terminal/saved flag is not accepted before a clean wire EOF."""
     return (isinstance(value, dict)
@@ -1128,7 +1139,7 @@ async def browser_run(report, directory, available):
             answer=rows[1]['content'] if saved else ''
             native_equal=await page.evaluate('(value)=>window.__NOX_BROWSER_QA.answer===value',answer)
             public=public_numeric_answer(answer)
-            report.update(stream=final,s03_readback_verified=bool(saved and native_equal),
+            report.update(stream=final,**dialog_history_evidence(saved,native_equal),
                           actual_native_model_stream_verified=bool(final['native_calls']==1 and all(final['done'].values())),
                           answer_sha256=digest(answer.encode()),answer_characters=len(answer),
                           synthetic_number_sequence_pass=public==EXPECTED,
