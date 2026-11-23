@@ -1427,6 +1427,23 @@ def final_observation_snapshots(helper):
             # produced a native/serving observation: record a named HOLD.
             if type(value) is not dict or not value:
                 raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
+            # A nonempty map can still be an unusable native observation.
+            # Recheck the established Supervisor state and GPU census shapes
+            # before labeling their final readbacks as successful.
+            if key == 'service_after':
+                if (type(value.get('state')) is not str
+                        or value['state'] not in
+                        ('RUNNING', 'STARTING', 'STOPPED', 'EXITED', 'FATAL')):
+                    raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
+            if key == 'gpu_after':
+                rows = value.get('gpus')
+                if (type(rows) is not list
+                        or any(type(row) is not dict
+                               or type(row.get('index')) is not int or row['index'] < 0
+                               or type(row.get('free_mib')) is not int or row['free_mib'] < 0
+                               for row in rows)
+                        or len({row['index'] for row in rows}) != len(rows)):
+                    raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
             snapshots[key] = value
         except Exception as exc:
             snapshots[key] = None

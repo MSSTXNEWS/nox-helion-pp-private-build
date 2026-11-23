@@ -2518,6 +2518,51 @@ class FinalReadbackReceiptContinuity(unittest.TestCase):
                             self.assertEqual(values[name], healthy[index])
 
 
+    def test_final_nested_supervisor_and_gpu_census_fail_closed(self):
+        # Test the shipped owner function, not a duplicated validator.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        fn = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                  and node.name == "final_observation_snapshots")
+        namespace = {"re": re}
+        exec(compile(ast.Module(body=[fn], type_ignores=[]),
+                     str(SOURCE), "exec"), namespace)
+        observe = namespace["final_observation_snapshots"]
+        keys = ("service_after", "chat_after", "gpu_after", "progress_after")
+        healthy = ({"state": "RUNNING"}, {"8080": 200},
+                   {"gpus": [{"index": 1, "free_mib": 28000}]}, {"step": 5})
+        self.assertEqual(observe(types.SimpleNamespace(
+            service_state=lambda: healthy[0], health=lambda: healthy[1],
+            gpu=lambda: healthy[2], progress=lambda: healthy[3])),
+            (dict(zip(keys, healthy)), {}))
+        cases = (
+            ("service_after", {"state": "READY_NOT_RUNNING"}),
+            ("service_after", {"state": 200}),
+            ("service_after", {"state": True}),
+            ("service_after", {"other": "RUNNING"}),
+            ("gpu_after", {"gpus": "unavailable"}),
+            ("gpu_after", {"gpus": [{"index": True, "free_mib": 28000}]}),
+            ("gpu_after", {"gpus": [{"index": 1, "free_mib": 28000.0}]}),
+            ("gpu_after", {"gpus": [{"index": 1, "free_mib": -1}]}),
+            ("gpu_after", {"gpus": [{"index": 1, "free_mib": 100},
+                                   {"index": 1, "free_mib": 99}]}),
+        )
+        for field, malformed in cases:
+            with self.subTest(field=field, malformed=repr(malformed)):
+                replies = dict(zip(keys, healthy))
+                replies[field] = malformed
+                helper = types.SimpleNamespace(
+                    service_state=lambda: replies["service_after"],
+                    health=lambda: replies["chat_after"],
+                    gpu=lambda: replies["gpu_after"],
+                    progress=lambda: replies["progress_after"])
+                observed, errors = observe(helper)
+                self.assertIsNone(observed[field])
+                self.assertEqual(errors, {field: "HOLD_FINAL_READBACK_MALFORMED"})
+                for key in keys:
+                    if key != field:
+                        self.assertEqual(observed[key], healthy[keys.index(key)])
+
+
 
 class LegacyHeavyServiceReadbackFence(unittest.TestCase):
     def test_malformed_legacy_service_snapshot_cannot_authorize_training(self):
