@@ -131,6 +131,30 @@ class BackupT(unittest.TestCase):
         self.assertEqual(open(tmp, "rb").read(), foreign)
         self.assertEqual(open(self.db, "rb").read(), prior)
 
+    def test_restore_manifest_changed_after_verify_is_hold_before_rename(self):
+        # Previously restore re-read the manifest after verifying and accepted
+        # a changed claim. The target must survive even if checksum is unchanged.
+        from unittest.mock import patch
+        copy = B.backup(self.db, self.bdir)
+        preimage = B.sha256_file(self.db)
+        actual_verify = B.verify
+
+        def mutate_after_valid_verify(path):
+            verdict = actual_verify(path)
+            with open(path + ".json", encoding="utf-8") as f:
+                meta = B.json.load(f)
+            meta["counts"]["mem_facts"] = 9999
+            with open(path + ".json", "w", encoding="utf-8") as f:
+                B.json.dump(meta, f)
+            return verdict
+
+        with patch.object(B, "verify", side_effect=mutate_after_valid_verify):
+            with self.assertRaisesRegex(RuntimeError, "manifest changed"):
+                B.restore(copy["path"], self.db)
+        self.assertEqual(B.sha256_file(self.db), preimage)
+        self.assertFalse(os.path.lexists(self.db + ".restore.tmp"))
+        self.assertFalse(any(".before-restore-" in n for n in os.listdir(self.td.name)))
+
     def test_restore_copy_failure_cleans_only_own_temp(self):
         """A disk/read failure must not strand or install a partial DB."""
         from unittest.mock import patch
