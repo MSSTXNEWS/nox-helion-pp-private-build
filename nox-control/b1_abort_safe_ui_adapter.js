@@ -116,6 +116,12 @@
           });
         }
       }
+      // A canonical terminal already committed to this DOM is immutable.
+      // Late transport deltas must not call an untrusted/hung precommit again.
+      // Preserve known event-ID conflict/replay checks above this fast path.
+      const terminalRow=find(s);
+      if(terminalRow&&terminalRow.dataset.noxB1State==='terminal')
+        return false;
       const previous=deltaTails.get(k)||Promise.resolve();
       let reservation=null;
       const job=previous.catch(()=>{}).then(async()=>{
