@@ -4123,5 +4123,57 @@ async function check(chunks, status=200) {
                     decode(wire)
 
 
+
+    def test_owner_history_http_mimetype_blocks_false_ru_es_history(self):
+        """A JSON-shaped proxy/login body is not an owner history witness.
+
+        Valid JSON API representation and multilingual content survive.
+        No native POST, authenticated session mutation or S03 write.
+        """
+        class Response:
+            status = 200
+            def __init__(self, raw, headers):
+                self.raw = raw
+                self.headers = headers
+            async def body(self):
+                return self.raw
+
+        history = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": "Привет 🧠"},
+            {"role": "assistant", "content": "Здравствуйте"},
+            {"role": "user", "content": "Continúa en español, por favor"},
+            {"role": "assistant", "content": "Claro, seguimos en español 🪐"},
+        ]}
+        wire = json.dumps(history, ensure_ascii=False).encode('utf-8')
+
+        for headers in (
+            {"content-type": "application/json"},
+            {"Content-Type": "APPLICATION/JSON; CHARSET=\"UTF-8\""},
+            {"content-type": "application/vnd.nox+json; charset=utf-8"},
+            {"content-type": "application/json; charset=utf-8; profile=history"},
+        ):
+            with self.subTest(accepted=headers):
+                self.assertEqual(asyncio.run(json_response(Response(wire, headers))),
+                                 history)
+
+        for headers in (
+            {},
+            {"content-type": "text/html"},
+            {"content-type": "text/plain"},
+            {"content-type": "text/event-stream"},
+            {"content-type": "application/octet-stream"},
+            {"content-type": "application/problem+xml"},
+            {"content-type": "application/json, text/html"},
+            {"content-type": "application/json; charset=latin1"},
+            {"content-type": "application/json; charset=utf-16"},
+            {"content-type": "application/json; charset="},
+            {"content-type": "application/json; charset=utf-8; charset=utf-8"},
+            {"content-type": 3},
+        ):
+            with self.subTest(rejected=headers):
+                with self.assertRaisesRegex(RuntimeError,
+                                            'HOLD_OWNER_HTTP_CONTENT_TYPE'):
+                    asyncio.run(json_response(Response(wire, headers)))
+
 if __name__ == "__main__":
     unittest.main()

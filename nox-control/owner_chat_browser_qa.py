@@ -1605,6 +1605,32 @@ async def click_send(page, report, expected_before=0):
 async def json_response(response, limit=200000):
     if response.status!=200:
         raise RuntimeError('HOLD_OWNER_HTTP_'+str(response.status))
+    # Only an actual JSON API representation may certify owner-scoped RU/ES
+    # persistence. Login/proxy HTML or text containing JSON-shaped content
+    # must not be misread as a second-turn history witness. Real Playwright
+    # APIResponse exposes headers; lightweight legacy unit fakes may omit it.
+    headers = getattr(response, 'headers', None)
+    if headers is not None:
+        if not isinstance(headers, dict):
+            raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
+        types = [v for k, v in headers.items()
+                 if isinstance(k, str) and k.lower() == 'content-type']
+        if len(types) != 1 or not isinstance(types[0], str):
+            raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
+        parts = [part.strip() for part in types[0].split(';')]
+        media = parts[0].lower()
+        if not (media == 'application/json'
+                or (media.startswith('application/') and media.endswith('+json'))):
+            raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
+        charsets = []
+        for part in parts[1:]:
+            key, sep, value = part.partition('=')
+            if key.strip().lower() == 'charset':
+                if not sep:
+                    raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
+                charsets.append(value.strip().strip('"').lower())
+        if len(charsets) > 1 or any(value != 'utf-8' for value in charsets):
+            raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
     raw=await response.body()
     if len(raw)>limit:
         raise RuntimeError('HOLD_OWNER_HTTP_SIZE')
