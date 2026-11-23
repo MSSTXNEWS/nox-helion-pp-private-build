@@ -4,7 +4,7 @@ import {createServer} from 'node:http';
 import {createHash} from 'node:crypto';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {performance} from 'node:perf_hooks';
-import {measureSseResponse} from './b4_sse_latency_probe.mjs';
+import {measureSseResponse,measureSseFetch} from './b4_sse_latency_probe.mjs';
 
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const event=x=>'data: '+JSON.stringify({choices:[x]})+'\n\n';
@@ -294,4 +294,66 @@ test('R28 total deadline survives heartbeat trickle; terminal/EOF boundary is fa
   assert.equal(proof.browser_authenticated,false);
   assert.equal(proof.canonical_s03_verified,false);
   assert.deepEqual(stats(),{count:4,cancelCount:0,releaseCount:1});
+});
+
+// R29: fetch() may hang before it yields HTTP headers. Bound that phase by
+// the same request-start deadline as streaming. A late resolution is not proof.
+test('R29 pre-header absolute deadline rejects stall/late settle; real loopback succeeds without replay',async()=>{
+  let calls=0,aborts=0,cancels=0;
+  await assert.rejects(measureSseFetch('http://fixture',{method:'POST'}, {
+    totalTimeoutMs:20,fetchImpl:(_url,init)=>{
+      calls++;init.signal.addEventListener('abort',()=>aborts++);
+      return new Promise(()=>{});
+    }
+  }),e=>e.code==='B4_TOTAL_TIMEOUT');
+  assert.equal(calls,1);assert.equal(aborts,1);
+  const unhandled=[];const onUnhandled=e=>unhandled.push(e);
+  process.on('unhandledRejection',onUnhandled);
+  try{
+    for(const kind of ['resolve','reject']){
+      let settle;
+      const pending=new Promise((resolve,reject)=>{settle={resolve,reject};});
+      const measurement=measureSseFetch('http://fixture',{method:'POST'}, {
+        totalTimeoutMs:20,fetchImpl:()=>pending
+      });
+      await assert.rejects(measurement,e=>e.code==='B4_TOTAL_TIMEOUT');
+      if(kind==='resolve')settle.resolve({body:{cancel(){cancels++;return Promise.resolve();}}});
+      else settle.reject(new Error('R29_LATE_HEADERS_FAILED'));
+      await sleep(5);
+    }
+    assert.equal(cancels,1,'late headers must discard their body');
+    assert.deepEqual(unhandled,[],'late reject must be observed');
+  }finally{process.off('unhandledRejection',onUnhandled);}
+
+  let requests=0;
+  const server=createServer(async(req,res)=>{
+    requests++;
+    for await(const chunk of req){};
+    if(req.url==='/slow')await sleep(100);
+    if(res.destroyed)return;
+    res.writeHead(200,{'content-type':'text/event-stream'});res.flushHeaders();
+    res.write(event({delta:{content:'Третий ✨'},finish_reason:null}));
+    res.write(event({delta:{},finish_reason:'stop'}));
+    res.write('data: [DONE]\n\n');
+    await sleep(5);res.end();
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try{
+    const url='http://127.0.0.1:'+server.address().port;
+    await assert.rejects(measureSseFetch(url+'/slow',{method:'POST',body:'{}'}, {
+      totalTimeoutMs:30
+    }),e=>e.code==='B4_TOTAL_TIMEOUT');
+    const startedAt=performance.now();
+    const proof=await measureSseFetch(url+'/good',{method:'POST',body:'{}'}, {
+      startedAt,totalTimeoutMs:1500,idleTimeoutMs:900
+    });
+    assert.equal(proof.verified,true);
+    assert.ok(proof.ttft_ms>=proof.first_byte_ms);
+    assert.ok(proof.completion_ms>=proof.sse_done_ms);
+    assert.equal(proof.browser_authenticated,false);
+    assert.equal(proof.native_verified,false);
+    assert.equal(requests,2,'no request replay after timeout');
+  }finally{
+    server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
+  }
 });

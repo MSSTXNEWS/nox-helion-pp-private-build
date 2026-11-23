@@ -126,3 +126,42 @@ export async function measureSseResponse(response,options={}){
     try{reader.releaseLock();}catch{}
   }
 }
+
+// R29: include the HTTP response-header wait in the *same* absolute
+// request-start deadline as SSE reads. No retry, replay or production POST.
+export async function measureSseFetch(url,init={},options={}){
+  const {startedAt=performance.now(),clock=()=>performance.now(),
+    totalTimeoutMs=60000,fetchImpl=globalThis.fetch}=options;
+  if(!Number.isFinite(startedAt))throw fail('B4_INVALID_STARTED_AT');
+  if(!Number.isInteger(totalTimeoutMs)||totalTimeoutMs<10||totalTimeoutMs>1800000)
+    throw fail('B4_INVALID_totalTimeoutMs');
+  if(typeof fetchImpl!=='function')throw fail('B4_INVALID_FETCH_IMPL');
+  const owner=new AbortController();
+  const externalSignal=init?.signal;
+  const signal=externalSignal?AbortSignal.any([externalSignal,owner.signal]):owner.signal;
+  let expired=false,headerTimer,response;
+  function disposeLate(bodyResponse){
+    try{Promise.resolve(bodyResponse?.body?.cancel?.()).catch(()=>{});}catch{}
+  }
+  // Attach late settlement handlers before awaiting the race: even a fetch
+  // implementation that ignores AbortSignal cannot revive an expired result.
+  const pending=Promise.resolve().then(()=>fetchImpl(url,{...init,signal}));
+  pending.then(value=>{if(expired)disposeLate(value);},()=>{});
+  try{
+    const remaining=totalTimeoutMs-(clock()-startedAt);
+    if(remaining<=0)throw fail('B4_TOTAL_TIMEOUT');
+    response=await Promise.race([
+      pending,
+      new Promise((_,reject)=>{headerTimer=setTimeout(()=>reject(fail('B4_TOTAL_TIMEOUT')),remaining);})
+    ]);
+    clearTimeout(headerTimer);
+    if(clock()-startedAt>=totalTimeoutMs)throw fail('B4_TOTAL_TIMEOUT');
+    return await measureSseResponse(response,{...options,startedAt,clock,totalTimeoutMs});
+  }catch(error){
+    expired=true;
+    try{owner.abort();}catch{}
+    if(response)disposeLate(response);
+    if(error?.code)throw error;
+    throw fail(externalSignal?.aborted?'B4_FETCH_ABORTED':'B4_FETCH_FAILED');
+  }finally{clearTimeout(headerTimer);}
+}
