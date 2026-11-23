@@ -3893,5 +3893,94 @@ class ProbeTests(unittest.TestCase):
                     self.assertFalse(probe.scoped_history_matches_turns(
                         snapshot, turns[:count], did))
 
+
+    def test_real_loopback_http_sse_second_third_turn_digest_and_replay(self):
+        """Actual local HTTP SSE later turns; no GLM, native POST or S03 writes.
+
+        Verify bounded raw wire digests through urllib HTTPResponse, replay HOLD
+        and stable reported model-route identity across later turns.
+        This does not certify an actual browser or canonical S03 row.
+        """
+        import hashlib
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        did = 'a' * 32
+        prompts = ['synthetic owner QA turn two', 'synthetic owner QA turn three']
+        captured = []
+        bodies = []
+        for text in ('323', '3 исполнителя и NOX'):
+            frames = (
+                {'type': 'start', 'dialogId': did, 'model': 'GLM-5.3-Flash'},
+                {'type': 'delta', 'dialogId': did, 'model': 'GLM-5.3-Flash',
+                 'text': text},
+                {'type': 'done', 'dialog_id': did, 'model': 'GLM-5.3-Flash',
+                 'saved': True, 's03_integrated': True},
+            )
+            def sse(kind, frame, index):
+                data = json.dumps(frame, ensure_ascii=False, separators=(',', ':')).encode()
+                return (b'id: ' + str(index).encode() + b'\r\n'
+                        + b'event: ' + kind.encode() + b'\r\n'
+                        + b'data: ' + data + b'\r\n\r\n')
+            bodies.append(b''.join(
+                sse(frame['type'], frame, idx)
+                for idx, frame in enumerate(frames, start=1)))
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = self.rfile.read(int(self.headers['Content-Length']))
+                captured.append((self.path, self.headers.get('Accept'), json.loads(body)))
+                replay = len(captured) == 3
+                payload = bodies[0 if replay else len(captured) - 1]
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
+                self.send_header('X-Content-Type-Options', 'nosniff')
+                self.send_header('Cache-Control', 'no-store')
+                if replay:
+                    self.send_header('X-Cache', 'HIT')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                try:
+                    self.wfile.write(payload)
+                except BrokenPipeError:
+                    pass
+
+            def log_message(self, *args):
+                pass
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        original_base = probe.BASE
+        worker.start()
+        try:
+            probe.BASE = 'http://127.0.0.1:' + str(server.server_port)
+            client = urllib.request.build_opener(urllib.request.ProxyHandler({}),
+                                                 probe.RejectPostRedirect())
+            second = probe.consume_turn(client, prompts[0], did, timeout=5)
+            third = probe.consume_turn(client, prompts[1], did, timeout=5)
+            self.assertTrue(probe.require_multiturn_model_route(second, third))
+            for index, result in enumerate((second, third)):
+                with self.subTest(later_turn=index + 2):
+                    self.assertEqual(result['stream_wire_sha256'],
+                                     hashlib.sha256(bodies[index]).hexdigest())
+                    self.assertTrue(result['stream_nosniff_verified'])
+                    self.assertEqual(result['delta_count'], 1)
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_CACHED_REPLAY
+):
+                probe.consume_turn(client, prompts[1], did, timeout=5)
+            self.assertEqual(len(captured), 3)
+            self.assertTrue(all(route == '/api/nox/chat/stream'
+                                and accept == 'text/event-stream'
+                                and req.get('dialog_id') == did
+                                and req.get('history') == []
+                                for route, accept, req in captured))
+            self.assertEqual([captured[0][2]['message'],
+                              captured[1][2]['message']], prompts)
+        finally:
+            probe.BASE = original_base
+            server.shutdown()
+            server.server_close()
+            worker.join(timeout=5)
+
 if __name__ == '__main__':
     unittest.main()

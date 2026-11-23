@@ -955,7 +955,7 @@ def bounded_stream_lines(response, max_line=100000):
 
 
 
-def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadline=None):
+def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadline=None, wire_hasher=None):
     """Decode bounded NDJSON or genuine SSE JSON events, never MIME-as-proof.
 
     Older text/event-stream responses containing plain NDJSON remain compatible,
@@ -997,6 +997,11 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
                           object_pairs_hook=reject_duplicate_json_keys)
 
     for wire_index, wire in enumerate(bounded_stream_lines(response, max_line)):
+        # Fingerprint the complete bounded HTTP entity bytes before BOM/CRLF
+        # normalization; no raw model output is exported by this receipt.
+        # Transport provenance is NOT browser, served-model or S03 attestation.
+        if wire_hasher is not None:
+            wire_hasher.update(wire)
         observed_bytes += len(wire)
         if declared_bytes is not None and observed_bytes > declared_bytes:
             raise RuntimeError('HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH')
@@ -1099,6 +1104,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
     if response.status!=200:
         response.close();raise RuntimeError('HOLD_STREAM_HTTP_'+str(response.status))
     events=[];answer='';done=None;first=None;placeholders=0;delta_count=0;model_identity=None
+    wire_hasher=hashlib.sha256()
     try:
         require_exact_stream_target(response)
         # A cached POST stream may replay an earlier SSE DONE as this turn.
@@ -1115,7 +1121,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
         nosniff_verified = require_stream_nosniff_header(response)
         require_stream_http_framing(response)
         for index,frame in enumerate(bounded_stream_frames(
-                response, deadline=started+timeout+5)):
+                response, deadline=started+timeout+5, wire_hasher=wire_hasher)):
             if index>2000 or time.monotonic()-started>timeout+5:
                 raise RuntimeError('HOLD_BOUNDED_STREAM')
             if done is not None:raise RuntimeError('HOLD_STREAM_TRAILING_AFTER_DONE')
@@ -1162,7 +1168,8 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             'placeholder_delta_count':placeholders,'delta_count':delta_count,
             'stream_total_ms':round((time.monotonic()-started)*1000),
              'stream_model_identity':model_identity,
-             'stream_nosniff_verified':nosniff_verified}
+             'stream_nosniff_verified':nosniff_verified,
+             'stream_wire_sha256':wire_hasher.hexdigest()}
 
 def admitted_consume_turn(client, prompt, dialog_id, timeout=95):
     """Re-admit RAM immediately before EVERY synthetic model-stream POST.
@@ -1464,6 +1471,7 @@ def main():
             'first_meaningful_delta_ms':first,'placeholder_delta_count':turn['placeholder_delta_count'],
             'delta_count':turn['delta_count'],
             'stream_nosniff_verified':turn['stream_nosniff_verified'],
+            'stream_wire_sha256':turn['stream_wire_sha256'],
             'answer_public_synthetic':numeric_public_answer(answer),
             'answer_sha256':digest(answer.encode()),'saved_verified':saved,
             'arithmetic_pass':numeric_public_answer(answer)=='323',
@@ -1480,6 +1488,7 @@ def main():
                 'first_delta_ms':follow['first_meaningful_delta_ms'],'first_meaningful_delta_ms':follow['first_meaningful_delta_ms'],
                 'total_ms':follow['stream_total_ms'],
                 'stream_nosniff_verified':follow['stream_nosniff_verified'],
+                'stream_wire_sha256':follow['stream_wire_sha256'],
                 'answer_public_synthetic':numeric_public_answer(answer2),
                 'answer_sha256':digest(answer2.encode()),
                 'performance_target_pass':follow['first_meaningful_delta_ms']<=5000 and follow['stream_total_ms']<=25000})
@@ -1522,6 +1531,7 @@ def main():
                 'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
                 'answer_sha256':digest(text.encode()),'raw_answer_exported':False,
                 'model_route_identity_verified':model_route_verified,
+                 'stream_wire_sha256':turn3['stream_wire_sha256'],
                  'three_turns_nosniff_verified':all(t['stream_nosniff_verified']
                      for t in (turn, follow, turn3)),
                  'verification_scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'}
