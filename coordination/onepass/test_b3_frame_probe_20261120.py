@@ -1679,7 +1679,7 @@ class TestProbe(unittest.TestCase):
                               'lonelowstart','astralstart'].entries()){
                             const postsBefore=window.__posts;
                             const readsBefore=window.__reads;
-                            const id=i.toString(16).repeat(32);
+                            const id=i.toString(16).padStart(2,'0').repeat(16);
                             const response=await fetch('/api/nox/chat',{
                                 method:'POST',body:JSON.stringify({
                                     dialog_id:id,request_id:'b3-model-'+mode,
