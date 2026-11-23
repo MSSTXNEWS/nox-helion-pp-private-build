@@ -73,5 +73,49 @@ class OwnerInspectRouteTests(unittest.TestCase):
         self.assertIn("raise RuntimeError('HOLD_CHECKOUT_MISMATCH')", text)
 
 
+    def test_exact_lookup_owner_scope_and_fail_closed(self):
+        from unittest import mock
+        import io
+        import urllib.error
+        import sys
+        sys.path.insert(0, str(HERE.parent))
+        from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as probe
+        opener = mock.Mock()
+        with mock.patch.object(probe.urllib.request, 'build_opener', return_value=opener) as build:
+            def answer(body):
+                opener.open.side_effect = None
+                opener.open.return_value = io.BytesIO(body)
+            answer(b'{"instances":{"id":60509551,"actual_status":"stopped"}}')
+            self.assertEqual(probe.exact_owner_instance('test-token')['actual_status'], 'stopped')
+            request = opener.open.call_args.args[0]
+            self.assertEqual(request.full_url, probe.API + '/instances/60509551/?owner=me')
+            self.assertEqual(request.get_method(), 'GET')
+            self.assertIsInstance(build.call_args.args[0], probe._ExactLookupNoRedirect)
+            self.assertIsNone(build.call_args.args[0].redirect_request(None,None,302,None,None,'https://example.invalid'))
+            for body, error in (
+                (b'{"instances":[]}', 'HOLD_PROVIDER_RESPONSE_SHAPE'),
+                (b'{"instances":{"id":1}}', 'HOLD_EXACT_INSTANCE_IDENTITY'),
+                (b'{"success":false}', 'HOLD_PROVIDER_RESPONSE'),
+                (b'not json', 'HOLD_PROVIDER_RESPONSE'),
+            ):
+                answer(body)
+                with self.assertRaisesRegex(RuntimeError, error):
+                    probe.exact_owner_instance('test-token')
+            for status, error in ((404, 'HOLD_EXACT_INSTANCE_NOT_VISIBLE'),
+                                  (403, 'HOLD_PROVIDER_HTTP_403')):
+                opener.open.side_effect = urllib.error.HTTPError(
+                    request.full_url, status, 'error', {}, io.BytesIO(b''))
+                with self.assertRaisesRegex(RuntimeError, error):
+                    probe.exact_owner_instance('test-token')
+        operator = load(HERE / 'owner_native_operator.py')
+        with mock.patch.dict(operator.os.environ, {'NOX2':'test-token'}):
+            with mock.patch.object(probe, 'exact_owner_instance',
+                                   return_value={'id':60509551,'actual_status':'stopped','num_gpus':2}):
+                with mock.patch.object(probe, 'api') as api:
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_EXACT_RUNNING_INSTANCE'):
+                        operator.run_native('inspect', 1)
+                    api.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()
