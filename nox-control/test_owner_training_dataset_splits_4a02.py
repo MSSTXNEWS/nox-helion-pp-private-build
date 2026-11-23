@@ -82,10 +82,13 @@ class DatasetSplitTests(unittest.TestCase):
         rows[1]["license"] = "Proprietary"
         with self.assertRaisesRegex(SplitHold, "HOLD_CONFLICTING_SOURCE_LICENSE"):
             split_manifest(rows)
-        # Equivalent casing and whitespace remain a single license claim.
+        # Equivalent license normalization still passes when both records
+        # are in the same provenance group, not across holdout partitions.
         rows[1]["license"] = " mit "
+        rows[1]["goal"] = rows[0]["goal"]
+        rows[1]["text"] = rows[0]["text"]
         result = split_manifest(rows)
-        self.assertEqual(result["counts"]["kept"], 60)
+        self.assertEqual(result["counts"]["kept"], 59)
 
     def test_duplicate_cross_group_holds(self):
         rows = rows_fixture()
