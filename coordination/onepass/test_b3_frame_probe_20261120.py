@@ -2343,5 +2343,91 @@ class TestProbe(unittest.TestCase):
         asyncio.run(run())
 
 
+
+    def test_nonapi_asset_fetch_shortcut_preserves_native_chat_and_alias(self):
+        """Chromium synthetic resource/endpoint regression, not a real NOX frame measurement."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+                    async def fixture(route):
+                        await route.fulfill(status=200, content_type='text/html',
+                                            body='<html>B3 non-API fetch fixture</html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                    await page.goto('http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                      window.NOX_NATIVE_OWNER=true;
+                      window.__parses=0;window.__assets=0;window.__posts=0;
+                      const URLBase=window.URL;
+                      window.URL=class extends URLBase {
+                        constructor(...args){super(...args);window.__parses++}
+                      };
+                      const did='a'.repeat(32);
+                      window.fetch=async (input,init)=>{
+                        const u=input instanceof Request?input.url:String(input);
+                        if(u.includes('/static/')){
+                          window.__assets++;
+                          return new Response('resource-ok',{status:200});
+                        }
+                        if(u==='/api/nox/chat/stream'){
+                          window.__posts++;
+                          return new Response([
+                            {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                            {type:'start',model:'mock-pinned'},
+                            {type:'delta',text:'second-turn answer'},
+                            {type:'done',saved:true,s03_integrated:true,
+                             dialog_id:did,exchange_id:'r32-second-turn'}
+                          ].map(JSON.stringify).join('\\n')+'\\n',{status:200});
+                        }
+                        if(u.startsWith('/api/ui/memory/dialogs/history?'))
+                          return new Response(JSON.stringify({
+                            status:'READY',dialog_id:did,
+                            messages:[
+                              {role:'user',content:'second turn',exchange_id:'r32-second-turn'},
+                              {role:'assistant',content:'second-turn answer',
+                               exchange_id:'r32-second-turn'}]
+                          }),{status:200});
+                        throw Error('UNEXPECTED_NATIVE_ROUTE '+u);
+                      };
+                    }""")
+                    bridge=(pathlib.Path(__file__).parent /
+                            'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    actual=await page.evaluate("""async () => {
+                      const resources=await Promise.all(Array.from({length:40},
+                        ()=>fetch('/static/theme.css').then(r=>r.text())));
+                      const assetParses=window.__parses;
+                      const alias=await fetch('/ap%69/nox/chat',{
+                        method:'POST',body:JSON.stringify({message:'alias'})});
+                      const chat=await fetch('/api/nox/chat',{method:'POST',
+                        body:JSON.stringify({dialog_id:'a'.repeat(32),
+                          request_id:'r32-second-turn',message:'second turn'})});
+                      const ev=(await chat.text()).split('\\n\\n').filter(Boolean)
+                        .map(s=>JSON.parse(s.slice(6)));
+                      return {resources,assetParses,aliasStatus:alias.status,
+                        aliasError:(await alias.json()).error,
+                        posts:window.__posts,assets:window.__assets,
+                        done:ev.filter(e=>e.type==='done'),
+                        errors:ev.filter(e=>e.type==='error'),
+                        answer:ev.filter(e=>e.type==='token').map(e=>e.t).join('')};
+                    }""")
+                    self.assertEqual(actual['resources'],['resource-ok']*40)
+                    self.assertEqual(actual['assetParses'],0)
+                    self.assertEqual(actual['assets'],40)
+                    self.assertEqual(actual['aliasStatus'],422)
+                    self.assertEqual(actual['aliasError'],'HOLD_OWNER_ROUTE_ALIAS')
+                    self.assertEqual(actual['posts'],1)
+                    self.assertEqual(actual['errors'],[])
+                    self.assertEqual(len(actual['done']),1)
+                    self.assertEqual(actual['answer'],'second-turn answer')
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
 if __name__ == '__main__':
     unittest.main()

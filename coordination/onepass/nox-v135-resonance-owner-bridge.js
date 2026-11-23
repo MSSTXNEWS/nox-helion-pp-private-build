@@ -1,9 +1,9 @@
 (() => {
  'use strict';
  const here=location.pathname;
- const owner=window.NOX_NATIVE_OWNER===true &&
+const owner=window.NOX_NATIVE_OWNER===true&&
  /^\/nox-web-v29\/pc\/(?:resonance\.html|v22\/resonance\.template\.html)$/.test(here);
- if (!owner || window.__NOX_V135_OWNER_RESONANCE) return;
+if(!owner||window.__NOX_V135_OWNER_RESONANCE)return;
  window.__NOX_V135_OWNER_RESONANCE='OWNER_NATIVE_ONLY';
  const F=window.fetch.bind(window);
  const enc=new TextEncoder();
@@ -354,44 +354,44 @@ const validNativeModelLabel=v=>typeof v==='string'&&v.length>0&&v.length<=96&&v=
    return errorResponse('HOLD_UNSUPPORTED_LEGACY_ROUTE',405);
  }catch(e){return errorResponse(String(e.message||'HOLD_NATIVE_DIALOG').slice(0,150));}
  }
- window.fetch=function(input,init){
- const url=samePath(input);
- if(!url)return F(input,init);
- const method=String(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();
- let p;try{p=decodeURIComponent(url.pathname).toLowerCase()}catch{p=url.pathname.toLowerCase()}
- if((p!==url.pathname&&p.startsWith('/api/nox/'))||
- url.pathname.startsWith('/api/nox/chat/')||
- (url.pathname==='/api/nox/chat'&&(url.search||method!=='POST'))||
- (url.pathname==='/api/nox/history'&&method!=='GET')||
- (url.pathname==='/api/nox/dialogs/new'&&method!=='POST')||
- (url.pathname==='/api/nox/dialog/rename'&&method!=='POST'))
- return Promise.resolve(errorResponse('HOLD_OWNER_ROUTE_ALIAS',422));
- if(input instanceof Request&&init?.body===undefined){
-   const bridged=(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search)||
-     (url.pathname==='/api/nox/history'&&method==='GET')||
-     (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
-     (url.pathname==='/api/nox/dialog/rename'&&method==='POST');
-   if(!bridged)return F(input,init);
-   return input.clone().text().then(body=>window.fetch(url.href,{
-     method,body:method==='GET'?undefined:body,
-     signal:init?.signal||input.signal,
-     headers:init?.headers||input.headers
-   })).catch(()=>errorResponse('HOLD_REQUEST_BODY_UNAVAILABLE',422));
- }
- if(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search){
-   let data;try{data=JSON.parse(init?.body);}catch{return Promise.resolve(errorResponse('INVALID_JSON',400));}
-   if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.message!=='string'||
-      !data.message.trim()||data.message.length>8000)return Promise.resolve(errorResponse('INVALID_MESSAGE',422));
-   if('request_id'in data&&(typeof data.request_id!=='string'||!data.request_id.trim()||data.request_id.length>160))
-     return Promise.resolve(errorResponse('HOLD_REQUEST_ID_SCOPE',422));
- const s=init?.signal||input?.signal;
-   return typeof data.request_id==='string'||Object.prototype.hasOwnProperty.call(data,'dialog_id')
-  ?Promise.resolve(sseChat(data,s)):jsonChat(data,s);
- }
- if((url.pathname==='/api/nox/history'&&method==='GET')||
+window.fetch=function(input,init){
+const url=input instanceof Request||/api|%|\\/i.test(input)?samePath(input):null;
+if(!url)return F(input,init);
+const method=String(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();
+let p;try{p=decodeURIComponent(url.pathname).toLowerCase()}catch{p=url.pathname.toLowerCase()}
+if((p!==url.pathname&&p.startsWith('/api/nox/'))||
+url.pathname.startsWith('/api/nox/chat/')||
+(url.pathname==='/api/nox/chat'&&(url.search||method!=='POST'))||
+(url.pathname==='/api/nox/history'&&method!=='GET')||
+(url.pathname==='/api/nox/dialogs/new'&&method!=='POST')||
+(url.pathname==='/api/nox/dialog/rename'&&method!=='POST'))
+return Promise.resolve(errorResponse('HOLD_OWNER_ROUTE_ALIAS',422));
+if(input instanceof Request&&init?.body===undefined){
+  const bridged=(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search)||
+    (url.pathname==='/api/nox/history'&&method==='GET')||
     (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
-    (url.pathname==='/api/nox/dialog/rename'&&method==='POST'))
-   return legacyDialogs(url,init);
- return F(input,init);
- };
+    (url.pathname==='/api/nox/dialog/rename'&&method==='POST');
+  if(!bridged)return F(input,init);
+  return input.clone().text().then(body=>window.fetch(url.href,{
+    method,body:method==='GET'?undefined:body,
+    signal:init?.signal||input.signal,
+    headers:init?.headers||input.headers
+  })).catch(()=>errorResponse('HOLD_REQUEST_BODY_UNAVAILABLE',422));
+}
+if(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search){
+  let data;try{data=JSON.parse(init?.body);}catch{return Promise.resolve(errorResponse('INVALID_JSON',400));}
+  if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.message!=='string'||
+     !data.message.trim()||data.message.length>8000)return Promise.resolve(errorResponse('INVALID_MESSAGE',422));
+  if('request_id'in data&&(typeof data.request_id!=='string'||!data.request_id.trim()||data.request_id.length>160))
+    return Promise.resolve(errorResponse('HOLD_REQUEST_ID_SCOPE',422));
+const s=init?.signal||input?.signal;
+  return typeof data.request_id==='string'||Object.prototype.hasOwnProperty.call(data,'dialog_id')
+ ?Promise.resolve(sseChat(data,s)):jsonChat(data,s);
+}
+if((url.pathname==='/api/nox/history'&&method==='GET')||
+   (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
+   (url.pathname==='/api/nox/dialog/rename'&&method==='POST'))
+  return legacyDialogs(url,init);
+return F(input,init);
+};
 })();
