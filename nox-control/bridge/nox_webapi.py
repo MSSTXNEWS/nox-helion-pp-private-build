@@ -1291,6 +1291,11 @@ def install(app, B):
                                 if not isinstance(event, dict) or "error" in event:
                                     upstream_failure = "UPSTREAM_ERROR_EVENT"
                                     break
+                                # A text-only response cannot claim completion
+                                # when the upstream also emits hidden tool work.
+                                if "tool_calls" in event or "function_call" in event:
+                                    upstream_failure = "UPSTREAM_UNSUPPORTED_DELTA"
+                                    break
                                 choices = event.get("choices")
                                 if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
                                     upstream_failure = "UPSTREAM_CHOICES_INVALID"
@@ -1300,12 +1305,25 @@ def install(app, B):
                                 if finish_reason is not None and finish_reason != "stop":
                                     upstream_failure = "UPSTREAM_NONSTOP_FINISH"
                                     break
+                                # A text-only stream cannot silently drop top-level
+                                # function/tool payloads mixed with visible tokens.
+                                if "tool_calls" in choice or "function_call" in choice:
+                                    upstream_failure = "UPSTREAM_UNSUPPORTED_DELTA"
+                                    break
                                 # A falsey non-object SSE delta is corrupt data, not
                                 # an empty metadata chunk. Only an absent delta
                                 # defaults to an empty mapping.
                                 delta = choice.get("delta", {})
                                 if not isinstance(delta, dict):
                                     upstream_failure = "UPSTREAM_DELTA_INVALID"
+                                    break
+                                # This text-only endpoint cannot execute tool calls.
+                                # Silently ignoring a tool/function envelope after
+                                # earlier tokens would certify a partial reply as
+                                # complete and persist it to canonical S03.
+                                if ("tool_calls" in delta or "function_call" in delta or
+                                        ("role" in delta and delta["role"] != "assistant")):
+                                    upstream_failure = "UPSTREAM_UNSUPPORTED_DELTA"
                                     break
                                 # A falsey JSON value (0, false, [], {}) is NOT
                                 # an empty token. Only missing/null content is

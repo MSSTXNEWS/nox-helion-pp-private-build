@@ -1166,6 +1166,12 @@ class FactReceiptTest(unittest.TestCase):
             '{"choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"total_tokens":NaN}}',
             # Ignoring the second choice could falsely authorize completion.
             '{"choices":[{"delta":{},"finish_reason":"stop"},{"delta":{"content":"B"}}]}',
+            # A text-only model reply cannot silently omit a hidden tool call
+            # or accept a provider frame with the wrong speaker role.
+            '{"choices":[{"delta":{"tool_calls":[{"id":"call-1","type":"function"}]},"finish_reason":"stop"}]}',
+            '{"choices":[{"delta":{"function_call":{"name":"do_action"}},"finish_reason":"stop"}]}',
+            '{"choices":[{"delta":{"role":"tool"},"finish_reason":"stop"}]}',
+            '{"choices":[{"delta":{"role":"assistant"},"finish_reason":"stop"}],"tool_calls":[{"id":"ignored"}]}',
         )
 
         class Upstream:
@@ -1213,7 +1219,8 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertEqual(observed[-1]["reason"], "MODEL_STREAM_INCOMPLETE")
                 self.assertEqual(observed[-1]["memory_write_receipt"]["status"], "SKIPPED")
                 self.assertTrue(any("INVALID_SSE_JSON" in error or
-                                    "UPSTREAM_CHOICES_INVALID" in error
+                                    "UPSTREAM_CHOICES_INVALID" in error or
+                                    "UPSTREAM_UNSUPPORTED_DELTA" in error
                                     for error in bridge.errors))
 
     def test_upstream_invalid_unicode_or_output_overrun_skips_s03(self):
