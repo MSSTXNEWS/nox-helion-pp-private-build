@@ -54,6 +54,17 @@ const assert = require('node:assert/strict');
       } };
     } }
   });
+  const responseRaw = raw => ({
+    ok: true,
+    body: { getReader() {
+      let once = false;
+      return { async read() {
+        if (once) return { done: true };
+        once = true;
+        return { done: false, value: new TextEncoder().encode(raw) };
+      } };
+    } }
+  });
   let unblock = null;
   const fetch = async (url, options) => {
     if (url === '/feedback') return { ok: true };
@@ -107,6 +118,15 @@ const assert = require('node:assert/strict');
         memory_write_receipt: { status: 'WRITE_RETURNED_UNVERIFIED' } },
       { type: 'token', text: 'Незаконный поздний токен' }
     ]);
+    if (requests === 11) return responseRaw(
+      frame({ type: 'token', text: 'Not trusted at EOF' }) +
+      frame({ type: 'done', generation_complete: true,
+        memory_write_receipt: { status: 'WRITE_RETURNED_UNVERIFIED' } }) +
+      'data: {"type":"token"'
+    );
+    if (requests === 12) return responseRaw(
+      'data: ' + 'X'.repeat(262145)
+    );
     if (requests >= 5) return response([
       { type: 'token', text: 'Continued ✅' },
       { type: 'done', generation_complete: true,
@@ -163,6 +183,17 @@ const assert = require('node:assert/strict');
   assert(get('log').children.some(
     entry => entry.textContent.includes('данные после завершения')),
     'browser must show terminal stream corruption instead of success');
+  await submit('TRAILING_INCOMPLETE_SSE');
+  assert.equal(requests, 11);
+  assert.equal(vm.runInContext('hist.length', context), 12,
+    'trailing unfinished SSE after DONE must not commit a successful exchange');
+  assert(get('log').children.some(
+    entry => entry.textContent.includes('повреждён поток SSE')),
+    'incomplete postterminal frame should visibly fail closed');
+  await submit('UNDELIMITED_OVERSIZED_SSE');
+  assert.equal(requests, 12);
+  assert.equal(vm.runInContext('hist.length', context), 12,
+    'oversized unterminated SSE must not enter next chat history');
   console.log('legacy browser history/SSE admission: PASS');
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """
