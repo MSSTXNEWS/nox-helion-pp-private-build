@@ -200,6 +200,27 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(events[-1]["type"], "done")
         self.assertEqual(writes, [("Привет", "hello")])
 
+    def test_done_sentinel_requires_clean_http_eof_before_s03(self):
+        # A late frame or transport failure after [DONE] must not turn
+        # partial/corrupt upstream output into a durable conversation.
+        complete = [self.chunk("привет 🌍"), self.chunk(finish="stop"),
+                    "data: [DONE]"]
+        for tail in (["event: error"], [self.chunk("late")],
+                     ["data: [DONE]"], ["event: message"],
+                     [OSError("transport reset")]):
+            with self.subTest(tail=tail):
+                events, writes, logs, last = self.run_stream(complete + tail)
+                self.assertEqual(events[-1]["type"], "error")
+                self.assertFalse(events[-1]["generation_complete"])
+                self.assertNotIn("done", [e["type"] for e in events])
+                self.assertEqual(writes, [])
+                self.assertEqual(logs, [])
+                self.assertEqual(last["t"], 0)
+        events, writes, _, _ = self.run_stream(
+            complete + ["", "", "   "])
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertEqual(writes, [("Привет", "привет 🌍")])
+
     def test_http_error_blocks_write(self):
         events, writes, _, _ = self.run_stream([self.chunk("hello"),
             self.chunk(finish="stop"), "data: [DONE]"], status=503)
