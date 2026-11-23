@@ -1,0 +1,27 @@
+name: NOX D3 3A04 bounded self-model input
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/nox_self_model.py'
+      - 'nox-control/test_nox_self_model_io_3a04.py'
+      - '.github/workflows/nox-d3-3a04-input.yml'
+permissions:
+  contents: read
+jobs:
+  bounded-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: One actual focused source acceptance
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/nox_self_model.py nox-control/test_nox_self_model_io_3a04.py
+          python3 -B nox-control/test_nox_self_model_io_3a04.py
+          echo "SOURCE_ONLY=true NATIVE_ACCEPTED=false"
