@@ -2817,6 +2817,80 @@ def main():
              reads===1&&posts===1&&acks===0;
         }'''))
 
+        # R40: a failed, unconfirmed, stopped or timed-out terminal UI upsert
+        # must release the no-longer-owned GET body once. Recovery is GET-only.
+        check('projection HOLD disposes readback body once; second GET never rePOSTs', page.evaluate('''async () => {
+          const modes=['reject','false','undefined','zero','stop','timeout','healthy'];
+          for(const mode of modes){
+            const s={conversation_id:'r40',exchange_id:mode};
+            let reads=0,posts=0,acks=0,cancels=0,goodCancels=0,upserts=0;
+            let entered;
+            const started=new Promise(resolve=>entered=resolve);
+            const transport={...opts.transport,
+              post(){posts++;throw Error('DUPLICATE_MODEL_POST')},
+              async readback(){
+                reads++;
+                const which=reads;
+                return {...s,body:{cancel(){
+                  if(which===1)cancels++;else goodCancels++;
+                  return Promise.resolve();
+                }}};
+              },
+              async ack(){acks++;return true}
+            };
+            const bridge={async acceptTerminal(){
+              return {safe_to_ack:true,model_post:false,
+                conversation_id:s.conversation_id,exchange_id:s.exchange_id,
+                projection_event_id:'ev-'+mode,ack_cursor:'cursor-'+mode};
+            }};
+            const ui={async onDelta(){throw Error('NO_DELTA')},
+              async upsertTerminal(){
+                upserts++;
+                if(upserts===1){
+                  if(mode==='reject')throw Error('UI_REJECT');
+                  if(mode==='false')return false;
+                  if(mode==='undefined')return undefined;
+                  if(mode==='zero')return 0;
+                  if(mode==='stop'||mode==='timeout'){
+                    entered();
+                    return new Promise(()=>{});
+                  }
+                }
+                return true;
+              }};
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge,ui,
+              uiProjectionTimeoutMs:mode==='timeout'?40:1000
+            });
+            const pending=client.reconnect(s);
+            if(mode==='stop'){await started;if(!client.stop(s))return false;}
+            const first=await Promise.race([
+              pending.then(v=>v,e=>e.code),
+              new Promise(resolve=>setTimeout(()=>resolve('HUNG'),850))
+            ]);
+            const expected=mode==='reject'?'HOLD_STREAM_UI_PROJECTION':
+              mode==='stop'?'HOLD_STREAM_RECONNECT_STOPPED':
+              mode==='timeout'?'HOLD_STREAM_UI_PROJECTION_TIMEOUT':
+              mode==='healthy'?null:'HOLD_STREAM_UI_NOT_CONFIRMED';
+            if(mode==='healthy'){
+              if(!first||first.safe_to_ack!==true||cancels!==0||
+                goodCancels!==0||reads!==1||acks!==1||posts!==0)
+                return false;
+            }else{
+              if(first!==expected||cancels!==1||reads!==1||acks!==0||
+                posts!==0||goodCancels!==0)return false;
+              const second=await client.reconnect(s);
+              if(!second||second.safe_to_ack!==true||reads!==2||
+                cancels!==1||goodCancels!==0||acks!==1||posts!==0)
+                return false;
+            }
+            const noRepost=await client.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(!noRepost||posts!==0)return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
