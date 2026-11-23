@@ -173,33 +173,36 @@ def memory_block(text):
     if _trivial(text):
         return ""
     key = hashlib.md5((text or "").strip().lower().encode("utf-8", "ignore")).hexdigest()
-    now = time.monotonic()
-    with _RC_LOCK:
-        generation = _RC_GENERATION
-        h = _RC.get(key)
-        if h and 0 <= now - h[0] < 180:
-            return h[1]
-    try:
-        import s03_memory as M
-        res = M.recall(text)
-        formatted = M.format_for_prompt(res)
-        if not isinstance(formatted, str):
-            raise TypeError("S03_MEMORY_FORMAT_NON_TEXT")
-        out = trim_mem(formatted)
-    except Exception as e:
-        log("recall_error %s" % type(e).__name__)
-        # A failed canonical S03 read is not an empty memory result. The
-        # browser route must HOLD before invoking the model or writing S03.
-        raise RuntimeError("S03_MEMORY_LOOKUP_FAILED") from e
-    with _RC_LOCK:
-        # An older in-flight recall must not reinsert stale context after a
-        # concurrent completed S03 write invalidated the cache.
-        if generation == _RC_GENERATION:
+    # A completed concurrent S03 write may revoke an in-flight recall. Do not
+    # return that stale result to the model even if it was never cached.
+    # Retry once against the new generation, then fail closed on continued churn.
+    for _ in range(2):
+        now = time.monotonic()
+        with _RC_LOCK:
+            generation = _RC_GENERATION
+            h = _RC.get(key)
+            if h and 0 <= now - h[0] < 180:
+                return h[1]
+        try:
+            import s03_memory as M
+            res = M.recall(text)
+            formatted = M.format_for_prompt(res)
+            if not isinstance(formatted, str):
+                raise TypeError("S03_MEMORY_FORMAT_NON_TEXT")
+            out = trim_mem(formatted)
+        except Exception as e:
+            log("recall_error %s" % type(e).__name__)
+            raise RuntimeError("S03_MEMORY_LOOKUP_FAILED") from e
+        with _RC_LOCK:
+            if generation != _RC_GENERATION:
+                continue
             _RC[key] = (now, out)
             if len(_RC) > 128:
                 for k in sorted(_RC, key=lambda k: _RC[k][0])[:32]:
                     _RC.pop(k, None)
-    return out
+            return out
+    log("recall_generation_changed")
+    raise RuntimeError("S03_MEMORY_CHANGED_DURING_LOOKUP")
 
 def invalidate_s03_cache():
     """Revoke cached context after a completed canonical S03 mutation."""
