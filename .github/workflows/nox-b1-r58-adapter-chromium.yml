@@ -1,0 +1,27 @@
+name: NOX B1 R58 independent adapter Chromium
+on:
+  pull_request:
+    branches:
+      - b1/r57-pending-terminal-replay-payload-20261124
+    paths:
+      - nox-control/test_b1_r58_adapter_chromium.py
+      - .github/workflows/nox-b1-r58-adapter-chromium.yml
+permissions:
+  contents: read
+jobs:
+  r58:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install playwright==1.56.0
+      - run: python -m playwright install --with-deps chromium
+      - run: |
+          git rev-parse HEAD
+          python nox-control/test_b1_r58_adapter_chromium.py
