@@ -1300,6 +1300,11 @@ def install(app, B):
                                 if finish_reason is not None and finish_reason != "stop":
                                     upstream_failure = "UPSTREAM_NONSTOP_FINISH"
                                     break
+                                # A text-only stream cannot silently drop top-level
+                                # function/tool payloads mixed with visible tokens.
+                                if "tool_calls" in choice or "function_call" in choice:
+                                    upstream_failure = "UPSTREAM_UNSUPPORTED_DELTA"
+                                    break
                                 # A falsey non-object SSE delta is corrupt data, not
                                 # an empty metadata chunk. Only an absent delta
                                 # defaults to an empty mapping.
