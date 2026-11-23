@@ -14,7 +14,7 @@ def _load_builder():
     module = ast.parse(source)
     builder = next(node for node in module.body
                    if isinstance(node, ast.FunctionDef) and node.name == "build_msgs")
-    ns = {"_style": lambda: ""}
+    ns = {"_style": lambda: "", "IDENTITY": "NOX", "STATIC_RULES": " rules"}
     exec(compile(ast.Module(body=[builder], type_ignores=[]),
                  "nox_bridge.py", "exec"), ns)
     return ns["build_msgs"]
