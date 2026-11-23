@@ -857,6 +857,11 @@ def install(app, B):
         user = next((m["content"] for m in reversed(msgs_in) if m["role"] == "user"), "")
         if not user.strip():
             return JSONResponse({"status": "HOLD", "reason": "CHAT_MISSING_USER"}, status_code=400)
+        # The final history item is the only newly submitted turn. A stale
+        # user message followed by an assistant reply must not be replayed as
+        # a fresh question and duplicated in S03 by a retry/reconnect client.
+        if msgs_in[-1]["role"] != "user":
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_LAST_MESSAGE_NOT_USER"}, status_code=400)
         use_mem = b.get("use_memory", True) is not False
         mini = b.get("mini") is True
         # The mini prompt previously sliced the final message to 3000 chars,
