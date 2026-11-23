@@ -67,6 +67,10 @@ class UnsafeEphemeralWriteReceipt(ValueError):
 # unbounded readline(), which can exhaust the limited serving cgroup RAM
 # before the existing post-read frame-size guard has a chance to run.
 MAX_NDJSON_FRAME_BYTES = 1024 * 1024
+# Bound cumulative wire data and event count, not just each individual line:
+# a peer can otherwise send arbitrarily many valid 1 MiB frames over 400 s.
+MAX_NDJSON_STREAM_BYTES = 8 * 1024 * 1024
+MAX_NDJSON_STREAM_FRAMES = 4096
 
 
 def _bounded_ndjson_lines(response):
@@ -76,18 +80,26 @@ def _bounded_ndjson_lines(response):
     isolated legacy test doubles that do not expose a bounded reader.
     """
     reader = getattr(response, "readline", None)
-    if callable(reader):
-        while True:
-            raw = reader(MAX_NDJSON_FRAME_BYTES + 1)
-            if not raw:
-                break
-            if len(raw) > MAX_NDJSON_FRAME_BYTES:
-                raise ValueError("OVERSIZED_FRAME")
-            yield raw
-        return
-    for raw in response:
+    def wire_lines():
+        if callable(reader):
+            while True:
+                raw = reader(MAX_NDJSON_FRAME_BYTES + 1)
+                if not raw:
+                    break
+                yield raw
+        else:
+            # Legacy test doubles; production always takes the bounded reader.
+            yield from response
+
+    total_bytes = 0
+    total_frames = 0
+    for raw in wire_lines():
         if len(raw) > MAX_NDJSON_FRAME_BYTES:
             raise ValueError("OVERSIZED_FRAME")
+        total_bytes += len(raw)
+        total_frames += 1
+        if total_bytes > MAX_NDJSON_STREAM_BYTES or total_frames > MAX_NDJSON_STREAM_FRAMES:
+            raise ValueError("OVERSIZED_STREAM")
         yield raw
 
 
