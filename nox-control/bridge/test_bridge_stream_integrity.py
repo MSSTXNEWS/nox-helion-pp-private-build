@@ -269,6 +269,62 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(writes, [("Привет", "saved")])
         self.assertEqual(logs, [])
 
+    def test_explicit_s03_rejection_and_nonstream_soul_mirror(self):
+        # Exercise the actual remember() and smart() AST functions offline:
+        # no live S03 writes, GPU requests or service imports.
+        import sys
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        saved, cache_events, logs = [], [], []
+        def persist(_user, _answer):
+            saved.append((_user, _answer))
+            return False
+        remember_node = next(n for n in TREE.body
+                             if isinstance(n, ast.FunctionDef) and n.name == "remember")
+        remember_code = compile(ast.fix_missing_locations(
+            ast.Module(body=[remember_node], type_ignores=[])), "nox_bridge.py", "exec")
+        state = {"invalidate_s03_cache": lambda: cache_events.append("invalidated"),
+                 "log": logs.append}
+        with patch.dict(sys.modules, {"s03_memory": SimpleNamespace(persist_turn=persist)}):
+            exec(remember_code, state)
+            self.assertIs(state["remember"]("u", "a"), False)
+        self.assertEqual(saved, [("u", "a")])
+        self.assertEqual(cache_events, ["invalidated"])
+        self.assertEqual(logs, ["persist_explicitly_rejected"])
+
+        # The existing S03 writer may return None after a successful commit;
+        # preserve that compatibility, rather than requiring truthy metadata.
+        with patch.dict(sys.modules, {
+            "s03_memory": SimpleNamespace(persist_turn=lambda *_: None)}):
+            self.assertIs(state["remember"]("u2", "a2"), True)
+
+        smart_node = next(n for n in TREE.body
+                          if isinstance(n, ast.AsyncFunctionDef) and n.name == "smart")
+        smart_code = compile(ast.fix_missing_locations(
+            ast.Module(body=[smart_node], type_ignores=[])), "nox_bridge.py", "exec")
+        mirrored = []
+        async def fake_ask(*_args, **_kwargs):
+            return "short answer"
+        env = {
+            "memory_block": lambda _: "",
+            "build_msgs": lambda *_: [],
+            "self_vol": lambda _: "",
+            "ask": fake_ask,
+            "adapt_tokens": lambda _: 200,
+            "remember": lambda *_: False,
+            "SOUL": SimpleNamespace(log_turn=lambda *x: mirrored.append(x)),
+            "LAST_CHAT": {"t": 0},
+            "time": time,
+        }
+        exec(smart_code, env)
+        reply, _ = asyncio.run(env["smart"]([{"role": "user", "content": "u"}]))
+        self.assertEqual(reply, "short answer")
+        self.assertEqual(mirrored, [])
+        env["remember"] = lambda *_: True
+        asyncio.run(env["smart"]([{"role": "user", "content": "u"}]))
+        self.assertEqual(mirrored, [("u", "short answer")])
+
     def test_browser_history_is_gated_on_real_complete(self):
         self.assertIn("if(!complete){", SOURCE)
         self.assertIn("complete=o.generation_complete===true", SOURCE)
