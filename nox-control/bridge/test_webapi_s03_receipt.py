@@ -521,6 +521,67 @@ class FactReceiptTest(unittest.TestCase):
                     self.assertNotIn(rid, W.ACTIVE_CHAT_IDS)
         self.assertEqual(len(self.bridge.errors), 2)
 
+    def test_1a01_adaptive_hint_failure_does_not_drop_live_sse_or_s03(self):
+        """An optional output-budget helper cannot strand a real chat turn."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT = {"t": 0}
+        bridge.SOUL = None
+        bridge.self_vol = lambda user: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Вопрос"}]
+        seen = []
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Ответ 🌌"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs):
+                seen.append(kwargs["json"]["max_tokens"])
+                return Upstream()
+
+        bridge.hc = lambda: Client()
+        memory = types.ModuleType("s03_memory")
+        writes = []
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        async def collect(idx):
+            response = await chat(Request({
+                "request_id": "adapt-hint-failure-" + str(idx), "mode": "auto",
+                "use_memory": False, "messages": [{"role": "user", "content": "Вопрос"}],
+            }))
+            return [json.loads(part) async for part in response.body_iterator]
+
+        with (mock.patch.object(W, "W", None),
+              mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
+              mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.dict(sys.modules, {"s03_memory": memory})):
+            for idx, hint in enumerate((RuntimeError("helper offline"), None, float("nan"), True)):
+                with self.subTest(idx=idx):
+                    def adaptive(*args, _hint=hint):
+                        if isinstance(_hint, Exception):
+                            raise _hint
+                        return _hint
+                    bridge.adapt_tokens = adaptive
+                    frames = asyncio.run(collect(idx))
+                    last = frames[-1]
+                    self.assertTrue(last["done"])
+                    self.assertEqual(last["completion_receipt"]["status"], "GENERATED")
+                    self.assertEqual(last["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
+                    self.assertFalse(last["memory_write_receipt"]["s03_readback_verified"])
+                    self.assertTrue(all(frame.get("status") != "HOLD" for frame in frames))
+                    self.assertEqual(writes[-1][1], "Ответ 🌌")
+                    self.assertNotIn("adapt-hint-failure-" + str(idx), W.ACTIVE_CHAT_IDS)
+        self.assertEqual(seen, [700] * 4)
+        self.assertEqual(len(writes), 4)
+        self.assertEqual(len(bridge.errors), 4)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
