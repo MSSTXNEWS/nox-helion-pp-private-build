@@ -3279,8 +3279,7 @@ class ProbeTests(unittest.TestCase):
                     self.assertFalse(probe.stable_postquiet_three_turn_history(
                         object(), history, turns, did))
                     with self.assertRaisesRegex(
-                            RuntimeError, '^HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED
-):
+                            RuntimeError, '^HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED$'):
                         probe.require_executor_witness(
                             {'saved': True, 's03_integrated': True},
                             history, turns, True, True, did)
