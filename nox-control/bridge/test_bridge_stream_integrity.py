@@ -127,7 +127,7 @@ class BridgeStreamIntegrity(unittest.TestCase):
         class Stream:
             def __init__(self, result, **kwargs):
                 admission.append((result, kwargs))
-        env = {"json": json, "CH": None, "JSONResponse": Response,
+        env = {"json": json, "CH": None, "Request": object, "JSONResponse": Response,
                "StreamingResponse": Stream,
                "stream_chat": lambda msgs: msgs}
         exec(code, env)
