@@ -1064,3 +1064,70 @@ test('R40 linear 128KiB UTF-8 SSE HTTP: split Unicode, TTFT, exact byte cap and 
     await new Promise(r=>server.close(r));
   }
 });
+
+
+test('R41 fragmented TCP multiline UTF-8 CRLF logical byte cap: exact accept and plus-one reject',async()=>{
+  // SSE counts UTF-8 bytes of each nonblank field line plus one LF per
+  // intervening field line; CRLF on the wire is one logical separator.
+  const visible='Привет 🌍 終 mañana';
+  const pretty=JSON.stringify({choices:[{delta:{content:visible},finish_reason:null}]},null,2);
+  const fields=pretty.split('\n').map(line=>'data: '+line);
+  const logicalBytes=fields.reduce((n,line)=>n+Buffer.byteLength(line,'utf8'),0)+fields.length-1;
+  assert.ok(logicalBytes>=128 && logicalBytes<=262144);
+  const frame=(extra='')=>fields.map((line,i)=>i===0?line+extra:line).join('\r\n')+'\r\n\r\n';
+  const terminal=event({delta:{},finish_reason:'stop'}).replaceAll('\n','\r\n')+
+    'data: [DONE]\r\n\r\n';
+  assert.equal(Buffer.byteLength(fields[0]+' ','utf8'),Buffer.byteLength(fields[0],'utf8')+1);
+  assert.equal(fields.reduce((n,line,i)=>n+Buffer.byteLength(line+(i===0?' ':''),'utf8'),0)+fields.length-1,logicalBytes+1);
+  assert.ok(Buffer.byteLength(event({delta:{},finish_reason:'stop'}).split('\n')[0])<logicalBytes);
+  const requests=[];
+  const server=createServer(async(req,res)=>{
+    if(req.method!=='POST'||req.url!=='/nox/chat'){res.writeHead(404).end();return;}
+    let body='';for await(const chunk of req)body+=chunk;
+    const input=JSON.parse(body);
+    requests.push({turn:input.turn,variant:input.variant});
+    const wire=Buffer.from(frame(input.variant==='plus'?' ':'')+terminal,'utf8');
+    res.writeHead(200,{'content-type':'text/event-stream','cache-control':'no-store'});
+    res.flushHeaders();
+    // Each write is only 1-3 wire bytes, including fragmented CRLF and
+    // multiple boundaries inside the four-byte UTF-8 globe scalar.
+    for(let i=0;i<wire.length;){
+      const size=1+(i%3),end=Math.min(i+size,wire.length);
+      try{res.write(wire.subarray(i,end));}catch{break;}
+      i=end;
+      if(i%13<3)await sleep(1);
+    }
+    res.end();
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const url='http://127.0.0.1:'+server.address().port+'/nox/chat';
+  const post=async(variant)=>{
+    const startedAt=performance.now();
+    const response=await fetch(url,{method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({turn:2,variant})});
+    return measureSseResponse(response,{startedAt,maxEventBytes:logicalBytes,
+      totalTimeoutMs:10000,idleTimeoutMs:3000});
+  };
+  try{
+    const result=await post('exact');
+    assert.equal(result.verified,true);
+    assert.equal(result.body_bytes,Buffer.byteLength(frame()+terminal));
+    assert.equal(result.visible_text_sha256,hash(visible));
+    assert.ok(result.first_byte_ms<=result.ttft_ms);
+    assert.ok(result.ttft_ms<=result.sse_done_ms);
+    assert.ok(result.sse_done_ms<=result.completion_ms);
+    assert.equal(result.native_verified,false);
+    assert.equal(result.browser_authenticated,false);
+    assert.equal(result.canonical_s03_verified,false);
+    await assert.rejects(post('plus'),e=>e?.code==='B4_EVENT_TOO_LARGE');
+    assert.deepEqual(requests,[{turn:2,variant:'exact'},{turn:2,variant:'plus'}],
+      'one explicit POST per case; no implicit retry');
+    console.log('B4_R41_SOURCE_ONLY '+JSON.stringify({
+      logical_event_bytes:logicalBytes,plus_one_rejected:true,
+      fragmented_tcp:true,genuine_glm:false,genuine_browser:false}));
+  }finally{
+    server.closeAllConnections();
+    await new Promise(resolve=>server.close(resolve));
+  }
+});
