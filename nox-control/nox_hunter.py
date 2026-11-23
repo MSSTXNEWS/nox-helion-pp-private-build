@@ -547,6 +547,9 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
             raise HunterError("cached response disappeared during conditional fetch")
         return row[0]
 
+    # A failed late candidate must not leave earlier sibling rows inserted.
+    # Keep the error/backoff state outside the savepoint so it still commits.
+    conn.execute("SAVEPOINT hunter_source_poll")
     try:
         body, etag, modified, content_type, not_modified = _fetch(
             source, cached, max_bytes, load_cached_body=load_cached_body)
@@ -614,6 +617,7 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
             "next_poll_at=excluded.next_poll_at,failures=0,last_error=NULL",
             (source["id"], fingerprint, next_poll),
         )
+        conn.execute("RELEASE SAVEPOINT hunter_source_poll")
         return {
             "source_id": source["id"],
             "status": "not_modified" if not_modified else "polled",
@@ -623,6 +627,11 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
             "next_poll_at": next_poll,
         }
     except (HTTPError, URLError, TimeoutError, OSError, ValueError, ET.ParseError) as exc:
+        # _poll_one normally reports a recoverable HOLD rather than raising.
+        # Roll back the complete candidate/cache batch first. A prior valid
+        # poll and unrelated sources retain their own committed observations.
+        conn.execute("ROLLBACK TO SAVEPOINT hunter_source_poll")
+        conn.execute("RELEASE SAVEPOINT hunter_source_poll")
         failures = (state["failures"] + 1) if state and state["fingerprint"] == fingerprint else 1
         delay = _retry_delay(exc, source["interval_seconds"]) if isinstance(exc, (HTTPError, URLError)) else MIN_INTERVAL
         next_poll = now + delay
