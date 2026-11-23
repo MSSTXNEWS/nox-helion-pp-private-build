@@ -537,7 +537,7 @@ class ProbeTests(unittest.TestCase):
         source = path.read_text()
         self.assertLess(
             source.index('require_cgroup_probe_headroom()  # Before ANY synthetic dialog-create/chat POST.'),
-            source.index("dialog=obj(request(client,'/api/ui/memory/dialogs/create'"))
+            source.index("did=create_probe_dialog(client,'NOX QA '+marker)"))
 
     def test_each_synthetic_stream_turn_rechecks_cgroup_before_post(self):
         """An accepted first turn cannot authorize a later POST after RAM drops."""
@@ -1776,7 +1776,7 @@ class ProbeTests(unittest.TestCase):
         self.assertIsNone(probe.require_multiturn_requested('1'))
         source = path.read_text()
         self.assertLess(source.index("require_multiturn_requested(os.environ.get('NOX_PROBE_SECOND_TURN'))"),
-                        source.index("'/api/ui/memory/dialogs/create'"))
+                        source.index("did=create_probe_dialog(client,'NOX QA '+marker)"))
 
     def test_skipped_executor_turn_is_not_success(self):
         self.assertIsNone(probe.require_executor_turn_budget(0))
