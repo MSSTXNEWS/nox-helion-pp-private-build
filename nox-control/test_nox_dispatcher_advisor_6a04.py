@@ -187,7 +187,9 @@ class GpuSourceEvidenceTests(unittest.TestCase):
 
     def test_high_valid_utilization_is_not_admission(self):
         s=snapshot(); s["gpu"]["utilization_pct"]=100
-        self.assertEqual(codes(s), ["NO_UNVERIFIED_TUNING"])
+        # A quiet/high-utilization GPU does not prove a live owner lease.
+        # This fixture deliberately lacks the fresh 6A02 owner attestation.
+        self.assertEqual(codes(s), ["NATIVE_QUEUE_UNVERIFIED"])
 
 
 if __name__ == "__main__":
