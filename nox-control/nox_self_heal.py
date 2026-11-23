@@ -159,23 +159,34 @@ def _stop_marker_present_or_unknown(path):
     must not turn an unknown STOP into permission to mutate a service.
     This local fence does not substitute for native owner STOP/lease/CAS.
     """
-    # The parent directory is part of the STOP fence. If it is missing,
-    # replaced by a symlink, or unreadable, treating an absent STOP filename
-    # as permission to restart would fail open. Check the final directory
-    # component without following its symlink before inspecting the marker.
+    # Pin every STOP directory component to a real (not symlinked) inode.
+    # Checking only the final parent follows symlinks in its ancestors:
+    # /owner/alias/stopdir/STOP could otherwise appear safely absent.
+    # The final marker is checked relative to the opened parent descriptor.
     try:
-        parent = os.stat(Path(path).parent, follow_symlinks=False)
-        if not stat.S_ISDIR(parent.st_mode):
+        components = Path(os.path.abspath(os.fspath(path))).parts
+        if len(components) < 2:
             return True
-    except OSError:
+        directory_fd = os.open(os.sep, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+        try:
+            for part in components[1:-1]:
+                child_fd = os.open(
+                    part,
+                    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                    dir_fd=directory_fd,
+                )
+                os.close(directory_fd)
+                directory_fd = child_fd
+            try:
+                os.stat(components[-1], dir_fd=directory_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                return False
+            return True
+        finally:
+            os.close(directory_fd)
+    except (OSError, TypeError, ValueError):
+        # An inaccessible or changed STOP path is never owner authorization.
         return True
-    try:
-        os.lstat(path)
-    except FileNotFoundError:
-        return False
-    except OSError:
-        return True
-    return True
 
 
 def _read_repair_state_checked(path):

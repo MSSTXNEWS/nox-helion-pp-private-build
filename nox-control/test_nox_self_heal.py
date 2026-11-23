@@ -278,7 +278,7 @@ class SafeRepairTests(unittest.TestCase):
                 self.assertEqual(result[0]["action"], "stop_lock")
                 run.assert_not_called()
             # An uninspectable STOP is also never considered safely absent.
-            with patch.object(healer.os, "lstat", side_effect=PermissionError("denied")):
+            with patch.object(healer.os, "stat", side_effect=PermissionError("denied")):
                 self.assertTrue(healer._stop_marker_present_or_unknown(stop))
 
     def test_missing_or_linked_stop_parent_blocks_restart(self):
@@ -299,6 +299,31 @@ class SafeRepairTests(unittest.TestCase):
             with patch.object(healer, "alive", return_value=False), patch.object(
                     healer.subprocess, "run") as systemd:
                 policy = self.policy(missing_stop)
+                healer.repair_cycle(policy, state)
+                result = healer.repair_cycle(policy, state)
+                self.assertEqual(result[0]["action"], "stop_lock")
+                systemd.assert_not_called()
+
+    def test_nested_stop_ancestor_symlink_is_hold(self):
+        # The immediate STOP parent is real, but a higher ancestor can be a
+        # symlink. The old single-parent stat followed it and returned clear.
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            owner = root / "owner"
+            owner.mkdir()
+            actual = owner / "actual"
+            actual.mkdir()
+            stopdir = actual / "stopdir"
+            stopdir.mkdir()
+            alias = owner / "alias"
+            alias.symlink_to(actual, target_is_directory=True)
+            linked_stop = alias / "stopdir" / "STOP"
+            self.assertTrue(healer._stop_marker_present_or_unknown(linked_stop))
+            self.assertFalse(healer._stop_marker_present_or_unknown(stopdir / "STOP"))
+            state = root / "repair.json"
+            with patch.object(healer, "alive", return_value=False), patch.object(
+                    healer.subprocess, "run") as systemd:
+                policy = self.policy(linked_stop)
                 healer.repair_cycle(policy, state)
                 result = healer.repair_cycle(policy, state)
                 self.assertEqual(result[0]["action"], "stop_lock")
