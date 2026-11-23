@@ -79,7 +79,7 @@ return data.dialog_id;
 async function checkHistory(id,prompt,answer,exchangeId,signal,model) {
 const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
 if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
-if(data.messages.some(m=>m&&(m.dialog_id!==undefined&&m.dialog_id!==id||m.role==='assistant'&&['model','model_label'].some(k=>k in m&&m[k]!==model))))throw Error('HOLD_DIALOG_HISTORY_SCOPE');
+if(data.messages.some(m=>m&&(m.dialog_id!==undefined&&m.dialog_id!==id||m.role==='assistant'&&['model','model_label','modelLabel'].some(k=>k in m&&m[k]!==model))))throw Error('HOLD_DIALOG_HISTORY_SCOPE');
 const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
 const currentAt=data.messages.indexOf(pair[0]);
 if(pair.length!==2||currentAt!==data.messages.length-2||
@@ -154,8 +154,8 @@ const line=async str=>{
      answer+=e.text;await emit(e.text);
    } else if(e.type==='done') {
      if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-     for(const k of ['model','model_label'])
-      if(k in e&&(!validNativeModelLabel(e[k])||e[k]!==nativeModel))
+     for(const k of ['model','model_label','modelLabel'])
+      if(k in e&&e[k]!==nativeModel)
        throw Error('HOLD_NATIVE_MODEL_RECEIPT_DRIFT');
      doneSeen=true;done=e;
    } else if(e.type==='start') {
