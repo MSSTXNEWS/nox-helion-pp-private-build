@@ -98,6 +98,35 @@ class HunterURLSafetyTests(unittest.TestCase):
                                 for digest, reason in rejected))
             self.assertFalse(any("password" in repr(row) for row in rejected))
 
+    def test_atom_enclosure_or_self_cannot_impersonate_article_provenance(self):
+        source = hunter._validate_source({
+            "id": "atom", "kind": "atom", "url": "https://example.org/feed",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        feed = (b'<feed xmlns="http://www.w3.org/2005/Atom">'
+                b'<entry><title>Attachment only</title>'
+                b'<link rel="enclosure" href="https://example.org/file.zip"/></entry>'
+                b'<entry><title>Self only</title>'
+                b'<link rel="self" href="https://example.org/api/item"/></entry>'
+                b'<entry><title>Actual article</title>'
+                b'<link rel="enclosure" href="https://example.org/other.zip"/>'
+                b'<link rel="alternate" href="https://example.org/article"/></entry>'
+                b'</feed>')
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "hunter.sqlite"
+            with patch.object(hunter, "_fetch", return_value=(
+                    feed, None, None, "application/atom+xml", False)):
+                result = hunter.poll_due([source], state, now=1000.0)[0]
+            self.assertEqual((result["added"], result["quarantined"]), (1, 2))
+            with sqlite3.connect(state) as conn:
+                saved = conn.execute("SELECT title,item_url FROM items").fetchall()
+            self.assertEqual(saved, [("Actual article", "https://example.org/article")])
+        # Preserve RSS's unqualified text-only <link> convention.
+        rss = (b'<rss><channel><item><title>RSS article</title>'
+               b'<link>https://example.org/rss-item</link></item></channel></rss>')
+        self.assertEqual(hunter._feed_items(rss)[0]["url"],
+                         "https://example.org/rss-item")
+
     def test_json_surrogates_quarantine_only_bad_candidates(self):
         # A legal JSON escape can decode to an invalid lone surrogate.
         # Source config fails cleanly, while malformed feed items are
