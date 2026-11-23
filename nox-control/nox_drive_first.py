@@ -115,7 +115,26 @@ def cgroup_admit(root=Path("/sys/fs/cgroup"), min_free=MIN_RAM):
 def load_manifest(path, expected):
     require(isinstance(expected, str) and SHA.fullmatch(expected) is not None,
             "MANIFEST_PIN")
-    raw = private_file(path).read_bytes()
+    # Keep the approved manifest attached to one bounded regular-file inode.
+    # The path can be replaced after private_file() validates it; never follow
+    # a late symlink, block on a FIFO, or read an unbounded replacement.
+    p = private_file(path)
+    try:
+        fd = os.open(p, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+        with os.fdopen(fd, "rb") as f:
+            before = os.fstat(f.fileno())
+            require(stat.S_ISREG(before.st_mode) and before.st_uid == os.geteuid()
+                    and before.st_nlink == 1 and not before.st_mode & 0o077
+                    and 0 < before.st_size <= MAX_MANIFEST, "MANIFEST_FILE")
+            raw = f.read(MAX_MANIFEST + 1)
+            after = os.fstat(f.fileno())
+            require(len(raw) == before.st_size and len(raw) <= MAX_MANIFEST
+                    and (before.st_dev, before.st_ino, before.st_size,
+                         before.st_mtime_ns, before.st_ctime_ns)
+                    == (after.st_dev, after.st_ino, after.st_size,
+                        after.st_mtime_ns, after.st_ctime_ns), "MANIFEST_CHANGED")
+    except OSError:
+        raise Hold("HOLD_DRIVE_FIRST_MANIFEST_FILE") from None
     require(hashlib.sha256(raw).hexdigest() == expected, "MANIFEST_CHANGED")
     try:
         # Ambiguous owner approval, size or source fields must fail closed.
