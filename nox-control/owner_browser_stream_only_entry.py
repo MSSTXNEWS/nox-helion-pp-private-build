@@ -24,7 +24,7 @@ except NameError:
 ROOT = Path('/root/nox')
 AREA = ROOT / 'browser_qa'
 PINS = {
-    'owner_chat_browser_qa.py': 'd0a407310f28c5fef7b0e043528d55a6268c714663c02838b544bbd7c3c7ce1c',
+    'owner_chat_browser_qa.py': 'ad1e0e6b037d820e91b7fe0c40d07665615f67b5c4111eb699ecf4bb4ca3ff67',
     'owner_chat_browser_transport_qa.py': 'e12b4735e9f75853ea476fa18db57e09e58873d54dc37033fcaee53a4c2a15b3',
     'owner_chat_browser_release_qa.py': 'e1d2c1e4be658c7dc5ad5cc0cd1978f0d8e9e0f6c5878aae3cb6a9e3e19f1427',
     'owner_chat_stream_only_qa.py': '7ac7df515f76d0e412e2d0778da9c8b0e1e7ea14d1107932fc85c8b8fe12e7a2',
