@@ -87,7 +87,8 @@ def plan_two_stage_retrieval(*, candidates, owner_persona_id, s03_revision,
     rerank_ids = ([x["id"] for x in top[:rerank_limit]
                    if top[0]["first_pass_score"] - x["first_pass_score"] <= .08]
                   if ambiguous else [])
-    return {"schema": "NOX_RETRIEVAL_SHORTLIST_SOURCE_V1",
+    return {"schema": "NOX_RETRIEVAL_SHORTLIST_SOURCE_V2",
+            "owner_persona_id": owner_persona_id, "s03_revision": s03_revision,
             "first_pass": top, "optional_multilingual_rerank_ids": rerank_ids,
             "requires_owner_gpu_resource_and_lease_gate": bool(rerank_ids),
             "gpu_reranker_executed": False, "native_installed": False,
@@ -186,15 +187,22 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
         import math
         _guard(scoped and type(retrieval_plan) is dict and
                set(retrieval_plan) == {
-                   "schema", "first_pass", "optional_multilingual_rerank_ids",
+                   "schema", "owner_persona_id", "s03_revision", "first_pass",
+                   "optional_multilingual_rerank_ids",
                    "requires_owner_gpu_resource_and_lease_gate",
                    "gpu_reranker_executed", "native_installed",
                    "independent_s03_readback_verified"}, "RETRIEVAL_PLAN")
-        _guard(retrieval_plan["schema"] == "NOX_RETRIEVAL_SHORTLIST_SOURCE_V1"
+        _guard(retrieval_plan["schema"] == "NOX_RETRIEVAL_SHORTLIST_SOURCE_V2"
                and retrieval_plan["gpu_reranker_executed"] is False
                and retrieval_plan["native_installed"] is False
                and retrieval_plan["independent_s03_readback_verified"] is False,
                "RETRIEVAL_PLAN")
+        # Even identical fact IDs and source hashes can occur across owners or
+        # revisions. Scores belong to the snapshot that produced them; never
+        # reuse an old or foreign shortlist, including an empty shortlist.
+        _guard(retrieval_plan["owner_persona_id"] == owner_persona_id and
+               retrieval_plan["s03_revision"] == current_s03_revision,
+               "RETRIEVAL_PLAN_SCOPE")
         rows = retrieval_plan["first_pass"]
         rerank = retrieval_plan["optional_multilingual_rerank_ids"]
         _guard(type(rows) is list and len(rows) <= 12 and
