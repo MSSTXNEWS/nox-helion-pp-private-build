@@ -119,6 +119,29 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(writes, [("Привет", "¡Привет! 🌍")])
         self.assertEqual(logs, writes)
 
+    def test_last_visible_token_sharing_stop_frame_is_saved_exactly_once(self):
+        # A provider may attach its last visible delta to finish_reason=stop.
+        # The terminal event is still provisional until [DONE] + clean EOF.
+        events, writes, logs, _ = self.run_stream([
+            self.chunk("Прив"), self.chunk("ет 🌌", finish="stop"), "data: [DONE]"
+        ])
+        text = "".join(e["text"] for e in events if e["type"] == "token")
+        self.assertEqual(text, "Привет 🌌")
+        self.assertEqual(writes, [("Привет", text)])
+        self.assertEqual(logs, writes)
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertTrue(events[-1]["generation_complete"])
+        self.assertFalse(events[-1]["memory_write_receipt"]["s03_readback_verified"])
+
+        # But any *later* text after the stop event must remain a HOLD.
+        rejected, writes2, logs2, _ = self.run_stream([
+            self.chunk("Прив"), self.chunk("ет", finish="stop"),
+            self.chunk("лишний"), "data: [DONE]"
+        ])
+        self.assertEqual(rejected[-1]["type"], "error")
+        self.assertEqual(writes2, [])
+        self.assertEqual(logs2, [])
+
     def test_many_unicode_fragments_keep_exact_token_order_and_s03_content(self):
         # Checks >1,000 token events plus non-ASCII characters and whitespace
         # against the final single S03 write, not only the displayed stream.

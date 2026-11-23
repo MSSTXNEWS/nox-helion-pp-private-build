@@ -431,7 +431,6 @@ async def stream_chat(history):
                     if finish is not None:
                         if finish != "stop" or finish_stop:
                             raise ValueError("UPSTREAM_FINISH_INVALID")
-                        finish_stop = True
                     delta = choice.get("delta")
                     if not isinstance(delta, dict):
                         raise ValueError("UPSTREAM_DELTA_INVALID")
@@ -442,8 +441,12 @@ async def stream_chat(history):
                         token = ""
                     if not isinstance(token, str) or any(0xD800 <= ord(ch) <= 0xDFFF for ch in token):
                         raise ValueError("UPSTREAM_TOKEN_INVALID")
+                    # A valid final token may share the first stop frame;
+                    # only content in a *later* frame is post-finish corruption.
                     if finish_stop and token:
                         raise ValueError("UPSTREAM_TOKEN_AFTER_FINISH")
+                    if finish == "stop":
+                        finish_stop = True
                     if full_chars + len(token) > 4000000:
                         raise ValueError("UPSTREAM_TEXT_LIMIT")
                 except (ValueError, KeyError, TypeError, IndexError) as exc:
