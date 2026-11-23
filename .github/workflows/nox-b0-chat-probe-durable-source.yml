@@ -6,24 +6,45 @@ on:
       - 'nox-control/owner_chat_probe.py'
       - 'nox-control/test_owner_chat_probe.py'
       - '.github/workflows/nox-b0-chat-probe-durable-source.yml'
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [repair/nox-continuous-execution-20261118]
+    paths:
+      - 'nox-control/owner_chat_probe.py'
+      - 'nox-control/test_owner_chat_probe.py'
+      - '.github/workflows/nox-b0-chat-probe-durable-source.yml'
 permissions: {contents: read}
 concurrency:
-  group: nox-b0-chat-probe-durable-source
+  group: nox-b0-chat-probe-durable-source-${{ github.event_name }}
   cancel-in-progress: false
 jobs:
   focused-source:
-    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event.pull_request.number == 445 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b0/chat-probe-durable-two-turn-20261119-0710')
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-        with: {persist-credentials: false}
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@v5
         with: {python-version: '3.11'}
+      - name: Pin exact tested commit and file blobs
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          printf 'B0_TESTED_HEAD=%s\n' "$EXPECTED_HEAD"
+          for path in nox-control/owner_chat_probe.py nox-control/test_owner_chat_probe.py .github/workflows/nox-b0-chat-probe-durable-source.yml; do
+            test "$(git hash-object "$path")" = "$(git rev-parse "HEAD:$path")"
+            printf 'B0_TESTED_BLOB %s %s\n' "$(git hash-object "$path")" "$path"
+          done
       - name: Compile and verify one scoped chat-probe test module
         run: |
           set -euo pipefail
-          python -m py_compile nox-control/owner_chat_probe.py nox-control/test_owner_chat_probe.py
-          python -m unittest -v nox-control/test_owner_chat_probe.py
+          python -B -m py_compile nox-control/owner_chat_probe.py nox-control/test_owner_chat_probe.py
+          python -B -m unittest discover -s nox-control -p test_owner_chat_probe.py -v
       - name: Declare source-only evidence
         run: |
           echo 'NOX_B0_SOURCE_PATCH_TESTED=true'
