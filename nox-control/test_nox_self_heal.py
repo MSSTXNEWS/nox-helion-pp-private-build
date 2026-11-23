@@ -281,6 +281,29 @@ class SafeRepairTests(unittest.TestCase):
             with patch.object(healer.os, "lstat", side_effect=PermissionError("denied")):
                 self.assertTrue(healer._stop_marker_present_or_unknown(stop))
 
+    def test_missing_or_linked_stop_parent_blocks_restart(self):
+        # An absent STOP directory used to look like an absent STOP marker.
+        # An attacker-controlled symlink as the final parent must also HOLD.
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            missing_stop = root / "missing-owner-dir" / "STOP"
+            real_dir = root / "other-dir"
+            real_dir.mkdir()
+            linked_dir = root / "linked-owner-dir"
+            linked_dir.symlink_to(real_dir, target_is_directory=True)
+            self.assertTrue(healer._stop_marker_present_or_unknown(missing_stop))
+            self.assertTrue(healer._stop_marker_present_or_unknown(linked_dir / "STOP"))
+            self.assertFalse(healer._stop_marker_present_or_unknown(real_dir / "STOP"))
+
+            state = root / "repair.json"
+            with patch.object(healer, "alive", return_value=False), patch.object(
+                    healer.subprocess, "run") as systemd:
+                policy = self.policy(missing_stop)
+                healer.repair_cycle(policy, state)
+                result = healer.repair_cycle(policy, state)
+                self.assertEqual(result[0]["action"], "stop_lock")
+                systemd.assert_not_called()
+
     def test_disabled_default_does_not_restart(self):
         with tempfile.TemporaryDirectory() as t:
             state=Path(t)/"s.json"
