@@ -622,7 +622,7 @@
               // MUST forward the challenge to the server; never a model POST.
               // The canonical receipt GET must be physically cancellable; a
               // timed-out or stopped late reply cannot resume gate CAS.
-              if(lifecycleSignal.aborted)
+              if(lifecycleSignal.aborted||signal.aborted)
                 hold('HOLD_STREAM_RECONNECT_STOPPED');
               // A canonical receipt GET can ignore AbortSignal and deliver
               // an OPEN body after STOP/deadline. The enclosing gate Promise
@@ -649,10 +649,10 @@
                 receipt=await Promise.resolve(transport.readCanonicalAck(
                   s,expected,challenge,lifecycleSignal)).then(value=>{
                     // Non-cooperative transport may settle after deadline/STOP.
-                    if(lifecycleSignal.aborted)discardReceipt(value);
+                    if(lifecycleSignal.aborted||signal.aborted)discardReceipt(value);
                     return value;
                   });
-                if(lifecycleSignal.aborted)
+                if(lifecycleSignal.aborted||signal.aborted)
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
                 // The gate may have returned before this GET settled. Its
                 // terminal HOLD cannot transfer ownership of a late body.
@@ -668,7 +668,7 @@
                 // while its identity is captured. Fence that reentrant abort
                 // BEFORE giving this GET to the freshness verifier: otherwise
                 // a host callback runs after STOP and can double-own the body.
-                if(lifecycleSignal.aborted){
+                if(lifecycleSignal.aborted||signal.aborted){
                   discardReceipt(receipt); // shared once-only abort disposal
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
                 }
@@ -689,15 +689,19 @@
                 // if it fails or hangs, the receipt body is not acknowledged.
                 const trusted=await host.verifyFreshCanonicalAck(
                   receipt,expected,s,challenge);
-                if(lifecycleSignal.aborted)
+                if(lifecycleSignal.aborted||signal.aborted)
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
                 if(canonicalGateClosed||canonicalCallbacksInvalid){
                   discardSignedBody();
                   hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
                 }
                 if(trusted!==true)hold('HOLD_STREAM_FRESHNESS_UNVERIFIED');
-                if(!sameSignedIdentity(receipt))
-                  hold('HOLD_STREAM_RECEIPT_MUTATED');
+                const unchanged=sameSignedIdentity(receipt);
+                // Getters are untrusted: STOP can occur while comparing the
+                // pinned receipt after a verifier has returned.
+                if(lifecycleSignal.aborted||signal.aborted)
+                  hold('HOLD_STREAM_RECONNECT_STOPPED');
+                if(!unchanged)hold('HOLD_STREAM_RECEIPT_MUTATED');
                 freshVerified=true;
                 return receipt;
               }catch(err){
@@ -735,7 +739,7 @@
               const onAbort=()=>discard();
               lifecycleSignal.addEventListener('abort',onAbort,{once:true});
               try{
-                if(lifecycleSignal.aborted){
+                if(lifecycleSignal.aborted||signal.aborted){
                   discard();
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
                 }
@@ -743,7 +747,14 @@
                   discard();
                   hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
                 }
-                if(!sameCanonicalProjection(receipt)){
+                const canonicalMatches=sameCanonicalProjection(receipt);
+                // A synchronous signed-field getter may STOP during the
+                // identity comparison. No host verifier after such STOP.
+                if(lifecycleSignal.aborted||signal.aborted){
+                  discard();
+                  hold('HOLD_STREAM_RECONNECT_STOPPED');
+                }
+                if(!canonicalMatches){
                   discard();
                   hold('HOLD_STREAM_RECEIPT_MUTATED');
                 }
@@ -755,7 +766,7 @@
                   discard();
                   throw err;
                 }
-                if(lifecycleSignal.aborted){
+                if(lifecycleSignal.aborted||signal.aborted){
                   discard();
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
                 }
