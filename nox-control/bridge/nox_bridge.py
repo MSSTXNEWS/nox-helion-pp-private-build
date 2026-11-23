@@ -463,7 +463,9 @@ async def stream_chat(history):
                         raise ValueError("UPSTREAM_SSE_LINE_TOO_LONG")
                     pending.append(byte)
         if pending:
-            yield pending.decode("utf-8", "strict")
+            # An unterminated final SSE line is not a complete wire frame.
+            # In particular, [DONE] without CR/LF must never authorize S03.
+            raise ValueError("UPSTREAM_SSE_UNTERMINATED_LINE")
 
     user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
     yield _sse({"type": "status", "text": "слушаю тебя…"})
