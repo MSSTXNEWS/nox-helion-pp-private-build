@@ -957,7 +957,20 @@ def bounded_stream_lines(response, max_line=100000, deadline=None):
     read1 = getattr(response, 'read1', None)
     # BytesIO test doubles expose read1 too; preserve their readline contract.
     from http.client import HTTPResponse
+    from socket import socket as SocketType
     incremental = callable(read1) and isinstance(response, HTTPResponse)
+    # Never silently regress a real HTTPResponse to unbounded readline()
+    # if its incremental reader is missing or shadowed by a proxy adapter.
+    if isinstance(response, HTTPResponse) and not incremental:
+        raise RuntimeError('HOLD_STREAM_BOUNDED_READER_UNAVAILABLE')
+    if not incremental:
+        # Non-HTTP offline readers may keep their legacy bounded contract,
+        # but a live socket-backed wrapper can drip partial readline() bytes
+        # indefinitely. It must supply a verified incremental HTTP reader.
+        fallback_sock = getattr(getattr(getattr(response, 'fp', None),
+                                        'raw', None), '_sock', None)
+        if isinstance(fallback_sock, SocketType):
+            raise RuntimeError('HOLD_STREAM_UNBOUNDED_SOCKET_READER')
     pending = b''
     while True:
         remaining = None

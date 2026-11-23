@@ -4155,5 +4155,56 @@ class ProbeTests(unittest.TestCase):
             worker.join(timeout=2)
 
 
+    def test_stream_nonhttp_network_readline_fallback_fails_closed(self):
+        """Do not reintroduce unbounded socket.readline after HTTP read1 recovery."""
+        import io
+        import socket
+        import time
+        from http.client import HTTPResponse
+        from types import SimpleNamespace
+
+        class ShadowedRead1(HTTPResponse):
+            read1 = None
+
+            def __init__(self):
+                self.read_calls = 0
+
+            def readline(self, limit):
+                self.read_calls += 1
+                raise AssertionError('HTTP fallback must never block')
+
+        shadowed = ShadowedRead1()
+        with self.assertRaisesRegex(
+                RuntimeError, '^HOLD_STREAM_BOUNDED_READER_UNAVAILABLE    unittest.main()
+):
+            list(probe.bounded_stream_lines(
+                shadowed, deadline=time.monotonic() + 2))
+        self.assertEqual(shadowed.read_calls, 0)
+
+        with socket.socketpair() as (left, right):
+            class SocketWrapper:
+                fp = SimpleNamespace(raw=SimpleNamespace(_sock=left))
+
+                def __init__(self):
+                    self.read_calls = 0
+
+                def readline(self, limit):
+                    self.read_calls += 1
+                    raise AssertionError('Network fallback must never block')
+
+            wrapped = SocketWrapper()
+            with self.assertRaisesRegex(
+                    RuntimeError, '^HOLD_STREAM_UNBOUNDED_SOCKET_READER    unittest.main()
+):
+                list(probe.bounded_stream_lines(
+                    wrapped, deadline=time.monotonic() + 2))
+            self.assertEqual(wrapped.read_calls, 0)
+
+        raw = io.BytesIO(b'{"type":"delta","text":"323"}\n')
+        self.assertEqual(list(probe.bounded_stream_frames(
+            raw, deadline=time.monotonic() + 2)),
+            [{'type': 'delta', 'text': '323'}])
+
+
 if __name__ == '__main__':
     unittest.main()
