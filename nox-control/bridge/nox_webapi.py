@@ -1121,8 +1121,25 @@ def install(app, B):
                     mm = [{"role": "system", "content": B.IDENTITY + B.STATIC_RULES},
                           {"role": "user", "content": "[Режим мини-помощника: ответ не длиннее 4 предложений, без строки «Уверенность»]" + extra + "\n" + user}]
                 else:
-                    vol = await asyncio.to_thread(B.self_vol, user)
-                    mm = B.build_msgs(msgs_in, user, mem, vol, "\n" + extra if extra else "")
+                    # Required self-state/prompt assembly is part of admission.
+                    # An exception here formerly ended the SSE generator without
+                    # a terminal frame, leaving browser and S03 state ambiguous.
+                    # Fail closed before any model POST or canonical memory write.
+                    try:
+                        vol = await asyncio.to_thread(B.self_vol, user)
+                        mm = B.build_msgs(msgs_in, user, mem, vol, "\n" + extra if extra else "")
+                    except Exception as e:
+                        B.log("web_premodel_context_unavailable " + type(e).__name__)
+                        yield fr(status="HOLD", reason="PREMODEL_CONTEXT_UNAVAILABLE",
+                                 done=False,
+                                 completion_receipt={"status": "HOLD", "request_id": rid,
+                                                     "upstream_done": False},
+                                 memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                       "s03_readback_verified": False},
+                                 memory_history={"status": "HOLD",
+                                                 "reason": "PREMODEL_CONTEXT_UNAVAILABLE",
+                                                 "s03_readback_verified": False})
+                        return
                 body = {"messages": mm, "max_tokens": max(64, min(npred, 900, (400 if mini else (900 if mode == "thoughtful" else B.adapt_tokens(user, 900))))), "temperature": 0.4 if mode == "thoughtful" else 0.6, "id_slot": 1 if mini else 0, "cache_prompt": True, "n_keep": B.NKEEP, "stream": True,
                         "chat_template_kwargs": {"enable_thinking": False}}
                 # STOP may also arrive while self-model or planning awaits.
