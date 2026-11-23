@@ -177,3 +177,48 @@ test('R26 cancellation rejection/synchronous throw and lock exception preserve o
     assert.equal(cancelCount,1);assert.equal(releaseCount,1);
   }
 });
+
+
+// R27: settle a raced read AFTER the deadline and lock release. Even a
+// complete, printable third SSE payload cannot revive an expired response.
+test('R27 quarantines late reader success/rejection after idle/total deadline; third SSE turn never revives',async()=>{
+  const unhandled=[];
+  const onUnhandled=error=>unhandled.push(error);
+  process.on('unhandledRejection',onUnhandled);
+  try{
+    const validThird=Buffer.from([
+      'data: '+JSON.stringify({choices:[{delta:{content:'Третий ответ ✨'},finish_reason:null}]})+'\n\n',
+      'data: '+JSON.stringify({choices:[{delta:{},finish_reason:'stop'}]})+'\n\n',
+      'data: [DONE]\n\n'
+    ].join(''));
+    for(const [idle,total,expected,lateOutcome] of [
+      [20,200,'B4_IDLE_TIMEOUT','resolve'],
+      [20,200,'B4_IDLE_TIMEOUT','reject'],
+      [200,20,'B4_TOTAL_TIMEOUT','resolve'],
+      [200,20,'B4_TOTAL_TIMEOUT','reject']
+    ]){
+      let settleRead,readCount=0,cancelCount=0,releaseCount=0;
+      const pending=new Promise((resolve,reject)=>{settleRead={resolve,reject};});
+      const reader={
+        read:()=>{readCount++;return pending;},
+        cancel:()=>{cancelCount++;return Promise.resolve();},
+        releaseLock:()=>{releaseCount++;}
+      };
+      const events=[];
+      const measurement=measureSseResponse(responseFor(reader),{
+        startedAt:performance.now(),idleTimeoutMs:idle,totalTimeoutMs:total
+      }).then(value=>events.push({kind:'verified',value}),error=>events.push({kind:'failed',code:error.code}));
+      await measurement;
+      assert.deepEqual(events,[{kind:'failed',code:expected}],lateOutcome);
+      assert.equal(cancelCount,1);assert.equal(releaseCount,1);
+      assert.equal(readCount,1);
+      if(lateOutcome==='resolve')settleRead.resolve({done:false,value:validThird});
+      else settleRead.reject(new Error('R27_LATE_READ_FAILURE'));
+      await sleep(0);await sleep(0);
+      assert.deepEqual(events,[{kind:'failed',code:expected}],lateOutcome);
+      assert.equal(readCount,1,'late data must not trigger a second read');
+      assert.equal(cancelCount,1);assert.equal(releaseCount,1);
+    }
+    assert.deepEqual(unhandled,[],'raced late read reject must be observed');
+  }finally{process.off('unhandledRejection',onUnhandled);}
+});
