@@ -171,5 +171,47 @@ class ReviewIntegrityContract(unittest.TestCase):
             self.assertEqual(cap.read_bytes(), raw)
 
 
+    def test_combine_independent_submissions_preserves_hashes_and_rejects_stale(self):
+        with tempfile.TemporaryDirectory() as folder:
+            cap, a, b = (Path(folder) / name for name in ("cap.json", "a.json", "b.json"))
+            raw = json.dumps(self.capture, ensure_ascii=False).encode("utf-8")
+            cap.write_bytes(raw)
+            sheets = [{"schema": probe.SCHEMA, "capture_sha256": self.digest,
+                       "reviewers": [copy.deepcopy(row)]}
+                      for row in self.review["reviewers"]]
+            sheets[1]["reviewers"][0]["decisions"][0]["verdict"] = "uncertain"
+            sheets[1]["reviewers"][0]["decisions"][0]["reason"] = "Revisión independiente ñ"
+            def write():
+                for path, sheet in zip((a, b), sheets):
+                    path.write_text(json.dumps(sheet, ensure_ascii=False), encoding="utf-8")
+            def invoke():
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    code = probe.main(["probe.py", "--combine-reviews", str(cap), str(a), str(b)])
+                return code, json.loads(out.getvalue())
+            write()
+            code, result = invoke()
+            self.assertEqual(code, 0)
+            self.assertEqual(result["reviewers"], [row["reviewers"][0] for row in sheets])
+            self.assertEqual(result["submission_sha256"],
+                             [hashlib.sha256(path.read_bytes()).hexdigest() for path in (a, b)])
+            self.assertEqual(probe.verify(self.capture, result, self.digest)["review_summary"],
+                             "ADJUDICATION_REQUIRED")
+            self.assertEqual(cap.read_bytes(), raw)
+            sheets[1]["capture_sha256"] = "f" * 64
+            write()
+            self.assertEqual(invoke(), (2, {"review_summary": "HOLD",
+                                            "reason": "HOLD_B2_REVIEW_CAPTURE_DIGEST"}))
+            sheets[1]["capture_sha256"] = self.digest
+            sheets[1]["reviewers"] = copy.deepcopy(self.review["reviewers"])
+            write()
+            self.assertEqual(invoke(), (2, {"review_summary": "HOLD",
+                                            "reason": "HOLD_B2_REVIEW_SINGLE_SUBMISSION"}))
+            sheets[1]["reviewers"] = copy.deepcopy(sheets[0]["reviewers"])
+            write()
+            self.assertEqual(invoke(), (2, {"review_summary": "HOLD",
+                                            "reason": "HOLD_B2_REVIEW_SUBMISSION_DIGEST"}))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -193,12 +193,44 @@ def prepare_review(capture: dict, capture_sha256: str) -> dict:
     }
 
 
+def combine_reviews(capture: dict, capture_sha: str,
+                    submissions: list[tuple[dict, str]]) -> dict:
+    """Combine two separately returned submissions without changing judgments."""
+    require(len(submissions) == 2, "HOLD_B2_REVIEW_TWO_SUBMISSIONS")
+    reviewers, digests = [], []
+    for submission, digest in submissions:
+        require(type(submission) is dict and submission.get("schema") == SCHEMA,
+                "HOLD_B2_REVIEW_SCHEMA")
+        require(submission.get("capture_sha256") == capture_sha,
+                "HOLD_B2_REVIEW_CAPTURE_DIGEST")
+        rows = submission.get("reviewers")
+        require(type(rows) is list and len(rows) == 1,
+                "HOLD_B2_REVIEW_SINGLE_SUBMISSION")
+        require(type(digest) is str and SHA256.fullmatch(digest) is not None
+                and digest not in digests, "HOLD_B2_REVIEW_SUBMISSION_DIGEST")
+        reviewers.extend(rows)
+        digests.append(digest)
+    combined = {"schema": SCHEMA, "capture_sha256": capture_sha,
+                "reviewers": reviewers, "submission_sha256": digests}
+    # Validate coverage, answer hashes, distinct reviewer claims and verdicts.
+    # This does not authenticate reviewers or native origin.
+    verify(capture, combined, capture_sha)
+    return combined
+
+
 def main(argv: list[str]) -> int:
-    if len(argv) != 3:
-        print("Usage: b2_ru_es_review_integrity.py CAPTURE.json REVIEW.json | --prepare-review CAPTURE.json",
+    combining = len(argv) > 1 and argv[1] == "--combine-reviews"
+    if len(argv) != (5 if combining else 3):
+        print("Usage: b2_ru_es_review_integrity.py CAPTURE.json REVIEW.json | --prepare-review CAPTURE.json | --combine-reviews CAPTURE.json A.json B.json",
               file=sys.stderr)
         return 2
     try:
+        if combining:
+            capture, capture_sha = read_json(Path(argv[2]))
+            submissions = [read_json(Path(path)) for path in argv[3:]]
+            print(json.dumps(combine_reviews(capture, capture_sha, submissions),
+                             ensure_ascii=False, sort_keys=True))
+            return 0
         if argv[1] == "--prepare-review":
             capture, capture_sha = read_json(Path(argv[2]))
             print(json.dumps(prepare_review(capture, capture_sha),
