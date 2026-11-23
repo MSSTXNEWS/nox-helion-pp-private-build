@@ -1496,3 +1496,54 @@ test('R47 monotonic per-read idle deadline fences settled data and physical EOF'
     healthy_ttft_ms:proof.ttft_ms,healthy_eof_ms:proof.completion_ms,clock:'injected'
   }));
 });
+
+
+test('R48 empty transport chunks do not renew idle budget but heartbeat bytes do',async()=>{
+  const heartbeat=Buffer.from(': heartbeat\n\n');
+  const body=Buffer.from(event({delta:{content:'Hola 🌈'}})+
+    event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n');
+  const empty=new Uint8Array(0);
+  function fixture(entries,totalTimeoutMs=100){
+    let elapsed=0,reads=0,cancels=0,releases=0;
+    const reader={
+      async read(){
+        const [at,value]=entries[reads++];
+        elapsed=at;
+        return value===null?{done:true}:{done:false,value};
+      },
+      cancel(){cancels++;},
+      releaseLock(){releases++;}
+    };
+    const response={status:200,headers:new Headers({'content-type':'text/event-stream'}),
+      body:{getReader:()=>reader}};
+    return {run:()=>measureSseResponse(response,{startedAt:0,clock:()=>elapsed,
+      totalTimeoutMs,idleTimeoutMs:20}),stats:()=>({reads,cancels,releases})};
+  }
+  for(const [name,entries,total,code,reads] of [
+    ['empty before first byte',[[9,empty],[18,empty],[21,body],[22,null]],100,'B4_IDLE_TIMEOUT',3],
+    ['empty after terminal frame',[[5,body],[14,empty],[23,empty],[25,null]],100,'B4_IDLE_TIMEOUT',4],
+    ['exact idle boundary',[[10,empty],[20,body],[21,null]],100,'B4_IDLE_TIMEOUT',2],
+    ['total precedence',[[9,empty],[18,empty],[20,body],[21,null]],20,'B4_TOTAL_TIMEOUT',3]
+  ]){
+    const f=fixture(entries,total);
+    await assert.rejects(f.run(),e=>e.code===code,name);
+    assert.deepEqual(f.stats(),{reads,cancels:1,releases:1},name);
+  }
+  const f=fixture([[9,empty],[18,heartbeat],[27,empty],[36,body],[45,empty],[54,null]]);
+  const proof=await f.run();
+  assert.equal(proof.verified,true);
+  assert.equal(proof.first_byte_ms,18);
+  assert.equal(proof.ttft_ms,36);
+  assert.equal(proof.completion_ms,54);
+  assert.equal(proof.body_bytes,heartbeat.length+body.length);
+  assert.equal(proof.body_sha256,hash(Buffer.concat([heartbeat,body])));
+  assert.equal(proof.visible_text_sha256,hash('Hola 🌈'));
+  assert.equal(proof.native_verified,false);
+  assert.equal(proof.model_tokens_per_second,null);
+  assert.deepEqual(f.stats(),{reads:6,cancels:0,releases:1});
+  console.log('B4_R48_SOURCE_ONLY '+JSON.stringify({
+    empty_before_first_byte:'REJECTED',empty_after_done:'REJECTED',
+    exact_boundary:'REJECTED',total_precedence:'PASS',heartbeat_renews_idle:true,
+    first_byte_ms:18,ttft_ms:36,completion_ms:54,clock:'injected',real_glm:false
+  }));
+});

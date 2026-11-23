@@ -143,12 +143,16 @@ export async function measureSseResponse(response,options={}){
         throw fail('B4_EVENT_TOO_LARGE');
     }
   }
+  let lastByteAt=null;
   async function boundedRead(){
     let timer;
     const readStartedAt=clock();
     const remaining=totalTimeoutMs-(readStartedAt-startedAt);
     if(remaining<=0)throw fail('B4_TOTAL_TIMEOUT');
-    const wait=Math.min(idleTimeoutMs,remaining);
+    if(lastByteAt===null)lastByteAt=readStartedAt;
+    const idleRemaining=idleTimeoutMs-(readStartedAt-lastByteAt);
+    if(idleRemaining<=0)throw fail('B4_IDLE_TIMEOUT');
+    const wait=Math.min(idleRemaining,remaining);
     try{
       const result=await Promise.race([
         reader.read(),
@@ -160,7 +164,10 @@ export async function measureSseResponse(response,options={}){
       // Both deadlines apply to EOF as well as data; total has precedence.
       const settledAt=clock();
       if(settledAt-startedAt>=totalTimeoutMs)throw fail('B4_TOTAL_TIMEOUT');
-      if(settledAt-readStartedAt>=idleTimeoutMs)throw fail('B4_IDLE_TIMEOUT');
+      if(settledAt-lastByteAt>=idleTimeoutMs)throw fail('B4_IDLE_TIMEOUT');
+      // Only actual transport bytes renew the idle budget, never empty reads.
+      if(!result.done&&result.value instanceof Uint8Array&&result.value.length>0)
+        lastByteAt=settledAt;
       return result;
     }finally{clearTimeout(timer);}
   }
