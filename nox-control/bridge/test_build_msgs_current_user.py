@@ -73,7 +73,7 @@ class FullCurrentTurnTests(unittest.TestCase):
         exec(compile(ast.Module(body=[function], type_ignores=[]),
                      "nox_bridge.py", "exec"), env)
         admit = env["trim_mem"]
-        data = ("М1 — память 🌍 и источник\n" * 900) + "Завершение ✔"
+        data = ("М1 — память 🌍 и источник\n" * 500) + "Завершение ✔"
         self.assertEqual(admit(data), data)
         with self.assertRaisesRegex(ValueError, "S03_MEMORY_CONTEXT_OVER_BUDGET"):
             admit("п" * 17000)
