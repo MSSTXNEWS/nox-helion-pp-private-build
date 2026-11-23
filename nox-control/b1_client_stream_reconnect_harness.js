@@ -610,7 +610,9 @@
                 s,witness.projection_event_id,
             witness.ack_cursor,
             async expected=>{
-              if(canonicalGateClosed||canonicalReadUsed){
+              if(canonicalGateClosed)
+                hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
+              if(canonicalReadUsed){
                 canonicalCallbacksInvalid=true;
                 discardSignedBody();
                 hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
@@ -693,7 +695,9 @@
               }
             },
             async (receipt,expected)=>{
-              if(canonicalGateClosed||canonicalVerifyUsed){
+              if(canonicalGateClosed)
+                hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
+              if(canonicalVerifyUsed){
                 canonicalCallbacksInvalid=true;
                 discardSignedBody();
                 hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
@@ -716,6 +720,10 @@
                 if(lifecycleSignal.aborted){
                   discard();
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
+                }
+                if(canonicalCallbacksInvalid){
+                  discard();
+                  hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
                 }
                 if(!sameCanonicalProjection(receipt)){
                   discard();
