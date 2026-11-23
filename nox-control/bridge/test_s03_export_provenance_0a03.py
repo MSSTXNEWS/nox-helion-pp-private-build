@@ -179,5 +179,62 @@ class S03ExportProvenanceTest(unittest.TestCase):
                 bridge.invalidate_s03_cache.assert_called_once_with()
                 self.assertTrue(Path(fact_path).is_file())
 
+
+    def test_0a03_fact_mirror_rejects_redirect_without_replaying_s03(self):
+        """S03 commit can precede a mirror HOLD; do not follow symlinks or hardlinks."""
+        import os
+        import tempfile
+        import types
+
+        class FactRequest:
+            async def json(self):
+                return {"content": "Приватный факт", "fact_key": "memo"}
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            root = Path(tempdir)
+            target = root / "outside.txt"
+            target.write_text("UNCHANGED", encoding="utf-8")
+            leaf_link = root / "facts-leaf.jsonl"
+            leaf_link.symlink_to(target)
+            real_dir = root / "real"
+            real_dir.mkdir()
+            parent_link = root / "linked"
+            parent_link.symlink_to(real_dir, target_is_directory=True)
+            hard_link = root / "facts-hardlink.jsonl"
+            os.link(target, hard_link)
+            for name, fact_path in (
+                    ("linked_leaf", leaf_link),
+                    ("linked_parent", parent_link / "facts.jsonl"),
+                    ("hardlinked_leaf", hard_link)):
+                with self.subTest(name=name):
+                    writer = mock.Mock(return_value=None)
+                    fake_s03 = types.ModuleType("s03_memory")
+                    fake_s03.persist_turn = writer
+                    bridge = Bridge()
+                    bridge.log = mock.Mock()
+                    bridge.invalidate_s03_cache = mock.Mock()
+                    with (mock.patch.dict(sys.modules, {"s03_memory": fake_s03}),
+                          mock.patch.object(W, "FACTS", str(fact_path))):
+                        with (mock.patch.object(W.threading.Thread, "start"),
+                              mock.patch.object(W.os.path, "isdir", return_value=False)):
+                            app = FastAPI()
+                            W.install(app, bridge)
+                        endpoint = next(r.endpoint for r in app.routes
+                                        if r.path == "/api/s03/remember")
+                        response = asyncio.run(endpoint(FactRequest()))
+                    payload = json.loads(response.body)
+                    self.assertEqual(response.status_code, 500)
+                    self.assertEqual(payload["status"], "PARTIAL_HOLD")
+                    self.assertEqual(payload["reason"], "FACTS_MIRROR_WRITE_FAILED")
+                    self.assertFalse(payload["saved"])
+                    self.assertTrue(payload["s03_write_returned"])
+                    self.assertFalse(payload["retry_safe"])
+                    self.assertFalse(payload["s03_readback_verified"])
+                    writer.assert_called_once()
+                    bridge.invalidate_s03_cache.assert_called_once()
+                    self.assertEqual(target.read_text(encoding="utf-8"), "UNCHANGED")
+                    self.assertFalse((real_dir / "facts.jsonl").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
