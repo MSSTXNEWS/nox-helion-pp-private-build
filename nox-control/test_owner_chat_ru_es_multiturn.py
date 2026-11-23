@@ -3333,6 +3333,75 @@ async function check(chunks, status=200) {
                 browser.close()
 
 
+
+    def test_ru_es_reload_scaled_zero_text_cannot_pass_chromium(self):
+        """CSS zero-area transforms erase painted text without changing history."""
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+        transcript = [
+            dict(row, message_id=f'zero-paint-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda req: posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items){
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body';
+                        body.textContent=row.content;
+                        bubble.append(body);root.append(bubble);
+                    }
+                }""", transcript)
+                check = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(check(), True)
+                body = page.locator('#messages .v24-msg .body').nth(3)
+                body.evaluate("""node => {
+                    const child=document.createElement('span');
+                    child.style.display='inline-block';
+                    child.textContent=node.textContent;
+                    node.replaceChildren(child);
+                }""")
+                self.assertIs(check(), True, 'ordinary nested span is visible')
+                child = body.locator('span')
+                child.evaluate("(node)=>node.style.transform='scaleX(0)'")
+                collapsed = child.evaluate("""node => ({
+                    rects:node.getClientRects().length,
+                    width:node.getBoundingClientRect().width,
+                    visible:node.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}),
+                    raw:node.parentElement.innerText===node.parentElement.textContent
+                })""")
+                self.assertGreater(collapsed['rects'], 0)
+                self.assertEqual(collapsed['width'], 0)
+                self.assertIs(collapsed['visible'], True)
+                self.assertIs(collapsed['raw'], True)
+                self.assertIs(check(), False, 'zero-width painted text must HOLD')
+                child.evaluate("(node)=>node.style.transform='translateX(10px)'")
+                self.assertIs(check(), True, 'nonzero visual translation remains valid')
+                child.evaluate("(node)=>node.style.transform='scaleY(0)'")
+                self.assertIs(check(), False, 'zero-height painted text must HOLD')
+                child.evaluate("(node)=>node.style.transform=''")
+                self.assertIs(check(), True)
+                bubble = page.locator('#messages .v24-msg').nth(0)
+                bubble.evaluate("(node)=>node.style.transform='scale(0)'")
+                self.assertIs(check(), False, 'zero-area ancestor must HOLD')
+                bubble.evaluate("(node)=>node.style.transform=''")
+                self.assertIs(check(), True)
+                self.assertEqual(posts, [], 'browser readback must never issue model POST')
+            finally:
+                browser.close()
+
+
     def test_ru_es_reload_conflicting_dom_row_ids_rejected_in_chromium(self):
         """Both visible DOM ID attributes must agree with the durable history.
 

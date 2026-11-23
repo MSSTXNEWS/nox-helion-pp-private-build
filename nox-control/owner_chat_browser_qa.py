@@ -1299,7 +1299,12 @@ RENDERED_FOURROW_JS = r"""expected => {
       // A child span can be transparent/hidden while its parent .body
       // remains visible and innerText/textContent still match persisted text.
       // Verify every text-owning descendant, not just bubble/body ancestors.
+      // CSS scale(0) can leave a client-rect entry and unchanged DOM text,
+      // yet collapse all painted glyphs to zero area. Pin actual paint extent
+      // for each text-owning descendant; harmless translation stays allowed.
+      const painted=ownsText?el.getBoundingClientRect():null;
       if(ownsText&&(!visible(el)||!el.getClientRects().length||
+         !(painted.width>0&&painted.height>0)||
          !Number.isFinite(parseFloat(style.fontSize))||
          parseFloat(style.fontSize)<=0||invisibleColor(style.color)||
          invisibleColor(style.webkitTextFillColor)))return false;
