@@ -3461,20 +3461,23 @@ class SignedCheckpointHashParentPathFence(unittest.TestCase):
             displaced.rename(approved)
             self.assertEqual(file_sha(file_path), digest)
 
-            # Parent pivot just before os.stat: same FD/bytes/inode/checksum.
-            original_stat = os.stat
+            # Pivot only after the descriptor bytes have been hashed.
+            # Patching os.stat here can intercept Path.is_symlink preflight,
+            # which tests the wrong HOLD (initial invalid source).
+            original_fstat = os.fstat
+            fstat_calls = 0
             pivoted = False
 
-            def pivot_on_named_stat(target, *args, **kwargs):
-                nonlocal pivoted
-                if (not pivoted and os.fspath(target) == os.fspath(file_path)
-                        and kwargs.get("follow_symlinks") is False):
+            def pivot_after_hash(fd):
+                nonlocal fstat_calls, pivoted
+                fstat_calls += 1
+                if fstat_calls == 2 and not pivoted:
                     approved.rename(displaced)
                     approved.symlink_to(displaced, target_is_directory=True)
                     pivoted = True
-                return original_stat(target, *args, **kwargs)
+                return original_fstat(fd)
 
-            with mock.patch("os.stat", side_effect=pivot_on_named_stat):
+            with mock.patch("os.fstat", side_effect=pivot_after_hash):
                 with self.assertRaisesRegex(
                         RuntimeError, "^HOLD_CHECKPOINT_FILE_MUTATED$"):
                     file_sha(file_path)
