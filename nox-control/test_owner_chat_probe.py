@@ -3832,7 +3832,7 @@ class ProbeTests(unittest.TestCase):
                     with patch.object(probe, 'request', return_value=reply):
                         with patch.object(probe, 'bounded_stream_frames') as parser:
                             with self.assertRaisesRegex(
-                                    RuntimeError, '^HOLD_STREAM_NOSNIFF_HEADER$')
+                                    RuntimeError, '^HOLD_STREAM_NOSNIFF_HEADER$'):
                                 probe.consume_turn(object(), 'offline-' + label, did)
                             parser.assert_not_called()
                     self.assertEqual(reply.read_count, 0)
