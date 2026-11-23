@@ -7,6 +7,8 @@ on:
       - 'nox-control/owner_training_resume.py'
       - 'nox-control/tests/test_owner_training_resume_step_type_b2.py'
       - '.github/workflows/nox-b2-4a02-hash-stability-ci.yml'
+      - 'nox-control/b2_ru_es_3turn_holdout.py'
+      - 'nox-control/tests/test_b2_ru_es_3turn_holdout.py'
 permissions:
   contents: read
 jobs:
@@ -25,6 +27,12 @@ jobs:
         run: |
           test "$(git hash-object nox-control/owner_training_resume.py)" = "65d71ed0009fc8f33b57a66d529754daaacb5719"
           test "$(git hash-object nox-control/tests/test_owner_training_resume_step_type_b2.py)" = "0425ec904d14a23573d4528cd1cf6092f6ea151c"
+      - name: Verify pinned B2 RU-ES quality holdout probe and offline tests
+        run: |
+          test "$(git hash-object nox-control/b2_ru_es_3turn_holdout.py)" = "3a2721e6053f8d123e68d1387d84f85be13f5ae6"
+          test "$(git hash-object nox-control/tests/test_b2_ru_es_3turn_holdout.py)" = "af872f1fcf8c77cf63c3071a9816b7ff685d8fb4"
+          python -B -m py_compile nox-control/b2_ru_es_3turn_holdout.py nox-control/tests/test_b2_ru_es_3turn_holdout.py
+          python -B -m unittest discover -s nox-control/tests -p 'test_b2_ru_es_3turn_holdout.py' -v
       - name: Syntax and bounded non-native checkpoint regression
         run: |
           python -B -m py_compile nox-control/owner_training_resume.py nox-control/tests/test_owner_training_resume_step_type_b2.py
