@@ -368,7 +368,11 @@ async def stream_chat(history):
                     delta = choice.get("delta")
                     if not isinstance(delta, dict):
                         raise ValueError("UPSTREAM_DELTA_INVALID")
-                    token = delta.get("content") or ""
+                    # Missing/null content is a valid empty control delta, but
+                    # falsy non-strings (0, false, []) must not be swallowed.
+                    token = delta.get("content")
+                    if token is None:
+                        token = ""
                     if not isinstance(token, str) or any(0xD800 <= ord(ch) <= 0xDFFF for ch in token):
                         raise ValueError("UPSTREAM_TOKEN_INVALID")
                     if finish_stop and token:
