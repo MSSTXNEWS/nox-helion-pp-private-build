@@ -8,7 +8,7 @@ KEY = os.environ["NOX2"]
 REMOTE = '#S1\ncurl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/' + os.environ['C300'] + ' -o /tmp/c300.sh && bash /tmp/c300.sh 2>&1 | tail -c 6000'
 
 if REMOTE.startswith("#S1"):
-    INSTANCE = 61825960
+    INSTANCE = int(os.environ.get("C300_INST", "62038702"))
 
 def api(method, path, body=None):
     req = urllib.request.Request("https://console.vast.ai/api/v0" + path, method=method,
