@@ -504,6 +504,11 @@ OBSERVER_JS = r"""
          const line=buffer.slice(0,end);buffer=buffer.slice(end+1);
          if(!line.trim())continue;
          const frame=JSON.parse(line);
+         // Browser acceptance must fail closed on unknown native JSONL frames.
+         // Ignoring a foreign event could hide a failed/partial generation.
+         if(frame===null||typeof frame!=='object'||Array.isArray(frame)||
+            !['delta','done','error'].includes(frame.type))
+           throw Error('HOLD_QA_STREAM_UNKNOWN_FRAME');
          // A terminal event never proves completion until the physical body
          // reaches EOF. Any non-empty frame after it invalidates the stream.
          if(q.done!==null)throw Error('HOLD_QA_STREAM_AFTER_DONE');
