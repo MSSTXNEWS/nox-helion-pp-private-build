@@ -1608,6 +1608,18 @@ async def json_response(response, limit=200000):
     raw=await response.body()
     if len(raw)>limit:
         raise RuntimeError('HOLD_OWNER_HTTP_SIZE')
+    # The owner history is an RFC 8259 UTF-8 wire witness. json.loads(bytes)
+    # auto-detects UTF-16/32; a second browser or canonical S03 reader may
+    # decode the same bytes differently. Reject ambiguous encodings before
+    # checking four persisted RU/ES turns, without changing response limits.
+    if b'\x00' in raw:
+        raise RuntimeError('HOLD_OWNER_HTTP_UTF8_WIRE')
+    try:
+        decoded = raw.decode('utf-8', errors='strict')
+    except UnicodeDecodeError:
+        raise RuntimeError('HOLD_OWNER_HTTP_UTF8_WIRE') from None
+    if decoded.startswith('\ufeff'):
+        raise RuntimeError('HOLD_OWNER_HTTP_UTF8_WIRE')
     # Browser history and S03 candidate witnesses must not accept ambiguous
     # JSON objects: json.loads normally keeps the last duplicate key, allowing
     # conflicting dialog/message identities to be silently overwritten.
@@ -1628,7 +1640,7 @@ async def json_response(response, limit=200000):
     def reject_nonfinite(_literal):
         raise RuntimeError('HOLD_OWNER_HTTP_NONFINITE_JSON_NUMBER')
 
-    return json.loads(raw, object_pairs_hook=unique_keys,
+    return json.loads(decoded, object_pairs_hook=unique_keys,
                       parse_constant=reject_nonfinite, parse_float=finite_float)
 
 

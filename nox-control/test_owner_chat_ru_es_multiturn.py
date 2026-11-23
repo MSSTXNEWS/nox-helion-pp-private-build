@@ -4003,5 +4003,42 @@ async function check(chunks, status=200) {
         self.assertEqual(decode('{"messages":[{"weight":1.25}]}'),
                          {"messages": [{"weight": 1.25}]})
 
+    def test_owner_history_json_strict_utf8_wire_before_four_turn_evidence(self):
+        # json.loads(bytes) silently auto-detects UTF-16/UTF-32. The owner
+        # history GET must agree with UTF-8 browser/S03 evidence, even when
+        # role/content text and ordered message identities would match.
+        class Response:
+            status = 200
+            def __init__(self, raw):
+                self.raw = raw
+            async def body(self):
+                return self.raw
+
+        def decode(raw):
+            return asyncio.run(json_response(Response(raw)))
+
+        history = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": "Привет, sesión 🪐"},
+            {"role": "assistant", "content": "Hola, ¿cómo estás?"},
+            {"role": "user", "content": "Продолжи en español"},
+            {"role": "assistant", "content": "Claro, seguimos"},
+        ]}
+        utf8 = json.dumps(history, ensure_ascii=False).encode("utf-8")
+        self.assertEqual(decode(utf8), history)
+        poisoned = {
+            "utf8_bom": b"\xef\xbb\xbf" + utf8,
+            "utf16le": utf8.decode("utf-8").encode("utf-16le"),
+            "utf16be": utf8.decode("utf-8").encode("utf-16be"),
+            "utf32le": utf8.decode("utf-8").encode("utf-32le"),
+            "utf32be": utf8.decode("utf-8").encode("utf-32be"),
+            "bad_utf8": b'{"messages":[{"content":"\xff"}]}',
+            "truncated_utf8": b'{"messages":[{"content":"\xe2\x82"}]}',
+            "raw_nul": b'{"messages":[{"content":"\x00"}]}',
+        }
+        for label, raw in poisoned.items():
+            with self.subTest(case=label):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_HTTP_UTF8_WIRE"):
+                    decode(raw)
+
 if __name__ == "__main__":
     unittest.main()
