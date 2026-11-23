@@ -727,7 +727,13 @@ def install(app, B):
             # a durable S03 write, even if the live SSE later completed.
             "completion_receipt": row["completion_receipt"] if row["state"] != "HOLD" else None,
             "memory_write_receipt": row["memory_write_receipt"] if row["state"] != "HOLD" else None,
-            "snapshot_integrity": "HOLD" if row["state"] == "HOLD" else ("COMPLETE" if row["terminal"] else "PARTIAL"),
+            # A terminal STOP frame only proves the stream stopped; it does
+            # not prove the whole assistant turn or its S03 write completed.
+            # Reconciliation must fail closed on interrupted/unknown states.
+            "snapshot_integrity": (
+                "HOLD" if row["state"] == "HOLD" else
+                "COMPLETE" if row["state"] == "GENERATED" and row["terminal"] else
+                "PARTIAL"),
             "snapshot_hold_reason": row.get("snapshot_hold_reason"),
             "s03_readback_verified": False,
             "snapshot_scope": "PROCESS_LOCAL", "replay_supported": False,
