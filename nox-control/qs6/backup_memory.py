@@ -194,9 +194,19 @@ def _restore_persona_id(path):
 
 
 def restore(backup_path, db, force=False):
+    # Pin manifest bytes before verifying. Reading a fresh checksum later
+    # allows a concurrent backup/metadata replacement to change the source
+    # of truth between admission and the irreversible DB rename.
+    manifest_path = backup_path + ".json"
+    manifest_before = None
+    if os.path.isfile(manifest_path):
+        with open(manifest_path, "rb") as mf:
+            manifest_before = mf.read()
     ok, msg = verify(backup_path)
     if not ok:
         raise RuntimeError("восстановление отменено: " + msg)
+    if manifest_before is None:
+        raise RuntimeError("restore HOLD: verified backup manifest disappeared")
     source_persona = _restore_persona_id(backup_path)
     tmp = db + ".restore.tmp"
     d = os.path.dirname(os.path.abspath(db))
@@ -214,8 +224,10 @@ def restore(backup_path, db, force=False):
             dst.flush()
             os.fsync(dst.fileno())
         ok, detail = integrity(tmp)
-        with open(backup_path + ".json", encoding="utf-8") as mf:
-            want = json.load(mf)["sha256"]
+        with open(manifest_path, "rb") as mf:
+            if mf.read() != manifest_before:
+                raise RuntimeError("restore HOLD: backup manifest changed during verification or staging")
+        want = json.loads(manifest_before)["sha256"]
         if not ok or sha256_file(tmp) != want:
             raise RuntimeError("копия повредилась при копировании")
         kept = None
