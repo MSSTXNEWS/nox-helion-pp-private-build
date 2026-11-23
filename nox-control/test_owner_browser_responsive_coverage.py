@@ -10,7 +10,16 @@ from owner_chat_browser_qa import (COMPOSER_JS, RESPONSIVE_LAYOUT_CASES,
     allowed_qa_request, fresh_qa_post_admission, post_admission_hold_reason,
     browser_route_method_allowed, check_report_layout, click_send, verify_saved_browser_refresh,
     idle_slots, MODEL_SLOTS_URL, pinned_served_html_hash, qa_scoped_stop_request_id, qa_scoped_stop_receipt_valid,
-    native_stream_envelope_valid, progressive_stream_valid, canonical_s03_proof_valid, OBSERVER_JS, SNAPSHOT_JS)
+    native_stream_envelope_valid, progressive_stream_valid, canonical_s03_proof_valid, dialog_history_evidence, OBSERVER_JS, SNAPSHOT_JS)
+
+class BrowserS03SourceOfTruthContract(unittest.TestCase):
+    def test_ui_history_never_claims_canonical_s03_independent_readback(self):
+        for saved, identical in ((False, False), (True, False), (False, True), (True, True)):
+            with self.subTest(saved=saved, identical=identical):
+                evidence = dialog_history_evidence(saved, identical)
+                self.assertIs(evidence['dialog_history_verified'], bool(saved and identical))
+                self.assertIs(evidence['s03_readback_verified'], False)
+
 
 class NumericTokenIntegrityContract(unittest.TestCase):
     def test_digits_separated_by_whitespace_cannot_pass_as_a_single_number(self):
