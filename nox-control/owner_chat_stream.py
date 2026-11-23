@@ -396,6 +396,11 @@ async def _model_events(client, url, payload):
                 # OpenAI-style servers may omit role after the first delta.
                 if 'role' in delta and delta['role'] != 'assistant':
                     raise ValueError('delta role')
+                # The upstream provider's deprecated function_call field is
+                # NOT handled by our tool dispatcher. Silently dropping it
+                # can promote an unfinished/tool-bearing reply to S03 success.
+                if 'function_call' in delta:
+                    raise ValueError('unsupported legacy function call')
                 # A valid terminal choice closes the model's content/tool delta.
                 # Usage-only epilogues remain legal, but no content after finish
                 # may be shown to the browser or certified by the S03 postflight.
