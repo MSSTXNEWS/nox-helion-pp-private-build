@@ -333,15 +333,21 @@ def _repair_cycle_locked(policy, state_path, dry_run=False):
             else:
                 entry["attempts"].append(now)
                 write(state_path, state)  # record attempt before mutation
-                try:
-                    p = subprocess.run(["systemctl", "restart", unit], shell=False,
-                                       timeout=40, capture_output=True, check=False)
-                    time.sleep(2)
-                    action = "restart_verified" if p.returncode == 0 and alive(unit, config.get("health_url")) else "restart_failed"
-                    if action == "restart_verified":
-                        entry["failures"] = 0
-                except (OSError, subprocess.TimeoutExpired):
-                    action = "restart_failed"
+                # The durable write/fsync can block while the owner sets STOP.
+                # Recheck after that I/O, immediately before the local action.
+                # Keep the reserved attempt conservatively in the rate budget.
+                if _stop_marker_present_or_unknown(stop):
+                    action = "stop_lock"
+                else:
+                    try:
+                        p = subprocess.run(["systemctl", "restart", unit], shell=False,
+                                           timeout=40, capture_output=True, check=False)
+                        time.sleep(2)
+                        action = "restart_verified" if p.returncode == 0 and alive(unit, config.get("health_url")) else "restart_failed"
+                        if action == "restart_verified":
+                            entry["failures"] = 0
+                    except (OSError, subprocess.TimeoutExpired):
+                        action = "restart_failed"
         row = {"unit": unit, "healthy_before": healthy, "action": action}
         if action in ("needs_owner_approval", "needs_owner_investigation", "restart_failed"):
             row["question"] = "Inspect journalctl and authorize further local repair if needed."
