@@ -1346,3 +1346,57 @@ test('R44 bounded hash batching: real TCP boundary, direct large delta, surrogat
     server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
   }
 });
+
+
+test('R45 real TCP malformed surrogate parity across bounded hash batches and actual EOF',async()=>{
+  const hi='\uD83D',lo='\uDE80',otherHi='\uD800',otherLo='\uDC00';
+  const parts=['x'.repeat(4095),hi,'',otherHi,lo,lo,
+    'Ж'.repeat(4094),hi,'',lo,'',otherLo,
+    'a'.repeat(4096),hi,hi,'',lo,
+    '界'.repeat(8193)+otherHi,'',otherLo,
+    ...Array.from({length:30},()=>['q'.repeat(4093),hi,lo,otherLo,otherHi,'','z']).flat(),
+    otherLo,hi,''];
+  const body=': heartbeat\r\n\r\n'+parts.map(content=>event({delta:{content}})).join('')+
+    event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n';
+  const wire=Buffer.from(body,'utf8');
+  let posts=0;
+  const server=createServer(async(req,res)=>{
+    if(req.method!=='POST'||req.url!=='/nox/chat'){res.writeHead(404).end();return;}
+    for await(const _ of req){}
+    posts++;
+    res.writeHead(200,{'content-type':'text/event-stream'});
+    res.flushHeaders();
+    try{
+      for(let i=0;i<wire.length;i+=997){
+        res.write(wire.subarray(i,i+997));
+        if(i%3988===0)await sleep(1);
+      }
+      await sleep(12);
+      res.end();
+    }catch{res.destroy();}
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try{
+    const proof=await measureSseRawHttp('http://127.0.0.1:'+server.address().port+'/nox/chat',
+      {method:'POST',body:'{}'},{totalTimeoutMs:10000,idleTimeoutMs:3000});
+    assert.equal(proof.verified,true);
+    assert.equal(proof.visible_text_sha256,hash(parts.join('')));
+    assert.equal(proof.body_sha256,hash(wire));
+    assert.equal(proof.body_bytes,wire.length);
+    assert.ok(proof.first_byte_ms<=proof.ttft_ms);
+    assert.ok(proof.ttft_ms<=proof.sse_done_ms);
+    assert.ok(proof.sse_done_ms<=proof.completion_ms);
+    assert.equal(proof.browser_authenticated,false);
+    assert.equal(proof.native_verified,false);
+    assert.equal(proof.canonical_s03_verified,false);
+    assert.equal(proof.model_tokens_per_second,null);
+    assert.equal(posts,1);
+    console.log('B4_R45_SOURCE_ONLY '+JSON.stringify({deltas:parts.length,
+      wire_bytes:wire.length,visible_utf8_bytes:Buffer.byteLength(parts.join('')),
+      malformed_surrogate_parity:true,real_local_tcp:true,physical_eof:true,
+      posts,ttft_ms:proof.ttft_ms,completion_ms:proof.completion_ms,
+      genuine_glm:false,authenticated_browser:false,canonical_s03:false}));
+  }finally{
+    server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
+  }
+});
