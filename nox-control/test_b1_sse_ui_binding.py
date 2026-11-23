@@ -2491,6 +2491,67 @@ def main():
           return true;
         }'''))
 
+        # A syntactically valid ACK ID belonging to a different turn is not
+        # valid proof for the receipt approved by both canonical verifiers.
+        check('canonical gate ACK ID is bound to the verified GET receipt', page.evaluate('''async () => {
+          for(const kind of ['foreign','no_receipt_id','healthy']){
+            const s={conversation_id:'r33',exchange_id:kind};
+            let gets=0,posts=0,acks=0,cancels=0,otherCancels=0,projections=0;
+            const transport={...opts.transport,
+              post(){posts++;throw Error('DUPLICATE_POST')},
+              ack(){acks++;throw Error('DUPLICATE_ACK')},
+              async readback(){return {...s}},
+              readCanonicalAck(_s,_expected,challenge){
+                const which=++gets,now=Date.now();
+                return {request_nonce:challenge.request_nonce,
+                  issued_at_ms:now,expires_at_ms:now+1000,
+                  ack_id:which===1&&kind==='no_receipt_id'?
+                    undefined:'ack-r33-'+kind,
+                  body:{cancel(){if(which===1)cancels++;else otherCancels++;
+                    return Promise.resolve()}}};
+              }
+            };
+            const host={...opts.host,
+              verifyFreshCanonicalAck(){return true},
+              verifyCanonicalAck(){return true}};
+            const gate={
+              async reserve(){return {status:'ALREADY_ACKED'}},
+              async beginSend(){throw Error('UNEXPECTED_ACK_SEND')},
+              async confirm(){throw Error('UNEXPECTED_LOCAL_CONFIRM')},
+              async requireCanonicalAck(_s,event,cursor,read,verify){
+                const expected={event_id:event,ack_cursor:cursor};
+                const receipt=await read(expected);
+                if(await verify(receipt,expected)!==true)
+                  throw Error('VERIFIER_REJECTED');
+                return {status:'CANONICAL_ACK_CONFIRMED',
+                  authority:'VERIFIER_CALLBACK_APPROVED',
+                  ack_id:gets===1&&kind==='foreign'?
+                    'ack-r33-unrelated-exchange':
+                    gets===1&&kind==='no_receipt_id'?
+                    'ack-r33-fabricated':receipt.ack_id};
+              }
+            };
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host,bridge:opts.bridge,ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){projections++;return true}}
+            });
+            const first=await c.reconnect(s).then(v=>v,e=>e.code);
+            if(kind==='healthy'){
+              if(!first||first.canonical_ack_id!=='ack-r33-healthy'||
+                 cancels!==0||projections!==1)return false;
+            }else{
+              if(first!=='HOLD_STREAM_CANONICAL_ACK'||cancels!==1||
+                 gets!==1||projections!==1)return false;
+              const recovered=await c.reconnect(s);
+              if(recovered.canonical_ack_id!=='ack-r33-'+kind||
+                 gets!==2||cancels!==1||otherCancels!==0||
+                 projections!==2)return false;
+            }
+            if(posts!==0||acks!==0)return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:

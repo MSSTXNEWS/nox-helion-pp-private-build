@@ -489,7 +489,8 @@
         let ack,freshVerified=false;
         // Second verifier success is not yet durable ACK-gate confirmation.
         // Until the gate envelope is accepted, a GET body may be unclaimed.
-        let verifiedReceipt=null,verifiedBodyDiscarded=false;
+        // Snapshot the verifier-approved ID before an untrusted gate settles.
+        let verifiedReceipt=null,verifiedAckId=null,verifiedBodyDiscarded=false;
         const discardVerifiedBody=()=>{
           if(verifiedBodyDiscarded||!verifiedReceipt)return;
           verifiedBodyDiscarded=true;
@@ -602,7 +603,10 @@
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
                 }
                 if(trusted!==true)discard();
-                else verifiedReceipt=receipt;
+                else{
+                  verifiedReceipt=receipt;
+                  verifiedAckId=receipt.ack_id;
+                }
                 return trusted;
               }finally{
                 lifecycleSignal.removeEventListener('abort',onAbort);
@@ -623,7 +627,11 @@
         }
         if(!ack||ack.status!=='CANONICAL_ACK_CONFIRMED'||
            ack.authority!=='VERIFIER_CALLBACK_APPROVED'||
-           typeof ack.ack_id!=='string'||!ID.test(ack.ack_id)){
+           typeof ack.ack_id!=='string'||!ID.test(ack.ack_id)||
+           typeof verifiedAckId!=='string'||!ID.test(verifiedAckId)||
+           ack.ack_id!==verifiedAckId){
+          // A syntactically valid ACK for another exchange is NOT proof
+          // for this verifier-approved GET receipt. Cancel its body once.
           discardVerifiedBody();
           hold('HOLD_STREAM_CANONICAL_ACK');
         }
