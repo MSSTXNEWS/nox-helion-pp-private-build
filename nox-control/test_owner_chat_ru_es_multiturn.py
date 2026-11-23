@@ -4434,25 +4434,37 @@ async function check(chunks, status=200) {
             return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
         def pin(raw):
             return hashlib.sha256(raw).hexdigest()
-        def witnesses(history, sequence=3):
+        def witnesses(history, sequence=3, event=None, turn=None):
             full = pin(json.dumps(
                 [{"role": x["role"], "content": x["content"]} for x in history],
                 ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode())
             ids = pin(wire([x["message_id"] for x in history]))
-            common = dict(source="canonical_s03", event_id="evt-03",
-                          turn_id="turn-03", sequence=sequence, dialog_id=DIALOG,
+            common = dict(source="canonical_s03", event_id=event or f"evt-{sequence:02}",
+                          turn_id=turn or f"turn-{sequence:02}", sequence=sequence, dialog_id=DIALOG,
                           session_id="owner-session", full_transcript_sha256=full,
                           message_ids_sha256=ids)
             return (wire(dict(common, verified=True, durable=True)),
                     wire(dict(common, independent=True, messages=history,
                               full_answer_sha256=pin(history[-1]["content"].encode()))))
-        def check(history=current, old=prior, sequence=3, receipt_sequence=3):
-            w, r = witnesses(history, receipt_sequence)
+        pw, pr = witnesses(prior, 2)
+        prior_pins = (pw, pr, pin(pw), pin(pr))
+        def check(history=current, old=prior, sequence=3, receipt_sequence=3,
+                  previous=prior_pins, event=None, turn=None):
+            w, r = witnesses(history, receipt_sequence, event, turn)
             return canonical_s03_pinned_evidence_valid(
                 w, r, pin(w), pin(r), DIALOG, history,
                 expected_session_id="owner-session", expected_sequence=sequence,
-                expected_prior_messages=old)
+                expected_prior_messages=old, prior_witnesses=previous)
         self.assertTrue(check())
+        self.assertFalse(check(previous=None))
+        self.assertFalse(check(previous=(pw, pr, pin(pr), pin(pw))))
+        self.assertFalse(check(previous=(pw, pr, pin(pw), "0" * 64)))
+        self.assertFalse(check(event="evt-02"))
+        self.assertFalse(check(turn="turn-02"))
+        wrong_prior = [dict(row) for row in prior]
+        wrong_prior[1]["content"] = "Different previous answer"
+        ww, wr = witnesses(wrong_prior, 2)
+        self.assertFalse(check(previous=(ww, wr, pin(ww), pin(wr))))
         self.assertFalse(check(old=None))
         self.assertFalse(check(old=prior[:2]))
         self.assertFalse(check(history=current[2:]))

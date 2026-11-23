@@ -1763,7 +1763,8 @@ def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
                                         writer_sha256, readback_sha256,
                                         dialog_id, expected_messages, *,
                                         expected_session_id, expected_sequence=2,
-                                        expected_prior_messages=None):
+                                        expected_prior_messages=None,
+                                        prior_witnesses=None):
     """Verify immutable bytes for the strict two-/three-turn S03 contract.
 
     The caller MUST obtain both expected hashes independently from the
@@ -1771,7 +1772,9 @@ def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
     The expected session ID must also come from authenticated owner context,
     independently of the candidate receipts and transcript.
     For turn three the caller must independently obtain the prior four
-    authenticated rows before the next request, not from either new witness.
+    authenticated rows and independently pinned sequence-two writer/readback
+    bytes before the next request, not from either new witness. The prior
+    tuple is (writer bytes, reader bytes, writer SHA256, reader SHA256).
     This pure adapter cannot establish that authority or native admission.
     It never reads S03, accepts a browser history as a writer, or issues POST.
     """
@@ -1801,7 +1804,12 @@ def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
                 or expected_messages[:4] != expected_prior_messages
                 or any(row.get('dialog_id') != dialog_id for row in expected_messages)):
             return False
-    elif expected_prior_messages is not None:
+        if (type(prior_witnesses) is not tuple or len(prior_witnesses) != 4
+                or not canonical_s03_pinned_evidence_valid(
+                    *prior_witnesses, dialog_id, expected_prior_messages,
+                    expected_session_id=expected_session_id)):
+            return False
+    elif expected_prior_messages is not None or prior_witnesses is not None:
         return False
     try:
         writer = strict_owner_json_bytes(writer_raw)
@@ -1810,6 +1818,13 @@ def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
                 or writer.get('session_id') != expected_session_id
                 or readback.get('session_id') != expected_session_id):
             return False
+        if expected_sequence == 3:
+            prior_writer = strict_owner_json_bytes(prior_witnesses[0])
+            # A third turn must have its own durable event and turn identity,
+            # not merely updated text and sequence under a reused receipt ID.
+            if any(writer.get(key) == prior_writer.get(key)
+                   for key in ('event_id', 'turn_id')):
+                return False
         return canonical_s03_proof_valid(
             writer, readback, dialog_id, expected_messages,
             require_full_transcript_pin=True, expected_sequence=expected_sequence)
