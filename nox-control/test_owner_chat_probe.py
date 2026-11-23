@@ -4032,5 +4032,26 @@ class ProbeTests(unittest.TestCase):
             server.server_close()
             worker.join(timeout=5)
 
+    def test_stream_aggregate_wire_budget_exact_boundary(self):
+        """Aggregate HTTP body cap is independent of per-line/line-count caps."""
+        import hashlib
+        import inspect
+        import io
+
+        payload = b'{"type":"delta","text":"x"}' + bytes([10])
+        stream = payload * 3
+        ceiling = inspect.signature(
+            probe.bounded_stream_frames).parameters['max_wire_bytes'].default
+        self.assertEqual(ceiling, 8 * 1024 * 1024)
+        hasher = hashlib.sha256()
+        parsed = list(probe.bounded_stream_frames(
+            io.BytesIO(stream), max_wire_bytes=len(stream), wire_hasher=hasher))
+        self.assertEqual(len(parsed), 3)
+        self.assertEqual(hasher.hexdigest(), hashlib.sha256(stream).hexdigest())
+        with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_WIRE_BYTE_LIMIT'):
+            list(probe.bounded_stream_frames(
+                io.BytesIO(stream), max_wire_bytes=len(stream) - 1))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -957,7 +957,7 @@ def bounded_stream_lines(response, max_line=100000):
 
 
 
-def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadline=None, wire_hasher=None):
+def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadline=None, wire_hasher=None, max_wire_bytes=8 * 1024 * 1024):
     """Decode bounded NDJSON or genuine SSE JSON events, never MIME-as-proof.
 
     Older text/event-stream responses containing plain NDJSON remain compatible,
@@ -1005,6 +1005,9 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
         if wire_hasher is not None:
             wire_hasher.update(wire)
         observed_bytes += len(wire)
+        # Aggregate wire byte fence; does not truncate chat history/context.
+        if observed_bytes > max_wire_bytes:
+            raise RuntimeError('HOLD_STREAM_WIRE_BYTE_LIMIT')
         if declared_bytes is not None and observed_bytes > declared_bytes:
             raise RuntimeError('HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH')
         if (wire_index >= max_wire_lines or
