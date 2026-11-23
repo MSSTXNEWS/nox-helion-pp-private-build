@@ -3645,6 +3645,81 @@ def main():
           return true;
         }'''))
 
+
+        # R50: an untrusted canonical receipt accessor can reentrantly invoke
+        # STOP while captureSignedIdentity() is reading nonce/time/ack ID.
+        # The freshness verifier must never be called AFTER that STOP, and
+        # both abandoned read-only GET bodies must be disposed exactly once.
+        # Healthy canonical ACK remains unchanged; neither path re-POSTs model.
+        check('R50 signed receipt getter STOP fences verifier and GET ownership', page.evaluate('''async () => {
+          for(const mode of ['stop-in-getter','healthy']){
+            const s={conversation_id:'r50',exchange_id:mode};
+            let client,stops=0,fresh=0,second=0,modelPosts=0,networkAcks=0;
+            let readbacks=0,canonicalGets=0,signedCancels=0,originalCancels=0;
+            const tr={...opts.transport,
+              post(){modelPosts++;throw Error('REPOST_MODEL')},
+              ack(){networkAcks++;throw Error('REPOST_ACK')},
+              readback(){readbacks++;return {...s,body:{cancel(){
+                originalCancels++;return Promise.reject(Error('NONBLOCKING'));
+              }}}},
+              readCanonicalAck(_s,_expected,challenge){
+                canonicalGets++;
+                const now=Date.now();
+                let stopped=false;
+                return {
+                  get request_nonce(){
+                    if(mode==='stop-in-getter'&&!stopped){
+                      stopped=true;stops++;
+                      if(client.stop(s)!==true)throw Error('STOP_NOT_ACTIVE');
+                    }
+                    return challenge.request_nonce;
+                  },
+                  issued_at_ms:now,expires_at_ms:now+1000,
+                  ack_id:'ack-r50-'+mode,
+                  body:{cancel(){
+                    signedCancels++;return Promise.reject(Error('NONBLOCKING'));
+                  }}
+                };
+              }
+            };
+            const host={...opts.host,
+              verifyFreshCanonicalAck(){fresh++;return true},
+              verifyCanonicalAck(){second++;return true}};
+            const gate={
+              reserve(){return {status:'ALREADY_ACKED'}},
+              beginSend(){throw Error('ACK_BEGIN')},
+              confirm(){throw Error('ACK_CONFIRM')},
+              async requireCanonicalAck(_s,event,cursor,read,verify){
+                const expected={event_id:event,ack_cursor:cursor};
+                const receipt=await read(expected);
+                if(await verify(receipt,expected)!==true)throw Error('UNVERIFIED');
+                return {status:'CANONICAL_ACK_CONFIRMED',
+                  authority:'VERIFIER_CALLBACK_APPROVED',ack_id:receipt.ack_id};
+              }
+            };
+            client=NOXB1StreamReconnect.createClient({
+              transport:tr,host,bridge:opts.bridge,ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){return true}}
+            });
+            const result=await client.reconnect(s).then(
+              v=>v.canonical_ack_id||'UNVERIFIED',e=>e.code||'ERROR');
+            for(let i=0;i<10;i++)await Promise.resolve();
+            if(mode==='stop-in-getter'){
+              if(result!=='HOLD_STREAM_RECONNECT_STOPPED'||
+                 stops!==1||fresh!==0||second!==0||
+                 originalCancels!==1||signedCancels!==1)
+                return false;
+            }else if(result!=='ack-r50-healthy'||stops!==0||
+                     fresh!==1||second!==1||originalCancels!==0||
+                     signedCancels!==0) return false;
+            if(readbacks!==1||canonicalGets!==1||
+               modelPosts!==0||networkAcks!==0||
+               !(await client.begin(s).then(()=>false,e=>
+                 e.code==='HOLD_STREAM_NO_REPOST')))return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
