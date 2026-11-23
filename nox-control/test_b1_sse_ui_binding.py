@@ -3720,6 +3720,90 @@ def main():
           return true;
         }'''))
 
+        # R51: STOP can be triggered by the normalized proof's second
+        # ack_id property access AFTER verifyCanonicalAck resolves, or by
+        # the ACK envelope getter AFTER boundedGet completes. Neither is
+        # permission to accept ACK or retain either unclaimed GET body.
+        check('R51 canonical post-verifier and envelope getters cannot ACK after STOP', page.evaluate('''async () => {
+          for(const mode of ['stop-after-verifier','stop-in-envelope','healthy']){
+            const scope={conversation_id:'r51',exchange_id:mode};
+            let client,modelPosts=0,networkAcks=0,originalGets=0,signedGets=0;
+            let originalCancels=0,signedCancels=0,fresh=0,second=0;
+            let proofReads=0,envelopeReads=0,verifyOutcome='pending';
+            const tr={...opts.transport,
+              post(){modelPosts++;throw Error('MODEL_REPOST')},
+              ack(){networkAcks++;throw Error('ACK_REPOST')},
+              readback(){originalGets++;return {...scope,body:{cancel(){
+                originalCancels++;return Promise.reject(Error('NONBLOCKING'));
+              }}}},
+              readCanonicalAck(_s,_expected,challenge){
+                signedGets++;const now=Date.now();
+                return {request_nonce:challenge.request_nonce,
+                  issued_at_ms:now,expires_at_ms:now+1000,
+                  ack_id:'ack-r51-'+mode,body:{cancel(){
+                    signedCancels++;return Promise.reject(Error('NONBLOCKING'));
+                  }}};
+              }
+            };
+            const host={...opts.host,
+              verifyFreshCanonicalAck(){fresh++;return true},
+              verifyCanonicalAck(){second++;return true}};
+            const gate={
+              reserve(){return {status:'ALREADY_ACKED'}},
+              beginSend(){throw Error('NO_BEGIN_SEND')},
+              confirm(){throw Error('NO_CONFIRM')},
+              async requireCanonicalAck(_s,event,cursor,read,verify){
+                const expected={event_id:event,ack_cursor:cursor};
+                const signed=await read(expected);
+                const proof={get ack_id(){
+                  proofReads++;
+                  if(mode==='stop-after-verifier'&&proofReads===2){
+                    if(client.stop(scope)!==true)throw Error('STOP_NOT_ACTIVE');
+                  }
+                  return signed.ack_id;
+                }};
+                try{verifyOutcome=await verify(proof,expected);}
+                catch(err){verifyOutcome=err.code||'ERROR';throw err;}
+                if(verifyOutcome!==true)throw Error('UNVERIFIED');
+                return {
+                  get status(){
+                    envelopeReads++;
+                    if(mode==='stop-in-envelope'){
+                      if(client.stop(scope)!==true)throw Error('STOP_NOT_ACTIVE');
+                    }
+                    return 'CANONICAL_ACK_CONFIRMED';
+                  },
+                  authority:'VERIFIER_CALLBACK_APPROVED',
+                  ack_id:signed.ack_id
+                };
+              }
+            };
+            client=NOXB1StreamReconnect.createClient({
+              transport:tr,host,bridge:opts.bridge,ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){return true}}
+            });
+            const outcome=await client.reconnect(scope).then(
+              v=>v.canonical_ack_id||'MISSING',e=>e.code||'ERROR');
+            for(let i=0;i<25;i++)await Promise.resolve();
+            const stopped=mode!=='healthy';
+            if(stopped){
+              if(outcome!=='HOLD_STREAM_RECONNECT_STOPPED'||
+                 originalCancels!==1||signedCancels!==1) return false;
+              if(mode==='stop-after-verifier'&&
+                 verifyOutcome!=='HOLD_STREAM_RECONNECT_STOPPED')return false;
+              if(mode==='stop-in-envelope'&&verifyOutcome!==true)return false;
+            }else if(outcome!=='ack-r51-healthy'||
+                     originalCancels!==0||signedCancels!==0||
+                     verifyOutcome!==true)return false;
+            if(originalGets!==1||signedGets!==1||fresh!==1||second!==1||
+               proofReads!==2||envelopeReads!==(mode==='stop-after-verifier'?0:1)||
+               modelPosts!==0||networkAcks!==0)return false;
+            if(!await client.begin(scope).then(()=>false,e=>
+              e.code==='HOLD_STREAM_NO_REPOST'))return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
