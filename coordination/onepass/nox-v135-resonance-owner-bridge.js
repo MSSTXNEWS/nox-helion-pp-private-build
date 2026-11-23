@@ -5,7 +5,7 @@
  /^\/nox-web-v29\/pc\/(?:resonance\.html|v22\/resonance\.template\.html)$/.test(here);
  if (!owner || window.__NOX_V135_OWNER_RESONANCE) return;
  window.__NOX_V135_OWNER_RESONANCE='OWNER_NATIVE_ONLY';
- const nativeFetch=window.fetch.bind(window);
+ const F=window.fetch.bind(window);
  const enc=new TextEncoder();
 const ID=/^[a-f0-9]{32}$/;
 const verifiedChain=new Map();
@@ -44,7 +44,7 @@ try{return await Promise.race([Promise.resolve().then(op),cancelled]);}
 finally{signal.removeEventListener('abort',stop);}
 }
 const nativeBodyJSON=(response,signal)=>waitOrAbort(()=>response.json(),signal);
-const nativePost=(path,data,signal)=>waitOrAbort(()=>nativeFetch(path,{
+const nativePost=(path,data,signal)=>waitOrAbort(()=>F(path,{
 method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',signal,
 headers:{'Content-Type':'application/json'},body:JSON.stringify(data)
 }),signal);
@@ -56,7 +56,7 @@ const responseJSON=(data,status=200)=>new Response(JSON.stringify(data),{
 status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}
 });
 async function nativeJSON(path,init) {
-const r=await waitOrAbort(()=>nativeFetch(path,options(init)),init?.signal);
+const r=await waitOrAbort(()=>F(path,options(init)),init?.signal);
 if (!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r,init?.signal));
 return nativeBodyJSON(r,init?.signal);
 }
@@ -360,7 +360,7 @@ const validNativeModelLabel=v=>typeof v==='string'&&v.length>0&&v.length<=96&&v=
  }
  window.fetch=function(input,init){
  const url=samePath(input);
- if(!url)return nativeFetch(input,init);
+ if(!url)return F(input,init);
  const method=String(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();
  let p;try{p=decodeURIComponent(url.pathname).toLowerCase()}catch{p=url.pathname.toLowerCase()}
  if((p!==url.pathname&&p.startsWith('/api/nox/'))||
@@ -375,7 +375,7 @@ const validNativeModelLabel=v=>typeof v==='string'&&v.length>0&&v.length<=96&&v=
      (url.pathname==='/api/nox/history'&&method==='GET')||
      (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
      (url.pathname==='/api/nox/dialog/rename'&&method==='POST');
-   if(!bridged)return nativeFetch(input,init);
+   if(!bridged)return F(input,init);
    return input.clone().text().then(body=>window.fetch(url.href,{
      method,body:method==='GET'?undefined:body,
      signal:init?.signal||input.signal,
@@ -396,6 +396,6 @@ const validNativeModelLabel=v=>typeof v==='string'&&v.length>0&&v.length<=96&&v=
     (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
     (url.pathname==='/api/nox/dialog/rename'&&method==='POST'))
    return legacyDialogs(url,init);
- return nativeFetch(input,init);
+ return F(input,init);
  };
 })();
