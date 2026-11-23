@@ -24,6 +24,49 @@ IDENTITY = ("Ты NOX HELION. Не справочник и не шаблонны
 import os, subprocess
 STATE = "/root/nox/state/affect.json"
 _body = {"t": 0, "v": ""}
+
+def _ram_status():
+    """Report the serving container's finite memory limit, never host RAM as admission."""
+    pairs = (("/sys/fs/cgroup/memory.current", "/sys/fs/cgroup/memory.max"),
+             ("/sys/fs/cgroup/memory/memory.usage_in_bytes",
+              "/sys/fs/cgroup/memory/memory.limit_in_bytes"))
+    for usage_path, limit_path in pairs:
+        try:
+            with open(limit_path, encoding="ascii") as handle:
+                limit = handle.read().strip()
+        except FileNotFoundError:
+            continue
+        except (OSError, UnicodeError):
+            return "RAM cgroup: нет данных"
+        if limit == "max":
+            continue  # Unlimited v2: look for a finite v1 limit or label host only.
+        if not limit.isascii() or not limit.isdecimal():
+            return "RAM cgroup: нет данных"
+        try:
+            cap = int(limit)
+            with open(usage_path, encoding="ascii") as handle:
+                used_raw = handle.read().strip()
+            if not used_raw.isascii() or not used_raw.isdecimal():
+                return "RAM cgroup: нет данных"
+            used = int(used_raw)
+        except (OSError, UnicodeError, ValueError):
+            return "RAM cgroup: нет данных"
+        if cap >= (1 << 60):
+            continue  # Kernel sentinel for no usable container limit.
+        if not (0 < cap < (1 << 63) and 0 <= used <= cap):
+            return "RAM cgroup: нет данных"
+        return ("RAM cgroup: остаток лимита %.2f ГиБ (не допуск задач)"
+                % ((cap - used) / 1073741824))
+    try:
+        with open("/proc/meminfo", encoding="ascii") as handle:
+            values = dict(line.split(":", 1) for line in handle if ":" in line)
+        available = int(values["MemAvailable"].split()[0])
+        if available < 0:
+            raise ValueError("negative MemAvailable")
+        return "RAM хоста: MemAvailable %.2f ГиБ (cgroup без лимита)" % (available / 1048576)
+    except (OSError, KeyError, ValueError, UnicodeError):
+        return "RAM: нет данных"
+
 def body_line():
     if time.time() - _body["t"] < 10:
         return _body["v"]
@@ -34,11 +77,9 @@ def body_line():
         gp = "; ".join("GPU%d %s%% %s/%sМБ %s°C" % ((i,) + tuple(x.strip() for x in l.split(","))) for i, l in enumerate(o))
     except Exception:
         gp = "GPU: нет данных"
-    try:
-        mi = dict(l.split(":") for l in open("/proc/meminfo").read().splitlines() if ":" in l)
-        ram = "RAM свободно %d ГБ" % (int(mi["MemAvailable"].split()[0]) // 1048576)
-    except Exception:
-        ram = "RAM: нет данных"
+    # Container memory ceiling is not the host MemAvailable value. In
+    # particular, no spare-RAM text grants owner resource admission.
+    ram = _ram_status()
     _body.update(t=time.time(), v=gp + "; " + ram)
     return _body["v"]
 
