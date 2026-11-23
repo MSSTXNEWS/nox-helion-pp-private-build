@@ -509,3 +509,82 @@ test('R31 true TCP HTTP second preheader abort and third mid-UTF8 SSE abort: no 
     process.off('unhandledRejection',onUnhandled);
   }
 });
+
+
+// R32: real Node 22 HTTP/TCP Content-Length mismatch, not synthetic SSE read().
+// STOP + [DONE] do NOT prove transport completion when advertised body is short.
+const r32Hash=s=>createHash('sha256').update(s).digest('hex');
+const r32Event=choice=>'data: '+JSON.stringify({choices:[choice]})+'\n\n';
+const r32Visible=['Привет 🌍','Hola, мир 🌈','Третий ответ ✨'];
+function r32Gate(){let resolve;const promise=new Promise(r=>{resolve=r;});return {promise,resolve};}
+async function r32Bound(p,ms=1500){
+  let timer;
+  try{return await Promise.race([p,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('B4_R32_HUNG')),ms);})]);}
+  finally{clearTimeout(timer);}
+}
+
+test('R32 real TCP truncated Content-Length after stop+DONE cannot verify second/third SSE; healthy, deadlines, abort, size',async()=>{
+  const arrived=r32Gate();
+  const observed=[];
+  const unhandled=[];
+  const onUnhandled=e=>unhandled.push(e);
+  process.on('unhandledRejection',onUnhandled);
+  const server=createServer(async(req,res)=>{
+    if(req.method!=='POST'||req.url!=='/nox/chat'){res.writeHead(404).end();return;}
+    let input='';for await(const part of req)input+=part;
+    const {turn,mode}=JSON.parse(input);
+    observed.push({turn,mode});
+    const body=Buffer.from(r32Event({delta:{content:r32Visible[turn-1]},finish_reason:null})+
+      r32Event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n');
+    res.writeHead(200,{'content-type':'text/event-stream','cache-control':'no-store',
+      'content-length':body.length+(mode==='healthy'||mode==='oversize'?0:37)});
+    res.write(body,()=>{
+      if(mode==='truncated')setTimeout(()=>res.destroy(),12);
+      if(mode==='abort')arrived.resolve();
+    });
+    if(mode==='healthy'||mode==='oversize')res.end();
+    // 'stall' and 'abort' deliberately never end: [DONE] is not TCP EOF.
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const url='http://127.0.0.1:'+server.address().port+'/nox/chat';
+  const post=(turn,mode,signal,options={})=>measureSseFetch(url,{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({turn,mode}),signal
+  },{startedAt:performance.now(),totalTimeoutMs:1000,idleTimeoutMs:650,...options});
+  try{
+    const healthy=await r32Bound(post(1,'healthy'));
+    assert.equal(healthy.verified,true);
+    assert.equal(healthy.visible_text_sha256,r32Hash(r32Visible[0]));
+    assert.ok(healthy.first_byte_ms<=healthy.ttft_ms);
+    assert.ok(healthy.ttft_ms<=healthy.sse_done_ms);
+    assert.ok(healthy.sse_done_ms<=healthy.completion_ms);
+    assert.equal(healthy.native_verified,false);
+    assert.equal(healthy.browser_authenticated,false);
+    assert.equal(healthy.canonical_s03_verified,false);
+
+    for(const turn of [2,3]){
+      await assert.rejects(r32Bound(post(turn,'truncated')),
+        e=>e?.code==='B4_FETCH_FAILED',`turn ${turn} must reject truncated declared Content-Length`);
+    }
+    await assert.rejects(r32Bound(post(3,'stall',undefined,{totalTimeoutMs:105,idleTimeoutMs:700})),
+      e=>e?.code==='B4_TOTAL_TIMEOUT','DONE without declared-length EOF cannot defeat absolute deadline');
+
+    const aborter=new AbortController();
+    const aborting=post(3,'abort',aborter.signal);
+    await r32Bound(arrived.promise);
+    aborter.abort();
+    await assert.rejects(r32Bound(aborting),e=>e?.code==='B4_FETCH_ABORTED');
+
+    await assert.rejects(r32Bound(post(2,'oversize',undefined,{maxTotalBytes:128})),
+      e=>e?.code==='B4_STREAM_TOO_LARGE','body size cap still applies when HTTP Content-Length is correct');
+    await sleep(10);await sleep(0);
+    assert.deepEqual(observed,[
+      {turn:1,mode:'healthy'},{turn:2,mode:'truncated'},
+      {turn:3,mode:'truncated'},{turn:3,mode:'stall'},
+      {turn:3,mode:'abort'},{turn:2,mode:'oversize'}
+    ],'exactly one network POST for each explicit action; never replay');
+    assert.deepEqual(unhandled,[],'no late uncaught errors on truncated transport');
+  }finally{
+    server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
+    process.off('unhandledRejection',onUnhandled);
+  }
+});
