@@ -2333,7 +2333,26 @@ class FactReceiptTest(unittest.TestCase):
             memory.persist_turn = mock.Mock(side_effect=OSError("S03 write failed"))
             held = asyncio.run(run_one("cache-write-failed"))
             self.assertEqual(held[-1]["memory_write_receipt"]["status"], "HOLD")
+            self.assertFalse(held[-1]["memory_write_receipt"]["s03_write_returned"])
+            self.assertTrue(held[-1]["memory_write_receipt"]["retry_unsafe"])
             bridge.invalidate_s03_cache.assert_called_once_with()
+
+            # A completed write followed by cache-revocation failure is not a
+            # failed/absent write. The user must not retry the same turn blindly.
+            memory.persist_turn = lambda *args: events.append(args)
+            bridge.invalidate_s03_cache = mock.Mock(
+                side_effect=RuntimeError("cache generation unavailable"))
+            stale = asyncio.run(run_one("cache-revoke-failed"))
+            receipt = stale[-1]["memory_write_receipt"]
+            self.assertEqual(receipt["status"], "HOLD")
+            self.assertTrue(receipt["s03_write_returned"])
+            self.assertTrue(receipt["retry_unsafe"])
+            self.assertFalse(receipt["s03_readback_verified"])
+            self.assertEqual(stale[-1]["memory_history"]["reason"],
+                             "S03_CACHE_INVALIDATION_FAILED")
+            self.assertEqual(stale[-1]["memory_history"]["status"], "HOLD")
+            self.assertEqual(events[-1], ("[mini] Проверь S03", "Готово 🌌"))
+            self.assertEqual(len(events), 2)
 
 
 
