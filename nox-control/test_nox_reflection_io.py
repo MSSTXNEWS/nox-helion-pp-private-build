@@ -97,6 +97,32 @@ class ReflectionInputAdmission(unittest.TestCase):
             path.write_text('{"sample":"ok"}', encoding="utf-8")
             self.assertEqual(_load_input(str(path)), {"sample": "ok"})
 
+    def test_ambiguous_json_is_rejected_before_any_reflection_receipt(self):
+        # json.loads normally uses last-wins duplicate keys and accepts
+        # NaN/Infinity. Neither is valid evidence for a source-cycle claim.
+        invalid = (
+            '{"record_id":"first","record_id":"second"}',
+            '{"task":{"id":"4B04","id":"other"}}',
+            '{"failure":{"observed_at":"a","observed_at":"b"}}',
+            '{"sample":NaN}', '{"sample":Infinity}',
+            '{"sample":-Infinity}',
+        )
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "input.json"
+            for raw in invalid:
+                with self.subTest(raw=raw):
+                    path.write_text(raw, encoding="utf-8")
+                    with self.assertRaises(ReflectionError):
+                        _load_input(str(path))
+                    err = io.StringIO()
+                    with contextlib.redirect_stderr(err):
+                        result = main(["--input", str(path)])
+                    self.assertEqual(result, 2)
+                    self.assertEqual(json.loads(err.getvalue())["status"], "HOLD")
+            path.write_text('{"sample":{"letters":["ñ","Б"]}}', encoding="utf-8")
+            self.assertEqual(_load_input(str(path)),
+                             {"sample": {"letters": ["ñ", "Б"]}})
+
     def test_symlink_is_rejected_before_read(self):
         with tempfile.TemporaryDirectory() as d:
             original = Path(d) / "original.json"
