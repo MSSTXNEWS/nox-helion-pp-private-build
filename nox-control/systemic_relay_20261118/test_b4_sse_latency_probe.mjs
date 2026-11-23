@@ -222,3 +222,76 @@ test('R27 quarantines late reader success/rejection after idle/total deadline; t
     assert.deepEqual(unhandled,[],'raced late read reject must be observed');
   }finally{process.off('unhandledRejection',onUnhandled);}
 });
+
+
+// R28: heartbeat events repeatedly settle reads but must NEVER renew the
+// absolute total deadline. A visible answer with STOP/DONE before the budget
+// is still unverified if the transport EOF exceeds the same total deadline.
+test('R28 total deadline survives heartbeat trickle; terminal/EOF boundary is fail-closed',async()=>{
+  const sse=choice=>'data: '+JSON.stringify({choices:[choice]})+'\n\n';
+  const printable=sse({delta:{content:'Третий ответ ✨'},finish_reason:null});
+  const stop=sse({delta:{},finish_reason:'stop'});
+  const done='data: [DONE]\n\n';
+  const bytes=s=>Buffer.from(s);
+  const slowReader=stages=>{
+    let count=0,cancelCount=0,releaseCount=0;
+    return {
+      reader:{
+        async read(){
+          count++;
+          const stage=stages.shift();
+          if(!stage)return new Promise(()=>{});
+          if(stage.delay)await sleep(stage.delay);
+          return stage.value===null?{done:true}:{done:false,value:bytes(stage.value)};
+        },
+        cancel(){cancelCount++;return Promise.resolve();},
+        releaseLock(){releaseCount++;}
+      },
+      stats:()=>({count,cancelCount,releaseCount})
+    };
+  };
+
+  const heartbeats={count:0,cancel:0,release:0};
+  const heartbeatReader={
+    async read(){heartbeats.count++;await sleep(14);return {done:false,value:bytes(': heartbeat\n\n')};},
+    cancel(){heartbeats.cancel++;return Promise.resolve();},
+    releaseLock(){heartbeats.release++;}
+  };
+  await assert.rejects(measureSseResponse(responseFor(heartbeatReader),{
+    startedAt:performance.now(),idleTimeoutMs:300,totalTimeoutMs:95
+  }),e=>e.code==='B4_TOTAL_TIMEOUT');
+  assert.ok(heartbeats.count>=3,'several heartbeats must arrive faster than idle budget');
+  assert.equal(heartbeats.cancel,1);
+  assert.equal(heartbeats.release,1);
+
+  for(const [scenario,stages] of [
+    ['DONE before deadline but EOF never delivered',[
+      {delay:10,value:printable},{delay:10,value:stop},{delay:10,value:done}
+    ]],
+    ['STOP before deadline but DONE arrives after total deadline',[
+      {delay:10,value:printable},{delay:10,value:stop},{delay:160,value:done}
+    ]]
+  ]){
+    const {reader,stats}=slowReader(stages);
+    await assert.rejects(measureSseResponse(responseFor(reader),{
+      startedAt:performance.now(),idleTimeoutMs:300,totalTimeoutMs:95
+    }),e=>e.code==='B4_TOTAL_TIMEOUT',scenario);
+    assert.equal(stats().cancelCount,1,scenario);
+    assert.equal(stats().releaseCount,1,scenario);
+  }
+
+  const {reader,stats}=slowReader([
+    {delay:10,value:printable},{delay:10,value:stop},{delay:10,value:done},{delay:10,value:null}
+  ]);
+  const proof=await measureSseResponse(responseFor(reader),{
+    startedAt:performance.now(),idleTimeoutMs:300,totalTimeoutMs:240
+  });
+  assert.equal(proof.verified,true);
+  assert.ok(proof.first_byte_ms<=proof.ttft_ms);
+  assert.ok(proof.ttft_ms<=proof.sse_done_ms);
+  assert.ok(proof.sse_done_ms<=proof.completion_ms);
+  assert.equal(proof.native_verified,false);
+  assert.equal(proof.browser_authenticated,false);
+  assert.equal(proof.canonical_s03_verified,false);
+  assert.deepEqual(stats(),{count:4,cancelCount:0,releaseCount:1});
+});
