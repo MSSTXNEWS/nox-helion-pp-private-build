@@ -678,6 +678,16 @@
         return Object.freeze({...witness,canonical_ack_status:ack.status,
           canonical_ack_id:ack.ack_id});
       }
+      // A failed canonical proof leaves the original terminal readback GET
+      // unclaimed even if the separate signed-ACK GET was disposed. Release
+      // only on failure; successful verification retains its ownership.
+      async function completeCanonicalOrDispose(){
+        try{ return await canonicalCompletion(); }
+        catch(err){
+          discardReadback(); // once-only, nonblocking, GET only
+          throw err;
+        }
+      }
       let grant=null;
       if(ackGate){
         try{
@@ -688,7 +698,7 @@
           // An uncertain SENDING ACK must NEVER be retransmitted: GET-only
           // readback, with the original event/cursor and CAS proof.
           if(err&&err.code==='HOLD_CROSSTAB_ACK_UNCERTAIN')
-            return canonicalCompletion();
+            return completeCanonicalOrDispose();
           // The reservation has not accepted ownership of the terminal
           // readback GET. A rejected, stopped or timed-out reserve must
           // release that open body once without waiting on cancel().
@@ -709,7 +719,7 @@
           discardReadback();
           hold('HOLD_STREAM_ACK_GATE');
         }
-        if(reservationStatus==='ALREADY_ACKED') return canonicalCompletion();
+        if(reservationStatus==='ALREADY_ACKED') return completeCanonicalOrDispose();
         if(reservationStatus!=='RESERVED'){
           discardReadback();
           hold('HOLD_STREAM_ACK_GATE');
@@ -782,7 +792,7 @@
           err.code==='HOLD_STREAM_RECONNECT_STOPPED')) throw err;
         hold('HOLD_STREAM_ACK_UNCONFIRMED');
       }
-      return ackGate?canonicalCompletion():witness;
+      return ackGate?completeCanonicalOrDispose():witness;
     }
     function reconnect(raw){
       const s=snap(raw),k=key(s);
