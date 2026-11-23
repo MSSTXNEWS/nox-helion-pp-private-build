@@ -36,6 +36,9 @@ FINAL_RESPONSE_LIMIT=2000000
 # A model server can send heartbeats forever and keep HTTPX's per-read timeout
 # reset. Bound the complete native model POST + SSE exchange independently.
 MODEL_STREAM_WALL_SECONDS=300
+# A provider may stream unlimited tiny heartbeats during that deadline.
+# Bound total transport bytes per model POST without trimming S03 context.
+MODEL_SSE_TOTAL_WIRE_LIMIT=32*1024*1024
 
 
 def _append_final_chunk(chunks, chunk, size):
@@ -196,6 +199,7 @@ async def _bounded_sse_lines(response):
     pending=''
     pending_bytes=0
     after_cr=False
+    total_wire_bytes=0
     # Un-sized chunks preserve immediate first-token delivery. Fixed-size
     # HTTPX text chunking can wait for 8 KiB and stall a live SSE response.
     # HTTPX aiter_text() uses replacement decoding for malformed UTF-8:
@@ -203,6 +207,9 @@ async def _bounded_sse_lines(response):
     # Preserve all split-codepoint boundaries, but never certify damaged text.
     decoder=codecs.getincrementaldecoder('utf-8')('strict')
     async for raw in response.aiter_bytes():
+        total_wire_bytes+=len(raw)
+        if total_wire_bytes>MODEL_SSE_TOTAL_WIRE_LIMIT:
+            raise StreamFailure('HOLD_MODEL_SSE_TOTAL_WIRE')
         # A provider can coalesce many SSE frames into one large transport
         # chunk. Decode bounded raw slices to avoid a second giant Unicode
         # allocation while preserving immediate first-token delivery.
