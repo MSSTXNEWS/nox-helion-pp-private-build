@@ -9,7 +9,6 @@ import {request as httpsRequest} from 'node:https';
 import {Readable} from 'node:stream';
 import {createGunzip} from 'node:zlib';
 
-const digest=s=>createHash('sha256').update(s).digest('hex');
 const printable=s=>/[\p{L}\p{N}\p{P}\p{S}]/u.test(s);
 const fail=code=>Object.assign(new Error(code),{code});
 
@@ -35,8 +34,30 @@ export async function measureSseResponse(response,options={}){
   const decoder=new TextDecoder('utf-8',{fatal:true});
   const rawHash=createHash('sha256');
   let total=0,firstByte=null,ttft=null,sseDone=null,close=null;
-  let line='',lineBytes=0,frame=[],frameBytes=0,seenStop=false,seenDone=false,visible='';
+  let line='',lineBytes=0,frame=[],frameBytes=0,seenStop=false,seenDone=false;
+  // Hash the visible stream incrementally; retain at most one dangling UTF-16
+  // high surrogate because distinct JSON deltas can split one Unicode scalar.
+  const visibleHash=createHash('sha256');
+  let pendingHighSurrogate='';
   const nowMs=()=>Math.max(0,clock()-startedAt);
+  function appendVisible(text){
+    if(!text)return;
+    let chunk=pendingHighSurrogate+text;
+    pendingHighSurrogate='';
+    // Node's UTF-8 encoding replaces an unpaired surrogate; postponing only
+    // a terminal high surrogate preserves hash(Buffer.from(fullVisibleText))
+    // if the next delta begins with its low surrogate.
+    const tail=chunk.charCodeAt(chunk.length-1);
+    if(tail>=0xD800&&tail<=0xDBFF){
+      pendingHighSurrogate=chunk.slice(-1);
+      chunk=chunk.slice(0,-1);
+    }
+    if(chunk){
+      visibleHash.update(chunk,'utf8');
+      // First-printable TTFT must also recognize cross-delta emoji.
+      if(ttft===null&&printable(chunk))ttft=nowMs();
+    }
+  }
   function acceptFrame(){
     const lines=frame;frame=[];frameBytes=0;
     // SSE fields allow both `data:` and the valueless `data` form.
@@ -60,7 +81,7 @@ export async function measureSseResponse(response,options={}){
     const text=choice?.delta?.content??choice?.text??'';
     if(typeof text!=='string')throw fail('B4_BAD_TEXT');
     if(seenStop&&text.length)throw fail('B4_TEXT_AFTER_STOP');
-    if(text){visible+=text;if(ttft===null&&printable(text))ttft=nowMs();}
+    appendVisible(text);
     const reason=choice?.finish_reason;
     if(reason!==null&&reason!==undefined){
       if(reason!=='stop'||seenStop)throw fail('B4_BAD_FINISH_REASON');
@@ -124,11 +145,14 @@ export async function measureSseResponse(response,options={}){
     if(line||frame.length)throw fail('B4_UNFRAMED_EOF');
     if(!seenStop||!seenDone||ttft===null)throw fail('B4_INCOMPLETE_SSE');
     if(close<sseDone||sseDone<ttft)throw fail('B4_TIME_ORDER_INVALID');
+    // At actual EOF a lone high surrogate is a U+FFFD replacement, as with
+    // one-shot crypto.update(fullVisibleText,'utf8'). Never digest before EOF.
+    if(pendingHighSurrogate)visibleHash.update(pendingHighSurrogate,'utf8');
     return Object.freeze({
       verified:true,first_byte_ms:firstByte,ttft_ms:ttft,
       sse_done_ms:sseDone,completion_ms:close,
       body_bytes:total,body_sha256:rawHash.digest('hex'),
-      visible_text_sha256:digest(visible),
+      visible_text_sha256:visibleHash.digest('hex'),
       // Never claim a local fetch is an authenticated model/browser/S03 proof.
       browser_authenticated:false,native_verified:false,canonical_s03_verified:false,
       model_tokens_per_second:null

@@ -1195,3 +1195,91 @@ test('R42 real TCP heartbeat and nonprintable deltas cannot start TTFT; invisibl
     await new Promise(resolve=>server.close(resolve));
   }
 });
+
+
+test('R43 real HTTP/TCP incremental visible SHA256: split UTF16 surrogate, 128KiB response and EOF',async()=>{
+  const high='\uD83D',low='\uDE80';
+  const large='Ж'.repeat(65536); // 128 KiB of actual UTF-8 visible bytes.
+  const expected={
+    split:'🚀',large:large+'🚀 финал',unpaired:'Привет '+high
+  };
+  const seen=[];
+  const server=createServer(async(req,res)=>{
+    if(req.method!=='POST'||req.url!=='/nox/chat'){res.writeHead(404).end();return;}
+    let request='';for await(const chunk of req)request+=chunk;
+    const {variant}=JSON.parse(request);seen.push(variant);
+    res.writeHead(200,{'content-type':'text/event-stream','cache-control':'no-store'});
+    res.flushHeaders();res.write(': heartbeat\n\n');
+    try{
+      if(variant==='split'){
+        await sleep(20);
+        res.write(event({delta:{content:high}}));
+        await sleep(32); // A half-surrogate must NOT start printable TTFT.
+        res.write(event({delta:{content:low}}));
+      }else if(variant==='large'){
+        res.write(event({delta:{content:large}}));
+        res.write(event({delta:{content:high}}));
+        res.write(event({delta:{content:low}}));
+        res.write(event({delta:{content:' финал'}}));
+      }else if(variant==='unpaired'){
+        res.write(event({delta:{content:'Привет '+high}}));
+      }else {res.destroy();return;}
+      res.write(event({delta:{},finish_reason:'stop'}));
+      res.write('data: [DONE]\n\n');
+      await sleep(8);
+      res.end();
+    }catch{res.destroy();}
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const url='http://127.0.0.1:'+server.address().port+'/nox/chat';
+  try{
+    for(const variant of ['split','large','unpaired']){
+      const proof=await measureSseFetch(url,{
+        method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({turn:2,variant})
+      },{startedAt:performance.now(),totalTimeoutMs:8000,idleTimeoutMs:3000});
+      assert.equal(proof.verified,true);
+      assert.equal(proof.visible_text_sha256,hash(expected[variant]),
+        'byte-identical to hashing the complete JS string in one update');
+      assert.ok(proof.first_byte_ms<=proof.ttft_ms);
+      assert.ok(proof.ttft_ms<=proof.sse_done_ms);
+      assert.ok(proof.sse_done_ms<=proof.completion_ms);
+      assert.equal(proof.native_verified,false);
+      assert.equal(proof.browser_authenticated,false);
+      assert.equal(proof.canonical_s03_verified,false);
+      assert.equal(proof.model_tokens_per_second,null);
+      if(variant==='split')assert.ok(proof.ttft_ms-proof.first_byte_ms>=28,
+        'do not declare TTFT on a dangling high surrogate');
+      if(variant==='large')assert.ok(proof.body_bytes>131072);
+    }
+    assert.deepEqual(seen,['split','large','unpaired'],
+      'three explicit POSTs only, one per case without hidden replay');
+
+    // Controlled microbenchmark only: engine/GC variability prevents treating
+    // these timings as a production model latency improvement. The legacy path
+    // retains 128KiB of visible UTF-8 at EOF; streaming hash retains no such
+    // aggregate string (only one possible high surrogate).
+    const pieces=Array.from({length:8192},()=> 'x'.repeat(16));
+    const startedLegacy=performance.now();
+    let legacy='';
+    for(const piece of pieces)legacy+=piece;
+    const legacyDigest=hash(legacy);
+    const legacyMs=performance.now()-startedLegacy;
+    const startedIncremental=performance.now();
+    const incremental=createHash('sha256');
+    for(const piece of pieces)incremental.update(piece,'utf8');
+    const incrementalDigest=incremental.digest('hex');
+    const incrementalMs=performance.now()-startedIncremental;
+    assert.equal(incrementalDigest,legacyDigest);
+    console.log('B4_R43_SOURCE_ONLY '+JSON.stringify({
+      cases:3,visible_sha256_exact:true,split_surrogate:true,
+      dangling_surrogate_replacement:true,real_local_tcp:true,physical_eof:true,
+      replayed_posts:0,legacy_buffered_visible_bytes:Buffer.byteLength(legacy),
+      streaming_aggregate_visible_bytes:0,legacy_microbench_ms:+legacyMs.toFixed(3),
+      streaming_microbench_ms:+incrementalMs.toFixed(3),
+      microbench_only:true,real_glm:false,authenticated_browser:false,canonical_s03:false
+    }));
+  }finally{
+    server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
+  }
+});
