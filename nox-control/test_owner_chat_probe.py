@@ -3787,5 +3787,73 @@ class ProbeTests(unittest.TestCase):
                 self.assertTrue(response.closed)
 
 
+    def test_stream_response_nosniff_malformed_headers_and_turn_receipt(self):
+        """Explicitly ambiguous nosniff never certifies a second/third SSE turn."""
+        from email.message import Message
+        did = 'a' * 32
+        frames = [
+            {'type': 'start', 'model': 'GLM-5.3'},
+            {'type': 'delta', 'text': '323'},
+            {'type': 'done', 'dialog_id': did, 'model': 'GLM-5.3',
+             'saved': True, 's03_integrated': True},
+        ]
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, fields):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream'
+                for name, value in fields:
+                    self.headers[name] = value
+                self.closed = False
+                self.read_count = 0
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n'
+                            for frame in frames)
+            def readline(self, limit):
+                self.read_count += 1
+                return super().readline(limit)
+            def close(self):
+                self.closed = True
+
+        for fields in (
+                [('X-Content-Type-Options', 'sniff')],
+                [('X-Content-Type-Options', 'no-sniff')],
+                [('X-Content-Type-Options', 'nosniff, nosniff')],
+                [('X-Content-Type-Options', 'nosniff; extra=1')],
+                [('X-Content-Type-Options', '')],
+                [('X-Content-Type-Options', 'nosniff'),
+                 ('X-Content-Type-Options', 'sniff')],
+                [('X-Content-Type-Options', 'nosniff'),
+                 ('X-Content-Type-Options', 'nosniff')]):
+            for label in ('second', 'third'):
+                reply = Response(fields)
+                with self.subTest(turn=label, headers=fields):
+                    with patch.object(probe, 'request', return_value=reply):
+                        with patch.object(probe, 'bounded_stream_frames') as parser:
+                            with self.assertRaisesRegex(
+                                    RuntimeError, '^HOLD_STREAM_NOSNIFF_HEADER
+    unittest.main()
+):
+                                probe.consume_turn(object(), 'offline-' + label, did)
+                            parser.assert_not_called()
+                    self.assertEqual(reply.read_count, 0)
+                    self.assertTrue(reply.closed)
+
+        for fields, proven in (
+                ([], False),
+                ([('X-Content-Type-Options', 'nosniff')], True),
+                ([('X-Content-Type-Options', '  NoSnIfF  ')], True)):
+            reply = Response(fields)
+            with self.subTest(healthy=fields):
+                with patch.object(probe, 'request', return_value=reply):
+                    result = probe.consume_turn(object(), 'offline', did)
+                self.assertEqual(result['answer'], '323')
+                self.assertEqual(result['stream_nosniff_verified'], proven)
+                self.assertGreater(reply.read_count, 0)
+                self.assertTrue(reply.closed)
+        self.assertFalse(probe.require_stream_nosniff_header(object()))
+
+
 if __name__ == '__main__':
     unittest.main()

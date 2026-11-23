@@ -872,6 +872,30 @@ def require_stream_response_mime(response):
         raise RuntimeError('HOLD_STREAM_RESPONSE_MIME')
 
 
+def require_stream_nosniff_header(response):
+    """Report whether a stream really advertises one unambiguous nosniff.
+
+    A missing header is UNKNOWN, not positive browser security evidence.
+    Explicit invalid/duplicate values cannot be silently trusted; a valid
+    one is only HTTP response metadata, not browser or canonical S03 proof.
+    """
+    headers = getattr(response, 'headers', None)
+    if headers is None:
+        return False  # Offline legacy fixture; never independent proof.
+    get_all = getattr(headers, 'get_all', None)
+    if callable(get_all):
+        fields = get_all('X-Content-Type-Options')
+    else:
+        value = headers.get('X-Content-Type-Options')
+        fields = [] if value is None else [value]
+    if fields is None or fields == []:
+        return False
+    if (not isinstance(fields, (list, tuple)) or len(fields) != 1
+            or not isinstance(fields[0], str)
+            or fields[0].strip().casefold() != 'nosniff'):
+        raise RuntimeError('HOLD_STREAM_NOSNIFF_HEADER')
+    return True
+
 def require_stream_http_framing(response):
     """Reject ambiguous HTTP body boundaries before parsing a model stream.
 
@@ -1084,6 +1108,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
                 raise RuntimeError('HOLD_STREAM_CACHED_REPLAY') from exc
             raise
         require_stream_response_mime(response)
+        nosniff_verified = require_stream_nosniff_header(response)
         require_stream_http_framing(response)
         for index,frame in enumerate(bounded_stream_frames(
                 response, deadline=started+timeout+5)):
@@ -1132,7 +1157,8 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
     return {'answer':answer,'done':done,'events':events,'first_meaningful_delta_ms':first,
             'placeholder_delta_count':placeholders,'delta_count':delta_count,
             'stream_total_ms':round((time.monotonic()-started)*1000),
-             'stream_model_identity':model_identity}
+             'stream_model_identity':model_identity,
+             'stream_nosniff_verified':nosniff_verified}
 
 def admitted_consume_turn(client, prompt, dialog_id, timeout=95):
     """Re-admit RAM immediately before EVERY synthetic model-stream POST.
@@ -1432,7 +1458,9 @@ def main():
         first=turn['first_meaningful_delta_ms']
         emit('chat_synthetic_latency',{'events':turn['events'],'total_ms':turn['stream_total_ms'],
             'first_meaningful_delta_ms':first,'placeholder_delta_count':turn['placeholder_delta_count'],
-            'delta_count':turn['delta_count'],'answer_public_synthetic':numeric_public_answer(answer),
+            'delta_count':turn['delta_count'],
+            'stream_nosniff_verified':turn['stream_nosniff_verified'],
+            'answer_public_synthetic':numeric_public_answer(answer),
             'answer_sha256':digest(answer.encode()),'saved_verified':saved,
             'arithmetic_pass':numeric_public_answer(answer)=='323',
             'performance_target_pass':first<=8000 and turn['stream_total_ms']<=25000})
@@ -1446,7 +1474,9 @@ def main():
                         and scoped_history_matches_turns(stored, [(prompt, answer), (followup, answer2)], did))
             emit('chat_history_followup',{'history_model_pass':passed,'client_history_empty':True,
                 'first_delta_ms':follow['first_meaningful_delta_ms'],'first_meaningful_delta_ms':follow['first_meaningful_delta_ms'],
-                'total_ms':follow['stream_total_ms'],'answer_public_synthetic':numeric_public_answer(answer2),
+                'total_ms':follow['stream_total_ms'],
+                'stream_nosniff_verified':follow['stream_nosniff_verified'],
+                'answer_public_synthetic':numeric_public_answer(answer2),
                 'answer_sha256':digest(answer2.encode()),
                 'performance_target_pass':follow['first_meaningful_delta_ms']<=5000 and follow['stream_total_ms']<=25000})
             require_durable_result(passed, numeric_public_answer(answer2)=='323', 'SECOND_TURN')
@@ -1488,6 +1518,8 @@ def main():
                 'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
                 'answer_sha256':digest(text.encode()),'raw_answer_exported':False,
                 'model_route_identity_verified':model_route_verified,
+                 'three_turns_nosniff_verified':all(t['stream_nosniff_verified']
+                     for t in (turn, follow, turn3)),
                  'verification_scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'}
         emit('chat_recent_timing_after',metrics())
     finally:
