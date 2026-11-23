@@ -5,6 +5,8 @@ on:
     paths:
       - 'nox-control/owner_latency_2a05.py'
       - 'nox-control/test_owner_latency_2a05.py'
+      - 'nox-control/bridge/bench.py'
+      - 'nox-control/bridge/test_bench_ephemeral_2a05.py'
       - '.github/workflows/nox-a5-2a05-latency-source-check.yml'
   workflow_dispatch:
 
@@ -24,5 +26,6 @@ jobs:
         run: |
           set -euo pipefail
           PYTHONPATH=nox-control python3 -m unittest -v test_owner_latency_2a05
+          python3 -B nox-control/bridge/test_bench_ephemeral_2a05.py
           echo 'NOX_2A05_SOURCE_ONLY=true'
           echo 'NOX_2A05_NATIVE_ACCEPTED=false'
