@@ -117,6 +117,10 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
     split_rows = {"train": [], "dev": [], "holdout": []}
     coverage = {}
     group_splits = {}
+    # One provenance source may contain several goals or strata. Its records
+    # must never train the model while also appearing in dev/holdout, even if
+    # each (source, goal) group was individually kept together.
+    source_splits = {}
     for lang in LANGUAGES:
         for domain in DOMAINS:
             stratum = (lang, domain)
@@ -135,6 +139,10 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
             coverage[lang + ":" + domain] = {"groups": n, "train": n - dev - holdout,
                                                "dev": dev, "holdout": holdout}
             for key, dest in zip(keys, partition):
+                source = key[2]
+                previous_split = source_splits.setdefault(source, dest)
+                if previous_split != dest:
+                    raise SplitHold("HOLD_SOURCE_ACROSS_PARTITIONS")
                 group_sha = _digest("\x1f".join(key))
                 if group_sha in group_splits:
                     raise SplitHold("HOLD_GROUP_COLLISION")
