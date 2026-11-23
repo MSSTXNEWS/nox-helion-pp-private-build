@@ -101,6 +101,12 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
              'finish_reason':None},
             {'index':0,'delta':{'role':'user','content':'spoofed user'},
              'finish_reason':None},
+            {'index':0,'delta':{'role':'assistant','content':'unsafe',
+                                'function_call':{'name':'dispatch','arguments':'{}'}},
+             'finish_reason':None},
+            {'index':0,'delta':{'role':'assistant','content':'unsafe',
+                                'function_call':None},
+             'finish_reason':None},
         ):
             with self.subTest(choice=choice), self.assertRaisesRegex(
                     stream.StreamFailure,'HOLD_MODEL_SSE_INVALID'):
