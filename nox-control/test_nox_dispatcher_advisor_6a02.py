@@ -34,6 +34,18 @@ def codes(data, verifier=None):
 
 
 class NativeRefillSourceGateTests(unittest.TestCase):
+    def test_missing_native_queue_is_explicit_hold(self):
+        # Before this guard, a healthy-looking snapshot without any native
+        # owner evidence could return NO_UNVERIFIED_TUNING instead of HOLD.
+        for value in (None, False, [], "RUNNING"):
+            with self.subTest(value=value):
+                s = snapshot()
+                s["native_queue"] = value
+                found = codes(s)
+                self.assertIn("NATIVE_QUEUE_UNVERIFIED", found)
+                self.assertNotIn("NO_UNVERIFIED_TUNING", found)
+                self.assertNotIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED", found)
+
     def test_idle_without_lease_and_source_is_hold(self):
         result = mod.assess(snapshot())
         self.assertIn("NATIVE_REFILL_OWNER_HOLD", [r["code"] for r in result])
