@@ -3804,7 +3804,7 @@ async function check(chunks, status=200) {
             dict(ui, sameSite=[]),
             dict(ui, partitionKey=''),
             dict(ui, partitionKey=42),
-            dict(ui, partitionKey='https://owner.example\\u200b'),
+            dict(ui, partitionKey='https://owner.example\u200b'),
         ]
         for bad in bad_attributes:
             with self.subTest(metadata=repr(bad)):
