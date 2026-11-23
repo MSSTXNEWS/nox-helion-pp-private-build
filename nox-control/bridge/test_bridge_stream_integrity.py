@@ -109,6 +109,62 @@ class BridgeStreamIntegrity(unittest.TestCase):
                          "finish_reason": finish}]
         }) 
 
+    def test_legacy_chat_admission_fails_closed_without_truncating_valid_history(self):
+        # Exercise the actual FastAPI endpoint AST without importing or
+        # starting serving modules, model traffic, or canonical S03.
+        import copy
+        import types
+        fn = copy.deepcopy(next(n for n in TREE.body
+                                if isinstance(n, ast.AsyncFunctionDef)
+                                and n.name == "chat_stream"))
+        fn.decorator_list = []
+        code = compile(ast.fix_missing_locations(
+            ast.Module(body=[fn], type_ignores=[])), "nox_bridge.py", "exec")
+        admission = []
+        class Response:
+            def __init__(self, data, status_code=200):
+                self.data, self.status_code = data, status_code
+        class Stream:
+            def __init__(self, result, **kwargs):
+                admission.append((result, kwargs))
+        env = {"json": json, "CH": None, "Request": object, "JSONResponse": Response,
+               "StreamingResponse": Stream,
+               "stream_chat": lambda msgs: msgs}
+        exec(code, env)
+        class RequestDouble:
+            def __init__(self, payload, header=None):
+                self.payload = payload
+                self.headers = header or {}
+            async def stream(self):
+                for chunk in self.payload:
+                    yield chunk
+        def invoke(payload, header=None):
+            return asyncio.run(env["chat_stream"](RequestDouble(payload, header)))
+        for payload, why in (
+                ([b"null"], "CHAT_INVALID_MESSAGES"),
+                ([b"[]"], "CHAT_INVALID_MESSAGES"),
+                ([b"{not json}"], "CHAT_INVALID_JSON"),
+                ([b'{"messages":{}}'], "CHAT_INVALID_MESSAGES"),
+                ([b'{"messages":[{"role":"user","content":3}]}'], "CHAT_INVALID_MESSAGES"),
+                ([b'{"messages":[{"role":"assistant","content":"only"}]}'], "CHAT_MISSING_USER"),
+                ([b'{"messages":[{"role":"user","content":"\\ud800"}]}'], "CHAT_INVALID_UNICODE")):
+            with self.subTest(payload=payload):
+                result = invoke(payload)
+                self.assertEqual(result.status_code, 400)
+                self.assertEqual(result.data["reason"], why)
+        huge = invoke([b"x" * (2*1024*1024), b"x"])
+        self.assertEqual(huge.status_code, 413)
+        self.assertEqual(huge.data["reason"], "CHAT_WIRE_TOO_LARGE")
+        self.assertFalse(admission)
+        full = [{"role":"user", "content":"И" * 2400},
+                {"role":"assistant", "content":"ok"},
+                {"role":"user", "content":"Что дальше? 🌍"}]
+        good = invoke([json.dumps({"messages":full}, ensure_ascii=False).encode("utf-8")])
+        self.assertIsInstance(good, Stream)
+        self.assertEqual(admission[-1][0], full)
+        self.assertEqual(admission[-1][1]["headers"]["Cache-Control"],
+                         "private, no-store, max-age=0")
+
     def test_failed_advisory_token_hint_keeps_sse_and_one_s03_write_attempt(self):
         # Optional token sizing must not strand an accepted request between
         # the status frame and the first model token.

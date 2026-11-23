@@ -516,9 +516,40 @@ async def stream_chat(history):
 
 @app.post("/v1/chat/stream")
 async def chat_stream(req: Request):
-    b = await req.json()
+    # Legacy clients need explicit admission failures, not a half-open SSE
+    # after invalid/oversized JSON. Never truncate the conversation silently.
+    try:
+        declared = req.headers.get("content-length")
+        if declared is not None:
+            if not declared.isdecimal():
+                return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_CONTENT_LENGTH"}, status_code=400)
+            if int(declared) > 2 * 1024 * 1024:
+                return JSONResponse({"status": "HOLD", "reason": "CHAT_WIRE_TOO_LARGE"}, status_code=413)
+        wire = bytearray()
+        async for chunk in req.stream():
+            if len(chunk) > 2 * 1024 * 1024 - len(wire):
+                return JSONResponse({"status": "HOLD", "reason": "CHAT_WIRE_TOO_LARGE"}, status_code=413)
+            wire.extend(chunk)
+        b = json.loads(wire)
+    except (ValueError, TypeError, UnicodeError):
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_JSON"}, status_code=400)
+    if not isinstance(b, dict) or not isinstance(b.get("messages"), list):
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_MESSAGES"}, status_code=400)
+    messages = b["messages"]
+    if not messages or any(not isinstance(m, dict) or m.get("role") not in ("user", "assistant")
+                           or not isinstance(m.get("content"), str) for m in messages):
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_MESSAGES"}, status_code=400)
+    if len(messages) > 200:
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_TOO_MANY_MESSAGES"}, status_code=400)
+    try:
+        for m in messages:
+            m["content"].encode("utf-8", "strict")
+    except UnicodeError:
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_UNICODE"}, status_code=400)
+    if not any(m["role"] == "user" and m["content"].strip() for m in messages):
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_MISSING_USER"}, status_code=400)
     if CH is not None: CH.mark_chat()
-    return StreamingResponse(stream_chat(b.get("messages") or []), media_type="text/event-stream", headers={"Cache-Control": "private, no-store, max-age=0", "X-Accel-Buffering": "no"})
+    return StreamingResponse(stream_chat(messages), media_type="text/event-stream", headers={"Cache-Control": "private, no-store, max-age=0", "X-Accel-Buffering": "no"})
 
 @app.post("/feedback")
 async def feedback(req: Request):
