@@ -299,7 +299,22 @@ async def stream_chat(history):
     yield _sse({"type": "status", "text": "слушаю тебя…"})
     mem_t = asyncio.create_task(asyncio.to_thread(memory_block, user))
     vol_t = asyncio.create_task(asyncio.to_thread(self_vol, user))
-    mem = await mem_t
+    try:
+        mem = await mem_t
+    except Exception as exc:
+        # An unavailable S03 context must end in an explicit terminal HOLD.
+        # Do not start the model with an incomplete conversation.
+        if not vol_t.done():
+            vol_t.cancel()
+        try:
+            await vol_t
+        except (Exception, asyncio.CancelledError):
+            pass
+        log("memory_preflight_error " + type(exc).__name__)
+        yield _sse({"type": "error", "reason": "S03_CONTEXT_UNAVAILABLE",
+                    "generation_complete": False, "s03_readback_verified": False,
+                    "text": "Контекст памяти недоступен; модель не запускалась"})
+        return
     n = mem.count("\n") + 1 if mem else 0
     yield _sse({"type": "status", "text": ("вспоминаю: нашёл %d фрагм. памяти" % n) if mem else "вспоминаю: в памяти ничего близкого"})
     vol = await vol_t
@@ -369,7 +384,12 @@ async def stream_chat(history):
     LAST_CHAT["t"] = time.time()
     write_returned = remember(user, full.strip())
     if SOUL:
-        SOUL.log_turn(user, full.strip())
+        try:
+            SOUL.log_turn(user, full.strip())
+        except Exception as exc:
+            # Optional soul telemetry cannot remove the final SSE receipt after
+            # an already attempted S03 commit (which must never be retried here).
+            log("soul_log_error " + type(exc).__name__)
     # A successful persist_turn() is not an independent S03 readback.
     yield _sse({"type": "done", "generation_complete": True,
                 "memory_write_receipt": {"status": "WRITE_RETURNED_UNVERIFIED" if write_returned else "HOLD",
