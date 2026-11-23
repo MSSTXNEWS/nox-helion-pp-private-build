@@ -26,3 +26,7 @@ jobs:
           python3 -B -m unittest discover -s nox-control -p 'test_nox_dispatcher_advisor_6a05_json.py' -q
           python3 -B -m unittest discover -s nox-control -p 'test_nox_web_ram_6a05.py' -q
           python3 -B -m unittest discover -s nox-control -p 'test_owner_chat_ui_5v14.py' -q
+      - name: One real FastAPI mini-chat ingress preservation check
+        run: |
+          python3 -m pip install -q "fastapi==0.128.2" "httpx==0.28.1"
+          PYTHONPATH=nox-control/bridge python3 -B -m unittest -q test_webapi_s03_receipt.FactReceiptTest.test_0a03_malformed_chat_never_starts_stream_or_memory
