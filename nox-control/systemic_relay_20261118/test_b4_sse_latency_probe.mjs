@@ -883,3 +883,58 @@ test('R36 second valid gzip member post-DONE SSE injection: real TCP, UTF8 split
   }
 });
 }
+
+
+// R37: a zero-length data field is still a post-terminal SSE event.
+// Valid gzip member 1 has stop + [DONE], member 2 must carry comments only.
+{
+const r37Event=x=>'data: '+JSON.stringify({choices:[x]})+'\n\n';
+test('R37 empty data after DONE fails closed; gzip EOF and 3 turns, heartbeat allowed',async()=>{
+  const sent=[],unhandled=[];
+  const onUnhandled=x=>unhandled.push(String(x));
+  process.on('unhandledRejection',onUnhandled);
+  const server=createServer(async(req,res)=>{
+    if(req.method!=='POST'||req.url!=='/nox/chat'){res.writeHead(404).end();return;}
+    let data='';for await(const part of req)data+=part;
+    const {turn,variant}=JSON.parse(data);sent.push({turn,variant});
+    const msg=['Привет','Hola','Третий'][turn-1];
+    const core=r37Event({delta:{content:msg}})+
+      r37Event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n';
+    const first=gzipSync(Buffer.from(variant==='preterminal'?'data:\n\n'+core:core));
+    const second=gzipSync(Buffer.from(
+      variant==='colon'?'data:\n\n':
+      variant==='bare'?'data\n\n':
+      ': heartbeat\n\n'
+    ));
+    res.writeHead(200,{'content-type':'text/event-stream','content-encoding':'gzip'});
+    res.end(Buffer.concat([first,second]));
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const endpoint='http://127.0.0.1:'+server.address().port+'/nox/chat';
+  const post=(turn,variant)=>measureSseRawHttp(endpoint,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({turn,variant})
+  },{startedAt:performance.now(),totalTimeoutMs:1000,idleTimeoutMs:500});
+  try{
+    const one=await post(1,'heartbeat');
+    assert.equal(one.verified,true);
+    assert.equal(one.visible_text_sha256,hash('Привет'));
+    assert.ok(one.ttft_ms<=one.sse_done_ms&&one.sse_done_ms<=one.completion_ms);
+    for(const [turn,variant] of [[2,'colon'],[3,'bare']]){
+      await assert.rejects(post(turn,variant),
+        e=>e?.code==='B4_POST_DONE_EVENT','empty data after DONE must reject on turn '+turn);
+    }
+    assert.equal((await post(3,'preterminal')).verified,true,
+      'empty data before terminal remains legal');
+    assert.deepEqual(sent,[
+      {turn:1,variant:'heartbeat'},{turn:2,variant:'colon'},
+      {turn:3,variant:'bare'},{turn:3,variant:'preterminal'}
+    ],'exactly one POST per explicit action');
+    assert.deepEqual(unhandled,[]);
+  }finally{
+    server.closeAllConnections();
+    await new Promise(resolve=>server.close(resolve));
+    process.off('unhandledRejection',onUnhandled);
+  }
+});
+}

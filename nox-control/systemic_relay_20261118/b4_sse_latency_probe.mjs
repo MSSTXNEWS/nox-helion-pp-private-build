@@ -41,10 +41,13 @@ export async function measureSseResponse(response,options={}){
     const lines=frame;frame=[];frameBytes=0;
     // SSE fields allow both `data:` and the valueless `data` form.
     // Multiple data fields form one payload with a literal LF between values.
-    const payload=lines.filter(x=>x==='data'||x.startsWith('data:'))
-      .map(x=>x==='data'?'':x.slice(5).replace(/^ /,'')).join('\n');
-    if(!payload)return;
+    const dataFields=lines.filter(x=>x==='data'||x.startsWith('data:'));
+    // An empty data frame is still an SSE event, including after [DONE].
+    // Ignore comment-only frames; never let a terminal data frame bypass the fence.
+    if(!dataFields.length)return;
     if(seenDone)throw fail('B4_POST_DONE_EVENT');
+    const payload=dataFields.map(x=>x==='data'?'':x.slice(5).replace(/^ /,'')).join('\n');
+    if(!payload)return;
     if(payload==='[DONE]'){
       if(!seenStop)throw fail('B4_DONE_WITHOUT_STOP');
       seenDone=true;sseDone=nowMs();return;
