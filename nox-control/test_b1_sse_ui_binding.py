@@ -2589,11 +2589,11 @@ def main():
         }'''))
 
         # Durable beginSend malformed non-void responses cannot authorize network
-        # ACK; retain only documented void and explicit true success contracts.
-        check('malformed non-void ACK beginSend fences network ACK; void/true remain compatible', page.evaluate('''async () => {
+        # ACK; allow native 'SENDING', legacy void, and explicit true successes.
+        check('malformed ACK beginSend fences ACK; SENDING/void/true remain compatible', page.evaluate('''async () => {
           const modes=['refused','null_reply','zero_reply','empty_string','object_status',
             'array_reply','numeric_one','string_true','rejected_status',
-            'legacy_void','confirmed_true'];
+            'legacy_void','confirmed_true','confirmed_sending'];
           for(const mode of modes){
             const s={conversation_id:'r36',exchange_id:mode};
             let reads=0,posts=0,acks=0,sends=0,gets=0,projections=0;
@@ -2622,7 +2622,7 @@ def main():
                 if(mode==='numeric_one')return 1;
                 if(mode==='string_true')return 'true';
                 if(mode==='rejected_status')return {status:'REJECTED'};
-                return mode==='confirmed_true'?true:undefined;
+                return mode==='confirmed_true'?true:mode==='confirmed_sending'?'SENDING':undefined;
               },
               async confirm(){throw Error('NO_LOCAL_CONFIRM')},
               async requireCanonicalAck(_s,event,cursor,read,verify){
@@ -2641,7 +2641,7 @@ def main():
               }}
             });
             const result=await client.reconnect(s).then(v=>v,e=>e.code);
-            if(mode!=='legacy_void'&&mode!=='confirmed_true'){
+            if(mode!=='legacy_void'&&mode!=='confirmed_true'&&mode!=='confirmed_sending'){
               if(result!=='HOLD_STREAM_ACK_GATE')return false;
               const retry=await client.reconnect(s).then(v=>v,e=>e.code);
               if(retry!=='HOLD_STREAM_ACK_GATE'||reads!==2||sends!==2||

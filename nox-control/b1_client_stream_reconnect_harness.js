@@ -668,9 +668,11 @@
           const sendReceipt=await boundedRead(()=>ackGate.beginSend(grant),
             'HOLD_STREAM_ACK_BEGIN_TIMEOUT',reconnectReadTimeoutMs,signal);
           // BeginSend is a durable CAS boundary, not an advisory response.
-          // Only the explicit true or legacy void success can authorize ACK.
-          // Reject malformed non-void replies before a network ACK escapes.
-          if(sendReceipt!==undefined && sendReceipt!==true)
+          // Native IndexedDB gate returns 'SENDING'; other adapters may
+          // commit with true or resolve void. Reject all other results
+          // before the network ACK escapes, including false and malformed.
+          if(sendReceipt!=='SENDING' &&
+             sendReceipt!==true && sendReceipt!==undefined)
             hold('HOLD_STREAM_ACK_GATE');
         }
         catch(err){
