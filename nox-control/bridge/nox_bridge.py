@@ -473,18 +473,34 @@ button{padding:0 16px;border-radius:10px;border:0;background:#4b6bff;color:#fff;
 <div id=log></div><form id=f><input id=i placeholder="Напиши NOX…" autocomplete=off><button>→</button></form>
 <script>
 const log=document.getElementById('log'),hist=[];
+let sending=false;
 function add(c,t){const d=document.createElement('div');d.className='m '+c;d.textContent=t;log.appendChild(d);log.scrollTop=1e9;return d}
-document.getElementById('f').onsubmit=async e=>{e.preventDefault();const i=document.getElementById('i'),q=i.value.trim();if(!q)return;i.value='';
-add('u',q);hist.push({role:'user',content:q});const st=add('s','…'),box=add('n','');let full='',complete=false;
-try{const r=await fetch('/v1/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:hist.slice(-6)})});
+document.getElementById('f').onsubmit=async e=>{e.preventDefault();if(sending)return;
+const i=document.getElementById('i'),send=document.querySelector('#f button'),q=i.value.trim();if(!q)return;
+sending=true;send.disabled=true;i.disabled=true;i.value='';
+add('u',q);const pending=[...hist,{role:'user',content:q}];const st=add('s','…'),box=add('n','');
+let full='',complete=false,failed=false,writeReceipt=null;
+try{const r=await fetch('/v1/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:pending.slice(-6)})});
 if(!r.ok||!r.body)throw Error('upstream');
 const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
 while(true){const{value,done}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});let k;
 while((k=buf.indexOf('\\n\\n'))>=0){const ln=buf.slice(0,k);buf=buf.slice(k+2);if(!ln.startsWith('data:'))continue;const o=JSON.parse(ln.slice(5));
 if(o.type=='status')st.textContent=o.text;else if(o.type=='token'){full+=o.text;box.textContent=full;st.textContent='';log.scrollTop=1e9}
-else if(o.type=='error')st.textContent=o.text;else if(o.type=='done')complete=o.generation_complete===true}}}catch(x){st.textContent='ошибка связи'}
+else if(o.type=='error'){failed=true;complete=false;st.textContent=o.text}
+else if(o.type=='done'){complete=o.generation_complete===true&&!failed;writeReceipt=o.memory_write_receipt||null}}}
+}catch(x){failed=true;complete=false;st.textContent='ошибка связи'}
+finally{sending=false;send.disabled=false;i.disabled=false;i.focus()}
+if(!full.trim())complete=false;
 if(!complete){if(!st.textContent)st.textContent='Ответ прерван; неполный текст не добавлен в историю';return}
-hist.push({role:'assistant',content:full});const fb=add('f','');
+// Only completed turns enter outgoing conversation history. A failed turn
+// remains visible on screen but must not pollute the next model request.
+hist.push({role:'user',content:q},{role:'assistant',content:full});
+if(writeReceipt?.s03_readback_verified!==true){
+ st.textContent=writeReceipt?.status==='WRITE_RETURNED_UNVERIFIED'
+ ? 'Память: запись вернулась, но отдельное чтение S03 не подтверждено'
+ : 'Память: запись не подтверждена';
+}
+const fb=add('f','');
 ['👍','👎'].forEach((s,j)=>{const b=document.createElement('button');b.textContent=s;b.onclick=()=>{fetch('/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:q,a:full,v:j?-1:1})});fb.remove()};fb.appendChild(b)})}
 </script>"""
 
