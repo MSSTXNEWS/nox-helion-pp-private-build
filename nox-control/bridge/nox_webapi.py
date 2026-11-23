@@ -368,6 +368,20 @@ def _warm(B):
             B.log("warm_slot_%d_fail %s" % (slot, type(e).__name__))
 
 
+def _revoke_uncertain_s03_cache(B):
+    """Best-effort cache revocation on uncertain S03 outcomes; not a save receipt."""
+    invalidate = getattr(B, "invalidate_s03_cache", None)
+    if callable(invalidate):
+        try:
+            invalidate()
+        except Exception as exc:
+            # A cache failure must not cause automatic S03 replay.
+            try:
+                B.log("web_s03_ambiguous_cache_revoke_failed " + type(exc).__name__)
+            except Exception:
+                pass
+
+
 def install(app, B):
     global _lock, _lock_mini
     threading.Thread(target=_warm, args=(B,), daemon=True).start()
@@ -1539,15 +1553,20 @@ def install(app, B):
                     hist = {"status": "SKIPPED", "reason": "ephemeral"}
                 elif full.strip() and not stopped:
                     s03_write_returned = False
+                    s03_write_attempted = False
                     try:
                         import s03_memory as S
                         # Keep the exact streamed Unicode/whitespace: stripping changes S03 history
                         # relative to the SSE text and its terminal digest.
+                        s03_write_attempted = True
                         persist_result = await asyncio.to_thread(S.persist_turn, ("[mini] " + user) if mini else user, full)
                         # Explicit False must never produce SAVED or a SOUL mirror.
                         # The writer might still have committed before rejection,
                         # so an automatic retry is unsafe without S03 readback.
                         if persist_result is False:
+                            # False may still mean committed-then-rejected. Revoke
+                            # process-local recall without asserting durability.
+                            _revoke_uncertain_s03_cache(B)
                             hist = {"status": "HOLD", "reason": "S03_PERSIST_REJECTED",
                                     "s03_write_returned": False, "retry_unsafe": True,
                                     "s03_readback_verified": False}
@@ -1561,6 +1580,10 @@ def install(app, B):
                                 invalidate()
                             hist = {"status": "SAVED", "mini": mini, "s03_readback_verified": False}
                     except Exception as e:
+                        if s03_write_attempted and not s03_write_returned:
+                            # A writer can commit and THEN raise. Cached old
+                            # context must not survive this ambiguous outcome.
+                            _revoke_uncertain_s03_cache(B)
                         # Persist may have committed despite a raised exception.
                         # If it returned but cache revocation failed, a replay can
                         # duplicate a durable S03 turn. Preserve that distinction.
