@@ -1517,6 +1517,11 @@ def install(app, B):
                             else:
                                 output_utf8_bytes += add_bytes
                                 full += add
+                                # The skeptic annotation is a real emitted text frame.
+                                # Count it in the terminal frames receipt so a
+                                # reconnect/2A05 consumer can verify the entire
+                                # delivered Unicode output, not just model deltas.
+                                n += 1
                                 yield fr(message={"role": "assistant", "content": add}, done=False)
                         yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": ("сомнение: " + sk["doubt"]) if sk.get("ok") is False else "проверка пройдена" if sk.get("ok") else "проверка недоступна", "ok": sk.get("ok")})
                 # STOP may arrive while the post-generation skeptic awaits. Never
