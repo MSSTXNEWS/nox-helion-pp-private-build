@@ -795,3 +795,91 @@ test('R35 real gzip multistream EOF: valid members, bad trailing CRC/truncation/
   }
 });
 }
+
+
+// R36: a second gzip member can be completely valid yet contain a malicious
+// post-DONE data frame. Integrity of gzip trailers alone is NOT SSE completion.
+{
+const r36Event=x=>'data: '+JSON.stringify({choices:[x]})+'\n\n';
+const r36Visible=['Привет 🌍','Hola 🌈','Ответ ✨'];
+const r36Body=turn=>r36Event({delta:{content:r36Visible[turn-1]}})+
+  r36Event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n';
+const r36Hash=x=>createHash('sha256').update(x).digest('hex');
+function r36Gate(){let release;const promise=new Promise(r=>{release=r;});return {promise,release};}
+async function r36Bound(p,ms=1300){
+  let timer;
+  try{return await Promise.race([p,new Promise((_,reject)=>{
+    timer=setTimeout(()=>reject(Error('R36_HUNG')),ms);
+  })]);}finally{clearTimeout(timer);}
+}
+test('R36 second valid gzip member post-DONE SSE injection: real TCP, UTF8 split, timeout, abort, exactly-once POST',async()=>{
+  const calls=[],written=r36Gate(),unhandled=[];
+  const onUnhandled=e=>unhandled.push(String(e));
+  process.on('unhandledRejection',onUnhandled);
+  const server=createServer(async(req,res)=>{
+    let input='';for await(const x of req)input+=x;
+    const {turn,kind}=JSON.parse(input);calls.push({turn,kind});
+    const complete=Buffer.from(r36Body(turn));
+    let first=gzipSync(complete);
+    let second=gzipSync(Buffer.from(': harmless heartbeat after DONE\n\n'));
+    if(kind==='injected')second=gzipSync(Buffer.from(
+      r36Event({delta:{content:'UNAUTHORIZED POST DONE EVENT'}})));
+    if(kind==='utf8_split'){
+      const emoji=Buffer.from('🌍'),i=complete.indexOf(emoji);
+      assert.ok(i>=0);
+      // Put one UTF-8 byte at the end of gzip member 1 and its other
+      // bytes in member 2; JSON frame terminators and DONE stay intact.
+      first=gzipSync(complete.subarray(0,i+1));
+      second=gzipSync(complete.subarray(i+1));
+    }
+    res.writeHead(200,{'content-type':'text/event-stream','content-encoding':'gzip',
+      'cache-control':'no-store'});
+    res.write(Buffer.concat([first,second]));
+    if(kind==='stall'||kind==='abort'){
+      if(kind==='abort')written.release();
+      return; // [DONE] and valid members are not actual HTTP EOF
+    }
+    res.end();
+  });
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));
+  const url='http://127.0.0.1:'+server.address().port+'/nox/chat';
+  const post=(turn,kind,signal,opts={})=>measureSseRawHttp(url,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({turn,kind}),signal
+  },{startedAt:performance.now(),idleTimeoutMs:450,totalTimeoutMs:950,...opts});
+  try{
+    const healthy=await r36Bound(post(1,'heartbeat'));
+    assert.equal(healthy.verified,true);
+    assert.equal(healthy.visible_text_sha256,r36Hash(r36Visible[0]));
+    assert.ok(healthy.first_byte_ms<=healthy.ttft_ms&&healthy.ttft_ms<=healthy.sse_done_ms);
+    assert.ok(healthy.sse_done_ms<=healthy.completion_ms);
+    assert.equal(healthy.native_verified,false);
+    assert.equal(healthy.browser_authenticated,false);
+    assert.equal(healthy.canonical_s03_verified,false);
+    for(const turn of [2,3]){
+      await assert.rejects(r36Bound(post(turn,'injected')),
+        e=>e?.code==='B4_POST_DONE_EVENT',
+        'valid gzip member2 must not hide an SSE data event after [DONE]');
+    }
+    const split=await r36Bound(post(1,'utf8_split'));
+    assert.equal(split.verified,true,'split UTF-8 across gzip members must decode');
+    assert.equal(split.visible_text_sha256,r36Hash(r36Visible[0]));
+    await assert.rejects(r36Bound(post(2,'stall',undefined,
+      {idleTimeoutMs:400,totalTimeoutMs:100})),e=>e?.code==='B4_TOTAL_TIMEOUT');
+    const controller=new AbortController();
+    const pending=post(3,'abort',controller.signal);
+    await r36Bound(written.promise);controller.abort();
+    await assert.rejects(r36Bound(pending),e=>e?.code==='B4_FETCH_ABORTED');
+    await sleep(5);
+    assert.deepEqual(calls,[
+      {turn:1,kind:'heartbeat'},{turn:2,kind:'injected'},
+      {turn:3,kind:'injected'},{turn:1,kind:'utf8_split'},
+      {turn:2,kind:'stall'},{turn:3,kind:'abort'}
+    ],'no implicit retry or second POST per explicit request');
+    assert.deepEqual(unhandled,[],'no unhandled late stream error');
+  }finally{
+    server.closeAllConnections();await new Promise(r=>server.close(r));
+    process.off('unhandledRejection',onUnhandled);
+  }
+});
+}
