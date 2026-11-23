@@ -1651,6 +1651,13 @@ class TestProbe(unittest.TestCase):
                                 if(mode==='camelaliasdriftstart')frames[1].modelLabel='other-model';
                                 if(mode==='camelaliasmatchstart')frames[1].modelLabel='existing-model';
                                 if(mode==='aliasnullstart')frames[1].model_label=null;
+                                if(mode==='deltamodeldrift')frames[2].model='other-model';
+                                if(mode==='deltaaliasdrift')frames[2].model_label='other-model';
+                                if(mode==='deltacameldrift')frames[2].modelLabel='other-model';
+                                if(mode==='deltabadtype')frames[2].model=42;
+                                if(mode==='deltamodelmatch')frames[2].model='existing-model';
+                                if(mode==='deltaaliasmatch')frames[2].model_label='existing-model';
+                                if(mode==='deltacamelmatch')frames[2].modelLabel='existing-model';
                                 return new Response(frames.map(JSON.stringify).join('\\n')+'\\n',{
                                     status:200
                                 });
@@ -1683,7 +1690,10 @@ class TestProbe(unittest.TestCase):
                               'punctstart','emojistart','lonehighstart',
                               'lonelowstart','astralstart','aliasdriftstart',
                               'aliasmatchstart','camelaliasdriftstart',
-                              'camelaliasmatchstart','aliasnullstart'].entries()){
+                              'camelaliasmatchstart','aliasnullstart',
+                              'deltamodeldrift','deltaaliasdrift','deltacameldrift',
+                              'deltabadtype','deltamodelmatch','deltaaliasmatch',
+                              'deltacamelmatch'].entries()){
                             const postsBefore=window.__posts;
                             const readsBefore=window.__reads;
                             const id=i.toString(16).padStart(2,'0').repeat(16);
@@ -1707,7 +1717,7 @@ class TestProbe(unittest.TestCase):
                         }
                         return rows;
                     }""")
-                    self.assertEqual(len(result), 23)
+                    self.assertEqual(len(result), 30)
                     for row in result:
                         self.assertEqual(row['posts'], 1)
                         # A terminal HOLD can withhold its last carried grapheme;
@@ -1720,12 +1730,16 @@ class TestProbe(unittest.TestCase):
                                            'punctstart', 'emojistart',
                                            'lonehighstart','lonelowstart',
                                            'aliasdriftstart','camelaliasdriftstart',
-                                           'aliasnullstart'):
+                                           'aliasnullstart','deltamodeldrift',
+                                           'deltaaliasdrift','deltacameldrift',
+                                           'deltabadtype'):
                             self.assertEqual(row['reads'], 0)
                             self.assertEqual(row['done'], [])
                             self.assertEqual(len(row['errors']), 1)
                             expected = ('HOLD_NATIVE_MODEL_START_LABEL'
                                         if row['mode'].endswith('start') else
+                                        'HOLD_NATIVE_MODEL_DELTA_DRIFT'
+                                        if row['mode'].startswith('delta') else
                                         'HOLD_NATIVE_MODEL_RECEIPT_DRIFT')
                             self.assertIn(expected, row['errors'][0]['error'])
                         else:

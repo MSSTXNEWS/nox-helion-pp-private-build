@@ -62,7 +62,7 @@ return nativeBodyJSON(r,init?.signal);
 async function createDialog(title,signal) {
 const r=await nativePost('/api/ui/memory/dialogs/create',{
  title:String(title||'Новый диалог').replace(/[\x00-\x1F\x7F]/g,' ').trim().slice(0,140)||'Новый диалог',
-  confirmed:true
+confirmed:true
 },signal);
 if(!r.ok)throw Error('HOLD_DIALOG_CREATE_'+await reason(r,signal));
 const d=await nativeBodyJSON(r,signal);
@@ -71,7 +71,7 @@ return d;
 }
 async function dialogId(data,signal) {
 if(data.dialog_id===null||data.dialog_id===undefined||data.dialog_id===''){
-  return (await createDialog(String(data.message||'').slice(0,140),signal)).dialog_id;
+return (await createDialog(String(data.message||'').slice(0,140),signal)).dialog_id;
 }
 if(typeof data.dialog_id!=='string'||!ID.test(data.dialog_id))throw Error('HOLD_INVALID_DIALOG_SCOPE');
 return data.dialog_id;
@@ -150,6 +150,7 @@ throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
 if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
 if(e.type==='delta'){
 if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
+if(['model','model_label','modelLabel'].some(k=>k in e&&e[k]!==nativeModel))throw Error('HOLD_NATIVE_MODEL_DELTA_DRIFT');
 if(typeof e.text!=='string'||answer.length+e.text.length>200000)throw Error('HOLD_NATIVE_DELTA');
 answer+=e.text;await emit(e.text);
 } else if(e.type==='done') {
@@ -159,36 +160,36 @@ if(k in e&&e[k]!==nativeModel)
 throw Error('HOLD_NATIVE_MODEL_RECEIPT_DRIFT');
 doneSeen=true;done=e;
 } else if(e.type==='start') {
-   if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
-     if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
-     startSeen=true;
-     if(!validNativeModelLabel(e.model)||['model_label','modelLabel'].some(k=>k in e&&e[k]!==e.model))throw Error('HOLD_NATIVE_MODEL_START_LABEL');
-     nativeModel=e.model;
-   } else if(e.type==='preparing') {
-     if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
-     if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
-     preparingSeen=true;
-   } else {
-     throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
-   }
+if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
+if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
+startSeen=true;
+if(!validNativeModelLabel(e.model)||['model_label','modelLabel'].some(k=>k in e&&e[k]!==e.model))throw Error('HOLD_NATIVE_MODEL_START_LABEL');
+nativeModel=e.model;
+} else if(e.type==='preparing') {
+if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
+if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
+preparingSeen=true;
+} else {
+throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
+}
  };
  try{
-   for(;;){
-     if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
-     const chunk=doneSeen ? await readNativeEofAfterDone(reader,signal)
-                          : await readNativeOrAbort(reader,signal);
-     if(chunk.done)break;
-     buf+=decoder.decode(chunk.value,{stream:true});
-     let j;while((j=buf.indexOf('\n'))>=0){
-       if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
-       await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
-     }
-     if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
-     if(doneSeen&&buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
-   }
-   buf+=decoder.decode();
-   if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
-   if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
+for(;;){
+if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
+const chunk=doneSeen ? await readNativeEofAfterDone(reader,signal)
+: await readNativeOrAbort(reader,signal);
+if(chunk.done)break;
+buf+=decoder.decode(chunk.value,{stream:true});
+let j;while((j=buf.indexOf('\n'))>=0){
+if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
+await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
+}
+if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
+if(doneSeen&&buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
+}
+buf+=decoder.decode();
+if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
+ if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
    if(new TextDecoder().decode(enc.encode(answer))!==answer)throw Error('HOLD_NATIVE_SURROGATE');
    return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};
  }finally{
