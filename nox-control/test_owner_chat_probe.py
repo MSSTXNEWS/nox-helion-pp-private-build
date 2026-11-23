@@ -3965,8 +3965,7 @@ class ProbeTests(unittest.TestCase):
                                      hashlib.sha256(bodies[index]).hexdigest())
                     self.assertTrue(result['stream_nosniff_verified'])
                     self.assertEqual(result['delta_count'], 1)
-            with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_CACHED_REPLAY
-):
+            with self.assertRaisesRegex(RuntimeError, "HOLD_STREAM_CACHED_REPLAY"):
                 probe.consume_turn(client, prompts[1], did, timeout=5)
             self.assertEqual(len(captured), 3)
             self.assertTrue(all(route == '/api/nox/chat/stream'
