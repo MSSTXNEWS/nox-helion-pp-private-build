@@ -3046,6 +3046,94 @@ def main():
           return true;
         }'''))
 
+        # R43: an ACK can commit remotely even when its promise fails.
+        # Only cancel the abandoned terminal GET body, not the uncertain ACK.
+        check('ACK send HOLD releases GET once; strict duplicate is GET-only', page.evaluate('''async () => {
+          const kinds=['reject','false','stop','timeout','strict-void','healthy'];
+          for(const kind of kinds){
+            const s={conversation_id:'r43',exchange_id:kind};
+            let reads=0,cancels=0,posts=0,acks=0;
+            let ackEntered;const entered=new Promise(resolve=>ackEntered=resolve);
+            const transport={...opts.transport,
+              post(){posts++;throw Error('DUPLICATE_MODEL_POST')},
+              async readback(){reads++;return {...s,body:{cancel(){
+                cancels++;return new Promise(()=>{}); // must not be awaited
+              }}}},
+              ack(){
+                acks++;
+                if(kind==='reject')throw Error('ACK_NETWORK_REJECT');
+                if(kind==='false')return false;
+                if(kind==='stop'){ackEntered();return new Promise(()=>{});}
+                if(kind==='timeout')return new Promise(()=>{});
+                if(kind==='strict-void')return undefined;
+                return true;
+              },
+              readCanonicalAck(){throw Error('NO_CANONICAL_GET')}
+            };
+            const gate={
+              reserve(){return {status:'RESERVED'}},
+              beginSend(){return 'SENDING'},
+              confirm(){throw Error('NO_CONFIRM')},
+              requireCanonicalAck(){throw Error('NO_CANONICAL_GATE')}
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,ackGate:gate,
+              strictAckNoReplay:kind==='strict-void',
+              bridge:{async acceptTerminal(){return {
+                safe_to_ack:true,model_post:false,
+                conversation_id:s.conversation_id,exchange_id:s.exchange_id,
+                projection_event_id:'ev-'+kind,ack_cursor:'cursor-'+kind
+              }}},
+              ui:{async onDelta(){},async upsertTerminal(){return true}},
+              ackSendTimeoutMs:kind==='timeout'?40:500
+            });
+            const pending=client.reconnect(s);
+            if(kind==='stop'){
+              await entered;
+              if(!client.stop(s))return false;
+            }
+            const result=await Promise.race([
+              pending.then(v=>v,e=>e.code),
+              new Promise(resolve=>setTimeout(()=>resolve('HUNG'),800))
+            ]);
+            const healthy=kind==='healthy';
+            const expected=healthy?'HOLD_STREAM_CANONICAL_ACK':
+              kind==='stop'?'HOLD_STREAM_RECONNECT_STOPPED':
+              kind==='timeout'?'HOLD_STREAM_ACK_SEND_TIMEOUT':
+              'HOLD_STREAM_ACK_UNCONFIRMED';
+            if(result!==expected||reads!==1||cancels!==(healthy?0:1)||
+               acks!==1||posts!==0)return false;
+            const noRepost=await client.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(!noRepost||posts!==0)return false;
+          }
+          const s={conversation_id:'r43',exchange_id:'strict-duplicate'};
+          let reads=0,cancels=0,posts=0,acks=0;
+          const transport={...opts.transport,
+            post(){posts++;throw Error('DUPLICATE_MODEL_POST')},
+            async readback(){reads++;return {...s,body:{cancel(){
+              cancels++;return new Promise(()=>{});
+            }}}},
+            async ack(){acks++;return true}
+          };
+          const client=NOXB1StreamReconnect.createClient({
+            transport,host:opts.host,strictAckNoReplay:true,
+            bridge:{async acceptTerminal(){return {
+              safe_to_ack:true,model_post:false,
+              conversation_id:s.conversation_id,exchange_id:s.exchange_id,
+              projection_event_id:'ev-duplicate',ack_cursor:'cursor-duplicate'
+            }}},
+            ui:{async onDelta(){},async upsertTerminal(){return true}}
+          });
+          const first=await client.reconnect(s).then(v=>v,e=>e.code);
+          const second=await client.reconnect(s).then(v=>v,e=>e.code);
+          const noRepost=await client.begin(s).then(()=>false,
+            e=>e.code==='HOLD_STREAM_NO_REPOST');
+          return first&&first.exchange_id===s.exchange_id &&
+            second==='HOLD_STREAM_ACK_UNCERTAIN_GET_ONLY' &&
+            reads===2&&cancels===1&&acks===1&&posts===0&&noRepost;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:

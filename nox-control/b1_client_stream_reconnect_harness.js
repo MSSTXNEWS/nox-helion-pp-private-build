@@ -737,8 +737,12 @@
       // Cross-tab/reload safety STILL requires the supplied durable ackGate.
       if(strictAckNoReplay&&!ackGate){
         const attemptKey=key(s);
-        if(ackAttempted.has(attemptKey))
+        if(ackAttempted.has(attemptKey)){
+          // A duplicate strict ACK is fenced before any network side effect.
+          // Its new GET response is unclaimed; close only that body.
+          discardReadback();
           hold('HOLD_STREAM_ACK_UNCERTAIN_GET_ONLY');
+        }
         ackAttempted.add(attemptKey);
       }
       try{
@@ -752,12 +756,20 @@
         // Strict opt-in transports must explicitly attest true. Legacy
         // transports preserve their prior void-success contract; only false
         // means explicitly unconfirmed. Neither result is canonical proof.
-        if(strictAckNoReplay ? acked!==true : acked===false)
+        if(strictAckNoReplay ? acked!==true : acked===false){
+          // Explicitly unconfirmed ACK leaves this terminal readback GET
+          // unclaimed. Disposing it does NOT retry or cancel the ACK.
+          discardReadback();
           hold('HOLD_STREAM_ACK_UNCONFIRMED');
+        }
         // Leave IndexedDB SENDING until a signed canonical GET proves ACKED.
         // A local confirm() would create ACKED without a server proof digest
         // and permanently block requireCanonicalAck() as unverified.
       }catch(err){
+        // ACK may have committed remotely; never retry or abort the ACK.
+        // Only the abandoned terminal *GET* body is released once and
+        // nonblocking on rejection, timeout, STOP and explicit HOLD.
+        discardReadback();
         if(err&&(err.code==='HOLD_STREAM_ACK_SEND_TIMEOUT'||
           err.code==='HOLD_STREAM_RECONNECT_STOPPED')) throw err;
         hold('HOLD_STREAM_ACK_UNCONFIRMED');
