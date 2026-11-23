@@ -87,11 +87,6 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         and native.get("owner_lease_cas_verified") is True
         and native.get("immutable_task_source_verified") is True
     )
-    if not native_complete:
-        add("NATIVE_QUEUE_UNVERIFIED", "hold",
-            "Native owner queue, workers, source, or fresh lease/CAS evidence "
-            "are missing, incomplete or malformed. Do not infer idle workers, "
-            "refill eligibility, or safe publication.")
     if isinstance(native, dict):
         workers = native.get("workers")
         state = native.get("admission_state")
@@ -314,12 +309,15 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                     f"Measured utilization-only upper bound to the 85% limit: {cap} percentage points. "
                     "VRAM is not a per-job allocation; no admission, trainer restart or new queue authorized.")
     if not issues:
-        # An otherwise healthy JSON snapshot without a trusted owner-side
-        # attestation must not produce a falsely clean diagnostic.
-        if not _owner_snapshot_attested(snapshot, owner_snapshot_verifier):
+        # If another concrete issue already exists, preserve its established
+        # diagnostic code (including GPU/thermal and memory checks). Only a
+        # falsely CLEAN report needs the missing-queue/attestation HOLD.
+        if not native_complete or not _owner_snapshot_attested(
+                snapshot, owner_snapshot_verifier):
             add("NATIVE_QUEUE_UNVERIFIED", "hold",
-                "No authenticated owner snapshot: lease/CAS and workers cannot "
-                "be inferred from JSON alone. No native admission.")
+                "Native owner queue, workers, immutable source or fresh "
+                "authenticated lease/CAS evidence is missing or incomplete. "
+                "No native admission or unverified clean diagnostic.")
         else:
             add("NO_UNVERIFIED_TUNING", "observe",
                 "No changes recommended without measured before/after and readback.")
