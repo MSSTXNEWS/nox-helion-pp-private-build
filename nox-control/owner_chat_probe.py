@@ -173,12 +173,41 @@ def require_fresh_owner_readback(response):
             raise RuntimeError('HOLD_OWNER_READBACK_CACHED')
 
 
+
+def require_owner_json_response_mime(response):
+    """A 200 owner API JSON body served as HTML is not authenticated route evidence.
+
+    An explicit Content-Type must unambiguously describe JSON, including a
+    structured +json subtype. Headerless legacy offline fixtures stay neutral;
+    missing MIME alone never supplies production acceptance.
+    """
+    headers = getattr(response, 'headers', None)
+    if headers is None:
+        return
+    get_all = getattr(headers, 'get_all', None)
+    if callable(get_all):
+        fields = get_all('Content-Type') or []
+    else:
+        value = headers.get('Content-Type')
+        fields = [] if value is None else [value]
+    if not fields:
+        return
+    if (not isinstance(fields, (list, tuple)) or len(fields) != 1
+            or not isinstance(fields[0], str)):
+        raise RuntimeError('HOLD_OWNER_JSON_RESPONSE_MIME')
+    media = fields[0].split(';', 1)[0].strip().casefold()
+    if (media != 'application/json'
+            and not re.fullmatch(r'application/[a-z0-9][a-z0-9._-]*\+json', media)):
+        raise RuntimeError('HOLD_OWNER_JSON_RESPONSE_MIME')
+
+
 def owner_readback_json(client, requested_path):
     """Bind read-only owner JSON to its exact path and close on both PASS and HOLD."""
     response = request(client, requested_path)
     try:
         require_exact_owner_readback_target(response, requested_path)
         require_fresh_owner_readback(response)
+        require_owner_json_response_mime(response)
     except Exception:
         response.close()
         raise
