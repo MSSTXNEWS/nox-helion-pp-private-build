@@ -85,7 +85,7 @@ for k in cpu memory io; do
 done
 df -P -B1 / 2>/dev/null | awk 'NR==2 {printf "root_bytes_total=%s root_bytes_used=%s root_bytes_available=%s\n", $2, $3, $4}'
 if [ -n "$gpu_rows" ]; then
-  printf '%s\n' "$gpu_rows" | awk -F, '{printf "gpu_index=%s gpu_used_MiB=%s gpu_free_MiB=%s gpu_total_MiB=%s gpu_util_pct=%s\\n", $1, $2, $3, $4, $5}'
+  printf '%s\n' "$gpu_rows" | awk -F, '{printf "gpu_index=%s gpu_used_MiB=%s gpu_free_MiB=%s gpu_total_MiB=%s gpu_util_pct=%s\n", $1, $2, $3, $4, $5}'
 else
   echo 'gpu_inventory=unavailable'
 fi
