@@ -330,6 +330,9 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(finished.status_code, 200)
         saved = json.loads(finished.body)
         self.assertEqual(saved["message"]["content"], "Привет 🌌")
+        self.assertEqual(saved["snapshot_utf8_bytes"], len("Привет 🌌".encode("utf-8")))
+        self.assertEqual(saved["snapshot_sha256"], frames[-1]["digest"])
+        self.assertTrue(saved["terminal_digest_verified"])
         self.assertEqual(saved["event_seq"], len(frames))
         self.assertEqual(saved["status"], "GENERATED")
         self.assertTrue(saved["done"])
@@ -396,10 +399,24 @@ class FactReceiptTest(unittest.TestCase):
                 stream_id=stream_id, request_id=request_id)).body)
             self.assertEqual(interrupted["snapshot_integrity"], "PARTIAL")
             row["state"], row["terminal"] = "GENERATED", True
+            row["terminal_digest"] = W.hashlib.sha256("Частичный 🌌".encode("utf-8")).hexdigest()
             completed = json.loads(asyncio.run(snapshot(
                 stream_id=stream_id, request_id=request_id)).body)
             self.assertEqual(completed["snapshot_integrity"], "COMPLETE")
+            self.assertTrue(completed["terminal_digest_verified"])
             self.assertFalse(completed["s03_readback_verified"])
+            # Corrupted/reordered snapshot bytes must never inherit an older
+            # terminal GENERATED or S03 receipt even when terminal=True.
+            row["text_chunks"] = ["Частичный 🌌", " подмена"]
+            mismatch = json.loads(asyncio.run(snapshot(
+                stream_id=stream_id, request_id=request_id)).body)
+            self.assertEqual(mismatch["status"], "HOLD")
+            self.assertEqual(mismatch["snapshot_integrity"], "HOLD")
+            self.assertEqual(mismatch["snapshot_hold_reason"], "CHAT_SNAPSHOT_DIGEST_MISMATCH")
+            self.assertFalse(mismatch["done"])
+            self.assertFalse(mismatch["terminal_digest_verified"])
+            self.assertIsNone(mismatch["completion_receipt"])
+            self.assertIsNone(mismatch["memory_write_receipt"])
 
     def test_0a03_s03_persists_exact_streamed_unicode_and_whitespace(self):
         """Successful canonical writer call receives exact SSE text, not stripped text."""
