@@ -197,6 +197,9 @@ class SavedRefreshContract(unittest.IsolatedAsyncioTestCase):
                 self.reloads+=1
                 return Response()
             async def wait_for_function(self, *args, **kwargs):
+                if kwargs.get('arg') is not None:
+                    self.refresh_payload = kwargs['arg']
+                    self.refresh_script = args[0]
                 return None
             def locator(self, selector):
                 return self.target
@@ -210,6 +213,20 @@ class SavedRefreshContract(unittest.IsolatedAsyncioTestCase):
         await verify_saved_browser_refresh(page,report,'synthetic QA','1,2,3',sha)
         self.assertEqual(page.reloads,1)
         self.assertTrue(report['browser_refresh_persisted'])
+        # A two-turn refresh must verify both ordered assistant replies.
+        two=Page(0)
+        await verify_saved_browser_refresh(two,{},'synthetic QA','second,answer',sha,
+                                           first_answer='first,answer')
+        self.assertEqual(two.reloads,1)
+        self.assertEqual(two.refresh_payload,{'last':'second,answer',
+                                              'first':'first,answer'})
+        self.assertIn('bodies.at(-2)',two.refresh_script)
+        # Fail before reloading when the expected first answer is missing.
+        bad=Page(0)
+        with self.assertRaisesRegex(RuntimeError,'HOLD_QA_REFRESH_EXPECTED_FIRST_ANSWER'):
+            await verify_saved_browser_refresh(bad,{},'synthetic QA','second',sha,
+                                               first_answer='')
+        self.assertEqual(bad.reloads,0)
         second=Page(1)
         with self.assertRaisesRegex(RuntimeError,'HOLD_QA_REFRESH_DUPLICATE_NATIVE_POST'):
             await verify_saved_browser_refresh(second,{},'synthetic QA','1,2,3',sha)
