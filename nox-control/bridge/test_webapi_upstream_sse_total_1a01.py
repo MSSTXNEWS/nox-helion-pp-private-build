@@ -40,13 +40,13 @@ class UpstreamSseWireBudgetTest(unittest.TestCase):
     def test_normal_chunked_unicode_and_crlf_preserved(self):
         with mock.patch.object(W, "MAX_UPSTREAM_SSE_TOTAL_BYTES", 100):
             got = asyncio.run(collect(ByteStream(
-                [b"data: \\xf0\\x9f", b"\\x8c\\x8d\\r", b"\\n", b"data: ok\\n"])))
+                [b"data: \xf0\x9f", b"\x8c\x8d\r", b"\n", b"data: ok\n"])))
         self.assertEqual(got, ["data: 🌍", "data: ok"])
 
     def test_repeated_small_sse_metadata_cannot_run_unbounded(self):
         with mock.patch.object(W, "MAX_UPSTREAM_SSE_TOTAL_BYTES", 20):
             with self.assertRaisesRegex(ValueError, "UPSTREAM_SSE_TOTAL_TOO_LONG"):
-                asyncio.run(collect(ByteStream([b":comment\\n"] * 4)))
+                asyncio.run(collect(ByteStream([b":comment\n"] * 4)))
 
     def test_legacy_line_reader_uses_same_global_cap(self):
         with mock.patch.object(W, "MAX_UPSTREAM_SSE_TOTAL_BYTES", 19):
@@ -57,7 +57,7 @@ class UpstreamSseWireBudgetTest(unittest.TestCase):
         with mock.patch.object(W, "MAX_UPSTREAM_SSE_TOTAL_BYTES", 200), \
              mock.patch.object(W, "MAX_UPSTREAM_SSE_LINE_BYTES", 8):
             with self.assertRaisesRegex(ValueError, "UPSTREAM_SSE_LINE_TOO_LONG"):
-                asyncio.run(collect(ByteStream([b"data: too-long\\n"])))
+                asyncio.run(collect(ByteStream([b"data: too-long\n"])))
 
 
 if __name__ == "__main__":
