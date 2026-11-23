@@ -33,6 +33,8 @@ KINDS = {"rss", "atom", "github_releases", "crossref", "html_page"}
 MIN_INTERVAL = 60
 MAX_INTERVAL = 30 * 24 * 60 * 60
 DEFAULT_MAX_BYTES = 5 * 1024 * 1024
+# Keep parsing and SQLite insert work bounded even for compact hostile feeds.
+MAX_ITEMS_PER_POLL = 2048
 USER_AGENT = "NOX-Hunter/1.0 (+read-only source monitor)"
 TRACKING_KEYS = {"fbclid", "gclid", "mc_cid", "mc_eid"}
 
@@ -214,9 +216,13 @@ def _feed_items(body: bytes) -> list[dict[str, str]]:
         raise HunterError("DTD/entity declarations are not accepted")
     root = ET.fromstring(body)
     result: list[dict[str, str]] = []
+    seen = 0
     for node in root.iter():
         if _local(node.tag) not in {"item", "entry"}:
             continue
+        seen += 1
+        if seen > MAX_ITEMS_PER_POLL:
+            raise HunterError("source exceeds item count budget")
         title = _child_text(node, {"title"})
         link = ""
         for child in list(node):
@@ -240,6 +246,8 @@ def _github_items(body: bytes) -> list[dict[str, str]]:
     decoded = json.loads(body)
     if not isinstance(decoded, list):
         raise HunterError("GitHub releases response must be a JSON array")
+    if len(decoded) > MAX_ITEMS_PER_POLL:
+        raise HunterError("source exceeds item count budget")
     items = []
     for release in decoded:
         if not isinstance(release, dict):
@@ -271,6 +279,8 @@ def _crossref_items(body: bytes) -> list[dict[str, str]]:
     records = message.get("items", []) if isinstance(message, dict) else []
     if not isinstance(records, list):
         raise HunterError("Crossref message.items must be a JSON array")
+    if len(records) > MAX_ITEMS_PER_POLL:
+        raise HunterError("source exceeds item count budget")
     items = []
     for record in records:
         if not isinstance(record, dict):
@@ -514,6 +524,8 @@ def _poll_one(conn: sqlite3.Connection, source: dict[str, Any], now: float, max_
         body, etag, modified, content_type, not_modified = _fetch(
             source, cached, max_bytes, load_cached_body=load_cached_body)
         parsed = _parse(source, body)
+        if len(parsed) > MAX_ITEMS_PER_POLL:
+            raise HunterError("source exceeds item count budget")
         inserted = 0
         quarantined = 0
         for item in parsed:
