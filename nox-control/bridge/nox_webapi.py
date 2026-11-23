@@ -808,6 +808,11 @@ def install(app, B):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_MISSING_USER"}, status_code=400)
         use_mem = b.get("use_memory", True) is not False
         mini = b.get("mini") is True
+        # The mini prompt previously sliced the final message to 3000 chars,
+        # silently discarding part of a legitimate user request. Fail before
+        # model/S03 admission instead; never claim an answer to an altered input.
+        if mini and len(user) > 3000:
+            return JSONResponse({"status": "HOLD", "reason": "MINI_INPUT_TOO_LONG"}, status_code=400)
         mode = str(opts.get("mode") or b.get("mode") or "auto")
         eph = b.get("ephemeral") is True
         if mode == "fast": npred = min(npred, 300)
@@ -1087,9 +1092,11 @@ def install(app, B):
                         B.log("web_mode_hint_unavailable " + type(e).__name__)
                 yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "think", "text": "формулирую ответ"})
                 if mini:
-                    last = msgs_in[-1]["content"] if msgs_in else user
+                    # Use the validated last USER message, not an optional
+                    # trailing assistant message. Admission already rejected
+                    # anything the mini-mode input budget cannot preserve.
                     mm = [{"role": "system", "content": B.IDENTITY + B.STATIC_RULES},
-                          {"role": "user", "content": "[Режим мини-помощника: ответ не длиннее 4 предложений, без строки «Уверенность»]" + extra + "\n" + str(last)[:3000]}]
+                          {"role": "user", "content": "[Режим мини-помощника: ответ не длиннее 4 предложений, без строки «Уверенность»]" + extra + "\n" + user}]
                 else:
                     vol = await asyncio.to_thread(B.self_vol, user)
                     mm = B.build_msgs(msgs_in, user, mem, vol, "\n" + extra if extra else "")

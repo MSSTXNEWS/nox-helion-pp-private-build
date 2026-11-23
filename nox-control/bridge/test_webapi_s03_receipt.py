@@ -82,6 +82,7 @@ class FactReceiptTest(unittest.TestCase):
             ({"messages": [{"role": "user", "content": {"unsafe": True}}]}, "CHAT_INVALID_CONTENT"),
             ({"messages": [{"role": "user", "content": "\ud800"}]}, "CHAT_INVALID_UNICODE"),
             ({"messages": [{"role": "user", "content": "ж" * (W.MAX_CHAT_INPUT_UTF8_BYTES // 2 + 1)}]}, "CHAT_INPUT_TOO_LARGE"),
+            ({"mini": True, "messages": [{"role": "user", "content": "a" * 3001}]}, "MINI_INPUT_TOO_LONG"),
             ({"messages": [{"role": "user", "content": "ok"}] * (W.MAX_CHAT_INPUT_MESSAGES + 1)}, "CHAT_INPUT_TOO_MANY_MESSAGES"),
             ({"options": ["wrong-shape"]}, "CHAT_INVALID_OPTIONS"),
             ({"options": {"num_predict": "nan"}}, "CHAT_INVALID_NUM_PREDICT"),
