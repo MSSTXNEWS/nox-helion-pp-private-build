@@ -4040,5 +4040,43 @@ async function check(chunks, status=200) {
                 with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_HTTP_UTF8_WIRE"):
                     decode(raw)
 
+    def test_owner_history_json_integer_digit_bound_before_ru_es_witness(self):
+        """Oversized valid-JSON integers must produce bounded HOLD, not Python ValueError.
+
+        Owner-history GET only: preserve normal RU/ES UTF-8 and integer metadata.
+        No native POST, S03 writer/readback or production admission.
+        """
+        class Response:
+            status = 200
+            def __init__(self, raw):
+                self.raw = raw
+            async def body(self):
+                return self.raw
+
+        def decode(raw):
+            return asyncio.run(json_response(Response(raw.encode('utf-8'))))
+
+        history = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": "Привет, sesión 🧠", "revision": -17},
+            {"role": "assistant", "content": "Hola, ¿cómo estás?"},
+            {"role": "user", "content": "Продолжи en español"},
+            {"role": "assistant", "content": "Claro, seguimos"},
+        ]}
+        self.assertEqual(decode(json.dumps(history, ensure_ascii=False)), history)
+        # 1024-digit integers remain compatible, alongside ordinary counters.
+        boundary = "9" * 1024
+        self.assertEqual(decode('{"revision":' + boundary + '}')['revision'],
+                         int(boundary))
+        self.assertEqual(decode('{"revision":-17}'), {"revision": -17})
+        for digits in (1025, 4301, 12000):
+            for sign in ('', '-'):
+                with self.subTest(digits=digits, negative=bool(sign)):
+                    wire = '{"messages":[{"revision":' + sign + ('9' * digits) + '}]}'
+                    self.assertLess(len(wire.encode('utf-8')), 200000)
+                    with self.assertRaisesRegex(
+                            RuntimeError, 'HOLD_OWNER_HTTP_INTEGER_DIGITS'):
+                        decode(wire)
+
+
 if __name__ == "__main__":
     unittest.main()

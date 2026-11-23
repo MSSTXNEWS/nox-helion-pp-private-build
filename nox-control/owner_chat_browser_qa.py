@@ -1640,8 +1640,20 @@ async def json_response(response, limit=200000):
     def reject_nonfinite(_literal):
         raise RuntimeError('HOLD_OWNER_HTTP_NONFINITE_JSON_NUMBER')
 
+    def bounded_int(literal):
+        # A legal-size history GET can still include a 4301+ digit JSON
+        # integer. Python 3.11 rejects it with an unclassified ValueError;
+        # bound it first, preserving ordinary integer metadata and all text.
+        if len(literal.lstrip('-')) > 1024:
+            raise RuntimeError('HOLD_OWNER_HTTP_INTEGER_DIGITS')
+        try:
+            return int(literal)
+        except ValueError:
+            raise RuntimeError('HOLD_OWNER_HTTP_INTEGER_DIGITS') from None
+
     return json.loads(decoded, object_pairs_hook=unique_keys,
-                      parse_constant=reject_nonfinite, parse_float=finite_float)
+                      parse_constant=reject_nonfinite, parse_float=finite_float,
+                      parse_int=bounded_int)
 
 
 async def capture_private_screenshot(page, report, directory, name, masks, content,
