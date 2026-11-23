@@ -1400,3 +1400,53 @@ test('R45 real TCP malformed surrogate parity across bounded hash batches and ac
     server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
   }
 });
+
+
+test('R46 monotonic absolute deadline fences settled read and true EOF before success',async()=>{
+  const body=Buffer.from(event({delta:{content:'Hola 🌈'}})+
+    event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n');
+  function fixture(dataAt,eofAt,finalAt=null){
+    let elapsed=0,reads=0,cancels=0,releases=0,eofClockCalls=0;
+    const reader={
+      async read(){
+        reads++;
+        if(reads===1){elapsed=dataAt;return {done:false,value:body};}
+        elapsed=eofAt;return {done:true};
+      },
+      cancel(){cancels++;},
+      releaseLock(){releases++;}
+    };
+    // The read promise can settle before a delayed timer callback runs.
+    // Advance only the injected monotonic clock, not wall time.
+    const clock=()=>{
+      if(reads===2&&finalAt!==null&&++eofClockCalls>=4)return finalAt;
+      return elapsed;
+    };
+    const response={status:200,headers:new Headers({'content-type':'text/event-stream'}),
+      body:{getReader:()=>reader}};
+    const run=()=>measureSseResponse(response,{startedAt:0,clock,totalTimeoutMs:100,idleTimeoutMs:100});
+    return {run,stats:()=>({reads,cancels,releases})};
+  }
+  for(const [name,dataAt,eofAt,finalAt,reads] of [
+    ['late data',101,102,null,1],
+    ['late EOF',10,101,null,2],
+    ['exact EOF deadline',10,100,null,2],
+    ['finalization crosses deadline',10,99,101,2]
+  ]){
+    const f=fixture(dataAt,eofAt,finalAt);
+    await assert.rejects(f.run(),e=>e.code==='B4_TOTAL_TIMEOUT',name);
+    assert.deepEqual(f.stats(),{reads,cancels:1,releases:1},name);
+  }
+  const f=fixture(10,99),proof=await f.run();
+  assert.equal(proof.verified,true);
+  assert.equal(proof.ttft_ms,10);
+  assert.equal(proof.completion_ms,99);
+  assert.equal(proof.visible_text_sha256,hash('Hola 🌈'));
+  assert.equal(proof.body_sha256,hash(body));
+  assert.equal(proof.native_verified,false);
+  assert.deepEqual(f.stats(),{reads:2,cancels:0,releases:1});
+  console.log('B4_R46_SOURCE_ONLY '+JSON.stringify({
+    late_data:'REJECTED',late_eof:'REJECTED',exact_deadline:'REJECTED',
+    late_finalization:'REJECTED',healthy_eof_ms:proof.completion_ms,clock:'injected'
+  }));
+});

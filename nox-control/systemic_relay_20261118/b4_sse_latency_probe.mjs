@@ -62,6 +62,11 @@ export async function measureSseResponse(response,options={}){
   const visibleHash=createBatchedVisibleHash();
   let pendingHighSurrogate='';
   const nowMs=()=>Math.max(0,clock()-startedAt);
+  // Timers can run late if parsing or the event loop stalls. A settled read
+  // is not proof that the monotonic absolute deadline was respected.
+  function assertTotalDeadline(){
+    if(clock()-startedAt>=totalTimeoutMs)throw fail('B4_TOTAL_TIMEOUT');
+  }
   function appendVisible(text){
     if(!text)return;
     let chunk=pendingHighSurrogate+text;
@@ -151,6 +156,7 @@ export async function measureSseResponse(response,options={}){
   try{
     for(;;){
       const {done,value}=await boundedRead();
+      assertTotalDeadline();
       if(done)break;
       if(!(value instanceof Uint8Array))throw fail('B4_NONBYTE_CHUNK');
       if(value.length===0)continue;
@@ -163,6 +169,7 @@ export async function measureSseResponse(response,options={}){
     }
     try{feedText(decoder.decode());}
     catch(e){if(e?.code)throw e;throw fail('B4_INVALID_UTF8');}
+    assertTotalDeadline();
     close=nowMs();
     if(line||frame.length)throw fail('B4_UNFRAMED_EOF');
     if(!seenStop||!seenDone||ttft===null)throw fail('B4_INCOMPLETE_SSE');
@@ -170,7 +177,7 @@ export async function measureSseResponse(response,options={}){
     // At actual EOF a lone high surrogate is a U+FFFD replacement, as with
     // one-shot crypto.update(fullVisibleText,'utf8'). Never digest before EOF.
     if(pendingHighSurrogate)visibleHash.update(pendingHighSurrogate);
-    return Object.freeze({
+    const result=Object.freeze({
       verified:true,first_byte_ms:firstByte,ttft_ms:ttft,
       sse_done_ms:sseDone,completion_ms:close,
       body_bytes:total,body_sha256:rawHash.digest('hex'),
@@ -179,6 +186,8 @@ export async function measureSseResponse(response,options={}){
       browser_authenticated:false,native_verified:false,canonical_s03_verified:false,
       model_tokens_per_second:null
     });
+    assertTotalDeadline();
+    return result;
   }catch(e){
     // Stream cancellation is best-effort: a nonsettling cancel must not
     // override or delay the original timeout or malformed-stream failure.
