@@ -2,7 +2,7 @@
 """One fixed action: temporarily attach a throwaway SSH key to Vast instance 60509551,
 run the reviewed agent-updater (branch u, file u) over SSH, then detach the key.
 No arbitrary command input. Secret NOX2 is only sent to console.vast.ai."""
-import json, os, re, subprocess, sys, tempfile, time, urllib.request, shlex
+import json, os, re, shutil, subprocess, sys, tempfile, time, urllib.request, shlex
 INSTANCE = 60509551  # S2 (США); S1 (Квебек) = 61825960, выбирается маркером #S1 в начале REMOTE
 KEY = os.environ["NOX2"]
 REMOTE = '#S1\ncurl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c607/inspect_v7_lineages.sh -o /tmp/sr.sh && bash /tmp/sr.sh 2>&1 | tail -c 3000 # 20261122192948Z'
@@ -43,10 +43,12 @@ def main():
     ports = [int(m["HostPort"]) for m in inst.get("ports", {}).get("22/tcp", []) if str(m.get("HostPort", "")).isdigit()]
     if inst.get("actual_status") != "running" or not ports: sys.exit("instance not running / no ssh port: id=%s actual_status=%s cur_state=%s intended=%s msg=%s" % (INSTANCE, inst.get("actual_status"), inst.get("cur_state"), inst.get("intended_status"), str(inst.get("status_msg"))[:200]))
     d = tempfile.mkdtemp(); kf = d + "/k"
-    subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "nox-update-button", "-f", kf], check=True)
-    pub = open(kf + ".pub").read().strip()
     key_id = None
+    pub = None
     try:
+        subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "nox-update-button", "-f", kf], check=True)
+        with open(kf + ".pub", encoding="utf-8") as keyfile:
+            pub = keyfile.read().strip()
         api("POST", "/instances/%d/ssh/" % INSTANCE, {"ssh_key": pub})
         for _ in range(8):
             rows = api("GET", "/instances/%d/ssh/" % INSTANCE)
@@ -70,17 +72,26 @@ def main():
             sys.exit("HOLD_AMBIGUOUS_SSH_REMOTE_OUTCOME; no automatic replay, owner readback required")
 
     finally:
-        if isinstance(key_id, int) and key_id > 0:
+        # Even if provider cleanup HOLDs or ssh-keygen fails, never leave the
+        # generated private key on the workflow runner's local filesystem.
+        try:
+            if isinstance(key_id, int) and key_id > 0:
+                try:
+                    detach_checked_key(pub, key_id)
+                    print("temp key detached; provider readback confirms absence")
+                except Exception as exc:
+                    print("HOLD_EPHEMERAL_KEY_CLEANUP_UNVERIFIED", type(exc).__name__,
+                          "- verify/remove nоx-update-button key in Vast before any retry",
+                          file=sys.stderr)
+                    raise SystemExit(2)
+            else:
+                print("HOLD_UNCONFIRMED_EPHEMERAL_KEY_ID: provider key cleanup needs owner inspection")
+        finally:
             try:
-                detach_checked_key(pub, key_id)
-                print("temp key detached; provider readback confirms absence")
-            except Exception as exc:
-                print("HOLD_EPHEMERAL_KEY_CLEANUP_UNVERIFIED", type(exc).__name__,
-                      "- verify/remove nоx-update-button key in Vast before any retry",
-                      file=sys.stderr)
-                raise SystemExit(2)
-        else:
-            print("HOLD_UNCONFIRMED_EPHEMERAL_KEY_ID: provider key cleanup needs owner inspection")
+                shutil.rmtree(d)
+            except OSError as exc:
+                print("HOLD_LOCAL_EPHEMERAL_KEY_CLEANUP_UNVERIFIED", type(exc).__name__, file=sys.stderr)
+                raise SystemExit(2) from exc
 
 if __name__ == "__main__":
     main()

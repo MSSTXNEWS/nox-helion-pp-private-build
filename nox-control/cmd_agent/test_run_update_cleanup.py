@@ -2,6 +2,8 @@
 """Offline source-only check: no provider access, SSH, or secrets."""
 import importlib.util
 import os
+import subprocess
+import tempfile
 from pathlib import Path
 from unittest import TestCase, main
 from unittest.mock import patch
@@ -35,6 +37,43 @@ class CleanupReadback(TestCase):
         with patch.object(mod, "api", side_effect=OSError("offline DELETE failure")):
             with self.assertRaises(OSError):
                 mod.detach_checked_key(PUB, ID)
+
+
+class LocalPrivateKeyCleanup(TestCase):
+    """Exercise the real owner function with all external effects stubbed."""
+
+    def test_private_key_directory_removed_after_verified_provider_detach(self):
+        folder = Path(tempfile.mkdtemp())
+        key_path = folder / "k"
+        def stub_run(args, **kwargs):
+            if args[0] == "ssh-keygen":
+                key_path.write_text("OFFLINE_PRIVATE_TEST_KEY", encoding="utf-8")
+                (folder / "k.pub").write_text(PUB, encoding="utf-8")
+                return subprocess.CompletedProcess(args, 0)
+            self.assertEqual(args[0], "ssh")
+            return subprocess.CompletedProcess(args, 0, stdout="offline ok", stderr="")
+        instance = {"actual_status": "running", "public_ipaddr": "127.0.0.1",
+                    "ports": {"22/tcp": [{"HostPort": "2222"}]}}
+        calls = [instance, {}, {"ssh_keys": [{"id": ID, "ssh_key": PUB}]},
+                 {}, {"ssh_keys": []}]
+        with patch.object(mod, "api", side_effect=calls) as fake_api, \
+             patch.object(mod.tempfile, "mkdtemp", return_value=str(folder)), \
+             patch.object(mod.subprocess, "run", side_effect=stub_run), \
+             patch.object(mod.time, "sleep", return_value=None):
+            mod.main()
+        self.assertEqual(fake_api.call_count, 5)
+        self.assertFalse(folder.exists(), "private key directory must be removed")
+
+    def test_ssh_keygen_failure_still_removes_local_directory(self):
+        folder = Path(tempfile.mkdtemp())
+        instance = {"actual_status": "running", "public_ipaddr": "127.0.0.1",
+                    "ports": {"22/tcp": [{"HostPort": "2222"}]}}
+        with patch.object(mod, "api", return_value=instance), \
+             patch.object(mod.tempfile, "mkdtemp", return_value=str(folder)), \
+             patch.object(mod.subprocess, "run", side_effect=OSError("offline keygen failed")):
+            with self.assertRaises(OSError):
+                mod.main()
+        self.assertFalse(folder.exists(), "failed keygen must not retain private key directory")
 
 if __name__ == "__main__":
     main()
