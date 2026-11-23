@@ -1353,6 +1353,14 @@ def install(app, B):
                                     upstream_failure = "UPSTREAM_CHOICES_INVALID"
                                     break
                                 choice = choices[0]
+                                # One streamed completion must stay on its primary
+                                # choice. Accept a missing legacy index, but never
+                                # silently treat index=1, bool or "0" as index 0.
+                                # That can mis-attribute a completed S03 turn.
+                                if "index" in choice and (type(choice["index"]) is not int or
+                                                          choice["index"] != 0):
+                                    upstream_failure = "UPSTREAM_CHOICES_INVALID"
+                                    break
                                 finish_reason = choice.get("finish_reason")
                                 if finish_reason is not None and finish_reason != "stop":
                                     upstream_failure = "UPSTREAM_NONSTOP_FINISH"
