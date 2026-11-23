@@ -3447,5 +3447,38 @@ class ProbeTests(unittest.TestCase):
         self.assertLess(scoped, main.index("print('NOX_MAINT_REPAIR_COMPLETE=false'"))
 
 
+    def test_postthird_worker_pid_startticks_reuse_fails_closed(self):
+        """Same worker ID cannot conceal a restarted process when PID/ticks are given."""
+        witnessed = {'schema': 'NOX_OWNER_EXECUTORS_V1', 'state': 'OBSERVED',
+                     'configured': 2, 'workers': [
+                         {'id': 'a', 'pid': 101, 'start_ticks': 2001},
+                         {'id': 2, 'pid': 102, 'start_ticks': 2002}]}
+        reordered = dict(witnessed, workers=[
+            {'id': ' 2 ', 'pid': '102', 'start_ticks': '2002'},
+            {'id': 'a', 'pid': '101', 'start_ticks': '2001'}])
+        with patch.object(probe, 'owner_readback_json', return_value=reordered):
+            self.assertTrue(probe.require_postturn_executor_identity('client', witnessed))
+        bad = (
+            {'id': 'a', 'pid': 103, 'start_ticks': 2001},
+            {'id': 'a', 'pid': 101, 'start_ticks': 2999},
+            {'id': 'a', 'pid': 101},
+            {'id': 'a', 'pid': 'bad', 'start_ticks': 2001},
+            {'id': 'a', 'pid': True, 'start_ticks': 2001},
+            {'id': 'a', 'pid': 0, 'start_ticks': 2001},
+            {'id': 'a', 'pid': 101, 'start_ticks': None},
+        )
+        for replacement in bad:
+            current = dict(witnessed, workers=[replacement, witnessed['workers'][1]])
+            with self.subTest(replacement=replacement), patch.object(
+                    probe, 'owner_readback_json', return_value=current):
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT
+):
+                    probe.require_postturn_executor_identity('client', witnessed)
+        legacy = dict(witnessed, workers=[{'id': 'a'}, {'id': 2}])
+        with patch.object(probe, 'owner_readback_json', return_value=legacy):
+            self.assertTrue(probe.require_postturn_executor_identity('client', legacy))
+
+
 if __name__ == '__main__':
     unittest.main()

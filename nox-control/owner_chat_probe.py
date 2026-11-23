@@ -1208,7 +1208,27 @@ def require_postturn_executor_identity(client, witnessed):
     if observed_owner_executor_count(current) is None:
         raise RuntimeError('HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT')
     def identities(snapshot):
-        return frozenset(str(row['id']).strip() for row in snapshot['workers'])
+        # Slot IDs may survive a native restart. Compare process identity
+        # when the owner API supplies PID/start_ticks for any worker.
+        result = {}
+        for row in snapshot['workers']:
+            markers = []
+            for key in ('pid', 'start_ticks'):
+                value = row.get(key)
+                if key in row:
+                    if type(value) is int and value > 0:
+                        number = value
+                    elif (isinstance(value, str) and
+                          re.fullmatch(r'[0-9]{1,20}', value.strip()) and
+                          int(value.strip()) > 0):
+                        number = int(value.strip())
+                    else:
+                        raise RuntimeError('HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT')
+                    markers.append(number)
+                else:
+                    markers.append(None)
+            result[str(row['id']).strip()] = tuple(markers)
+        return result
     if (witnessed['configured'] != current['configured']
             or identities(witnessed) != identities(current)):
         raise RuntimeError('HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT')
