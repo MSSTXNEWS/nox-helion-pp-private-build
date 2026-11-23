@@ -785,6 +785,25 @@ class FactReceiptTest(unittest.TestCase):
         self.assertFalse(row["s03_readback_verified"])
         self.assertFalse(self.fact_path.exists())
 
+    def test_explicit_false_fact_write_fails_closed_without_mirror(self):
+        m = types.ModuleType("s03_memory")
+        calls = []
+        def reject(*args):
+            calls.append(args)
+            return False
+        m.persist_turn = reject
+        res = self.invoke(m)
+        self.assertEqual(res.status_code, 503)
+        row = json.loads(res.body)
+        self.assertEqual(row["reason"], "S03_PERSIST_REJECTED")
+        self.assertEqual(row["status"], "HOLD")
+        self.assertFalse(row["saved"])
+        self.assertFalse(row["s03_write_returned"])
+        self.assertFalse(row["retry_safe"])
+        self.assertFalse(row["s03_readback_verified"])
+        self.assertEqual(len(calls), 1)
+        self.assertFalse(self.fact_path.exists())
+
     def test_successful_s03_call_remains_unverified_without_readback(self):
         m = types.ModuleType("s03_memory")
         calls = []
@@ -1803,14 +1822,17 @@ class FactReceiptTest(unittest.TestCase):
             }))
             return [json.loads(row) async for row in response.body_iterator]
 
-        for fail_s03 in (True, False):
-            with self.subTest(fail_s03=fail_s03):
+        for write_outcome in ("raise", "reject", "return_none"):
+            with self.subTest(write_outcome=write_outcome):
                 mirror_calls.clear()
                 bridge.errors.clear()
 
                 def persist(*args):
-                    if fail_s03:
+                    if write_outcome == "raise":
                         raise RuntimeError("S03 unavailable")
+                    if write_outcome == "reject":
+                        return False
+                    return None
 
                 memory.persist_turn = persist
                 with mock.patch.object(W, "CANCEL", set()), \
@@ -1823,10 +1845,14 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertEqual(terminal["completion_receipt"]["status"], "GENERATED")
                 self.assertTrue(terminal["done"])
                 self.assertFalse(terminal["memory_write_receipt"]["s03_readback_verified"])
-                if fail_s03:
+                if write_outcome != "return_none":
                     self.assertEqual(terminal["memory_history"]["status"], "HOLD")
+                    self.assertTrue(terminal["memory_write_receipt"]["retry_unsafe"])
                     self.assertEqual(mirror_calls, [])
                     self.assertFalse(any("soul_secondary_log_error" in e for e in bridge.errors))
+                    if write_outcome == "reject":
+                        self.assertEqual(terminal["memory_history"]["reason"], "S03_PERSIST_REJECTED")
+                        self.assertFalse(terminal["memory_write_receipt"]["s03_write_returned"])
                 else:
                     self.assertEqual(terminal["memory_history"]["status"], "SAVED")
                     self.assertEqual(mirror_calls, [("Запомни ответ", "Ответ")])
