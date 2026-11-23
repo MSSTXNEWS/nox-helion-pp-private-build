@@ -164,6 +164,32 @@ class HotContextTests(unittest.TestCase):
             call(**{**kwargs,"verified_s03":[{**facts[1],"status":"REVOKED"}]},
                  retrieval_plan=plan)
 
+    def test_3b03_retrieval_plan_cannot_cross_owner_or_revision(self):
+        for empty in (False, True):
+            candidate = {"id":"shared", "persona_id":"alice", "revision":"a"*64,
+                         "status":"ACTIVE", "source_sha256":"b"*64,
+                         "fts_score":.9, "vector_score":.9}
+            plan = m.plan_two_stage_retrieval(
+                candidates=[] if empty else [candidate], owner_persona_id="alice",
+                s03_revision="a"*64)
+            fact = {"id":"shared", "persona_id":"alice", "revision":"a"*64,
+                    "status":"ACTIVE", "source_sha256":"b"*64,
+                    "text":"same immutable source", "superseded_by":None}
+            kwargs = dict(conversation=[], token_budget=2048, retrieval_plan=plan)
+            out = call(**kwargs, verified_s03=[fact], owner_persona_id="alice",
+                       current_s03_revision="a"*64)
+            self.assertEqual(out["selected_s03_ids"], [] if empty else ["shared"])
+            for owner, revision in (("bob","a"*64), ("alice","c"*64)):
+                with self.subTest(empty=empty, owner=owner, revision=revision):
+                    with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_RETRIEVAL_PLAN_SCOPE"):
+                        call(**kwargs, verified_s03=[{**fact,"persona_id":owner,"revision":revision}],
+                             owner_persona_id=owner, current_s03_revision=revision)
+            legacy = {k:v for k,v in plan.items() if k not in {"owner_persona_id","s03_revision"}}
+            legacy["schema"] = "NOX_RETRIEVAL_SHORTLIST_SOURCE_V1"
+            with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_RETRIEVAL_PLAN"):
+                call(conversation=[], verified_s03=[fact], owner_persona_id="alice",
+                     current_s03_revision="a"*64, retrieval_plan=legacy)
+
     def test_retains_persona_current_s03_and_retrieval_refs(self):
         out=call()
         text="\n".join(x["content"] for x in out["messages"])
