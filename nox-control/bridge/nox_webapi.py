@@ -801,8 +801,14 @@ def install(app, B):
         raw_messages = b.get("messages", [])
         if not isinstance(raw_messages, list) or any(not isinstance(m, dict) for m in raw_messages):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_MESSAGES"}, status_code=400)
-        if any(m.get("role") in ("user", "assistant") and
-               not isinstance(m.get("content"), str) for m in raw_messages):
+        # A declared message is part of the caller's context. Silently
+        # filtering unknown roles can turn a full user-supplied conversation
+        # into a different prompt, then still report a completed S03 turn.
+        # The server owns its system instructions; accept only the supported
+        # user/assistant history, with no implicit role coercion.
+        if any(m.get("role") not in ("user", "assistant") for m in raw_messages):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_ROLE"}, status_code=400)
+        if any(not isinstance(m.get("content"), str) for m in raw_messages):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_CONTENT"}, status_code=400)
         if len(raw_messages) > MAX_CHAT_INPUT_MESSAGES:
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INPUT_TOO_MANY_MESSAGES"}, status_code=400)
