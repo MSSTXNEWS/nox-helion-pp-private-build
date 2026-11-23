@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {createHash} from 'node:crypto';
+import {gzipSync} from 'node:zlib';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {performance} from 'node:perf_hooks';
-import {measureSseResponse,measureSseFetch} from './b4_sse_latency_probe.mjs';
+import {measureSseResponse,measureSseFetch,measureSseRawHttp} from './b4_sse_latency_probe.mjs';
 
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const event=x=>'data: '+JSON.stringify({choices:[x]})+'\n\n';
@@ -659,3 +660,63 @@ test('R33 real TCP chunked missing zero terminator cannot verify second/third SS
     process.off('unhandledRejection',onUnhandled);
   }
 });
+
+
+// R34: integrity of compressed SSE is distinct from receiving a syntactically
+// correct [DONE]. Node global fetch can silently swallow a truncated gzip
+// footer. The opt-in raw HTTP adapter validates zlib gzip CRC and actual EOF.
+{
+const evt=x=>'data: '+JSON.stringify({choices:[x]})+'\n\n';
+const visible=['Привет 🌍','Hola 🌈','Третий ✨'];
+const body=turn=>evt({delta:{content:visible[turn-1]},finish_reason:null})+
+  evt({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n';
+const sha=x=>createHash('sha256').update(x).digest('hex');
+test('R34 gzip trailer/CRC strict EOF under live HTTP: 3 turns, deadlines, abort, no replay',async()=>{
+  const requests=[];let releaseAbort;
+  const abortWritten=new Promise(r=>releaseAbort=r);
+  const server=createServer(async(req,res)=>{
+    let input='';for await(const x of req)input+=x;
+    const {turn,kind}=JSON.parse(input);requests.push({turn,kind});
+    const compressed=gzipSync(Buffer.from(body(turn)));
+    let data=compressed;
+    if(kind==='truncate')data=compressed.subarray(0,compressed.length-6);
+    if(kind==='corrupt'){data=Buffer.from(compressed);data[data.length-8]^=0xf0;}
+    res.writeHead(200,{'content-type':'text/event-stream','content-encoding':'gzip',
+      'cache-control':'no-store'});
+    res.write(data);
+    if(kind==='stall'||kind==='abort'){if(kind==='abort')releaseAbort();return;}
+    res.end();
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const url='http://127.0.0.1:'+server.address().port+'/nox/chat';
+  const post=(turn,kind,signal,raw=true,options={})=>(raw?measureSseRawHttp:measureSseFetch)(url,{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({turn,kind}),signal
+  },{startedAt:performance.now(),totalTimeoutMs:800,idleTimeoutMs:500,...options});
+  try{
+    const success=await post(1,'healthy');
+    assert.equal(success.verified,true);
+    assert.equal(success.visible_text_sha256,sha(visible[0]));
+    assert.ok(success.first_byte_ms<=success.ttft_ms);
+    assert.ok(success.ttft_ms<=success.sse_done_ms);
+    assert.ok(success.sse_done_ms<=success.completion_ms);
+    assert.equal(success.native_verified,false);
+    for(const turn of [2,3]){
+      await assert.rejects(post(turn,'truncate'),e=>e?.code==='B4_COMPRESSED_INTEGRITY_FAILED');
+    }
+    await assert.rejects(post(2,'corrupt'),e=>e?.code==='B4_COMPRESSED_INTEGRITY_FAILED');
+    await assert.rejects(post(3,'healthy',undefined,false),e=>e?.code==='B4_COMPRESSED_TRANSPORT_UNVERIFIABLE');
+    await assert.rejects(post(3,'stall',undefined,true,{totalTimeoutMs:100,idleTimeoutMs:450}),
+      e=>e?.code==='B4_TOTAL_TIMEOUT');
+    const ctrl=new AbortController();
+    const pending=post(3,'abort',ctrl.signal);
+    await abortWritten;
+    ctrl.abort();
+    await assert.rejects(pending,e=>e?.code==='B4_FETCH_ABORTED');
+    assert.deepEqual(requests,[
+      {turn:1,kind:'healthy'},{turn:2,kind:'truncate'},{turn:3,kind:'truncate'},
+      {turn:2,kind:'corrupt'},{turn:3,kind:'healthy'},
+      {turn:3,kind:'stall'},{turn:3,kind:'abort'}
+    ],'exactly one POST per explicit turn; no retries');
+  }finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
+});
+}

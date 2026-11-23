@@ -4,6 +4,10 @@
  */
 import {createHash} from 'node:crypto';
 import {performance} from 'node:perf_hooks';
+import {request as httpRequest} from 'node:http';
+import {request as httpsRequest} from 'node:https';
+import {Readable} from 'node:stream';
+import {createGunzip} from 'node:zlib';
 
 const digest=s=>createHash('sha256').update(s).digest('hex');
 const printable=s=>/[\p{L}\p{N}\p{P}\p{S}]/u.test(s);
@@ -23,6 +27,10 @@ export async function measureSseResponse(response,options={}){
     ['maxTotalBytes',maxTotalBytes,128,67108864]])
     if(!Number.isInteger(value)||value<min||value>max)throw fail('B4_INVALID_'+name);
   if(!Number.isFinite(startedAt))throw fail('B4_INVALID_STARTED_AT');
+  // A browser/undici fetch can silently accept a missing gzip trailer after
+  // exposing [DONE]. Integrity requires an untouched compressed byte stream.
+  const encoding=(response.headers?.get('content-encoding')||'').trim().toLowerCase();
+  if(encoding&&encoding!=='identity')throw fail('B4_COMPRESSED_TRANSPORT_UNVERIFIABLE');
   const reader=response.body.getReader();
   const decoder=new TextDecoder('utf-8',{fatal:true});
   const rawHash=createHash('sha256');
@@ -176,10 +184,54 @@ export async function measureSseFetch(url,init={},options={}){
     expired=true;
     try{owner.abort();}catch{}
     if(response)disposeLate(response);
+    if(['Z_BUF_ERROR','Z_DATA_ERROR','Z_STREAM_ERROR'].includes(error?.code))
+      throw fail('B4_COMPRESSED_INTEGRITY_FAILED');
     if(error?.code)throw error;
     throw fail(externalSignal?.aborted?'B4_FETCH_ABORTED':'B4_FETCH_FAILED');
   }finally{
     clearTimeout(headerTimer);
     externalSignal?.removeEventListener('abort',onExternalAbort);
   }
+}
+
+
+// R34: trustworthy compressed SSE requires transport-level integrity, not a
+// fetch() body already transparently decoded by undici. Node's gzip transform
+// verifies the gzip CRC32/ISIZE trailer before its readable EOF is released.
+// This is opt-in; the established fetch route and model are untouched.
+export async function measureSseRawHttp(url,init={},options={}){
+  const fetchRaw=(target,requestInit)=>new Promise((resolve,reject)=>{
+    let address;
+    try{address=new URL(target);}catch{return reject(fail('B4_INVALID_URL'));}
+    if(!['http:','https:'].includes(address.protocol))
+      return reject(fail('B4_INVALID_PROTOCOL'));
+    const transport=address.protocol==='https:'?httpsRequest:httpRequest;
+    const req=transport(address,{
+      method:requestInit.method||'GET',headers:requestInit.headers,
+      signal:requestInit.signal
+    },res=>{
+      const coding=String(res.headers['content-encoding']||'identity').trim().toLowerCase();
+      if(coding!=='identity'&&coding!=='gzip'){
+        res.destroy();reject(fail('B4_UNSUPPORTED_COMPRESSION'));return;
+      }
+      let source=res;
+      if(coding==='gzip'){
+        const decoded=createGunzip();
+        res.on('aborted',()=>decoded.destroy(new Error('B4_COMPRESSED_TRUNCATED')));
+        res.on('error',e=>decoded.destroy(e));
+        decoded.once('close',()=>{if(!res.complete&&!res.destroyed)res.destroy();});
+        res.pipe(decoded);
+        source=decoded;
+      }
+      // Advertise identity only after the raw gzip decoder owns the stream.
+      // A Readable.toWeb read() may finish only when zlib has seen a valid EOF.
+      const headers=new Headers(res.headers);
+      headers.set('content-encoding','identity');
+      headers.delete('content-length');
+      resolve({status:res.statusCode,headers,body:Readable.toWeb(source)});
+    });
+    req.once('error',reject);
+    try{req.end(requestInit.body);}catch(e){req.destroy();reject(e);}
+  });
+  return measureSseFetch(url,init,{...options,fetchImpl:fetchRaw});
 }
