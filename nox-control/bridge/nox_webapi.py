@@ -754,27 +754,42 @@ def install(app, B):
         row = CHAT_SNAPSHOTS.get(stream_id)
         if row is None or row["request_id"] != request_id:
             return JSONResponse({"status": "HOLD", "reason": "CHAT_SNAPSHOT_NOT_FOUND"}, status_code=404)
+        # A terminal flag alone is not evidence that every SSE Unicode byte
+        # survived in the process-local reconnect snapshot. Compare the exact
+        # reconstructed text to the digest emitted by the terminal stream.
+        snapshot_text = ("".join(row["text_chunks"]) if "text_chunks" in row
+                         else row.get("text", ""))
+        snapshot_bytes = snapshot_text.encode("utf-8", "strict")
+        snapshot_sha256 = hashlib.sha256(snapshot_bytes).hexdigest()
+        terminal_digest_verified = (row["state"] == "GENERATED"
+                                    and row["terminal"] is True
+                                    and row.get("terminal_digest") == snapshot_sha256)
+        snapshot_corrupt = (row["state"] == "GENERATED" and row["terminal"] is True
+                            and not terminal_digest_verified)
         return JSONResponse({
-            "status": row["state"], "request_id": request_id,
+            "status": "HOLD" if snapshot_corrupt else row["state"],
+            "request_id": request_id,
             "stream_id": stream_id, "event_seq": row["event_seq"],
+            "snapshot_sha256": snapshot_sha256,
+            "snapshot_utf8_bytes": len(snapshot_bytes),
+            "terminal_digest_verified": terminal_digest_verified,
             **({"conversation_id": row["conversation_id"]}
                if row.get("conversation_id") is not None else {}),
-            "message": {"role": "assistant", "content": (
-                "".join(row["text_chunks"]) if "text_chunks" in row
-                else row.get("text", ""))},
-            "done": row["terminal"],
+            "message": {"role": "assistant", "content": snapshot_text},
+            "done": row["terminal"] and not snapshot_corrupt,
             # A lossy/incomplete snapshot is never proof of generated output or
             # a durable S03 write, even if the live SSE later completed.
-            "completion_receipt": row["completion_receipt"] if row["state"] != "HOLD" else None,
-            "memory_write_receipt": row["memory_write_receipt"] if row["state"] != "HOLD" else None,
+            "completion_receipt": row["completion_receipt"] if row["state"] != "HOLD" and not snapshot_corrupt else None,
+            "memory_write_receipt": row["memory_write_receipt"] if row["state"] != "HOLD" and not snapshot_corrupt else None,
             # A terminal STOP frame only proves the stream stopped; it does
             # not prove the whole assistant turn or its S03 write completed.
             # Reconciliation must fail closed on interrupted/unknown states.
             "snapshot_integrity": (
-                "HOLD" if row["state"] == "HOLD" else
-                "COMPLETE" if row["state"] == "GENERATED" and row["terminal"] else
-                "PARTIAL"),
-            "snapshot_hold_reason": row.get("snapshot_hold_reason"),
+                "HOLD" if row["state"] == "HOLD" or snapshot_corrupt else
+                "COMPLETE" if terminal_digest_verified else "PARTIAL"),
+            "snapshot_hold_reason": (
+                "CHAT_SNAPSHOT_DIGEST_MISMATCH" if snapshot_corrupt
+                else row.get("snapshot_hold_reason")),
             "s03_readback_verified": False,
             "snapshot_scope": "PROCESS_LOCAL", "replay_supported": False,
         }, headers={"Cache-Control": "no-store"})
@@ -999,6 +1014,11 @@ def install(app, B):
                 if k.get("done") is True and row["state"] != "HOLD":
                     row["terminal"] = True
                     row["state"] = ("STOPPED" if k.get("done_reason") == "stopped" else "GENERATED")
+                    if row["state"] == "GENERATED":
+                        terminal_digest = k.get("digest")
+                        row["terminal_digest"] = (terminal_digest
+                            if isinstance(terminal_digest, str)
+                            and re.fullmatch(r"[0-9a-f]{64}", terminal_digest) else None)
                 for receipt in ("completion_receipt", "memory_write_receipt"):
                     if isinstance(k.get(receipt), dict):
                         row[receipt] = k[receipt].copy()
