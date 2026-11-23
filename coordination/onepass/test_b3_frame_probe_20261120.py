@@ -2429,5 +2429,74 @@ class TestProbe(unittest.TestCase):
         asyncio.run(run())
 
 
+
+    def test_b3_chat_input_lone_surrogate_fails_before_model_post(self):
+        """Source-only Chromium regression: malformed UTF-16 must not reach serving."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    page = await browser.new_page()
+                    async def fixture(route):
+                        await route.fulfill(status=200, content_type='text/html',
+                                            body='<html>B3 input Unicode fixture</html>')
+                    await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                    await page.goto('http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                    await page.evaluate("""() => {
+                      window.NOX_NATIVE_OWNER=true; window.__nativePosts=0;
+                      const id='a'.repeat(32), exchange='r33-unicode-valid';
+                      window.fetch=async path=>{
+                        if(path==='/api/nox/chat/stream'){
+                          window.__nativePosts++;
+                          return new Response([
+                            {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                            {type:'start',model:'mock-pinned'},
+                            {type:'delta',text:'valid emoji'},
+                            {type:'done',saved:true,s03_integrated:true,
+                             dialog_id:id,exchange_id:exchange}
+                          ].map(JSON.stringify).join('\\n')+'\\n');
+                        }
+                        if(String(path).startsWith('/api/ui/memory/dialogs/history?'))
+                          return new Response(JSON.stringify({status:'READY',dialog_id:id,
+                            messages:[{role:'user',content:'Привет 😀 ¿qué tal?',
+                                       exchange_id:exchange},
+                                      {role:'assistant',content:'valid emoji',
+                                       exchange_id:exchange}]}));
+                        throw Error('UNEXPECTED_NATIVE_ROUTE '+path);
+                      };
+                    }""")
+                    bridge=(pathlib.Path(__file__).parent /
+                            'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                    await page.add_script_tag(content=bridge)
+                    result=await page.evaluate("""async () => {
+                      const id='a'.repeat(32), statuses=[], errors=[];
+                      for(const [n,s] of [String.fromCharCode(0xd800),
+                                          String.fromCharCode(0xdc00)].entries()){
+                        const r=await fetch('/api/nox/chat',{method:'POST',
+                          body:JSON.stringify({dialog_id:id,
+                            request_id:'r33-invalid-'+n,message:s})});
+                        statuses.push(r.status);errors.push((await r.json()).error);
+                      }
+                      const r=await fetch('/api/nox/chat',{method:'POST',
+                        body:JSON.stringify({dialog_id:id,
+                          request_id:'r33-valid',message:'Привет 😀 ¿qué tal?'})});
+                      const events=(await r.text()).split('\\n\\n').filter(Boolean)
+                        .map(s=>JSON.parse(s.slice(6)));
+                      return {statuses,errors,posts:window.__nativePosts,
+                        done:events.filter(e=>e.type==='done').length,
+                        streamErrors:events.filter(e=>e.type==='error')};
+                    }""")
+                    self.assertEqual(result['statuses'],[422,422])
+                    self.assertEqual(result['errors'],['INVALID_MESSAGE']*2)
+                    self.assertEqual(result['posts'],1)
+                    self.assertEqual(result['done'],1)
+                    self.assertEqual(result['streamErrors'],[])
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
 if __name__ == '__main__':
     unittest.main()

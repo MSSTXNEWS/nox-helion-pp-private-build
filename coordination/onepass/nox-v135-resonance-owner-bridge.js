@@ -1,9 +1,8 @@
 (() => {
  'use strict';
- const here=location.pathname;
-const owner=window.NOX_NATIVE_OWNER===true&&
- /^\/nox-web-v29\/pc\/(?:resonance\.html|v22\/resonance\.template\.html)$/.test(here);
-if(!owner||window.__NOX_V135_OWNER_RESONANCE)return;
+ if(window.NOX_NATIVE_OWNER!==true||
+ !/^\/nox-web-v29\/pc\/(?:resonance\.html|v22\/resonance\.template\.html)$/.test(location.pathname)||
+ window.__NOX_V135_OWNER_RESONANCE)return;
  window.__NOX_V135_OWNER_RESONANCE='OWNER_NATIVE_ONLY';
  const F=window.fetch.bind(window);
  const enc=new TextEncoder();
@@ -133,12 +132,12 @@ timer=setTimeout(()=>reject(Error('HOLD_NATIVE_TERMINAL_EOF_TIMEOUT')),2500);
 ]);
 }finally{clearTimeout(timer);}
 }
-const validNativeModelLabel=v=>typeof v==='string'&&v.length>0&&v.length<=96&&v===v.trim()&&!/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(v)&&!/^(unknown|na|none|null|undefined|unavailable|notavailable|unset|nomodel)?$/i.test(v.replace(/[\s/_-]+/g,''));
+const validNativeModelLabel=v=>typeof v==='string'&&v.length<=96&&v===v.trim()&&!/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(v)&&!/^(unknown|na|none|null|undefined|unavailable|notavailable|unset|nomodel)?$/i.test(v.replace(/[\s/_-]+/g,''));
  async function consume(response,emit,signal) {
  if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
  const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
- let buf='',answer='',done=null,doneSeen=false,startSeen=false,preparingSeen=false;
- let nativeModel='UNKNOWN';
+ let buf='',answer='',done,doneSeen=false,startSeen=false,preparingSeen=false;
+ let nativeModel;
  const line=async str=>{
    if(!str.trim())return;
    let e;
@@ -200,7 +199,7 @@ const validNativeModelLabel=v=>typeof v==='string'&&v.length>0&&v.length<=96&&v=
  }
  function sseChat(data,signal) {
  let closed=false;const started=performance.now();let firstVisibleMs=null;
- let phasePrev=null;
+ let phasePrev;
  const upstreamAbort=new AbortController();
  const onAbort=()=>upstreamAbort.abort();
  if(signal?.aborted)upstreamAbort.abort();
@@ -284,7 +283,7 @@ const validNativeModelLabel=v=>typeof v==='string'&&v.length>0&&v.length<=96&&v=
  });
  return responseJSONStream(body);
  }
- const responseJSONStream=body=>new Response(body,{status:200,headers:{
+ const responseJSONStream=body=>new Response(body,{headers:{
  'Content-Type':'text/event-stream','Cache-Control':'no-store','X-Accel-Buffering':'no'
  }});
  async function jsonChat(data,signal) {
@@ -381,7 +380,9 @@ if(input instanceof Request&&init?.body===undefined){
 if(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search){
   let data;try{data=JSON.parse(init?.body);}catch{return Promise.resolve(errorResponse('INVALID_JSON',400));}
   if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.message!=='string'||
-     !data.message.trim()||data.message.length>8000)return Promise.resolve(errorResponse('INVALID_MESSAGE',422));
+     !data.message.trim()||data.message.length>8000||
+     new TextDecoder().decode(enc.encode(data.message))!==data.message)
+     return Promise.resolve(errorResponse('INVALID_MESSAGE',422));
   if('request_id'in data&&(typeof data.request_id!=='string'||!data.request_id.trim()||data.request_id.length>160))
     return Promise.resolve(errorResponse('HOLD_REQUEST_ID_SCOPE',422));
 const s=init?.signal||input?.signal;
