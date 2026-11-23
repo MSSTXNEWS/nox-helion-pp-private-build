@@ -812,8 +812,7 @@ def install(app, B):
         # silently discarding part of a legitimate user request. Fail before
         # model/S03 admission instead; never claim an answer to an altered input.
         if mini and len(user) > 3000:
-            return JSONResponse({"status": "HOLD", "reason": "MINI_INPUT_TOO_LONG",
-                                 "input_preserved": False}, status_code=413)
+            return JSONResponse({"status": "HOLD", "reason": "MINI_INPUT_TOO_LONG"}, status_code=400)
         mode = str(opts.get("mode") or b.get("mode") or "auto")
         eph = b.get("ephemeral") is True
         if mode == "fast": npred = min(npred, 300)
