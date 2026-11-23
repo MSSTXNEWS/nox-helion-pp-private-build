@@ -80,7 +80,7 @@ return data.dialog_id;
 async function checkHistory(id,prompt,answer,exchangeId,signal,model) {
 const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
 if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
-if(data.messages.some(m=>m&&(m.dialog_id!==undefined&&m.dialog_id!==id||m.role==='assistant'&&['model','model_label','modelLabel'].some(k=>k in m&&m[k]!==model))))throw Error('HOLD_DIALOG_HISTORY_SCOPE');
+if(data.messages.some(m=>m&&(m.dialog_id!==undefined&&m.dialog_id!==id||m.role==='assistant'&&['model','model_label','modelLabel','native_model_label'].some(k=>k in m&&m[k]!==model))))throw Error('HOLD_DIALOG_HISTORY_SCOPE');
 const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
 const currentAt=data.messages.indexOf(pair[0]);
 if(pair.length!==2||currentAt!==data.messages.length-2||
@@ -210,13 +210,13 @@ function sseChat(data,signal){
  window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopped'}}));};
  const body=new ReadableStream({
    async start(controller){
-    const event=payload=>{if(closed)return;
-    if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
-     firstVisibleMs=Math.round(performance.now()-started);
-    const phase={meta:'waiting',token:'speaking',done:'idle',error:nativeSignal.aborted?'stopped':'error'}[payload.type];
-    if(phase&&phase!==phasePrev){
-     phasePrev=phase;
-     if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+const event=payload=>{if(closed)return;
+if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
+ firstVisibleMs=Math.round(performance.now()-started);
+const phase={meta:'waiting',token:'speaking',done:'idle',error:nativeSignal.aborted?'stopped':'error'}[payload.type];
+if(phase&&phase!==phasePrev){
+ phasePrev=phase;
+ if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
       window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
     }
     if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
