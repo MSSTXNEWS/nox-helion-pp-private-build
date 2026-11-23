@@ -1198,6 +1198,64 @@ class CheckpointStepProvenance(unittest.TestCase):
                              prefix + "\n")
 
 
+    def test_owned_flag_parent_symlink_and_atomic_pivot_are_not_owner_proof(self):
+        # Same bytes and inode do not prove an unswapped pathname owner.
+        # Exercise the real extracted production verifier, never native flags.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            parent = root / "owner-flags"
+            parent.mkdir()
+            flag = parent / "TRAIN_HOLD.flag"
+            prefix = "OWNER_REQUESTED_TRAINING_HALT request=41 source=abc"
+            flag.write_text(prefix + "\n", encoding="utf-8")
+            verify = load_pinned_verifier(root)["owned_flag"]
+            self.assertIsNone(verify(flag, prefix))
+
+            alias = root / "owner-flags-link"
+            alias.symlink_to(parent, target_is_directory=True)
+            with self.assertRaisesRegex(
+                    RuntimeError, "^HOLD_CURRENT_OWNER_FLAG_CHANGED$"):
+                verify(alias / flag.name, prefix)
+            alias.unlink()
+            self.assertIsNone(verify(flag, prefix))
+
+            actual_fdopen = os.fdopen
+
+            class PivotParentOnRead:
+                def __init__(self, stream):
+                    self.stream = stream
+                    self.pivoted = False
+
+                def __enter__(self):
+                    self.stream.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.stream.__exit__(*args)
+
+                def fileno(self):
+                    return self.stream.fileno()
+
+                def read(self, length):
+                    if not self.pivoted:
+                        self.pivoted = True
+                        parent.rename(root / "original-owner-flags")
+                        parent.symlink_to(root / "original-owner-flags",
+                                          target_is_directory=True)
+                    return self.stream.read(length)
+
+            with mock.patch("os.fdopen", side_effect=lambda fd, mode:
+                            PivotParentOnRead(actual_fdopen(fd, mode))):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_CURRENT_OWNER_FLAG_CHANGED$"):
+                    verify(flag, prefix)
+            self.assertTrue(parent.is_symlink())
+            self.assertEqual(flag.read_text(encoding="utf-8"), prefix + "\n")
+            parent.unlink()
+            (root / "original-owner-flags").rename(parent)
+            self.assertIsNone(verify(flag, prefix))
+
+
     def test_train_cpu_env_rejects_extra_directives_after_valid_cap(self):
         # Previous MULTILINE findall accepted an approved first line
         # despite trailing shell/env directives that the trainer could load.

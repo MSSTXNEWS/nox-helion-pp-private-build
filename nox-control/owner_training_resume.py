@@ -1304,6 +1304,9 @@ def verify_training_policy_owner(policy, admission):
 def owned_flag(path, prefix):
     """Verify an owned STOP flag through one bounded, pathname-stable descriptor."""
     path = Path(path)
+    # A leaf O_NOFOLLOW does not authenticate an owner flag under a symlink parent.
+    if any(item.is_symlink() for item in (path, *path.parents)):
+        raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED')
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
     except OSError as exc:
@@ -1317,6 +1320,10 @@ def owned_flag(path, prefix):
             raw = stream.read(4097)
             after = os.fstat(stream.fileno())
             named = os.stat(path, follow_symlinks=False)
+        # An atomic parent rename then symlink to the same inode invalidates
+        # the owner flag pathname even when descriptor and named stat still match.
+        if any(item.is_symlink() for item in (path, *path.parents)):
+            raise RuntimeError('HOLD_CURRENT_OWNER_FLAG_CHANGED')
         # A matching hash prefix is not ownership: require a token boundary.
         identity = prefix.encode('utf-8') if isinstance(prefix, str) else b''
         fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
