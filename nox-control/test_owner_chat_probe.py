@@ -4209,5 +4209,41 @@ class ProbeTests(unittest.TestCase):
             [{'type': 'delta', 'text': '323'}])
 
 
+    def test_custom_socket_aliases_reject_unbounded_fallback_without_read(self):
+        """Custom sock/socket aliases must not evade the SSE deadline fence."""
+        import io
+        import socket
+        import time
+
+        left, right = socket.socketpair()
+        try:
+            for alias in ('sock', 'socket', '_sock'):
+                class HiddenNetworkReader:
+                    def __init__(self):
+                        self.read_calls = 0
+
+                    def readline(self, limit):
+                        self.read_calls += 1
+                        raise AssertionError('network readline must never execute')
+
+                wrapped = HiddenNetworkReader()
+                setattr(wrapped, alias, left)
+                with self.subTest(alias=alias):
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_STREAM_UNBOUNDED_SOCKET_READER):
+                        list(probe.bounded_stream_lines(
+                            wrapped, deadline=time.monotonic() + 2))
+                    self.assertEqual(wrapped.read_calls, 0)
+            # Valid offline readers remain supported.
+            memory = io.BytesIO(b'{"type":"delta","text":"323"}' + bytes([10]))
+            self.assertEqual(list(probe.bounded_stream_frames(
+                memory, deadline=time.monotonic() + 2)),
+                [{'type': 'delta', 'text': '323'}])
+        finally:
+            left.close()
+            right.close()
+
+
+
 if __name__ == '__main__':
     unittest.main()

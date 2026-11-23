@@ -967,9 +967,20 @@ def bounded_stream_lines(response, max_line=100000, deadline=None):
         # Non-HTTP offline readers may keep their legacy bounded contract,
         # but a live socket-backed wrapper can drip partial readline() bytes
         # indefinitely. It must supply a verified incremental HTTP reader.
-        fallback_sock = getattr(getattr(getattr(response, 'fp', None),
-                                        'raw', None), '_sock', None)
-        if isinstance(fallback_sock, SocketType):
+        fallback_fp = getattr(response, 'fp', None)
+        fallback_raw = getattr(fallback_fp, 'raw', None)
+        # Custom wrappers may expose the live TCP socket directly, outside
+        # conventional HTTPResponse.fp.raw._sock. Any such fallback can block
+        # indefinitely on slow-dripping newline-less bytes.
+        socket_candidates = (
+            getattr(fallback_raw, '_sock', None),
+            fallback_fp,
+            getattr(response, '_sock', None),
+            getattr(response, 'sock', None),
+            getattr(response, 'socket', None),
+        )
+        if any(isinstance(candidate, SocketType)
+               for candidate in socket_candidates):
             raise RuntimeError('HOLD_STREAM_UNBOUNDED_SOCKET_READER')
     pending = b''
     while True:
