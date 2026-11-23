@@ -200,6 +200,60 @@ class BackupT(unittest.TestCase):
         self.assertEqual(result["installed_sha256"], B.sha256_file(new))
         self.assertEqual(result["installed_sha256"], copy["sha256"])
 
+    def test_restore_persona_id_mismatch_fails_without_touching_target(self):
+        s = Store(self.db)
+        s.set_profile("PersonaID", "persona-original", section="persona")
+        s.close()
+        snapshot = B.backup(self.db, self.bdir)
+        s = Store(self.db)
+        s.set_profile("PersonaID", "persona-different", section="persona")
+        s.close()
+        preimage = B.sha256_file(self.db)
+        with self.assertRaisesRegex(RuntimeError, "PersonaID missing or mismatched"):
+            B.restore(snapshot["path"], self.db)
+        self.assertEqual(B.sha256_file(self.db), preimage)
+        self.assertFalse(os.path.lexists(self.db + ".restore.tmp"))
+
+    def test_restore_persona_id_match_reads_back_installed_identity(self):
+        s = Store(self.db)
+        s.set_profile("persona_id", "same-persona", section="persona")
+        s.close()
+        snapshot = B.backup(self.db, self.bdir)
+        s = Store(self.db)
+        s.add_fact("newer than identity-bound snapshot")
+        s.close()
+        result = B.restore(snapshot["path"], self.db)
+        self.assertEqual(result["persona_scope"], "MATCHED_PREIMAGE_AND_POSTIMAGE")
+        self.assertEqual(B._restore_persona_id(self.db), "same-persona")
+
+    def test_restore_persona_id_alias_conflict_is_hold(self):
+        s = Store(self.db)
+        s.set_profile("PersonaID", "alpha", section="persona")
+        s.set_profile("persona_id", "beta", section="persona")
+        s.close()
+        snapshot = B.backup(self.db, self.bdir)
+        preimage = B.sha256_file(self.db)
+        with self.assertRaisesRegex(RuntimeError, "conflicting active PersonaID"):
+            B.restore(snapshot["path"], self.db)
+        self.assertEqual(B.sha256_file(self.db), preimage)
+
+    def test_restore_live_or_orphan_sidecar_is_hold_even_with_force(self):
+        snapshot = B.backup(self.db, self.bdir)
+        preimage = B.sha256_file(self.db)
+        wal_path = self.db + "-wal"
+        with open(wal_path, "wb") as f:
+            f.write(b"foreign owner sidecar; never move")
+        with self.assertRaisesRegex(RuntimeError, "SQLite sidecar present"):
+            B.restore(snapshot["path"], self.db, force=True)
+        self.assertEqual(B.sha256_file(self.db), preimage)
+        self.assertEqual(open(wal_path, "rb").read(), b"foreign owner sidecar; never move")
+        self.assertFalse(os.path.lexists(self.db + ".restore.tmp"))
+
+    def test_restore_legacy_identity_is_explicitly_unverified(self):
+        snapshot = B.backup(self.db, self.bdir)
+        restored = B.restore(snapshot["path"], self.db)
+        self.assertEqual(restored["persona_scope"], "UNVERIFIED_LEGACY_NO_PERSONA_ID")
+
     def test_restore_into_new_path(self):
         r = B.backup(self.db, self.bdir)
         new = os.path.join(self.td.name, "sub", "new.db")
