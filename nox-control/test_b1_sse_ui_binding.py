@@ -2770,6 +2770,53 @@ def main():
           return true;
         }'''))
 
+        # readCommitted() may signal a failed or unknown lookup with an
+        # ambiguous falsy result. Only explicit null proves "no prior turn";
+        # otherwise there must be no model POST (even on repeat begin).
+        check('ambiguous falsy preflight HOLDs; explicit null permits one turn', page.evaluate('''async () => {
+          const invalid=[undefined,false,0,'',NaN];
+          for(let i=0;i<invalid.length;i++){
+            const s={conversation_id:'r39',exchange_id:'invalid-'+i};
+            let reads=0,posts=0,acks=0;
+            const host={...opts.host,async readCommitted(){
+              reads++;return invalid[i];
+            }};
+            const transport={...opts.transport,
+              post(){posts++;throw Error('DUPLICATE_MODEL_POST')},
+              ack(){acks++;throw Error('DUPLICATE_ACK')}
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              host,transport,bridge:opts.bridge,
+              ui:{async onDelta(){},async upsertTerminal(){}}
+            });
+            const first=await client.begin(s).then(()=>false,e=>e.code);
+            const second=await client.begin(s).then(()=>false,e=>e.code);
+            if(first!=='HOLD_STREAM_STORAGE'||
+               second!=='HOLD_STREAM_NO_REPOST'||reads!==1||
+               posts!==0||acks!==0)return false;
+          }
+          const s={conversation_id:'r39',exchange_id:'explicit-null'};
+          let reads=0,posts=0,acks=0;
+          const host={...opts.host,async readCommitted(){reads++;return null;}};
+          const transport={...opts.transport,
+            async post(){posts++;
+              return {ok:true,body:new ReadableStream({start(controller){
+                controller.close();
+              }})};
+            },
+            ack(){acks++;throw Error('UNEXPECTED_ACK')}
+          };
+          const client=NOXB1StreamReconnect.createClient({
+            host,transport,bridge:opts.bridge,
+            ui:{async onDelta(){},async upsertTerminal(){}}
+          });
+          const first=await client.begin(s);
+          const second=await client.begin(s).then(()=>false,e=>e.code);
+          return first==='STREAM_ENDED_READBACK_REQUIRED'&&
+             second==='HOLD_STREAM_NO_REPOST'&&
+             reads===1&&posts===1&&acks===0;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:

@@ -149,6 +149,11 @@
           return stopped();
         }
         if(preflight.storageError) hold('HOLD_STREAM_STORAGE');
+        // Only an explicit null is an authoritative "not committed" result.
+        // A falsy malformed/unknown lookup (undefined, false, 0, NaN, '')
+        // must NOT authorize another model POST for this exchange.
+        if(preflight.previous!==null&&!preflight.previous)
+          hold('HOLD_STREAM_STORAGE');
         if(preflight.previous){
           // This preflight GET only checks whether the exchange already exists.
           // Its response body is not consumed by begin(), and the model must
