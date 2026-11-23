@@ -78,6 +78,12 @@ const assert = require('node:assert/strict');
         memory_write_receipt: { status: 'WRITE_RETURNED_UNVERIFIED' } },
       { type: 'error', text: 'late transport fault' }
     ]);
+    if (requests >= 5) return response([
+      { type: 'token', text: 'Continued ✅' },
+      { type: 'done', generation_complete: true,
+        memory_write_receipt: { status: 'WRITE_RETURNED_UNVERIFIED',
+                                s03_readback_verified: false } }
+    ]);
     return new Promise(resolve => { unblock = resolve; });
   };
   const context = vm.createContext({ document, fetch, TextDecoder, console });
@@ -110,6 +116,12 @@ const assert = require('node:assert/strict');
   await waiting;
   assert.equal(get('submit').disabled, false);
   assert.equal(vm.runInContext('hist.length', context), 2);
+  for (let i = 0; i < 5; i++) await submit('LONG_DIALOGUE_' + i);
+  assert.equal(vm.runInContext('hist.length', context), 12);
+  assert.equal(seen[8].length, 11,
+    'legacy UI must send every previously completed turn, not slice to six');
+  assert.equal(seen[8][0].content, 'SUCCESS_NEXT');
+  assert.equal(seen[8][10].content, 'LONG_DIALOGUE_4');
   console.log('legacy browser history/SSE admission: PASS');
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """

@@ -43,13 +43,18 @@ class FullCurrentTurnTests(unittest.TestCase):
         out = self.build([], user, "", "")
         self.assertTrue(out[-1]["content"].endswith(user))
 
-    def test_prior_display_budget_remains_bounded(self):
-        # This narrow fix does not claim to solve longer-term S03 retrieval.
-        prior = "p" * 2500
+    def test_all_prior_context_is_kept_byte_exact_without_hidden_window(self):
+        # Source-only: model context capacity and S03 persistence are not proven.
+        history = []
+        for i in range(8):
+            history.extend([{"role": "user", "content": f"past-{i}-🌍" + "Ю" * 1600},
+                            {"role": "assistant", "content": f"answer-{i}-✅" + "A" * 1100}])
         user = "latest full request"
-        out = self.build([{"role": "assistant", "content": prior},
-                          {"role": "user", "content": user}], user, "", "")
-        self.assertEqual(out[-2]["content"], prior[:900])
+        history.append({"role": "user", "content": user})
+        out = self.build(history, user, "", "")
+        self.assertEqual(len(out), len(history) + 1)
+        for i, message in enumerate(history[:-1], 1):
+            self.assertEqual(out[i], message)
         self.assertTrue(out[-1]["content"].endswith(user))
 
 
