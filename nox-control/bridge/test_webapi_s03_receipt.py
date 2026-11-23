@@ -133,12 +133,16 @@ class FactReceiptTest(unittest.TestCase):
             chunked = await chat(WireRequest([b'a' * 40, b'b' * 25]))
             bad_length = await chat(WireRequest([b'{}'], "-1"))
             malformed = await chat(WireRequest([b'{"messages":']))
-            return header, chunked, bad_length, malformed
+            duplicate_request = await chat(WireRequest([b'{"request_id":"A","request_id":"B"}']))
+            duplicate_nested = await chat(WireRequest([b'{"options":{"mode":"fast","mode":"slow"}}']))
+            nonfinite = await chat(WireRequest([b'{"options":{"num_predict":NaN}}']))
+            return header, chunked, bad_length, malformed, duplicate_request, duplicate_nested, nonfinite
 
         with (mock.patch.object(W, "MAX_CHAT_WIRE_BYTES", 64),
               mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
               mock.patch.object(W, "CHAT_SNAPSHOTS", {})):
-            header, chunked, bad_length, malformed = asyncio.run(scenario())
+            (header, chunked, bad_length, malformed,
+             duplicate_request, duplicate_nested, nonfinite) = asyncio.run(scenario())
             self.assertEqual(W.ACTIVE_CHAT_IDS, set())
             self.assertEqual(W.CHAT_SNAPSHOTS, {})
         for response in (header, chunked):
@@ -147,8 +151,11 @@ class FactReceiptTest(unittest.TestCase):
                              {"status": "HOLD", "reason": "CHAT_WIRE_TOO_LARGE"})
         self.assertEqual(bad_length.status_code, 400)
         self.assertEqual(json.loads(bad_length.body)["reason"], "CHAT_INVALID_CONTENT_LENGTH")
-        self.assertEqual(malformed.status_code, 400)
-        self.assertEqual(json.loads(malformed.body)["reason"], "CHAT_INVALID_JSON")
+        for invalid in (malformed, duplicate_request, duplicate_nested, nonfinite):
+            with self.subTest(body=invalid.body):
+                self.assertEqual(invalid.status_code, 400)
+                self.assertEqual(json.loads(invalid.body),
+                                 {"status": "HOLD", "reason": "CHAT_INVALID_JSON"})
 
     def test_1a03_process_local_snapshot_reconciles_utf8_and_disconnect(self):
         """Snapshot is bounded, non-replaying and never certifies S03 readback."""
