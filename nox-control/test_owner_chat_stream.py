@@ -225,7 +225,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         # Many individually valid keepalives cannot consume unlimited CPU/I/O
         # until the wall-clock deadline; never replay the model POST or mark S03.
         partial=frame('Hola')
-        chunks=Chunks([partial]+[b': alive\\n\\n']*32)
+        chunks=Chunks([partial]+[b': alive\n\n']*32)
         requests,factory=self.transport([chunks])
         native=self.native()
         payload={'messages':[{'role':'user','content':'Hola'}]}
