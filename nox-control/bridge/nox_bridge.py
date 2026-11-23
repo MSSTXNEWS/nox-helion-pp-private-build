@@ -157,11 +157,14 @@ def _style():
 def build_msgs(history, user, mem, vol, extra=""):
     """Стабильная часть (личность+правила) идёт первой и кэшируется llama.cpp; всё, что меняется каждый ход
     (память, тело, эмоции), добавляется в самый конец последнего вопроса, чтобы префикс истории не ломал кэш."""
-    hist = [{"role": m["role"], "content": str(m.get("content", ""))[:(900 if m["role"] == "assistant" else 1500)]} for m in history if m.get("role") in ("user", "assistant")][-6:]
+    # Keep the entire explicitly admitted dialogue, including long prior turns.
+    # The HTTP admission boundary is bounded and rejects oversized requests;
+    # silently slicing here would fabricate a different conversation for NOX.
+    hist = [{"role": m["role"], "content": str(m.get("content", ""))}
+            for m in history if m.get("role") in ("user", "assistant")]
     ctx = "[Контекст для NOX, не цитируй дословно]\n" + ("Память: " + mem[:500] + "\n" if mem else "") + vol + _style() + extra + "\n\n[Вопрос Создателя]\n"
     if hist and hist[-1]["role"] == "user":
-        # Preserve the exact current user text; the 1500-character history
-        # display cap must never change the active instruction.
+        # Preserve the exact current user text and all prior admitted turns.
         hist[-1]["content"] = ctx + user
     else:
         hist.append({"role": "user", "content": ctx + user})
@@ -583,7 +586,7 @@ const i=document.getElementById('i'),send=document.querySelector('#f button'),q=
 sending=true;send.disabled=true;i.disabled=true;i.value='';
 add('u',q);const pending=[...hist,{role:'user',content:q}];const st=add('s','…'),box=add('n','');
 let full='',complete=false,failed=false,writeReceipt=null;
-try{const r=await fetch('/v1/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:pending.slice(-6)})});
+try{const r=await fetch('/v1/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:pending})});
 if(!r.ok||!r.body)throw Error('upstream');
 const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
 while(true){const{value,done}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});let k;
