@@ -58,7 +58,13 @@ class NativeRefillSourceGateTests(unittest.TestCase):
             with self.subTest(partial=partial):
                 s["native_queue"] = partial
                 found = codes(s, lambda exact: exact is s)
-                self.assertIn("NATIVE_QUEUE_UNVERIFIED", found)
+                # A missing cgroup byte count already emits its own HOLD.
+                # A partial dict with valid cgroup bytes must emit the new
+                # native-queue HOLD instead of an apparently clean report.
+                if "resource_headroom_bytes" in partial:
+                    self.assertIn("NATIVE_QUEUE_UNVERIFIED", found)
+                else:
+                    self.assertIn("NATIVE_CGROUP_MEMORY_UNVERIFIED", found)
                 self.assertNotIn("NO_UNVERIFIED_TUNING", found)
                 self.assertNotIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED", found)
         # Even a shape-complete, idle source cannot self-attest through JSON.
