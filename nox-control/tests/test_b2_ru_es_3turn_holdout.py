@@ -86,5 +86,45 @@ class ThreeTurnHoldoutContract(unittest.TestCase):
         self.assertEqual(probe.verify_capture(example)["native_acceptance"], probe.HOLD)
 
 
+    def test_reference_numbers_and_confident_guess_are_review_flags_not_pass(self):
+        example = fixture()
+        def set_answer(case_index, turn_index, answer):
+            turn = example["sessions"][case_index]["turns"][turn_index]
+            turn["answer"] = answer
+            turn["sse_deltas"] = [answer]
+            # Preserve the full assistant history required by later turns.
+            for later in example["sessions"][case_index]["turns"][turn_index + 1:]:
+                messages = later["messages"]
+                messages[2 * turn_index + 1]["content"] = answer
+        set_answer(0, 1, "Это 28 евро.")
+        set_answer(1, 2, "Son 36 euros.")
+        set_answer(2, 0, "Точно 42.")
+        set_answer(3, 2, "Я не знаю: лист не показан.")
+        result = probe.verify_capture(example)
+        signals = {(r["case_id"], r["turn"]): r["signal"]
+                   for r in result["quality_review_signals"]}
+        self.assertEqual(len(signals), 12)
+        self.assertEqual(signals[("RU_CORRECTION", 2)], "EXPECTED_NUMBER_ABSENT")
+        self.assertEqual(signals[("ES_CORRECTION", 3)],
+                         "REFERENCE_NUMBER_MENTIONED_REVIEW_REQUIRED")
+        self.assertEqual(signals[("RU_CALIBRATION", 1)],
+                         "UNSUPPORTED_EXACT_NUMBER_MENTION")
+        self.assertEqual(signals[("ES_CALIBRATION", 3)],
+                         "ABSTENTION_CUE_MENTIONED_REVIEW_REQUIRED")
+        self.assertEqual(result["quality_grade"], "NOT_MEASURED")
+        self.assertEqual(result["native_acceptance"], probe.HOLD)
+
+    def test_ambiguous_correct_and_stale_numbers_never_auto_pass(self):
+        example = fixture()
+        turn = example["sessions"][0]["turns"][2]
+        turn["answer"] = "Не 28, а 21 евро."
+        turn["sse_deltas"] = [turn["answer"]]
+        result = probe.verify_capture(example)
+        self.assertEqual(result["quality_review_signals"][2]["signal"],
+                         "AMBIGUOUS_NUMERIC_ANSWER")
+        self.assertEqual(result["native_acceptance"], probe.HOLD)
+
+
+
 if __name__ == "__main__":
     unittest.main()

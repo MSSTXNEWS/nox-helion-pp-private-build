@@ -131,10 +131,56 @@ def verify_capture(capture: object) -> dict:
         "cases": len(CASES),
         "turns": len(seen_streams),
         "quality_grade": "NOT_MEASURED",
+        "quality_review_signals": quality_review_signals(sessions),
         "native_acceptance": HOLD,
         "required_next": "Independent browser turns2/3, RU/ES human+rubric holdout, "
                          "owner/CAS immutable verifier, served SHA256 and S03 row readback",
     }
+
+
+
+# Transparent lexical red flags; these cannot certify semantics, origin or intent.
+# They only prioritize the INDEPENDENT human RU/ES rubric on real captures.
+ARITHMETIC_REFERENCES = {
+    "RU_CORRECTION": ("28", "21", "21"),
+    "ES_CORRECTION": ("45", "36", "36"),
+}
+DECIMAL_TOKENS = re.compile(r"(?<![0-9])[0-9]+(?![0-9])")
+UNCERTAINTY_CUES = (
+    "не знаю", "неизвест", "недостаточ", "не могу", "нет данн",
+    "не видел", "не видела", "no sé", "no se ", "no puedo",
+    "no tengo", "desconoz", "falta información", "sin información",
+    "no hay información", "no he visto",
+)
+
+
+def quality_review_signals(sessions: list) -> list[dict]:
+    """Flag plainly suspicious answers; NEVER return a model-quality PASS."""
+    flags = []
+    for session in sessions:
+        case_id = session["case_id"]
+        for index, turn in enumerate(session["turns"]):
+            answer = turn["answer"]
+            numbers = set(DECIMAL_TOKENS.findall(answer))
+            if case_id in ARITHMETIC_REFERENCES:
+                reference = ARITHMETIC_REFERENCES[case_id][index]
+                if not numbers:
+                    signal = "NUMERIC_ANSWER_NEEDS_REVIEW"
+                elif numbers == {reference}:
+                    signal = "REFERENCE_NUMBER_MENTIONED_REVIEW_REQUIRED"
+                elif reference in numbers:
+                    signal = "AMBIGUOUS_NUMERIC_ANSWER"
+                else:
+                    signal = "EXPECTED_NUMBER_ABSENT"
+            elif numbers:
+                signal = "UNSUPPORTED_EXACT_NUMBER_MENTION"
+            elif any(cue in answer.casefold() for cue in UNCERTAINTY_CUES):
+                signal = "ABSTENTION_CUE_MENTIONED_REVIEW_REQUIRED"
+            else:
+                signal = "CALIBRATION_NEEDS_REVIEW"
+            flags.append({"case_id": case_id, "turn": index + 1,
+                          "signal": signal})
+    return flags
 
 
 def unique_keys(items):
