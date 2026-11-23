@@ -1446,6 +1446,57 @@ class FactReceiptTest(unittest.TestCase):
         self.assertIsNone(frames[-1]["skeptic"])
         self.assertFalse(any(f.get("status") == "HOLD" for f in frames))
 
+    def test_1v14_stop_on_premodel_status_skips_persistent_affect(self):
+        """A STOP on the final premodel SSE frame cannot write user-derived PAD."""
+        chat = next(route.endpoint for route in self.app.routes
+                    if route.path == "/api/chat")
+        rid = "a2-stop-before-affect"
+        bridge = self.bridge
+        bridge.SOUL = None
+        bridge.self_vol = mock.Mock(side_effect=AssertionError(
+            "cancelled user text must not reach persistent affect journal"))
+        bridge.build_msgs = mock.Mock(side_effect=AssertionError(
+            "cancelled turn must not assemble model prompt"))
+        bridge.hc = mock.Mock(side_effect=AssertionError(
+            "cancelled turn must not make model POST"))
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = mock.Mock(side_effect=AssertionError(
+            "cancelled turn must not write S03"))
+
+        async def scenario():
+            response = await chat(Request({
+                "request_id": rid, "mode": "fast", "use_memory": False,
+                "messages": [{"role": "user", "content": "STOP before affect"}],
+            }))
+            frames = []
+            async for wire in response.body_iterator:
+                frame = json.loads(wire)
+                frames.append(frame)
+                if frame.get("nox_event", {}).get("text") == "формулирую ответ":
+                    W.CANCEL.add(rid)
+            return frames
+
+        with mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \
+             mock.patch.object(W, "W", None), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            frames = asyncio.run(scenario())
+            self.assertEqual(W.ACTIVE_CHAT_IDS, set())
+        self.assertTrue(any(f.get("nox_event", {}).get("text") == "формулирую ответ"
+                            for f in frames))
+        self.assertTrue(frames[-1]["done"])
+        self.assertEqual(frames[-1]["done_reason"], "stopped")
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
+        self.assertFalse(frames[-1]["completion_receipt"]["upstream_done"])
+        self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+        self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
+        bridge.self_vol.assert_not_called()
+        bridge.build_msgs.assert_not_called()
+        bridge.hc.assert_not_called()
+        memory.persist_turn.assert_not_called()
+
     def test_stop_during_memory_or_prompt_assembly_never_posts_model(self):
         """1A04: accepted STOP after a slow phase must not start GPU inference."""
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
