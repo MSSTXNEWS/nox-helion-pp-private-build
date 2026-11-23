@@ -405,24 +405,32 @@
     // when STOP, deadline, or transport failure wins. Never repeat a POST.
     async function boundedGet(thunk,code,deadlineMs,signal){
       const controller=new AbortController();
-      let completed=false,abandoned=false;
+      let completed=false,abandoned=false,received=null,discarded=false;
+      // STOP can win after a GET resolves but before boundedRead settles.
+      // The late callback and finally must share ONE disposal fence, so a
+      // previously delivered response is never leaked or double-canceled.
+      const discardIfAbandoned=value=>{
+        if(discarded||!value)return;
+        if(abandoned||controller.signal.aborted||(signal&&signal.aborted)){
+          discarded=true;
+          cancelAbandonedGet(value); // nonblocking even for hung cancel()
+        }
+      };
       try{
-        // The transport may ignore AbortSignal and resolve after a STOP or
-        // deadline with an unclaimed HTTP response body. Race() prevents
-        // resuming UI/ACK but does not close that late GET connection.
         const answer=await boundedRead(
           ()=>Promise.resolve().then(()=>thunk(controller.signal))
             .then(value=>{
-              if(abandoned||controller.signal.aborted||
-                 (signal&&signal.aborted)) cancelAbandonedGet(value);
+              received=value;
+              discardIfAbandoned(value);
               return value;
             }),code,deadlineMs,signal);
-        completed=true;
+        completed=true; // ownership now belongs to reconnectOnce()
         return answer;
       }finally{
         if(!completed){
           abandoned=true;
           controller.abort();
+          discardIfAbandoned(received); // resolved-before-STOP race
         }
       }
     }
