@@ -288,6 +288,25 @@ class TestProbe(unittest.TestCase):
                 self.assertFalse(is_model_chat_endpoint(url))
 
 
+    def test_deeply_encoded_native_serving_aliases_fail_closed(self):
+        # The former four-decode budget allowed five-plus layers to bypass
+        # the GET/HEAD/OPTIONS guard of this browser-only observer.
+        from urllib.parse import quote
+        for depth in (5, 8, 12, 18):
+            slash = '/'
+            for _ in range(depth):
+                slash = quote(slash, safe='')
+            for stem, suffix in (('/api/nox', 'chat/stream'),
+                                 ('/nox', 'chat'),
+                                 ('/v1/chat', 'completions')):
+                url = 'http://127.0.0.1:18877' + stem + slash + suffix
+                with self.subTest(depth=depth, url=url):
+                    self.assertTrue(is_model_chat_endpoint(url))
+        # A normal UI asset remains observable; no inference is attempted.
+        self.assertFalse(is_model_chat_endpoint(
+            'http://127.0.0.1:18877/assets/resonance.css'))
+
+
     def test_post_screenshot_spa_route_fence_wired(self):
         code = inspect.getsource(_measure_async)
         self.assertGreater(code.rfind('require_landing_url(url, page.url)'),

@@ -60,11 +60,15 @@ def is_model_chat_endpoint(url):
     path = urlsplit(url).path
     # Proxies may decode %2F, collapse repeated separators, case-fold
     # routes, or strip ;matrix parameters before dispatching inference.
-    for _ in range(4):
+    for _ in range(12):
         decoded = unquote(path)
         if decoded == path:
             break
         path = decoded
+    else:
+        # Exhausted normalization budget: reject the URL rather than risk
+        # a deeply encoded alias reaching a model endpoint through a proxy.
+        return True
     path = path.replace('\\', '/').lower()
     while '//' in path:
         path = path.replace('//', '/')
