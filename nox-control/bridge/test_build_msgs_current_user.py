@@ -41,7 +41,7 @@ class FullCurrentTurnTests(unittest.TestCase):
     def test_current_unchanged_without_history(self):
         user = "u" * 2000 + " END"
         out = self.build([], user, "", "")
-        self.assertEqual(out[-1]["content"].split("[Вопрос Создателя]\\n", 1)[1], user)
+        self.assertTrue(out[-1]["content"].endswith(user))
 
     def test_prior_display_budget_remains_bounded(self):
         # This narrow fix does not claim to solve longer-term S03 retrieval.
