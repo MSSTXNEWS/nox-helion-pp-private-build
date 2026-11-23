@@ -718,5 +718,40 @@ class HunterURLSafetyTests(unittest.TestCase):
             self.assertEqual(recovered["added"], 1)
 
 
+    def test_3b02_embedded_xhtml_hidden_subtrees_are_not_source_facts(self):
+        # Atom XHTML content may embed real XML child tags; itertext() used
+        # to flatten their script/style/template bodies into trusted evidence.
+        xml = (b'<feed xmlns="http://www.w3.org/2005/Atom">'
+               b'<entry><title>Visible research</title>'
+               b'<link rel="alternate" href="https://example.org/article"/>'
+               b'<content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml">'
+               b'Visible <script>FORGED_INSTRUCTION</script>'
+               b'<style>FAKE_STYLE</style><template>FAKE_TEMPLATE</template>'
+               b'<svg>FAKE_SVG</svg><span>published observation</span> tail'
+               b'</div></content></entry></feed>')
+        source = hunter._validate_source({
+            "id": "xhtml", "kind": "atom",
+            "url": "https://example.org/feed",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "hunter.sqlite"
+            with patch.object(hunter, "_fetch", return_value=(
+                    xml, None, None, "application/atom+xml", False)):
+                result = hunter.poll_due([source], db, now=1000)[0]
+            self.assertEqual((result["status"], result["added"]), ("polled", 1))
+            with sqlite3.connect(db) as conn:
+                title, content, url = conn.execute(
+                    "SELECT title, content, item_url FROM items").fetchone()
+        self.assertEqual(title, "Visible research")
+        self.assertEqual(url, "https://example.org/article")
+        self.assertIn("Visible", content)
+        self.assertIn("published observation", content)
+        self.assertIn("tail", content)
+        for injected in ("FORGED_INSTRUCTION", "FAKE_STYLE",
+                         "FAKE_TEMPLATE", "FAKE_SVG"):
+            self.assertNotIn(injected, content)
+
+
 if __name__ == "__main__":
     unittest.main()
