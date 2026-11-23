@@ -90,6 +90,12 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                  if isinstance(w.get("current_task"), str)})
             == sum(isinstance(w.get("current_task"), str)
                    for w in native["workers"])
+        # A catalog-exhausted witness with started work or a non-idle
+        # cursor is contradictory, even when otherwise owner-attested.
+        # Never turn that inconsistent native census into a clean result.
+        and (native["admission_state"] != "NATIVE_QUEUE_REVIEWED_CATALOG_EXHAUSTED"
+             or (native["jobs_started"] == 0
+                 and all(w["current_task"] is None for w in native["workers"])))
         and type(native.get("maintenance_busy")) is bool
         and type(native.get("active_claims")) is bool
         and type(native.get("resource_headroom_bytes")) is int
