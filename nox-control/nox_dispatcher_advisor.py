@@ -64,6 +64,12 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         return issues
     onehost, s03, trainer, gpu, disk = [snapshot[x] for x in required]
     native = snapshot.get("native_queue")
+    if not isinstance(native, dict):
+        # 6A02: missing owner/worker evidence is an explicit HOLD, not
+        # an apparently clean diagnostic when every other service is healthy.
+        add("NATIVE_QUEUE_UNVERIFIED", "hold",
+            "Native owner queue and lease/CAS evidence are missing or malformed. "
+            "Do not infer idle workers, refill eligibility, or safe publication.")
     if isinstance(native, dict):
         workers = native.get("workers")
         state = native.get("admission_state")
