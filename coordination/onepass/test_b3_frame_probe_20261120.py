@@ -2498,5 +2498,65 @@ class TestProbe(unittest.TestCase):
                     await browser.close()
         asyncio.run(run())
 
+
+    def test_legacy_history_fails_closed_on_foreign_dialog_rows(self):
+        """Synthetic Chromium: legacy UI history must not leak foreign S03 rows."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    for mode in ('matching', 'untagged', 'foreign', 'explicit_null'):
+                        page = await browser.new_page()
+                        async def fixture(route):
+                            await route.fulfill(status=200, content_type='text/html',
+                                                body='<html>B3 legacy history fixture</html>')
+                        await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                        await page.goto('http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                        await page.evaluate("""mode => {
+                          window.NOX_NATIVE_OWNER=true;
+                          const id='a'.repeat(32),other='b'.repeat(32);
+                          window.__readCount=0;
+                          window.fetch=async path=>{
+                            if(String(path).startsWith('/api/ui/memory/dialogs/history?')){
+                              window.__readCount++;
+                              const rows=[
+                                {role:'user',content:'private memory',
+                                 dialog_id:id,exchange_id:'legacy-ex1'},
+                                {role:'assistant',content:'response',
+                                 dialog_id:id,exchange_id:'legacy-ex1'}];
+                              if(mode==='untagged')rows.forEach(r=>delete r.dialog_id);
+                              if(mode==='foreign')rows[0].dialog_id=other;
+                              if(mode==='explicit_null')rows[1].dialog_id=null;
+                              return new Response(JSON.stringify({
+                                status:'READY',dialog_id:id,messages:rows}),{status:200});
+                            }
+                            throw Error('UNEXPECTED_NATIVE_ROUTE '+path);
+                          };
+                        }""",mode)
+                        bridge=(pathlib.Path(__file__).parent /
+                                'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                        await page.add_script_tag(content=bridge)
+                        result=await page.evaluate("""async () => {
+                          const id='a'.repeat(32);
+                          const r=await fetch('/api/nox/history?dialog_id='+id);
+                          return {status:r.status,json:await r.json(),reads:window.__readCount};
+                        }""")
+                        self.assertEqual(result['reads'],1)
+                        if mode in ('matching','untagged'):
+                            self.assertEqual(result['status'],200,mode)
+                            self.assertEqual(len(result['json']['messages']),2)
+                        else:
+                            self.assertEqual(result['status'],503,mode)
+                            self.assertEqual(result['json']['error'],
+                                             'HOLD_DIALOG_HISTORY_SCOPE')
+                            self.assertFalse(result['json']['history_persisted'])
+                        await page.close()
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
 if __name__ == '__main__':
     unittest.main()

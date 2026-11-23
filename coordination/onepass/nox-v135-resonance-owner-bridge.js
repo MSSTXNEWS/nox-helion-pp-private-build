@@ -305,54 +305,56 @@ const validNativeModelLabel=v=>typeof v==='string'&&v.length<=96&&v===v.trim()&&
  }catch(e){return errorResponse(String(e.message||'HOLD_NATIVE_JSON').slice(0,150));}
  finally{if(claimedId)activeDialogs.delete(claimedId);}
  }
- async function legacyDialogs(url,init) {
- try{
-   const method=String(init?.method||'GET').toUpperCase();
-   if(url.pathname==='/api/nox/dialogs/new'&&method==='POST'){
-    const data=JSON.parse(init?.body||'{}');
-    const created=await createDialog(data.title,init?.signal);
-    return responseJSON({dialog_id:created.dialog_id,title:created.title||'Новый диалог'});
-   }
-   if(url.pathname==='/api/nox/history'&&method==='GET'){
-    const did=url.searchParams.get('dialog_id');
-    if(did){
-    if(!ID.test(did))return errorResponse('HOLD_INVALID_DIALOG_SCOPE',422);
-    const n=Number(url.searchParams.get('limit')||100);
-    const limit=Number.isFinite(n)?Math.min(Math.max(Math.floor(n),1),100):100;
-    const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+did+'&limit='+limit,init);
-    if(data.status!=='READY'||data.dialog_id!==did||!Array.isArray(data.messages))
-     throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
-    return responseJSON({dialog_id:did,messages:data.messages.map(m=>({
-     role:m.role,content:m.content,created_at:m.ts||'',status:'saved'
-    }))});
-    }
-    const data=await nativeJSON('/api/ui/memory/dialogs?limit=80',init);
-    if(data.status!=='READY'||!Array.isArray(data.dialogs))throw Error('HOLD_DIALOG_LIST_CONTRACT');
-    return responseJSON({dialogs:data.dialogs.map(d=>({
-    id:d.dialog_id,title:d.title,messages:'—'
-    })),creator_messages_total:'—'});
-   }
-   if(url.pathname==='/api/nox/dialog/rename'&&method==='POST'){
-    const data=JSON.parse(init?.body||'{}');
-    if(!ID.test(String(data.dialog_id||''))||typeof data.title!=='string'||!data.title.trim())
-    return errorResponse('HOLD_RENAME_SCOPE',422);
-    const list=await nativeJSON('/api/ui/memory/dialogs?limit=80',init);
-    if(list.status!=='READY'||!Array.isArray(list.dialogs))throw Error('HOLD_RENAME_LIST');
-    const row=list.dialogs.find(d=>d.dialog_id===data.dialog_id);
-    if(!row||!Number.isInteger(row.revision)||row.revision<1)throw Error('HOLD_RENAME_REVISION');
-    const r=await nativePost('/api/ui/memory/dialogs/update',{
-    dialog_id:data.dialog_id,revision:row.revision,title:data.title,confirmed:true
-    },init?.signal);
-    if(!r.ok)throw Error('HOLD_RENAME_'+await reason(r,init?.signal));
-    const d=await nativeBodyJSON(r,init?.signal);
-    if(d.dialog_id!==data.dialog_id||d.title!==data.title||
-    !Number.isInteger(d.revision)||d.revision<=row.revision)
-    throw Error('HOLD_RENAME_RECEIPT');
-    return responseJSON({status:'READY',dialog_id:d.dialog_id,title:d.title,revision:d.revision});
-   }
-   return errorResponse('HOLD_UNSUPPORTED_LEGACY_ROUTE',405);
- }catch(e){return errorResponse(String(e.message||'HOLD_NATIVE_DIALOG').slice(0,150));}
- }
+async function legacyDialogs(url,init) {
+try{
+const method=String(init?.method||'GET').toUpperCase();
+if(url.pathname==='/api/nox/dialogs/new'&&method==='POST'){
+const data=JSON.parse(init?.body||'{}');
+const created=await createDialog(data.title,init?.signal);
+return responseJSON({dialog_id:created.dialog_id,title:created.title||'Новый диалог'});
+}
+if(url.pathname==='/api/nox/history'&&method==='GET'){
+const did=url.searchParams.get('dialog_id');
+if(did){
+if(!ID.test(did))return errorResponse('HOLD_INVALID_DIALOG_SCOPE',422);
+const n=Number(url.searchParams.get('limit')||100);
+const limit=Number.isFinite(n)?Math.min(Math.max(Math.floor(n),1),100):100;
+const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+did+'&limit='+limit,init);
+if(data.status!=='READY'||data.dialog_id!==did||!Array.isArray(data.messages))
+throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
+if(data.messages.some(m=>m&&'dialog_id'in m&&m.dialog_id!==did))
+throw Error('HOLD_DIALOG_HISTORY_SCOPE');
+return responseJSON({dialog_id:did,messages:data.messages.map(m=>({
+role:m.role,content:m.content,created_at:m.ts||'',status:'saved'
+}))});
+}
+const data=await nativeJSON('/api/ui/memory/dialogs?limit=80',init);
+if(data.status!=='READY'||!Array.isArray(data.dialogs))throw Error('HOLD_DIALOG_LIST_CONTRACT');
+return responseJSON({dialogs:data.dialogs.map(d=>({
+id:d.dialog_id,title:d.title,messages:'—'
+})),creator_messages_total:'—'});
+}
+if(url.pathname==='/api/nox/dialog/rename'&&method==='POST'){
+const data=JSON.parse(init?.body||'{}');
+if(!ID.test(String(data.dialog_id||''))||typeof data.title!=='string'||!data.title.trim())
+return errorResponse('HOLD_RENAME_SCOPE',422);
+const list=await nativeJSON('/api/ui/memory/dialogs?limit=80',init);
+if(list.status!=='READY'||!Array.isArray(list.dialogs))throw Error('HOLD_RENAME_LIST');
+const row=list.dialogs.find(d=>d.dialog_id===data.dialog_id);
+if(!row||!Number.isInteger(row.revision)||row.revision<1)throw Error('HOLD_RENAME_REVISION');
+const r=await nativePost('/api/ui/memory/dialogs/update',{
+dialog_id:data.dialog_id,revision:row.revision,title:data.title,confirmed:true
+},init?.signal);
+if(!r.ok)throw Error('HOLD_RENAME_'+await reason(r,init?.signal));
+const d=await nativeBodyJSON(r,init?.signal);
+if(d.dialog_id!==data.dialog_id||d.title!==data.title||
+!Number.isInteger(d.revision)||d.revision<=row.revision)
+throw Error('HOLD_RENAME_RECEIPT');
+return responseJSON({status:'READY',dialog_id:d.dialog_id,title:d.title,revision:d.revision});
+}
+return errorResponse('HOLD_UNSUPPORTED_LEGACY_ROUTE',405);
+}catch(e){return errorResponse(String(e.message||'HOLD_NATIVE_DIALOG').slice(0,150));}
+}
 window.fetch=function(input,init){
 const url=input instanceof Request||/api|%|\\/i.test(input)?samePath(input):null;
 if(!url)return F(input,init);
