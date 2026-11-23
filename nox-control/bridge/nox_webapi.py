@@ -753,6 +753,15 @@ def install(app, B):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_JSON"}, status_code=400)
         if not isinstance(b, dict):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_BODY"}, status_code=400)
+        # Privacy and memory controls must be explicit JSON booleans. A
+        # string like "true" for ephemeral previously became False, silently
+        # persisting a turn that the caller intended to keep temporary.
+        # Reject malformed flags before any model, snapshot or S03 admission.
+        for flag in ("ephemeral", "use_memory", "mini"):
+            if flag in b and type(b[flag]) is not bool:
+                return JSONResponse({"status": "HOLD",
+                                     "reason": "CHAT_INVALID_BOOLEAN_FLAG",
+                                     "flag": flag}, status_code=400)
         raw_messages = b.get("messages", [])
         if not isinstance(raw_messages, list) or any(not isinstance(m, dict) for m in raw_messages):
             return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_MESSAGES"}, status_code=400)

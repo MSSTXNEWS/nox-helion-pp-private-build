@@ -84,6 +84,12 @@ class FactReceiptTest(unittest.TestCase):
             ({"messages": [{"role": "user", "content": "ж" * (W.MAX_CHAT_INPUT_UTF8_BYTES // 2 + 1)}]}, "CHAT_INPUT_TOO_LARGE"),
             ({"mini": True, "messages": [{"role": "user", "content": "a" * 3001}]}, "MINI_INPUT_TOO_LONG"),
             ({"messages": [{"role": "user", "content": "ok"}] * (W.MAX_CHAT_INPUT_MESSAGES + 1)}, "CHAT_INPUT_TOO_MANY_MESSAGES"),
+            # Malformed privacy flags previously silently changed the caller's
+            # requested S03 persistence / recall / mini mode semantics.
+            ({"ephemeral": "true", "messages": [{"role": "user", "content": "private"}]}, "CHAT_INVALID_BOOLEAN_FLAG"),
+            ({"ephemeral": 0, "messages": [{"role": "user", "content": "private"}]}, "CHAT_INVALID_BOOLEAN_FLAG"),
+            ({"use_memory": "false", "messages": [{"role": "user", "content": "no recall"}]}, "CHAT_INVALID_BOOLEAN_FLAG"),
+            ({"mini": None, "messages": [{"role": "user", "content": "mini"}]}, "CHAT_INVALID_BOOLEAN_FLAG"),
             ({"options": ["wrong-shape"]}, "CHAT_INVALID_OPTIONS"),
             ({"options": {"num_predict": "nan"}}, "CHAT_INVALID_NUM_PREDICT"),
             ({"options": {"num_predict": -1}}, "CHAT_INVALID_NUM_PREDICT"),
@@ -111,7 +117,13 @@ class FactReceiptTest(unittest.TestCase):
                 response = asyncio.run(chat(Request(body)))
                 self.assertEqual(response.status_code, 400)
                 payload = json.loads(response.body)
-                self.assertEqual(payload, {"status": "HOLD", "reason": code})
+                if code == "CHAT_INVALID_BOOLEAN_FLAG":
+                    self.assertEqual(payload, {"status": "HOLD", "reason": code,
+                                               "flag": next(f for f in
+                                               ("ephemeral", "use_memory", "mini")
+                                               if f in body)})
+                else:
+                    self.assertEqual(payload, {"status": "HOLD", "reason": code})
 
     def test_1v14_01_raw_chat_wire_bound_before_model_or_s03(self):
         """Reject oversized headers and chunked bodies without parsing or admission."""
