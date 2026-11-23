@@ -330,6 +330,37 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(events[-1]["type"], "done")
         self.assertEqual(writes, [("Привет", "valid")])
 
+    def test_legacy_text_stream_rejects_hidden_tool_work_before_s03(self):
+        """A text-only stream must not save visible tokens from an unfinished tool turn."""
+        def event(delta, **choice_fields):
+            return {"choices": [{"delta": delta, "finish_reason": None,
+                                 **choice_fields}]}
+        malformed = (
+            ("delta_tool", event({"content": "partial", "tool_calls": [{"id": "t1"}]})),
+            ("delta_function", event({"function_call": {"name": "act"}})),
+            ("non_assistant", event({"role": "tool", "content": "spoof"})),
+            ("choice_tool", event({"content": ""}, tool_calls=[{"id": "t2"}])),
+            ("top_tool", {**event({"content": ""}), "tool_calls": [{"id": "t3"}]}),
+            ("explicit_error", {**event({"content": ""}), "error": None}),
+        )
+        for label, payload in malformed:
+            with self.subTest(case=label):
+                lines = [self.chunk("visible prefix"),
+                         "data: " + json.dumps(payload),
+                         self.chunk(finish="stop"), "data: [DONE]"]
+                frames, writes, soul, last = self.run_stream(lines)
+                self.assertEqual(frames[-1]["type"], "error")
+                self.assertFalse(frames[-1]["generation_complete"])
+                self.assertNotIn("done", [item["type"] for item in frames])
+                self.assertEqual(writes, [])
+                self.assertEqual(soul, [])
+                self.assertEqual(last["t"], 0)
+        valid, writes, _, _ = self.run_stream([
+            self.chunk("full text"), self.chunk(finish="stop"), "data: [DONE]"
+        ])
+        self.assertEqual(valid[-1]["type"], "done")
+        self.assertEqual(writes, [("Привет", "full text")])
+
     def test_bare_named_error_after_stop_never_writes_s03(self):
         events, writes, logs, last = self.run_stream([
             self.chunk("partial"), self.chunk(finish="stop"),
