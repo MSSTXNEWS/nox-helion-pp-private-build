@@ -3820,5 +3820,42 @@ async function check(chunks, status=200) {
                 200, [good, signed], pin))
 
 
+    def test_ru_es_signed_owner_rejects_malformed_ancillary_identity(self):
+        """A signed cookie cannot hide corrupt UI cookie name/domain/path/value.
+
+        Unsigned preference cookies with empty *string* values remain valid.
+        This verifies only pure source-side owner pins, not live S03.
+        """
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='signed-owner', httpOnly=True, secure=True,
+                      sameSite='Lax')
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), pin)
+        self.assertEqual(owner_session_cookie_pin(
+            [signed, dict(ui, value='')]), pin)
+        malformed = [
+            dict(ui, name=''),
+            dict(ui, name=None),
+            {k: v for k, v in ui.items() if k != 'name'},
+            dict(ui, domain=''),
+            dict(ui, domain=123),
+            dict(ui, path=[]),
+            dict(ui, path=None),
+            dict(ui, value=None),
+            dict(ui, value=5),
+            {k: v for k, v in ui.items() if k != 'value'},
+        ]
+        for bad in malformed:
+            with self.subTest(cookie=repr(bad)):
+                for cookies in ([signed, bad], [bad, signed],
+                                [signed, ui, bad]):
+                    self.assertIsNone(owner_session_cookie_pin(cookies))
+                    self.assertFalse(owner_session_continuity_valid(
+                        200, cookies, pin))
+
+
 if __name__ == "__main__":
     unittest.main()

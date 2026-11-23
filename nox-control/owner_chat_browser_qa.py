@@ -442,6 +442,14 @@ def owner_session_cookie_pin(cookies):
     # Malformed unsigned UI attributes must not disappear beside a valid
     # HttpOnly owner cookie and falsely certify RU/ES continuity.
     for row in cookies:
+        # Validate the complete owner cookie snapshot, not only signed rows.
+        # Ordinary unsigned preferences may have an empty string value, but
+        # missing/malformed name, domain, path or non-string value is not
+        # reliable browser-session provenance beside a signed owner cookie.
+        if (any(not isinstance(row.get(key), str) or not row[key]
+                for key in ('name', 'domain', 'path'))
+                or not isinstance(row.get('value'), str)):
+            return None
         if 'secure' in row and type(row['secure']) is not bool:
             return None
         same_site = row.get('sameSite')
