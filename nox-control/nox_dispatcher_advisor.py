@@ -84,6 +84,12 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                      (isinstance(w.get("current_task"), str)
                       and bool(w["current_task"].strip())))
                 and "current_task" in w for w in native["workers"])
+        # Two RUNNING workers must not report the same original TaskID as
+        # independent native claims. Treat whitespace aliases as duplicates.
+        and len({w["current_task"].strip() for w in native["workers"]
+                 if isinstance(w.get("current_task"), str)})
+            == sum(isinstance(w.get("current_task"), str)
+                   for w in native["workers"])
         and type(native.get("maintenance_busy")) is bool
         and type(native.get("active_claims")) is bool
         and type(native.get("resource_headroom_bytes")) is int
