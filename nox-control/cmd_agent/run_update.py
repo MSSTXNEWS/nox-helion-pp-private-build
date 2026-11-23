@@ -18,6 +18,23 @@ def api(method, path, body=None):
         raw = r.read()
     return json.loads(raw) if raw else {}
 
+def detach_checked_key(pub, key_id):
+    """Confirm provider key removal before reporting a successful owner action.
+
+    A DELETE response alone is not proof of revoked access. This performs one
+    read-only provider readback; never retries the remote SSH action.
+    """
+    api("DELETE", "/instances/%d/ssh/%d" % (INSTANCE, key_id))
+    rows = api("GET", "/instances/%d/ssh/" % INSTANCE)
+    if isinstance(rows, dict):
+        rows = rows.get("ssh_keys", rows.get("keys"))
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise RuntimeError("HOLD_EPHEMERAL_KEY_READBACK_SHAPE")
+    fingerprint = pub.split()[1]
+    if any(str(row.get("id")) == str(key_id) or fingerprint in json.dumps(row) for row in rows):
+        raise RuntimeError("HOLD_EPHEMERAL_KEY_STILL_PRESENT")
+
+
 def main():
     inst = api("GET", "/instances/%d/" % INSTANCE)
     inst = inst.get("instances", inst)
@@ -54,9 +71,16 @@ def main():
 
     finally:
         if isinstance(key_id, int) and key_id > 0:
-            try: api("DELETE", "/instances/%d/ssh/%s" % (INSTANCE, key_id)); print("temp key detached")
-            except Exception as e: print("DETACH FAILED", type(e).__name__, "- remove 'nox-update-button' key in Vast manually")
+            try:
+                detach_checked_key(pub, key_id)
+                print("temp key detached; provider readback confirms absence")
+            except Exception as exc:
+                print("HOLD_EPHEMERAL_KEY_CLEANUP_UNVERIFIED", type(exc).__name__,
+                      "- verify/remove nоx-update-button key in Vast before any retry",
+                      file=sys.stderr)
+                raise SystemExit(2)
         else:
             print("HOLD_UNCONFIRMED_EPHEMERAL_KEY_ID: provider key cleanup needs owner inspection")
 
-main()
+if __name__ == "__main__":
+    main()
