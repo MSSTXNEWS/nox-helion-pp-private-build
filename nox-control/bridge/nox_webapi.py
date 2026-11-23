@@ -943,6 +943,16 @@ def install(app, B):
                 return JSONResponse({"status": "HOLD", "reason": "CHAT_EXCHANGE_RECENTLY_USED",
                                      "retry_same_id": False, "snapshot_scope": "PROCESS_LOCAL",
                                      "s03_readback_verified": False}, status_code=409)
+        # Opt-in modern clients may not reuse a request ID to label a new
+        # exchange. Otherwise a retry can sidestep the exchange fence simply
+        # by changing exchange_id while keeping the completed request_id.
+        # Legacy clients without exchange_id retain their old semantics.
+        if not eph and exchange_id is not None and any(
+                row.get("request_id") == rid and row.get("event_seq", 0) > 0
+                for row in CHAT_SNAPSHOTS.values()):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_REQUEST_ID_REUSED_ACROSS_EXCHANGES",
+                                 "retry_same_id": False, "snapshot_scope": "PROCESS_LOCAL",
+                                 "s03_readback_verified": False}, status_code=409)
         if len(ACTIVE_CHAT_IDS) >= MAX_ACTIVE_CHAT_IDS:
             return JSONResponse({"status": "HOLD", "reason": "CHAT_ACTIVE_CAPACITY"}, status_code=503)
         # Reserve before registering the active request: a capacity HOLD
