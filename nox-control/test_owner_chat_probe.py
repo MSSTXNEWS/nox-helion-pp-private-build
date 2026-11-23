@@ -4111,6 +4111,49 @@ class ProbeTests(unittest.TestCase):
         self.assertLessEqual(sock.set_calls[0], 0.25)
         self.assertEqual(stalled.limit, 100001)
 
+    def test_stream_deadline_tcp_slowdrip_read1(self):
+        """An HTTP peer dribbling bytes must not extend the absolute SSE deadline."""
+        import time
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        from threading import Thread
+        from urllib.request import urlopen
+
+        class SlowDrip(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/event-stream')
+                self.end_headers()
+                payload = b'data: {"type":"delta","text":"323"}' + bytes([10, 10])
+                for value in payload:
+                    try:
+                        self.wfile.write(bytes([value]))
+                        self.wfile.flush()
+                    except OSError:
+                        return
+                    time.sleep(0.015)
+
+            def log_message(self, *args):
+                pass
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), SlowDrip)
+        server.daemon_threads = True
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            with urlopen('http://127.0.0.1:%s/' % server.server_port,
+                         timeout=2) as response:
+                self.assertTrue(callable(getattr(response, 'read1', None)))
+                started = time.monotonic()
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_STREAM_DEADLINE_EXCEEDED$'):
+                    list(probe.bounded_stream_frames(
+                        response, deadline=started + 0.08))
+                self.assertLess(time.monotonic() - started, 0.35)
+        finally:
+            server.shutdown()
+            server.server_close()
+            worker.join(timeout=2)
+
 
 if __name__ == '__main__':
     unittest.main()

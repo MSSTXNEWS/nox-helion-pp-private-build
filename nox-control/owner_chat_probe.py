@@ -943,39 +943,64 @@ def require_stream_http_framing(response):
 
 
 def bounded_stream_lines(response, max_line=100000, deadline=None):
-    """Bound read size and check a turn's deadline BEFORE each blocking read.
+    """Read line-delimited SSE within the absolute turn deadline.
 
-    For urllib HTTPResponse, also cap the live socket's per-read timeout to
-    remaining budget. The caller closes this response, so no timeout restore is
-    needed. Unsupported synthetic readers still enforce pre/post-read checks.
+    HTTPResponse.readline() can wait indefinitely while a peer drip-feeds
+    partial bytes faster than the socket's inactivity timeout. Where available,
+    read1() returns available bounded chunks without waiting for a newline.
+    Check the absolute deadline between chunks and preserve all line boundaries.
+    The legacy bounded readline fallback is retained for synthetic readers.
     """
     readline = getattr(response, 'readline', None)
     if not callable(readline):
         raise RuntimeError('HOLD_STREAM_BOUNDED_READER_UNAVAILABLE')
+    read1 = getattr(response, 'read1', None)
+    incremental = callable(read1)
+    pending = b''
     while True:
+        remaining = None
         if deadline is not None:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED')
+
+        if incremental and b'\n' in pending:
+            newline = pending.index(b'\n') + 1
+            line, pending = pending[:newline], pending[newline:]
+        else:
+            if incremental and len(pending) > max_line:
+                raise RuntimeError('HOLD_BOUNDED_STREAM')
             sock = getattr(getattr(getattr(response, 'fp', None),
                                    'raw', None), '_sock', None)
-            if sock is not None and callable(getattr(sock, 'settimeout', None)):
+            if (remaining is not None and sock is not None
+                    and callable(getattr(sock, 'settimeout', None))):
                 existing = sock.gettimeout()
                 if existing is None or existing > remaining:
                     sock.settimeout(remaining)
-        try:
-            line = readline(max_line + 1)
-        except TimeoutError as exc:
-            raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED') from exc
-        if deadline is not None and time.monotonic() > deadline:
-            raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED')
+            try:
+                if incremental:
+                    # One upstream read only; never wait to fill a whole line.
+                    chunk = read1(min(4096, max_line + 1 - len(pending)))
+                else:
+                    line = readline(max_line + 1)
+            except TimeoutError as exc:
+                raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED') from exc
+            if deadline is not None and time.monotonic() > deadline:
+                raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED')
+            if incremental:
+                if not isinstance(chunk, bytes):
+                    raise RuntimeError('HOLD_BOUNDED_STREAM')
+                if chunk:
+                    pending += chunk
+                    continue
+                if not pending:
+                    return
+                line, pending = pending, b''
         if line == b'':
             return
         if not isinstance(line, bytes) or len(line) > max_line:
             raise RuntimeError('HOLD_BOUNDED_STREAM')
         yield line
-
-
 
 def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadline=None, wire_hasher=None, max_wire_bytes=8 * 1024 * 1024):
     """Decode bounded NDJSON or genuine SSE JSON events, never MIME-as-proof.
