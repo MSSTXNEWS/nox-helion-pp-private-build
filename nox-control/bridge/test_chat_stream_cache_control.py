@@ -59,5 +59,43 @@ class StreamCachePolicyTest(unittest.TestCase):
             self.assertEqual(W.ACTIVE_CHAT_IDS, set())
 
 
+    def test_legacy_bridge_sse_is_private_and_no_store(self):
+        # Exercise the real legacy endpoint's AST without importing NOX
+        # services or consuming a model/S03 stream.
+        import ast
+        from fastapi.responses import StreamingResponse
+
+        tree = ast.parse(Path(__file__).with_name("nox_bridge.py").read_text(encoding="utf-8"))
+        node = next(n for n in tree.body if
+                    isinstance(n, ast.AsyncFunctionDef) and n.name == "chat_stream")
+        node.decorator_list = []
+        compiled = compile(ast.fix_missing_locations(
+            ast.Module(body=[node], type_ignores=[])), "nox_bridge.py", "exec")
+
+        async def never_consume(_history):
+            if False:
+                yield None
+
+        context = {
+            "CH": None,
+            "StreamingResponse": StreamingResponse,
+            "stream_chat": never_consume,
+        }
+        exec(compiled, context)
+
+        async def run():
+            response = await context["chat_stream"](Request())
+            try:
+                directives = {d.strip().lower() for d in
+                              response.headers["cache-control"].split(",")}
+                self.assertIn("private", directives)
+                self.assertIn("no-store", directives)
+                self.assertEqual(response.media_type, "text/event-stream")
+                self.assertEqual(response.headers["x-accel-buffering"], "no")
+            finally:
+                await response.body_iterator.aclose()
+
+        asyncio.run(run())
+
 if __name__ == "__main__":
     unittest.main()
