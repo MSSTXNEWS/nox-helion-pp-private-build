@@ -338,6 +338,13 @@ def _repair_cycle_locked(policy, state_path, dry_run=False):
                 # Keep the reserved attempt conservatively in the rate budget.
                 if _stop_marker_present_or_unknown(stop):
                     action = "stop_lock"
+                elif not _unit_confirmed_inactive(unit):
+                    # The service may have recovered or been started by its
+                    # owner during fsync. Never restart a newly active unit.
+                    action = "needs_owner_investigation"
+                elif _stop_marker_present_or_unknown(stop):
+                    # The fresh systemd checks also consume time.
+                    action = "stop_lock"
                 else:
                     try:
                         p = subprocess.run(["systemctl", "restart", unit], shell=False,

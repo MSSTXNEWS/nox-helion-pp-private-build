@@ -395,6 +395,23 @@ class SafeRepairTests(unittest.TestCase):
             self.assertEqual(len(json.loads(state.read_text())["services"]
                                  ["nox-dispatcher.service"]["attempts"]), 1)
 
+    def test_unit_recovery_during_attempt_write_prevents_restart(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "state.json"
+            stop = Path(root) / "STOP"
+            policy = self.policy(stop)
+            healer.write(state, {"services": {"nox-dispatcher.service": {
+                "failures": 1, "attempts": []}}})
+            with patch.object(healer, "alive", return_value=False), patch.object(
+                    healer, "_unit_confirmed_inactive", side_effect=[True, False]) as inactive, patch.object(
+                    healer.subprocess, "run") as run:
+                result = healer.repair_cycle(policy, state)
+                self.assertEqual(result[0]["action"], "needs_owner_investigation")
+                self.assertEqual(inactive.call_count, 2)
+                run.assert_not_called()
+            self.assertEqual(len(json.loads(state.read_text())["services"]
+                                 ["nox-dispatcher.service"]["attempts"]), 1)
+
     def test_health_probe_failure_does_not_restart_active_unit(self):
         # A transient HTTP timeout can make alive() false while systemd still
         # owns a healthy running process. Never restart it on that evidence.
