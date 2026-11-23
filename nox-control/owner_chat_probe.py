@@ -1263,6 +1263,9 @@ def require_logout_revoked(client):
     # checked before any synthetic model POST.
     with request(client, '/api/nox/status') as probe:
         require_exact_owner_readback_target(probe, '/api/nox/status')
+        # A cached unauthenticated 401 is not proof that the live owner session
+        # was revoked. Apply the same proxy freshness fence as owner GET reads.
+        require_fresh_owner_readback(probe)
         if probe.status != 401:
             raise RuntimeError('HOLD_OWNER_LOGOUT_SESSION_ACTIVE')
     return True
