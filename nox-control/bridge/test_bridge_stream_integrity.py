@@ -169,6 +169,59 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(admission[-1][1]["headers"]["Cache-Control"],
                          "private, no-store, max-age=0")
 
+    def test_nonstream_history_replay_cannot_reach_model_or_s03(self):
+        # The legacy JSON route shares the same safe admission constraints as
+        # SSE; an assistant-tail replay must be denied before smart()/memory.
+        import copy
+        from types import SimpleNamespace
+        node = copy.deepcopy(next(n for n in TREE.body
+                                  if isinstance(n, ast.AsyncFunctionDef)
+                                  and n.name == "chat"))
+        node.decorator_list = []
+        code = compile(ast.fix_missing_locations(
+            ast.Module(body=[node], type_ignores=[])), "nox_bridge.py", "exec")
+        calls = []
+        class Response:
+            def __init__(self, data, status_code=200):
+                self.data, self.status_code = data, status_code
+        async def fake_smart(history, budget):
+            calls.append((history, budget))
+            return "answer", False
+        class RequestDouble:
+            def __init__(self, payload, headers=None):
+                self.payload = payload
+                self.headers = headers or {}
+            async def stream(self):
+                for item in self.payload:
+                    yield item
+        env = {"json": json, "CH": None, "Request": object,
+               "JSONResponse": Response, "smart": fake_smart,
+               "log": lambda *_: None, "traceback": SimpleNamespace(format_exc=lambda: "")}
+        exec(code, env)
+        def invoke(value, headers=None):
+            data = value if isinstance(value, bytes) else json.dumps(value).encode("utf-8")
+            return asyncio.run(env["chat"](RequestDouble([data], headers)))
+        for payload, reason in (
+            ({"messages": [{"role": "user", "content": "old"},
+                           {"role": "assistant", "content": "done"}]}, "CHAT_LAST_USER_REQUIRED"),
+            ({"messages": [{"role": "user", "content": "   "}]}, "CHAT_MISSING_USER"),
+            ({"messages": [{"role": "user", "content": 5}]}, "CHAT_INVALID_MESSAGES"),
+            ({"messages": [{"role": "user", "content": chr(0xD800)}]}, "CHAT_INVALID_UNICODE"),
+        ):
+            with self.subTest(reason=reason):
+                result = invoke(payload)
+                self.assertEqual(result.status_code, 400)
+                self.assertEqual(result.data["reason"], reason)
+        self.assertEqual(invoke(b"x" * (2*1024*1024 + 1)).status_code, 413)
+        self.assertEqual(calls, [])
+        valid = [{"role": "system", "content": "trusted existing context"},
+                 {"role": "user", "content": "first"},
+                 {"role": "assistant", "content": "reply"},
+                 {"role": "user", "content": "second"}]
+        result = invoke({"messages": valid, "max_tokens": 350})
+        self.assertEqual(result["choices"][0]["message"]["content"], "answer")
+        self.assertEqual(calls, [(valid, 350)])
+
     def test_failed_advisory_token_hint_keeps_sse_and_one_s03_write_attempt(self):
         # Optional token sizing must not strand an accepted request between
         # the status frame and the first model token.
