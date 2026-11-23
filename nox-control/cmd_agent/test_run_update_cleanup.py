@@ -75,5 +75,47 @@ class LocalPrivateKeyCleanup(TestCase):
                 mod.main()
         self.assertFalse(folder.exists(), "failed keygen must not retain private key directory")
 
+
+class ProviderOrphanRecovery(TestCase):
+    def test_unique_generated_key_is_detached_without_remote_dispatch(self):
+        # POST was accepted, yet eight initial provider reads missed the ID.
+        # Final recovery lookup must remove ONLY this exact generated key.
+        folder = Path(tempfile.mkdtemp())
+        key_path = folder / "k"
+        instance = {"actual_status": "running", "public_ipaddr": "127.0.0.1",
+                    "ports": {"22/tcp": [{"HostPort": "2222"}]}}
+        def stub_run(args, **kwargs):
+            self.assertEqual(args[0], "ssh-keygen", "ambiguous key ID must fence SSH")
+            key_path.write_text("OFFLINE_PRIVATE_TEST_KEY", encoding="utf-8")
+            (folder / "k.pub").write_text(PUB, encoding="utf-8")
+            return subprocess.CompletedProcess(args, 0)
+        calls = [instance, {}, *([{"ssh_keys": []}] * 8),
+                 {"ssh_keys": [{"id": ID, "ssh_key": PUB}]},
+                 {}, {"ssh_keys": []}]
+        with patch.object(mod, "api", side_effect=calls) as fake_api, \\
+             patch.object(mod.tempfile, "mkdtemp", return_value=str(folder)), \\
+             patch.object(mod.subprocess, "run", side_effect=stub_run) as fake_run, \\
+             patch.object(mod.time, "sleep", return_value=None):
+            with self.assertRaisesRegex(SystemExit, "HOLD_UNCONFIRMED_EPHEMERAL_KEY_ID"):
+                mod.main()
+        self.assertFalse(folder.exists())
+        self.assertEqual(fake_run.call_count, 1, "no SSH replay or dispatch")
+        self.assertEqual(fake_api.call_count, len(calls))
+        self.assertEqual(fake_api.call_args_list[-2].args[0], "DELETE")
+        self.assertEqual(fake_api.call_args_list[-1].args[0], "GET")
+
+    def test_ambiguous_recovered_identity_holds_without_key_deletion(self):
+        # Never delete a different operator's key when matching is ambiguous.
+        with patch.object(mod, "api", return_value={"ssh_keys": [
+            {"id": ID, "ssh_key": PUB},
+            {"id": ID + 1, "ssh_key": PUB}]}):
+            with self.assertRaisesRegex(RuntimeError, "RECOVERY_NOT_UNIQUE"):
+                mod.locate_uploaded_key_id(PUB)
+
+    def test_invalid_provider_shape_holds_without_guessing(self):
+        with patch.object(mod, "api", return_value={"unknown": []}):
+            with self.assertRaisesRegex(RuntimeError, "RECOVERY_READBACK_SHAPE"):
+                mod.locate_uploaded_key_id(PUB)
+
 if __name__ == "__main__":
     main()
