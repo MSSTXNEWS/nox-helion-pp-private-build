@@ -32,6 +32,33 @@ class SafeRepairTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             healer.policy_validate({"schema_version":1,"services":[{"unit":"nox-main.service",
                                   "health_url":"http://example.com/ping"}]})
+    def test_6b04_ambiguous_enable_flags_never_authorize_repair(self):
+        # JSON strings and integers previously became truthy when read by
+        # _repair_cycle_locked; both must HOLD at policy admission.
+        bad = (
+            ({"enabled": "false"}, {}),
+            ({"enabled": 1}, {}),
+            ({}, {"restart_enabled": "false"}),
+            ({}, {"restart_enabled": 1}),
+            ({}, {"restart_enabled": None}),
+        )
+        for global_flags, service_flags in bad:
+            with self.subTest(global_flags=global_flags, service_flags=service_flags):
+                policy = {"schema_version": 1, "enabled": True,
+                          "services": [{"unit": "nox-dispatcher.service",
+                                        "restart_enabled": True}]}
+                policy.update(global_flags)
+                policy["services"][0].update(service_flags)
+                with patch.object(healer, "alive") as probe, patch.object(
+                        healer.subprocess, "run") as systemd:
+                    with self.assertRaises(ValueError):
+                        healer.policy_validate(policy)
+                    probe.assert_not_called()
+                    systemd.assert_not_called()
+        self.assertTrue(healer.policy_validate({"schema_version": 1,
+                        "enabled": False, "services": [{"unit": "nox-dispatcher.service",
+                        "restart_enabled": False}]})["services"])
+
     def test_healthy_loopback_does_not_follow_redirect(self):
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
