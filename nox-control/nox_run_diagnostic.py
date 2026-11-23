@@ -80,6 +80,24 @@ def hardware_2a01_snapshot():
     if not gpu or any(row["compute_cap"] != "7.0" for row in gpu):
         holds.append("HOLD_2A01_SM70_UNVERIFIED")
 
+    # SM70 alone also describes non-V100 boards. Keep host identity untrusted
+    # unless two distinct UUIDs, V100 32GB model names, and plausible MiB agree.
+    def v100_32gb(row):
+        name = row["name"].upper().replace(" ", "")
+        if not re.fullmatch(r"(?:NVIDIA)?(?:TESLA)?V100-(?:SXM2|PCIE)-32GB", name):
+            return False
+        try:
+            total_mib = int(row["memory.total"])
+            free_mib = int(row["memory.free"])
+        except ValueError:
+            return False
+        return 30000 <= total_mib <= 34000 and 0 <= free_mib <= total_mib
+
+    if (len(gpu) != 2 or len({row["uuid"] for row in gpu}) != 2
+            or any(not row["uuid"].startswith("GPU-") or not v100_32gb(row)
+                   for row in gpu)):
+        holds.append("HOLD_2A01_V100_32G_IDENTITY_UNVERIFIED")
+
     topology = command(["nvidia-smi", "topo", "-m"])
     link = None
     if topology:
