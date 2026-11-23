@@ -3261,6 +3261,99 @@ def main():
           return true;
         }'''))
 
+
+        # R46: an untrusted canonical ACK envelope can have throwing or
+        # non-repeatable accessors. After both verifiers succeed, a failed
+        # field read must close BOTH signed and original GET bodies once,
+        # never issue another POST/ACK, and permit GET-only recovery.
+        check('R46 canonical ACK envelope accessor HOLD disposes signed GET once', page.evaluate('''async () => {
+          for(const kind of ['status-throw','authority-throw','ackid-throw',
+                             'status-once','ackid-once','healthy']){
+            const s={conversation_id:'r46',exchange_id:'ack-envelope-'+kind};
+            let reads=0,signedReads=0,readbackCancels=0,signedCancels=0;
+            let posts=0,acks=0,gateCalls=0,recover=false,propertyReads=0;
+            const transport={...opts.transport,
+              post(){posts++;throw Error('DUPLICATE_MODEL_POST')},
+              async readback(){reads++;return {...s,body:{cancel(){
+                readbackCancels++;return Promise.reject(Error('cancel nonblocking'));
+              }}}},
+              ack(){acks++;throw Error('REPLAYED_ACK')},
+              readCanonicalAck(_s,_expected,challenge){
+                signedReads++;
+                const now=Date.now();return {
+                  request_nonce:challenge.request_nonce,
+                  issued_at_ms:now,expires_at_ms:now+1000,
+                  ack_id:'ack-r46-'+kind,
+                  body:{cancel(){
+                    signedCancels++;return Promise.reject(Error('cancel nonblocking'));
+                  }}
+                };
+              }
+            };
+            const gate={
+              reserve(){return {status:'ALREADY_ACKED'}},
+              beginSend(){throw Error('NO_BEGIN_SEND')},
+              confirm(){throw Error('NO_LOCAL_CONFIRM')},
+              async requireCanonicalAck(_s,event,cursor,read,verify){
+                gateCalls++;
+                const expected={event_id:event,ack_cursor:cursor};
+                const receipt=await read(expected);
+                if(await verify(receipt,expected)!==true)
+                  throw Error('INVALID_CANONICAL_VERIFIER');
+                const envelope={status:'CANONICAL_ACK_CONFIRMED',
+                  authority:'VERIFIER_CALLBACK_APPROVED',ack_id:receipt.ack_id};
+                if(!recover&&kind.endsWith('-throw')){
+                  const key=kind.slice(0,kind.indexOf('-'));
+                  const field=key==='ackid'?'ack_id':key;
+                  Object.defineProperty(envelope,field,{get(){
+                    throw Error('UNTRUSTED_ACK_ENVELOPE_GETTER');
+                  }});
+                }else if(!recover&&kind.endsWith('-once')){
+                  const field=kind==='ackid-once'?'ack_id':'status';
+                  const good=envelope[field];
+                  Object.defineProperty(envelope,field,{get(){
+                    propertyReads++;
+                    return propertyReads===1?good:'MUTATED_ENVELOPE';
+                  }});
+                }
+                return envelope;
+              }
+            };
+            const host={...opts.host,
+              verifyFreshCanonicalAck(){return true},
+              verifyCanonicalAck(){return true}
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host,bridge:opts.bridge,ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){return true}}
+            });
+            const initial=await client.reconnect(s).then(v=>v,e=>e.code);
+            const failing=kind.endsWith('-throw');
+            if(failing){
+              if(initial!=='HOLD_STREAM_CANONICAL_ACK'||
+                 signedCancels!==1||readbackCancels!==1||
+                 signedReads!==1||reads!==1||gateCalls!==1)return false;
+            }else{
+              if(!initial||initial.canonical_ack_id!=='ack-r46-'+kind||
+                 signedCancels!==0||readbackCancels!==0||
+                 signedReads!==1||reads!==1||gateCalls!==1)return false;
+              if(kind.endsWith('-once')&&propertyReads!==1)return false;
+            }
+            const noRepost=await client.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(!noRepost||posts!==0||acks!==0)return false;
+            if(failing){
+              recover=true;
+              const recovered=await client.reconnect(s);
+              if(!recovered||recovered.canonical_ack_id!=='ack-r46-'+kind||
+                 signedReads!==2||reads!==2||gateCalls!==2||
+                 readbackCancels!==1||signedCancels!==1||
+                 posts!==0||acks!==0)return false;
+            }
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
