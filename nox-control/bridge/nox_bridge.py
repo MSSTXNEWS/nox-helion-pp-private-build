@@ -339,7 +339,10 @@ async def stream_chat(history):
         return
     yield _sse({"type": "status", "text": "чувствую: " + mood})
     yield _sse({"type": "status", "text": "формулирую ответ…"})
-    full = ""
+    # Chunk list avoids quadratic re-copying of an ever-growing Unicode answer.
+    # The exact token sequence is still sent to the browser immediately.
+    full_parts = []
+    full_chars = 0
     received_done = False
     finish_stop = False
     body = {"messages": msgs, "max_tokens": adapt_tokens(user), "temperature": 0.6, "id_slot": 0, "cache_prompt": True, "n_keep": NKEEP, "stream": True,
@@ -384,12 +387,13 @@ async def stream_chat(history):
                         raise ValueError("UPSTREAM_TOKEN_INVALID")
                     if finish_stop and token:
                         raise ValueError("UPSTREAM_TOKEN_AFTER_FINISH")
-                    if len(full) + len(token) > 4000000:
+                    if full_chars + len(token) > 4000000:
                         raise ValueError("UPSTREAM_TEXT_LIMIT")
                 except (ValueError, KeyError, TypeError, IndexError) as exc:
                     raise ValueError("UPSTREAM_FRAME_INVALID") from exc
                 if token:
-                    full += token
+                    full_parts.append(token)
+                    full_chars += len(token)
                     yield _sse({"type": "token", "text": token})
     except Exception as exc:
         log("stream_error %s" % type(exc).__name__)
@@ -397,6 +401,7 @@ async def stream_chat(history):
                     "generation_complete": False, "s03_readback_verified": False,
                     "text": "Ответ модели прерван; неполный текст не сохранён"})
         return
+    full = "".join(full_parts)
     if not (received_done and finish_stop and full.strip()):
         yield _sse({"type": "error", "reason": "UPSTREAM_NOT_COMPLETE",
                     "generation_complete": False, "s03_readback_verified": False,
