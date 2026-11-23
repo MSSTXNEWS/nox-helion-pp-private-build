@@ -147,6 +147,25 @@ class BridgeStreamIntegrity(unittest.TestCase):
                 self.assertNotIn("done", [x["type"] for x in events])
                 self.assertEqual(writes, [])
 
+    def test_falsy_nonstring_sse_content_fails_closed_before_s03(self):
+        # A malformed delta with numeric zero, false or [] must not be
+        # interpreted as an empty control frame and then committed to S03.
+        for invalid in (0, False, []):
+            with self.subTest(invalid=invalid):
+                wrong = self.chunk("answer")
+                malformed = "data: " + json.dumps({
+                    "choices": [{"delta": {"content": invalid},
+                                 "finish_reason": None}]})
+                events, writes, logs, last = self.run_stream([
+                    wrong, malformed, self.chunk(finish="stop"), "data: [DONE]"
+                ])
+                self.assertEqual(events[-1]["type"], "error")
+                self.assertFalse(events[-1]["generation_complete"])
+                self.assertNotIn("done", [e["type"] for e in events])
+                self.assertEqual(writes, [])
+                self.assertEqual(logs, [])
+                self.assertEqual(last["t"], 0)
+
     def test_bare_named_error_after_stop_never_writes_s03(self):
         events, writes, logs, last = self.run_stream([
             self.chunk("partial"), self.chunk(finish="stop"),
