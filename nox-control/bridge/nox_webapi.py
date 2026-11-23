@@ -507,11 +507,15 @@ def install(app, B):
             with open(FACTS, "a", encoding="utf-8") as f:
                 f.write(json.dumps({"t": int(time.time()), "key": str(b.get("fact_key", ""))[:120], "content": txt, "source": str(b.get("source_ref") or b.get("source", ""))[:200]}, ensure_ascii=False) + "\n")
             return {"status": "RECORDED_UNVERIFIED", "saved": True,
-                    "s03_readback_verified": False}
+                    "s03_write_returned": True, "s03_readback_verified": False}
         except Exception as e:
             B.log("fact_mirror_error %s" % type(e).__name__)
+            # S03 writer already returned, even though the optional mirror
+            # failed. A blind client retry can duplicate the canonical turn.
+            # This is NOT a readback or verified durable S03 receipt.
             return JSONResponse({"status": "PARTIAL_HOLD", "reason": "FACTS_MIRROR_WRITE_FAILED",
-                                 "saved": False, "s03_readback_verified": False},
+                                 "saved": False, "s03_write_returned": True,
+                                 "retry_safe": False, "s03_readback_verified": False},
                                 status_code=500)
 
     @app.get("/api/nox/memory/facts")
