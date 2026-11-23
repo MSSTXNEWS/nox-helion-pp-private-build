@@ -35,6 +35,27 @@ def detach_checked_key(pub, key_id):
         raise RuntimeError("HOLD_EPHEMERAL_KEY_STILL_PRESENT")
 
 
+
+def locate_uploaded_key_id(pub):
+    """One exact fingerprint-based recovery lookup; never guess a key ID.
+
+    If registration succeeded but the initial readback missed its ID, find
+    only the generated key before the final owner cleanup. Ambiguity is HOLD.
+    """
+    rows = api("GET", "/instances/%d/ssh/" % INSTANCE)
+    if isinstance(rows, dict):
+        rows = rows.get("ssh_keys", rows.get("keys"))
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise RuntimeError("HOLD_EPHEMERAL_KEY_RECOVERY_READBACK_SHAPE")
+    matches = [row for row in rows if pub.split()[1] in json.dumps(row)]
+    if len(matches) != 1:
+        raise RuntimeError("HOLD_EPHEMERAL_KEY_RECOVERY_NOT_UNIQUE")
+    raw_id = matches[0].get("id")
+    if not str(raw_id).isdecimal() or int(raw_id) <= 0:
+        raise RuntimeError("HOLD_EPHEMERAL_KEY_RECOVERY_INVALID_ID")
+    return int(raw_id)
+
+
 def main():
     inst = api("GET", "/instances/%d/" % INSTANCE)
     inst = inst.get("instances", inst)
@@ -75,6 +96,16 @@ def main():
         # Even if provider cleanup HOLDs or ssh-keygen fails, never leave the
         # generated private key on the workflow runner's local filesystem.
         try:
+            # An ephemeral provider key can be accepted even when the first
+            # eight reads never return its ID. In that case, attempt ONE exact
+            # fingerprint readback, not a second upload or a guessed delete.
+            if not isinstance(key_id, int) and pub:
+                try:
+                    key_id = locate_uploaded_key_id(pub)
+                except Exception as exc:
+                    print("HOLD_EPHEMERAL_KEY_RECOVERY_UNVERIFIED",
+                          type(exc).__name__, file=sys.stderr)
+                    raise SystemExit(2) from exc
             if isinstance(key_id, int) and key_id > 0:
                 try:
                     detach_checked_key(pub, key_id)
