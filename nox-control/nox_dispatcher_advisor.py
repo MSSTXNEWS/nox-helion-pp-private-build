@@ -75,8 +75,13 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         and native["jobs_started"] >= 0
         and isinstance(native.get("workers"), list)
         and 0 < len(native["workers"]) <= 3
+        # A named but failed worker is not a healthy native owner witness.
+        # Do not turn malformed or blank task cursors into a clean diagnosis.
         and all(isinstance(w, dict)
-                and isinstance(w.get("state"), str) and bool(w["state"])
+                and w.get("state") == "RUNNING"
+                and (w.get("current_task") is None or
+                     (isinstance(w.get("current_task"), str)
+                      and bool(w["current_task"].strip())))
                 and "current_task" in w for w in native["workers"])
         and type(native.get("maintenance_busy")) is bool
         and type(native.get("active_claims")) is bool
