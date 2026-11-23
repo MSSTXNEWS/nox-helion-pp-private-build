@@ -1310,6 +1310,11 @@ def install(app, B):
                                 # A final token carried on the same stop event
                                 # remains valid; only *subsequent* deltas fail.
                                 if finish_reason == "stop":
+                                    # A second stop frame is ambiguous provider output,
+                                    # not a second successful completion. Do not write S03.
+                                    if upstream_stop_seen:
+                                        upstream_failure = "UPSTREAM_DUPLICATE_STOP_FINISH"
+                                        break
                                     upstream_stop_seen = True
                                 if t:
                                     full_chunks.append(t)

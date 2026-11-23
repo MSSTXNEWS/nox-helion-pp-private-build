@@ -1011,6 +1011,31 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(post_stop_frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
         self.assertTrue(any("UPSTREAM_AFTER_STOP_FINISH" in item for item in bridge.errors))
 
+        # A provider may accidentally send the terminal stop twice. This is
+        # not a canonical completed turn, even when [DONE] later arrives.
+        class DuplicateStopUpstream(Upstream):
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"A"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class DuplicateStopClient:
+            def stream(self, *args, **kwargs):
+                return DuplicateStopUpstream(True, 200, "stop")
+
+        writes.clear()
+        bridge.errors.clear()
+        bridge.hc = lambda: DuplicateStopClient()
+        with mock.patch.dict(sys.modules, {"s03_memory": module}), mock.patch.object(W, "W", None):
+            duplicate_frames = asyncio.run(get_frames())
+        self.assertEqual(writes, [])
+        self.assertFalse(any(v.get("done") is True for v in duplicate_frames))
+        self.assertEqual(duplicate_frames[-1]["status"], "HOLD")
+        self.assertEqual(duplicate_frames[-1]["reason"], "MODEL_STREAM_INCOMPLETE")
+        self.assertEqual(duplicate_frames[-1]["upstream_hold_code"], "UPSTREAM_DUPLICATE_STOP_FINISH")
+        self.assertEqual(duplicate_frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+
         # A falsey non-string delta after real tokens must not be quietly
         # erased before finish_reason=stop and committed to S03.
         class FalseyContentUpstream(Upstream):
