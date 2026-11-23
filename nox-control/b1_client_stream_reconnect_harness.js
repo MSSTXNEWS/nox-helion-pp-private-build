@@ -667,11 +667,11 @@
         try{
           const sendReceipt=await boundedRead(()=>ackGate.beginSend(grant),
             'HOLD_STREAM_ACK_BEGIN_TIMEOUT',reconnectReadTimeoutMs,signal);
-          // Existing durable adapters commit SENDING and resolve void.
-          // An EXPLICIT negative reply means SENDING was refused; sending a
-          // network ACK anyway would bypass the cross-tab/reload CAS fence.
-          // Keep the legacy void-success contract, but never ACK on false.
-          if(sendReceipt===false) hold('HOLD_STREAM_ACK_GATE');
+          // BeginSend is a durable CAS boundary, not an advisory response.
+          // Only the explicit true or legacy void success can authorize ACK.
+          // Reject malformed non-void replies before a network ACK escapes.
+          if(sendReceipt!==undefined && sendReceipt!==true)
+            hold('HOLD_STREAM_ACK_GATE');
         }
         catch(err){
           if(err&&typeof err.code==='string') throw err;
