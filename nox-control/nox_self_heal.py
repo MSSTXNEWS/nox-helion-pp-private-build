@@ -143,6 +143,23 @@ def _reject_repair_state_duplicate_keys(pairs):
     return result
 
 
+def _stop_marker_present_or_unknown(path):
+    """STOP is clear only when lstat proves the path itself is absent.
+
+    Path.exists() follows a symlink: a dangling STOP link was treated as
+    missing and could authorize a restart. Permission/IO errors likewise
+    must not turn an unknown STOP into permission to mutate a service.
+    This local fence does not substitute for native owner STOP/lease/CAS.
+    """
+    try:
+        os.lstat(path)
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+    return True
+
+
 def _read_repair_state_checked(path):
     """An invalid EXISTING state must not silently reset restart safety budgets.
 
@@ -270,7 +287,7 @@ def _repair_cycle_locked(policy, state_path, dry_run=False):
                              isinstance(x, (int, float)) and 0 <= now - x < 86400]
         action = "healthy" if healthy else "observe"
         if not healthy and entry["failures"] >= max(2, int(config.get("failures_before_restart", 3))):
-            if stop.exists():
+            if _stop_marker_present_or_unknown(stop):
                 action = "stop_lock"
             elif not policy.get("enabled") or not config.get("restart_enabled"):
                 action = "needs_owner_approval"
@@ -282,7 +299,7 @@ def _repair_cycle_locked(policy, state_path, dry_run=False):
                 action = "needs_owner_investigation"
             elif dry_run:
                 action = "would_restart"
-            elif stop.exists():
+            elif _stop_marker_present_or_unknown(stop):
                 action = "stop_lock"
             else:
                 entry["attempts"].append(now)
