@@ -18,6 +18,7 @@ from owner_chat_browser_qa import (
     native_chat_route_candidate,
     canonical_s03_proof_valid,
     click_send,
+    json_response,
     firstturn_history_valid,
     firstturn_prefix_identity_valid,
     firstturn_session_continuity_valid,
@@ -3959,6 +3960,48 @@ async function check(chunks, status=200) {
                     self.assertFalse(canonical_s03_proof_valid(
                         original_writer, original_reader, DIALOG, oversized,
                         require_full_transcript_pin=True))
+
+
+    def test_owner_history_json_duplicate_keys_and_nonfinite_numbers_hold(self):
+        # A second RU/ES history read cannot certify one dialog if JSON uses
+        # duplicate keys and client decoders may disagree about the winner.
+        class Response:
+            status = 200
+            def __init__(self, raw):
+                self.raw = raw
+            async def body(self):
+                return self.raw
+
+        def decode(payload):
+            return asyncio.run(json_response(Response(payload.encode("utf-8"))))
+
+        valid = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": "Привет, ¿cómo estás? 🪐"},
+            {"role": "assistant", "content": "Estoy bien"},
+            {"role": "user", "content": "Продолжи по-испански"},
+            {"role": "assistant", "content": "Claro, seguimos"},
+        ]}
+        self.assertEqual(decode(json.dumps(valid, ensure_ascii=False)), valid)
+        poisoned = (
+            '{"dialog_id":"a","dialog_id":"b","messages":[]}',
+            '{"messages":[],"messages":[]}',
+            '{"messages":[{"role":"user","role":"assistant"}]}',
+            '{"messages":[{"content":"Русский","content":"español"}]}',
+            '{"messages":[{"message_id":"m1","message_id":"m2"}]}',
+            '{"messages":[{"session_id":"s1","session_id":"s2"}]}',
+            '{"messages":[{"dialog_id":"d1","dialog_id":"d2"}]}',
+            '{"messages":[],"metadata":{"revision":1,"revision":2}}',
+        )
+        for payload in poisoned:
+            with self.subTest(case=payload[:55]):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_HTTP_DUPLICATE_JSON_KEY"):
+                    decode(payload)
+        for value in ("NaN", "Infinity", "-Infinity", "1e999", "-1e999"):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_HTTP_NONFINITE_JSON_NUMBER"):
+                    decode('{"messages":[{"content":'+value+'}]}')
+        self.assertEqual(decode('{"messages":[{"weight":1.25}]}'),
+                         {"messages": [{"weight": 1.25}]})
 
 if __name__ == "__main__":
     unittest.main()

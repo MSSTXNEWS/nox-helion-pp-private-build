@@ -17,6 +17,7 @@ import importlib.metadata
 import importlib.util
 import ipaddress
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -1607,7 +1608,28 @@ async def json_response(response, limit=200000):
     raw=await response.body()
     if len(raw)>limit:
         raise RuntimeError('HOLD_OWNER_HTTP_SIZE')
-    return json.loads(raw)
+    # Browser history and S03 candidate witnesses must not accept ambiguous
+    # JSON objects: json.loads normally keeps the last duplicate key, allowing
+    # conflicting dialog/message identities to be silently overwritten.
+    def unique_keys(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise RuntimeError('HOLD_OWNER_HTTP_DUPLICATE_JSON_KEY')
+            value[key] = item
+        return value
+
+    def finite_float(literal):
+        value = float(literal)
+        if not math.isfinite(value):
+            raise RuntimeError('HOLD_OWNER_HTTP_NONFINITE_JSON_NUMBER')
+        return value
+
+    def reject_nonfinite(_literal):
+        raise RuntimeError('HOLD_OWNER_HTTP_NONFINITE_JSON_NUMBER')
+
+    return json.loads(raw, object_pairs_hook=unique_keys,
+                      parse_constant=reject_nonfinite, parse_float=finite_float)
 
 
 async def capture_private_screenshot(page, report, directory, name, masks, content,
