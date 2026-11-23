@@ -685,7 +685,11 @@ def install(app, B):
                     if len(chunk) > MAX_CHAT_WIRE_BYTES - len(wire):
                         return JSONResponse({"status": "HOLD", "reason": "CHAT_WIRE_TOO_LARGE"}, status_code=413)
                     wire.extend(chunk)
-                b = json.loads(wire)
+                # A duplicate request_id/exchange_id or nonfinite JSON value can
+                # change STOP/dedup semantics across clients. Reject ambiguous
+                # wire input before any model/S03 admission (including nested keys).
+                b = json.loads(wire, object_pairs_hook=_unique_sse_object,
+                               parse_constant=_finite_sse_constant)
             else:
                 # Unit-level request doubles expose json() only; real ASGI
                 # Request always exposes stream() and uses the bounded path.
