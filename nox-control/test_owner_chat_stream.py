@@ -2265,7 +2265,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                          'max_tokens':128,'temperature':0.4,'id_slot':1,'n_keep':32}
                 allowed=(change=='cache_only')
                 streams=[Chunks([frame('ready'),frame(finish='stop'),
-                                 b'data: [DONE]\\n\\n'])] if allowed else []
+                                 b'data: [DONE]\n\n'])] if allowed else []
                 requests,factory=self.transport(streams)
                 with factory:
                     response=await native['owner_completion'](
