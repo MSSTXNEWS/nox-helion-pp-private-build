@@ -17,6 +17,30 @@ spec.loader.exec_module(mod)
 PUB = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIofflinekey nox-update-button"
 ID = 1234
 
+class RemoteOutputRedaction(TestCase):
+    def test_exact_owner_credentials_are_removed_before_tail_truncation(self):
+        provider = "D3_PROVIDER_TEST_SECRET_SUFFIX"
+        auth = "D3_AUTH_TEST_CREDENTIAL"
+        with patch.dict(os.environ, {"NOX2": provider, "TS_AUTHKEY": auth}):
+            # A truncation-first implementation leaks the last 8 bytes
+            # of a credential whose prefix is just outside the log tail.
+            crossed = "start " + provider + "Z" * 2992
+            self.assertNotIn("T_SUFFIX", mod.redact_remote_output(crossed))
+            logged = mod.redact_remote_output(
+                "before " + provider + " " + auth +
+                " github_pat_OFFLINE_TEST123 tskey-OFFLINE-TEST after")
+            for secret in (provider, auth, "github_pat_OFFLINE_TEST123", "tskey-OFFLINE-TEST"):
+                self.assertNotIn(secret, logged)
+            self.assertIn("after", logged)
+
+    def test_redaction_preserves_bounded_nonsecret_output(self):
+        with patch.dict(os.environ, {"NOX2": "OFFLINE_REDACT_ME", "TS_AUTHKEY": ""}):
+            result = mod.redact_remote_output("x" * 5000)
+            self.assertEqual(len(result), 3000)
+            self.assertEqual(result, "x" * 3000)
+            self.assertEqual(mod.redact_remote_output(None), "")
+
+
 class CleanupReadback(TestCase):
     def test_deleted_key_absent(self):
         with patch.object(mod, "api", side_effect=[{}, {"ssh_keys": []}]) as api:
