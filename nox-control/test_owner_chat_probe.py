@@ -3589,7 +3589,7 @@ class ProbeTests(unittest.TestCase):
                 with self.subTest(turn=label, policy=fields):
                     with patch.object(probe, 'request', return_value=response):
                         with patch.object(probe, 'bounded_stream_frames') as parser:
-                            with self.assertRaisesRegex(RuntimeError, '^' + reason + '):
+                            with self.assertRaisesRegex(RuntimeError, '^' + reason + '$'):
                                 probe.consume_turn(client, 'offline', 'f' * 32)
                             parser.assert_not_called()
                 self.assertTrue(response.closed)
