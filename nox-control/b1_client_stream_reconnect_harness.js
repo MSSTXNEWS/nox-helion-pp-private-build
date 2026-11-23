@@ -149,7 +149,14 @@
           return stopped();
         }
         if(preflight.storageError) hold('HOLD_STREAM_STORAGE');
-        if(preflight.previous) hold('HOLD_STREAM_RECONNECT_ONLY');
+        if(preflight.previous){
+          // This preflight GET only checks whether the exchange already exists.
+          // Its response body is not consumed by begin(), and the model must
+          // never be POSTed again for this exchange. Release the unclaimed
+          // read-only body even when cancellation rejects or never settles.
+          cancelAbandonedGet(preflight.previous);
+          hold('HOLD_STREAM_RECONNECT_ONLY');
+        }
         if(priorReconnect) hold('HOLD_STREAM_NO_REPOST');
         // The host must ALSO enforce durable exchange idempotency across
         // tabs, reloads and devices. Never re-POST an ambiguous exchange.
