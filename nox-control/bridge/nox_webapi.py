@@ -995,7 +995,7 @@ def install(app, B):
             return payload
 
         async def gen():
-            t0, n, shown = time.time(), 0, 0
+            t0, n, shown = time.monotonic(), 0, 0
             full = ""
             # Assemble SSE deltas once. Incremental str concatenation can become
             # quadratic for a long answer split into tiny model token frames.
@@ -1538,7 +1538,10 @@ def install(app, B):
                                                "s03_write_returned": bool(hist.get("s03_write_returned", hist["status"] == "SAVED")),
                                                "retry_unsafe": bool(hist.get("retry_unsafe", False))},
                          digest=hashlib.sha256(full.encode()).hexdigest(), frames=n, memory_history=hist, nox_mode=mode, skeptic=sk, plan=plan or None,
-                         total_duration=int((time.time() - t0) * 1e9), eval_count=n)
+                         total_duration=max(0, int((time.monotonic() - t0) * 1e9)),
+                         # n counts provider text fragments, NOT tokenizer tokens.
+                         # Null prevents clients from reporting fictional tok/s.
+                         eval_count=None, eval_count_status="NOT_REPORTED_BY_UPSTREAM")
 
         def release_chat_admission():
             ACTIVE_CHAT_IDS.discard(rid)
