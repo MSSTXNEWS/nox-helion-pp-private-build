@@ -1131,3 +1131,67 @@ test('R41 fragmented TCP multiline UTF-8 CRLF logical byte cap: exact accept and
     await new Promise(resolve=>server.close(resolve));
   }
 });
+
+
+test('R42 real TCP heartbeat and nonprintable deltas cannot start TTFT; invisible-only DONE rejects',async()=>{
+  const invisible=[' \u0301','\t\u0300\u200b'];
+  const printableDelta='¡Hola, Привет 🌍';
+  const seen=[];
+  const server=createServer(async(req,res)=>{
+    if(req.method!=='POST'||req.url!=='/nox/chat'){res.writeHead(404).end();return;}
+    let body='';for await(const chunk of req)body+=chunk;
+    const {variant}=JSON.parse(body);
+    seen.push(variant);
+    res.writeHead(200,{'content-type':'text/event-stream','cache-control':'no-store'});
+    res.flushHeaders();
+    // An actual wire heartbeat must precede all content and never count as TTFT.
+    res.write(': heartbeat\r\n\r\n');
+    await sleep(20);
+    res.write(event({delta:{content:invisible[0]}}));
+    await sleep(22);
+    res.write(event({delta:{content:invisible[1]}}));
+    await sleep(26);
+    if(variant==='printable'){
+      res.write(event({delta:{content:printableDelta}}));
+      await sleep(8);
+    }
+    res.write(event({delta:{},finish_reason:'stop'}));
+    res.write('data: [DONE]\n\n');
+    await sleep(8);
+    res.end(); // Full transport EOF, not merely an in-band [DONE].
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const url='http://127.0.0.1:'+server.address().port+'/nox/chat';
+  const post=variant=>measureSseFetch(url,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({turn:2,variant})
+  },{startedAt:performance.now(),totalTimeoutMs:2000,idleTimeoutMs:750});
+  try{
+    const proof=await post('printable');
+    assert.equal(proof.verified,true);
+    assert.ok(proof.first_byte_ms>=0);
+    assert.ok(proof.ttft_ms-proof.first_byte_ms>=35,
+      'TTFT must exclude heartbeat, spaces and isolated combining/format marks');
+    assert.ok(proof.ttft_ms<=proof.sse_done_ms);
+    assert.ok(proof.sse_done_ms<=proof.completion_ms);
+    assert.equal(proof.visible_text_sha256,hash(invisible.join('')+printableDelta));
+    assert.equal(proof.native_verified,false);
+    assert.equal(proof.browser_authenticated,false);
+    assert.equal(proof.canonical_s03_verified,false);
+    await assert.rejects(post('invisible'),e=>e?.code==='B4_INCOMPLETE_SSE',
+      'stop and [DONE] without any printable delta must not fabricate TTFT');
+    assert.deepEqual(seen,['printable','invisible'],
+      'exactly one POST per explicit case, no automatic replay');
+    console.log('B4_R42_SOURCE_ONLY '+JSON.stringify({
+      first_byte_ms:+proof.first_byte_ms.toFixed(3),
+      first_printable_ttft_ms:+proof.ttft_ms.toFixed(3),
+      done_ms:+proof.sse_done_ms.toFixed(3),
+      eof_completion_ms:+proof.completion_ms.toFixed(3),
+      invisible_only_rejected:true,real_local_tcp:true,
+      real_glm:false,authenticated_browser:false,canonical_s03:false
+    }));
+  }finally{
+    server.closeAllConnections();
+    await new Promise(resolve=>server.close(resolve));
+  }
+});
