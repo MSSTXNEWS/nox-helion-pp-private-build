@@ -1307,6 +1307,14 @@ def install(app, B):
                                 if not isinstance(delta, dict):
                                     upstream_failure = "UPSTREAM_DELTA_INVALID"
                                     break
+                                # This text-only endpoint cannot execute tool calls.
+                                # Silently ignoring a tool/function envelope after
+                                # earlier tokens would certify a partial reply as
+                                # complete and persist it to canonical S03.
+                                if ("tool_calls" in delta or "function_call" in delta or
+                                        ("role" in delta and delta["role"] != "assistant")):
+                                    upstream_failure = "UPSTREAM_UNSUPPORTED_DELTA"
+                                    break
                                 # A falsey JSON value (0, false, [], {}) is NOT
                                 # an empty token. Only missing/null content is
                                 # legitimate no-text SSE metadata.
