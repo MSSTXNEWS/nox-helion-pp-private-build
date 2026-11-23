@@ -3437,6 +3437,53 @@ class SignedTrainerStateParentPathFence(unittest.TestCase):
                              {"global_step": 5})
 
 
+class SignedCheckpointHashParentPathFence(unittest.TestCase):
+    def test_parent_symlink_hash_same_inode_is_named_hold(self):
+        # Execute the real source file_sha AST without starting any service.
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            approved = base / "approved"
+            approved.mkdir()
+            displaced = base / "displaced"
+            file_path = approved / "adapter_model.safetensors"
+            data = b"approved-pinned-tensor-bytes"
+            file_path.write_bytes(data)
+            file_sha = load_pinned_verifier(base)["file_sha"]
+            digest = hashlib.sha256(data).hexdigest()
+            self.assertEqual(file_sha(file_path), digest)
+
+            # A pre-existing parent symlink is never an approved source path.
+            approved.rename(displaced)
+            approved.symlink_to(displaced, target_is_directory=True)
+            with self.assertRaisesRegex(RuntimeError, "^HOLD_SOURCE_PATH$"):
+                file_sha(file_path)
+            approved.unlink()
+            displaced.rename(approved)
+            self.assertEqual(file_sha(file_path), digest)
+
+            # Parent pivot just before os.stat: same FD/bytes/inode/checksum.
+            original_stat = os.stat
+            pivoted = False
+
+            def pivot_on_named_stat(target, *args, **kwargs):
+                nonlocal pivoted
+                if (not pivoted and os.fspath(target) == os.fspath(file_path)
+                        and kwargs.get("follow_symlinks") is False):
+                    approved.rename(displaced)
+                    approved.symlink_to(displaced, target_is_directory=True)
+                    pivoted = True
+                return original_stat(target, *args, **kwargs)
+
+            with mock.patch("os.stat", side_effect=pivot_on_named_stat):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_CHECKPOINT_FILE_MUTATED$"):
+                    file_sha(file_path)
+            self.assertTrue(pivoted)
+            approved.unlink()
+            displaced.rename(approved)
+            self.assertEqual(file_sha(file_path), digest)
+
+
 class MediaOutputRehashPathFence(unittest.TestCase):
     def test_removed_and_rebound_media_get_named_hold(self):
         # Run the actual reviewed verifier AST; no native GPU or media job.

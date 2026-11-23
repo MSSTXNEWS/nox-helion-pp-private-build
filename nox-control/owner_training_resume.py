@@ -209,6 +209,10 @@ def read_json(path, limit=4_000_000, expected_sha256=None, include_mtime=False):
 def file_sha(path):
     """Hash only a stable, pathname-bound regular file from one descriptor."""
     path = Path(path)
+    # O_NOFOLLOW protects only the leaf: reject a symlinked parent even
+    # when it resolves to the correct inode and SHA-256.
+    if any(item.is_symlink() for item in (path, *path.parents)):
+        raise RuntimeError('HOLD_SOURCE_PATH')
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
     except OSError as exc:
@@ -236,6 +240,10 @@ def file_sha(path):
                 named = os.stat(path, follow_symlinks=False)
             except OSError as exc:
                 raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED') from exc
+            # Parent directories may be atomically rebound to a symlink
+            # during descriptor hashing; named inode equality cannot see it.
+            if any(item.is_symlink() for item in (path, *path.parents)):
+                raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED')
             keys = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
             if any(getattr(before, key) != getattr(after, key)
                    or getattr(before, key) != getattr(named, key) for key in keys):
