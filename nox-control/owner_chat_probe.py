@@ -53,7 +53,9 @@ def request(client,path,method='GET',data=None,timeout=6,base=None):
     headers={'Content-Type':'application/json','Accept':accept}
     # A proxy must not replay an old owner/executor/history snapshot as live
     # admission or multi-turn readback evidence.
-    if ((method == 'GET' and path.startswith(('/api/nox/', '/api/ui/')))
+    if ((method == 'GET' and (
+            path.startswith(('/api/nox/', '/api/ui/'))
+            or (path == '/slots' and base == 'http://127.0.0.1:8098')))
             or (method == 'POST' and path in (
                 '/api/nox/chat/stream', '/api/ui/memory/dialogs/create'))):
         headers.update({'Cache-Control':'no-store, no-cache', 'Pragma':'no-cache'})
@@ -1232,8 +1234,16 @@ def model_slots_state(client):
     try:
         with request(client, '/slots', base='http://127.0.0.1:8098') as response:
             require_exact_model_slots_target(response)
+            # Slot admission must be as fresh as the owner route snapshot.
+            # A cached idle 200 can trigger an unsafe non-idempotent POST.
+            try:
+                require_fresh_owner_readback(response)
+            except RuntimeError as exc:
+                raise RuntimeError('HOLD_CHAT_SLOTS_CACHE_REPLAY') from exc
             slots = obj(response, limit=100000)
     except (OSError, ValueError, RuntimeError) as exc:
+        if str(exc) == 'HOLD_CHAT_SLOTS_CACHE_REPLAY':
+            raise
         raise RuntimeError('HOLD_CHAT_SLOTS_ENDPOINT_UNAVAILABLE') from exc
     if not isinstance(slots, list) or not slots or len(slots) > 1024:
         raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')

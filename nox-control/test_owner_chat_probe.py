@@ -2043,6 +2043,2014 @@ class ProbeTests(unittest.TestCase):
                 probe.model_slots_state(object())
 
 
+    def test_slots_stale_cache_never_admits_nonidempotent_chat(self):
+        """Cached idle model slots may not authorize a later synthetic model POST."""
+        from email.message import Message
+
+        class SlotReply:
+            status = 200
+            url = 'http://127.0.0.1:8098/slots'
+
+            def __init__(self, fields):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'application/json'
+                for name, value in fields:
+                    self.headers[name] = value
+                self.closed = False
+                self.read_called = False
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                self.close()
+
+            def close(self):
+                self.closed = True
+
+            def read(self, limit):
+                self.read_called = True
+                return b'[{"id":0,"is_processing":false}]'
+
+        stale = (
+            [('Age', '1')],
+            [('X-Cache', 'HIT')],
+            [('CF-Cache-Status', 'HIT')],
+            [('Cache-Control', 'public')],
+            [('Cache-Control', 'max-age=30')],
+            [('Cache-Control', 'no-store'), ('Age', 'invalid')],
+            [('Age', '0'), ('Age', '0')],
+        )
+        for fields in stale:
+            reply = SlotReply(fields)
+            with self.subTest(stale=fields), patch.object(
+                    probe, 'request', return_value=reply):
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_CHAT_SLOTS_CACHE_REPLAY
+        good_first = {'first_meaningful_delta_ms': 8000, 'stream_total_ms': 25000}
+        good_second = {'first_meaningful_delta_ms': 5000, 'stream_total_ms': 25000}
+        self.assertIsNone(probe.require_latency_target(good_first, 'FIRST_TURN', 8000))
+        self.assertIsNone(probe.require_latency_target(good_second, 'SECOND_TURN', 5000))
+        for bad in (
+            {'first_meaningful_delta_ms': 8001, 'stream_total_ms': 25000},
+            {'first_meaningful_delta_ms': 5000, 'stream_total_ms': 25001},
+            {'first_meaningful_delta_ms': 5001, 'stream_total_ms': 5000},
+            {'first_meaningful_delta_ms': -1, 'stream_total_ms': 100},
+            {'first_meaningful_delta_ms': float('nan'), 'stream_total_ms': 100},
+            {'first_meaningful_delta_ms': True, 'stream_total_ms': 100},
+            {'stream_total_ms': 100},
+            {},
+            None,
+        ):
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_FIRST_TURN_LATENCY_TARGET$'):
+                    probe.require_latency_target(bad, 'FIRST_TURN', 8000)
+        with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_SECOND_TURN_LATENCY_TARGET$'):
+            probe.require_latency_target(
+                {'first_meaningful_delta_ms': 5001, 'stream_total_ms': 10000},
+                'SECOND_TURN', 5000)
+        source = path.read_text()
+        self.assertIn("require_latency_target(turn, 'FIRST_TURN', 8000)", source)
+        self.assertIn("require_latency_target(follow, 'SECOND_TURN', 5000)", source)
+        self.assertLess(source.index("require_durable_result(saved, numeric_public_answer(answer)=='323'"),
+                        source.index("require_latency_target(turn, 'FIRST_TURN', 8000)"))
+        self.assertLess(source.index("require_durable_result(passed, numeric_public_answer(answer2)=='323'"),
+                        source.index("require_latency_target(follow, 'SECOND_TURN', 5000)"))
+
+    def test_nonfinite_ndjson_metadata_must_hold_before_stream_success(self):
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(frame + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        did = '1' * 32
+        valid_delta = b'{"type":"delta","text":"323"}'
+        valid_done = ('{"type":"done","dialog_id":"' + did +
+                      '","saved":true,"s03_integrated":true}').encode()
+        invalid_streams = [
+            [b'{"type":"delta","text":"323","meta":{"ratio":NaN}}', valid_done],
+            [valid_delta, ('{"type":"done","dialog_id":"' + did +
+                           '","saved":true,"s03_integrated":true,"meta":[Infinity]}').encode()],
+            [b'{"type":"status","metadata":{"bad":-Infinity}}', valid_delta, valid_done],
+            [b'{"type":"status","metadata":{"bad":1e999}}', valid_delta, valid_done],
+            [b'{"type":"status","metadata":[-1e999]}', valid_delta, valid_done],
+        ]
+        for frames in invalid_streams:
+            response = Response(frames)
+            with self.subTest(frame=frames[0]), patch.object(probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_NONFINITE_JSON$'):
+                    probe.consume_turn(object(), 'synthetic', did)
+            self.assertTrue(response.closed)
+        valid = Response([b'{"type":"status","meta":{"ratio":3.5,"finite":2.5e2}}', valid_delta, valid_done])
+        with patch.object(probe, 'request', return_value=valid):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+        self.assertTrue(valid.closed)
+
+
+    def test_duplicate_json_keys_in_any_stream_object_hold_before_terminal_acceptance(self):
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(self.frames)
+            def close(self):
+                self.closed = True
+
+        did = '1' * 32
+        delta = b'{"type":"delta","text":"323"}\n'
+        done = ('{"type":"done","dialog_id":"' + did +
+                '","saved":true,"s03_integrated":true}\n').encode()
+        ambiguous = (
+            [b'{"type":"delta","type":"status","text":"323"}\n', done],
+            [delta, ('{"type":"done","dialog_id":"' + did +
+                     '","dialog_id":"' + did +
+                     '","saved":true,"s03_integrated":true}\n').encode()],
+            [delta, ('{"type":"done","dialog_id":"' + did +
+                     '","saved":false,"saved":true,"s03_integrated":true}\n').encode()],
+            [b'{"type":"meta","payload":{"count":1,"count":2}}\n', delta, done],
+        )
+        for index, frames in enumerate(ambiguous):
+            response = Response(frames)
+            with self.subTest(index=index), patch.object(probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_DUPLICATE_JSON_KEY$'):
+                    probe.consume_turn(object(), 'synthetic', did)
+            self.assertTrue(response.closed)
+        valid = Response([b'{"type":"meta","payload":{"count":2}}\n', delta, done])
+        with patch.object(probe, 'request', return_value=valid):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+        self.assertTrue(valid.closed)
+
+
+    def test_stream_terminal_requires_clean_eof_and_single_done(self):
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(self.frames)
+            def close(self):
+                self.closed = True
+
+        did = '1' * 32
+        delta = b'{"type":"delta","text":"323"}\n'
+        done = ('{"type":"done","dialog_id":"' + did +
+                '","saved":true,"s03_integrated":true}\n').encode()
+        cases = (
+            ([delta, done], None),
+            ([delta, done, b'{"type":"delta","text":"late"}\n'], 'HOLD_STREAM_TRAILING_AFTER_DONE'),
+            ([delta, done, done], 'HOLD_STREAM_TRAILING_AFTER_DONE'),
+            ([delta, done, b'{"type":"error"}\n'], 'HOLD_STREAM_TRAILING_AFTER_DONE'),
+            ([delta, done, b'\n'], 'HOLD_STREAM_TRAILING_AFTER_DONE'),
+            ([delta, done[:-1]], 'HOLD_STREAM_MISSING_NEWLINE'),
+            ([delta[:-1], done], 'HOLD_STREAM_MISSING_NEWLINE'),
+        )
+        for frames, expected in cases:
+            response = Response(frames)
+            with self.subTest(expected=expected, length=len(frames)), patch.object(
+                    probe, 'request', return_value=response):
+                if expected is None:
+                    self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+                else:
+                    with self.assertRaisesRegex(RuntimeError, '^' + expected + '$'):
+                        probe.consume_turn(object(), 'synthetic', did)
+            self.assertTrue(response.closed)
+
+
+    def test_truncated_or_error_stream_cannot_pass(self):
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, rows): self.rows = rows; self.closed = False
+            def close(self): self.closed = True
+            def __iter__(self):
+                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
+        for rows, code in [([{'type':'delta','text':'323'}], 'INCOMPLETE_OR_PLACEHOLDER'),
+                           ([{'type':'delta','text':'…'}, {'type':'done','dialog_id':'1'*32}], 'INCOMPLETE_OR_PLACEHOLDER'),
+                           ([{'type':'error','error':'PRIVATE_PROVIDER_TEXT'}], 'HOLD_STREAM_ERROR')]:
+            response = Response(rows)
+            with patch.object(probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, code):
+                    probe.consume_turn(object(), 'synthetic', '1'*32)
+            self.assertTrue(response.closed)
+
+
+    def test_scoped_history_rejects_foreign_dialog_even_with_identical_turns(self):
+        did, other = '1' * 32, '2' * 32
+        turns = [('first', '323'), ('second', '323'), ('third', 'six')]
+        messages = [{'role': role, 'content': content} for role, content in (
+            ('user', 'first'), ('assistant', '323'), ('user', 'second'),
+            ('assistant', '323'), ('user', 'third'), ('assistant', 'six'))]
+        good = {'dialog_id': did, 'messages': messages}
+        self.assertTrue(probe.scoped_history_matches_turns(good, turns, did))
+        self.assertFalse(probe.scoped_history_matches_turns({'messages': messages}, turns, did))
+        tagged = [dict(row, dialog_id=did) for row in messages]
+        self.assertTrue(probe.scoped_history_matches_turns({'dialog_id': did, 'messages': tagged}, turns, did))
+        corrupted = [
+            {'dialog_id': other, 'messages': messages},
+            {'dialog_id': None, 'messages': messages},
+            {'dialog_id': did, 'messages': [dict(messages[0], dialog_id=other), *messages[1:]]},
+            {'dialog_id': did, 'messages': [*messages[:-1], dict(messages[-1], dialog_id=other)]},
+            {'dialog_id': did, 'messages': [*messages[:-1], dict(messages[-1], dialog_id=None)]},
+            {'dialog_id': did, 'messages': tagged[2:]},
+        ]
+        for history in corrupted:
+            with self.subTest(history=history):
+                self.assertFalse(probe.scoped_history_matches_turns(history, turns, did))
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED$'):
+                    probe.require_executor_witness(
+                        {'saved': True, 's03_integrated': True}, history, turns, True, True, did)
+        self.assertIsNone(probe.require_executor_witness(
+            {'saved': True, 's03_integrated': True}, good, turns, True, True, did))
+
+
+    def test_done_frame_with_error_or_failed_status_cannot_certify_stream(self):
+        """Saved=true must not hide an upstream error inside the done frame."""
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, terminal):
+                self.terminal, self.closed = terminal, False
+            def __iter__(self):
+                frames = [
+                    {'type': 'delta', 'text': '323'},
+                    dict({'type': 'done', 'dialog_id': '1' * 32,
+                          'saved': True, 's03_integrated': True}, **self.terminal),
+                ]
+                return iter(json.dumps(row).encode() + b'\n' for row in frames)
+            def close(self):
+                self.closed = True
+
+        failed = [
+            {'error': 'upstream timeout'},
+            {'error': {'code': 'provider_failure'}},
+            {'status': 'error'},
+            {'status': 'failed'},
+            {'status': 'cancelled'},
+            {'status': 'aborted'},
+            {'success': False},
+            {'ok': False},
+            {'status': {'ok': False}},
+        ]
+        for flags in failed:
+            response = Response(flags)
+            with self.subTest(flags=flags), patch.object(probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_TERMINAL_FAILURE$'):
+                    probe.consume_turn(object(), 'synthetic', '1' * 32)
+            self.assertTrue(response.closed)
+
+        accepted = Response({'error': None, 'status': 'completed', 'success': True})
+        with patch.object(probe, 'request', return_value=accepted):
+            result = probe.consume_turn(object(), 'synthetic', '1' * 32)
+        self.assertEqual(result['answer'], '323')
+        self.assertTrue(accepted.closed)
+
+    def test_preterminal_failure_cannot_be_laundered_by_saved_done(self):
+        """A failed status/meta/delta must poison a later success terminal."""
+        did = '1' * 32
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(row).encode() + b'\n' for row in self.frames)
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        bad = (
+            {'type': 'status', 'status': 'failed'},
+            {'type': 'status', 'status': ' ABORTED '},
+            {'type': 'meta', 'error': {'code': 'provider_failure'}},
+            {'type': 'started', 'success': False},
+            {'type': 'status', 'ok': False},
+            {'type': 'meta', 'status': {'ok': False}},
+            {'type': 'delta', 'text': '323', 'error': 'timeout'},
+        )
+        for frame in bad:
+            response = Response([frame, {'type': 'delta', 'text': '323'}, done])
+            with self.subTest(frame=frame), patch.object(probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_PRETERMINAL_FAILURE$'):
+                    probe.consume_turn(object(), 'synthetic', did)
+            self.assertTrue(response.closed)
+        healthy = Response([{'type': 'status', 'status': 'running', 'success': True, 'ok': True},
+                            {'type': 'delta', 'text': '323'}, done])
+        with patch.object(probe, 'request', return_value=healthy):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+        self.assertTrue(healthy.closed)
+
+
+    def test_structured_http_failure_cannot_be_laundered_by_saved_done(self):
+        """Structured 4xx/5xx on any SSE frame poisons the entire stream."""
+        did = '1' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        delta = {'type': 'delta', 'text': '323'}
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        bad = (
+            {'status': {'code': 503}},
+            {'status': {'status_code': '429'}},
+            {'status': {'httpStatus': 502}},
+            {'status': {'state': ' FAILED '}},
+            {'status': {'status': 'aborted'}},
+            {'code': 503},
+            {'status_code': 500},
+            {'statusCode': '502'},
+            {'http_status': '504'},
+            {'httpStatus': 429},
+        )
+        for flags in bad:
+            for placement in ('preterminal', 'terminal'):
+                if placement == 'preterminal':
+                    frames = [dict({'type': 'status'}, **flags), delta, done]
+                    code = 'HOLD_STREAM_PRETERMINAL_FAILURE'
+                else:
+                    frames = [delta, dict(done, **flags)]
+                    code = 'HOLD_STREAM_TERMINAL_FAILURE'
+                response = Response(frames)
+                with self.subTest(flags=flags, placement=placement), patch.object(
+                        probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, '^' + code + '$'):
+                        probe.consume_turn(object(), 'synthetic', did)
+                self.assertTrue(response.closed)
+
+        healthy = Response([{'type': 'status', 'status': {'code': 200}},
+                            {'type': 'meta', 'http_status': '200'},
+                            delta, dict(done, status={'code': 200})])
+        with patch.object(probe, 'request', return_value=healthy):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+        self.assertTrue(healthy.closed)
+
+
+
+    def test_nested_status_error_and_false_success_poison_stream(self):
+        """A structured upstream failure cannot be masked by a later saved DONE."""
+        did = '1' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        delta = {'type': 'delta', 'text': '323'}
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        bad = (
+            {'status': {'error': 'upstream_timeout'}},
+            {'status': {'error': {'message': 'provider failure'}}},
+            {'status': {'success': False}},
+            {'status': {'error': ' ', 'success': True}},
+        )
+        for flags in bad:
+            for placement in ('preterminal', 'terminal'):
+                frames = ([dict({'type': 'status'}, **flags), delta, done]
+                          if placement == 'preterminal'
+                          else [delta, dict(done, **flags)])
+                expected = ('HOLD_STREAM_PRETERMINAL_FAILURE'
+                            if placement == 'preterminal'
+                            else 'HOLD_STREAM_TERMINAL_FAILURE')
+                response = Response(frames)
+                with self.subTest(flags=flags, placement=placement), patch.object(
+                        probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, '^' + expected + '$'):
+                        probe.consume_turn(object(), 'synthetic', did)
+                self.assertTrue(response.closed)
+
+        healthy = Response([
+            {'type': 'status', 'status': {'error': None, 'success': True, 'code': 200}},
+            delta, dict(done, status={'error': '', 'success': True, 'code': 200}),
+        ])
+        with patch.object(probe, 'request', return_value=healthy):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+        self.assertTrue(healthy.closed)
+
+
+
+    def test_intermediate_stream_dialog_provenance_is_bound_per_frame(self):
+        """A foreign tagged SSE fragment must not join an otherwise correct turn."""
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        did = '1' * 32
+        clean_done = {'type': 'done', 'dialog_id': did,
+                      'saved': True, 's03_integrated': True}
+        for kind in ('preparing', 'started', 'status', 'meta', 'delta'):
+            for foreign in ('2' * 32, None, '', True):
+                fragment = {'type': kind, 'dialog_id': foreign}
+                if kind == 'delta':
+                    fragment['text'] = '323'
+                frames = [fragment, {'type': 'delta', 'text': '323'}, clean_done]
+                response = Response(frames)
+                with self.subTest(kind=kind, foreign=foreign), patch.object(
+                        probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH$'):
+                        probe.consume_turn(object(), 'synthetic', did)
+                self.assertTrue(response.closed)
+
+        # Both explicitly tagged and legacy untagged intermediate frames remain usable.
+        for include_id in (False, True):
+            fragment = {'type': 'status', 'status': 'running'}
+            delta = {'type': 'delta', 'text': '323'}
+            if include_id:
+                fragment['dialog_id'] = did
+                delta['dialog_id'] = did
+            response = Response([fragment, delta, clean_done])
+            with self.subTest(include_id=include_id), patch.object(
+                    probe, 'request', return_value=response):
+                self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+            self.assertTrue(response.closed)
+
+
+    def test_third_turn_six_row_postquiet_readback_stays_identical(self):
+        """Two exact same-dialog GET snapshots, no extra POST and no S03 assertion."""
+        did = '1' * 32
+        turns = [('17 x 19?', '323'),
+                 ('Previous number?', '323'),
+                 ('How many executors?', '3')]
+        rows = []
+        for index, (question, answer) in enumerate(turns):
+            rows.extend([
+                {'id': index * 2 + 1, 'role': 'user',
+                 'content': question, 'dialog_id': did},
+                {'id': index * 2 + 2, 'role': 'assistant',
+                 'content': answer, 'dialog_id': did},
+            ])
+        initial = {'dialog_id': did, 'messages': rows}
+        def snap():
+            return json.loads(json.dumps(initial))
+        with patch.object(probe.time, 'sleep') as sleeper, patch.object(
+                probe, 'owner_readback_json', return_value=snap()) as fetch:
+            self.assertTrue(probe.stable_postquiet_three_turn_history(
+                object(), initial, turns, did))
+            sleeper.assert_called_once_with(0.5)
+            self.assertEqual(fetch.call_args.args[1],
+                '/api/ui/memory/dialogs/history?dialog_id=' + did + '&limit=8')
+        bad_snapshots = []
+        changed_content = snap()
+        changed_content['messages'][-1]['content'] = 'stale replacement'
+        bad_snapshots.append(changed_content)
+        changed_id = snap()
+        changed_id['messages'][1]['id'] = 777
+        bad_snapshots.append(changed_id)
+        missing_id = snap()
+        del missing_id['messages'][0]['id']
+        bad_snapshots.append(missing_id)
+        foreign = snap()
+        foreign['dialog_id'] = '2' * 32
+        bad_snapshots.append(foreign)
+        duplicate = snap()
+        duplicate['messages'][-1]['id'] = duplicate['messages'][-2]['id']
+        bad_snapshots.append(duplicate)
+        for poisoned in bad_snapshots:
+            with self.subTest(poisoned=poisoned), patch.object(
+                    probe.time, 'sleep'), patch.object(
+                    probe, 'owner_readback_json', return_value=poisoned):
+                self.assertFalse(probe.stable_postquiet_three_turn_history(
+                    object(), initial, turns, did))
+        with patch.object(probe.time, 'sleep') as sleeper, patch.object(
+                probe, 'owner_readback_json') as fetch:
+            self.assertFalse(probe.stable_postquiet_three_turn_history(
+                object(), {'dialog_id': did, 'messages': rows[:2]}, turns, did))
+            sleeper.assert_not_called()
+            fetch.assert_not_called()
+        source = path.read_text()
+        self.assertIn('stable_postquiet_three_turn_history(client,third_history,expected_three,did)', source)
+        self.assertIn("if not third_durable:raise RuntimeError('HOLD_CHAT_PROBE_POSTQUIET_HISTORY')", source)
+
+    def test_anonymous_owner_401_must_bind_exact_protected_route(self):
+        """Foreign or redirected 401 cannot prove the intended owner API is protected."""
+        class Response:
+            def __init__(self, url):
+                self.url, self.status, self.closed = url, 401, False
+            def __enter__(self):
+                return self
+            def __exit__(self, *_):
+                self.closed = True
+
+        base = 'http://127.0.0.1:8080'
+        paths = ('/api/nox/status', '/api/ui/executors', '/api/ui/events')
+        with patch.object(probe, 'BASE', base):
+            for owner_path in paths:
+                healthy = Response(base + owner_path)
+                with self.subTest(owner_path=owner_path, healthy=True), \
+                     patch.object(probe, 'request', return_value=healthy) as http:
+                    self.assertEqual(
+                        probe.anonymous_owner_scope_status(object(), owner_path), 401)
+                    http.assert_called_once()
+                    self.assertEqual(http.call_args.args[1], owner_path)
+                self.assertTrue(healthy.closed)
+
+                for wrong_url in (base + '/chat/login',
+                                  base + owner_path + '?redirected=1',
+                                  'http://other.example' + owner_path,
+                                  'https://127.0.0.1:8080' + owner_path):
+                    redirected = Response(wrong_url)
+                    with self.subTest(owner_path=owner_path, wrong_url=wrong_url), \
+                         patch.object(probe, 'request', return_value=redirected):
+                        with self.assertRaisesRegex(
+                                RuntimeError, 'HOLD_OWNER_READBACK_RESPONSE_ROUTE'):
+                            probe.anonymous_owner_scope_status(object(), owner_path)
+                    self.assertTrue(redirected.closed)
+
+        source = path.read_text()
+        self.assertIn(
+            "report['anonymous_http'][path]=anonymous_owner_scope_status(unauth,path)",
+            source)
+        self.assertNotIn(
+            "with request(unauth,path) as response:report['anonymous_http'][path]=response.status",
+            source)
+
+    def test_anonymous_owner_401_rejects_cached_gateway_replay(self):
+        """Never accept an old proxy 401 as current anonymous-route evidence."""
+        from email.message import Message
+
+        class Response:
+            def __init__(self, owner_path, entries=()):
+                self.url = 'http://127.0.0.1:8080' + owner_path
+                self.status, self.closed = 401, False
+                self.headers = Message()
+                for name, value in entries:
+                    self.headers[name] = value
+            def close(self):
+                self.closed = True
+            def __enter__(self):
+                return self
+            def __exit__(self, *_):
+                self.close()
+
+        cases = (
+            ((('Age', '3'),), 'HOLD_OWNER_READBACK_CACHED'),
+            ((('X-Cache', 'HIT'),), 'HOLD_OWNER_READBACK_CACHED'),
+            ((('CF-Cache-Status', 'STALE'),), 'HOLD_OWNER_READBACK_CACHED'),
+            ((('Cache-Status', 'cdn; hit'),), 'HOLD_OWNER_READBACK_CACHED'),
+            ((('Age', 'invalid'),), 'HOLD_OWNER_READBACK_CACHE_UNVERIFIED'),
+            ((('Age', '0'), ('Age', '0')), 'HOLD_OWNER_READBACK_CACHE_UNVERIFIED'),
+            ((('Age', '0'),), None),
+            ((), None),
+        )
+        for owner_path in ('/api/nox/status', '/api/ui/executors', '/api/ui/events'):
+            for entries, expected in cases:
+                denial = Response(owner_path, entries)
+                with self.subTest(owner_path=owner_path, entries=entries), \
+                     patch.object(probe, 'BASE', 'http://127.0.0.1:8080'), \
+                     patch.object(probe, 'request', return_value=denial) as http:
+                    if expected is None:
+                        self.assertEqual(
+                            probe.anonymous_owner_scope_status('unauth', owner_path), 401)
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, '^' + expected + '$'):
+                            probe.anonymous_owner_scope_status('unauth', owner_path)
+                    http.assert_called_once()
+                self.assertTrue(denial.closed)
+        # Assert the freshness fence is in THIS anonymous check, not another helper.
+        anonymous_block = path.read_text().split(
+            'def anonymous_owner_scope_status(', 1)[1].split(
+            'def require_not_html_asset(', 1)[0]
+        self.assertIn('require_fresh_owner_readback(response)', anonymous_block)
+
+    def test_owner_readbacks_bind_exact_origin_path_and_query(self):
+        """Do not certify third-turn owner/S03 evidence from redirected HTTP 200 JSON."""
+        class Response:
+            status = 200
+            def __init__(self, url):
+                self.url, self.closed = url, False
+            def read(self, limit):
+                return b'{"ok":true}'
+            def close(self):
+                self.closed = True
+
+        base = 'http://127.0.0.1:8080'
+        path_request = '/api/ui/memory/dialogs/history?dialog_id=' + '1' * 32 + '&limit=8'
+        with patch.object(probe, 'BASE', base):
+            valid = Response(base + path_request)
+            with patch.object(probe, 'request', return_value=valid):
+                self.assertEqual(probe.owner_readback_json(object(), path_request), {'ok': True})
+            self.assertTrue(valid.closed)
+
+            wrong_urls = (
+                base + '/chat/login',
+                base + '/api/ui/memory/dialogs/history?dialog_id=' + '2' * 32 + '&limit=8',
+                base + '/api/ui/memory/dialogs/history?dialog_id=' + '1' * 32 + '&limit=6',
+                base + path_request + '#fragment',
+                'https://127.0.0.1:8080' + path_request,
+                'http://127.0.0.1:8081' + path_request,
+                'http://evil.example' + path_request,
+                '',
+            )
+            for wrong in wrong_urls:
+                response = Response(wrong)
+                with self.subTest(url=wrong), patch.object(probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, '^HOLD_OWNER_READBACK_RESPONSE_ROUTE$'):
+                        probe.owner_readback_json(object(), path_request)
+                self.assertTrue(response.closed)
+
+        source = path.read_text()
+        self.assertEqual(source.count("owner_readback_json(client,'/api/ui/memory/dialogs/history?dialog_id='+did"), 3)
+        self.assertEqual(source.count("owner_readback_json(client,'/api/ui/executors')"), 2)
+        self.assertNotIn("third_history=obj(request(client,", source)
+
+
+
+    def test_nested_stream_model_provenance_matches_actual_route(self):
+        """Nested SSE model labels cannot hide route drift behind saved DONE."""
+        did = '1' * 32
+        for container in ('status', 'metadata', 'meta'):
+            with self.subTest(container=container):
+                frame = {'type': 'meta', container: {'model_id': 'GLM-5.3'}}
+                self.assertEqual(probe.require_stream_model_identity(frame), 'GLM-5.3')
+                self.assertEqual(probe.require_stream_model_identity(
+                    {'type': 'done', container: {'model': 'GLM-5.3'}}, 'GLM-5.3'),
+                    'GLM-5.3')
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
+                    probe.require_stream_model_identity(
+                        {'type': 'status', 'model': 'GLM-5.3',
+                         container: {'model_id': 'other'}}, None)
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
+                    probe.require_stream_model_identity(
+                        {'type': 'meta', container: {'model': 'other'}}, 'GLM-5.3')
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_STREAM_MODEL_IDENTITY_INVALID$'):
+                    probe.require_stream_model_identity(
+                        {'type': 'status', container: {'model': True}}, None)
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        healthy = Response([
+            {'type': 'start', 'model': 'GLM-5.3'},
+            {'type': 'status', 'metadata': {'model_id': 'GLM-5.3'}},
+            {'type': 'delta', 'text': '323'},
+            dict(done, meta={'model': 'GLM-5.3'})])
+        with patch.object(probe, 'request', return_value=healthy):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)[
+                'stream_model_identity'], 'GLM-5.3')
+        self.assertTrue(healthy.closed)
+        poisoned = Response([
+            {'type': 'start', 'model': 'GLM-5.3'},
+            {'type': 'status', 'metadata': {'model': 'different'}},
+            {'type': 'delta', 'text': '323'}, done])
+        with patch.object(probe, 'request', return_value=poisoned):
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
+                probe.consume_turn(object(), 'synthetic', did)
+        self.assertTrue(poisoned.closed)
+        unlabeled = Response([{'type': 'delta', 'text': '323'}, done])
+        with patch.object(probe, 'request', return_value=unlabeled):
+            self.assertIsNone(probe.consume_turn(object(), 'synthetic', did)[
+                'stream_model_identity'])
+        self.assertTrue(unlabeled.closed)
+
+
+    def test_nested_sse_metadata_failures_cannot_be_laundered_by_saved_done(self):
+        """Explicit metadata/meta failures must HOLD before S03-style success."""
+        did = '1' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        delta = {'type': 'delta', 'text': '323'}
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        bad = (
+            {'metadata': {'ok': False}},
+            {'meta': {'success': False}},
+            {'metadata': {'error': {'message': 'proxy unavailable'}}},
+            {'meta': {'http_status': 503}},
+            {'metadata': {'status': 'timeout'}},
+            {'meta': {'status': {'code': 503}}},
+            {'metadata': {'finish_reason': 'length'}},
+        )
+        for fields in bad:
+            for placement in ('preterminal', 'terminal'):
+                frames = ([dict({'type': 'status'}, **fields), delta, done]
+                          if placement == 'preterminal'
+                          else [delta, dict(done, **fields)])
+                expected = ('HOLD_STREAM_PRETERMINAL_FAILURE'
+                            if placement == 'preterminal'
+                            else 'HOLD_STREAM_TERMINAL_FAILURE')
+                response = Response(frames)
+                with self.subTest(fields=fields, placement=placement), patch.object(
+                        probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, '^' + expected + '$'):
+                        probe.consume_turn(object(), 'synthetic', did)
+                self.assertTrue(response.closed)
+
+        healthy = Response([
+            {'type': 'meta', 'metadata': {'http_status': 200, 'status': 'running'}},
+            delta,
+            dict(done, meta={'ok': True, 'status': {'code': 200}})])
+        with patch.object(probe, 'request', return_value=healthy):
+            self.assertEqual(probe.consume_turn(object(), 'synthetic', did)['answer'], '323')
+        self.assertTrue(healthy.closed)
+
+
+
+    def test_http_200_duplicate_page_content_type_must_hold(self):
+        """Conflicting browser HTML/gateway MIME cannot certify page health."""
+        from email.message import Message
+
+        html = b'<html><body>NOX</body></html>'
+
+        class Response:
+            status = 200
+            url = 'http://127.0.0.1:8080/chat'
+
+            def __init__(self, values):
+                self.headers = Message()
+                for value in values:
+                    self.headers.add_header('Content-Type', value)
+                self.closed = False
+                self.reads = 0
+
+            def read(self, limit):
+                self.reads += 1
+                return html
+
+            def close(self):
+                self.closed = True
+
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'):
+            for headers in (
+                ('text/html', 'application/json'),
+                ('application/json', 'text/html'),
+                ('text/html', 'text/html'),
+                ('text/html', 'text/plain'),
+            ):
+                response = Response(headers)
+                with self.subTest(ambiguous=headers), self.assertRaisesRegex(
+                        RuntimeError, 'HOLD_CHAT_PAGE_CONTENT_TYPE_AMBIGUOUS'):
+                    probe.page_snapshot(response, expected_path='/chat')
+                self.assertTrue(response.closed)
+                self.assertEqual(response.reads, 1)
+
+            for headers in ((), ('text/html',), ('text/html; charset=utf-8',)):
+                response = Response(headers)
+                with self.subTest(healthy=headers):
+                    self.assertEqual(probe.page_snapshot(
+                        response, expected_path='/chat'), (200, '/chat', html))
+                self.assertTrue(response.closed)
+                self.assertEqual(response.reads, 1)
+
+            invalid = Response(('application/json',))
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PAGE_NOT_HTML'):
+                probe.page_snapshot(invalid, expected_path='/chat')
+            self.assertTrue(invalid.closed)
+
+
+    def test_genuine_sse_envelope_multi_frame_requires_clean_terminal(self):
+        """SSE data envelopes prove canonical frames, not a mere HTTP 200."""
+        from email.message import Message
+        did = 'offline-sse-envelope'
+        start = {'type': 'start', 'dialog_id': did}
+        delta = {'type': 'delta', 'text': '323', 'dialog_id': did}
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+
+        def payload(frame):
+            return json.dumps(frame, separators=(',', ':')).encode()
+
+        def event(kind, frame):
+            return [b'event: ' + kind.encode() + b'\n',
+                    b'data: ' + payload(frame) + b'\n', b'\n']
+
+        valid = ([b': heartbeat\n'] + event('start', start) +
+                 event('delta', delta) + event('done', done))
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, rows):
+                self.rows = rows
+                self.closed = False
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream; charset=utf-8'
+
+            def __iter__(self):
+                return iter(self.rows)
+
+            def close(self):
+                self.closed = True
+
+        response = Response(valid)
+        with patch.object(probe, 'request', return_value=response):
+            measured = probe.consume_turn(object(), 'synthetic', did)
+        self.assertEqual(measured['answer'], '323')
+        self.assertEqual(measured['delta_count'], 1)
+        self.assertTrue(response.closed)
+
+        failed = (
+            (event('start', start) + event('error', delta),
+             'HOLD_STREAM_SSE_EVENT_MISMATCH'),
+            (event('start', start) + event('delta', delta) +
+             [b'data: ' + payload(done) + b'\n'],
+             'HOLD_STREAM_SSE_UNTERMINATED'),
+            (event('start', start) + [payload(delta) + b'\n'],
+             'HOLD_STREAM_SSE_FIELD'),
+            (valid + [b': extra after done\n'],
+             'HOLD_STREAM_TRAILING_AFTER_DONE'),
+            (event('start', start) + event('delta', delta) +
+             [b'data: [DONE]\n', b'\n'],
+             'HOLD_STREAM_SSE_SENTINEL_WITHOUT_RECEIPT'),
+        )
+        for rows, expected in failed:
+            response = Response(rows)
+            with self.subTest(expected=expected), patch.object(
+                    probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, '^' + expected + '$'):
+                    probe.consume_turn(object(), 'synthetic', did)
+            self.assertTrue(response.closed)
+
+    def test_sse_event_ids_accept_valid_transport_and_fence_replays(self):
+        """Real SSE transport IDs/retry are bounded; they never prove S03."""
+        from email.message import Message
+        did = 'offline-sse-id'
+        start = {'type': 'start', 'dialog_id': did}
+        delta = {'type': 'delta', 'dialog_id': did, 'text': '323'}
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+
+        def event(kind, frame, eid, extra=()):
+            lines = [b'event: ' + kind.encode() + b'\n']
+            lines.extend(extra)
+            lines.extend([b'id: ' + eid + b'\n',
+                          b'data: ' + json.dumps(frame).encode() + b'\n',
+                          b'\n'])
+            return lines
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, rows):
+                self.rows = rows
+                self.closed = False
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream'
+
+            def __iter__(self):
+                return iter(self.rows)
+
+            def close(self):
+                self.closed = True
+
+        start_lines = event('start', start, b'evt-001')
+        delta_lines = event('delta', delta, b'evt-002')
+        done_lines = event('done', done, b'evt-003')
+        good = ([b'retry: 3000\n', b'\n'] + start_lines +
+                delta_lines + done_lines)
+        response = Response(good)
+        with patch.object(probe, 'request', return_value=response):
+            result = probe.consume_turn(object(), 'synthetic', did)
+        self.assertEqual(result['answer'], '323')
+        self.assertEqual(result['delta_count'], 1)
+        self.assertTrue(response.closed)
+
+        cases = (
+            (start_lines + event('delta', delta, b'evt-001') + done_lines,
+             'HOLD_STREAM_SSE_EVENT_ID_REPLAY'),
+            (event('start', start, b'evt-001',
+                   extra=(b'id: duplicate\n',)) + delta_lines + done_lines,
+             'HOLD_STREAM_SSE_EVENT_ID_INVALID'),
+            (event('start', start, b'') + delta_lines + done_lines,
+             'HOLD_STREAM_SSE_EVENT_ID_INVALID'),
+            (event('start', start, b'bad\x00id') + delta_lines + done_lines,
+             'HOLD_STREAM_SSE_EVENT_ID_INVALID'),
+            (event('start', start, b'evt-001',
+                   extra=(b'retry: fast\n',)) + delta_lines + done_lines,
+             'HOLD_STREAM_SSE_RETRY_INVALID'),
+            (event('start', start, b'evt-001',
+                   extra=(b'retry: 1\n', b'retry: 2\n')) + delta_lines +
+             done_lines, 'HOLD_STREAM_SSE_RETRY_INVALID'),
+            ([b'id: orphan\n', b'\n'] + start_lines + delta_lines +
+             done_lines, 'HOLD_STREAM_SSE_EMPTY_EVENT'),
+            (start_lines + delta_lines + [b'retry: 1000\n'],
+             'HOLD_STREAM_SSE_UNTERMINATED'),
+        )
+        for wire, expected in cases:
+            response = Response(wire)
+            with self.subTest(expected=expected), patch.object(
+                    probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, '^' + expected + '$'):
+                    probe.consume_turn(object(), 'synthetic', did)
+            self.assertTrue(response.closed)
+
+
+    def test_sse_utf8_bom_and_bounded_blank_preamble(self):
+        """Legal SSE preambles should not hide a working second-turn stream."""
+        from email.message import Message
+        did = '3' * 32
+        frames = [
+            {'type': 'start', 'dialog_id': did},
+            {'type': 'delta', 'dialog_id': did, 'text': '323'},
+            {'type': 'done', 'dialog_id': did, 'saved': True,
+             's03_integrated': True},
+        ]
+        wire = []
+        for frame in frames:
+            wire.extend([
+                b'event: ' + frame['type'].encode() + b'\n',
+                b'data: ' + json.dumps(frame).encode() + b'\n',
+                b'\n',
+            ])
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, rows, mime='text/event-stream'):
+                self.rows, self.closed = rows, False
+                self.headers = Message()
+                self.headers['Content-Type'] = mime
+
+            def __iter__(self):
+                return iter(self.rows)
+
+            def close(self):
+                self.closed = True
+
+        valid = (
+            [b'\n'] + wire,
+            [b'\r\n'] + wire,
+            [b'\xef\xbb\xbf' + wire[0]] + wire[1:],
+            [b'\xef\xbb\xbf\r\n', b'\r\n'] + wire,
+            [b'\n'] * 16 + wire,
+        )
+        for rows in valid:
+            response = Response(rows)
+            with self.subTest(valid_prefix=rows[:2]), patch.object(
+                    probe, 'request', return_value=response):
+                result = probe.consume_turn(object(), 'second-turn', did)
+            self.assertEqual(result['answer'], '323')
+            self.assertTrue(response.closed)
+
+        invalid = (
+            (Response([b'\n'] * 17 + wire),
+             'HOLD_STREAM_SSE_PREAMBLE_LIMIT'),
+            (Response([b'\n'] + wire, 'application/x-ndjson'),
+             'HOLD_STREAM_ENVELOPE_INVALID'),
+            (Response([b'\n', b'\xef\xbb\xbf' + wire[0]] + wire[1:]),
+             'HOLD_STREAM_ENVELOPE_INVALID'),
+        )
+        for response, expected in invalid:
+            with self.subTest(expected=expected), patch.object(
+                    probe, 'request', return_value=response):
+                with self.assertRaises(RuntimeError) as caught:
+                    probe.consume_turn(object(), 'second-turn', did)
+            self.assertEqual(str(caught.exception), expected)
+            self.assertTrue(response.closed)
+
+
+    def test_camelcase_sse_dialog_alias_rejects_foreign_later_turns(self):
+        """Foreign camelCase dialog aliases must not certify stream turn 2/3."""
+        did, foreign = '1' * 32, '2' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        for turn in ('second-turn', 'third-turn'):
+            for kind in ('delta', 'status', 'done'):
+                for scope in ('top', 'status', 'meta', 'metadata', 'meta.status'):
+                    frame = {'type': kind}
+                    if kind == 'delta':
+                        frame['text'] = '323'
+                    if kind == 'done':
+                        frame.update(done)
+                    if scope == 'top':
+                        frame['dialogId'] = foreign
+                    elif scope == 'meta.status':
+                        frame['meta'] = {'status': {'dialogId': foreign}}
+                    else:
+                        frame[scope] = {'dialogId': foreign}
+                    if kind == 'done':
+                        frames = [{'type': 'delta', 'text': '323'}, frame]
+                    elif kind == 'delta':
+                        frames = [frame, done]
+                    else:
+                        frames = [frame, {'type': 'delta', 'text': '323'}, done]
+                    expected = ('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH'
+                                if kind == 'done' else
+                                'HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH')
+                    response = Response(frames)
+                    with self.subTest(turn=turn, kind=kind, scope=scope):
+                        with patch.object(probe, 'request', return_value=response):
+                            with self.assertRaisesRegex(RuntimeError, '^' + expected + '$'):
+                                probe.consume_turn(object(), turn, did)
+                    self.assertTrue(response.closed)
+
+        for frame in ({'type': 'delta', 'text': '323', 'dialogId': did},
+                      {'type': 'delta', 'text': '323'}):
+            response = Response([frame, done])
+            with patch.object(probe, 'request', return_value=response):
+                self.assertEqual(probe.consume_turn(
+                    object(), 'third-turn', did)['answer'], '323')
+            self.assertTrue(response.closed)
+
+    def test_nested_sse_dialog_provenance_cannot_mix_foreign_second_turn(self):
+        """Foreign nested SSE dialog IDs cannot contaminate a same-dialog answer."""
+        did, foreign = '1' * 32, '2' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        for kind in ('status', 'meta', 'delta', 'done'):
+            for container in ('status', 'metadata', 'meta'):
+                for nested in (False, True):
+                    metadata = ({'status': {'dialog_id': foreign}} if nested
+                                else {'dialog_id': foreign})
+                    fragment = {'type': kind, container: metadata}
+                    if kind == 'delta':
+                        fragment['text'] = '323'
+                    if kind == 'done':
+                        fragment = dict(done, **{container: metadata})
+                        frames = [{'type': 'delta', 'text': '323'}, fragment]
+                    else:
+                        frames = [fragment, {'type': 'delta', 'text': '323'}, done]
+                    response = Response(frames)
+                    error = ('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH'
+                             if kind == 'done' else
+                             'HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH')
+                    with self.subTest(kind=kind, container=container,
+                                      nested=nested), patch.object(
+                            probe, 'request', return_value=response):
+                        with self.assertRaisesRegex(RuntimeError, '^' + error + '$'):
+                            probe.consume_turn(object(), 'second-turn', did)
+                    self.assertTrue(response.closed)
+
+        # Matching nested provenance and untagged legacy frames remain valid.
+        for nested in (True, False):
+            meta = {'meta': {'status': {'dialog_id': did}}} if nested else {}
+            response = Response([dict({'type': 'status'}, **meta),
+                                 {'type': 'delta', 'text': '323'}, done])
+            with self.subTest(valid_nested=nested), patch.object(
+                    probe, 'request', return_value=response):
+                self.assertEqual(
+                    probe.consume_turn(object(), 'second-turn', did)['answer'],
+                    '323')
+            self.assertTrue(response.closed)
+
+
+    def test_nested_status_model_provenance_cannot_launder_second_turn_route(self):
+        """A foreign model inside metadata.status cannot hide under a good DONE."""
+        did = '4' * 32
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n' for frame in self.frames)
+            def close(self):
+                self.closed = True
+
+        done = {'type': 'done', 'dialog_id': did,
+                'saved': True, 's03_integrated': True}
+        for container in ('status', 'metadata', 'meta'):
+            for field in ('model', 'model_id', 'modelId'):
+                poison = {'type': 'status', container:
+                          {'status': {field: 'foreign-route'}}}
+                response = Response([
+                    {'type': 'start', 'model': 'GLM-5.3'}, poison,
+                    {'type': 'delta', 'text': '323'}, done])
+                with self.subTest(container=container, field=field), patch.object(
+                        probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
+                        probe.consume_turn(object(), 'second-turn', did)
+                self.assertTrue(response.closed)
+            good = Response([
+                {'type': 'start', 'model': 'GLM-5.3'},
+                {'type': 'status', container:
+                 {'status': {'model_id': 'GLM-5.3'}}},
+                {'type': 'delta', 'text': '323'}, done])
+            with self.subTest(good_container=container), patch.object(
+                    probe, 'request', return_value=good):
+                result = probe.consume_turn(object(), 'second-turn', did)
+            self.assertEqual(result['stream_model_identity'], 'GLM-5.3')
+            self.assertTrue(good.closed)
+
+
+    def test_sse_content_length_ends_at_exact_wire_eof(self):
+        """An SSE DONE followed by EOF must match the promised raw wire bytes."""
+        from email.message import Message
+        did = '4' * 32
+        frames = [
+            {'type': 'start', 'dialog_id': did},
+            {'type': 'delta', 'dialog_id': did, 'text': '323'},
+            {'type': 'done', 'dialog_id': did, 'saved': True,
+             's03_integrated': True},
+        ]
+        wire = []
+        for frame in frames:
+            wire.extend((b'event: ' + frame['type'].encode() + b'\n',
+                         b'data: ' + json.dumps(frame).encode() + b'\n',
+                         b'\n'))
+
+        class Response(SyntheticBoundedReader):
+            def __init__(self, declared):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream'
+                self.headers['Content-Length'] = str(declared)
+
+            def __iter__(self):
+                return iter(wire)
+
+        exact = sum(map(len, wire))
+        for advertised in (exact - 1, exact + 1, exact + 97):
+            with self.subTest(advertised=advertised):
+                with self.assertRaises(RuntimeError) as caught:
+                    list(probe.bounded_stream_frames(Response(advertised)))
+                self.assertEqual(str(caught.exception),
+                                 'HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH')
+
+        clean_frames = list(probe.bounded_stream_frames(Response(exact)))
+        self.assertEqual([row['type'] for row in clean_frames],
+                         ['start', 'delta', 'done'])
+        self.assertEqual(clean_frames[-1]['dialog_id'], did)
+
+
+    def test_live_multiturn_missing_model_tag_holds_before_third_post_and_complete(self):
+        """An untagged route is compatible transport, never positive model proof."""
+        known = {'stream_model_identity': 'GLM-5.3'}
+        unknown = {'stream_model_identity': None}
+        self.assertFalse(probe.require_multiturn_model_route(unknown, unknown))
+        self.assertFalse(probe.require_multiturn_model_route(unknown, unknown, unknown))
+        self.assertTrue(probe.require_multiturn_model_route(known, known))
+        self.assertTrue(probe.require_multiturn_model_route(known, known, known))
+
+        main = path.read_text().split('def main():', 1)[1]
+        preflight = "if not require_multiturn_model_route(turn,follow):"
+        postflight = "if not model_route_verified:"
+        third_post = 'turn3=admitted_consume_turn('
+        complete = "print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'"
+        self.assertEqual(main.count(preflight), 1)
+        self.assertEqual(main.count(postflight), 1)
+        self.assertEqual(main.count(
+            "raise RuntimeError('HOLD_CHAT_MULTITURN_MODEL_IDENTITY_MISSING')"), 2)
+        self.assertLess(main.index(preflight), main.index(third_post))
+        self.assertLess(main.index(third_post), main.index(postflight))
+        self.assertLess(main.index(postflight), main.index(complete))
+
+
+    def test_http_200_html_page_requires_exact_body_eof_and_unambiguous_framing(self):
+        """A truncated 200 HTML prefix cannot certify a healthy Resonance page."""
+        from email.message import Message
+        html = b'<html><body>NOX Resonance</body></html>'
+
+        class Response:
+            status = 200
+            url = 'http://127.0.0.1:8080/chat'
+
+            def __init__(self, fields=()):
+                self.headers = Message()
+                self.headers.add_header('Content-Type', 'text/html; charset=utf-8')
+                for name, value in fields:
+                    self.headers.add_header(name, str(value))
+                self.closed = False
+
+            def read(self, limit):
+                return html
+
+            def close(self):
+                self.closed = True
+
+        with patch.object(probe, 'BASE', 'http://127.0.0.1:8080'):
+            for length in (len(html) - 1, len(html) + 1, len(html) + 120):
+                response = Response((('Content-Length', length),))
+                with self.subTest(length=length):
+                    with self.assertRaisesRegex(RuntimeError,
+                                                'HOLD_CHAT_PAGE_BODY_LENGTH_MISMATCH'):
+                        probe.page_snapshot(response, expected_path='/chat')
+                self.assertTrue(response.closed)
+
+            for fields in (
+                (('Content-Length', len(html)), ('Transfer-Encoding', 'chunked')),
+                (('Content-Length', len(html)), ('Content-Length', len(html))),
+                (('Transfer-Encoding', 'gzip'),),
+                (('Content-Encoding', 'gzip'),),
+            ):
+                response = Response(fields)
+                with self.subTest(ambiguous=fields):
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_HTTP_FRAMING'):
+                        probe.page_snapshot(response, expected_path='/chat')
+                self.assertTrue(response.closed)
+
+            for fields in (
+                (),
+                (('Content-Length', len(html)),),
+                (('Transfer-Encoding', 'chunked'),),
+                (('Content-Encoding', 'identity'),),
+            ):
+                response = Response(fields)
+                with self.subTest(healthy=fields):
+                    self.assertEqual(probe.page_snapshot(
+                        response, expected_path='/chat'), (200, '/chat', html))
+                self.assertTrue(response.closed)
+
+
+
+    def test_upstream_http_redirect_poison_cannot_be_laundered_by_sse_done(self):
+        """An authenticated model turn cannot turn upstream HTTP 3xx into OK."""
+        did = 'f' * 32
+        for value in ('HTTP/1.1 301 Moved Permanently', 'HTTP 302 Found',
+                      '303 See Other', 'HTTP/2 307 Temporary Redirect',
+                      '308 Permanent Redirect', 302, 307.0, '308'):
+            with self.subTest(redirect=value):
+                self.assertTrue(probe.stream_status_is_failure(value))
+        for value in ('ready', '323 tokens', 200, 'HTTP/1.1 200 OK', '200',
+                      None, True):
+            with self.subTest(healthy=value):
+                self.assertFalse(probe.stream_status_is_failure(value))
+
+        healthy_done = {'type': 'done', 'dialog_id': did, 'saved': True,
+                        's03_integrated': True, 'model': 'GLM-5.3'}
+        cases = [
+            {'type': 'status', 'status': 'HTTP/1.1 302 Found'},
+            {'type': 'status', 'metadata': {'status': {'httpStatus': 307}}},
+            {'type': 'meta', 'meta': {'status_code': '308'}},
+            {'type': 'status', 'code': 301.0},
+            dict(healthy_done, metadata={'http_status': 303}),
+        ]
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, frames):
+                self.frames = frames
+                self.closed = False
+
+            def __iter__(self):
+                return iter(json.dumps(row).encode() + b'\n'
+                            for row in self.frames)
+
+            def close(self):
+                self.closed = True
+
+        for poisoned in cases:
+            frames = [{'type': 'start', 'model': 'GLM-5.3'},
+                      {'type': 'delta', 'text': '323'}]
+            if poisoned['type'] == 'done':
+                frames.append(poisoned)
+                expected = 'HOLD_STREAM_TERMINAL_FAILURE'
+            else:
+                frames.extend((poisoned, healthy_done))
+                expected = 'HOLD_STREAM_PRETERMINAL_FAILURE'
+            response = Response(frames)
+            with self.subTest(frame=poisoned):
+                with patch.object(probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(RuntimeError, expected):
+                        probe.consume_turn(object(), 'offline synthetic', did)
+                self.assertTrue(response.closed)
+
+    def test_unknown_explicit_finish_reason_blocks_false_second_turn_completion(self):
+        """Unknown/tool finish markers cannot be laundered by saved=true DONE."""
+        did = 'offline-unfinished-tool-handoff'
+        done = {'type': 'done', 'dialog_id': did, 'saved': True,
+                's03_integrated': True, 'model': 'GLM-5.3'}
+        start = {'type': 'start', 'model': 'GLM-5.3'}
+        delta = {'type': 'delta', 'text': '323'}
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+
+            def __init__(self, frames):
+                self.frames = frames
+                self.closed = False
+
+            def __iter__(self):
+                return iter(json.dumps(item).encode() + b'\n'
+                            for item in self.frames)
+
+            def close(self):
+                self.closed = True
+
+        wrappers = (
+            lambda field, value: {field: value},
+            lambda field, value: {'metadata': {field: value}},
+            lambda field, value: {'status': {'status': {field: value}}},
+        )
+        bad_reasons = (
+            ('finish_reason', 'tool_calls'),
+            ('finishReason', 'function_call'),
+            ('stop_reason', 'incomplete'),
+            ('stopReason', ' pending '),
+            ('finish_reason', 'UNKNOWN'),
+            ('finishReason', False),
+            ('stop_reason', 1),
+            ('stopReason', ''),
+            ('finish_reason', 'content_filter'),
+        )
+        for field, value in bad_reasons:
+            for wrap in wrappers:
+                evidence = wrap(field, value)
+                for terminal in (False, True):
+                    frame = dict(done if terminal else {'type': 'status'},
+                                 **evidence)
+                    frames = ([start, delta, frame] if terminal else
+                              [start, delta, frame, done])
+                    response = Response(frames)
+                    with self.subTest(field=field, reason=value,
+                                      nested=evidence, terminal=terminal):
+                        with patch.object(probe, 'request',
+                                          return_value=response):
+                            with self.assertRaisesRegex(
+                                    RuntimeError, 'HOLD_STREAM_(TERMINAL|PRETERMINAL)_FAILURE'):
+                                probe.consume_turn(object(), 'offline', did)
+                        self.assertTrue(response.closed)
+
+        for value in ('stop', ' STOP ', 'end_of_turn', 'end_turn',
+                      'eos', 'eot_id', 'stop_sequence', 'completed'):
+            response = Response([start, delta, dict(done, finish_reason=value)])
+            with self.subTest(valid=value), patch.object(
+                    probe, 'request', return_value=response):
+                self.assertEqual(
+                    probe.consume_turn(object(), 'offline', did)['answer'],
+                    '323')
+            self.assertTrue(response.closed)
+        # Missing or explicit null stays neutral for older native streams;
+        # it is not independently sufficient for model/S03 acceptance.
+        for done_extra in ({}, {'finish_reason': None}):
+            response = Response([start, delta, dict(done, **done_extra)])
+            with patch.object(probe, 'request', return_value=response):
+                self.assertEqual(
+                    probe.consume_turn(object(), 'offline', did)['answer'],
+                    '323')
+            self.assertTrue(response.closed)
+
+    def test_runtime_js_css_asset_requires_complete_bounded_http_body(self):
+        """A 200 JS prefix cannot certify a truncated critical runtime asset."""
+        from email.message import Message
+
+        body = b'window.NOX=' + b'x' * 780
+
+        class Response:
+            def __init__(self, fields):
+                self.headers = Message()
+                for name, value in fields:
+                    self.headers.add_header(name, value)
+                self.position = 0
+                self.reads = 0
+
+            def read(self, amount):
+                self.reads += 1
+                chunk = body[self.position:self.position + amount]
+                self.position += len(chunk)
+                return chunk
+
+        for fields in ([], [('Content-Length', str(len(body)))],
+                       [('Transfer-Encoding', 'chunked')]):
+            response = Response(fields)
+            sample = response.read(512)
+            with self.subTest(valid=fields):
+                self.assertEqual(
+                    probe.complete_runtime_asset_body(response, sample),
+                    (len(body), probe.digest(body)))
+                self.assertEqual(response.reads, 2)
+
+        for fields, reason in (
+            ([('Content-Length', str(len(body) + 1))],
+             'HOLD_RESONANCE_ASSET_BODY_LENGTH_MISMATCH'),
+            ([('Content-Length', str(len(body) - 1))],
+             'HOLD_RESONANCE_ASSET_BODY_LENGTH_MISMATCH'),
+            ([('Content-Length', str(len(body))),
+              ('Content-Length', str(len(body)))], 'HOLD_STREAM_HTTP_FRAMING'),
+            ([('Content-Encoding', 'gzip')], 'HOLD_STREAM_HTTP_FRAMING'),
+        ):
+            response = Response(fields)
+            sample = response.read(512)
+            with self.subTest(rejected=fields), self.assertRaisesRegex(
+                    RuntimeError, '^' + reason + '$'):
+                probe.complete_runtime_asset_body(response, sample)
+
+        for fields in ([], [('Content-Length', str(len(body)))],
+                       [('Content-Length', '999999')]):
+            response = Response(fields)
+            sample = response.read(512)
+            with self.subTest(limit=fields), self.assertRaisesRegex(
+                    RuntimeError, '^HOLD_RESONANCE_ASSET_LIMIT$'):
+                probe.complete_runtime_asset_body(response, sample, limit=700)
+
+        source = path.read_text()
+        self.assertIn('complete_runtime_asset_body(asset, sample)', source)
+
+
+    def test_owner_history_row_ids_unique_across_complete_read_window(self):
+        """Earlier owner-history rows cannot reuse IDs from six accepted rows."""
+        did = 'f' * 32
+        turns = [('alpha', 'one'), ('beta', 'two'), ('gamma', 'three')]
+        older = [
+            {'role': 'user', 'content': 'old-question', 'id': 'old-u'},
+            {'role': 'assistant', 'content': 'old-answer', 'message_id': 'old-a'},
+        ]
+        tail = []
+        for index, (prompt, answer) in enumerate(turns):
+            tail.extend([
+                {'role': 'user', 'content': prompt, 'id': 'u' + str(index)},
+                {'role': 'assistant', 'content': answer, 's03_id': 'a' + str(index)},
+            ])
+        history = {'dialog_id': did, 'messages': older + tail}
+        self.assertTrue(probe.scoped_history_matches_turns(history, turns, did))
+        self.assertTrue(probe.history_matches_turns(history['messages'], turns))
+        for index, key, reused_id in (
+                (0, 's03_id', 'a2'),
+                (1, 'id', 'u1'),
+                (0, 'message_id', 'a0')):
+            changed = [dict(row) for row in history['messages']]
+            changed[index][key] = reused_id
+            with self.subTest(older_row=index, alias=key):
+                self.assertFalse(probe.scoped_history_matches_turns(
+                    {'dialog_id': did, 'messages': changed}, turns, did))
+                self.assertFalse(probe.history_matches_turns(changed, turns))
+        legacy = [dict(row) for row in history['messages']]
+        legacy[0].pop('id')
+        legacy[1].pop('message_id')
+        self.assertTrue(probe.scoped_history_matches_turns(
+            {'dialog_id': did, 'messages': legacy}, turns, did))
+
+
+    def test_stream_post_explicit_sse_accept_keeps_owner_json_routes(self):
+        """A three-turn stream probe must ask for SSE, not silently negotiate JSON."""
+        class Client:
+            def __init__(self):
+                self.requests = []
+
+            def open(self, request, timeout):
+                self.requests.append((request, timeout))
+                return object()
+
+        client = Client()
+        probe.request(client, '/api/nox/chat/stream', 'POST',
+                      {'message': 'offline', 'dialog_id': 'f' * 32}, timeout=12)
+        stream, timeout = client.requests[-1]
+        headers = {key.lower(): value for key, value in stream.header_items()}
+        self.assertEqual(stream.get_method(), 'POST')
+        self.assertEqual(timeout, 12)
+        self.assertEqual(headers['accept'], 'text/event-stream')
+        self.assertEqual(headers['content-type'], 'application/json')
+        self.assertTrue(stream.full_url.endswith('/api/nox/chat/stream'))
+        self.assertIn(b'"message": "offline"', stream.data)
+
+        for path, method, payload in (
+                ('/api/nox/status', 'GET', None),
+                ('/api/ui/memory/dialogs/create', 'POST', {'confirmed': True}),
+                ('/api/nox/chat/stream', 'GET', None)):
+            with self.subTest(path=path, method=method):
+                probe.request(client, path, method, payload)
+                current, _ = client.requests[-1]
+                request_headers = {key.lower(): value
+                                   for key, value in current.header_items()}
+                self.assertEqual(request_headers['accept'], 'application/json')
+                self.assertEqual(request_headers['content-type'], 'application/json')
+
+
+    def test_owner_history_full_window_dialog_scope_before_three_turn_acceptance(self):
+        """A foreign earlier row cannot hide behind six correct same-dialog tail rows."""
+        did, foreign = 'a' * 32, 'b' * 32
+        turns = [('first', '323'), ('second', '323'), ('third', '3 workers')]
+        tail = []
+        for prompt, answer in turns:
+            tail.extend((
+                {'role': 'user', 'content': prompt, 'dialog_id': did},
+                {'role': 'assistant', 'content': answer, 'dialog_id': did},
+            ))
+        older = [
+            {'role': 'user', 'content': 'older question', 'dialog_id': did},
+            {'role': 'assistant', 'content': 'older answer', 'dialog_id': did},
+        ]
+        healthy = {'dialog_id': did, 'messages': older + tail}
+        self.assertTrue(probe.scoped_history_matches_turns(healthy, turns, did))
+        self.assertTrue(probe.stable_postquiet_three_turn_history(
+            object(), {'dialog_id': foreign, 'messages': older + tail}, turns, did) is False)
+        # Legacy untagged rows are permissible within the same scoped response.
+        legacy = [dict(row) for row in older + tail]
+        legacy[0].pop('dialog_id')
+        legacy[1].pop('dialog_id')
+        self.assertTrue(probe.scoped_history_matches_turns(
+            {'dialog_id': did, 'messages': legacy}, turns, did))
+        for earlier_index in (0, 1):
+            for invalid in (foreign, None, ''):
+                poisoned = [dict(row) for row in older + tail]
+                poisoned[earlier_index]['dialog_id'] = invalid
+                history = {'dialog_id': did, 'messages': poisoned}
+                with self.subTest(older_row=earlier_index, dialog=invalid):
+                    self.assertFalse(probe.scoped_history_matches_turns(
+                        history, turns, did))
+                    self.assertFalse(probe.stable_postquiet_three_turn_history(
+                        object(), history, turns, did))
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED$'):
+                        probe.require_executor_witness(
+                            {'saved': True, 's03_integrated': True},
+                            history, turns, True, True, did)
+
+
+    def test_owner_dialog_completion_cannot_claim_native_repair(self):
+        """A bounded owner-dialog readback is not production acceptance."""
+        source = path.read_text()
+        main = source.split('def main():', 1)[1]
+        self.assertNotIn('NOX_MAINT_REPAIR_COMPLETE=true', main)
+        self.assertIn("print('NOX_MAINT_REPAIR_COMPLETE=false'", main)
+        self.assertIn("print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'", main)
+        self.assertIn("if executor_question_receipt is None:", main)
+        self.assertIn("raise RuntimeError('HOLD_OWNER_DIALOG_PROBE_INCOMPLETE')", main)
+        self.assertIn("'scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'", main)
+        self.assertIn("'browser_multiturn_accepted':False", main)
+        self.assertIn("'native_s03_independently_verified':False", main)
+        self.assertIn("'production_accepted':False", main)
+        final_gate = main.rindex('require_executor_turn_budget(time.monotonic()-probe_started)')
+        scoped = main.index("print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'")
+        self.assertLess(final_gate, scoped)
+        self.assertLess(main.index('require_logout_revoked(client)'), scoped)
+        self.assertLess(main.index("emit('chat_probe_acceptance_scope'"), scoped)
+        self.assertLess(scoped, main.index("print('NOX_MAINT_REPAIR_COMPLETE=false'"))
+
+
+    def test_postthird_worker_pid_startticks_reuse_fails_closed(self):
+        """Same worker ID cannot conceal a restarted process when PID/ticks are given."""
+        witnessed = {'schema': 'NOX_OWNER_EXECUTORS_V1', 'state': 'OBSERVED',
+                     'configured': 2, 'workers': [
+                         {'id': 'a', 'pid': 101, 'start_ticks': 2001},
+                         {'id': 2, 'pid': 102, 'start_ticks': 2002}]}
+        reordered = dict(witnessed, workers=[
+            {'id': ' 2 ', 'pid': '102', 'start_ticks': '2002'},
+            {'id': 'a', 'pid': '101', 'start_ticks': '2001'}])
+        with patch.object(probe, 'owner_readback_json', return_value=reordered):
+            self.assertTrue(probe.require_postturn_executor_identity('client', witnessed))
+        bad = (
+            {'id': 'a', 'pid': 103, 'start_ticks': 2001},
+            {'id': 'a', 'pid': 101, 'start_ticks': 2999},
+            {'id': 'a', 'pid': 101},
+            {'id': 'a', 'pid': 'bad', 'start_ticks': 2001},
+            {'id': 'a', 'pid': True, 'start_ticks': 2001},
+            {'id': 'a', 'pid': 0, 'start_ticks': 2001},
+            {'id': 'a', 'pid': 101, 'start_ticks': None},
+        )
+        for replacement in bad:
+            current = dict(witnessed, workers=[replacement, witnessed['workers'][1]])
+            with self.subTest(replacement=replacement), patch.object(
+                    probe, 'owner_readback_json', return_value=current):
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT'):
+                    probe.require_postturn_executor_identity('client', witnessed)
+        legacy = dict(witnessed, workers=[{'id': 'a'}, {'id': 2}])
+        with patch.object(probe, 'owner_readback_json', return_value=legacy):
+            self.assertTrue(probe.require_postturn_executor_identity('client', legacy))
+
+
+    def test_stream_post_cached_replay_cannot_certify_later_sse_turn(self):
+        """A cached 200/DONE is not live second-/third-turn stream evidence."""
+        from email.message import Message
+
+        class Response:
+            status = 200
+            url = probe.BASE + '/api/nox/chat/stream'
+
+            def __init__(self, extra):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream'
+                for name, value in extra:
+                    self.headers[name] = value
+                self.closed = False
+
+            def close(self):
+                self.closed = True
+
+        cached = (
+            [('Age', '12')],
+            [('X-Cache', 'HIT')],
+            [('CF-Cache-Status', 'STALE')],
+            [('Cache-Status', 'gateway; hit')],
+            [('Age', 'not-a-number')],
+            [('Age', '0'), ('Age', '0')],
+        )
+        for label in ('second', 'third'):
+            did = 'offline-' + label
+            for fields in cached:
+                response = Response(fields)
+                with self.subTest(turn=label, headers=fields):
+                    with patch.object(probe, 'request', return_value=response):
+                        with patch.object(probe, 'bounded_stream_frames') as parser:
+                            with self.assertRaisesRegex(
+                                    RuntimeError, '^HOLD_STREAM_CACHED_REPLAY$'):
+                                probe.consume_turn('client', 'offline probe', did)
+                            parser.assert_not_called()
+                self.assertTrue(response.closed)
+
+            # Age:0 with a cache MISS is allowed to reach the existing
+            # strict SSE frame/terminal validation (not native acceptance).
+            fresh = Response([('Age', '0'), ('X-Cache', 'MISS')])
+            frames = iter((
+                {'type': 'start', 'model': 'same-route'},
+                {'type': 'delta', 'text': 'Ответ получен', 'model': 'same-route'},
+                {'type': 'done', 'dialog_id': did, 'model': 'same-route',
+                 'saved': True, 's03_integrated': True},
+            ))
+            with patch.object(probe, 'request', return_value=fresh):
+                with patch.object(probe, 'bounded_stream_frames', return_value=frames) as parser:
+                    reply = probe.consume_turn('client', 'offline probe', did)
+                    parser.assert_called_once()
+            self.assertTrue(fresh.closed)
+            self.assertEqual(reply['done']['dialog_id'], did)
+            self.assertEqual(reply['stream_model_identity'], 'same-route')
+
+
+
+
+    def test_sse_cache_policy_replay_fence_before_later_turn_frames(self):
+        """A public/cacheable 200 SSE cannot certify a fresh turn2/turn3 DONE."""
+        from email.message import Message
+
+        class Client:
+            def __init__(self):
+                self.requests = []
+            def open(self, request, timeout):
+                self.requests.append(request)
+                return object()
+
+        client = Client()
+        probe.request(client, '/api/nox/chat/stream', 'POST',
+                      {'dialog_id': 'f' * 32, 'message': 'offline only'})
+        headers = {key.lower(): value for key, value in
+                   client.requests[-1].header_items()}
+        self.assertIn('no-store', headers['cache-control'])
+        self.assertIn('no-cache', headers['cache-control'])
+        self.assertEqual(headers['pragma'], 'no-cache')
+        self.assertEqual(headers['accept'], 'text/event-stream')
+
+        class Response:
+            status = 200
+            url = probe.BASE + '/api/nox/chat/stream'
+            def __init__(self, fields):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream'
+                for name, value in fields:
+                    self.headers[name] = value
+                self.closed = False
+            def close(self):
+                self.closed = True
+
+        poisoned = (
+            ([('Cache-Control', 'public')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'max-age=120')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 's-maxage=30')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'immutable')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'stale-while-revalidate=30')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'stale-if-error=60')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'no-store'), ('Cache-Control', 'public')],
+             'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'max-age=bad')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'no-store,')], 'HOLD_STREAM_CACHED_REPLAY'),
+        )
+        for label in ('second', 'third'):
+            for fields, reason in poisoned:
+                response = Response(fields)
+                with self.subTest(turn=label, policy=fields):
+                    with patch.object(probe, 'request', return_value=response):
+                        with patch.object(probe, 'bounded_stream_frames') as parser:
+                            with self.assertRaisesRegex(RuntimeError, '^' + reason + '$'):
+                                probe.consume_turn(client, 'offline', 'f' * 32)
+                            parser.assert_not_called()
+                self.assertTrue(response.closed)
+        for policy in ('no-store, no-cache', 'private, max-age=0',
+                       'no-cache, must-revalidate'):
+            response = Response([('Cache-Control', policy), ('Age', '0'),
+                                 ('X-Cache', 'MISS')])
+            with self.subTest(fresh=policy):
+                probe.require_fresh_owner_readback(response)
+
+
+
+    def test_stream_model_label_aliases_bind_second_third_route(self):
+        """A mismatched explicit model_label/modelLabel must poison later-turn SSE."""
+        did = 'd' * 32
+        expected = 'GLM-5.3'
+        for turn_label in ('second', 'third'):
+            for alias in ('model_label', 'modelLabel'):
+                foreign = 'foreign-model'
+                shapes = (
+                    {'type': 'status', alias: foreign},
+                    {'type': 'status', 'status': {alias: foreign}},
+                    {'type': 'meta', 'metadata': {alias: foreign}},
+                    {'type': 'meta', 'meta': {'status': {alias: foreign}}},
+                    {'type': 'done', 'dialog_id': did, 'model': expected,
+                     'meta': {alias: foreign}},
+                )
+                for frame in shapes:
+                    with self.subTest(turn=turn_label, alias=alias, frame=frame):
+                        with self.assertRaisesRegex(
+                                RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
+                            probe.require_stream_model_identity(frame, expected)
+                # If the alias is the ONLY label, it is positive identity evidence.
+                self.assertEqual(
+                    probe.require_stream_model_identity({'type': 'start', alias: expected}),
+                    expected)
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_STREAM_MODEL_IDENTITY_INVALID$'):
+                    probe.require_stream_model_identity({'type': 'meta', alias: True})
+        matching = {'type': 'done', 'model': expected,
+                    'metadata': {'modelLabel': expected},
+                    'meta': {'model_label': expected},
+                    'status': {'status': {'model_label': expected}}}
+        self.assertEqual(probe.require_stream_model_identity(matching, expected), expected)
+        self.assertIsNone(probe.require_stream_model_identity({'type': 'delta', 'text': '323'}))
+        class OfflineResponse(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + bytes([10]) for frame in self.frames)
+            def close(self):
+                self.closed = True
+        for turn_label in ('second', 'third'):
+            response = OfflineResponse([
+                {'type': 'start', 'model': expected},
+                {'type': 'delta', 'text': '323', 'metadata': {'modelLabel': 'foreign-model'}},
+                {'type': 'done', 'dialog_id': did, 'saved': True, 's03_integrated': True,
+                 'model': expected},
+            ])
+            with self.subTest(stream=turn_label):
+                with patch.object(probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
+                        probe.consume_turn(object(), 'offline-' + turn_label, did)
+                self.assertTrue(response.closed)
+
+
+    def test_stream_response_nosniff_malformed_headers_and_turn_receipt(self):
+        """Explicitly ambiguous nosniff never certifies a second/third SSE turn."""
+        from email.message import Message
+        did = 'a' * 32
+        frames = [
+            {'type': 'start', 'model': 'GLM-5.3'},
+            {'type': 'delta', 'text': '323'},
+            {'type': 'done', 'dialog_id': did, 'model': 'GLM-5.3',
+             'saved': True, 's03_integrated': True},
+        ]
+
+        class Response(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, fields):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream'
+                for name, value in fields:
+                    self.headers[name] = value
+                self.closed = False
+                self.read_count = 0
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + b'\n'
+                            for frame in frames)
+            def readline(self, limit):
+                self.read_count += 1
+                return super().readline(limit)
+            def close(self):
+                self.closed = True
+
+        for fields in (
+                [('X-Content-Type-Options', 'sniff')],
+                [('X-Content-Type-Options', 'no-sniff')],
+                [('X-Content-Type-Options', 'nosniff, nosniff')],
+                [('X-Content-Type-Options', 'nosniff; extra=1')],
+                [('X-Content-Type-Options', '')],
+                [('X-Content-Type-Options', 'nosniff'),
+                 ('X-Content-Type-Options', 'sniff')],
+                [('X-Content-Type-Options', 'nosniff'),
+                 ('X-Content-Type-Options', 'nosniff')]):
+            for label in ('second', 'third'):
+                reply = Response(fields)
+                with self.subTest(turn=label, headers=fields):
+                    with patch.object(probe, 'request', return_value=reply):
+                        with patch.object(probe, 'bounded_stream_frames') as parser:
+                            with self.assertRaisesRegex(
+                                    RuntimeError, '^HOLD_STREAM_NOSNIFF_HEADER$'):
+                                probe.consume_turn(object(), 'offline-' + label, did)
+                            parser.assert_not_called()
+                    self.assertEqual(reply.read_count, 0)
+                    self.assertTrue(reply.closed)
+
+        for fields, proven in (
+                ([], False),
+                ([('X-Content-Type-Options', 'nosniff')], True),
+                ([('X-Content-Type-Options', '  NoSnIfF  ')], True)):
+            reply = Response(fields)
+            with self.subTest(healthy=fields):
+                with patch.object(probe, 'request', return_value=reply):
+                    result = probe.consume_turn(object(), 'offline', did)
+                self.assertEqual(result['answer'], '323')
+                self.assertEqual(result['stream_nosniff_verified'], proven)
+                self.assertGreater(reply.read_count, 0)
+                self.assertTrue(reply.closed)
+        self.assertFalse(probe.require_stream_nosniff_header(object()))
+
+
+    def test_owner_history_camelcase_dialog_aliases_fence_later_turns(self):
+        """An explicitly foreign dialogId cannot certify owner-history turns 2/3."""
+        did, foreign = 'a' * 32, 'b' * 32
+        turns = [('first question', '323'), ('second question', '323'),
+                 ('third question', '3')]
+        rows = [
+            {'role': role, 'content': content}
+            for question, answer in turns
+            for role, content in (('user', question), ('assistant', answer))
+        ]
+        for count in (2, 3):
+            window = rows[:2 * count]
+            # Both legacy untagged rows and consistent alias rows remain valid.
+            self.assertTrue(probe.scoped_history_matches_turns(
+                {'dialog_id': did, 'messages': window}, turns[:count], did))
+            matching = {'dialog_id': did, 'dialogId': did,
+                        'messages': [dict(row, dialogId=did) for row in window]}
+            self.assertTrue(probe.scoped_history_matches_turns(
+                matching, turns[:count], did))
+            for index in range(len(window)):
+                for alias in ('dialog_id', 'dialogId'):
+                    poisoned = [dict(row) for row in window]
+                    poisoned[index][alias] = foreign
+                    snapshot = {'dialog_id': did, 'messages': poisoned}
+                    with self.subTest(turn=count, row=index, alias=alias):
+                        self.assertFalse(probe.scoped_history_matches_turns(
+                            snapshot, turns[:count], did))
+                        with self.assertRaisesRegex(
+                                RuntimeError, "HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED"):
+                            probe.require_executor_witness(
+                                {'saved': True, 's03_integrated': True}, snapshot,
+                                turns[:count], True, True, did)
+            # Top-level snake_case is correct, but camelCase alias contradicts it.
+            for invalid in (foreign, None, '', True):
+                snapshot = {'dialog_id': did, 'dialogId': invalid,
+                            'messages': window}
+                with self.subTest(turn=count, envelope=repr(invalid)):
+                    self.assertFalse(probe.scoped_history_matches_turns(
+                        snapshot, turns[:count], did))
+
+
+    def test_real_loopback_http_sse_second_third_turn_digest_and_replay(self):
+        """Actual local HTTP SSE later turns; no GLM, native POST or S03 writes.
+
+        Verify bounded raw wire digests through urllib HTTPResponse, replay HOLD
+        and stable reported model-route identity across later turns.
+        This does not certify an actual browser or canonical S03 row.
+        """
+        import hashlib
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        did = 'a' * 32
+        prompts = ['synthetic owner QA turn two', 'synthetic owner QA turn three']
+        captured = []
+        bodies = []
+        for text in ('323', '3 исполнителя и NOX'):
+            frames = (
+                {'type': 'start', 'dialogId': did, 'model': 'GLM-5.3-Flash'},
+                {'type': 'delta', 'dialogId': did, 'model': 'GLM-5.3-Flash',
+                 'text': text},
+                {'type': 'done', 'dialog_id': did, 'model': 'GLM-5.3-Flash',
+                 'saved': True, 's03_integrated': True},
+            )
+            def sse(kind, frame, index):
+                data = json.dumps(frame, ensure_ascii=False, separators=(',', ':')).encode()
+                return (b'id: ' + str(index).encode() + b'\r\n'
+                        + b'event: ' + kind.encode() + b'\r\n'
+                        + b'data: ' + data + b'\r\n\r\n')
+            bodies.append(b''.join(
+                sse(frame['type'], frame, idx)
+                for idx, frame in enumerate(frames, start=1)))
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = self.rfile.read(int(self.headers['Content-Length']))
+                captured.append((self.path, self.headers.get('Accept'), json.loads(body)))
+                replay = len(captured) == 3
+                payload = bodies[0 if replay else len(captured) - 1]
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
+                self.send_header('X-Content-Type-Options', 'nosniff')
+                self.send_header('Cache-Control', 'no-store')
+                if replay:
+                    self.send_header('X-Cache', 'HIT')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                try:
+                    self.wfile.write(payload)
+                except BrokenPipeError:
+                    pass
+
+            def log_message(self, *args):
+                pass
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        original_base = probe.BASE
+        worker.start()
+        try:
+            probe.BASE = 'http://127.0.0.1:' + str(server.server_port)
+            client = urllib.request.build_opener(urllib.request.ProxyHandler({}),
+                                                 probe.RejectPostRedirect())
+            second = probe.consume_turn(client, prompts[0], did, timeout=5)
+            third = probe.consume_turn(client, prompts[1], did, timeout=5)
+            self.assertTrue(probe.require_multiturn_model_route(second, third))
+            for index, result in enumerate((second, third)):
+                with self.subTest(later_turn=index + 2):
+                    self.assertEqual(result['stream_wire_sha256'],
+                                     hashlib.sha256(bodies[index]).hexdigest())
+                    self.assertTrue(result['stream_nosniff_verified'])
+                    self.assertEqual(result['delta_count'], 1)
+            with self.assertRaisesRegex(RuntimeError, "HOLD_STREAM_CACHED_REPLAY"):
+                probe.consume_turn(client, prompts[1], did, timeout=5)
+            self.assertEqual(len(captured), 3)
+            self.assertTrue(all(route == '/api/nox/chat/stream'
+                                and accept == 'text/event-stream'
+                                and req.get('dialog_id') == did
+                                and req.get('history') == []
+                                for route, accept, req in captured))
+            self.assertEqual([captured[0][2]['message'],
+                              captured[1][2]['message']], prompts)
+        finally:
+            probe.BASE = original_base
+            server.shutdown()
+            server.server_close()
+            worker.join(timeout=5)
+
+if __name__ == '__main__':
+    unittest.main()
+):
+                    probe.model_slots_state(object())
+            self.assertFalse(reply.read_called)
+            self.assertTrue(reply.closed)
+
+        fresh = SlotReply([('Cache-Control', 'private, no-store'), ('Age', '0')])
+        with patch.object(probe, 'request', return_value=fresh):
+            self.assertEqual(probe.model_slots_state(object()),
+                             {'count': 1, 'busy': 0})
+        self.assertTrue(fresh.read_called)
+        self.assertTrue(fresh.closed)
+
+        class CapturingOpener:
+            def open(self, req, timeout):
+                self.req = req
+                return SlotReply([('Cache-Control', 'no-store')])
+
+        opener = CapturingOpener()
+        with probe.request(opener, '/slots',
+                           base='http://127.0.0.1:8098') as response:
+            self.assertEqual(response.status, 200)
+        self.assertEqual(opener.req.get_header('Cache-control'),
+                         'no-store, no-cache')
+        self.assertEqual(opener.req.get_header('Pragma'), 'no-cache')
+
     def test_real_latency_targets_gate_completion_for_first_and_second_turn(self):
         good_first = {'first_meaningful_delta_ms': 8000, 'stream_total_ms': 25000}
         good_second = {'first_meaningful_delta_ms': 5000, 'stream_total_ms': 25000}
