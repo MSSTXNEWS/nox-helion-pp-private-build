@@ -3857,5 +3857,34 @@ async function check(chunks, status=200) {
                         200, cookies, pin))
 
 
+    def test_canonical_s03_lone_surrogates_fail_closed_but_valid_ru_es_utf8_survives(self):
+        """Four persisted RU/ES rows must be genuine UTF-8, not JSON surrogate escapes.
+
+        Strict source-only S03 witnesses; NOT a live native writer/readback.
+        """
+        spanish = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        original = [dict(row, message_id=f"utf8-row-{index}")
+                    for index, row in enumerate(rows(spanish), 1)]
+        valid = [dict(row) for row in original]
+        valid[0]["content"] += " Привет, мир"
+        valid[1]["content"] += " 🧠"
+        valid[2]["content"] += " ¡Hola, España!"
+        valid[3]["content"] += " café"
+        self.assertRegex(multiturn_transcript_sha256(valid), r"^[0-9a-f]{64}$")
+        writer, reader = s03_proof(valid)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, valid, require_full_transcript_pin=True))
+        baseline_writer, baseline_reader = s03_proof(original)
+        for character in (chr(0xd800), chr(0xdbff), chr(0xdc00), chr(0xdfff)):
+            for index in range(4):
+                with self.subTest(codepoint=hex(ord(character)), row=index):
+                    corrupt = [dict(row) for row in original]
+                    corrupt[index]["content"] += character
+                    self.assertIsNone(multiturn_transcript_sha256(corrupt))
+                    self.assertFalse(canonical_s03_proof_valid(
+                        baseline_writer, baseline_reader, DIALOG, corrupt,
+                        require_full_transcript_pin=True))
+
+
 if __name__ == "__main__":
     unittest.main()

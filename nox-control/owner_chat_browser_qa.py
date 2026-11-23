@@ -833,8 +833,14 @@ def multiturn_transcript_sha256(rows):
         return None
     transcript = [{'role': role, 'content': row['content']}
                   for row, role in zip(rows, roles)]
-    raw = json.dumps(transcript, ensure_ascii=False, sort_keys=True,
-                     separators=(',', ':'), allow_nan=False).encode('utf-8')
+    try:
+        # API JSON may contain a lone escaped UTF-16 surrogate. Such text
+        # cannot be persisted as strict UTF-8; it must never certify an S03
+        # transcript or abort the owner QA with an uncategorized codec error.
+        raw = json.dumps(transcript, ensure_ascii=False, sort_keys=True,
+                         separators=(',', ':'), allow_nan=False).encode('utf-8')
+    except UnicodeEncodeError:
+        return None
     return digest(raw)
 
 
