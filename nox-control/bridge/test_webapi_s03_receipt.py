@@ -79,6 +79,10 @@ class FactReceiptTest(unittest.TestCase):
             (None, "CHAT_INVALID_BODY"),
             (["not", "a", "dict"], "CHAT_INVALID_BODY"),
             ({"messages": ["not-a-message"]}, "CHAT_INVALID_MESSAGES"),
+            # Unknown/missing roles must not silently vanish from history.
+            ({"messages": [{"role": "system", "content": "Do not drop this"}]}, "CHAT_INVALID_ROLE"),
+            ({"messages": [{"content": "missing explicit role"}, {"role": "user", "content": "Ответь"}]}, "CHAT_INVALID_ROLE"),
+            ({"messages": [{"role": "tool", "content": {"result": "x"}}, {"role": "user", "content": "Ответь"}]}, "CHAT_INVALID_ROLE"),
             ({"messages": [{"role": "user", "content": {"unsafe": True}}]}, "CHAT_INVALID_CONTENT"),
             ({"messages": [{"role": "user", "content": "\ud800"}]}, "CHAT_INVALID_UNICODE"),
             ({"messages": [{"role": "user", "content": "ж" * (W.MAX_CHAT_INPUT_UTF8_BYTES // 2 + 1)}]}, "CHAT_INPUT_TOO_LARGE"),
