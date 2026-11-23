@@ -126,7 +126,7 @@ class CanonicalTwoTurnS03EvidenceContract(unittest.TestCase):
         for pos in range(4):
             with self.subTest(surrogate_position=pos):
                 invalid_utf8 = [dict(row) for row in rows]
-                invalid_utf8[pos]['content'] += '\\ud800'
+                invalid_utf8[pos]['content'] += '\ud800'
                 witness = readback(rows)
                 witness['messages'] = invalid_utf8
                 self.assertFalse(canonical_s03_proof_valid(
