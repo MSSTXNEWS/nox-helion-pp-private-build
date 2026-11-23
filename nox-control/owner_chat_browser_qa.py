@@ -1623,13 +1623,20 @@ async def json_response(response, limit=200000):
                 or (media.startswith('application/') and media.endswith('+json'))):
             raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
         charsets = []
+        params = set()
         for part in parts[1:]:
             key, sep, value = part.partition('=')
-            if key.strip().lower() == 'charset':
-                if not sep:
-                    raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
+            key = key.strip().lower()
+            # Invalid/duplicate MIME parameters make a claimed JSON history
+            # representation ambiguous, even if its charset looks valid.
+            # Do not let malformed proxy headers certify another RU/ES turn.
+            if (not sep or not re.fullmatch(r"[a-z0-9!#$%&'*+.^_`|~-]+", key)
+                    or not value.strip() or key in params):
+                raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
+            params.add(key)
+            if key == 'charset':
                 charsets.append(value.strip().strip('"').lower())
-        if len(charsets) > 1 or any(value != 'utf-8' for value in charsets):
+        if any(value != 'utf-8' for value in charsets):
             raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
     raw=await response.body()
     if len(raw)>limit:

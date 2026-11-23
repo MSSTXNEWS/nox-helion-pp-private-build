@@ -4175,5 +4175,42 @@ async function check(chunks, status=200) {
                                             'HOLD_OWNER_HTTP_CONTENT_TYPE'):
                     asyncio.run(json_response(Response(wire, headers)))
 
+
+    def test_owner_history_http_mime_params_fail_closed(self):
+        """Malformed/duplicate MIME params cannot certify RU/ES history."""
+        class Response:
+            status = 200
+            def __init__(self, content_type):
+                self.headers = {"content-type": content_type}
+            async def body(self):
+                return b'{"dialog_id":"own","messages":[]}'
+
+        expected = {"dialog_id": "own", "messages": []}
+        for media in (
+            "application/json",
+            "application/json; charset=UTF-8",
+            "application/vnd.nox+json; charset=\"UTF-8\"; profile=history",
+            "application/json; profile=history; charset=utf-8",
+        ):
+            with self.subTest(accepted=media):
+                self.assertEqual(asyncio.run(json_response(Response(media))),
+                                 expected)
+
+        for media in (
+            "application/json;",
+            "application/json; junk",
+            "application/json; =value",
+            "application/json; profile=",
+            "application/json; profile=history; profile=history",
+            "application/json; PROFILE=history; profile=next",
+            "application/json; charset=utf-8; profile",
+            "application/json; charset=utf-8; =secret",
+            "application/json; charset=utf-8; x=",
+        ):
+            with self.subTest(rejected=media):
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_OWNER_HTTP_CONTENT_TYPE"):
+                    asyncio.run(json_response(Response(media)))
+
 if __name__ == "__main__":
     unittest.main()
