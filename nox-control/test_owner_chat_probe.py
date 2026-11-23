@@ -3881,8 +3881,7 @@ class ProbeTests(unittest.TestCase):
                         self.assertFalse(probe.scoped_history_matches_turns(
                             snapshot, turns[:count], did))
                         with self.assertRaisesRegex(
-                                RuntimeError, '^HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED
-):
+                                RuntimeError, "HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED"):
                             probe.require_executor_witness(
                                 {'saved': True, 's03_integrated': True}, snapshot,
                                 turns[:count], True, True, did)
