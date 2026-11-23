@@ -126,6 +126,45 @@ class ReviewIntegrityContract(unittest.TestCase):
                              "HOLD_B2_REVIEW_DUPLICATE_KEY")
 
 
+    def test_receipt_binds_exact_review_bytes_even_when_summary_unchanged(self):
+        with tempfile.TemporaryDirectory() as folder:
+            cap, rev, a, b = (Path(folder) / name for name in
+                              ("capture.json", "review.json", "a.json", "b.json"))
+            cap.write_bytes(json.dumps(self.capture, ensure_ascii=False).encode("utf-8"))
+
+            def invoke(args, doc, suffix=b""):
+                raw = json.dumps(doc, ensure_ascii=False).encode("utf-8") + suffix
+                rev.write_bytes(raw)
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    self.assertEqual(probe.main(args), 0)
+                result = json.loads(out.getvalue())
+                self.assertEqual(result.pop("review_sha256"),
+                                 hashlib.sha256(raw).hexdigest())
+                self.assertFalse(result["reviewer_identity_verified"])
+                self.assertEqual(result["native_acceptance"], probe.holdout.HOLD)
+                return result, hashlib.sha256(raw).hexdigest()
+
+            args = ["probe.py", str(cap), str(rev)]
+            first, digest1 = invoke(args, self.review)
+            changed = copy.deepcopy(self.review)
+            changed["reviewers"][0]["decisions"][0]["reason"] = "Otra razón independiente ñ"
+            second, digest2 = invoke(args, changed)
+            self.assertEqual(first, second)
+            self.assertNotEqual(digest1, digest2)
+            for path, reviewer in zip((a, b), self.review["reviewers"]):
+                path.write_text(json.dumps({"schema": probe.SCHEMA,
+                    "capture_sha256": self.digest, "reviewers": [reviewer]}),
+                    encoding="utf-8")
+            combined = probe.combine_reviews(self.capture, self.digest,
+                                             [probe.read_json(path) for path in (a, b)])
+            args = ["probe.py", "--verify-combined", str(cap), str(rev), str(a), str(b)]
+            first, digest1 = invoke(args, combined)
+            second, digest2 = invoke(args, combined, b" ")
+            self.assertEqual(first, second)
+            self.assertTrue(first["original_submissions_reconciled"])
+            self.assertNotEqual(digest1, digest2)
+
     def test_blank_independent_review_packet_cli_and_round_trip(self):
         with tempfile.TemporaryDirectory() as folder:
             cap = Path(folder) / "capture.json"

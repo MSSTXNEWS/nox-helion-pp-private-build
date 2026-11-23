@@ -243,10 +243,11 @@ def main(argv: list[str]) -> int:
     try:
         if reconciling:
             capture, capture_sha = read_json(Path(argv[2]))
-            combined, _ = read_json(Path(argv[3]))
+            combined, review_sha = read_json(Path(argv[3]))
             submissions = [read_json(Path(path)) for path in argv[4:]]
-            print(json.dumps(verify_combined(capture, capture_sha, combined, submissions),
-                             ensure_ascii=False, sort_keys=True))
+            result = verify_combined(capture, capture_sha, combined, submissions)
+            result["review_sha256"] = review_sha
+            print(json.dumps(result, ensure_ascii=False, sort_keys=True))
             return 0
         if combining:
             capture, capture_sha = read_json(Path(argv[2]))
@@ -260,9 +261,10 @@ def main(argv: list[str]) -> int:
                              ensure_ascii=False, sort_keys=True))
             return 0
         capture, capture_sha = read_json(Path(argv[1]))
-        review, _ = read_json(Path(argv[2]))
-        print(json.dumps(verify(capture, review, capture_sha),
-                         ensure_ascii=False, sort_keys=True))
+        review, review_sha = read_json(Path(argv[2]))
+        result = verify(capture, review, capture_sha)
+        result["review_sha256"] = review_sha
+        print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0
     except (ReviewHold, holdout.CaptureHold, OSError, UnicodeError,
             ValueError, TypeError, KeyError, IndexError) as error:
