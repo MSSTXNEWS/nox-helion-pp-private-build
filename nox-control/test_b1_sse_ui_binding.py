@@ -2969,6 +2969,83 @@ def main():
           return true;
         }'''))
 
+        # R42: failed/ambiguous durable beginSend cannot leave the terminal
+        # GET body open. Healthy beginSend must keep that body untouched.
+        check('ACK beginSend HOLD disposes GET once; no model rePOST', page.evaluate('''async () => {
+          const kinds=['reject','false','object','null','stop','timeout',
+            'sending','true','void'];
+          for(const kind of kinds){
+            const s={conversation_id:'r42',exchange_id:kind};
+            let reads=0,cancels=0,posts=0,acks=0,sends=0;
+            let entered;const started=new Promise(resolve=>entered=resolve);
+            const transport={...opts.transport,
+              post(){posts++;throw Error('DUPLICATE_MODEL_POST')},
+              async readback(){reads++;return {...s,body:{cancel(){
+                cancels++;return Promise.resolve();
+              }}}},
+              async ack(){acks++;return true},
+              readCanonicalAck(){throw Error('NO_CANONICAL_GET')}
+            };
+            const gate={
+              reserve(){return {status:'RESERVED'}},
+              beginSend(){
+                sends++;
+                if(kind==='reject')throw Error('BEGIN_REJECT');
+                if(kind==='false')return false;
+                if(kind==='object')return {};
+                if(kind==='null')return null;
+                if(kind==='stop'){
+                  if(sends===1){entered();return new Promise(()=>{});}
+                  return false;
+                }
+                if(kind==='timeout')return new Promise(()=>{});
+                if(kind==='sending')return 'SENDING';
+                if(kind==='true')return true;
+                return undefined;
+              },
+              confirm(){throw Error('NO_CONFIRM')},
+              requireCanonicalAck(){throw Error('NO_CANONICAL_GATE')}
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,ackGate:gate,
+              bridge:{async acceptTerminal(){
+                return {safe_to_ack:true,model_post:false,
+                  conversation_id:s.conversation_id,exchange_id:s.exchange_id,
+                  projection_event_id:'ev-'+kind,ack_cursor:'cursor-'+kind};
+              }},
+              ui:{async onDelta(){},async upsertTerminal(){return true}},
+              reconnectReadTimeoutMs:kind==='timeout'?40:500
+            });
+            const firstPending=client.reconnect(s);
+            if(kind==='stop'){
+              await started;
+              if(!client.stop(s))return false;
+            }
+            const first=await Promise.race([
+              firstPending.then(v=>v,e=>e.code),
+              new Promise(resolve=>setTimeout(()=>resolve('HUNG'),800))
+            ]);
+            const good=['sending','true','void'].includes(kind);
+            const expected=good?'HOLD_STREAM_CANONICAL_ACK':
+              kind==='stop'?'HOLD_STREAM_RECONNECT_STOPPED':
+              kind==='timeout'?'HOLD_STREAM_ACK_BEGIN_TIMEOUT':
+              'HOLD_STREAM_ACK_GATE';
+            if(first!==expected||reads!==1||cancels!==(good?0:1)||
+               acks!==(good?1:0)||posts!==0)return false;
+            if(!good){
+              const second=await client.reconnect(s).then(v=>v,e=>e.code);
+              const next=kind==='timeout'?'HOLD_STREAM_ACK_BEGIN_TIMEOUT':
+                'HOLD_STREAM_ACK_GATE';
+              if(second!==next||reads!==2||cancels!==2||
+                acks!==0||posts!==0)return false;
+            }
+            const noRepost=await client.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(!noRepost||posts!==0)return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
