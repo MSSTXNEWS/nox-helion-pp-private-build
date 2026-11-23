@@ -440,6 +440,10 @@ def owner_session_cookie_pin(cookies):
         # A signed Secure cookie downgraded to an HTTP-eligible cookie
         # must not reuse the same RU/ES owner-session pin. A change from
         # Strict/Lax to None also weakens the browser's CSRF boundary.
+        # Explicit cookie attribute metadata must not be silently aliased
+        # with absent legacy fields or nonboolean Secure values.
+        if 'secure' in cookie and type(cookie['secure']) is not bool:
+            return None
         same_site = cookie.get('sameSite')
         if same_site is not None and same_site not in ('Strict', 'Lax', 'None'):
             return None
@@ -454,7 +458,8 @@ def owner_session_cookie_pin(cookies):
         else:
             partition = None
         fields += (cookie.get('httpOnly') is True,
-                   cookie.get('secure') is True, same_site,
+                   'secure' in cookie, cookie.get('secure') is True,
+                   'sameSite' in cookie, same_site,
                    'partitionKey' in cookie, partition)
         identity.append(fields)
     if len(set(fields[:3] for fields in identity)) != len(identity):

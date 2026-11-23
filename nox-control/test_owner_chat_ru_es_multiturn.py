@@ -1084,6 +1084,33 @@ async function check(chunks, status=200) {
         self.assertEqual(owner_session_cookie_pin([legacy]),
                          owner_session_cookie_pin([dict(legacy)]))
 
+    def test_ru_es_owner_cookie_metadata_presence_cannot_alias_legacy_defaults(self):
+        """A signed owner cookie cannot lose explicit optional security fields."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='same-session', httpOnly=True,
+                      secure=False, sameSite=None)
+        baseline = owner_session_cookie_pin([signed])
+        self.assertIsInstance(baseline, str)
+        self.assertEqual(owner_session_cookie_pin([dict(signed)]), baseline)
+        self.assertTrue(owner_session_continuity_valid(200, [signed], baseline))
+        for removed_field in ('secure', 'sameSite'):
+            changed = dict(signed)
+            del changed[removed_field]
+            with self.subTest(removed=removed_field):
+                self.assertNotEqual(owner_session_cookie_pin([changed]), baseline)
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [changed], baseline))
+        for malformed in (None, 0, 1, 'false', [], {}):
+            with self.subTest(secure=repr(malformed)):
+                self.assertIsNone(owner_session_cookie_pin(
+                    [dict(signed, secure=malformed)]))
+        legacy = dict(signed)
+        legacy.pop('secure')
+        legacy.pop('sameSite')
+        self.assertEqual(owner_session_cookie_pin([legacy]),
+                         owner_session_cookie_pin([dict(legacy)]))
+        self.assertNotEqual(owner_session_cookie_pin([legacy]), baseline)
+
     def test_ru_es_owner_cookie_partition_key_drift_cannot_reuse_session_pin(self):
         """A partitioned signed cookie must keep its top-level site across turns."""
         signed = dict(name='nox_owner', domain='owner.example', path='/',
