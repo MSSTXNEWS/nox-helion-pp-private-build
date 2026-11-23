@@ -221,6 +221,24 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(len(observed),2)
         self.assertLessEqual(max(observed),8192)
 
+    async def test_1a03_heartbeat_flood_stops_at_bounded_total_transport_bytes(self):
+        # Many individually valid keepalives cannot consume unlimited CPU/I/O
+        # until the wall-clock deadline; never replay the model POST or mark S03.
+        partial=frame('Hola')
+        chunks=Chunks([partial]+[b': alive\\n\\n']*32)
+        requests,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory,patch.object(stream,'MODEL_SSE_TOTAL_WIRE_LIMIT',len(partial)+24):
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Hola',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertIn('HOLD_MODEL_SSE_TOTAL_WIRE',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertTrue(chunks.closed)
+        self.assertEqual(len(requests),1)
+        self.assertNotIn('_agent_final',payload)
+
     async def test_sse_done_requires_clean_http_eof_and_no_late_events(self):
         # 1A03: a [DONE] line cannot authorize S03 postflight if the native
         # model HTTP stream is truncated or contains later event data. No retry.
