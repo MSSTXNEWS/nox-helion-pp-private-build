@@ -144,6 +144,11 @@ class BridgeStreamIntegrity(unittest.TestCase):
                 ([b"null"], "CHAT_INVALID_MESSAGES"),
                 ([b"[]"], "CHAT_INVALID_MESSAGES"),
                 ([b"{not json}"], "CHAT_INVALID_JSON"),
+                # Last-key-wins JSON must never rewrite a client history.
+                ([b'{"messages":[],"messages":[{"role":"user","content":"overridden"}]}'], "CHAT_INVALID_JSON"),
+                ([b'{"messages":[{"role":"user","content":"safe","content":"overridden"}]}'], "CHAT_INVALID_JSON"),
+                ([b'{"messages":[{"role":"user","content":"safe","meta":NaN}]}'], "CHAT_INVALID_JSON"),
+                ([b'{"messages":[{"role":"user","content":"safe","meta":Infinity}]}'], "CHAT_INVALID_JSON"),
                 ([b'{"messages":{}}'], "CHAT_INVALID_MESSAGES"),
                 ([b'{"messages":[{"role":"user","content":3}]}'], "CHAT_INVALID_MESSAGES"),
                 ([b'{"messages":[{"role":"assistant","content":"only"}]}'], "CHAT_MISSING_USER"),
@@ -212,6 +217,18 @@ class BridgeStreamIntegrity(unittest.TestCase):
                 result = invoke(payload)
                 self.assertEqual(result.status_code, 400)
                 self.assertEqual(result.data["reason"], reason)
+        # The non-stream legacy route must enforce the same strict JSON
+        # boundary before smart() or canonical S03 is invoked.
+        for raw in (
+            b'{"messages":[],"messages":[{"role":"user","content":"overridden"}]}',
+            b'{"messages":[{"role":"user","content":"safe","content":"overridden"}]}',
+            b'{"messages":[{"role":"user","content":"safe","meta":NaN}]}',
+            b'{"messages":[{"role":"user","content":"safe","meta":-Infinity}]}',
+        ):
+            with self.subTest(raw=raw):
+                result = invoke(raw)
+                self.assertEqual(result.status_code, 400)
+                self.assertEqual(result.data["reason"], "CHAT_INVALID_JSON")
         self.assertEqual(invoke(b"x" * (2*1024*1024 + 1)).status_code, 413)
         self.assertEqual(calls, [])
         valid = [{"role": "system", "content": "trusted existing context"},
