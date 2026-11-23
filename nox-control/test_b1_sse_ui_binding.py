@@ -3443,6 +3443,94 @@ def main():
           return true;
         }'''))
 
+        # R48: external ACK gate callbacks are single-use and fail closed,
+        # even when the gate catches the duplicate-call HOLD and forges ACK.
+        # All retries are GET-only; no second signed GET per gate invocation.
+        check('R48 repeated or late canonical callbacks cannot certify ACK', page.evaluate('''async () => {
+          for(const kind of ['double-read','double-verify','late-read',
+                             'late-verify','healthy']){
+            const s={conversation_id:'r48',exchange_id:'single-use-'+kind};
+            let reads=0,gets=0,posts=0,acks=0;
+            let originalCancels=0,signedCancels=0,attempt=0;
+            let savedRead=null,savedVerify=null;
+            const transport={...opts.transport,
+              post(){posts++;throw Error('MODEL_REPOST')},
+              ack(){acks++;throw Error('ACK_REPOST')},
+              readback(){reads++;return {...s,body:{cancel(){
+                originalCancels++;return Promise.reject(Error('nonblocking'));
+              }}}},
+              readCanonicalAck(_s,_expected,challenge){
+                gets++;const now=Date.now();
+                return {request_nonce:challenge.request_nonce,
+                  issued_at_ms:now,expires_at_ms:now+1000,
+                  ack_id:'ack-r48-'+kind,body:{cancel(){
+                    signedCancels++;return Promise.reject(Error('nonblocking'));
+                  }}};
+              }
+            };
+            const gate={
+              reserve(){return {status:'ALREADY_ACKED'}},
+              beginSend(){throw Error('NO_SEND')},
+              confirm(){throw Error('NO_LOCAL_CONFIRM')},
+              async requireCanonicalAck(_s,event,cursor,read,verify){
+                attempt++;
+                const expected={event_id:event,ack_cursor:cursor};
+                const receipt=await read(expected);
+                if(kind==='double-read'&&attempt===1){
+                  try{await read(expected)}catch(_){}
+                }
+                const good=await verify(receipt,expected);
+                if(kind==='double-verify'&&attempt===1){
+                  try{await verify(receipt,expected)}catch(_){}
+                }
+                if(kind==='late-read')savedRead=()=>read(expected);
+                if(kind==='late-verify')
+                  savedVerify=()=>verify(receipt,expected);
+                // The external gate can attempt to hide a replay by returning
+                // a plausible envelope; the client must still fail closed.
+                return {status:'CANONICAL_ACK_CONFIRMED',
+                  authority:'VERIFIER_CALLBACK_APPROVED',ack_id:receipt.ack_id};
+              }
+            };
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host:{...opts.host,
+                verifyFreshCanonicalAck(){return true},
+                verifyCanonicalAck(){return true}},
+              bridge:opts.bridge,ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){return true}}
+            });
+            const first=await c.reconnect(s).then(v=>v,e=>e.code);
+            const double=kind.startsWith('double-');
+            if(double){
+              if(first!=='HOLD_STREAM_CANONICAL_CALLBACK_REPLAY'||
+                 reads!==1||gets!==1||signedCancels!==1||
+                 originalCancels!==1)return false;
+              const resumed=await c.reconnect(s);
+              if(!resumed||resumed.canonical_ack_id!=='ack-r48-'+kind||
+                 reads!==2||gets!==2||
+                 signedCancels!==1||originalCancels!==1)return false;
+            }else{
+              if(!first||first.canonical_ack_id!=='ack-r48-'+kind||
+                 reads!==1||gets!==1||signedCancels!==0||
+                 originalCancels!==0)return false;
+              if(kind==='late-read'){
+                const result=await savedRead().then(()=>null,e=>e.code);
+                if(result!=='HOLD_STREAM_CANONICAL_CALLBACK_REPLAY'||
+                   gets!==1)return false;
+              }
+              if(kind==='late-verify'){
+                const result=await savedVerify().then(()=>null,e=>e.code);
+                if(result!=='HOLD_STREAM_CANONICAL_CALLBACK_REPLAY'||
+                   gets!==1)return false;
+              }
+            }
+            if(posts!==0||acks!==0||
+               !(await c.begin(s).then(()=>false,e=>
+                 e.code==='HOLD_STREAM_NO_REPOST')))return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
