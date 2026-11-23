@@ -535,6 +535,18 @@
         // or mutate the receipt object. A later ACK envelope must not certify
         // a different nonce/expiry/ACK ID than the signed GET supplied.
         let signedIdentity=null,signedReceipt=null;
+        // The cross-tab gate is external. A malicious/buggy gate may call a
+        // read/verify callback twice, swallow its rejection, or invoke it after
+        // returning a forged ACK envelope. Each callback is single-use.
+        // Invalidation is sticky even if that external gate catches the HOLD.
+        let canonicalReadUsed=false,canonicalVerifyUsed=false;
+        let canonicalCallbacksInvalid=false,canonicalGateClosed=false;
+        let signedBodyDisposed=false;
+        const discardSignedBody=()=>{
+          if(signedBodyDisposed||!signedReceipt)return;
+          signedBodyDisposed=true;
+          cancelAbandonedGet(signedReceipt); // once, nonblocking
+        };
         const captureSignedIdentity=receipt=>{
           try{
             const fields=Object.freeze({
@@ -567,7 +579,7 @@
         // the gate's normalized receipt to be the transport's raw object.
         const sameCanonicalProjection=proof=>{
           if(!proof||typeof proof!=='object'||Array.isArray(proof)||
-             !signedReceipt||!sameSignedIdentity(signedReceipt))return false;
+             !signedReceipt||canonicalCallbacksInvalid||!sameSignedIdentity(signedReceipt))return false;
           try{
             return proof.ack_id===signedIdentity.ack_id&&
               (proof.request_nonce===undefined||
@@ -581,7 +593,7 @@
         const discardVerifiedBody=()=>{
           if(verifiedBodyDiscarded||!verifiedReceipt)return;
           verifiedBodyDiscarded=true;
-          cancelAbandonedGet(verifiedReceipt); // nonblocking, once only
+          discardSignedBody(); // single shared signed-GET disposal fence
         };
         try {
           // A signed canonical ACK read still involves external GET and
@@ -598,6 +610,12 @@
                 s,witness.projection_event_id,
             witness.ack_cursor,
             async expected=>{
+              if(canonicalGateClosed||canonicalReadUsed){
+                canonicalCallbacksInvalid=true;
+                discardSignedBody();
+                hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
+              }
+              canonicalReadUsed=true;
               // readCanonicalAck MUST be a no-store, authenticated GET. It
               // MUST forward the challenge to the server; never a model POST.
               // The canonical receipt GET must be physically cancellable; a
@@ -619,7 +637,10 @@
                 cancelAbandonedGet(value); // never await rejected/hung cancel()
               };
               const onReceiptAbort=()=>{
-                if(receipt)discardReceipt(receipt);
+                if(receipt){
+                  if(signedReceipt===receipt)discardSignedBody();
+                  else discardReceipt(receipt);
+                }
               };
               lifecycleSignal.addEventListener('abort',onReceiptAbort,{once:true});
               try{
@@ -636,6 +657,10 @@
                   hold('HOLD_STREAM_RECEIPT_FRESHNESS');
                 signedIdentity=captureSignedIdentity(receipt);
                 signedReceipt=receipt;
+                if(canonicalCallbacksInvalid){
+                  discardSignedBody();
+                  hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
+                }
                 if(signedIdentity.request_nonce!==challenge.request_nonce||
                    !Number.isSafeInteger(signedIdentity.issued_at_ms)||
                    !Number.isSafeInteger(signedIdentity.expires_at_ms)||
@@ -658,13 +683,22 @@
               }catch(err){
                 // Invalid/failing receipts must release the unclaimed socket.
                 // After timeout this shares the same once-only abort fence.
-                if(receipt)discardReceipt(receipt);
+                if(receipt){
+                  if(signedReceipt===receipt)discardSignedBody();
+                  else discardReceipt(receipt);
+                }
                 throw err;
               }finally{
                 lifecycleSignal.removeEventListener('abort',onReceiptAbort);
               }
             },
             async (receipt,expected)=>{
+              if(canonicalGateClosed||canonicalVerifyUsed){
+                canonicalCallbacksInvalid=true;
+                discardSignedBody();
+                hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
+              }
+              canonicalVerifyUsed=true;
               // Freshness is only the first proof. A rejected, throwing,
               // stalled or stopped second verifier can abandon the same
               // canonical GET response body. Close it once without awaiting.
@@ -673,7 +707,8 @@
               const discard=()=>{
                 if(discarded)return;
                 discarded=true;
-                cancelAbandonedGet(signedReceipt||receipt);
+                if(signedReceipt)discardSignedBody();
+                else cancelAbandonedGet(receipt);
               };
               const onAbort=()=>discard();
               lifecycleSignal.addEventListener('abort',onAbort,{once:true});
@@ -716,9 +751,17 @@
             },
              'HOLD_STREAM_CANONICAL_ACK_TIMEOUT',canonicalAckTimeoutMs,signal);
         }catch(err){
+          discardSignedBody();
           discardVerifiedBody();
           if(err&&typeof err.code==='string') throw err;
           hold('HOLD_STREAM_CANONICAL_ACK');
+        }finally{
+          canonicalGateClosed=true;
+        }
+        if(canonicalCallbacksInvalid){
+          discardSignedBody();
+          discardReadback();
+          hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
         }
         if(!freshVerified){
           discardVerifiedBody();
