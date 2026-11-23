@@ -3354,6 +3354,95 @@ def main():
           return true;
         }'''))
 
+
+        # R47: a canonical GET identity must not change during async verifier
+        # callbacks. A mutated proof is a HOLD with signed/original GET cleanup,
+        # followed by GET-only recovery (never another model POST or ACK).
+        check('R47 signed GET identity immutable across both verifiers', page.evaluate('''async () => {
+          for(const kind of ['fresh-ack','fresh-nonce','second-ack',
+                             'second-expiry','normalized','healthy']){
+            const s={conversation_id:'r47',exchange_id:'identity-'+kind};
+            let reads=0,signedReads=0,origCancels=0,signedCancels=0;
+            let posts=0,acks=0,recovery=false;
+            const transport={...opts.transport,
+              post(){posts++;throw Error('MODEL_REPOST')},
+              ack(){acks++;throw Error('ACK_REPOST')},
+              async readback(){reads++;return {...s,body:{cancel(){
+                origCancels++;return Promise.reject(Error('nonblocking'));
+              }}}},
+              readCanonicalAck(_s,_expected,challenge){
+                signedReads++;const now=Date.now();return {
+                  request_nonce:challenge.request_nonce,
+                  issued_at_ms:now,expires_at_ms:now+1000,
+                  ack_id:'ack-r47-'+kind,
+                  body:{cancel(){
+                    signedCancels++;return Promise.reject(Error('nonblocking'));
+                  }}
+                };
+              }
+            };
+            const host={...opts.host,
+              verifyFreshCanonicalAck(receipt){
+                if(!recovery&&kind==='fresh-ack')
+                  receipt.ack_id='ack-mutated';
+                if(!recovery&&kind==='fresh-nonce')
+                  receipt.request_nonce='nonce-mutated';
+                return true;
+              },
+              verifyCanonicalAck(receipt){
+                if(!recovery&&kind==='second-ack')
+                  receipt.ack_id='ack-mutated';
+                if(!recovery&&kind==='second-expiry')
+                  receipt.expires_at_ms+=1000;
+                return true;
+              }
+            };
+            const gate={
+              reserve(){return {status:'ALREADY_ACKED'}},
+              beginSend(){throw Error('NO_BEGIN_SEND')},
+              confirm(){throw Error('NO_LOCAL_CONFIRM')},
+              async requireCanonicalAck(_s,event,cursor,read,verify){
+                const expected={event_id:event,ack_cursor:cursor};
+                const receipt=await read(expected);
+                // The actual IndexedDB gate verifies a sanitized signed
+                // proof; nonce/time/body remain only on the original GET.
+                const proof=kind==='normalized'?
+                  {ack_id:receipt.ack_id,version:1,server_cas:'synthetic'}:
+                  receipt;
+                if(await verify(proof,expected)!==true)
+                  throw Error('CANONICAL_VERIFIER_FAIL');
+                return {status:'CANONICAL_ACK_CONFIRMED',
+                  authority:'VERIFIER_CALLBACK_APPROVED',ack_id:proof.ack_id};
+              }
+            };
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host,bridge:opts.bridge,ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){return true}}
+            });
+            const first=await c.reconnect(s).then(v=>v,e=>e.code);
+            const drift=kind!=='healthy';
+            if(drift){
+              if(first!=='HOLD_STREAM_RECEIPT_MUTATED'||
+                 origCancels!==1||signedCancels!==1||
+                 reads!==1||signedReads!==1)return false;
+            }else if(!first||
+              first.canonical_ack_id!=='ack-r47-'+kind||
+              origCancels!==0||signedCancels!==0)return false;
+            const noRepost=await c.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(!noRepost||posts!==0||acks!==0)return false;
+            if(drift){
+              recovery=true;
+              const second=await c.reconnect(s);
+              if(!second||second.canonical_ack_id!=='ack-r47-'+kind||
+                 reads!==2||signedReads!==2||
+                 origCancels!==1||signedCancels!==1||
+                 posts!==0||acks!==0)return false;
+            }
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
