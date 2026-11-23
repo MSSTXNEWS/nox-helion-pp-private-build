@@ -1026,6 +1026,31 @@ async function check(chunks, status=200) {
         self.assertEqual(owner_session_cookie_pin(legacy),
                          owner_session_cookie_pin([dict(client_ui)]))
 
+    def test_ru_es_owner_cookie_httponly_presence_rotation_holds(self):
+        """Missing and explicit False HttpOnly cannot share a legacy owner pin."""
+        legacy = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='unchanged-legacy-owner')
+        explicit = dict(legacy, httpOnly=False)
+        legacy_pin = owner_session_cookie_pin([legacy])
+        explicit_pin = owner_session_cookie_pin([explicit])
+        self.assertIsInstance(legacy_pin, str)
+        self.assertIsInstance(explicit_pin, str)
+        self.assertNotEqual(legacy_pin, explicit_pin)
+        self.assertTrue(owner_session_continuity_valid(200, [legacy], legacy_pin))
+        self.assertTrue(owner_session_continuity_valid(200, [explicit], explicit_pin))
+        self.assertFalse(owner_session_continuity_valid(200, [explicit], legacy_pin))
+        self.assertFalse(owner_session_continuity_valid(200, [legacy], explicit_pin))
+        self.assertEqual(owner_session_cookie_pin([dict(legacy)]), legacy_pin)
+        self.assertEqual(owner_session_cookie_pin([dict(explicit)]), explicit_pin)
+        signed = dict(legacy, httpOnly=True)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        signed_pin = owner_session_cookie_pin([signed])
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), signed_pin)
+        self.assertEqual(owner_session_cookie_pin([signed, dict(legacy)]),
+                         signed_pin)
+        self.assertNotEqual(signed_pin, legacy_pin)
+
     def test_ru_es_owner_cookie_httponly_type_fence_before_fallback(self):
         """Malformed HttpOnly flags never masquerade as legacy owner cookies."""
         signed = dict(name='nox_owner', domain='owner.example', path='/',

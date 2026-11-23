@@ -464,7 +464,9 @@ def owner_session_cookie_pin(cookies):
                 return None
         else:
             partition = None
-        fields += (cookie.get('httpOnly') is True,
+        # Missing legacy HttpOnly metadata is not equivalent to explicit
+        # False: a disappearing/appearing attribute must rotate the pin.
+        fields += ('httpOnly' in cookie, cookie.get('httpOnly') is True,
                    'secure' in cookie, cookie.get('secure') is True,
                    'sameSite' in cookie, same_site,
                    'partitionKey' in cookie, partition)
