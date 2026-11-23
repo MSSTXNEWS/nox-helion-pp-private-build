@@ -1173,6 +1173,15 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
     if declared_bytes is not None and observed_bytes != declared_bytes:
         raise RuntimeError('HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH')
 
+def stream_http_transport_verified(response):
+    """Positive transport evidence; socket alias absence is not provenance."""
+    from http.client import HTTPResponse
+    if type(response) is not HTTPResponse or not callable(getattr(response, 'read1', None)):
+        return False
+    sock = getattr(getattr(getattr(response, 'fp', None), 'raw', None), '_sock', None)
+    return isinstance(sock, socket.socket) and sock.fileno() >= 0
+
+
 def consume_turn(client,prompt,dialog_id,timeout=95):
     started=time.monotonic()
     response=request(client,'/api/nox/chat/stream','POST',
@@ -1182,6 +1191,11 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
     events=[];answer='';done=None;first=None;placeholders=0;delta_count=0;model_identity=None
     wire_hasher=hashlib.sha256()
     try:
+        transport_verified = stream_http_transport_verified(response)
+        # The actual owner CLI uses an OpenerDirector, not a synthetic reader.
+        # Never accept a custom fallback as live HTTP transport evidence.
+        if isinstance(client, urllib.request.OpenerDirector) and not transport_verified:
+            raise RuntimeError('HOLD_STREAM_TRANSPORT_UNVERIFIED')
         require_exact_stream_target(response)
         # A cached POST stream may replay an earlier SSE DONE as this turn.
         # Reuse the strict owner-readback cache-header validator on the actual
@@ -1245,6 +1259,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             'stream_total_ms':round((time.monotonic()-started)*1000),
              'stream_model_identity':model_identity,
              'stream_nosniff_verified':nosniff_verified,
+             'stream_http_transport_verified':transport_verified,
              'stream_wire_sha256':wire_hasher.hexdigest()}
 
 def admitted_consume_turn(client, prompt, dialog_id, timeout=95):
@@ -1554,6 +1569,7 @@ def main():
         emit('chat_synthetic_latency',{'events':turn['events'],'total_ms':turn['stream_total_ms'],
             'first_meaningful_delta_ms':first,'placeholder_delta_count':turn['placeholder_delta_count'],
             'delta_count':turn['delta_count'],
+            'stream_http_transport_verified':turn['stream_http_transport_verified'],
             'stream_nosniff_verified':turn['stream_nosniff_verified'],
             'stream_wire_sha256':turn['stream_wire_sha256'],
             'answer_public_synthetic':numeric_public_answer(answer),
@@ -1571,6 +1587,7 @@ def main():
             emit('chat_history_followup',{'history_model_pass':passed,'client_history_empty':True,
                 'first_delta_ms':follow['first_meaningful_delta_ms'],'first_meaningful_delta_ms':follow['first_meaningful_delta_ms'],
                 'total_ms':follow['stream_total_ms'],
+                'stream_http_transport_verified':follow['stream_http_transport_verified'],
                 'stream_nosniff_verified':follow['stream_nosniff_verified'],
                 'stream_wire_sha256':follow['stream_wire_sha256'],
                 'answer_public_synthetic':numeric_public_answer(answer2),
@@ -1616,6 +1633,8 @@ def main():
                 'answer_sha256':digest(text.encode()),'raw_answer_exported':False,
                 'model_route_identity_verified':model_route_verified,
                  'stream_wire_sha256':turn3['stream_wire_sha256'],
+                 'three_turns_http_transport_verified':all(t['stream_http_transport_verified']
+                     for t in (turn, follow, turn3)),
                  'three_turns_nosniff_verified':all(t['stream_nosniff_verified']
                      for t in (turn, follow, turn3)),
                  'verification_scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'}

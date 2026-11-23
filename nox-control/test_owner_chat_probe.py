@@ -25,6 +25,25 @@ class SyntheticBoundedReader:
 
 
 class ProbeTests(unittest.TestCase):
+    def test_real_owner_opener_rejects_unverified_stream_transport(self):
+        """No custom reader may certify live transport even without socket aliases."""
+        from io import BytesIO
+
+        class CustomResponse(BytesIO):
+            status = 200
+
+            def readline(self, limit=-1):
+                raise AssertionError('must not read unverified transport')
+
+        response = CustomResponse(b'fake')
+        client = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        self.assertFalse(probe.stream_http_transport_verified(response))
+        with patch.object(probe, 'request', return_value=response):
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_TRANSPORT_UNVERIFIED$'):
+                probe.consume_turn(client, 'synthetic', 'offline')
+        self.assertTrue(response.closed)
+
+
     def test_stream_http_framing_rejects_ambiguous_proxy_headers(self):
         """Malformed/duplicate framing headers cannot certify saved=true DONE."""
         from email.message import Message
@@ -4012,6 +4031,7 @@ class ProbeTests(unittest.TestCase):
             self.assertTrue(probe.require_multiturn_model_route(second, third))
             for index, result in enumerate((second, third)):
                 with self.subTest(later_turn=index + 2):
+                    self.assertTrue(result['stream_http_transport_verified'])
                     self.assertEqual(result['stream_wire_sha256'],
                                      hashlib.sha256(bodies[index]).hexdigest())
                     self.assertTrue(result['stream_nosniff_verified'])
