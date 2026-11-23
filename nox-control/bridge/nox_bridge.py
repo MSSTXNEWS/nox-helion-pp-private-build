@@ -444,12 +444,17 @@ async def stream_chat(history):
                 try:
                     payload = json.loads(raw, object_pairs_hook=unique_sse_pairs,
                                          parse_constant=reject_nonfinite_sse)
-                    if not isinstance(payload, dict) or payload.get("error"):
+                    if (not isinstance(payload, dict) or "error" in payload or
+                            "tool_calls" in payload or "function_call" in payload):
                         raise ValueError("UPSTREAM_ERROR_FRAME")
                     choices = payload["choices"]
                     if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
                         raise ValueError("UPSTREAM_CHOICES_INVALID")
                     choice = choices[0]
+                    # This endpoint is text-only. Never certify a partial
+                    # visible reply while hidden tool work remains unexecuted.
+                    if "tool_calls" in choice or "function_call" in choice:
+                        raise ValueError("UPSTREAM_UNSUPPORTED_TOOL_CALL")
                     finish = choice.get("finish_reason")
                     if finish is not None:
                         if finish != "stop" or finish_stop:
@@ -457,6 +462,9 @@ async def stream_chat(history):
                     delta = choice.get("delta")
                     if not isinstance(delta, dict):
                         raise ValueError("UPSTREAM_DELTA_INVALID")
+                    if ("tool_calls" in delta or "function_call" in delta or
+                            ("role" in delta and delta["role"] != "assistant")):
+                        raise ValueError("UPSTREAM_UNSUPPORTED_TOOL_OR_ROLE")
                     # Missing/null content is a valid empty control delta, but
                     # falsy non-strings (0, false, []) must not be swallowed.
                     token = delta.get("content")
