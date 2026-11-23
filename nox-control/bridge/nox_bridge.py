@@ -358,7 +358,22 @@ async def chat(req: Request):
             if len(chunk) > 2 * 1024 * 1024 - len(wire):
                 return JSONResponse({"status": "HOLD", "reason": "CHAT_WIRE_TOO_LARGE"}, status_code=413)
             wire.extend(chunk)
-        b = json.loads(wire)
+        # History is a model/S03 instruction boundary: reject duplicate
+        # fields (including nested message objects) and NaN/Infinity before
+        # a malformed client turn can be reinterpreted as a valid exchange.
+        def unique_history_pairs(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError("CHAT_DUPLICATE_JSON_KEY")
+                result[key] = value
+            return result
+
+        def reject_nonfinite_history(_value):
+            raise ValueError("CHAT_NONFINITE_JSON")
+
+        b = json.loads(wire, object_pairs_hook=unique_history_pairs,
+                       parse_constant=reject_nonfinite_history)
     except (ValueError, TypeError, UnicodeError):
         return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_JSON"}, status_code=400)
     if not isinstance(b, dict) or not isinstance(b.get("messages"), list):
@@ -581,7 +596,22 @@ async def chat_stream(req: Request):
             if len(chunk) > 2 * 1024 * 1024 - len(wire):
                 return JSONResponse({"status": "HOLD", "reason": "CHAT_WIRE_TOO_LARGE"}, status_code=413)
             wire.extend(chunk)
-        b = json.loads(wire)
+        # History is a model/S03 instruction boundary: reject duplicate
+        # fields (including nested message objects) and NaN/Infinity before
+        # a malformed client turn can be reinterpreted as a valid exchange.
+        def unique_history_pairs(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError("CHAT_DUPLICATE_JSON_KEY")
+                result[key] = value
+            return result
+
+        def reject_nonfinite_history(_value):
+            raise ValueError("CHAT_NONFINITE_JSON")
+
+        b = json.loads(wire, object_pairs_hook=unique_history_pairs,
+                       parse_constant=reject_nonfinite_history)
     except (ValueError, TypeError, UnicodeError):
         return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_JSON"}, status_code=400)
     if not isinstance(b, dict) or not isinstance(b.get("messages"), list):
