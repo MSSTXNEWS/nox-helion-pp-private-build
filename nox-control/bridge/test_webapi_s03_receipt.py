@@ -2510,6 +2510,37 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(out[6]["target_request_id"], "live-1")
         self.assertFalse(out[6]["stop_confirmed"])
 
+    def test_1a04_stop_signal_receipt_does_not_claim_idle_work_stopped(self):
+        """A queued unknown ID, a live ID and broadcast have distinct truthful ACKs."""
+        stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
+
+        async def scenario():
+            pending = await stop(Request({"scope": "generation", "request_id": "unknown"}))
+            admitted = await stop(Request({"scope": "generation", "request_id": "real-a"}))
+            broadcast = await stop(Request({"scope": "generation", "request_id": "*"}))
+            return pending, admitted, broadcast
+
+        with (mock.patch.object(W, "CANCEL", set()),
+              mock.patch.object(W, "ACTIVE_CHAT_IDS", {"real-a", "real-b"}),
+              mock.patch.object(W, "CANCEL_ALL_EPOCH", 0)):
+            pending, admitted, broadcast = asyncio.run(scenario())
+            self.assertEqual(W.CANCEL, {"unknown", "real-a"})
+            self.assertEqual(W.CANCEL_ALL_EPOCH, 1)
+
+        for item in (pending, admitted, broadcast):
+            self.assertEqual(item["status"], "STOPPING")
+            self.assertFalse(item["stop_confirmed"])
+            self.assertEqual(item["scope"], "generation")
+            self.assertFalse(item["owner_stop"])
+            self.assertFalse(item["media_stopped"])
+            self.assertFalse(item["task_cancelled"])
+        self.assertEqual((pending["active_requests_at_signal"], pending["signal_receipt"]),
+                         (0, "PENDING_UNKNOWN_REQUEST_ID"))
+        self.assertEqual((admitted["active_requests_at_signal"], admitted["signal_receipt"]),
+                         (1, "ADMITTED_REQUEST_SIGNALLED"))
+        self.assertEqual((broadcast["active_requests_at_signal"], broadcast["signal_receipt"]),
+                         (2, "BROADCAST_EPOCH_SET"))
+
     def test_1a04_pending_scoped_stop_is_bounded_without_broadcast(self):
         """Excess unknown IDs HOLD; existing STOP and explicit broadcast still work."""
         stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
