@@ -258,6 +258,9 @@ def file_sha(path):
 def stable_backup_bytes(path, expected_sha256=None, max_bytes=64 * 1024 * 1024):
     """Back up only a single stable named regular-file preimage, never a swapped link."""
     path = Path(path)
+    # A leaf O_NOFOLLOW cannot authenticate a backup under a symlink parent.
+    if any(item.is_symlink() for item in (path, *path.parents)):
+        raise RuntimeError('HOLD_BACKUP_SOURCE_CHANGED')
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
     except OSError as exc:
@@ -274,6 +277,10 @@ def stable_backup_bytes(path, expected_sha256=None, max_bytes=64 * 1024 * 1024):
             named = os.stat(path, follow_symlinks=False)
         except OSError as exc:
             raise RuntimeError('HOLD_BACKUP_SOURCE_CHANGED') from exc
+        # An atomic parent rename/symlink swap can retain the exact same
+        # named inode and signed bytes; recheck pathname provenance after read.
+        if any(item.is_symlink() for item in (path, *path.parents)):
+            raise RuntimeError('HOLD_BACKUP_SOURCE_CHANGED')
         fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
         if (len(raw) != before.st_size
                 or any(getattr(before, key) != getattr(after, key)

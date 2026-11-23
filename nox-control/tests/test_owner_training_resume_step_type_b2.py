@@ -3562,5 +3562,62 @@ class MediaOutputRehashPathFence(unittest.TestCase):
             self.assertIsNone(verify(row))
 
 
+
+class StableBackupParentPathFence(unittest.TestCase):
+    def test_signed_backup_parent_symlink_and_atomic_pivot(self):
+        # Extract the real backup verifier, not a stub of the native service.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        node = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                    and n.name == "stable_backup_bytes")
+        scope = {"Path": Path, "os": os, "stat": stat,
+                 "hashlib": hashlib, "re": re}
+        exec(compile(ast.Module(body=[node], type_ignores=[]),
+                     str(SOURCE), "exec"), scope)
+        backup = scope["stable_backup_bytes"]
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            approved = base / "approved"
+            approved.mkdir()
+            displaced = base / "displaced"
+            path = approved / "approved_wrapper.sh"
+            payload = b"pinned owner original wrapper preimage"
+            path.write_bytes(payload)
+            digest = hashlib.sha256(payload).hexdigest()
+            self.assertEqual(backup(path, expected_sha256=digest), payload)
+
+            # Source is signed, but a symlink parent is not an approved preimage.
+            approved.rename(displaced)
+            approved.symlink_to(displaced, target_is_directory=True)
+            with self.assertRaisesRegex(
+                    RuntimeError, "^HOLD_BACKUP_SOURCE_CHANGED$"):
+                backup(path, expected_sha256=digest)
+            approved.unlink()
+            displaced.rename(approved)
+            self.assertEqual(backup(path, expected_sha256=digest), payload)
+
+            # Swap the parent after reading the stable FD, preserving
+            # original inode, digest, and named metadata.
+            original_fstat = os.fstat
+            fstat_calls = 0
+            pivoted = False
+
+            def pivot_after_backup_read(fd):
+                nonlocal fstat_calls, pivoted
+                fstat_calls += 1
+                if fstat_calls == 2 and not pivoted:
+                    approved.rename(displaced)
+                    approved.symlink_to(displaced, target_is_directory=True)
+                    pivoted = True
+                return original_fstat(fd)
+
+            with mock.patch("os.fstat", side_effect=pivot_after_backup_read):
+                with self.assertRaisesRegex(
+                        RuntimeError, "^HOLD_BACKUP_SOURCE_CHANGED$"):
+                    backup(path, expected_sha256=digest)
+            self.assertTrue(pivoted)
+            approved.unlink()
+            displaced.rename(approved)
+            self.assertEqual(backup(path, expected_sha256=digest), payload)
+
 if __name__ == "__main__":
     unittest.main()
