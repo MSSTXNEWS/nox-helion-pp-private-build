@@ -3360,7 +3360,7 @@ def main():
         # followed by GET-only recovery (never another model POST or ACK).
         check('R47 signed GET identity immutable across both verifiers', page.evaluate('''async () => {
           for(const kind of ['fresh-ack','fresh-nonce','second-ack',
-                             'second-expiry','healthy']){
+                             'second-expiry','normalized','healthy']){
             const s={conversation_id:'r47',exchange_id:'identity-'+kind};
             let reads=0,signedReads=0,origCancels=0,signedCancels=0;
             let posts=0,acks=0,recovery=false;
@@ -3404,10 +3404,15 @@ def main():
               async requireCanonicalAck(_s,event,cursor,read,verify){
                 const expected={event_id:event,ack_cursor:cursor};
                 const receipt=await read(expected);
-                if(await verify(receipt,expected)!==true)
+                // The actual IndexedDB gate verifies a sanitized signed
+                // proof; nonce/time/body remain only on the original GET.
+                const proof=kind==='normalized'?
+                  {ack_id:receipt.ack_id,version:1,server_cas:'synthetic'}:
+                  receipt;
+                if(await verify(proof,expected)!==true)
                   throw Error('CANONICAL_VERIFIER_FAIL');
                 return {status:'CANONICAL_ACK_CONFIRMED',
-                  authority:'VERIFIER_CALLBACK_APPROVED',ack_id:receipt.ack_id};
+                  authority:'VERIFIER_CALLBACK_APPROVED',ack_id:proof.ack_id};
               }
             };
             const c=NOXB1StreamReconnect.createClient({
@@ -3421,7 +3426,7 @@ def main():
                  origCancels!==1||signedCancels!==1||
                  reads!==1||signedReads!==1)return false;
             }else if(!first||
-              first.canonical_ack_id!=='ack-r47-healthy'||
+              first.canonical_ack_id!=='ack-r47-'+kind||
               origCancels!==0||signedCancels!==0)return false;
             const noRepost=await c.begin(s).then(()=>false,
               e=>e.code==='HOLD_STREAM_NO_REPOST');
