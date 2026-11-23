@@ -119,6 +119,21 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(writes, [("Привет", "¡Привет! 🌍")])
         self.assertEqual(logs, writes)
 
+    def test_many_unicode_fragments_keep_exact_token_order_and_s03_content(self):
+        # Checks >1,000 token events plus non-ASCII characters and whitespace
+        # against the final single S03 write, not only the displayed stream.
+        pieces = ["a", "ю", "🙂", " "] * 350
+        lines = [self.chunk(part) for part in pieces]
+        lines.extend((self.chunk(finish="stop"), "data: [DONE]"))
+        events, writes, logs, _ = self.run_stream(lines)
+        actual = "".join(e["text"] for e in events if e["type"] == "token")
+        self.assertEqual(actual, "".join(pieces))
+        self.assertEqual(writes, [("Привет", actual.strip())])
+        self.assertEqual(logs, writes)
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertTrue(events[-1]["generation_complete"])
+        self.assertFalse(events[-1]["memory_write_receipt"]["s03_readback_verified"])
+
     def test_early_eof_cannot_become_done_or_memory(self):
         for lines in ([self.chunk("partial"), self.chunk(finish="stop")],
                       [self.chunk("partial"), "data: [DONE]"],
