@@ -2956,8 +2956,8 @@ class FactReceiptTest(unittest.TestCase):
             self.assertNotIn(
                 bridge.hashlib.md5("нужна память".encode()).hexdigest(), bridge._RC)
 
-    def test_0a03_web_write_revokes_recall_cache_only_after_s03_returns(self):
-        """A returned canonical S03 write invalidates memory, an exception does not."""
+    def test_3a03_ambiguous_s03_write_revokes_cached_recall_without_retry(self):
+        """A canonical S03 write may commit before an exception or False return."""
         chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
         bridge = self.bridge
         bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
@@ -3004,7 +3004,17 @@ class FactReceiptTest(unittest.TestCase):
             self.assertEqual(held[-1]["memory_write_receipt"]["status"], "HOLD")
             self.assertFalse(held[-1]["memory_write_receipt"]["s03_write_returned"])
             self.assertTrue(held[-1]["memory_write_receipt"]["retry_unsafe"])
-            bridge.invalidate_s03_cache.assert_called_once_with()
+            self.assertEqual(bridge.invalidate_s03_cache.call_count, 2)
+            # Even an explicit rejection could follow an actual S03 commit.
+            # Do not leave cached old recall alive or retry the writer.
+            memory.persist_turn = mock.Mock(return_value=False)
+            rejected = asyncio.run(run_one("cache-write-rejected"))
+            self.assertEqual(rejected[-1]["memory_history"]["reason"], "S03_PERSIST_REJECTED")
+            self.assertEqual(rejected[-1]["memory_write_receipt"]["status"], "HOLD")
+            self.assertTrue(rejected[-1]["memory_write_receipt"]["retry_unsafe"])
+            self.assertFalse(rejected[-1]["memory_write_receipt"]["s03_write_returned"])
+            self.assertFalse(rejected[-1]["memory_write_receipt"]["s03_readback_verified"])
+            self.assertEqual(bridge.invalidate_s03_cache.call_count, 3)
 
             # A completed write followed by cache-revocation failure is not a
             # failed/absent write. The user must not retry the same turn blindly.
