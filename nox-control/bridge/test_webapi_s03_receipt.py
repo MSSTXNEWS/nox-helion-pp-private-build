@@ -422,6 +422,57 @@ class FactReceiptTest(unittest.TestCase):
             self.assertEqual(frame["request_receipt"]["status"], "RECEIVED")
         self.assertNotEqual(frames[0]["stream_id"], frames[1]["stream_id"])
 
+    def test_1a01_required_web_premodel_failure_has_terminal_hold(self):
+        """No silent SSE EOF or fake S03 success when self-state/prompt fails."""
+        chat = next(route.endpoint for route in self.app.routes
+                    if route.path == "/api/chat")
+        self.bridge.SOUL = None
+        self.bridge.LAST_CHAT = {"t": 0}
+        self.bridge.NKEEP = 0
+        self.bridge.memory_block = lambda user: "S03 memory available"
+        model_attempts, writes = [], []
+        self.bridge.hc = lambda: model_attempts.append("POST")
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        def fail(*_args):
+            raise RuntimeError("synthetic required premodel failure")
+
+        async def collect(request_id):
+            response = await chat(Request({
+                "request_id": request_id, "mini": False, "use_memory": True,
+                "messages": [{"role": "user", "content": "Продолжи с S03"}],
+            }))
+            return [json.loads(frame) async for frame in response.body_iterator]
+
+        with (mock.patch.object(W, "W", None),
+              mock.patch.object(W, "CANCEL", set()),
+              mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
+              mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.dict(sys.modules, {"s03_memory": memory})):
+            for phase in ("self_vol", "build_msgs"):
+                with self.subTest(phase=phase):
+                    if phase == "self_vol":
+                        self.bridge.self_vol = fail
+                        self.bridge.build_msgs = lambda *_: [{"role": "user", "content": "unused"}]
+                    else:
+                        self.bridge.self_vol = lambda _: ""
+                        self.bridge.build_msgs = fail
+                    rid = "web-premodel-hold-" + phase
+                    frames = asyncio.run(collect(rid))
+                    last = frames[-1]
+                    self.assertEqual(last["status"], "HOLD")
+                    self.assertEqual(last["reason"], "PREMODEL_CONTEXT_UNAVAILABLE")
+                    self.assertFalse(last["done"])
+                    self.assertFalse(last["completion_receipt"]["upstream_done"])
+                    self.assertEqual(last["completion_receipt"]["status"], "HOLD")
+                    self.assertEqual(last["memory_write_receipt"]["status"], "SKIPPED")
+                    self.assertFalse(last["memory_history"]["s03_readback_verified"])
+                    self.assertEqual(model_attempts, [])
+                    self.assertEqual(writes, [])
+                    self.assertNotIn(rid, W.ACTIVE_CHAT_IDS)
+        self.assertEqual(len(self.bridge.errors), 2)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
