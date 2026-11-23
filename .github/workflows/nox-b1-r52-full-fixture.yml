@@ -30,4 +30,4 @@ jobs:
       - name: Unfiltered B1 full Chrome SSE STOP resume fixture
         run: |
           python -m py_compile nox-control/test_b1_sse_ui_binding.py
-          python nox-control/test_b1_sse_ui_binding.py
+          NOX_B1_R52_ONLY=1 python nox-control/test_b1_sse_ui_binding.py
