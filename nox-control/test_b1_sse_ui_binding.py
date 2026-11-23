@@ -2552,6 +2552,42 @@ def main():
           return true;
         }'''))
 
+        # A faulty durable reservation must never turn a GET-only reconnect
+        # into an ACK, and must expose a stable HOLD rather than a TypeError.
+        check('malformed durable ACK reserve is fail-closed and GET-only',
+              page.evaluate('''async () => {
+          const poison={};
+          Object.defineProperty(poison,'status',{get(){throw Error('BAD_GETTER')}});
+          const candidates=[null,undefined,[],0,{},poison,{status:'UNKNOWN'}];
+          for(let index=0;index<candidates.length;index++){
+            const s={conversation_id:'r34',exchange_id:'bad-reserve-'+index};
+            let posts=0,acks=0,reads=0,projections=0,sends=0,canonical=0;
+            const transport={...opts.transport,
+              post(){posts++;throw Error('NO_MODEL_POST')},
+              ack(){acks++;throw Error('NO_ACK')},
+              async readback(){reads++;return {...s}},
+              readCanonicalAck(){canonical++;throw Error('NO_CANONICAL_GET')}
+            };
+            const gate={
+              async reserve(){return candidates[index]},
+              async beginSend(){sends++;throw Error('NO_BEGIN_SEND')},
+              async confirm(){throw Error('NO_LOCAL_CONFIRM')},
+              async requireCanonicalAck(){canonical++;throw Error('NO_GATE')}
+            };
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge:opts.bridge,ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){projections++;return true}}
+            });
+            for(let retry=0;retry<2;retry++){
+              const actual=await c.reconnect(s).then(v=>v,e=>e.code);
+              if(actual!=='HOLD_STREAM_ACK_GATE'||reads!==retry+1||
+                 projections!==retry+1||posts!==0||acks!==0||
+                 sends!==0||canonical!==0)return false;
+            }
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:

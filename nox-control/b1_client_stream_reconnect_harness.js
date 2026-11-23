@@ -652,8 +652,18 @@
           if(err&&typeof err.code==='string') throw err;
           hold('HOLD_STREAM_ACK_GATE');
         }
-        if(grant.status==='ALREADY_ACKED') return canonicalCompletion();
-        if(grant.status!=='RESERVED') hold('HOLD_STREAM_ACK_GATE');
+        // An external durable gate can return null, a malformed grant or
+        // throw from a status accessor. Normalize every such failure to HOLD
+        // BEFORE beginSend or the first network ACK. Read status only once:
+        // a changing accessor must not switch this turn between paths.
+        let reservationStatus;
+        try{
+          if(!grant||typeof grant!=='object'||Array.isArray(grant))
+            hold('HOLD_STREAM_ACK_GATE');
+          reservationStatus=grant.status;
+        }catch(_){hold('HOLD_STREAM_ACK_GATE');}
+        if(reservationStatus==='ALREADY_ACKED') return canonicalCompletion();
+        if(reservationStatus!=='RESERVED') hold('HOLD_STREAM_ACK_GATE');
         try{
           await boundedRead(()=>ackGate.beginSend(grant),
             'HOLD_STREAM_ACK_BEGIN_TIMEOUT',reconnectReadTimeoutMs,signal);
