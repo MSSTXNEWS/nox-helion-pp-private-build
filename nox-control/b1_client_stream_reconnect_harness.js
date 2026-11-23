@@ -681,6 +681,10 @@
           // readback, with the original event/cursor and CAS proof.
           if(err&&err.code==='HOLD_CROSSTAB_ACK_UNCERTAIN')
             return canonicalCompletion();
+          // The reservation has not accepted ownership of the terminal
+          // readback GET. A rejected, stopped or timed-out reserve must
+          // release that open body once without waiting on cancel().
+          discardReadback();
           if(err&&typeof err.code==='string') throw err;
           hold('HOLD_STREAM_ACK_GATE');
         }
@@ -693,9 +697,15 @@
           if(!grant||typeof grant!=='object'||Array.isArray(grant))
             hold('HOLD_STREAM_ACK_GATE');
           reservationStatus=grant.status;
-        }catch(_){hold('HOLD_STREAM_ACK_GATE');}
+        }catch(_){
+          discardReadback();
+          hold('HOLD_STREAM_ACK_GATE');
+        }
         if(reservationStatus==='ALREADY_ACKED') return canonicalCompletion();
-        if(reservationStatus!=='RESERVED') hold('HOLD_STREAM_ACK_GATE');
+        if(reservationStatus!=='RESERVED'){
+          discardReadback();
+          hold('HOLD_STREAM_ACK_GATE');
+        }
         try{
           const sendReceipt=await boundedRead(()=>ackGate.beginSend(grant),
             'HOLD_STREAM_ACK_BEGIN_TIMEOUT',reconnectReadTimeoutMs,signal);
