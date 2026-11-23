@@ -490,7 +490,8 @@ else if(o.type=='error'){failed=true;complete=false;st.textContent=o.text}
 else if(o.type=='done'){complete=o.generation_complete===true&&!failed;writeReceipt=o.memory_write_receipt||null}}}
 }catch(x){failed=true;complete=false;st.textContent='ошибка связи'}
 finally{sending=false;send.disabled=false;i.disabled=false;i.focus()}
-if(!complete||!full.trim()){if(!st.textContent)st.textContent='Ответ прерван; неполный текст не добавлен в историю';return}
+if(!full.trim())complete=false;
+if(!complete){if(!st.textContent)st.textContent='Ответ прерван; неполный текст не добавлен в историю';return}
 // Only completed turns enter outgoing conversation history. A failed turn
 // remains visible on screen but must not pollute the next model request.
 hist.push({role:'user',content:q},{role:'assistant',content:full});
