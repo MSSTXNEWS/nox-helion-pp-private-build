@@ -54,7 +54,8 @@ def request(client,path,method='GET',data=None,timeout=6,base=None):
     # A proxy must not replay an old owner/executor/history snapshot as live
     # admission or multi-turn readback evidence.
     if ((method == 'GET' and path.startswith(('/api/nox/', '/api/ui/')))
-            or (method == 'POST' and path == '/api/nox/chat/stream')):
+            or (method == 'POST' and path in (
+                '/api/nox/chat/stream', '/api/ui/memory/dialogs/create'))):
         headers.update({'Cache-Control':'no-store, no-cache', 'Pragma':'no-cache'})
     req=urllib.request.Request((base or BASE)+path,data=payload,method=method,headers=headers)
     try:return client.open(req,timeout=timeout)
@@ -235,6 +236,29 @@ def owner_readback_json(client, requested_path):
         response.close()
         raise
     return obj(response)
+
+
+def create_probe_dialog(client, title):
+    """Fail closed on stale/redirected dialog-create POST before any model turn.
+
+    Creating a dialog is non-idempotent. The returned ID must belong to this
+    exact fresh authenticated route, not a cached or gateway JSON prefix.
+    This is owner-dialog evidence only, NOT independent S03 proof.
+    """
+    path = '/api/ui/memory/dialogs/create'
+    response = request(client, path, 'POST', {'title': title, 'confirmed': True})
+    try:
+        require_exact_owner_readback_target(response, path)
+        require_fresh_owner_readback(response)
+        require_owner_json_response_mime(response)
+    except Exception:
+        response.close()
+        raise
+    created = obj(response)  # One bounded complete JSON read, always closes.
+    did = created.get('dialog_id') if isinstance(created, dict) else None
+    if not isinstance(did, str) or not re.fullmatch(r'[a-f0-9]{32}', did):
+        raise RuntimeError('HOLD_DIALOG_CREATE')
+    return did
 
 
 def require_postturn_owner_binding(client):
@@ -1400,9 +1424,7 @@ def main():
         require_multiturn_requested(os.environ.get('NOX_PROBE_SECOND_TURN'))
         marker='nox_latency_'+secrets.token_hex(5)
         prompt='[QA '+marker+'] Сколько будет 17 умножить на 19? Ответь только числом.'
-        dialog=obj(request(client,'/api/ui/memory/dialogs/create','POST',{'title':'NOX QA '+marker,'confirmed':True}))
-        did=dialog.get('dialog_id')
-        if not isinstance(did,str) or not re.fullmatch('[a-f0-9]{32}',did):raise RuntimeError('HOLD_DIALOG_CREATE')
+        did=create_probe_dialog(client,'NOX QA '+marker)
         turn=admitted_consume_turn(client,prompt,did);answer=turn['answer'];receipt=turn['done']
         history=owner_readback_json(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6')
         saved=bool(receipt and receipt.get('saved') is True and receipt.get('s03_integrated') is True
