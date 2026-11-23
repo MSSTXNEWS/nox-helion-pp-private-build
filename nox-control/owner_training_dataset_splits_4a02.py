@@ -97,20 +97,28 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
         if prior_source_license != license_claim:
             raise SplitHold("HOLD_CONFLICTING_SOURCE_LICENSE")
         fingerprint = _digest(_norm(row["text"]))
-        prior = seen_content.get(fingerprint)
-        if prior is not None:
-            if prior != group:
-                raise SplitHold("HOLD_CROSS_GROUP_DUPLICATE")
-            duplicate_count += 1
-            continue
-        seen_content[fingerprint] = group
-        groups.setdefault(group, []).append({
+        candidate = {
             "record_id": row["id"],
             "raw_sha256": _digest(row["text"]),
             "normalized_sha256": fingerprint,
             "source_id": row["source_id"],
             "license_claim": row["license"],
-        })
+        }
+        prior = seen_content.get(fingerprint)
+        if prior is not None:
+            prior_group, representative = prior
+            if prior_group != group:
+                raise SplitHold("HOLD_CROSS_GROUP_DUPLICATE")
+            duplicate_count += 1
+            # A normalized duplicate must not make the manifest depend on
+            # input iteration order. Keep the lowest immutable record ID as
+            # the canonical representative, including its raw hash and claim.
+            if (candidate["record_id"], candidate["raw_sha256"]) < (
+                    representative["record_id"], representative["raw_sha256"]):
+                representative.update(candidate)
+            continue
+        groups.setdefault(group, []).append(candidate)
+        seen_content[fingerprint] = (group, candidate)
 
     if count == 0:
         raise SplitHold("HOLD_NO_DATA")
