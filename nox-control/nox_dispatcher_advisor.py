@@ -409,7 +409,7 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                         cap = round(85 - peak_util, 2)
                         add("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", "observe",
                             f"Most-loaded GPU upper bound to the 85% limit: {cap} percentage points. "
-                            "This is utilization-only, not per-job GPU/VRAM admission; "
+                            "Utilization-only; no admission of GPU/VRAM jobs, "
                             "no trainer restart or new queue authorized.")
     if not issues:
         # If another concrete issue already exists, preserve its established
