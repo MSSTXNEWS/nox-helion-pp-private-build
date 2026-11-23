@@ -221,6 +221,8 @@ class SavedRefreshContract(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(two.refresh_payload,{'last':'second,answer',
                                               'first':'first,answer'})
         self.assertIn('bodies.at(-2)',two.refresh_script)
+        self.assertIn('bodies.length === (expected.first === null ? 1 : 2)',two.refresh_script)
+        self.assertIn("text.replace(/\s+/g,' ').trim()",two.refresh_script)
         # Fail before reloading when the expected first answer is missing.
         bad=Page(0)
         with self.assertRaisesRegex(RuntimeError,'HOLD_QA_REFRESH_EXPECTED_FIRST_ANSWER'):
@@ -231,6 +233,45 @@ class SavedRefreshContract(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(RuntimeError,'HOLD_QA_REFRESH_DUPLICATE_NATIVE_POST'):
             await verify_saved_browser_refresh(second,{},'synthetic QA','1,2,3',sha)
         self.assertEqual(second.reloads,1)
+
+    def test_refresh_witness_executes_real_js_against_replayed_visible_bodies(self):
+        """An extra assistant reply or collapsed word boundary is not persistence proof."""
+        import inspect
+        import json
+        import re
+        import shutil
+        import subprocess
+
+        source=inspect.getsource(verify_saved_browser_refresh)
+        match=re.search(r'await page\.wait_for_function\("""(expected => \{.*?\})""", arg=',source,re.S)
+        self.assertIsNotNone(match,'Browser refresh JS witness not found')
+        node=shutil.which('node')
+        if node is None:
+            self.skipTest('Node.js unavailable for executable browser witness regression')
+        javascript="""
+const verify=eval('(' + %s + ')');
+function witnessed(bodies,first,last) {
+  globalThis.document={querySelectorAll:selector=>{
+    if(selector!=='#messages .v24-msg.nox .body')throw Error('unexpected selector');
+    return bodies.map(innerText=>({innerText,getClientRects:()=>[1]}));
+  }};
+  return verify({first,last});
+}
+console.log(JSON.stringify([
+  witnessed(['1, 2'],null,'1, 2'),
+  witnessed(['first, answer','second, answer'],'first, answer','second, answer'),
+  witnessed(['first,\\n answer','second, answer'],'first, answer','second, answer'),
+  witnessed(['first,answer','second,answer'],'first, answer','second, answer'),
+  witnessed(['unrelated','first, answer','second, answer'],'first, answer','second, answer'),
+  witnessed(['second, answer'],'first, answer','second, answer'),
+  witnessed(['second, answer','first, answer'],'first, answer','second, answer')
+]));
+""" % json.dumps(match.group(1))
+        result=subprocess.run([node,'-e',javascript],capture_output=True,text=True,timeout=8,check=False)
+        self.assertEqual(result.returncode,0,result.stderr[:1000])
+        self.assertEqual(json.loads(result.stdout),
+                         [True,True,True,False,False,False,False])
+
 
 class AmbiguousSendContract(unittest.IsolatedAsyncioTestCase):
     @patch('owner_chat_browser_qa.stop_present',return_value=False)
