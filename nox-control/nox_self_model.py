@@ -15,8 +15,9 @@ import argparse
 import datetime as dt
 import hashlib
 import ipaddress
+import os
 import json
-from pathlib import Path
+import stat
 import re
 import sys
 from typing import Any
@@ -325,18 +326,65 @@ def build_snapshot(data: Any) -> dict[str, Any]:
     return result
 
 
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Reject duplicate evidence keys rather than silently trusting last-wins JSON."""
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise SelfModelError("input JSON has duplicate keys")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    """NaN and Infinity are not JSON and must not enter an evidence snapshot."""
+    raise SelfModelError("input JSON contains non-finite constants")
+
+
+def _load_input(path: str) -> Any:
+    """Read one bounded, non-symlink regular file through a single descriptor.
+
+    Preflight checks on a pathname followed by read_bytes() permit a raced
+    symlink/FIFO/device substitution. Open with O_NOFOLLOW and O_NONBLOCK,
+    fstat the opened object, then cap bytes actually read even if it grows.
+    The caller still validates the snapshot schema and evidence separately.
+    """
+    if not hasattr(os, "O_NOFOLLOW"):
+        raise SelfModelError("safe non-symlink input opening is unavailable")
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+    except OSError as exc:
+        raise SelfModelError("input must be an accessible non-symlink file") from exc
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_INPUT_BYTES:
+            raise SelfModelError("input must be a regular JSON file no larger than 256 KiB")
+        data = bytearray()
+        while len(data) <= MAX_INPUT_BYTES:
+            part = os.read(fd, min(8192, MAX_INPUT_BYTES + 1 - len(data)))
+            if not part:
+                break
+            data.extend(part)
+        if len(data) > MAX_INPUT_BYTES:
+            raise SelfModelError("input grew beyond the 256 KiB bound")
+    except OSError as exc:
+        raise SelfModelError("input file could not be safely read") from exc
+    finally:
+        os.close(fd)
+    try:
+        return json.loads(data.decode("utf-8"),
+                          object_pairs_hook=_unique_json_object,
+                          parse_constant=_reject_json_constant)
+    except UnicodeDecodeError as exc:
+        raise SelfModelError("input must be UTF-8 JSON") from exc
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate one evidence-bound 3A04 self-model snapshot.")
     parser.add_argument("--input", required=True, help="JSON document using nox.self_model.input.v1")
     args = parser.parse_args(argv)
     try:
-        path = Path(args.input)
-        if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_INPUT_BYTES:
-            raise SelfModelError("input must be a non-symlink regular JSON file no larger than 256 KiB")
-        raw = path.read_bytes()
-        if len(raw) > MAX_INPUT_BYTES:
-            raise SelfModelError("input must be a non-symlink regular JSON file no larger than 256 KiB")
-        snapshot = build_snapshot(json.loads(raw.decode("utf-8")))
+        snapshot = build_snapshot(_load_input(args.input))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, SelfModelError) as exc:
         print(json.dumps({"status": "HOLD", "error": f"{type(exc).__name__}: {str(exc)[:300]}"}), file=sys.stderr)
         return 2
