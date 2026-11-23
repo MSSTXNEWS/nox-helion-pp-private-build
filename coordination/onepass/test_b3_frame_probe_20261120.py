@@ -2273,5 +2273,75 @@ class TestProbe(unittest.TestCase):
         asyncio.run(run())
 
 
+
+    def test_b3_simple_text_fastpath_preserves_unicode_stream(self):
+        """Synthetic Chromium stream only; not a native serving/S03 receipt."""
+        from playwright.async_api import async_playwright
+
+        async def run():
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(
+                    headless=True, executable_path='/usr/bin/chromium')
+                try:
+                    for chunks in (['Ab', 'Пр'] * 120,
+                                   ['A', '\u0301', 'B', '👩', '\u200d', '💻']):
+                        page = await browser.new_page()
+                        async def fixture(route):
+                            await route.fulfill(status=200, content_type='text/html',
+                                                body='<html>B3 grapheme fixture</html>')
+                        await page.route('**/nox-web-v29/pc/resonance.html', fixture)
+                        await page.goto('http://127.0.0.1:18775/nox-web-v29/pc/resonance.html')
+                        await page.evaluate("""chunks => {
+                          window.NOX_NATIVE_OWNER=true;
+                          const did='a'.repeat(32),answer=chunks.join('');
+                          window.__segmentCalls=0;
+                          const Original=Intl.Segmenter;
+                          Intl.Segmenter=class extends Original {
+                            segment(text){window.__segmentCalls++;return super.segment(text)}
+                          };
+                          window.fetch=async url=>{
+                            if(url==='/api/nox/chat/stream'){
+                              const rows=[{type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+                                {type:'start',model:'mock-pinned'},
+                                ...chunks.map(text=>({type:'delta',text})),
+                                {type:'done',saved:true,s03_integrated:true,
+                                 dialog_id:did,exchange_id:'r31-test-1'}];
+                              return new Response(rows.map(JSON.stringify).join('\\n')+'\\n');
+                            }
+                            if(String(url).startsWith('/api/ui/memory/dialogs/history?'))
+                              return new Response(JSON.stringify({status:'READY',dialog_id:did,
+                                messages:[{role:'user',content:'check',exchange_id:'r31-test-1'},
+                                {role:'assistant',content:answer,exchange_id:'r31-test-1'}]}));
+                            throw Error('UNEXPECTED_NATIVE_ROUTE');
+                          };
+                        }""", chunks)
+                        bridge=(pathlib.Path(__file__).parent /
+                                'nox-v135-resonance-owner-bridge.js').read_text('utf8')
+                        await page.add_script_tag(content=bridge)
+                        out=await page.evaluate("""async () => {
+                          const r=await fetch('/api/nox/chat',{method:'POST',
+                            body:JSON.stringify({dialog_id:'a'.repeat(32),
+                              request_id:'r31-test-1',message:'check'})});
+                          const events=(await r.text()).split('\\n\\n').filter(Boolean)
+                            .map(s=>JSON.parse(s.slice(6)));
+                          return {text:events.filter(e=>e.type==='token').map(e=>e.t).join(''),
+                            chunks:events.filter(e=>e.type==='token').map(e=>e.t),
+                            done:events.filter(e=>e.type==='done').length,
+                            errors:events.filter(e=>e.type==='error'),
+                            segmentCalls:window.__segmentCalls};
+                        }""")
+                        self.assertEqual(out['text'], ''.join(chunks))
+                        self.assertEqual((out['done'],out['errors']),(1,[]))
+                        if len(chunks)>100:
+                            self.assertEqual(out['segmentCalls'],0)
+                        else:
+                            self.assertGreater(out['segmentCalls'],0)
+                            self.assertEqual(out['chunks'],['A\u0301','B','👩\u200d💻'])
+                        await page.close()
+                finally:
+                    await browser.close()
+        asyncio.run(run())
+
+
 if __name__ == '__main__':
     unittest.main()

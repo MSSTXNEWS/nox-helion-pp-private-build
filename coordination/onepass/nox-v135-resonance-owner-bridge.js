@@ -251,12 +251,8 @@ const validNativeModelLabel=v=>typeof v==='string'&&v.length>0&&v.length<=96&&v=
        }
        return;
      }
-     const lastBoundary=segmenter.segment(trailing).containing(trailing.length-1)?.index||0;
-     if(lastBoundary>0){
-      const safe=trailing.slice(0,lastBoundary);
-      trailing=trailing.slice(lastBoundary);
-      await emitPieces(safe);
-     }
+     const b=trailing.length>1&&/^[\x20-\x7e\u0401\u0410-\u044f\u0451]+$/.test(trailing)?trailing.length-1:segmenter.segment(trailing).containing(trailing.length-1)?.index||0;
+     if(b>0){const t=trailing.slice(0,b);trailing=trailing.slice(b);await emitPieces(t);}
     },nativeSignal);
     if(trailing)await emitPieces(trailing);
     if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
