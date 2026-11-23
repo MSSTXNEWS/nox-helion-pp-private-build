@@ -3134,6 +3134,47 @@ def main():
             reads===2&&cancels===1&&acks===1&&posts===0&&noRepost;
         }'''))
 
+        # R44: GET may deliver a body before STOP wins boundedRead's race.
+        # A delivered-but-untransferred packet must be canceled exactly once.
+        check('R44 GET delivery/STOP microtask race cancels once, never rePOSTs', page.evaluate('''async () => {
+          for(let depth=0;depth<6;depth++){
+            const s={conversation_id:'r44',exchange_id:'delivery-stop-'+depth};
+            let reads=0,cancels=0,posts=0,acks=0,client;
+            const transport={...opts.transport,
+              post(){posts++;throw Error('DUPLICATE_MODEL_POST')},
+              readback(){
+                reads++;
+                let stop=()=>client.stop(s);
+                for(let i=0;i<depth;i++){
+                  const old=stop;stop=()=>queueMicrotask(old);
+                }
+                queueMicrotask(stop);
+                return {...s,body:{cancel(){
+                  cancels++;return new Promise(()=>{}); // nonblocking
+                }}};
+              },
+              ack(){acks++;return true}
+            };
+            client=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,
+              bridge:{async acceptTerminal(){return {
+                safe_to_ack:true,model_post:false,
+                conversation_id:s.conversation_id,exchange_id:s.exchange_id,
+                projection_event_id:'ev-r44',ack_cursor:'cursor-r44'
+              }}},
+              ui:{async onDelta(){},async upsertTerminal(){return true}}
+            });
+            const first=await client.reconnect(s).then(()=>null,e=>e.code);
+            await Promise.resolve();await Promise.resolve();
+            if(first!=='HOLD_STREAM_RECONNECT_STOPPED'||
+               reads!==1||cancels!==1||posts!==0||acks!==0)return false;
+            const noRepost=await client.begin(s).then(()=>false,
+              e=>e.code==='HOLD_STREAM_NO_REPOST');
+            if(!noRepost||posts!==0)return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
