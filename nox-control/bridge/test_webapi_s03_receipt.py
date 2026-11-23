@@ -450,6 +450,7 @@ class FactReceiptTest(unittest.TestCase):
         res = self.invoke(m)
         self.assertEqual(res["status"], "RECORDED_UNVERIFIED")
         self.assertTrue(res["saved"])
+        self.assertTrue(res["s03_write_returned"])
         self.assertFalse(res["s03_readback_verified"])
         self.assertEqual(len(calls), 1)
         entry = json.loads(self.fact_path.read_text(encoding="utf-8").strip())
@@ -463,6 +464,11 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(res.status_code, 500)
         row = json.loads(res.body)
         self.assertEqual(row["status"], "PARTIAL_HOLD")
+        # The S03 writer already returned; the failed secondary JSONL mirror
+        # cannot authorize replay of the same user fact.
+        self.assertFalse(row["saved"])
+        self.assertTrue(row["s03_write_returned"])
+        self.assertFalse(row["retry_safe"])
         self.assertFalse(row["s03_readback_verified"])
 
 
