@@ -705,7 +705,7 @@ document.getElementById('f').onsubmit=async e=>{e.preventDefault();if(sending)re
 const i=document.getElementById('i'),send=document.querySelector('#f button'),q=i.value.trim();if(!q)return;
 sending=true;send.disabled=true;i.disabled=true;i.value='';
 add('u',q);const pending=[...hist,{role:'user',content:q}];const st=add('s','…'),box=add('n','');
-let full='',complete=false,failed=false,writeReceipt=null;
+let full='',complete=false,failed=false,writeReceipt=null,terminalFrames=0;
 try{const r=await fetch('/v1/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:pending})});
 if(!r.ok||!r.body)throw Error('upstream');
 const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
@@ -714,9 +714,12 @@ buf+=done?dc.decode():dc.decode(value,{stream:true});let frame;
 while((frame=buf.match(/\\r?\\n\\r?\\n/))!==null){
 const ln=buf.slice(0,frame.index);buf=buf.slice(frame.index+frame[0].length);
 if(!ln.startsWith('data:'))continue;const o=JSON.parse(ln.slice(5));
+// No frame after a terminal "done" can be silently accepted as a valid
+// user-visible response. It would otherwise certify a corrupted SSE exchange.
+if(terminalFrames){failed=true;complete=false;st.textContent='Ошибка: данные после завершения потока';continue}
 if(o.type=='status')st.textContent=o.text;else if(o.type=='token'){full+=o.text;box.textContent=full;st.textContent='';log.scrollTop=1e9}
 else if(o.type=='error'){failed=true;complete=false;st.textContent=o.text}
-else if(o.type=='done'){complete=o.generation_complete===true&&!failed;writeReceipt=o.memory_write_receipt||null}}
+else if(o.type=='done'){terminalFrames++;complete=o.generation_complete===true&&!failed;writeReceipt=o.memory_write_receipt||null}}
 if(done)break;}
 }catch(x){failed=true;complete=false;st.textContent='ошибка связи'}
 finally{sending=false;send.disabled=false;i.disabled=false;i.focus()}
