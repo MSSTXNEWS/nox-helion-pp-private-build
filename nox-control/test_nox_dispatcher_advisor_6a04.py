@@ -17,7 +17,13 @@ def snapshot():
             "trainer": {"running": True, "checkpoint_recent": True},
             "gpu": {"temperature_c": 58, "temperature_sensor_valid": True,
                     "utilization_pct": 15, "vram_used_mib": 10000,
-                    "vram_total_mib": 16000, "age_sec": 1},
+                    "vram_total_mib": 16000, "age_sec": 1,
+                    "devices": [
+                        {"index": 0, "utilization_pct": 15,
+                         "vram_used_mib": 5000, "vram_total_mib": 8000},
+                        {"index": 1, "utilization_pct": 15,
+                         "vram_used_mib": 5000, "vram_total_mib": 8000},
+                    ]},
             "cpu_io": {"cpu_busy_pct": 40, "io_wait_pct": 2, "age_sec": 1},
             "disk": {"free_gib": 100},
             "native_queue": {"active_claims": False, "maintenance_busy": False,
@@ -45,6 +51,40 @@ class GpuSourceEvidenceTests(unittest.TestCase):
         self.assertEqual([x["code"] for x in result], ["GPU_RESIDUAL_OBSERVED_NOT_ADMITTED"])
         self.assertIn("70", result[0]["advice"])
         self.assertIn("no admission", result[0]["advice"])
+
+    def test_per_gpu_peak_not_pooled_average_controls_spare_hint(self):
+        s = snapshot()
+        s["gpu"]["utilization_pct"] = 30
+        s["gpu"]["devices"][0]["utilization_pct"] = 60
+        s["gpu"]["devices"][1]["utilization_pct"] = 0
+        result = mod.assess(s, owner_snapshot_verifier=lambda exact: exact is s)
+        self.assertEqual([x["code"] for x in result], ["GPU_RESIDUAL_OBSERVED_NOT_ADMITTED"])
+        self.assertIn("25", result[0]["advice"])
+        self.assertNotIn("55 percentage", result[0]["advice"])
+
+    def test_per_gpu_missing_duplicate_or_saturated_device_fails_closed(self):
+        for bad in ("missing", "duplicate", "unmatched_vram", "saturated",
+                    "invalid_util", "nonlist"):
+            with self.subTest(case=bad):
+                s = snapshot()
+                if bad == "missing":
+                    s["gpu"].pop("devices")
+                elif bad == "duplicate":
+                    s["gpu"]["devices"][1]["index"] = 0
+                elif bad == "unmatched_vram":
+                    s["gpu"]["devices"][1]["vram_used_mib"] += 1
+                elif bad == "saturated":
+                    s["gpu"]["devices"][0]["utilization_pct"] = 95
+                elif bad == "invalid_util":
+                    s["gpu"]["devices"][0]["utilization_pct"] = float("inf")
+                else:
+                    s["gpu"]["devices"] = {"index": 0}
+                codes_seen = [x["code"] for x in mod.assess(
+                    s, owner_snapshot_verifier=lambda exact: exact is s)]
+                expected = ("GPU_RESIDUAL_DEVICE_BUSY_HOLD" if bad == "saturated"
+                            else "GPU_RESIDUAL_DEVICE_CENSUS_HOLD")
+                self.assertIn(expected, codes_seen)
+                self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", codes_seen)
 
     def test_incomplete_native_queue_never_labels_gpu_spare_as_measured(self):
         # Even a snapshot signature and low GPU utilization cannot certify
