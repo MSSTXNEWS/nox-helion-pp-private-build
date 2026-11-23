@@ -67,7 +67,7 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
                         "s03_write_returned": True, "s03_readback_verified": False})
 
     def test_unknown_receipt_is_not_success(self):
-        with self.assertRaisesRegex(ValueError, "TERMINAL_RECEIPT_NOT_EPHEMERAL_GENERATED"):
+        with self.assertRaisesRegex(bench.UnsafeEphemeralWriteReceipt, "BENCH_EPHEMERAL_WRITE_RISK"):
             run_sample({"status": "SKIPPED", "s03_readback_verified": False})
 
     def test_batch_stops_on_first_possible_write(self):
