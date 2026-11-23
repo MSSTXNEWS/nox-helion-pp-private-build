@@ -447,6 +447,7 @@ def owner_session_cookie_pin(cookies):
     # unchanged. Cookie snapshots with duplicate scopes are not unambiguous
     # authenticated RU/ES session evidence, even when one row is HttpOnly.
     seen_cookie_scopes = set()
+    seen_cookie_names = set()
     for row in cookies:
         # Validate the complete owner cookie snapshot, not only signed rows.
         # Ordinary unsigned preferences may have an empty string value, but
@@ -465,9 +466,14 @@ def owner_session_cookie_pin(cookies):
         except UnicodeEncodeError:
             return None
         scope = (row['name'], row['domain'], row['path'])
-        if scope in seen_cookie_scopes:
+        # Cookies with identical names but different domain/path scopes can
+        # both reach one HTTP endpoint. A server may resolve the first/last
+        # Cookie header value differently while our signed owner pin stays
+        # unchanged. Reject all same-name shadows, not just exact-scope ones.
+        if scope in seen_cookie_scopes or row['name'] in seen_cookie_names:
             return None
         seen_cookie_scopes.add(scope)
+        seen_cookie_names.add(row['name'])
         if 'secure' in row and type(row['secure']) is not bool:
             return None
         same_site = row.get('sameSite')

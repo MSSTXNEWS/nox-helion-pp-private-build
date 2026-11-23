@@ -4256,5 +4256,56 @@ async function check(chunks, status=200) {
                              baseline)
         self.assertEqual(owner_session_cookie_pin([signed]), baseline)
 
+    def test_ru_es_cross_scope_cookie_name_shadow_must_hold(self):
+        """A same-name cookie at another domain/path cannot certify one owner.
+
+        Pure-source RU/ES session provenance: no inference POST or S03 write.
+        """
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='stable-secret', httpOnly=True, secure=True)
+        theme = dict(name='theme', domain='owner.example', path='/',
+                     value='dark', httpOnly=False)
+        locale = dict(name='locale', domain='owner.example', path='/',
+                      value='es', httpOnly=False)
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        for order in ([signed, theme, locale], [locale, signed, theme]):
+            self.assertEqual(owner_session_cookie_pin(order), pin)
+            self.assertTrue(owner_session_continuity_valid(200, order, pin))
+
+        # Distinct domain/path scopes previously bypassed the R45 exact
+        # (name,domain,path) uniqueness check. Cookie headers omit those
+        # scopes, so another same-name value can shadow the signed owner.
+        shadows = (
+            dict(signed, domain='.owner.example', httpOnly=False,
+                 value='parent-domain-shadow'),
+            dict(signed, domain='parent.example', httpOnly=False,
+                 value='parent-shadow'),
+            dict(signed, path='/chat', httpOnly=False,
+                 value='chat-path-shadow'),
+            dict(signed, path='/api', httpOnly=False,
+                 value='history-path-shadow'),
+            dict(signed, path='/chat', value='stable-secret',
+                 httpOnly=True),
+        )
+        for shadow in shadows:
+            for snapshot in (
+                [signed, shadow],
+                [shadow, signed],
+                [signed, theme, shadow],
+                [theme, shadow, signed, locale],
+            ):
+                with self.subTest(shadow=repr(shadow), count=len(snapshot)):
+                    self.assertIsNone(owner_session_cookie_pin(snapshot))
+                    self.assertFalse(owner_session_continuity_valid(
+                        200, snapshot, pin))
+        # The rule applies even when both colliding cookies are ancillary;
+        # a signed owner must not hide ambiguity in full browser provenance.
+        other_theme = dict(theme, domain='.owner.example', value='light')
+        self.assertIsNone(owner_session_cookie_pin(
+            [signed, theme, other_theme]))
+        self.assertEqual(owner_session_cookie_pin([signed, locale]), pin)
+
+
 if __name__ == "__main__":
     unittest.main()
