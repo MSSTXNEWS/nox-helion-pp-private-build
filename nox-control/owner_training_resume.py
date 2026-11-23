@@ -1400,7 +1400,10 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
     if any(file_sha(path/name) != hashes[name] for name in helper.CHECKPOINT_NAMES):
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_HASH')
     state = read_json(path/'trainer_state.json', expected_sha256=hashes['trainer_state.json'])
-    if type(state.get('global_step')) is not int or state['global_step'] != step:
+    # A matching checkpoint SHA proves bytes, not the JSON document's root type.
+    # Non-object signed state must emit a durable owner HOLD, not AttributeError.
+    if (type(state) is not dict or type(state.get('global_step')) is not int
+            or state['global_step'] != step):
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_STEP')
     return True
 

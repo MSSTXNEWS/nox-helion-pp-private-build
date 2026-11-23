@@ -4046,5 +4046,54 @@ class InstalledTrainCpuCapParentPathFence(unittest.TestCase):
             displaced.rename(approved)
             self.assertEqual(cap(env), 60)
 
+
+class SignedCheckpointStateRootTypeFence(unittest.TestCase):
+    def test_signed_json_nonobject_roots_have_named_checkpoint_hold(self):
+        # Exact owner AST and signed bytes; never starts trainer, server, GPU, S03.
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            checkpoint = output / "checkpoint-1"
+            checkpoint.mkdir()
+            tensor = checkpoint / "adapter_model.safetensors"
+            tensor.write_bytes(b"state-root-type-proof")
+            state = checkpoint / "trainer_state.json"
+            verifier = load_pinned_verifier(output)
+            names = ("adapter_model.safetensors", "trainer_state.json")
+            receipt = {
+                "global_step": 1,
+                "state": "CHECKPOINTED_OWNER_STOP",
+                "native_sha256": "a" * 64,
+                "successful_optimizer_steps": 1,
+                "adapter_delta_verified": True,
+                "before_tensor_sha256": "b" * 64,
+                "after_tensor_sha256": "c" * 64,
+                "loss": 0.5,
+                "checkpoint": {
+                    "path": str(checkpoint),
+                    "global_step": 1,
+                    "files_sha256": {},
+                },
+            }
+            helper = types.SimpleNamespace(CHECKPOINT_NAMES=names)
+            verify = verifier["verify_paused_result"]
+            for root in (None, [], [1], False, 0, 1, "step=1"):
+                with self.subTest(signed_root=repr(root)):
+                    state.write_text(json.dumps(root), encoding="utf-8")
+                    receipt["checkpoint"]["files_sha256"] = {
+                        name: verifier["file_sha"](checkpoint / name)
+                        for name in names
+                    }
+                    with self.assertRaisesRegex(
+                            RuntimeError, "^HOLD_PAUSED_CHECKPOINT_STEP$"):
+                        verify(helper, receipt)
+            # A signed valid object remains admissible on the same path.
+            state.write_text('{"global_step":1}', encoding="utf-8")
+            receipt["checkpoint"]["files_sha256"] = {
+                name: verifier["file_sha"](checkpoint / name)
+                for name in names
+            }
+            self.assertTrue(verify(helper, receipt))
+
+
 if __name__ == "__main__":
     unittest.main()
