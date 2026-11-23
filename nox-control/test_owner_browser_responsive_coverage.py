@@ -121,6 +121,16 @@ class CanonicalTwoTurnS03EvidenceContract(unittest.TestCase):
                     'messages': messages,
                     'full_answer_sha256': hashlib.sha256(str(answer).encode()).hexdigest()}
         self.assertTrue(canonical_s03_proof_valid(receipt, readback(rows), dialog, rows))
+        # One malformed historical user/assistant message can otherwise pass
+        # with a valid hash of the last answer. No unencodable S03 proof is OK.
+        for pos in range(4):
+            with self.subTest(surrogate_position=pos):
+                invalid_utf8 = [dict(row) for row in rows]
+                invalid_utf8[pos]['content'] += '\ud800'
+                witness = readback(rows)
+                witness['messages'] = invalid_utf8
+                self.assertFalse(canonical_s03_proof_valid(
+                    receipt, witness, dialog, invalid_utf8))
         invalid = [
             rows[-1:],  # Prior code admitted single assistant as canonical two-turn.
             rows[:2],   # One exchange is not multi-turn.
