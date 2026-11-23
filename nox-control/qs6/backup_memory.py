@@ -222,9 +222,12 @@ def restore(backup_path, db, force=False):
         if os.path.islink(db):
             raise RuntimeError("restore HOLD: destination S03 is a symbolic link")
         if os.path.exists(db):
-            # An open WAL/SHM or rollback journal may still be owned by a live
-            # SQLite writer. --force does not authorize a split-brain restore.
-            if any(os.path.lexists(db + ext) for ext in ("-wal", "-shm", "-journal")):
+            # A force override must never move a possibly live WAL/SHM or
+            # rollback journal. In normal mode the existing SQLite lock probe
+            # below still controls admission; some valid offline WAL snapshots
+            # retain sidecars until SQLite itself checkpoints them.
+            sidecars = any(os.path.lexists(db + ext) for ext in ("-wal", "-shm", "-journal"))
+            if force and sidecars:
                 raise RuntimeError("restore HOLD: live or orphan SQLite sidecar present")
             # Identity check applies only to explicit PersonaID values. Legacy
             # databases remain clearly unverified; a one-sided ID is unsafe.
