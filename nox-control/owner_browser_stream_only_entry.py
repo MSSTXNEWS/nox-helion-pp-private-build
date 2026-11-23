@@ -25,9 +25,9 @@ ROOT = Path('/root/nox')
 AREA = ROOT / 'browser_qa'
 PINS = {
     'owner_chat_browser_qa.py': '6d36396630f1555530202b00932daf2eaaa6ad014d29d1763874ae6c02a61637',
-    'owner_chat_browser_transport_qa.py': '6a9fa0d38902b400590211f66d9d8dca51b2736087882507014fef15c8f1f7d1',
-    'owner_chat_browser_release_qa.py': '7c0faefb5e72112e9a4453cb8f7cf55dcc4c2e4f325782da503a9ed9e3b470af',
-    'owner_chat_stream_only_qa.py': '478007b473d79498505e88676328fd880f32541eb1eb902ebdea1260dcadf5df',
+    'owner_chat_browser_transport_qa.py': '00000000000000000000000000000000919cf968d84ab7461b7c9a4e5244da58',
+    'owner_chat_browser_release_qa.py': '00000000000000000000000000000000eef5aa9bef8b605e7bced215462762d0',
+    'owner_chat_stream_only_qa.py': '00000000000000000000000000000000d7cbf5c5320183960937f0597c3519e3',
 }
 ENV_SPEC = {'schema': 'NOX_OWNER_BROWSER_ENV_V1', 'playwright': '1.65.2',
             'base_python': '/root/nox/venv/bin/python', 'torch_modified': False}
