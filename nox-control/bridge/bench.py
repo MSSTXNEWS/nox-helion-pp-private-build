@@ -63,6 +63,34 @@ class UnsafeEphemeralWriteReceipt(ValueError):
     """An ephemeral benchmark may have written S03; never send another probe."""
 
 
+# The HTTP peer controls the line length. urllib HTTPResponse.__iter__ uses
+# unbounded readline(), which can exhaust the limited serving cgroup RAM
+# before the existing post-read frame-size guard has a chance to run.
+MAX_NDJSON_FRAME_BYTES = 1024 * 1024
+
+
+def _bounded_ndjson_lines(response):
+    """Limit allocated bytes per wire line before decoding provider NDJSON.
+
+    Real urllib HTTPResponse implements readline(size); keep __iter__ only for
+    isolated legacy test doubles that do not expose a bounded reader.
+    """
+    reader = getattr(response, "readline", None)
+    if callable(reader):
+        while True:
+            raw = reader(MAX_NDJSON_FRAME_BYTES + 1)
+            if not raw:
+                break
+            if len(raw) > MAX_NDJSON_FRAME_BYTES:
+                raise ValueError("OVERSIZED_FRAME")
+            yield raw
+        return
+    for raw in response:
+        if len(raw) > MAX_NDJSON_FRAME_BYTES:
+            raise ValueError("OVERSIZED_FRAME")
+        yield raw
+
+
 
 def _percentile(values, percentile):
     """Nearest-rank empirical quantile: no interpolation/fabricated observations."""
@@ -91,9 +119,7 @@ def _sample(index, clock=time.perf_counter, opener=urllib.request.urlopen, auth_
             raise ValueError("HTTP_NOT_OK")
         # Production /api/chat emits exactly one complete NDJSON object per line.
         # A partial final line or invalid UTF-8 is never a successful sample.
-        for raw in response:
-            if len(raw) > 1024 * 1024:
-                raise ValueError("OVERSIZED_FRAME")
+        for raw in _bounded_ndjson_lines(response):
             if not raw.endswith(b"\n"):
                 raise ValueError("TRUNCATED_FRAME")
             frame = json.loads(raw.decode("utf-8", "strict"))
