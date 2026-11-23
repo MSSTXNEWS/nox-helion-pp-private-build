@@ -101,6 +101,12 @@ const assert = require('node:assert/strict');
         } };
       } } };
     }
+    if (requests === 10) return response([
+      { type: 'token', text: 'Сначала завершено' },
+      { type: 'done', generation_complete: true,
+        memory_write_receipt: { status: 'WRITE_RETURNED_UNVERIFIED' } },
+      { type: 'token', text: 'Незаконный поздний токен' }
+    ]);
     if (requests >= 5) return response([
       { type: 'token', text: 'Continued ✅' },
       { type: 'done', generation_complete: true,
@@ -150,6 +156,13 @@ const assert = require('node:assert/strict');
   assert.equal(seen[8][10].content, 'LONG_DIALOGUE_4');
   assert.equal(vm.runInContext('hist[11].content', context), 'Кириллица 🌍 CRLF',
     'CRLF and split UTF-8 bytes must preserve the completed final Unicode turn');
+  await submit('POST_DONE_CORRUPTION');
+  assert.equal(requests, 10);
+  assert.equal(vm.runInContext('hist.length', context), 12,
+    'a late model token after terminal DONE must never enter next history');
+  assert(get('log').children.some(
+    entry => entry.textContent.includes('данные после завершения')),
+    'browser must show terminal stream corruption instead of success');
   console.log('legacy browser history/SSE admission: PASS');
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """
