@@ -46,6 +46,10 @@ class TrainingResumeAttestationTests(unittest.TestCase):
             "trainer": {
                 "running": False, "ready_for_resume": True,
                 "checkpoint_recent": True,
+                "checkpoint_readback_verified": True,
+                "checkpoint_step": 42,
+                "resume_cursor_sha256": "a" * 64,
+                "checkpoint_resume_cursor_sha256": "a" * 64,
             },
             "gpu": {
                 "temperature_sensor_valid": True, "temperature_c": 60,
@@ -80,6 +84,27 @@ class TrainingResumeAttestationTests(unittest.TestCase):
         self.assertEqual(len(target), 1)
         self.assertEqual(target[0]["urgency"], "review")
         self.assertIn("recheck", target[0]["advice"])
+
+    def test_checkpoint_restore_without_exact_readback_never_gets_review_hint(self):
+        for field, value in (
+            ("checkpoint_readback_verified", False),
+            ("checkpoint_readback_verified", None),
+            ("checkpoint_step", None),
+            ("checkpoint_step", True),
+            ("checkpoint_step", -1),
+            ("resume_cursor_sha256", None),
+            ("resume_cursor_sha256", "not-a-digest"),
+            ("resume_cursor_sha256", "A" * 64),
+            ("checkpoint_resume_cursor_sha256", None),
+            ("checkpoint_resume_cursor_sha256", "b" * 64),
+        ):
+            with self.subTest(field=field):
+                s = self.snapshot()
+                s["trainer"][field] = value
+                codes = [x["code"] for x in advisor.assess(
+                    s, owner_snapshot_verifier=lambda exact: exact is s)]
+                self.assertIn("TRAIN_RESUME_OWNER_HOLD", codes)
+                self.assertNotIn("TRAIN_RESUME_CANDIDATE", codes)
 
     def test_stale_s03_checkpoint_and_resource_hold(self):
         for path, val in (
