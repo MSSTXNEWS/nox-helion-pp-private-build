@@ -938,3 +938,79 @@ test('R37 empty data after DONE fails closed; gzip EOF and 3 turns, heartbeat al
   }
 });
 }
+
+
+// R38: exact-source Node22 witness for serial HTTP/TCP SSE turns and late gzip events.
+// Synthetic fixture only: timings must never be reported as GLM production latency.
+test('R38 source-exact three serial SSE TTFT completion and post-DONE gzip fence',async()=>{
+  const sent=[], traces=[], errors=[];
+  const messages=['Привет 🌍','Hola 🌈','三番目 ✨'];
+  const r38Event=x=>'data: '+JSON.stringify({choices:[x]})+'\n\n';
+  const server=createServer(async(req,res)=>{
+    if(req.method!=='POST'||req.url!=='/nox/chat'){res.writeHead(404).end();return;}
+    let body=''; for await(const data of req)body+=data;
+    let payload;
+    try{payload=JSON.parse(body);}catch(e){res.writeHead(400).end();errors.push(String(e));return;}
+    const {turn,variant='clean'}=payload;
+    sent.push({turn,variant,input_sha256:hash(body)});
+    if(!Number.isInteger(turn)||turn<1||turn>3){res.writeHead(400).end();return;}
+    const content=r38Event({delta:{content:messages[turn-1]}});
+    const stop=r38Event({delta:{},finish_reason:'stop'});
+    const done='data: [DONE]\n\n';
+    if(variant==='colon'||variant==='bare'){
+      const first=gzipSync(Buffer.from(content+stop+done));
+      const second=gzipSync(Buffer.from(variant==='colon'?'data:\n\n':'data\n\n'));
+      res.writeHead(200,{'Content-Type':'text/event-stream','Content-Encoding':'gzip','Cache-Control':'no-store'});
+      res.end(Buffer.concat([first,second]));return;
+    }
+    res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store'});
+    res.flushHeaders();
+    await sleep(9+turn*5);res.write(content);
+    await sleep(9+turn*7);res.write(stop+done);
+    await sleep(9+turn*3);res.end(': heartbeat\n\n');
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const url='http://127.0.0.1:'+server.address().port+'/nox/chat';
+  const post=(turn,variant='clean')=>measureSseRawHttp(url,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({turn,variant})
+  },{startedAt:performance.now(),totalTimeoutMs:2000,idleTimeoutMs:500});
+  try{
+    for(let turn=1;turn<=3;turn++){
+      const result=await post(turn);
+      assert.equal(result.verified,true);
+      assert.equal(result.browser_authenticated,false);
+      assert.equal(result.native_verified,false);
+      assert.equal(result.canonical_s03_verified,false);
+      assert.equal(result.model_tokens_per_second,null);
+      assert.equal(result.visible_text_sha256,hash(messages[turn-1]));
+      for(const k of ['first_byte_ms','ttft_ms','sse_done_ms','completion_ms']){
+        assert.equal(typeof result[k],'number',k);
+        assert.ok(Number.isFinite(result[k]),k);
+      }
+      assert.ok(result.first_byte_ms<=result.ttft_ms,'first_byte<=TTFT');
+      assert.ok(result.ttft_ms<=result.sse_done_ms,'TTFT<=DONE');
+      assert.ok(result.sse_done_ms<result.completion_ms,'DONE<physical EOF');
+      traces.push(Object.freeze({turn,first_byte_ms:result.first_byte_ms,
+        ttft_ms:result.ttft_ms,sse_done_ms:result.sse_done_ms,
+        completion_ms:result.completion_ms,
+        body_sha256:result.body_sha256,
+        visible_text_sha256:result.visible_text_sha256}));
+    }
+    assert.equal(new Set(traces.map(x=>x.body_sha256)).size,3,'three distinct wire digests');
+    assert.equal(new Set(traces.map(x=>x.visible_text_sha256)).size,3,'three distinct text digests');
+    await assert.rejects(post(2,'colon'),e=>e?.code==='B4_POST_DONE_EVENT');
+    await assert.rejects(post(3,'bare'),e=>e?.code==='B4_POST_DONE_EVENT');
+    assert.deepEqual(sent.map(x=>[x.turn,x.variant]),[
+      [1,'clean'],[2,'clean'],[3,'clean'],[2,'colon'],[3,'bare']
+    ],'single POST per explicit fixture call; no replay');
+    assert.deepEqual(errors,[]);
+    // Digest-only test transcript, with precision appropriate for a local loopback fixture.
+    console.log('B4_R38_SYNTHETIC_LOCAL_ONLY '+JSON.stringify(traces.map(x=>({
+      ...x,first_byte_ms:+x.first_byte_ms.toFixed(3),ttft_ms:+x.ttft_ms.toFixed(3),
+      sse_done_ms:+x.sse_done_ms.toFixed(3),completion_ms:+x.completion_ms.toFixed(3)
+    }))));
+  }finally{
+    server.closeAllConnections();
+    await new Promise(resolve=>server.close(resolve));
+  }
+});
