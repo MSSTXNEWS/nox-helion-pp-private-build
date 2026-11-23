@@ -137,7 +137,7 @@ class BridgeStreamIntegrity(unittest.TestCase):
     def test_s03_receives_exact_visible_bytes_including_edge_whitespace(self):
         # A visually complete SSE turn must not silently normalize the
         # assistant answer before the canonical persistence attempt.
-        pieces = ["  ", "Привет", "\\n", "🙂", "  "]
+        pieces = ["  ", "Привет", "\n", "🙂", "  "]
         events, writes, logs, _ = self.run_stream(
             [self.chunk(part) for part in pieces] +
             [self.chunk(finish="stop"), "data: [DONE]"])
