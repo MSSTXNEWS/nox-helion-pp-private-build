@@ -335,6 +335,21 @@ def append_receipt(path: str | os.PathLike[str], receipt: dict[str, Any]) -> Non
             os.close(fd)
 
 
+def _unique_input_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Reject ambiguous duplicate JSON keys at every nesting level."""
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ReflectionError("input JSON contains duplicate object keys")
+        result[key] = value
+    return result
+
+
+def _reject_input_constant(value: str) -> None:
+    """Python's JSON parser otherwise accepts NaN and Infinity as numbers."""
+    raise ReflectionError("input JSON contains a non-finite constant")
+
+
 def _load_input(path: str) -> Any:
     """Read one bounded regular-file snapshot from a single NOFOLLOW descriptor.
 
@@ -364,7 +379,9 @@ def _load_input(path: str) -> Any:
     finally:
         os.close(fd)
     try:
-        return json.loads(data.decode("utf-8"))
+        return json.loads(data.decode("utf-8"),
+                          object_pairs_hook=_unique_input_object,
+                          parse_constant=_reject_input_constant)
     except UnicodeDecodeError as exc:
         raise ReflectionError("input must be UTF-8 JSON") from exc
 
