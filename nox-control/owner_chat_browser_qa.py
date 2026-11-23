@@ -217,6 +217,14 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
                    or not row['content']
                    for row, role in zip(expected_messages, roles))):
         return False
+    # Canonical S03 is UTF-8. A surrogate in any of the four historical
+    # messages is invalid, even when the final answer itself hashes cleanly.
+    # Fail closed instead of treating malformed history as accepted evidence.
+    try:
+        for row in expected_messages:
+            row['content'].encode('utf-8', 'strict')
+    except UnicodeError:
+        return False
     event_id = writer_receipt.get('event_id')
     turn_id = writer_receipt.get('turn_id')
     sequence = writer_receipt.get('sequence')
