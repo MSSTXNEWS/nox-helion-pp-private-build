@@ -2637,7 +2637,12 @@ def main():
               if(!first||first.canonical_ack_id!=='ack-r33-healthy'||
                  cancels!==0||projections!==1)return false;
             }else{
-              if(first!=='HOLD_STREAM_CANONICAL_ACK'||cancels!==1||
+              // Missing/invalid ACK ID is rejected at the signed GET
+              // identity boundary, before an ACK-gate envelope exists.
+              // A foreign but well-formed gate ID fails at envelope validation.
+              const expected=kind==='no_receipt_id'?
+                'HOLD_STREAM_RECEIPT_IDENTITY':'HOLD_STREAM_CANONICAL_ACK';
+              if(first!==expected||cancels!==1||
                  gets!==1||projections!==1)return false;
               const recovered=await c.reconnect(s);
               if(recovered.canonical_ack_id!=='ack-r33-'+kind||
@@ -2648,6 +2653,11 @@ def main():
           }
           return true;
         }'''))
+
+        if os.environ.get('NOX_B1_R53_ONLY')=='1':
+            browser.close()
+            print('B1 R53 real Chromium canonical ACK ID boundary PASS')
+            return
 
         # A faulty durable reservation must never turn a GET-only reconnect
         # into an ACK, and must expose a stable HOLD rather than a TypeError.
