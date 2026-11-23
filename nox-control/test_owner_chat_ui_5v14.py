@@ -187,6 +187,18 @@ class OwnerWorkerSnapshotTrustTests(unittest.TestCase):
         self.assertEqual(snap['state'],'OBSERVED')
         self.assertEqual(snap['configured'],1)
 
+    def test_native_worker_cap_three_never_certifies_extra_workers(self):
+        # UI is read-only and must not make >3 native workers appear admitted.
+        def snapshot(count):
+            return json.dumps({'n':count,'workers':[
+                {'id':f'nox-agent-{i:02d}','status':'idle','current_task':None}
+                for i in range(1,count+1)]})
+        self.assertEqual(self.read_snapshot(snapshot(3))['state'],'OBSERVED')
+        extra=self.read_snapshot(snapshot(4))
+        self.assertEqual(extra['state'],'UNAVAILABLE')
+        self.assertIsNone(extra['configured'])
+        self.assertEqual(extra['workers'],[])
+
     def test_group_or_world_writable_status_never_certifies_work(self):
         raw='{"n":1,"workers":[{"id":"nox-agent-01","status":"idle","current_task":null}]}'
         self.assertEqual(self.read_snapshot(raw,0o666)['state'],'UNAVAILABLE')

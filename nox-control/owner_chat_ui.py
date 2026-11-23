@@ -191,7 +191,9 @@ def workers():
         stamp=before.st_mtime
         if not isinstance(value,dict):return result
         rows=value.get('workers')
-        if (not isinstance(rows,list) or not 1<=len(rows)<=64 or type(value.get('n')) is not int
+        # The native OneHost contract caps physical workers at three;
+        # a 4+ worker report is not trustworthy capacity evidence.
+        if (not isinstance(rows,list) or not 1<=len(rows)<=3 or type(value.get('n')) is not int
                 or value['n']!=len(rows)):return result
         if any(not isinstance(row,dict) or not isinstance(row.get('id'),str)
                or not re.fullmatch(r'nox-agent-[0-9]{2}',row['id'])
