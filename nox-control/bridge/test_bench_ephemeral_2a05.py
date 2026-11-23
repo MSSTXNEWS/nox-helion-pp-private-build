@@ -117,7 +117,8 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
         for failure in (URLError("connection reset"), ValueError("TRUNCATED_FRAME")):
             with self.subTest(failure=type(failure).__name__):
                 output = io.StringIO()
-                with mock.patch.object(bench, "_sample", side_effect=failure) as sampler:
+                with mock.patch.object(bench, "_owner_web_token", return_value=None), \
+                     mock.patch.object(bench, "_sample", side_effect=failure) as sampler:
                     with contextlib.redirect_stdout(output):
                         code = bench.main(["--model-sha", "a" * 64,
                                            "--route-sha", "b" * 40,
@@ -132,7 +133,8 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
 
     def test_batch_stops_on_first_possible_write(self):
         output = io.StringIO()
-        with mock.patch.object(bench, "_sample",
+        with mock.patch.object(bench, "_owner_web_token", return_value=None), \
+             mock.patch.object(bench, "_sample",
                                side_effect=bench.UnsafeEphemeralWriteReceipt("BENCH_EPHEMERAL_WRITE_RISK")) as sampler:
             with contextlib.redirect_stdout(output):
                 code = bench.main(["--model-sha", "a" * 64,
