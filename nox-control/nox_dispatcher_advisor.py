@@ -64,12 +64,34 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         return issues
     onehost, s03, trainer, gpu, disk = [snapshot[x] for x in required]
     native = snapshot.get("native_queue")
-    if not isinstance(native, dict):
-        # 6A02: missing owner/worker evidence is an explicit HOLD, not
-        # an apparently clean diagnostic when every other service is healthy.
+    # 6A02: A partially populated dict is not a usable native owner snapshot.
+    # Check the same essential fields used by existing lease, worker and
+    # resource gates. A plain JSON flag alone still cannot attest provenance.
+    native_complete = (
+        isinstance(native, dict)
+        and isinstance(native.get("admission_state"), str)
+        and bool(native["admission_state"].strip())
+        and type(native.get("jobs_started")) is int
+        and native["jobs_started"] >= 0
+        and isinstance(native.get("workers"), list)
+        and 0 < len(native["workers"]) <= 3
+        and all(isinstance(w, dict)
+                and isinstance(w.get("state"), str) and bool(w["state"])
+                and "current_task" in w for w in native["workers"])
+        and type(native.get("maintenance_busy")) is bool
+        and type(native.get("active_claims")) is bool
+        and type(native.get("resource_headroom_bytes")) is int
+        and native["resource_headroom_bytes"] >= 0
+        and type(native.get("owner_evidence_age_sec")) is int
+        and 0 <= native["owner_evidence_age_sec"] <= 30
+        and native.get("owner_lease_cas_verified") is True
+        and native.get("immutable_task_source_verified") is True
+    )
+    if not native_complete:
         add("NATIVE_QUEUE_UNVERIFIED", "hold",
-            "Native owner queue and lease/CAS evidence are missing or malformed. "
-            "Do not infer idle workers, refill eligibility, or safe publication.")
+            "Native owner queue, workers, source, or fresh lease/CAS evidence "
+            "are missing, incomplete or malformed. Do not infer idle workers, "
+            "refill eligibility, or safe publication.")
     if isinstance(native, dict):
         workers = native.get("workers")
         state = native.get("admission_state")
@@ -292,7 +314,15 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                     f"Measured utilization-only upper bound to the 85% limit: {cap} percentage points. "
                     "VRAM is not a per-job allocation; no admission, trainer restart or new queue authorized.")
     if not issues:
-        add("NO_UNVERIFIED_TUNING", "observe", "No changes recommended without measured before/after and readback.")
+        # An otherwise healthy JSON snapshot without a trusted owner-side
+        # attestation must not produce a falsely clean diagnostic.
+        if not _owner_snapshot_attested(snapshot, owner_snapshot_verifier):
+            add("NATIVE_QUEUE_UNVERIFIED", "hold",
+                "No authenticated owner snapshot: lease/CAS and workers cannot "
+                "be inferred from JSON alone. No native admission.")
+        else:
+            add("NO_UNVERIFIED_TUNING", "observe",
+                "No changes recommended without measured before/after and readback.")
     return issues
 
 def _unique_json_pairs(pairs):
