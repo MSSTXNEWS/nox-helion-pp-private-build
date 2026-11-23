@@ -25,7 +25,13 @@ def main():
     print("VAST_STATUS", {k: inst.get(k) for k in ("actual_status","cur_state","intended_status","status_msg","next_state","dph_total","end_date")} if isinstance(inst, dict) else repr(inst)[:300])
     if not isinstance(inst, dict) or not inst.get("public_ipaddr"):
         try:
-            L = api("GET", "/instances/").get("instances") or []
+            for u in ("https://console.vast.ai/api/v1/instances/", "https://console.vast.ai/api/v0/instances/?owner=me", "https://console.vast.ai/api/v0/instances/61825960/", "https://console.vast.ai/api/v1/instances/61825960/"):
+                try:
+                    rq = urllib.request.Request(u, headers={"Authorization": "Bearer " + KEY, "Accept": "application/json"})
+                    with urllib.request.urlopen(rq, timeout=30) as rr: body = rr.read().decode()[:700]
+                    print("VAST_TRY", u, body)
+                except Exception as e: print("VAST_TRY", u, "ERR", e)
+            L = []
             print("VAST_LIST", [(i.get("id"), i.get("actual_status"), i.get("intended_status"), (i.get("gpu_name") or ""), i.get("num_gpus"), str(i.get("status_msg"))[:80], i.get("geolocation")) for i in L])
         except Exception as e: print("VAST_LIST_ERR", e)
         sys.exit("no ip")
