@@ -218,6 +218,41 @@ class BridgeStreamIntegrity(unittest.TestCase):
                 self.assertEqual(logs, [])
                 self.assertEqual(last["t"], 0)
 
+    def test_ambiguous_upstream_sse_must_not_write_canonical_memory(self):
+        # Previously Python json.loads used last-wins keys, accepted
+        # nonfinite constants and ignored additional completion choices.
+        invalid_events = (
+            'data: {"error":{"message":"failed"},"error":null,'
+            '"choices":[{"delta":{"content":"hidden"},"finish_reason":null}]}',
+            'data: {"choices":[{"delta":{"content":"hidden","content":""},'
+            '"finish_reason":null}]}',
+            'data: {"choices":[{"delta":{"content":"visible"},'
+            '"finish_reason":null},{"delta":{"content":"different"},'
+            '"finish_reason":null}]}',
+            'data: {"choices":[{"delta":{"content":""},'
+            '"finish_reason":null}],"meta":NaN}',
+            'data: {"choices":[{"delta":{"content":""},'
+            '"finish_reason":null}],"meta":Infinity}',
+        )
+        for invalid in invalid_events:
+            with self.subTest(invalid=invalid):
+                events, writes, logs, last = self.run_stream([
+                    self.chunk("valid prefix"), invalid,
+                    self.chunk(finish="stop"), "data: [DONE]"
+                ])
+                self.assertEqual(events[-1]["type"], "error")
+                self.assertFalse(events[-1]["generation_complete"])
+                self.assertNotIn("done", [e["type"] for e in events])
+                self.assertEqual(writes, [])
+                self.assertEqual(logs, [])
+                self.assertEqual(last["t"], 0)
+        # One ordinary single-choice SSE still completes and writes once.
+        events, writes, _, _ = self.run_stream([
+            self.chunk("valid"), self.chunk(finish="stop"), "data: [DONE]"
+        ])
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertEqual(writes, [("Привет", "valid")])
+
     def test_bare_named_error_after_stop_never_writes_s03(self):
         events, writes, logs, last = self.run_stream([
             self.chunk("partial"), self.chunk(finish="stop"),
