@@ -218,13 +218,36 @@ def combine_reviews(capture: dict, capture_sha: str,
     return combined
 
 
+def verify_combined(capture: dict, capture_sha: str, combined: dict,
+                    submissions: list[tuple[dict, str]]) -> dict:
+    """Reconstruct from originals; compare the entire combined document."""
+    expected = combine_reviews(capture, capture_sha, submissions)
+    # Canonical JSON distinguishes bool/int/float and ignores key ordering only.
+    canonical = lambda doc: json.dumps(doc, ensure_ascii=True, sort_keys=True,
+                                       separators=(",", ":"), allow_nan=False)
+    require(canonical(combined) == canonical(expected),
+            "HOLD_B2_REVIEW_COMBINED_ORIGINAL_MISMATCH")
+    result = verify(capture, expected, capture_sha)
+    result["original_submissions_reconciled"] = True
+    result["submission_sha256"] = expected["submission_sha256"]
+    return result
+
+
 def main(argv: list[str]) -> int:
     combining = len(argv) > 1 and argv[1] == "--combine-reviews"
-    if len(argv) != (5 if combining else 3):
-        print("Usage: b2_ru_es_review_integrity.py CAPTURE.json REVIEW.json | --prepare-review CAPTURE.json | --combine-reviews CAPTURE.json A.json B.json",
+    reconciling = len(argv) > 1 and argv[1] == "--verify-combined"
+    if len(argv) != (6 if reconciling else 5 if combining else 3):
+        print("Usage: b2_ru_es_review_integrity.py CAPTURE.json REVIEW.json | --prepare-review CAPTURE.json | --combine-reviews CAPTURE.json A.json B.json | --verify-combined CAPTURE.json COMBINED.json A.json B.json",
               file=sys.stderr)
         return 2
     try:
+        if reconciling:
+            capture, capture_sha = read_json(Path(argv[2]))
+            combined, _ = read_json(Path(argv[3]))
+            submissions = [read_json(Path(path)) for path in argv[4:]]
+            print(json.dumps(verify_combined(capture, capture_sha, combined, submissions),
+                             ensure_ascii=False, sort_keys=True))
+            return 0
         if combining:
             capture, capture_sha = read_json(Path(argv[2]))
             submissions = [read_json(Path(path)) for path in argv[3:]]

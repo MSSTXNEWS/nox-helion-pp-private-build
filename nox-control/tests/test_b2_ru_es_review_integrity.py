@@ -213,5 +213,53 @@ class ReviewIntegrityContract(unittest.TestCase):
                                             "reason": "HOLD_B2_REVIEW_SUBMISSION_DIGEST"}))
 
 
+    def test_verify_combined_reconciles_originals_and_rejects_edited_verdict(self):
+        with tempfile.TemporaryDirectory() as folder:
+            cap, combined_path, a, b = (Path(folder) / name for name in
+                                         ("cap.json", "combined.json", "a.json", "b.json"))
+            raw = json.dumps(self.capture, ensure_ascii=False).encode("utf-8")
+            cap.write_bytes(raw)
+            for path, reviewer in zip((a, b), self.review["reviewers"]):
+                sheet = {"schema": probe.SCHEMA, "capture_sha256": self.digest,
+                         "reviewers": [reviewer]}
+                path.write_text(json.dumps(sheet, ensure_ascii=False), encoding="utf-8")
+            originals = [probe.read_json(path) for path in (a, b)]
+            combined = probe.combine_reviews(self.capture, self.digest, originals)
+
+            def invoke(doc):
+                combined_path.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    code = probe.main(["probe.py", "--verify-combined", str(cap),
+                                       str(combined_path), str(a), str(b)])
+                return code, json.loads(out.getvalue())
+
+            code, result = invoke(combined)
+            self.assertEqual(code, 0)
+            self.assertTrue(result["original_submissions_reconciled"])
+            self.assertEqual(result["submission_sha256"], [row[1] for row in originals])
+            self.assertEqual(result["native_acceptance"], probe.holdout.HOLD)
+            self.assertFalse(result["reviewer_identity_verified"])
+            self.assertEqual(result["quality_grade"], "NOT_INDEPENDENTLY_VERIFIED")
+            edited = copy.deepcopy(combined)
+            edited["reviewers"][0]["decisions"][0]["verdict"] = "incorrect"
+            # A standalone structural review cannot detect the changed verdict.
+            self.assertEqual(probe.verify(self.capture, edited, self.digest)["review_summary"],
+                             "INCORRECT_REPORTED_UNVERIFIED")
+            hold = (2, {"review_summary": "HOLD",
+                        "reason": "HOLD_B2_REVIEW_COMBINED_ORIGINAL_MISMATCH"})
+            self.assertEqual(invoke(edited), hold)
+            edited = copy.deepcopy(combined)
+            edited["submission_sha256"][0] = "f" * 64
+            self.assertEqual(invoke(edited), hold)
+            edited = copy.deepcopy(combined)
+            edited["reviewers"][0]["decisions"][0]["turn"] = True
+            self.assertEqual(invoke(edited), hold)
+            # Even semantically identical original JSON with different bytes is stale.
+            a.write_bytes(a.read_bytes() + b" ")
+            self.assertEqual(invoke(combined), hold)
+            self.assertEqual(cap.read_bytes(), raw)
+
+
 if __name__ == "__main__":
     unittest.main()
