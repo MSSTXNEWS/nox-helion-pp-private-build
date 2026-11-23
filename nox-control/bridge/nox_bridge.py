@@ -392,8 +392,15 @@ async def stream_chat(history):
                     "text": "Ответ модели не завершён; память не изменена"})
         return
     LAST_CHAT["t"] = time.time()
-    write_returned = remember(user, full.strip())
-    if SOUL:
+    # A persistence call may commit before raising. Never blindly repeat it.
+    write_exception = False
+    try:
+        write_returned = remember(user, full.strip())
+    except Exception as exc:
+        log("s03_write_error " + type(exc).__name__)
+        write_returned = False
+        write_exception = True
+    if SOUL and write_returned:
         try:
             SOUL.log_turn(user, full.strip())
         except Exception as exc:
@@ -401,9 +408,12 @@ async def stream_chat(history):
             # an already attempted S03 commit (which must never be retried here).
             log("soul_log_error " + type(exc).__name__)
     # A successful persist_turn() is not an independent S03 readback.
+    receipt = {"status": "WRITE_RETURNED_UNVERIFIED" if write_returned else "HOLD",
+               "s03_readback_verified": False}
+    if write_exception:
+        receipt.update({"reason": "S03_WRITE_EXCEPTION", "retry_safe": False})
     yield _sse({"type": "done", "generation_complete": True,
-                "memory_write_receipt": {"status": "WRITE_RETURNED_UNVERIFIED" if write_returned else "HOLD",
-                                         "s03_readback_verified": False}})
+                "memory_write_receipt": receipt})
 
 @app.post("/v1/chat/stream")
 async def chat_stream(req: Request):
