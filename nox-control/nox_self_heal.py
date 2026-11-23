@@ -159,6 +159,16 @@ def _stop_marker_present_or_unknown(path):
     must not turn an unknown STOP into permission to mutate a service.
     This local fence does not substitute for native owner STOP/lease/CAS.
     """
+    # The parent directory is part of the STOP fence. If it is missing,
+    # replaced by a symlink, or unreadable, treating an absent STOP filename
+    # as permission to restart would fail open. Check the final directory
+    # component without following its symlink before inspecting the marker.
+    try:
+        parent = os.stat(Path(path).parent, follow_symlinks=False)
+        if not stat.S_ISDIR(parent.st_mode):
+            return True
+    except OSError:
+        return True
     try:
         os.lstat(path)
     except FileNotFoundError:
