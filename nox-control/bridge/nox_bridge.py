@@ -317,6 +317,10 @@ async def stream_chat(history):
             if r.status_code != 200:
                 raise ValueError("UPSTREAM_HTTP_STATUS")
             async for line in r.aiter_lines():
+                # An SSE named error may carry no data frame. It invalidates
+                # the upstream turn even after finish_reason=stop.
+                if line.startswith("event:") and line[6:].strip() == "error":
+                    raise ValueError("UPSTREAM_ERROR_EVENT")
                 if not line.startswith("data:"):
                     continue
                 raw = line[5:].strip()
