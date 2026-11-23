@@ -708,7 +708,7 @@ class ProbeTests(unittest.TestCase):
         self.assertTrue(missing.closed)
         source = path.read_text()
         self.assertIn('for index,frame in enumerate(bounded_stream_frames(', source)
-        self.assertIn('for wire_index, wire in enumerate(bounded_stream_lines(response, max_line)):', source)
+        self.assertIn('for wire_index, wire in enumerate(bounded_stream_lines(response, max_line, deadline=deadline)):', source)
         self.assertIn('readline(max_line + 1)', source)
 
 
