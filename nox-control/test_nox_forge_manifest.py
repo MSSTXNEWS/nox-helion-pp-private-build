@@ -69,7 +69,7 @@ class ForgeContentDedupeTests(unittest.TestCase):
                 "source_id": sid,
                 "origin_kind": "VERIFIED_KNOWLEDGE",
                 "source_url": f"https://example.org/{sid}",
-                "source_sha256": sha,
+                "source_sha256": ("1" if sid == "s1" else "2") * 64,
                 "license_id": "MIT",
                 "license_url": "https://example.org/license",
                 "license_sha256": sha,
@@ -115,6 +115,51 @@ class ForgeContentDedupeTests(unittest.TestCase):
         self.assertFalse(result["integrity_scope"]["content_hashes_verified"])
 
 
+
+
+class ForgeSourceIdentityTests(unittest.TestCase):
+    def test_source_aliases_cannot_inflate_reported_diversity(self):
+        digest = "0" * 64
+        instant = "2026-11-20T11:00:00Z"
+
+        def source(sid, url, claimed_hash):
+            return {
+                "source_id": sid, "origin_kind": "VERIFIED_KNOWLEDGE",
+                "source_url": url, "source_sha256": claimed_hash,
+                "license_id": "MIT", "license_url": "https://example.org/license",
+                "license_sha256": digest, "permission_status": "ALLOWED",
+                "permission_receipt": {
+                    "url": "https://example.org/permission",
+                    "sha256": digest, "observed_at": instant,
+                },
+            }
+
+        payload = {
+            "schema": forge.INPUT_SCHEMA, "manifest_id": "alias-sources",
+            "created_at": instant,
+            "task": {
+                "id": forge.TASK_ID, "spec_sha256": forge.TASK_SPEC_SHA256,
+                "registry_blob_sha": forge.SOURCE_REGISTRY_BLOB_SHA,
+            },
+            "sources": [
+                source("s1", "https://example.org/one", "1" * 64),
+                source("s2", "https://example.org/two", "2" * 64),
+            ],
+            "examples": [],
+        }
+        self.assertEqual(len(forge.build_manifest(payload)["sources"]), 2)
+
+        # Identical URLs under distinct IDs are not independent sources.
+        payload["sources"][1]["source_url"] = "https://example.org/one"
+        with self.assertRaisesRegex(forge.ForgeError, "duplicate source reference"):
+            forge.build_manifest(payload)
+        payload["sources"][1]["source_url"] = "https://example.org/two"
+
+        # Different URLs carrying identical claimed source bytes cannot be
+        # counted as independent proportions without owner reconciliation.
+        payload["sources"][1]["source_sha256"] = "1" * 64
+        with self.assertRaisesRegex(forge.ForgeError, "duplicate claimed source SHA"):
+            forge.build_manifest(payload)
 
 
 class ForgeJsonIntegrityTests(unittest.TestCase):
