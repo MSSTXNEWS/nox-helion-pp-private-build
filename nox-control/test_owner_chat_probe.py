@@ -3472,8 +3472,7 @@ class ProbeTests(unittest.TestCase):
             with self.subTest(replacement=replacement), patch.object(
                     probe, 'owner_readback_json', return_value=current):
                 with self.assertRaisesRegex(
-                        RuntimeError, '^HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT
-):
+                        RuntimeError, '^HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT'):
                     probe.require_postturn_executor_identity('client', witnessed)
         legacy = dict(witnessed, workers=[{'id': 'a'}, {'id': 2}])
         with patch.object(probe, 'owner_readback_json', return_value=legacy):
