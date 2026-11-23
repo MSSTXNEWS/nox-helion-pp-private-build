@@ -425,6 +425,11 @@ def owner_session_cookie_pin(cookies):
     """
     if not isinstance(cookies, list) or not cookies:
         return None
+    # A malformed ancillary cookie must not disappear from the owner-session
+    # snapshot merely because a valid signed HttpOnly cookie was selected.
+    # Keep ordinary well-formed unsigned UI preferences compatible.
+    if not all(isinstance(row, dict) for row in cookies):
+        return None
     # An explicit but nonboolean HttpOnly flag is not an authenticated
     # cookie claim. Reject it BEFORE the legacy unsigned-cookie fallback,
     # even when another valid HttpOnly cookie is also present. Truly absent

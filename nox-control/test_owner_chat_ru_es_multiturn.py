@@ -1051,6 +1051,32 @@ async function check(chunks, status=200) {
                          signed_pin)
         self.assertNotEqual(signed_pin, legacy_pin)
 
+    def test_ru_es_malformed_ancillary_cookie_snapshot_must_hold(self):
+        """A signed cookie cannot hide malformed ancillary snapshot members."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='same-signed-owner', httpOnly=True)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        original_pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(original_pin, str)
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), original_pin)
+        self.assertTrue(owner_session_continuity_valid(
+            200, [signed, ui], original_pin))
+        legacy_pin = owner_session_cookie_pin([ui])
+        self.assertIsInstance(legacy_pin, str)
+        for invalid in (None, 'bad-cookie', [], 42, True, ('cookie',)):
+            with self.subTest(value=repr(invalid)):
+                for snapshot in ([signed, invalid], [invalid, signed],
+                                 [signed, ui, invalid]):
+                    self.assertIsNone(owner_session_cookie_pin(snapshot))
+                    self.assertFalse(owner_session_continuity_valid(
+                        200, snapshot, original_pin))
+                self.assertIsNone(owner_session_cookie_pin([ui, invalid]))
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [ui, invalid], legacy_pin))
+        self.assertEqual(owner_session_cookie_pin([dict(signed)]), original_pin)
+        self.assertEqual(owner_session_cookie_pin([dict(ui)]), legacy_pin)
+
     def test_ru_es_owner_cookie_httponly_type_fence_before_fallback(self):
         """Malformed HttpOnly flags never masquerade as legacy owner cookies."""
         signed = dict(name='nox_owner', domain='owner.example', path='/',
