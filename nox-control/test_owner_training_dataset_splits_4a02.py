@@ -93,6 +93,15 @@ class DatasetSplitTests(unittest.TestCase):
         with self.assertRaisesRegex(SplitHold, "HOLD_CROSS_GROUP_DUPLICATE"):
             split_manifest(rows)
 
+    def test_one_source_multiple_goals_cannot_leak_into_holdout(self):
+        rows = rows_fixture()
+        # Five different goals from one origin are distinct groups, but
+        # must never be split across train, dev and holdout.
+        for row in rows[:5]:
+            row["source_id"] = "publisher/ru/memory/shared-batch"
+        with self.assertRaisesRegex(SplitHold, "HOLD_SOURCE_ACROSS_PARTITIONS"):
+            split_manifest(rows)
+
     def test_origin_goal_cannot_cross_language_or_domain_partitions(self):
         for offender_index in (5, -1):  # RU cross-domain; RU to ES
             with self.subTest(offender_index=offender_index):
