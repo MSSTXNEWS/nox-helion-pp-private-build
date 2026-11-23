@@ -344,10 +344,44 @@ async def health():
 
 @app.post("/v1/chat/completions")
 async def chat(req: Request):
-    b = await req.json()
+    # 1A02: the legacy non-stream route must not bypass the streaming route's
+    # bounded history admission and replay an old assistant-complete exchange.
+    try:
+        declared = req.headers.get("content-length")
+        if declared is not None:
+            if not declared.isdecimal():
+                return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_CONTENT_LENGTH"}, status_code=400)
+            if int(declared) > 2 * 1024 * 1024:
+                return JSONResponse({"status": "HOLD", "reason": "CHAT_WIRE_TOO_LARGE"}, status_code=413)
+        wire = bytearray()
+        async for chunk in req.stream():
+            if len(chunk) > 2 * 1024 * 1024 - len(wire):
+                return JSONResponse({"status": "HOLD", "reason": "CHAT_WIRE_TOO_LARGE"}, status_code=413)
+            wire.extend(chunk)
+        b = json.loads(wire)
+    except (ValueError, TypeError, UnicodeError):
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_JSON"}, status_code=400)
+    if not isinstance(b, dict) or not isinstance(b.get("messages"), list):
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_MESSAGES"}, status_code=400)
+    messages = b["messages"]
+    # Keep existing system-role compatibility; build_msgs accepts the complete
+    # user/assistant history without silently trimming a valid turn.
+    if not messages or len(messages) > 200 or any(
+            not isinstance(m, dict) or m.get("role") not in ("system", "user", "assistant")
+            or not isinstance(m.get("content"), str) for m in messages):
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_MESSAGES"}, status_code=400)
+    try:
+        for m in messages:
+            m["content"].encode("utf-8", "strict")
+    except UnicodeError:
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_INVALID_UNICODE"}, status_code=400)
+    if not any(m["role"] == "user" and m["content"].strip() for m in messages):
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_MISSING_USER"}, status_code=400)
+    if messages[-1]["role"] != "user" or not messages[-1]["content"].strip():
+        return JSONResponse({"status": "HOLD", "reason": "CHAT_LAST_USER_REQUIRED"}, status_code=400)
     if CH is not None: CH.mark_chat()
     try:
-        ans, used = await smart(b.get("messages") or [], int(b.get("max_tokens") or 1500))
+        ans, used = await smart(messages, int(b.get("max_tokens") or 1500))
         return {"choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": ans}}], "memory_used": used}
     except Exception as e:
         log("chat_error " + traceback.format_exc()[-300:])
