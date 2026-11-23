@@ -2336,5 +2336,69 @@ class FactReceiptTest(unittest.TestCase):
             bridge.invalidate_s03_cache.assert_called_once_with()
 
 
+
+    def test_6a05_transport_holds_are_specific_and_never_replayed(self):
+        """An uncertain model POST returns a bounded cause and never writes S03."""
+        chat = next(route.endpoint for route in self.app.routes
+                    if route.path == "/api/chat")
+        self.bridge.IDENTITY, self.bridge.STATIC_RULES = "", ""
+        self.bridge.NKEEP, self.bridge.LAST_CHAT = 0, {"t": 0}
+        self.bridge.SOUL = None
+        writes, posts = [], []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        class FailedUpstream:
+            def __init__(self, failure):
+                self.failure = failure
+
+            async def __aenter__(self):
+                raise self.failure
+
+            async def __aexit__(self, *args):
+                return False
+
+        class Client:
+            def __init__(self, failure):
+                self.failure = failure
+
+            def stream(self, *args, **kwargs):
+                posts.append(1)
+                return FailedUpstream(self.failure)
+
+        async def attempt(index):
+            response = await chat(Request({
+                "request_id": "transport-failure-" + str(index),
+                "mini": True, "use_memory": False,
+                "messages": [{"role": "user", "content": "Ответь"}],
+            }))
+            return [json.loads(frame) async for frame in response.body_iterator]
+
+        failures = (
+            (W.httpx.ReadTimeout("upstream timed out"), "UPSTREAM_TIMEOUT"),
+            (W.httpx.ReadError("socket closed"), "UPSTREAM_NETWORK"),
+            (W.httpx.RemoteProtocolError("bad framing"), "UPSTREAM_PROTOCOL"),
+            (RuntimeError("unexpected error"), "UPSTREAM_NOT_COMPLETE"),
+        )
+        with mock.patch.object(W, "W", None), \
+             mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            for index, (failure, expected) in enumerate(failures):
+                self.bridge.hc = lambda failure=failure: Client(failure)
+                frames = asyncio.run(attempt(index))
+                terminal = frames[-1]
+                self.assertEqual(terminal["status"], "HOLD")
+                self.assertEqual(terminal["reason"], "MODEL_STREAM_INCOMPLETE")
+                self.assertEqual(terminal["upstream_hold_code"], expected)
+                self.assertFalse(terminal["done"])
+                self.assertEqual(terminal["completion_receipt"]["status"], "HOLD")
+                self.assertEqual(terminal["memory_write_receipt"]["status"], "SKIPPED")
+                self.assertFalse(terminal["memory_history"]["s03_readback_verified"])
+        self.assertEqual(len(posts), len(failures), "no ambiguous POST replay")
+        self.assertEqual(writes, [], "transport failure cannot persist partial S03")
+
+
 if __name__ == "__main__":
     unittest.main()

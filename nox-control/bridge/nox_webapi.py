@@ -1204,6 +1204,17 @@ def install(app, B):
                                                 yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "шаг %d/%d: %s" % (k, len(plan), plan[k - 1]), "index": k, "total": len(plan)})
                 except Exception as e:
                     err = type(e).__name__
+                    # Keep the original HTTP error code if already classified.
+                    # Otherwise identify bounded transport failures without
+                    # leaking upstream URLs, bodies or credentials into SSE.
+                    # An ambiguous POST is NEVER retried here.
+                    if upstream_failure is None:
+                        if isinstance(e, httpx.TimeoutException):
+                            upstream_failure = "UPSTREAM_TIMEOUT"
+                        elif isinstance(e, httpx.NetworkError):
+                            upstream_failure = "UPSTREAM_NETWORK"
+                        elif isinstance(e, httpx.ProtocolError):
+                            upstream_failure = "UPSTREAM_PROTOCOL"
                     B.log("web_stream_error %s" % err)
                 # The final answer, digest and S03 write use the exact emitted
                 # text, including Unicode, line breaks and whitespace.
