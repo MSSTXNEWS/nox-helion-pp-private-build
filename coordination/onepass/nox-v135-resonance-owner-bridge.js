@@ -155,7 +155,7 @@ if(typeof e.text!=='string'||answer.length+e.text.length>200000)throw Error('HOL
 answer+=e.text;await emit(e.text);
 } else if(e.type==='done') {
 if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-for(const k of ['model','model_label','modelLabel'])
+for(const k of ['model','model_label','modelLabel','native_model_label'])
 if(k in e&&e[k]!==nativeModel)
 throw Error('HOLD_NATIVE_MODEL_RECEIPT_DRIFT');
 doneSeen=true;done=e;

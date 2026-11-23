@@ -2599,7 +2599,7 @@ class TestProbe(unittest.TestCase):
             async with async_playwright() as pw:
                 browser=await pw.chromium.launch(headless=True,executable_path='/usr/bin/chromium')
                 try:
-                    for mode in ('drift','invalid','match','absent'):
+                    for mode in ('drift','invalid','match','absent','native_drift','native_match','native_null'):
                         page=await browser.new_page()
                         async def fixture(route):
                             await route.fulfill(status=200,content_type='text/html',
@@ -2614,7 +2614,8 @@ class TestProbe(unittest.TestCase):
                               window.__posts++;
                               const done={type:'done',saved:true,s03_integrated:true,
                                 dialog_id:id,exchange_id:ex};
-                              if(mode!=='absent')done.model_label=
+                              if(mode.startsWith('native_'))done.native_model_label=mode==='native_drift'?'Qwen3-8B':mode==='native_null'?null:'GLM-5.3-Flash';
+                               else if(mode!=='absent')done.model_label=
                                 mode==='drift'?'Qwen3-8B':mode==='invalid'?'???':'GLM-5.3-Flash';
                               return new Response([
                                 {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
@@ -2647,7 +2648,7 @@ class TestProbe(unittest.TestCase):
                             errors:ev.filter(e=>e.type==='error')};
                         }""",mode)
                         self.assertEqual(got['posts'],1,mode)
-                        if mode in ('drift','invalid'):
+                        if mode in ('drift','invalid','native_drift','native_null'):
                             self.assertEqual(len(got['done']),0,mode)
                             self.assertEqual(got['hist'],0,mode)
                             self.assertEqual([e['error'] for e in got['errors']],
