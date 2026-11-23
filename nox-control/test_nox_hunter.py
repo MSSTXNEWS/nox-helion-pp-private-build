@@ -629,6 +629,52 @@ class HunterURLSafetyTests(unittest.TestCase):
             self.assertFalse(state.exists())
 
 
+    def test_late_poll_error_rolls_back_all_candidate_rows_and_cache(self):
+        # A parser/normalizer failure after a healthy first item previously
+        # returned status=error while committing that first item anyway.
+        source = hunter._validate_source({
+            "id": "atomic", "kind": "rss", "url": "https://example.org/feed",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        xml = (b"<rss><channel>"
+               b"<item><title>first</title><link>https://example.org/1</link></item>"
+               b"<item><title>second</title><link>https://example.org/2</link></item>"
+               b"</channel></rss>")
+        actual_record = hunter._item_record
+        calls = [0]
+
+        def fail_second(*args):
+            calls[0] += 1
+            if calls[0] == 2:
+                raise ValueError("synthetic late failure")
+            return actual_record(*args)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "state.sqlite"
+            with (patch.object(hunter, "_fetch", return_value=(
+                    xml, None, None, "application/rss+xml", False)),
+                  patch.object(hunter, "_item_record", side_effect=fail_second)):
+                result = hunter.poll_due([source], db, now=1000)[0]
+            self.assertEqual(result["status"], "error")
+            self.assertEqual(result["added"], 0)
+            with sqlite3.connect(db) as conn:
+                self.assertEqual(conn.execute("SELECT count(*) FROM items").fetchone()[0], 0)
+                self.assertEqual(conn.execute("SELECT count(*) FROM http_cache").fetchone()[0], 0)
+                failures, error = conn.execute(
+                    "SELECT failures,last_error FROM source_state WHERE source_id='atomic'"
+                ).fetchone()
+                self.assertEqual(failures, 1)
+                self.assertEqual(error, "ValueError")
+
+            with patch.object(hunter, "_fetch", return_value=(
+                    xml, None, None, "application/rss+xml", False)):
+                healthy = hunter.poll_due([source], db, now=1100)[0]
+            self.assertEqual(healthy["status"], "polled")
+            self.assertEqual(healthy["added"], 2)
+            with sqlite3.connect(db) as conn:
+                self.assertEqual(conn.execute("SELECT count(*) FROM items").fetchone()[0], 2)
+                self.assertEqual(conn.execute("SELECT count(*) FROM http_cache").fetchone()[0], 1)
+
     def test_oversized_candidate_count_holds_before_partial_persistence(self):
         # Even compact 25 MiB-or-less sources may contain thousands of entries.
         # Reject the whole response: never silently truncate provenance,
