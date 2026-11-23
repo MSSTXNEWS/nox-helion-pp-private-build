@@ -87,15 +87,18 @@ def authorize_event(action):
     if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:raise RuntimeError('HOLD_CHECKOUT_MISMATCH')
     return c['id']
 
+def legacy_owner_instance(s,key):
+    values=s.api('GET','/instances/',key)
+    values=values.get('instances',values) if isinstance(values,dict) else values
+    return next((x for x in values if isinstance(x,dict) and str(x.get('id'))==str(INSTANCE)),None) if isinstance(values,list) else None
+
 def run_native(action,request_id):
     global MASTER
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
     from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
     key=os.environ.get('NOX2','')
     if not key:raise RuntimeError('HOLD_OWNER_API_CREDENTIAL_UNAVAILABLE')
-    values=s.api('GET','/instances/',key)
-    values=values.get('instances',values) if isinstance(values,dict) else values
-    target=next((x for x in values if isinstance(x,dict) and str(x.get('id'))==str(INSTANCE)),None) if isinstance(values,list) else None
+    target=s.exact_owner_instance(key) if action == 'inspect' else legacy_owner_instance(s,key)
     def public_state(value):
         return value if isinstance(value,str) and re.fullmatch('[a-zA-Z0-9_-]{1,40}',value) else None
     print('NOX_MAINT_INSTANCE_STATE='+json.dumps({'instance':INSTANCE,'found':target is not None,
