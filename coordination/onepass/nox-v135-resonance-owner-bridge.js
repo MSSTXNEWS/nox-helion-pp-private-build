@@ -80,7 +80,7 @@ const r=await nativePost('/api/ui/memory/dialogs/create',{
 async function checkHistory(id,prompt,answer,exchangeId,signal,model) {
 const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
 if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
-if(data.messages.some(m=>m&&m.dialog_id!==undefined&&m.dialog_id!==id))throw Error('HOLD_DIALOG_HISTORY_SCOPE');
+if(data.messages.some(m=>m&&(m.dialog_id!==undefined&&m.dialog_id!==id||m.role==='assistant'&&['model','model_label'].some(k=>k in m&&m[k]!==model))))throw Error('HOLD_DIALOG_HISTORY_SCOPE');
 const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
 const currentAt=data.messages.indexOf(pair[0]);
 if(pair.length!==2||currentAt!==data.messages.length-2||

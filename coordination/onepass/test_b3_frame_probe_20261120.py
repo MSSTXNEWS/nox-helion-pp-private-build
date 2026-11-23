@@ -2187,7 +2187,10 @@ class TestProbe(unittest.TestCase):
                     headless=True, executable_path='/usr/bin/chromium')
                 try:
                     for mode in ('tagged', 'legacy', 'foreign_current',
-                                 'foreign_ancestor', 'null_current'):
+                                 'foreign_ancestor', 'null_current',
+                                 'model_current', 'model_ancestor', 'model_null',
+                                 'model_label_current', 'model_label_ancestor',
+                                 'model_consistent'):
                         page = await browser.new_page()
                         async def fixture(route):
                             await route.fulfill(status=200, content_type='text/html',
@@ -2221,6 +2224,12 @@ class TestProbe(unittest.TestCase):
                                 if(mode==='foreign_current')messages[3].dialog_id=foreign;
                                 if(mode==='foreign_ancestor')messages[0].dialog_id=foreign;
                                 if(mode==='null_current')messages[3].dialog_id=null;
+                                if(mode==='model_current')messages[3].model='other-model';
+                                if(mode==='model_ancestor')messages[1].model='other-model';
+                                if(mode==='model_null')messages[3].model=null;
+                                if(mode==='model_label_current')messages[3].model_label='other-model';
+                                if(mode==='model_label_ancestor')messages[1].model_label='other-model';
+                                if(mode==='model_consistent')messages.forEach(m=>{if(m.role==='assistant'){m.model='mock-pinned';m.model_label='mock-pinned';}});
                               }
                               return new Response(JSON.stringify({
                                 status:'READY',dialog_id:did,messages
@@ -2250,7 +2259,7 @@ class TestProbe(unittest.TestCase):
                         self.assertEqual((actual['posts'],actual['reads']),(2,2))
                         self.assertEqual(len(actual['out'][0]['done']),1)
                         self.assertEqual(actual['out'][0]['error'],[])
-                        if mode in ('tagged','legacy'):
+                        if mode in ('tagged','legacy','model_consistent'):
                             self.assertEqual(len(actual['out'][1]['done']),1)
                             self.assertEqual(actual['out'][1]['error'],[])
                         else:
