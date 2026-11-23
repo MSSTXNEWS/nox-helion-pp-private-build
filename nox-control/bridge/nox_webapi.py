@@ -541,7 +541,14 @@ def install(app, B):
         # the candidate. This is NOT an independent S03 readback/acceptance.
         try:
             import s03_memory as S
-            await asyncio.to_thread(S.persist_turn, "[ФАКТ ОТ СОЗДАТЕЛЯ] " + txt, "Принято и запомнено.")
+            persist_result = await asyncio.to_thread(S.persist_turn, "[ФАКТ ОТ СОЗДАТЕЛЯ] " + txt, "Принято и запомнено.")
+            # Explicit False is a rejected S03 write, not an accepted fact.
+            # Commit ambiguity prevents safe blind retry; never emit a mirror.
+            if persist_result is False:
+                return JSONResponse({"status": "HOLD", "reason": "S03_PERSIST_REJECTED",
+                                     "saved": False, "s03_write_returned": False,
+                                     "retry_safe": False, "s03_readback_verified": False},
+                                    status_code=503)
         except Exception as e:
             B.log("fact_persist_error %s" % type(e).__name__)
             return JSONResponse({"status": "HOLD", "reason": "S03_PERSIST_FAILED",
@@ -1409,15 +1416,23 @@ def install(app, B):
                         import s03_memory as S
                         # Keep the exact streamed Unicode/whitespace: stripping changes S03 history
                         # relative to the SSE text and its terminal digest.
-                        await asyncio.to_thread(S.persist_turn, ("[mini] " + user) if mini else user, full)
-                        s03_write_returned = True
-                        # Native and web chat share the bridge recall cache.
-                        # A returned write must revoke prior search results;
-                        # this remains a write-returned, NOT an S03 readback.
-                        invalidate = getattr(B, "invalidate_s03_cache", None)
-                        if callable(invalidate):
-                            invalidate()
-                        hist = {"status": "SAVED", "mini": mini, "s03_readback_verified": False}
+                        persist_result = await asyncio.to_thread(S.persist_turn, ("[mini] " + user) if mini else user, full)
+                        # Explicit False must never produce SAVED or a SOUL mirror.
+                        # The writer might still have committed before rejection,
+                        # so an automatic retry is unsafe without S03 readback.
+                        if persist_result is False:
+                            hist = {"status": "HOLD", "reason": "S03_PERSIST_REJECTED",
+                                    "s03_write_returned": False, "retry_unsafe": True,
+                                    "s03_readback_verified": False}
+                        else:
+                            s03_write_returned = True
+                            # Native and web chat share the bridge recall cache.
+                            # A returned write must revoke prior search results;
+                            # this remains a write-returned, NOT an S03 readback.
+                            invalidate = getattr(B, "invalidate_s03_cache", None)
+                            if callable(invalidate):
+                                invalidate()
+                            hist = {"status": "SAVED", "mini": mini, "s03_readback_verified": False}
                     except Exception as e:
                         # Persist may have committed despite a raised exception.
                         # If it returned but cache revocation failed, a replay can
