@@ -3655,5 +3655,61 @@ class ProbeTests(unittest.TestCase):
 
 
 
+    def test_stream_model_label_aliases_bind_second_third_route(self):
+        """A mismatched explicit model_label/modelLabel must poison later-turn SSE."""
+        did = 'd' * 32
+        expected = 'GLM-5.3'
+        for turn_label in ('second', 'third'):
+            for alias in ('model_label', 'modelLabel'):
+                foreign = 'foreign-model'
+                shapes = (
+                    {'type': 'status', alias: foreign},
+                    {'type': 'status', 'status': {alias: foreign}},
+                    {'type': 'meta', 'metadata': {alias: foreign}},
+                    {'type': 'meta', 'meta': {'status': {alias: foreign}}},
+                    {'type': 'done', 'dialog_id': did, 'model': expected,
+                     'meta': {alias: foreign}},
+                )
+                for frame in shapes:
+                    with self.subTest(turn=turn_label, alias=alias, frame=frame):
+                        with self.assertRaisesRegex(
+                                RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
+                            probe.require_stream_model_identity(frame, expected)
+                # If the alias is the ONLY label, it is positive identity evidence.
+                self.assertEqual(
+                    probe.require_stream_model_identity({'type': 'start', alias: expected}),
+                    expected)
+                with self.assertRaisesRegex(
+                        RuntimeError, '^HOLD_STREAM_MODEL_IDENTITY_INVALID$'):
+                    probe.require_stream_model_identity({'type': 'meta', alias: True})
+        matching = {'type': 'done', 'model': expected,
+                    'metadata': {'modelLabel': expected},
+                    'meta': {'model_label': expected},
+                    'status': {'status': {'model_label': expected}}}
+        self.assertEqual(probe.require_stream_model_identity(matching, expected), expected)
+        self.assertIsNone(probe.require_stream_model_identity({'type': 'delta', 'text': '323'}))
+        class OfflineResponse(SyntheticBoundedReader):
+            status = 200
+            def __init__(self, frames):
+                self.frames, self.closed = frames, False
+            def __iter__(self):
+                return iter(json.dumps(frame).encode() + bytes([10]) for frame in self.frames)
+            def close(self):
+                self.closed = True
+        for turn_label in ('second', 'third'):
+            response = OfflineResponse([
+                {'type': 'start', 'model': expected},
+                {'type': 'delta', 'text': '323', 'metadata': {'modelLabel': 'foreign-model'}},
+                {'type': 'done', 'dialog_id': did, 'saved': True, 's03_integrated': True,
+                 'model': expected},
+            ])
+            with self.subTest(stream=turn_label):
+                with patch.object(probe, 'request', return_value=response):
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_STREAM_MODEL_ROUTE_DRIFT$'):
+                        probe.consume_turn(object(), 'offline-' + turn_label, did)
+                self.assertTrue(response.closed)
+
+
 if __name__ == '__main__':
     unittest.main()
