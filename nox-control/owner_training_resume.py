@@ -952,6 +952,10 @@ def lease_free():
 
 def read_installed_train_cpu_cap(path):
     """Read exactly one approved env assignment from a stable regular file."""
+    path = Path(path)
+    # Leaf O_NOFOLLOW cannot authenticate a training limit beneath a symlink.
+    if any(item.is_symlink() for item in (path, *path.parents)):
+        raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT')
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
     except OSError as exc:
@@ -965,6 +969,9 @@ def read_installed_train_cpu_cap(path):
             raw = stream.read(65)
             after = os.fstat(stream.fileno())
             named = os.stat(path, follow_symlinks=False)
+        # An atomic rename+symlink to the same inode defeats named stat alone.
+        if any(item.is_symlink() for item in (path, *path.parents)):
+            raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_LIMIT')
         fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
         if (len(raw) != before.st_size
                 or any(getattr(before, field) != getattr(after, field)

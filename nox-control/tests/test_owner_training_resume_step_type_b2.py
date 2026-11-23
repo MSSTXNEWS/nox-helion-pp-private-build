@@ -3677,5 +3677,53 @@ class StableBackupParentPathFence(unittest.TestCase):
             displaced.rename(approved)
             self.assertEqual(backup(path, expected_sha256=digest), payload)
 
+
+class InstalledTrainCpuCapParentPathFence(unittest.TestCase):
+    def test_signed_cpu_cap_parent_alias_atomic_pivot_and_restore(self):
+        # Real owner AST; no server, cgroup, model or training is touched.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        node = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                    and n.name == "read_installed_train_cpu_cap")
+        scope = {"Path": Path, "os": os, "stat": stat, "re": re}
+        exec(compile(ast.Module(body=[node], type_ignores=[]), str(SOURCE), "exec"), scope)
+        cap = scope["read_installed_train_cpu_cap"]
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            approved = root / "approved"
+            approved.mkdir()
+            displaced = root / "displaced"
+            env = approved / "train_cpu_max.env"
+            env.write_bytes(b"TRAIN_CPU_MAX=60GiB\n")
+            self.assertEqual(cap(env), 60)
+
+            approved.rename(displaced)
+            approved.symlink_to(displaced, target_is_directory=True)
+            with self.assertRaisesRegex(RuntimeError, "^HOLD_INSTALLED_TRAIN_CPU_LIMIT$"):
+                cap(env)
+            approved.unlink()
+            displaced.rename(approved)
+            self.assertEqual(cap(env), 60)
+
+            original_fstat = os.fstat
+            fstat_calls = 0
+            pivoted = False
+
+            def pivot_after_cap_read(fd):
+                nonlocal fstat_calls, pivoted
+                fstat_calls += 1
+                if fstat_calls == 2 and not pivoted:
+                    approved.rename(displaced)
+                    approved.symlink_to(displaced, target_is_directory=True)
+                    pivoted = True
+                return original_fstat(fd)
+
+            with mock.patch("os.fstat", side_effect=pivot_after_cap_read):
+                with self.assertRaisesRegex(RuntimeError, "^HOLD_INSTALLED_TRAIN_CPU_LIMIT$"):
+                    cap(env)
+            self.assertTrue(pivoted)
+            approved.unlink()
+            displaced.rename(approved)
+            self.assertEqual(cap(env), 60)
+
 if __name__ == "__main__":
     unittest.main()
