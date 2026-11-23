@@ -126,6 +126,25 @@ class BridgeStreamIntegrity(unittest.TestCase):
                 self.assertNotIn("done", [x["type"] for x in events])
                 self.assertEqual(writes, [])
 
+    def test_bare_named_error_after_stop_never_writes_s03(self):
+        events, writes, logs, last = self.run_stream([
+            self.chunk("partial"), self.chunk(finish="stop"),
+            "event: error", "data: [DONE]"
+        ])
+        self.assertEqual(events[-1]["type"], "error")
+        self.assertNotIn("done", [x["type"] for x in events])
+        self.assertEqual(writes, [])
+        self.assertEqual(logs, [])
+        self.assertEqual(last["t"], 0)
+
+    def test_nonerror_sse_fields_remain_compatible(self):
+        events, writes, _, _ = self.run_stream([
+            "event: message", "id: 3", self.chunk("hello"),
+            self.chunk(finish="stop"), "data: [DONE]"
+        ])
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertEqual(writes, [("Привет", "hello")])
+
     def test_http_error_blocks_write(self):
         events, writes, _, _ = self.run_stream([self.chunk("hello"),
             self.chunk(finish="stop"), "data: [DONE]"], status=503)
