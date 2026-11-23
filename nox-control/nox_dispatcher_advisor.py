@@ -8,6 +8,7 @@ import datetime as dt
 import json
 import math
 import os
+import re
 import tempfile
 import stat
 from pathlib import Path
@@ -182,6 +183,14 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             and onehost["chat_metrics_age_sec"] <= 30
             and s03.get("readback_verified") is True
             and trainer.get("checkpoint_recent") is True
+            # The boolean "recent" is not a durable restore witness.
+            # Require the exact saved checkpoint and resume cursor to agree.
+            and trainer.get("checkpoint_readback_verified") is True
+            and type(trainer.get("checkpoint_step")) is int
+            and trainer["checkpoint_step"] >= 0
+            and isinstance(trainer.get("resume_cursor_sha256"), str)
+            and re.fullmatch(r"[0-9a-f]{64}", trainer["resume_cursor_sha256"]) is not None
+            and trainer.get("checkpoint_resume_cursor_sha256") == trainer["resume_cursor_sha256"]
             and gpu.get("temperature_sensor_valid") is True
             and _finite_nonnegative(temp) and temp < 70
             and _finite_nonnegative(free_gib)
@@ -212,7 +221,8 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         else:
             add("TRAIN_RESUME_OWNER_HOLD", "hold",
                 "Cached ready_for_resume is not training admission. Require "
-                "independent current owner attestation, verified S03/checkpoint, "
+                "independent current owner attestation, verified S03, exact read-back " 
+                "checkpoint step and matching SHA256 resume cursor, "
                 "SAFE70 sensor, disk, fresh under-budget idle chat, and >=2 GiB "
                 "cgroup headroom, idle claims and maintenance clearance; "
                 "do not enqueue or resume.")
@@ -221,7 +231,6 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         # Only an authenticated, completed optimizer-step/embedding-batch
         # boundary with a durable checkpoint+cursor may be suggested for
         # owner review. No signals, scheduler changes or resumes here.
-        import re
         cursor = trainer.get("resume_cursor_sha256")
         # Verified restore data must belong to this exact completed boundary:
         # a stale, separately verified checkpoint is not a safe-yield witness.
