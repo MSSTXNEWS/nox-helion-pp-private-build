@@ -12,6 +12,28 @@ import {createGunzip} from 'node:zlib';
 const printable=s=>/[\p{L}\p{N}\p{P}\p{S}]/u.test(s);
 const fail=code=>Object.assign(new Error(code),{code});
 
+
+// Bound staged UTF-16 to 4096 code units (at most 12 KiB encoded UTF-8).
+// Large deltas bypass staging. Caller joins cross-delta surrogate pairs
+// before update; final lone high surrogate is supplied only at actual EOF.
+export function createBatchedVisibleHash(){
+  const hash=createHash('sha256'),limit=4096;
+  let staged='';
+  function flush(){
+    if(staged){hash.update(staged,'utf8');staged='';}
+  }
+  return {
+    update(chunk){
+      if(!chunk)return;
+      if(staged.length+chunk.length>limit)flush();
+      if(chunk.length>=limit)hash.update(chunk,'utf8');
+      else staged+=chunk;
+    },
+    get bufferedCodeUnits(){return staged.length;},
+    digest(){flush();return hash.digest('hex');}
+  };
+}
+
 export async function measureSseResponse(response,options={}){
   const {startedAt=performance.now(),clock=()=>performance.now(),
     idleTimeoutMs=5000,totalTimeoutMs=60000,
@@ -35,9 +57,9 @@ export async function measureSseResponse(response,options={}){
   const rawHash=createHash('sha256');
   let total=0,firstByte=null,ttft=null,sseDone=null,close=null;
   let line='',lineBytes=0,frame=[],frameBytes=0,seenStop=false,seenDone=false;
-  // Hash the visible stream incrementally; retain at most one dangling UTF-16
+  // Hash the visible stream in bounded batches; retain at most one dangling UTF-16
   // high surrogate because distinct JSON deltas can split one Unicode scalar.
-  const visibleHash=createHash('sha256');
+  const visibleHash=createBatchedVisibleHash();
   let pendingHighSurrogate='';
   const nowMs=()=>Math.max(0,clock()-startedAt);
   function appendVisible(text){
@@ -53,7 +75,7 @@ export async function measureSseResponse(response,options={}){
       chunk=chunk.slice(0,-1);
     }
     if(chunk){
-      visibleHash.update(chunk,'utf8');
+      visibleHash.update(chunk);
       // First-printable TTFT must also recognize cross-delta emoji.
       if(ttft===null&&printable(chunk))ttft=nowMs();
     }
@@ -147,12 +169,12 @@ export async function measureSseResponse(response,options={}){
     if(close<sseDone||sseDone<ttft)throw fail('B4_TIME_ORDER_INVALID');
     // At actual EOF a lone high surrogate is a U+FFFD replacement, as with
     // one-shot crypto.update(fullVisibleText,'utf8'). Never digest before EOF.
-    if(pendingHighSurrogate)visibleHash.update(pendingHighSurrogate,'utf8');
+    if(pendingHighSurrogate)visibleHash.update(pendingHighSurrogate);
     return Object.freeze({
       verified:true,first_byte_ms:firstByte,ttft_ms:ttft,
       sse_done_ms:sseDone,completion_ms:close,
       body_bytes:total,body_sha256:rawHash.digest('hex'),
-      visible_text_sha256:visibleHash.digest('hex'),
+      visible_text_sha256:visibleHash.digest(),
       // Never claim a local fetch is an authenticated model/browser/S03 proof.
       browser_authenticated:false,native_verified:false,canonical_s03_verified:false,
       model_tokens_per_second:null

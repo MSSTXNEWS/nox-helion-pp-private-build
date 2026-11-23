@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {performance} from 'node:perf_hooks';
-import {measureSseResponse,measureSseFetch,measureSseRawHttp} from './b4_sse_latency_probe.mjs';
+import {measureSseResponse,measureSseFetch,measureSseRawHttp,createBatchedVisibleHash} from './b4_sse_latency_probe.mjs';
 
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const event=x=>'data: '+JSON.stringify({choices:[x]})+'\n\n';
@@ -1278,6 +1278,69 @@ test('R43 real HTTP/TCP incremental visible SHA256: split UTF16 surrogate, 128Ki
       streaming_aggregate_visible_bytes:0,legacy_microbench_ms:+legacyMs.toFixed(3),
       streaming_microbench_ms:+incrementalMs.toFixed(3),
       microbench_only:true,real_glm:false,authenticated_browser:false,canonical_s03:false
+    }));
+  }finally{
+    server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
+  }
+});
+
+
+test('R44 bounded hash batching: real TCP boundary, direct large delta, surrogate parity and CPU median',async()=>{
+  const parts=['a'.repeat(4095),'\uD83D','\uDE80', 'Ж'.repeat(6000),
+    ...Array.from({length:512},(_,i)=>i%2?'¡Hola 🌍!':'Привет 123'),
+    '\uD83D'];
+  const wire=parts.map(content=>event({delta:{content}})).join('')+
+    event({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n';
+  let posts=0;
+  const server=createServer(async(req,res)=>{
+    if(req.method!=='POST'||req.url!=='/nox/chat'){res.writeHead(404).end();return;}
+    for await(const _ of req){}
+    posts++;
+    res.writeHead(200,{'content-type':'text/event-stream'});
+    res.write(': heartbeat\n\n');
+    res.end(wire);
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try{
+    const proof=await measureSseFetch('http://127.0.0.1:'+server.address().port+'/nox/chat',
+      {method:'POST',body:'{}'},{totalTimeoutMs:8000,idleTimeoutMs:3000});
+    assert.equal(proof.visible_text_sha256,hash(parts.join('')));
+    assert.equal(proof.body_sha256,hash(': heartbeat\n\n'+wire));
+    assert.ok(proof.first_byte_ms<=proof.ttft_ms&&proof.ttft_ms<=proof.sse_done_ms&&proof.sse_done_ms<=proof.completion_ms);
+    assert.equal(proof.native_verified,false);
+    assert.equal(proof.browser_authenticated,false);
+    assert.equal(proof.canonical_s03_verified,false);
+    assert.equal(posts,1);
+
+    // Exact production helper, same 128KiB input for all algorithms.
+    // Warmup, rotate order and report medians; no flaky wall-time assertion.
+    const pieces=Array.from({length:8192},()=> 'x'.repeat(16));
+    const expected=hash(pieces.join(''));
+    const algorithms=[
+      ()=>{let text='';for(const p of pieces)text+=p;return hash(text);},
+      ()=>{const h=createHash('sha256');for(const p of pieces)h.update(p,'utf8');return h.digest('hex');},
+      ()=>{const h=createBatchedVisibleHash();for(const p of pieces)h.update(p);return h.digest();}
+    ];
+    const bound=createBatchedVisibleHash();
+    let peak=0;
+    for(const p of pieces){bound.update(p);peak=Math.max(peak,bound.bufferedCodeUnits);}
+    assert.ok(peak>0&&peak<=4096);
+    assert.equal(bound.digest(),expected);
+    assert.equal(bound.bufferedCodeUnits,0);
+    for(let i=0;i<8;i++)for(const fn of algorithms)assert.equal(fn(),expected);
+    const samples=[[],[],[]];
+    for(let i=0;i<31;i++)for(let j=0;j<3;j++){
+      const k=(i+j)%3,start=performance.now(),digest=algorithms[k]();
+      samples[k].push(performance.now()-start);
+      assert.equal(digest,expected);
+    }
+    const median=a=>+a.sort((x,y)=>x-y)[Math.floor(a.length/2)].toFixed(4);
+    console.log('B4_R44_SOURCE_ONLY '+JSON.stringify({
+      rounds:31,visible_input_bytes:131072,chunk_bytes:16,
+      legacy_median_ms:median(samples[0]),per_delta_median_ms:median(samples[1]),
+      batched_median_ms:median(samples[2]),peak_staged_code_units:peak,
+      max_staged_utf8_bytes:12288,visible_sha256_exact:true,real_local_tcp:true,
+      no_replay:posts===1,microbench_only:true,real_glm:false
     }));
   }finally{
     server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
