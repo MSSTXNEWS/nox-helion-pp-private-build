@@ -311,7 +311,7 @@ async def ask(messages, max_tokens, slot=0):
             if ch.get("finish_reason") != "stop":
                 raise ValueError("UPSTREAM_NONSTOP_COMPLETION")
             m = ch.get("message")
-            if not isinstance(m, dict) or m.get("role") != "assistant":
+            if not isinstance(m, dict) or ("role" in m and m["role"] != "assistant"):
                 raise ValueError("UPSTREAM_MESSAGE_INVALID")
             if any(k in ch or k in m for k in ("tool_calls", "function_call")):
                 raise ValueError("UPSTREAM_UNEXECUTED_TOOL_CALL")
