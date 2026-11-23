@@ -230,10 +230,14 @@ def _feed_items(body: bytes) -> list[dict[str, str]]:
                 href = child.attrib.get("href", "").strip()
                 rel = child.attrib.get("rel", "alternate").strip().lower()
                 text = " ".join(" ".join(child.itertext()).split())
-                # Only an alternate (article) link is provenance for an
-                # entry. Atom self/enclosure/related links are metadata or
-                # attachments, not independently citable item URLs.
-                if rel in {"alternate", ""} and (href or text):
+                # Only article-like alternate links count as provenance.
+                # A feed can label a ZIP or API export "alternate"; explicit
+                # binary/feed media types are not publication landing pages.
+                media_type = child.attrib.get("type", "").partition(";")[0].strip().lower()
+                article_types = {"text/html", "application/xhtml+xml",
+                                 "application/pdf", "text/plain"}
+                if (rel in {"alternate", ""} and (href or text)
+                        and (not media_type or media_type in article_types)):
                     link = href or text
                     break
         content = _child_text(node, {"content", "encoded", "summary", "description"})
