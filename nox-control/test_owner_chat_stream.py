@@ -2048,6 +2048,12 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             valid={'n':2,'workers':[{'id':f'nox-agent-{i:02d}','status':'idle','current_task':None}
                                    for i in (1,2)]}
             variants=[dict(valid,n=6),dict(valid,n=True),
+                      # A self-consistent legacy four-worker file is not the
+                      # current native cap3 census (the UI rejects it too).
+                      {'n':4,'workers':[{'id':f'nox-agent-{i:02d}',
+                          'status':'idle','current_task':None} for i in range(1,5)]},
+                      dict(valid,workers=[valid['workers'][0],
+                          dict(valid['workers'][1],id='nox-agent-999')]),
                       dict(valid,workers=[valid['workers'][0],valid['workers'][0]]),
                       dict(valid,workers=[valid['workers'][0],dict(valid['workers'][1],status='busy')]),
                       dict(valid,workers=[valid['workers'][0],dict(valid['workers'][1],status='invented')]),
