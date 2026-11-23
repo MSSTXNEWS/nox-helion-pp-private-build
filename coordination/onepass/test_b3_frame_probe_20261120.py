@@ -364,6 +364,45 @@ class TestProbe(unittest.TestCase):
         self.assertLess(code.rfind('require_landing_url(url, page.url)'),
                         code.index("result['landing_url_verified'] = True"))
 
+    def test_p95_and_slow_frame_count_are_consistent(self):
+        # Real summarize() computes 90-frame p95 at zero-based index 85.
+        # A forged report must not combine that percentile with an
+        # impossible number of intervals longer than 50ms.
+        rows = [
+            {'width': width, 'height': height, 'mode': mode,
+             'frame_time': {'frames': 90, 'median_ms': 16.0,
+                            'p95_ms': 16.0, 'over_50ms': 0}}
+            for width, height in ((320, 720), (390, 844), (1440, 900))
+            for mode in ('normal', 'reduced')
+        ]
+        baseline = {
+            'schema': 'NOX_B3_READONLY_BROWSER_FRAME_EVIDENCE_V6',
+            'url_sha256': 'c' * 64, 'chromium_version_sha256': 'a' * 64,
+            'sample_js': '90 consecutive real requestAnimationFrame intervals',
+            'synthetic_fixture': True, 'fixture_html_sha256': 'd' * 64,
+            'expected_selector_checked': False,
+            'expected_selector_sha256': None, 'landing_url_verified': False,
+            'runs': rows,
+        }
+        cases = (
+            (4, 50.001, False), (5, 49.999, False),
+            (4, 50.0, True), (5, 50.0, True),
+            (4, 49.999, True), (5, 50.001, True),
+        )
+        for side in ('current', 'prior'):
+            for slow, p95, allowed in cases:
+                current, prior = copy.deepcopy(baseline), copy.deepcopy(baseline)
+                changed = current if side == 'current' else prior
+                changed['runs'][0]['frame_time'].update(
+                    over_50ms=slow, p95_ms=p95)
+                with self.subTest(side=side, slow=slow, p95=p95):
+                    if allowed:
+                        self.assertEqual(len(compare_baseline(current, prior)), 6)
+                    else:
+                        with self.assertRaisesRegex(
+                                ValueError, 'HOLD_BASELINE_FRAME_INVALID'):
+                            compare_baseline(current, prior)
+
     def test_baseline_provenance_and_six_frame_modes(self):
         rows = [
             {'width': width, 'height': height, 'mode': mode,

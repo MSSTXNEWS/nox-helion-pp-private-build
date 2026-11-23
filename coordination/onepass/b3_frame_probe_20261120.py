@@ -391,6 +391,13 @@ def compare_baseline(current, prior, approved_render_transition=None):
                         or type(frame.get('over_50ms')) is not int
                         or not 0 <= frame['over_50ms'] <= frame['frames']):
                     raise ValueError()
+            # With 90 samples, rank-85 p95 crosses 50ms iff at least
+            # five intervals are slow. At 50.000ms allow either side:
+            # rounded display values can hide a <0.0005ms difference.
+            for frame in (previous, measured):
+                if ((frame['over_50ms'] >= 5 and frame['p95_ms'] < 50) or
+                        (frame['over_50ms'] < 5 and frame['p95_ms'] > 50)):
+                    raise ValueError()
             p95 = float(previous['p95_ms'])
             now_p95 = float(measured['p95_ms'])
             old_median = float(previous['median_ms'])
