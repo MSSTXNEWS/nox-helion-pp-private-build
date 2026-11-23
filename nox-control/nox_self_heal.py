@@ -223,10 +223,23 @@ def repair_cycle(policy, state_path, dry_run=False):
         return _repair_cycle_locked(policy, state_path, dry_run=True)
     lock_path = state_path.with_name(state_path.name + ".writer.lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
+    # A pre-existing FIFO, directory, shared-mode or foreign-owned sidecar
+    # cannot serve as a trustworthy single-writer lock. NONBLOCK also prevents
+    # a hostile FIFO from hanging the observer before its safety checks.
     fd = os.open(str(lock_path),
-                 os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+                 os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW |
+                 os.O_CLOEXEC | os.O_NONBLOCK, 0o600)
     try:
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or
+                info.st_uid != os.geteuid() or info.st_mode & 0o077):
+            raise ValueError("unsafe repair writer lock")
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        # Reject a sidecar replaced between open and lease acquisition.
+        # This is an additional local inode fence, not native owner CAS.
+        current = os.stat(lock_path, follow_symlinks=False)
+        if (current.st_dev, current.st_ino) != (info.st_dev, info.st_ino):
+            raise ValueError("repair writer lock changed")
         return _repair_cycle_locked(policy, state_path, dry_run)
     finally:
         os.close(fd)
