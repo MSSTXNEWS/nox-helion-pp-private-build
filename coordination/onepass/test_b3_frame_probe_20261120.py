@@ -879,7 +879,8 @@ class TestProbe(unittest.TestCase):
                     self.assertIn('HOLD_DIALOG_MODEL_DRIFT', drift['sse'])
                     self.assertNotIn('"type":"done"', drift['sse'])
                     self.assertEqual(drift['posts'], 9)
-                    self.assertEqual(drift['reads'], 7)
+                    self.assertEqual(drift['reads'], 6)
+                    self.assertNotIn('"type":"token"', drift['sse'])
                     for idx, mode in enumerate((
                             'modelless', 'unknownlabel', 'lowerunknown',
                             'mixedunknown', 'navalue', 'nonemodel', 'nullmodel',
@@ -888,7 +889,7 @@ class TestProbe(unittest.TestCase):
                         self.assertIn('HOLD_NATIVE_MODEL_START_LABEL', missing['sse'])
                         self.assertNotIn('"type":"done"', missing['sse'])
                         self.assertEqual(missing['posts'], idx)
-                        self.assertEqual(missing['reads'], 7)
+                        self.assertEqual(missing['reads'], 6)
                 finally:
                     await browser.close()
         asyncio.run(run())

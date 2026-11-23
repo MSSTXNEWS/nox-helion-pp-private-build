@@ -26,8 +26,8 @@ status:'HOLD',error,history_persisted:false,s03_integrated:false
 }),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 const samePath=input=>{
 try {
- const u=new URL(input instanceof Request?input.url:String(input),location.href);
- return u.origin===location.origin?u:null;
+const u=new URL(input instanceof Request?input.url:String(input),location.href);
+return u.origin===location.origin?u:null;
 } catch{return null;}
 };
 const options=(init={})=>({
@@ -135,7 +135,8 @@ timer=setTimeout(()=>reject(Error('HOLD_NATIVE_TERMINAL_EOF_TIMEOUT')),2500);
 }finally{clearTimeout(timer);}
 }
 const validNativeModelLabel=v=>typeof v==='string'&&v.length<=96&&v===v.trim()&&/[\p{L}\p{N}]/u.test(v)&&new TextDecoder().decode(enc.encode(v))===v&&!/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(v)&&!/^(unknown|na|none|null|undefined|unavailable|notavailable|unset|nomodel)?$/i.test(v.replace(/[\s/_-]+/g,''));
-async function consume(response,emit,signal){
+async function consume(response,emit,signal,id){
+const pinned=verifiedChain.get(id)?.[0]?.model;
 if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
 const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
 let buf='',answer='',done,doneSeen=false,startSeen=false,preparingSeen=false;
@@ -166,6 +167,7 @@ if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
 if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
 startSeen=true;
 if(!validNativeModelLabel(e.model)||modelKeys.some(k=>k in e&&e[k]!==e.model))throw Error('HOLD_NATIVE_MODEL_START_LABEL');
+if(pinned&&pinned!==e.model)throw Error('HOLD_DIALOG_MODEL_DRIFT');
 nativeModel=e.model;
 } else if(e.type==='preparing') {
 if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
@@ -175,7 +177,7 @@ preparingSeen=true;
 throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
 }
  };
- try{
+try{
 for(;;){
 if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
 const chunk=doneSeen ? await readNativeEofAfterDone(reader,signal)
@@ -192,25 +194,25 @@ if(doneSeen&&buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
 }
 buf+=decoder.decode();
 if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
- if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
-   if(new TextDecoder().decode(enc.encode(answer))!==answer)throw Error('HOLD_NATIVE_SURROGATE');
-   return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};
- }finally{
-   try{Promise.resolve(reader.cancel('STREAM_CLOSED')).catch(()=>{});}catch{}
+if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
+if(new TextDecoder().decode(enc.encode(answer))!==answer)throw Error('HOLD_NATIVE_SURROGATE');
+return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};
+}finally{
+try{Promise.resolve(reader.cancel('STREAM_CLOSED')).catch(()=>{});}catch{}
  }
  }
 function sseChat(data,signal){
- let closed=false;const started=performance.now();let firstVisibleMs=null;
- let phasePrev;
- const upstreamAbort=new AbortController();
- const onAbort=()=>upstreamAbort.abort();
- if(signal?.aborted)upstreamAbort.abort();
+let closed=false;const started=performance.now();let firstVisibleMs=null;
+let phasePrev;
+const upstreamAbort=new AbortController();
+const onAbort=()=>upstreamAbort.abort();
+if(signal?.aborted)upstreamAbort.abort();
  else signal?.addEventListener?.('abort',onAbort,{once:true});
- const nativeSignal=upstreamAbort.signal;
- let claimedId;
- const stopPhase=()=>{if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+const nativeSignal=upstreamAbort.signal;
+let claimedId;
+const stopPhase=()=>{if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
  window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopped'}}));};
- const body=new ReadableStream({
+const body=new ReadableStream({
    async start(controller){
 const event=payload=>{if(closed)return;
 if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
@@ -218,18 +220,18 @@ if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&p
 const phase={meta:'waiting',token:'speaking',done:'idle',error:nativeSignal.aborted?'stopped':'error'}[payload.type];
 if(phase&&phase!==phasePrev){
  phasePrev=phase;
- if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
       window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
     }
-    if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
+if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
     };
     try {
-    if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
     pinRequest(data);
-    const id=await dialogId(data,nativeSignal);
-    if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+const id=await dialogId(data,nativeSignal);
+if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
     claimedId=claimDialog(id);
-    event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
+event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
      answer_source:'NATIVE_PENDING',model_identity_verified:false});
 const upstream=await nativePost('/api/nox/chat/stream',{
      message:data.message,dialog_id:id,task:'general',history:[]
@@ -237,75 +239,75 @@ const upstream=await nativePost('/api/nox/chat/stream',{
     segmenter??=Intl.Segmenter?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
 let trailing='';
 const emitPieces=async t=>{
-     if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-     if(t)event({type:'token',t});
+if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+if(t)event({type:'token',t});
     };
-    const {answer,receipt}=await consume(upstream,async t=>{
+const {answer,receipt}=await consume(upstream,async t=>{
      trailing+=t;
-     if(trailing.length>8192)throw Error('HOLD_GRAPHEME_RUN');
-     if(!segmenter){
-       const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
-       if(ascii){
-         const safe=ascii[0].slice(0,-1);
+if(trailing.length>8192)throw Error('HOLD_GRAPHEME_RUN');
+if(!segmenter){
+const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
+if(ascii){
+const safe=ascii[0].slice(0,-1);
          trailing=trailing.slice(safe.length);
-         await emitPieces(safe);
+await emitPieces(safe);
        }
        return;
      }
-     const b=trailing.length>1&&/^[\x20-\x7e\u0401\u0410-\u044f\u0451]+$/.test(trailing)?trailing.length-1:segmenter.segment(trailing).containing(trailing.length-1)?.index||0;
-     if(b>0){const t=trailing.slice(0,b);trailing=trailing.slice(b);await emitPieces(t);}
-    },nativeSignal);
-    if(trailing)await emitPieces(trailing);
-    if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-    if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
-    await checkHistory(id,data.message,answer,receipt.exchange_id,nativeSignal,receipt.native_model_label);
-    if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-    event({type:'done',status:'done',saved:true,s03_integrated:true,
+const b=trailing.length>1&&/^[\x20-\x7e\u0401\u0410-\u044f\u0451]+$/.test(trailing)?trailing.length-1:segmenter.segment(trailing).containing(trailing.length-1)?.index||0;
+if(b>0){const t=trailing.slice(0,b);trailing=trailing.slice(b);await emitPieces(t);}
+    },nativeSignal,id);
+if(trailing)await emitPieces(trailing);
+if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
+await checkHistory(id,data.message,answer,receipt.exchange_id,nativeSignal,receipt.native_model_label);
+if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
+event({type:'done',status:'done',saved:true,s03_integrated:true,
      history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
      model_label:receipt.native_model_label||'UNKNOWN',
      model_identity_verified:false,answer_source:'LIVE_NOX',
      first_visible_token_ms:firstVisibleMs,
      seconds:+((performance.now()-started)/1000).toFixed(2)});
-    }catch(e){
-    event({type:'error',
+}catch(e){
+event({type:'error',
      error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
      gpu_stop_verified:false});
-    }finally{
-    if(claimedId)activeDialogs.delete(claimedId);
-    signal?.removeEventListener?.('abort',onAbort);
-    if(!closed){closed=true;try{controller.close();}catch{}}
+}finally{
+if(claimedId)activeDialogs.delete(claimedId);
+signal?.removeEventListener?.('abort',onAbort);
+if(!closed){closed=true;try{controller.close();}catch{}}
     }
    },
    cancel(){
     closed=true;
     upstreamAbort.abort();
-    if(phasePrev!=='idle')stopPhase();
-    signal?.removeEventListener?.('abort',onAbort);
+if(phasePrev!=='idle')stopPhase();
+signal?.removeEventListener?.('abort',onAbort);
    }
  });
- return responseJSONStream(body);
+return responseJSONStream(body);
  }
 const responseJSONStream=body=>new Response(body,{headers:{
  'Content-Type':'text/event-stream','Cache-Control':'no-store','X-Accel-Buffering':'no'
  }});
 async function jsonChat(data,signal){
- let claimedId;
- try{
-   const id=await dialogId(data,signal);
-   if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
+let claimedId;
+try{
+const id=await dialogId(data,signal);
+if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
    claimedId=claimDialog(id);
-   const upstream=await nativePost('/api/nox/chat/stream',{
+const upstream=await nativePost('/api/nox/chat/stream',{
      message:data.message,dialog_id:id,history:[],task:'general'
    },signal);
-   const {answer,receipt,nativeModel}=await consume(upstream,()=>{},signal);
-   if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
-   if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
-   await checkHistory(id,data.message,answer,receipt.exchange_id,signal,nativeModel);
-   if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
-   return responseJSON({answer,model:nativeModel,model_identity_verified:false,dialog_id:id,
+const {answer,receipt,nativeModel}=await consume(upstream,()=>{},signal,id);
+if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
+if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
+await checkHistory(id,data.message,answer,receipt.exchange_id,signal,nativeModel);
+if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
+return responseJSON({answer,model:nativeModel,model_identity_verified:false,dialog_id:id,
      exchange_id:receipt.exchange_id,history_persisted:true,s03_integrated:true});
- }catch(e){return errorResponse(String(e.message||'HOLD_NATIVE_JSON').slice(0,150));}
- finally{if(claimedId)activeDialogs.delete(claimedId);}
+}catch(e){return errorResponse(String(e.message||'HOLD_NATIVE_JSON').slice(0,150));}
+finally{if(claimedId)activeDialogs.delete(claimedId);}
  }
 async function legacyDialogs(url,init) {
 try{
@@ -370,33 +372,33 @@ url.pathname.startsWith('/api/nox/chat/')||
 (url.pathname==='/api/nox/dialog/rename'&&method!=='POST'))
 return Promise.resolve(errorResponse('HOLD_OWNER_ROUTE_ALIAS',422));
 if(input instanceof Request&&init?.body===undefined){
-  const bridged=(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search)||
+const bridged=(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search)||
     (url.pathname==='/api/nox/history'&&method==='GET')||
     (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
     (url.pathname==='/api/nox/dialog/rename'&&method==='POST');
-  if(!bridged)return F(input,init);
-  return input.clone().text().then(body=>window.fetch(url.href,{
+if(!bridged)return F(input,init);
+return input.clone().text().then(body=>window.fetch(url.href,{
     method,body:method==='GET'?undefined:body,
     signal:init?.signal||input.signal,
     headers:init?.headers||input.headers
   })).catch(()=>errorResponse('HOLD_REQUEST_BODY_UNAVAILABLE',422));
 }
 if(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search){
-  let data;try{data=JSON.parse(init?.body);}catch{return Promise.resolve(errorResponse('INVALID_JSON',400));}
-  if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.message!=='string'||
+let data;try{data=JSON.parse(init?.body);}catch{return Promise.resolve(errorResponse('INVALID_JSON',400));}
+if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.message!=='string'||
      !data.message.trim()||data.message.length>8000||
      new TextDecoder().decode(enc.encode(data.message))!==data.message)
-     return Promise.resolve(errorResponse('INVALID_MESSAGE',422));
-  if('request_id'in data&&(typeof data.request_id!=='string'||!data.request_id.trim()||data.request_id.length>160))
-    return Promise.resolve(errorResponse('HOLD_REQUEST_ID_SCOPE',422));
+return Promise.resolve(errorResponse('INVALID_MESSAGE',422));
+if('request_id'in data&&(typeof data.request_id!=='string'||!data.request_id.trim()||data.request_id.length>160))
+return Promise.resolve(errorResponse('HOLD_REQUEST_ID_SCOPE',422));
 const s=init?.signal||input?.signal;
-  return typeof data.request_id==='string'||Object.prototype.hasOwnProperty.call(data,'dialog_id')
+return typeof data.request_id==='string'||Object.prototype.hasOwnProperty.call(data,'dialog_id')
  ?Promise.resolve(sseChat(data,s)):jsonChat(data,s);
 }
 if((url.pathname==='/api/nox/history'&&method==='GET')||
    (url.pathname==='/api/nox/dialogs/new'&&method==='POST')||
    (url.pathname==='/api/nox/dialog/rename'&&method==='POST'))
-  return legacyDialogs(url,init);
+return legacyDialogs(url,init);
 return F(input,init);
 };
 })();
