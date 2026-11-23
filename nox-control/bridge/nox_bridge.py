@@ -119,7 +119,9 @@ def build_msgs(history, user, mem, vol, extra=""):
     hist = [{"role": m["role"], "content": str(m.get("content", ""))[:(900 if m["role"] == "assistant" else 1500)]} for m in history if m.get("role") in ("user", "assistant")][-6:]
     ctx = "[Контекст для NOX, не цитируй дословно]\n" + ("Память: " + mem[:500] + "\n" if mem else "") + vol + _style() + extra + "\n\n[Вопрос Создателя]\n"
     if hist and hist[-1]["role"] == "user":
-        hist[-1]["content"] = ctx + hist[-1]["content"]
+        # Preserve the exact current user text; the 1500-character history
+        # display cap must never change the active instruction.
+        hist[-1]["content"] = ctx + user
     else:
         hist.append({"role": "user", "content": ctx + user})
     return [{"role": "system", "content": IDENTITY + STATIC_RULES}] + hist
