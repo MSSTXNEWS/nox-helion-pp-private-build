@@ -2732,6 +2732,44 @@ def main():
           return true;
         }'''))
 
+        # begin() only checks existence with readCommitted(): a committed GET
+        # response can still own a live body even though the model must not
+        # POST this exchange again. Release it once, nonblocking, on HOLD.
+        check('committed preflight GET body disposed once; no duplicate model turn', page.evaluate('''async () => {
+          for (const mode of ['resolved','rejected','hanging','throwing']) {
+            const s={conversation_id:'r38',exchange_id:mode};
+            let reads=0,cancels=0,posts=0,acks=0;
+            const host={...opts.host,async readCommitted(conversation,exchange){
+              reads++;
+              return {conversation_id:conversation,exchange_id:exchange,
+                body:{cancel(){
+                  cancels++;
+                  if(mode==='rejected')return Promise.reject(Error('cancel rejected'));
+                  if(mode==='hanging')return new Promise(()=>{});
+                  if(mode==='throwing')throw Error('cancel threw');
+                  return Promise.resolve();
+                }}};
+            }};
+            const transport={...opts.transport,
+              post(){posts++;throw Error('DUPLICATE_MODEL_POST')},
+              ack(){acks++;throw Error('DUPLICATE_ACK')}
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host,bridge:opts.bridge,
+              ui:{async onDelta(){},async upsertTerminal(){}}
+            });
+            const first=await Promise.race([
+              client.begin(s).then(v=>v,e=>e.code),
+              new Promise(resolve=>setTimeout(()=>resolve('HUNG'),250))
+            ]);
+            const repeated=await client.begin(s).then(v=>v,e=>e.code);
+            if(first!=='HOLD_STREAM_RECONNECT_ONLY'||
+               repeated!=='HOLD_STREAM_NO_REPOST'||reads!==1||
+               cancels!==1||posts!==0||acks!==0)return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
