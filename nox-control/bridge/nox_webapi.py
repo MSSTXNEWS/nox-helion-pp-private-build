@@ -1,7 +1,7 @@
 """NOX web adapter: делает веб-сборку «Резонанс» рабочей поверх умного моста (ядро, память S03, эмоции остаются на пути ответа).
 Подключается из nox_bridge.py: WEB.install(app, bridge_module). Слушает тот же 127.0.0.1:8091.
 Без выдумок: нет измерения -> null / HOLD. Токен доступа: если есть /root/nox/state/web_token, он обязателен."""
-import asyncio, hashlib, json, math, os, re, secrets, shutil, subprocess, threading, time
+import asyncio, hashlib, json, math, os, re, secrets, shutil, stat, subprocess, threading, time
 import httpx
 from fastapi import Request
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
@@ -366,6 +366,33 @@ def _jl(path, n):
         return []
 
 
+def _append_fact_mirror(record):
+    """Append to a regular, unlinked owner-facts mirror, never a redirected path.
+
+    Canonical S03 is already written before this optional local mirror.
+    Walk every parent with O_NOFOLLOW; opening only the leaf with that flag
+    would still follow an attacker-controlled ancestor symlink.
+    """
+    parts = os.path.abspath(FACTS).split(os.sep)
+    parent_fd = os.open(os.sep, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    try:
+        for part in parts[1:-1]:
+            next_fd = os.open(part, os.O_RDONLY | os.O_DIRECTORY |
+                              os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=parent_fd)
+            os.close(parent_fd)
+            parent_fd = next_fd
+        fd = os.open(parts[-1], os.O_WRONLY | os.O_APPEND | os.O_CREAT |
+                     os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
+                     0o600, dir_fd=parent_fd)
+        with os.fdopen(fd, "a", encoding="utf-8") as output:
+            info = os.fstat(output.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                raise OSError("FACTS_MIRROR_UNSAFE_INODE")
+            output.write(json.dumps(record, ensure_ascii=False) + "\n")
+    finally:
+        os.close(parent_fd)
+
+
 def _warm(B):
     """Прогрев: загрузить S03 и закэшировать стабильный префикс промпта в обоих слотах, чтобы первый ответ не ждал."""
     time.sleep(25)
@@ -639,8 +666,10 @@ def install(app, B):
                                      "retry_safe": False, "s03_readback_verified": False},
                                     status_code=503)
         try:
-            with open(FACTS, "a", encoding="utf-8") as f:
-                f.write(json.dumps({"t": int(time.time()), "key": str(b.get("fact_key", ""))[:120], "content": txt, "source": str(b.get("source_ref") or b.get("source", ""))[:200]}, ensure_ascii=False) + "\n")
+            _append_fact_mirror({"t": int(time.time()),
+                                 "key": str(b.get("fact_key", ""))[:120],
+                                 "content": txt,
+                                 "source": str(b.get("source_ref") or b.get("source", ""))[:200]})
             return {"status": "RECORDED_UNVERIFIED", "saved": True,
                     "s03_write_returned": True, "s03_readback_verified": False}
         except Exception as e:
