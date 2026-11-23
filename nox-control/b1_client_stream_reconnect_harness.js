@@ -534,7 +534,7 @@
         // Pin canonical GET identity before either external verifier can await
         // or mutate the receipt object. A later ACK envelope must not certify
         // a different nonce/expiry/ACK ID than the signed GET supplied.
-        let signedIdentity=null;
+        let signedIdentity=null,signedReceipt=null;
         const captureSignedIdentity=receipt=>{
           try{
             const fields=Object.freeze({
@@ -558,6 +558,24 @@
               receipt.issued_at_ms===signedIdentity.issued_at_ms&&
               receipt.expires_at_ms===signedIdentity.expires_at_ms&&
               receipt.ack_id===signedIdentity.ack_id;
+          }catch(_){return false;}
+        };
+        // Durable cross-tab ACK gates legitimately pass a normalized signed
+        // proof to their second verifier: it may omit nonce/time/body fields.
+        // Compare the shared ACK ID, any present freshness fields, AND the
+        // original raw signed GET still pinned by this client. Do not require
+        // the gate's normalized receipt to be the transport's raw object.
+        const sameCanonicalProjection=proof=>{
+          if(!proof||typeof proof!=='object'||Array.isArray(proof)||
+             !signedReceipt||!sameSignedIdentity(signedReceipt))return false;
+          try{
+            return proof.ack_id===signedIdentity.ack_id&&
+              (proof.request_nonce===undefined||
+               proof.request_nonce===signedIdentity.request_nonce)&&
+              (proof.issued_at_ms===undefined||
+               proof.issued_at_ms===signedIdentity.issued_at_ms)&&
+              (proof.expires_at_ms===undefined||
+               proof.expires_at_ms===signedIdentity.expires_at_ms);
           }catch(_){return false;}
         };
         const discardVerifiedBody=()=>{
@@ -617,6 +635,7 @@
                 if(!receipt||typeof receipt!=='object'||Array.isArray(receipt))
                   hold('HOLD_STREAM_RECEIPT_FRESHNESS');
                 signedIdentity=captureSignedIdentity(receipt);
+                signedReceipt=receipt;
                 if(signedIdentity.request_nonce!==challenge.request_nonce||
                    !Number.isSafeInteger(signedIdentity.issued_at_ms)||
                    !Number.isSafeInteger(signedIdentity.expires_at_ms)||
@@ -654,7 +673,7 @@
               const discard=()=>{
                 if(discarded)return;
                 discarded=true;
-                cancelAbandonedGet(receipt);
+                cancelAbandonedGet(signedReceipt||receipt);
               };
               const onAbort=()=>discard();
               lifecycleSignal.addEventListener('abort',onAbort,{once:true});
@@ -662,6 +681,10 @@
                 if(lifecycleSignal.aborted){
                   discard();
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
+                }
+                if(!sameCanonicalProjection(receipt)){
+                  discard();
+                  hold('HOLD_STREAM_RECEIPT_MUTATED');
                 }
                 let trusted;
                 try{
@@ -676,11 +699,11 @@
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
                 }
                 if(trusted!==true)discard();
-                else if(!sameSignedIdentity(receipt)){
+                else if(!sameCanonicalProjection(receipt)){
                   discard();
                   hold('HOLD_STREAM_RECEIPT_MUTATED');
                 }else{
-                  verifiedReceipt=receipt;
+                  verifiedReceipt=signedReceipt;
                   verifiedAckId=signedIdentity.ack_id;
                 }
                 return trusted;
