@@ -3538,5 +3538,69 @@ class ProbeTests(unittest.TestCase):
 
 
 
+    def test_sse_cache_policy_replay_fence_before_later_turn_frames(self):
+        """A public/cacheable 200 SSE cannot certify a fresh turn2/turn3 DONE."""
+        from email.message import Message
+
+        class Client:
+            def __init__(self):
+                self.requests = []
+            def open(self, request, timeout):
+                self.requests.append(request)
+                return object()
+
+        client = Client()
+        probe.request(client, '/api/nox/chat/stream', 'POST',
+                      {'dialog_id': 'f' * 32, 'message': 'offline only'})
+        headers = {key.lower(): value for key, value in
+                   client.requests[-1].header_items()}
+        self.assertIn('no-store', headers['cache-control'])
+        self.assertIn('no-cache', headers['cache-control'])
+        self.assertEqual(headers['pragma'], 'no-cache')
+        self.assertEqual(headers['accept'], 'text/event-stream')
+
+        class Response:
+            status = 200
+            url = probe.BASE + '/api/nox/chat/stream'
+            def __init__(self, fields):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream'
+                for name, value in fields:
+                    self.headers[name] = value
+                self.closed = False
+            def close(self):
+                self.closed = True
+
+        poisoned = (
+            ([('Cache-Control', 'public')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'max-age=120')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 's-maxage=30')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'immutable')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'stale-while-revalidate=30')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'stale-if-error=60')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'no-store'), ('Cache-Control', 'public')],
+             'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'max-age=bad')], 'HOLD_STREAM_CACHED_REPLAY'),
+            ([('Cache-Control', 'no-store,')], 'HOLD_STREAM_CACHED_REPLAY'),
+        )
+        for label in ('second', 'third'):
+            for fields, reason in poisoned:
+                response = Response(fields)
+                with self.subTest(turn=label, policy=fields):
+                    with patch.object(probe, 'request', return_value=response):
+                        with patch.object(probe, 'bounded_stream_frames') as parser:
+                            with self.assertRaisesRegex(RuntimeError, '^' + reason + '):
+                                probe.consume_turn(client, 'offline', 'f' * 32)
+                            parser.assert_not_called()
+                self.assertTrue(response.closed)
+        for policy in ('no-store, no-cache', 'private, max-age=0',
+                       'no-cache, must-revalidate'):
+            response = Response([('Cache-Control', policy), ('Age', '0'),
+                                 ('X-Cache', 'MISS')])
+            with self.subTest(fresh=policy):
+                probe.require_fresh_owner_readback(response)
+
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -53,7 +53,8 @@ def request(client,path,method='GET',data=None,timeout=6,base=None):
     headers={'Content-Type':'application/json','Accept':accept}
     # A proxy must not replay an old owner/executor/history snapshot as live
     # admission or multi-turn readback evidence.
-    if method == 'GET' and path.startswith(('/api/nox/', '/api/ui/')):
+    if ((method == 'GET' and path.startswith(('/api/nox/', '/api/ui/')))
+            or (method == 'POST' and path == '/api/nox/chat/stream')):
         headers.update({'Cache-Control':'no-store, no-cache', 'Pragma':'no-cache'})
     req=urllib.request.Request((base or BASE)+path,data=payload,method=method,headers=headers)
     try:return client.open(req,timeout=timeout)
@@ -159,6 +160,28 @@ def require_fresh_owner_readback(response):
         if len(fields) != 1 or not isinstance(fields[0], str):
             raise RuntimeError('HOLD_OWNER_READBACK_CACHE_UNVERIFIED')
         return fields[0].strip()
+
+    # Even Age:0 or a missing X-Cache is insufficient when a gateway
+    # explicitly marks the HTTP response as cacheable/stale-reusable.
+    # This applies equally to owner JSON and the second/third SSE POST.
+    cache_control = unique_header('Cache-Control')
+    if cache_control is not None:
+        directives = [part.strip().casefold() for part in cache_control.split(',')]
+        if any(not part for part in directives):
+            raise RuntimeError('HOLD_OWNER_READBACK_CACHE_UNVERIFIED')
+        for directive in directives:
+            name, separator, value = directive.partition('=')
+            if not re.fullmatch(r'[a-z][a-z0-9-]*', name):
+                raise RuntimeError('HOLD_OWNER_READBACK_CACHE_UNVERIFIED')
+            if name in ('public', 'immutable', 'stale-while-revalidate',
+                        'stale-if-error'):
+                raise RuntimeError('HOLD_OWNER_READBACK_CACHED')
+            if name in ('max-age', 's-maxage'):
+                value = value.strip().strip('"')
+                if not separator or not re.fullmatch(r'[0-9]{1,12}', value):
+                    raise RuntimeError('HOLD_OWNER_READBACK_CACHE_UNVERIFIED')
+                if int(value) > 0:
+                    raise RuntimeError('HOLD_OWNER_READBACK_CACHED')
 
     age = unique_header('Age')
     if age is not None:
