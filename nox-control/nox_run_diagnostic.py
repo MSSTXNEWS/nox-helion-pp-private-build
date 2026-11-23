@@ -60,7 +60,7 @@ def hardware_2a01_snapshot():
     holds = []
     fields = ("index", "uuid", "name", "pci.bus_id", "memory.total",
               "memory.free", "temperature.gpu", "driver_version",
-              "compute_cap", "pci.link.gen.current", "pci.link.width.current")
+              "compute_cap", "pcie.link.gen.current", "pcie.link.width.current")
     raw = command(["nvidia-smi", "--query-gpu=" + ",".join(fields),
                    "--format=csv,noheader,nounits"])
     gpu = []
