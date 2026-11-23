@@ -1141,7 +1141,13 @@ def install(app, B):
                     # a terminal frame, leaving browser and S03 state ambiguous.
                     # Fail closed before any model POST or canonical memory write.
                     try:
-                        vol = await asyncio.to_thread(B.self_vol, user)
+                        # Ephemeral turns must not feed their private text into
+                        # the persistent PAD/affect journal via self_vol(). Keep
+                        # the same identity and complete user prompt, without a
+                        # lasting emotional side effect for this private turn.
+                        vol = ("[Я-СЕЙЧАС] Временный диалог: эмоциональное состояние "
+                               "не обновляется." if eph else
+                               await asyncio.to_thread(B.self_vol, user))
                         mm = B.build_msgs(msgs_in, user, mem, vol, "\n" + extra if extra else "")
                     except Exception as e:
                         B.log("web_premodel_context_unavailable " + type(e).__name__)

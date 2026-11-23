@@ -582,6 +582,63 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(len(writes), 4)
         self.assertEqual(len(bridge.errors), 4)
 
+    def test_1v14_01_ephemeral_turn_does_not_persist_emotional_signal(self):
+        """Private chat keeps the real model stream, but never updates affect."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        bridge = self.bridge
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+        bridge.LAST_CHAT = {"t": 0}
+        bridge.self_vol = mock.Mock(side_effect=AssertionError(
+            "ephemeral text must not update persistent PAD"))
+        vol_seen = []
+        def build(messages, user, mem, vol, extra=""):
+            vol_seen.append(vol)
+            return [{"role": "user", "content": user + "\\n" + vol}]
+        bridge.build_msgs = build
+        bridge.adapt_tokens = lambda *_: 700
+        memory = types.ModuleType("s03_memory")
+        saved = []
+        memory.persist_turn = lambda *args: saved.append(args)
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Частный ответ 🌌"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+        bridge.hc = lambda: Client()
+
+        async def scenario():
+            response = await chat(Request({
+                "request_id": "private-pad-isolation", "ephemeral": True,
+                "use_memory": False,
+                "messages": [{"role": "user", "content": "Мой приватный вопрос"}],
+            }))
+            return [json.loads(part) async for part in response.body_iterator]
+
+        with (mock.patch.object(W, "W", None),
+              mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
+              mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
+              mock.patch.dict(sys.modules, {"s03_memory": memory})):
+            frames = asyncio.run(scenario())
+            self.assertNotIn("private-pad-isolation", W.ACTIVE_CHAT_IDS)
+            self.assertEqual(W.CHAT_SNAPSHOTS, {})
+        self.assertTrue(frames[-1]["done"])
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "GENERATED")
+        self.assertEqual(frames[-1]["memory_history"]["status"], "SKIPPED")
+        self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
+        self.assertFalse(frames[-1]["memory_write_receipt"]["s03_readback_verified"])
+        self.assertEqual(saved, [])
+        bridge.self_vol.assert_not_called()
+        self.assertEqual(len(vol_seen), 1)
+        self.assertIn("не обновляется", vol_seen[0])
+        self.assertNotIn("Мой приватный вопрос", vol_seen[0])
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
