@@ -1,0 +1,17 @@
+name: A6 2A01 read-only host facts
+on:
+  pull_request:
+    paths:
+      - 'nox-control/nox_run_diagnostic.py'
+      - 'nox-control/test_nox_run_diagnostic_2a01.py'
+      - '.github/workflows/nox-a6-2a01-host-facts.yml'
+  workflow_dispatch:
+jobs:
+  offline-2a01:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: One focused hardware fail-closed regression (no server or GPU access)
+        run: python -m unittest discover -s nox-control -p 'test_nox_run_diagnostic_2a01.py' -v
