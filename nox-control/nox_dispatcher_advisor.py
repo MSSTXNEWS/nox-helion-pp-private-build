@@ -374,10 +374,43 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                     "exact snapshot with the trusted owner verifier before "
                     "reporting spare GPU observations; no new work is admitted.")
             else:
-                cap = round(85 - util, 2)
-                add("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", "observe",
-                    f"Measured utilization-only upper bound to the 85% limit: {cap} percentage points. "
-                    "VRAM is not a per-job allocation; no admission, trainer restart or new queue authorized.")
+                # A fleet-wide GPU average is not per-device spare capacity:
+                # one V100 can be saturated while the other is idle. Require
+                # owner-attested, fresh device readings before naming a bound.
+                devices = gpu.get("devices")
+                device_census_valid = (
+                    isinstance(devices, list) and 0 < len(devices) <= 8
+                    and all(isinstance(dev, dict)
+                            and type(dev.get("index")) is int
+                            and 0 <= dev["index"] <= 255
+                            and _finite_nonnegative(dev.get("utilization_pct"))
+                            and dev["utilization_pct"] <= 100
+                            and _finite_nonnegative(dev.get("vram_used_mib"))
+                            and _finite_nonnegative(dev.get("vram_total_mib"))
+                            and 0 < dev["vram_total_mib"] <= 1048576
+                            and dev["vram_used_mib"] <= dev["vram_total_mib"]
+                            for dev in devices)
+                    and len({dev["index"] for dev in devices}) == len(devices)
+                    and sum(dev["vram_used_mib"] for dev in devices) == gpu["vram_used_mib"]
+                    and sum(dev["vram_total_mib"] for dev in devices) == gpu["vram_total_mib"]
+                )
+                if not device_census_valid:
+                    add("GPU_RESIDUAL_DEVICE_CENSUS_HOLD", "hold",
+                        "Pooled GPU utilization/VRAM cannot establish per-device spare "
+                        "capacity. Require unique device IDs and matching fresh per-GPU "
+                        "utilization/VRAM from the authenticated owner snapshot.")
+                else:
+                    peak_util = max(dev["utilization_pct"] for dev in devices)
+                    if peak_util >= 85:
+                        add("GPU_RESIDUAL_DEVICE_BUSY_HOLD", "hold",
+                            "At least one GPU is at or above 85% utilization. "
+                            "Do not treat a low pooled average as safe residual capacity.")
+                    else:
+                        cap = round(85 - peak_util, 2)
+                        add("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", "observe",
+                            f"Most-loaded GPU upper bound to the 85% limit: {cap} percentage points. "
+                            "Utilization-only; no admission of GPU/VRAM jobs, "
+                            "no trainer restart or new queue authorized.")
     if not issues:
         # If another concrete issue already exists, preserve its established
         # diagnostic code (including GPU/thermal and memory checks). Only a
