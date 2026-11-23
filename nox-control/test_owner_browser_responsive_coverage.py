@@ -468,6 +468,59 @@ class NativeStreamTerminalEnvelopeContract(unittest.TestCase):
                       SNAPSHOT_JS)
 
 
+
+class NativeUnknownJSONLFrameContract(unittest.TestCase):
+    def test_real_js_observer_rejects_unknown_frame_before_native_done(self):
+        """Execute the browser's actual stream observer with valid and invalid JSONL."""
+        import json
+        import shutil
+        import subprocess
+
+        node = shutil.which('node')
+        if node is None:
+            self.skipTest('Node.js unavailable for real browser-observer regression')
+        code = r"""
+globalThis.HTMLCanvasElement=class { getContext(){return null;} };
+globalThis.window={};
+globalThis.document={getElementById:()=>null,querySelectorAll:()=>[]};
+globalThis.addEventListener=()=>{};
+globalThis.requestAnimationFrame=()=>{};
+globalThis.performance={now:()=>100};
+globalThis.location={href:'http://owner.test/nox',origin:'http://owner.test'};
+globalThis.Request=class Request {};
+const observer = %s;
+const cases=[
+  [{type:'delta',text:'1'},{type:'done',saved:true,s03_integrated:true,dialog_id:'qa-demo'}],
+  [{type:'delta',text:'1'},{type:'heartbeat',status:'OK'},{type:'done',saved:true,s03_integrated:true,dialog_id:'qa-demo'}],
+  [{type:'delta',text:'1'},[],{type:'done',saved:true,s03_integrated:true,dialog_id:'qa-demo'}]
+];
+async function one(frames){
+  const bytes=new TextEncoder().encode(frames.map(x=>JSON.stringify(x)).join('\\n')+'\\n');
+  window.fetch=async()=>({
+    body:{getReader(){let remaining=1;return {
+      async read(){return remaining--?{done:false,value:bytes}:{done:true};},
+      async cancel(){}
+    };}},
+    clone(){return this;}
+  });
+  eval(observer);
+  await window.fetch('/api/nox/chat/stream',{method:'POST'});
+  const q=window.__NOX_BROWSER_QA;
+  for(let i=0;i<8&&!q.nativeClosed&&!q.error;i++)await new Promise(setImmediate);
+  return [q.error,q.nativeClosed,q.nativeTerminals,q.nativeCalls];
+}
+(async()=>{console.log(JSON.stringify(await Promise.all(cases.map(one))));})()
+ .catch(e=>{console.error(e);process.exitCode=1;});
+""" % json.dumps(OBSERVER_JS.replace('__CONFIG__', '{"did":"qa-demo"}'))
+        result = subprocess.run([node, '-e', code], capture_output=True, text=True,
+                                timeout=8, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr[:1000])
+        self.assertEqual(json.loads(result.stdout),
+                         [[None, True, 1, 1],
+                          ['HOLD_QA_STREAM_UNKNOWN_FRAME', False, 0, 1],
+                          ['HOLD_QA_STREAM_UNKNOWN_FRAME', False, 0, 1]])
+
+
 class BrowserWriteScopeContract(unittest.TestCase):
     def test_no_implicit_browser_write_outside_scoped_model_stream(self):
         # Browser page fetches may read UI/static data, but only the exact
