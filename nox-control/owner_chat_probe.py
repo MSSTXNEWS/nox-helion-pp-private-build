@@ -573,7 +573,9 @@ def history_matches_turns(messages, turns, dialog_id=None):
         # An owner-scoped history GET must never contain an explicitly foreign
         # dialog anywhere in its bounded window, not merely in the final tail.
         # Legacy untagged rows remain compatible; this is not canonical S03.
-        if dialog_id is not None and 'dialog_id' in row and row['dialog_id'] != dialog_id:
+        if dialog_id is not None and any(
+                alias in row and row[alias] != dialog_id
+                for alias in ('dialog_id', 'dialogId')):
             return False
         for key in ('id', 'message_id', 's03_id'):
             if key not in row:
@@ -590,8 +592,9 @@ def history_matches_turns(messages, turns, dialog_id=None):
         user, assistant = tail[2 * index:2 * index + 2]
         if not isinstance(user, dict) or not isinstance(assistant, dict):
             return False
-        if dialog_id is not None and any('dialog_id' in row and row['dialog_id'] != dialog_id
-                                         for row in (user, assistant)):
+        if dialog_id is not None and any(
+                alias in row and row[alias] != dialog_id
+                for row in (user, assistant) for alias in ('dialog_id', 'dialogId')):
             return False
         if (user.get('role') != 'user' or assistant.get('role') != 'assistant'
                 or user.get('content') != prompt or assistant.get('content') != answer):
@@ -601,7 +604,8 @@ def history_matches_turns(messages, turns, dialog_id=None):
 
 def scoped_history_matches_turns(history, turns, dialog_id):
     """Reject a mismatched history session even when its visible rows match."""
-    if not isinstance(history, dict) or history.get('dialog_id') != dialog_id:
+    if (not isinstance(history, dict) or history.get('dialog_id') != dialog_id
+            or ('dialogId' in history and history['dialogId'] != dialog_id)):
         return False
     return history_matches_turns(history.get('messages'), turns, dialog_id)
 

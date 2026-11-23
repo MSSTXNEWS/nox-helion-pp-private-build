@@ -3853,5 +3853,46 @@ class ProbeTests(unittest.TestCase):
         self.assertFalse(probe.require_stream_nosniff_header(object()))
 
 
+    def test_owner_history_camelcase_dialog_aliases_fence_later_turns(self):
+        """An explicitly foreign dialogId cannot certify owner-history turns 2/3."""
+        did, foreign = 'a' * 32, 'b' * 32
+        turns = [('first question', '323'), ('second question', '323'),
+                 ('third question', '3')]
+        rows = [
+            {'role': role, 'content': content}
+            for question, answer in turns
+            for role, content in (('user', question), ('assistant', answer))
+        ]
+        for count in (2, 3):
+            window = rows[:2 * count]
+            # Both legacy untagged rows and consistent alias rows remain valid.
+            self.assertTrue(probe.scoped_history_matches_turns(
+                {'dialog_id': did, 'messages': window}, turns[:count], did))
+            matching = {'dialog_id': did, 'dialogId': did,
+                        'messages': [dict(row, dialogId=did) for row in window]}
+            self.assertTrue(probe.scoped_history_matches_turns(
+                matching, turns[:count], did))
+            for index in range(len(window)):
+                for alias in ('dialog_id', 'dialogId'):
+                    poisoned = [dict(row) for row in window]
+                    poisoned[index][alias] = foreign
+                    snapshot = {'dialog_id': did, 'messages': poisoned}
+                    with self.subTest(turn=count, row=index, alias=alias):
+                        self.assertFalse(probe.scoped_history_matches_turns(
+                            snapshot, turns[:count], did))
+                        with self.assertRaisesRegex(
+                                RuntimeError, '^HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED
+):
+                            probe.require_executor_witness(
+                                {'saved': True, 's03_integrated': True}, snapshot,
+                                turns[:count], True, True, did)
+            # Top-level snake_case is correct, but camelCase alias contradicts it.
+            for invalid in (foreign, None, '', True):
+                snapshot = {'dialog_id': did, 'dialogId': invalid,
+                            'messages': window}
+                with self.subTest(turn=count, envelope=repr(invalid)):
+                    self.assertFalse(probe.scoped_history_matches_turns(
+                        snapshot, turns[:count], did))
+
 if __name__ == '__main__':
     unittest.main()
