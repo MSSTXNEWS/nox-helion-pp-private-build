@@ -35,6 +35,54 @@ class Request:
 
 class FactReceiptTest(unittest.TestCase):
 
+    def test_2a05_stream_metrics_do_not_invent_provider_tokens(self):
+        """Chunks are not tokens; duration must use monotonic time."""
+        chat = next(route.endpoint for route in self.app.routes if route.path == "/api/chat")
+        bridge = self.bridge
+        bridge.SOUL, bridge.LAST_CHAT = None, {"t": 0}
+        bridge.IDENTITY, bridge.STATIC_RULES, bridge.NKEEP = "", "", 0
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Два"}}]}'
+                yield 'data: {"choices":[{"delta":{"content":" фрагмента"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        bridge.hc = lambda: Client()
+
+        async def collect():
+            response = await chat(Request({
+                "request_id": "honest-metric-2a05", "mini": True,
+                "use_memory": False, "ephemeral": True,
+                "messages": [{"role": "user", "content": "Ответь"}]}))
+            return [json.loads(frame) async for frame in response.body_iterator]
+
+        # Simulate an invalid backward wall-clock correction: elapsed time
+        # must stay nonnegative and remain independent of wall time.
+        with mock.patch.object(W, "W", None), \
+             mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \
+             mock.patch.object(W.time, "time", return_value=-1000):
+            frames = asyncio.run(collect())
+        final = frames[-1]
+        self.assertTrue(final["done"])
+        self.assertEqual(final["completion_receipt"]["status"], "GENERATED")
+        self.assertEqual(final["frames"], 2)
+        self.assertIsNone(final["eval_count"])
+        self.assertEqual(final["eval_count_status"], "NOT_REPORTED_BY_UPSTREAM")
+        self.assertGreaterEqual(final["total_duration"], 0)
+        self.assertEqual("".join(f["message"]["content"] for f in frames
+                                 if f.get("message") and f["message"]["content"]),
+                         "Два фрагмента")
+
     def test_1a02_conversation_id_cursor_reconciles_stream_and_snapshot(self):
         """A client-visible conversation identifier must not be lost or coerced."""
         chat = next(route.endpoint for route in self.app.routes if route.path == "/api/chat")
