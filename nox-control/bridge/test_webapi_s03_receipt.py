@@ -1581,6 +1581,9 @@ class FactReceiptTest(unittest.TestCase):
             {"reminder": {"due": float("inf")}},
             {"reminder": {"due": True}},
             {"reminder": {"due": 10**100}},
+            # Valid due but invalid sidecar payload: old fr() advanced the
+            # event counter before JSON encoding raised, losing a cursor.
+            {"reminder": {"due": 1760000000, "corrupt": {"not-serializable"}}},
             {"reminder": {"due": 1760000000}},
         )
         with mock.patch.object(W, "CANCEL", set()), \
@@ -1589,6 +1592,12 @@ class FactReceiptTest(unittest.TestCase):
             for idx, result in enumerate(cases):
                 with self.subTest(idx=idx), mock.patch.object(W, "W", Reminder(result)):
                     frames = asyncio.run(scenario(idx))
+                # No phantom SSE cursor or snapshot event from a suppressed
+                # advisory serialization error: stream remains gap-free.
+                self.assertEqual([f["event_seq"] for f in frames],
+                                 list(range(1, len(frames) + 1)))
+                self.assertEqual(W.CHAT_SNAPSHOTS[frames[0]["stream_id"]]["event_seq"],
+                                 len(frames))
                 self.assertTrue(any(f.get("message", {}).get("content") == "Живой ответ" for f in frames))
                 self.assertEqual(frames[-1]["completion_receipt"]["status"], "GENERATED")
                 self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "WRITE_RETURNED_UNVERIFIED")
