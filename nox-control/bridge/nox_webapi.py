@@ -378,7 +378,7 @@ def install(app, B):
         d = {"status": "READY" if alive else "HOLD", "model": TAG, "digest": digest, "backend": "NOX_BRIDGE",
              # Health on a configured endpoint verifies reachability, NOT the loaded
              # model's name or weight identity. Never advertise a stale hardcoded
-             # DeepSeek label as the active OneHost brain.
+             # legacy weight label as the active OneHost brain.
              "primary_model": None, "model_identity_verified": False,
              "model_identity_hold": "OWNER_MODEL_ID_NOT_ATTESTED",
              "digest_is_weight_sha": False,
