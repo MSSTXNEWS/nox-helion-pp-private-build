@@ -38,7 +38,8 @@ class FakeResponse:
 
 
 class BridgeStreamIntegrity(unittest.TestCase):
-    def run_stream(self, lines, status=200, write_ok=True):
+    def run_stream(self, lines, status=200, write_ok=True,
+                   memory_error=False, soul_error=False):
         writes, soul_logs, notices = [], [], []
         response = FakeResponse(lines, status)
         class Client:
@@ -51,7 +52,14 @@ class BridgeStreamIntegrity(unittest.TestCase):
 
         class Soul:
             def log_turn(self, *args):
+                if soul_error:
+                    raise RuntimeError("SOUL_LOG_FAULT")
                 soul_logs.append(args)
+
+        def recall(_text):
+            if memory_error:
+                raise RuntimeError("S03_RECALL_FAULT")
+            return ""
 
         scope = {
             "asyncio": asyncio,
@@ -61,7 +69,7 @@ class BridgeStreamIntegrity(unittest.TestCase):
             "MODEL": "http://127.0.0.1/test-only",
             "NKEEP": 0,
             "_sse": lambda payload: "data: " + json.dumps(payload) + "\n\n",
-            "memory_block": lambda _: "",
+            "memory_block": recall,
             "self_vol": lambda _: "",
             "affect_update": lambda _: {},
             "affect_words": lambda _: "steady",
@@ -159,6 +167,31 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(events[-1]["type"], "done")
         self.assertEqual(events[-1]["memory_write_receipt"]["status"], "HOLD")
         self.assertFalse(events[-1]["memory_write_receipt"]["s03_readback_verified"])
+
+    def test_failed_s03_context_returns_terminal_hold_without_model_or_write(self):
+        events, writes, logs, last = self.run_stream(
+            [self.chunk("should-not-run"), self.chunk(finish="stop"),
+             "data: [DONE]"], memory_error=True)
+        self.assertEqual(events[-1]["type"], "error")
+        self.assertEqual(events[-1]["reason"], "S03_CONTEXT_UNAVAILABLE")
+        self.assertFalse(events[-1]["generation_complete"])
+        self.assertFalse(events[-1]["s03_readback_verified"])
+        self.assertNotIn("done", [e["type"] for e in events])
+        self.assertEqual(writes, [])
+        self.assertEqual(logs, [])
+        self.assertEqual(last["t"], 0)
+
+    def test_failed_optional_soul_log_keeps_exact_s03_receipt(self):
+        events, writes, logs, _ = self.run_stream([
+            self.chunk("saved"), self.chunk(finish="stop"), "data: [DONE]"
+        ], soul_error=True)
+        self.assertEqual(events[-1]["type"], "done")
+        self.assertTrue(events[-1]["generation_complete"])
+        self.assertEqual(events[-1]["memory_write_receipt"],
+                         {"status": "WRITE_RETURNED_UNVERIFIED",
+                          "s03_readback_verified": False})
+        self.assertEqual(writes, [("Привет", "saved")])
+        self.assertEqual(logs, [])
 
     def test_browser_history_is_gated_on_real_complete(self):
         self.assertIn("if(!complete){", SOURCE)
