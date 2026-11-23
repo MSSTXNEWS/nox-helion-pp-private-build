@@ -82,15 +82,27 @@ class DatasetSplitTests(unittest.TestCase):
         rows[1]["license"] = "Proprietary"
         with self.assertRaisesRegex(SplitHold, "HOLD_CONFLICTING_SOURCE_LICENSE"):
             split_manifest(rows)
-        # Equivalent casing and whitespace remain a single license claim.
+        # Equivalent license normalization still passes when both records
+        # are in the same provenance group, not across holdout partitions.
         rows[1]["license"] = " mit "
+        rows[1]["goal"] = rows[0]["goal"]
+        rows[1]["text"] = rows[0]["text"]
         result = split_manifest(rows)
-        self.assertEqual(result["counts"]["kept"], 60)
+        self.assertEqual(result["counts"]["kept"], 59)
 
     def test_duplicate_cross_group_holds(self):
         rows = rows_fixture()
         rows[1]["text"] = rows[0]["text"].upper()
         with self.assertRaisesRegex(SplitHold, "HOLD_CROSS_GROUP_DUPLICATE"):
+            split_manifest(rows)
+
+    def test_one_source_multiple_goals_cannot_leak_into_holdout(self):
+        rows = rows_fixture()
+        # Five different goals from one origin are distinct groups, but
+        # must never be split across train, dev and holdout.
+        for row in rows[:5]:
+            row["source_id"] = "publisher/ru/memory/shared-batch"
+        with self.assertRaisesRegex(SplitHold, "HOLD_SOURCE_ACROSS_PARTITIONS"):
             split_manifest(rows)
 
     def test_origin_goal_cannot_cross_language_or_domain_partitions(self):
