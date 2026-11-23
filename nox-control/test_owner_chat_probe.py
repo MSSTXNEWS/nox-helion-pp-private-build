@@ -4053,5 +4053,68 @@ class ProbeTests(unittest.TestCase):
                 io.BytesIO(stream), max_wire_bytes=len(stream) - 1))
 
 
+    def test_stream_deadline_pre_read_and_socket_budget(self):
+        """An expired deadline never enters readline; socket reads cannot exceed remaining time."""
+        import io
+        import time
+        from types import SimpleNamespace
+
+        class CountReader(io.BytesIO):
+            def __init__(self, raw):
+                super().__init__(raw)
+                self.read_calls = 0
+
+            def readline(self, limit=-1):
+                self.read_calls += 1
+                return super().readline(limit)
+
+        raw = b'{"type":"delta","text":"323"}' + bytes([10])
+        expired = CountReader(raw)
+        with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_DEADLINE_EXCEEDED
+    unittest.main()
+):
+            list(probe.bounded_stream_frames(
+                expired, deadline=time.monotonic() - 1))
+        self.assertEqual(expired.read_calls, 0)
+
+        fresh = CountReader(raw)
+        frames = list(probe.bounded_stream_frames(
+            fresh, deadline=time.monotonic() + 5))
+        self.assertEqual(frames, [{'type': 'delta', 'text': '323'}])
+        self.assertEqual(fresh.read_calls, 2)
+
+        class Socket:
+            def __init__(self):
+                self.timeout = 5
+                self.set_calls = []
+
+            def gettimeout(self):
+                return self.timeout
+
+            def settimeout(self, value):
+                self.timeout = value
+                self.set_calls.append(value)
+
+        sock = Socket()
+
+        class StalledReader:
+            fp = SimpleNamespace(raw=SimpleNamespace(_sock=sock))
+
+            def readline(self, limit):
+                self.limit = limit
+                raise TimeoutError('synthetic stalled upstream')
+
+        stalled = StalledReader()
+        with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_DEADLINE_EXCEEDED
+    unittest.main()
+):
+            list(probe.bounded_stream_frames(
+                stalled, deadline=time.monotonic() + 0.25))
+        self.assertTrue(sock.set_calls)
+        self.assertGreater(sock.set_calls[0], 0)
+        self.assertLessEqual(sock.set_calls[0], 0.25)
+        self.assertEqual(stalled.limit, 100001)
+
+
 if __name__ == '__main__':
     unittest.main()

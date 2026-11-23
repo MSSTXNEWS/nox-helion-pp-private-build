@@ -942,13 +942,33 @@ def require_stream_http_framing(response):
         raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
 
 
-def bounded_stream_lines(response, max_line=100000):
-    """Bound each network read; iteration can buffer a huge NDJSON line before a length check."""
+def bounded_stream_lines(response, max_line=100000, deadline=None):
+    """Bound read size and check a turn's deadline BEFORE each blocking read.
+
+    For urllib HTTPResponse, also cap the live socket's per-read timeout to
+    remaining budget. The caller closes this response, so no timeout restore is
+    needed. Unsupported synthetic readers still enforce pre/post-read checks.
+    """
     readline = getattr(response, 'readline', None)
     if not callable(readline):
         raise RuntimeError('HOLD_STREAM_BOUNDED_READER_UNAVAILABLE')
     while True:
-        line = readline(max_line + 1)
+        if deadline is not None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED')
+            sock = getattr(getattr(getattr(response, 'fp', None),
+                                   'raw', None), '_sock', None)
+            if sock is not None and callable(getattr(sock, 'settimeout', None)):
+                existing = sock.gettimeout()
+                if existing is None or existing > remaining:
+                    sock.settimeout(remaining)
+        try:
+            line = readline(max_line + 1)
+        except TimeoutError as exc:
+            raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED') from exc
+        if deadline is not None and time.monotonic() > deadline:
+            raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED')
         if line == b'':
             return
         if not isinstance(line, bytes) or len(line) > max_line:
@@ -998,7 +1018,7 @@ def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadli
                           parse_float=reject_nonfinite_json_float,
                           object_pairs_hook=reject_duplicate_json_keys)
 
-    for wire_index, wire in enumerate(bounded_stream_lines(response, max_line)):
+    for wire_index, wire in enumerate(bounded_stream_lines(response, max_line, deadline=deadline)):
         # Fingerprint the complete bounded HTTP entity bytes before BOM/CRLF
         # normalization; no raw model output is exported by this receipt.
         # Transport provenance is NOT browser, served-model or S03 attestation.
