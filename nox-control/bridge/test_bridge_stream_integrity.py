@@ -40,7 +40,7 @@ class FakeResponse:
 class BridgeStreamIntegrity(unittest.TestCase):
     def run_stream(self, lines, status=200, write_ok=True,
                    memory_error=False, soul_error=False,
-                   vol_error=False, affect_error=False):
+                   vol_error=False, affect_error=False, write_raises=False):
         writes, soul_logs, notices = [], [], []
         response = FakeResponse(lines, status)
         class Client:
@@ -49,6 +49,8 @@ class BridgeStreamIntegrity(unittest.TestCase):
 
         def write(user, answer):
             writes.append((user, answer))
+            if write_raises:
+                raise RuntimeError("S03_WRITE_RETURN_LOST")
             return write_ok
 
         class Soul:
@@ -178,6 +180,18 @@ class BridgeStreamIntegrity(unittest.TestCase):
         self.assertEqual(events[-1]["type"], "done")
         self.assertEqual(events[-1]["memory_write_receipt"]["status"], "HOLD")
         self.assertFalse(events[-1]["memory_write_receipt"]["s03_readback_verified"])
+
+    def test_write_exception_after_complete_turn_is_terminal_but_never_s03_success(self):
+        events, writes, logs, _ = self.run_stream([
+            self.chunk("answer"), self.chunk(finish="stop"), "data: [DONE]"
+        ], write_raises=True)
+        self.assertEqual([e["type"] for e in events].count("done"), 1)
+        self.assertTrue(events[-1]["generation_complete"])
+        self.assertEqual(events[-1]["memory_write_receipt"], {
+            "status": "HOLD", "s03_readback_verified": False,
+            "reason": "S03_WRITE_EXCEPTION", "retry_safe": False})
+        self.assertEqual(writes, [("Привет", "answer")])
+        self.assertEqual(logs, [])
 
     def test_failed_s03_context_returns_terminal_hold_without_model_or_write(self):
         events, writes, logs, last = self.run_stream(
