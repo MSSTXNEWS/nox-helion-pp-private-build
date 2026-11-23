@@ -1,0 +1,19 @@
+name: NOX A4 full current question regression
+on:
+  pull_request:
+    paths:
+      - 'nox-control/bridge/nox_bridge.py'
+      - 'nox-control/bridge/test_build_msgs_current_user.py'
+      - '.github/workflows/nox-a4-full-current-question.yml'
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: One real source-level regression; no native host access
+        run: python -m unittest discover -s nox-control/bridge -p 'test_build_msgs_current_user.py' -v
