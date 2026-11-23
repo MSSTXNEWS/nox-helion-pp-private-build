@@ -720,3 +720,78 @@ test('R34 gzip trailer/CRC strict EOF under live HTTP: 3 turns, deadlines, abort
   }finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
 });
 }
+
+
+// R35: receiving [DONE] from member one never authorizes accepting a corrupt
+// second gzip member, unverified trailing junk, or an HTTP body without EOF.
+{
+const evt=x=>'data: '+JSON.stringify({choices:[x]})+'\n\n';
+const visible=['Привет 🌍','Hola 🌈','Третий ✨'];
+const first=turn=>gzipSync(Buffer.from(evt({delta:{content:visible[turn-1]}})+
+  evt({delta:{},finish_reason:'stop'})+'data: [DONE]\n\n'));
+const second=gzipSync(Buffer.from(': harmless gzip member after DONE\n\n'));
+const sha=x=>createHash('sha256').update(x).digest('hex');
+function gate(){let release;const promise=new Promise(r=>{release=r;});return {promise,release};}
+async function bound(p,ms=1200){
+  let timer;try{return await Promise.race([p,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('R35_HUNG')),ms);})]);}
+  finally{clearTimeout(timer);}
+}
+test('R35 real gzip multistream EOF: valid members, bad trailing CRC/truncation/junk, deadline, abort, exactly-once POST',async()=>{
+  const counts=[];const stalled=gate();const unhandled=[];
+  const onUnhandled=e=>unhandled.push(String(e));
+  process.on('unhandledRejection',onUnhandled);
+  const server=createServer(async(req,res)=>{
+    let input='';for await(const data of req)input+=data;
+    const {turn,kind}=JSON.parse(input);counts.push({turn,kind});
+    const head=first(turn),tail=Buffer.from(second);
+    if(kind==='trailer')tail[tail.length-8]^=0xa5;
+    const payload=Buffer.concat([head,
+      kind==='truncated'?tail.subarray(0,-4):
+      kind==='junk'?Buffer.from('NOT_A_GZIP_MEMBER'):tail]);
+    res.writeHead(200,{'content-type':'text/event-stream','content-encoding':'gzip','cache-control':'no-store'});
+    res.write(payload);
+    if(kind==='stall'||kind==='abort'){
+      if(kind==='abort')stalled.release();
+      return; // no HTTP EOF, even though member1 contains [DONE]
+    }
+    res.end();
+  });
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));
+  const url='http://127.0.0.1:'+server.address().port+'/nox/chat';
+  const post=(turn,kind,signal,opts={})=>measureSseRawHttp(url,{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({turn,kind}),signal
+  },{startedAt:performance.now(),idleTimeoutMs:480,totalTimeoutMs:900,...opts});
+  try{
+    const healthy=await bound(post(1,'valid'));
+    assert.equal(healthy.verified,true);
+    assert.equal(healthy.visible_text_sha256,sha(visible[0]));
+    assert.ok(healthy.first_byte_ms<=healthy.ttft_ms);
+    assert.ok(healthy.ttft_ms<=healthy.sse_done_ms);
+    assert.ok(healthy.sse_done_ms<=healthy.completion_ms);
+    assert.equal(healthy.native_verified,false);
+    assert.equal(healthy.browser_authenticated,false);
+    assert.equal(healthy.canonical_s03_verified,false);
+    for(const [turn,kind] of [[2,'trailer'],[3,'truncated'],[3,'junk']]){
+      await assert.rejects(bound(post(turn,kind)),
+        e=>e?.code==='B4_COMPRESSED_INTEGRITY_FAILED',kind+' must fail despite DONE in gzip member1');
+    }
+    await assert.rejects(bound(post(2,'stall',undefined,{totalTimeoutMs:95,idleTimeoutMs:430})),
+      e=>e?.code==='B4_TOTAL_TIMEOUT');
+    const aborter=new AbortController();
+    const pending=post(3,'abort',aborter.signal);
+    await bound(stalled.promise);
+    aborter.abort();
+    await assert.rejects(bound(pending),e=>e?.code==='B4_FETCH_ABORTED');
+    await sleep(5);
+    assert.deepEqual(counts,[
+      {turn:1,kind:'valid'},{turn:2,kind:'trailer'},
+      {turn:3,kind:'truncated'},{turn:3,kind:'junk'},
+      {turn:2,kind:'stall'},{turn:3,kind:'abort'}
+    ],'one POST per explicit attempt; no replays');
+    assert.deepEqual(unhandled,[],'late TCP/zlib errors are handled');
+  }finally{
+    server.closeAllConnections();await new Promise(r=>server.close(r));
+    process.off('unhandledRejection',onUnhandled);
+  }
+});
+}
