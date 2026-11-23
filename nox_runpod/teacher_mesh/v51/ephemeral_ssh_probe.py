@@ -405,6 +405,47 @@ def api(method: str, path: str, key: str, data: dict | None = None):
     return value
 
 
+# Exact owner-scoped lookup adapted from reviewed PR #543. Keep legacy key
+# attach/detach and their cleanup untouched; never follow redirects on this GET.
+class _ExactLookupNoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def exact_owner_instance(key: str):
+    if not isinstance(key, str) or not key or len(key) > 4096 or "\r" in key or "\n" in key:
+        raise RuntimeError("HOLD_OWNER_API_CREDENTIAL_UNAVAILABLE")
+    request = urllib.request.Request(
+        API + f"/instances/{INSTANCE}/?owner=me",
+        headers={"Authorization": "Bearer " + key, "Accept": "application/json"},
+        method="GET")
+    try:
+        with urllib.request.build_opener(_ExactLookupNoRedirect()).open(request, timeout=20) as response:
+            raw = response.read(1048577)
+    except urllib.error.HTTPError as exc:
+        status = exc.code
+        exc.close()
+        # Even 404 means absent from this owner's view, not proven deleted.
+        raise RuntimeError("HOLD_EXACT_INSTANCE_NOT_VISIBLE" if status == 404
+                           else "HOLD_PROVIDER_HTTP_" + str(status)) from None
+    except (urllib.error.URLError, TimeoutError, OSError):
+        raise RuntimeError("HOLD_PROVIDER_TRANSPORT") from None
+    if len(raw) > 1048576:
+        raise RuntimeError("HOLD_PROVIDER_RESPONSE_SIZE")
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        raise RuntimeError("HOLD_PROVIDER_RESPONSE") from None
+    if not isinstance(data, dict) or data.get("success") is False:
+        raise RuntimeError("HOLD_PROVIDER_RESPONSE")
+    row = data.get("instances")
+    if not isinstance(row, dict):
+        raise RuntimeError("HOLD_PROVIDER_RESPONSE_SHAPE")
+    if str(row.get("id")) != str(INSTANCE):
+        raise RuntimeError("HOLD_EXACT_INSTANCE_IDENTITY")
+    return row
+
+
 def keys(key: str) -> list[dict]:
     data = api("GET", f"/instances/{INSTANCE}/ssh/", key)
     entries = data.get("ssh_keys", data.get("keys", [])) if isinstance(data, dict) else data
