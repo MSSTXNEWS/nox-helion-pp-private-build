@@ -256,6 +256,23 @@ class FactReceiptTest(unittest.TestCase):
         self.assertFalse(unsafe_snapshot["s03_readback_verified"])
         self.assertEqual(len(writes), 2)
 
+    def test_6a04_invalid_vram_census_is_not_spare_capacity(self):
+        """Reject a bad GPU sample rather than report fabricated spare VRAM."""
+        def sample(output):
+            with mock.patch.object(W.subprocess, "run",
+                                   return_value=types.SimpleNamespace(stdout=output)):
+                return W._gpu()
+
+        valid = ("0, 20, 1024, 32768, 58, 90\n"
+                 "1, 10, 0, 32768, 53, 80")
+        self.assertEqual(len(sample(valid)), 2)
+        # Even a malformed second GPU invalidates the whole two-GPU census.
+        for bad in ("-1, 32768", "32769, 32768", "NaN, 32768",
+                    "0, Infinity", "0, 0", "1e309, 32768"):
+            with self.subTest(vram=bad):
+                self.assertEqual(sample("0, 20, 1024, 32768, 58, 90\n"
+                                        "1, 10, " + bad + ", 53, 80"), [])
+
     def test_1a03_stopped_snapshot_must_not_claim_complete_recovery(self):
         """A terminal STOP is not a completed model turn or canonical S03 proof."""
         snapshot = next(r.endpoint for r in self.app.routes
