@@ -64,18 +64,120 @@ for k in memory.current memory.max memory.events cpu.stat; do
     printf 'cgroup_%s=unavailable\n' "$k"
   fi
 done
-cur=$(cat /sys/fs/cgroup/memory.current 2>/dev/null || :)
-lim=$(cat /sys/fs/cgroup/memory.max 2>/dev/null || :)
-# This is only the RAM threshold, NOT an owner/CAS/STOP/SSD/VRAM admission.
-if [[ "$cur" =~ ^[0-9]+$ && "$lim" =~ ^[0-9]+$ ]]; then
-  headroom=$((lim - cur))
-  printf 'cgroup_mem_headroom_bytes=%s\n' "$headroom"
-  if (( headroom >= 2147483648 )); then
-    echo 'cgroup_ram_2gib_threshold=PASS_THRESHOLD_ONLY'
-  else
-    echo 'cgroup_ram_2gib_threshold=HOLD_LOW_HEADROOM'
-  fi
+# Inspect the actual Flash listener, never the observer's root cgroup.
+# Even a full visible walk can hide ancestors in a delegated cgroup namespace.
+# Report visible headroom only; owner-side scope validation is a separate gate.
+ram_snapshot=''
+if command -v python3 >/dev/null 2>&1 && command -v ss >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1; then
+  ram_snapshot=$(timeout -k 1s 8s python3 - <<'PYCGROUP'
+import os
+import re
+import subprocess
+from pathlib import Path, PurePosixPath
+
+def read(path):
+    return Path(path).read_text().strip()
+
+def listener():
+    rows = subprocess.check_output(
+        ["ss", "-H", "-ltnp", "sport = :8081"], text=True, timeout=2
+    ).splitlines()
+    pids = set()
+    for row in rows:
+        owners = re.findall(r"pid=(\d+),fd=\d+", row)
+        if not owners:
+            raise ValueError("listener owner unavailable")
+        pids.update(owners)
+    if len(pids) != 1:
+        raise ValueError("ambiguous listener")
+    return pids.pop()
+
+def identity(pid):
+    proc = Path("/proc") / pid
+    # comm can contain spaces and parentheses; fields after the last ')' start at field 3.
+    ticks = read(proc / "stat").rsplit(")", 1)[1].split()[19]
+    exe = os.path.basename(os.readlink(proc / "exe"))
+    if exe != "llama-server" or not ticks.isdecimal():
+        raise ValueError("unexpected serving process")
+    for ns in ("cgroup", "mnt", "net"):
+        if os.readlink(proc / "ns" / ns) != os.readlink("/proc/self/ns/" + ns):
+            raise ValueError("namespace mismatch")
+    membership = read(proc / "cgroup").splitlines()
+    if len(membership) != 1 or not membership[0].startswith("0::/"):
+        raise ValueError("not a unified cgroup")
+    return ticks, membership[0][3:]
+
+def mount():
+    candidates = []
+    for line in read("/proc/self/mountinfo").splitlines():
+        left, right = line.split(" - ", 1)
+        fields = left.split()
+        if right.split()[0] == "cgroup2":
+            # Do not guess through escaped paths or a subtree-only mount.
+            if fields[3] != "/" or "\\" in fields[4]:
+                continue
+            candidates.append(Path(fields[4]))
+    if len(candidates) != 1:
+        raise ValueError("ambiguous cgroup2 mount")
+    return candidates[0]
+
+def visible_headroom(root, membership):
+    rel = PurePosixPath(membership)
+    if not rel.is_absolute() or ".." in rel.parts:
+        raise ValueError("invalid membership")
+    leaf = root.joinpath(*rel.parts[1:])
+    if leaf.resolve() != leaf or root.resolve() != root:
+        raise ValueError("unexpected symlink")
+    current = leaf
+    limits = []
+    count = 0
+    while True:
+        count += 1
+        if count > 128:
+            raise ValueError("ancestor depth")
+        maximum = current / "memory.max"
+        usage = current / "memory.current"
+        # The real cgroup v2 root may expose neither memory controller file.
+        if current == root and not maximum.exists() and not usage.exists():
+            break
+        cap, used = read(maximum), read(usage)
+        if not used.isascii() or not used.isdecimal():
+            raise ValueError("invalid usage")
+        if cap != "max":
+            if not cap.isascii() or not cap.isdecimal():
+                raise ValueError("invalid limit")
+            limits.append(max(0, int(cap) - int(used)))
+        if current == root:
+            break
+        current = current.parent
+    return min(limits) if limits else None
+
+try:
+    pid = listener()
+    before = identity(pid)
+    root = mount()
+    headroom = visible_headroom(root, before[1])
+    if listener() != pid or identity(pid) != before or mount() != root:
+        raise ValueError("serving identity changed")
+    print("cgroup_serving_pid=" + pid)
+    print("cgroup_serving_startticks=" + before[0])
+    print("cgroup_visible_headroom_bytes=" + ("unavailable" if headroom is None else str(headroom)))
+    # Preserve the old threshold key, but never emit a positive admission
+    # from a container-local diagnostic: hidden ancestors remain possible.
+    state = "HOLD_LOW_HEADROOM" if headroom is not None and headroom < 2147483648 else "HOLD_SCOPE_UNVERIFIED"
+    print("cgroup_mem_headroom_bytes=unavailable")
+    print("cgroup_ram_2gib_threshold=" + state)
+except (OSError, ValueError, IndexError, RuntimeError, subprocess.SubprocessError):
+    print("cgroup_visible_headroom_bytes=unavailable")
+    print("cgroup_mem_headroom_bytes=unavailable")
+    print("cgroup_ram_2gib_threshold=HOLD_UNKNOWN")
+PYCGROUP
+  ) || ram_snapshot=''
+fi
+if [ -n "$ram_snapshot" ]; then
+  printf '%s\n' "$ram_snapshot"
 else
+  echo 'cgroup_visible_headroom_bytes=unavailable'
   echo 'cgroup_mem_headroom_bytes=unavailable'
   echo 'cgroup_ram_2gib_threshold=HOLD_UNKNOWN'
 fi
