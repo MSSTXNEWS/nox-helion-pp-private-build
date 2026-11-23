@@ -350,7 +350,14 @@ async def smart(history, max_tokens=1500):
         write_returned = remember(user, ans)
         # Optional soul telemetry must never claim an S03 turn rejected by
         # the canonical writer. An ambiguous failure is not retry-safe.
-        if SOUL and write_returned: SOUL.log_turn(user, ans)
+        if SOUL and write_returned:
+            try:
+                SOUL.log_turn(user, ans)
+            except Exception as exc:
+                # S03 already returned success: optional Soul telemetry must
+                # never turn the HTTP reply into a 502 and invite a duplicate
+                # inference/write on client retry.
+                log("soul_log_error " + type(exc).__name__)
     return ans, bool(mem)
 
 @app.get("/health")

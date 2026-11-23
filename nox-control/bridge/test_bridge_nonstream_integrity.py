@@ -19,7 +19,7 @@ compiled = compile(ast.fix_missing_locations(ast.Module(body=functions, type_ign
 
 
 class NonstreamCompletionFence(unittest.TestCase):
-    def invoke(self, finish_reason, content="finished", reasoning_content=None):
+    def invoke(self, finish_reason, content="finished", reasoning_content=None, soul=None):
         writes = []
         class Response:
             status_code = 200
@@ -42,7 +42,7 @@ class NonstreamCompletionFence(unittest.TestCase):
             "adapt_tokens": lambda _: 64,
             "LAST_CHAT": clock,
             "remember": lambda u, a: writes.append((u, a)) or True,
-            "SOUL": None,
+            "SOUL": soul,
             "time": time,
         }
         exec(compiled, scope)
@@ -56,6 +56,18 @@ class NonstreamCompletionFence(unittest.TestCase):
 
     def test_stop_persists_one_complete_turn(self):
         reply, writes, clock = self.invoke("stop")
+        self.assertEqual(reply, ("finished", False))
+        self.assertEqual(writes, [("question", "finished")])
+        self.assertGreater(clock["t"], 0)
+
+    def test_soul_failure_after_s03_commit_does_not_fail_complete_reply(self):
+        # Optional Soul logs may fail after canonical S03 persist_turn returned.
+        # The browser must receive the completed answer, not retry a 502.
+        class FailingSoul:
+            def log_turn(self, _user, _answer):
+                raise OSError("optional log unavailable")
+
+        reply, writes, clock = self.invoke("stop", soul=FailingSoul())
         self.assertEqual(reply, ("finished", False))
         self.assertEqual(writes, [("question", "finished")])
         self.assertGreater(clock["t"], 0)
