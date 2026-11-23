@@ -4307,5 +4307,41 @@ async function check(chunks, status=200) {
         self.assertEqual(owner_session_cookie_pin([signed, locale]), pin)
 
 
+    def test_owner_history_json_root_must_be_object_before_ru_es_turn2(self):
+        """Malformed/scalar API JSON never certifies persisted RU/ES history.
+
+        Exact source-only browser-history representation contract; no native
+        POST, actual session, or canonical S03 writer/readback is exercised.
+        """
+        class Response:
+            status = 200
+            headers = {"content-type": "application/json; charset=utf-8"}
+
+            def __init__(self, raw):
+                self.raw = raw
+
+            async def body(self):
+                return self.raw
+
+        def read(wire):
+            return asyncio.run(json_response(Response(wire.encode("utf-8"))))
+
+        good = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": "Привет 🧠"},
+            {"role": "assistant", "content": "Здравствуйте"},
+            {"role": "user", "content": "Sigue en español"},
+            {"role": "assistant", "content": "Claro, seguimos en español 🪐"},
+        ]}
+        self.assertEqual(read(json.dumps(good, ensure_ascii=False)), good)
+        self.assertEqual(read("{}"), {})
+        for bad in ("null", "[]", "[{}]", "true", "false", "7",
+                    '"español"', '{"messages":', '{"dialog_id":}',
+                    '{}[]', '', ' \n'):
+            with self.subTest(payload=repr(bad)):
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_OWNER_HTTP_JSON_ROOT"):
+                    read(bad)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1723,9 +1723,19 @@ async def json_response(response, limit=200000):
         except ValueError:
             raise RuntimeError('HOLD_OWNER_HTTP_INTEGER_DIGITS') from None
 
-    return json.loads(decoded, object_pairs_hook=unique_keys,
-                      parse_constant=reject_nonfinite, parse_float=finite_float,
-                      parse_int=bounded_int)
+    # All callers consume one owner-scoped API object. A syntactically valid
+    # JSON scalar/list/null or a truncated document is not trusted history,
+    # even if it passed wire/MIME checks. Classify shape failures as HOLD
+    # instead of leaking JSONDecodeError or later unclassified .get() errors.
+    try:
+        document = json.loads(decoded, object_pairs_hook=unique_keys,
+                              parse_constant=reject_nonfinite, parse_float=finite_float,
+                              parse_int=bounded_int)
+    except json.JSONDecodeError:
+        raise RuntimeError('HOLD_OWNER_HTTP_JSON_ROOT') from None
+    if not isinstance(document, dict):
+        raise RuntimeError('HOLD_OWNER_HTTP_JSON_ROOT')
+    return document
 
 
 async def capture_private_screenshot(page, report, directory, name, masks, content,
