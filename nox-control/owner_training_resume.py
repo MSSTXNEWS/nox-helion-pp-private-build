@@ -948,13 +948,35 @@ def global_stop():
 
 
 def lease_free():
-    fd = os.open(STATE/'forge_training.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    """Probe an existing, pathname-bound GPU1 lease; never create shared state."""
+    path = STATE/'forge_training.lock'
+    # A read-only admission probe must not invent a missing native lock or
+    # accept a lock through an aliased parent directory.
+    if any(item.is_symlink() for item in (path, *path.parents)):
+        raise RuntimeError('HOLD_SHARED_GPU1_LEASE_PATH')
     try:
+        fd = os.open(path, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError as exc:
+        raise RuntimeError('HOLD_SHARED_GPU1_LEASE_PATH') from exc
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode):
+            raise RuntimeError('HOLD_SHARED_GPU1_LEASE_PATH')
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return True
         except BlockingIOError:
             return False
+        # Locking an inode is not proof that the canonical pathname still
+        # refers to it after an atomic rename/rebind.
+        try:
+            named = os.stat(path, follow_symlinks=False)
+        except OSError as exc:
+            raise RuntimeError('HOLD_SHARED_GPU1_LEASE_PATH') from exc
+        if (any(item.is_symlink() for item in (path, *path.parents))
+                or not stat.S_ISREG(named.st_mode)
+                or (before.st_dev, before.st_ino) != (named.st_dev, named.st_ino)):
+            raise RuntimeError('HOLD_SHARED_GPU1_LEASE_PATH')
+        return True
     finally:
         os.close(fd)
 

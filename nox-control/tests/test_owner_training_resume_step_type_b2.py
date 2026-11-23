@@ -4,6 +4,7 @@ Extract the exact functions under test from the pinned owner script without
 importing its maintenance entrypoint or starting a service.
 """
 import ast
+import fcntl
 import copy
 import hashlib
 import json
@@ -4106,3 +4107,51 @@ class SignedCheckpointStateRootTypeFence(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class SharedGpu1LeasePathNoCreate(unittest.TestCase):
+    def test_lease_probe_requires_preexisting_regular_canonical_lock(self):
+        """Execute real owner lease_free in isolation; never touch native locks."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        matches = [node for node in tree.body
+                   if isinstance(node, ast.FunctionDef) and node.name == "lease_free"]
+        self.assertEqual(len(matches), 1)
+        code = compile(ast.Module(body=matches, type_ignores=[]), str(SOURCE), "exec")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            state = root / "state"
+            state.mkdir()
+            namespace = {"STATE": state, "os": os, "stat": stat,
+                         "fcntl": fcntl, "Path": Path}
+            exec(code, namespace)
+            probe = namespace["lease_free"]
+            lock = state / "forge_training.lock"
+            with self.assertRaisesRegex(RuntimeError, "HOLD_SHARED_GPU1_LEASE_PATH"):
+                probe()
+            self.assertFalse(lock.exists(), "a missing native lock must not be created")
+            lock.write_bytes(b"")
+            self.assertTrue(probe(), "free canonical regular lock")
+            held = os.open(lock, os.O_RDWR)
+            try:
+                fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                self.assertFalse(probe(), "genuinely busy lock is not free")
+            finally:
+                fcntl.flock(held, fcntl.LOCK_UN)
+                os.close(held)
+            self.assertTrue(probe(), "lock should recover without mutation")
+            lock.unlink()
+            lock.mkdir()
+            with self.assertRaisesRegex(RuntimeError, "HOLD_SHARED_GPU1_LEASE_PATH"):
+                probe()
+            lock.rmdir()
+            lock.symlink_to(root / "missing")
+            with self.assertRaisesRegex(RuntimeError, "HOLD_SHARED_GPU1_LEASE_PATH"):
+                probe()
+            lock.unlink()
+            other = root / "other"
+            other.mkdir()
+            (other / "forge_training.lock").write_bytes(b"")
+            moved = root / "moved-state"
+            state.rename(moved)
+            state.symlink_to(other, target_is_directory=True)
+            with self.assertRaisesRegex(RuntimeError, "HOLD_SHARED_GPU1_LEASE_PATH"):
+                probe()
