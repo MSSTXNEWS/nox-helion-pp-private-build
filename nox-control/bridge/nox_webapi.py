@@ -1291,6 +1291,11 @@ def install(app, B):
                                 if not isinstance(event, dict) or "error" in event:
                                     upstream_failure = "UPSTREAM_ERROR_EVENT"
                                     break
+                                # A text-only response cannot claim completion
+                                # when the upstream also emits hidden tool work.
+                                if "tool_calls" in event or "function_call" in event:
+                                    upstream_failure = "UPSTREAM_UNSUPPORTED_DELTA"
+                                    break
                                 choices = event.get("choices")
                                 if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
                                     upstream_failure = "UPSTREAM_CHOICES_INVALID"
