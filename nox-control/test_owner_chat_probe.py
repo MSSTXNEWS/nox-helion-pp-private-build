@@ -4230,7 +4230,7 @@ class ProbeTests(unittest.TestCase):
                 setattr(wrapped, alias, left)
                 with self.subTest(alias=alias):
                     with self.assertRaisesRegex(
-                            RuntimeError, '^HOLD_STREAM_UNBOUNDED_SOCKET_READER):
+                            RuntimeError, '^HOLD_STREAM_UNBOUNDED_SOCKET_READER$'):
                         list(probe.bounded_stream_lines(
                             wrapped, deadline=time.monotonic() + 2))
                     self.assertEqual(wrapped.read_calls, 0)
