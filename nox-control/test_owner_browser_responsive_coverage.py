@@ -14,13 +14,19 @@ from owner_chat_browser_qa import (COMPOSER_JS, RESPONSIVE_LAYOUT_CASES,
 
 class NumericTokenIntegrityContract(unittest.TestCase):
     def test_digits_separated_by_whitespace_cannot_pass_as_a_single_number(self):
-        expected = ','.join(map(str,range(1,41)))
         for parser in (core_public_numeric_answer, transport_public_numeric_answer):
             with self.subTest(parser=parser.__module__):
+                # Baseline QA has a 100-char contract; the transport probe
+                # intentionally supports the longer forty-number challenge.
+                limit = 11 if parser is core_public_numeric_answer else 41
+                expected = ','.join(map(str, range(1, limit)))
                 self.assertEqual(parser('  1,  2,\n3  '), '1,2,3')
                 self.assertEqual(parser(expected), expected)
-                self.assertIsNone(parser(expected.replace(',10,', ',1 0,', 1)))
-                self.assertIsNone(parser(expected.replace(',10,', ',1\n0,', 1)))
+                corrupt = expected.split(',')
+                corrupt[9] = '1 0'
+                self.assertIsNone(parser(','.join(corrupt)))
+                corrupt[9] = '1\n0'
+                self.assertIsNone(parser(','.join(corrupt)))
                 for malformed in ('1 0,9', '1,,2', '1,2,', '1 2', '1,2x'):
                     self.assertIsNone(parser(malformed))
 
