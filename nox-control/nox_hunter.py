@@ -203,6 +203,24 @@ def _local(tag: str) -> str:
     return tag.rsplit("}", 1)[-1].lower()
 
 
+# File extensions are a second provenance fence: Atom/RSS publishers often
+# omit link media types, or incorrectly label a binary download "alternate".
+# Scientific PDFs remain citable; these opaque artifacts are never articles.
+NON_ARTICLE_SUFFIXES = (
+    ".zip", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".7z", ".rar",
+    ".exe", ".dll", ".bin", ".safetensors", ".gguf",
+    ".mp3", ".mp4", ".mov", ".png", ".jpg", ".jpeg", ".webp",
+)
+
+
+def _is_artifact_link(value: str) -> bool:
+    try:
+        return urlsplit(value).path.lower().endswith(NON_ARTICLE_SUFFIXES)
+    except ValueError:
+        # Defer malformed URL handling to _canonical_url and quarantine.
+        return False
+
+
 def _child_text(node: ET.Element, names: set[str]) -> str:
     for child in list(node):
         if _local(child.tag) in names:
@@ -236,9 +254,11 @@ def _feed_items(body: bytes) -> list[dict[str, str]]:
                 media_type = child.attrib.get("type", "").partition(";")[0].strip().lower()
                 article_types = {"text/html", "application/xhtml+xml",
                                  "application/pdf", "text/plain"}
-                if (rel in {"alternate", ""} and (href or text)
-                        and (not media_type or media_type in article_types)):
-                    link = href or text
+                candidate = href or text
+                if (rel in {"alternate", ""} and candidate
+                        and (not media_type or media_type in article_types)
+                        and not _is_artifact_link(candidate)):
+                    link = candidate
                     break
         content = _child_text(node, {"content", "encoded", "summary", "description"})
         published = _child_text(node, {"published", "updated", "pubdate", "date"})
@@ -486,6 +506,8 @@ def _item_record(source: dict[str, Any], item: dict[str, str], now: float) -> tu
     # Item links remain references only; they are never fetched. Unsafe links
     # go into the candidate quarantine, not verified items or S03.
     item_url = _canonical_url(raw_url)
+    if _is_artifact_link(item_url):
+        raise HunterError("item URL points to a binary artifact, not publication evidence")
     # Validate every persisted field, not only the text used for dedup.
     # A malformed JSON escaped surrogate in published_at otherwise reaches
     # SQLite unchanged, aborting the entire poll after healthy inserts.

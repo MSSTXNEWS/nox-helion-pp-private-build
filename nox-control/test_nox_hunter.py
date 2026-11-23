@@ -163,6 +163,44 @@ class HunterURLSafetyTests(unittest.TestCase):
                 ("Real article", "https://example.org/article"),
             ])
 
+    def test_untyped_artifact_links_quarantine_without_poisoning_publications(self):
+        # Alternate != article: real Atom feeds omit type, and RSS links can
+        # point straight at ZIPs. A query suffix must not disguise the path.
+        source = hunter._validate_source({
+            "id": "atom-artifacts", "kind": "atom",
+            "url": "https://example.org/feed",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        feed = (b'<feed xmlns="http://www.w3.org/2005/Atom">'
+                b'<entry><title>ZIP only</title><link rel="alternate" '
+                b'href="https://example.org/build.ZIP?download=1"/></entry>'
+                b'<entry><title>HTML fallback</title><link rel="alternate" '
+                b'href="/weights.gguf"/><link rel="alternate" '
+                b'href="/article"/></entry>'
+                b'<entry><title>Paper PDF</title><link rel="alternate" '
+                b'href="/paper.pdf"/></entry>'
+                b'</feed>')
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "hunter.sqlite"
+            with patch.object(hunter, "_fetch", return_value=(
+                    feed, None, None, "application/atom+xml", False)):
+                result = hunter.poll_due([source], db, now=1000.0)[0]
+            self.assertEqual((result["added"], result["quarantined"]), (2, 1))
+            with sqlite3.connect(db) as conn:
+                rows = conn.execute("SELECT title,item_url FROM items ORDER BY title").fetchall()
+            self.assertEqual(rows, [
+                ("HTML fallback", "https://example.org/article"),
+                ("Paper PDF", "https://example.org/paper.pdf"),
+            ])
+        # The item-level fence applies to RSS, GitHub and Crossref candidates too.
+        for suffix in ("/media.zip", "/weights.GGUF?raw=1", "/installer.exe"):
+            with self.subTest(suffix=suffix), self.assertRaisesRegex(
+                    hunter.HunterError, "binary artifact"):
+                hunter._item_record(source, {
+                    "title": "Not an article", "url": suffix,
+                    "content": "Must not become provenance", "published": "",
+                }, 1000.0)
+
     def test_json_surrogates_quarantine_only_bad_candidates(self):
         # A legal JSON escape can decode to an invalid lone surrogate.
         # Source config fails cleanly, while malformed feed items are
