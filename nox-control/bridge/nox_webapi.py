@@ -576,15 +576,36 @@ def install(app, B):
             # Explicit False is a rejected S03 write, not an accepted fact.
             # Commit ambiguity prevents safe blind retry; never emit a mirror.
             if persist_result is False:
+                # A false return might follow a commit; revoke stale recall.
+                _revoke_uncertain_s03_cache(B)
                 return JSONResponse({"status": "HOLD", "reason": "S03_PERSIST_REJECTED",
                                      "saved": False, "s03_write_returned": False,
                                      "retry_safe": False, "s03_readback_verified": False},
                                     status_code=503)
         except Exception as e:
+            # A writer can commit then raise; never retain a prior cached recall,
+            # assert no write, or suggest a blind retry of this fact.
+            _revoke_uncertain_s03_cache(B)
             B.log("fact_persist_error %s" % type(e).__name__)
             return JSONResponse({"status": "HOLD", "reason": "S03_PERSIST_FAILED",
-                                 "saved": False, "s03_readback_verified": False},
+                                 "saved": False, "s03_write_returned": False,
+                                 "retry_safe": False, "s03_readback_verified": False},
                                 status_code=503)
+        # A successful fact write changes what the very next chat can recall.
+        # Native and web chat share this cache; mirror export is not enough.
+        invalidate = getattr(B, "invalidate_s03_cache", None)
+        if callable(invalidate):
+            try:
+                invalidate()
+            except Exception as e:
+                B.log("fact_s03_cache_invalidation_error %s" % type(e).__name__)
+                # Canonical writer already returned; do not mirror or retry
+                # a fact whose fresh recall cannot currently be guaranteed.
+                return JSONResponse({"status": "PARTIAL_HOLD",
+                                     "reason": "S03_CACHE_INVALIDATION_FAILED",
+                                     "saved": False, "s03_write_returned": True,
+                                     "retry_safe": False, "s03_readback_verified": False},
+                                    status_code=503)
         try:
             with open(FACTS, "a", encoding="utf-8") as f:
                 f.write(json.dumps({"t": int(time.time()), "key": str(b.get("fact_key", ""))[:120], "content": txt, "source": str(b.get("source_ref") or b.get("source", ""))[:200]}, ensure_ascii=False) + "\n")
