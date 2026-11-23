@@ -430,6 +430,29 @@ class FactReceiptTest(unittest.TestCase):
         with mock.patch.dict(sys.modules, {"s03_memory": module}):
             return asyncio.run(self.endpoint(Request({"content": "Проверенный факт", "fact_key": "x"})))
 
+    def test_3a03_missing_source_reference_never_claims_s03_readback(self):
+        """A stale/unknown local source ID must not look like a found fact."""
+        endpoint = next(r.endpoint for r in self.app.routes if r.path == "/api/s03/record")
+        with mock.patch.object(W, "SRC", {"1": "контекст S03", "2": ""}):
+            missing = asyncio.run(endpoint("999"))
+            blank = asyncio.run(endpoint("2"))
+            hit = asyncio.run(endpoint("1"))
+        for response in (missing, blank):
+            self.assertEqual(response.status_code, 404)
+            row = json.loads(response.body)
+            self.assertEqual(row["status"], "HOLD")
+            self.assertEqual(row["reason"], "S03_SOURCE_NOT_FOUND")
+            self.assertFalse(row["s03_readback_verified"])
+            self.assertNotIn("content", row)
+            self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertEqual(hit.status_code, 200)
+        row = json.loads(hit.body)
+        self.assertEqual(row["status"], "OK")
+        self.assertEqual(row["content"], "контекст S03")
+        self.assertEqual(row["source_scope"], "PROCESS_LOCAL")
+        self.assertFalse(row["s03_readback_verified"])
+        self.assertEqual(hit.headers["cache-control"], "no-store")
+
     def test_failed_s03_does_not_publish_mirror_or_saved_receipt(self):
         m = types.ModuleType("s03_memory")
         def fail(*a):

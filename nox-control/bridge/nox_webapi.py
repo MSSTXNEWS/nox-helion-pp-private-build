@@ -461,8 +461,19 @@ def install(app, B):
 
     @app.get("/api/s03/record")
     async def a_record(id: str = ""):
+        # SRC only indexes the last process-local recall. An absent reference
+        # must never masquerade as a successfully retrieved S03 document.
+        # Even a hit is NOT an independent canonical S03 readback.
         r = SRC.get(str(id))
-        return {"status": "OK", "id": id, "content": r or "запись не найдена в последнем поиске", "category": "memory"}
+        if not isinstance(r, str) or not r.strip():
+            return JSONResponse({"status": "HOLD", "reason": "S03_SOURCE_NOT_FOUND",
+                                 "id": id, "s03_readback_verified": False},
+                                status_code=404,
+                                headers={"Cache-Control": "no-store"})
+        return JSONResponse({"status": "OK", "id": id, "content": r,
+                             "category": "memory", "source_scope": "PROCESS_LOCAL",
+                             "s03_readback_verified": False},
+                            headers={"Cache-Control": "no-store"})
 
     @app.post("/api/nox/memory/facts")
     @app.post("/api/s03/remember")
