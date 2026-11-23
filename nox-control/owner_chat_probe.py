@@ -942,6 +942,45 @@ def require_stream_http_framing(response):
         raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
 
 
+def deadline_chunk_read(read1, size, sock, deadline):
+    """Bound HTTP chunk metadata reads as well as the payload read."""
+    from http.client import HTTPException
+    from socket import SHUT_RD
+    from threading import Event, Timer
+
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED')
+    expired = Event()
+
+    def interrupt_read():
+        expired.set()
+        try:
+            # This is only the probe's own HTTP connection, never a service.
+            sock.shutdown(SHUT_RD)
+        except OSError:
+            pass
+
+    # HTTPResponse.read1() itself can read a chunk-size line or trailers.
+    # Per-socket inactivity timeout alone cannot bound a slow metadata drip.
+    timer = Timer(remaining, interrupt_read)
+    timer.daemon = True
+    timer.start()
+    try:
+        try:
+            result = read1(size)
+        except (OSError, HTTPException) as exc:
+            if expired.is_set() or time.monotonic() >= deadline:
+                raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED') from exc
+            raise
+    finally:
+        timer.cancel()
+        timer.join()
+    if expired.is_set() or time.monotonic() >= deadline:
+        raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED')
+    return result
+
+
 def bounded_stream_lines(response, max_line=100000, deadline=None):
     """Read line-delimited SSE within the absolute turn deadline.
 
@@ -1006,7 +1045,12 @@ def bounded_stream_lines(response, max_line=100000, deadline=None):
             try:
                 if incremental:
                     # One upstream read only; never wait to fill a whole line.
-                    chunk = read1(min(4096, max_line + 1 - len(pending)))
+                    size = min(4096, max_line + 1 - len(pending))
+                    if (deadline is not None and getattr(response, 'chunked', False)
+                            and isinstance(sock, SocketType)):
+                        chunk = deadline_chunk_read(read1, size, sock, deadline)
+                    else:
+                        chunk = read1(size)
                 else:
                     line = readline(max_line + 1)
             except TimeoutError as exc:

@@ -4175,6 +4175,63 @@ class ProbeTests(unittest.TestCase):
             worker.join(timeout=2)
 
 
+    def test_chunked_stream_deadline_bounds_header_and_trailer_drip(self):
+        """read1 must not block beyond the deadline on chunk metadata."""
+        import time
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        from threading import Thread
+        from urllib.request import urlopen
+
+        class ChunkDrip(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/event-stream')
+                self.send_header('Transfer-Encoding', 'chunked')
+                self.end_headers()
+                if self.path == '/trailer':
+                    self.wfile.write(b'2\r\nx\n\r\n0\r\n')
+                    self.wfile.flush()
+                    payload = b'X-Drip: abcdefghijklmnop\r\n\r\n'
+                elif self.path == '/healthy':
+                    self.wfile.write(b'2\r\nx\n\r\n0\r\n\r\n')
+                    self.wfile.flush()
+                    return
+                else:
+                    payload = b'1;abcdefghijklmnop\r\nx\r\n0\r\n\r\n'
+                for value in payload:
+                    try:
+                        self.wfile.write(bytes([value]))
+                        self.wfile.flush()
+                    except OSError:
+                        return
+                    time.sleep(0.025)
+
+            def log_message(self, *args):
+                pass
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), ChunkDrip)
+        server.daemon_threads = True
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        base = 'http://127.0.0.1:%s' % server.server_port
+        try:
+            for path in ('/header', '/trailer'):
+                with self.subTest(path=path), urlopen(base + path, timeout=2) as response:
+                    started = time.monotonic()
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_STREAM_DEADLINE_EXCEEDED$'):
+                        list(probe.bounded_stream_lines(
+                            response, deadline=started + 0.15))
+                    self.assertLess(time.monotonic() - started, 0.4)
+            with urlopen(base + '/healthy', timeout=2) as response:
+                self.assertEqual(list(probe.bounded_stream_lines(
+                    response, deadline=time.monotonic() + 2)), [b'x\n'])
+        finally:
+            server.shutdown()
+            server.server_close()
+            worker.join(timeout=2)
+
+
     def test_stream_nonhttp_network_readline_fallback_fails_closed(self):
         """Do not reintroduce unbounded socket.readline after HTTP read1 recovery."""
         import io
