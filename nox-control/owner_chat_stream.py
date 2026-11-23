@@ -138,12 +138,14 @@ def _executor_status_reply(user_text,path=None):
                        parse_constant=_reject_nonfinite_json_constant)
         if not isinstance(doc,dict):return unknown
         rows=doc.get('workers');n=doc.get('n')
-        if type(n) is not int or not 1<=n<=64 or not isinstance(rows,list) or len(rows)!=n:return unknown
+        # Native OneHost admits at most three workers; do not report a larger
+        # legacy logical pool as presently verified native executor capacity.
+        if type(n) is not int or not 1<=n<=3 or not isinstance(rows,list) or len(rows)!=n:return unknown
         ids=[];busy=0;active_task_ids=set()
         for row in rows:
             if not isinstance(row,dict):return unknown
             name=row.get('id');status=row.get('status');task=row.get('current_task')
-            if not isinstance(name,str) or not re.fullmatch(r'nox-agent-\d{2,3}',name) or name in ids:return unknown
+            if not isinstance(name,str) or not re.fullmatch(r'nox-agent-[0-9]{2}',name) or name in ids:return unknown
             if status=='busy':
                 if not isinstance(task,dict):return unknown
                 task_id=task.get('id')
