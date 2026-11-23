@@ -654,6 +654,12 @@
                   });
                 if(lifecycleSignal.aborted)
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
+                // The gate may have returned before this GET settled. Its
+                // terminal HOLD cannot transfer ownership of a late body.
+                if(canonicalGateClosed||canonicalCallbacksInvalid){
+                  discardReceipt(receipt);
+                  hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
+                }
                 const now=Date.now();
                 if(!receipt||typeof receipt!=='object'||Array.isArray(receipt))
                   hold('HOLD_STREAM_RECEIPT_FRESHNESS');
@@ -677,6 +683,10 @@
                   receipt,expected,s,challenge);
                 if(lifecycleSignal.aborted)
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
+                if(canonicalGateClosed||canonicalCallbacksInvalid){
+                  discardSignedBody();
+                  hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
+                }
                 if(trusted!==true)hold('HOLD_STREAM_FRESHNESS_UNVERIFIED');
                 if(!sameSignedIdentity(receipt))
                   hold('HOLD_STREAM_RECEIPT_MUTATED');
@@ -740,6 +750,12 @@
                 if(lifecycleSignal.aborted){
                   discard();
                   hold('HOLD_STREAM_RECONNECT_STOPPED');
+                }
+                // External ACK gate can settle before a verifier Promise.
+                // Never publish late verifiedAckId into a closed gate.
+                if(canonicalGateClosed||canonicalCallbacksInvalid){
+                  discard();
+                  hold('HOLD_STREAM_CANONICAL_CALLBACK_REPLAY');
                 }
                 if(trusted!==true)discard();
                 else if(!sameCanonicalProjection(receipt)){

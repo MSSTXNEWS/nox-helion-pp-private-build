@@ -3531,6 +3531,120 @@ def main():
           return true;
         }'''))
 
+
+        # R49: an external ACK gate can settle while a signed GET or host
+        # verifier is pending. Late successful resolution must neither run a
+        # fresh verifier after closure, nor publish canonical ACK state, nor
+        # leak an orphan GET body. Healthy fully-awaited gate must still work.
+        check('R49 late signed GET/verifier settlement fenced after gate closes', page.evaluate('''async () => {
+          for(const kind of ['late-read','late-fresh','late-second','healthy']){
+            const s={conversation_id:'r49',exchange_id:'late-'+kind};
+            let reads=0,gets=0,posts=0,acks=0,orig=0,signed=0;
+            let fresh=0,second=0,resolveLate,callback='pending';
+            let enteredFresh,enteredSecond;
+            const freshEntered=new Promise(r=>enteredFresh=r);
+            const secondEntered=new Promise(r=>enteredSecond=r);
+            const signedPacket=challenge=>{const now=Date.now();return {
+              request_nonce:challenge.request_nonce,
+              issued_at_ms:now,expires_at_ms:now+1000,
+              ack_id:'ack-r49-'+kind,body:{cancel(){
+                signed++;return Promise.reject(Error('nonblocking'));
+              }}
+            }};
+            const transport={...opts.transport,
+              post(){posts++;throw Error('REPOST_MODEL')},
+              ack(){acks++;throw Error('REPOST_ACK')},
+              readback(){reads++;return {...s,body:{cancel(){
+                orig++;return Promise.reject(Error('nonblocking'));
+              }}}},
+              readCanonicalAck(_s,_expected,challenge){
+                gets++;
+                return kind==='late-read'?
+                  new Promise(r=>resolveLate=()=>r(signedPacket(challenge))):
+                  signedPacket(challenge);
+              }
+            };
+            const host={...opts.host,
+              verifyFreshCanonicalAck(){
+                fresh++;
+                if(kind==='late-fresh'){
+                  enteredFresh();
+                  return new Promise(r=>resolveLate=()=>r(true));
+                }
+                return true;
+              },
+              verifyCanonicalAck(){
+                second++;
+                if(kind==='late-second'){
+                  enteredSecond();
+                  return new Promise(r=>resolveLate=()=>r(true));
+                }
+                return true;
+              }
+            };
+            const gate={
+              reserve(){return {status:'ALREADY_ACKED'}},
+              beginSend(){throw Error('NO_SEND')},
+              confirm(){throw Error('NO_LOCAL_CONFIRM')},
+              async requireCanonicalAck(_s,event,cursor,read,verify){
+                const expected={event_id:event,ack_cursor:cursor};
+                const watch=p=>Promise.resolve(p).then(
+                  ()=>callback='resolved',e=>callback=e.code||'error');
+                if(kind==='late-read'){
+                  watch(read(expected));
+                  return {status:'CANONICAL_ACK_CONFIRMED',
+                    authority:'VERIFIER_CALLBACK_APPROVED',
+                    ack_id:'ack-r49-'+kind};
+                }
+                if(kind==='late-fresh'){
+                  watch(read(expected));
+                  await freshEntered;
+                  return {status:'CANONICAL_ACK_CONFIRMED',
+                    authority:'VERIFIER_CALLBACK_APPROVED',
+                    ack_id:'ack-r49-'+kind};
+                }
+                const receipt=await read(expected);
+                if(kind==='late-second'){
+                  watch(verify(receipt,expected));
+                  await secondEntered;
+                }else if(await verify(receipt,expected)!==true)
+                  throw Error('BAD_VERIFIER');
+                return {status:'CANONICAL_ACK_CONFIRMED',
+                  authority:'VERIFIER_CALLBACK_APPROVED',ack_id:receipt.ack_id};
+              }
+            };
+            const c=NOXB1StreamReconnect.createClient({
+              transport,host,bridge:opts.bridge,ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){return true}}
+            });
+            const first=await c.reconnect(s).then(()=> 'ACCEPTED',
+              e=>e.code||'ERROR');
+            if(kind==='healthy'){
+              if(first!=='ACCEPTED'||reads!==1||gets!==1||
+                 orig!==0||signed!==0||fresh!==1||second!==1)
+                return false;
+            }else{
+              const expected=kind==='late-second'?
+                'HOLD_STREAM_CANONICAL_ACK':
+                'HOLD_STREAM_FRESHNESS_UNVERIFIED';
+              if(first!==expected||typeof resolveLate!=='function')
+                return false;
+              resolveLate();
+              for(let i=0;i<20;i++)await Promise.resolve();
+              if(callback!=='HOLD_STREAM_CANONICAL_CALLBACK_REPLAY'||
+                 signed!==1||orig!==1||gets!==1||
+                 fresh!==(kind==='late-read'?0:1)||
+                 second!==(kind==='late-second'?1:0))
+                return false;
+            }
+            if(posts!==0||acks!==0||
+               !(await c.begin(s).then(()=>false,e=>
+                 e.code==='HOLD_STREAM_NO_REPOST')))
+              return false;
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
