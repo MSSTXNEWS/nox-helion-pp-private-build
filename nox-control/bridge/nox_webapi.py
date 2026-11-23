@@ -953,7 +953,11 @@ def install(app, B):
                                                  "s03_readback_verified": False})
                         return
                 lines = [l for l in mem.splitlines() if l.strip()] if mem else []
-                SRC.clear()
+                # The mini assistant has no S03 recall and runs under a
+                # different lock. It must not invalidate the main chat's
+                # process-local memory source links while a reply is visible.
+                if not mini:
+                    SRC.clear()
                 srcs = []
                 for i, l in enumerate(lines[:8]):
                     SRC[str(i + 1)] = l

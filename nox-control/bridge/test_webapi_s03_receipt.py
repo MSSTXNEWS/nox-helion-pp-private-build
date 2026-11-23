@@ -2400,5 +2400,59 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(writes, [], "transport failure cannot persist partial S03")
 
 
+
+    def test_1a01_mini_chat_preserves_main_s03_source_links(self):
+        """A mini turn must not wipe the main Resonance's local source cursor."""
+        chat = next(route.endpoint for route in self.app.routes
+                    if route.path == "/api/chat")
+        record = next(route.endpoint for route in self.app.routes
+                      if route.path == "/api/s03/record")
+        self.bridge.IDENTITY, self.bridge.STATIC_RULES = "", ""
+        self.bridge.NKEEP, self.bridge.LAST_CHAT = 0, {"t": 0}
+        self.bridge.SOUL = None
+        self.bridge.hc = lambda: Client()
+        writes = []
+        memory = types.ModuleType("s03_memory")
+        memory.persist_turn = lambda *args: writes.append(args)
+
+        class Upstream:
+            status_code = 200
+            async def __aenter__(self): return self
+            async def __aexit__(self, *args): return False
+            async def aiter_lines(self):
+                yield 'data: {"choices":[{"delta":{"content":"Мини ответ"}}]}'
+                yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                yield 'data: [DONE]'
+
+        class Client:
+            def stream(self, *args, **kwargs): return Upstream()
+
+        async def scenario():
+            before = await record("1")
+            response = await chat(Request({
+                "request_id": "mini-preserve-main-sources",
+                "mini": True, "use_memory": False,
+                "messages": [{"role": "user", "content": "Запиши заметку"}],
+            }))
+            frames = [json.loads(f) async for f in response.body_iterator]
+            after = await record("1")
+            return json.loads(before.body), frames, json.loads(after.body)
+
+        with mock.patch.object(W, "SRC", {"1": "Проверенная ссылка из основного чата"}), \
+             mock.patch.object(W, "W", None), \
+             mock.patch.object(W, "CANCEL", set()), \
+             mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+             mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \
+             mock.patch.dict(sys.modules, {"s03_memory": memory}):
+            before, frames, after = asyncio.run(scenario())
+            self.assertEqual(W.SRC, {"1": "Проверенная ссылка из основного чата"})
+        self.assertEqual(before["status"], "OK")
+        self.assertEqual(after["status"], "OK")
+        self.assertEqual(after["content"], before["content"])
+        self.assertFalse(after["s03_readback_verified"])
+        self.assertEqual(frames[-1]["completion_receipt"]["status"], "GENERATED")
+        self.assertEqual(writes, [("[mini] Запиши заметку", "Мини ответ")])
+
+
 if __name__ == "__main__":
     unittest.main()
