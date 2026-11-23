@@ -2588,6 +2588,66 @@ def main():
           return true;
         }'''))
 
+        # Durable beginSend may reject without throwing. That explicit
+        # negative reply must never authorize a network ACK; preserve the
+        # existing async void-success and true-success adapter contracts.
+        check('explicit negative ACK beginSend fences network ACK; void adapter remains compatible', page.evaluate('''async () => {
+          const modes=['refused','legacy_void','confirmed_true'];
+          for(const mode of modes){
+            const s={conversation_id:'r35',exchange_id:mode};
+            let reads=0,posts=0,acks=0,sends=0,gets=0,projections=0;
+            const transport={...opts.transport,
+              post(){posts++;throw Error('NO_MODEL_POST')},
+              async readback(){reads++;return {...s}},
+              async ack(){acks++;return true},
+              async readCanonicalAck(_s,_expected,challenge){
+                gets++;
+                const now=Date.now();
+                return {request_nonce:challenge.request_nonce,
+                  issued_at_ms:now,expires_at_ms:now+1000,
+                  ack_id:'ack-r35-'+mode};
+              }
+            };
+            const gate={
+              async reserve(){return {status:'RESERVED'}},
+              async beginSend(){
+                sends++;
+                return mode==='refused'?false:
+                  mode==='confirmed_true'?true:undefined;
+              },
+              async confirm(){throw Error('NO_LOCAL_CONFIRM')},
+              async requireCanonicalAck(_s,event,cursor,read,verify){
+                const receipt=await read({event_id:event,ack_cursor:cursor});
+                if(await verify(receipt,{event_id:event,ack_cursor:cursor})!==true)
+                  throw Error('BAD_CANONICAL');
+                return {status:'CANONICAL_ACK_CONFIRMED',
+                  authority:'VERIFIER_CALLBACK_APPROVED',
+                  ack_id:receipt.ack_id};
+              }
+            };
+            const client=NOXB1StreamReconnect.createClient({
+              transport,host:opts.host,bridge:opts.bridge,ackGate:gate,
+              ui:{async onDelta(){},async upsertTerminal(){
+                projections++;return true;
+              }}
+            });
+            const result=await client.reconnect(s).then(v=>v,e=>e.code);
+            if(mode==='refused'){
+              if(result!=='HOLD_STREAM_ACK_GATE')return false;
+              const retry=await client.reconnect(s).then(v=>v,e=>e.code);
+              if(retry!=='HOLD_STREAM_ACK_GATE'||reads!==2||sends!==2||
+                 projections!==2||acks!==0||gets!==0||posts!==0)
+                return false;
+            }else{
+              if(!result||result.canonical_ack_status!==
+                 'CANONICAL_ACK_CONFIRMED'||reads!==1||sends!==1||
+                 projections!==1||acks!==1||gets!==1||posts!==0)
+                return false;
+            }
+          }
+          return true;
+        }'''))
+
         browser.close()
     print(f'B1 Chromium synthetic two-turn SSE binding: {len(checks)}/{len(checks)} PASS')
     for name in checks:
