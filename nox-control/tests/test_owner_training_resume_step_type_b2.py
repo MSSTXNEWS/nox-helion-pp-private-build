@@ -2748,6 +2748,56 @@ class FinalReadbackReceiptContinuity(unittest.TestCase):
                 self.assertEqual(values["chat_after"], {"8080": 200})
 
 
+
+    def test_final_progress_successful_optimizer_count_is_step_bounded(self):
+        """Actual owner function: untrusted progress must not certify impossible counts."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        fn = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                  and node.name == "final_observation_snapshots")
+        scope = {"re": re, "math": math}
+        exec(compile(ast.Module(body=[fn], type_ignores=[]),
+                     str(SOURCE), "exec"), scope)
+        observe_source = scope["final_observation_snapshots"]
+
+        def observe(progress):
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "RUNNING"},
+                health=lambda: {"8080": 200},
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 28000}]},
+                progress=lambda: progress)
+            return observe_source(helper)
+
+        # Not all progress services expose the optional counter. Zero and
+        # resumed delta counters may be smaller than the global step.
+        for good in (
+                {"step": 0},
+                {"step": 0, "successful_optimizer_steps": 0},
+                {"step": 5, "successful_optimizer_steps": 0},
+                {"step": 5, "successful_optimizer_steps": 5},
+                {"global_step": 1000, "successful_optimizer_steps": 5}):
+            with self.subTest(good=repr(good)):
+                values, errors = observe(good)
+                self.assertEqual(errors, {})
+                self.assertEqual(values["progress_after"], good)
+
+        for bad in (
+                {"step": 5, "successful_optimizer_steps": -1},
+                {"step": 5, "successful_optimizer_steps": True},
+                {"step": 5, "successful_optimizer_steps": False},
+                {"step": 5, "successful_optimizer_steps": "5"},
+                {"step": 5, "successful_optimizer_steps": 5.0},
+                {"step": 5, "successful_optimizer_steps": 6},
+                {"step": 0, "successful_optimizer_steps": 1},
+                {"step": 5, "successful_optimizer_steps": None},
+                {"global_step": 5, "successful_optimizer_steps": 10 ** 400}):
+            with self.subTest(bad=repr(bad)):
+                values, errors = observe(bad)
+                self.assertIsNone(values["progress_after"])
+                self.assertEqual(errors, {
+                    "progress_after": "HOLD_FINAL_READBACK_MALFORMED"})
+                self.assertEqual(values["chat_after"], {"8080": 200})
+
+
 class LegacyHeavyServiceReadbackFence(unittest.TestCase):
     def test_malformed_legacy_service_snapshot_cannot_authorize_training(self):
         # Exercise actual source gate AST, not a duplicate in the test.

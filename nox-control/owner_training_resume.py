@@ -1466,6 +1466,14 @@ def final_observation_snapshots(helper):
                             and (type(value['global_step']) is not int
                                  or value['global_step'] != native_step))):
                     raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
+                # A final readback cannot report more successful optimizer
+                # updates than its step, or claim negative/untyped updates.
+                # Resumed runs may report a smaller per-run count.
+                if 'successful_optimizer_steps' in value:
+                    successful = value['successful_optimizer_steps']
+                    if (type(successful) is not int or successful < 0
+                            or successful > native_step):
+                        raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
                 # Optional loss observations must never appear valid when they
                 # are non-finite, negative, boolean or unrepresentable as floats.
                 # This is a schema guard, not proof of RU/ES holdout quality.
