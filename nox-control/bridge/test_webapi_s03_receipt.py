@@ -1322,6 +1322,11 @@ class FactReceiptTest(unittest.TestCase):
             '{"choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"total_tokens":NaN}}',
             # Ignoring the second choice could falsely authorize completion.
             '{"choices":[{"delta":{},"finish_reason":"stop"},{"delta":{"content":"B"}}]}',
+            # Exactly one choice still carries an identity: a nonzero or
+            # non-integral index cannot be silently written as choice zero.
+            '{"choices":[{"index":1,"delta":{},"finish_reason":"stop"}]}',
+            '{"choices":[{"index":false,"delta":{},"finish_reason":"stop"}]}',
+            '{"choices":[{"index":"0","delta":{},"finish_reason":"stop"}]}',
             # A text-only model reply cannot silently omit a hidden tool call
             # or accept a provider frame with the wrong speaker role.
             '{"choices":[{"delta":{"tool_calls":[{"id":"call-1","type":"function"}]},"finish_reason":"stop"}]}',
