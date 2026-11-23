@@ -239,9 +239,12 @@ def require_preturn_owner_binding(client):
 
 
 def anonymous_owner_scope_status(client, requested_path):
-    """A redirected 401 is not proof that the intended owner API is protected."""
+    """A cached or redirected 401 cannot prove current anonymous route protection."""
     with request(client, requested_path) as response:
         require_exact_owner_readback_target(response, requested_path)
+        # Match the owner/logout readback freshness fence. A stale proxy
+        # denial must not certify the CURRENT unauthenticated API boundary.
+        require_fresh_owner_readback(response)
         return response.status
 
 

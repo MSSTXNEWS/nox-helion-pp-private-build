@@ -2464,6 +2464,53 @@ class ProbeTests(unittest.TestCase):
             "with request(unauth,path) as response:report['anonymous_http'][path]=response.status",
             source)
 
+    def test_anonymous_owner_401_rejects_cached_gateway_replay(self):
+        """Never accept an old proxy 401 as current anonymous-route evidence."""
+        from email.message import Message
+
+        class Response:
+            def __init__(self, owner_path, entries=()):
+                self.url = 'http://127.0.0.1:8080' + owner_path
+                self.status, self.closed = 401, False
+                self.headers = Message()
+                for name, value in entries:
+                    self.headers[name] = value
+            def close(self):
+                self.closed = True
+            def __enter__(self):
+                return self
+            def __exit__(self, *_):
+                self.close()
+
+        cases = (
+            ((('Age', '3'),), 'HOLD_OWNER_READBACK_CACHED'),
+            ((('X-Cache', 'HIT'),), 'HOLD_OWNER_READBACK_CACHED'),
+            ((('CF-Cache-Status', 'STALE'),), 'HOLD_OWNER_READBACK_CACHED'),
+            ((('Cache-Status', 'cdn; hit'),), 'HOLD_OWNER_READBACK_CACHED'),
+            ((('Age', 'invalid'),), 'HOLD_OWNER_READBACK_CACHE_UNVERIFIED'),
+            ((('Age', '0'), ('Age', '0')), 'HOLD_OWNER_READBACK_CACHE_UNVERIFIED'),
+            ((('Age', '0'),), None),
+            ((), None),
+        )
+        for owner_path in ('/api/nox/status', '/api/ui/executors', '/api/ui/events'):
+            for entries, expected in cases:
+                denial = Response(owner_path, entries)
+                with self.subTest(owner_path=owner_path, entries=entries), \
+                     patch.object(probe, 'BASE', 'http://127.0.0.1:8080'), \
+                     patch.object(probe, 'request', return_value=denial) as http:
+                    if expected is None:
+                        self.assertEqual(
+                            probe.anonymous_owner_scope_status('unauth', owner_path), 401)
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, '^' + expected + '$'):
+                            probe.anonymous_owner_scope_status('unauth', owner_path)
+                    http.assert_called_once()
+                self.assertTrue(denial.closed)
+        self.assertIn(
+            'require_exact_owner_readback_target(response, requested_path)\\n'
+            '        # Match the owner/logout readback freshness fence.',
+            path.read_text())
+
     def test_owner_readbacks_bind_exact_origin_path_and_query(self):
         """Do not certify third-turn owner/S03 evidence from redirected HTTP 200 JSON."""
         class Response:
