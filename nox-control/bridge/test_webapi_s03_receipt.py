@@ -1461,6 +1461,10 @@ class FactReceiptTest(unittest.TestCase):
         healthy = 'data: {"content":"А"}\\r\\ndata: [DONE]\\r\\n'.replace('\\r', '\r').replace('\\n', '\n').encode("utf-8")
         self.assertEqual(asyncio.run(lines(healthy)), [
             'data: {"content":"А"}', 'data: [DONE]'])
+        # A syntactically complete [DONE] with no wire-line delimiter is
+        # still a truncated SSE record, never canonical S03 acceptance.
+        with self.assertRaisesRegex(ValueError, "UPSTREAM_SSE_UNTERMINATED_LINE"):
+            asyncio.run(lines(b'data: [DONE]'))
         with self.assertRaises(UnicodeDecodeError):
             asyncio.run(lines(b'data: {"bad":"\\xff"}\n'.replace(b'\\xff', b'\xff')))
         with self.assertRaisesRegex(ValueError, "UPSTREAM_SSE_LINE_TOO_LONG"):
@@ -1489,6 +1493,8 @@ class FactReceiptTest(unittest.TestCase):
         for malformed in (
             good_prefix + b'data: {"choices":\xff}\n',
             good_prefix + b'data: ' + b'z' * (W.MAX_UPSTREAM_SSE_LINE_BYTES + 1),
+            good_prefix + b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n'
+                        + b'data: [DONE]',
         ):
             with self.subTest(payload_bytes=len(malformed)):
                 writes.clear()

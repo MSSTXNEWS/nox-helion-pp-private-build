@@ -143,7 +143,12 @@ async def _bounded_upstream_sse_lines(response):
                     raise ValueError("UPSTREAM_SSE_LINE_TOO_LONG")
                 pending.append(byte)
     if pending:
-        yield pending.decode("utf-8", "strict")
+        # A byte-stream EOF without a line terminator is not proof of a
+        # complete upstream SSE event. In particular, do not accept a trailing
+        # unterminated [DONE] as permission to persist the answer into S03.
+        # This guard applies to real bytes; legacy aiter_lines fixtures do not
+        # expose delimiter completeness and remain conservative source stubs.
+        raise ValueError("UPSTREAM_SSE_UNTERMINATED_LINE")
 
 
 def _read(p):
