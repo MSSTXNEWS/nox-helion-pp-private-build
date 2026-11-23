@@ -1476,6 +1476,10 @@ def final_observation_snapshots(helper):
                         or value['state'] not in
                         ('RUNNING', 'STARTING', 'STOPPED', 'EXITED', 'FATAL')):
                     raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
+                # FATAL is a supervisor failure, never a successful trainer
+                # final observation even if proxy/GPU/progress are healthy.
+                if value['state'] == 'FATAL':
+                    raise RuntimeError('HOLD_FINAL_TRAINER_FATAL')
             if key == 'gpu_after':
                 rows = value.get('gpus')
                 # A well-typed but empty/foreign GPU list is not evidence that

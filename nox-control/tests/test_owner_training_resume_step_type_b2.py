@@ -4192,3 +4192,38 @@ class FinalChatProxy8080ReadbackStrict(unittest.TestCase):
                 self.assertEqual(errors, {"chat_after": "HOLD_FINAL_CHAT_HEALTH"})
                 self.assertEqual(readings["service_after"], {"state": "RUNNING"})
                 self.assertEqual(readings["progress_after"], {"step": 5, "loss": 0.5})
+
+
+class FinalTrainerFatalSupervisorFence(unittest.TestCase):
+    def test_fatal_supervisor_state_fails_closed_with_healthy_other_channels(self):
+        """Execute the exact owner readback function with isolated fake inputs."""
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        nodes = [node for node in tree.body
+                 if isinstance(node, ast.FunctionDef)
+                 and node.name == "final_observation_snapshots"]
+        self.assertEqual(len(nodes), 1)
+        scope = {"re": re, "math": math}
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE), "exec"), scope)
+        readback = scope["final_observation_snapshots"]
+
+        def capture(state):
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": state},
+                health=lambda: {"8080": 200},
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 28000}]},
+                progress=lambda: {"step": 5, "successful_optimizer_steps": 5,
+                                  "loss": 0.5})
+            return readback(helper)
+
+        for healthy_state in ("RUNNING", "STARTING", "STOPPED", "EXITED"):
+            with self.subTest(healthy_state=healthy_state):
+                snapshots, errors = capture(healthy_state)
+                self.assertEqual(errors, {})
+                self.assertEqual(snapshots["service_after"], {"state": healthy_state})
+                self.assertEqual(snapshots["chat_after"], {"8080": 200})
+
+        snapshots, errors = capture("FATAL")
+        self.assertIsNone(snapshots["service_after"])
+        self.assertEqual(errors, {"service_after": "HOLD_FINAL_TRAINER_FATAL"})
+        self.assertEqual(snapshots["chat_after"], {"8080": 200})
+        self.assertEqual(snapshots["progress_after"]["successful_optimizer_steps"], 5)
