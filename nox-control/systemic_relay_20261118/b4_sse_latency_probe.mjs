@@ -115,6 +115,14 @@ export async function measureSseResponse(response,options={}){
       browser_authenticated:false,native_verified:false,canonical_s03_verified:false,
       model_tokens_per_second:null
     });
-  }catch(e){try{await reader.cancel();}catch{}throw e;}
-  finally{reader.releaseLock();}
+  }catch(e){
+    // Stream cancellation is best-effort: a nonsettling cancel must not
+    // override or delay the original timeout or malformed-stream failure.
+    try{Promise.resolve(reader.cancel()).catch(()=>{});}catch{}
+    throw e;
+  }finally{
+    // A raced read may still be pending. Release the lock even if cancel
+    // never settles, without masking the original failure.
+    try{reader.releaseLock();}catch{}
+  }
 }

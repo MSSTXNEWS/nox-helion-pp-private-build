@@ -135,3 +135,45 @@ test('R25 real HTTP loopback: lone CR, split CRLF, multiline SSE; incomplete ter
       ['cr_only','crlf_split','multiline','unframed_cr','unframed_crlf']);
   });
 });
+
+
+// R26: a noncompliant, never-settling cancellation cannot hide the
+// original timeout or retain the standard ReadableStream reader lock.
+const responseFor=reader=>({status:200,headers:new Headers({'content-type':'text/event-stream'}),body:{getReader:()=>reader}});
+async function wallBound(promise,ms=180){
+  let handle;
+  try{return await Promise.race([promise,new Promise((_,reject)=>{handle=setTimeout(()=>reject(new Error('B4_TEST_HUNG_CANCEL')),ms);})]);}
+  finally{clearTimeout(handle);}
+}
+
+test('R26 stuck ReadableStream.cancel settles idle/total deadline, releases real reader lock',async()=>{
+  for(const [idle,total,code] of [[20,200,'B4_IDLE_TIMEOUT'],[120,20,'B4_TOTAL_TIMEOUT']]){
+    const stream=new ReadableStream({start(){}});
+    const reader=stream.getReader();
+    const originalRead=reader.read.bind(reader);
+    let pendingRead,cancelCount=0,releaseCount=0;
+    reader.read=()=>{pendingRead=originalRead();return pendingRead;};
+    reader.cancel=()=>{cancelCount++;return new Promise(()=>{});};
+    const originalRelease=reader.releaseLock.bind(reader);
+    reader.releaseLock=()=>{releaseCount++;return originalRelease();};
+    const startedAt=performance.now();
+    await assert.rejects(wallBound(measureSseResponse(responseFor(reader),{startedAt,idleTimeoutMs:idle,totalTimeoutMs:total})),e=>e.code===code);
+    assert.equal(cancelCount,1);assert.equal(releaseCount,1);
+    await assert.rejects(pendingRead,{name:'TypeError'});
+    assert.doesNotThrow(()=>stream.getReader().releaseLock());
+  }
+});
+
+test('R26 cancellation rejection/synchronous throw and lock exception preserve original error',async()=>{
+  for(const cancelStyle of ['reject','throw']){
+    let cancelCount=0,releaseCount=0;
+    const reader={
+      read:()=>new Promise(()=>{}),
+      cancel:()=>{cancelCount++;if(cancelStyle==='throw')throw new Error('cancel-sync');return Promise.reject(new Error('cancel-reject'));},
+      releaseLock:()=>{releaseCount++;throw new Error('release-failed');}
+    };
+    const startedAt=performance.now();
+    await assert.rejects(wallBound(measureSseResponse(responseFor(reader),{startedAt,idleTimeoutMs:20,totalTimeoutMs:200})),e=>e.code==='B4_IDLE_TIMEOUT');
+    assert.equal(cancelCount,1);assert.equal(releaseCount,1);
+  }
+});
