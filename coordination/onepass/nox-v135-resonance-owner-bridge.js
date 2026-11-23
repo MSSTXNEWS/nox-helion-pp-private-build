@@ -132,8 +132,8 @@ timer=setTimeout(()=>reject(Error('HOLD_NATIVE_TERMINAL_EOF_TIMEOUT')),2500);
 ]);
 }finally{clearTimeout(timer);}
 }
-const validNativeModelLabel=v=>typeof v==='string'&&v.length<=96&&v===v.trim()&&/[\p{L}\p{N}]/u.test(v)&&!/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(v)&&!/^(unknown|na|none|null|undefined|unavailable|notavailable|unset|nomodel)?$/i.test(v.replace(/[\s/_-]+/g,''));
- async function consume(response,emit,signal) {
+const validNativeModelLabel=v=>typeof v==='string'&&v.length<=96&&v===v.trim()&&/[\p{L}\p{N}]/u.test(v)&&new TextDecoder().decode(enc.encode(v))===v&&!/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(v)&&!/^(unknown|na|none|null|undefined|unavailable|notavailable|unset|nomodel)?$/i.test(v.replace(/[\s/_-]+/g,''));
+async function consume(response,emit,signal){
  if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
  const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
  let buf='',answer='',done,doneSeen=false,startSeen=false,preparingSeen=false;
@@ -197,7 +197,7 @@ const validNativeModelLabel=v=>typeof v==='string'&&v.length<=96&&v===v.trim()&&
    try{Promise.resolve(reader.cancel('STREAM_CLOSED')).catch(()=>{});}catch{}
  }
  }
- function sseChat(data,signal) {
+function sseChat(data,signal){
  let closed=false;const started=performance.now();let firstVisibleMs=null;
  let phasePrev;
  const upstreamAbort=new AbortController();
@@ -283,10 +283,10 @@ const validNativeModelLabel=v=>typeof v==='string'&&v.length<=96&&v===v.trim()&&
  });
  return responseJSONStream(body);
  }
- const responseJSONStream=body=>new Response(body,{headers:{
+const responseJSONStream=body=>new Response(body,{headers:{
  'Content-Type':'text/event-stream','Cache-Control':'no-store','X-Accel-Buffering':'no'
  }});
- async function jsonChat(data,signal) {
+async function jsonChat(data,signal){
  let claimedId;
  try{
    const id=await dialogId(data,signal);

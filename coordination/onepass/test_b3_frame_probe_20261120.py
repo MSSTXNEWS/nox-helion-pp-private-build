@@ -1643,6 +1643,9 @@ class TestProbe(unittest.TestCase):
                                  if(mode==='graphemestart')frames[1].model='existing-\\u034f-model';
                                 if(mode==='punctstart')frames[1].model='???';
                                 if(mode==='emojistart')frames[1].model='🧠';
+                                if(mode==='lonehighstart')frames[1].model='existing-\\uD800-model';
+                                if(mode==='lonelowstart')frames[1].model='existing-\\uDC00-model';
+                                if(mode==='astralstart')frames[1].model='existing-𐐀-model';
                                 return new Response(frames.map(JSON.stringify).join('\\n')+'\\n',{
                                     status:200
                                 });
@@ -1672,7 +1675,8 @@ class TestProbe(unittest.TestCase):
                             ['mismatch','match','absent','malformed','paddedstart',
                              'longstart','controlstart','blankstart','bidistart','zerostart',
                               'softstart','joinstart','graphemestart',
-                              'punctstart','emojistart'].entries()){
+                              'punctstart','emojistart','lonehighstart',
+                              'lonelowstart','astralstart'].entries()){
                             const postsBefore=window.__posts;
                             const readsBefore=window.__reads;
                             const id=i.toString(16).repeat(32);
@@ -1696,7 +1700,7 @@ class TestProbe(unittest.TestCase):
                         }
                         return rows;
                     }""")
-                    self.assertEqual(len(result), 15)
+                    self.assertEqual(len(result), 18)
                     for row in result:
                         self.assertEqual(row['posts'], 1)
                         # A terminal HOLD can withhold its last carried grapheme;
@@ -1706,7 +1710,8 @@ class TestProbe(unittest.TestCase):
                                            'longstart', 'controlstart', 'blankstart',
                                            'bidistart', 'zerostart', 'softstart',
                                             'joinstart', 'graphemestart',
-                                           'punctstart', 'emojistart'):
+                                           'punctstart', 'emojistart',
+                                           'lonehighstart','lonelowstart'):
                             self.assertEqual(row['reads'], 0)
                             self.assertEqual(row['done'], [])
                             self.assertEqual(len(row['errors']), 1)
@@ -1720,7 +1725,8 @@ class TestProbe(unittest.TestCase):
                             self.assertEqual(row['errors'], [])
                             self.assertEqual(len(row['done']), 1)
                             self.assertEqual(row['done'][0]['model_label'],
-                                             'existing-model')
+                              'existing-𐐀-model' if row['mode']=='astralstart'
+                              else 'existing-model')
                             self.assertIs(row['done'][0]['model_identity_verified'],
                                           False)
                 finally:
