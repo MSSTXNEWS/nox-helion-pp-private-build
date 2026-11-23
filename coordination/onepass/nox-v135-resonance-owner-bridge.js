@@ -281,7 +281,7 @@ if(!closed){closed=true;try{controller.close();}catch{}}
    cancel(){
     closed=true;
     upstreamAbort.abort();
-if(phasePrev!=='idle')stopPhase();
+    if(phasePrev!=='idle')stopPhase();
 signal?.removeEventListener?.('abort',onAbort);
    }
  });
