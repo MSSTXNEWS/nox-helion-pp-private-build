@@ -32,4 +32,4 @@ jobs:
       - name: Run actual B1 client + UI binding exact-source regression
         run: |
           python -m py_compile nox-control/test_b1_sse_ui_binding.py
-          python nox-control/test_b1_sse_ui_binding.py
+          NOX_B1_R51_ONLY=1 python nox-control/test_b1_sse_ui_binding.py
