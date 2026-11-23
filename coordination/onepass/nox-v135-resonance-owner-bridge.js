@@ -77,61 +77,62 @@ const r=await nativePost('/api/ui/memory/dialogs/create',{
  if(typeof data.dialog_id!=='string'||!ID.test(data.dialog_id))throw Error('HOLD_INVALID_DIALOG_SCOPE');
  return data.dialog_id;
  }
- async function checkHistory(id,prompt,answer,exchangeId,signal,model) {
- const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
- if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
- const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
- const currentAt=data.messages.indexOf(pair[0]);
- if(pair.length!==2||currentAt!==data.messages.length-2||
-    pair[0].role!=='user'||pair[1].role!=='assistant'||
-    pair[0].content!==prompt||pair[1].content!==answer||
-    pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
-   throw Error('HOLD_DIALOG_HISTORY_READBACK');
- const chain=verifiedChain.get(id)||[];
-  if(chain.length&&chain[0].model!==model)throw Error('HOLD_DIALOG_MODEL_DRIFT');
- if(chain.length>=50)throw Error('HOLD_DIALOG_HISTORY_WINDOW_EXHAUSTED');
- const begin=currentAt-2*chain.length;
- if(begin<0)throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
- for(let i=0;i<chain.length;i++){
-   const p=chain[i],u=data.messages[begin+2*i],v=data.messages[begin+2*i+1];
-   if(!u||!v||u.role!=='user'||v.role!=='assistant'||
-      u.exchange_id!==p.exchange_id||v.exchange_id!==p.exchange_id||
-      u.content!==p.prompt||v.content!==p.answer)
-     throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
- }
- verifiedChain.set(id,[...chain,{exchange_id:exchangeId,prompt,answer,model}]);
- }
- function accepted(done,id) {
- return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
-   done.dialog_id===id&&typeof done.exchange_id==='string'&&
-   done.exchange_id.length>=6&&done.exchange_id.length<=160;
- }
- async function readNativeOrAbort(reader,signal) {
- if(!signal)return reader.read();
- if(signal.aborted)throw Error('STREAM_STOP_REQUESTED');
- let onAbort;
- const aborted=new Promise((_,reject)=>{
-   onAbort=()=>{
-     try{Promise.resolve(reader.cancel('STREAM_STOP_REQUESTED')).catch(()=>{});}catch{}
-     reject(Error('STREAM_STOP_REQUESTED'));
-   };
-   signal.addEventListener('abort',onAbort,{once:true});
-   if(signal.aborted)onAbort();
- });
- try{return await Promise.race([reader.read(),aborted]);}
- finally{signal.removeEventListener('abort',onAbort);}
- }
- async function readNativeEofAfterDone(reader,signal) {
- let timer;
- try {
-   return await Promise.race([
-     readNativeOrAbort(reader,signal),
-     new Promise((_,reject)=>{
-       timer=setTimeout(()=>reject(Error('HOLD_NATIVE_TERMINAL_EOF_TIMEOUT')),2500);
-     })
-   ]);
- }finally{clearTimeout(timer);}
- }
+async function checkHistory(id,prompt,answer,exchangeId,signal,model) {
+const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
+if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
+if(data.messages.some(m=>m&&m.dialog_id!==undefined&&m.dialog_id!==id))throw Error('HOLD_DIALOG_HISTORY_SCOPE');
+const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
+const currentAt=data.messages.indexOf(pair[0]);
+if(pair.length!==2||currentAt!==data.messages.length-2||
+pair[0].role!=='user'||pair[1].role!=='assistant'||
+pair[0].content!==prompt||pair[1].content!==answer||
+pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
+throw Error('HOLD_DIALOG_HISTORY_READBACK');
+const chain=verifiedChain.get(id)||[];
+if(chain.length&&chain[0].model!==model)throw Error('HOLD_DIALOG_MODEL_DRIFT');
+if(chain.length>=50)throw Error('HOLD_DIALOG_HISTORY_WINDOW_EXHAUSTED');
+const begin=currentAt-2*chain.length;
+if(begin<0)throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
+for(let i=0;i<chain.length;i++){
+const p=chain[i],u=data.messages[begin+2*i],v=data.messages[begin+2*i+1];
+if(!u||!v||u.role!=='user'||v.role!=='assistant'||
+u.exchange_id!==p.exchange_id||v.exchange_id!==p.exchange_id||
+u.content!==p.prompt||v.content!==p.answer)
+throw Error('HOLD_DIALOG_PRIOR_EXCHANGE_LOST');
+}
+verifiedChain.set(id,[...chain,{exchange_id:exchangeId,prompt,answer,model}]);
+}
+function accepted(done,id) {
+return done?.type==='done'&&done.saved===true&&done.s03_integrated===true&&
+done.dialog_id===id&&typeof done.exchange_id==='string'&&
+done.exchange_id.length>=6&&done.exchange_id.length<=160;
+}
+async function readNativeOrAbort(reader,signal) {
+if(!signal)return reader.read();
+if(signal.aborted)throw Error('STREAM_STOP_REQUESTED');
+let onAbort;
+const aborted=new Promise((_,reject)=>{
+onAbort=()=>{
+try{Promise.resolve(reader.cancel('STREAM_STOP_REQUESTED')).catch(()=>{});}catch{}
+reject(Error('STREAM_STOP_REQUESTED'));
+};
+signal.addEventListener('abort',onAbort,{once:true});
+if(signal.aborted)onAbort();
+});
+try{return await Promise.race([reader.read(),aborted]);}
+finally{signal.removeEventListener('abort',onAbort);}
+}
+async function readNativeEofAfterDone(reader,signal) {
+let timer;
+try {
+return await Promise.race([
+readNativeOrAbort(reader,signal),
+new Promise((_,reject)=>{
+timer=setTimeout(()=>reject(Error('HOLD_NATIVE_TERMINAL_EOF_TIMEOUT')),2500);
+})
+]);
+}finally{clearTimeout(timer);}
+}
 const validNativeModelLabel=v=>typeof v==='string'&&v.length>0&&v.length<=96&&v===v.trim()&&!/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(v)&&!/^(unknown|na|none|null|undefined|unavailable|notavailable|unset|nomodel)?$/i.test(v.replace(/[\s/_-]+/g,''));
  async function consume(response,emit,signal) {
  if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
