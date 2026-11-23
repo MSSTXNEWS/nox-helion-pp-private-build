@@ -1646,6 +1646,11 @@ class TestProbe(unittest.TestCase):
                                 if(mode==='lonehighstart')frames[1].model='existing-\\uD800-model';
                                 if(mode==='lonelowstart')frames[1].model='existing-\\uDC00-model';
                                 if(mode==='astralstart')frames[1].model='existing-𐐀-model';
+                                if(mode==='aliasdriftstart')frames[1].model_label='other-model';
+                                if(mode==='aliasmatchstart')frames[1].model_label='existing-model';
+                                if(mode==='camelaliasdriftstart')frames[1].modelLabel='other-model';
+                                if(mode==='camelaliasmatchstart')frames[1].modelLabel='existing-model';
+                                if(mode==='aliasnullstart')frames[1].model_label=null;
                                 return new Response(frames.map(JSON.stringify).join('\\n')+'\\n',{
                                     status:200
                                 });
@@ -1676,7 +1681,9 @@ class TestProbe(unittest.TestCase):
                              'longstart','controlstart','blankstart','bidistart','zerostart',
                               'softstart','joinstart','graphemestart',
                               'punctstart','emojistart','lonehighstart',
-                              'lonelowstart','astralstart'].entries()){
+                              'lonelowstart','astralstart','aliasdriftstart',
+                              'aliasmatchstart','camelaliasdriftstart',
+                              'camelaliasmatchstart','aliasnullstart'].entries()){
                             const postsBefore=window.__posts;
                             const readsBefore=window.__reads;
                             const id=i.toString(16).padStart(2,'0').repeat(16);
@@ -1700,7 +1707,7 @@ class TestProbe(unittest.TestCase):
                         }
                         return rows;
                     }""")
-                    self.assertEqual(len(result), 18)
+                    self.assertEqual(len(result), 23)
                     for row in result:
                         self.assertEqual(row['posts'], 1)
                         # A terminal HOLD can withhold its last carried grapheme;
@@ -1711,7 +1718,9 @@ class TestProbe(unittest.TestCase):
                                            'bidistart', 'zerostart', 'softstart',
                                             'joinstart', 'graphemestart',
                                            'punctstart', 'emojistart',
-                                           'lonehighstart','lonelowstart'):
+                                           'lonehighstart','lonelowstart',
+                                           'aliasdriftstart','camelaliasdriftstart',
+                                           'aliasnullstart'):
                             self.assertEqual(row['reads'], 0)
                             self.assertEqual(row['done'], [])
                             self.assertEqual(len(row['errors']), 1)

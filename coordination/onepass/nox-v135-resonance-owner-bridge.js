@@ -1,11 +1,11 @@
 (() => {
- 'use strict';
- if(!(window.NOX_NATIVE_OWNER===true&&
+'use strict';
+if(!(window.NOX_NATIVE_OWNER===true&&
 /^\/nox-web-v29\/pc\/(?:resonance\.html|v22\/resonance\.template\.html)$/.test(location.pathname))||
 window.__NOX_V135_OWNER_RESONANCE)return;
- window.__NOX_V135_OWNER_RESONANCE='OWNER_NATIVE_ONLY';
- const F=window.fetch.bind(window);
- const enc=new TextEncoder();
+window.__NOX_V135_OWNER_RESONANCE='OWNER_NATIVE_ONLY';
+const F=window.fetch.bind(window);
+const enc=new TextEncoder();
 const ID=/^[a-f0-9]{32}$/;
 const verifiedChain=new Map();
 const activeDialogs=new Set();
@@ -24,8 +24,8 @@ status:'HOLD',error,history_persisted:false,s03_integrated:false
 }),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 const samePath=input=>{
 try {
-  const u=new URL(input instanceof Request?input.url:String(input),location.href);
-  return u.origin===location.origin?u:null;
+ const u=new URL(input instanceof Request?input.url:String(input),location.href);
+ return u.origin===location.origin?u:null;
 } catch{return null;}
 };
 const options=(init={})=>({
@@ -36,8 +36,8 @@ async function waitOrAbort(op,signal){
 if(!signal)return op();
 if(signal.aborted)throw Error('STREAM_STOP_REQUESTED');
 let stop;const cancelled=new Promise((_,reject)=>{
-  stop=()=>reject(Error('STREAM_STOP_REQUESTED'));
-  signal.addEventListener('abort',stop,{once:true});
+ stop=()=>reject(Error('STREAM_STOP_REQUESTED'));
+ signal.addEventListener('abort',stop,{once:true});
 });
 try{return await Promise.race([Promise.resolve().then(op),cancelled]);}
 finally{signal.removeEventListener('abort',stop);}
@@ -61,21 +61,21 @@ return nativeBodyJSON(r,init?.signal);
 }
 async function createDialog(title,signal) {
 const r=await nativePost('/api/ui/memory/dialogs/create',{
-  title:String(title||'Новый диалог').replace(/[\x00-\x1F\x7F]/g,' ').trim().slice(0,140)||'Новый диалог',
-   confirmed:true
- },signal);
- if(!r.ok)throw Error('HOLD_DIALOG_CREATE_'+await reason(r,signal));
- const d=await nativeBodyJSON(r,signal);
- if(typeof d.dialog_id!=='string'||!ID.test(d.dialog_id))throw Error('HOLD_DIALOG_CREATE_RECEIPT');
- return d;
- }
- async function dialogId(data,signal) {
- if(data.dialog_id===null||data.dialog_id===undefined||data.dialog_id===''){
-   return (await createDialog(String(data.message||'').slice(0,140),signal)).dialog_id;
- }
- if(typeof data.dialog_id!=='string'||!ID.test(data.dialog_id))throw Error('HOLD_INVALID_DIALOG_SCOPE');
- return data.dialog_id;
- }
+ title:String(title||'Новый диалог').replace(/[\x00-\x1F\x7F]/g,' ').trim().slice(0,140)||'Новый диалог',
+  confirmed:true
+},signal);
+if(!r.ok)throw Error('HOLD_DIALOG_CREATE_'+await reason(r,signal));
+const d=await nativeBodyJSON(r,signal);
+if(typeof d.dialog_id!=='string'||!ID.test(d.dialog_id))throw Error('HOLD_DIALOG_CREATE_RECEIPT');
+return d;
+}
+async function dialogId(data,signal) {
+if(data.dialog_id===null||data.dialog_id===undefined||data.dialog_id===''){
+  return (await createDialog(String(data.message||'').slice(0,140),signal)).dialog_id;
+}
+if(typeof data.dialog_id!=='string'||!ID.test(data.dialog_id))throw Error('HOLD_INVALID_DIALOG_SCOPE');
+return data.dialog_id;
+}
 async function checkHistory(id,prompt,answer,exchangeId,signal,model) {
 const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
 if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
@@ -134,17 +134,17 @@ timer=setTimeout(()=>reject(Error('HOLD_NATIVE_TERMINAL_EOF_TIMEOUT')),2500);
 }
 const validNativeModelLabel=v=>typeof v==='string'&&v.length<=96&&v===v.trim()&&/[\p{L}\p{N}]/u.test(v)&&new TextDecoder().decode(enc.encode(v))===v&&!/[\x00-\x1F\x7F\u034F]|\p{Cf}/u.test(v)&&!/^(unknown|na|none|null|undefined|unavailable|notavailable|unset|nomodel)?$/i.test(v.replace(/[\s/_-]+/g,''));
 async function consume(response,emit,signal){
- if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
- const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
- let buf='',answer='',done,doneSeen=false,startSeen=false,preparingSeen=false;
- let nativeModel;
- const line=async str=>{
-   if(!str.trim())return;
-   let e;
-   try{e=JSON.parse(str);}catch{throw Error('HOLD_NATIVE_FRAME_JSON');}
-   if(!e||typeof e!=='object'||Array.isArray(e))throw Error('HOLD_NATIVE_FRAME_TYPE');
-   if(doneSeen){
-     if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
+if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
+const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
+let buf='',answer='',done,doneSeen=false,startSeen=false,preparingSeen=false;
+let nativeModel;
+const line=async str=>{
+  if(!str.trim())return;
+  let e;
+  try{e=JSON.parse(str);}catch{throw Error('HOLD_NATIVE_FRAME_JSON');}
+  if(!e||typeof e!=='object'||Array.isArray(e))throw Error('HOLD_NATIVE_FRAME_TYPE');
+  if(doneSeen){
+    if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
      throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
    }
    if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
@@ -162,8 +162,7 @@ async function consume(response,emit,signal){
      if(!preparingSeen)throw Error('HOLD_NATIVE_PREPARING_REQUIRED');
      if(startSeen)throw Error('HOLD_DUPLICATE_NATIVE_START');
      startSeen=true;
-     if(!validNativeModelLabel(e.model))
-       throw Error('HOLD_NATIVE_MODEL_START_LABEL');
+     if(!validNativeModelLabel(e.model)||['model_label','modelLabel'].some(k=>k in e&&e[k]!==e.model))throw Error('HOLD_NATIVE_MODEL_START_LABEL');
      nativeModel=e.model;
    } else if(e.type==='preparing') {
      if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
