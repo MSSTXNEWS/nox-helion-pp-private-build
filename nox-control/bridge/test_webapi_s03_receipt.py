@@ -1930,6 +1930,56 @@ class FactReceiptTest(unittest.TestCase):
         self.assertFalse(valid["task_cancelled"])
         self.assertFalse(valid["owner_stop"])
 
+    def test_1a04_stop_wire_rejects_oversize_and_ambiguous_requests(self):
+        """Real ASGI STOP admission is bounded, including chunked wire bodies."""
+        stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
+
+        class WireRequest:
+            def __init__(self, chunks, declared=None):
+                self.chunks = chunks
+                self.headers = {} if declared is None else {"content-length": declared}
+
+            async def stream(self):
+                for chunk in self.chunks:
+                    yield chunk
+
+            async def json(self):
+                raise AssertionError("STOP must not eagerly parse unbounded wire input")
+
+        async def scenario():
+            oversized_header = await stop(WireRequest([b'{}'], "65"))
+            oversized_chunked = await stop(WireRequest([b' ' * 48, b' ' * 17]))
+            bad_length = await stop(WireRequest([b'{}'], "-2"))
+            duplicate_scope = await stop(WireRequest([
+                b'{"scope":"generation","scope":"owner","request_id":"*"}'
+            ]))
+            duplicate_target = await stop(WireRequest([
+                b'{"scope":"generation","request_id":"a","request_id":"*"}'
+            ]))
+            nonfinite = await stop(WireRequest([
+                b'{"scope":"generation","request_id":"*","debug":NaN}'
+            ]))
+            valid = await stop(WireRequest([
+                b'{"scope":"generation","request_id":"live-1"}'
+            ]))
+            return (oversized_header, oversized_chunked, bad_length,
+                    duplicate_scope, duplicate_target, nonfinite, valid)
+
+        with (mock.patch.object(W, "MAX_STOP_WIRE_BYTES", 64),
+              mock.patch.object(W, "CANCEL", set()),
+              mock.patch.object(W, "CANCEL_ALL_EPOCH", 0)):
+            out = asyncio.run(scenario())
+            self.assertEqual(W.CANCEL_ALL_EPOCH, 0)
+            self.assertEqual(W.CANCEL, {"live-1"})
+        self.assertEqual([x.status_code for x in out[:6]], [413, 413, 400, 400, 400, 400])
+        self.assertEqual([json.loads(x.body)["reason"] for x in out[:6]],
+                         ["STOP_WIRE_TOO_LARGE", "STOP_WIRE_TOO_LARGE",
+                          "STOP_INVALID_CONTENT_LENGTH", "STOP_INVALID_JSON",
+                          "STOP_INVALID_JSON", "STOP_INVALID_JSON"])
+        self.assertEqual(out[6]["status"], "STOPPING")
+        self.assertEqual(out[6]["target_request_id"], "live-1")
+        self.assertFalse(out[6]["stop_confirmed"])
+
     def test_1a04_pending_scoped_stop_is_bounded_without_broadcast(self):
         """Excess unknown IDs HOLD; existing STOP and explicit broadcast still work."""
         stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
