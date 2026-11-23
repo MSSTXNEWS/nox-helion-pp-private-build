@@ -188,7 +188,7 @@ def _restore_persona_id(path):
     finally:
         con.close()
     values = {v[0].strip() for v in rows if isinstance(v[0], str) and v[0].strip()}
-    if len(values) != len(rows) or len(values) > 1:
+    if len(values) > 1 or any(not isinstance(row[0], str) or not row[0].strip() for row in rows):
         raise RuntimeError("restore HOLD: missing or conflicting active PersonaID aliases")
     return next(iter(values)) if values else None
 
