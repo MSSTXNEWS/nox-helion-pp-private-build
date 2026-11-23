@@ -1770,7 +1770,8 @@ def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
     The caller MUST obtain both expected hashes independently from the
     authorized owner/immutable-verifier path, not from the candidate files.
     The expected session ID must also come from authenticated owner context,
-    independently of the candidate receipts and transcript.
+    independently of the candidate receipts and transcript. The dialog ID
+    must be canonical and explicitly present on every persisted row.
     For turn three the caller must independently obtain the prior four
     authenticated rows and independently pinned sequence-two writer/readback
     bytes before the next request, not from either new witness. The prior
@@ -1779,6 +1780,8 @@ def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
     It never reads S03, accepts a browser history as a writer, or issues POST.
     """
     if (type(expected_sequence) is not int or expected_sequence not in (2, 3)
+            or not isinstance(dialog_id, str) or not dialog_id.strip()
+            or dialog_id != dialog_id.strip() or not dialog_id.isprintable()
             or not isinstance(expected_session_id, str)
             or not expected_session_id.strip()
             or expected_session_id != expected_session_id.strip()
@@ -1786,7 +1789,8 @@ def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
             or not isinstance(expected_messages, list)
             or len(expected_messages) != 2 * expected_sequence
             or any(not isinstance(row, dict) or
-                   row.get('session_id') != expected_session_id
+                   row.get('session_id') != expected_session_id or
+                   row.get('dialog_id') != dialog_id
                    for row in expected_messages)
             or type(writer_raw) is not bytes or type(readback_raw) is not bytes
             or not 0 < len(writer_raw) <= 200000
@@ -1801,8 +1805,7 @@ def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
     if expected_sequence == 3:
         if (not isinstance(expected_prior_messages, list)
                 or len(expected_prior_messages) != 4
-                or expected_messages[:4] != expected_prior_messages
-                or any(row.get('dialog_id') != dialog_id for row in expected_messages)):
+                or expected_messages[:4] != expected_prior_messages):
             return False
         if (type(prior_witnesses) is not tuple or len(prior_witnesses) != 4
                 or not canonical_s03_pinned_evidence_valid(

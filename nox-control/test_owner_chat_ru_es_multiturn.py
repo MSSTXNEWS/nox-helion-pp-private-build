@@ -4362,9 +4362,9 @@ async function check(chunks, status=200) {
         w, r = wire(writer), wire(reader)
         wp, rp = pin(w), pin(r)
         def check(wire_w=w, wire_r=r, hash_w=wp, hash_r=rp,
-                  history=transcript, session="owner-session"):
+                  history=transcript, session="owner-session", dialog=DIALOG):
             return canonical_s03_pinned_evidence_valid(
-                wire_w, wire_r, hash_w, hash_r, DIALOG, history,
+                wire_w, wire_r, hash_w, hash_r, dialog, history,
                 expected_session_id=session)
         self.assertTrue(check())
         # Same semantic JSON with changed bytes must not reuse a pinned receipt.
@@ -4413,6 +4413,26 @@ async function check(chunks, status=200) {
             args = ({'wire_w': raw, 'hash_w': pin(raw)} if key == 'writer'
                     else {'wire_r': raw, 'hash_r': pin(raw)})
             self.assertFalse(check(**args))
+        # A strict immutable receipt must explicitly scope every row to the
+        # independently selected dialog, even if all witness hashes agree.
+        for missing in (tuple(range(4)), (0,), (3,)):
+            unscoped_dialog = [dict(row) for row in transcript]
+            for index in missing:
+                unscoped_dialog[index].pop("dialog_id")
+            dw, dr = s03_proof(unscoped_dialog)
+            if len(missing) == 4:
+                self.assertTrue(canonical_s03_proof_valid(
+                    dw, dr, DIALOG, unscoped_dialog, require_full_transcript_pin=True))
+            dw, dr = wire(dw), wire(dr)
+            self.assertFalse(check(wire_w=dw, wire_r=dr, hash_w=pin(dw),
+                                   hash_r=pin(dr), history=unscoped_dialog))
+        for bad_dialog in (" "+DIALOG, DIALOG+" ", DIALOG+"\u200b", DIALOG+"\x00"):
+            bad_rows = [dict(row, dialog_id=bad_dialog) for row in transcript]
+            dw, dr = s03_proof(bad_rows)
+            dw["dialog_id"] = dr["dialog_id"] = bad_dialog
+            dw, dr = wire(dw), wire(dr)
+            self.assertFalse(check(wire_w=dw, wire_r=dr, hash_w=pin(dw),
+                                   hash_r=pin(dr), history=bad_rows, dialog=bad_dialog))
         # The adapter cannot accept browser-history-only or omit row IDs.
         legacy = rows("Sigue en español 🪐")
         lw, lr = map(wire, s03_proof(legacy))
