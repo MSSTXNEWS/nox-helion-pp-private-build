@@ -113,6 +113,13 @@ class FactReceiptTest(unittest.TestCase):
             ({"request_id": None, "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
             ({"request_id": True, "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
             ({"request_id": "*", "messages": [{"role": "user", "content": "hi"}]}, "CHAT_INVALID_REQUEST_ID"),
+            # A reconnect/retry caller must append a NEW user turn. Never
+            # reinterpret a historical user turn as new when assistant is last.
+            ({"messages": [{"role": "user", "content": "Уже отвечено"},
+                           {"role": "assistant", "content": "Готово"}]}, "CHAT_LAST_MESSAGE_NOT_USER"),
+            ({"messages": [{"role": "user", "content": "Вопрос"},
+                           {"role": "assistant", "content": "Ответ"},
+                           {"role": "assistant", "content": "Продолжение"}]}, "CHAT_LAST_MESSAGE_NOT_USER"),
             ({"messages": [{"role": "assistant", "content": "only response"}]}, "CHAT_MISSING_USER"),
             ({"messages": [{"role": "user", "content": "   "}]}, "CHAT_MISSING_USER"),
         )
