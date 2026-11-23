@@ -96,6 +96,21 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
         self.assertEqual(giant.read_limits,
                          [bench.MAX_NDJSON_FRAME_BYTES + 1])
 
+    def test_cumulative_wire_bytes_and_frame_count_are_bounded(self):
+        # Thousands of individually legal frames must not accumulate in RAM.
+        small = b'{"event_seq":1}\\n'.replace(b'\\\\n', b'\\n')
+        with mock.patch.object(bench, "MAX_NDJSON_STREAM_BYTES", len(small) * 2):
+            response = BoundedReadResponse(small * 3)
+            with self.assertRaisesRegex(ValueError, "OVERSIZED_STREAM"):
+                list(bench._bounded_ndjson_lines(response))
+            self.assertEqual(len(response.read_limits), 3)
+
+        with mock.patch.object(bench, "MAX_NDJSON_STREAM_FRAMES", 2):
+            response = BoundedReadResponse(small * 3)
+            with self.assertRaisesRegex(ValueError, "OVERSIZED_STREAM"):
+                list(bench._bounded_ndjson_lines(response))
+            self.assertEqual(len(response.read_limits), 3)
+
     def test_valid_receipt_measures_without_s03_write(self):
         result = run_sample()
         self.assertEqual(result["s03_write"], "SKIPPED_EPHEMERAL")
