@@ -182,7 +182,11 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             and _finite_nonnegative(free_gib)
             and _finite_nonnegative(reserve_gib)
             and free_gib >= max(5, reserve_gib)
-            and isinstance(native, dict)
+            # 0A01: an owner-attested partial queue dict is not a complete
+            # admission snapshot. Use the exact 6A02 completeness contract
+            # (worker identities, immutable source, claims and fresh CAS)
+            # before even advertising a training-resume review candidate.
+            and native_complete
             and native.get("maintenance_busy") is False
             and native.get("active_claims") is False
             and type(native.get("resource_headroom_bytes")) is int
