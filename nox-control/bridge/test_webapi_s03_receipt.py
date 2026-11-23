@@ -552,7 +552,11 @@ class FactReceiptTest(unittest.TestCase):
                 yield 'data: {"choices":[{"delta":{"content":"частичный ответ"}}]}'
                 if self.finish_reason is not None:
                     yield 'data: ' + json.dumps({"choices": [{"delta": {}, "finish_reason": self.finish_reason}]})
-                if self.error_event:
+                if self.error_event == "named":
+                    # A bare named SSE error must not be ignored just because
+                    # the provider later sends a valid stop and [DONE].
+                    yield 'event: error'
+                elif self.error_event:
                     yield 'data: {"error":{"message":"upstream worker failed"}}'
                 if self.complete:
                     yield 'data: [DONE]'
@@ -593,6 +597,7 @@ class FactReceiptTest(unittest.TestCase):
             (True, 504, None, False, None, False),
             (True, 200, "length", False, None, False),
             (True, 200, None, True, None, False),
+            (True, 200, "stop", "named", None, False),
             # [DONE] with visible content but no model stop finish is incomplete.
             (True, 200, None, False, None, False),
             # A successful DONE is only valid after a clean HTTP stream EOF.
