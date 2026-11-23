@@ -791,7 +791,7 @@ def install(app, B):
                 "media_stopped": False, "task_cancelled": False, "owner_stop": False}
 
     @app.get("/api/chat/snapshot")
-    async def a_chat_snapshot(stream_id: str = "", request_id: str = ""):
+    async def a_chat_snapshot(stream_id: str = "", request_id: str = "", exchange_id: str = ""):
         # The random 128-bit stream identifier is an unguessable read capability.
         # Existing web-token middleware also applies where configured.
         if not re.fullmatch(r"[0-9a-f]{32}", stream_id) or not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", request_id):
@@ -800,6 +800,15 @@ def install(app, B):
         row = CHAT_SNAPSHOTS.get(stream_id)
         if row is None or row["request_id"] != request_id:
             return JSONResponse({"status": "HOLD", "reason": "CHAT_SNAPSHOT_NOT_FOUND"}, status_code=404)
+        # A reconnecting browser must not reconcile a different exchange from
+        # the same conversation. An opt-in expected exchange is checked before
+        # returning any snapshot text; legacy clients remain compatible.
+        if exchange_id and not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", exchange_id):
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_SNAPSHOT_INVALID_EXCHANGE_ID"}, status_code=400)
+        if exchange_id and row.get("exchange_id") != exchange_id:
+            return JSONResponse({"status": "HOLD", "reason": "CHAT_SNAPSHOT_EXCHANGE_MISMATCH",
+                                 "snapshot_scope": "PROCESS_LOCAL", "s03_readback_verified": False},
+                                status_code=409, headers={"Cache-Control": "no-store"})
         # A terminal flag alone is not evidence that every SSE Unicode byte
         # survived in the process-local reconnect snapshot. Compare the exact
         # reconstructed text to the digest emitted by the terminal stream.
@@ -821,6 +830,8 @@ def install(app, B):
             "terminal_digest_verified": terminal_digest_verified,
             **({"conversation_id": row["conversation_id"]}
                if row.get("conversation_id") is not None else {}),
+            **({"exchange_id": row["exchange_id"]}
+               if row.get("exchange_id") is not None else {}),
             "message": {"role": "assistant", "content": snapshot_text},
             "done": row["terminal"] and not snapshot_corrupt,
             # A lossy/incomplete snapshot is never proof of generated output or
