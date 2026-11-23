@@ -3479,5 +3479,64 @@ class ProbeTests(unittest.TestCase):
             self.assertTrue(probe.require_postturn_executor_identity('client', legacy))
 
 
+    def test_stream_post_cached_replay_cannot_certify_later_sse_turn(self):
+        """A cached 200/DONE is not live second-/third-turn stream evidence."""
+        from email.message import Message
+
+        class Response:
+            status = 200
+            url = probe.BASE + '/api/nox/chat/stream'
+
+            def __init__(self, extra):
+                self.headers = Message()
+                self.headers['Content-Type'] = 'text/event-stream'
+                for name, value in extra:
+                    self.headers[name] = value
+                self.closed = False
+
+            def close(self):
+                self.closed = True
+
+        cached = (
+            [('Age', '12')],
+            [('X-Cache', 'HIT')],
+            [('CF-Cache-Status', 'STALE')],
+            [('Cache-Status', 'gateway; hit')],
+            [('Age', 'not-a-number')],
+            [('Age', '0'), ('Age', '0')],
+        )
+        for label in ('second', 'third'):
+            did = 'offline-' + label
+            for fields in cached:
+                response = Response(fields)
+                with self.subTest(turn=label, headers=fields):
+                    with patch.object(probe, 'request', return_value=response):
+                        with patch.object(probe, 'bounded_stream_frames') as parser:
+                            with self.assertRaisesRegex(
+                                    RuntimeError, '^HOLD_STREAM_CACHED_REPLAY):
+                                probe.consume_turn('client', 'offline probe', did)
+                            parser.assert_not_called()
+                self.assertTrue(response.closed)
+
+            # Age:0 with a cache MISS is allowed to reach the existing
+            # strict SSE frame/terminal validation (not native acceptance).
+            fresh = Response([('Age', '0'), ('X-Cache', 'MISS')])
+            frames = iter((
+                {'type': 'start', 'model': 'same-route'},
+                {'type': 'delta', 'text': 'Ответ получен', 'model': 'same-route'},
+                {'type': 'done', 'dialog_id': did, 'model': 'same-route',
+                 'saved': True, 's03_integrated': True},
+            ))
+            with patch.object(probe, 'request', return_value=fresh):
+                with patch.object(probe, 'bounded_stream_frames', return_value=frames) as parser:
+                    reply = probe.consume_turn('client', 'offline probe', did)
+                    parser.assert_called_once()
+            self.assertTrue(fresh.closed)
+            self.assertEqual(reply['done']['dialog_id'], did)
+            self.assertEqual(reply['stream_model_identity'], 'same-route')
+
+
+
+
 if __name__ == '__main__':
     unittest.main()

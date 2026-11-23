@@ -1024,6 +1024,16 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
     events=[];answer='';done=None;first=None;placeholders=0;delta_count=0;model_identity=None
     try:
         require_exact_stream_target(response)
+        # A cached POST stream may replay an earlier SSE DONE as this turn.
+        # Reuse the strict owner-readback cache-header validator on the actual
+        # HTTP response before trusting a single delta or durable DONE flag.
+        try:
+            require_fresh_owner_readback(response)
+        except RuntimeError as exc:
+            if str(exc) in ('HOLD_OWNER_READBACK_CACHED',
+                            'HOLD_OWNER_READBACK_CACHE_UNVERIFIED'):
+                raise RuntimeError('HOLD_STREAM_CACHED_REPLAY') from exc
+            raise
         require_stream_response_mime(response)
         require_stream_http_framing(response)
         for index,frame in enumerate(bounded_stream_frames(
