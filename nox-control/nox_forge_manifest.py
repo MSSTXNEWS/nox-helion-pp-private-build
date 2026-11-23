@@ -283,6 +283,14 @@ def build_manifest(data: Any) -> dict[str, Any]:
     source_ids = [source["source_id"] for source in sources]
     if len(set(source_ids)) != len(source_ids):
         raise ForgeError("source_id values must be unique")
+    # The same original content cannot be split across caller-assigned aliases
+    # to make the per-source contribution ratio look more diverse. A repeated
+    # locator is also ambiguous even when the caller asserts different hashes.
+    # These are claimed identifiers only: no source bytes are verified here.
+    if len({source["source_reference"] for source in sources}) != len(sources):
+        raise ForgeError("duplicate source reference across source_id values")
+    if len({source["claimed_source_sha256"] for source in sources}) != len(sources):
+        raise ForgeError("duplicate claimed source SHA-256 across source_id values")
     source_id_set = set(source_ids)
     examples = [_example(value, source_id_set) for value in examples_raw]
     # A manifest cannot truthfully attest that it already held examples or
