@@ -9,7 +9,7 @@ import datetime as dt, hashlib, json, os, sys, time
 from .config import Config
 from .tools.approvals import Approvals
 
-PRIO = {"high": 0, "urgent": 0, "срочно": 0, "высокий": 0, "normal": 1, "обычный": 1, "low": 2, "низкий": 2}
+PRIO = {"p0": 0, "p1": 1, "p2": 2, "high": 0, "urgent": 0, "срочно": 0, "высокий": 0, "normal": 1, "обычный": 1, "low": 2, "низкий": 2}
 OPEN = ("pending", "interrupted")
 
 
