@@ -78,6 +78,29 @@ const assert = require('node:assert/strict');
         memory_write_receipt: { status: 'WRITE_RETURNED_UNVERIFIED' } },
       { type: 'error', text: 'late transport fault' }
     ]);
+    if (requests === 9) {
+      const messages = [
+        { type: 'token', text: 'Кириллица 🌍 CRLF' },
+        { type: 'done', generation_complete: true,
+          memory_write_receipt: {
+            status: 'WRITE_RETURNED_UNVERIFIED',
+            s03_readback_verified: false
+          } }
+      ];
+      const bytes = new TextEncoder().encode(
+        messages.map(o => 'data: ' + JSON.stringify(o) + '\r\n\r\n').join('')
+      );
+      const chunks = [];
+      for (let k = 0; k < bytes.length; k += 3) chunks.push(bytes.slice(k, k+3));
+      return { ok: true, body: { getReader() {
+        let k = 0;
+        return { async read() {
+          return k < chunks.length
+            ? { done: false, value: chunks[k++] }
+            : { done: true };
+        } };
+      } } };
+    }
     if (requests >= 5) return response([
       { type: 'token', text: 'Continued ✅' },
       { type: 'done', generation_complete: true,
@@ -86,6 +109,9 @@ const assert = require('node:assert/strict');
     ]);
     return new Promise(resolve => { unblock = resolve; });
   };
+  // A proxy may emit CRLF SSE across arbitrary byte boundaries, including
+  // the middle of a four-byte emoji; the completed turn must remain exact.
+  // The ninth request exercises those boundaries without a live model.
   const context = vm.createContext({ document, fetch, TextDecoder, console });
   vm.runInContext(found[1], context);
   const send = get('f').onsubmit;
@@ -122,6 +148,8 @@ const assert = require('node:assert/strict');
     'legacy UI must send every previously completed turn, not slice to six');
   assert.equal(seen[8][0].content, 'SUCCESS_NEXT');
   assert.equal(seen[8][10].content, 'LONG_DIALOGUE_4');
+  assert.equal(vm.runInContext('hist[11].content', context), 'Кириллица 🌍 CRLF',
+    'CRLF and split UTF-8 bytes must preserve the completed final Unicode turn');
   console.log('legacy browser history/SSE admission: PASS');
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """
