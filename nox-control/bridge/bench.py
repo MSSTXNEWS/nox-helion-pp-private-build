@@ -91,16 +91,15 @@ def _sample(index, clock=time.perf_counter, opener=urllib.request.urlopen):
     # A benchmark is observational, not training or chat history. If the
     # supposedly ephemeral request may have committed S03, stop the entire
     # sampling batch immediately instead of issuing another POST.
-    if (write.get("s03_write_returned") is True or
-            write.get("status") in ("SAVED", "WRITE_RETURNED_UNVERIFIED") or
-            memory.get("status") == "SAVED"):
-        raise UnsafeEphemeralWriteReceipt("BENCH_EPHEMERAL_WRITE_RISK")
-    if (terminal.get("done_reason") != "stop" or
-            receipt.get("status") != "GENERATED" or receipt.get("upstream_done") is not True or
-            memory.get("status") != "SKIPPED" or memory.get("reason") != "ephemeral" or
+    if (memory.get("status") != "SKIPPED" or
+            memory.get("reason") != "ephemeral" or
             write.get("status") != "SKIPPED" or
             write.get("s03_write_returned") is not False or
             write.get("s03_readback_verified") is not False):
+        # Missing or ambiguous receipts are also unsafe to probe repeatedly.
+        raise UnsafeEphemeralWriteReceipt("BENCH_EPHEMERAL_WRITE_RISK")
+    if (terminal.get("done_reason") != "stop" or
+            receipt.get("status") != "GENERATED" or receipt.get("upstream_done") is not True):
         raise ValueError("TERMINAL_RECEIPT_NOT_EPHEMERAL_GENERATED")
     full = "".join(chunks)
     if hashlib.sha256(full.encode("utf-8", "strict")).hexdigest() != terminal.get("digest"):
