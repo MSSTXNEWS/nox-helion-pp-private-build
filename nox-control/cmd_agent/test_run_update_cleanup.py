@@ -92,9 +92,9 @@ class ProviderOrphanRecovery(TestCase):
         calls = [instance, {}, *([{"ssh_keys": []}] * 8),
                  {"ssh_keys": [{"id": ID, "ssh_key": PUB}]},
                  {}, {"ssh_keys": []}]
-        with patch.object(mod, "api", side_effect=calls) as fake_api, \\
-             patch.object(mod.tempfile, "mkdtemp", return_value=str(folder)), \\
-             patch.object(mod.subprocess, "run", side_effect=stub_run) as fake_run, \\
+        with patch.object(mod, "api", side_effect=calls) as fake_api, \
+             patch.object(mod.tempfile, "mkdtemp", return_value=str(folder)), \
+             patch.object(mod.subprocess, "run", side_effect=stub_run) as fake_run, \
              patch.object(mod.time, "sleep", return_value=None):
             with self.assertRaisesRegex(SystemExit, "HOLD_UNCONFIRMED_EPHEMERAL_KEY_ID"):
                 mod.main()
