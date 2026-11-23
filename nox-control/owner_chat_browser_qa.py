@@ -450,6 +450,14 @@ def owner_session_cookie_pin(cookies):
                 for key in ('name', 'domain', 'path'))
                 or not isinstance(row.get('value'), str)):
             return None
+        # JSON-decoded cookies can contain unpaired surrogate escapes. A
+        # malformed signed or ancillary value is not valid UTF-8 provenance;
+        # reject the whole snapshot before selecting owner-only cookies.
+        try:
+            for key in ('name', 'domain', 'path', 'value'):
+                row[key].encode('utf-8')
+        except UnicodeEncodeError:
+            return None
         if 'secure' in row and type(row['secure']) is not bool:
             return None
         same_site = row.get('sameSite')

@@ -1051,6 +1051,33 @@ async function check(chunks, status=200) {
                          signed_pin)
         self.assertNotEqual(signed_pin, legacy_pin)
 
+    def test_ru_es_owner_cookie_invalid_utf8_snapshot_holds(self):
+        """Lone surrogates in signed OR ancillary cookie fields must fail closed."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='owner-stable', httpOnly=True)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), pin)
+        self.assertTrue(owner_session_continuity_valid(200, [signed, ui], pin))
+        for field in ('name', 'domain', 'path', 'value'):
+            for invalid in ('\\ud800', '\\udfff'):
+                with self.subTest(field=field, codepoint=repr(invalid)):
+                    bad_signed = dict(signed, **{field: invalid})
+                    bad_ui = dict(ui, **{field: invalid})
+                    for snapshot in ([bad_signed], [bad_signed, ui],
+                                     [signed, bad_ui], [bad_ui, signed]):
+                        self.assertIsNone(owner_session_cookie_pin(snapshot))
+                        self.assertFalse(owner_session_continuity_valid(
+                            200, snapshot, pin))
+        # Complete valid Unicode remains accepted, including RU/ES and emoji.
+        valid = dict(signed, value='сессия-españa-🙂')
+        self.assertIsInstance(owner_session_cookie_pin([valid]), str)
+        self.assertEqual(owner_session_cookie_pin([valid, ui]),
+                         owner_session_cookie_pin([valid]))
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), pin)
+
     def test_ru_es_malformed_ancillary_cookie_snapshot_must_hold(self):
         """A signed cookie cannot hide malformed ancillary snapshot members."""
         signed = dict(name='nox_owner', domain='owner.example', path='/',
