@@ -1,8 +1,8 @@
 (() => {
  'use strict';
- if(window.NOX_NATIVE_OWNER!==true||
- !/^\/nox-web-v29\/pc\/(?:resonance\.html|v22\/resonance\.template\.html)$/.test(location.pathname)||
- window.__NOX_V135_OWNER_RESONANCE)return;
+ if(!(window.NOX_NATIVE_OWNER===true&&
+/^\/nox-web-v29\/pc\/(?:resonance\.html|v22\/resonance\.template\.html)$/.test(location.pathname))||
+window.__NOX_V135_OWNER_RESONANCE)return;
  window.__NOX_V135_OWNER_RESONANCE='OWNER_NATIVE_ONLY';
  const F=window.fetch.bind(window);
  const enc=new TextEncoder();
