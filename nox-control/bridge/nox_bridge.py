@@ -162,7 +162,7 @@ def build_msgs(history, user, mem, vol, extra=""):
     # silently slicing here would fabricate a different conversation for NOX.
     hist = [{"role": m["role"], "content": str(m.get("content", ""))}
             for m in history if m.get("role") in ("user", "assistant")]
-    ctx = "[Контекст для NOX, не цитируй дословно]\n" + ("Память: " + mem[:500] + "\n" if mem else "") + vol + _style() + extra + "\n\n[Вопрос Создателя]\n"
+    ctx = "[Контекст для NOX, не цитируй дословно]\n" + ("Память: " + mem + "\n" if mem else "") + vol + _style() + extra + "\n\n[Вопрос Создателя]\n"
     if hist and hist[-1]["role"] == "user":
         # Preserve the exact current user text and all prior admitted turns.
         hist[-1]["content"] = ctx + user
@@ -206,14 +206,16 @@ def _trivial(t):
     return len(s) < 14 and "?" not in s and any(s.startswith(w) for w in _TRIVIAL)
 
 def trim_mem(out):
-    """top-k строк памяти и жёсткий бюджет символов: меньше токенов в промпте, быстрее чтение."""
-    keep, tot = [], 0
-    for l in [x.strip() for x in out.splitlines() if len(x.strip()) >= 12][:6]:
-        l = l[:240]
-        if tot + len(l) > 520:
-            break
-        keep.append(l); tot += len(l) + 1
-    return "\n".join(keep)
+    """Historical entry point: admit the full retrieved S03 text or fail closed.
+
+    Never invent a different memory by silently truncating records or Unicode.
+    An oversized S03 result needs narrower retrieval, not accidental omission.
+    """
+    if not isinstance(out, str):
+        raise TypeError("S03_MEMORY_FORMAT_NON_TEXT")
+    if len(out.encode("utf-8")) > 32 * 1024:
+        raise ValueError("S03_MEMORY_CONTEXT_OVER_BUDGET")
+    return out
 
 def memory_block(text):
     if _trivial(text):
