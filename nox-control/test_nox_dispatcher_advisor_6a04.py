@@ -62,6 +62,70 @@ class GpuSourceEvidenceTests(unittest.TestCase):
         s=snapshot(); s["onehost"]["chat_p95_ms"]=400
         self.assertEqual(codes(s), ["GPU_CHAT_PRIORITY"])
 
+
+    def test_6a03_chat_priority_does_not_yield_without_boundary_proof(self):
+        s = snapshot()
+        s["onehost"]["chat_waiting"] = True
+        issue = [x for x in mod.assess(s) if x["code"] == "CHAT_PRIORITY"][0]
+        self.assertEqual(issue["urgency"], "hold")
+        self.assertIn("No signal", issue["advice"])
+
+    def test_6a03_safe_boundary_is_owner_review_only(self):
+        s = snapshot()
+        s["onehost"]["chat_waiting"] = True
+        s["trainer"].update(
+            yield_boundary="optimizer_step", yield_boundary_complete=True,
+            yield_step=42, resume_cursor_sha256="a" * 64,
+            checkpoint_readback_verified=True,
+            yield_owner_lease_cas_verified=True,
+        )
+        # Unauthenticated JSON flags cannot turn a source suggestion into
+        # an actionable training controller command.
+        issue = [x for x in mod.assess(s) if x["code"] == "CHAT_PRIORITY"][0]
+        self.assertEqual(issue["urgency"], "hold")
+        attested = [x for x in mod.assess(
+            s, owner_snapshot_verifier=lambda exact: exact is s)
+            if x["code"] == "CHAT_PRIORITY"][0]
+        self.assertEqual(attested["urgency"], "review")
+        self.assertIn("no automatic action", attested["advice"])
+        # Either native boundary type is supported only after live owner proof.
+        s["trainer"]["yield_boundary"] = "embedding_batch"
+        attested = [x for x in mod.assess(
+            s, owner_snapshot_verifier=lambda exact: exact is s)
+            if x["code"] == "CHAT_PRIORITY"][0]
+        self.assertEqual(attested["urgency"], "review")
+
+    def test_6a03_invalid_or_stale_cursor_and_owner_evidence_hold(self):
+        for scope, field, value in (
+            ("trainer", "yield_boundary", "unsafe_mid_step"),
+            ("trainer", "yield_boundary_complete", False),
+            ("trainer", "yield_step", True),
+            ("trainer", "resume_cursor_sha256", "broken"),
+            ("trainer", "checkpoint_readback_verified", None),
+            ("trainer", "yield_owner_lease_cas_verified", False),
+            ("native_queue", "maintenance_busy", True),
+            ("native_queue", "owner_lease_cas_verified", False),
+            ("native_queue", "owner_evidence_age_sec", 31),
+        ):
+            with self.subTest(field=field):
+                s = snapshot()
+                s["onehost"]["chat_waiting"] = True
+                s["trainer"].update(
+                    yield_boundary="optimizer_step", yield_boundary_complete=True,
+                    yield_step=42, resume_cursor_sha256="a" * 64,
+                    checkpoint_readback_verified=True,
+                    yield_owner_lease_cas_verified=True,
+                )
+                s[scope][field] = value
+                target = [x for x in mod.assess(
+                    s, owner_snapshot_verifier=lambda exact: exact is s)
+                    if x["code"] == "CHAT_PRIORITY"][0]
+                self.assertEqual(target["urgency"], "hold")
+        s = snapshot()
+        s["stop_active"] = True
+        s["onehost"]["chat_waiting"] = True
+        self.assertEqual([x["code"] for x in mod.assess(s)], ["STOP_ACTIVE"])
+
     def test_cpu_io_pressure_blocks(self):
         s=snapshot(); s["cpu_io"]["io_wait_pct"]=20
         self.assertEqual(codes(s), ["GPU_HOST_PIPELINE_PRESSURE"])
