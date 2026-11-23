@@ -127,6 +127,42 @@ class HunterURLSafetyTests(unittest.TestCase):
         self.assertEqual(hunter._feed_items(rss)[0]["url"],
                          "https://example.org/rss-item")
 
+    def test_atom_binary_alternate_is_not_article_provenance(self):
+        # An Atom exporter may advertise a ZIP as rel=alternate. Its declared
+        # media type is not a citable article; prefer a later HTML alternate,
+        # and quarantine entries that contain only a binary link.
+        source = hunter._validate_source({
+            "id": "atom-media", "kind": "atom",
+            "url": "https://example.org/feed",
+            "allowed_hosts": ["example.org"], "interval_seconds": 60,
+        })
+        feed = (b'<feed xmlns="http://www.w3.org/2005/Atom">'
+                b'<entry><title>Archive only</title>'
+                b'<link rel="alternate" type="application/zip" '
+                b'href="https://example.org/export.zip"/></entry>'
+                b'<entry><title>Real article</title>'
+                b'<link rel="alternate" type="application/octet-stream" '
+                b'href="https://example.org/data.bin"/>'
+                b'<link rel="alternate" type="text/html; charset=utf-8" '
+                b'href="https://example.org/article"/></entry>'
+                b'<entry><title>Paper PDF</title>'
+                b'<link rel="alternate" type="application/pdf" '
+                b'href="https://example.org/paper.pdf"/></entry>'
+                b'</feed>')
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "hunter.sqlite"
+            with patch.object(hunter, "_fetch", return_value=(
+                    feed, None, None, "application/atom+xml", False)):
+                result = hunter.poll_due([source], state, now=1000.0)[0]
+            self.assertEqual((result["added"], result["quarantined"]), (2, 1))
+            with sqlite3.connect(state) as conn:
+                saved = conn.execute(
+                    "SELECT title,item_url FROM items ORDER BY title").fetchall()
+            self.assertEqual(saved, [
+                ("Paper PDF", "https://example.org/paper.pdf"),
+                ("Real article", "https://example.org/article"),
+            ])
+
     def test_json_surrogates_quarantine_only_bad_candidates(self):
         # A legal JSON escape can decode to an invalid lone surrogate.
         # Source config fails cleanly, while malformed feed items are
