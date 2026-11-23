@@ -1419,9 +1419,18 @@ def main():
                 emit('chat_logout_cleanup_hold', {'reason':'HOLD_OWNER_LOGOUT_UNCONFIRMED'})
     # Logout/metrics are part of elapsed probe time; check immediately before COMPLETE.
     require_executor_turn_budget(time.monotonic()-probe_started)
-    if executor_question_receipt is not None:
-        emit('chat_executor_question',executor_question_receipt)
-    print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
+    # Owner-dialog history is not independent browser/canonical-S03 proof.
+    # Fail closed for consumers of the historical broad completion marker.
+    if executor_question_receipt is None:
+        raise RuntimeError('HOLD_OWNER_DIALOG_PROBE_INCOMPLETE')
+    emit('chat_executor_question',executor_question_receipt)
+    emit('chat_probe_acceptance_scope', {
+        'scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03',
+        'browser_multiturn_accepted':False,
+        'native_s03_independently_verified':False,
+        'production_accepted':False})
+    print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true',flush=True)
+    print('NOX_MAINT_REPAIR_COMPLETE=false',flush=True)
 
 if __name__=='__main__':
     try:main()

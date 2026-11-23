@@ -303,7 +303,7 @@ class ProbeTests(unittest.TestCase):
             'require_logout_revoked(client)',
             '    require_executor_turn_budget(time.monotonic()-probe_started)\\n    if executor_question_receipt is not None:',
             "emit('chat_executor_question',executor_question_receipt)",
-            "print('NOX_MAINT_REPAIR_COMPLETE=true'",
+            "print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'",
         )
         # Distinguish the final timeout guard from the earlier two guards.
         order = tuple(x.replace('\\n', '\n') for x in order)
@@ -1679,7 +1679,7 @@ class ProbeTests(unittest.TestCase):
         self.assertLess(source.index('require_executor_witness(end,third_history,'), second_gate)
         self.assertLess(second_gate, source.index("emit('chat_recent_timing_after'"))
         self.assertGreater(final_gate, source.index('require_logout_revoked(client)', source.index('def main():')))
-        self.assertLess(final_gate, source.index("print('NOX_MAINT_REPAIR_COMPLETE=true'"))
+        self.assertLess(final_gate, source.index("print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'"))
 
     def test_scoped_history_requires_explicit_top_level_dialog_id(self):
         did = '1' * 32
@@ -2974,7 +2974,7 @@ class ProbeTests(unittest.TestCase):
         preflight = "if not require_multiturn_model_route(turn,follow):"
         postflight = "if not model_route_verified:"
         third_post = 'turn3=admitted_consume_turn('
-        complete = "print('NOX_MAINT_REPAIR_COMPLETE=true'"
+        complete = "print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'"
         self.assertEqual(main.count(preflight), 1)
         self.assertEqual(main.count(postflight), 1)
         self.assertEqual(main.count(
@@ -3334,6 +3334,27 @@ class ProbeTests(unittest.TestCase):
                         probe.require_executor_witness(
                             {'saved': True, 's03_integrated': True},
                             history, turns, True, True, did)
+
+
+    def test_owner_dialog_completion_cannot_claim_native_repair(self):
+        """A bounded owner-dialog readback is not production acceptance."""
+        source = path.read_text()
+        main = source.split('def main():', 1)[1]
+        self.assertNotIn('NOX_MAINT_REPAIR_COMPLETE=true', main)
+        self.assertIn("print('NOX_MAINT_REPAIR_COMPLETE=false'", main)
+        self.assertIn("print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'", main)
+        self.assertIn("if executor_question_receipt is None:", main)
+        self.assertIn("raise RuntimeError('HOLD_OWNER_DIALOG_PROBE_INCOMPLETE')", main)
+        self.assertIn("'scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'", main)
+        self.assertIn("'browser_multiturn_accepted':False", main)
+        self.assertIn("'native_s03_independently_verified':False", main)
+        self.assertIn("'production_accepted':False", main)
+        final_gate = main.rindex('require_executor_turn_budget(time.monotonic()-probe_started)')
+        scoped = main.index("print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true'")
+        self.assertLess(final_gate, scoped)
+        self.assertLess(main.index('require_logout_revoked(client)'), scoped)
+        self.assertLess(main.index("emit('chat_probe_acceptance_scope'"), scoped)
+        self.assertLess(scoped, main.index("print('NOX_MAINT_REPAIR_COMPLETE=false'"))
 
 
 if __name__ == '__main__':
