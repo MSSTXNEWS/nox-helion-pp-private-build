@@ -2499,6 +2499,11 @@ def main():
             healthyCancels===1&&healthyPosts===0;
         }'''))
 
+        if os.environ.get('NOX_B1_R52_ONLY')=='1':
+            browser.close()
+            print('B1 R52 actual Chromium committed-preflight GET disposal PASS')
+            return
+
         # After both canonical verifiers succeed, an invalid durable ACK
         # envelope or late failed gate CAS still owns an abandoned GET body.
         # Release it once nonblocking, without a repeated model POST/ACK.
