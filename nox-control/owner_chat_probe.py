@@ -491,6 +491,11 @@ def history_matches_turns(messages, turns, dialog_id=None):
     for row_index, row in enumerate(messages):
         if not isinstance(row, dict):
             return False
+        # An owner-scoped history GET must never contain an explicitly foreign
+        # dialog anywhere in its bounded window, not merely in the final tail.
+        # Legacy untagged rows remain compatible; this is not canonical S03.
+        if dialog_id is not None and 'dialog_id' in row and row['dialog_id'] != dialog_id:
+            return False
         for key in ('id', 'message_id', 's03_id'):
             if key not in row:
                 continue

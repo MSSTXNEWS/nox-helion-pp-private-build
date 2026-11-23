@@ -3244,5 +3244,47 @@ class ProbeTests(unittest.TestCase):
                 self.assertEqual(request_headers['content-type'], 'application/json')
 
 
+    def test_owner_history_full_window_dialog_scope_before_three_turn_acceptance(self):
+        """A foreign earlier row cannot hide behind six correct same-dialog tail rows."""
+        did, foreign = 'a' * 32, 'b' * 32
+        turns = [('first', '323'), ('second', '323'), ('third', '3 workers')]
+        tail = []
+        for prompt, answer in turns:
+            tail.extend((
+                {'role': 'user', 'content': prompt, 'dialog_id': did},
+                {'role': 'assistant', 'content': answer, 'dialog_id': did},
+            ))
+        older = [
+            {'role': 'user', 'content': 'older question', 'dialog_id': did},
+            {'role': 'assistant', 'content': 'older answer', 'dialog_id': did},
+        ]
+        healthy = {'dialog_id': did, 'messages': older + tail}
+        self.assertTrue(probe.scoped_history_matches_turns(healthy, turns, did))
+        self.assertTrue(probe.stable_postquiet_three_turn_history(
+            object(), {'dialog_id': foreign, 'messages': older + tail}, turns, did) is False)
+        # Legacy untagged rows are permissible within the same scoped response.
+        legacy = [dict(row) for row in older + tail]
+        legacy[0].pop('dialog_id')
+        legacy[1].pop('dialog_id')
+        self.assertTrue(probe.scoped_history_matches_turns(
+            {'dialog_id': did, 'messages': legacy}, turns, did))
+        for earlier_index in (0, 1):
+            for invalid in (foreign, None, ''):
+                poisoned = [dict(row) for row in older + tail]
+                poisoned[earlier_index]['dialog_id'] = invalid
+                history = {'dialog_id': did, 'messages': poisoned}
+                with self.subTest(older_row=earlier_index, dialog=invalid):
+                    self.assertFalse(probe.scoped_history_matches_turns(
+                        history, turns, did))
+                    self.assertFalse(probe.stable_postquiet_three_turn_history(
+                        object(), history, turns, did))
+                    with self.assertRaisesRegex(
+                            RuntimeError, '^HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED
+):
+                        probe.require_executor_witness(
+                            {'saved': True, 's03_integrated': True},
+                            history, turns, True, True, did)
+
+
 if __name__ == '__main__':
     unittest.main()
