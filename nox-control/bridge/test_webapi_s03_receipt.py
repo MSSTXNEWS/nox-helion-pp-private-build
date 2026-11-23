@@ -469,7 +469,8 @@ class FactReceiptTest(unittest.TestCase):
     def test_0a03_local_history_and_facts_are_not_canonical_s03(self):
         # All values come from process-local JSONL, not independent S03.
         history = next(r.endpoint for r in self.app.routes if r.path == "/api/nox/history")
-        facts = next(r.endpoint for r in self.app.routes if r.path == "/api/nox/memory/facts")
+        facts = next(r.endpoint for r in self.app.routes
+                     if r.path == "/api/nox/memory/facts" and "GET" in r.methods)
 
         def local_tail(path, limit):
             if str(path).endswith("/turns.jsonl"):
