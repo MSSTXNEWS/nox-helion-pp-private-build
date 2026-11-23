@@ -56,6 +56,14 @@ class TrainingResumeAttestationTests(unittest.TestCase):
                 "resource_headroom_bytes": 3 * 1024**3,
                 "owner_evidence_age_sec": 5,
                 "owner_lease_cas_verified": True,
+                "immutable_task_source_verified": True,
+                "admission_state": "OWNER_REVIEWED",
+                "jobs_started": 0,
+                "workers": [
+                    {"state": "RUNNING", "current_task": None},
+                    {"state": "RUNNING", "current_task": None},
+                    {"state": "RUNNING", "current_task": None},
+                ],
             },
         }
 
@@ -93,6 +101,28 @@ class TrainingResumeAttestationTests(unittest.TestCase):
             with self.subTest(path=path, val=val):
                 s = self.snapshot()
                 s[path[0]][path[1]] = val
+                codes = [x["code"] for x in advisor.assess(
+                    s, owner_snapshot_verifier=lambda exact: exact is s)]
+                self.assertIn("TRAIN_RESUME_OWNER_HOLD", codes)
+                self.assertNotIn("TRAIN_RESUME_CANDIDATE", codes)
+
+    def test_attested_partial_queue_never_advertises_training_resume(self):
+        # Exact owner signature alone does not fill missing queue/workers,
+        # immutable source or admission state. The baseline is complete.
+        for field in ("workers", "admission_state", "jobs_started",
+                      "immutable_task_source_verified"):
+            with self.subTest(field=field):
+                s = self.snapshot()
+                s["native_queue"].pop(field)
+                codes = [x["code"] for x in advisor.assess(
+                    s, owner_snapshot_verifier=lambda exact: exact is s)]
+                self.assertIn("TRAIN_RESUME_OWNER_HOLD", codes)
+                self.assertNotIn("TRAIN_RESUME_CANDIDATE", codes)
+        for field, val in (("workers", []), ("jobs_started", True),
+                           ("immutable_task_source_verified", False)):
+            with self.subTest(field=field):
+                s = self.snapshot()
+                s["native_queue"][field] = val
                 codes = [x["code"] for x in advisor.assess(
                     s, owner_snapshot_verifier=lambda exact: exact is s)]
                 self.assertIn("TRAIN_RESUME_OWNER_HOLD", codes)
