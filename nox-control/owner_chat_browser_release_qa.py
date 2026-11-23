@@ -12,7 +12,7 @@ import hashlib
 import math
 import time
 
-BASE_SHA = 'ccc6c6e49899c92310f611fb6db4750a24617be07018caf6232b31a55700ad67'
+BASE_SHA = '6d36396630f1555530202b00932daf2eaaa6ad014d29d1763874ae6c02a61637'
 TRANSPORT_SHA = '6a9fa0d38902b400590211f66d9d8dca51b2736087882507014fef15c8f1f7d1'
 CONTROL_STATE_JS = r"""() => {
  const controls=document.querySelectorAll('#chatForm [type=submit]');
