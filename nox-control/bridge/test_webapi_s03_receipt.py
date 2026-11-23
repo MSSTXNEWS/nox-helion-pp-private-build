@@ -527,6 +527,10 @@ class FactReceiptTest(unittest.TestCase):
             second_body = json.loads(second.body)
             after_done = await chat(Request(changed_id))
             after_done_status = after_done.status_code
+            changed_exchange = await chat(Request(
+                dict(body, exchange_id="different-exchange-1a02")))
+            changed_exchange_status = changed_exchange.status_code
+            changed_exchange_body = json.loads(changed_exchange.body)
             # TTL/eviction is deliberately NOT durable idempotency. Once the
             # bounded entry expires, a new request may be admitted again.
             W.CHAT_SNAPSHOTS[first_frames[0]["stream_id"]]["updated_at"] = (
@@ -542,18 +546,26 @@ class FactReceiptTest(unittest.TestCase):
             if was_readmitted:
                 await readmitted.body_iterator.aclose()
             return (first_frames, in_flight_status, second_status,
-                    second_body, after_done_status, third_frames, was_readmitted)
+                    second_body, after_done_status, changed_exchange_status,
+                    changed_exchange_body, third_frames, was_readmitted)
 
         with (mock.patch.object(W, "CHAT_SNAPSHOTS", {}),
               mock.patch.object(W, "ACTIVE_CHAT_IDS", set()),
               mock.patch.object(W, "W", None),
               mock.patch.dict(sys.modules, {"s03_memory": memory})):
             (first_frames, in_flight_status, status, rejected,
-             after_done_status, third_frames, was_readmitted) = asyncio.run(scenario())
+             after_done_status, changed_exchange_status, changed_exchange_body,
+             third_frames, was_readmitted) = asyncio.run(scenario())
         self.assertTrue(first_frames[-1]["done"])
         self.assertEqual(in_flight_status, 409)
         self.assertEqual(status, 409)
         self.assertEqual(after_done_status, 409)
+        self.assertEqual(changed_exchange_status, 409)
+        self.assertEqual(changed_exchange_body, {
+            "status": "HOLD", "reason": "CHAT_REQUEST_ID_REUSED_ACROSS_EXCHANGES",
+            "retry_same_id": False, "snapshot_scope": "PROCESS_LOCAL",
+            "s03_readback_verified": False,
+        })
         self.assertEqual(rejected, {
             "status": "HOLD", "reason": "CHAT_EXCHANGE_RECENTLY_USED",
             "retry_same_id": False, "snapshot_scope": "PROCESS_LOCAL",
