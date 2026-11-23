@@ -2700,6 +2700,54 @@ class FinalReadbackReceiptContinuity(unittest.TestCase):
                 self.assertEqual(values["chat_after"], {"8080": 200})
 
 
+    def test_final_progress_loss_metrics_reject_nonfinite_or_false_quality(self):
+        # Execute the exact owner AST, without native GPU/trainer/serving access.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"), filename=str(SOURCE))
+        fn = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                  and node.name == "final_observation_snapshots")
+        scope = {"re": re, "math": math}
+        exec(compile(ast.Module(body=[fn], type_ignores=[]), str(SOURCE), "exec"),
+             scope)
+        capture = scope["final_observation_snapshots"]
+
+        def observe(progress):
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "RUNNING"},
+                health=lambda: {"8080": 200},
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 28000}]},
+                progress=lambda: progress)
+            return capture(helper)
+
+        for good in (
+                {"step": 0}, {"step": 5, "loss": 0},
+                {"step": 5, "loss": 0.5, "eval_loss": 0.7},
+                {"global_step": 5, "eval_loss": 0.0}):
+            with self.subTest(good=repr(good)):
+                values, errors = observe(good)
+                self.assertEqual(errors, {})
+                self.assertEqual(values["progress_after"], good)
+
+        for bad in (
+                {"step": 5, "loss": -0.1},
+                {"step": 5, "loss": True},
+                {"step": 5, "loss": None},
+                {"step": 5, "loss": "0.3"},
+                {"step": 5, "loss": float("nan")},
+                {"step": 5, "loss": float("inf")},
+                {"step": 5, "loss": float("-inf")},
+                {"step": 5, "loss": 10 ** 400},
+                {"step": 5, "eval_loss": -0.1},
+                {"step": 5, "eval_loss": False},
+                {"step": 5, "eval_loss": float("nan")},
+                {"step": 5, "loss": 0.3, "eval_loss": float("inf")}):
+            with self.subTest(bad=repr(bad)):
+                values, errors = observe(bad)
+                self.assertIsNone(values["progress_after"])
+                self.assertEqual(errors, {
+                    "progress_after": "HOLD_FINAL_READBACK_MALFORMED"})
+                self.assertEqual(values["chat_after"], {"8080": 200})
+
+
 class LegacyHeavyServiceReadbackFence(unittest.TestCase):
     def test_malformed_legacy_service_snapshot_cannot_authorize_training(self):
         # Exercise actual source gate AST, not a duplicate in the test.

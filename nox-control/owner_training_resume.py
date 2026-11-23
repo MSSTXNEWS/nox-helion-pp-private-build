@@ -1466,6 +1466,19 @@ def final_observation_snapshots(helper):
                             and (type(value['global_step']) is not int
                                  or value['global_step'] != native_step))):
                     raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
+                # Optional loss observations must never appear valid when they
+                # are non-finite, negative, boolean or unrepresentable as floats.
+                # This is a schema guard, not proof of RU/ES holdout quality.
+                for metric_name in ('loss', 'eval_loss'):
+                    if metric_name in value:
+                        measured = value[metric_name]
+                        try:
+                            valid_loss = (type(measured) in (int, float)
+                                          and math.isfinite(measured) and measured >= 0)
+                        except OverflowError:
+                            valid_loss = False
+                        if not valid_loss:
+                            raise RuntimeError('HOLD_FINAL_READBACK_MALFORMED')
             snapshots[key] = value
         except Exception as exc:
             snapshots[key] = None
