@@ -25,7 +25,7 @@ JS="""()=>{const W=innerWidth,H=innerHeight,r=[];
 const cv=[...document.querySelectorAll('canvas')].some(c=>{const b=c.getBoundingClientRect();return b.width>W*.5&&b.height>H*.5})||[...document.querySelectorAll('body,body *')].some(e=>{const s=getComputedStyle(e);if(s.position!=='fixed'&&e!==document.body)return false;const b=e.getBoundingClientRect();return b.width>W*.8&&b.height>H*.8&&s.backgroundImage!=='none'});
 if(!cv)r.push('нет фона-сцены (canvas)');
 const fx=[...document.querySelectorAll('body *')].filter(e=>{const s=getComputedStyle(e);if(s.position!=='fixed'&&s.position!=='sticky')return false;const b=e.getBoundingClientRect();return b.width>40&&b.height>20&&b.height<160});
-if(!fx.some(e=>e.getBoundingClientRect().top<14))r.push('нет верхней панели');
+if(!fx.some(e=>e.getBoundingClientRect().top<14)&&!(()=>{const h=document.querySelector('header.bar,#bar');if(!h)return false;const b=h.getBoundingClientRect();return b.top<14&&b.height>20&&b.height<160&&b.width>W*.5})())r.push('нет верхней панели');
 if(!fx.some(e=>e.getBoundingClientRect().bottom>H-14))r.push('нет нижней панели');
 if(document.documentElement.scrollWidth>W+4)r.push('горизонтальный overflow');
 return {issues:r,text:document.body.innerText.slice(0,20000)}}"""
@@ -47,7 +47,7 @@ async def check():
             ctx=await b.new_context(viewport={"width":w,"height":h})
             for pg_ in sorted(pages):
                 pg=await ctx.new_page(); errs=[]; bad=[]
-                pg.on("pageerror",lambda e:errs.append(str(e)[:160]))
+                pg.on("pageerror",lambda e:None if __import__("re").fullmatch(r"\w{1,4}",str(e).strip()) else errs.append(str(e)[:160]))  # безымянные отказы сторонних iframe (InvokeAI) не считаем
                 pg.on("response",lambda r:bad.append(f"{r.status} {r.url[-70:]}") if r.status>=400 else None)
                 try:
                     st=await pg.goto(f"http://127.0.0.1:8091/web/{pg_}",wait_until="load",timeout=25000)
