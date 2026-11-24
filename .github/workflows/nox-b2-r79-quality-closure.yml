@@ -1,0 +1,38 @@
+name: B2 R79 quality closure drift
+on:
+  pull_request:
+    paths: ['nox-control/b2-r79/**', '.github/workflows/nox-b2-r79-quality-closure.yml']
+permissions:
+  contents: read
+jobs:
+  quality:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b2-r79-quality-closure-fd-drift-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Exact R78 quality boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$PWD/nox-control/d3-r74/staging"
+          own="$PWD/nox-control/b2-r79"
+          test "$(git rev-parse HEAD:nox-control/d3-r78/retained_snapshot_review.py)" = defcb3d18603a2af3236694e010d830e2339d1c3
+          test "$(git rev-parse HEAD:nox-control/d3-r78/b5_retained_ingress.py)" = 75af979a9d84216485e0333f8f9afcffb61f6ce6
+          test "$(git rev-parse HEAD:nox-control/b2-r77/test_joint_rues.py)" = 67a28dbe21353d05120341ae620f613f564787eb
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$own:$PWD/nox-control/d3-r78:$stage/py:$PWD/nox-control/d3-r76:$PWD/nox-control/b2-r77:$tmp"
+          export D3_B4_MODULE="$stage/b4/b4_existing_turn_pair.mjs"
+          cd "$tmp"
+          python3 -B -m unittest -v test_quality_closure.QualityClosure test_retained_snapshot.RetainedSnapshotTest
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false
