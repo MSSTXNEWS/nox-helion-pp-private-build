@@ -1,0 +1,67 @@
+<!doctype html>
+<!-- nox-web-extras: пропустить -->
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02030a">
+<title>NOX HELION · ФОТОСТУДИЯ</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./nox-wow.css">
+<link rel="stylesheet" href="./nox-pages.css">
+<link rel="stylesheet" href="./nox-unify.css">
+<link rel="stylesheet" href="./nox-tools.css">
+<style>
+.ps{display:grid;grid-template-columns:1fr 320px;gap:10px;height:calc(100vh - 170px);min-height:560px}
+.ps-ed{border-radius:14px;overflow:hidden;border:1px solid rgba(150,190,255,.18);background:#0b0f18}
+.ps-ed iframe{width:100%;height:100%;border:0;display:block}
+.ps-ai{overflow:auto;display:flex;flex-direction:column;gap:8px;padding:10px}
+.ps-box{padding:10px;border-radius:12px;background:rgba(10,14,26,.5);border:1px solid rgba(150,190,255,.15)}
+.ps-box h3{margin:0 0 6px;font:700 11px/1 system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#9fd6ff}
+.ps-box textarea,.ps-box select,.ps-box input{width:100%;box-sizing:border-box;background:rgba(0,0,0,.35);color:inherit;border:1px solid rgba(150,190,255,.2);border-radius:8px;padding:6px;font:13px/1.35 system-ui,sans-serif}
+.ps-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.ps-row button{flex:1;min-width:92px;background:rgba(120,170,255,.12);border:1px solid rgba(150,190,255,.25);border-radius:9px;color:inherit;padding:7px 8px;font:12.5px system-ui,sans-serif;cursor:pointer;transition:box-shadow .15s,background .15s}
+.ps-row button:hover{background:rgba(120,170,255,.24);box-shadow:0 0 14px rgba(124,200,255,.35)}
+.ps-row button.ai{border-color:rgba(255,190,110,.55);color:#ffd08a}
+.ps-row button:disabled{opacity:.5;cursor:wait}
+.ps-st{font-size:12px;opacity:.8;min-height:16px;white-space:pre-wrap}
+.ps-th{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.ps-th img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px;cursor:pointer;border:1px solid rgba(150,190,255,.2)}
+@media (max-width:900px){.ps{grid-template-columns:1fr;height:auto}.ps-ed{height:62vh}}
+</style>
+<script src="./nox-theme.js"></script>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
+</head>
+<body data-page="photo" class="boot">
+<div id="app">
+<main class="page" id="page"><div class="wrap">
+<div class="ph"><div><span class="kick mono">Редактор слоёв miniPaint · ИИ NOX: генерация, фон, увеличение, описание</span><h1>Фотостудия</h1></div>
+ <div class="acts"><span class="seg"><button type="button" id="openF"><sl-icon library="tabler" name="photo-plus"></sl-icon>Открыть фото</button><button type="button" id="expP"><sl-icon library="tabler" name="download"></sl-icon>PNG</button><button type="button" id="expJ"><sl-icon library="tabler" name="download"></sl-icon>JPG</button><button type="button" id="expW"><sl-icon library="tabler" name="download"></sl-icon>WebP</button></span></div></div>
+<section class="ps">
+ <div class="ps-ed"><iframe id="mp" src="./vendor/nox-x/minipaint/index.html" title="miniPaint"></iframe></div>
+ <aside class="ps-ai glass">
+  <div class="ps-box"><h3>Генерация</h3>
+   <textarea id="gP" rows="3" placeholder="Опиши картинку: «закат над морем, неон, кинематографично»"></textarea>
+   <div class="ps-row"><select id="gS"><option value="1024x1024">1:1 · 1024</option><option value="1216x832">16:10 · 1216</option><option value="832x1216">10:16 · 832</option><option value="768x768">быстро · 768</option></select><select id="gM"><option value="chroma">Chroma</option><option value="zimage">Z-Image</option></select></div>
+   <div class="ps-row"><button class="ai" id="gImp">NOX: улучши промпт</button><button class="ai" id="gGo">Создать слоем</button></div>
+   <div class="ps-st" id="gSt"></div><div class="ps-th" id="gTh"></div></div>
+  <div class="ps-box"><h3>ИИ-обработка холста</h3>
+   <div class="ps-row"><button class="ai" id="aBg">Удалить фон</button><button class="ai" id="aUp2">Увеличить ×2</button></div>
+   <div class="ps-row"><button class="ai" id="aDesc">Описать фото</button><button class="ai" id="aIdea">Идеи правок</button></div>
+   <div class="ps-st" id="aSt"></div></div>
+  <div class="ps-box"><h3>Быстрые фильтры</h3>
+   <div class="ps-row"><button data-f="grayscale(1)">Ч/б</button><button data-f="sepia(.8)">Сепия</button><button data-f="contrast(1.25) saturate(1.3)">Сочно</button></div>
+   <div class="ps-row"><button data-f="brightness(1.1) contrast(.9) saturate(.8) sepia(.25)">Винтаж</button><button data-f="hue-rotate(180deg) saturate(1.6)">Неон</button><button data-f="blur(3px)">Размыть</button></div>
+   <div class="ps-st">Фильтр применяется к копии холста новым слоем.</div></div>
+  <div class="ps-box" id="noxBox" hidden><h3>NOX</h3><div class="ps-st" id="noxOut"></div></div>
+ </aside>
+</section>
+</div></main>
+</div>
+<script type="module" src="./nox-nav.js"></script>
+<script src="./nox-photo.js"></script>
+<script src="nox-shell-classic.js" defer></script>
+</body>
+</html>
