@@ -18,6 +18,8 @@ from owner_chat_browser_qa import (
     native_chat_route_candidate,
     canonical_s03_proof_valid,
     canonical_s03_pinned_evidence_valid,
+    canonical_s03_firstturn_prefix_valid,
+    canonical_s03_resumed_second_turn_valid,
     click_send,
     json_response,
     owner_history_json_response,
@@ -4505,6 +4507,55 @@ async function check(chunks, status=200) {
         self.assertFalse(check(history=foreign))
         self.assertIsNone(multiturn_transcript_sha256(current))
         self.assertIsNotNone(multiturn_transcript_sha256(current, expected_sequence=3))
+        self.assertIn("canonical_s03_verified=False", inspect.getsource(browser_run))
+
+    def test_existing_first_turn_prefix_resume_without_replay(self):
+        current = [dict(row, message_id=f"row-{i}", session_id="owner-session",
+                        dialog_id=DIALOG)
+                   for i, row in enumerate(rows("¿Qué recuerdas? 🪐"), 1)]
+        prior = [dict(row) for row in current[:2]]
+        def wire(obj):
+            return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
+        def pin(raw):
+            return hashlib.sha256(raw).hexdigest()
+        def witnesses(history, sequence, event=None, turn=None):
+            full = pin(json.dumps(
+                [{"role": x["role"], "content": x["content"]} for x in history],
+                ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode())
+            common = dict(source="canonical_s03", event_id=event or f"evt-{sequence}",
+                          turn_id=turn or f"turn-{sequence}", sequence=sequence,
+                          dialog_id=DIALOG, session_id="owner-session",
+                          full_transcript_sha256=full,
+                          message_ids_sha256=pin(wire([x["message_id"] for x in history])))
+            w = wire(dict(common, verified=True, durable=True))
+            r = wire(dict(common, independent=True, messages=history,
+                          full_answer_sha256=pin(history[-1]["content"].encode())))
+            return w, r, pin(w), pin(r)
+        previous = witnesses(prior, 1)
+        self.assertTrue(canonical_s03_firstturn_prefix_valid(
+            *previous, DIALOG, prior, expected_session_id="owner-session"))
+        self.assertFalse(canonical_s03_pinned_evidence_valid(
+            *previous, DIALOG, prior, expected_session_id="owner-session",
+            expected_sequence=1))
+        self.assertIsNone(multiturn_transcript_sha256(prior, expected_sequence=1))
+        def check(history=current, prefix=prior, pins=previous, event=None, turn=None):
+            return canonical_s03_resumed_second_turn_valid(
+                *witnesses(history, 2, event, turn), DIALOG, history,
+                expected_session_id="owner-session", prior_messages=prefix,
+                prior_witnesses=pins)
+        self.assertTrue(check())
+        self.assertFalse(check(pins=None))
+        self.assertFalse(check(pins=(*previous[:2], "0"*64, previous[3])))
+        self.assertFalse(check(event="evt-1"))
+        self.assertFalse(check(turn="turn-1"))
+        rewritten = [dict(row) for row in current]
+        rewritten[1]["content"] = "Подмена предыдущего ответа"
+        self.assertFalse(check(history=rewritten))
+        duplicated = [dict(row) for row in current]
+        duplicated[-1]["message_id"] = prior[0]["message_id"]
+        self.assertFalse(check(history=duplicated))
+        self.assertFalse(canonical_s03_firstturn_prefix_valid(
+            *previous, DIALOG, prior, expected_session_id="different-owner"))
         self.assertIn("canonical_s03_verified=False", inspect.getsource(browser_run))
 
 
