@@ -1,0 +1,15 @@
+name: B1 R65 POST response ownership
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b1-r65/**'
+      - '.github/workflows/nox-b1-r65-post-response.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: node nox-control/b1-r65/test_post_response_stop.cjs
