@@ -1,0 +1,19 @@
+name: B3 R58 composed callsite
+on:
+  pull_request:
+    paths:
+      - 'coordination/onepass/b3_r58_*'
+      - '.github/workflows/b3-r58-composed.yml'
+permissions:
+  contents: read
+jobs:
+  composed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test exact R57 composition
+        run: |
+          node --version
+          node coordination/onepass/b3_r57_phase_transition_port.cjs
+          node coordination/onepass/b3_r58_composed_test.cjs
