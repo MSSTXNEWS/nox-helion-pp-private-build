@@ -13,7 +13,7 @@ for f in $S/*.html; do
 done
 echo "injected pages: $n"
 # реестр шины (пишет исполнитель A) - только просмотр
-python3 -c "import json;d=json.load(open('$S/qa/registry.json'));print('registry keys:',len(d) if isinstance(d,(list,dict)) else type(d).__name__)" 2>&1 | head -3
+[ -f $S/qa/registry.json ] && python3 -c "import json;d=json.load(open('$S/qa/registry.json'));print('registry keys:',len(d) if isinstance(d,(list,dict)) else type(d).__name__)" 2>&1 | head -3
 mkdir -p $S/qa/rework && echo "nav: nox-nav-x.js (палитра Ctrl+K, крошки, датчики ядра/чата, поиск на телефоне); канон не менялся" > $S/qa/rework/nav.fixed
 cat > /tmp/shot_navx.py <<'P'
 import base64,subprocess
@@ -25,7 +25,7 @@ def out(tag,png,w,q):
     print('B64_%s_BEGIN'%tag)
     for i in range(0,len(b),900): print(b[i:i+900])
     print('B64_%s_END'%tag)
-J=[('index_d',1440,900,'index.html',11),('index_m',390,844,'index.html',11),('chat_4k',3840,2160,'chat.html',11)]
+J=[('index_d',1440,900,'index.html','11'),('index_m',390,844,'index.html','11'),('chat_4k',3840,2160,'chat.html','11')]
 with sync_playwright() as p:
     b=p.chromium.launch()
     for tag,w,h,page,q in J:
