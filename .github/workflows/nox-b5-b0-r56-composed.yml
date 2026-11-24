@@ -1,4 +1,4 @@
-name: NOX B5 B0 R57 composed ingress fixture
+name: NOX B5 B0 R58 composed ingress fixture
 on:
   pull_request:
     paths:
@@ -20,7 +20,7 @@ jobs:
         run: |
           set -euo pipefail
           b5=4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3
-          b0=13c7599cd194d422cf68d0c39874c1b4509f199e
+          b0=ea2926cd4c88868f731052c4f2fd649c7f673c5a
           git fetch --no-tags --depth=1 origin "$b5" "$b0"
           tmp=$(mktemp -d)
           trap 'rm -rf "$tmp"' EXIT
@@ -32,8 +32,8 @@ jobs:
             printf '%s %s %s\n' "$ref" "$pin" "$target"
           }
           materialize "$b5" nox-control/b5_s03_verifier_r54.py df94c535273dde1fd2609f555d1d615eacfda831 b5_r55_pinned.py
-          materialize "$b0" nox-control/b0-r53/b0_resume_bridge.py ea6e818b336e735ada5da6daa66d35755b21f8b6 b0_resume_bridge.py
-          materialize "$b0" nox-control/b0-r53/test_b0_resume_bridge.py 6afdf1e2ad8b061dc7dca43e6aca68f560d86730 test_b0_resume_bridge.py
+          materialize "$b0" nox-control/b0-r53/b0_resume_bridge.py a090f0bd0cf9a654b7aeee9c694338bd184fb92f b0_resume_bridge.py
+          materialize "$b0" nox-control/b0-r53/test_b0_resume_bridge.py c0bae6c1086241c95fc29584ff4044717ea7d790 test_b0_resume_bridge.py
           materialize "$b0" nox-control/b0-r53/owner_chat_probe.py 87b9f3d2e3eb109327bd9f403b26b53d926ab803 owner_chat_probe.py
           cp nox-control/test_b5_b0_r56_composed.py nox-control/b5_browser_prefix_gate.py "$tmp/"
           cd "$tmp"

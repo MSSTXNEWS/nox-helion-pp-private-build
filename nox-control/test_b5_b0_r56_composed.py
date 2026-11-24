@@ -169,5 +169,43 @@ class ComposedIngressTests(unittest.TestCase):
                         get.assert_called_once()
                 self.assertEqual(old, rows(n))
 
+    def test_r58_terminal_independence_with_pinned_fd_readback(self):
+        from unittest.mock import patch
+        import owner_chat_probe as probe
+        from b0_resume_bridge import prepare_existing_resume_from_owner_get
+        with ExitStack() as stack:
+            for n in (1, 2):
+                old, pins = self.load(stack, n)
+                new, newpins = self.load(stack, n+1, prior_rows=old, prior_witnesses=pins)
+                for mode in ("same_list", "shallow_alias", "mixed_alias", "independent"):
+                    f = fixture(n)
+                    f.update(canonical_rows=old, prior_witnesses=pins)
+                    kwargs = {k: v for k, v in f.items() if k not in ("preflight", "owner_rows")}
+                    kwargs.update(client="fixture-client", row_count=2*n,
+                                  observed_browser_rows=[dict(r) for r in old],
+                                  observed_browser_calls=7)
+                    with self.subTest(turn=n+1, mode=mode), \
+                         patch.object(probe, "require_preturn_owner_binding"), \
+                         patch.object(probe, "owner_readback_json", return_value=dict(
+                             dialog_id=f["dialog_id"], messages=f["owner_rows"])) as get, \
+                         patch.object(probe, "require_postturn_owner_binding"):
+                        bridge = prepare_existing_resume_from_owner_get(**kwargs)
+                        get.assert_called_once()
+                        independent = [dict(r) for r in new]
+                        browser = {"same_list": new, "shallow_alias": list(new),
+                                   "mixed_alias": independent[:-1]+[new[-1]],
+                                   "independent": independent}[mode]
+                        args = dict(browser_rows=browser, canonical_rows=new,
+                                    witnesses=newpins, browser_calls=8, admitted_calls=8,
+                                    prompt=new[-2]["content"], stream_answer=new[-1]["content"],
+                                    terminal_saved=True, dom_matches=True)
+                        self.assertEqual(bridge.finish(**args),
+                            "RESUME_EVIDENCE_MATCHED" if mode == "independent"
+                            else "HOLD_ACTUAL_BROWSER_POSTTURN")
+                        args["browser_rows"] = independent
+                        self.assertEqual(bridge.finish(**args), "HOLD_RESUME_ALREADY_CONSUMED")
+                self.assertEqual(new[:len(old)], old)
+                self.assertEqual(new, rows(n+1))
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
