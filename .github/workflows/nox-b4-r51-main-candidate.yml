@@ -1,4 +1,4 @@
-name: NOX B4 R51 Main Candidate Exact Node22 SSE Suite
+name: NOX B4 R52 Browser Dialect Exact Node22 SSE Suite
 on:
   push:
     branches:
@@ -33,11 +33,11 @@ jobs:
         run: |
           set -euo pipefail
           cd nox-control/systemic_relay_20261118
-          test "$(git hash-object b4_sse_latency_probe.mjs)" = "d84c043c339c33213c6ddaf52c39a359721a3f5e"
-          test "$(git hash-object test_b4_sse_latency_probe.mjs)" = "d6233e791beddac9f3579c91861e937bec6b7055"
-          printf 'B4_R51_EXACT_SOURCE_PROBE_SHA256='
+          test "$(git hash-object b4_sse_latency_probe.mjs)" = "3582fd900dde982d1abbc1ef0f7ba11025a2e0d5"
+          test "$(git hash-object test_b4_sse_latency_probe.mjs)" = "62483645cf5c037d4366467caa2c80679729a5b6"
+          printf 'B4_R52_EXACT_SOURCE_PROBE_SHA256='
           sha256sum b4_sse_latency_probe.mjs
-          printf 'B4_R51_EXACT_SOURCE_TEST_SHA256='
+          printf 'B4_R52_EXACT_SOURCE_TEST_SHA256='
           sha256sum test_b4_sse_latency_probe.mjs
           node --version
           node --test test_b4_sse_latency_probe.mjs

@@ -37,7 +37,12 @@ export function createBatchedVisibleHash(){
 export async function measureSseResponse(response,options={}){
   const {startedAt=performance.now(),clock=()=>performance.now(),
     idleTimeoutMs=5000,totalTimeoutMs=60000,
-    maxEventBytes=262144,maxTotalBytes=8388608}=options;
+    maxEventBytes=262144,maxTotalBytes=8388608,
+    protocol='openai',expectedDialogId=null}=options;
+  if(!['openai','nox-browser'].includes(protocol))throw fail('B4_INVALID_PROTOCOL');
+  const browser=protocol==='nox-browser';
+  if(browser&&(typeof expectedDialogId!=='string'||! /^[a-f0-9]{32}$/.test(expectedDialogId)))
+    throw fail('B4_BROWSER_DIALOG_REQUIRED');
   if(!response?.body?.getReader || response.status!==200 ||
      !/^(?:text\/event-stream)(?:\s*;|\s*$)/i.test(response.headers?.get('content-type')||''))
     throw fail('B4_NOT_SSE_200');
@@ -61,6 +66,7 @@ export async function measureSseResponse(response,options={}){
   // high surrogate because distinct JSON deltas can split one Unicode scalar.
   const visibleHash=createBatchedVisibleHash();
   let pendingHighSurrogate='';
+  let browserMeta=false,browserExchangeId=null;
   const nowMs=()=>Math.max(0,clock()-startedAt);
   // Timers can run late if parsing or the event loop stalls. A settled read
   // is not proof that the monotonic absolute deadline was respected.
@@ -96,6 +102,35 @@ export async function measureSseResponse(response,options={}){
     if(seenDone)throw fail('B4_POST_DONE_EVENT');
     const payload=dataFields.map(x=>x==='data'?'':x.slice(5).replace(/^ /,'')).join('\n');
     if(!payload)return;
+    if(browser){
+      // B3 R56 browser bridge emits meta/token/done/error, not OpenAI choices.
+      // Time from the consumer's monotonic clock; never trust embedded timing,
+      // or equate browser-visible pieces with model tokens.
+      let e;
+      try{e=JSON.parse(payload);}catch{throw fail('B4_MALFORMED_EVENT');}
+      if(!e||typeof e!=='object'||Array.isArray(e))throw fail('B4_BROWSER_BAD_FRAME');
+      if(e.type==='error')throw fail('B4_BROWSER_ERROR');
+      if('dialog_id' in e&&e.dialog_id!==expectedDialogId)throw fail('B4_BROWSER_DIALOG_MISMATCH');
+      if(e.type==='meta'){
+        if(browserMeta||e.dialog_id!==expectedDialogId||e.answer_source!=='NATIVE_PENDING')
+          throw fail('B4_BROWSER_BAD_META');
+        browserMeta=true;return;
+      }
+      if(!browserMeta)throw fail('B4_BROWSER_META_REQUIRED');
+      if(e.type==='token'){
+        if(typeof e.t!=='string')throw fail('B4_BROWSER_BAD_TOKEN');
+        appendVisible(e.t);return;
+      }
+      if(e.type==='done'){
+        if(e.dialog_id!==expectedDialogId||e.status!=='done'||e.saved!==true||
+           e.history_persisted!==true||e.answer_source!=='LIVE_NOX'||
+           typeof e.exchange_id!=='string'||e.exchange_id.length<6||e.exchange_id.length>160||
+           typeof e.s03_integrated!=='boolean'||ttft===null)
+          throw fail('B4_BROWSER_BAD_DONE');
+        browserExchangeId=e.exchange_id;seenStop=true;seenDone=true;sseDone=nowMs();return;
+      }
+      throw fail('B4_BROWSER_BAD_FRAME');
+    }
     if(payload==='[DONE]'){
       if(!seenStop)throw fail('B4_DONE_WITHOUT_STOP');
       seenDone=true;sseDone=nowMs();return;
@@ -210,7 +245,9 @@ export async function measureSseResponse(response,options={}){
       visible_text_sha256:visibleHash.digest(),
       // Never claim a local fetch is an authenticated model/browser/S03 proof.
       browser_authenticated:false,native_verified:false,canonical_s03_verified:false,
-      model_tokens_per_second:null
+      model_tokens_per_second:null,
+      ...(browser?{timing_scope:'browser-consumer',dialog_id:expectedDialogId,
+        exchange_id:browserExchangeId}: {})
     });
     assertTotalDeadline();
     return result;

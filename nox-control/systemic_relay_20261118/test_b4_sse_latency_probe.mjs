@@ -1607,3 +1607,44 @@ test('R50 malformed non-null delta cannot pass as empty or legacy text SSE',asyn
   console.log('B4_R50_SOURCE_ONLY '+JSON.stringify({malformed_rejected:cases.length*4,
     healthy_digest:true,ttft_ms:proof.ttft_ms,completion_ms:proof.completion_ms,real_glm:false}));
 });
+
+
+test('R52 explicit B3 browser dialect measures existing-dialog consumer stream, not GLM',async()=>{
+  const dialog='a'.repeat(32),exchange='existing-exchange-2';
+  const meta={type:'meta',dialog_id:dialog,answer_source:'NATIVE_PENDING'};
+  const token=t=>({type:'token',t});
+  const done={type:'done',status:'done',saved:true,history_persisted:true,
+    dialog_id:dialog,exchange_id:exchange,answer_source:'LIVE_NOX',s03_integrated:true,
+    first_visible_token_ms:999999,seconds:999999};
+  const frame=e=>'data: '+JSON.stringify(e)+'\n\n';
+  const wire=[meta,token(' \u0301'),token('Hola '),token('\ud83c'),token('\udf08 Привет'),done].map(frame).join('');
+  const response=raw=>new Response(raw,{status:200,headers:{'content-type':'text/event-stream'}});
+  const options={protocol:'nox-browser',expectedDialogId:dialog};
+  const proof=await measureSseResponse(response(wire),options);
+  assert.equal(proof.visible_text_sha256,hash(' \u0301Hola 🌈 Привет'));
+  assert.equal(proof.body_sha256,hash(wire));
+  assert.equal(proof.timing_scope,'browser-consumer');
+  assert.equal(proof.exchange_id,exchange);
+  assert.equal(proof.dialog_id,dialog);
+  assert.ok(proof.first_byte_ms<=proof.ttft_ms&&proof.ttft_ms<=proof.sse_done_ms&&proof.sse_done_ms<=proof.completion_ms);
+  assert.ok(proof.ttft_ms<999999);
+  for(const key of ['browser_authenticated','native_verified','canonical_s03_verified'])assert.equal(proof[key],false);
+  assert.equal(proof.model_tokens_per_second,null);
+  const cases=[
+    [[token('x'),done],'B4_BROWSER_META_REQUIRED'],
+    [[meta,meta,token('x'),done],'B4_BROWSER_BAD_META'],
+    [[meta,token('x'),{...done,dialog_id:'b'.repeat(32)}],'B4_BROWSER_DIALOG_MISMATCH'],
+    [[meta,token(1),done],'B4_BROWSER_BAD_TOKEN'],
+    [[meta,token('x'),{type:'error'}],'B4_BROWSER_ERROR'],
+    [[meta,token('x'),{...done,saved:false}],'B4_BROWSER_BAD_DONE'],
+    [[meta,token('x'),{...done,history_persisted:false}],'B4_BROWSER_BAD_DONE'],
+    [[meta,token('x'),done,token('late')],'B4_POST_DONE_EVENT'],
+    [[meta,token('x'),done,done],'B4_POST_DONE_EVENT'],
+    [[meta,token('x')],'B4_INCOMPLETE_SSE'],
+    [[meta,token(' '),done],'B4_BROWSER_BAD_DONE']
+  ];
+  for(const [frames,code] of cases)await assert.rejects(measureSseResponse(response(frames.map(frame).join('')),options),e=>e.code===code);
+  await assert.rejects(measureSseResponse(response(wire)),e=>e.code==='B4_BAD_CHOICES');
+  await assert.rejects(measureSseResponse(response(wire),{protocol:'nox-browser'}),e=>e.code==='B4_BROWSER_DIALOG_REQUIRED');
+  console.log('B4_R52_SOURCE_ONLY '+JSON.stringify({negative_cases:cases.length+2,scope:proof.timing_scope,ttft_ms:proof.ttft_ms,completion_ms:proof.completion_ms,real_glm:false}));
+});
