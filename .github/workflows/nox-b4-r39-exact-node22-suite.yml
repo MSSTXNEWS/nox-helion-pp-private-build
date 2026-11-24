@@ -1,0 +1,37 @@
+name: NOX B4 R50 Exact Node22 SSE Suite
+on:
+  push:
+    branches:
+      - b4/sse-loopback-ttft-eof-r24-20261123
+    paths:
+      - .github/workflows/nox-b4-r39-exact-node22-suite.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-b4-r50-source-only
+  cancel-in-progress: false
+jobs:
+  full-exact-b4-suite:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify B4 exact source and run ALL test cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd nox-control/systemic_relay_20261118
+          test "$(git hash-object b4_sse_latency_probe.mjs)" = "d84c043c339c33213c6ddaf52c39a359721a3f5e"
+          test "$(git hash-object test_b4_sse_latency_probe.mjs)" = "d6233e791beddac9f3579c91861e937bec6b7055"
+          printf 'B4_R50_EXACT_SOURCE_PROBE_SHA256='
+          sha256sum b4_sse_latency_probe.mjs
+          printf 'B4_R50_EXACT_SOURCE_TEST_SHA256='
+          sha256sum test_b4_sse_latency_probe.mjs
+          node --version
+          node --test test_b4_sse_latency_probe.mjs
