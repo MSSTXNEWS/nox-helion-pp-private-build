@@ -15,7 +15,7 @@ function setup(lib,makeParts){
     ui:{onDelta:async(s,d)=>counters.delta.push(d),upsertTerminal:async()=>true}});
   return {client,counters};
 }
-const chunk=x=>new TextEncoder().encode('event: delta\nid: '+x+'\ndata: '+x+'\n\n');
+const chunk=(x,id=x)=>new TextEncoder().encode('event: delta\nid: '+id+'\ndata: '+x+'\n\n');
 function changing(){
   let n=0;
   return [{get done(){return ++n!==1;},value:chunk('a')},{done:false,value:chunk('b')},{done:true}];
@@ -51,7 +51,7 @@ test('malformed done fails closed and disposes reader',async()=>{
   assert.equal(next.counters.ack,0);
 });
 test('normal EOF and UTF8 split preserve exact text',async()=>{
-  const full=chunk('три'),cut=full.length-4;
+  const full=chunk('три','ru3'),cut=full.length-4;
   const next=setup(after,()=>[{done:false,value:full.slice(0,cut)},{done:false,value:full.slice(cut)},{done:true}]);
   assert.equal(await next.client.begin(scope),'STREAM_ENDED_READBACK_REQUIRED');
   assert.deepEqual(next.counters.delta,['три']);assert.equal(next.counters.cancel,0);
