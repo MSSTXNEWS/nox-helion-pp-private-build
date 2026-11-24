@@ -1,0 +1,1 @@
+cd /workspace/nox/web/site; grep -n "data-page=\"home\"\|data-page='home'\|\.wrap\b\|\.page{\|\.page \|\.ph{" nox-pages.css nox-wow.css nox-unify.css nox-wow-fix.css nox-identity.css | cut -c1-300 | head -20
