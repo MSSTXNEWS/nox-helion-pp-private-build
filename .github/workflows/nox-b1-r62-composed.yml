@@ -1,7 +1,7 @@
 name: NOX B1 R62 composed stream and UI
 on:
-  push:
-    branches: [b1/r62-stream-ui-compose-20261124]
+  pull_request:
+    branches: [b1/r61-main-ui-candidate-20261124]
     paths:
       - 'nox-control/b1-r62/**'
       - '.github/workflows/nox-b1-r62-composed.yml'
