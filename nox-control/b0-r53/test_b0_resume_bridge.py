@@ -108,7 +108,7 @@ class B0ResumeBridgeTests(unittest.TestCase):
                 after.assert_called_once_with('fixture-client')
                 get.assert_called_once_with('fixture-client', '/api/ui/memory/dialogs/history?dialog_id='+DIALOG+'&limit=8')
                 new = rows(n+1)
-                self.assertEqual(bridge.finish(browser_rows=new, canonical_rows=new,
+                self.assertEqual(bridge.finish(browser_rows=[dict(r) for r in new], canonical_rows=new,
                     witnesses=witnesses(new), browser_calls=8, admitted_calls=8,
                     prompt=new[-2]['content'], stream_answer=new[-1]['content'],
                     terminal_saved=True, dom_matches=True), 'RESUME_EVIDENCE_MATCHED')
@@ -178,3 +178,35 @@ class B0ResumeBridgeTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "HOLD_ACTUAL_BROWSER_PREFIX"):
                         prepare_existing_resume_from_owner_get(**kwargs)
                     get.assert_called_once()
+
+    def test_single_get_terminal_dom_must_be_independent_and_one_shot(self):
+        from unittest.mock import patch
+        import owner_chat_probe as probe
+        from b0_resume_bridge import prepare_existing_resume_from_owner_get
+        for n in (1, 2):
+            for mode in ("same_list", "shallow_alias", "mixed_alias", "independent"):
+                f = fixture(n)
+                kwargs = {k: v for k, v in f.items() if k not in ("preflight", "owner_rows")}
+                kwargs.update(client="fixture-client", row_count=2*n,
+                              observed_browser_rows=rows(n), observed_browser_calls=7)
+                with self.subTest(turn=n+1, mode=mode), \
+                     patch.object(probe, "require_preturn_owner_binding"), \
+                     patch.object(probe, "owner_readback_json", return_value=dict(
+                         dialog_id=DIALOG, messages=f["owner_rows"])) as get, \
+                     patch.object(probe, "require_postturn_owner_binding"):
+                    bridge = prepare_existing_resume_from_owner_get(**kwargs)
+                    get.assert_called_once()
+                    new = rows(n+1)
+                    independent = [dict(r) for r in new]
+                    browser = {"same_list": new, "shallow_alias": list(new),
+                               "mixed_alias": independent[:-1]+[new[-1]],
+                               "independent": independent}[mode]
+                    args = dict(browser_rows=browser, canonical_rows=new,
+                                witnesses=witnesses(new), browser_calls=8, admitted_calls=8,
+                                prompt=new[-2]["content"], stream_answer=new[-1]["content"],
+                                terminal_saved=True, dom_matches=True)
+                    self.assertEqual(bridge.finish(**args),
+                        "RESUME_EVIDENCE_MATCHED" if mode == "independent"
+                        else "HOLD_ACTUAL_BROWSER_POSTTURN")
+                    args["browser_rows"] = independent
+                    self.assertEqual(bridge.finish(**args), "HOLD_RESUME_ALREADY_CONSUMED")

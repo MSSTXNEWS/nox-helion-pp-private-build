@@ -48,6 +48,28 @@ def bind_existing_resume(*, preflight, expected_owner_sha, dialog_id, session_id
         browser_calls=browser_calls, admitted_calls=admitted_calls)
 
 
+class _IndependentBrowserResumeEvidence(BrowserResumeEvidence):
+    """Actual-browser path: terminal DOM rows cannot alias canonical readback.
+
+    This is a local evidence fence, not proof of browser origin or admission.
+    An invalid terminal observation consumes the one-shot object; reconcile,
+    never replay an uncertain POST.
+    """
+    def finish(self, *, browser_rows, canonical_rows, witnesses,
+               browser_calls, admitted_calls, prompt, stream_answer,
+               terminal_saved, dom_matches):
+        aliased = (type(browser_rows) is list and type(canonical_rows) is list
+                   and (browser_rows is canonical_rows or any(
+                       row is peer for row in browser_rows for peer in canonical_rows)))
+        result = super().finish(
+            browser_rows=browser_rows, canonical_rows=canonical_rows,
+            witnesses=witnesses, browser_calls=browser_calls,
+            admitted_calls=admitted_calls, prompt=prompt, stream_answer=stream_answer,
+            terminal_saved=terminal_saved, dom_matches=False if aliased else dom_matches)
+        if aliased and result == "HOLD_RESUME_POST_OR_STREAM":
+            return "HOLD_ACTUAL_BROWSER_POSTTURN"
+        return result
+
 def prepare_existing_resume_from_owner_get(*, client, expected_owner_sha, dialog_id,
                                            session_id, row_count, canonical_rows,
                                            prior_witnesses, browser_calls, admitted_calls,
@@ -98,7 +120,7 @@ def prepare_existing_resume_from_owner_get(*, client, expected_owner_sha, dialog
         session_id=session_id, owner_rows=owner_rows, canonical_rows=canonical_rows,
         prior_witnesses=prior_witnesses, browser_calls=browser_calls,
         admitted_calls=admitted_calls)
-    return BrowserResumeEvidence(
+    return _IndependentBrowserResumeEvidence(
         dialog_id=dialog_id, session_id=session_id, prior_rows=canonical_rows,
         prior_witnesses=prior_witnesses, browser_rows=json.loads(frozen_browser),
         browser_calls=observed_browser_calls, admitted_calls=admitted_calls)
