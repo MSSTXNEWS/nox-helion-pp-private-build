@@ -6,6 +6,8 @@ on:
       - 'nox-control/tests/test_b2_ru_es_3turn_holdout.py'
       - 'nox-control/b2_ru_es_review_integrity.py'
       - 'nox-control/tests/test_b2_ru_es_review_integrity.py'
+      - 'nox-control/b2_existing_dialog_review.py'
+      - 'nox-control/tests/test_b2_existing_dialog_review.py'
       - '.github/workflows/nox-b2-r65-main-rues-candidate.yml'
   workflow_dispatch:
 permissions:
@@ -35,4 +37,8 @@ jobs:
           grep -Eq '^Ran 10 tests in ' /tmp/b2-holdout.log
           python -B -m unittest discover -s nox-control/tests -p test_b2_ru_es_review_integrity.py -v 2>&1 | tee /tmp/b2-review.log
           grep -Eq '^Ran 9 tests in ' /tmp/b2-review.log
-          echo 'SOURCE_ONLY: 19 tests; native quality and S03 NOT VERIFIED'
+          test "$(git hash-object nox-control/b2_existing_dialog_review.py)" = "9660e41dde202970da509b0db2dad3cf1e96c0b0"
+          test "$(git hash-object nox-control/tests/test_b2_existing_dialog_review.py)" = "10c98b01883eba4b524feec2a483fc8294b7703c"
+          python -B -m unittest discover -s nox-control/tests -p test_b2_existing_dialog_review.py -v 2>&1 | tee /tmp/b2-resume.log
+          grep -Eq '^Ran 3 tests in ' /tmp/b2-resume.log
+          echo 'SOURCE_ONLY: 22 tests; native quality and S03 NOT VERIFIED'
