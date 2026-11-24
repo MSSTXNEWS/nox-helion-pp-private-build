@@ -79,7 +79,8 @@ def main():
     st=json.load(open(f"{OUT}/audit.json")) if os.path.exists(f"{OUT}/audit.json") else {}
     for pg in pages:
         r=asyncio.run(audit(pg)); key=pg[:-5]; prev=st.get(key,{})
-        r["cycle"]=prev.get("cycle",0)+(1 if r["fails"] else 0) if prev.get("status")!="ok" else (1 if r["fails"] else 0)
+        fixed_run=len(sys.argv)>1  # цикл считается только при перепроверке после .fixed
+        r["cycle"]=(prev.get("cycle",0)+(1 if (r["fails"] and fixed_run) else 0)) if prev.get("status")!="ok" else 0
         if r["fails"]:
             r["status"]="rework" if r["cycle"]<3 else "owner"
             json.dump({"page":pg,"cycle":r["cycle"],"fails":r["fails"],"fix":r["fix"],"shots":[f"qa/audit_desk_{key}.jpg",f"qa/audit_mob_{key}.jpg"]},open(f"{RW}/{key}.json","w"),ensure_ascii=False,indent=1)
