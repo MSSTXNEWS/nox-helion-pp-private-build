@@ -1547,3 +1547,34 @@ test('R48 empty transport chunks do not renew idle budget but heartbeat bytes do
     first_byte_ms:18,ttft_ms:36,completion_ms:54,clock:'injected',real_glm:false
   }));
 });
+
+
+test('R49 malformed single-choice values cannot become a verified SSE completion',async()=>{
+  const begin=event({delta:{role:'assistant'}}),visible=event({delta:{content:'Hola 🌈'}});
+  const stop=event({delta:{},finish_reason:'stop'}),done='data: [DONE]\n\n';
+  const cases=[null,false,true,0,7,'bad',[],[{}]];
+  function response(wire){
+    return new Response(wire,{status:200,headers:{'content-type':'text/event-stream'}});
+  }
+  for(const choice of cases){
+    const bad=event(choice);
+    for(const wire of [begin+bad+visible+stop+done,begin+visible+bad+stop+done,
+      begin+visible+stop+bad+done]){
+      await assert.rejects(measureSseResponse(response(wire)),e=>e.code==='B4_BAD_CHOICES',
+        JSON.stringify(choice));
+    }
+  }
+  // Valid empty/role-only deltas and legacy text remain supported.
+  const wire=begin+event({delta:{}})+visible+event({text:' Привет'})+stop+done;
+  const result=await measureSseResponse(response(wire));
+  assert.equal(result.verified,true);
+  assert.equal(result.visible_text_sha256,hash('Hola 🌈 Привет'));
+  assert.equal(result.body_sha256,hash(wire));
+  assert.ok(result.first_byte_ms<=result.ttft_ms);
+  assert.ok(result.ttft_ms<=result.sse_done_ms&&result.sse_done_ms<=result.completion_ms);
+  assert.equal(result.native_verified,false);
+  assert.equal(result.browser_authenticated,false);
+  assert.equal(result.model_tokens_per_second,null);
+  console.log('B4_R49_SOURCE_ONLY '+JSON.stringify({malformed_rejected:cases.length*3,
+    healthy_digest:true,ttft_ms:result.ttft_ms,completion_ms:result.completion_ms,real_glm:false}));
+});

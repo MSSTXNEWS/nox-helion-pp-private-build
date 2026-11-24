@@ -105,7 +105,10 @@ export async function measureSseResponse(response,options={}){
     if(!parsed||!Array.isArray(parsed.choices)||parsed.choices.length!==1)
       throw fail('B4_BAD_CHOICES');
     const choice=parsed.choices[0];
-    const text=choice?.delta?.content??choice?.text??'';
+    // A malformed choice is not a heartbeat or an empty valid delta.
+    if(!choice||typeof choice!=='object'||Array.isArray(choice))
+      throw fail('B4_BAD_CHOICES');
+    const text=choice.delta?.content??choice.text??'';
     if(typeof text!=='string')throw fail('B4_BAD_TEXT');
     if(seenStop&&text.length)throw fail('B4_TEXT_AFTER_STOP');
     appendVisible(text);
