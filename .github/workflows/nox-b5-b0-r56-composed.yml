@@ -1,0 +1,39 @@
+name: NOX B5 B0 R56 composed ingress fixture
+on:
+  pull_request:
+    paths:
+      - 'nox-control/test_b5_b0_r56_composed.py'
+      - '.github/workflows/nox-b5-b0-r56-composed.yml'
+permissions:
+  contents: read
+jobs:
+  composed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Exact source composition (no native access)
+        shell: bash
+        run: |
+          set -euo pipefail
+          b5=4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3
+          b0=62ce5ffd2aa0e6876594fe5874458f03cbfc42cc
+          git fetch --no-tags --depth=1 origin "$b5" "$b0"
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          materialize() {
+            local ref="$1" path="$2" pin="$3" target="$4"
+            test "$(git rev-parse "$ref:$path")" = "$pin"
+            git show "$ref:$path" > "$tmp/$target"
+            test "$(git hash-object "$tmp/$target")" = "$pin"
+            printf '%s %s %s\n' "$ref" "$pin" "$target"
+          }
+          materialize "$b5" nox-control/b5_s03_verifier_r54.py df94c535273dde1fd2609f555d1d615eacfda831 b5_r55_pinned.py
+          materialize "$b0" nox-control/b0-r53/b0_resume_bridge.py 0b0972c58d52ff5538520839cc35a02f4c005919 b0_resume_bridge.py
+          materialize "$b0" nox-control/b0-r53/test_b0_resume_bridge.py 9c750d36bd97329b8fe699591189a616b1a80ce6 test_b0_resume_bridge.py
+          cp nox-control/test_b5_b0_r56_composed.py "$tmp/"
+          cd "$tmp"
+          python -m unittest -v test_b5_b0_r56_composed
+          echo B5_NATIVE_ACCEPTED=false
