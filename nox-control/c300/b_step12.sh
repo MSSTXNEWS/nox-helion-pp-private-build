@@ -5,13 +5,13 @@ W=/workspace/nox
 OUT=$W/web/site/qa/voice2; mkdir -p "$OUT"
 echo "== 1) restart tts2"
 pkill -f "tts2_server.py" 2>/dev/null; sleep 3
-cd $W/c300_voice/voice2 && NOX_VOICE_MODELS=$W/voice_models nohup setsid nice -n 5 $W/voice2_venv/bin/python tts2_server.py >$W/svc/logs/tts2.log 2>&1 &
-for i in $(seq 1 40); do curl -s --max-time 3 http://127.0.0.1:8095/health | grep -q '"ok": true' && break; sleep 4; done
+cd $W/c300_voice/voice2 && NOX_VOICE_MODELS=$W/voice_models setsid -f nice -n 5 $W/voice2_venv/bin/python tts2_server.py </dev/null >$W/svc/logs/tts2.log 2>&1
+for i in $(seq 1 15); do curl -s --max-time 3 http://127.0.0.1:8095/health | grep -q '"ok": true' && break; sleep 4; done
 curl -s --max-time 5 http://127.0.0.1:8095/health; echo
 echo "== T7 synth"
 T7='В XX веке музыка изменилась. Что дальше? Не знаю!'
-for path in /synth /api/synth; do
-  code=$(curl -s -o $OUT/t7_after_restart.wav -w "%{http_code}" --max-time 200 -X POST http://127.0.0.1:8095$path -H 'Content-Type: application/json' -d "{\"text\": \"$T7\", \"voice\": \"aidar\", \"format\": \"wav\"}")
+for path in /synth; do
+  code=$(curl -s -o $OUT/t7_after_restart.wav -w "%{http_code}" --max-time 90 -X POST http://127.0.0.1:8095$path -H 'Content-Type: application/json' -d "{\"text\": \"$T7\", \"voice\": \"aidar\", \"format\": \"wav\"}")
   echo "$path -> $code"; [ "$code" = "200" ] && break
 done
 ls -la $OUT/t7_after_restart.wav 2>/dev/null
