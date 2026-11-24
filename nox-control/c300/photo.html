@@ -27,6 +27,7 @@
 .ps-row button.ai{border-color:rgba(255,190,110,.55);color:#ffd08a}
 .ps-row button:disabled{opacity:.5;cursor:wait}
 .ps-st{font-size:12px;opacity:.8;min-height:16px;white-space:pre-wrap}
+.ps-log{max-height:34vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:6px}.ps-log .m{padding:6px 9px;border-radius:10px;font-size:13px;line-height:1.4;white-space:pre-wrap}.ps-log .u{align-self:flex-end;background:rgba(124,200,255,.14);border:1px solid rgba(124,200,255,.25)}.ps-log .n{background:rgba(255,190,110,.08);border:1px solid rgba(255,190,110,.22)}.ps-log img{max-width:100%;border-radius:8px;margin-top:4px;cursor:pointer}.ps-see{display:flex;gap:6px;align-items:center;font-size:12px;opacity:.85}.ps-see input{width:auto}
 .ps-th{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
 .ps-th img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px;cursor:pointer;border:1px solid rgba(150,190,255,.2)}
 @media (max-width:900px){.ps{grid-template-columns:1fr;height:auto}.ps-ed{height:62vh}}
@@ -42,9 +43,14 @@
 <section class="ps">
  <div class="ps-ed"><iframe id="mp" src="./vendor/nox-x/minipaint/index.html" title="miniPaint"></iframe></div>
  <aside class="ps-ai glass">
+  <div class="ps-box ps-chat"><h3>Диалог с NOX</h3>
+   <div id="cLog" class="ps-log"></div>
+   <label class="ps-see"><input type="checkbox" id="cSee"> NOX видит холст</label>
+   <div class="ps-row"><textarea id="cIn" rows="2" placeholder="«Нарисуй уютный дом в горах ночью» или «что улучшить на фото?»"></textarea></div>
+   <div class="ps-row"><button class="ai" id="cGo">Отправить</button></div></div>
   <div class="ps-box"><h3>Генерация</h3>
    <textarea id="gP" rows="3" placeholder="Опиши картинку: «закат над морем, неон, кинематографично»"></textarea>
-   <div class="ps-row"><select id="gS"><option value="1024x1024">1:1 · 1024</option><option value="1216x832">16:10 · 1216</option><option value="832x1216">10:16 · 832</option><option value="768x768">быстро · 768</option></select><select id="gM"><option value="chroma">Chroma</option><option value="zimage">Z-Image</option></select></div>
+   <div class="ps-row"><select id="gS"><option value="1024x1024">1:1 · 1024</option><option value="1216x832">16:10 · 1216</option><option value="832x1216">10:16 · 832</option><option value="768x768">быстро · 768</option></select><select id="gM"><option value="chroma">Chroma HD</option></select></div>
    <div class="ps-row"><button class="ai" id="gImp">NOX: улучши промпт</button><button class="ai" id="gGo">Создать слоем</button></div>
    <div class="ps-st" id="gSt"></div><div class="ps-th" id="gTh"></div></div>
   <div class="ps-box"><h3>ИИ-обработка холста</h3>

@@ -10,7 +10,7 @@
   /* --- мост к miniPaint --- */
   function canvasOut() {
     var w = W(); if (!w) throw new Error('редактор не загружен');
-    var L = w.Layers, cfg = w.config || w.AppConfig || {};
+    var L = w.Layers, cfg = w.AppConfig || w.config || {};
     if (L && L.convert_layers_to_canvas && cfg.WIDTH) {
       var c = document.createElement('canvas'); c.width = cfg.WIDTH; c.height = cfg.HEIGHT;
       L.convert_layers_to_canvas(c.getContext('2d'), null, false); return c;
@@ -24,7 +24,7 @@
       img.onload = function () {
         var w = W(), L = w && w.Layers;
         if (!L || !L.insert) return no(new Error('API слоёв miniPaint недоступно'));
-        var cfg = w.config || {};
+        var cfg = w.AppConfig || {};
         try { if (cfg.WIDTH !== undefined && (img.width > cfg.WIDTH || img.height > cfg.HEIGHT)) { cfg.WIDTH = Math.max(cfg.WIDTH, img.width); cfg.HEIGHT = Math.max(cfg.HEIGHT, img.height); w.Layers.render && w.Layers.render(); } } catch (e) {}
         L.insert({ name: name || 'NOX', type: 'image', data: img, width: img.naturalWidth, height: img.naturalHeight, width_original: img.naturalWidth, height_original: img.naturalHeight });
         ok();
@@ -52,14 +52,15 @@
   /* --- генерация на сервере --- */
   var thumbs = [];
   $('#gImp').onclick = function () { var p = $('#gP').value.trim(); if (!p) return; askNox('Сделай из описания сильный промпт для генерации изображения на английском: объект, стиль, свет, композиция, камера. Верни только промпт одной строкой.\n\n' + p).then(function (a) { if (a) $('#gP').value = a.replace(/^["«]|["»]$/g, '').trim(); }); };
-  $('#gGo').onclick = function () {
-    var p = $('#gP').value.trim(); if (!p) return; var sz = $('#gS').value.split('x'), b = $('#gGo'); busy(b, true); say('#gSt', 'Генерирую на сервере… (обычно 10–60 с)');
-    fetch('/img/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: p, model: $('#gM').value, width: +sz[0], height: +sz[1], seed: -1 }) })
+  function generate(p) {
+    var sz = $('#gS').value.split('x'), b = $('#gGo'); busy(b, true); say('#gSt', 'Генерирую на сервере… (обычно 20–90 с)');
+    return fetch('/img/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: p, model: $('#gM').value, width: +sz[0], height: +sz[1], seed: -1 }) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || j.reason || ('HTTP ' + r.status)); return j; }); })
-      .then(function (j) { var url = '/img/file?p=' + encodeURIComponent(j.path); say('#gSt', 'Готово за ' + (j.seconds || '?') + ' с'); thumbs.unshift(url); drawThumbs(); return insertImage(url, 'NOX: ' + p.slice(0, 30)); })
-      .catch(function (e) { say('#gSt', 'Не вышло: ' + e.message + (/503/.test(e.message) ? '\n(видеокарта занята — попробуй через минуту)' : '')); })
-      .then(function () { busy(b, false); });
-  };
+      .then(function (j) { var url = '/img/file?p=' + encodeURIComponent(j.path); say('#gSt', 'Готово за ' + (j.seconds || '?') + ' с'); thumbs.unshift(url); drawThumbs(); return insertImage(url, 'NOX: ' + p.slice(0, 30)).then(function () { return url; }); })
+      .catch(function (e) { say('#gSt', 'Не вышло: ' + e.message + (/503|занят/.test(e.message) ? '\n(видеокарта занята — попробуй через минуту)' : '')); return null; })
+      .then(function (u) { busy(b, false); return u; });
+  }
+  $('#gGo').onclick = function () { var p = $('#gP').value.trim(); if (p) generate(p); };
   function drawThumbs() { var t = $('#gTh'); t.innerHTML = ''; thumbs.slice(0, 9).forEach(function (u) { var i = new Image(); i.src = u; i.title = 'Вставить слоем'; i.onclick = function () { insertImage(u, 'NOX'); }; t.appendChild(i); }); }
 
   /* --- ИИ в браузере --- */
@@ -86,6 +87,32 @@
   }
   $('#aDesc').onclick = function () { vision('Опиши это изображение по-русски: что на нём, композиция, свет, настроение. 3–5 предложений.'); };
   $('#aIdea').onclick = function () { vision('Ты фоторедактор. Предложи 5 конкретных правок этого изображения по-русски (кадрирование, свет, цвет, ретушь, стиль), коротко по пунктам.'); };
+
+
+  /* --- диалог с NOX: ядро с памятью; «нарисуй…» → генерация; галочка — NOX видит холст --- */
+  var hist = [], log = $('#cLog');
+  function bubble(cls, text) { var d = document.createElement('div'); d.className = 'm ' + cls; d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight; return d; }
+  var SYS = 'Ты NOX в разделе «Фотостудия» (редактор слоёв + генерация картинок на сервере). Отвечай по-русски, коротко и по делу. ' +
+    'Если Создатель просит создать, нарисовать, сгенерировать изображение или вариант картинки — ответь одной-двумя фразами и последней строкой выдай: GEN: <подробный промпт на английском: объект, стиль, свет, композиция>. Иначе строку GEN не пиши.';
+  function send() {
+    var q = $('#cIn').value.trim(); if (!q) return; $('#cIn').value = ''; bubble('u', q); var nb = bubble('n', '…'), b = $('#cGo'); busy(b, true);
+    var done = function () { busy(b, false); };
+    if ($('#cSee').checked) {
+      var ctx = hist.slice(-6).map(function (m) { return (m.role === 'user' ? 'Создатель: ' : 'NOX: ') + m.content; }).join('\n');
+      return fetch('/vision/describe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: small(canvasOut(), 768), prompt: 'Ты NOX, фоторедактор. Контекст диалога:\n' + ctx + '\n\nСоздатель: ' + q + '\nОтветь по-русски, опираясь на изображение.' }) })
+        .then(function (r) { return r.json(); }).then(function (j) { var t = j.text || ('Ошибка: ' + (j.error || 'нет ответа')); nb.textContent = t; hist.push({ role: 'user', content: q }, { role: 'assistant', content: t }); }).catch(function (e) { nb.textContent = 'Ошибка: ' + e.message; }).then(done);
+    }
+    hist.push({ role: 'user', content: q }); var acc = '';
+    fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'nox-helion:latest', stream: true, nox_mode: 'fast', messages: [{ role: 'system', content: SYS }].concat(hist.slice(-12)) }) })
+      .then(function (r) { var rd = r.body.getReader(), dec = new TextDecoder(), buf = '';
+        function pump() { return rd.read().then(function (x) { if (x.done) return; buf += dec.decode(x.value, { stream: true }); var k; while ((k = buf.indexOf('\n')) >= 0) { var l = buf.slice(0, k).trim(); buf = buf.slice(k + 1); if (!l) continue; try { var d = JSON.parse(l); if (d.message && d.message.content) { acc += d.message.content; nb.textContent = acc.replace(/\n?GEN:[\s\S]*$/, ''); log.scrollTop = log.scrollHeight; } } catch (e) {} } return pump(); }); }
+        return pump(); })
+      .then(function () { hist.push({ role: 'assistant', content: acc }); var m = /GEN:\s*([\s\S]+)$/.exec(acc);
+        if (m) { var p = m[1].trim().split('\n')[0]; $('#gP').value = p; var gb = bubble('n', '🎨 Рисую…'); return generate(p).then(function (u) { if (u) { gb.textContent = 'Готово — новый слой на холсте:'; var im = new Image(); im.src = u; im.onclick = function () { insertImage(u, 'NOX'); }; gb.appendChild(im); } else gb.textContent = 'Видеокарта занята или генерация недоступна — попробую позже.'; }); } })
+      .catch(function (e) { nb.textContent = 'NOX не ответил: ' + e.message; }).then(done);
+  }
+  $('#cGo').onclick = send; $('#cIn').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+  bubble('n', 'Я в Фотостудии. Скажи, что нарисовать, или включи «NOX видит холст» — подскажу по фото.');
 
   /* --- фильтры копией --- */
   Array.prototype.forEach.call(document.querySelectorAll('[data-f]'), function (b) {
