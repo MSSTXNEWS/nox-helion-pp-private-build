@@ -19,11 +19,13 @@
   }
   const hold=code=>{throw new UiHold(code);};
   function scope(s){
-    if(!s||typeof s!=='object'||Array.isArray(s)||
-       typeof s.conversation_id!=='string'||!ID.test(s.conversation_id)||
-       typeof s.exchange_id!=='string'||!ID.test(s.exchange_id))
+    if(!s||typeof s!=='object'||Array.isArray(s)) hold('HOLD_B1_UI_SCOPE');
+    // Snapshot identity once; getters must not change the validated FIFO key.
+    const conversation_id=s.conversation_id,exchange_id=s.exchange_id;
+    if(typeof conversation_id!=='string'||!ID.test(conversation_id)||
+       typeof exchange_id!=='string'||!ID.test(exchange_id))
       hold('HOLD_B1_UI_SCOPE');
-    return {conversation_id:s.conversation_id,exchange_id:s.exchange_id};
+    return {conversation_id,exchange_id};
   }
   function createUiAdapter({container,beforeCommit=()=>Promise.resolve(),terminalTimeoutMs=30000,deltaPrecommitTimeoutMs=30000}={}){
     if(!container||container.nodeType!==1||
@@ -131,7 +133,7 @@
         let outcome;
         try{
           outcome=await Promise.race([
-            Promise.resolve().then(()=>beforeCommit('delta',s))
+            Promise.resolve().then(()=>beforeCommit('delta',{...s}))
               .then(()=>({ready:true}),()=>({failed:true})),
             new Promise(resolve=>{
               onAbort=()=>resolve({aborted:true});
@@ -282,7 +284,7 @@
           // below still apply before any DOM mutation or ACK witness.
           await previous.catch(()=>{});
           if(closed||(signal&&signal.aborted)) return {kind:'aborted'};
-          await beforeCommit('terminal',s);
+          await beforeCommit('terminal',{...s});
           // No asynchronous gap between this fence and the DOM mutation.
           if(closed||(signal&&signal.aborted)) return {kind:'aborted'};
           let el=find(s);
