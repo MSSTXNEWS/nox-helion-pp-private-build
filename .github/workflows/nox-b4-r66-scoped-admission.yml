@@ -1,0 +1,42 @@
+name: NOX B4 R66 actual scoped admission
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/nox-b4-r66-scoped-admission.yml'
+      - 'nox-control/systemic_relay_20261118/*r66*'
+permissions:
+  contents: read
+jobs:
+  exact-scoped:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 0672898d3b2106ee6093eb44522455c6fa11da47
+          path: b1-pinned
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 98e955c00fbd45c781e8d9ca81c309462f86a480
+          path: b3-pinned
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - run: |
+          set -euo pipefail
+          test "$(git -C b1-pinned rev-parse HEAD)" = 0672898d3b2106ee6093eb44522455c6fa11da47
+          test "$(git -C b3-pinned rev-parse HEAD)" = 98e955c00fbd45c781e8d9ca81c309462f86a480
+          test "$(git hash-object b1-pinned/nox-control/b1-r76/scoped_transport.cjs)" = 1d30c51d321f6691ca86e02afd5b986427a4eeb5
+          test "$(git hash-object b1-pinned/nox-control/b1-r74/wire_guard.cjs)" = 22bb2217f82bb44bfadc92b979e1af22e0dfaab8
+          test "$(git hash-object b1-pinned/nox-control/b1-r75/b1_browser_bundle.js)" = d0c0a689810be2bbad2d986f02c305e978d4f38f
+          test "$(git hash-object b3-pinned/coordination/onepass/b3_r69_exchange_scope_binding.cjs)" = 18b3be8fc4264b32d51a57ad4db367b3ba786d41
+          test "$(git hash-object b3-pinned/coordination/onepass/b3_r68_route_binding.cjs)" = 6d0fef57783346fe33d59ca39a625015514ae168
+          test "$(git hash-object nox-control/systemic_relay_20261118/b4_r64_preverifier_fence.cjs)" = 119c938d14c16f359c78d6ec46acf639f23ee315
+          test "$(git hash-object nox-control/systemic_relay_20261118/b4_r63_admission_budget.cjs)" = 2c5d50ee0b3719f6e9f76eaff7feede359f06cd0
+          node --unhandled-rejections=strict nox-control/systemic_relay_20261118/test_b4_r66_scoped_admission.cjs b1-pinned/nox-control b3-pinned/coordination/onepass/b3_r69_exchange_scope_binding.cjs
