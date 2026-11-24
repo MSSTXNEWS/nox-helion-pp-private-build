@@ -1,0 +1,28 @@
+name: NOX B1 R79 queued STOP differential
+on:
+  pull_request:
+    branches:
+      - b1/r78-r77-hosted-regression-20261124
+    paths:
+      - 'nox-control/b1-r79/**'
+      - '.github/workflows/nox-b1-r79-queued-stop.yml'
+permissions:
+  contents: read
+jobs:
+  queued-stop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify exact source and differential STOP
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object nox-control/b1-r77/b1_browser_bundle.js)" = 06eb77bcbb5530f1d58778e324c6ed7c6001d86f
+          test "$(git hash-object nox-control/b1-r79/b1_browser_bundle.js)" = b42f00e572ad000b87d7e9e5bf210aba0362494a
+          test "$(git hash-object nox-control/b1-r79/test_stop_queued_io.cjs)" = b79efd5a160273e2f6bd95c8d4f7a1a2de0c3a8d
+          node --version
+          node nox-control/b1-r79/test_stop_queued_io.cjs

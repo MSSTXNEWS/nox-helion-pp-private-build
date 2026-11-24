@@ -1,0 +1,92 @@
+{
+  "schema": "nox.b1.release-input.v1",
+  "task_id": "B1-R67-R66-IMMUTABLE-RELEASE-INPUT-20261124",
+  "claim": 7125922920,
+  "status": "SOURCE_COMPOSITION_VERIFIED_NATIVE_HOLD",
+  "native_accepted": false,
+  "admission": false,
+  "donors": [
+    {
+      "commit": "0747c70155676b58865e2b46957c0fd41474699d",
+      "path": "nox-control/b1-r61/b1_abort_safe_ui_adapter.js",
+      "git_blob": "9a9365258888e218990e0126bdc918605005777f",
+      "role": "dom_adapter"
+    },
+    {
+      "commit": "0747c70155676b58865e2b46957c0fd41474699d",
+      "path": "nox-control/b1-r62/b1_sse_ui_binding.js",
+      "git_blob": "f3cf260b98838039f2daf1005795d5adf6049bc8",
+      "role": "binding"
+    },
+    {
+      "commit": "0747c70155676b58865e2b46957c0fd41474699d",
+      "path": "nox-control/b1-r65/b1_client_stream_reconnect_harness.js",
+      "git_blob": "dc40fa933db679b8529e8fce96b653c2d867beab",
+      "role": "stream_harness"
+    },
+    {
+      "commit": "0747c70155676b58865e2b46957c0fd41474699d",
+      "path": "nox-control/b1-r66/test_b1_r66_composed.py",
+      "git_blob": "b5d7232740a5b4276a19d7b33133f2d107a38ed0",
+      "role": "test_only"
+    },
+    {
+      "commit": "0747c70155676b58865e2b46957c0fd41474699d",
+      "path": ".github/workflows/nox-b1-r66-composed.yml",
+      "git_blob": "09fc3ba0173c883903fe1e85380befcea05f9c1d",
+      "role": "workflow_only"
+    }
+  ],
+  "browser_load_order": [
+    "nox-control/b1-r61/b1_abort_safe_ui_adapter.js",
+    "nox-control/b1-r65/b1_client_stream_reconnect_harness.js",
+    "nox-control/b1-r62/b1_sse_ui_binding.js"
+  ],
+  "evidence": {
+    "source_receipt": 7124812462,
+    "test_merge": "e9f7628787ff4b7f3eb0b0734e6ba9acb75d27ab",
+    "run": 45346705965,
+    "job": 138282898511,
+    "tests": 18,
+    "passed": 18,
+    "scope": "Chromium 141.0.7390.37; synthetic transport, no native model POST or S03",
+    "head_circleci": "owner-command-safety:success",
+    "test_merge_combined_statuses": [],
+    "combined_release": "NOT_ESTABLISHED"
+  },
+  "coordination_only": {
+    "b0": {
+      "commit": "ebf8c05b8220da0b871d26672d55237def36691e",
+      "path": "nox-control/b0-r53/release_input_r59.json",
+      "git_blob": "ebd042ad06b2dedc483eddcb66390d6c1e2bf87c"
+    },
+    "b3": {
+      "pr": 2192,
+      "commit": "5b50ed7166061a62b5e7b42802cefc8a45e99b5c"
+    },
+    "b4": {
+      "pr": 2197,
+      "commit": "f00cc722022773edaed335ffb59fdbb0664189e2"
+    },
+    "b5": {
+      "pr": 2200,
+      "commit": "7fad0f38fa299112a9a67781f427e21b23f3fb18"
+    },
+    "b2": {
+      "pr": 2207,
+      "commit": "eea1a8cb5fe6541517d735a0571194e359b198e6"
+    },
+    "jointly_tested": false
+  },
+  "handoff": {
+    "owner": "D3/A1",
+    "task_id": "B1-UI-ADAPTER-SSE-CALLSITE-2TURN-20261120",
+    "requirements": [
+      "Use immutable tested B1 donor blobs, not moving PR tips. Load DOM then harness then binding; use owner-selected served callsite, not fixture code.",
+      "Reconcile full mandatory combined CI including historical R54 matrix; confirm current status on exact combined candidate.",
+      "Exclusive native/shared owner claim, fresh preimage CAS, resource/STOP/lease/rollback admission and immutable verifier before native writes.",
+      "Verify installed/served SHA256, then resume existing dialog and perform real browser SSE turns 2/3: STOP, no late deltas, GET-only reconnect, at most one model POST per turn and independent canonical four/six S03 IDs. No first-turn replay.",
+      "Do not retry ambiguous POST or ACK; do not substitute synthetic ACK or DOM for canonical proof."
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+name: NOX B1 R71 wire contract
+on:
+  pull_request:
+    branches: [b1/r70-materialized-r69-20261124]
+    paths:
+      - 'nox-control/b1-r71/**'
+      - '.github/workflows/nox-b1-r71-wire-contract.yml'
+permissions:
+  contents: read
+jobs:
+  wire-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 568b5e548180c039629789b57e4b22ff0abc7f9a
+          path: b3-pinned
+          persist-credentials: false
+      - run: |
+          git rev-parse HEAD
+          test "$(git hash-object nox-control/b1-r70/b1_browser_bundle.js)" = 8fbd18f35c96924f9330622a8148b273f6199f31
+          test "$(git hash-object b3-pinned/coordination/onepass/b3_r64_eof_candidate.js)" = 66595eac01c562aff4daae68f5d146aaed64cbbe
+          node --version
+          node nox-control/b1-r71/test_b1_r71_wire_contract.mjs nox-control/b1-r70/b1_browser_bundle.js nox-control/b1-r71/b1_browser_bundle.js b3-pinned/coordination/onepass/b3_r64_eof_candidate.js
