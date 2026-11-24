@@ -1,0 +1,1 @@
+cut -c1-300 /tmp/fx_qa.out | head -50; date; tail -3 /workspace/nox/web/site/qa/history.log; ls /workspace/nox/web/site/qa/ | head -20; cat /workspace/nox/web/site/qa/audit.json 2>/dev/null | head -c 1500
