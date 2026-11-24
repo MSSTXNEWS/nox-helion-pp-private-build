@@ -1,0 +1,61 @@
+{
+  "task_id": "B0-R63-R65-RELEASE-INPUT-REPIND-20261124",
+  "scope": "isolated source candidate references only; NOT combined CI, install authorization or native receipt",
+  "b0": {
+    "parent": "69de8ecf573b6c166d0ff47f4142d5bcca29be29",
+    "wrapper_blob": "628e8e337a987766336be6fa96fa0528ad1786aa",
+    "stage": "r63_fd_stage",
+    "test": "test_r63_fd_stage.py"
+  },
+  "lanes": [
+    {
+      "lane": "B1 R70",
+      "commit": "a5b191979bbd7fc4b1b230cbea23e9f2b595bae6",
+      "path": "nox-control/b1-r70/b1_browser_bundle.js",
+      "blob": "8fbd18f35c96924f9330622a8148b273f6199f31",
+      "source_run": 45382759678
+    },
+    {
+      "lane": "B2 R77",
+      "commit": "b90975b4c624947b4e256f75824fb5415f9503b3",
+      "path": "nox-control/b2-r77/test_joint_rues.py",
+      "blob": "67a28dbe21353d05120341ae620f613f564787eb",
+      "source_run": 45383538301
+    },
+    {
+      "lane": "B3 R64",
+      "commit": "568b5e548180c039629789b57e4b22ff0abc7f9a",
+      "path": "coordination/onepass/b3_r64_eof_candidate.js",
+      "blob": "66595eac01c562aff4daae68f5d146aaed64cbbe",
+      "source_run": 45384320110
+    },
+    {
+      "lane": "B4 R60",
+      "commit": "1cdf405312b702cdb9be59418ae895c979b34a57",
+      "path": "nox-control/systemic_relay_20261118/test_b4_r60_r64_eof_overlap.mjs",
+      "blob": "720590133b4d6fccd6e4a46bb185caf1c647eaad",
+      "source_run": 45385273686
+    },
+    {
+      "lane": "B5 R65",
+      "commit": "d6595d051ea73357e4cde184a81db853218c0bf7",
+      "path": "nox-control/b5-r65/b5_retained_ingress.py",
+      "blob": "3e2a8693574608bb773eb7ed4140b574bc5b1efb",
+      "source_run": 45385742881
+    }
+  ],
+  "native_accepted": false,
+  "combined_release_ci_verified": false,
+  "required": [
+    "combined mandatory CI on exact joint input",
+    "exclusive native owner and fresh preimage CAS",
+    "STOP/resource/rollback and independent immutable verifier",
+    "installed and served SHA256",
+    "resume existing dialog turns 2 and 3 only; genuine stream EOF and independent four/six S03 rows"
+  ],
+  "never": [
+    "replay first or uncertain POST",
+    "install tests or fixtures",
+    "change model or route"
+  ]
+}
