@@ -1,0 +1,17 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NOX · Контроль канона</title>
+<script src="./nox-theme.js"></script><script type="module" src="./nox-nav.js"></script>
+<style>main{max-width:1400px;margin:90px auto 140px;padding:0 16px;color:#e9e2d8;font:14px/1.35 Inter,system-ui}
+h1{font-weight:300;letter-spacing:.3em;text-transform:uppercase;font-size:22px}.s{color:#b9a99a;margin:4px 0 14px}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.c{background:rgba(12,8,8,.55);backdrop-filter:blur(14px);border:1px solid rgba(255,90,60,.16);border-radius:12px;padding:8px}
+.c.bad{border-color:rgba(255,70,50,.6)}.c img{width:100%;border-radius:8px;display:block}.c b{font-weight:500;letter-spacing:.08em}
+.c ul{margin:4px 0 0 16px;padding:0;color:#ff9a80;font-size:12px}.ok{color:#8fd19e;font-size:12px}.t{display:flex;gap:6px}.t img{width:72%}.t img+img{width:26%}
+</style></head><body><main><h1>Контроль канона</h1><div class="s" id="s">загрузка…</div><div class="g" id="g"></div></main>
+<script>
+fetch('qa/report.json?'+Date.now()).then(r=>r.json()).then(d=>{
+ s.textContent=`Проверка ${d.ts} · проблемных ${d.bad} из ${d.total} · каждые 15 мин`+(d.etalon.length?' · '+d.etalon.join(', '):' · эталоны целы');
+ const e=Object.entries(d.pages).sort((a,b)=>(b[1].desk.length+b[1].mob.length)-(a[1].desk.length+a[1].mob.length));
+ g.innerHTML=e.map(([p,v])=>{const i=[...v.desk.map(x=>'ПК: '+x),...v.mob.map(x=>'моб: '+x)],n=p.replace('.html','');
+ return `<div class="c ${i.length?'bad':''}"><b><a href="${p}" style="color:inherit">${n}</a></b><div class="t"><img loading="lazy" src="qa/desk_${n}.jpg?${d.ts}"><img loading="lazy" src="qa/mob_${n}.jpg?${d.ts}"></div>${i.length?'<ul>'+i.map(x=>'<li>'+x.replace(/</g,'&lt;')+'</li>').join('')+'</ul>':'<div class="ok">канон соблюдён</div>'}</div>`}).join('')
+}).catch(()=>s.textContent='Отчёта пока нет — первая проверка идёт')
+</script></body></html>
