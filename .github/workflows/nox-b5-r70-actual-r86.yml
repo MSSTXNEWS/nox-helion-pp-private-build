@@ -1,0 +1,48 @@
+name: NOX B5 R70 actual R86 retained-chain ingress
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b5-r70/**'
+      - '.github/workflows/nox-b5-r70-actual-r86.yml'
+permissions:
+  contents: read
+jobs:
+  actual-ingress:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact R86 with actual B5 R69 to R55 chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          own="$PWD"
+          ref=3f739914428307213485aa7605142c8062d715a2
+          git fetch --no-tags --depth=1 origin "$ref"
+          tmp=$(mktemp -d)
+          trap 'git worktree remove --force "$tmp/donor" 2>/dev/null || true; rm -rf "$tmp"' EXIT
+          git worktree add --detach "$tmp/donor" "$ref"
+          d="$tmp/donor/nox-control"
+          stage="$d/d3-r74/staging"
+          test "$(git hash-object "$d/b2-r86/receipted_outcome.py")" = 935c97ef18126eb40d6af3f66f3bf062f2500084
+          test "$(git hash-object "$d/b2-r86/b5_strict_receipted_poststate.py")" = e2997a136b47f06d47eba519e4cd6a87f1c68fb0
+          test "$(git hash-object "$d/b2-r86/b5_receipted_failed_poststate.py")" = c6181ce7a16f787b4b68b2507150c6990da2ef83
+          test "$(git hash-object "$own/nox-control/b5-r69/b5_strict_receipted_poststate.py")" = e2997a136b47f06d47eba519e4cd6a87f1c68fb0
+          test "$(git hash-object "$d/d3-r83/b5_bound_failed_poststate.py")" = 878128ef41095f8bf0d14a02281148e96e4a6ba3
+          test "$(git hash-object "$d/d3-r83/b5_failed_poststate.py")" = 381a738e54bdb1bba874ee8e0295c957e92b68b5
+          test "$(git hash-object "$d/d3-r83/test_b5_chain_guard.py")" = 96fa30430ac2a9027eec0a2a0ef9b39c670c55dd
+          test "$(git hash-object "$d/d3-r83/test_b5_bound_failed_poststate.py")" = 72576b738fa734f7c5181fc9b6e1ab06c07ced03
+          test "$(git hash-object "$d/d3-r78/b5_chain_guard.py")" = f321f4ad36867e434ba72db9264a88cf23a91fb8
+          test "$(git hash-object "$stage/py/b5_s03_verifier_r54.py")" = df94c535273dde1fd2609f555d1d615eacfda831
+          test "$(git hash-object "$d/d3-r83/outcome_review.py")" = 1de5a6e91f3744505bd49f4510db97343253870b
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "$d/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$d/b2-r86:$d/d3-r85:$d/b2-r84:$d/d3-r83:$d/b2-r81:$d/d3-r80:$d/b2-r79:$d/d3-r78:$stage/py:$d/d3-r76:$d/b2-r77:$tmp:$own/nox-control/b5-r70"
+          export D3_B4_MODULE="$stage/b4/b4_existing_turn_pair.mjs"
+          cd "$tmp"
+          python3 -B -m unittest -v test_actual_receipt_ingress.ActualReceiptIngress
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false
