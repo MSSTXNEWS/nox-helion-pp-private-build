@@ -72,5 +72,61 @@ class ExistingReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "HOLD_B2_RESUME_RUBRIC"):
             self.invoke()
 
+    def review_inputs(self):
+        args = {}
+        for key, obj in zip(("turn2", "turn3", "rubric"), (*self.docs, self.rubric)):
+            raw = json.dumps(obj, ensure_ascii=False).encode()
+            args[key+"_raw"] = raw
+            args[key+"_pin"] = probe.digest(raw)
+        template = probe.prepare_existing_review(**args)["submission"]
+        a, b = copy.deepcopy(template), copy.deepcopy(template)
+        for reviewer, doc in (("reviewer-A", a), ("reviewer-B", b)):
+            doc["reviewer_id"] = reviewer
+            for row in doc["decisions"]:
+                row.update(verdict="correct", reason="Verified against full dialogue")
+        return args, a, b
+
+    def close_reviews(self, args, a, b):
+        ar, br = (json.dumps(x, ensure_ascii=False).encode() for x in (a, b))
+        return probe.verify_existing_reviews(
+            **args, submission_a_raw=ar, submission_a_pin=probe.digest(ar),
+            submission_b_raw=br, submission_b_pin=probe.digest(br))
+
+    def test_two_review_closure_never_native_pass(self):
+        args, a, b = self.review_inputs()
+        result = self.close_reviews(args, a, b)
+        self.assertEqual(result["decisions_bound"], 4)
+        self.assertEqual(result["review_summary"],
+                         "TWO_REVIEWER_CONSENSUS_REPORTED_UNVERIFIED")
+        self.assertFalse(result["reviewer_identity_verified"])
+        self.assertTrue(result["native_acceptance"].startswith("HOLD"))
+        b["decisions"][0]["verdict"] = "uncertain"
+        result = self.close_reviews(args, a, b)
+        self.assertEqual(result["review_summary"], "ADJUDICATION_REQUIRED")
+        self.assertEqual(result["reported_uncertain"], [2])
+        b["decisions"][1]["verdict"] = "incorrect"
+        self.assertEqual(self.close_reviews(args, a, b)["reported_incorrect"], [3])
+
+    def test_closure_rejects_foreign_duplicate_and_stale(self):
+        args, a, original = self.review_inputs()
+        for mutate, reason in (
+            (lambda b: b.update(reviewer_id="REVIEWER-a"), "REVIEWER"),
+            (lambda b: b.update(rubric_sha256="0"*64), "REVIEW_SCOPE"),
+            (lambda b: b["decisions"][0].update(turn=3), "REVIEW_COVERAGE"),
+            (lambda b: b["decisions"][1].update(answer_sha256="0"*64), "REVIEW_ANSWER"),
+            (lambda b: b["decisions"][0].update(verdict=None), "REVIEW_VERDICT"),
+            (lambda b: b["decisions"][0].update(reason=""), "REVIEW_REASON"),
+        ):
+            b = copy.deepcopy(original)
+            mutate(b)
+            with self.subTest(reason=reason), self.assertRaisesRegex(ValueError, reason):
+                self.close_reviews(args, a, b)
+        ar, br = (json.dumps(x).encode() for x in (a, original))
+        with self.assertRaisesRegex(ValueError, "HOLD_B2_RESUME_PIN"):
+            probe.verify_existing_reviews(
+                **args, submission_a_raw=ar, submission_a_pin="0"*64,
+                submission_b_raw=br, submission_b_pin=probe.digest(br))
+
+
 if __name__ == "__main__":
     unittest.main()

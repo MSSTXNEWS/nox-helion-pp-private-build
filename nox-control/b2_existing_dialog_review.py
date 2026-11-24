@@ -107,3 +107,61 @@ def prepare_existing_review(*, turn2_raw, turn2_pin, turn3_raw, turn3_pin,
                             "mark correct, incorrect or uncertain with a reason.",
             "quality_grade": "NOT_MEASURED",
             "native_acceptance": "HOLD_EXTERNAL_OWNER_BROWSER_S03_REVIEW"}
+
+
+def verify_existing_reviews(*, submission_a_raw, submission_a_pin,
+                            submission_b_raw, submission_b_pin, **evidence_inputs):
+    """Rebuild the exact two-turn sheet and bind two original returned reviews.
+
+    External pins and reviewer authentication remain the owner's responsibility.
+    A consensus here is a reported judgment, never a native PASS.
+    """
+    packet = prepare_existing_review(**evidence_inputs)
+    template = packet["submission"]
+    require(submission_a_pin != submission_b_pin, "REVIEW_REUSED")
+    expected = {x["turn"]: x["answer_sha256"] for x in template["decisions"]}
+    marks = {2: [], 3: []}
+    reviewers = set()
+    for raw, pin in ((submission_a_raw, submission_a_pin),
+                     (submission_b_raw, submission_b_pin)):
+        doc = read_pinned(raw, pin)
+        require(set(doc) == set(template)
+                and doc.get("rubric_sha256") == template["rubric_sha256"]
+                and doc.get("readback_sha256") == template["readback_sha256"],
+                "REVIEW_SCOPE")
+        reviewer = doc.get("reviewer_id")
+        require(type(reviewer) is str
+                and re.fullmatch(r"[A-Za-z0-9_.:-]{4,80}", reviewer)
+                and reviewer.casefold() not in reviewers, "REVIEWER")
+        reviewers.add(reviewer.casefold())
+        decisions = doc.get("decisions")
+        require(type(decisions) is list and len(decisions) == 2, "REVIEW_COVERAGE")
+        seen = set()
+        for row in decisions:
+            require(type(row) is dict and set(row) == set(template["decisions"][0]),
+                    "REVIEW_DECISION")
+            turn = row.get("turn")
+            require(type(turn) is int and turn in expected and turn not in seen,
+                    "REVIEW_COVERAGE")
+            seen.add(turn)
+            require(row.get("answer_sha256") == expected[turn], "REVIEW_ANSWER")
+            verdict, reason = row.get("verdict"), row.get("reason")
+            require(type(verdict) is str and verdict in ("correct", "incorrect", "uncertain"),
+                    "REVIEW_VERDICT")
+            require(type(reason) is str and 8 <= len(reason.strip()) <= 400,
+                    "REVIEW_REASON")
+            marks[turn].append(verdict)
+    disagreement = [n for n in marks if marks[n][0] != marks[n][1]]
+    incorrect = [n for n in marks if "incorrect" in marks[n]]
+    uncertain = [n for n in marks if "uncertain" in marks[n]]
+    summary = ("INCORRECT_REPORTED_UNVERIFIED" if incorrect else
+               "ADJUDICATION_REQUIRED" if disagreement or uncertain else
+               "TWO_REVIEWER_CONSENSUS_REPORTED_UNVERIFIED")
+    return {"schema": SCHEMA, "rubric_sha256": packet["rubric_sha256"],
+            "readback_sha256": packet["readback_sha256"],
+            "submission_sha256": [submission_a_pin, submission_b_pin],
+            "decisions_bound": 4, "disagreements": disagreement,
+            "reported_incorrect": incorrect, "reported_uncertain": uncertain,
+            "review_summary": summary, "reviewer_identity_verified": False,
+            "quality_grade": "NOT_INDEPENDENTLY_VERIFIED",
+            "native_acceptance": packet["native_acceptance"]}
