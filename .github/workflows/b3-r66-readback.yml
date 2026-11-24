@@ -1,0 +1,17 @@
+name: B3 R66 raw readback digest binding
+on:
+  pull_request:
+    paths:
+      - 'coordination/onepass/b3_r66_raw_readback_binding.cjs'
+      - '.github/workflows/b3-r66-readback.yml'
+permissions:
+  contents: read
+jobs:
+  source-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node coordination/onepass/b3_r66_raw_readback_binding.cjs --self-test
