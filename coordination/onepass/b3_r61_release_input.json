@@ -1,0 +1,80 @@
+{
+  "schema": "NOX_B3_IMMUTABLE_RELEASE_INPUT_V1",
+  "task_id": "5A05-B3-R60-IMMUTABLE-RELEASE-INPUT-20261124-R61",
+  "parent_task_id": "5A05",
+  "next_existing_task_id": "5A05-B3-PR717-442EF93B-PHASE-CI-OWNER-CAS-LIVE-S03-20261121",
+  "claim_comment_id": 7126139734,
+  "source_head": "5b50ed7166061a62b5e7b42802cefc8a45e99b5c",
+  "source_test_merge": "a9c5dda06065bd8cab4a1282c0b2d092e543c2df",
+  "source_test_job": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/45348070847/job/138287394520",
+  "source_test_cases": 9,
+  "source_test_is_synthetic": true,
+  "previous_receipt": 7125013326,
+  "pins": [
+    {
+      "path": "coordination/onepass/b3_r56_combined_candidate.js",
+      "git_blob_sha1": "6fb70b91eac58ab24167d66729074ce1889c3687"
+    },
+    {
+      "path": "coordination/onepass/b3_r57_phase_transition_port.cjs",
+      "git_blob_sha1": "a4ec982ab0e25959a100a21c765ba1d13df06bc0"
+    },
+    {
+      "path": "coordination/onepass/b3_r60_identity_readback_race.cjs",
+      "git_blob_sha1": "6fa1fa32d229339ded8ecd861cbe35696f184e3e"
+    },
+    {
+      "path": ".github/workflows/b3-r60-identity-readback.yml",
+      "git_blob_sha1": "22f7396b9d8a1b4cd9dc7a2c1cc321ad97685d33"
+    },
+    {
+      "path": "coordination/onepass/nox-v135-resonance-owner-bridge.js",
+      "git_blob_sha1": "7e66d4cfcf479d908a1eb9e3bdc86e5899a2b070"
+    }
+  ],
+  "candidate": {
+    "path": "coordination/onepass/b3_r61_release_candidate.js",
+    "git_blob_sha1": "a6e4185e47f480648c88d29b9a2046bb3e70a00e",
+    "sha256": "9cd1cd1ab96a01b295418b59d53669b742d804520af15e3da648716b02427ef3",
+    "bytes": 24786,
+    "cap": 25454,
+    "admitted": false,
+    "materialization": "exact R57+R60 transformations, SHA256 equals raw R60 hosted output"
+  },
+  "independent_composition": {
+    "scope": "B4 fixture timing, not live or canonical S03",
+    "commit": "f00cc722022773edaed335ffb59fdbb0664189e2",
+    "path": "nox-control/systemic_relay_20261118/test_b4_r56_r60_composed.mjs",
+    "git_blob_sha1": "73998c265268eb10ae14c7da7a038958ef4505d4",
+    "job": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/45348750570/job/138289635699",
+    "mock_browser_posts": 2,
+    "mock_admitted_posts": 2,
+    "mock_upstream_posts": 2,
+    "native_accepted": false
+  },
+  "coordination_only": [
+    "B0 R59 / B5 R61 pins B0 R58",
+    "B1 R67 / R66 tested",
+    "B2 R73 / R72 tested",
+    "B4 R56",
+    "B5 R61"
+  ],
+  "gates": {
+    "full_combined_ci": false,
+    "shared_owner_cas": false,
+    "native_owner_cas": false,
+    "resource_stop_rollback_immutable_verifier": false,
+    "served_weights_tokenizer_sha256": false,
+    "actual_browser_stream_stop_voice_frame_matrix": false,
+    "existing_dialog_turns_2_3_independent_s03": false,
+    "ready": "UNKNOWN",
+    "native_cap": 3
+  },
+  "native_accepted": false,
+  "original_295_accepted_delta": 0,
+  "notes": [
+    "R59 Chromium fixture tested R58 predecessor only; do not attribute its frame metrics to R60.",
+    "No changes to active shared bridge or policy; new candidate is source input only.",
+    "D3/A5 must recheck fresh preimage and authorized repin on actual shared release, full mandatory CI, then live turns 2 and 3; no first-turn replay."
+  ]
+}
