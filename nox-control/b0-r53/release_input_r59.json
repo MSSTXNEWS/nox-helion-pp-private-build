@@ -1,0 +1,73 @@
+{
+  "schema": "nox.b0.release-input.v1",
+  "task_id": "B0-R59-R58-B5R61-IMMUTABLE-RELEASE-INPUT-20261124",
+  "claim": 7125836831,
+  "status": "SOURCE_COMPOSITION_VERIFIED_NATIVE_HOLD",
+  "native_accepted": false,
+  "admission": false,
+  "donors": [
+    {
+      "commit": "ea2926cd4c88868f731052c4f2fd649c7f673c5a",
+      "path": "nox-control/b0-r53/b0_resume_bridge.py",
+      "git_blob": "a090f0bd0cf9a654b7aeee9c694338bd184fb92f",
+      "role": "bridge"
+    },
+    {
+      "commit": "ea2926cd4c88868f731052c4f2fd649c7f673c5a",
+      "path": "nox-control/b0-r53/owner_chat_probe.py",
+      "git_blob": "87b9f3d2e3eb109327bd9f403b26b53d926ab803",
+      "role": "owner_get"
+    },
+    {
+      "commit": "4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3",
+      "path": "nox-control/b5_s03_verifier_r54.py",
+      "git_blob": "df94c535273dde1fd2609f555d1d615eacfda831",
+      "role": "canonical_b5_dependency",
+      "import_alias": "b5_r55_pinned.py"
+    },
+    {
+      "commit": "ea2926cd4c88868f731052c4f2fd649c7f673c5a",
+      "path": "nox-control/b0-r53/test_b0_resume_bridge.py",
+      "git_blob": "c0bae6c1086241c95fc29584ff4044717ea7d790",
+      "role": "test_only"
+    },
+    {
+      "commit": "7fad0f38fa299112a9a67781f427e21b23f3fb18",
+      "path": "nox-control/test_b5_b0_r56_composed.py",
+      "git_blob": "1faf4032c2ce1f077ee8125ac098870caf02d0ae",
+      "role": "composition_test_only"
+    }
+  ],
+  "evidence": {
+    "b0": {
+      "receipt": 7124728298,
+      "test_merge": "fdd1c3ce1691e475d981531b29b506badb541ed6",
+      "job": 138280884648,
+      "tests": 119
+    },
+    "b5": {
+      "receipt": 7125175068,
+      "test_merge": "fa65d592af7b6e954322d1ee30239e34ea31c5ec",
+      "job": 138291304064,
+      "tests": 7,
+      "seconds": 0.057
+    },
+    "combined_release": "NOT_ESTABLISHED"
+  },
+  "handoff": {
+    "owner": "D3/O1/A6",
+    "task_id": "B0-PR445-7D0AB-CI-SUCCESS-OWNER-CAS-BROWSER-S03-20261119",
+    "requirements": [
+      "Use donor Git blobs, not PR tip or vendored B0 fixture; resolve canonical B5 alias only in approved integration packaging.",
+      "Reconcile all required CI on exact combined release candidate.",
+      "Exclusive shared/native owner claim; fresh preimages, STOP, lease, rollback, resource admission and immutable verifier.",
+      "Verify installed and served SHA256 before live tests.",
+      "Resume existing dialog; real browser SSE turns 2 and 3, exactly one POST per turn, independent four/six canonical S03 IDs; no first-turn replay."
+    ],
+    "prohibited": [
+      "native mutation without admission",
+      "automatic merge/deploy",
+      "repeat uncertain POST"
+    ]
+  }
+}
