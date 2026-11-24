@@ -1,0 +1,25 @@
+name: NOX B5 R54 isolated S03 port
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/b5_s03_verifier_r54.py'
+      - '.github/workflows/nox-b5-r54-s03-port.yml'
+permissions:
+  contents: read
+jobs:
+  b5-r54-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Focused pure S03 chain fixtures
+        run: |
+          python -m py_compile nox-control/b5_s03_verifier_r54.py
+          python nox-control/b5_s03_verifier_r54.py
+          echo 'B5_NATIVE_ACCEPTED=false'
