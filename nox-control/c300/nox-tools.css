@@ -1,0 +1,35 @@
+/* NOX · Инструменты: стекло, неон, компактно */
+.nt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px;margin-top:10px}
+.nt-tile{position:relative;display:flex;flex-direction:column;gap:6px;padding:12px 12px 10px;border-radius:14px;cursor:pointer;text-align:left;color:inherit;
+ background:rgba(14,18,30,.52);border:1px solid rgba(150,190,255,.16);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
+ box-shadow:0 6px 24px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .15s,border-color .15s,box-shadow .15s}
+.nt-tile:hover{transform:translateY(-2px);border-color:rgba(120,200,255,.45);box-shadow:0 10px 32px rgba(0,0,0,.45),0 0 18px rgba(90,170,255,.18)}
+.nt-tile sl-icon{font-size:22px;color:#7cc8ff}
+.nt-tile b{font-size:14px;letter-spacing:.02em}
+.nt-tile span{font-size:11.5px;opacity:.7;line-height:1.3}
+.nt-tile i{position:absolute;top:8px;right:10px;font-style:normal;font-size:10px;opacity:.45}
+.nt-stage{margin-top:10px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:72vh}
+.nt-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.nt-bar b{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#9fd6ff}
+.nt-tools{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.nt-tools button,.nt-tools select,.nt-tools label.nt-file{background:rgba(120,170,255,.12);border:1px solid rgba(150,190,255,.22);border-radius:9px;color:inherit;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer}
+.nt-tools button:hover,.nt-tools label.nt-file:hover{background:rgba(120,170,255,.24)}
+.nt-tools button.nt-ai{border-color:rgba(255,190,110,.5);color:#ffd08a}
+.nt-body{position:relative;flex:1;min-height:60vh;border-radius:10px;overflow:hidden;background:rgba(2,4,10,.45)}
+.nt-body.pad{padding:10px;overflow:auto}
+.nt-body textarea.nt-ta{width:100%;min-height:22vh;background:rgba(0,0,0,.35);color:inherit;border:1px solid rgba(150,190,255,.18);border-radius:8px;padding:8px;font:13px/1.45 ui-monospace,monospace}
+.nt-nox{border-top:1px solid rgba(150,190,255,.15);padding-top:6px;max-height:28vh;overflow:auto}
+.nt-nox-h{font-size:10px;letter-spacing:.2em;color:#ffd08a;opacity:.8}
+.nt-nox-out{white-space:pre-wrap;font-size:13.5px;line-height:1.45}
+.nt-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.nt-col{flex:1;min-width:280px}
+.nt-out{white-space:pre-wrap;font-size:13px;line-height:1.45;background:rgba(0,0,0,.3);border-radius:8px;padding:8px;min-height:80px}
+.nt-keys{display:flex;user-select:none;margin-top:10px}
+.nt-keys div{width:38px;height:150px;border:1px solid rgba(150,190,255,.3);border-radius:0 0 7px 7px;background:rgba(230,240,255,.85);color:#123;display:flex;align-items:flex-end;justify-content:center;font-size:10px;padding-bottom:6px;cursor:pointer}
+.nt-keys div.b{width:26px;height:95px;margin:0 -13px;z-index:2;background:#10141f;color:#9fd6ff}
+.nt-keys div.on{background:#7cc8ff!important}
+.nt-dot{display:inline-block;width:14px;height:14px;border-radius:50%;background:#444;vertical-align:middle;margin-right:6px;transition:background .15s,box-shadow .15s}
+.nt-dot.on{background:#ff5d7a;box-shadow:0 0 14px #ff5d7a}
+.nt-body .reveal{height:100%}
+.nt-body canvas{display:block}
+@media (max-width:640px){.nt-grid{grid-template-columns:repeat(2,1fr)}.nt-tools{margin-left:0}}

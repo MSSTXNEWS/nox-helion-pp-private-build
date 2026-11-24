@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NOX · ТВ</title>
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/nox-x/reveal/reveal.css">
+<link rel="stylesheet" href="./vendor/nox-x/reveal/black.css">
+<style>
+html,body{margin:0;height:100%;background:radial-gradient(ellipse at 30% 20%,#0d1a33 0%,#03050c 55%,#000 100%);color:#e6f1ff;font-family:system-ui,sans-serif;overflow:hidden}
+#stars{position:fixed;inset:0;pointer-events:none}
+#chat{position:fixed;inset:5vh 6vw;display:flex;flex-direction:column;gap:2vh}
+#chat .k{font-size:1.6vw;letter-spacing:.4em;color:#7cc8ff;opacity:.8}
+#ans{flex:1;overflow:hidden;font-size:3vw;line-height:1.35;text-shadow:0 0 18px rgba(124,200,255,.25);white-space:pre-wrap}
+#q{font-size:1.8vw;opacity:.6}
+#in{display:flex;gap:1vw}#in input{flex:1;font-size:1.8vw;padding:1vh 1vw;border-radius:1vw;border:1px solid rgba(150,190,255,.3);background:rgba(10,16,30,.6);color:inherit}
+#in button{font-size:1.6vw;padding:1vh 2vw;border-radius:1vw;border:1px solid rgba(255,190,110,.5);background:rgba(255,190,110,.12);color:#ffd08a}
+#deck{position:fixed;inset:0;display:none}
+#vid{position:fixed;inset:0;width:100%;height:100%;display:none;background:#000}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div id="chat"><div class="k">NOX HELION</div><div id="q"></div><div id="ans">Готов. Говори или отправь сюда слайды с телефона.</div>
+ <form id="in"><input id="inp" placeholder="Вопрос NOX…" autocomplete="off"><button>Спросить</button></form></div>
+<div id="deck"><div class="reveal"><div class="slides"><section data-markdown><textarea data-template></textarea></section></div></div></div>
+<video id="vid" controls></video>
+<script src="./vendor/nox-x/reveal/reveal.js"></script>
+<script src="./vendor/nox-x/reveal/markdown.js"></script>
+<script>
+(function(){
+  var cv=document.getElementById('stars'),cx=cv.getContext('2d'),S=[];function rs(){cv.width=innerWidth;cv.height=innerHeight;S=[];for(var i=0;i<260;i++)S.push([Math.random()*cv.width,Math.random()*cv.height,Math.random()*1.4+.2,Math.random()]);}rs();addEventListener('resize',rs);
+  (function tw(t){cx.clearRect(0,0,cv.width,cv.height);S.forEach(function(s){var a=.35+.65*Math.abs(Math.sin(t/1400+s[3]*9));cx.fillStyle='rgba(200,225,255,'+a+')';cx.beginPath();cx.arc(s[0],s[1],s[2],0,7);cx.fill();});requestAnimationFrame(tw);})(0);
+  var ans=document.getElementById('ans'),q=document.getElementById('q'),deck=null;
+  function show(which){document.getElementById('chat').style.display=which==='chat'?'flex':'none';document.getElementById('deck').style.display=which==='deck'?'block':'none';document.getElementById('vid').style.display=which==='vid'?'block':'none';}
+  function slides(md){show('deck');var box=document.getElementById('deck');box.innerHTML='<div class="reveal"><div class="slides"><section data-markdown><textarea data-template></textarea></section></div></div>';box.querySelector('textarea').value=md;
+    if(deck)try{deck.destroy()}catch(e){};deck=new Reveal(box.querySelector('.reveal'),{hash:false,plugins:[RevealMarkdown],controls:true,progress:true,keyboard:true});deck.initialize();}
+  function ask(text){show('chat');q.textContent='— '+text;ans.textContent='…';var acc='';
+    fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'nox-helion:latest',stream:true,nox_mode:'fast',messages:[{role:'user',content:text}]})}).then(function(r){var rd=r.body.getReader(),dec=new TextDecoder(),buf='';
+      function pump(){return rd.read().then(function(x){if(x.done)return;buf+=dec.decode(x.value,{stream:true});var k;while((k=buf.indexOf('\n'))>=0){var l=buf.slice(0,k).trim();buf=buf.slice(k+1);if(!l)continue;try{var d=JSON.parse(l);if(d.message&&d.message.content){acc+=d.message.content;ans.textContent=acc;}}catch(e){}}return pump();});}return pump();}).catch(function(e){ans.textContent='NOX не ответил: '+e.message;});}
+  function handle(m){if(!m)return;if(m.type==='slides')slides(m.md);else if(m.type==='ask')ask(m.text);else if(m.type==='answer'){show('chat');q.textContent=m.q?'— '+m.q:'';ans.textContent=m.text;}else if(m.type==='video'){show('vid');var v=document.getElementById('vid');v.src=m.url;v.play();}else if(m.type==='chat')show('chat');}
+  if('BroadcastChannel' in window){new BroadcastChannel('nox-tv').onmessage=function(e){handle(e.data);};}
+  addEventListener('storage',function(e){if(e.key==='nox-tv:last')try{handle(JSON.parse(e.newValue))}catch(x){}});
+  if(navigator.presentation&&navigator.presentation.receiver)navigator.presentation.receiver.connectionList.then(function(l){l.connections.forEach(function(c){c.onmessage=function(e){try{handle(JSON.parse(e.data))}catch(x){}};});});
+  document.getElementById('in').onsubmit=function(e){e.preventDefault();var v=document.getElementById('inp').value.trim();if(v){ask(v);document.getElementById('inp').value='';}};
+  addEventListener('keydown',function(e){if(e.key==='Escape')show('chat');});
+})();
+</script>
+</body>
+</html>
