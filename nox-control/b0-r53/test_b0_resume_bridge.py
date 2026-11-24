@@ -87,3 +87,41 @@ class B0ResumeBridgeTests(unittest.TestCase):
         f["admitted_calls"]=6
         with self.assertRaisesRegex(ValueError,"HOLD_RESUME_PREFIX"):
             bind_existing_resume(**f)
+
+    def test_single_authenticated_get_snapshot_bridge(self):
+        from unittest.mock import patch
+        import owner_chat_probe as probe
+        from b0_resume_bridge import prepare_existing_resume_from_owner_get
+        for n in (1, 2):
+            f = fixture(n)
+            kwargs = {k: v for k, v in f.items() if k not in ('preflight', 'owner_rows')}
+            kwargs.update(client='fixture-client', row_count=2*n)
+            history = dict(dialog_id=DIALOG, messages=f['owner_rows'])
+            with self.subTest(n=n), patch.object(probe, 'require_preturn_owner_binding') as before, \
+                    patch.object(probe, 'owner_readback_json', return_value=history) as get, \
+                    patch.object(probe, 'require_postturn_owner_binding') as after:
+                # Mutating the source object after hashing must not alter the exact snapshot.
+                after.side_effect = lambda _: history['messages'][0].update(owner_metadata='late')
+                bridge = prepare_existing_resume_from_owner_get(**kwargs)
+                before.assert_called_once_with('fixture-client')
+                after.assert_called_once_with('fixture-client')
+                get.assert_called_once_with('fixture-client', '/api/ui/memory/dialogs/history?dialog_id='+DIALOG+'&limit=8')
+                new = rows(n+1)
+                self.assertEqual(bridge.finish(browser_rows=new, canonical_rows=new,
+                    witnesses=witnesses(new), browser_calls=8, admitted_calls=8,
+                    prompt=new[-2]['content'], stream_answer=new[-1]['content'],
+                    terminal_saved=True, dom_matches=True), 'RESUME_EVIDENCE_MATCHED')
+
+    def test_single_get_bridge_fails_closed_on_owner_drift(self):
+        from unittest.mock import patch
+        import owner_chat_probe as probe
+        from b0_resume_bridge import prepare_existing_resume_from_owner_get
+        f = fixture(1)
+        kwargs = {k: v for k, v in f.items() if k not in ('preflight', 'owner_rows')}
+        kwargs.update(client='fixture-client', row_count=2)
+        with patch.object(probe, 'require_preturn_owner_binding'), \
+                patch.object(probe, 'owner_readback_json', return_value=dict(dialog_id=DIALOG, messages=f['owner_rows'])) as get, \
+                patch.object(probe, 'require_postturn_owner_binding', side_effect=RuntimeError('HOLD_OWNER')):
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER'):
+                prepare_existing_resume_from_owner_get(**kwargs)
+            get.assert_called_once()

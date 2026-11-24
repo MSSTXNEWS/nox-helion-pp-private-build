@@ -646,7 +646,7 @@ def existing_dialog_preflight_config():
     return dialog_id, expected_sha, int(row_count)
 
 
-def existing_dialog_prefix_preflight(client, dialog_id, expected_sha, row_count):
+def _existing_dialog_prefix_snapshot(client, dialog_id, expected_sha, row_count):
     """GET-only owner history pin check, not browser/S03 proof or POST admission.
 
     The caller must obtain expected_sha independently from a trusted prior
@@ -670,20 +670,29 @@ def existing_dialog_prefix_preflight(client, dialog_id, expected_sha, row_count)
     if not scoped_history_matches_turns(history, pairs, dialog_id):
         raise RuntimeError('HOLD_EXISTING_DIALOG_PREFIX')
     try:
-        actual_sha = digest(json.dumps(
+        canonical = json.dumps(
             {'dialog_id': dialog_id, 'messages': rows}, ensure_ascii=False,
-            sort_keys=True, separators=(',', ':'), allow_nan=False).encode('utf-8'))
+            sort_keys=True, separators=(',', ':'), allow_nan=False).encode('utf-8')
+        actual_sha = digest(canonical)
+        snapshot = json.loads(canonical)['messages']
     except (TypeError, ValueError, UnicodeError):
         raise RuntimeError('HOLD_EXISTING_DIALOG_PREFIX') from None
     if actual_sha != expected_sha:
         raise RuntimeError('HOLD_EXISTING_DIALOG_PREFIX_PIN_MISMATCH')
     require_postturn_owner_binding(client)
-    return {'scope': 'EXISTING_OWNER_DIALOG_PREFIX_ONLY_NOT_INDEPENDENT_S03',
+    receipt = {'scope': 'EXISTING_OWNER_DIALOG_PREFIX_ONLY_NOT_INDEPENDENT_S03',
             'prefix_rows': row_count, 'prefix_sha256': actual_sha,
             'dialog_id_sha256': digest(dialog_id.encode('ascii')),
             'prefix_pin_matched': True, 'model_post_issued': False,
             'dialog_created': False, 'browser_multiturn_accepted': False,
             'native_s03_independently_verified': False, 'production_accepted': False}
+    return receipt, snapshot
+
+
+def existing_dialog_prefix_preflight(client, dialog_id, expected_sha, row_count):
+    """Public diagnostics retain the redacted receipt; never emit raw rows."""
+    receipt, _ = _existing_dialog_prefix_snapshot(client, dialog_id, expected_sha, row_count)
+    return receipt
 
 
 def stable_postquiet_three_turn_history(client, original, turns, dialog_id):

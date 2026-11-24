@@ -46,3 +46,21 @@ def bind_existing_resume(*, preflight, expected_owner_sha, dialog_id, session_id
         dialog_id=dialog_id, session_id=session_id, prior_rows=canonical_rows,
         prior_witnesses=prior_witnesses, browser_rows=owner_rows,
         browser_calls=browser_calls, admitted_calls=admitted_calls)
+
+
+def prepare_existing_resume_from_owner_get(*, client, expected_owner_sha, dialog_id,
+                                           session_id, row_count, canonical_rows,
+                                           prior_witnesses, browser_calls, admitted_calls):
+    """Bind the exact verified owner GET snapshot; no second history GET or POST.
+
+    The caller must supply separately authenticated pins and native admission.
+    The returned evidence is not permission to call the model.
+    """
+    from owner_chat_probe import _existing_dialog_prefix_snapshot
+    preflight, owner_rows = _existing_dialog_prefix_snapshot(
+        client, dialog_id, expected_owner_sha, row_count)
+    return bind_existing_resume(
+        preflight=preflight, expected_owner_sha=expected_owner_sha, dialog_id=dialog_id,
+        session_id=session_id, owner_rows=owner_rows, canonical_rows=canonical_rows,
+        prior_witnesses=prior_witnesses, browser_calls=browser_calls,
+        admitted_calls=admitted_calls)
