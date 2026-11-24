@@ -1,0 +1,25 @@
+name: D3 R97 browser projection quality gate
+on:
+  pull_request:
+    paths: ['nox-control/d3-r97/**', '.github/workflows/nox-d3-r97-browser-projection.yml']
+permissions:
+  contents: read
+jobs:
+  browser_quality_gate:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r97-browser-quality-gate-20261125'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: One joint source acceptance with new browser projection gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="nox-control/d3-r97:$(python3 -c 'import json; print(":".join(json.load(open("nox-control/d3-r93/release.json"))["python_paths"]))')"
+          python3 -B -m unittest -v test_browser_projection_gate
