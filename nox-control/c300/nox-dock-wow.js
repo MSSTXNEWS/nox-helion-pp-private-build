@@ -41,6 +41,10 @@
     '.nw-top{display:flex;gap:2px;flex-wrap:wrap}',
     '.nw-top a{color:#bcd3ee;text-decoration:none;font:600 11px/1 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;padding:8px 10px;border-radius:9px;transition:color .15s,background .15s,text-shadow .15s}',
     '.nw-top a:hover,.nw-top a[aria-current=page]{color:#fff;background:rgba(124,200,255,.1);text-shadow:0 0 10px rgba(124,200,255,.8)}',
+    '.nw-topbar{position:fixed;top:0;left:0;right:0;z-index:9998;display:flex;align-items:center;gap:14px;padding:6px 14px;background:rgba(6,9,18,.55);border-bottom:1px solid rgba(140,190,255,.14);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%)}',
+    '.nw-brand{color:#e6f1ff;text-decoration:none;font:700 12px/1 system-ui,sans-serif;letter-spacing:.32em;text-shadow:0 0 12px rgba(124,200,255,.7)}',
+    'body.nw-has-top{padding-top:44px!important}',
+    '@media (max-width:760px){.nw-topbar{overflow-x:auto}.nw-top{flex-wrap:nowrap}}',
     '@keyframes nw-spin{to{--nw-a:360deg}}',
     '@keyframes nw-sweep{0%,55%{left:-60%}85%,100%{left:140%}}',
     '@keyframes nw-glow{0%,100%{opacity:.85}50%{opacity:1;transform:scale(1.06)}}',
@@ -89,7 +93,15 @@
     links.forEach(function (a) { a.style.display = 'none'; });
     host.insertBefore(nav, host.firstChild); return true;
   }
+  function topFallback() {
+    if (document.querySelector('.nw-topbar')) return;
+    var t = document.createElement('header'); t.className = 'nw-topbar';
+    t.innerHTML = '<a class="nw-brand" href="./index.html">NOX HELION</a>';
+    var nav = document.createElement('nav'); nav.className = 'nw-top'; nav.setAttribute('aria-label', 'Система');
+    SYS.forEach(function (s) { var a = document.createElement('a'); a.href = './' + s[0]; a.textContent = s[1]; if (isCur(s[0])) a.setAttribute('aria-current', 'page'); nav.appendChild(a); });
+    t.appendChild(nav); document.body.appendChild(t); document.body.classList.add('nw-has-top');
+  }
   function loadTilt(cb) { if (window.VanillaTilt) return cb(); var s = document.createElement('script'); s.src = V + 'nox-x/fx2/vanilla-tilt.min.js'; s.onload = cb; s.onerror = cb; document.head.appendChild(s); }
-  function go() { loadTilt(buildDock); var n = 0; (function tryTop() { if (!buildTop() && n++ < 40) setTimeout(tryTop, 150); })(); }
+  function go() { loadTilt(buildDock); var n = 0; (function tryTop() { if (buildTop()) return; if (n++ < 12) setTimeout(tryTop, 150); else topFallback(); })(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
 })();
