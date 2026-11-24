@@ -32,10 +32,8 @@ with sync_playwright() as p:
         pg=b.new_page(viewport={'width':w,'height':h},has_touch=w<800,is_mobile=w<800)
         errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)[:120]))
         pg.goto('http://localhost:8091/web/'+page,wait_until='load'); pg.wait_for_timeout(4000)
-        pg.keyboard.press('Control+k'); pg.wait_for_timeout(400)
         pg.screenshot(path='/tmp/s.png')
         out(tag,'/tmp/s.png',640 if w>800 else 390,q)
-        pg.keyboard.press('Escape')
         print('ERRS',tag,errs[:3])
     b.close()
 P
