@@ -39,10 +39,10 @@
 <body data-page="photo" class="boot">
 <div id="app">
 <main class="page" id="page"><div class="wrap">
-<div class="ph"><div><span class="kick mono">Редактор слоёв miniPaint · ИИ NOX: генерация, фон, увеличение, описание</span><h1>Фотостудия</h1></div>
+<div class="ph"><div><span class="kick mono">Filerobot Image Editor · ИИ NOX: генерация, фон, увеличение, описание, диалог</span><h1>Фотостудия</h1></div>
  <div class="acts"><span class="seg"><button type="button" id="openF"><sl-icon library="tabler" name="photo-plus"></sl-icon>Открыть фото</button><button type="button" id="expP"><sl-icon library="tabler" name="download"></sl-icon>PNG</button><button type="button" id="expJ"><sl-icon library="tabler" name="download"></sl-icon>JPG</button><button type="button" id="expW"><sl-icon library="tabler" name="download"></sl-icon>WebP</button></span></div></div>
 <section class="ps">
- <div class="ps-ed"><iframe id="mp" src="./vendor/nox-x/minipaint/index.html" title="miniPaint"></iframe></div>
+ <div class="ps-ed"><div id="fie" style="width:100%;height:100%"></div></div>
  <aside class="ps-ai glass">
   <div class="ps-box ps-chat"><h3>Диалог с NOX</h3>
    <div id="cLog" class="ps-log"></div>
@@ -68,6 +68,7 @@
 </div></main>
 </div>
 <script type="module" src="./nox-nav.js"></script>
+<script src="./vendor/nox-x/filerobot/filerobot-image-editor.min.js"></script>
 <script src="./nox-photo.js"></script>
 </body>
 </html>
