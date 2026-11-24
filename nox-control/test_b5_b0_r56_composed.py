@@ -102,5 +102,40 @@ class ComposedIngressTests(unittest.TestCase):
                     prompt=new[-2]["content"], stream_answer=new[-1]["content"],
                     terminal_saved=True, dom_matches=True), "RESUME_EVIDENCE_MATCHED")
 
+    def test_exact_single_get_ingress_two_consecutive_turns(self):
+        from unittest.mock import patch
+        import owner_chat_probe as probe
+        from b0_resume_bridge import prepare_existing_resume_from_owner_get
+        with ExitStack() as stack:
+            old, pins = self.load(stack, 1)
+            for n in (1, 2):
+                f = fixture(n)
+                f.update(canonical_rows=old, prior_witnesses=pins,
+                         browser_calls=6+n, admitted_calls=6+n)
+                observed = [dict(r) for r in old]
+                history = dict(dialog_id=f["dialog_id"], messages=f["owner_rows"])
+                kwargs = {k: v for k, v in f.items() if k not in ("preflight", "owner_rows")}
+                kwargs.update(client="fixture-client", row_count=2*n,
+                              observed_browser_rows=observed, observed_browser_calls=6+n)
+                # Actual B0 snapshot path; only the authenticated transport is mocked.
+                with patch.object(probe, "require_preturn_owner_binding") as before, \
+                     patch.object(probe, "owner_readback_json", return_value=history) as get, \
+                     patch.object(probe, "require_postturn_owner_binding") as after:
+                    bridge = prepare_existing_resume_from_owner_get(**kwargs)
+                    before.assert_called_once_with("fixture-client")
+                    after.assert_called_once_with("fixture-client")
+                    get.assert_called_once_with("fixture-client",
+                        "/api/ui/memory/dialogs/history?dialog_id="+f["dialog_id"]+"&limit=8")
+                new, newpins = self.load(stack, n+1, prior_rows=old, prior_witnesses=pins)
+                args = dict(browser_rows=[dict(r) for r in new], canonical_rows=new,
+                            witnesses=newpins, browser_calls=7+n, admitted_calls=7+n,
+                            prompt=new[-2]["content"], stream_answer=new[-1]["content"],
+                            terminal_saved=True, dom_matches=True)
+                self.assertEqual(bridge.finish(**args), "RESUME_EVIDENCE_MATCHED")
+                self.assertEqual(bridge.finish(**args), "HOLD_RESUME_ALREADY_CONSUMED")
+                self.assertEqual(new[:len(old)], old)
+                old, pins = new, newpins
+            self.assertEqual(len(old), 6)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

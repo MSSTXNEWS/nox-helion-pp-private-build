@@ -20,7 +20,7 @@ jobs:
         run: |
           set -euo pipefail
           b5=4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3
-          b0=62ce5ffd2aa0e6876594fe5874458f03cbfc42cc
+          b0=9d5a6fc80b59ae0f7c85a8c998cb142e988002ad
           git fetch --no-tags --depth=1 origin "$b5" "$b0"
           tmp=$(mktemp -d)
           trap 'rm -rf "$tmp"' EXIT
@@ -32,8 +32,9 @@ jobs:
             printf '%s %s %s\n' "$ref" "$pin" "$target"
           }
           materialize "$b5" nox-control/b5_s03_verifier_r54.py df94c535273dde1fd2609f555d1d615eacfda831 b5_r55_pinned.py
-          materialize "$b0" nox-control/b0-r53/b0_resume_bridge.py 0b0972c58d52ff5538520839cc35a02f4c005919 b0_resume_bridge.py
-          materialize "$b0" nox-control/b0-r53/test_b0_resume_bridge.py 9c750d36bd97329b8fe699591189a616b1a80ce6 test_b0_resume_bridge.py
+          materialize "$b0" nox-control/b0-r53/b0_resume_bridge.py dd4da69738d72ad924155609a468b2fde4308f14 b0_resume_bridge.py
+          materialize "$b0" nox-control/b0-r53/test_b0_resume_bridge.py 1419c26d29e12c7e1519a1850264bf3762ba7333 test_b0_resume_bridge.py
+          materialize "$b0" nox-control/b0-r53/owner_chat_probe.py 87b9f3d2e3eb109327bd9f403b26b53d926ab803 owner_chat_probe.py
           cp nox-control/test_b5_b0_r56_composed.py nox-control/b5_browser_prefix_gate.py "$tmp/"
           cd "$tmp"
           python -m unittest -v test_b5_b0_r56_composed
