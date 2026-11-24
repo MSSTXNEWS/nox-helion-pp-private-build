@@ -21,11 +21,12 @@ jobs:
           git ls-files -s nox-control/b0-r53/ .circleci/config.yml
           test "$(git rev-parse HEAD:.circleci/config.yml)" = 7cf197b8654cba15a940b6a9685e70ac1a6b634a
           python -B -m py_compile nox-control/b0-r53/owner_chat_probe.py nox-control/b0-r53/test_owner_chat_probe.py
+          test "$(git rev-parse HEAD:nox-control/b0-r53/b5_r55_pinned.py)" = 8da8a3b14ba7ceea19b4e3d998541e9d4587282c
           cd nox-control/b0-r53
           python -B - <<'PY'
           import unittest
-          suite = unittest.defaultTestLoader.discover('.', pattern='test_owner_chat_probe.py')
-          assert suite.countTestCases() >= 108, 'missing regression coverage'
+          suite = unittest.defaultTestLoader.discover('.', pattern='test_*.py')
+          assert suite.countTestCases() >= 114, 'missing regression coverage'
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           print('B0_NATIVE_ACCEPTED=false')
           raise SystemExit(not result.wasSuccessful())
