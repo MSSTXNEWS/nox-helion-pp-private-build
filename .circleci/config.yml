@@ -1,0 +1,38 @@
+# NOX B2 4A02 exact-repository source-only verification.
+# Not a native training admission. Production requires mandatory independent
+# CI, owner/CAS, immutable verifier, STOP/resources, checkpoint and S03 readback.
+version: 2.1
+
+jobs:
+  b2-4a02-exact-source:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Verify exact checked-out 4A02 source and regression Git blobs
+          command: |
+            set -eu
+            git rev-parse HEAD
+            test "$(git hash-object nox-control/owner_training_resume.py)" = "65d71ed0009fc8f33b57a66d529754daaacb5719"
+            test "$(git hash-object nox-control/tests/test_owner_training_resume_step_type_b2.py)" = "0425ec904d14a23573d4528cd1cf6092f6ea151c"
+      - run:
+          name: Verify B2 RU-ES multi-turn read-only capture contract
+          command: |
+            set -eu
+            test "$(git hash-object nox-control/b2_ru_es_3turn_holdout.py)" = "38a00de3a374487c3e0ad9067445fa30ada5a8ab"
+            test "$(git hash-object nox-control/tests/test_b2_ru_es_3turn_holdout.py)" = "57ea3c68e3db4f39a74a0f1ab8466d9530e8d7fc"
+            python -B -m py_compile nox-control/b2_ru_es_3turn_holdout.py nox-control/tests/test_b2_ru_es_3turn_holdout.py
+            python -B -m unittest discover -s nox-control/tests -p 'test_b2_ru_es_3turn_holdout.py' -v
+      - run:
+          name: Compile and run bounded non-native checkpoint regression
+          command: |
+            set -eu
+            python -B -m py_compile nox-control/owner_training_resume.py nox-control/tests/test_owner_training_resume_step_type_b2.py
+            python -B -m unittest discover -s nox-control/tests -p 'test_owner_training_resume_step_type_b2.py' -v
+
+workflows:
+  b2-4a02-exact-source-verification:
+    jobs:
+      - b2-4a02-exact-source
