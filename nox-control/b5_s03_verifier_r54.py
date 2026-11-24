@@ -535,5 +535,155 @@ class PortTests(unittest.TestCase):
         self.assertFalse(canonical_s03_firstturn_prefix_valid(
             *previous, DIALOG, prior, expected_session_id="different-owner"))
 
+
+def _browser_rows_match(browser_rows, canonical_rows):
+    """Exact role/text equality, plus every identity actually exposed by GET."""
+    if type(browser_rows) is not list or len(browser_rows) != len(canonical_rows):
+        return False
+    for browser, canonical in zip(browser_rows, canonical_rows):
+        if type(browser) is not dict:
+            return False
+        if any(browser.get(k) != canonical[k] for k in ("role", "content")):
+            return False
+        if any(k in browser and browser[k] != canonical[k]
+               for k in ("message_id", "dialog_id", "session_id")):
+            return False
+    return True
+
+
+class BrowserResumeEvidence:
+    """One-shot local evidence bridge, NOT a native admission or POST client.
+
+    Call before the next request using independently authenticated scope,
+    canonical old rows, immutable pins and the current browser GET.
+    After exactly one admitted request, call finish with independent new
+    witnesses and the browser's full observed prompt/answer/history.
+    Never retry an uncertain POST: discard this object and reconcile via GET.
+    The owner must separately enforce lease, STOP, admission and freshness.
+    """
+    def __init__(self, *, dialog_id, session_id, prior_rows, prior_witnesses,
+                 browser_rows, browser_calls, admitted_calls):
+        if (type(prior_rows) is not list or len(prior_rows) not in (2, 4)
+                or type(prior_witnesses) is not tuple or len(prior_witnesses) != 4
+                or type(browser_calls) is not int or browser_calls < 0
+                or type(admitted_calls) is not int or admitted_calls != browser_calls):
+            raise ValueError("HOLD_RESUME_PREFIX")
+        self._sequence = len(prior_rows) // 2
+        verifier = (canonical_s03_firstturn_prefix_valid if self._sequence == 1
+                    else canonical_s03_pinned_evidence_valid)
+        if not verifier(*prior_witnesses, dialog_id, prior_rows,
+                        expected_session_id=session_id):
+            raise ValueError("HOLD_RESUME_PREFIX")
+        if not _browser_rows_match(browser_rows, prior_rows):
+            raise ValueError("HOLD_RESUME_BROWSER_PREFIX")
+        # Snapshot from exact bytes, not mutable caller-owned row dictionaries.
+        self._prior_raw = prior_witnesses[1]
+        self._prior_witnesses = prior_witnesses
+        self._dialog_id = dialog_id
+        self._session_id = session_id
+        self._calls = browser_calls
+        self._used = False
+
+    def finish(self, *, browser_rows, canonical_rows, witnesses,
+               browser_calls, admitted_calls, prompt, stream_answer,
+               terminal_saved, dom_matches):
+        """Return evidence status only; never claim production ACCEPTED."""
+        if self._used:
+            return "HOLD_RESUME_ALREADY_CONSUMED"
+        self._used = True
+        if (type(browser_calls) is not int or browser_calls != self._calls + 1
+                or type(admitted_calls) is not int or admitted_calls != browser_calls
+                or terminal_saved is not True or dom_matches is not True):
+            return "HOLD_RESUME_POST_OR_STREAM"
+        if (type(canonical_rows) is not list
+                or len(canonical_rows) != 2 * (self._sequence + 1)
+                or type(witnesses) is not tuple or len(witnesses) != 4
+                or not isinstance(prompt, str) or not isinstance(stream_answer, str)):
+            return "HOLD_RESUME_S03"
+        prior = strict_owner_json_bytes(self._prior_raw)["messages"]
+        if self._sequence == 1:
+            valid = canonical_s03_resumed_second_turn_valid(
+                *witnesses, self._dialog_id, canonical_rows,
+                expected_session_id=self._session_id, prior_messages=prior,
+                prior_witnesses=self._prior_witnesses)
+        else:
+            valid = canonical_s03_pinned_evidence_valid(
+                *witnesses, self._dialog_id, canonical_rows,
+                expected_session_id=self._session_id, expected_sequence=3,
+                expected_prior_messages=prior, prior_witnesses=self._prior_witnesses)
+        if not valid:
+            return "HOLD_RESUME_S03"
+        if (not _browser_rows_match(browser_rows, canonical_rows)
+                or canonical_rows[-2]["content"] != prompt
+                or canonical_rows[-1]["content"] != stream_answer):
+            return "HOLD_RESUME_BROWSER_TRANSCRIPT"
+        return "RESUME_EVIDENCE_MATCHED"
+
+
+class ResumeBridgeTests(unittest.TestCase):
+    def test_second_and_third_browser_evidence_no_replay(self):
+        history = [dict(row, message_id=f"row-{i}", session_id="owner-session",
+                        dialog_id=DIALOG)
+                   for i, row in enumerate(rows("¿Qué recuerdas? 🪐") + [
+                       dict(role="user", content="¿Y después?"),
+                       dict(role="assistant", content="Помню. Sí 🪐")], 1)]
+        def wire(obj):
+            return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
+        def witnesses(items):
+            sequence = len(items) // 2
+            common = dict(source="canonical_s03", event_id=f"event-{sequence}",
+                          turn_id=f"turn-{sequence}", sequence=sequence,
+                          dialog_id=DIALOG, session_id="owner-session",
+                          full_transcript_sha256=multiturn_transcript_sha256(
+                              items, expected_sequence=sequence, _prefix_only=sequence == 1),
+                          message_ids_sha256=digest(wire([x["message_id"] for x in items])))
+            w = wire(dict(common, verified=True, durable=True))
+            r = wire(dict(common, independent=True, messages=items,
+                          full_answer_sha256=digest(items[-1]["content"].encode())))
+            return w, r, digest(w), digest(r)
+        def browser(items):
+            return [{k: x[k] for k in ("role", "content")} for x in items]
+        def start(n, **overrides):
+            old = [dict(x) for x in history[:n]]
+            args = dict(dialog_id=DIALOG, session_id="owner-session",
+                        prior_rows=old, prior_witnesses=witnesses(old),
+                        browser_rows=browser(old), browser_calls=0, admitted_calls=0)
+            args.update(overrides)
+            return BrowserResumeEvidence(**args)
+        def finish(bridge, n, **overrides):
+            current = [dict(x) for x in history[:n]]
+            args = dict(browser_rows=browser(current), canonical_rows=current,
+                        witnesses=witnesses(current), browser_calls=1, admitted_calls=1,
+                        prompt=current[-2]["content"], stream_answer=current[-1]["content"],
+                        terminal_saved=True, dom_matches=True)
+            args.update(overrides)
+            return bridge.finish(**args)
+        for n in (2, 4):
+            bridge = start(n)
+            self.assertEqual(finish(bridge, n+2), "RESUME_EVIDENCE_MATCHED")
+            self.assertEqual(finish(bridge, n+2), "HOLD_RESUME_ALREADY_CONSUMED")
+            for override in (dict(browser_calls=2), dict(admitted_calls=0),
+                             dict(terminal_saved=False), dict(dom_matches=False),
+                             dict(browser_calls=True)):
+                bridge = start(n)
+                self.assertEqual(finish(bridge, n+2, **override), "HOLD_RESUME_POST_OR_STREAM")
+                self.assertEqual(finish(bridge, n+2), "HOLD_RESUME_ALREADY_CONSUMED")
+            self.assertEqual(finish(start(n), n+2, stream_answer="wrong"),
+                             "HOLD_RESUME_BROWSER_TRANSCRIPT")
+            changed = browser(history[:n+2])
+            changed[0]["message_id"] = "foreign"
+            self.assertEqual(finish(start(n), n+2, browser_rows=changed),
+                             "HOLD_RESUME_BROWSER_TRANSCRIPT")
+            self.assertEqual(finish(start(n), n+2, witnesses=witnesses(history[:n])),
+                             "HOLD_RESUME_S03")
+        with self.assertRaisesRegex(ValueError, "HOLD_RESUME_BROWSER_PREFIX"):
+            start(2, browser_rows=browser(history[2:4]))
+        with self.assertRaisesRegex(ValueError, "HOLD_RESUME_PREFIX"):
+            start(2, admitted_calls=1)
+        old = [dict(x) for x in history[:2]]
+        bridge = start(2, prior_rows=old)
+        old[0]["content"] = "rewritten"
+        self.assertEqual(finish(bridge, 4), "RESUME_EVIDENCE_MATCHED")
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
