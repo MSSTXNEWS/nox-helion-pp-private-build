@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02030a">
+<title>NOX HELION · СОБЫТИЯ</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="./nox-wow.css">
+<link rel="stylesheet" href="./nox-pages.css">
+<link rel="stylesheet" href="./nox-unify.css">
+<script src="./nox-theme.js"></script>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","postprocessing":"./vendor/postprocessing/build/index.js"}}</script>
+<style>
+#cal{--fc-border-color:rgba(255,225,200,.1);--fc-page-bg-color:transparent;--fc-neutral-bg-color:rgba(255,235,220,.04);--fc-list-event-hover-bg-color:rgba(176,44,32,.25);--fc-today-bg-color:rgba(176,44,32,.14);--fc-button-bg-color:rgba(255,235,220,.07);--fc-button-border-color:rgba(255,225,200,.14);--fc-button-hover-bg-color:rgba(176,44,32,.6);--fc-button-hover-border-color:rgba(214,70,48,.6);--fc-button-active-bg-color:rgba(176,44,32,.85);--fc-button-active-border-color:rgba(214,70,48,.8);--fc-event-bg-color:#9c2e22;--fc-event-border-color:#c0412e;color:#efe6df;font-size:13px}
+#cal .fc-toolbar-title{font-weight:300;letter-spacing:.2em;text-transform:uppercase;font-size:1.05rem}
+#cal .fc-button{text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:300}
+#cal a{color:inherit;text-decoration:none}
+.calw{-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+</style>
+</head>
+<body data-page="events" class="boot">
+<div id="app">
+<main class="page" id="page"><div class="wrap">
+<div class="ph"><div><span class="kick mono">Календарь NOX · API /cal/events</span><h1>СОБЫТИЯ</h1></div><div class="acts"></div></div>
+<section class="card calw"><h2>Календарь <span class="r mono" id="calSt">…</span></h2><div id="cal"></div></section>
+</div></main>
+</div>
+<script type="module" src="./nox-nav.js"></script>
+<script src="./vendor/fullcalendar/fc.js" defer></script>
+</body>
+</html>
