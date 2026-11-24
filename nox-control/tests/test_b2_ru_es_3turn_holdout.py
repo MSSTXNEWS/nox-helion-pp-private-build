@@ -86,6 +86,19 @@ class ThreeTurnHoldoutContract(unittest.TestCase):
         self.assertEqual(probe.verify_capture(example)["native_acceptance"], probe.HOLD)
 
 
+    def test_native_installed_and_served_sha_must_match(self):
+        example = fixture()
+        example.update(origin="native_browser", installed_sha256="a" * 64,
+                       served_sha256="b" * 64, browser_capture_sha256="c" * 64)
+        with self.assertRaisesRegex(probe.CaptureHold,
+                                    "HOLD_B2_NATIVE_ARTIFACT_SHA_MISMATCH"):
+            probe.verify_capture(example)
+        example["served_sha256"] = example["installed_sha256"]
+        result = probe.verify_capture(example)
+        self.assertEqual(result["trace_structure"], "PASS")
+        self.assertEqual(result["quality_grade"], "NOT_MEASURED")
+        self.assertEqual(result["native_acceptance"], probe.HOLD)
+
     def test_reference_numbers_and_confident_guess_are_review_flags_not_pass(self):
         example = fixture()
         def set_answer(case_index, turn_index, answer):
