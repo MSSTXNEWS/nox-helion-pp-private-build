@@ -23,7 +23,7 @@ frames = [
 def wire(frame):
     return list(subprocess.check_output([sys.executable, "-B", "-c",
         "import json,sys\nfrom b0_proxy_stream_iter import ProxyDeltaBody\n"
-        "body=ProxyDeltaBody(iter([json.load(sys.stdin)]))\n"
+        "def source(): yield json.load(sys.stdin)\nbody=ProxyDeltaBody(source())\n"
         "try:\n for data in body: sys.stdout.buffer.write(data)\nfinally: body.close()\n"],
         input=json.dumps(frame).encode(), cwd=stage))
 with sync_playwright() as p:
