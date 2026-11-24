@@ -1,0 +1,1 @@
+cd /workspace/nox/web/site; grep -ln "i_" studio.html nox-*.js | head; grep -n "'i_'\|\"i_\"\|throw i_\|[^a-zA-Z_]i_[^a-zA-Z_0-9]" studio.html nox-nav.js nox-dock-pop.js nox-ninja.js nox-minichat.js nox-pwa.js nox-svc-embed.js | cut -c1-240 | head
