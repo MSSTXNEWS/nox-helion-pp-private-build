@@ -1,0 +1,16 @@
+name: B0 R66 fixed path wire attestation
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b0-r53/**'
+      - '.github/workflows/nox-b0-r66-fixed-source.yml'
+permissions:
+  contents: read
+jobs:
+  fixed-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bounded source-only fixture
+        run: python3 nox-control/b0-r53/b0_fixed_proxy_wire_attest.py selftest
