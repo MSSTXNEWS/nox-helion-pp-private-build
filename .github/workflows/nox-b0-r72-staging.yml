@@ -1,0 +1,40 @@
+name: B0 R72 proxy browser owner staging
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b0-r53/**'
+      - '.github/workflows/nox-b0-r72-staging.yml'
+permissions:
+  contents: read
+jobs:
+  staged-proxy:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b0/green-base-continuation-r53-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exact deterministic staged proxy and browser parser
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin 1610a9688bae986a30621befc58b004e07b67d31 2e26491241fb2483e6b6c2a4647810ae4ed15058
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          mkdir -p "$RUNNER_TEMP/b0-r72"
+          out="$RUNNER_TEMP/b0-r72/b0-r72-staging.zip"
+          python3 -B nox-control/b0-r53/stage_proxy_r72.py --repo "$PWD" --output "$out"
+          python3 -B nox-control/b0-r53/stage_proxy_r72.py --repo "$PWD" --output "$tmp/repeat.zip"
+          cmp "$out" "$tmp/repeat.zip"
+          python3 -m zipfile -e "$out" "$tmp/staged"
+          node nox-control/b0-r53/test_staged_proxy_r72.cjs "$tmp/staged"
+          sha256sum "$out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: b0-r72-proxy-browser-staging-source-only
+          path: ${{ runner.temp }}/b0-r72/b0-r72-staging.zip
+          if-no-files-found: error
