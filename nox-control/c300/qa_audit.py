@@ -14,10 +14,10 @@ CHECK=["Шапка, нижняя панель и фон-солнце как у �
 SKIP=re.compile(r"удал|delete|stop|стоп|выход|logout|очист|сброс|reset|генер|создать|отправ|send",re.I)
 def vision(jpg,prompt):
     d="data:image/jpeg;base64,"+base64.b64encode(jpg).decode()
-    body={"messages":[{"role":"user","content":[{"type":"image_url","image_url":{"url":d}},{"type":"text","text":prompt}]}],"max_tokens":700,"temperature":0.2}
+    body={"messages":[{"role":"user","content":[{"type":"image_url","image_url":{"url":d}},{"type":"text","text":prompt}]}],"max_tokens":1500,"temperature":0.2,"chat_template_kwargs":{"enable_thinking":False}}
     rq=urllib.request.Request("http://127.0.0.1:8104/v1/chat/completions",json.dumps(body).encode(),{"Content-Type":"application/json"})
     for _ in range(3):
-        try: return json.loads(urllib.request.urlopen(rq,timeout=600).read())["choices"][0]["message"]["content"]
+        try: m=json.loads(urllib.request.urlopen(rq,timeout=600).read())["choices"][0]["message"]; return (m.get("content") or "")+"\n"+(m.get("reasoning_content") or "")[-3000:]
         except Exception as e: err=f"ERR {e}"; time.sleep(30)
     return err
 async def audit(page):
