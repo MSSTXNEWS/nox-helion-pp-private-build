@@ -18,7 +18,7 @@ const jget = (u, o) => fetch(u, o).then(async (r) => { const t = await r.text();
   const st = await jget('/svc/_status').then((r) => r.j || {}).catch(() => ({}));
   for (const [k, v] of Object.entries(st.services || {})) if (v.ui !== false) data.push({ id: 's:' + k, title: (v.title || k) + (v.up ? '' : ' · не запущен'), section: 'Сервисы', keywords: k, handler: () => { v.up ? window.open('/svc/' + k + '/', '_blank') : toast((v.title || k) + ': сервис не запущен', 1); } });
   const el = document.createElement('ninja-keys');
-  el.setAttribute('placeholder', 'Поиск страниц и действий NOX…'); el.openHotkey = 'ctrl+alt+shift+f12'; el.noAutoLoadMdIcons = true; el.data = data;
+  el.setAttribute('placeholder', 'Поиск страниц и действий NOX…'); el.openHotkey = 'ctrl+alt+shift+f12'; el.noAutoLoadMdIcons = true; el.data = data; el.footerHtml = '<span style="opacity:.7;letter-spacing:.12em;font-size:10px">ENTER · ВЫБРАТЬ &nbsp; ↑↓ · ПЕРЕМЕЩЕНИЕ &nbsp; ESC · ЗАКРЫТЬ</span>';
   el.style.cssText = '--ninja-z-index:9800;--ninja-width:620px;--ninja-accent-color:#c0392b;--ninja-font-family:inherit;--ninja-text-color:#efe6df;--ninja-secondary-text-color:#a89c93;--ninja-modal-background:rgba(16,13,13,.78);--ninja-modal-shadow:0 24px 70px rgba(0,0,0,.65);--ninja-overflow-background:rgba(2,3,10,.55);--ninja-secondary-background-color:rgba(255,235,220,.06);--ninja-selected-background:rgba(176,44,32,.38);--ninja-actions-height:360px;--ninja-icon-size:1.2em;--ninja-key-border-radius:6px;--ninja-footer-background:rgba(255,235,220,.04)';
   document.body.appendChild(el);
   const open = (e) => { e.preventDefault(); e.stopImmediatePropagation(); el.open(); };

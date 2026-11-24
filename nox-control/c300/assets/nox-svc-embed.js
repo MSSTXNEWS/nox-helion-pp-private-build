@@ -25,5 +25,8 @@
   const css = document.createElement('style');
   css.textContent = '.nsv-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.nsv-tabs .tag.on{background:linear-gradient(90deg,rgba(176,44,32,.85),rgba(110,26,20,.6));color:#fff}.nsv-st{font-size:12px;letter-spacing:.06em;margin:8px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.nsv-box iframe{width:100%;height:72vh;min-height:420px;border:1px solid rgba(255,225,200,.1);border-radius:14px;background:rgba(8,7,8,.6)}@media(max-width:600px){.nsv-box iframe{height:68vh}}';
   document.head.appendChild(css);
-  (window.requestIdleCallback || setTimeout)(() => setTimeout(go, 900));
+  let busy = 0, cache = null;
+  const ensure = async () => { if (busy || document.querySelector('.nsv')) return; busy = 1; try { await go(); } finally { busy = 0; } };
+  (window.requestIdleCallback || setTimeout)(() => setTimeout(ensure, 900));
+  let tm = 0; new MutationObserver(() => { clearTimeout(tm); tm = setTimeout(() => { if (!document.querySelector('.nsv') && document.querySelector('.page .wrap')) ensure(); }, 400); }).observe(document.body, { childList: true, subtree: true });
 })();
