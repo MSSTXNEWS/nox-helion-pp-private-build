@@ -59,11 +59,33 @@ def prepare_existing_resume_from_owner_get(*, client, expected_owner_sha, dialog
     The returned evidence is not permission to call the model.
     """
     from owner_chat_probe import _existing_dialog_prefix_snapshot
+    # Freeze the independently collected DOM before network I/O. A later
+    # owner GET must not silently replace the browser's pre-GET observation.
+    def browser_snapshot():
+        try:
+            if type(observed_browser_rows) is list:
+                return json.dumps(observed_browser_rows, ensure_ascii=False,
+                                  sort_keys=True, separators=(",", ":"),
+                                  allow_nan=False)
+        except (TypeError, ValueError, UnicodeError):
+            pass
+        return None
+
+    def aliases(rows, other):
+        return (type(rows) is list and type(other) is list
+                and (rows is other or any(
+                    row is other_row for row in rows for other_row in other)))
+
+    frozen_browser = browser_snapshot()
+    aliased_before_get = aliases(observed_browser_rows, canonical_rows)
     preflight, owner_rows = _existing_dialog_prefix_snapshot(
         client, dialog_id, expected_owner_sha, row_count)
     if (type(observed_browser_rows) is not list
-            or observed_browser_rows is owner_rows
-            or observed_browser_rows is canonical_rows
+            or frozen_browser is None
+            or aliased_before_get
+            or aliases(observed_browser_rows, owner_rows)
+            or aliases(observed_browser_rows, canonical_rows)
+            or browser_snapshot() != frozen_browser
             or len(observed_browser_rows) != row_count
             or type(observed_browser_calls) is not int
             or type(browser_calls) is not int
@@ -78,5 +100,5 @@ def prepare_existing_resume_from_owner_get(*, client, expected_owner_sha, dialog
         admitted_calls=admitted_calls)
     return BrowserResumeEvidence(
         dialog_id=dialog_id, session_id=session_id, prior_rows=canonical_rows,
-        prior_witnesses=prior_witnesses, browser_rows=observed_browser_rows,
+        prior_witnesses=prior_witnesses, browser_rows=json.loads(frozen_browser),
         browser_calls=observed_browser_calls, admitted_calls=admitted_calls)

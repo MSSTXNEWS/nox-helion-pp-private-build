@@ -152,3 +152,29 @@ class B0ResumeBridgeTests(unittest.TestCase):
                         prepare_existing_resume_from_owner_get(**kwargs,
                             observed_browser_rows=observed, observed_browser_calls=count)
                     get.assert_called_once()
+
+    def test_single_get_rejects_mutated_dom_and_shallow_canonical_alias(self):
+        from unittest.mock import patch
+        import owner_chat_probe as probe
+        from b0_resume_bridge import prepare_existing_resume_from_owner_get
+        for n in (1, 2):
+            for mode in ("shallow_alias", "stale_replaced", "changed_after_get"):
+                f = fixture(n)
+                observed = list(f["canonical_rows"]) if mode == "shallow_alias" else rows(n)
+                if mode == "stale_replaced":
+                    observed[-1]["content"] = "stale before GET"
+                kwargs = {k: v for k, v in f.items() if k not in ("preflight", "owner_rows")}
+                kwargs.update(client="fixture-client", row_count=2*n,
+                              observed_browser_rows=observed, observed_browser_calls=7)
+                def mutate(_):
+                    if mode == "stale_replaced":
+                        observed[-1]["content"] = f["canonical_rows"][-1]["content"]
+                    elif mode == "changed_after_get":
+                        observed[-1]["content"] = "changed during GET"
+                with self.subTest(n=n, mode=mode), patch.object(probe, "require_preturn_owner_binding"), \
+                        patch.object(probe, "owner_readback_json", return_value=dict(
+                            dialog_id=DIALOG, messages=f["owner_rows"])) as get, \
+                        patch.object(probe, "require_postturn_owner_binding", side_effect=mutate):
+                    with self.assertRaisesRegex(ValueError, "HOLD_ACTUAL_BROWSER_PREFIX"):
+                        prepare_existing_resume_from_owner_get(**kwargs)
+                    get.assert_called_once()
