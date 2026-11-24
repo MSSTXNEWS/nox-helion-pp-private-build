@@ -1,0 +1,1817 @@
+#!/usr/bin/env python3
+"""Bounded owner-authenticated latency/UI probe; exports synthetic text only."""
+import fcntl, hashlib, http.cookiejar, ipaddress, json, math, os, re, secrets, socket, struct, sys, time, unicodedata, urllib.error, urllib.parse, urllib.request
+from pathlib import Path
+from html.parser import HTMLParser
+
+ROOT=Path('/root/nox')
+SITE=ROOT/'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site'
+BASE='http://127.0.0.1:8080'
+
+def nonloopback_base():
+    for _,name in socket.if_nameindex():
+        if name=='lo':continue
+        try:
+            with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as sock:
+                info=fcntl.ioctl(sock.fileno(),0x8915,struct.pack('256s',name.encode()[:15]))
+            address=socket.inet_ntoa(info[20:24])
+            if not ipaddress.ip_address(address).is_loopback:return 'http://'+address+':8080'
+        except OSError:pass
+    raise RuntimeError('HOLD_NONLOOPBACK_PEER_REQUIRED')
+
+def emit(kind,value):
+    print('NOX_MAINT_REPAIR='+json.dumps({'kind':kind,'data':value},ensure_ascii=False,separators=(',',':')),flush=True)
+
+def digest(data):return hashlib.sha256(data).hexdigest()
+
+def redact(value):
+    value=re.sub(r'-----BEGIN [^-\n]*PRIVATE KEY-----[\s\S]*?-----END [^-\n]*PRIVATE KEY-----','[REDACTED_PRIVATE_KEY]',value)
+    value=re.sub(r'(?i)(https?://)[^/@\s]+:[^/@\s]+@',r'\1[REDACTED]@',value)
+    value=re.sub(r'(?:hf_|ghp_|github_pat_)[A-Za-z0-9_]{12,}','[REDACTED]',value)
+    return re.sub(r'(?im)^([^\n]*(?:password|secret|api_key|access_key|authorization|token)[\w\s]*=\s*)[\"\'][^\"\'\n]{12,}[\"\']',r'\1"[REDACTED]"',value)
+
+class RejectPostRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow an HTTP redirect after issuing a non-idempotent request.
+
+    In particular an HTTP 302 could transform a chat POST into a second request
+    at an unrelated URL *before* the final stream-target fence could run.
+    Keep GET redirect behavior unchanged for explicit final-URL diagnostics.
+    """
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if req.get_method() != 'GET':
+            return None
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def request(client,path,method='GET',data=None,timeout=6,base=None):
+    payload=None if data is None else json.dumps(data,ensure_ascii=False).encode()
+    # Explicitly negotiate the browser's SSE wire format for model streaming.
+    # Other owner/slots endpoints retain their JSON readback contract.
+    accept = ('text/event-stream'
+              if method == 'POST' and path == '/api/nox/chat/stream'
+              else 'application/json')
+    headers={'Content-Type':'application/json','Accept':accept}
+    # A proxy must not replay an old owner/executor/history snapshot as live
+    # admission or multi-turn readback evidence.
+    if ((method == 'GET' and (
+            path.startswith(('/api/nox/', '/api/ui/'))
+            or (path == '/slots' and base == 'http://127.0.0.1:8098')))
+            or (method == 'POST' and path in (
+                '/api/nox/chat/stream', '/api/ui/memory/dialogs/create'))):
+        headers.update({'Cache-Control':'no-store, no-cache', 'Pragma':'no-cache'})
+    req=urllib.request.Request((base or BASE)+path,data=payload,method=method,headers=headers)
+    try:return client.open(req,timeout=timeout)
+    except urllib.error.HTTPError as exc:return exc
+
+def obj(response,limit=100000):
+    """Bounded owner JSON readback; always release its HTTP response/socket."""
+    try:
+        if response.status!=200:raise RuntimeError('HOLD_HTTP_'+str(response.status))
+        # Owner status, worker identity and dialog history are acceptance
+        # evidence: a syntactically valid JSON prefix is not a complete HTTP
+        # readback when the peer promised more body bytes.
+        require_stream_http_framing(response)
+        raw=response.read(limit+1)
+        if len(raw)>limit:raise RuntimeError('HOLD_RESPONSE_LIMIT')
+        headers=getattr(response, 'headers', None)
+        declared=headers.get('Content-Length') if headers is not None else None
+        if declared is not None and len(raw)!=int(declared.strip()):
+            raise RuntimeError('HOLD_OWNER_JSON_BODY_LENGTH_MISMATCH')
+        return json.loads(raw, parse_constant=reject_owner_nonfinite_json_constant,
+                          parse_float=reject_owner_nonfinite_json_float,
+                          object_pairs_hook=reject_owner_duplicate_json_keys)
+    finally:
+        response.close()
+
+
+def reject_owner_nonfinite_json_constant(_value):
+    """Do not certify owner APIs carrying nonstandard JSON constants."""
+    raise RuntimeError('HOLD_OWNER_JSON_NONFINITE')
+
+
+def reject_owner_nonfinite_json_float(value):
+    """Exponent-overflow JSON floats can silently become Infinity in Python."""
+    number = float(value)
+    if not math.isfinite(number):
+        raise RuntimeError('HOLD_OWNER_JSON_NONFINITE')
+    return number
+
+
+def reject_owner_duplicate_json_keys(pairs):
+    """Fail closed on ambiguous owner status/history keys at any nesting level."""
+    fields = {}
+    for key, value in pairs:
+        if key in fields:
+            raise RuntimeError('HOLD_OWNER_JSON_DUPLICATE_KEY')
+        fields[key] = value
+    return fields
+
+def require_same_origin_target(response, requested_path, exact_path=True):
+    """A redirected login/foreign page must never count as healthy UI or JS."""
+    actual = urllib.parse.urlsplit(response.url)
+    expected = urllib.parse.urlsplit(BASE)
+    if actual.scheme != expected.scheme or actual.netloc != expected.netloc:
+        raise RuntimeError('HOLD_CHAT_RESPONSE_ORIGIN')
+    if exact_path and actual.path != requested_path:
+        raise RuntimeError('HOLD_CHAT_RESPONSE_REDIRECT')
+
+
+def require_exact_asset_target(response, requested_path_and_query):
+    """Inspect the same cache/versioned asset URL that the browser requested."""
+    requested = urllib.parse.urlsplit(requested_path_and_query)
+    require_same_origin_target(response, requested.path)
+    if urllib.parse.urlsplit(response.url).query != requested.query:
+        raise RuntimeError('HOLD_RESONANCE_ASSET_QUERY_MISMATCH')
+
+
+def require_exact_stream_target(response):
+    """Redirected/cross-origin HTTP 200 must not certify the active chat stream."""
+    actual = urllib.parse.urlsplit(response.url)
+    expected = urllib.parse.urlsplit(BASE)
+    if actual.scheme != expected.scheme or actual.netloc != expected.netloc:
+        raise RuntimeError('HOLD_STREAM_RESPONSE_ORIGIN')
+    if (actual.path != '/api/nox/chat/stream' or actual.query or actual.fragment):
+        raise RuntimeError('HOLD_STREAM_RESPONSE_REDIRECT')
+
+
+def require_exact_owner_readback_target(response, requested_path):
+    """A redirected owner API/history 200 is not evidence for the requested endpoint."""
+    expected = urllib.parse.urlsplit(BASE + requested_path)
+    actual = urllib.parse.urlsplit(getattr(response, 'url', ''))
+    if (actual.scheme, actual.netloc, actual.path, actual.query, actual.fragment) != (
+            expected.scheme, expected.netloc, expected.path, expected.query, expected.fragment):
+        raise RuntimeError('HOLD_OWNER_READBACK_RESPONSE_ROUTE')
+
+
+def require_fresh_owner_readback(response):
+    """Fail closed on explicit cached owner GET responses before JSON parsing.
+
+    Owner status, worker identities and chat history are evidence of *current*
+    state; a gateway HIT or Age>0 can replay an earlier healthy snapshot.
+    Headerless offline fixtures remain compatible, never native evidence.
+    """
+    headers = getattr(response, 'headers', None)
+    if headers is None:
+        return
+
+    def unique_header(name):
+        get_all = getattr(headers, 'get_all', None)
+        fields = get_all(name) if callable(get_all) else (
+            [headers.get(name)] if headers.get(name) is not None else [])
+        if not fields:
+            return None
+        if len(fields) != 1 or not isinstance(fields[0], str):
+            raise RuntimeError('HOLD_OWNER_READBACK_CACHE_UNVERIFIED')
+        return fields[0].strip()
+
+    # Even Age:0 or a missing X-Cache is insufficient when a gateway
+    # explicitly marks the HTTP response as cacheable/stale-reusable.
+    # This applies equally to owner JSON and the second/third SSE POST.
+    cache_control = unique_header('Cache-Control')
+    if cache_control is not None:
+        directives = [part.strip().casefold() for part in cache_control.split(',')]
+        if any(not part for part in directives):
+            raise RuntimeError('HOLD_OWNER_READBACK_CACHE_UNVERIFIED')
+        for directive in directives:
+            name, separator, value = directive.partition('=')
+            if not re.fullmatch(r'[a-z][a-z0-9-]*', name):
+                raise RuntimeError('HOLD_OWNER_READBACK_CACHE_UNVERIFIED')
+            if name in ('public', 'immutable', 'stale-while-revalidate',
+                        'stale-if-error'):
+                raise RuntimeError('HOLD_OWNER_READBACK_CACHED')
+            if name in ('max-age', 's-maxage'):
+                value = value.strip().strip('"')
+                if not separator or not re.fullmatch(r'[0-9]{1,12}', value):
+                    raise RuntimeError('HOLD_OWNER_READBACK_CACHE_UNVERIFIED')
+                if int(value) > 0:
+                    raise RuntimeError('HOLD_OWNER_READBACK_CACHED')
+
+    age = unique_header('Age')
+    if age is not None:
+        if not re.fullmatch(r'[0-9]{1,12}', age):
+            raise RuntimeError('HOLD_OWNER_READBACK_CACHE_UNVERIFIED')
+        if int(age) > 0:
+            raise RuntimeError('HOLD_OWNER_READBACK_CACHED')
+    for name in ('X-Cache', 'CF-Cache-Status', 'X-Cache-Status', 'Cache-Status'):
+        value = unique_header(name)
+        if value is not None and re.search(
+                r'(?i)(?:^|[^a-z])(hit|stale|revalidated)(?:$|[^a-z])', value):
+            raise RuntimeError('HOLD_OWNER_READBACK_CACHED')
+
+
+
+def require_owner_json_response_mime(response):
+    """A 200 owner API JSON body served as HTML is not authenticated route evidence.
+
+    An explicit Content-Type must unambiguously describe JSON, including a
+    structured +json subtype. Headerless legacy offline fixtures stay neutral;
+    missing MIME alone never supplies production acceptance.
+    """
+    headers = getattr(response, 'headers', None)
+    if headers is None:
+        return
+    get_all = getattr(headers, 'get_all', None)
+    if callable(get_all):
+        fields = get_all('Content-Type') or []
+    else:
+        value = headers.get('Content-Type')
+        fields = [] if value is None else [value]
+    if not fields:
+        return
+    if (not isinstance(fields, (list, tuple)) or len(fields) != 1
+            or not isinstance(fields[0], str)):
+        raise RuntimeError('HOLD_OWNER_JSON_RESPONSE_MIME')
+    media = fields[0].split(';', 1)[0].strip().casefold()
+    if (media != 'application/json'
+            and not re.fullmatch(r'application/[a-z0-9][a-z0-9._-]*\+json', media)):
+        raise RuntimeError('HOLD_OWNER_JSON_RESPONSE_MIME')
+
+
+def owner_readback_json(client, requested_path):
+    """Bind read-only owner JSON to its exact path and close on both PASS and HOLD."""
+    response = request(client, requested_path)
+    try:
+        require_exact_owner_readback_target(response, requested_path)
+        require_fresh_owner_readback(response)
+        require_owner_json_response_mime(response)
+    except Exception:
+        response.close()
+        raise
+    return obj(response)
+
+
+def create_probe_dialog(client, title):
+    """Fail closed on stale/redirected dialog-create POST before any model turn.
+
+    Creating a dialog is non-idempotent. The returned ID must belong to this
+    exact fresh authenticated route, not a cached or gateway JSON prefix.
+    This is owner-dialog evidence only, NOT independent S03 proof.
+    """
+    path = '/api/ui/memory/dialogs/create'
+    response = request(client, path, 'POST', {'title': title, 'confirmed': True})
+    try:
+        require_exact_owner_readback_target(response, path)
+        require_fresh_owner_readback(response)
+        require_owner_json_response_mime(response)
+    except Exception:
+        response.close()
+        raise
+    created = obj(response)  # One bounded complete JSON read, always closes.
+    did = created.get('dialog_id') if isinstance(created, dict) else None
+    if not isinstance(did, str) or not re.fullmatch(r'[a-f0-9]{32}', did):
+        raise RuntimeError('HOLD_DIALOG_CREATE')
+    return did
+
+
+def require_postturn_owner_binding(client):
+    """Reconfirm the authenticated native chat binding after the final SSE turn.
+
+    A preflight bind is not evidence that the same owner route stayed bound
+    through three requests. This only READS owner status; no extra model POST.
+    """
+    snapshot = owner_readback_json(client, '/api/nox/status')
+    if not isinstance(snapshot, dict) or snapshot.get('native_p02_bound') is not True:
+        raise RuntimeError('HOLD_POSTTURN_OWNER_CHAT_BINDING')
+    return True
+
+
+def require_preturn_owner_binding(client):
+    """Reconfirm the authenticated native chat route before EACH model POST.
+
+    A startup status snapshot cannot authorize later synthetic generation.
+    Native owner/CAS, STOP, VRAM and resource admission remain separate.
+    """
+    snapshot = owner_readback_json(client, '/api/nox/status')
+    if not isinstance(snapshot, dict) or snapshot.get('native_p02_bound') is not True:
+        raise RuntimeError('HOLD_PRETURN_OWNER_CHAT_BINDING')
+    return True
+
+
+def anonymous_owner_scope_status(client, requested_path):
+    """A cached or redirected 401 cannot prove current anonymous route protection."""
+    with request(client, requested_path) as response:
+        require_exact_owner_readback_target(response, requested_path)
+        # Match the owner/logout readback freshness fence. A stale proxy
+        # denial must not certify the CURRENT unauthenticated API boundary.
+        require_fresh_owner_readback(response)
+        return response.status
+
+
+def require_not_html_asset(response, sample):
+    """HTTP 200 SPA/login HTML at a JS/CSS path is not a usable Resonance asset."""
+    headers = getattr(response, 'headers', None)
+    ctype = headers.get('Content-Type', '') if headers is not None else ''
+    if not isinstance(ctype, str):
+        raise RuntimeError('HOLD_RESONANCE_ASSET_HTML_FALLBACK')
+    media = ctype.split(';', 1)[0].strip().lower()
+    prefix = sample.lstrip(b'\xef\xbb\xbf \t\r\n')
+    if (media in ('text/html', 'application/xhtml+xml')
+            or re.match(rb'(?i)^(?:<!doctype\s+html\b|<html\b|<head\b|<body\b)', prefix)):
+        raise RuntimeError('HOLD_RESONANCE_ASSET_HTML_FALLBACK')
+
+
+def require_browser_asset_mime(response, path):
+    """A 200 JSON/error response is not an executable JS/CSS asset in the browser."""
+    headers = getattr(response, 'headers', None)
+    ctype = headers.get('Content-Type', '') if headers is not None else ''
+    if not isinstance(ctype, str):
+        raise RuntimeError('HOLD_RESONANCE_ASSET_MIME')
+    media = ctype.split(';', 1)[0].strip().lower()
+    extension = urllib.parse.urlsplit(path).path.lower()
+    expected = ({'text/css'} if extension.endswith('.css') else
+                {'text/javascript', 'application/javascript', 'application/x-javascript'}
+                if extension.endswith(('.js', '.mjs')) else set())
+    if media not in expected:
+        raise RuntimeError('HOLD_RESONANCE_ASSET_MIME')
+
+
+
+def complete_runtime_asset_body(response, sample, limit=8 * 1024 * 1024):
+    """Bounded full JS/CSS GET; 512-byte MIME sample is not asset health proof.
+
+    Require an unambiguous identity body and exact advertised byte count,
+    then preserve a content checksum without exporting the asset itself.
+    This is HTTP health evidence, never a substitute for browser rendering.
+    """
+    require_stream_http_framing(response)
+    headers = getattr(response, 'headers', None)
+    length = headers.get('Content-Length') if headers is not None else None
+    if len(sample) > limit or (length is not None and int(length.strip()) > limit):
+        raise RuntimeError('HOLD_RESONANCE_ASSET_LIMIT')
+    raw = sample + response.read(limit + 1 - len(sample))
+    if len(raw) > limit:
+        raise RuntimeError('HOLD_RESONANCE_ASSET_LIMIT')
+    if length is not None and len(raw) != int(length.strip()):
+        raise RuntimeError('HOLD_RESONANCE_ASSET_BODY_LENGTH_MISMATCH')
+    if not raw:
+        raise RuntimeError('HOLD_RESONANCE_ASSET_EMPTY')
+    return len(raw), digest(raw)
+
+def page_snapshot(response, limit=200000, expected_path=None):
+    """Read a complete bounded owner HTML page and always close its socket."""
+    try:
+        status = response.status
+        require_same_origin_target(response, expected_path, expected_path is not None)
+        path = urllib.parse.urlparse(response.url).path
+        # The authenticated root intentionally permits same-origin redirects,
+        # but a 200 login fallback is not evidence of a usable NOX home page.
+        if expected_path is None and urllib.parse.unquote(path).rstrip('/').casefold() in (
+                '/chat/login', '/login', '/auth/login', '/signin', '/sign-in'):
+            raise RuntimeError('HOLD_CHAT_ROOT_LOGIN_REDIRECT')
+        raw = response.read(limit + 1)
+        if len(raw) > limit:
+            raise RuntimeError('HOLD_CHAT_PAGE_LIMIT')
+        # HTTP 200 may be a JSON gateway error or plain-text maintenance page.
+        # Status and same-origin routing alone never prove that the web UI exists.
+        if status == 200:
+            headers = getattr(response, 'headers', None)
+            # An HTML-looking prefix is not proof of a complete browser page.
+            # Reuse the strict identity HTTP framing guard already exercised
+            # for chat streams; an inconsistent EOF must fail before UI PASS.
+            require_stream_http_framing(response)
+            declared_length = headers.get('Content-Length') if headers is not None else None
+            if declared_length is not None and len(raw) != int(declared_length.strip()):
+                raise RuntimeError('HOLD_CHAT_PAGE_BODY_LENGTH_MISMATCH')
+            # HTTPMessage.get() hides repeated Content-Type headers. A browser
+            # must not certify ambiguous HTML/gateway MIME as healthy NOX UI.
+            get_all = getattr(headers, 'get_all', None)
+            if callable(get_all):
+                declared = get_all('Content-Type') or []
+                if not isinstance(declared, (list, tuple)) or len(declared) > 1:
+                    raise RuntimeError('HOLD_CHAT_PAGE_CONTENT_TYPE_AMBIGUOUS')
+                ctype = declared[0] if declared else ''
+            else:
+                ctype = headers.get('Content-Type', '') if headers is not None else ''
+            if not isinstance(ctype, str):
+                raise RuntimeError('HOLD_CHAT_PAGE_NOT_HTML')
+            media = ctype.split(';', 1)[0].strip().lower()
+            prefix = raw[:2048].lstrip(b'\xef\xbb\xbf \t\r\n')
+            html_start = re.search(
+                rb'(?is)^(?:<\?xml\b[^>]*>\s*)?(?:<!--.*?-->\s*)*'
+                rb'(?:<!doctype\s+html\b|<html\b|<head\b|<body\b)', prefix)
+            if media not in ('', 'text/html', 'application/xhtml+xml') or not html_start:
+                raise RuntimeError('HOLD_CHAT_PAGE_NOT_HTML')
+            reject_auth_meta_refresh(raw, response.url)
+            reject_auth_refresh_header(response)
+        return status, path, raw
+    finally:
+        response.close()
+
+
+def require_same_origin_refresh_target(response_url, target):
+    """Browser navigations to a foreign origin cannot prove live NOX UI health."""
+    resolved = urllib.parse.urlsplit(urllib.parse.urljoin(response_url, target))
+    page = urllib.parse.urlsplit(response_url)
+    if ((resolved.scheme, resolved.netloc.lower()) !=
+            (page.scheme, page.netloc.lower())):
+        raise RuntimeError('HOLD_CHAT_CROSS_ORIGIN_REFRESH')
+    return resolved
+
+
+def reject_auth_meta_refresh(raw, response_url):
+    """Reject successful HTML that sends the real browser to an auth page."""
+    class RefreshScanner(HTMLParser):
+        def handle_starttag(self, tag, attrs):
+            if tag != 'meta':
+                return
+            # A browser uses the first duplicate HTML attribute, but dict(attrs)
+            # would retain the last: a second value must not hide a redirect.
+            if any(sum(key == name for key, _ in attrs) > 1
+                   for name in ('http-equiv', 'content')):
+                raise RuntimeError('HOLD_CHAT_META_REFRESH_DUPLICATE_ATTRIBUTE')
+            fields = dict(attrs)
+            if str(fields.get('http-equiv', '')).strip().casefold() != 'refresh':
+                return
+            content = fields.get('content')
+            if not isinstance(content, str) or ';' not in content:
+                return
+            target_spec = content.split(';', 1)[1].strip()
+            if not re.match(r'(?is)^url\s*=', target_spec):
+                return
+            target = target_spec.split('=', 1)[1].strip()
+            if len(target) >= 2 and target[0] in ('"', "'") and target[-1] == target[0]:
+                target = target[1:-1]
+            target_url = require_same_origin_refresh_target(response_url, target)
+            path = urllib.parse.unquote(target_url.path).rstrip('/').casefold()
+            if path in ('/chat/login', '/login', '/auth/login', '/signin', '/sign-in'):
+                raise RuntimeError('HOLD_CHAT_AUTH_META_REFRESH')
+
+    scanner = RefreshScanner(convert_charrefs=True)
+    scanner.feed(raw.decode('utf-8', errors='replace'))
+    scanner.close()
+
+
+def reject_auth_refresh_header(response):
+    """HTTP Refresh: navigation to login is not proof of a healthy chat UI."""
+    headers = getattr(response, 'headers', None)
+    if headers is None:
+        refresh = ''
+    elif callable(getattr(headers, 'get_all', None)):
+        # Real HTTPMessage can contain several independent Refresh headers.
+        # A browser may follow any one of them: no ambiguous 200 UI proof.
+        fields = headers.get_all('Refresh') or []
+        if not isinstance(fields, (list, tuple)) or len(fields) > 1:
+            raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_DUPLICATE')
+        refresh = fields[0] if fields else ''
+    else:
+        refresh = headers.get('Refresh', '')
+    if not isinstance(refresh, str) or len(refresh) > 2048:
+        raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_INVALID')
+    if not refresh:
+        if headers is not None and headers.get('Refresh') is not None:
+            raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
+        return
+    match = re.fullmatch(
+        r'(?is)\s*\d+(?:\.\d+)?(?:\s*;\s*url\s*=\s*(.*?)\s*)?', refresh)
+    if not match:
+        raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
+    if match.group(1) is None:
+        return  # Valid numeric-only reload.
+    target = match.group(1).strip()
+    if not target:
+        raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
+    if target[0] in ('"', "'"):
+        if len(target) < 2 or target[-1] != target[0]:
+            raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
+        target = target[1:-1]
+    elif target[-1] in ('"', "'"):
+        raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
+    if not target:
+        raise RuntimeError('HOLD_CHAT_REFRESH_HEADER_MALFORMED')
+    resolved = require_same_origin_refresh_target(response.url, target)
+    path = urllib.parse.unquote(resolved.path).rstrip('/').casefold()
+    if path in ('/chat/login', '/login', '/auth/login', '/signin', '/sign-in'):
+        raise RuntimeError('HOLD_CHAT_AUTH_REFRESH_HEADER')
+
+
+
+def resonance_runtime_assets(html, page_url, max_assets=35):
+    """Census browser-critical JS/CSS: never silently skip foreign or overflow assets.
+
+    HTTP evidence only, not real browser or independent native/S03 acceptance.
+    """
+    class Scanner(HTMLParser):
+        def __init__(self):
+            super().__init__(convert_charrefs=True)
+            self.refs = []
+            self.base_ref = None
+
+        def handle_starttag(self, tag, attrs):
+            # HTML browsers honor the first of duplicate attributes, whereas
+            # dict(attrs) keeps the last. A foreign script/href can otherwise
+            # be disguised by a later local attribute in this health census.
+            if tag == 'script':
+                guarded = ('src',)
+            elif tag == 'base':
+                guarded = ('href',)
+            elif tag == 'link' and any(
+                    name == 'rel' and isinstance(value, str)
+                    and set(value.lower().split()) & {'stylesheet', 'preload', 'modulepreload'}
+                    for name, value in attrs):
+                guarded = ('rel', 'href', 'as')
+            else:
+                guarded = ()
+            if any(sum(name == key for name, _ in attrs) > 1 for key in guarded):
+                raise RuntimeError('HOLD_RESONANCE_RUNTIME_DUPLICATE_ATTRIBUTE')
+            fields = dict(attrs)
+            if tag == 'base' and self.base_ref is None and 'href' in fields:
+                self.base_ref = fields['href']
+            resource = None
+            if tag == 'script' and 'src' in fields:
+                resource = fields['src']
+            elif tag == 'link':
+                rel = str(fields.get('rel') or '').lower().split()
+                kind = str(fields.get('as') or '').lower().strip()
+                if ('stylesheet' in rel or 'modulepreload' in rel
+                        or ('preload' in rel and kind in ('script', 'style'))):
+                    resource = fields.get('href')
+            if resource is not None:
+                if not isinstance(resource, str) or not resource.strip():
+                    raise RuntimeError('HOLD_RESONANCE_RUNTIME_ASSET_CENSUS')
+                self.refs.append(resource)
+
+    scanner = Scanner()
+    scanner.feed(html)
+    scanner.close()
+    if not scanner.refs or len(scanner.refs) > max_assets:
+        raise RuntimeError('HOLD_RESONANCE_RUNTIME_ASSET_CENSUS')
+    effective_base = urllib.parse.urljoin(page_url, scanner.base_ref or '')
+    allowed = urllib.parse.urlsplit(BASE)
+    def require_local(url):
+        target = urllib.parse.urlsplit(url)
+        if ((target.scheme, target.netloc.lower()) !=
+                (allowed.scheme, allowed.netloc.lower())):
+            raise RuntimeError('HOLD_RESONANCE_EXTERNAL_RUNTIME_ASSET')
+        return url
+    require_local(effective_base)
+    return [require_local(urllib.parse.urljoin(effective_base, ref))
+            for ref in scanner.refs]
+
+
+def meaningful_delta(text):
+    """Only visible glyphs may start meaningful-stream TTFT; ignore invisible format/mark/control placeholders."""
+    return isinstance(text, str) and any(
+        ch not in '.…' and unicodedata.category(ch)[0] not in ('C', 'M', 'Z')
+        for ch in text
+    )
+
+def history_matches_turns(messages, turns, dialog_id=None):
+    """Verify ordered roles/content and any present row-level dialog identity."""
+    if not isinstance(messages, list) or len(messages) < len(turns) * 2:
+        return False
+    tail = messages[-len(turns) * 2:]
+    # History JSON is NOT independent canonical S03 writer/readback evidence.
+    # When the API provides row IDs, repeated/invalid IDs must not pass as
+    # distinct user/assistant turns; legacy untagged history stays compatible.
+    # Check every row returned by this bounded owner-history GET, not only
+    # the expected tail: an older row may reuse a claimed durable S03 ID.
+    # An API may expose id/message_id/s03_id as aliases for a durable row.
+    # Same-row aliases are fine, but an ID on two different rows cannot
+    # establish that these are distinct user and assistant messages.
+    seen_row_ids = {}
+    for row_index, row in enumerate(messages):
+        if not isinstance(row, dict):
+            return False
+        # An owner-scoped history GET must never contain an explicitly foreign
+        # dialog anywhere in its bounded window, not merely in the final tail.
+        # Legacy untagged rows remain compatible; this is not canonical S03.
+        if dialog_id is not None and any(
+                alias in row and row[alias] != dialog_id
+                for alias in ('dialog_id', 'dialogId')):
+            return False
+        for key in ('id', 'message_id', 's03_id'):
+            if key not in row:
+                continue
+            value = row[key]
+            if not ((isinstance(value, str) and 0 < len(value.strip()) <= 128)
+                    or (type(value) is int and value >= 0)):
+                return False
+            witness = str(value).strip()
+            if witness in seen_row_ids and seen_row_ids[witness] != row_index:
+                return False
+            seen_row_ids[witness] = row_index
+    for index, (prompt, answer) in enumerate(turns):
+        user, assistant = tail[2 * index:2 * index + 2]
+        if not isinstance(user, dict) or not isinstance(assistant, dict):
+            return False
+        if dialog_id is not None and any(
+                alias in row and row[alias] != dialog_id
+                for row in (user, assistant) for alias in ('dialog_id', 'dialogId')):
+            return False
+        if (user.get('role') != 'user' or assistant.get('role') != 'assistant'
+                or user.get('content') != prompt or assistant.get('content') != answer):
+            return False
+    return True
+
+
+def scoped_history_matches_turns(history, turns, dialog_id):
+    """Reject a mismatched history session even when its visible rows match."""
+    if (not isinstance(history, dict) or history.get('dialog_id') != dialog_id
+            or ('dialogId' in history and history['dialogId'] != dialog_id)):
+        return False
+    return history_matches_turns(history.get('messages'), turns, dialog_id)
+
+
+
+def require_preturn_dialog_prefix(client, previous, turns, dialog_id):
+    """Read-only later-turn fence: never POST against an advanced or rewritten dialog.
+
+    This is a fresh owner-dialog snapshot comparison, not atomic native CAS,
+    independent S03 proof, or permission to replay an uncertain request.
+    """
+    if (not isinstance(dialog_id, str) or not re.fullmatch(r'[a-f0-9]{32}', dialog_id)
+            or len(turns) not in (1, 2)
+            or not scoped_history_matches_turns(previous, turns, dialog_id)
+            or len(previous['messages']) != 2 * len(turns)):
+        raise RuntimeError('HOLD_CHAT_PRETURN_DIALOG_PREFIX')
+    current = owner_readback_json(
+        client, '/api/ui/memory/dialogs/history?dialog_id=' + dialog_id + '&limit=8')
+    if (not scoped_history_matches_turns(current, turns, dialog_id)
+            or current['messages'] != previous['messages']):
+        raise RuntimeError('HOLD_CHAT_PRETURN_DIALOG_PREFIX')
+    return True
+
+
+def existing_dialog_preflight_config():
+    """Select explicit continuation-only mode; partial pins never fall through to POST."""
+    keys = ('NOX_PROBE_EXISTING_DIALOG_ONLY', 'NOX_PROBE_EXISTING_DIALOG_ID',
+            'NOX_PROBE_EXISTING_PREFIX_SHA256', 'NOX_PROBE_EXISTING_PREFIX_ROWS')
+    if not any(key in os.environ for key in keys):
+        return None
+    mode, dialog_id, expected_sha, row_count = (os.environ.get(key, '') for key in keys)
+    if (mode != '1' or not re.fullmatch(r'[a-f0-9]{32}', dialog_id)
+            or not re.fullmatch(r'[a-f0-9]{64}', expected_sha)
+            or row_count not in ('2', '4')):
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFLIGHT_CONFIG')
+    return dialog_id, expected_sha, int(row_count)
+
+
+def _existing_dialog_prefix_snapshot(client, dialog_id, expected_sha, row_count):
+    """GET-only owner history pin check, not browser/S03 proof or POST admission.
+
+    The caller must obtain expected_sha independently from a trusted prior
+    receipt, not calculate it from this candidate readback. Canonical bytes:
+    UTF-8 sorted-key compact JSON of {"dialog_id": id, "messages": full_rows}.
+    The full rows (including optional metadata/IDs) must be unchanged.
+    """
+    if (not isinstance(dialog_id, str) or not re.fullmatch(r'[a-f0-9]{32}', dialog_id)
+            or not isinstance(expected_sha, str) or not re.fullmatch(r'[a-f0-9]{64}', expected_sha)
+            or type(row_count) is not int or row_count not in (2, 4)):
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFLIGHT_CONFIG')
+    require_preturn_owner_binding(client)
+    history = owner_readback_json(
+        client, '/api/ui/memory/dialogs/history?dialog_id=' + dialog_id + '&limit=8')
+    rows = history.get('messages') if isinstance(history, dict) else None
+    if (not isinstance(rows, list) or len(rows) != row_count
+            or any(not isinstance(row, dict) or not isinstance(row.get('content'), str)
+                   for row in rows)):
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFIX')
+    pairs = [(rows[i]['content'], rows[i + 1]['content']) for i in range(0, row_count, 2)]
+    if not scoped_history_matches_turns(history, pairs, dialog_id):
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFIX')
+    try:
+        canonical = json.dumps(
+            {'dialog_id': dialog_id, 'messages': rows}, ensure_ascii=False,
+            sort_keys=True, separators=(',', ':'), allow_nan=False).encode('utf-8')
+        actual_sha = digest(canonical)
+        snapshot = json.loads(canonical)['messages']
+    except (TypeError, ValueError, UnicodeError):
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFIX') from None
+    if actual_sha != expected_sha:
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFIX_PIN_MISMATCH')
+    require_postturn_owner_binding(client)
+    receipt = {'scope': 'EXISTING_OWNER_DIALOG_PREFIX_ONLY_NOT_INDEPENDENT_S03',
+            'prefix_rows': row_count, 'prefix_sha256': actual_sha,
+            'dialog_id_sha256': digest(dialog_id.encode('ascii')),
+            'prefix_pin_matched': True, 'model_post_issued': False,
+            'dialog_created': False, 'browser_multiturn_accepted': False,
+            'native_s03_independently_verified': False, 'production_accepted': False}
+    return receipt, snapshot
+
+
+def existing_dialog_prefix_preflight(client, dialog_id, expected_sha, row_count):
+    """Public diagnostics retain the redacted receipt; never emit raw rows."""
+    receipt, _ = _existing_dialog_prefix_snapshot(client, dialog_id, expected_sha, row_count)
+    return receipt
+
+
+def stable_postquiet_three_turn_history(client, original, turns, dialog_id):
+    """Re-read six owner-dialog rows after quiescence; never claim canonical S03 proof.
+
+    A single immediate history GET after third-turn DONE can reflect transient
+    or later-replaced rows. Compare the ordered six full rows, including any
+    present row IDs, across two authenticated exact-route GET snapshots.
+    This remains owner-dialog evidence only, NOT independent S03 or browser proof.
+    """
+    if len(turns) != 3 or not scoped_history_matches_turns(original, turns, dialog_id):
+        return False
+    time.sleep(0.5)
+    confirmed = owner_readback_json(
+        client, '/api/ui/memory/dialogs/history?dialog_id=' + dialog_id + '&limit=8')
+    if not scoped_history_matches_turns(confirmed, turns, dialog_id):
+        return False
+    return original['messages'][-6:] == confirmed['messages'][-6:]
+
+
+def require_durable_result(saved, answered, phase):
+    """A diagnostic run cannot emit COMPLETE after an unsuccessful chat turn."""
+    if not saved or not answered:
+        raise RuntimeError('HOLD_CHAT_PROBE_' + phase + '_NOT_ACCEPTED')
+
+
+def require_executor_witness(done, messages, turns, owner_observed, model_matches, dialog_id=None):
+    """Fail closed if an issued third chat turn is not persisted or disagrees with live owner state."""
+    durable = (isinstance(done, dict) and done.get('saved') is True
+               and done.get('s03_integrated') is True
+               and (scoped_history_matches_turns(messages, turns, dialog_id) if dialog_id is not None
+                    else history_matches_turns(messages, turns)))
+    if not (durable and owner_observed and model_matches):
+        raise RuntimeError('HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED')
+
+
+def require_executor_turn_budget(elapsed_seconds):
+    """Never report a completed multi-turn probe when its third POST was skipped."""
+    if elapsed_seconds >= 210:
+        raise RuntimeError('HOLD_CHAT_PROBE_EXECUTOR_TURN_BUDGET_EXHAUSTED')
+
+
+def require_multiturn_requested(value):
+    """Do not certify full multi-turn acceptance after only one chat turn."""
+    if value != '1':
+        raise RuntimeError('HOLD_CHAT_PROBE_MULTITURN_NOT_REQUESTED')
+
+
+def require_latency_target(turn, phase, first_limit_ms):
+    """Fail closed when the already-advertised browser latency target is missed."""
+    first = turn.get('first_meaningful_delta_ms') if isinstance(turn, dict) else None
+    total = turn.get('stream_total_ms') if isinstance(turn, dict) else None
+    valid = (type(first) in (int, float) and type(total) in (int, float)
+             and 0 <= first <= first_limit_ms and first <= total <= 25000)
+    if not valid:
+        raise RuntimeError('HOLD_CHAT_PROBE_' + phase + '_LATENCY_TARGET')
+
+
+def numeric_public_answer(text):
+    # Raw model text can unexpectedly draw on private memory. Export only a
+    # bounded numeric answer to this synthetic arithmetic prompt, plus hashes.
+    value=text.strip().strip('`*_ .!\n\r\t')
+    return value if re.fullmatch(r'-?\d{1,6}',value or '') else '[NONNUMERIC_RESPONSE_WITHHELD]'
+
+def reject_nonfinite_json_constant(_value):
+    """Strict NDJSON: Python's default json.loads incorrectly accepts NaN/Infinity."""
+    raise RuntimeError('HOLD_STREAM_NONFINITE_JSON')
+
+
+def reject_nonfinite_json_float(value):
+    """Do not certify an SSE JSON exponent overflow as valid finite metadata."""
+    number = float(value)
+    if not math.isfinite(number):
+        raise RuntimeError('HOLD_STREAM_NONFINITE_JSON')
+    return number
+
+
+def reject_duplicate_json_keys(pairs):
+    """Reject ambiguous NDJSON fields instead of accepting Python's last-key-wins result."""
+    fields = {}
+    for key, value in pairs:
+        if key in fields:
+            raise RuntimeError('HOLD_STREAM_DUPLICATE_JSON_KEY')
+        fields[key] = value
+    return fields
+
+
+def stream_status_is_failure(value):
+    """Fail closed on failed HTTP status and upstream 3xx redirect evidence."""
+    if isinstance(value, str):
+        status = value.strip().lower()
+        # Textual HTTP status lines, including 3xx login/gateway redirects,
+        # cannot be erased by a later saved=true terminal receipt.
+        # Keep untagged model text (for example '500 tokens') out of this fence.
+        if re.match(r'^http(?:/\d+(?:\.\d+)?)?\s+[345]\d{2}\b', status):
+            return True
+        if re.match(r'^3\d{2}\s+(?:multiple choices|moved permanently|found|'
+                    r'see other|not modified|use proxy|temporary redirect|'
+                    r'permanent redirect)\b', status):
+            return True
+        if re.match(r'^[45]\d{2}\s+(?:bad request|unauthorized|payment required|'
+                    r'forbidden|not found|method not allowed|not acceptable|'
+                    r'request timeout|conflict|gone|too many requests|'
+                    r'internal server error|not implemented|bad gateway|'
+                    r'service unavailable|gateway timeout|client closed request)\b',
+                    status):
+            return True
+        # Upstream may encode a failed stream as a plain status/state label
+        # rather than an HTTP code or an explicit error field. Never let a
+        # later saved=true terminal erase such a preterminal failure.
+        return status in ('error', 'failed', 'failure', 'cancelled', 'canceled',
+                          'aborted', 'timeout', 'timed_out', 'timed-out', 'fatal') or (
+            status.isdecimal() and int(status) >= 300)
+    # JSON encoders may serialize HTTP 302/503 as floats rather than ints.
+    # A later saved=true DONE must never override an upstream redirect or error.
+    # Exclude bool (a subclass of int); malformed non-finite floats fail closed.
+    if type(value) is float:
+        # Only whole-number 3xx floats are HTTP redirect codes; preserve
+        # the legacy non-integral 399.9 fixture as non-HTTP metadata.
+        return not math.isfinite(value) or value >= 400 or (value.is_integer() and 300 <= value < 400)
+    return type(value) is int and value >= 300
+
+
+def stream_frame_reports_failure(frame):
+    """Recognize HTTP redirects/failures in flat and nested upstream metadata.
+
+    A downstream saved=true DONE must not erase earlier 3xx/4xx/5xx evidence in
+    a status object or an alternate HTTP status field.
+    """
+    keys = ('code', 'status_code', 'statusCode', 'http_status', 'httpStatus')
+    status = frame.get('status')
+    # Explicit upstream ok=false is a failure even with no code/error field.
+    # Do not coerce zero or a missing legacy flag to boolean failure.
+    if frame.get('ok') is False:
+        return True
+    # A saved=true terminal can still represent truncated/filtered generation.
+    # Accept ordinary stop/end-of-turn and absent legacy finish metadata.
+    incomplete = ('length', 'max_tokens', 'max_length', 'content_filter',
+                  'error', 'failed', 'cancelled', 'canceled', 'aborted',
+                  'timeout', 'timed_out')
+    # A model/proxy may put explicit failures in metadata/meta rather than
+    # status. A subsequent saved=true DONE must not launder those flags.
+    scopes = [frame]
+    for container in ('status', 'metadata', 'meta'):
+        nested = frame.get(container)
+        if isinstance(nested, dict):
+            scopes.append(nested)
+            nested_status = nested.get('status')
+            if isinstance(nested_status, dict):
+                scopes.append(nested_status)
+    # If a proxy explicitly reports a finish reason, only known completed
+    # generation endings are acceptable. A tool handoff, unknown/future code
+    # or malformed reason must not become a valid saved=true chat completion.
+    # Absent/null legacy metadata stays neutral, never positive proof.
+    completed = ('stop', 'end_of_turn', 'end_turn', 'eos', 'eos_token',
+                 'eot', 'eot_id', 'stop_sequence', 'complete', 'completed', 'done')
+    for metadata in scopes:
+        for key in ('finish_reason', 'finishReason', 'stop_reason', 'stopReason'):
+            if key in metadata and metadata[key] is not None:
+                reason = metadata[key]
+                if (type(reason) is not str or
+                        reason.strip().casefold() not in completed):
+                    return True
+        if (metadata.get('error') not in (None, '', False)
+                or metadata.get('success') is False or metadata.get('ok') is False):
+            return True
+        if any(stream_status_is_failure(metadata.get(key))
+               for key in (*keys, 'status', 'state')):
+            return True
+    return False
+
+def require_stream_dialog_provenance(frame, dialog_id):
+    """Reject foreign-dialog SSE fragments hidden in nested route metadata.
+
+    A terminal DONE must still bind its top-level identity separately.
+    This is transport provenance, NOT independent canonical S03 proof.
+    """
+    scopes = [frame]
+    for key in ('status', 'metadata', 'meta'):
+        nested = frame.get(key)
+        if isinstance(nested, dict):
+            scopes.append(nested)
+            inner = nested.get('status')
+            if isinstance(inner, dict):
+                scopes.append(inner)
+    for scope in scopes:
+        # Stream fragments may use camelCase even when canonical DONE uses
+        # dialog_id; a conflicting alias must not pass as same-dialog evidence.
+        if any(key in scope and scope[key] != dialog_id
+               for key in ('dialog_id', 'dialogId')):
+            code = ('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH'
+                    if frame.get('type') == 'done' else
+                    'HOLD_STREAM_INTERMEDIATE_DIALOG_MISMATCH')
+            raise RuntimeError(code)
+
+
+def require_stream_model_identity(frame, previous=None):
+    """Bind any explicitly reported model labels across one complete stream."""
+    # Explicit model provenance can also be carried inside metadata or status.
+    # A nested route label must not disagree with a top-level or earlier SSE
+    # label while a later saved=true DONE attempts to certify the same turn.
+    model_keys = ('model', 'model_id', 'modelId', 'model_label', 'modelLabel')
+    fields = [frame[key] for key in model_keys if key in frame]
+    for container in ('status', 'metadata', 'meta'):
+        nested = frame.get(container)
+        if isinstance(nested, dict):
+            fields.extend(nested[key] for key in model_keys if key in nested)
+            # status.status and metadata.status are supported SSE route
+            # envelopes; a foreign model here must poison the whole turn.
+            inner = nested.get('status')
+            if isinstance(inner, dict):
+                fields.extend(inner[key] for key in model_keys if key in inner)
+    if not fields:
+        return previous  # Unlabeled legacy frames are not positive model proof.
+    if any(type(value) is not str or not 0 < len(value.strip()) <= 256
+           or any(ord(char) < 32 or ord(char) == 127 for char in value)
+           for value in fields):
+        raise RuntimeError('HOLD_STREAM_MODEL_IDENTITY_INVALID')
+    label = fields[0].strip()
+    if any(value.strip() != label for value in fields[1:]):
+        raise RuntimeError('HOLD_STREAM_MODEL_ROUTE_DRIFT')
+    if previous is not None and previous != label:
+        raise RuntimeError('HOLD_STREAM_MODEL_ROUTE_DRIFT')
+    return label
+
+
+def require_multiturn_model_route(*turns):
+    """Explicit model route identity must agree for every issued chat turn.
+
+    No model tag in any turn keeps legacy responses compatible, but never
+    provides independent installed/model identity evidence.
+    """
+    labels = [turn.get('stream_model_identity') for turn in turns]
+    tagged = [label for label in labels if label is not None]
+    if tagged and (len(tagged) != len(labels) or len(set(tagged)) != 1):
+        raise RuntimeError('HOLD_CHAT_MULTITURN_MODEL_ROUTE_DRIFT')
+    return bool(tagged)
+
+
+def require_stream_response_mime(response):
+    """A 200 HTML/login/gateway fallback cannot certify a chat stream.
+
+    Real HTTP responses expose headers; older headerless in-memory fixtures
+    remain supported only as offline synthetic tests, never native proof.
+    """
+    headers = getattr(response, 'headers', None)
+    if headers is None:
+        return
+    # HTTPMessage.get() returns only one of several Content-Type fields.
+    # A second field could describe a gateway fallback or conflicting stream.
+    get_all = getattr(headers, 'get_all', None)
+    if callable(get_all):
+        fields = get_all('Content-Type')
+        if not isinstance(fields, (list, tuple)) or len(fields) != 1:
+            raise RuntimeError('HOLD_STREAM_RESPONSE_MIME')
+        raw = fields[0]
+    else:
+        raw = headers.get('Content-Type', '')
+    if not isinstance(raw, str):
+        raise RuntimeError('HOLD_STREAM_RESPONSE_MIME')
+    media = raw.split(';', 1)[0].strip().lower()
+    if media not in ('application/x-ndjson', 'application/ndjson',
+                     'application/jsonl', 'application/jsonlines',
+                     'application/json', 'text/event-stream', 'text/plain'):
+        raise RuntimeError('HOLD_STREAM_RESPONSE_MIME')
+
+
+def require_stream_nosniff_header(response):
+    """Report whether a stream really advertises one unambiguous nosniff.
+
+    A missing header is UNKNOWN, not positive browser security evidence.
+    Explicit invalid/duplicate values cannot be silently trusted; a valid
+    one is only HTTP response metadata, not browser or canonical S03 proof.
+    """
+    headers = getattr(response, 'headers', None)
+    if headers is None:
+        return False  # Offline legacy fixture; never independent proof.
+    get_all = getattr(headers, 'get_all', None)
+    if callable(get_all):
+        fields = get_all('X-Content-Type-Options')
+    else:
+        value = headers.get('X-Content-Type-Options')
+        fields = [] if value is None else [value]
+    if fields is None or fields == []:
+        return False
+    if (not isinstance(fields, (list, tuple)) or len(fields) != 1
+            or not isinstance(fields[0], str)
+            or fields[0].strip().casefold() != 'nosniff'):
+        raise RuntimeError('HOLD_STREAM_NOSNIFF_HEADER')
+    return True
+
+def require_stream_http_framing(response):
+    """Reject ambiguous HTTP body boundaries before parsing a model stream.
+
+    A client can accept a body despite disagreeing Content-Length and
+    Transfer-Encoding metadata. It cannot then certify a single complete turn.
+    Headerless offline fixtures remain compatible, never production evidence.
+    """
+    headers = getattr(response, 'headers', None)
+    if headers is None:
+        return
+
+    def values(name):
+        get_all = getattr(headers, 'get_all', None)
+        if callable(get_all):
+            fields = get_all(name)
+        else:
+            field = headers.get(name)
+            fields = [] if field is None else [field]
+        if fields is None:
+            fields = []
+        if not isinstance(fields, (list, tuple)) or any(
+                not isinstance(field, str) for field in fields):
+            raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+        return fields
+
+    lengths = values('Content-Length')
+    transfers = values('Transfer-Encoding')
+    encodings = values('Content-Encoding')
+    if any(len(fields) > 1 for fields in (lengths, transfers, encodings)):
+        raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+    if lengths:
+        length = lengths[0].strip()
+        if not re.fullmatch(r'[0-9]{1,18}', length) or int(length) == 0:
+            raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+    if transfers and (transfers[0].strip().casefold() != 'chunked' or lengths):
+        raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+    if encodings and encodings[0].strip().casefold() not in ('', 'identity'):
+        raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+
+
+def deadline_chunk_read(read1, size, sock, deadline):
+    """Bound HTTP chunk metadata reads as well as the payload read."""
+    from http.client import HTTPException
+    from socket import SHUT_RD
+    from threading import Event, Timer
+
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED')
+    expired = Event()
+
+    def interrupt_read():
+        expired.set()
+        try:
+            # This is only the probe's own HTTP connection, never a service.
+            sock.shutdown(SHUT_RD)
+        except OSError:
+            pass
+
+    # HTTPResponse.read1() itself can read a chunk-size line or trailers.
+    # Per-socket inactivity timeout alone cannot bound a slow metadata drip.
+    timer = Timer(remaining, interrupt_read)
+    timer.daemon = True
+    timer.start()
+    try:
+        try:
+            result = read1(size)
+        except (OSError, HTTPException) as exc:
+            if expired.is_set() or time.monotonic() >= deadline:
+                raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED') from exc
+            raise
+    finally:
+        timer.cancel()
+        timer.join()
+    if expired.is_set() or time.monotonic() >= deadline:
+        raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED')
+    return result
+
+
+def bounded_stream_lines(response, max_line=100000, deadline=None):
+    """Read line-delimited SSE within the absolute turn deadline.
+
+    HTTPResponse.readline() can wait indefinitely while a peer drip-feeds
+    partial bytes faster than the socket's inactivity timeout. Where available,
+    read1() returns available bounded chunks without waiting for a newline.
+    Check the absolute deadline between chunks and preserve all line boundaries.
+    The legacy bounded readline fallback is retained for synthetic readers.
+    """
+    readline = getattr(response, 'readline', None)
+    if not callable(readline):
+        raise RuntimeError('HOLD_STREAM_BOUNDED_READER_UNAVAILABLE')
+    read1 = getattr(response, 'read1', None)
+    # BytesIO test doubles expose read1 too; preserve their readline contract.
+    from http.client import HTTPResponse
+    from socket import socket as SocketType
+    incremental = callable(read1) and isinstance(response, HTTPResponse)
+    # Never silently regress a real HTTPResponse to unbounded readline()
+    # if its incremental reader is missing or shadowed by a proxy adapter.
+    if isinstance(response, HTTPResponse) and not incremental:
+        raise RuntimeError('HOLD_STREAM_BOUNDED_READER_UNAVAILABLE')
+    if not incremental:
+        # Non-HTTP offline readers may keep their legacy bounded contract,
+        # but a live socket-backed wrapper can drip partial readline() bytes
+        # indefinitely. It must supply a verified incremental HTTP reader.
+        fallback_fp = getattr(response, 'fp', None)
+        fallback_raw = getattr(fallback_fp, 'raw', None)
+        # Custom wrappers may expose the live TCP socket directly, outside
+        # conventional HTTPResponse.fp.raw._sock. Any such fallback can block
+        # indefinitely on slow-dripping newline-less bytes.
+        socket_candidates = (
+            getattr(fallback_raw, '_sock', None),
+            fallback_fp,
+            getattr(response, '_sock', None),
+            getattr(response, 'sock', None),
+            getattr(response, 'socket', None),
+        )
+        if any(isinstance(candidate, SocketType)
+               for candidate in socket_candidates):
+            raise RuntimeError('HOLD_STREAM_UNBOUNDED_SOCKET_READER')
+    pending = b''
+    while True:
+        remaining = None
+        if deadline is not None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED')
+
+        if incremental and b'\n' in pending:
+            newline = pending.index(b'\n') + 1
+            line, pending = pending[:newline], pending[newline:]
+        else:
+            if incremental and len(pending) > max_line:
+                raise RuntimeError('HOLD_BOUNDED_STREAM')
+            sock = getattr(getattr(getattr(response, 'fp', None),
+                                   'raw', None), '_sock', None)
+            if (remaining is not None and sock is not None
+                    and callable(getattr(sock, 'settimeout', None))):
+                existing = sock.gettimeout()
+                if existing is None or existing > remaining:
+                    sock.settimeout(remaining)
+            try:
+                if incremental:
+                    # One upstream read only; never wait to fill a whole line.
+                    size = min(4096, max_line + 1 - len(pending))
+                    if (deadline is not None and getattr(response, 'chunked', False)
+                            and isinstance(sock, SocketType)):
+                        chunk = deadline_chunk_read(read1, size, sock, deadline)
+                    else:
+                        chunk = read1(size)
+                else:
+                    line = readline(max_line + 1)
+            except TimeoutError as exc:
+                raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED') from exc
+            if deadline is not None and time.monotonic() > deadline:
+                raise RuntimeError('HOLD_STREAM_DEADLINE_EXCEEDED')
+            if incremental:
+                if not isinstance(chunk, bytes):
+                    raise RuntimeError('HOLD_BOUNDED_STREAM')
+                if chunk:
+                    pending += chunk
+                    continue
+                if not pending:
+                    return
+                line, pending = pending, b''
+        if line == b'':
+            return
+        if not isinstance(line, bytes) or len(line) > max_line:
+            raise RuntimeError('HOLD_BOUNDED_STREAM')
+        yield line
+
+def bounded_stream_frames(response, max_line=100000, max_wire_lines=2000, deadline=None, wire_hasher=None, max_wire_bytes=8 * 1024 * 1024):
+    """Decode bounded NDJSON or genuine SSE JSON events, never MIME-as-proof.
+
+    Older text/event-stream responses containing plain NDJSON remain compatible,
+    but wire formats cannot be mixed within one model turn. This is transport
+    evidence only; canonical S03 durability needs separate native readback.
+    """
+    headers = getattr(response, 'headers', None)
+    ctype = headers.get('Content-Type', '') if headers is not None else ''
+    sse_allowed = (isinstance(ctype, str) and
+                   ctype.split(';', 1)[0].strip().lower() == 'text/event-stream')
+    mode = None
+    data_lines = []
+    data_size = 0
+    event_name = None
+    terminal = False
+    # SSE event IDs are transport metadata, not proof of stored S03 rows.
+    # A repeated explicit ID can represent replay, never a distinct model event.
+    event_id = None
+    seen_event_ids = set()
+    retry_seen = False
+    initial_empty_lines = 0
+    # Valid terminal JSON is not proof that HTTP completed its advertised
+    # identity-encoded body. Count wire bytes including SSE BOM/CRLF framing.
+    declared_bytes = None
+    if headers is not None:
+        raw_length = headers.get('Content-Length')
+        if raw_length is not None:
+            if (not isinstance(raw_length, str) or
+                    not re.fullmatch(r'[0-9]{1,18}', raw_length.strip())):
+                raise RuntimeError('HOLD_STREAM_HTTP_FRAMING')
+            declared_bytes = int(raw_length.strip())
+    observed_bytes = 0
+
+    def parse_payload(payload):
+        if payload == b'[DONE]':
+            raise RuntimeError('HOLD_STREAM_SSE_SENTINEL_WITHOUT_RECEIPT')
+        return json.loads(payload, parse_constant=reject_nonfinite_json_constant,
+                          parse_float=reject_nonfinite_json_float,
+                          object_pairs_hook=reject_duplicate_json_keys)
+
+    for wire_index, wire in enumerate(bounded_stream_lines(response, max_line, deadline=deadline)):
+        # Fingerprint the complete bounded HTTP entity bytes before BOM/CRLF
+        # normalization; no raw model output is exported by this receipt.
+        # Transport provenance is NOT browser, served-model or S03 attestation.
+        if wire_hasher is not None:
+            wire_hasher.update(wire)
+        observed_bytes += len(wire)
+        # Aggregate wire byte fence; does not truncate chat history/context.
+        if observed_bytes > max_wire_bytes:
+            raise RuntimeError('HOLD_STREAM_WIRE_BYTE_LIMIT')
+        if declared_bytes is not None and observed_bytes > declared_bytes:
+            raise RuntimeError('HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH')
+        if (wire_index >= max_wire_lines or
+                (deadline is not None and time.monotonic() > deadline)):
+            raise RuntimeError('HOLD_BOUNDED_STREAM')
+        if terminal:
+            raise RuntimeError('HOLD_STREAM_TRAILING_AFTER_DONE')
+        if not isinstance(wire, bytes) or not wire.endswith(b'\n'):
+            raise RuntimeError('HOLD_STREAM_MISSING_NEWLINE')
+        if mode is None and sse_allowed:
+            # A valid SSE transport may begin with a UTF-8 BOM and blank
+            # preamble records before its first event. These are not model
+            # evidence: limit them before allowing any stream to proceed.
+            if wire_index == 0 and wire.startswith(b'\xef\xbb\xbf'):
+                wire = wire[3:]
+            if wire in (b'\n', b'\r\n'):
+                initial_empty_lines += 1
+                if initial_empty_lines > 16:
+                    raise RuntimeError('HOLD_STREAM_SSE_PREAMBLE_LIMIT')
+                continue
+        if mode is None:
+            if sse_allowed and wire.startswith((b'data:', b'event:', b'id:', b'retry:', b':')):
+                mode = 'sse'
+            elif wire.lstrip().startswith(b'{'):
+                mode = 'ndjson'
+            else:
+                raise RuntimeError('HOLD_STREAM_ENVELOPE_INVALID')
+        if mode == 'ndjson':
+            if not wire.lstrip().startswith(b'{'):
+                raise RuntimeError('HOLD_STREAM_ENVELOPE_MIXED')
+            frame = parse_payload(wire)
+            terminal = isinstance(frame, dict) and frame.get('type') == 'done'
+            yield frame
+            continue
+
+        line = wire[:-1]
+        if line.endswith(b'\r'):
+            line = line[:-1]
+        if not line:
+            if not data_lines:
+                if event_name is not None or event_id is not None:
+                    raise RuntimeError('HOLD_STREAM_SSE_EMPTY_EVENT')
+                # A standalone numeric retry is valid but never chat evidence.
+                retry_seen = False
+                continue
+            frame = parse_payload(b'\n'.join(data_lines))
+            if (event_name is not None and event_name != 'message' and
+                    (not isinstance(frame, dict) or frame.get('type') != event_name)):
+                raise RuntimeError('HOLD_STREAM_SSE_EVENT_MISMATCH')
+            if event_id is not None:
+                if event_id in seen_event_ids:
+                    raise RuntimeError('HOLD_STREAM_SSE_EVENT_ID_REPLAY')
+                seen_event_ids.add(event_id)
+            terminal = isinstance(frame, dict) and frame.get('type') == 'done'
+            data_lines, data_size, event_name, event_id, retry_seen = [], 0, None, None, False
+            yield frame
+            continue
+        if line.startswith(b':'):
+            continue  # Bounded SSE keepalive; never evidence of model output.
+        field, separator, value = line.partition(b':')
+        if not separator:
+            raise RuntimeError('HOLD_STREAM_SSE_FIELD')
+        if value.startswith(b' '):
+            value = value[1:]
+        if field == b'data':
+            data_size += len(value) + (1 if data_lines else 0)
+            if data_size > max_line:
+                raise RuntimeError('HOLD_BOUNDED_STREAM')
+            data_lines.append(value)
+        elif field == b'event':
+            if event_name is not None or not value.isascii():
+                raise RuntimeError('HOLD_STREAM_SSE_EVENT')
+            event_name = value.decode('ascii')
+            if event_name not in ('message', 'preparing', 'start', 'started',
+                                  'delta', 'done', 'error', 'status', 'meta'):
+                raise RuntimeError('HOLD_STREAM_SSE_EVENT')
+        elif field == b'id':
+            if (event_id is not None or not 0 < len(value) <= 128 or
+                    any(byte < 33 or byte > 126 for byte in value)):
+                raise RuntimeError('HOLD_STREAM_SSE_EVENT_ID_INVALID')
+            event_id = value
+        elif field == b'retry':
+            if (retry_seen or not re.fullmatch(rb'[0-9]{1,6}', value)
+                    or int(value) > 60000):
+                raise RuntimeError('HOLD_STREAM_SSE_RETRY_INVALID')
+            retry_seen = True
+        else:
+            raise RuntimeError('HOLD_STREAM_SSE_FIELD')
+    if mode == 'sse' and (data_lines or event_name is not None
+                          or event_id is not None or retry_seen):
+        raise RuntimeError('HOLD_STREAM_SSE_UNTERMINATED')
+    if declared_bytes is not None and observed_bytes != declared_bytes:
+        raise RuntimeError('HOLD_STREAM_HTTP_BODY_LENGTH_MISMATCH')
+
+def stream_http_transport_verified(response):
+    """Positive transport evidence; socket alias absence is not provenance."""
+    from http.client import HTTPResponse
+    if type(response) is not HTTPResponse or not callable(getattr(response, 'read1', None)):
+        return False
+    sock = getattr(getattr(getattr(response, 'fp', None), 'raw', None), '_sock', None)
+    return isinstance(sock, socket.socket) and sock.fileno() >= 0
+
+
+def consume_turn(client,prompt,dialog_id,timeout=95):
+    started=time.monotonic()
+    response=request(client,'/api/nox/chat/stream','POST',
+        {'message':prompt,'history':[],'task':'general','dialog_id':dialog_id},timeout=timeout)
+    if response.status!=200:
+        response.close();raise RuntimeError('HOLD_STREAM_HTTP_'+str(response.status))
+    events=[];answer='';done=None;first=None;placeholders=0;delta_count=0;model_identity=None
+    wire_hasher=hashlib.sha256()
+    try:
+        transport_verified = stream_http_transport_verified(response)
+        # The actual owner CLI uses an OpenerDirector, not a synthetic reader.
+        # Never accept a custom fallback as live HTTP transport evidence.
+        if isinstance(client, urllib.request.OpenerDirector) and not transport_verified:
+            raise RuntimeError('HOLD_STREAM_TRANSPORT_UNVERIFIED')
+        require_exact_stream_target(response)
+        # A cached POST stream may replay an earlier SSE DONE as this turn.
+        # Reuse the strict owner-readback cache-header validator on the actual
+        # HTTP response before trusting a single delta or durable DONE flag.
+        try:
+            require_fresh_owner_readback(response)
+        except RuntimeError as exc:
+            if str(exc) in ('HOLD_OWNER_READBACK_CACHED',
+                            'HOLD_OWNER_READBACK_CACHE_UNVERIFIED'):
+                raise RuntimeError('HOLD_STREAM_CACHED_REPLAY') from exc
+            raise
+        require_stream_response_mime(response)
+        nosniff_verified = require_stream_nosniff_header(response)
+        require_stream_http_framing(response)
+        for index,frame in enumerate(bounded_stream_frames(
+                response, deadline=started+timeout+5, wire_hasher=wire_hasher)):
+            if index>2000 or time.monotonic()-started>timeout+5:
+                raise RuntimeError('HOLD_BOUNDED_STREAM')
+            if done is not None:raise RuntimeError('HOLD_STREAM_TRAILING_AFTER_DONE')
+            if not isinstance(frame,dict):raise RuntimeError('HOLD_STREAM_FRAME_SCHEMA')
+            kind=frame.get('type');elapsed=round((time.monotonic()-started)*1000)
+            if kind not in ('preparing','start','started','delta','done','error','status','meta'):
+                raise RuntimeError('HOLD_STREAM_FRAME_TYPE')
+            model_identity=require_stream_model_identity(frame,model_identity)
+            # Bind explicit session provenance in every supported SSE envelope.
+            # Untagged legacy intermediate frames remain compatible.
+            require_stream_dialog_provenance(frame, dialog_id)
+            # A preterminal failure must poison the entire stream, even if
+            # the backend subsequently emits a successful saved=true done.
+            if kind not in ('done', 'error') and (
+                    frame.get('error') not in (None, '', False)
+                    or stream_frame_reports_failure(frame)
+                    or frame.get('success') is False):
+                raise RuntimeError('HOLD_STREAM_PRETERMINAL_FAILURE')
+            if not any(event['type']==kind for event in events):events.append({'type':kind,'ms':elapsed})
+            if kind=='delta':
+                text=frame.get('text','')
+                if not isinstance(text,str):raise RuntimeError('HOLD_STREAM_DELTA_SCHEMA')
+                if len(answer)+len(text)>10000:raise RuntimeError('HOLD_STREAM_TEXT_LIMIT')
+                answer+=text;delta_count+=1
+                if meaningful_delta(text):
+                    if first is None:first=elapsed
+                else:placeholders+=1
+            elif kind=='done':
+                # A terminal frame carrying a failure cannot certify saved history.
+                # Some upstreams report an error *inside* done instead of a
+                # separate type=error event; never trust its success flags.
+                if (frame.get('error') not in (None, '', False)
+                        or stream_frame_reports_failure(frame)
+                        or frame.get('success') is False):
+                    raise RuntimeError('HOLD_STREAM_TERMINAL_FAILURE')
+                if frame.get('dialog_id') != dialog_id:
+                    raise RuntimeError('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH')
+                done=frame  # Require clean EOF after exactly one terminal frame.
+            elif kind=='error':raise RuntimeError('HOLD_STREAM_ERROR')
+            if len(answer)>10000:raise RuntimeError('HOLD_STREAM_TEXT_LIMIT')
+    finally:response.close()
+    if done is None or first is None:raise RuntimeError('HOLD_STREAM_INCOMPLETE_OR_PLACEHOLDER')
+    return {'answer':answer,'done':done,'events':events,'first_meaningful_delta_ms':first,
+            'placeholder_delta_count':placeholders,'delta_count':delta_count,
+            'stream_total_ms':round((time.monotonic()-started)*1000),
+             'stream_model_identity':model_identity,
+             'stream_nosniff_verified':nosniff_verified,
+             'stream_http_transport_verified':transport_verified,
+             'stream_wire_sha256':wire_hasher.hexdigest()}
+
+def admitted_consume_turn(client, prompt, dialog_id, timeout=95):
+    """Re-admit RAM immediately before EVERY synthetic model-stream POST.
+
+    An earlier turn can consume cgroup headroom before the next turn; the
+    one-time check before dialog creation does not authorize all later POSTs.
+    This is not a replacement for native owner/CAS, STOP, VRAM or lease gates.
+    """
+    require_cgroup_probe_headroom()
+    # Another owner may take the model slot between synthetic chat turns.
+    # An earlier idle snapshot never authorizes the next non-idempotent POST.
+    slots = model_slots_state(client)
+    if slots['busy']:
+        raise RuntimeError('HOLD_CHAT_BUSY_FOR_SYNTHETIC_PROBE')
+    # Recheck owner binding immediately before each non-idempotent chat POST.
+    require_preturn_owner_binding(client)
+    return consume_turn(client, prompt, dialog_id, timeout=timeout)
+
+
+def sources():
+    for rel in ('scripts/agent_loop.py','scripts/slim_chat_t885u.py','scripts/understanding/hook.py','scripts/understanding_hook.py'):
+        path=ROOT/rel
+        if not path.is_file() or path.is_symlink():continue
+        raw=path.read_bytes()
+        if len(raw)>125000:
+            emit('chat_source',{'path':str(path),'sha256':digest(raw),'bytes':len(raw),'source_omitted':True});continue
+        source=raw.decode(errors='replace');safe=redact(source)
+        emit('chat_source',{'path':str(path),'sha256':digest(raw),'bytes':len(raw),'source_redacted':safe!=source,'source':safe})
+    for rel in ('scripts/chat.html','scripts/nox_v29_chat_bridge.py','scripts/chat_proxy.py'):
+        p=ROOT/rel
+        if p.is_file():emit('chat_source_pin',{'path':str(p),'sha256':digest(p.read_bytes()),'bytes':p.stat().st_size})
+    for rel in ('chat.html','nox-chat.js','nox-ui.js','native-owner.js','pc/resonance.html','pc/v22/resonance.template.html'):
+        p=SITE/rel
+        if not p.is_file():continue
+        raw=p.read_bytes()
+        emit('chat_asset',{'path':str(p),'sha256':digest(raw),'bytes':len(raw),'v135':b'nox-v135' in raw,'v137':b'nox-v137' in raw,
+                          'source':raw.decode(errors='replace') if rel.endswith('resonance.html') and len(raw)<70000 else None})
+
+def metrics():
+    path=ROOT/'logs/proxy.log'
+    if not path.is_file():return []
+    with path.open('rb') as f:
+        f.seek(max(0,path.stat().st_size-160000));data=f.read().decode(errors='replace')
+    rows=[]
+    for line in data.splitlines():
+        values=re.findall(r'\b(augment_ms|s03_ms|retrieve_ms|enrich_ms|searx_ms|build_ms|llm_ms|total_ms|ttft_s|infinite_ms|cedr_ready|cache_prompt)=([0-9.]+|True|False|None)',line)
+        if values:rows.append(dict(values))
+    return rows[-35:]
+
+def require_exact_model_slots_target(response):
+    """A redirected /slots JSON must never authorize a new model POST."""
+    actual = urllib.parse.urlsplit(response.url)
+    if (actual.scheme, actual.netloc, actual.path, actual.query, actual.fragment) != (
+            'http', '127.0.0.1:8098', '/slots', '', ''):
+        raise RuntimeError('HOLD_CHAT_SLOTS_RESPONSE_ROUTE')
+
+
+def model_slots_state(client):
+    """Read only the active model slots. Unknown/missing state is never idle."""
+    try:
+        with request(client, '/slots', base='http://127.0.0.1:8098') as response:
+            require_exact_model_slots_target(response)
+            # Slot admission must be as fresh as the owner route snapshot.
+            # A cached idle 200 can trigger an unsafe non-idempotent POST.
+            try:
+                require_fresh_owner_readback(response)
+            except RuntimeError as exc:
+                raise RuntimeError('HOLD_CHAT_SLOTS_CACHE_REPLAY') from exc
+            slots = obj(response, limit=100000)
+    except (OSError, ValueError, RuntimeError) as exc:
+        if str(exc) == 'HOLD_CHAT_SLOTS_CACHE_REPLAY':
+            raise
+        raise RuntimeError('HOLD_CHAT_SLOTS_ENDPOINT_UNAVAILABLE') from exc
+    if not isinstance(slots, list) or not slots or len(slots) > 1024:
+        raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
+    # llama.cpp /slots supplies per-slot IDs. A duplicated or incomplete ID
+    # census must not authorize a competing synthetic generation. Preserve
+    # compatibility with older servers that expose no IDs at all.
+    identified = any(isinstance(slot, dict) and 'id' in slot for slot in slots)
+    seen_ids = set()
+    busy = 0
+    for slot in slots:
+        if not isinstance(slot, dict):
+            raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
+        if identified:
+            slot_id = slot.get('id')
+            if type(slot_id) is not int or slot_id < 0 or slot_id in seen_ids:
+                raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
+            seen_ids.add(slot_id)
+        flags = [slot[key] for key in ('is_processing', 'processing') if key in slot]
+        if (not flags or any(type(flag) is not bool for flag in flags)
+                or len(set(flags)) != 1):
+            raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
+        busy += int(flags[0])
+    return {'count': len(slots), 'busy': busy}
+
+
+def observed_owner_executor_count(snapshot):
+    """Bind the third synthetic answer to CURRENT observed native workers.
+
+    Configured workers are not permanently six; owner observations can be three.
+    Any missing, inconsistent, or duplicate worker identity remains unverified.
+    """
+    if not isinstance(snapshot, dict) or snapshot.get('schema') != 'NOX_OWNER_EXECUTORS_V1':
+        return None
+    configured = snapshot.get('configured')
+    workers = snapshot.get('workers')
+    if (snapshot.get('state') != 'OBSERVED'
+            or type(configured) is not int or not 1 <= configured <= 64
+            or not isinstance(workers, list) or len(workers) != configured):
+        return None
+    identifiers = []
+    for row in workers:
+        if not isinstance(row, dict):
+            return None
+        identity = row.get('id')
+        # Owner APIs may serialize the same worker as 1 or "1" across reads.
+        # Treat whitespace-only and cross-type aliases as untrusted identities.
+        if isinstance(identity, str) and 0 < len(identity) <= 128 and identity.strip():
+            normalized_id = identity.strip()
+        elif type(identity) is int and identity >= 0:
+            normalized_id = str(identity)
+        else:
+            return None
+        identifiers.append(normalized_id)
+    if len(set(identifiers)) != configured:
+        return None
+    return configured
+
+
+def require_postturn_executor_identity(client, witnessed):
+    """Reconfirm exact observed worker set after postquiet third-turn history.
+
+    A stable worker COUNT is not sufficient evidence when identities churn.
+    Owner-only GET, no extra model POST and no native lease.
+    """
+    if observed_owner_executor_count(witnessed) is None:
+        raise RuntimeError('HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT')
+    current = owner_readback_json(client, '/api/ui/executors')
+    if observed_owner_executor_count(current) is None:
+        raise RuntimeError('HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT')
+    def identities(snapshot):
+        # Slot IDs may survive a native restart. Compare process identity
+        # when the owner API supplies PID/start_ticks for any worker.
+        result = {}
+        for row in snapshot['workers']:
+            markers = []
+            for key in ('pid', 'start_ticks'):
+                value = row.get(key)
+                if key in row:
+                    if type(value) is int and value > 0:
+                        number = value
+                    elif (isinstance(value, str) and
+                          re.fullmatch(r'[0-9]{1,20}', value.strip()) and
+                          int(value.strip()) > 0):
+                        number = int(value.strip())
+                    else:
+                        raise RuntimeError('HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT')
+                    markers.append(number)
+                else:
+                    markers.append(None)
+            result[str(row['id']).strip()] = tuple(markers)
+        return result
+    if (witnessed['configured'] != current['configured']
+            or identities(witnessed) != identities(current)):
+        raise RuntimeError('HOLD_POSTTURN_OWNER_EXECUTOR_DRIFT')
+    return True
+
+
+def answer_matches_observed_executor_count(answer, configured):
+    """The model's N executors + NOX claim must match the observed N."""
+    if not isinstance(answer, str) or type(configured) is not int or configured < 1:
+        return False
+    mentioned = [int(value) for value in re.findall(
+        r'(?<!\d)(\d{1,3})\s+исполнител[а-яё]*\b', answer, re.I)]
+    return (bool(mentioned) and all(value == configured for value in mentioned)
+            and re.search(r'(?:\+|и)\s*NOX\b', answer, re.I) is not None)
+
+
+def require_cgroup_probe_headroom(
+        limit_path=Path('/sys/fs/cgroup/memory.max'),
+        current_path=Path('/sys/fs/cgroup/memory.current'),
+        minimum_bytes=2 * 1024 ** 3):
+    """Fail closed before synthetic dialog/chat writes when NOX cgroup RAM is too low.
+
+    This read-only cgroup-v2 check is only one admission fence. It does not
+    replace the independent native owner/CAS, STOP, lease, VRAM and rollback gates.
+    """
+    try:
+        raw_limit = limit_path.read_text().strip()
+        raw_current = current_path.read_text().strip()
+        if not raw_limit.isdecimal() or not raw_current.isdecimal():
+            raise ValueError('unbounded or malformed cgroup counters')
+        limit = int(raw_limit)
+        current = int(raw_current)
+    except (OSError, ValueError, TypeError, OverflowError) as exc:
+        raise RuntimeError('HOLD_CHAT_PROBE_CGROUP_RAM_ADMISSION') from exc
+    if limit <= 0 or current > limit or limit - current < minimum_bytes:
+        raise RuntimeError('HOLD_CHAT_PROBE_CGROUP_RAM_ADMISSION')
+    return limit - current
+
+
+def require_logout_revoked(client):
+    """A positive chat probe requires an ACK and proof its owner session ended.
+
+    This is a bounded owner-only readback, NOT browser/S03 acceptance.
+    Reject redirected success and never count an HTTP error as logout.
+    """
+    response = request(client, '/chat/logout', 'POST', {})
+    try:
+        require_exact_owner_readback_target(response, '/chat/logout')
+        if response.status not in (200, 204):
+            raise RuntimeError('HOLD_OWNER_LOGOUT_NOT_ACKNOWLEDGED')
+    finally:
+        response.close()
+    # Reuse the same authenticated cookie jar; an active owner session must
+    # no longer read the protected API after logout. Anonymous 401 is already
+    # checked before any synthetic model POST.
+    with request(client, '/api/nox/status') as probe:
+        require_exact_owner_readback_target(probe, '/api/nox/status')
+        # A cached unauthenticated 401 is not proof that the live owner session
+        # was revoked. Apply the same proxy freshness fence as owner GET reads.
+        require_fresh_owner_readback(probe)
+        if probe.status != 401:
+            raise RuntimeError('HOLD_OWNER_LOGOUT_SESSION_ACTIVE')
+    return True
+
+
+def main():
+    global BASE
+    existing_config=existing_dialog_preflight_config()
+    if os.environ.get('NOX_PROBE_NONLOOPBACK','1')=='1':BASE=nonloopback_base()
+    probe_started=time.monotonic()
+    executor_question_receipt=None  # Publish only after every gate, logout and final budget.
+    if existing_config is None:
+        if os.environ.get('NOX_PROBE_SOURCE_EXPORT')=='1':sources()
+        emit('chat_recent_timing',metrics())
+    elif BASE=='http://127.0.0.1:8080':
+        raise RuntimeError('HOLD_NONLOOPBACK_ACCEPTANCE_REQUIRED')
+    sys.path.insert(0,str(ROOT/'scripts'))
+    import chat_proxy
+    password=chat_proxy._read_chat_password()
+    if not isinstance(password,str) or len(password)<6:raise RuntimeError('HOLD_OWNER_CREDENTIAL_UNAVAILABLE')
+    jar=http.cookiejar.CookieJar();client=urllib.request.build_opener(urllib.request.ProxyHandler({}),urllib.request.HTTPCookieProcessor(jar),RejectPostRedirect())
+    login=request(client,'/chat/login','POST',{'password':password});password=None
+    if login.status!=200 or not any(True for _ in jar):raise RuntimeError('HOLD_OFFICIAL_LOGIN')
+    login.close()
+    if existing_config is not None:
+        try:
+            existing_receipt=existing_dialog_prefix_preflight(client,*existing_config)
+        finally:
+            if sys.exc_info()[0] is None:
+                require_logout_revoked(client)
+            else:
+                try:
+                    require_logout_revoked(client)
+                except Exception:
+                    emit('chat_logout_cleanup_hold', {'reason':'HOLD_OWNER_LOGOUT_UNCONFIRMED'})
+        emit('chat_existing_dialog_prefix_preflight',existing_receipt)
+        print('NOX_MAINT_REPAIR_COMPLETE=false',flush=True)
+        return
+    try:
+        report={'schema':'NOX_OWNER_CHAT_LATENCY_V1','private_data_exported':False,'paths':[],
+                'nonloopback_peer':BASE!='http://127.0.0.1:8080','assets':[]}
+        for path in ('/','/chat','/nox-web-v29/chat.html','/nox-web-v29/pc/resonance.html'):
+            t=time.monotonic();status,final_path,raw=page_snapshot(request(client,path), expected_path=path if path != '/' else None)
+            text=raw.decode(errors='replace');title=re.search(r'<title[^>]*>(.*?)</title>',text,re.S|re.I)
+            report['paths'].append({'path':path,'status':status,'final_path':final_path,'ms':round((time.monotonic()-t)*1000),
+                'sha256':digest(raw),'title':title[1][:150] if title else None,'scripts':re.findall(r'<script[^>]+src=[\"\']([^\"\']+)',text)[:30]})
+            if path=='/nox-web-v29/pc/resonance.html':
+                resources=resonance_runtime_assets(text,BASE+path)
+                for target in resources:
+                    target_parts=urllib.parse.urlsplit(target)
+                    local=target_parts.path
+                    asset_request=local + ('?' + target_parts.query if target_parts.query else '')
+                    with request(client,asset_request) as asset:
+                        require_exact_asset_target(asset,asset_request)
+                        sample = asset.read(512)
+                        if asset.status == 200 and local.lower().endswith(('.js', '.mjs', '.css')):
+                            require_not_html_asset(asset, sample)
+                            require_browser_asset_mime(asset, local)
+                            body_bytes, asset_sha256 = complete_runtime_asset_body(asset, sample)
+                        else:
+                            body_bytes, asset_sha256 = None, None
+                        report['assets'].append({'path':local,'status':asset.status,
+                            'bytes_sampled':len(sample),'bytes_complete':body_bytes,
+                            'sha256':asset_sha256})
+        unauth=urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        report['anonymous_http']={}
+        for path in ('/api/nox/status','/api/ui/executors','/api/ui/events'):
+            report['anonymous_http'][path]=anonymous_owner_scope_status(unauth,path)
+        if report['nonloopback_peer']:
+            if set(report['anonymous_http'].values())!={401}:raise RuntimeError('HOLD_ANONYMOUS_OWNER_SCOPE')
+            status=owner_readback_json(client,'/api/nox/status')
+            report['owner_status_bound']=status.get('native_p02_bound') is True
+            executors=owner_readback_json(client,'/api/ui/executors')
+            event_status=owner_readback_json(client,'/api/ui/events?limit=1')
+            report['owner_events_access']=event_status.get('schema')=='NOX_OWNER_EVENTS_V1' and isinstance(event_status.get('events'),list)
+            rows=executors.get('workers',[])
+            report['owner_executors_access']=bool(executors.get('schema')=='NOX_OWNER_EXECUTORS_V1' and isinstance(rows,list))
+            report['owner_executors']={'state':executors.get('state'),'configured':executors.get('configured'),
+                'observed_workers':len(rows) if isinstance(rows,list) else None,
+                'worker_ids':[str(row.get('id',''))[:60] for row in rows if isinstance(row,dict)] if isinstance(rows,list) else []}
+        report['slots']=model_slots_state(client)
+        emit('chat_before_probe',report)
+        if not report['nonloopback_peer']:raise RuntimeError('HOLD_NONLOOPBACK_ACCEPTANCE_REQUIRED')
+        if not report.get('owner_status_bound') or not report.get('owner_executors_access') or not report.get('owner_events_access'):
+            raise RuntimeError('HOLD_AUTHENTICATED_OWNER_APIS')
+        if (not report['assets'] or any(asset['status']!=200 or asset['bytes_sampled']==0 for asset in report['assets'])
+                or any(page['status']!=200 for page in report['paths'])):
+            raise RuntimeError('HOLD_RESONANCE_ASSET_HTTP')
+        if report['slots']['busy']:raise RuntimeError('HOLD_CHAT_BUSY_FOR_SYNTHETIC_PROBE')
+        require_cgroup_probe_headroom()  # Before ANY synthetic dialog-create/chat POST.
+        # Single-turn diagnostics must not be reported as completed multi-turn acceptance.
+        require_multiturn_requested(os.environ.get('NOX_PROBE_SECOND_TURN'))
+        marker='nox_latency_'+secrets.token_hex(5)
+        prompt='[QA '+marker+'] Сколько будет 17 умножить на 19? Ответь только числом.'
+        did=create_probe_dialog(client,'NOX QA '+marker)
+        turn=admitted_consume_turn(client,prompt,did);answer=turn['answer'];receipt=turn['done']
+        history=owner_readback_json(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6')
+        saved=bool(receipt and receipt.get('saved') is True and receipt.get('s03_integrated') is True
+                   and scoped_history_matches_turns(history, [(prompt, answer)], did))
+        first=turn['first_meaningful_delta_ms']
+        emit('chat_synthetic_latency',{'events':turn['events'],'total_ms':turn['stream_total_ms'],
+            'first_meaningful_delta_ms':first,'placeholder_delta_count':turn['placeholder_delta_count'],
+            'delta_count':turn['delta_count'],
+            'stream_http_transport_verified':turn['stream_http_transport_verified'],
+            'stream_nosniff_verified':turn['stream_nosniff_verified'],
+            'stream_wire_sha256':turn['stream_wire_sha256'],
+            'answer_public_synthetic':numeric_public_answer(answer),
+            'answer_sha256':digest(answer.encode()),'saved_verified':saved,
+            'arithmetic_pass':numeric_public_answer(answer)=='323',
+            'performance_target_pass':first<=8000 and turn['stream_total_ms']<=25000})
+        require_durable_result(saved, numeric_public_answer(answer)=='323', 'FIRST_TURN')
+        require_latency_target(turn, 'FIRST_TURN', 8000)
+        if os.environ.get('NOX_PROBE_SECOND_TURN')=='1':
+            followup='Какое число ты только что получил? Ответь только этим числом.'
+            require_preturn_dialog_prefix(client, history, [(prompt, answer)], did)
+            follow=admitted_consume_turn(client,followup,did);answer2=follow['answer'];done=follow['done']
+            stored=owner_readback_json(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6')
+            passed=bool(done and done.get('saved') is True and done.get('s03_integrated') is True
+                        and scoped_history_matches_turns(stored, [(prompt, answer), (followup, answer2)], did))
+            emit('chat_history_followup',{'history_model_pass':passed,'client_history_empty':True,
+                'first_delta_ms':follow['first_meaningful_delta_ms'],'first_meaningful_delta_ms':follow['first_meaningful_delta_ms'],
+                'total_ms':follow['stream_total_ms'],
+                'stream_http_transport_verified':follow['stream_http_transport_verified'],
+                'stream_nosniff_verified':follow['stream_nosniff_verified'],
+                'stream_wire_sha256':follow['stream_wire_sha256'],
+                'answer_public_synthetic':numeric_public_answer(answer2),
+                'answer_sha256':digest(answer2.encode()),
+                'performance_target_pass':follow['first_meaningful_delta_ms']<=5000 and follow['stream_total_ms']<=25000})
+            require_durable_result(passed, numeric_public_answer(answer2)=='323', 'SECOND_TURN')
+            # An untagged stream provides no evidence that the model route stayed fixed.
+            # Hold before issuing the third non-idempotent model request.
+            if not require_multiturn_model_route(turn,follow):
+                raise RuntimeError('HOLD_CHAT_MULTITURN_MODEL_IDENTITY_MISSING')
+            require_latency_target(follow, 'SECOND_TURN', 5000)
+            require_executor_turn_budget(time.monotonic()-probe_started)
+            question='Сколько сейчас исполнителей и агентов у NOX?'
+            require_preturn_dialog_prefix(client, stored, [(prompt, answer), (followup, answer2)], did)
+            turn3=admitted_consume_turn(client,question,did,timeout=30)
+            text=turn3['answer'];end=turn3['done']
+            fresh=owner_readback_json(client,'/api/ui/executors')
+            configured=observed_owner_executor_count(fresh)
+            count=configured is not None
+            phrase=answer_matches_observed_executor_count(text, configured)
+            third_history=owner_readback_json(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=8')
+            expected_three=[(prompt,answer),(followup,answer2),(question,text)]
+            third_durable=(isinstance(end,dict) and end.get('saved') is True
+                           and end.get('s03_integrated') is True
+                           and stable_postquiet_three_turn_history(client,third_history,expected_three,did))
+            if not third_durable:raise RuntimeError('HOLD_CHAT_PROBE_POSTQUIET_HISTORY')
+            require_executor_witness(end,third_history,expected_three,count,phrase,did)
+            model_route_verified=require_multiturn_model_route(turn,follow,turn3)
+            if not model_route_verified:
+                raise RuntimeError('HOLD_CHAT_MULTITURN_MODEL_IDENTITY_MISSING')
+            require_postturn_owner_binding(client)  # final owner route continuity, read-only
+            require_postturn_executor_identity(client, fresh)  # final identity continuity
+            # Third inference and durable-history readback also consume the 210 s budget.
+            # A passed pre-POST gate alone must never authorize final COMPLETE.
+            require_executor_turn_budget(time.monotonic()-probe_started)
+            executor_question_receipt={'verified_six_plus_nox':bool(configured == 6 and phrase and third_durable),
+                'verified_observed_executor_count':bool(count and phrase and third_durable),
+                'observed_configured_count':configured,
+                'live_api_fresh':count,'native_answer_matches_six_plus_nox':bool(configured == 6 and phrase),
+                'native_answer_matches_observed_count':phrase,
+                'saved':end.get('saved') is True,'s03_integrated':end.get('s03_integrated') is True,
+                'three_turn_history_verified':third_durable,
+                'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
+                'answer_sha256':digest(text.encode()),'raw_answer_exported':False,
+                'model_route_identity_verified':model_route_verified,
+                 'stream_wire_sha256':turn3['stream_wire_sha256'],
+                 'three_turns_http_transport_verified':all(t['stream_http_transport_verified']
+                     for t in (turn, follow, turn3)),
+                 'three_turns_nosniff_verified':all(t['stream_nosniff_verified']
+                     for t in (turn, follow, turn3)),
+                 'verification_scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03'}
+        emit('chat_recent_timing_after',metrics())
+    finally:
+        if sys.exc_info()[0] is None:
+            # Success must not certify an unreleased owner session.
+            require_logout_revoked(client)
+        else:
+            # Keep the original HOLD; separately report failed cleanup.
+            try:
+                require_logout_revoked(client)
+            except Exception:
+                emit('chat_logout_cleanup_hold', {'reason':'HOLD_OWNER_LOGOUT_UNCONFIRMED'})
+    # Logout/metrics are part of elapsed probe time; check immediately before COMPLETE.
+    require_executor_turn_budget(time.monotonic()-probe_started)
+    # Owner-dialog history is not independent browser/canonical-S03 proof.
+    # Fail closed for consumers of the historical broad completion marker.
+    if executor_question_receipt is None:
+        raise RuntimeError('HOLD_OWNER_DIALOG_PROBE_INCOMPLETE')
+    emit('chat_executor_question',executor_question_receipt)
+    emit('chat_probe_acceptance_scope', {
+        'scope':'OWNER_DIALOG_ONLY_NOT_INDEPENDENT_S03',
+        'browser_multiturn_accepted':False,
+        'native_s03_independently_verified':False,
+        'production_accepted':False})
+    print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true',flush=True)
+    print('NOX_MAINT_REPAIR_COMPLETE=false',flush=True)
+
+if __name__=='__main__':
+    try:main()
+    except Exception as exc:
+        reason=str(exc);emit('chat_probe_hold',{'reason':reason if re.fullmatch('[A-Z0-9_]{1,120}',reason) else type(exc).__name__})
+        raise SystemExit(2)
