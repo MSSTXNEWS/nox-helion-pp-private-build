@@ -2553,6 +2553,74 @@ class ProbeTests(unittest.TestCase):
         self.assertLess(main.index('require_preturn_dialog_prefix(client, stored,'),
                         main.index('turn3=admitted_consume_turn('))
 
+    def test_existing_dialog_readonly_prefix_preflight_never_replays_first_turn(self):
+        import hashlib
+        import os
+        from copy import deepcopy
+        did = 'a' * 32
+        rows = [
+            {'id': i + 1, 'dialog_id': did, 'role': 'user' if i % 2 == 0 else 'assistant',
+             'content': text}
+            for i, text in enumerate(('Привет', 'Hola', '¿Qué tal?', 'Хорошо'))
+        ]
+        keys = {'NOX_PROBE_EXISTING_DIALOG_ONLY': '1',
+                'NOX_PROBE_EXISTING_DIALOG_ID': did,
+                'NOX_PROBE_EXISTING_PREFIX_SHA256': 'a' * 64,
+                'NOX_PROBE_EXISTING_PREFIX_ROWS': '2'}
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertIsNone(probe.existing_dialog_preflight_config())
+        for key in keys:
+            partial = dict(keys)
+            del partial[key]
+            with patch.dict(os.environ, partial, clear=True):
+                with self.assertRaisesRegex(RuntimeError, 'HOLD_EXISTING_DIALOG_PREFLIGHT_CONFIG'):
+                    probe.existing_dialog_preflight_config()
+        with patch.dict(os.environ, keys, clear=True):
+            self.assertEqual(probe.existing_dialog_preflight_config(), (did, 'a' * 64, 2))
+        for count in (2, 4):
+            good = {'dialog_id': did, 'messages': rows[:count]}
+            pin = hashlib.sha256(json.dumps(good, ensure_ascii=False, sort_keys=True,
+                                           separators=(',', ':')).encode('utf-8')).hexdigest()
+            route = '/api/ui/memory/dialogs/history?dialog_id=' + did + '&limit=8'
+            with patch.object(probe, 'owner_readback_json',
+                              side_effect=[{'native_p02_bound': True}, good,
+                                           {'native_p02_bound': True}]) as fetch, patch.object(
+                        probe, 'create_probe_dialog') as create, patch.object(
+                        probe, 'admitted_consume_turn') as post:
+                receipt = probe.existing_dialog_prefix_preflight('client', did, pin, count)
+                self.assertEqual([call.args[1] for call in fetch.call_args_list],
+                                 ['/api/nox/status', route, '/api/nox/status'])
+                self.assertEqual(receipt['prefix_sha256'], pin)
+                self.assertEqual(receipt['prefix_rows'], count)
+                for field in ('model_post_issued', 'dialog_created', 'browser_multiturn_accepted',
+                              'native_s03_independently_verified', 'production_accepted'):
+                    self.assertIs(receipt[field], False)
+                self.assertNotIn(did, json.dumps(receipt))
+                create.assert_not_called()
+                post.assert_not_called()
+            advanced = deepcopy(good)
+            advanced['messages'].append({'id': 9, 'role': 'user', 'content': 'uncertain'})
+            altered = deepcopy(good)
+            altered['messages'][0]['id'] = 88
+            foreign = deepcopy(good)
+            foreign['dialog_id'] = 'b' * 32
+            for candidate in (advanced, altered, foreign):
+                with patch.object(probe, 'owner_readback_json',
+                                  side_effect=[{'native_p02_bound': True}, candidate]) as fetch:
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_EXISTING_DIALOG_PREFIX'):
+                        probe.existing_dialog_prefix_preflight('client', did, pin, count)
+                    self.assertEqual(fetch.call_count, 2)
+        main = path.read_text().split('def main():', 1)[1]
+        self.assertLess(main.index('existing_config=existing_dialog_preflight_config()'),
+                        main.index("login=request("))
+        branch = main.split('    if existing_config is not None:', 1)[1].split('    try:\n        report=', 1)[0]
+        self.assertIn('existing_dialog_prefix_preflight(client,*existing_config)', branch)
+        self.assertIn('require_logout_revoked(client)', branch)
+        self.assertIn('        return', branch)
+        self.assertNotIn('create_probe_dialog(', branch)
+        self.assertNotIn('admitted_consume_turn(', branch)
+
+
     def test_third_turn_six_row_postquiet_readback_stays_identical(self):
         """Two exact same-dialog GET snapshots, no extra POST and no S03 assertion."""
         did = '1' * 32

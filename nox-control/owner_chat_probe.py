@@ -632,6 +632,60 @@ def require_preturn_dialog_prefix(client, previous, turns, dialog_id):
     return True
 
 
+def existing_dialog_preflight_config():
+    """Select explicit continuation-only mode; partial pins never fall through to POST."""
+    keys = ('NOX_PROBE_EXISTING_DIALOG_ONLY', 'NOX_PROBE_EXISTING_DIALOG_ID',
+            'NOX_PROBE_EXISTING_PREFIX_SHA256', 'NOX_PROBE_EXISTING_PREFIX_ROWS')
+    if not any(key in os.environ for key in keys):
+        return None
+    mode, dialog_id, expected_sha, row_count = (os.environ.get(key, '') for key in keys)
+    if (mode != '1' or not re.fullmatch(r'[a-f0-9]{32}', dialog_id)
+            or not re.fullmatch(r'[a-f0-9]{64}', expected_sha)
+            or row_count not in ('2', '4')):
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFLIGHT_CONFIG')
+    return dialog_id, expected_sha, int(row_count)
+
+
+def existing_dialog_prefix_preflight(client, dialog_id, expected_sha, row_count):
+    """GET-only owner history pin check, not browser/S03 proof or POST admission.
+
+    The caller must obtain expected_sha independently from a trusted prior
+    receipt, not calculate it from this candidate readback. Canonical bytes:
+    UTF-8 sorted-key compact JSON of {"dialog_id": id, "messages": full_rows}.
+    The full rows (including optional metadata/IDs) must be unchanged.
+    """
+    if (not isinstance(dialog_id, str) or not re.fullmatch(r'[a-f0-9]{32}', dialog_id)
+            or not isinstance(expected_sha, str) or not re.fullmatch(r'[a-f0-9]{64}', expected_sha)
+            or type(row_count) is not int or row_count not in (2, 4)):
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFLIGHT_CONFIG')
+    require_preturn_owner_binding(client)
+    history = owner_readback_json(
+        client, '/api/ui/memory/dialogs/history?dialog_id=' + dialog_id + '&limit=8')
+    rows = history.get('messages') if isinstance(history, dict) else None
+    if (not isinstance(rows, list) or len(rows) != row_count
+            or any(not isinstance(row, dict) or not isinstance(row.get('content'), str)
+                   for row in rows)):
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFIX')
+    pairs = [(rows[i]['content'], rows[i + 1]['content']) for i in range(0, row_count, 2)]
+    if not scoped_history_matches_turns(history, pairs, dialog_id):
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFIX')
+    try:
+        actual_sha = digest(json.dumps(
+            {'dialog_id': dialog_id, 'messages': rows}, ensure_ascii=False,
+            sort_keys=True, separators=(',', ':'), allow_nan=False).encode('utf-8'))
+    except (TypeError, ValueError, UnicodeError):
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFIX') from None
+    if actual_sha != expected_sha:
+        raise RuntimeError('HOLD_EXISTING_DIALOG_PREFIX_PIN_MISMATCH')
+    require_postturn_owner_binding(client)
+    return {'scope': 'EXISTING_OWNER_DIALOG_PREFIX_ONLY_NOT_INDEPENDENT_S03',
+            'prefix_rows': row_count, 'prefix_sha256': actual_sha,
+            'dialog_id_sha256': digest(dialog_id.encode('ascii')),
+            'prefix_pin_matched': True, 'model_post_issued': False,
+            'dialog_created': False, 'browser_multiturn_accepted': False,
+            'native_s03_independently_verified': False, 'production_accepted': False}
+
+
 def stable_postquiet_three_turn_history(client, original, turns, dialog_id):
     """Re-read six owner-dialog rows after quiescence; never claim canonical S03 proof.
 
@@ -1554,11 +1608,15 @@ def require_logout_revoked(client):
 
 def main():
     global BASE
+    existing_config=existing_dialog_preflight_config()
     if os.environ.get('NOX_PROBE_NONLOOPBACK','1')=='1':BASE=nonloopback_base()
     probe_started=time.monotonic()
     executor_question_receipt=None  # Publish only after every gate, logout and final budget.
-    if os.environ.get('NOX_PROBE_SOURCE_EXPORT')=='1':sources()
-    emit('chat_recent_timing',metrics())
+    if existing_config is None:
+        if os.environ.get('NOX_PROBE_SOURCE_EXPORT')=='1':sources()
+        emit('chat_recent_timing',metrics())
+    elif BASE=='http://127.0.0.1:8080':
+        raise RuntimeError('HOLD_NONLOOPBACK_ACCEPTANCE_REQUIRED')
     sys.path.insert(0,str(ROOT/'scripts'))
     import chat_proxy
     password=chat_proxy._read_chat_password()
@@ -1567,6 +1625,20 @@ def main():
     login=request(client,'/chat/login','POST',{'password':password});password=None
     if login.status!=200 or not any(True for _ in jar):raise RuntimeError('HOLD_OFFICIAL_LOGIN')
     login.close()
+    if existing_config is not None:
+        try:
+            existing_receipt=existing_dialog_prefix_preflight(client,*existing_config)
+        finally:
+            if sys.exc_info()[0] is None:
+                require_logout_revoked(client)
+            else:
+                try:
+                    require_logout_revoked(client)
+                except Exception:
+                    emit('chat_logout_cleanup_hold', {'reason':'HOLD_OWNER_LOGOUT_UNCONFIRMED'})
+        emit('chat_existing_dialog_prefix_preflight',existing_receipt)
+        print('NOX_MAINT_REPAIR_COMPLETE=false',flush=True)
+        return
     try:
         report={'schema':'NOX_OWNER_CHAT_LATENCY_V1','private_data_exported':False,'paths':[],
                 'nonloopback_peer':BASE!='http://127.0.0.1:8080','assets':[]}
