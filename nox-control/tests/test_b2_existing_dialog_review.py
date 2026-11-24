@@ -112,7 +112,7 @@ class ExistingReviewTests(unittest.TestCase):
         for mutate, reason in (
             (lambda b: b.update(reviewer_id="REVIEWER-a"), "REVIEWER"),
             (lambda b: b.update(rubric_sha256="0"*64), "REVIEW_SCOPE"),
-            (lambda b: b["decisions"][0].update(turn=3), "REVIEW_COVERAGE"),
+            (lambda b: b["decisions"][1].update(turn=2), "REVIEW_COVERAGE"),
             (lambda b: b["decisions"][1].update(answer_sha256="0"*64), "REVIEW_ANSWER"),
             (lambda b: b["decisions"][0].update(verdict=None), "REVIEW_VERDICT"),
             (lambda b: b["decisions"][0].update(reason=""), "REVIEW_REASON"),
