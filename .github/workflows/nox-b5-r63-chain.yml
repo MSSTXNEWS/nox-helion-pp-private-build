@@ -1,0 +1,31 @@
+name: NOX B5 R63 full immutable S03 chain
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b5-r63/**'
+      - '.github/workflows/nox-b5-r63-chain.yml'
+permissions:
+  contents: read
+jobs:
+  chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Exact donor chain regression (no native access)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref=4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3
+          pin=df94c535273dde1fd2609f555d1d615eacfda831
+          git fetch --no-tags --depth=1 origin "$ref"
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          git show "$ref:nox-control/b5_s03_verifier_r54.py" > "$tmp/b5_r55_pinned.py"
+          test "$(git hash-object "$tmp/b5_r55_pinned.py")" = "$pin"
+          cp nox-control/b5-r63/*.py "$tmp/"
+          cd "$tmp"
+          python -m unittest -v test_b5_chain_guard
+          echo B5_NATIVE_ACCEPTED=false
