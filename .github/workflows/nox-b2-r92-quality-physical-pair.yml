@@ -1,0 +1,73 @@
+name: B2 R92 quality physical pair
+on:
+  pull_request:
+    paths: ['nox-control/b2-r92/**', '.github/workflows/nox-b2-r92-quality-physical-pair.yml']
+permissions:
+  contents: read
+jobs:
+  outcome:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b2-r92-quality-physical-pair-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: R92 physical pair differential quality regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$PWD/nox-control/d3-r74/staging"
+          own="$PWD/nox-control/d3-r83"
+          test "$(git rev-parse HEAD:nox-control/b2-r81/review_feedback.py)" = eb7f7ccb4a33ae9da106bfbdf79c85b9ae737689
+          test "$(git rev-parse HEAD:nox-control/d3-r80/review_release.py)" = ddaafb5fa397eac0418aa235a5627b2b275bec41
+          test "$(git rev-parse HEAD:nox-control/d3-r78/b5_chain_guard.py)" = f321f4ad36867e434ba72db9264a88cf23a91fb8
+          test "$(git hash-object "$stage/py/b5_s03_verifier_r54.py")" = df94c535273dde1fd2609f555d1d615eacfda831
+          test "$(git hash-object "$own/b5_failed_poststate.py")" = 381a738e54bdb1bba874ee8e0295c957e92b68b5
+          test "$(git hash-object "$own/b5_bound_failed_poststate.py")" = 878128ef41095f8bf0d14a02281148e96e4a6ba3
+          test "$(git hash-object "$own/test_b5_chain_guard.py")" = 96fa30430ac2a9027eec0a2a0ef9b39c670c55dd
+          test "$(git hash-object "$own/test_b5_bound_failed_poststate.py")" = 72576b738fa734f7c5181fc9b6e1ab06c07ced03
+          test "$(git rev-parse HEAD:nox-control/b2-r84/final_feedback.py)" = 15ecd6aeef6a628a5ecbffb9411daa62b12908a7
+          test "$(git rev-parse HEAD:nox-control/d3-r83/outcome_review.py)" = 1de5a6e91f3744505bd49f4510db97343253870b
+          test "$(git rev-parse HEAD:nox-control/b2-r86/receipted_outcome.py)" = 935c97ef18126eb40d6af3f66f3bf062f2500084
+          test "$(git rev-parse HEAD:nox-control/b2-r86/b5_receipted_failed_poststate.py)" = c6181ce7a16f787b4b68b2507150c6990da2ef83
+          test "$(git rev-parse HEAD:nox-control/b2-r86/b5_strict_receipted_poststate.py)" = e2997a136b47f06d47eba519e4cd6a87f1c68fb0
+          test "$(git rev-parse HEAD:nox-control/d3-r85/integrated_outcome.py)" = 2be0b73d5ace38c35d9e75bc01d6e2afcd0a0bb9
+          test "$(git hash-object nox-control/d3-r91/b3_r70_s03_terminal_identity.cjs)" = ced1789a8ab19b625888489bf97faa79e07c7e1b
+          test "$(git hash-object nox-control/d3-r91/b3_r69_exchange_scope_binding.cjs)" = 18b3be8fc4264b32d51a57ad4db367b3ba786d41
+          test "$(git hash-object nox-control/d3-r91/b3_r68_route_binding.cjs)" = 6d0fef57783346fe33d59ca39a625015514ae168
+          test "$(git hash-object nox-control/d3-r91/terminal_canonical.py)" = 89872eef8ee3013a94f8e46ebbd4cb020947278e
+          test "$(git hash-object nox-control/d3-r89/s03_identity_join.py)" = c0b6f7d509d89cf031c2238b700db019d36f062d
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$PWD/nox-control/d3-r91:$PWD/nox-control/d3-r89:$PWD/nox-control/d3-r87:$PWD/nox-control/b2-r86:$PWD/nox-control/d3-r85:$PWD/nox-control/b2-r84:$own:$PWD/nox-control/b2-r81:$PWD/nox-control/d3-r80:$PWD/nox-control/b2-r79:$PWD/nox-control/d3-r78:$stage/py:$PWD/nox-control/d3-r76:$PWD/nox-control/b2-r77:$tmp"
+          export D3_B4_MODULE="$stage/b4/b4_existing_turn_pair.mjs"
+          set -x
+          b3=5a061fb98bd6d9fcab4c64abbe6f65317fef3a47
+          b5=1c9f984247e557f9b2e393f9e2c24246f4f6a8de
+          git fetch --no-tags --depth=1 origin "$b3" "$b5"
+          dest="$PWD/nox-control/b2-r92"
+          for name in b3_r71_physical_terminal_composition b3_r66_raw_readback_binding b3_r65_r64_physical_pin_check; do
+            git show "$b3:coordination/onepass/$name.cjs" > "$dest/$name.cjs"
+          done
+          for name in b3_r70_s03_terminal_identity b3_r69_exchange_scope_binding b3_r68_route_binding; do
+            cp "nox-control/d3-r91/$name.cjs" "$dest/$name.cjs"
+          done
+          git show "$b5:nox-control/b5-r72/retained_pair.py" > "$dest/retained_pair.py"
+          test "$(git hash-object "$dest/b3_r71_physical_terminal_composition.cjs")" = 4c0cd74bc0453d3e450894668338499549217f50
+          test "$(git hash-object "$dest/b3_r66_raw_readback_binding.cjs")" = c4331cc22cb94da0c67fa765e27c838d7b354c66
+          test "$(git hash-object "$dest/b3_r65_r64_physical_pin_check.cjs")" = 1e22eff92da6b951ad22dea2b2db09201b2d371b
+          test "$(git hash-object "$dest/retained_pair.py")" = acdd8421db132d7754faa1229e493920d5bf5682
+          test "$(git hash-object nox-control/d3-r91/distinct_dialog.py)" = c1bb7f2eeb336a854a90c7669ca4ed76fb2ea8e5
+          test "$(git hash-object nox-control/d3-r91/test_distinct_dialog.py)" = be6c7b2b564eec4ff87f1b2e13ba5d64f50c5507
+          export PYTHONPATH="$dest:$PYTHONPATH"
+          cd "$tmp"
+          python3 -B -m unittest -v test_quality_physical_pair.QualityPhysicalPair
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false
