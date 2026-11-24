@@ -1,0 +1,32 @@
+name: NOX B1 R81 canonical DOM recovery
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b1-r81/**'
+      - '.github/workflows/nox-b1-r81-canonical-dom.yml'
+permissions:
+  contents: read
+jobs:
+  staged-browser:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Recreate exact R72 stage and exercise corrected Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin 3ffc1edd2f221d8e7e03369f856709c6e8b96fc1 1610a9688bae986a30621befc58b004e07b67d31 2e26491241fb2483e6b6c2a4647810ae4ed15058
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          git show 3ffc1edd2f221d8e7e03369f856709c6e8b96fc1:nox-control/b0-r53/stage_proxy_r72.py > "$tmp/stage.py"
+          test "$(git hash-object "$tmp/stage.py")" = 5f3f1ac77168927da6f5fbb11ae4f83eb1ff3195
+          python3 -B "$tmp/stage.py" --repo "$PWD" --output "$tmp/r72.zip"
+          echo "4e9d08619e84b244c619a42cc76f6b0b28dd3ad74cbd0f6a2a683f689c80e3c6  $tmp/r72.zip" | sha256sum -c -
+          unzip -q "$tmp/r72.zip" -d "$tmp/staged"
+          python3 -m pip install playwright==1.51.0
+          python3 -m playwright install --with-deps chromium
+          python3 -B nox-control/b1-r81/test_staged_browser.py "$tmp/staged"
