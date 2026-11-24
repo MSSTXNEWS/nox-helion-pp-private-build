@@ -1,0 +1,4563 @@
+"""B5 focused source contract: RU first-turn / Spanish follow-up, same S03 dialog.
+
+No browser, native POST, live S03 or production host mutation. The historical
+multiturn canonical-S03 HOLD remains mandatory until real writer/readback wiring.
+"""
+import asyncio
+import hashlib
+import inspect
+import json
+import shutil
+import subprocess
+import unittest
+from unittest.mock import AsyncMock
+
+from owner_chat_browser_qa import (
+    allowed_qa_request,
+    allowed_qa_stream_url,
+    native_chat_route_candidate,
+    canonical_s03_proof_valid,
+    canonical_s03_pinned_evidence_valid,
+    canonical_s03_firstturn_prefix_valid,
+    canonical_s03_resumed_second_turn_valid,
+    click_send,
+    json_response,
+    owner_history_json_response,
+    firstturn_history_valid,
+    firstturn_prefix_identity_valid,
+    firstturn_session_continuity_valid,
+    verified_two_turn_firstturn_ids,
+    owner_session_cookie_pin,
+    owner_session_continuity_valid,
+    empty_dialog_history_valid,
+    exact_native_post_fence,
+    multiturn_followup_prompt,
+    ru_es_context_challenge,
+    ru_es_unleaked_first_prompt,
+    ru_es_unleaked_first_answer_valid,
+    multiturn_history_valid,
+    multiturn_transcript_sha256,
+    native_terminal_stream_valid,
+    readback_evidence,
+    clean_two_turn_browser_runtime,
+    browser_run,
+    require_screenshot_captures,
+    OBSERVER_JS,
+)
+
+TOKEN = "gmnop"
+DIALOG = "synthetic-owner-dialog"
+RU = f"[NOX UI QA {TOKEN}] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов."
+FIRST = "1,2,3,4,5,6,7,8,9,10"
+LAST = "10,9,8,7,6,5,4,3,2,1"
+
+
+def rows(spanish_prompt):
+    return [
+        {"role": "user", "content": RU},
+        {"role": "assistant", "content": FIRST},
+        {"role": "user", "content": spanish_prompt},
+        {"role": "assistant", "content": LAST},
+    ]
+
+
+def s03_proof(transcript):
+    writer = {
+        "source": "canonical_s03", "verified": True, "durable": True,
+        "event_id": "evt-02", "turn_id": "turn-02", "sequence": 2,
+        "dialog_id": DIALOG,
+        "full_transcript_sha256": multiturn_transcript_sha256(transcript),
+    }
+    readback = {
+        "source": "canonical_s03", "independent": True,
+        "event_id": "evt-02", "turn_id": "turn-02", "sequence": 2,
+        "dialog_id": DIALOG, "messages": transcript,
+        "full_transcript_sha256": multiturn_transcript_sha256(transcript),
+        "full_answer_sha256": hashlib.sha256(LAST.encode("utf-8")).hexdigest(),
+    }
+    # Strict session-annotated rows require explicit matching session pins
+    # from both independent canonical witnesses. Absent metadata is legacy.
+    if len(transcript) == 4 and all('session_id' in row for row in transcript):
+        writer['session_id'] = transcript[0]['session_id']
+        readback['session_id'] = transcript[0]['session_id']
+    # Test fixtures represent two distinct native witnesses. When the real
+    # writer is wired, both must independently pin the SAME persisted row IDs.
+    if len(transcript) == 4 and all(
+            isinstance(row.get("message_id"), str) for row in transcript):
+        ordered_ids = [row["message_id"] for row in transcript]
+        row_id_sha = hashlib.sha256(json.dumps(
+            ordered_ids, ensure_ascii=False, separators=(",", ":"),
+            allow_nan=False).encode("utf-8")).hexdigest()
+        writer["message_ids_sha256"] = row_id_sha
+        readback["message_ids_sha256"] = row_id_sha
+    return writer, readback
+
+
+class OwnerRuEsContinuity(unittest.TestCase):
+    def test_two_turn_dialog_history_cannot_claim_canonical_s03_readback(self):
+        # Even a perfect first-turn browser/history match is NOT a trusted
+        # writer receipt plus an independently verified canonical S03 read.
+        self.assertEqual(
+            readback_evidence(True, True, True),
+            {'dialog_history_readback_verified': True,
+             's03_readback_verified': False})
+        self.assertEqual(
+            readback_evidence(True, True, False),
+            {'dialog_history_readback_verified': True,
+             's03_readback_verified': True})
+        for saved, native in ((False, True), (True, False),
+                              (None, True), (True, None),
+                              (1, True), (True, 'true')):
+            with self.subTest(saved=repr(saved), native=repr(native)):
+                evidence = readback_evidence(saved, native, True)
+                self.assertFalse(evidence['dialog_history_readback_verified'])
+                self.assertFalse(evidence['s03_readback_verified'])
+        # Verify this helper is actually used by the production browser
+        # reporting path, rather than being an unconnected test-only helper.
+        self.assertIn('**readback_evidence(saved, native_equal,', inspect.getsource(browser_run))
+
+    def test_native_ndjson_rejects_truncated_utf8_eof_after_done(self):
+        """Actual JS observer must flush fatal UTF-8 state at clean stream EOF.
+
+        Without decoder.decode() at EOF, a dangling leading byte after DONE
+        vanishes silently and the clone reports native_stream_complete=True.
+        """
+        if not shutil.which("node"):
+            self.skipTest("Node required for byte-stream observer regression")
+        driver = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const observer = fs.readFileSync(0, 'utf8');
+async function check(chunks, status=200) {
+  let index = 0;
+  const reader = {
+    read: async () => index < chunks.length
+      ? {done: false, value: Uint8Array.from(chunks[index++])}
+      : {done: true},
+    cancel: async () => {}
+  };
+  const response = {
+    status,
+    body: {getReader: () => reader},
+    clone() { return this; }
+  };
+  const win = {fetch: async () => response};
+  class Canvas { getContext() { return null; } }
+  const env = {
+    window: win, HTMLCanvasElement: Canvas, TextDecoder, URL,
+    Request: class Request {}, performance: {now: () => 25},
+    location: {origin: 'http://qa.invalid', href: 'http://qa.invalid/'},
+    document: {querySelectorAll: () => [], getElementById: () => null},
+    addEventListener: () => {}, requestAnimationFrame: () => {}
+  };
+  vm.runInNewContext(observer, env);
+  await win.fetch('http://qa.invalid/api/nox/chat/stream', {method:'POST'});
+  await new Promise(resolve => setTimeout(resolve, 15));
+  return win.__NOX_BROWSER_QA;
+}
+(async () => {
+  const complete = Buffer.from('{"type":"delta","text":"ñ"}\\n{"type":"done","saved":true,"s03_integrated":true,"dialog_id":"synthetic"}\\n'.replaceAll('\\n', '\n'),'utf8');
+  const needle = Buffer.from('ñ','utf8');
+  const at = complete.indexOf(needle);
+  assert.ok(at > 0);
+  const split = await check([complete.subarray(0,at+1),complete.subarray(at+1)]);
+  assert.equal(split.nativeStreamComplete,true,'split valid UTF-8 must pass');
+  assert.equal(split.error,null);
+  assert.equal(split.nativeTerminalCount,1);
+  // A syntactically valid DONE in a native HTTP error response is NOT a
+  // successful model turn and cannot certify S03 persistence.
+  for (const status of [401, 403, 500, 503]) {
+    const rejected = await check([complete], status);
+    assert.equal(rejected.nativeStreamComplete,false,'non-200 must HOLD');
+    assert.equal(rejected.error,'HOLD_QA_NATIVE_HTTP_STATUS');
+    assert.equal(rejected.nativeTerminalCount,0);
+  }
+  // B5 browser observer must not bless a later DONE after an earlier failure
+  // status/meta/start; B0's distinct owner_chat_probe remains untouched.
+  const doneFrame = '{"type":"done","saved":true,"s03_integrated":true,"dialog_id":"synthetic"}';
+  const deltaFrame = '{"type":"delta","text":"hola"}';
+  const statusFrames = [
+    {type:'status',state:'failed'},
+    {type:'status',status:'ERROR'},
+    {type:'meta',success:false},
+    {type:'start',ok:false},
+    {type:'status',phase:'cancelled'},
+    {type:'meta',status:503},
+    {type:'meta',error:{code:'failure'}},
+    {type:'done',saved:true,s03_integrated:true,dialog_id:'synthetic',success:false},
+    // A failing delta or extension frame cannot be rescued by later DONE.
+    {type:'delta',text:'hola',state:'failed'},
+    {type:'delta',text:'hola',status:503},
+    {type:'delta',text:'hola',error:{code:'upstream_failed'}},
+    {type:'extension',status:'cancelled'},
+    // Provider status codes may be strings, and state strings can be padded.
+    {type:'status',state:' FAILED '},
+    {type:'delta',status:'503',text:'hola'},
+    {type:'meta',status:' 429 '},
+    {type:'extension',phase:' Cancelled '},
+    {type:'done',status:'504',saved:true,s03_integrated:true,dialog_id:'synthetic'},
+    // Structured HTTP failures must never be cleared by a later DONE.
+    {type:'meta',code:503},
+    {type:'delta',text:'hola',status_code:' 503 '},
+    {type:'status',status:{code:502}},
+    {type:'extension',httpStatus:429},
+    {type:'meta',status:{statusCode:' 504 '}},
+    {type:'done',statusCode:503,saved:true,s03_integrated:true,dialog_id:'synthetic'},
+  ];
+  for (const poison of statusFrames) {
+    const payload = Buffer.from([deltaFrame,JSON.stringify(poison),doneFrame].join('\n')+'\n','utf8');
+    const rejected = await check([payload]);
+    assert.equal(rejected.nativeStreamComplete,false,'failed status cannot be accepted');
+    assert.equal(rejected.error,'HOLD_QA_PRETERMINAL_FAILURE_STATUS');
+  }
+  const cleanStatus = Buffer.from([
+    deltaFrame, '{"type":"delta","text":"mundo","state":"running"}',
+    '{"type":"status","state":"running","status":{"code":200}}',
+    '{"type":"delta","text":"bien","status_code":"200"}',doneFrame
+  ].join('\n')+'\n','utf8');
+  const permitted = await check([cleanStatus]);
+  assert.equal(permitted.nativeStreamComplete,true,'running status remains compatible');
+  assert.equal(permitted.error,null);
+  const dangling = await check([complete,Buffer.from([0xc3])]);
+  assert.equal(dangling.nativeStreamComplete,false,'dangling UTF-8 must HOLD');
+  assert.equal(dangling.error,'HOLD_QA_STREAM_OBSERVER');
+  // DONE must reject trailing blank frames and partial whitespace fragments.
+  for (const chunks of [
+    [complete, Buffer.from('\\n')],
+    [Buffer.concat([complete,Buffer.from(' \\n')])],
+    [Buffer.concat([complete,Buffer.from(' ')])]
+  ]) {
+    const extra = await check(chunks);
+    assert.equal(extra.nativeStreamComplete,false,'trailing bytes must HOLD');
+    assert.equal(extra.error,'HOLD_QA_TRAILING_AFTER_DONE');
+  }
+})().catch(error => {console.error(error);process.exitCode=1;});
+"""
+        result = subprocess.run(
+            ["node", "-e", driver],
+            input=OBSERVER_JS.replace('__CONFIG__', '{"did":"synthetic"}'),
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            timeout=15, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr[:1000])
+
+    def test_native_stream_done_is_not_terminal_until_clean_eof_for_each_turn(self):
+        complete = {"native_stream_complete": True, "native_terminal_count": 1,
+                    "done": {"saved": True, "s03_integrated": True,
+                             "dialog_matches": True}, "error": None}
+        for turn in (1, 2):
+            self.assertTrue(native_terminal_stream_valid(dict(complete,
+                native_calls=turn)))
+        for invalid in (
+            dict(complete, native_stream_complete=False),
+            dict(complete, native_stream_complete=None),
+            dict(complete, native_terminal_count=0),
+            dict(complete, native_terminal_count=2),
+            dict(complete, native_terminal_count=1.0),
+            dict(complete, native_terminal_count=True),
+            dict(complete, error="HOLD_QA_TRAILING_AFTER_DONE"),
+            dict(complete, error="HOLD_QA_STREAM_NOT_TERMINAL"),
+            dict(complete, done=None),
+        ):
+            with self.subTest(case=str(invalid)[:90]):
+                self.assertFalse(native_terminal_stream_valid(invalid))
+        self.assertFalse(native_terminal_stream_valid(None))
+        self.assertFalse(native_terminal_stream_valid({}))
+        # The JS observer is the actual witness producer. Check its syntax on
+        # CI (Node is on ubuntu-latest); no browser/model/network side effects.
+        self.assertIn("HOLD_QA_TRAILING_AFTER_DONE", OBSERVER_JS)
+        self.assertIn("HOLD_QA_STREAM_NOT_TERMINAL", OBSERVER_JS)
+        self.assertIn("q.nativeStreamComplete=true", OBSERVER_JS)
+        if shutil.which("node"):
+            check = subprocess.run(["node", "--check", "-"],
+                input=OBSERVER_JS.replace('__CONFIG__', '{"did":"synthetic"}'),
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=12, check=False)
+            self.assertEqual(check.returncode, 0, check.stderr[:500])
+
+    def test_native_done_requires_explicit_true_persistence_and_session_flags(self):
+        """Terminal EOF alone cannot certify saved S03 or same RU-ES dialog."""
+        complete = {
+            "native_stream_complete": True, "native_terminal_count": 1,
+            "error": None,
+            "done": {"saved": True, "s03_integrated": True,
+                     "dialog_matches": True},
+        }
+        self.assertTrue(native_terminal_stream_valid(complete))
+        for done in ({}, {"saved": True},
+                     {"saved": True, "s03_integrated": True},
+                     {"saved": True, "s03_integrated": True,
+                      "dialog_matches": False},
+                     {"saved": 1, "s03_integrated": True,
+                      "dialog_matches": True},
+                     {"saved": True, "s03_integrated": "true",
+                      "dialog_matches": True},
+                     {"saved": True, "s03_integrated": True,
+                      "dialog_matches": None}):
+            with self.subTest(done=done):
+                self.assertFalse(native_terminal_stream_valid(dict(complete, done=done)))
+
+    def test_canonical_s03_four_rows_are_bound_to_own_dialog(self):
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        legacy = rows(es)
+        writer, readback = s03_proof(legacy)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, legacy))
+        scoped = [dict(row, dialog_id=DIALOG) for row in legacy]
+        writer, readback = s03_proof(scoped)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, scoped))
+        for wrong_scope in ("foreign-dialog", None, "", 17):
+            for row_index in range(4):
+                with self.subTest(row=row_index, scope=repr(wrong_scope)):
+                    forged = [dict(row) for row in scoped]
+                    forged[row_index]["dialog_id"] = wrong_scope
+                    writer, readback = s03_proof(forged)
+                    self.assertFalse(canonical_s03_proof_valid(
+                        writer, readback, DIALOG, forged))
+
+    def test_strict_s03_rejects_partially_scoped_four_row_dialog_provenance(self):
+        """One missing per-row dialog_id cannot attest a single RU/ES dialog.
+
+        Source-only synthetic receipts; native S03 writer/readback still HOLD.
+        Fully scoped and entirely legacy rows remain compatible.
+        """
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        legacy = [
+            dict(row, message_id=f"scope-row-{index}")
+            for index, row in enumerate(rows(es), 1)
+        ]
+
+        def strict(sample):
+            writer, reader = s03_proof(sample)
+            return canonical_s03_proof_valid(
+                writer, reader, DIALOG, sample, require_full_transcript_pin=True)
+
+        scoped = [dict(row, dialog_id=DIALOG) for row in legacy]
+        self.assertTrue(strict(legacy))
+        self.assertTrue(strict(scoped))
+        for missing in range(4):
+            with self.subTest(missing_row=missing):
+                partial = [dict(row) for row in scoped]
+                del partial[missing]["dialog_id"]
+                self.assertFalse(strict(partial))
+        for included in range(4):
+            with self.subTest(only_scoped_row=included):
+                partial = [dict(row) for row in legacy]
+                partial[included]["dialog_id"] = DIALOG
+                self.assertFalse(strict(partial))
+        foreign = [dict(row) for row in scoped]
+        foreign[2]["dialog_id"] = "foreign-dialog"
+        self.assertFalse(strict(foreign))
+
+    def test_browser_first_second_reload_reject_partial_row_dialog_provenance(self):
+        """All owner-history gates reject partial scope, independent of S03 R24."""
+        from owner_chat_browser_qa import (
+            coherent_row_dialog_scope, postquiet_fourrow_history_stable,
+        )
+        import copy
+        es = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        legacy = [dict(row, message_id=f'browser-row-{i}')
+                  for i, row in enumerate(rows(es), 1)]
+        scoped = [dict(row, dialog_id=DIALOG) for row in legacy]
+        sha = multiturn_transcript_sha256(legacy)
+        first_ids = ('browser-row-1', 'browser-row-2')
+
+        def browser_checks(sample):
+            first = {'dialog_id': DIALOG, 'messages': copy.deepcopy(sample[:2])}
+            final = {'dialog_id': DIALOG, 'messages': copy.deepcopy(sample)}
+            return (
+                firstturn_history_valid(first, RU, FIRST, DIALOG),
+                multiturn_history_valid(sample, RU, FIRST, es, LAST, DIALOG),
+                postquiet_fourrow_history_stable(
+                    final, copy.deepcopy(final), DIALOG, sha, first_ids),
+            )
+
+        self.assertEqual(browser_checks(legacy), (True, True, True))
+        self.assertEqual(browser_checks(scoped), (True, True, True))
+        for index in range(4):
+            with self.subTest(missing_dialog_id=index):
+                partial = copy.deepcopy(scoped)
+                del partial[index]['dialog_id']
+                self.assertFalse(coherent_row_dialog_scope(partial))
+                first, second, reload = browser_checks(partial)
+                self.assertFalse(second)
+                self.assertFalse(reload)
+                if index < 2:
+                    self.assertFalse(first)
+            with self.subTest(only_scoped_row=index):
+                partial = copy.deepcopy(legacy)
+                partial[index]['dialog_id'] = DIALOG
+                self.assertFalse(coherent_row_dialog_scope(partial))
+                first, second, reload = browser_checks(partial)
+                self.assertFalse(second)
+                self.assertFalse(reload)
+                if index < 2:
+                    self.assertFalse(first)
+        self.assertIn('firstturn_history_valid(', inspect.getsource(browser_run))
+        self.assertIn('multiturn_history_valid(', inspect.getsource(browser_run))
+        self.assertIn('postquiet_fourrow_history_stable(',
+                      inspect.getsource(browser_run))
+
+    def test_rootless_browser_fourrow_cannot_mix_explicit_dialog_scopes(self):
+        """Optional root parameter must never permit cross-dialog RU/ES rows."""
+        from owner_chat_browser_qa import coherent_row_dialog_scope
+        import copy
+        es = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        legacy = [dict(row, message_id=f'rootless-row-{i}')
+                  for i, row in enumerate(rows(es), 1)]
+        scoped = [dict(row, dialog_id=DIALOG) for row in legacy]
+
+        def without_root(sample):
+            return multiturn_history_valid(sample, RU, FIRST, es, LAST)
+
+        self.assertTrue(coherent_row_dialog_scope(legacy))
+        self.assertTrue(without_root(legacy))
+        self.assertTrue(coherent_row_dialog_scope(scoped))
+        self.assertTrue(without_root(scoped))
+        self.assertTrue(multiturn_history_valid(
+            scoped, RU, FIRST, es, LAST, DIALOG))
+        for index in range(4):
+            for foreign in ('foreign-dialog', None, '', ' bad ', '\u200b', 42):
+                with self.subTest(row=index, scope=repr(foreign)):
+                    mixed = copy.deepcopy(scoped)
+                    mixed[index]['dialog_id'] = foreign
+                    self.assertFalse(coherent_row_dialog_scope(mixed))
+                    self.assertFalse(without_root(mixed))
+        self.assertFalse(coherent_row_dialog_scope(
+            [dict(scoped[0]), dict(scoped[1], dialog_id=None)]))
+
+    def test_explicit_message_ids_do_not_replay_one_row_as_multiple_ru_es_turns(self):
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        legacy = rows(es)
+        self.assertTrue(multiturn_history_valid(
+            legacy, RU, FIRST, es, LAST, dialog_id=DIALOG))
+        unique = [dict(row, message_id=f"msg-{i}") for i, row in enumerate(legacy)]
+        self.assertTrue(firstturn_history_valid(
+            {"dialog_id": DIALOG, "messages": unique[:2]}, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            unique, RU, FIRST, es, LAST, dialog_id=DIALOG))
+        writer, independent = s03_proof(unique)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, independent, DIALOG, unique))
+        duplicate_first = [dict(row) for row in unique[:2]]
+        duplicate_first[1]["message_id"] = duplicate_first[0]["message_id"]
+        self.assertFalse(firstturn_history_valid(
+            {"messages": duplicate_first}, RU, FIRST, DIALOG))
+        for malformed in ("msg-1", None, "", " ", 7, True):
+            with self.subTest(message_id=repr(malformed)):
+                changed = [dict(row) for row in unique]
+                changed[2]["message_id"] = malformed
+                self.assertFalse(multiturn_history_valid(
+                    changed, RU, FIRST, es, LAST, dialog_id=DIALOG))
+                writer, independent = s03_proof(changed)
+                self.assertFalse(canonical_s03_proof_valid(
+                    writer, independent, DIALOG, changed))
+
+    def test_strict_s03_rejects_whitespace_aliased_durable_row_ids(self):
+        """Four S03 IDs must be byte-canonical, not merely unique after strip.
+
+        In a strict two-turn witness both writer and independent reader can
+        agree on an invalid padded ID and its exact SHA. Such agreement does
+        not make that durable identity safe to reconcile across read paths.
+        """
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        clean = [dict(row, message_id=f"msg-{i}")
+                 for i, row in enumerate(rows(es))]
+        writer, reader = s03_proof(clean)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, clean, require_full_transcript_pin=True))
+        for index in range(4):
+            for bad_id in (f" msg-{index}", f"msg-{index} ",
+                           f"\tmsg-{index}", f"msg-{index}\t"):
+                with self.subTest(row=index, identifier=repr(bad_id)):
+                    aliased = [dict(row) for row in clean]
+                    aliased[index]["message_id"] = bad_id
+                    matching_writer, matching_reader = s03_proof(aliased)
+                    self.assertFalse(canonical_s03_proof_valid(
+                        matching_writer, matching_reader, DIALOG, aliased,
+                        require_full_transcript_pin=True))
+
+    def test_strict_s03_rejects_invisible_control_row_ids(self):
+        """Matched witness hashes cannot legitimize invisible message identities."""
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        clean = [dict(row, message_id=f"msg-{i}")
+                 for i, row in enumerate(rows(es))]
+        writer, reader = s03_proof(clean)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, clean, require_full_transcript_pin=True))
+        for index in range(4):
+            for suffix in ("\u200b", "\u2060", "\u202e", "\x00"):
+                with self.subTest(row=index, suffix=repr(suffix)):
+                    bad = [dict(row) for row in clean]
+                    bad[index]["message_id"] += suffix
+                    matched_writer, matched_reader = s03_proof(bad)
+                    self.assertFalse(canonical_s03_proof_valid(
+                        matched_writer, matched_reader, DIALOG, bad,
+                        require_full_transcript_pin=True))
+        # Exact existing legacy, non-strict 4-row validation is not tightened.
+        legacy_writer, legacy_reader = s03_proof(clean)
+        self.assertTrue(canonical_s03_proof_valid(
+            legacy_writer, legacy_reader, DIALOG, clean))
+
+    def test_strict_s03_rejects_nonprintable_owner_session_even_if_witnesses_match(self):
+        """Identical Unicode-control session IDs are not a canonical owner pin."""
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        clean = [dict(row, message_id=f"msg-{i}", session_id="owner-session")
+                 for i, row in enumerate(rows(es))]
+        writer, readback = s03_proof(clean)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, clean, require_full_transcript_pin=True))
+        for suffix in ("\u200b", "\u2060", "\u202e", "\x00"):
+            # All four rows and both synthetic witnesses agree; a text/hash
+            # match still must not certify a malformed session identity.
+            poisoned = [dict(row, session_id="owner-session" + suffix)
+                        for row in clean]
+            matched_writer, matched_readback = s03_proof(poisoned)
+            with self.subTest(suffix=repr(suffix)):
+                self.assertFalse(canonical_s03_proof_valid(
+                    matched_writer, matched_readback, DIALOG, poisoned,
+                    require_full_transcript_pin=True))
+        # Historical rows without any session metadata keep their contract.
+        legacy = [dict(row, message_id=f"msg-{i}")
+                  for i, row in enumerate(rows(es))]
+        old_writer, old_reader = s03_proof(legacy)
+        self.assertTrue(canonical_s03_proof_valid(
+            old_writer, old_reader, DIALOG, legacy))
+
+    def test_firstturn_message_ids_survive_spanish_followup_readback(self):
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        final_rows = [
+            dict(row, message_id=f"turn-{i}") for i, row in enumerate(rows(es))
+        ]
+        initial_ids = ("turn-0", "turn-1")
+        self.assertTrue(firstturn_prefix_identity_valid(initial_ids, final_rows))
+        self.assertTrue(multiturn_history_valid(
+            final_rows, RU, FIRST, es, LAST, dialog_id=DIALOG))
+
+        # The preexisting four-row checker accepts matching role/text despite
+        # history-row replacement. The new second-read fence must reject it.
+        for row_index in (0, 1):
+            for changed_id in (f"rewritten-{row_index}", None, "", 19):
+                with self.subTest(row=row_index, changed_id=repr(changed_id)):
+                    replaced = [dict(row) for row in final_rows]
+                    if changed_id is None:
+                        replaced[row_index].pop("message_id")
+                    else:
+                        replaced[row_index]["message_id"] = changed_id
+                    self.assertFalse(firstturn_prefix_identity_valid(
+                        initial_ids, replaced))
+                    if isinstance(changed_id, str) and changed_id:
+                        self.assertTrue(multiturn_history_valid(
+                            replaced, RU, FIRST, es, LAST, dialog_id=DIALOG))
+
+        # Legacy first-turn history without IDs remains usable, even when
+        # durable IDs appear in the second read. Explicit malformed source
+        # snapshots or malformed final history fail closed.
+        self.assertTrue(firstturn_prefix_identity_valid(
+            (None, None), final_rows))
+        self.assertFalse(firstturn_prefix_identity_valid(
+            ("", "turn-1"), final_rows))
+        self.assertFalse(firstturn_prefix_identity_valid(
+            ["turn-0", "turn-1"], final_rows))
+        self.assertFalse(firstturn_prefix_identity_valid(
+            initial_ids, final_rows[:2]))
+
+    def test_browser_ru_es_row_ids_reject_nonprintable_aliases(self):
+        """Two-turn owner-history PASS cannot bless invisible durable IDs.
+
+        The strict canonical S03 verifier already rejects nonprintable IDs.
+        This browser-only preflight must agree, even if BOTH owner-history
+        snapshots repeat the same poisoned ID (not merely detect drift).
+        No real browser, model POST or native S03 write occurs.
+        """
+        import copy
+        from owner_chat_browser_qa import postquiet_fourrow_history_stable
+
+        es = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        clean = {'dialog_id': DIALOG, 'messages': [
+            dict(row, message_id=f'row-{i}')
+            for i, row in enumerate(rows(es), 1)]}
+        transcript = multiturn_transcript_sha256(clean['messages'])
+        first_ids = ('row-1', 'row-2')
+        check = lambda h, ids: postquiet_fourrow_history_stable(
+            h, copy.deepcopy(h), DIALOG, transcript, ids)
+        self.assertEqual(verified_two_turn_firstturn_ids(
+            clean['messages'][:2]), first_ids)
+        self.assertTrue(check(clean, first_ids))
+        for index in range(4):
+            for invisible in ('\u200b', '\u2060', '\u202e', '\x00'):
+                with self.subTest(index=index, marker=repr(invisible)):
+                    poisoned = copy.deepcopy(clean)
+                    poisoned['messages'][index]['message_id'] += invisible
+                    matching_first_ids = tuple(
+                        row['message_id'] for row in poisoned['messages'][:2])
+                    # Both snapshots contain the same 4 rows. Prior code
+                    # returned True despite uncanonical persistent IDs.
+                    self.assertFalse(check(poisoned, matching_first_ids))
+                    if index < 2:
+                        self.assertIsNone(verified_two_turn_firstturn_ids(
+                            poisoned['messages'][:2]))
+        # Printable Russian and Spanish Unicode is valid inside row IDs.
+        multilingual = copy.deepcopy(clean)
+        multilingual['messages'][0]['message_id'] = 'ряд-ñ-1'
+        multilingual['messages'][1]['message_id'] = 'fila-á-2'
+        multilingual_ids = tuple(row['message_id']
+                                 for row in multilingual['messages'][:2])
+        self.assertEqual(verified_two_turn_firstturn_ids(
+            multilingual['messages'][:2]), multilingual_ids)
+        self.assertTrue(check(multilingual, multilingual_ids))
+        caller = inspect.getsource(browser_run)
+        self.assertLess(caller.index('verified_two_turn_firstturn_ids('),
+                        caller.index("report['multiturn_browser_acceptance_verified']=True"))
+        self.assertLess(caller.index('postquiet_fourrow_history_stable('),
+                        caller.index("report['multiturn_browser_acceptance_verified']=True"))
+
+    def test_browser_ru_es_session_metadata_rejects_invisible_unicode(self):
+        """Owner-history session metadata must agree with strict S03 identity.
+
+        Browser-only checks used to accept fully matching poisoned session
+        identifiers even when canonical S03 rejects them. This is synthetic
+        history verification only, not a live S03 writer/readback acceptance.
+        """
+        from owner_chat_browser_qa import (
+            consistent_explicit_row_session_ids,
+            root_history_session_valid,
+            postquiet_fourrow_history_stable,
+        )
+        import copy
+
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        scoped_rows = [
+            dict(row, message_id=f"session-row-{i}", session_id="owner-ñ")
+            for i, row in enumerate(rows(es), 1)
+        ]
+        complete = {"dialog_id": DIALOG, "session_id": "owner-ñ",
+                    "messages": scoped_rows}
+        first = {"dialog_id": DIALOG, "session_id": "owner-ñ",
+                 "messages": copy.deepcopy(scoped_rows[:2])}
+        transcript_sha = multiturn_transcript_sha256(scoped_rows)
+        ids = ("session-row-1", "session-row-2")
+        stable = lambda h: postquiet_fourrow_history_stable(
+            h, copy.deepcopy(h), DIALOG, transcript_sha, ids)
+        self.assertTrue(firstturn_history_valid(first, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            scoped_rows, RU, FIRST, es, LAST, DIALOG))
+        self.assertTrue(stable(complete))
+        self.assertTrue(firstturn_session_continuity_valid(
+            first["messages"], scoped_rows))
+        self.assertTrue(root_history_session_valid(complete, scoped_rows))
+
+        # Whole owner-history snapshots are identical: drift-only fences
+        # cannot catch noncanonical, invisible identity aliases.
+        for invisible in ("\u200b", "\u2060", "\u202e", "\x00"):
+            with self.subTest(invisible=repr(invisible), source="both_scopes"):
+                poisoned = copy.deepcopy(complete)
+                poisoned["session_id"] += invisible
+                for row in poisoned["messages"]:
+                    row["session_id"] += invisible
+                self.assertFalse(consistent_explicit_row_session_ids(
+                    poisoned["messages"]))
+                self.assertFalse(root_history_session_valid(
+                    poisoned, poisoned["messages"]))
+                self.assertFalse(multiturn_history_valid(
+                    poisoned["messages"], RU, FIRST, es, LAST, DIALOG))
+                self.assertFalse(stable(poisoned))
+                self.assertFalse(firstturn_history_valid(
+                    {"dialog_id": DIALOG, "session_id": poisoned["session_id"],
+                     "messages": poisoned["messages"][:2]},
+                    RU, FIRST, DIALOG))
+            with self.subTest(invisible=repr(invisible), source="root_only"):
+                poisoned_root = copy.deepcopy(complete)
+                poisoned_root["session_id"] += invisible
+                self.assertFalse(root_history_session_valid(
+                    poisoned_root, poisoned_root["messages"]))
+                self.assertFalse(stable(poisoned_root))
+
+        # Absence of optional session annotations remains legacy-compatible.
+        legacy_rows = [{k: v for k, v in row.items() if k != "session_id"}
+                       for row in scoped_rows]
+        legacy = {"dialog_id": DIALOG, "messages": legacy_rows}
+        self.assertTrue(firstturn_history_valid(
+            {"dialog_id": DIALOG, "messages": legacy_rows[:2]},
+            RU, FIRST, DIALOG))
+        self.assertTrue(stable(legacy))
+        self.assertTrue(multiturn_history_valid(
+            legacy_rows, RU, FIRST, es, LAST, DIALOG))
+        caller = inspect.getsource(browser_run)
+        self.assertLess(
+            caller.index("firstturn_session_continuity_valid("),
+            caller.index("report['multiturn_browser_acceptance_verified']=True"))
+        self.assertLess(
+            caller.index("postquiet_fourrow_history_stable("),
+            caller.index("report['multiturn_browser_acceptance_verified']=True"))
+
+    def test_first_to_second_ru_es_session_scope_does_not_rotate(self):
+        # Even homogeneous snapshots are unsafe if the first RU turn was
+        # saved in owner session A and the completed RU/ES history is session B.
+        # Exact row IDs and all four original UTF-8 texts remain unchanged.
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        final = [dict(row, message_id=f"durable-{index}")
+                 for index, row in enumerate(rows(es))]
+        first = [dict(row) for row in final[:2]]
+        scoped_first = [dict(row, session_id="owner-A") for row in first]
+        scoped_final = [dict(row, session_id="owner-A") for row in final]
+        self.assertTrue(firstturn_session_continuity_valid(first, final))
+        self.assertTrue(firstturn_session_continuity_valid(
+            scoped_first, scoped_final))
+        self.assertTrue(firstturn_history_valid(
+            {"messages": scoped_first}, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            scoped_final, RU, FIRST, es, LAST, dialog_id=DIALOG))
+        self.assertTrue(firstturn_prefix_identity_valid(
+            ("durable-0", "durable-1"), scoped_final))
+        self.assertFalse(firstturn_session_continuity_valid(
+            scoped_first, [dict(row, session_id="owner-B") for row in final]))
+        self.assertFalse(firstturn_session_continuity_valid(
+            scoped_first, final))  # Scoped to legacy unscoped rotation.
+        self.assertFalse(firstturn_session_continuity_valid(
+            first, scoped_final))  # Legacy to newly scoped rotation.
+        for bad in (None, "", " ", 17, True, "owner-A "):
+            with self.subTest(session_id=repr(bad)):
+                corrupted = [dict(row) for row in scoped_final]
+                corrupted[2]["session_id"] = bad
+                self.assertFalse(firstturn_session_continuity_valid(
+                    scoped_first, corrupted))
+        self.assertFalse(firstturn_session_continuity_valid(
+            scoped_first[:1], scoped_final))
+        self.assertFalse(firstturn_session_continuity_valid(
+            scoped_first, scoped_final[:2]))
+        # Callsite must gate the final browser-history pass itself;
+        # a helper tested but never called is not a physical correction.
+        caller = inspect.getsource(browser_run)
+        self.assertIn(
+            "and firstturn_session_continuity_valid(\n"
+            "                                  rows, second_rows)", caller)
+        self.assertLess(
+            caller.index("and firstturn_session_continuity_valid("),
+            caller.index("report['multiturn_browser_acceptance_verified']=True"))
+
+    def test_presecond_owner_history_root_session_cannot_rotate_or_disagree(self):
+        """History-root session provenance must survive the last pre-ES GET.
+
+        Valid row IDs and UTF-8 text cannot authorize a Spanish model POST
+        when the history envelope silently changes owner session.
+        This regression is browser-history-only, never native S03 proof.
+        """
+        from owner_chat_browser_qa import (
+            presecond_firstturn_history_stable,
+            root_history_session_valid,
+        )
+        import copy
+        initial = {
+            'dialog_id': DIALOG,
+            'session_id': 'owner-session-A',
+            'messages': [
+                {'role': 'user', 'content': RU, 'message_id': 'first-user',
+                 'dialog_id': DIALOG, 'session_id': 'owner-session-A'},
+                {'role': 'assistant', 'content': FIRST, 'message_id': 'first-answer',
+                 'dialog_id': DIALOG, 'session_id': 'owner-session-A'},
+            ],
+        }
+        check = lambda a, b: presecond_firstturn_history_stable(
+            a, b, RU, FIRST, DIALOG)
+        self.assertTrue(root_history_session_valid(
+            initial, initial['messages']))
+        self.assertTrue(check(initial, copy.deepcopy(initial)))
+        for rotated in ('owner-session-B', None, '', ' ', 'owner-session-A ', 42):
+            with self.subTest(root_session=repr(rotated)):
+                changed = copy.deepcopy(initial)
+                changed['session_id'] = rotated
+                self.assertFalse(check(initial, changed))
+                self.assertFalse(firstturn_history_valid(
+                    changed, RU, FIRST, DIALOG))
+        lost = copy.deepcopy(initial)
+        lost.pop('session_id')
+        self.assertFalse(check(initial, lost),
+                         'root provenance cannot disappear before POST')
+        self.assertFalse(check(lost, initial),
+                         'a new root scope cannot silently appear')
+        self.assertTrue(check(lost, copy.deepcopy(lost)),
+                        'fully legacy root metadata remains valid')
+        root_only = copy.deepcopy(lost)
+        for row in root_only['messages']:
+            row.pop('session_id')
+        root_only['session_id'] = 'root-only-A'
+        self.assertTrue(check(root_only, copy.deepcopy(root_only)))
+        shifted = copy.deepcopy(root_only)
+        shifted['session_id'] = 'root-only-B'
+        self.assertFalse(check(root_only, shifted))
+        # Both the ordinary first-turn check and actual last-presecond fence
+        # use the hardened validator; no extra generation POST is introduced.
+        owner_fence = inspect.getsource(
+            __import__('owner_chat_browser_qa').presecond_owner_history_fence)
+        self.assertIn('presecond_firstturn_history_stable(', owner_fence)
+
+    def test_firstsecond_ru_es_prefix_row_dialog_scope_is_immutable(self):
+        """A Spanish follow-up cannot rebind the persisted first RU row scope.
+
+        Only synthetic owner-history responses; NOT native S03 acceptance.
+        """
+        from owner_chat_browser_qa import firstturn_root_session_continuity_valid
+        import copy
+
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        final_rows = [
+            dict(row, message_id=f'durable-{i}', dialog_id=DIALOG,
+                 session_id='owner-A')
+            for i, row in enumerate(rows(spanish))
+        ]
+        first = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                 'messages': copy.deepcopy(final_rows[:2])}
+        completed = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                     'messages': copy.deepcopy(final_rows)}
+        check = firstturn_root_session_continuity_valid
+        self.assertTrue(check(first, completed))
+        self.assertTrue(firstturn_history_valid(first, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            completed['messages'], RU, FIRST, spanish, LAST, dialog_id=DIALOG))
+        for index in (0, 1):
+            with self.subTest(row=index, change='drop_after_spanish'):
+                changed = copy.deepcopy(completed)
+                del changed['messages'][index]['dialog_id']
+                self.assertFalse(multiturn_history_valid(
+                    changed['messages'], RU, FIRST, spanish, LAST,
+                    dialog_id=DIALOG))
+                self.assertFalse(check(first, changed))
+            with self.subTest(row=index, change='add_after_spanish'):
+                initial_legacy = copy.deepcopy(first)
+                del initial_legacy['messages'][index]['dialog_id']
+                self.assertFalse(firstturn_history_valid(
+                    initial_legacy, RU, FIRST, DIALOG))
+                self.assertFalse(check(initial_legacy, completed))
+                both_legacy = copy.deepcopy(completed)
+                del both_legacy['messages'][index]['dialog_id']
+                self.assertTrue(check(initial_legacy, both_legacy))
+        # Unscoped legacy messages in BOTH snapshots remain supported.
+        no_row_scope_first = copy.deepcopy(first)
+        no_row_scope_final = copy.deepcopy(completed)
+        for snapshot in (no_row_scope_first, no_row_scope_final):
+            for row in snapshot['messages']:
+                row.pop('dialog_id')
+        self.assertTrue(check(no_row_scope_first, no_row_scope_final))
+        # The real browser gate must call this helper before browser-only PASS.
+        caller = inspect.getsource(browser_run)
+        self.assertIn('firstturn_root_session_continuity_valid(', caller)
+        self.assertLess(caller.index('firstturn_root_session_continuity_valid('),
+                        caller.index("report['multiturn_browser_acceptance_verified']=True"))
+
+    def test_first_to_second_owner_history_root_dialog_presence_is_pinned(self):
+        """Two separately valid RU/ES histories cannot change root dialog scope."""
+        from owner_chat_browser_qa import firstturn_root_session_continuity_valid
+        import copy
+
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        persisted = [
+            dict(row, message_id=f'persisted-{i}', dialog_id=DIALOG,
+                 session_id='owner-A')
+            for i, row in enumerate(rows(spanish))
+        ]
+        first = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                 'messages': copy.deepcopy(persisted[:2])}
+        completed = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                     'messages': copy.deepcopy(persisted)}
+        check = firstturn_root_session_continuity_valid
+        self.assertTrue(firstturn_history_valid(first, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            completed['messages'], RU, FIRST, spanish, LAST, dialog_id=DIALOG))
+        self.assertTrue(check(first, completed))
+
+        absent_first = copy.deepcopy(first)
+        absent_final = copy.deepcopy(completed)
+        del absent_first['dialog_id']
+        del absent_final['dialog_id']
+        # The old verifier permitted one-sided root disappearance or
+        # appearance despite both individual snapshots being scope-valid.
+        self.assertTrue(firstturn_history_valid(
+            absent_first, RU, FIRST, DIALOG))
+        self.assertTrue(check(absent_first, absent_final))
+        self.assertFalse(check(first, absent_final))
+        self.assertFalse(check(absent_first, completed))
+        altered = copy.deepcopy(completed)
+        altered['dialog_id'] = 'another-dialog'
+        self.assertFalse(check(first, altered))
+
+    def test_postsecond_root_session_provenance_cannot_rotate_from_first_ru_turn(self):
+        """The four-row response must preserve the first root owner-session.
+
+        The prior pre-second fence pins root scope only before the second POST.
+        Valid rows with unchanged IDs, text and per-row scope cannot justify
+        a second history carrying a different envelope root session.
+        """
+        from owner_chat_browser_qa import (
+            firstturn_root_session_continuity_valid, root_history_session_valid,
+        )
+        import copy
+        es = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        completed = [dict(row, message_id=f'persisted-{index}')
+                     for index, row in enumerate(rows(es))]
+        scoped = [dict(row, session_id='owner-A') for row in completed]
+        first = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                 'messages': copy.deepcopy(scoped[:2])}
+        final = {'dialog_id': DIALOG, 'session_id': 'owner-A',
+                 'messages': copy.deepcopy(scoped)}
+        check = firstturn_root_session_continuity_valid
+        self.assertTrue(check(first, final))
+        self.assertTrue(firstturn_history_valid(first, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            final['messages'], RU, FIRST, es, LAST, dialog_id=DIALOG))
+        self.assertTrue(firstturn_prefix_identity_valid(
+            ('persisted-0', 'persisted-1'), final['messages']))
+        for bad_root in ('owner-B', None, '', ' ', 'owner-A ', 19):
+            with self.subTest(root=repr(bad_root)):
+                replaced = copy.deepcopy(final)
+                replaced['session_id'] = bad_root
+                self.assertFalse(check(first, replaced))
+        vanished = copy.deepcopy(final)
+        vanished.pop('session_id')
+        self.assertFalse(check(first, vanished))
+        self.assertFalse(check(vanished, final))
+        # A root-only history is valid on each individual read. This is
+        # the essential false-PASS case: A -> B with unchanged row payloads.
+        root_only_first = copy.deepcopy(first)
+        root_only_final = copy.deepcopy(final)
+        for record in (root_only_first, root_only_final):
+            for row in record['messages']:
+                row.pop('session_id')
+        self.assertTrue(root_history_session_valid(
+            root_only_first, root_only_first['messages']))
+        self.assertTrue(root_history_session_valid(
+            root_only_final, root_only_final['messages']))
+        self.assertTrue(check(root_only_first, root_only_final))
+        root_only_final['session_id'] = 'owner-B'
+        self.assertTrue(root_history_session_valid(
+            root_only_final, root_only_final['messages']))
+        self.assertFalse(check(root_only_first, root_only_final))
+        # Both fully unscoped legacy responses remain source-compatible.
+        root_only_first.pop('session_id')
+        root_only_final.pop('session_id')
+        self.assertTrue(check(root_only_first, root_only_final))
+        self.assertFalse(check({}, root_only_final))
+        self.assertFalse(check(root_only_first, {'messages': []}))
+        caller = inspect.getsource(browser_run)
+        self.assertIn(
+            'and firstturn_root_session_continuity_valid(\n'
+            '                                  history, second_history)', caller)
+        self.assertLess(
+            caller.index('and firstturn_root_session_continuity_valid('),
+            caller.index("report['multiturn_browser_acceptance_verified']=True"))
+
+    def test_second_ru_es_post_needs_two_persisted_firstturn_identities(self):
+        # Matching role/text without two durable identities cannot admit POST 2.
+        first = [
+            {"role": "user", "content": RU, "message_id": "s03-row-01"},
+            {"role": "assistant", "content": FIRST, "message_id": "s03-row-02"},
+        ]
+        self.assertEqual(verified_two_turn_firstturn_ids(first),
+                         ("s03-row-01", "s03-row-02"))
+        for invalid in (
+            [{k: v for k, v in item.items() if k != "message_id"} for item in first],
+            [dict(first[0]), dict(first[1], message_id="s03-row-01")],
+            [dict(first[0]), dict(first[1], message_id=" s03-row-01 ")],
+            [dict(first[0]), dict(first[1], message_id="s03-row-02 ")],
+            [dict(first[0]), dict(first[1], message_id="")],
+            [dict(first[0]), dict(first[1], message_id=None)],
+            [dict(first[0]), dict(first[1], message_id=123)],
+            first[:1],
+            None,
+        ):
+            with self.subTest(rows=repr(invalid)):
+                self.assertIsNone(verified_two_turn_firstturn_ids(invalid))
+        caller = inspect.getsource(browser_run)
+        self.assertIn('firstturn_id_snapshot=verified_two_turn_firstturn_ids(rows)', caller)
+        self.assertIn('HOLD_MULTITURN_FIRSTTURN_IDS_NOT_PERSISTED', caller)
+        self.assertLess(
+            caller.index('firstturn_id_snapshot=verified_two_turn_firstturn_ids(rows)'),
+            caller.index('second_permitted=True'))
+
+    def test_presecond_owner_session_cookie_pin_rejects_rotation(self):
+        # Login 200 is insufficient if a different authenticated browser
+        # session replaces the first-turn cookie before the Spanish POST.
+        original = [dict(name='nox_owner', domain='owner.example', path='/',
+                         value='signed-session-1', httpOnly=True)]
+        pin = owner_session_cookie_pin(original)
+        self.assertIsInstance(pin, str)
+        self.assertEqual(len(pin), 64)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        self.assertEqual(owner_session_cookie_pin([ui, *original]), pin)
+        for changed in (
+            [],
+            [dict(original[0], value='signed-session-2')],
+            [dict(original[0], name='other-owner')],
+            [dict(original[0], path='/other')],
+            [dict(original[0], value='')],
+            [dict(original[0]), dict(original[0])],
+        ):
+            with self.subTest(case=repr(changed)[:60]):
+                self.assertNotEqual(owner_session_cookie_pin(changed), pin)
+        self.assertIsNone(owner_session_cookie_pin([]))
+        self.assertIsNone(owner_session_cookie_pin(None))
+        caller = inspect.getsource(browser_run)
+        self.assertIn("signed_again=await context.request.get(", caller)
+        self.assertIn("HOLD_MULTITURN_OWNER_SESSION_CHANGED", caller)
+        self.assertLess(caller.index("owner_session_pin=owner_session_cookie_pin("),
+                        caller.index("firstturn_id_snapshot=verified_two_turn_firstturn_ids(rows)"))
+        self.assertLess(caller.index("HOLD_MULTITURN_OWNER_SESSION_CHANGED"),
+                        caller.index("second_permitted=True"))
+
+    def test_ru_es_owner_cookie_httponly_downgrade_cannot_reuse_session_pin(self):
+        """No multi-turn owner PASS after a signed cookie becomes JS-readable."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='unchanged-signed-session', httpOnly=True)
+        client_ui = dict(name='theme', domain='owner.example', path='/',
+                         value='dark', httpOnly=False)
+        original_pin = owner_session_cookie_pin([signed])
+        self.assertEqual(len(original_pin), 64)
+        self.assertEqual(owner_session_cookie_pin([client_ui, signed]),
+                         original_pin)
+        self.assertTrue(owner_session_continuity_valid(
+            200, [client_ui, signed], original_pin))
+        for stripped in (False, None):
+            changed = dict(signed)
+            if stripped is None:
+                del changed['httpOnly']
+            else:
+                changed['httpOnly'] = stripped
+            with self.subTest(http_only=stripped):
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [changed], original_pin))
+                self.assertNotEqual(owner_session_cookie_pin([changed]),
+                                    original_pin)
+        legacy = [dict(client_ui)]
+        self.assertEqual(owner_session_cookie_pin(legacy),
+                         owner_session_cookie_pin([dict(client_ui)]))
+
+    def test_ru_es_owner_cookie_httponly_presence_rotation_holds(self):
+        """Missing and explicit False HttpOnly cannot share a legacy owner pin."""
+        legacy = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='unchanged-legacy-owner')
+        explicit = dict(legacy, httpOnly=False)
+        legacy_pin = owner_session_cookie_pin([legacy])
+        explicit_pin = owner_session_cookie_pin([explicit])
+        self.assertIsInstance(legacy_pin, str)
+        self.assertIsInstance(explicit_pin, str)
+        self.assertNotEqual(legacy_pin, explicit_pin)
+        self.assertTrue(owner_session_continuity_valid(200, [legacy], legacy_pin))
+        self.assertTrue(owner_session_continuity_valid(200, [explicit], explicit_pin))
+        self.assertFalse(owner_session_continuity_valid(200, [explicit], legacy_pin))
+        self.assertFalse(owner_session_continuity_valid(200, [legacy], explicit_pin))
+        self.assertEqual(owner_session_cookie_pin([dict(legacy)]), legacy_pin)
+        self.assertEqual(owner_session_cookie_pin([dict(explicit)]), explicit_pin)
+        signed = dict(legacy, httpOnly=True)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        signed_pin = owner_session_cookie_pin([signed])
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), signed_pin)
+        # An unsigned shadow with the signed cookie's identical scope is
+        # ambiguous browser-session provenance, not a benign UI preference.
+        self.assertIsNone(owner_session_cookie_pin([signed, dict(legacy)]))
+        self.assertNotEqual(signed_pin, legacy_pin)
+
+    def test_ru_es_owner_cookie_invalid_utf8_snapshot_holds(self):
+        """Lone surrogates in signed OR ancillary cookie fields must fail closed."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='owner-stable', httpOnly=True)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), pin)
+        self.assertTrue(owner_session_continuity_valid(200, [signed, ui], pin))
+        for field in ('name', 'domain', 'path', 'value'):
+            for invalid in ('\ud800', '\udfff'):
+                with self.subTest(field=field, codepoint=repr(invalid)):
+                    bad_signed = dict(signed, **{field: invalid})
+                    bad_ui = dict(ui, **{field: invalid})
+                    for snapshot in ([bad_signed], [bad_signed, ui],
+                                     [signed, bad_ui], [bad_ui, signed]):
+                        self.assertIsNone(owner_session_cookie_pin(snapshot))
+                        self.assertFalse(owner_session_continuity_valid(
+                            200, snapshot, pin))
+        # Complete valid Unicode remains accepted, including RU/ES and emoji.
+        valid = dict(signed, value='сессия-españa-🙂')
+        self.assertIsInstance(owner_session_cookie_pin([valid]), str)
+        self.assertEqual(owner_session_cookie_pin([valid, ui]),
+                         owner_session_cookie_pin([valid]))
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), pin)
+
+    def test_ru_es_malformed_ancillary_cookie_snapshot_must_hold(self):
+        """A signed cookie cannot hide malformed ancillary snapshot members."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='same-signed-owner', httpOnly=True)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        original_pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(original_pin, str)
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), original_pin)
+        self.assertTrue(owner_session_continuity_valid(
+            200, [signed, ui], original_pin))
+        legacy_pin = owner_session_cookie_pin([ui])
+        self.assertIsInstance(legacy_pin, str)
+        for invalid in (None, 'bad-cookie', [], 42, True, ('cookie',)):
+            with self.subTest(value=repr(invalid)):
+                for snapshot in ([signed, invalid], [invalid, signed],
+                                 [signed, ui, invalid]):
+                    self.assertIsNone(owner_session_cookie_pin(snapshot))
+                    self.assertFalse(owner_session_continuity_valid(
+                        200, snapshot, original_pin))
+                self.assertIsNone(owner_session_cookie_pin([ui, invalid]))
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [ui, invalid], legacy_pin))
+        self.assertEqual(owner_session_cookie_pin([dict(signed)]), original_pin)
+        self.assertEqual(owner_session_cookie_pin([dict(ui)]), legacy_pin)
+
+    def test_ru_es_owner_cookie_httponly_type_fence_before_fallback(self):
+        """Malformed HttpOnly flags never masquerade as legacy owner cookies."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='owner-stable', httpOnly=True)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        baseline = owner_session_cookie_pin([signed])
+        self.assertIsInstance(baseline, str)
+        self.assertEqual(owner_session_cookie_pin([ui, signed]), baseline)
+        self.assertTrue(owner_session_continuity_valid(200, [signed], baseline))
+        for malformed in ('true', 1, None, [], {}):
+            with self.subTest(httpOnly=repr(malformed)):
+                corrupted = dict(signed, httpOnly=malformed)
+                self.assertIsNone(owner_session_cookie_pin([corrupted]))
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [corrupted], baseline))
+                # An invalid ancillary cookie must not be silently ignored
+                # merely because a valid signed owner cookie also exists.
+                self.assertIsNone(owner_session_cookie_pin(
+                    [signed, dict(ui, httpOnly=malformed)]))
+        legacy = dict(signed)
+        del legacy['httpOnly']
+        self.assertEqual(owner_session_cookie_pin([legacy]),
+                         owner_session_cookie_pin([dict(legacy)]))
+        self.assertIsInstance(owner_session_cookie_pin([legacy]), str)
+        self.assertIsInstance(owner_session_cookie_pin([ui]), str)
+
+    def test_ru_es_owner_secure_cookie_downgrade_cannot_reuse_session_pin(self):
+        """Secure owner cookies must not silently become HTTP-eligible mid-chat."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='unchanged-owner-cookie', httpOnly=True, secure=True)
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False, secure=False)
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        self.assertEqual(len(pin), 64)
+        self.assertTrue(owner_session_continuity_valid(200, [ui, signed], pin))
+        self.assertEqual(owner_session_cookie_pin([dict(signed)]), pin)
+        for downgrade in (False, None):
+            changed = dict(signed)
+            if downgrade is None:
+                changed.pop('secure')
+            else:
+                changed['secure'] = downgrade
+            with self.subTest(downgrade=downgrade):
+                self.assertNotEqual(owner_session_cookie_pin([changed]), pin)
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [ui, changed], pin))
+        # Legacy cookies with no Secure metadata retain their old stable pin.
+        legacy = dict(signed)
+        legacy.pop('secure')
+        self.assertEqual(owner_session_cookie_pin([legacy]),
+                         owner_session_cookie_pin([dict(legacy)]))
+
+    def test_ru_es_owner_cookie_samesite_downgrade_cannot_reuse_session_pin(self):
+        """RU/ES owner continuity must pin explicit SameSite on signed cookies."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='owner-cookie-unchanged', httpOnly=True,
+                      secure=True, sameSite='Strict')
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False, sameSite='None')
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        self.assertTrue(owner_session_continuity_valid(200, [ui, signed], pin))
+        self.assertEqual(owner_session_cookie_pin([dict(signed)]), pin)
+        for replacement in ('Lax', 'None', None):
+            downgraded = dict(signed)
+            if replacement is None:
+                downgraded.pop('sameSite')
+            else:
+                downgraded['sameSite'] = replacement
+            with self.subTest(same_site=replacement):
+                self.assertNotEqual(owner_session_cookie_pin([downgraded]), pin)
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [ui, downgraded], pin))
+        for malformed in ('unsafe', True, 0, [], {}):
+            with self.subTest(malformed=repr(malformed)):
+                self.assertIsNone(owner_session_cookie_pin(
+                    [dict(signed, sameSite=malformed)]))
+        # Stable legacy cookies with no SameSite metadata remain comparable.
+        legacy = dict(signed)
+        legacy.pop('sameSite')
+        self.assertEqual(owner_session_cookie_pin([legacy]),
+                         owner_session_cookie_pin([dict(legacy)]))
+
+    def test_ru_es_owner_cookie_metadata_presence_cannot_alias_legacy_defaults(self):
+        """A signed owner cookie cannot lose explicit optional security fields."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='same-session', httpOnly=True,
+                      secure=False, sameSite=None)
+        baseline = owner_session_cookie_pin([signed])
+        self.assertIsInstance(baseline, str)
+        self.assertEqual(owner_session_cookie_pin([dict(signed)]), baseline)
+        self.assertTrue(owner_session_continuity_valid(200, [signed], baseline))
+        for removed_field in ('secure', 'sameSite'):
+            changed = dict(signed)
+            del changed[removed_field]
+            with self.subTest(removed=removed_field):
+                self.assertNotEqual(owner_session_cookie_pin([changed]), baseline)
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [changed], baseline))
+        for malformed in (None, 0, 1, 'false', [], {}):
+            with self.subTest(secure=repr(malformed)):
+                self.assertIsNone(owner_session_cookie_pin(
+                    [dict(signed, secure=malformed)]))
+        legacy = dict(signed)
+        legacy.pop('secure')
+        legacy.pop('sameSite')
+        self.assertEqual(owner_session_cookie_pin([legacy]),
+                         owner_session_cookie_pin([dict(legacy)]))
+        self.assertNotEqual(owner_session_cookie_pin([legacy]), baseline)
+
+    def test_ru_es_owner_cookie_partition_key_drift_cannot_reuse_session_pin(self):
+        """A partitioned signed cookie must keep its top-level site across turns."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='unchanged-owner-session', httpOnly=True,
+                      secure=True, sameSite='None',
+                      partitionKey='https://owner.example')
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        baseline = owner_session_cookie_pin([signed])
+        self.assertIsInstance(baseline, str)
+        self.assertTrue(owner_session_continuity_valid(200, [ui, signed], baseline))
+        self.assertEqual(owner_session_cookie_pin([dict(signed)]), baseline)
+        for replacement in ('https://other.example', None):
+            drift = dict(signed)
+            if replacement is None:
+                drift.pop('partitionKey')
+            else:
+                drift['partitionKey'] = replacement
+            with self.subTest(partition_key=replacement):
+                self.assertNotEqual(owner_session_cookie_pin([drift]), baseline)
+                self.assertFalse(owner_session_continuity_valid(
+                    200, [ui, drift], baseline))
+        for malformed in ('', ' https://owner.example', 'https://owner.example ',
+                          'https://owner.example\u200b', 17, False, None, [], {}):
+            with self.subTest(malformed=repr(malformed)):
+                self.assertIsNone(owner_session_cookie_pin(
+                    [dict(signed, partitionKey=malformed)]))
+        legacy = dict(signed)
+        legacy.pop('partitionKey')
+        legacy_pin = owner_session_cookie_pin([legacy])
+        self.assertIsInstance(legacy_pin, str)
+        self.assertEqual(owner_session_cookie_pin([dict(legacy)]), legacy_pin)
+        self.assertNotEqual(legacy_pin, baseline)
+        self.assertEqual(owner_session_cookie_pin([ui, signed]), baseline)
+
+    def test_ru_es_presecond_readonly_history_owner_fence_prevents_stale_post(self):
+        """Re-read first turn after composer delays, before Spanish model POST."""
+        from types import SimpleNamespace
+        from owner_chat_browser_qa import (
+            presecond_firstturn_history_stable, presecond_owner_history_fence,
+            owner_session_cookie_pin, PAGE,
+        )
+        baseline = {'dialog_id': DIALOG, 'messages': [
+            {'role': 'user', 'content': RU, 'message_id': 'first-user',
+             'dialog_id': DIALOG, 'session_id': 'owner-session-A'},
+            {'role': 'assistant', 'content': FIRST, 'message_id': 'first-answer',
+             'dialog_id': DIALOG, 'session_id': 'owner-session-A'}]}
+        copy = lambda value: json.loads(json.dumps(value, ensure_ascii=False))
+        self.assertTrue(presecond_firstturn_history_stable(
+            baseline, copy(baseline), RU, FIRST, DIALOG))
+        legacy = copy(baseline)
+        for row in legacy['messages']:
+            row.pop('session_id')
+        self.assertTrue(presecond_firstturn_history_stable(
+            legacy, copy(legacy), RU, FIRST, DIALOG))
+        mutations = (
+            lambda v: v['messages'][0].update(message_id='replaced-user'),
+            lambda v: v['messages'][1].update(content=FIRST+'ñ'),
+            lambda v: v['messages'][1].update(role='user'),
+            lambda v: v['messages'][0].update(session_id='owner-session-B'),
+            lambda v: v['messages'][0].pop('session_id'),
+            lambda v: v['messages'][1].update(dialog_id='foreign-dialog'),
+            lambda v: v.pop('dialog_id'),
+        )
+        for mutate in mutations:
+            later = copy(baseline)
+            mutate(later)
+            with self.subTest(changed=later):
+                self.assertFalse(presecond_firstturn_history_stable(
+                    baseline, later, RU, FIRST, DIALOG))
+
+        cookies = [{'name': 'owner', 'domain': '127.0.0.1',
+                    'path': '/', 'value': 'signed-A', 'httpOnly': True}]
+        pin = owner_session_cookie_pin(cookies)
+        def probe(fresh, cookie_values, selected=True):
+            response = SimpleNamespace(
+                status=200, body=AsyncMock(return_value=json.dumps(
+                    fresh, ensure_ascii=False).encode('utf-8')))
+            session = SimpleNamespace(status=200)
+            request = SimpleNamespace(get=AsyncMock(
+                side_effect=[response, session]))
+            context = SimpleNamespace(
+                request=request, cookies=AsyncMock(return_value=cookie_values))
+            page = SimpleNamespace(
+                url='http://127.0.0.1:18775'+PAGE,
+                evaluate=AsyncMock(return_value=selected))
+            result = asyncio.run(presecond_owner_history_fence(
+                context, 'http://127.0.0.1:18775', pin,
+                page, 'QA dialog', baseline, RU, FIRST, DIALOG))
+            self.assertLessEqual(request.get.await_count, 2)
+            self.assertFalse(hasattr(request, 'post'), 'must be GET-only')
+            return result
+        self.assertTrue(probe(copy(baseline), cookies))
+        overwritten = copy(baseline)
+        overwritten['messages'][0]['message_id'] = 'replaced-user'
+        self.assertFalse(probe(overwritten, cookies))
+        self.assertFalse(probe(copy(baseline),
+                               [dict(cookies[0], value='signed-B')]))
+        self.assertFalse(probe(copy(baseline), cookies, selected=False))
+        caller = inspect.getsource(browser_run)
+        self.assertLess(caller.index("QA_PRESECOND_HISTORY_OWNER_FENCE"),
+                        caller.index('second_permitted=True'))
+        self.assertLess(caller.index('second_permitted=True'),
+                        caller.index('await click_send(page,report,expected_before=1)'))
+        self.assertIn('HOLD_MULTITURN_PRESECOND_HISTORY_OWNER_DRIFT', caller)
+
+    def test_postsecond_owner_session_pin_precedes_four_row_history_readback(self):
+        owner = [dict(name='nox_owner', domain='owner.example', path='/',
+                      value='original-signed-session', httpOnly=True)]
+        pin = owner_session_cookie_pin(owner)
+        self.assertTrue(owner_session_continuity_valid(200, owner, pin))
+        for status, cookies in (
+            (401, owner), (302, owner), (True, owner), (None, owner),
+            (200, []), (200, [dict(owner[0], value='new-owner-session')]),
+            (200, [dict(owner[0], path='/another')]),
+        ):
+            with self.subTest(status=status, cookies=repr(cookies)[:30]):
+                self.assertFalse(owner_session_continuity_valid(status, cookies, pin))
+        self.assertFalse(owner_session_continuity_valid(200, owner, None))
+        caller = inspect.getsource(browser_run)
+        self.assertEqual(caller.count('owner_session_continuity_valid('), 4)
+        self.assertIn("signed_after_second=await context.request.get(", caller)
+        self.assertIn("multiturn_postsecond_owner_session_verified", caller)
+        self.assertLess(caller.index("signed_after_second=await context.request.get("),
+                        caller.index("second_history=await owner_history_json_response("))
+        self.assertLess(caller.index("multiturn_postsecond_owner_session_verified"),
+                        caller.index("second_history=await owner_history_json_response("))
+        self.assertLess(caller.index("signed_after_second=await context.request.get("),
+                        caller.index("multiturn_browser_acceptance_verified"))
+
+    def test_preacceptance_ru_es_owner_session_after_second_screenshot(self):
+        # A 200 identity check before history cannot pin the owner through
+        # potentially slow private screenshot capture.
+        original = [dict(name='nox_owner', domain='owner.example', path='/',
+                         value='signed-before-screenshot', httpOnly=True)]
+        pin = owner_session_cookie_pin(original)
+        self.assertTrue(owner_session_continuity_valid(200, original, pin))
+        for status, cookies in (
+            (401, original), (302, original),
+            (200, [dict(original[0], value='rotated-during-screenshot')]),
+            (200, [dict(original[0], path='/changed')]),
+        ):
+            with self.subTest(status=status):
+                self.assertFalse(owner_session_continuity_valid(status, cookies, pin))
+        caller = inspect.getsource(browser_run)
+        self.assertIn("signed_precert=await context.request.get(", caller)
+        self.assertIn("multiturn_precert_owner_session_verified", caller)
+        self.assertIn("HOLD_MULTITURN_OWNER_SESSION_CHANGED_BEFORE_ACCEPTANCE", caller)
+        screenshot = caller.index("second_capture=await capture_private_screenshot(")
+        session = caller.index("signed_precert=await context.request.get(")
+        runtime = caller.index("if not clean_two_turn_browser_runtime(")
+        accepted = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(screenshot, session)
+        self.assertLess(session, runtime)
+        self.assertLess(runtime, accepted)
+
+    def test_two_turn_native_post_accounting_fences_before_s03_proof(self):
+        for turn in (1, 2):
+            self.assertTrue(exact_native_post_fence(
+                {'native_calls': turn}, turn, turn))
+            # Either the browser observer or the owner guard may be stale:
+            # neither witness by itself is sufficient to admit the turn.
+            for observed, admitted in ((turn + 1, turn), (turn, turn + 1),
+                                       (turn - 1, turn), (turn, turn - 1)):
+                with self.subTest(turn=turn, observed=observed, admitted=admitted):
+                    self.assertFalse(exact_native_post_fence(
+                        {'native_calls': observed}, admitted, turn))
+            for malformed in (True, float(turn), str(turn), None, [], {}):
+                with self.subTest(turn=turn, malformed=repr(malformed)):
+                    self.assertFalse(exact_native_post_fence(
+                        {'native_calls': malformed}, turn, turn))
+                    self.assertFalse(exact_native_post_fence(
+                        {'native_calls': turn}, malformed, turn))
+        self.assertFalse(exact_native_post_fence({}, 1, 1))
+        self.assertFalse(exact_native_post_fence(None, 1, 1))
+        self.assertFalse(exact_native_post_fence({'native_calls': 3}, 3, 3))
+
+    def test_empty_history_scope_must_match_before_first_native_post(self):
+        # An empty list from another dialog must not authorize the first POST.
+        self.assertTrue(empty_dialog_history_valid(
+            {"dialog_id": DIALOG, "messages": []}, DIALOG))
+        self.assertTrue(empty_dialog_history_valid({"messages": []}, DIALOG))
+        for value in (
+            {"dialog_id": "another-session", "messages": []},
+            {"dialog_id": None, "messages": []},
+            {"dialog_id": "", "messages": []},
+            {"messages": [{"role": "user", "content": "unexpected"}]},
+            {"messages": None},
+            {"messages": {}},
+            [],
+            None,
+        ):
+            with self.subTest(value=str(value)[:90]):
+                self.assertFalse(empty_dialog_history_valid(value, DIALOG))
+        self.assertFalse(empty_dialog_history_valid(
+            {"messages": []}, None))
+        self.assertFalse(empty_dialog_history_valid(
+            {"messages": []}, "   "))
+
+    def test_first_turn_history_requires_own_dialog_before_es_post(self):
+        # The query string alone cannot authenticate a returned S03/history row.
+        first = [
+            {"role": "user", "content": RU, "dialog_id": DIALOG},
+            {"role": "assistant", "content": FIRST, "dialog_id": DIALOG},
+        ]
+        self.assertTrue(firstturn_history_valid(
+            {"dialog_id": DIALOG, "messages": first}, RU, FIRST, DIALOG))
+        self.assertTrue(firstturn_history_valid(
+            {"messages": [
+                {"role": "user", "content": RU},
+                {"role": "assistant", "content": FIRST},
+            ]}, RU, FIRST, DIALOG))
+        for tampered in (
+            {"dialog_id": "other-dialog", "messages": first},
+            {"dialog_id": None, "messages": first},
+            {"messages": [dict(first[0], dialog_id="other-dialog"), first[1]]},
+            {"messages": [first[0], dict(first[1], dialog_id=None)]},
+            {"messages": [first[0], dict(first[1], content="")]},
+            {"messages": [first[0], {"role": "assistant", "content": FIRST}, first[1]]},
+            {"messages": [first[0], None]},
+            {"messages": "not-a-turn-list"},
+        ):
+            with self.subTest(case=str(tampered)[:90]):
+                self.assertFalse(firstturn_history_valid(tampered, RU, FIRST, DIALOG))
+        self.assertFalse(firstturn_history_valid(
+            {"messages": first}, RU, FIRST, None))
+        self.assertFalse(firstturn_history_valid(
+            {"messages": first}, RU, FIRST, "other-dialog"))
+
+    def test_four_turn_fingerprint_binds_entire_untrimmed_ru_es_utf8_history(self):
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        transcript = rows(spanish)
+        transcript[0]['content'] += ' Привет'
+        expected = hashlib.sha256(json.dumps(
+            [{'role': item['role'], 'content': item['content']} for item in transcript],
+            ensure_ascii=False, sort_keys=True, separators=(',', ':'),
+            allow_nan=False).encode('utf-8')).hexdigest()
+        self.assertEqual(multiturn_transcript_sha256(transcript), expected)
+        self.assertEqual(len(expected), 64)
+        for turn in range(4):
+            altered = [dict(item) for item in transcript]
+            altered[turn]['content'] += 'ñ' if turn == 2 else 'я'
+            self.assertNotEqual(multiturn_transcript_sha256(altered), expected)
+            invalid = [dict(item) for item in transcript]
+            invalid[turn]['content'] = '  '
+            self.assertIsNone(multiturn_transcript_sha256(invalid))
+        self.assertIsNone(multiturn_transcript_sha256(transcript[:2]))
+        self.assertIsNone(multiturn_transcript_sha256([*transcript[:3], None]))
+        invalid_roles = [dict(item) for item in transcript]
+        invalid_roles[2]['role'] = 'assistant'
+        self.assertIsNone(multiturn_transcript_sha256(invalid_roles))
+
+    def test_s03_full_history_sha_is_bound_to_both_native_witnesses(self):
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        self.assertFalse(canonical_s03_proof_valid(
+            {key: value for key, value in writer.items()
+             if key != "full_transcript_sha256"}, readback, DIALOG, transcript))
+        self.assertFalse(canonical_s03_proof_valid(
+            writer, dict(readback, full_transcript_sha256="0" * 64),
+            DIALOG, transcript))
+        # Matching event ID and final answer cannot authenticate a different
+        # previous Russian user/assistant exchange.
+        forged = [dict(item) for item in transcript]
+        forged[0]["content"] += " другой вопрос"
+        forged[1]["content"] = "3,8,1,9,5,10,6,4,2,7"
+        forged_readback = dict(
+            readback, messages=forged,
+            full_transcript_sha256=multiturn_transcript_sha256(forged))
+        self.assertFalse(canonical_s03_proof_valid(
+            writer, forged_readback, DIALOG, forged))
+
+    def test_s03_unpinned_legacy_witness_cannot_certify_four_turns(self):
+        # Neither omitted nor explicitly null history pins can prove two turns.
+        # Old last-answer-only receipts may match after earlier turns changed.
+        transcript = [dict(row, message_id=f"s03-{i}") for i, row in enumerate(
+            rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es")))]
+        writer, readback = s03_proof(transcript)
+        old_writer = {k: v for k, v in writer.items()
+                      if k != "full_transcript_sha256"}
+        old_readback = {k: v for k, v in readback.items()
+                        if k != "full_transcript_sha256"}
+        self.assertFalse(canonical_s03_proof_valid(
+            old_writer, old_readback, DIALOG, transcript,
+            require_full_transcript_pin=True))
+        # The legacy A1 helper remains source-compatible, not B5-accepted.
+        self.assertTrue(canonical_s03_proof_valid(
+            old_writer, old_readback, DIALOG, transcript))
+        changed_earlier_turns = [dict(row) for row in transcript]
+        changed_earlier_turns[0]['content'] += ' другой вопрос'
+        changed_earlier_turns[1]['content'] = '3,8,1,9,5,10,6,4,2,7'
+        stale_last_answer_readback = dict(
+            old_readback, messages=changed_earlier_turns)
+        # Both receipts still agree on event, dialog, sequence, final answer.
+        # That is insufficient to certify changed previous conversation turns.
+        self.assertFalse(canonical_s03_proof_valid(
+            old_writer, stale_last_answer_readback,
+            DIALOG, changed_earlier_turns, require_full_transcript_pin=True))
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, transcript, require_full_transcript_pin=True))
+        for bad_writer, bad_readback in (
+            (dict(old_writer, full_transcript_sha256=None), old_readback),
+            (old_writer, dict(old_readback, full_transcript_sha256=None)),
+            (dict(old_writer, full_transcript_sha256=None),
+             dict(old_readback, full_transcript_sha256=None)),
+            (dict(writer, full_transcript_sha256=None), readback),
+            (writer, dict(readback, full_transcript_sha256=None)),
+            (dict(old_writer, full_transcript_sha256=""),
+             dict(old_readback, full_transcript_sha256="")),
+        ):
+            with self.subTest(writer_pin=repr(bad_writer.get("full_transcript_sha256")),
+                              readback_pin=repr(bad_readback.get("full_transcript_sha256"))):
+                self.assertFalse(canonical_s03_proof_valid(
+                    bad_writer, bad_readback, DIALOG, transcript))
+
+    def test_strict_s03_requires_four_distinct_persisted_message_identities(self):
+        # Exact four role/text bytes and full SHA pins still cannot certify that
+        # S03 read four individually identified durable messages.
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        self.assertFalse(canonical_s03_proof_valid(
+            writer, readback, DIALOG, transcript, require_full_transcript_pin=True))
+
+        identified = [dict(row, message_id=f"s03-{i}") for i, row in enumerate(transcript)]
+        writer, readback = s03_proof(identified)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, identified, require_full_transcript_pin=True))
+        for invalid in (None, "", " ", 42, True):
+            with self.subTest(missing_or_malformed=repr(invalid)):
+                changed = [dict(row) for row in identified]
+                changed[2]["message_id"] = invalid
+                a, b = s03_proof(changed)
+                self.assertFalse(canonical_s03_proof_valid(
+                    a, b, DIALOG, changed, require_full_transcript_pin=True))
+        for missing in range(4):
+            changed = [dict(row) for row in identified]
+            del changed[missing]["message_id"]
+            a, b = s03_proof(changed)
+            self.assertFalse(canonical_s03_proof_valid(
+                a, b, DIALOG, changed, require_full_transcript_pin=True))
+        whitespace_collision = [dict(row) for row in identified]
+        whitespace_collision[1]["message_id"] = "s03-0 "
+        a, b = s03_proof(whitespace_collision)
+        self.assertFalse(canonical_s03_proof_valid(
+            a, b, DIALOG, whitespace_collision, require_full_transcript_pin=True))
+
+    def test_strict_s03_explicit_row_session_ids_cannot_cross_owner_sessions(self):
+        # Four correct UTF-8 messages and durable IDs are insufficient when
+        # a canonical S03 row was persisted under another owner session.
+        baseline = [dict(row, message_id=f"durable-session-{i}")
+                    for i, row in enumerate(rows(multiturn_followup_prompt(
+                        TOKEN, "multiturn_ru_es")))]
+        w, r = s03_proof(baseline)
+        self.assertTrue(canonical_s03_proof_valid(
+            w, r, DIALOG, baseline, require_full_transcript_pin=True))
+        scoped = [dict(row, session_id="owner-session-A") for row in baseline]
+        w, r = s03_proof(scoped)
+        self.assertTrue(canonical_s03_proof_valid(
+            w, r, DIALOG, scoped, require_full_transcript_pin=True))
+        for invalid in ("owner-session-B", None, "", " ", 42, True,
+                        "owner-session-A "):
+            with self.subTest(foreign_or_invalid=repr(invalid)):
+                mixed = [dict(row) for row in scoped]
+                mixed[2]["session_id"] = invalid
+                a, b = s03_proof(mixed)
+                self.assertFalse(canonical_s03_proof_valid(
+                    a, b, DIALOG, mixed, require_full_transcript_pin=True))
+        for missing in range(4):
+            with self.subTest(partial_scope=missing):
+                partial = [dict(row) for row in scoped]
+                del partial[missing]["session_id"]
+                a, b = s03_proof(partial)
+                self.assertFalse(canonical_s03_proof_valid(
+                    a, b, DIALOG, partial, require_full_transcript_pin=True))
+        # S03 metadata consistency is only a gate. Native owner-cookie pins,
+        # real writer evidence and independent persisted readback remain HOLD.
+
+    def test_strict_s03_three_way_session_pin_rejects_cross_session_receipts(self):
+        # Four exact RU/ES rows and durable IDs are not enough if an S03
+        # writer receipt belongs to another owner session. All three witness
+        # scopes must agree; synthetic-only proof is never live S03 acceptance.
+        transcript = [
+            dict(row, message_id=f"session-triple-{i}")
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, "multiturn_ru_es")), 1)
+        ]
+        legacy_writer, legacy_readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(
+            legacy_writer, legacy_readback, DIALOG, transcript,
+            require_full_transcript_pin=True))
+        self.assertFalse(canonical_s03_proof_valid(
+            dict(legacy_writer, session_id="foreign-session"),
+            legacy_readback, DIALOG, transcript,
+            require_full_transcript_pin=True))
+        scoped = [dict(row, session_id="owner-session-A") for row in transcript]
+        writer, readback = s03_proof(scoped)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, scoped,
+            require_full_transcript_pin=True))
+        for side in ("writer", "readback"):
+            for corrupt in (None, "", "owner-session-B", "owner-session-A ",
+                            42, True):
+                with self.subTest(side=side, value=repr(corrupt)):
+                    w, r = dict(writer), dict(readback)
+                    (w if side == "writer" else r)["session_id"] = corrupt
+                    self.assertFalse(canonical_s03_proof_valid(
+                        w, r, DIALOG, scoped,
+                        require_full_transcript_pin=True))
+            with self.subTest(missing_side=side):
+                w, r = dict(writer), dict(readback)
+                (w if side == "writer" else r).pop("session_id")
+                self.assertFalse(canonical_s03_proof_valid(
+                    w, r, DIALOG, scoped,
+                    require_full_transcript_pin=True))
+        unscoped_writer, unscoped_reader = s03_proof(transcript)
+        unscoped_writer["session_id"] = "owner-session-A"
+        unscoped_reader["session_id"] = "owner-session-A"
+        self.assertFalse(canonical_s03_proof_valid(
+            unscoped_writer, unscoped_reader, DIALOG, transcript,
+            require_full_transcript_pin=True))
+
+    def test_strict_s03_writer_and_reader_bind_ordered_persisted_row_ids(self):
+        # Identical four message texts cannot prove the same four durable S03
+        # rows: a later writer may have replaced rows without changing text.
+        identified = [dict(row, message_id=f"durable-{i}")
+                      for i, row in enumerate(rows(multiturn_followup_prompt(
+                          TOKEN, "multiturn_ru_es")))]
+        writer, readback = s03_proof(identified)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, identified,
+            require_full_transcript_pin=True))
+        for missing_side in ("writer", "readback"):
+            with self.subTest(side=missing_side):
+                w, r = dict(writer), dict(readback)
+                (w if missing_side == "writer" else r).pop("message_ids_sha256")
+                self.assertFalse(canonical_s03_proof_valid(
+                    w, r, DIALOG, identified,
+                    require_full_transcript_pin=True))
+        for invalid in (None, "", "0" * 64):
+            with self.subTest(pin=repr(invalid)):
+                self.assertFalse(canonical_s03_proof_valid(
+                    dict(writer, message_ids_sha256=invalid),
+                    readback, DIALOG, identified,
+                    require_full_transcript_pin=True))
+                self.assertFalse(canonical_s03_proof_valid(
+                    writer, dict(readback, message_ids_sha256=invalid),
+                    DIALOG, identified, require_full_transcript_pin=True))
+        replaced = [dict(row) for row in identified]
+        replaced[0]["message_id"] = "replacement-0"
+        self.assertEqual(multiturn_transcript_sha256(replaced),
+                         multiturn_transcript_sha256(identified))
+        stale_writer_readback = dict(
+            readback, messages=replaced, message_ids_sha256=hashlib.sha256(
+                json.dumps([row["message_id"] for row in replaced],
+                           ensure_ascii=False, separators=(",", ":"),
+                           allow_nan=False).encode("utf-8")).hexdigest())
+        self.assertFalse(canonical_s03_proof_valid(
+            writer, stale_writer_readback, DIALOG, replaced,
+            require_full_transcript_pin=True))
+        # The existing A1 helper intentionally keeps its legacy source contract.
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, readback, DIALOG, identified))
+
+    def test_s03_optional_writer_answer_digest_must_agree_with_fourth_turn(self):
+        # A writer may optionally expose its own final-answer digest. If it
+        # disagrees with the independently verified fourth message, HOLD.
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        expected = readback["full_answer_sha256"]
+        # Preserve old writer receipts, which remain source-only witnesses.
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        self.assertTrue(canonical_s03_proof_valid(
+            dict(writer, full_answer_sha256=expected), readback, DIALOG, transcript))
+        for wrong in ("0" * 64, None, ""):
+            with self.subTest(writer_answer_digest=repr(wrong)):
+                self.assertFalse(canonical_s03_proof_valid(
+                    dict(writer, full_answer_sha256=wrong), readback, DIALOG, transcript))
+
+    def test_s03_two_turn_receipt_requires_second_sequence_and_distinct_readback(self):
+        # One first-turn writer receipt cannot prove a two-turn S03 persist.
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        writer["sequence"] = 1
+        readback["sequence"] = 1
+        self.assertFalse(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        # A single, self-declared "independent" dict is not two read operations.
+        writer["sequence"] = readback["sequence"] = 2
+        aliased = {**writer, **readback}
+        self.assertFalse(canonical_s03_proof_valid(aliased, aliased, DIALOG, transcript))
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+
+    def test_strict_s03_event_and_turn_witness_ids_reject_invisible_aliases(self):
+        # Even two mutually matching receipts are not independent proof if the
+        # durable event/turn identity is padded or contains invisible controls.
+        transcript = [
+            dict(row, message_id=f"witness-r12-{i}")
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, "multiturn_ru_es")))
+        ]
+        writer, reader = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, transcript,
+            require_full_transcript_pin=True))
+        for field in ("event_id", "turn_id"):
+            original = writer[field]
+            for changed in (
+                    " " + original, original + " ", original + "\t",
+                    original + "\n", original + "\u200b",
+                    original + "\u200e", original + "\x00"):
+                with self.subTest(identity=field, value=repr(changed)):
+                    altered_writer = dict(writer, **{field: changed})
+                    altered_reader = dict(reader, **{field: changed})
+                    self.assertFalse(canonical_s03_proof_valid(
+                        altered_writer, altered_reader, DIALOG, transcript,
+                        require_full_transcript_pin=True))
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, transcript,
+            require_full_transcript_pin=False))
+
+    def test_canonical_s03_readback_sequence_requires_exact_int(self):
+        # JSON 2.0 compares equal to Python int 2, but is not a valid
+        # canonical integer turn index in an independent S03 readback.
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        for bad_sequence in (2.0, True, "2", None, [2], 3):
+            with self.subTest(readback_sequence=repr(bad_sequence)):
+                self.assertFalse(canonical_s03_proof_valid(
+                    writer, dict(readback, sequence=bad_sequence),
+                    DIALOG, transcript))
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, dict(readback, sequence=2), DIALOG, transcript))
+
+    def test_canonical_s03_rejects_later_turn_or_blank_receipt_identity(self):
+        # An event from a third or later turn cannot certify exactly two turns.
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        for invalid_sequence in (3, 99, True, "2"):
+            tampered_writer = dict(writer, sequence=invalid_sequence)
+            tampered_readback = dict(readback, sequence=invalid_sequence)
+            self.assertFalse(canonical_s03_proof_valid(
+                tampered_writer, tampered_readback, DIALOG, transcript))
+        for invalid_key in ("event_id", "turn_id"):
+            tampered_writer = dict(writer, **{invalid_key: "  "})
+            tampered_readback = dict(readback, **{invalid_key: "  "})
+            self.assertFalse(canonical_s03_proof_valid(
+                tampered_writer, tampered_readback, DIALOG, transcript))
+        self.assertFalse(canonical_s03_proof_valid(
+            dict(writer, dialog_id="  "), dict(readback, dialog_id="  "),
+            "  ", transcript))
+        empty_reply = [*transcript[:3], {"role": "assistant", "content": ""}]
+        empty_writer, empty_readback = s03_proof(empty_reply)
+        empty_readback["full_answer_sha256"] = hashlib.sha256(b"").hexdigest()
+        self.assertFalse(canonical_s03_proof_valid(
+            empty_writer, empty_readback, DIALOG, empty_reply))
+
+    def test_canonical_s03_rejects_single_turn_even_with_matching_receipt_metadata(self):
+        # Before this regression, two messages plus a matching last-answer SHA
+        # could masquerade as a complete RU/ES multi-turn S03 acceptance.
+        one_turn = [
+            {"role": "user", "content": RU},
+            {"role": "assistant", "content": LAST},
+        ]
+        writer, readback = s03_proof(one_turn)
+        self.assertFalse(canonical_s03_proof_valid(writer, readback, DIALOG, one_turn))
+
+    def test_canonical_s03_rejects_wrong_role_order_even_with_matching_receipt(self):
+        malformed = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        malformed[1]["role"] = "user"
+        writer, readback = s03_proof(malformed)
+        self.assertFalse(canonical_s03_proof_valid(writer, readback, DIALOG, malformed))
+
+    def test_browser_history_session_annotations_cannot_cross_ru_es_turns(self):
+        # The first read occurs BEFORE authorizing the Spanish POST; its two
+        # rows must not silently mix sessions. The four-row browser witness
+        # must enforce the same rule independently from canonical S03.
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        complete = rows(es)
+        for label, original in (("pre_second_post", complete[:2]),
+                                ("post_second_history", complete)):
+            with self.subTest(phase=label):
+                def valid(candidate):
+                    if label == "pre_second_post":
+                        return firstturn_history_valid(
+                            {"dialog_id": DIALOG, "messages": candidate},
+                            RU, FIRST, DIALOG)
+                    return multiturn_history_valid(
+                        candidate, RU, FIRST, es, LAST, DIALOG)
+
+                self.assertTrue(valid(original))  # legacy unannotated rows
+                bound = [dict(row, session_id="owner-session-A")
+                         for row in original]
+                self.assertTrue(valid(bound))
+                for index in range(len(bound)):
+                    for foreign in ("owner-session-B", None, "", " ", 42,
+                                    True, "owner-session-A "):
+                        with self.subTest(phase=label, row=index,
+                                          value=repr(foreign)):
+                            mixed = [dict(row) for row in bound]
+                            mixed[index]["session_id"] = foreign
+                            self.assertFalse(valid(mixed))
+                    partial = [dict(row) for row in bound]
+                    del partial[index]["session_id"]
+                    self.assertFalse(valid(partial))
+
+    def test_four_turn_scope_rejects_cross_dialog_metadata_without_breaking_legacy_rows(self):
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        transcript = rows(es)
+        # The authenticated endpoint can return legacy rows without per-row scope.
+        self.assertTrue(multiturn_history_valid(transcript, RU, FIRST, es, LAST, DIALOG))
+        scoped = [dict(message, dialog_id=DIALOG) for message in transcript]
+        self.assertTrue(multiturn_history_valid(scoped, RU, FIRST, es, LAST, DIALOG))
+        for index in range(4):
+            for invalid in ("other-dialog", "", None):
+                with self.subTest(turn=index, invalid=repr(invalid)):
+                    mixed = [dict(message) for message in scoped]
+                    mixed[index]["dialog_id"] = invalid
+                    self.assertFalse(multiturn_history_valid(
+                        mixed, RU, FIRST, es, LAST, DIALOG))
+        self.assertFalse(multiturn_history_valid(scoped, RU, FIRST, es, LAST, "  "))
+
+    def test_default_russian_prompt_byte_equivalent(self):
+        self.assertEqual(
+            multiturn_followup_prompt(TOKEN, "multiturn"),
+            f"[NOX UI QA {TOKEN}] Используя предыдущий ответ, перечисли "
+            "те же числа в обратном порядке через запятую. Без пояснений.",
+        )
+
+    def test_spanish_opt_in_preserves_token_and_requests_previous_ru_answer(self):
+        text = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        self.assertTrue(text.startswith(f"[NOX UI QA {TOKEN}] "))
+        self.assertIn("respuesta a la pregunta anterior en ruso", text)
+        self.assertIn("secuencia de números en orden inverso", text)
+        self.assertNotEqual(text, multiturn_followup_prompt(TOKEN, "multiturn"))
+        with self.assertRaisesRegex(RuntimeError, "HOLD_QA_LANGUAGE_MODE"):
+            multiturn_followup_prompt(TOKEN, "es_es")
+
+    def test_ru_es_requires_prior_randomized_russian_answer_not_rote_ten_to_one(self):
+        challenge = ru_es_context_challenge(TOKEN)
+        numbers = challenge.split(',')
+        self.assertEqual(set(numbers), {str(i) for i in range(1, 11)})
+        self.assertEqual(len(numbers), 10)
+        self.assertNotEqual(challenge, FIRST)
+        self.assertNotEqual(challenge, LAST)
+        self.assertEqual(challenge, ru_es_context_challenge(TOKEN))
+        self.assertNotEqual(challenge, ru_es_context_challenge('ghijk'))
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        self.assertNotIn(challenge, spanish)
+        reversed_answer = ','.join(reversed(numbers))
+        self.assertNotIn(reversed_answer, spanish)
+        self.assertTrue(multiturn_history_valid([
+            {'role': 'user', 'content': 'RU first turn: '+challenge},
+            {'role': 'assistant', 'content': challenge},
+            {'role': 'user', 'content': spanish},
+            {'role': 'assistant', 'content': reversed_answer},
+        ], 'RU first turn: '+challenge, challenge, spanish, reversed_answer))
+        self.assertFalse(multiturn_history_valid([
+            {'role': 'user', 'content': 'RU first turn: '+challenge},
+            {'role': 'assistant', 'content': FIRST},
+            {'role': 'user', 'content': spanish},
+            {'role': 'assistant', 'content': reversed_answer},
+        ], 'RU first turn: '+challenge, challenge, spanish, reversed_answer))
+        with self.assertRaisesRegex(RuntimeError, 'HOLD_QA_CHALLENGE_TOKEN'):
+            ru_es_context_challenge('bad!token')
+
+    def test_ru_es_unleaked_first_answer_drives_dynamic_second_turn(self):
+        first_prompt = ru_es_unleaked_first_prompt(TOKEN)
+        self.assertIn('Выбери самостоятельно', first_prompt)
+        self.assertNotIn('2,7,4,9,1,10,3,8,6,5', first_prompt)
+        first_answer = '2,7,4,9,1,10,3,8,6,5'
+        self.assertTrue(ru_es_unleaked_first_answer_valid(first_answer))
+        self.assertTrue(ru_es_unleaked_first_answer_valid('3,8,1,9,5,10,6,4,2,7'))
+        for invalid in (FIRST, LAST, '1,1,3,4,5,6,7,8,9,10',
+                        '1,2,3,4,5,6,7,8,9', '2,7,4,9,1,10,3,8,6,5,5',
+                        '2,7,4,9,1,10,3,8,6,11', ''):
+            self.assertFalse(ru_es_unleaked_first_answer_valid(invalid))
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        expected_second = ','.join(reversed(first_answer.split(',')))
+        self.assertNotIn(first_answer, spanish)
+        self.assertNotIn(expected_second, spanish)
+        self.assertTrue(multiturn_history_valid([
+            {'role': 'user', 'content': first_prompt},
+            {'role': 'assistant', 'content': first_answer},
+            {'role': 'user', 'content': spanish},
+            {'role': 'assistant', 'content': expected_second},
+        ], first_prompt, first_answer, spanish, expected_second))
+        self.assertFalse(multiturn_history_valid([
+            {'role': 'user', 'content': first_prompt},
+            {'role': 'assistant', 'content': FIRST},
+            {'role': 'user', 'content': spanish},
+            {'role': 'assistant', 'content': expected_second},
+        ], first_prompt, first_answer, spanish, expected_second))
+
+    def test_alternate_native_chat_wire_cannot_bypass_ru_es_post_fence(self):
+        # All recognized native chat aliases must HOLD before the network.
+        self.assertTrue(native_chat_route_candidate('/api/nox/chat/stream'))
+        for path in ('/api/nox/chat', '/api/nox/chat/',
+                     '/api/nox/chat/completions',
+                     '/api/nox/chat/stream/', '/api/nox/chat/stream-v2',
+                     '/api/nox/chat%2Fstream', '/api/nox/chat%5cstream'):
+            with self.subTest(path=path):
+                self.assertTrue(native_chat_route_candidate(path))
+                self.assertNotEqual(path, '/api/nox/chat/stream')
+        for path in ('/api/nox/chatter', '/api/ui/memory/dialogs/history',
+                     '/api/nox/status', '/chat/session', None):
+            self.assertFalse(native_chat_route_candidate(path))
+        guard = inspect.getsource(browser_run)
+        self.assertIn('if native_chat_route_candidate(url.path):', guard)
+        self.assertIn("blocked['alternate_native_chat_route']+=1", guard)
+        self.assertIn("if url.path != '/api/nox/chat/stream':", guard)
+        self.assertIn('allowed_qa_stream_url(request.url, origin)', guard)
+        self.assertIn('allowed_qa_request(', guard)
+
+    def test_encoded_earlier_chat_segments_cannot_escape_native_post_accounting(self):
+        # urlsplit.path is still encoded; a reverse proxy can decode earlier
+        # segments before routing. Such aliases must hit the abort path,
+        # never bypass the exact one-POST-per-turn /api/nox/chat/stream gate.
+        aliases = (
+            '/api/nox/%63hat/stream',
+            '/api/%6eox/chat/stream',
+            '/%61pi/nox/chat/stream',
+            '/%2Fapi/nox/chat/stream',
+            '/api/nox/%2563hat/stream',
+            '/api/nox/chat%2Fstream',
+            '/api/nox/%63hat/completions',
+        )
+        for path in aliases:
+            with self.subTest(path=path):
+                self.assertTrue(native_chat_route_candidate(path))
+                self.assertNotEqual(path, '/api/nox/chat/stream')
+        for ordinary in ('/api/nox/%63hatter', '/api/%6eox/status',
+                         '/api/ui/memory/dialogs/history',
+                         '/nox-web-v29/pc/owner-chat-ui.js'):
+            with self.subTest(ordinary=ordinary):
+                self.assertFalse(native_chat_route_candidate(ordinary))
+        guard = inspect.getsource(browser_run)
+        self.assertIn('if native_chat_route_candidate(url.path):', guard)
+        self.assertIn("if url.path != '/api/nox/chat/stream':", guard)
+        self.assertIn("blocked['alternate_native_chat_route']+=1", guard)
+
+    def test_stream_url_query_cannot_override_native_model_or_history(self):
+        # The browser's real route is a plain path. JSON-body admission alone
+        # is insufficient if the request URL carries alternate query metadata.
+        origin = 'owner.example:18775'
+        endpoint = 'https://' + origin + '/api/nox/chat/stream'
+        self.assertTrue(allowed_qa_stream_url(endpoint, origin))
+        self.assertTrue(allowed_qa_stream_url('http://' + origin + '/api/nox/chat/stream', origin))
+        for url in (
+            endpoint + '?model=foreign-model',
+            endpoint + '?history=%5B%5D',
+            endpoint + '?dialog_id=other',
+            endpoint + '?client_request_id=qa-2',
+            endpoint + '#override',
+            endpoint + '/extra',
+            endpoint.replace('owner.example', 'other.example'),
+            endpoint.replace(':18775', ':9999'),
+            endpoint.replace('https:', 'ftp:'),
+        ):
+            with self.subTest(url=url):
+                self.assertFalse(allowed_qa_stream_url(url, origin))
+        self.assertFalse(allowed_qa_stream_url(None, origin))
+        self.assertFalse(allowed_qa_stream_url(endpoint, None))
+        # Regression must cover wiring in the live Playwright route rather
+        # than validating an unreferenced helper.
+        self.assertIn('allowed_qa_stream_url(request.url, origin)',
+                      inspect.getsource(browser_run))
+
+    def test_ru_es_native_post_rejects_model_route_and_history_overrides(self):
+        # The two-turn QA guard must not certify a different backend/model
+        # or externally supplied history as the owner-scoped native dialog.
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        first = {"message": RU, "dialog_id": DIALOG}
+        second = {"message": es, "dialog_id": DIALOG}
+        self.assertTrue(allowed_qa_request(0, False, RU, es, first, DIALOG))
+        self.assertTrue(allowed_qa_request(1, True, RU, es, second, DIALOG))
+        # Harmless UI tracing metadata must not break the existing client.
+        self.assertTrue(allowed_qa_request(
+            1, True, RU, es, dict(second, client_request_id="qa-2"), DIALOG))
+        overrides = {
+            "model": "foreign-model", "model_id": "foreign-model",
+            "model_override": "foreign-model", "provider": "external",
+            "backend": "external", "route": "/other/stream",
+            "route_override": "/other/stream", "endpoint": "external",
+            "base_url": "https://example.invalid", "upstream_url": "https://example.invalid",
+            "system_prompt": "forget previous answer", "system": "override",
+            "tools": [], "history": [], "messages": [],
+            "session_id": "foreign-session", "conversation_id": "foreign-dialog",
+        }
+        for key, value in overrides.items():
+            with self.subTest(key=key):
+                self.assertFalse(allowed_qa_request(
+                    0, False, RU, es, dict(first, **{key: value}), DIALOG))
+                self.assertFalse(allowed_qa_request(
+                    1, True, RU, es, dict(second, **{key: value}), DIALOG))
+        # A forbidden key must not pass merely because its value is null.
+        self.assertFalse(allowed_qa_request(
+            1, True, RU, es, dict(second, model=None), DIALOG))
+
+    def test_exact_spanish_followup_keeps_same_dialog_and_one_shot_gate(self):
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        good = {"message": es, "dialog_id": DIALOG}
+        self.assertTrue(allowed_qa_request(1, True, RU, es, good, DIALOG))
+        self.assertFalse(allowed_qa_request(1, False, RU, es, good, DIALOG))
+        self.assertFalse(allowed_qa_request(2, True, RU, es, good, DIALOG))
+        self.assertFalse(allowed_qa_request(1, True, RU, es, good, "different-dialog"))
+        self.assertFalse(allowed_qa_request(1, True, RU, es, dict(good, message=es[:-1]), DIALOG))
+
+    def test_second_turn_fails_closed_without_real_dialog_scope(self):
+        # A missing/null request dialog ID must never become a matching
+        # unscoped native POST just because expected dialog_id is also None.
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        valid = {"message": es, "dialog_id": DIALOG}
+        self.assertTrue(allowed_qa_request(1, True, RU, es, valid, DIALOG))
+        for missing_scope in (None, "", "   "):
+            self.assertFalse(allowed_qa_request(
+                1, True, RU, es, {"message": es}, missing_scope))
+            self.assertFalse(allowed_qa_request(
+                1, True, RU, es, {"message": es, "dialog_id": missing_scope},
+                missing_scope))
+        self.assertFalse(allowed_qa_request(
+            1, True, RU, es, valid, "other-dialog"))
+
+    def test_two_turn_browser_receipt_separate_from_unwired_s03(self):
+        """A three-shot browser witness must not imply native S03 acceptance."""
+        captures = [{"stage": "empty", "state": "CAPTURED"},
+                    {"stage": "completed", "state": "CAPTURED"}]
+        single = {"two_turn_mode": False, "screenshot_captures": list(captures)}
+        require_screenshot_captures(single)
+        self.assertTrue(single["screenshot_capture_verified"])
+        incomplete = {"two_turn_mode": True, "screenshot_captures": list(captures)}
+        with self.assertRaisesRegex(RuntimeError, "HOLD_SCREENSHOT_CAPTURE_PENDING"):
+            require_screenshot_captures(incomplete)
+        self.assertFalse(incomplete["screenshot_capture_verified"])
+        for extra in ({"stage": "second_turn", "state": "CAPTURE_TIMEOUT"},
+                      {"stage": "completed", "state": "CAPTURED"}):
+            invalid = {"two_turn_mode": True, "screenshot_captures": captures + [extra]}
+            with self.subTest(extra=extra):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_SCREENSHOT_CAPTURE_PENDING"):
+                    require_screenshot_captures(invalid)
+        complete = {"two_turn_mode": True, "screenshot_captures": captures + [
+            {"stage": "second_turn", "state": "CAPTURED"}]}
+        require_screenshot_captures(complete)
+        self.assertTrue(complete["screenshot_capture_verified"])
+        source = inspect.getsource(browser_run)
+        self.assertIn("QA_SECOND_TURN_PRIVATE_SCREENSHOT", source)
+        self.assertIn("HOLD_MULTITURN_SCREENSHOT_CAPTURE_PENDING", source)
+        self.assertLess(source.index("HOLD_MULTITURN_BROWSER"),
+                        source.index("QA_SECOND_TURN_PRIVATE_SCREENSHOT"))
+        self.assertLess(source.index("QA_SECOND_TURN_PRIVATE_SCREENSHOT"),
+                        source.index("multiturn_browser_acceptance_verified"))
+        self.assertLess(source.index("require_screenshot_captures(report)"),
+                        source.index("multiturn_browser_acceptance_verified"))
+        self.assertLess(source.index("multiturn_browser_acceptance_verified"),
+                        source.index("HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK"))
+        self.assertIn("canonical_s03_verified=False", source)
+
+    def test_ru_es_browser_pass_fences_js_and_critical_static_failures_before_s03_hold(self):
+        """Partial two-turn browser PASS is not valid with JS or failed JS/CSS."""
+        healthy = [{'path': '/nox.js', 'status': 200, 'resource_type': 'script'},
+                   {'path': '/nox.css', 'status': 304, 'resource_type': 'stylesheet'},
+                   {'path': '/missing-image', 'status': 404, 'resource_type': 'image'}]
+        self.assertTrue(clean_two_turn_browser_runtime([], healthy))
+        self.assertTrue(clean_two_turn_browser_runtime([], []))
+        rejected = [
+            ([{'category': 'TypeError'}], healthy),
+            ([], healthy + [{'status': 404, 'resource_type': 'script'}]),
+            ([], healthy + [{'status': 503, 'resource_type': 'stylesheet'}]),
+            ([], healthy + [{'status': None, 'resource_type': 'script'}]),
+            ([], healthy + [{'status': True, 'resource_type': 'script'}]),
+            (None, healthy), ([], None), ([], [None])
+        ]
+        for page_errors, network in rejected:
+            with self.subTest(page_errors=page_errors, network=network):
+                self.assertFalse(clean_two_turn_browser_runtime(page_errors, network))
+        caller = inspect.getsource(browser_run)
+        fence = "if not clean_two_turn_browser_runtime("
+        self.assertIn(fence, caller)
+        self.assertIn("page_errors, network, report[\'network_response_overflow_count\']", caller)
+        self.assertIn("report['critical_requestfailed_count']", caller)
+        self.assertLess(caller.index(fence),
+                        caller.index("report['multiturn_browser_acceptance_verified']=True"))
+        self.assertLess(caller.index(fence),
+                        caller.index("HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK"))
+
+    def test_ru_es_network_observation_overflow_cannot_certify_browser_pass(self):
+        """A bounded network log cannot certify responses it silently omitted."""
+        seen = [{'path': '/nox.js', 'status': 200, 'resource_type': 'script'}]
+        self.assertTrue(clean_two_turn_browser_runtime([], seen, 0))
+        for dropped in (1, 250, -1, None, True, False, "0", 0.0):
+            with self.subTest(dropped=repr(dropped)):
+                self.assertFalse(clean_two_turn_browser_runtime([], seen, dropped))
+        # Keep reports bounded, but count every omitted response and invalidate
+        # narrow browser-only PASS before the mandatory canonical-S03 HOLD.
+        caller = inspect.getsource(browser_run)
+        self.assertIn("report['network_response_overflow_count']=0", caller)
+        self.assertIn("report['network_response_overflow_count']+=1", caller)
+        self.assertIn("page_errors, network, report['network_response_overflow_count']", caller)
+        self.assertLess(caller.index("network_response_overflow_count']+=1"),
+                        caller.index("multiturn_browser_acceptance_verified"))
+
+    def test_ru_es_requestfailed_critical_resources_cannot_certify_browser_pass(self):
+        """Critical script/css transport errors can have no HTTP response event."""
+        healthy = [{'status': 200, 'resource_type': 'script'},
+                   {'status': 304, 'resource_type': 'stylesheet'},
+                   {'status': 404, 'resource_type': 'image'}]
+        self.assertTrue(clean_two_turn_browser_runtime([], healthy, 0, 0))
+        self.assertTrue(clean_two_turn_browser_runtime([], [], 0, 0))
+        for count in (1, 2, -1, None, True, False, "0", 0.0):
+            with self.subTest(critical_requestfailed_count=repr(count)):
+                self.assertFalse(clean_two_turn_browser_runtime([], healthy, 0, count))
+        caller = inspect.getsource(browser_run)
+        self.assertIn("page.on('requestfailed',on_request_failed)", caller)
+        self.assertIn("request.resource_type in ('script', 'stylesheet')", caller)
+        self.assertIn("report['critical_requestfailed_count']+=1", caller)
+        self.assertIn("report['critical_requestfailed_count']=0", caller)
+        self.assertLess(caller.index("page.on('requestfailed',on_request_failed)"),
+                        caller.index("multiturn_browser_acceptance_verified"))
+        self.assertLess(caller.index("report['critical_requestfailed_count']+=1"),
+                        caller.index("multiturn_browser_acceptance_verified"))
+        self.assertLess(caller.index("report['critical_requestfailed_count'],"),
+                        caller.index("multiturn_browser_acceptance_verified"))
+
+    def test_ru_es_extra_blocked_native_posts_invalidate_browser_acceptance(self):
+        """Two admitted POSTs alone cannot hide a third/alternate blocked attempt."""
+        healthy = [{'status': 200, 'resource_type': 'script'},
+                   {'status': 404, 'resource_type': 'image'}]
+        self.assertTrue(clean_two_turn_browser_runtime([], healthy, 0, 0, 0))
+        for count in (1, 2, -1, None, True, False, "0", 0.0):
+            with self.subTest(blocked_native_attempts=repr(count)):
+                self.assertFalse(clean_two_turn_browser_runtime([], healthy, 0, 0, count))
+        caller = inspect.getsource(browser_run)
+        self.assertIn("blocked['non_qa_generation'] + blocked['alternate_native_chat_route']", caller)
+        self.assertIn("blocked['non_qa_generation']+=1", caller)
+        self.assertIn("blocked['alternate_native_chat_route']+=1", caller)
+        self.assertLess(
+            caller.index("blocked['non_qa_generation'] + blocked['alternate_native_chat_route']"),
+            caller.index("report['multiturn_browser_acceptance_verified']=True"))
+        # External assets and blocked legacy/unscoped history are separate
+        # privacy counters, not themselves proof of extra native POSTs.
+        self.assertNotIn("blocked['external_origin'] +", caller)
+        self.assertNotIn("blocked['legacy_unscoped_history'] +", caller)
+
+    def test_ru_es_second_turn_bounded_quiescence_before_browser_only_pass(self):
+        """A delayed third POST or changed stream after screenshot is HOLD."""
+        from owner_chat_browser_qa import stable_second_turn_quiescence
+        snapshot = {
+            'native_calls': 2, 'native_stream_complete': True,
+            'native_terminal_count': 1, 'error': None,
+            'done': {'saved': True, 's03_integrated': True,
+                     'dialog_matches': True},
+            'dom_answer_matches_native': True, 'answer_characters': 19,
+            'answer_sha256': 'a' * 64,
+            'native_delta_count': 4, 'native_bytes': 180,
+            'native_done_ms': 120.5,
+        }
+        self.assertTrue(stable_second_turn_quiescence(
+            snapshot, dict(snapshot), 2, True))
+        for changed in (
+            {'native_calls': 3}, {'native_terminal_count': 2},
+            {'native_stream_complete': False}, {'answer_characters': 20},
+            {'native_delta_count': 5}, {'native_done_ms': 125.5},
+            {'dom_answer_matches_native': False},
+            {'done': dict(snapshot['done'], saved=False)},
+            {'error': 'HOLD_LATE_FAILURE'},
+        ):
+            with self.subTest(changed=changed):
+                self.assertFalse(stable_second_turn_quiescence(
+                    snapshot, dict(snapshot, **changed), 2, True))
+        self.assertFalse(stable_second_turn_quiescence(
+            snapshot, dict(snapshot), 3, True))
+        self.assertFalse(stable_second_turn_quiescence(
+            snapshot, dict(snapshot), 2, False))
+        caller = inspect.getsource(browser_run)
+        screenshot = caller.index("second_capture=await capture_private_screenshot(")
+        quiet = caller.index("quiet_snapshot=await page.evaluate(SNAPSHOT_JS)")
+        session = caller.index("signed_precert=await context.request.get(")
+        runtime = caller.index("if not clean_two_turn_browser_runtime(")
+        accepted = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertIn("await page.wait_for_timeout(500)", caller)
+        self.assertIn("HOLD_MULTITURN_POSTTERMINAL_QUIESCENCE", caller)
+        self.assertLess(screenshot, quiet)
+        self.assertLess(quiet, session)
+        self.assertLess(session, runtime)
+        self.assertLess(runtime, accepted)
+
+    def test_ru_es_postquiet_history_fourrow_identity_and_digest_fence(self):
+        """A clean stream may conceal a rewritten or replaced persisted row."""
+        from owner_chat_browser_qa import postquiet_fourrow_history_stable
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        before = {'dialog_id': DIALOG, 'messages': [
+            dict(row, message_id=f'row-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(es), 1)]}
+        pin = multiturn_transcript_sha256(before['messages'])
+        first_ids = ('row-1', 'row-2')
+        self.assertTrue(postquiet_fourrow_history_stable(
+            before, json.loads(json.dumps(before)), DIALOG, pin, first_ids))
+        for label, mutate in (
+            ('changed_es_answer', lambda h: h['messages'][3].update(content='9,8,7')),
+            ('replaced_last_id', lambda h: h['messages'][3].update(message_id='new-row')),
+            ('replaced_first_id', lambda h: h['messages'][0].update(message_id='new-row')),
+            ('duplicate_id', lambda h: h['messages'][2].update(message_id='row-1')),
+            ('missing_id', lambda h: h['messages'][2].pop('message_id')),
+            ('bad_row_scope', lambda h: h['messages'][1].update(dialog_id='other-dialog')),
+            ('bad_root_scope', lambda h: h.update(dialog_id='other-dialog')),
+            ('dropped_message', lambda h: h['messages'].pop()),
+            ('extra_message', lambda h: h['messages'].append(dict(h['messages'][3]))),
+        ):
+            with self.subTest(mutation=label):
+                later = json.loads(json.dumps(before))
+                mutate(later)
+                self.assertFalse(postquiet_fourrow_history_stable(
+                    before, later, DIALOG, pin, first_ids))
+        self.assertFalse(postquiet_fourrow_history_stable(
+            before, before, DIALOG, '0' * 64, first_ids))
+        self.assertFalse(postquiet_fourrow_history_stable(
+            before, before, DIALOG, pin, ('wrong-1', 'row-2')))
+        self.assertFalse(postquiet_fourrow_history_stable(
+            before, before, DIALOG, pin, first_ids[:1]))
+        caller = inspect.getsource(browser_run)
+        self.assertLess(caller.index("quiet_snapshot=await page.evaluate(SNAPSHOT_JS)"),
+                        caller.index("QA_POSTQUIET_PERSISTED_HISTORY"))
+        self.assertLess(caller.index("QA_POSTQUIET_PERSISTED_HISTORY"),
+                        caller.index("signed_precert=await context.request.get("))
+        self.assertLess(caller.index("postquiet_fourrow_history_stable("),
+                        caller.index("multiturn_browser_acceptance_verified']=True"))
+        self.assertIn('HOLD_MULTITURN_POSTQUIET_HISTORY_CHANGED', caller)
+        self.assertIn("base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6'", caller)
+        self.assertIn('canonical_s03_verified=False', caller)
+
+
+    def test_postquiet_row_dialog_presence_remains_pinned_across_reload(self):
+        """Do not mistake changed row-level dialog provenance for stable history.
+
+        Read-only synthetic owner-history snapshots, NOT live canonical S03.
+        """
+        from owner_chat_browser_qa import postquiet_fourrow_history_stable
+
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        scoped = {'dialog_id': DIALOG, 'messages': [
+            dict(row, message_id=f'row-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(spanish), 1)]}
+        clone = lambda obj: json.loads(json.dumps(obj, ensure_ascii=False))
+        legacy = clone(scoped)
+        for row in legacy['messages']:
+            del row['dialog_id']
+        transcript = multiturn_transcript_sha256(scoped['messages'])
+        first_ids = ('row-1', 'row-2')
+        stable = lambda a, b: postquiet_fourrow_history_stable(
+            a, b, DIALOG, transcript, first_ids)
+
+        self.assertTrue(stable(scoped, clone(scoped)))
+        self.assertTrue(stable(legacy, clone(legacy)))
+        for index in range(4):
+            with self.subTest(row_index=index):
+                # Equal role/text digest, durable message IDs, root dialog
+                # and session scope, but one row drops explicit provenance.
+                dropped = clone(scoped)
+                del dropped['messages'][index]['dialog_id']
+                self.assertFalse(stable(scoped, dropped))
+                added = clone(legacy)
+                added['messages'][index]['dialog_id'] = DIALOG
+                self.assertFalse(stable(legacy, added))
+
+        # Whole-history scope can also vanish or appear during reload.
+        self.assertFalse(stable(scoped, legacy))
+        self.assertFalse(stable(legacy, scoped))
+        self.assertNotIn('context.request.post(',
+                         inspect.getsource(postquiet_fourrow_history_stable))
+
+
+    def test_postquiet_root_dialog_presence_cannot_rotate_after_second_turn(self):
+        """Postquiet and reload owner-history GETs must pin root dialog presence."""
+        from owner_chat_browser_qa import postquiet_fourrow_history_stable
+        spanish = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        scoped = {'dialog_id': DIALOG, 'messages': [
+            dict(row, message_id=f'row-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(spanish), 1)]}
+        digest = multiturn_transcript_sha256(scoped['messages'])
+        first_ids = ('row-1', 'row-2')
+        clone = lambda obj: json.loads(json.dumps(obj))
+        legacy = clone(scoped)
+        del legacy['dialog_id']
+        stable = lambda a, b: postquiet_fourrow_history_stable(
+            a, b, DIALOG, digest, first_ids)
+        self.assertTrue(stable(scoped, clone(scoped)))
+        self.assertTrue(stable(legacy, clone(legacy)))
+        # Role/text SHA, row IDs and per-row dialog_id remain identical.
+        # Only root dialog_id field presence rotates between snapshots.
+        self.assertFalse(stable(scoped, legacy))
+        self.assertFalse(stable(legacy, scoped))
+
+    def test_postsecond_postquiet_root_session_provenance_is_immutable(self):
+        """Root owner session must survive quiet/reload history read-only GETs."""
+        from owner_chat_browser_qa import postquiet_fourrow_history_stable
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        base = {'dialog_id': DIALOG, 'session_id': 'owner-session-A',
+                'messages': [
+                    dict(row, message_id=f'row-{i}', dialog_id=DIALOG,
+                         session_id='owner-session-A')
+                    for i, row in enumerate(rows(es), 1)]}
+        sha = multiturn_transcript_sha256(base['messages'])
+        first_ids = ('row-1', 'row-2')
+        clone = lambda obj: json.loads(json.dumps(obj))
+        assert_stable = lambda a, b: postquiet_fourrow_history_stable(
+            a, b, DIALOG, sha, first_ids)
+        self.assertTrue(assert_stable(base, clone(base)))
+        for mode in ('rotate-root-only', 'drop-root', 'null-root', 'padded-root',
+                     'wrong-root-type', 'drop-row-scope'):
+            later = clone(base)
+            if mode == 'rotate-root-only':
+                later['session_id'] = 'owner-session-B'
+            elif mode == 'drop-root':
+                del later['session_id']
+            elif mode == 'null-root':
+                later['session_id'] = None
+            elif mode == 'padded-root':
+                later['session_id'] = ' owner-session-A '
+            elif mode == 'wrong-root-type':
+                later['session_id'] = 99
+            else:
+                del later['messages'][2]['session_id']
+            with self.subTest(mode=mode):
+                self.assertEqual(
+                    multiturn_transcript_sha256(later['messages']), sha)
+                self.assertEqual(
+                    [r['message_id'] for r in later['messages']],
+                    [r['message_id'] for r in base['messages']])
+                self.assertFalse(assert_stable(base, later))
+        # Root-only owner sessions are valid when all rows are legacy unscoped.
+        root_only = clone(base)
+        for row in root_only['messages']:
+            row.pop('session_id')
+        self.assertTrue(assert_stable(root_only, clone(root_only)))
+        changed_root = clone(root_only)
+        changed_root['session_id'] = 'owner-session-B'
+        self.assertFalse(assert_stable(root_only, changed_root))
+        # Entirely unscoped legacy history remains backward-compatible.
+        legacy = clone(root_only)
+        legacy.pop('session_id')
+        self.assertTrue(assert_stable(legacy, clone(legacy)))
+        self.assertFalse(assert_stable(legacy, root_only))
+        caller = inspect.getsource(browser_run)
+        self.assertLess(caller.index('QA_POSTQUIET_PERSISTED_HISTORY'),
+                        caller.index('QA_RELOAD_SAME_DIALOG_FOURROW'))
+        self.assertLess(caller.index('QA_POSTQUIET_PERSISTED_HISTORY'),
+                        caller.index("multiturn_browser_acceptance_verified']=True"))
+
+    def test_ru_es_reload_history_recheck_cannot_rotate_row_session_metadata(self):
+        """Stable four-message IDs/text must not hide an owner-session switch."""
+        from types import SimpleNamespace
+        from owner_chat_browser_qa import (
+            postquiet_fourrow_history_stable, postrender_owner_history_recheck,
+        )
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        legacy = {'dialog_id': DIALOG, 'messages': [
+            dict(row, message_id=f'row-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(es), 1)]}
+        scoped = json.loads(json.dumps(legacy))
+        for row in scoped['messages']:
+            row['session_id'] = 'owner-session-A'
+        sha = multiturn_transcript_sha256(scoped['messages'])
+        first_ids = ('row-1', 'row-2')
+        self.assertTrue(postquiet_fourrow_history_stable(
+            legacy, json.loads(json.dumps(legacy)), DIALOG, sha, first_ids))
+        self.assertTrue(postquiet_fourrow_history_stable(
+            scoped, json.loads(json.dumps(scoped)), DIALOG, sha, first_ids))
+
+        rotated = json.loads(json.dumps(scoped))
+        for row in rotated['messages']:
+            row['session_id'] = 'owner-session-B'
+        partial = json.loads(json.dumps(scoped))
+        partial['messages'][2].pop('session_id')
+        padded = json.loads(json.dumps(scoped))
+        padded['messages'][1]['session_id'] = ' owner-session-A '
+        malformed = json.loads(json.dumps(scoped))
+        malformed['messages'][1]['session_id'] = 0
+        snapshots = (
+            (scoped, rotated), (scoped, legacy), (legacy, scoped),
+            (scoped, partial), (scoped, padded), (scoped, malformed),
+        )
+        for before, after in snapshots:
+            with self.subTest(before_session=before['messages'][0].get('session_id'),
+                              after_session=after['messages'][0].get('session_id')):
+                # The transcript SHA and all four message IDs stay identical;
+                # only the owner/session provenance changes.
+                self.assertEqual(
+                    multiturn_transcript_sha256(before['messages']),
+                    multiturn_transcript_sha256(after['messages']))
+                self.assertEqual(
+                    [row['message_id'] for row in before['messages']],
+                    [row['message_id'] for row in after['messages']])
+                self.assertFalse(postquiet_fourrow_history_stable(
+                    before, after, DIALOG, sha, first_ids))
+                response = SimpleNamespace(status=200, body=AsyncMock(
+                    return_value=json.dumps(after, ensure_ascii=False).encode('utf-8')))
+                context = SimpleNamespace(request=SimpleNamespace(
+                    get=AsyncMock(return_value=response)))
+                self.assertFalse(asyncio.run(postrender_owner_history_recheck(
+                    context, 'http://127.0.0.1:18775', before,
+                    DIALOG, sha, first_ids)))
+                self.assertEqual(context.request.get.await_count, 1)
+
+    def test_ru_es_postread_final_stream_fence_after_history_and_session(self):
+        """A late SSE mutation during read-only history/session GET is HOLD."""
+        from owner_chat_browser_qa import stable_second_turn_quiescence
+        quiet = {
+            'native_calls': 2, 'native_stream_complete': True,
+            'native_terminal_count': 1, 'error': None,
+            'done': {'saved': True, 's03_integrated': True,
+                     'dialog_matches': True},
+            'dom_answer_matches_native': True, 'answer_characters': 19,
+            'answer_sha256': 'a' * 64,
+            'native_delta_count': 4, 'native_bytes': 180,
+            'native_done_ms': 120.5,
+        }
+        self.assertTrue(stable_second_turn_quiescence(
+            quiet, dict(quiet), 2, True))
+        for late in (
+            {'native_calls': 3}, {'native_terminal_count': 2},
+            {'native_delta_count': 5}, {'native_bytes': 181},
+            {'native_done_ms': 130.5}, {'error': 'HOLD_LATE_ERROR'},
+            {'dom_answer_matches_native': False},
+        ):
+            with self.subTest(late=late):
+                self.assertFalse(stable_second_turn_quiescence(
+                    quiet, dict(quiet, **late), 2, True))
+        self.assertFalse(stable_second_turn_quiescence(
+            quiet, dict(quiet), 2, False))
+        caller = inspect.getsource(browser_run)
+        history = caller.index("postquiet_history=await owner_history_json_response(")
+        session = caller.index("signed_precert=await context.request.get(")
+        runtime = caller.index("if not clean_two_turn_browser_runtime(")
+        final = caller.index("postread_snapshot=await page.evaluate(SNAPSHOT_JS)")
+        passed = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(history, session)
+        self.assertLess(session, runtime)
+        self.assertLess(runtime, final)
+        self.assertLess(final, passed)
+        self.assertIn("quiet_snapshot, postread_snapshot, stream_admitted, postread_native_equal", caller)
+        self.assertIn('HOLD_MULTITURN_POSTREAD_STREAM_CHANGED', caller)
+        self.assertNotIn("context.request.post(", caller[history:passed])
+        self.assertIn('canonical_s03_verified=False', caller)
+
+    def test_ru_es_equal_length_second_answer_mutation_must_hold(self):
+        """Same-length changed SSE answer must fail even if counters do not move."""
+        from owner_chat_browser_qa import SNAPSHOT_JS, stable_second_turn_quiescence
+        snapshot = {
+            'native_calls': 2, 'native_stream_complete': True,
+            'native_terminal_count': 1, 'error': None,
+            'done': {'saved': True, 's03_integrated': True,
+                     'dialog_matches': True},
+            'dom_answer_matches_native': True, 'answer_characters': 19,
+            'answer_sha256': 'a' * 64,
+            'native_delta_count': 4, 'native_bytes': 180,
+            'native_done_ms': 120.5,
+        }
+        self.assertTrue(stable_second_turn_quiescence(
+            snapshot, dict(snapshot), 2, True))
+        # Same byte/character lengths, terminal timestamp and delta count:
+        # only the stable salted answer digest distinguishes the mutation.
+        self.assertFalse(stable_second_turn_quiescence(
+            snapshot, dict(snapshot, answer_sha256='b' * 64), 2, True))
+        for malformed in (None, '', 'a' * 63, 'Z' * 64, 123, True):
+            with self.subTest(malformed=malformed):
+                self.assertFalse(stable_second_turn_quiescence(
+                    dict(snapshot, answer_sha256=malformed),
+                    dict(snapshot, answer_sha256=malformed), 2, True))
+        self.assertIn("SNAPSHOT_JS = r\"\"\"async () =>", inspect.getsource(
+            __import__('owner_chat_browser_qa')))
+        self.assertIn("crypto.getRandomValues(salt)", SNAPSHOT_JS)
+        self.assertIn("crypto.subtle.digest('SHA-256',salted)", SNAPSHOT_JS)
+        self.assertIn("answer_sha256:answerDigest", SNAPSHOT_JS)
+        # Never expose raw answer or secret salt in any report snapshot.
+        self.assertNotIn("answer_text:", SNAPSHOT_JS)
+        self.assertNotIn("qaDigestSalt:", SNAPSHOT_JS)
+
+    def test_ru_es_four_turn_history_needs_independent_canonical_s03(self):
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        transcript = rows(es)
+        self.assertTrue(multiturn_history_valid(transcript, RU, FIRST, es, LAST))
+        self.assertFalse(canonical_s03_proof_valid(None, None, DIALOG, transcript))
+        writer, proof = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(writer, proof, DIALOG, transcript))
+        self.assertFalse(canonical_s03_proof_valid(writer, proof, "different-dialog", transcript))
+        self.assertFalse(canonical_s03_proof_valid(writer, dict(proof, independent=False), DIALOG, transcript))
+        self.assertFalse(canonical_s03_proof_valid(writer, dict(proof, full_answer_sha256="0"*64), DIALOG, transcript))
+        altered = rows(es)
+        altered[2]["content"] = altered[2]["content"].replace("números", "numeros")
+        self.assertFalse(multiturn_history_valid(altered, RU, FIRST, es, LAST))
+        self.assertFalse(canonical_s03_proof_valid(writer, proof, DIALOG, altered))
+        self.assertFalse(multiturn_history_valid(transcript[:2], RU, FIRST, es, LAST))
+
+
+    def test_ambiguous_click_never_retries_native_first_or_second_turn(self):
+        # A client click timeout may occur after DOM dispatch but before the
+        # observable fetch counter advances. Do not submit a second click.
+        class Target:
+            async def evaluate(self, _):
+                return {"in_view": True, "pointer_hit_own_button": True, "x": 40, "y": 40}
+
+            async def click(self, timeout):
+                raise TimeoutError("not stable")
+
+        class Page:
+            def __init__(self, calls):
+                self.calls = calls
+                self.mouse = type("Mouse", (), {"click": AsyncMock()})()
+
+            def locator(self, _):
+                return Target()
+
+            async def evaluate(self, _):
+                return {"native_calls": self.calls}
+
+        for before in (0, 1):
+            with self.subTest(turn=before + 1, outcome="unknown"):
+                page, report = Page(before), {}
+                with self.assertRaisesRegex(RuntimeError, "HOLD_QA_SEND_OUTCOME_UNKNOWN"):
+                    asyncio.run(click_send(page, report, expected_before=before))
+                page.mouse.click.assert_not_awaited()
+                field = "qa_send_control" if before == 0 else "qa_second_send_control"
+                self.assertTrue(report[field]["native_request_outcome_unknown"])
+                self.assertEqual(report[field]["observed_native_calls"], before)
+            with self.subTest(turn=before + 1, outcome="already-started"):
+                page, report = Page(before + 1), {}
+                asyncio.run(click_send(page, report, expected_before=before))
+                page.mouse.click.assert_not_awaited()
+                field = "qa_send_control" if before == 0 else "qa_second_send_control"
+                self.assertTrue(report[field]["native_request_already_started"])
+
+
+
+    def test_ru_es_active_dialog_pinned_before_second_post_and_acceptance(self):
+        """Real Chromium switches the visible dialog without touching S03."""
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import ACTIVE_QA_DIALOG_JS
+
+        title = 'NOX Browser QA synthetic'
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                page.set_content(
+                    '<div id="nativeChats">'
+                    '<button role="listitem" aria-current="true">'
+                    '<span class="t">NOX Browser QA synthetic</span></button>'
+                    '<button role="listitem" aria-current="false">'
+                    '<span class="t">Another dialog</span></button></div>'
+                    '<div id="messages"></div>')
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                page.evaluate("""() => {
+                    const b=document.querySelectorAll('#nativeChats button');
+                    b[0].setAttribute('aria-current','false');
+                    b[1].setAttribute('aria-current','true');
+                }""")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.evaluate("""() => {
+                    const b=document.querySelectorAll('#nativeChats button');
+                    b[0].setAttribute('aria-current','true');
+                }""")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.evaluate("""() => {
+                    const b=document.querySelectorAll('#nativeChats button');
+                    b[1].setAttribute('aria-current','false');
+                    b[0].querySelector('.t').textContent='Replaced dialog';
+                }""")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.evaluate("""() => {
+                    document.querySelector('#nativeChats .t').textContent=
+                        'NOX Browser QA synthetic';
+                }""")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                page.evaluate("document.querySelector('#messages').remove()")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+            finally:
+                browser.close()
+        caller = inspect.getsource(browser_run)
+        pre = caller.index("HOLD_MULTITURN_ACTIVE_DIALOG_CHANGED_BEFORE_SECOND_POST")
+        admitted = caller.index('second_permitted=True', pre)
+        final = caller.index("postread_snapshot=await page.evaluate(SNAPSHOT_JS)")
+        preaccept = caller.index("HOLD_MULTITURN_ACTIVE_DIALOG_CHANGED_BEFORE_ACCEPTANCE")
+        accepted = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(pre, admitted)
+        self.assertLess(final, preaccept)
+        self.assertLess(preaccept, accepted)
+        self.assertEqual(caller.count('page.evaluate(ACTIVE_QA_DIALOG_JS,title)'), 4)
+        self.assertIn("urllib.parse.urlsplit(page.url).path!=PAGE", caller)
+        self.assertNotIn("context.request.post(", caller[final:accepted])
+
+
+    def test_ru_es_browser_reload_reselect_preserves_four_rows(self):
+        """Real Chromium reload recovers the same persisted RU/ES UI rows;
+        the in-memory stream witness is not reused as durable history.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import (
+            ACTIVE_QA_DIALOG_JS, postquiet_fourrow_history_stable,
+        )
+        title = 'NOX Browser QA synthetic'
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        transcript = [
+            dict(row, message_id=f'ru-es-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(spanish), 1)
+        ]
+        expected_sha = multiturn_transcript_sha256(transcript)
+        first_ids = verified_two_turn_firstturn_ids(transcript[:2])
+        self.assertIsNotNone(first_ids)
+        html = """
+          <div id="nativeChats">
+            <button id="qa-dialog" role="listitem" aria-current="false">
+              <span class="t">NOX Browser QA synthetic</span>
+            </button>
+          </div>
+          <div id="messages"></div>
+          <script>
+            const rows=__ROWS__;
+            document.getElementById('qa-dialog').addEventListener('click', function() {
+              this.setAttribute('aria-current','true');
+              const root=document.getElementById('messages');
+              root.textContent='';
+              for(const row of rows) {
+                const p=document.createElement('p');
+                p.dataset.messageId=row.message_id;
+                p.dataset.role=row.role;
+                p.textContent=row.content;
+                root.appendChild(p);
+              }
+            });
+          </script>
+        """.replace('__ROWS__', json.dumps(transcript, ensure_ascii=True))
+        read_js = """dialogId=>({
+          dialog_id:dialogId,
+          messages:[...document.querySelectorAll('#messages p')].map(p=>({
+            role:p.dataset.role, content:p.textContent,
+            message_id:p.dataset.messageId, dialog_id:dialogId
+          }))
+        })"""
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posted = []
+                page.on('request', lambda req: posted.append(req.method)
+                        if req.method == 'POST' else None)
+                page.route('**/b5-reload-ru-es',
+                           lambda route: route.fulfill(
+                               status=200, content_type='text/html', body=html))
+                page.goto('http://127.0.0.1:8765/b5-reload-ru-es')
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.locator('#qa-dialog').click()
+                before = page.evaluate(read_js, DIALOG)
+                self.assertEqual(before['messages'], transcript)
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                page.reload(wait_until='domcontentloaded')
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.locator('#qa-dialog').click()
+                after = page.evaluate(read_js, DIALOG)
+                self.assertTrue(postquiet_fourrow_history_stable(
+                    before, after, DIALOG, expected_sha, first_ids))
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                page.evaluate("""() => {
+                  document.querySelector('#messages p:last-child').textContent='0';
+                }""")
+                self.assertFalse(postquiet_fourrow_history_stable(
+                    before, page.evaluate(read_js, DIALOG), DIALOG,
+                    expected_sha, first_ids))
+                page.evaluate("""() => {
+                  document.querySelector('#messages p:first-child').dataset.messageId='replayed';
+                }""")
+                self.assertFalse(postquiet_fourrow_history_stable(
+                    before, page.evaluate(read_js, DIALOG), DIALOG,
+                    expected_sha, first_ids))
+                self.assertEqual(posted, [], 'reload must not generate a native POST')
+            finally:
+                browser.close()
+        caller = inspect.getsource(browser_run)
+        stream_end = caller.index("report['multiturn_preaccept_active_dialog_verified']=True")
+        reload_gate = caller.index("report['browser_stage']='QA_RELOAD_SAME_DIALOG_FOURROW'")
+        reload_call = caller.index("page.reload(wait_until='domcontentloaded'", reload_gate)
+        persisted = caller.index("postquiet_fourrow_history_stable(", reload_call)
+        passed = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(stream_end, reload_gate)
+        self.assertLess(reload_gate, reload_call)
+        self.assertLess(reload_call, persisted)
+        self.assertLess(persisted, passed)
+        self.assertNotIn('context.request.post(', caller[reload_gate:passed])
+        self.assertIn('HOLD_MULTITURN_RELOAD_OWNER_SESSION_CHANGED', caller)
+        self.assertIn('HOLD_MULTITURN_RELOAD_HISTORY_FOURROW_CHANGED', caller)
+
+    def test_ru_es_snapshot_webcrypto_real_chromium(self):
+        """Real isolated Chromium evaluates the production async snapshot JS.
+
+        Browser-only evidence: no native inference, cookies, or canonical S03.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import SNAPSHOT_JS, stable_second_turn_quiescence
+
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                page.route("**/b5-crypto-snapshot", lambda route: route.fulfill(
+                    status=200, content_type="text/html",
+                    body='<html><body><div id="messages"><div id="answer">10,9,8</div></div></body></html>'))
+                page.goto("http://127.0.0.1:8765/b5-crypto-snapshot")
+                self.assertTrue(page.evaluate("window.isSecureContext"))
+                self.assertEqual(page.evaluate("typeof crypto.subtle"), "object")
+                page.evaluate("""() => {
+                    window.__NOX_BROWSER_QA={
+                        answer:'10,9,8',uiBody:document.getElementById('answer'),
+                        contexts:[],nativeFirst:10,nativeDone:100,nativeDeltas:4,
+                        nativeBytes:120,nativeCalls:2,nativeTerminalCount:1,
+                        nativeStreamComplete:true,done:{saved:true,s03_integrated:true,dialog_matches:true},
+                        error:null,draws:0
+                    };
+                }""")
+                first = page.evaluate(SNAPSHOT_JS)
+                second = page.evaluate(SNAPSHOT_JS)
+                self.assertRegex(first['answer_sha256'], r'^[0-9a-f]{64}$')
+                self.assertEqual(first['answer_sha256'], second['answer_sha256'])
+                self.assertTrue(first['dom_answer_matches_native'])
+                self.assertTrue(stable_second_turn_quiescence(first, second, 2, True))
+                self.assertNotIn('qaDigestSalt', first)
+                self.assertNotIn('10,9,8', str(first))
+                # The mutation preserves all network counters and character length.
+                page.evaluate("""() => {
+                    window.__NOX_BROWSER_QA.answer='10,9,7';
+                    document.getElementById('answer').innerText='10,9,7';
+                }""")
+                changed = page.evaluate(SNAPSHOT_JS)
+                self.assertEqual(first['answer_characters'], changed['answer_characters'])
+                for field in ('native_calls','native_delta_count','native_bytes','native_done_ms'):
+                    self.assertEqual(first[field], changed[field])
+                self.assertNotEqual(first['answer_sha256'], changed['answer_sha256'])
+                self.assertTrue(changed['dom_answer_matches_native'])
+                self.assertFalse(stable_second_turn_quiescence(first, changed, 2, True))
+                # Within one browser context the per-browser salt must remain stable.
+                page.evaluate("""() => {
+                    window.__NOX_BROWSER_QA.answer='10,9,8';
+                    document.getElementById('answer').innerText='10,9,8';
+                }""")
+                restored = page.evaluate(SNAPSHOT_JS)
+                self.assertEqual(first['answer_sha256'], restored['answer_sha256'])
+            finally:
+                browser.close()
+
+
+    def test_ru_es_postreload_session_rotation_during_fourrow_read_holds(self):
+        """A slow postreload history GET cannot certify a rotated owner."""
+        from types import SimpleNamespace
+        from owner_chat_browser_qa import postreload_owner_session_recheck
+
+        base = 'http://127.0.0.1:8765'
+        original = {'name':'nox-owner','domain':'127.0.0.1',
+                    'path':'/','value':'signed-A','httpOnly':True}
+        rotated = dict(original, value='signed-B')
+        pin = owner_session_cookie_pin([original])
+        self.assertIsInstance(pin, str)
+        self.assertEqual(len(pin), 64)
+
+        async def exercise(mode):
+            cookies = [dict(original)]
+            async def slow_history_get():
+                # Simulate server rotation/expiration while the authenticated
+                # history endpoint is resolving after browser reload.
+                await asyncio.sleep(0)
+                if mode == 'rotated':
+                    cookies[:] = [rotated]
+                return {'messages': ['ru','answer','es','answer']}
+            await slow_history_get()
+
+            async def signed_get(url, **kwargs):
+                self.assertEqual(url, base+'/chat/session')
+                self.assertEqual(kwargs, {'max_redirects':0,'timeout':6000})
+                if mode == 'transport-error':
+                    raise OSError('synthetic lost session check')
+                return SimpleNamespace(status=401 if mode == 'expired' else 200)
+            async def observed_cookies(origin):
+                self.assertEqual(origin, base)
+                return list(cookies)
+            context=SimpleNamespace(
+                request=SimpleNamespace(get=AsyncMock(side_effect=signed_get)),
+                cookies=AsyncMock(side_effect=observed_cookies))
+            verified=await postreload_owner_session_recheck(context,base,pin)
+            context.request.get.assert_awaited_once()
+            context.cookies.assert_awaited_once() if mode != 'transport-error' else None
+            return verified
+
+        for mode, expected in (('stable',True),('rotated',False),
+                               ('expired',False),('transport-error',False)):
+            with self.subTest(mode=mode):
+                self.assertIs(asyncio.run(exercise(mode)), expected)
+        self.assertFalse(asyncio.run(postreload_owner_session_recheck(
+            SimpleNamespace(request=SimpleNamespace(
+                get=AsyncMock(side_effect=OSError('offline')))),
+            base,pin)))
+
+        caller = inspect.getsource(browser_run)
+        reload_point=caller.index("report['browser_stage']='QA_RELOAD_SAME_DIALOG_FOURROW'")
+        prehistory_session=caller.index("signed_reload=await context.request.get(",reload_point)
+        history=caller.index('reloaded_history=await owner_history_json_response(',reload_point)
+        stable=caller.index('postquiet_fourrow_history_stable(',history)
+        posthistory_session=caller.index('postreload_owner_session_recheck(',history)
+        runtime=caller.index('HOLD_MULTITURN_RELOAD_RUNTIME_OR_POST',posthistory_session)
+        acceptance=caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(prehistory_session,history)
+        self.assertLess(history,stable)
+        self.assertLess(stable,posthistory_session)
+        self.assertLess(posthistory_session,runtime)
+        self.assertLess(runtime,acceptance)
+        self.assertIn('HOLD_MULTITURN_RELOAD_POSTHISTORY_SESSION_CHANGED',caller)
+        self.assertNotIn('context.request.post(',caller[history:acceptance])
+        self.assertIn('canonical_s03_verified=False',caller)
+
+
+    def test_ru_es_postreload_posthistory_ui_drift_fails_closed(self):
+        """A late UI switch after owner history/session reads cannot certify B5."""
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import ACTIVE_QA_DIALOG_JS
+
+        title = 'NOX Browser QA synthetic'
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                observed_posts = []
+                page.on('request', lambda req: observed_posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content(
+                    '<div id="nativeChats">'
+                    '<button id="pinned" role="listitem" aria-current="true">'
+                    '<span class="t">NOX Browser QA synthetic</span></button>'
+                    '<button id="other" role="listitem" aria-current="false">'
+                    '<span class="t">Other dialog</span></button>'
+                    '</div><div id="messages"></div>')
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                # Simulate the user switching dialogs during a slow history
+                # and signed-session read. The last witness must see the drift.
+                page.evaluate("""() => {
+                  setTimeout(() => {
+                    document.getElementById('pinned').setAttribute('aria-current','false');
+                    document.getElementById('other').setAttribute('aria-current','true');
+                  }, 15);
+                }""")
+                page.wait_for_function(
+                    "document.getElementById('other').getAttribute('aria-current')==='true'",
+                    timeout=2000)
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                page.evaluate("""() => {
+                    document.getElementById('other').setAttribute('aria-current','false');
+                    document.getElementById('pinned').setAttribute('aria-current','true');
+                }""")
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), True)
+                page.locator('#messages').evaluate('(el)=>el.remove()')
+                self.assertIs(page.evaluate(ACTIVE_QA_DIALOG_JS, title), False)
+                self.assertEqual(observed_posts, [], 'UI fence never requests generation')
+            finally:
+                browser.close()
+
+        caller = inspect.getsource(browser_run)
+        reloaded_history = caller.index('reloaded_history=await owner_history_json_response(')
+        session = caller.index('postreload_owner_session_recheck(', reloaded_history)
+        runtime = caller.index('HOLD_MULTITURN_RELOAD_RUNTIME_OR_POST', session)
+        guard = caller.index(
+            'HOLD_MULTITURN_RELOAD_POSTHISTORY_ACTIVE_DIALOG_CHANGED', runtime)
+        accepted = caller.index(
+            "report['multiturn_browser_acceptance_verified']=True", guard)
+        self.assertLess(reloaded_history, session)
+        self.assertLess(session, runtime)
+        self.assertLess(runtime, guard)
+        self.assertLess(guard, accepted)
+        self.assertIn('page.evaluate(ACTIVE_QA_DIALOG_JS,title)',
+                      caller[runtime:guard])
+        self.assertNotIn('context.request.post(', caller[session:accepted])
+
+
+
+    def test_ru_es_postreload_rendered_fourrow_identity_real_chromium(self):
+        """Only four visible, ordered, role-matched bubbles can certify UI readback.
+
+        This is synthetic browser DOM; not live model or independent S03 proof.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+        transcript = [
+            dict(row, message_id=f'fourrow-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                observed_posts = []
+                page.on('request', lambda req: observed_posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.querySelector('#messages');
+                    for(const row of items){
+                      const bubble=document.createElement('div');
+                      bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                      bubble.dataset.messageId=row.message_id;
+                      const body=document.createElement('div');
+                      body.className='body';
+                      body.textContent=row.content;
+                      bubble.append(body);
+                      root.append(bubble);
+                    }
+                }""", transcript)
+                proof = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(proof(), True)
+                # Browser rendering may collapse ordinary spaces without losing
+                # message identity; full content/order still must be identical.
+                page.locator('#messages .body').nth(0).evaluate(
+                    "(node)=>node.textContent='unexpected message'")
+                self.assertIs(proof(), False)
+                page.locator('#messages .body').nth(0).evaluate(
+                    "(node,text)=>node.textContent=text", transcript[0]['content'])
+                self.assertIs(proof(), True)
+                page.locator('#messages .v24-msg').nth(1).evaluate(
+                    "(node)=>node.classList.remove('nox')")
+                self.assertIs(proof(), False)
+                page.locator('#messages .v24-msg').nth(1).evaluate(
+                    "(node)=>node.classList.add('nox')")
+                self.assertIs(proof(), True)
+                page.locator('#messages .v24-msg').nth(2).evaluate(
+                    "(node)=>node.dataset.messageId='other-owner-row'")
+                self.assertIs(proof(), False)
+                page.locator('#messages .v24-msg').nth(2).evaluate(
+                    "(node,text)=>node.dataset.messageId=text",
+                    transcript[2]['message_id'])
+                self.assertIs(proof(), True)
+                page.locator('#messages .v24-msg').nth(3).evaluate(
+                    "(node)=>node.style.display='none'")
+                self.assertIs(proof(), False)
+                page.locator('#messages .v24-msg').nth(3).evaluate(
+                    "(node)=>node.style.display=''")
+                self.assertIs(proof(), True)
+                page.locator('#messages').evaluate(
+                    "(root)=>root.append(root.firstElementChild.cloneNode(true))")
+                self.assertIs(proof(), False)
+                self.assertEqual(observed_posts, [])
+            finally:
+                browser.close()
+        caller = inspect.getsource(browser_run)
+        history = caller.index('reloaded_history=await owner_history_json_response(')
+        final_ui = caller.index(
+            'HOLD_MULTITURN_RELOAD_POSTHISTORY_ACTIVE_DIALOG_CHANGED', history)
+        rendered = caller.index(
+            'HOLD_MULTITURN_RELOAD_RENDERED_FOURROW_MISMATCH', final_ui)
+        accepted = caller.index("report['multiturn_browser_acceptance_verified']=True")
+        self.assertLess(history, final_ui)
+        self.assertLess(final_ui, rendered)
+        self.assertLess(rendered, accepted)
+        self.assertIn('page.wait_for_function(', caller[final_ui:accepted])
+        self.assertNotIn('context.request.post(', caller[history:accepted])
+        self.assertIn('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK', caller)
+
+
+
+    def test_ru_es_postrender_final_owner_fence_real_chromium(self):
+        """A session/UI mutation while rendering cannot certify RU/ES history.
+
+        Synthetic Chromium only; native S03 and installed serving remain HOLD.
+        """
+        from types import SimpleNamespace
+        from playwright.async_api import async_playwright
+        from owner_chat_browser_qa import (
+            PAGE, owner_session_cookie_pin, postrender_owner_session_dialog_fence,
+        )
+
+        title = 'NOX Browser QA synthetic'
+        transcript = [
+            dict(row, message_id=f'postrender-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        cookie = {'name':'nox-owner','domain':'127.0.0.1',
+                  'path':'/','value':'signed-A','httpOnly':True}
+        pin = owner_session_cookie_pin([cookie])
+        self.assertIsInstance(pin, str)
+        self.assertEqual(len(pin), 64)
+        self.assertTrue(all(ch in '0123456789abcdef' for ch in pin))
+
+        async def exercise():
+            async with async_playwright() as runner:
+                browser = await runner.chromium.launch(headless=True)
+                try:
+                    page = await browser.new_page()
+                    observed_posts = []
+                    page.on('request', lambda req: observed_posts.append(req.url)
+                            if req.method == 'POST' else None)
+                    html = (
+                        '<div id="nativeChats">'
+                        '<button id="pinned" role="listitem" aria-current="true">'
+                        '<span class="t">NOX Browser QA synthetic</span></button>'
+                        '<button id="other" role="listitem" aria-current="false">'
+                        '<span class="t">Other dialog</span></button>'
+                        '</div><main id="messages"></main>'
+                    )
+                    async def serve(route):
+                        await route.fulfill(status=200, content_type='text/html', body=html)
+                    await page.route('**'+PAGE, serve)
+                    await page.goto('http://127.0.0.1:8765'+PAGE)
+                    for mode, expected in (
+                            ('stable', True), ('rotated', False),
+                            ('expired', False), ('transport', False),
+                            ('dialog-switched-during-get', False),
+                            ('render-mutation-during-get', False)):
+                        await page.evaluate("""items => {
+                          document.getElementById('pinned').setAttribute('aria-current','true');
+                          document.getElementById('other').setAttribute('aria-current','false');
+                          const root=document.getElementById('messages');
+                          root.textContent='';
+                          for(const row of items) {
+                            const el=document.createElement('div');
+                            el.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                            el.dataset.messageId=row.message_id;
+                            const body=document.createElement('div');
+                            body.className='body';
+                            body.textContent=row.content;
+                            el.append(body);
+                            root.append(el);
+                          }
+                        }""", transcript)
+                        cookies = [dict(cookie)]
+                        async def session_get(url, **opts):
+                            self.assertEqual(url,'http://127.0.0.1:8765/chat/session')
+                            self.assertEqual(opts, {'max_redirects':0,'timeout':6000})
+                            if mode == 'transport':
+                                raise OSError('synthetic session error')
+                            if mode == 'rotated':
+                                cookies[:] = [dict(cookie, value='signed-B')]
+                            if mode == 'dialog-switched-during-get':
+                                await page.evaluate("""() => {
+                                  document.getElementById('pinned').setAttribute('aria-current','false');
+                                  document.getElementById('other').setAttribute('aria-current','true');
+                                }""")
+                            if mode == 'render-mutation-during-get':
+                                await page.evaluate("""() => {
+                                  document.querySelector('#messages .body').textContent='changed';
+                                }""")
+                            return SimpleNamespace(status=401 if mode=='expired' else 200)
+                        async def observed_cookies(origin):
+                            self.assertEqual(origin,'http://127.0.0.1:8765')
+                            return list(cookies)
+                        ctx = SimpleNamespace(
+                            request=SimpleNamespace(get=AsyncMock(side_effect=session_get)),
+                            cookies=AsyncMock(side_effect=observed_cookies),
+                        )
+                        verified = await postrender_owner_session_dialog_fence(
+                            ctx,'http://127.0.0.1:8765',pin,page,title,transcript)
+                        self.assertIs(verified,expected,mode)
+                        ctx.request.get.assert_awaited_once()
+                    self.assertEqual(observed_posts, [], 'read-only acceptance never regenerates')
+                finally:
+                    await browser.close()
+
+        asyncio.run(exercise())
+        caller = inspect.getsource(browser_run)
+        rendered = caller.index("report['multiturn_reload_rendered_fourrow_verified']=True")
+        final_session = caller.index('postrender_owner_session_dialog_fence(',rendered)
+        runtime = caller.index('HOLD_MULTITURN_RELOAD_POSTRENDER_RUNTIME_OR_POST',final_session)
+        accepted = caller.index("report['multiturn_browser_acceptance_verified']=True",runtime)
+        self.assertLess(rendered,final_session)
+        self.assertLess(final_session,runtime)
+        self.assertLess(runtime,accepted)
+        self.assertIn('HOLD_MULTITURN_RELOAD_POSTRENDER_OWNER_OR_DIALOG',caller)
+        self.assertNotIn('context.request.post(',caller[rendered:accepted])
+        self.assertIn('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK',caller)
+
+
+
+    def test_ru_es_postrender_second_history_readback_fails_closed(self):
+        """A late owner-history edit during DOM render cannot certify RU/ES.
+
+        Synthetic API readback only, not a canonical S03 writer/read receipt.
+        """
+        from types import SimpleNamespace
+        from owner_chat_browser_qa import postrender_owner_history_recheck
+
+        transcript = [
+            dict(row, message_id=f'postrender-history-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        initial = {'dialog_id': DIALOG, 'messages': transcript}
+        expected_sha = multiturn_transcript_sha256(transcript)
+        first_ids = tuple(row['message_id'] for row in transcript[:2])
+
+        async def exercise(mode):
+            # One independent read-only GET after the visible four-row witness.
+            # The server may mutate IDs/text during that browser render wait.
+            payload = json.loads(json.dumps(initial, ensure_ascii=False))
+            if mode == 'changed-text':
+                payload['messages'][3]['content'] = 'different'
+            elif mode == 'replaced-id':
+                payload['messages'][1]['message_id'] = 'different-id'
+            elif mode == 'reordered':
+                payload['messages'][0], payload['messages'][1] = (
+                    payload['messages'][1], payload['messages'][0])
+            elif mode == 'foreign-dialog':
+                payload['dialog_id'] = 'another-owner-dialog'
+            elif mode == 'foreign-row':
+                payload['messages'][2]['dialog_id'] = 'another-owner-dialog'
+
+            async def get(url, **kwargs):
+                self.assertEqual(
+                    url, 'http://127.0.0.1:8765/api/ui/memory/dialogs/history'
+                         '?dialog_id=synthetic-owner-dialog&limit=6')
+                self.assertEqual(kwargs, {'max_redirects': 0, 'timeout': 6000})
+                if mode == 'transport':
+                    raise OSError('synthetic readback offline')
+                raw = b'not-json' if mode == 'invalid-json' else json.dumps(
+                    payload, ensure_ascii=False).encode('utf-8')
+                return SimpleNamespace(
+                    status=401 if mode == 'expired' else 200,
+                    body=AsyncMock(return_value=raw))
+            ctx = SimpleNamespace(request=SimpleNamespace(
+                get=AsyncMock(side_effect=get)))
+            passed = await postrender_owner_history_recheck(
+                ctx, 'http://127.0.0.1:8765', initial,
+                DIALOG, expected_sha, first_ids)
+            ctx.request.get.assert_awaited_once()
+            return passed
+
+        for mode, expected in (
+                ('stable', True), ('changed-text', False),
+                ('replaced-id', False), ('reordered', False),
+                ('foreign-dialog', False), ('foreign-row', False),
+                ('expired', False), ('transport', False),
+                ('invalid-json', False)):
+            with self.subTest(mode=mode):
+                self.assertIs(asyncio.run(exercise(mode)), expected)
+
+        caller = inspect.getsource(browser_run)
+        rendered = caller.index(
+            "report['multiturn_reload_rendered_fourrow_verified']=True")
+        latest_history = caller.index('postrender_owner_history_recheck(', rendered)
+        final_session_dom = caller.index(
+            'postrender_owner_session_dialog_fence(', latest_history)
+        accepted = caller.index(
+            "report['multiturn_browser_acceptance_verified']=True",
+            final_session_dom)
+        self.assertLess(rendered, latest_history)
+        self.assertLess(latest_history, final_session_dom)
+        self.assertLess(final_session_dom, accepted)
+        self.assertIn('HOLD_MULTITURN_RELOAD_POSTRENDER_HISTORY_DRIFT',
+                      caller[rendered:accepted])
+        self.assertNotIn('context.request.post(', caller[rendered:accepted])
+
+
+
+    def test_ru_es_reload_css_hidden_history_rows_rejected_in_chromium(self):
+        """Four DOM nodes are not four visible, rendered RU/ES messages.
+
+        This is an isolated browser witness, NOT canonical S03 acceptance.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'css-visible-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                observed_posts = []
+                page.on('request', lambda req: observed_posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const mount=document.getElementById('messages');
+                    for(const row of items){
+                      const bubble=document.createElement('div');
+                      bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                      bubble.dataset.messageId=row.message_id;
+                      const body=document.createElement('div');
+                      body.className='body';
+                      body.textContent=row.content;
+                      bubble.append(body);mount.append(bubble);
+                    }
+                }""", transcript)
+                proof = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(proof(), True)
+                bubble = page.locator('#messages .v24-msg').nth(1)
+                bubble.evaluate("(node)=>node.style.visibility='hidden'")
+                self.assertIs(proof(), False)
+                bubble.evaluate("(node)=>node.style.visibility=''")
+                self.assertIs(proof(), True)
+                bubble.evaluate("(node)=>node.style.opacity='0'")
+                self.assertIs(proof(), False)
+                bubble.evaluate("(node)=>node.style.opacity=''")
+                self.assertIs(proof(), True)
+                body = page.locator('#messages .v24-msg .body').nth(2)
+                body.evaluate("(node)=>node.style.visibility='hidden'")
+                self.assertIs(proof(), False)
+                body.evaluate("(node)=>node.style.visibility=''")
+                self.assertIs(proof(), True)
+                page.locator('#messages').evaluate(
+                    "(node)=>node.style.opacity='0'")
+                self.assertIs(proof(), False)
+                page.locator('#messages').evaluate(
+                    "(node)=>node.style.opacity=''")
+                self.assertIs(proof(), True)
+                page.locator('#messages').evaluate(
+                    "(node)=>node.style.visibility='hidden'")
+                self.assertIs(proof(), False)
+                page.locator('#messages').evaluate(
+                    "(node)=>node.style.visibility=''")
+                self.assertIs(proof(), True)
+                self.assertEqual(observed_posts, [])
+            finally:
+                browser.close()
+        caller = inspect.getsource(browser_run)
+        self.assertIn('RENDERED_FOURROW_JS', caller)
+        self.assertIn('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK',
+                      caller)
+
+
+    def test_ru_es_reload_dom_unicode_whitespace_exactness_in_chromium(self):
+        """Chromium must not erase meaningful RU/ES persisted Unicode drift."""
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'unicode-row-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                observed_posts = []
+                page.on('request', lambda req: observed_posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const mount=document.getElementById('messages');
+                    for(const row of items){
+                      const bubble=document.createElement('div');
+                      bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                      bubble.dataset.messageId=row.message_id;
+                      const body=document.createElement('div');
+                      body.className='body'; body.textContent=row.content;
+                      bubble.append(body); mount.append(bubble);
+                    }
+                }""", transcript)
+                witness = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(witness(), True)
+                body = page.locator('#messages .v24-msg .body').first
+                original = transcript[0]['content']
+                self.assertIn(' ', original)
+                mutations = [
+                    original.replace(' ', '\u00a0', 1),  # NBSP: old \s+ collapsed it
+                    original.replace(' ', '  ', 1),      # extra ASCII space
+                    original.replace(' ', '\t', 1),     # tab alias
+                    original + ' ',                       # trailing whitespace
+                    '\u200b' + original,               # zero-width code point
+                    original.replace('\u0438', '\u0438\u0301', 1),
+                ]
+                for candidate in mutations:
+                    self.assertNotEqual(candidate, original)
+                    body.evaluate('(n,value)=>n.textContent=value', candidate)
+                    self.assertIs(witness(), False, repr(candidate[:30]))
+                    body.evaluate('(n,value)=>n.textContent=value', original)
+                    self.assertIs(witness(), True)
+                # A hidden inserted element is invisible to innerText but
+                # contributes to the actual persisted DOM text.
+                body.evaluate("""node => {
+                    const extra=document.createElement('span');
+                    extra.style.display='none'; extra.textContent='invisible';
+                    node.append(extra);
+                }""")
+                self.assertIs(witness(), False)
+                body.evaluate('(node,value)=>node.textContent=value', original)
+                self.assertIs(witness(), True)
+                # Ordinary visible span markup with exact text remains valid.
+                body.evaluate("""(node,value) => {
+                    const head=document.createElement('span');
+                    head.textContent=value.slice(0, 5);
+                    const tail=document.createElement('span');
+                    tail.textContent=value.slice(5);
+                    node.replaceChildren(head, tail);
+                }""", original)
+                self.assertIs(witness(), True)
+                self.assertEqual(observed_posts, [])
+            finally:
+                browser.close()
+
+
+
+    def test_ru_es_reload_css_generated_visual_text_fence_real_chromium(self):
+        """CSS pseudo glyphs/transforms cannot silently change rendered RU/ES text.
+
+        Synthetic Chromium DOM only, not live S03, serving or model acceptance.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'css-content-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda req: posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items) {
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body'; body.textContent=row.content;
+                        bubble.append(body); root.append(bubble);
+                    }
+                }""", transcript)
+                witness = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(witness(), True)
+                style = page.add_style_tag(content=(
+                    '#messages .v24-msg:nth-child(2) .body::before'
+                    '{content:"texto ajeno";}'
+                ))
+                self.assertIs(witness(), False, 'CSS ::before adds visual text')
+                style.evaluate('(node)=>node.remove()')
+                self.assertIs(witness(), True)
+                style = page.add_style_tag(content=(
+                    '#messages .v24-msg:nth-child(3)::after'
+                    '{content:"otro";}'
+                ))
+                self.assertIs(witness(), False, 'bubble ::after changes visible glyphs')
+                style.evaluate('(node)=>node.remove()')
+                self.assertIs(witness(), True)
+                # A nested span and its pseudoelement can alter visual text
+                # while the parent still has the exact persisted textContent.
+                body = page.locator('#messages .body').first
+                original = transcript[0]['content']
+                body.evaluate("""(node,value)=>{
+                    const span=document.createElement('span');
+                    span.textContent=value;
+                    node.replaceChildren(span);
+                }""", original)
+                self.assertIs(witness(), True)
+                style = page.add_style_tag(content=(
+                    '#messages .v24-msg:first-child .body span::after'
+                    '{content:" !";}'
+                ))
+                self.assertIs(witness(), False, 'nested ::after injects text')
+                style.evaluate('(node)=>node.remove()')
+                self.assertIs(witness(), True)
+                style = page.add_style_tag(content=(
+                    '#messages {text-transform:uppercase;}'
+                ))
+                self.assertIs(witness(), False, 'inherited transform changes display')
+                style.evaluate('(node)=>node.remove()')
+                self.assertIs(witness(), True)
+                # Empty generated content is allowed; it changes no glyphs.
+                style = page.add_style_tag(content=(
+                    '#messages .v24-msg:first-child .body::before'
+                    '{content:"";}'
+                ))
+                self.assertIs(witness(), True)
+                style.evaluate('(node)=>node.remove()')
+                self.assertIs(witness(), True)
+                self.assertEqual(posts, [], 'no new model POST')
+            finally:
+                browser.close()
+
+
+
+    def test_ru_es_reload_nested_opacity_zero_text_must_not_pass_chromium(self):
+        """Opacity-zero child text is not a visibly restored RU/ES message.
+
+        Chromium DOM regression only; no model POST or S03 writer/readback.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'nested-opacity-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda request: posts.append(request.url)
+                        if request.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items) {
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body';
+                        body.textContent=row.content;
+                        bubble.append(body);root.append(bubble);
+                    }
+                }""", transcript)
+                witness = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(witness(), True)
+                body = page.locator('#messages .v24-msg .body').nth(3)
+                body.evaluate("""node => {
+                    const child=document.createElement('span');
+                    child.textContent=node.textContent;
+                    node.replaceChildren(child);
+                }""")
+                self.assertIs(witness(), True, 'ordinary nested spans remain valid')
+                child=body.locator('span')
+                child.evaluate("(node)=>node.style.opacity='0'")
+                self.assertIs(
+                    page.evaluate("""() => {
+                        const node=document.querySelector(
+                            '#messages .v24-msg:last-child .body');
+                        return node.innerText===node.textContent;
+                    }"""), True, 'the hidden child preserves text equality')
+                self.assertIs(witness(), False,
+                              'hidden descendant cannot attest a painted fourth row')
+                child.evaluate("(node)=>node.style.opacity=''")
+                self.assertIs(witness(), True, 'visible child restores proof')
+                child.evaluate("(node)=>node.style.visibility='hidden'")
+                self.assertIs(witness(), False, 'hidden nested text fails closed')
+                child.evaluate("(node)=>node.style.visibility=''")
+                self.assertIs(witness(), True)
+                self.assertEqual(posts, [], 'render check must never generate')
+            finally:
+                browser.close()
+
+
+
+    def test_ru_es_reload_scaled_zero_text_cannot_pass_chromium(self):
+        """CSS zero-area transforms erase painted text without changing history."""
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+        transcript = [
+            dict(row, message_id=f'zero-paint-{i}', dialog_id=DIALOG)
+            for i, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda req: posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items){
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body';
+                        body.textContent=row.content;
+                        bubble.append(body);root.append(bubble);
+                    }
+                }""", transcript)
+                check = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(check(), True)
+                body = page.locator('#messages .v24-msg .body').nth(3)
+                body.evaluate("""node => {
+                    const child=document.createElement('span');
+                    child.style.display='inline-block';
+                    child.textContent=node.textContent;
+                    node.replaceChildren(child);
+                }""")
+                self.assertIs(check(), True, 'ordinary nested span is visible')
+                child = body.locator('span')
+                child.evaluate("(node)=>node.style.transform='scaleX(0)'")
+                collapsed = child.evaluate("""node => ({
+                    rects:node.getClientRects().length,
+                    width:node.getBoundingClientRect().width,
+                    visible:node.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}),
+                    raw:node.parentElement.innerText===node.parentElement.textContent
+                })""")
+                self.assertGreater(collapsed['rects'], 0)
+                self.assertEqual(collapsed['width'], 0)
+                self.assertIs(collapsed['visible'], True)
+                self.assertIs(collapsed['raw'], True)
+                self.assertIs(check(), False, 'zero-width painted text must HOLD')
+                child.evaluate("(node)=>node.style.transform='translateX(10px)'")
+                self.assertIs(check(), True, 'nonzero visual translation remains valid')
+                child.evaluate("(node)=>node.style.transform='scaleY(0)'")
+                self.assertIs(check(), False, 'zero-height painted text must HOLD')
+                child.evaluate("(node)=>node.style.transform=''")
+                self.assertIs(check(), True)
+                bubble = page.locator('#messages .v24-msg').nth(0)
+                bubble.evaluate("(node)=>node.style.transform='scale(0)'")
+                self.assertIs(check(), False, 'zero-area ancestor must HOLD')
+                bubble.evaluate("(node)=>node.style.transform=''")
+                self.assertIs(check(), True)
+                self.assertEqual(posts, [], 'browser readback must never issue model POST')
+            finally:
+                browser.close()
+
+
+    def test_ru_es_reload_conflicting_dom_row_ids_rejected_in_chromium(self):
+        """Both visible DOM ID attributes must agree with the durable history.
+
+        Synthetic Chromium witness only. No live model requests or S03 writes.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'row-id-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda req: posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root = document.getElementById('messages');
+                    for(const row of items){
+                        const bubble = document.createElement('div');
+                        bubble.className = 'v24-msg'+(row.role === 'assistant'?' nox':'');
+                        bubble.setAttribute('data-message-id', row.message_id);
+                        const body = document.createElement('div');
+                        body.className = 'body';
+                        body.textContent = row.content;
+                        bubble.append(body);
+                        root.append(bubble);
+                    }
+                }""", transcript)
+                witness = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(witness(), True)
+                bubble = page.locator('#messages .v24-msg').first
+                body = bubble.locator('.body')
+                body.evaluate("(n)=>n.setAttribute('data-message-id','foreign')")
+                self.assertIs(witness(), False, 'body ID contradicts valid bubble ID')
+                body.evaluate("(n)=>n.setAttribute('data-message-id','')")
+                self.assertIs(witness(), False, 'blank body ID cannot be ignored')
+                body.evaluate("(n)=>n.setAttribute('data-message-id','   ')")
+                self.assertIs(witness(), False, 'whitespace ID cannot be ignored')
+                body.evaluate("(n)=>n.setAttribute('data-message-id','row-id-1')")
+                self.assertIs(witness(), True, 'both agreeing IDs are valid')
+                bubble.evaluate("(n)=>n.setAttribute('data-message-id','foreign')")
+                self.assertIs(witness(), False, 'bubble ID contradicts valid body ID')
+                bubble.evaluate("(n)=>n.setAttribute('data-message-id','')")
+                self.assertIs(witness(), False, 'blank bubble ID cannot be ignored')
+                bubble.evaluate("(n)=>n.removeAttribute('data-message-id')")
+                self.assertIs(witness(), True, 'body-only ID remains valid')
+                bubble.evaluate("(n)=>n.setAttribute('data-message-id','row-id-1')")
+                body.evaluate("(n)=>n.removeAttribute('data-message-id')")
+                self.assertIs(witness(), True, 'bubble-only ID remains valid')
+                self.assertEqual(posts, [], 'no extra native model POST')
+            finally:
+                browser.close()
+
+
+
+    def test_ru_es_reload_css_clip_and_mask_painted_text_in_chromium(self):
+        """Paint-obscured RU/ES history is not visually accepted as readback.
+
+        Browser-only fixture: no live S03, model or serving request.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'paint-row-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda request: posts.append(request.url)
+                        if request.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items){
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body';
+                        body.textContent=row.content;
+                        bubble.append(body);root.append(bubble);
+                    }
+                }""", transcript)
+                check = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(check(), True)
+                # Neither of these alters DOM text, row count or layout box.
+                bubble = page.locator('#messages .v24-msg').nth(1)
+                bubble.evaluate("(n)=>n.style.clipPath='inset(100%)'")
+                self.assertIs(check(), False, 'clipped bubble cannot be accepted')
+                bubble.evaluate("(n)=>n.style.clipPath=''")
+                self.assertIs(check(), True)
+                body = page.locator('#messages .v24-msg .body').nth(2)
+                body.evaluate(
+                    "(n)=>n.style.maskImage='linear-gradient(transparent,transparent)'")
+                self.assertIs(check(), False, 'CSS mask erases painted words')
+                body.evaluate("(n)=>n.style.maskImage=''")
+                self.assertIs(check(), True)
+                mount = page.locator('#messages')
+                mount.evaluate("(n)=>n.style.clipPath='inset(100%)'")
+                self.assertIs(check(), False, 'clipped ancestor cannot pass')
+                mount.evaluate("(n)=>n.style.clipPath=''")
+                self.assertIs(check(), True)
+                self.assertEqual(posts, [], 'readback never triggers inference')
+            finally:
+                browser.close()
+
+
+    def test_ru_es_reload_filter_and_transparent_text_paint_real_chromium(self):
+        """Literal RU/ES four-row history must actually be painted as text.
+
+        Browser-only readback, not proof of live model or canonical S03.
+        """
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+
+        transcript = [
+            dict(row, message_id=f'paint-opaque-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda request: posts.append(request.url)
+                        if request.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items){
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body';
+                        body.textContent=row.content;
+                        bubble.append(body);
+                        root.append(bubble);
+                    }
+                }""", transcript)
+                check = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(check(), True)
+
+                bubble = page.locator('#messages .v24-msg').first
+                bubble.evaluate("(n)=>n.style.filter='opacity(0)'")
+                self.assertIs(check(), False,
+                              'CSS filter opacity zero erases painted bubble')
+                bubble.evaluate("(n)=>n.style.filter=''")
+                self.assertIs(check(), True)
+
+                mount = page.locator('#messages')
+                mount.evaluate("(n)=>n.style.filter='opacity(0)'")
+                self.assertIs(check(), False,
+                              'ancestor filter erases every painted history row')
+                mount.evaluate("(n)=>n.style.filter=''")
+                self.assertIs(check(), True)
+
+                body = page.locator('#messages .v24-msg .body').nth(1)
+                body.evaluate("(n)=>n.style.color='transparent'")
+                self.assertIs(check(), False,
+                              'transparent computed text color is not visible')
+                body.evaluate("(n)=>n.style.color=''")
+                self.assertIs(check(), True)
+
+                body.evaluate("(n)=>n.style.webkitTextFillColor='transparent'")
+                self.assertIs(check(), False,
+                              'transparent text fill hides unchanged text nodes')
+                body.evaluate("(n)=>n.style.webkitTextFillColor=''")
+                self.assertIs(check(), True)
+                self.assertEqual(posts, [], 'paint QA cannot trigger model POST')
+            finally:
+                browser.close()
+
+
+    def test_ru_es_reload_zero_font_text_cannot_pass_visual_readback(self):
+        """Zero-size text preserves DOM bytes but cannot paint RU/ES history."""
+        from playwright.sync_api import sync_playwright
+        from owner_chat_browser_qa import RENDERED_FOURROW_JS
+        transcript = [
+            dict(row, message_id=f'zero-font-{index}', dialog_id=DIALOG)
+            for index, row in enumerate(rows(multiturn_followup_prompt(
+                TOKEN, 'multiturn_ru_es')), 1)
+        ]
+        with sync_playwright() as runner:
+            browser = runner.chromium.launch(headless=True)
+            try:
+                page = browser.new_page()
+                posts = []
+                page.on('request', lambda req: posts.append(req.url)
+                        if req.method == 'POST' else None)
+                page.set_content('<main id="messages"></main>')
+                page.evaluate("""items => {
+                    const root=document.getElementById('messages');
+                    for(const row of items){
+                        const bubble=document.createElement('div');
+                        bubble.className='v24-msg'+(row.role==='assistant'?' nox':'');
+                        bubble.dataset.messageId=row.message_id;
+                        const body=document.createElement('div');
+                        body.className='body';
+                        body.textContent=row.content;
+                        bubble.append(body);root.append(bubble);
+                    }
+                }""", transcript)
+                check = lambda: page.evaluate(RENDERED_FOURROW_JS, transcript)
+                self.assertIs(check(), True)
+                body = page.locator('#messages .v24-msg .body').nth(1)
+                body.evaluate("(n)=>n.style.fontSize='0px'")
+                self.assertIs(check(), False, 'zero-size message text is not painted')
+                body.evaluate("(n)=>n.style.fontSize=''")
+                self.assertIs(check(), True)
+                bubble = page.locator('#messages .v24-msg').nth(2)
+                bubble.evaluate("(n)=>n.style.fontSize='0px'")
+                self.assertIs(check(), False, 'inherited zero-size text must fail')
+                bubble.evaluate("(n)=>n.style.fontSize=''")
+                self.assertIs(check(), True)
+                self.assertEqual(posts, [], 'no additional native model POST')
+            finally:
+                browser.close()
+
+
+    def test_firstturn_and_secondturn_reject_noncanonical_row_ids_before_s03(self):
+        """Explicit row IDs with invisible/padded text cannot prove RU/ES continuity.
+
+        The first history gate must reject them before the Spanish POST, not
+        merely during a later postreload four-row verification. No native POST.
+        """
+        prompt = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        first = [
+            {"role": "user", "content": RU, "message_id": "frío-uno"},
+            {"role": "assistant", "content": FIRST, "message_id": "niño-dos"},
+        ]
+        complete = first + [
+            {"role": "user", "content": prompt, "message_id": "español-tres"},
+            {"role": "assistant", "content": LAST, "message_id": "café-cuatro"},
+        ]
+        self.assertTrue(firstturn_history_valid(
+            {"messages": first}, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            complete, RU, FIRST, prompt, LAST, DIALOG))
+        for malicious in (" padded", "padded ", "word"+chr(9)+"part",
+                          "word"+chr(10)+"part", chr(0x200b)+"hidden",
+                          "a"+chr(0x2066)+"b", "a"+chr(0x200d)+"b",
+                          "word"+chr(13)+"part"):
+            with self.subTest(id=ascii(malicious)):
+                corrupt_first = [dict(row) for row in first]
+                corrupt_first[0]["message_id"] = malicious
+                self.assertFalse(firstturn_history_valid(
+                    {"messages": corrupt_first}, RU, FIRST, DIALOG))
+                corrupt_four = [dict(row) for row in complete]
+                corrupt_four[2]["message_id"] = malicious
+                self.assertFalse(multiturn_history_valid(
+                    corrupt_four, RU, FIRST, prompt, LAST, DIALOG))
+        legacy_first = [{k: v for k, v in row.items() if k != "message_id"}
+                        for row in first]
+        legacy_complete = [{k: v for k, v in row.items() if k != "message_id"}
+                           for row in complete]
+        self.assertTrue(firstturn_history_valid(
+            {"messages": legacy_first}, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            legacy_complete, RU, FIRST, prompt, LAST, DIALOG))
+
+
+
+    def test_ru_es_malformed_ancillary_cookie_security_metadata_must_hold(self):
+        """Signed owner must not mask invalid security attributes on UI cookies.
+
+        Pure source-side owner pin check, not a live session or S03 acceptance.
+        """
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='same-signed-owner', httpOnly=True,
+                      secure=True, sameSite='Lax')
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), pin)
+        self.assertTrue(owner_session_continuity_valid(200, [ui, signed], pin))
+        bad_attributes = [
+            dict(ui, secure='false'),
+            dict(ui, secure=None),
+            dict(ui, secure=1),
+            dict(ui, sameSite='Invalid'),
+            dict(ui, sameSite=[]),
+            dict(ui, partitionKey=''),
+            dict(ui, partitionKey=42),
+            dict(ui, partitionKey='https://owner.example\u200b'),
+        ]
+        for bad in bad_attributes:
+            with self.subTest(metadata=repr(bad)):
+                for cookies in ([signed, bad], [bad, signed], [signed, ui, bad]):
+                    self.assertIsNone(owner_session_cookie_pin(cookies))
+                    self.assertFalse(owner_session_continuity_valid(
+                        200, cookies, pin))
+        for good in (dict(ui, secure=False),
+                     dict(ui, sameSite='Lax'),
+                     dict(ui, partitionKey='https://owner.example')):
+            self.assertEqual(owner_session_cookie_pin([signed, good]), pin)
+            self.assertTrue(owner_session_continuity_valid(
+                200, [good, signed], pin))
+
+
+    def test_ru_es_signed_owner_rejects_malformed_ancillary_identity(self):
+        """A signed cookie cannot hide corrupt UI cookie name/domain/path/value.
+
+        Unsigned preference cookies with empty *string* values remain valid.
+        This verifies only pure source-side owner pins, not live S03.
+        """
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='signed-owner', httpOnly=True, secure=True,
+                      sameSite='Lax')
+        ui = dict(name='theme', domain='owner.example', path='/',
+                  value='dark', httpOnly=False)
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        self.assertEqual(owner_session_cookie_pin([signed, ui]), pin)
+        self.assertEqual(owner_session_cookie_pin(
+            [signed, dict(ui, value='')]), pin)
+        malformed = [
+            dict(ui, name=''),
+            dict(ui, name=None),
+            {k: v for k, v in ui.items() if k != 'name'},
+            dict(ui, domain=''),
+            dict(ui, domain=123),
+            dict(ui, path=[]),
+            dict(ui, path=None),
+            dict(ui, value=None),
+            dict(ui, value=5),
+            {k: v for k, v in ui.items() if k != 'value'},
+        ]
+        for bad in malformed:
+            with self.subTest(cookie=repr(bad)):
+                for cookies in ([signed, bad], [bad, signed],
+                                [signed, ui, bad]):
+                    self.assertIsNone(owner_session_cookie_pin(cookies))
+                    self.assertFalse(owner_session_continuity_valid(
+                        200, cookies, pin))
+
+
+    def test_canonical_s03_lone_surrogates_fail_closed_but_valid_ru_es_utf8_survives(self):
+        """Four persisted RU/ES rows must be genuine UTF-8, not JSON surrogate escapes.
+
+        Strict source-only S03 witnesses; NOT a live native writer/readback.
+        """
+        spanish = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        original = [dict(row, message_id=f"utf8-row-{index}")
+                    for index, row in enumerate(rows(spanish), 1)]
+        valid = [dict(row) for row in original]
+        valid[0]["content"] += " Привет, мир"
+        valid[1]["content"] += " 🧠"
+        valid[2]["content"] += " ¡Hola, España!"
+        valid[3]["content"] += " café"
+        self.assertRegex(multiturn_transcript_sha256(valid), r"^[0-9a-f]{64}$")
+        writer, reader = s03_proof(valid)
+        # The shared fixture hashes the fixed numeric LAST; this UTF-8
+        # control intentionally changes the fourth answer to accented text.
+        reader["full_answer_sha256"] = hashlib.sha256(
+            valid[-1]["content"].encode("utf-8")).hexdigest()
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, valid, require_full_transcript_pin=True))
+        baseline_writer, baseline_reader = s03_proof(original)
+        for character in (chr(0xd800), chr(0xdbff), chr(0xdc00), chr(0xdfff)):
+            for index in range(4):
+                with self.subTest(codepoint=hex(ord(character)), row=index):
+                    corrupt = [dict(row) for row in original]
+                    corrupt[index]["content"] += character
+                    self.assertIsNone(multiturn_transcript_sha256(corrupt))
+                    self.assertFalse(canonical_s03_proof_valid(
+                        baseline_writer, baseline_reader, DIALOG, corrupt,
+                        require_full_transcript_pin=True))
+
+
+    def test_canonical_s03_utf8_transport_bound_never_truncates_ru_es(self):
+        """Reject oversized four-role S03 fingerprints, while pinning full in-bound bytes.
+
+        The browser owner's json_response has a 200000-byte response limit.
+        This is a witness limit, NOT conversation/model-context truncation.
+        No native writer/readback or model POST is involved.
+        """
+        spanish = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        baseline = [dict(row, message_id=f"bounded-row-{index}")
+                    for index, row in enumerate(rows(spanish), 1)]
+
+        def raw_bytes(messages):
+            payload = [{"role": row["role"], "content": row["content"]}
+                       for row in messages]
+            return json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                              separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+        remaining = 200000 - len(raw_bytes(baseline))
+        self.assertGreater(remaining, 10000)
+        exactly_bounded = [dict(row) for row in baseline]
+        exactly_bounded[0]["content"] += "x" * remaining
+        self.assertEqual(len(raw_bytes(exactly_bounded)), 200000)
+        expected = hashlib.sha256(raw_bytes(exactly_bounded)).hexdigest()
+        self.assertEqual(multiturn_transcript_sha256(exactly_bounded), expected)
+        writer, reader = s03_proof(exactly_bounded)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, reader, DIALOG, exactly_bounded,
+            require_full_transcript_pin=True))
+
+        original_writer, original_reader = s03_proof(baseline)
+        for index in range(4):
+            # ASCII +1 byte and UTF-8 multibyte overflow must both HOLD.
+            for extra in ("x" * (remaining + 1),
+                          "ñ" * (remaining // 2 + 1)):
+                with self.subTest(row=index, kind="utf8" if extra[0] == "ñ" else "ascii"):
+                    oversized = [dict(row) for row in baseline]
+                    oversized[index]["content"] += extra
+                    self.assertGreater(len(raw_bytes(oversized)), 200000)
+                    self.assertIsNone(multiturn_transcript_sha256(oversized))
+                    self.assertFalse(canonical_s03_proof_valid(
+                        original_writer, original_reader, DIALOG, oversized,
+                        require_full_transcript_pin=True))
+
+
+    def test_owner_history_json_duplicate_keys_and_nonfinite_numbers_hold(self):
+        # A second RU/ES history read cannot certify one dialog if JSON uses
+        # duplicate keys and client decoders may disagree about the winner.
+        class Response:
+            status = 200
+            def __init__(self, raw):
+                self.raw = raw
+            async def body(self):
+                return self.raw
+
+        def decode(payload):
+            return asyncio.run(json_response(Response(payload.encode("utf-8"))))
+
+        valid = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": "Привет, ¿cómo estás? 🪐"},
+            {"role": "assistant", "content": "Estoy bien"},
+            {"role": "user", "content": "Продолжи по-испански"},
+            {"role": "assistant", "content": "Claro, seguimos"},
+        ]}
+        self.assertEqual(decode(json.dumps(valid, ensure_ascii=False)), valid)
+        poisoned = (
+            '{"dialog_id":"a","dialog_id":"b","messages":[]}',
+            '{"messages":[],"messages":[]}',
+            '{"messages":[{"role":"user","role":"assistant"}]}',
+            '{"messages":[{"content":"Русский","content":"español"}]}',
+            '{"messages":[{"message_id":"m1","message_id":"m2"}]}',
+            '{"messages":[{"session_id":"s1","session_id":"s2"}]}',
+            '{"messages":[{"dialog_id":"d1","dialog_id":"d2"}]}',
+            '{"messages":[],"metadata":{"revision":1,"revision":2}}',
+        )
+        for payload in poisoned:
+            with self.subTest(case=payload[:55]):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_HTTP_DUPLICATE_JSON_KEY"):
+                    decode(payload)
+        for value in ("NaN", "Infinity", "-Infinity", "1e999", "-1e999"):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_HTTP_NONFINITE_JSON_NUMBER"):
+                    decode('{"messages":[{"content":'+value+'}]}')
+        self.assertEqual(decode('{"messages":[{"weight":1.25}]}'),
+                         {"messages": [{"weight": 1.25}]})
+
+    def test_owner_history_json_strict_utf8_wire_before_four_turn_evidence(self):
+        # json.loads(bytes) silently auto-detects UTF-16/UTF-32. The owner
+        # history GET must agree with UTF-8 browser/S03 evidence, even when
+        # role/content text and ordered message identities would match.
+        class Response:
+            status = 200
+            def __init__(self, raw):
+                self.raw = raw
+            async def body(self):
+                return self.raw
+
+        def decode(raw):
+            return asyncio.run(json_response(Response(raw)))
+
+        history = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": "Привет, sesión 🪐"},
+            {"role": "assistant", "content": "Hola, ¿cómo estás?"},
+            {"role": "user", "content": "Продолжи en español"},
+            {"role": "assistant", "content": "Claro, seguimos"},
+        ]}
+        utf8 = json.dumps(history, ensure_ascii=False).encode("utf-8")
+        self.assertEqual(decode(utf8), history)
+        poisoned = {
+            "utf8_bom": b"\xef\xbb\xbf" + utf8,
+            "utf16le": utf8.decode("utf-8").encode("utf-16le"),
+            "utf16be": utf8.decode("utf-8").encode("utf-16be"),
+            "utf32le": utf8.decode("utf-8").encode("utf-32le"),
+            "utf32be": utf8.decode("utf-8").encode("utf-32be"),
+            "bad_utf8": b'{"messages":[{"content":"\xff"}]}',
+            "truncated_utf8": b'{"messages":[{"content":"\xe2\x82"}]}',
+            "raw_nul": b'{"messages":[{"content":"\x00"}]}',
+        }
+        for label, raw in poisoned.items():
+            with self.subTest(case=label):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_HTTP_UTF8_WIRE"):
+                    decode(raw)
+
+    def test_owner_history_json_integer_digit_bound_before_ru_es_witness(self):
+        """Oversized valid-JSON integers must produce bounded HOLD, not Python ValueError.
+
+        Owner-history GET only: preserve normal RU/ES UTF-8 and integer metadata.
+        No native POST, S03 writer/readback or production admission.
+        """
+        class Response:
+            status = 200
+            def __init__(self, raw):
+                self.raw = raw
+            async def body(self):
+                return self.raw
+
+        def decode(raw):
+            return asyncio.run(json_response(Response(raw.encode('utf-8'))))
+
+        history = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": "Привет, sesión 🧠", "revision": -17},
+            {"role": "assistant", "content": "Hola, ¿cómo estás?"},
+            {"role": "user", "content": "Продолжи en español"},
+            {"role": "assistant", "content": "Claro, seguimos"},
+        ]}
+        self.assertEqual(decode(json.dumps(history, ensure_ascii=False)), history)
+        # 1024-digit integers remain compatible, alongside ordinary counters.
+        boundary = "9" * 1024
+        self.assertEqual(decode('{"revision":' + boundary + '}')['revision'],
+                         int(boundary))
+        self.assertEqual(decode('{"revision":-17}'), {"revision": -17})
+        for digits in (1025, 4301, 12000):
+            for sign in ('', '-'):
+                with self.subTest(digits=digits, negative=bool(sign)):
+                    wire = '{"messages":[{"revision":' + sign + ('9' * digits) + '}]}'
+                    self.assertLess(len(wire.encode('utf-8')), 200000)
+                    with self.assertRaisesRegex(
+                            RuntimeError, 'HOLD_OWNER_HTTP_INTEGER_DIGITS'):
+                        decode(wire)
+
+
+    def test_owner_history_json_depth_bound_preserves_ru_es_escaped_text(self):
+        """Owner GET nesting cannot exhaust Python's JSON decoder stack.
+
+        A 64-level witness remains legal; 65+ is a controlled HOLD, and
+        thousands of textual brackets/escaped quotes are never depth.
+        No model POST, content slicing, or canonical S03 write.
+        """
+        class Response:
+            status = 200
+            def __init__(self, raw):
+                self.raw = raw
+            async def body(self):
+                return self.raw
+
+        def decode(wire):
+            return asyncio.run(json_response(Response(wire.encode('utf-8'))))
+
+        tricky = ('[' * 160 + ']' * 160 + ' {json} "quoted" ' +
+                  'slash \\' + ' ¿Cómo estás? Привет 🧠')
+        history = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": tricky},
+            {"role": "assistant", "content": "Hola, español 🪐"},
+            {"role": "user", "content": "Продолжи en español"},
+            {"role": "assistant", "content": "Claro, seguimos"},
+        ]}
+        self.assertEqual(decode(json.dumps(history, ensure_ascii=False)), history)
+
+        for level in (1, 4, 64):
+            with self.subTest(accepted_depth=level):
+                wire = '[' * level + '0' + ']' * level
+                value = decode(wire)
+                for _ in range(level):
+                    self.assertIsInstance(value, list)
+                    value = value[0]
+                self.assertEqual(value, 0)
+
+        for level in (65, 1001, 12000):
+            with self.subTest(rejected_depth=level):
+                wire = '[' * level + '0' + ']' * level
+                self.assertLess(len(wire.encode('utf-8')), 200000)
+                with self.assertRaisesRegex(RuntimeError,
+                                            'HOLD_OWNER_HTTP_JSON_DEPTH'):
+                    decode(wire)
+
+
+
+    def test_owner_history_http_mimetype_blocks_false_ru_es_history(self):
+        """A JSON-shaped proxy/login body is not an owner history witness.
+
+        Valid JSON API representation and multilingual content survive.
+        No native POST, authenticated session mutation or S03 write.
+        """
+        class Response:
+            status = 200
+            def __init__(self, raw, headers):
+                self.raw = raw
+                self.headers = headers
+            async def body(self):
+                return self.raw
+
+        history = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": "Привет 🧠"},
+            {"role": "assistant", "content": "Здравствуйте"},
+            {"role": "user", "content": "Continúa en español, por favor"},
+            {"role": "assistant", "content": "Claro, seguimos en español 🪐"},
+        ]}
+        wire = json.dumps(history, ensure_ascii=False).encode('utf-8')
+
+        for headers in (
+            {"content-type": "application/json"},
+            {"Content-Type": "APPLICATION/JSON; CHARSET=\"UTF-8\""},
+            {"content-type": "application/vnd.nox+json; charset=utf-8"},
+            {"content-type": "application/json; charset=utf-8; profile=history"},
+        ):
+            with self.subTest(accepted=headers):
+                self.assertEqual(asyncio.run(json_response(Response(wire, headers))),
+                                 history)
+
+        for headers in (
+            {},
+            {"content-type": "text/html"},
+            {"content-type": "text/plain"},
+            {"content-type": "text/event-stream"},
+            {"content-type": "application/octet-stream"},
+            {"content-type": "application/problem+xml"},
+            {"content-type": "application/json, text/html"},
+            {"content-type": "application/json; charset=latin1"},
+            {"content-type": "application/json; charset=utf-16"},
+            {"content-type": "application/json; charset="},
+            {"content-type": "application/json; charset=utf-8; charset=utf-8"},
+            {"content-type": 3},
+        ):
+            with self.subTest(rejected=headers):
+                with self.assertRaisesRegex(RuntimeError,
+                                            'HOLD_OWNER_HTTP_CONTENT_TYPE'):
+                    asyncio.run(json_response(Response(wire, headers)))
+
+
+    def test_owner_history_http_mime_params_fail_closed(self):
+        """Malformed/duplicate MIME params cannot certify RU/ES history."""
+        class Response:
+            status = 200
+            def __init__(self, content_type):
+                self.headers = {"content-type": content_type}
+            async def body(self):
+                return b'{"dialog_id":"own","messages":[]}'
+
+        expected = {"dialog_id": "own", "messages": []}
+        for media in (
+            "application/json",
+            "application/json; charset=UTF-8",
+            "application/vnd.nox+json; charset=\"UTF-8\"; profile=history",
+            "application/json; profile=history; charset=utf-8",
+        ):
+            with self.subTest(accepted=media):
+                self.assertEqual(asyncio.run(json_response(Response(media))),
+                                 expected)
+
+        for media in (
+            "application/json;",
+            "application/json; junk",
+            "application/json; =value",
+            "application/json; profile=",
+            "application/json; profile=history; profile=history",
+            "application/json; PROFILE=history; profile=next",
+            "application/json; charset=utf-8; profile",
+            "application/json; charset=utf-8; =secret",
+            "application/json; charset=utf-8; x=",
+        ):
+            with self.subTest(rejected=media):
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_OWNER_HTTP_CONTENT_TYPE"):
+                    asyncio.run(json_response(Response(media)))
+
+
+    def test_ru_es_shadow_cookie_cannot_reuse_signed_session_pin(self):
+        """Shadowing a signed cookie with identical scope fails before ES POST."""
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='signed-session-stable', httpOnly=True)
+        legitimate_ui = dict(name='theme', domain='owner.example', path='/',
+                             value='dark', httpOnly=False)
+        baseline = owner_session_cookie_pin([signed])
+        self.assertIsInstance(baseline, str)
+        self.assertEqual(len(baseline), 64)
+        self.assertEqual(owner_session_cookie_pin([signed, legitimate_ui]), baseline)
+        self.assertTrue(owner_session_continuity_valid(
+            200, [legitimate_ui, signed], baseline))
+        # A signed pin is not enough if another row can shadow the owner
+        # name/domain/path in the request cookie header. Check both orders.
+        for attacker in (
+            dict(signed, value='shadow-user', httpOnly=False),
+            dict(signed, value='shadow-user'),
+            dict(signed, value='signed-session-stable', httpOnly=False),
+        ):
+            for snapshot in (
+                [signed, attacker],
+                [attacker, signed],
+                [legitimate_ui, signed, attacker],
+                [attacker, legitimate_ui, signed],
+            ):
+                with self.subTest(shadow=repr(attacker), order=repr(snapshot)[:90]):
+                    self.assertIsNone(owner_session_cookie_pin(snapshot))
+                    self.assertFalse(owner_session_continuity_valid(
+                        200, snapshot, baseline))
+        # Duplicate unsigned browser preferences are ambiguous too; distinct
+        # scopes remain legal and do not alter the signed owner identity.
+        self.assertIsNone(owner_session_cookie_pin(
+            [signed, legitimate_ui, dict(legitimate_ui, value='light')]))
+        for valid_ui in (
+            dict(legitimate_ui, name='locale', value='es'),
+            dict(legitimate_ui, domain='other.example'),
+            dict(legitimate_ui, path='/settings'),
+        ):
+            self.assertEqual(owner_session_cookie_pin([signed, valid_ui]),
+                             baseline)
+        self.assertEqual(owner_session_cookie_pin([signed]), baseline)
+
+    def test_ru_es_cross_scope_cookie_name_shadow_must_hold(self):
+        """A same-name cookie at another domain/path cannot certify one owner.
+
+        Pure-source RU/ES session provenance: no inference POST or S03 write.
+        """
+        signed = dict(name='nox_owner', domain='owner.example', path='/',
+                      value='stable-secret', httpOnly=True, secure=True)
+        theme = dict(name='theme', domain='owner.example', path='/',
+                     value='dark', httpOnly=False)
+        locale = dict(name='locale', domain='owner.example', path='/',
+                      value='es', httpOnly=False)
+        pin = owner_session_cookie_pin([signed])
+        self.assertIsInstance(pin, str)
+        for order in ([signed, theme, locale], [locale, signed, theme]):
+            self.assertEqual(owner_session_cookie_pin(order), pin)
+            self.assertTrue(owner_session_continuity_valid(200, order, pin))
+
+        # Distinct domain/path scopes previously bypassed the R45 exact
+        # (name,domain,path) uniqueness check. Cookie headers omit those
+        # scopes, so another same-name value can shadow the signed owner.
+        shadows = (
+            dict(signed, domain='.owner.example', httpOnly=False,
+                 value='parent-domain-shadow'),
+            dict(signed, domain='parent.example', httpOnly=False,
+                 value='parent-shadow'),
+            dict(signed, path='/chat', httpOnly=False,
+                 value='chat-path-shadow'),
+            dict(signed, path='/api', httpOnly=False,
+                 value='history-path-shadow'),
+            dict(signed, path='/chat', value='stable-secret',
+                 httpOnly=True),
+        )
+        for shadow in shadows:
+            for snapshot in (
+                [signed, shadow],
+                [shadow, signed],
+                [signed, theme, shadow],
+                [theme, shadow, signed, locale],
+            ):
+                with self.subTest(shadow=repr(shadow), count=len(snapshot)):
+                    self.assertIsNone(owner_session_cookie_pin(snapshot))
+                    self.assertFalse(owner_session_continuity_valid(
+                        200, snapshot, pin))
+        # The rule applies even when both colliding cookies are ancillary;
+        # a signed owner must not hide ambiguity in full browser provenance.
+        other_theme = dict(theme, domain='.owner.example', value='light')
+        self.assertIsNone(owner_session_cookie_pin(
+            [signed, theme, other_theme]))
+        self.assertEqual(owner_session_cookie_pin([signed, locale]), pin)
+
+
+    def test_owner_history_json_root_must_be_object_before_ru_es_turn2(self):
+        """Malformed/scalar API JSON never certifies persisted RU/ES history.
+
+        Exact source-only browser-history representation contract; no native
+        POST, actual session, or canonical S03 writer/readback is exercised.
+        """
+        class Response:
+            status = 200
+            headers = {"content-type": "application/json; charset=utf-8"}
+
+            def __init__(self, raw):
+                self.raw = raw
+
+            async def body(self):
+                return self.raw
+
+        def read(wire):
+            return asyncio.run(owner_history_json_response(
+                Response(wire.encode("utf-8"))))
+
+        good = {"dialog_id": DIALOG, "messages": [
+            {"role": "user", "content": "Привет 🧠"},
+            {"role": "assistant", "content": "Здравствуйте"},
+            {"role": "user", "content": "Sigue en español"},
+            {"role": "assistant", "content": "Claro, seguimos en español 🪐"},
+        ]}
+        self.assertEqual(read(json.dumps(good, ensure_ascii=False)), good)
+        self.assertEqual(read("{}"), {})
+        for bad in ("null", "[]", "[{}]", "true", "false", "7",
+                    '"español"', '{"messages":', '{"dialog_id":}',
+                    '{}[]', '', ' \n'):
+            with self.subTest(payload=repr(bad)):
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_OWNER_HTTP_JSON_ROOT"):
+                    read(bad)
+
+
+    def test_s03_exact_independent_witness_bytes_before_fourrow_proof(self):
+        """Source adapter only: the owner must supply independently trusted pins."""
+        transcript = rows("Sigue en español 🪐")
+        transcript[0]["content"] = "Привет 🧠"
+        for index, row in enumerate(transcript):
+            row.update(message_id=f"row-{index}", dialog_id=DIALOG,
+                       session_id="owner-session")
+        writer, reader = s03_proof(transcript)
+        def wire(value):
+            return json.dumps(value, ensure_ascii=False,
+                              separators=(",", ":")).encode("utf-8")
+        def pin(raw):
+            return hashlib.sha256(raw).hexdigest()
+        w, r = wire(writer), wire(reader)
+        wp, rp = pin(w), pin(r)
+        def check(wire_w=w, wire_r=r, hash_w=wp, hash_r=rp,
+                  history=transcript, session="owner-session", dialog=DIALOG):
+            return canonical_s03_pinned_evidence_valid(
+                wire_w, wire_r, hash_w, hash_r, dialog, history,
+                expected_session_id=session)
+        self.assertTrue(check())
+        # Same semantic JSON with changed bytes must not reuse a pinned receipt.
+        for kwargs in (
+            {"wire_w": w+b" "}, {"wire_r": r+b" "},
+            {"hash_w": None}, {"hash_r": "0"*64}, {"hash_w": wp.upper()},
+            {"wire_w": bytearray(w)}, {"wire_r": w, "hash_r": wp},
+            {"wire_w": r, "wire_r": w, "hash_w": rp, "hash_r": wp},
+        ):
+            with self.subTest(kwargs=repr(kwargs)):
+                self.assertFalse(check(**kwargs))
+        # Even an independently pinned ambiguous or invalid JSON document
+        # cannot satisfy the canonical S03 contract.
+        for bad in (
+            b'{"verified":false,'+w[1:], b'[]', b'null',
+            b'\xef\xbb\xbf'+w, b'\xff', b'['*65+b']'*65,
+            b' '*200001,
+        ):
+            with self.subTest(bad=repr(bad[:60])):
+                self.assertFalse(check(wire_w=bad, hash_w=pin(bad)))
+        foreign = dict(reader, session_id="different-session")
+        altered = wire(foreign)
+        self.assertFalse(check(wire_r=altered, hash_r=pin(altered)))
+        # Even two internally coherent, pinned receipts cannot identify the
+        # authenticated owner session unless it is independently supplied.
+        for invalid in (None, '', ' owner-session', 'owner-session\\n', 'foreign-session'):
+            with self.subTest(session=invalid):
+                self.assertFalse(check(session=invalid))
+        unscoped = [dict(row) for row in transcript]
+        for row in unscoped:
+            row.pop('session_id')
+        uw, ur = map(wire, s03_proof(unscoped))
+        self.assertFalse(check(wire_w=uw, wire_r=ur, hash_w=pin(uw),
+                               hash_r=pin(ur), history=unscoped))
+        foreign_rows = [dict(row, session_id='foreign-session') for row in transcript]
+        fw, fr = map(wire, s03_proof(foreign_rows))
+        self.assertFalse(check(wire_w=fw, wire_r=fr, hash_w=pin(fw),
+                               hash_r=pin(fr), history=foreign_rows))
+        self.assertTrue(check(wire_w=fw, wire_r=fr, hash_w=pin(fw),
+                              hash_r=pin(fr), history=foreign_rows,
+                              session='foreign-session'))
+        for key, obj in (("writer", writer), ("reader", reader)):
+            absent = dict(obj)
+            absent.pop('session_id')
+            raw = wire(absent)
+            args = ({'wire_w': raw, 'hash_w': pin(raw)} if key == 'writer'
+                    else {'wire_r': raw, 'hash_r': pin(raw)})
+            self.assertFalse(check(**args))
+        # A strict immutable receipt must explicitly scope every row to the
+        # independently selected dialog, even if all witness hashes agree.
+        for missing in (tuple(range(4)), (0,), (3,)):
+            unscoped_dialog = [dict(row) for row in transcript]
+            for index in missing:
+                unscoped_dialog[index].pop("dialog_id")
+            dw, dr = s03_proof(unscoped_dialog)
+            if len(missing) == 4:
+                self.assertTrue(canonical_s03_proof_valid(
+                    dw, dr, DIALOG, unscoped_dialog, require_full_transcript_pin=True))
+            dw, dr = wire(dw), wire(dr)
+            self.assertFalse(check(wire_w=dw, wire_r=dr, hash_w=pin(dw),
+                                   hash_r=pin(dr), history=unscoped_dialog))
+        for bad_dialog in (" "+DIALOG, DIALOG+" ", DIALOG+"\u200b", DIALOG+"\x00"):
+            bad_rows = [dict(row, dialog_id=bad_dialog) for row in transcript]
+            dw, dr = s03_proof(bad_rows)
+            dw["dialog_id"] = dr["dialog_id"] = bad_dialog
+            dw, dr = wire(dw), wire(dr)
+            self.assertFalse(check(wire_w=dw, wire_r=dr, hash_w=pin(dw),
+                                   hash_r=pin(dr), history=bad_rows, dialog=bad_dialog))
+        # The adapter cannot accept browser-history-only or omit row IDs.
+        legacy = rows("Sigue en español 🪐")
+        lw, lr = map(wire, s03_proof(legacy))
+        self.assertFalse(check(wire_w=lw, wire_r=lr,
+                               hash_w=pin(lw), hash_r=pin(lr), history=legacy))
+        self.assertIn("canonical_s03_verified=False", inspect.getsource(browser_run))
+
+
+    def test_pinned_s03_third_turn_requires_independent_prior_prefix(self):
+        prior = [dict(row, message_id=f"row-{i}", session_id="owner-session",
+                      dialog_id=DIALOG)
+                 for i, row in enumerate(rows("Sigue en español 🪐"), 1)]
+        current = [dict(row) for row in prior] + [
+            dict(role="user", content="¿Y ahora qué recuerdas? 🪐",
+                 message_id="row-5", session_id="owner-session", dialog_id=DIALOG),
+            dict(role="assistant", content="Помню весь диалог. Sí.",
+                 message_id="row-6", session_id="owner-session", dialog_id=DIALOG)]
+        def wire(obj):
+            return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
+        def pin(raw):
+            return hashlib.sha256(raw).hexdigest()
+        def witnesses(history, sequence=3, event=None, turn=None):
+            full = pin(json.dumps(
+                [{"role": x["role"], "content": x["content"]} for x in history],
+                ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode())
+            ids = pin(wire([x["message_id"] for x in history]))
+            common = dict(source="canonical_s03", event_id=event or f"evt-{sequence:02}",
+                          turn_id=turn or f"turn-{sequence:02}", sequence=sequence, dialog_id=DIALOG,
+                          session_id="owner-session", full_transcript_sha256=full,
+                          message_ids_sha256=ids)
+            return (wire(dict(common, verified=True, durable=True)),
+                    wire(dict(common, independent=True, messages=history,
+                              full_answer_sha256=pin(history[-1]["content"].encode()))))
+        pw, pr = witnesses(prior, 2)
+        prior_pins = (pw, pr, pin(pw), pin(pr))
+        def check(history=current, old=prior, sequence=3, receipt_sequence=3,
+                  previous=prior_pins, event=None, turn=None):
+            w, r = witnesses(history, receipt_sequence, event, turn)
+            return canonical_s03_pinned_evidence_valid(
+                w, r, pin(w), pin(r), DIALOG, history,
+                expected_session_id="owner-session", expected_sequence=sequence,
+                expected_prior_messages=old, prior_witnesses=previous)
+        self.assertTrue(check())
+        self.assertFalse(check(previous=None))
+        self.assertFalse(check(previous=(pw, pr, pin(pr), pin(pw))))
+        self.assertFalse(check(previous=(pw, pr, pin(pw), "0" * 64)))
+        self.assertFalse(check(event="evt-02"))
+        self.assertFalse(check(turn="turn-02"))
+        wrong_prior = [dict(row) for row in prior]
+        wrong_prior[1]["content"] = "Different previous answer"
+        ww, wr = witnesses(wrong_prior, 2)
+        self.assertFalse(check(previous=(ww, wr, pin(ww), pin(wr))))
+        self.assertFalse(check(old=None))
+        self.assertFalse(check(old=prior[:2]))
+        self.assertFalse(check(history=current[2:]))
+        self.assertFalse(check(sequence=2))
+        self.assertFalse(check(sequence=True))
+        self.assertFalse(check(receipt_sequence=2))
+        replaced = [dict(x) for x in current]
+        replaced[1]["content"] = "Rewritten prior answer"
+        self.assertFalse(check(history=replaced))
+        replaced = [dict(x) for x in current]
+        replaced[0]["message_id"] = "replacement-row"
+        self.assertFalse(check(history=replaced))
+        duplicate = [dict(x) for x in current]
+        duplicate[-1]["message_id"] = prior[0]["message_id"]
+        self.assertFalse(check(history=duplicate))
+        foreign = [dict(x) for x in current]
+        foreign[-1]["dialog_id"] = "foreign-dialog"
+        self.assertFalse(check(history=foreign))
+        self.assertIsNone(multiturn_transcript_sha256(current))
+        self.assertIsNotNone(multiturn_transcript_sha256(current, expected_sequence=3))
+        self.assertIn("canonical_s03_verified=False", inspect.getsource(browser_run))
+
+    def test_existing_first_turn_prefix_resume_without_replay(self):
+        current = [dict(row, message_id=f"row-{i}", session_id="owner-session",
+                        dialog_id=DIALOG)
+                   for i, row in enumerate(rows("¿Qué recuerdas? 🪐"), 1)]
+        prior = [dict(row) for row in current[:2]]
+        def wire(obj):
+            return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
+        def pin(raw):
+            return hashlib.sha256(raw).hexdigest()
+        def witnesses(history, sequence, event=None, turn=None):
+            full = pin(json.dumps(
+                [{"role": x["role"], "content": x["content"]} for x in history],
+                ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode())
+            common = dict(source="canonical_s03", event_id=event or f"evt-{sequence}",
+                          turn_id=turn or f"turn-{sequence}", sequence=sequence,
+                          dialog_id=DIALOG, session_id="owner-session",
+                          full_transcript_sha256=full,
+                          message_ids_sha256=pin(wire([x["message_id"] for x in history])))
+            w = wire(dict(common, verified=True, durable=True))
+            r = wire(dict(common, independent=True, messages=history,
+                          full_answer_sha256=pin(history[-1]["content"].encode())))
+            return w, r, pin(w), pin(r)
+        previous = witnesses(prior, 1)
+        self.assertTrue(canonical_s03_firstturn_prefix_valid(
+            *previous, DIALOG, prior, expected_session_id="owner-session"))
+        self.assertFalse(canonical_s03_pinned_evidence_valid(
+            *previous, DIALOG, prior, expected_session_id="owner-session",
+            expected_sequence=1))
+        self.assertIsNone(multiturn_transcript_sha256(prior, expected_sequence=1))
+        def check(history=current, prefix=prior, pins=previous, event=None, turn=None):
+            return canonical_s03_resumed_second_turn_valid(
+                *witnesses(history, 2, event, turn), DIALOG, history,
+                expected_session_id="owner-session", prior_messages=prefix,
+                prior_witnesses=pins)
+        self.assertTrue(check())
+        self.assertFalse(check(pins=None))
+        self.assertFalse(check(pins=(*previous[:2], "0"*64, previous[3])))
+        self.assertFalse(check(event="evt-1"))
+        self.assertFalse(check(turn="turn-1"))
+        rewritten = [dict(row) for row in current]
+        rewritten[1]["content"] = "Подмена предыдущего ответа"
+        self.assertFalse(check(history=rewritten))
+        duplicated = [dict(row) for row in current]
+        duplicated[-1]["message_id"] = prior[0]["message_id"]
+        self.assertFalse(check(history=duplicated))
+        self.assertFalse(canonical_s03_firstturn_prefix_valid(
+            *previous, DIALOG, prior, expected_session_id="different-owner"))
+        self.assertIn("canonical_s03_verified=False", inspect.getsource(browser_run))
+
+
+if __name__ == "__main__":
+    unittest.main()

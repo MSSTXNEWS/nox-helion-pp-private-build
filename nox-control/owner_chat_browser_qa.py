@@ -17,6 +17,7 @@ import importlib.metadata
 import importlib.util
 import ipaddress
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -78,6 +79,49 @@ def public_numeric_answer(value):
     return re.sub(r'\s+','',value)
 
 
+def ru_es_context_challenge(token):
+    """Per-dialog order so a second answer cannot pass by reciting 10..1."""
+    if not isinstance(token, str) or not re.fullmatch(r'[a-p]{5,32}', token):
+        raise RuntimeError('HOLD_QA_CHALLENGE_TOKEN')
+    order = sorted(range(1, 11),
+                   key=lambda number: digest((token + ':' + str(number)).encode('ascii')))
+    if order in (list(range(1, 11)), list(range(10, 0, -1))):
+        order = order[1:] + order[:1]
+    return ','.join(map(str, order))
+
+
+def ru_es_unleaked_first_prompt(token):
+    """First assistant chooses sequence; first user prompt must not expose it."""
+    if not isinstance(token, str) or not re.fullmatch(r'[a-p]{5,32}', token):
+        raise RuntimeError('HOLD_QA_CHALLENGE_TOKEN')
+    return ('[NOX UI QA ' + token + '] Выбери самостоятельно произвольную перестановку '
+            'чисел от 1 до 10, каждое ровно один раз. Не используй возрастающий '
+            'или убывающий порядок. Ответ: только числа через запятую, без пояснений.')
+
+
+def ru_es_unleaked_first_answer_valid(value):
+    """Accept only a complete, nontrivial first assistant-selected permutation."""
+    if not isinstance(value, str) or not re.fullmatch(r'(?:10|[1-9])(?:,(?:10|[1-9])){9}', value):
+        return False
+    parts = value.split(',')
+    return (set(parts) == {str(number) for number in range(1, 11)}
+            and parts != list(map(str, range(1, 11)))
+            and parts != list(map(str, range(10, 0, -1))))
+
+
+def multiturn_followup_prompt(token, mode):
+    """Optional RU->ES owner QA, never enabled for normal or legacy runs."""
+    if mode not in ('multiturn', 'multiturn_ru_es'):
+        raise RuntimeError('HOLD_QA_LANGUAGE_MODE')
+    prefix = '[NOX UI QA ' + token + '] '
+    if mode == 'multiturn_ru_es':
+        return (prefix + 'Usando únicamente la respuesta a la pregunta anterior en ruso, '
+                'escribe esa misma secuencia de números en orden inverso, separados por comas. '
+                'Sin explicaciones ni otras palabras.')
+    return (prefix + 'Используя предыдущий ответ, перечисли '
+            'те же числа в обратном порядке через запятую. Без пояснений.')
+
+
 def admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt):
     """A second native POST cannot start before terminal S03; a third never starts."""
     if count == 0:
@@ -87,50 +131,895 @@ def admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt):
     return None
 
 
+QA_GENERATION_OVERRIDES = frozenset((
+    'model', 'model_id', 'model_override', 'provider', 'backend',
+    'route', 'route_override', 'endpoint', 'base_url', 'upstream_url',
+    'system_prompt', 'system', 'tools', 'history', 'messages',
+    'session_id', 'conversation_id',
+))
+
+
 def allowed_qa_request(count, second_permitted, first_prompt, second_prompt, body, dialog_id):
-    """No missing/null message may satisfy an exhausted one-shot allowance."""
+    """Admit only the current-dialog prompt without an alternate model/history route.
+
+    The synthetic QA is not allowed to choose a different model, upstream,
+    context or session in request metadata. Benign client metadata is retained
+    for compatibility, but explicit generation overrides fail closed.
+    """
     expected = admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt)
     return (expected is not None and isinstance(body, dict)
+            and isinstance(dialog_id, str) and bool(dialog_id.strip())
             and body.get('message') == expected
-            and body.get('dialog_id') == dialog_id)
+            and body.get('dialog_id') == dialog_id
+            and not QA_GENERATION_OVERRIDES.intersection(body))
 
 
-def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, second_answer):
-    """Require four exact ordered messages from one already-scoped dialog."""
-    if not isinstance(rows, list) or len(rows) != 4 or not all(isinstance(row, dict) for row in rows):
+def allowed_qa_stream_url(request_url, origin):
+    """Certify the exact existing OneHost streaming endpoint, not query overrides.
+
+    The browser QA must not accept a native POST whose URL adds alternate
+    routing/model/history arguments outside the already checked JSON body.
+    This validates the request; it never submits another POST.
+    """
+    if not isinstance(request_url, str) or not isinstance(origin, str):
         return False
+    try:
+        target = urllib.parse.urlsplit(request_url)
+    except ValueError:
+        return False
+    return (target.scheme in ('http', 'https')
+            and target.netloc == origin
+            and target.path == '/api/nox/chat/stream'
+            and not target.query and not target.fragment
+            and target.username is None and target.password is None)
+
+
+
+def native_chat_route_candidate(path):
+    """Fence encoded aliases before uncounted same-origin native POSTs.
+
+    The owner browser's allowlist must see a chat request even when an
+    upstream URL decoder turns an earlier encoded segment into /api/nox/chat.
+    Only the original raw /api/nox/chat/stream route is admitted later; an
+    encoded alias is always aborted, never silently treated as a UI asset.
+    """
+    if not isinstance(path, str):
+        return False
+    for _ in range(3):
+        if (path == '/api/nox/chat' or path.startswith('/api/nox/chat/')
+                or path.startswith('/api/nox/chat%')):
+            return True
+        decoded = urllib.parse.unquote(path)
+        # Some upstream HTTP routers canonicalize multiple leading slashes.
+        # Treat a newly decoded leading slash as a native-chat candidate too.
+        if decoded.startswith('//'):
+            decoded = '/' + decoded.lstrip('/')
+        if decoded == path:
+            break
+        path = decoded
+    return False
+
+def exact_native_post_fence(snapshot, admitted, expected):
+    """Require observed browser POSTs AND owner route admission to agree exactly.
+
+    A streamed answer and history rows alone do not prove that only the
+    allowed native generation occurred before the next RU/ES message.
+    """
+    return (type(expected) is int and expected in (1, 2)
+            and type(admitted) is int and admitted == expected
+            and isinstance(snapshot, dict)
+            and type(snapshot.get('native_calls')) is int
+            and snapshot['native_calls'] == expected)
+
+
+def native_terminal_stream_valid(snapshot):
+    """A single DONE frame is not proof of a completed native response.
+
+    Require the cloned browser observer to read clean EOF with exactly one
+    terminal frame before admitting the Spanish follow-up or final result.
+    """
+    return (isinstance(snapshot, dict)
+            and snapshot.get('native_stream_complete') is True
+            and type(snapshot.get('native_terminal_count')) is int
+            and snapshot['native_terminal_count'] == 1
+            and snapshot.get('error') is None
+            and isinstance(snapshot.get('done'), dict)
+            # Empty/partial DONE would vacuously satisfy all(done.values())
+            # in the caller yet cannot prove S03 saved and same session.
+            and all(snapshot['done'].get(flag) is True for flag in
+                    ('saved', 's03_integrated', 'dialog_matches')))
+
+
+def readback_evidence(saved, native_equal, two_turn_mode):
+    """Keep browser dialog-history evidence separate from trusted canonical S03.
+
+    In RU/ES multi-turn, /api/ui/memory/dialogs/history proves only that
+    history matches the observed browser answer. It is NOT an independent
+    canonical S03 writer receipt/readback. Preserve the legacy one-turn
+    s03_readback_verified reporting contract without promoting it to a
+    multi-turn persistence proof.
+    """
+    dialog_ok = saved is True and native_equal is True
+    return {
+        'dialog_history_readback_verified': dialog_ok,
+        's03_readback_verified': dialog_ok and two_turn_mode is not True,
+    }
+
+
+def clean_two_turn_browser_runtime(page_errors, network, overflow_count=0,
+                                   critical_requestfailed_count=0,
+                                   blocked_native_attempts=0):
+    """No browser-only RU/ES PASS with page JS errors or broken JS/CSS.
+
+    The overall browser_run historically checked these conditions only after
+    returning. Canonical S03 HOLD prevents that return in two-turn mode, so
+    recheck captured observations before any partial browser PASS.
+    Failed image assets are not critical JS/CSS failures. A bounded response
+    log is insufficient when additional unobserved responses may hide failures.
+    Request failures without HTTP responses are also fatal for scripts/styles.
+    Any attempted extra/alternate native generation, even if aborted by the
+    owner route guard, invalidates the claimed exactly-two-POST browser result.
+    """
+    if (not isinstance(page_errors, list) or page_errors
+            or not isinstance(network, list)
+            or type(overflow_count) is not int or overflow_count != 0
+            or type(critical_requestfailed_count) is not int
+            or critical_requestfailed_count != 0
+            or type(blocked_native_attempts) is not int
+            or blocked_native_attempts != 0):
+        return False
+    for item in network:
+        if not isinstance(item, dict):
+            return False
+        if item.get('resource_type') in ('script', 'stylesheet'):
+            status = item.get('status')
+            if type(status) is not int or not 200 <= status < 400:
+                return False
+    return True
+
+
+
+def stable_second_turn_quiescence(before, after, admitted, native_answer_equal):
+    """Bounded post-terminal observation must preserve the same second answer.
+
+    A late third browser POST or a changed terminal/answer after the screenshot
+    must not receive even narrow browser-only PASS. A per-browser salted answer
+    digest also detects same-length mutations that counters cannot detect.
+    This is not proof against
+    events after the bounded observation window or a substitute for S03.
+    """
+    if (native_answer_equal is not True
+            or not exact_native_post_fence(before, admitted, 2)
+            or not exact_native_post_fence(after, admitted, 2)
+            or not native_terminal_stream_valid(before)
+            or not native_terminal_stream_valid(after)
+            or after.get('dom_answer_matches_native') is not True
+            or type(before.get('answer_characters')) is not int
+            or before['answer_characters'] <= 0
+            or not isinstance(before.get('answer_sha256'), str)
+            or re.fullmatch(r'[0-9a-f]{64}', before['answer_sha256']) is None
+            or type(before.get('native_delta_count')) is not int
+            or before['native_delta_count'] <= 0
+            or type(before.get('native_done_ms')) not in (int, float)):
+        return False
+    return all(before.get(key) == after.get(key) for key in (
+        'native_calls', 'native_stream_complete', 'native_terminal_count',
+        'done', 'native_done_ms', 'native_delta_count', 'native_bytes',
+        'answer_characters', 'answer_sha256'))
+
+
+
+def coherent_row_dialog_scope(rows):
+    """Browser-history rows must be one explicitly coherent or legacy dialog.
+
+    Presence alone is insufficient: a rootless four-row RU/ES validator must
+    not accept different explicit dialog_id values as one conversation.
+    """
+    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+        return False
+    scope = ['dialog_id' in row for row in rows]
+    if not any(scope):
+        return True  # Fully unscoped legacy history.
+    if not all(scope):
+        return False
+    ids = [row['dialog_id'] for row in rows]
+    return (all(isinstance(value, str) and bool(value)
+                and value == value.strip() and value.isprintable()
+                for value in ids)
+            and len(set(ids)) == 1)
+
+
+def postquiet_fourrow_history_stable(before, after, dialog_id, transcript_sha, firstturn_ids):
+    """Pin four persisted row identities and exact RU/ES text after quiescence.
+
+    Owner-scoped dialog history is NOT canonical S03. Private IDs/text never
+    enter a public QA report: only this boolean attestation is recorded.
+    """
+    if (not isinstance(before, dict) or not isinstance(after, dict)
+            or not isinstance(dialog_id, str) or not dialog_id.strip()
+            or not isinstance(transcript_sha, str)
+            or re.fullmatch(r'[0-9a-f]{64}', transcript_sha) is None):
+        return False
+    pinned_ids = None
+    pinned_session = None
+    pinned_root_session = None
+    pinned_root_dialog_presence = None
+    pinned_row_dialog_presence = None
+    for history in (before, after):
+        if 'dialog_id' in history and history['dialog_id'] != dialog_id:
+            return False
+        # Both history GETs must agree whether root dialog provenance is
+        # explicit. One-sided omission is not a stable owner-history witness.
+        # Fully legacy snapshots without the field remain compatible.
+        root_dialog_present = 'dialog_id' in history
+        if (pinned_root_dialog_presence is not None
+                and root_dialog_present != pinned_root_dialog_presence):
+            return False
+        pinned_root_dialog_presence = root_dialog_present
+        rows = history.get('messages')
+        if (not isinstance(rows, list) or len(rows) != 4
+                or not all(isinstance(row, dict) for row in rows)
+                or any('dialog_id' in row and row['dialog_id'] != dialog_id
+                       for row in rows)
+                or not coherent_row_dialog_scope(rows)
+                or not firstturn_prefix_identity_valid(firstturn_ids, rows)
+                or not consistent_explicit_row_session_ids(rows)
+                or not root_history_session_valid(history, rows)
+                or multiturn_transcript_sha256(rows) != transcript_sha):
+            return False
+        ids = tuple(row.get('message_id') for row in rows)
+        if (any(not isinstance(mid, str) or not mid.strip() or mid != mid.strip()
+                or not mid.isprintable() for mid in ids)
+                or len(set(ids)) != 4):
+            return False
+        if pinned_ids is not None and ids != pinned_ids:
+            return False
+        # Even a matching explicit dialog_id is not a stable row provenance
+        # witness if that field disappears or appears across owner GETs.
+        # Keep wholly legacy unscoped snapshots compatible.
+        row_dialog_presence = tuple('dialog_id' in row for row in rows)
+        if (pinned_row_dialog_presence is not None
+                and row_dialog_presence != pinned_row_dialog_presence):
+            return False
+        pinned_row_dialog_presence = row_dialog_presence
+        # A role/content SHA and four stable row IDs do not pin optional
+        # owner session metadata. A reload/recheck must not silently rotate
+        # all four rows from one session to another with identical text/IDs.
+        # No-session legacy snapshots are allowed only when BOTH are unscoped.
+        session_pin = ('session_id' in rows[0], rows[0].get('session_id'))
+        if pinned_session is not None and session_pin != pinned_session:
+            return False
+        # The envelope owner session is independent provenance. A server can
+        # rotate the root session without changing any row ID/text/session.
+        # Do not certify a postquiet/reload snapshot across that rotation.
+        root_pin = ('session_id' in history, history.get('session_id'))
+        if pinned_root_session is not None and root_pin != pinned_root_session:
+            return False
+        pinned_root_session = root_pin
+        pinned_session = session_pin
+        pinned_ids = ids
+    return pinned_ids is not None
+
+
+def distinct_explicit_message_ids(rows):
+    """Optional row IDs must not claim multiple distinct turns with one identity.
+
+    Historical S03/dialog-history responses may omit message_id; whenever
+    an ID is explicitly supplied it must be a nonblank string and unique.
+    """
+    ids = [row['message_id'] for row in rows if 'message_id' in row]
+    # A nonblank but padded or invisible identifier is not durable row
+    # provenance. Reject it at the FIRST owner-history gate, before any
+    # Spanish follow-up; preserve valid Unicode and legacy absent IDs.
+    return (all(isinstance(mid, str) and bool(mid)
+                and mid == mid.strip() and mid.isprintable() for mid in ids)
+            and len(ids) == len(set(ids)))
+
+
+
+def owner_session_cookie_pin(cookies):
+    """In-memory identity of signed owner cookies; never log any cookie data.
+
+    Prefer server-issued HttpOnly cookies; benign JavaScript UI preferences
+    cannot rotate the owner identity. Fallback to all initial cookies only if
+    the server does not mark any cookie HttpOnly. Fail closed on malformed data.
+    """
+    if not isinstance(cookies, list) or not cookies:
+        return None
+    # A malformed ancillary cookie must not disappear from the owner-session
+    # snapshot merely because a valid signed HttpOnly cookie was selected.
+    # Keep ordinary well-formed unsigned UI preferences compatible.
+    if not all(isinstance(row, dict) for row in cookies):
+        return None
+    # An explicit but nonboolean HttpOnly flag is not an authenticated
+    # cookie claim. Reject it BEFORE the legacy unsigned-cookie fallback,
+    # even when another valid HttpOnly cookie is also present. Truly absent
+    # legacy metadata and explicit booleans retain their prior semantics.
+    if any(isinstance(row, dict) and 'httpOnly' in row
+           and type(row['httpOnly']) is not bool for row in cookies):
+        return None
+    # Security metadata is part of the WHOLE browser snapshot, not only
+    # whichever signed owner cookie gets selected for the identity hash.
+    # Malformed unsigned UI attributes must not disappear beside a valid
+    # HttpOnly owner cookie and falsely certify RU/ES continuity.
+    # A shadow cookie with the same (name, domain, path) may be used by a
+    # subsequent HTTP request while the selected signed-cookie pin stays
+    # unchanged. Cookie snapshots with duplicate scopes are not unambiguous
+    # authenticated RU/ES session evidence, even when one row is HttpOnly.
+    seen_cookie_scopes = set()
+    seen_cookie_names = set()
+    for row in cookies:
+        # Validate the complete owner cookie snapshot, not only signed rows.
+        # Ordinary unsigned preferences may have an empty string value, but
+        # missing/malformed name, domain, path or non-string value is not
+        # reliable browser-session provenance beside a signed owner cookie.
+        if (any(not isinstance(row.get(key), str) or not row[key]
+                for key in ('name', 'domain', 'path'))
+                or not isinstance(row.get('value'), str)):
+            return None
+        # JSON-decoded cookies can contain unpaired surrogate escapes. A
+        # malformed signed or ancillary value is not valid UTF-8 provenance;
+        # reject the whole snapshot before selecting owner-only cookies.
+        try:
+            for key in ('name', 'domain', 'path', 'value'):
+                row[key].encode('utf-8')
+        except UnicodeEncodeError:
+            return None
+        scope = (row['name'], row['domain'], row['path'])
+        # Cookies with identical names but different domain/path scopes can
+        # both reach one HTTP endpoint. A server may resolve the first/last
+        # Cookie header value differently while our signed owner pin stays
+        # unchanged. Reject all same-name shadows, not just exact-scope ones.
+        if scope in seen_cookie_scopes or row['name'] in seen_cookie_names:
+            return None
+        seen_cookie_scopes.add(scope)
+        seen_cookie_names.add(row['name'])
+        if 'secure' in row and type(row['secure']) is not bool:
+            return None
+        same_site = row.get('sameSite')
+        if same_site is not None and same_site not in ('Strict', 'Lax', 'None'):
+            return None
+        if 'partitionKey' in row:
+            part = row['partitionKey']
+            if (not isinstance(part, str) or not part
+                    or part != part.strip() or not part.isprintable()):
+                return None
+    signed = [row for row in cookies
+              if isinstance(row, dict) and row.get('httpOnly') is True]
+    selected = signed if signed else cookies
+    identity = []
+    for cookie in selected:
+        if not isinstance(cookie, dict):
+            return None
+        # A signed owner cookie losing HttpOnly cannot authenticate the
+        # next RU/ES turn just because its name, path and value stay equal.
+        fields = tuple(cookie.get(key) for key in ('name', 'domain', 'path', 'value'))
+        if any(not isinstance(field, str) or not field for field in fields):
+            return None
+        # A signed Secure cookie downgraded to an HTTP-eligible cookie
+        # must not reuse the same RU/ES owner-session pin. A change from
+        # Strict/Lax to None also weakens the browser's CSRF boundary.
+        # Explicit cookie attribute metadata must not be silently aliased
+        # with absent legacy fields or nonboolean Secure values.
+        if 'secure' in cookie and type(cookie['secure']) is not bool:
+            return None
+        same_site = cookie.get('sameSite')
+        if same_site is not None and same_site not in ('Strict', 'Lax', 'None'):
+            return None
+        # CHIPS/partitioned cookies can be scoped to distinct top-level sites;
+        # pin the optional partition key without exposing its value in reports.
+        if 'partitionKey' in cookie:
+            partition = cookie['partitionKey']
+            if (not isinstance(partition, str) or not partition
+                    or partition != partition.strip()
+                    or not partition.isprintable()):
+                return None
+        else:
+            partition = None
+        # Missing legacy HttpOnly metadata is not equivalent to explicit
+        # False: a disappearing/appearing attribute must rotate the pin.
+        fields += ('httpOnly' in cookie, cookie.get('httpOnly') is True,
+                   'secure' in cookie, cookie.get('secure') is True,
+                   'sameSite' in cookie, same_site,
+                   'partitionKey' in cookie, partition)
+        identity.append(fields)
+    if len(set(fields[:3] for fields in identity)) != len(identity):
+        return None
+    raw = json.dumps(sorted(identity), ensure_ascii=False,
+                     separators=(',', ':'), allow_nan=False).encode('utf-8')
+    return digest(raw)
+
+
+def owner_session_continuity_valid(status, cookies, expected_pin):
+    """Reject a rotated or expired owner session before trusted history reads."""
+    return (type(status) is int and status == 200
+            and isinstance(expected_pin, str) and len(expected_pin) == 64
+            and owner_session_cookie_pin(cookies) == expected_pin)
+
+
+async def postreload_owner_session_recheck(context, base, expected_pin):
+    """Re-pin authenticated owner identity AFTER the slow reload-history GET.
+
+    A successful pre-history session check cannot authorize a later read if
+    the session expires or cookies rotate while history is being retrieved.
+    No generation request is made; any read failure is a conservative HOLD.
+    """
+    try:
+        response = await context.request.get(
+            base+'/chat/session', max_redirects=0, timeout=6000)
+        return owner_session_continuity_valid(
+            response.status, await context.cookies(base), expected_pin)
+    except Exception:
+        return False
+
+
+
+async def postrender_owner_history_recheck(context, base, before, dialog_id,
+                                           transcript_sha, firstturn_ids):
+    """Refetch the same four owner-scoped rows AFTER browser DOM has rendered.
+
+    The earlier history GET cannot certify persisted IDs/text if another writer
+    changed them during the Chromium render wait. This is browser-history-only,
+    never an independent S03 receipt, and never sends inference requests.
+    The final caller must re-pin owner session and DOM AFTER this awaited GET.
+    """
+    if not isinstance(dialog_id, str) or not dialog_id.strip():
+        return False
+    try:
+        url = (base+'/api/ui/memory/dialogs/history?dialog_id='
+               +urllib.parse.quote(dialog_id, safe='')+'&limit=6')
+        response = await context.request.get(
+            url, max_redirects=0, timeout=6000)
+        after = await owner_history_json_response(response)
+        return postquiet_fourrow_history_stable(
+            before, after, dialog_id, transcript_sha, firstturn_ids)
+    except Exception:
+        return False
+
+
+async def postrender_owner_session_dialog_fence(context, base, expected_pin,
+                                                page, title, rows):
+    """Read-only last owner/session and visible RU/ES dialog fence.
+
+    Awaiting DOM render can outlive the earlier owner-cookie and route checks.
+    Re-authenticate after render, then compare the still-selected dialog and
+    four visible rows; never issue a generation request. All errors fail closed.
+    """
+    if not await postreload_owner_session_recheck(context, base, expected_pin):
+        return False
+    try:
+        return (urllib.parse.urlsplit(page.url).path == PAGE
+                and await page.evaluate(ACTIVE_QA_DIALOG_JS, title) is True
+                and await page.evaluate(RENDERED_FOURROW_JS, rows) is True)
+    except Exception:
+        return False
+
+
+def verified_two_turn_firstturn_ids(rows):
+    """Allow second POST only after two distinct, stable first-turn row IDs.
+
+    A dialog-history text match alone does not establish durable first-turn
+    identity. Legacy history helpers stay compatible; B5 explicitly opts in.
+    """
+    if (not isinstance(rows, list) or len(rows) != 2
+            or not all(isinstance(row, dict) for row in rows)):
+        return None
+    ids = tuple(row.get('message_id') for row in rows)
+    if (any(not isinstance(mid, str) or not mid.strip()
+            or mid != mid.strip() or not mid.isprintable() for mid in ids)
+            or ids[0] == ids[1]):
+        return None
+    return ids
+
+
+def firstturn_session_continuity_valid(first_rows, completed_rows):
+    """The second history snapshot must retain the FIRST owner's session scope.
+
+    Separate two-row and four-row validators reject mixed sessions *within*
+    each snapshot, but a wholesale A→B rotation can otherwise preserve the
+    first two row IDs and identical UTF-8 text. Compare exact optional scope
+    across the first and second history reads before any browser-only PASS.
+    Legacy unscoped history is compatible only when BOTH reads are unscoped.
+    This is not a canonical S03 writer receipt or owner-cookie verifier.
+    """
+    if (not isinstance(first_rows, list) or len(first_rows) != 2
+            or not isinstance(completed_rows, list) or len(completed_rows) != 4
+            or not consistent_explicit_row_session_ids(first_rows)
+            or not consistent_explicit_row_session_ids(completed_rows)):
+        return False
+    first_pin = ('session_id' in first_rows[0], first_rows[0].get('session_id'))
+    second_pin = ('session_id' in completed_rows[0],
+                  completed_rows[0].get('session_id'))
+    return first_pin == second_pin
+
+
+def firstturn_prefix_identity_valid(firstturn_ids, completed_rows):
+    """A second history read must retain the first two persisted message IDs.
+
+    If a first-turn row carried an explicit message_id, its identity must
+    survive the Spanish follow-up. Legacy first-turn rows without IDs may
+    acquire IDs later; absent metadata alone never proves persistence.
+    """
+    if (not isinstance(firstturn_ids, tuple) or len(firstturn_ids) != 2
+            or not isinstance(completed_rows, list) or len(completed_rows) != 4
+            or not all(isinstance(row, dict) for row in completed_rows[:2])):
+        return False
+    return all(
+        initial is None or (
+            isinstance(initial, str) and bool(initial.strip())
+            and row.get('message_id') == initial)
+        for initial, row in zip(firstturn_ids, completed_rows[:2]))
+
+
+def empty_dialog_history_valid(history, dialog_id):
+    """Reject an empty-history response scoped to another dialog before the FIRST POST.
+
+    A query-string dialog_id is not proof of the response's identity. Legacy
+    responses lacking a top-level dialog_id remain compatible.
+    """
+    return (isinstance(history, dict)
+            and isinstance(dialog_id, str) and bool(dialog_id.strip())
+            and ('dialog_id' not in history or history['dialog_id'] == dialog_id)
+            and history.get('messages') == [])
+
+
+def consistent_explicit_row_session_ids(rows):
+    """A browser history proof cannot combine turns from different sessions.
+
+    Legacy history rows with no session_id remain compatible. If any row
+    supplies that metadata, ALL rows must declare the same exact nonblank
+    session ID; mismatches or partial annotations fail closed. This does NOT
+    replace the authenticated owner-cookie pin or canonical S03 verifier.
+    """
+    if (not isinstance(rows, list) or not rows
+            or not all(isinstance(row, dict) for row in rows)):
+        return False
+    supplied = ['session_id' in row for row in rows]
+    if not any(supplied):
+        return True
+    if not all(supplied):
+        return False
+    values = [row['session_id'] for row in rows]
+    return (all(isinstance(value, str) and bool(value.strip())
+                and value == value.strip() and value.isprintable() for value in values)
+            and len(set(values)) == 1)
+
+
+def root_history_session_valid(history, rows):
+    """Fail closed if owner-history root scope contradicts explicit row scope.
+
+    A root session_id is optional for legacy history responses; if present it
+    must be a canonical nonblank owner session and agree with annotated rows.
+    This checks provenance consistency, not authentication or canonical S03.
+    """
+    if not isinstance(history, dict) or not isinstance(rows, list):
+        return False
+    if 'session_id' not in history:
+        return True
+    root = history['session_id']
+    return (isinstance(root, str) and bool(root.strip())
+            and root == root.strip() and root.isprintable()
+            and all('session_id' not in row or row['session_id'] == root
+                    for row in rows if isinstance(row, dict)))
+
+
+
+def firstturn_root_session_continuity_valid(first_history, completed_history):
+    """Keep the root owner-session provenance pinned through the Spanish turn.
+
+    The initial RU history and the completed RU/ES history can each be
+    individually well formed while belonging to different root sessions.
+    Even identical persisted message IDs and row texts do not make a
+    wholesale root scope switch safe. Entirely legacy unscoped envelopes
+    remain compatible; a root pin cannot silently appear or disappear.
+    This is browser-history proof only, not canonical S03 acceptance.
+    """
+    if not isinstance(first_history, dict) or not isinstance(completed_history, dict):
+        return False
+    first_rows = first_history.get('messages')
+    completed_rows = completed_history.get('messages')
+    if (not isinstance(first_rows, list) or len(first_rows) != 2
+            or not isinstance(completed_rows, list) or len(completed_rows) != 4
+            or not consistent_explicit_row_session_ids(first_rows)
+            or not consistent_explicit_row_session_ids(completed_rows)
+            or not root_history_session_valid(first_history, first_rows)
+            or not root_history_session_valid(completed_history, completed_rows)):
+        return False
+    # The original two persisted RU rows cannot quietly gain/lose their
+    # per-row dialog provenance after the Spanish turn. Both snapshots may
+    # be individually valid even if the same first two durable rows change
+    # their dialog_id field presence. Fully legacy stable rows remain valid.
+    for first_row, completed_row in zip(first_rows, completed_rows[:2]):
+        if (('dialog_id' in first_row, first_row.get('dialog_id')) !=
+                ('dialog_id' in completed_row,
+                 completed_row.get('dialog_id'))):
+            return False
+    # A root dialog_id is optional only in entirely legacy owner histories.
+    # Its presence must not rotate between RU and ES while row IDs/text match.
+    return (('session_id' in first_history, first_history.get('session_id'))
+            == ('session_id' in completed_history,
+                completed_history.get('session_id'))
+            and ('dialog_id' in first_history, first_history.get('dialog_id'))
+            == ('dialog_id' in completed_history,
+                completed_history.get('dialog_id')))
+
+
+def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
+    """Require the first persisted turn to belong to the owner QA dialog.
+
+    The API query's dialog_id is not proof of the returned row's scope.
+    Legacy rows lacking dialog_id metadata are accepted, but any supplied
+    mismatching/null identifier must HOLD before second-turn admission.
+    """
+    if (not isinstance(history, dict) or not isinstance(dialog_id, str)
+            or not dialog_id.strip()
+            or ('dialog_id' in history and history['dialog_id'] != dialog_id)):
+        return False
+    rows = history.get('messages')
+    if (not isinstance(rows, list) or len(rows) != 2
+            or not all(isinstance(row, dict) for row in rows)
+            or any('dialog_id' in row and row['dialog_id'] != dialog_id for row in rows)
+            or not coherent_row_dialog_scope(rows)
+            or not distinct_explicit_message_ids(rows)
+            or not consistent_explicit_row_session_ids(rows)
+            or not root_history_session_valid(history, rows)
+            or not isinstance(first_answer, str) or not first_answer.strip()):
+        return False
+    return (rows[0].get('role') == 'user'
+            and rows[0].get('content') == first_prompt
+            and rows[1].get('role') == 'assistant'
+            and rows[1].get('content') == first_answer)
+
+
+
+def presecond_firstturn_history_stable(before, after, first_prompt, first_answer, dialog_id):
+    """Revalidate first persisted RU turn immediately before Spanish POST.
+
+    Two valid individual snapshots can hide an intervening row rewrite or a
+    wholesale owner/session switch. Preserve exact durable IDs, literal UTF-8
+    text, and explicit metadata presence across both read-only owner GETs.
+    """
+    if (not firstturn_history_valid(before, first_prompt, first_answer, dialog_id)
+            or not firstturn_history_valid(after, first_prompt, first_answer, dialog_id)):
+        return False
+    earlier, current = before['messages'], after['messages']
+    original_ids = verified_two_turn_firstturn_ids(earlier)
+    if (original_ids is None
+            or verified_two_turn_firstturn_ids(current) != original_ids
+            or ('dialog_id' in before) != ('dialog_id' in after)
+            or (('session_id' in before, before.get('session_id')) !=
+                ('session_id' in after, after.get('session_id')))):
+        return False
+    return all(
+        (field in old, old.get(field)) == (field in new, new.get(field))
+        for old, new in zip(earlier, current)
+        for field in ('dialog_id', 'session_id')
+    )
+
+
+async def presecond_owner_history_fence(context, base, owner_pin, page, title,
+                                        first_history, prompt, answer, dialog_id):
+    """Last read-only history+owner+visible dialog fence before POST admission.
+
+    No inference POST is made here. A rewritten first turn, redirected GET,
+    rotated owner cookie, or changed visible dialog must fail closed.
+    """
+    try:
+        url = (base + '/api/ui/memory/dialogs/history?dialog_id='
+               + urllib.parse.quote(dialog_id, safe='') + '&limit=6')
+        fresh = await owner_history_json_response(await context.request.get(
+            url, max_redirects=0, timeout=6000))
+        if not presecond_firstturn_history_stable(
+                first_history, fresh, prompt, answer, dialog_id):
+            return False
+        if not await postreload_owner_session_recheck(context, base, owner_pin):
+            return False
+        return (urllib.parse.urlsplit(page.url).path == PAGE
+                and await page.evaluate(ACTIVE_QA_DIALOG_JS, title) is True)
+    except Exception:
+        return False
+
+
+def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, second_answer,
+                            dialog_id=None):
+    """Require four exact role/text turns; reject cross-dialog row metadata."""
+    if (not isinstance(rows, list) or len(rows) != 4
+            or not all(isinstance(row, dict) for row in rows)
+            or not distinct_explicit_message_ids(rows)
+            or not consistent_explicit_row_session_ids(rows)
+            or not coherent_row_dialog_scope(rows)):
+        return False
+    # Legacy rows may omit per-message dialog_id. If supplied, a wrong/null
+    # identifier must never certify continuity of the current browser session.
+    if dialog_id is not None:
+        if not isinstance(dialog_id, str) or not dialog_id.strip():
+            return False
+        if any('dialog_id' in row and row['dialog_id'] != dialog_id for row in rows):
+            return False
     expected = (('user', first_prompt), ('assistant', first_answer),
                 ('user', second_prompt), ('assistant', second_answer))
     return all(row.get('role') == role and row.get('content') == content
                for row, (role, content) in zip(rows, expected))
 
 
-def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, expected_messages):
-    """Fail closed unless a trusted canonical writer receipt matches exact independent S03 readback."""
-    if not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict):
+def multiturn_transcript_sha256(rows, *, expected_sequence=2, _prefix_only=False):
+    """Fingerprint full UTF-8 browser-history messages, not S03 proof.
+
+    Canonical writer provenance still requires a separate trusted receipt
+    and independent readback. Never truncate or normalize message content.
+    """
+    if (type(expected_sequence) is not int
+            or expected_sequence not in ((1,) if _prefix_only is True else (2, 3))):
+        return None
+    roles = ('user', 'assistant') * expected_sequence
+    if not isinstance(rows, list) or len(rows) != len(roles):
+        return None
+    if any(not isinstance(row, dict) or row.get('role') != role
+           or not isinstance(row.get('content'), str) or not row['content'].strip()
+           for row, role in zip(rows, roles)):
+        return None
+    # Owner browser-history JSON reads are bounded to 200000 bytes by
+    # json_response(). An oversized witness cannot be independently read
+    # through that route. Reject it; never truncate or normalize RU/ES text.
+    if any(len(row['content']) > 200000 for row in rows):
+        return None
+    transcript = [{'role': role, 'content': row['content']}
+                  for row, role in zip(rows, roles)]
+    try:
+        # API JSON may contain a lone escaped UTF-16 surrogate. Such text
+        # cannot be persisted as strict UTF-8; it must never certify an S03
+        # transcript or abort the owner QA with an uncategorized codec error.
+        raw = json.dumps(transcript, ensure_ascii=False, sort_keys=True,
+                         separators=(',', ':'), allow_nan=False).encode('utf-8')
+    except UnicodeEncodeError:
+        return None
+    if len(raw) > 200000:
+        return None
+    return digest(raw)
+
+
+def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, expected_messages,
+                              require_full_transcript_pin=False, *, expected_sequence=2,
+                              _prefix_only=False):
+    """Match independent S03 witnesses; strict B5 requires full transcript pins.
+
+    The legacy A1 source contract does not include full_transcript_sha256.
+    Preserve that source-only compatibility, never treat it as a strict
+    two-turn RU/ES acceptance witness. A live B5 verifier must opt in.
+    """
+    # A single native chat exchange is not a two-turn continuity witness.
+    # Reject malformed transcript structure before evaluating receipt metadata:
+    # a matching final-answer hash alone does not establish four ordered turns.
+    if (type(expected_sequence) is not int
+            or expected_sequence not in ((1,) if _prefix_only is True else (2, 3))
+            or (expected_sequence in (1, 3) and require_full_transcript_pin is not True)
+            or not isinstance(dialog_id, str) or not dialog_id.strip()
+            or not isinstance(expected_messages, list)
+            or len(expected_messages) != 2 * expected_sequence):
         return False
+    if any(not isinstance(row, dict) or row.get('role') != role
+           or not isinstance(row.get('content'), str)
+           for row, role in zip(expected_messages,
+                                ('user', 'assistant') * expected_sequence)):
+        return False
+    # A witness scoped to this dialog cannot legitimize a foreign session's
+    # individual S03 rows, even when all four role/text values are identical.
+    # Legacy messages without explicit dialog_id remain compatible.
+    if (not distinct_explicit_message_ids(expected_messages)
+            or any('dialog_id' in row and row['dialog_id'] != dialog_id
+                   for row in expected_messages)):
+        return False
+    if require_full_transcript_pin:
+        # A partial row-level dialog scope is not a coherent four-turn S03
+        # provenance witness. Preserve wholly legacy unscoped histories.
+        row_dialog_presence = ['dialog_id' in row for row in expected_messages]
+        if any(row_dialog_presence) and not all(row_dialog_presence):
+            return False
+    transcript_sha = multiturn_transcript_sha256(
+        expected_messages, expected_sequence=expected_sequence, _prefix_only=_prefix_only)
+    if transcript_sha is None:
+        return False
+    # Text/digest equality alone cannot establish four distinct persisted S03
+    # records. Strict B5 acceptance requires independently readable row IDs.
+    # The legacy A1 source helper and browser-history compatibility stay intact.
+    if require_full_transcript_pin:
+        row_ids = [row.get('message_id') for row in expected_messages]
+        if (any(not isinstance(value, str) or not value.strip()
+                or value != value.strip() or not value.isprintable()
+                for value in row_ids)
+                or len({value.strip() for value in row_ids}) != len(expected_messages)):
+            return False
+    if require_full_transcript_pin and any(
+            'session_id' in row for row in expected_messages):
+        # A four-row RU/ES S03 readback cannot mix authenticated sessions.
+        # Historical rows may omit session_id entirely. If any row supplies
+        # this metadata, every row must provide the same nonblank exact ID;
+        # a partial annotation must not certify cross-session continuity.
+        # This alone is NOT an owner-cookie or independent writer proof.
+        session_ids = [row.get('session_id') for row in expected_messages]
+        if (any(not isinstance(value, str) or not value.strip()
+                or value != value.strip() or not value.isprintable()
+                for value in session_ids)
+                or len(set(session_ids)) != 1):
+            return False
+    if (not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict)
+            or writer_receipt is independent_readback):
+        return False
+    if require_full_transcript_pin:
+        # Session-consistent rows alone do not bind a trusted S03 writer
+        # event to the independent reader's owner session. If any witness
+        # exposes a session pin, ALL three witnesses must agree exactly.
+        # Entirely unannotated older rows/receipts remain compatible.
+        row_scoped = 'session_id' in expected_messages[0]
+        witness_scoped = ('session_id' in writer_receipt
+                          or 'session_id' in independent_readback)
+        if row_scoped or witness_scoped:
+            if not row_scoped:
+                return False
+            session_id = expected_messages[0]['session_id']
+            if (writer_receipt.get('session_id') != session_id
+                    or independent_readback.get('session_id') != session_id):
+                return False
+    if require_full_transcript_pin:
+        # The role/content fingerprint omits durable row identities. A stale
+        # writer receipt can otherwise match newly replaced rows with the same
+        # text. Both trusted witnesses must pin the same ordered four IDs.
+        identity_sha = digest(json.dumps(
+            row_ids, ensure_ascii=False, separators=(',', ':'),
+            allow_nan=False).encode('utf-8'))
+        if (writer_receipt.get('message_ids_sha256') != identity_sha
+                or independent_readback.get('message_ids_sha256') != identity_sha):
+            return False
+    # A legacy writer/readback with only the last-answer SHA can match a
+    # stale event even when the earlier RU/ES turns changed. In two-turn mode
+    # BOTH independent witnesses must pin the complete four-message history.
+    writer_history_sha = writer_receipt.get('full_transcript_sha256')
+    readback_history_sha = independent_readback.get('full_transcript_sha256')
+    if (require_full_transcript_pin
+            or 'full_transcript_sha256' in writer_receipt
+            or 'full_transcript_sha256' in independent_readback):
+        if writer_history_sha != transcript_sha or readback_history_sha != transcript_sha:
+            return False
     event_id = writer_receipt.get('event_id')
     turn_id = writer_receipt.get('turn_id')
     sequence = writer_receipt.get('sequence')
+    if require_full_transcript_pin and any(
+            not isinstance(value, str) or value != value.strip()
+            or not value.isprintable()
+            for value in (event_id, turn_id)):
+        # Strict RU/ES S03 witnesses must not treat padded or invisible
+        # event/turn aliases as durable identities. The legacy source-only
+        # A1 validation contract remains unchanged.
+        return False
     if (writer_receipt.get('source') != 'canonical_s03'
             or writer_receipt.get('verified') is not True
             or writer_receipt.get('durable') is not True
-            or not isinstance(event_id, str) or not event_id
-            or not isinstance(turn_id, str) or not turn_id
-            or isinstance(sequence, bool) or not isinstance(sequence, int) or sequence < 1
+            or not isinstance(event_id, str) or not event_id.strip()
+            or not isinstance(turn_id, str) or not turn_id.strip()
+            or type(sequence) is not int or sequence != expected_sequence
             or writer_receipt.get('dialog_id') != dialog_id):
         return False
     if (independent_readback.get('source') != 'canonical_s03'
             or independent_readback.get('independent') is not True
             or independent_readback.get('event_id') != event_id
             or independent_readback.get('turn_id') != turn_id
-            or independent_readback.get('sequence') != sequence
+            or type(independent_readback.get('sequence')) is not int
+            or independent_readback['sequence'] != sequence
             or independent_readback.get('dialog_id') != dialog_id
             or independent_readback.get('messages') != expected_messages):
         return False
     answer = expected_messages[-1].get('content') if expected_messages else None
-    expected_hash = digest(answer.encode('utf-8')) if isinstance(answer, str) else None
-    return bool(expected_hash and independent_readback.get('full_answer_sha256') == expected_hash)
+    expected_hash = (digest(answer.encode('utf-8'))
+                     if isinstance(answer, str) and answer.strip() else None)
+    if not expected_hash or independent_readback.get('full_answer_sha256') != expected_hash:
+        return False
+    # An optional writer-side final-answer hash must corroborate the same
+    # fourth message. A contradictory writer must not be certified just
+    # because independent history/readback happened to match the browser.
+    # Older writer receipts without this field remain source-compatible;
+    # they never replace the required trusted native writer/readback proof.
+    return ('full_answer_sha256' not in writer_receipt
+            or writer_receipt['full_answer_sha256'] == expected_hash)
 
 
 def progressive_stream_valid(value):
@@ -257,7 +1146,7 @@ OBSERVER_JS = r"""
  'use strict';
  const cfg=__CONFIG__;
  const q=window.__NOX_BROWSER_QA={started:null,nativeFirst:null,nativeDone:null,
-   nativeDeltas:0,nativeBytes:0,answer:'',done:null,error:null,nativeCalls:0,
+   nativeDeltas:0,nativeBytes:0,answer:'',done:null,error:null,nativeCalls:0,nativeTerminalCount:0,nativeStreamComplete:false,
    uiFirst:null,uiBeforeDone:false,uiLengths:[],uiPrefixLengthsBeforeDone:[],uiBody:null,
    uiVisible:false,uiMaxTokenSpans:0,contexts:[],draws:0,
    stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0};
@@ -341,19 +1230,54 @@ OBSERVER_JS = r"""
  addEventListener('DOMContentLoaded',watch,{once:true});
  const fetch0=window.fetch.bind(window);
  async function observe(response){
+   if(response.status!==200){q.error='HOLD_QA_NATIVE_HTTP_STATUS';return;}
    if(!response.body){q.error='HOLD_NO_NATIVE_RESPONSE_BODY';return;}
-   const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
+   const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});let buffer='',sawEof=false;
    try{
      for(let count=0;count<2048;count++){
-       const part=await reader.read();if(part.done)break;
+       const part=await reader.read();if(part.done){buffer+=decoder.decode();sawEof=true;break;}
        q.nativeBytes+=part.value.length;
        if(q.nativeBytes>65536)throw Error('HOLD_QA_STREAM_LIMIT');
        buffer+=decoder.decode(part.value,{stream:true});
        let end;
        while((end=buffer.indexOf('\n'))>=0){
          const line=buffer.slice(0,end);buffer=buffer.slice(end+1);
+         // DONE must be the last framed byte, including empty lines.
+         if(q.nativeTerminalCount!==0)throw Error('HOLD_QA_TRAILING_AFTER_DONE');
          if(!line.trim())continue;
          const frame=JSON.parse(line);
+         // An explicit FAILED/ERROR/CANCELLED status before a later DONE is
+         // never a successful RU->ES turn, even if DONE claims saved=true.
+         // These statuses are protocol metadata, not user response text.
+         const stateValues=['status','state','phase'].map(key=>frame?.[key]);
+         const failedState=stateValues.some(value=>typeof value==='string'&&
+           ['failed','failure','error','cancelled','canceled','aborted',
+            'rejected','denied','timeout','timed_out'].includes(value.trim().toLowerCase()));
+         // Native adapters can serialize upstream HTTP codes as strings.
+         // Reject padded failures and string-coded 4xx/5xx on ANY SSE frame.
+         const httpFailureCode=value=>
+           (typeof value==='number'&&Number.isFinite(value)&&value>=400)||
+           (typeof value==='string'&&/^[4-9][0-9]{2}$/.test(value.trim()));
+         // A provider can place a 4xx/5xx error code in a structured status
+         // object or a separate code/status_code field, not only status text.
+         // Such failures cannot be hidden by a later apparently valid DONE.
+         const httpKeys=['status','state','phase','code','status_code',
+                         'statusCode','http_status','httpStatus'];
+         const failedHttpStatus=httpKeys.some(key=>{
+           const value=frame?.[key];
+           if(httpFailureCode(value))return true;
+           if(!value||typeof value!=='object'||Array.isArray(value))return false;
+           return ['code','status_code','statusCode','http_status','httpStatus']
+             .some(nested=>httpFailureCode(value[nested]));
+         });
+         // Protocol failures can be attached to delta or extension frames,
+         // not just status/meta/start/done. A later DONE cannot clear them.
+         const explicitError=(frame?.error!==undefined&&frame.error!==null&&
+                              frame.error!==false&&frame.error!=='');
+         if(frame&&typeof frame==='object'&&
+            (frame.success===false||frame.ok===false||
+             failedState||failedHttpStatus||explicitError))
+           throw Error('HOLD_QA_PRETERMINAL_FAILURE_STATUS');
          if(frame.type==='delta'){
            if(typeof frame.text!=='string'||q.answer.length+frame.text.length>4096)throw Error('HOLD_QA_ANSWER_LIMIT');
            q.answer+=frame.text;q.nativeDeltas++;
@@ -362,12 +1286,21 @@ OBSERVER_JS = r"""
            // may precede this clone's frame; retry on the next real paint.
            queueUi();
          }else if(frame.type==='done'){
+           q.nativeTerminalCount++;
            q.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,
                    dialog_matches:frame.dialog_id===cfg.did};
            q.nativeDone=performance.now()-q.started;
          }else if(frame.type==='error'){q.error='HOLD_NATIVE_STREAM_ERROR';}
        }
+       // Reject unterminated data after DONE, too. Incomplete UTF-8 remains
+       // independently fail-closed by fatal decoder.flush at stream EOF.
+       if(q.nativeTerminalCount!==0&&buffer.length)
+         throw Error('HOLD_QA_TRAILING_AFTER_DONE');
      }
+     if(!sawEof||buffer.trim()||q.nativeTerminalCount!==1)
+       throw Error('HOLD_QA_STREAM_NOT_TERMINAL');
+     if(q.error)throw Error(q.error);
+     q.nativeStreamComplete=true;
    }catch(e){q.error=/^HOLD_[A-Z_]+$/.test(e.message)?e.message:'HOLD_QA_STREAM_OBSERVER';}
    finally{try{await reader.cancel();}catch{}}
  }
@@ -379,7 +1312,8 @@ OBSERVER_JS = r"""
      if(q.nativeCalls===2){
        // Independent second POST measurement without clearing cumulative calls.
        q.nativeFirst=null;q.nativeDone=null;q.nativeDeltas=0;q.nativeBytes=0;
-       q.answer='';q.done=null;q.error=null;q.uiFirst=null;q.uiBeforeDone=false;
+       q.answer='';q.done=null;q.error=null;q.nativeTerminalCount=0;q.nativeStreamComplete=false;
+       q.uiFirst=null;q.uiBeforeDone=false;
        q.uiLengths=[];q.uiPrefixLengthsBeforeDone=[];q.uiBody=null;
        q.uiVisible=false;q.uiMaxTokenSpans=0;q.stopSamples=0;
        q.stopVisibleSamples=0;q.stopOccludedSamples=0;
@@ -396,8 +1330,129 @@ OBSERVER_JS = r"""
 })();
 """
 
-SNAPSHOT_JS = r"""() => {
+ACTIVE_QA_DIALOG_JS = r"""title => {
+ // Source-only UI selection witness; never return a title, ID or private text.
+ const buttons=[...document.querySelectorAll('#nativeChats button[role="listitem"]')];
+ const selected=buttons.filter(button=>button.getAttribute('aria-current')==='true');
+ return selected.length===1 &&
+   selected[0].querySelector('.t')?.textContent===title &&
+   !!document.getElementById('messages');
+}"""
+
+RENDERED_FOURROW_JS = r"""expected => {
+  // Compare only in browser memory, return boolean: no private user text/IDs
+  // in shared diagnostics. Owner history pins IDs independently of this DOM.
+  if(!Array.isArray(expected)||expected.length!==4)return false;
+  const mount=document.getElementById('messages');
+  if(!mount)return false;
+  const bubbles=[...mount.querySelectorAll('.v24-msg')];
+  if(bubbles.length!==4)return false;
+  // No whitespace collapsing or Unicode normalization: NBSP, combining marks,
+  // trailing spaces and hidden descendants change the actual four-row witness.
+  // This numeric RU/ES QA contract uses unformatted, literal row text.
+  // Require BOTH rendered text and raw DOM text to match persisted bytes.
+  // innerText alone can omit a display:none child whose raw text differs.
+  // Layout boxes persist for CSS visibility:hidden and opacity:0.
+  // The four history rows must be rendered, not merely present in the DOM.
+  // checkVisibility also traverses hidden/transparent ancestors.
+  const visible=node=>typeof node.checkVisibility==='function'&&
+    node.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
+  // DOM innerText/textContent do not attest CSS-generated or transformed glyphs.
+  // In this literal numeric QA, any such styling makes visual evidence ambiguous.
+  // Fail closed: inspect all descendants, not just the message body root.
+  const literalVisual=node=>{
+    // CSS clip paths/masks can erase *painted* words even when DOM text,
+    // checkVisibility and layout geometry still match the persisted history.
+    // Check the message subtree AND its ancestors (including #messages).
+    // CSS filter:opacity(0) erases painted text without affecting DOM,
+    // checkVisibility, client rects, clip-path or mask-image.
+    // Treat other filters as visually ambiguous for this literal-text QA.
+    const paintSafe=style=>
+      style.clipPath==='none'&&(!style.maskImage||style.maskImage==='none')&&
+      style.filter==='none';
+    // Computed transparent glyph color or WebKit text-fill can make a
+    // nonempty text node invisible even while innerText still matches.
+    const invisibleColor=value=>{
+      const v=String(value||'').replace(/\s+/g,'').toLowerCase();
+      return v==='transparent'||/^rgba\([^)]*,0(?:\.0+)?\)$/.test(v)||
+        /^rgb\([^)]*\/0(?:\.0+)?\)$/.test(v);
+    };
+    const elements=[node,...node.querySelectorAll('*')];
+    for(const el of elements){
+      const style=getComputedStyle(el);
+      if(style.textTransform!=='none'||!paintSafe(style))return false;
+      const ownsText=[...el.childNodes].some(child=>
+        child.nodeType===3&&/\S/.test(child.nodeValue||''));
+      // font-size:0 preserves DOM bytes but paints no RU/ES glyphs.
+      // A child span can be transparent/hidden while its parent .body
+      // remains visible and innerText/textContent still match persisted text.
+      // Verify every text-owning descendant, not just bubble/body ancestors.
+      // CSS scale(0) can leave a client-rect entry and unchanged DOM text,
+      // yet collapse all painted glyphs to zero area. Pin actual paint extent
+      // for each text-owning descendant; harmless translation stays allowed.
+      const painted=ownsText?el.getBoundingClientRect():null;
+      if(ownsText&&(!visible(el)||!el.getClientRects().length||
+         !(painted.width>0&&painted.height>0)||
+         !Number.isFinite(parseFloat(style.fontSize))||
+         parseFloat(style.fontSize)<=0||invisibleColor(style.color)||
+         invisibleColor(style.webkitTextFillColor)))return false;
+      for(const pseudo of ['::before','::after']){
+        const content=getComputedStyle(el,pseudo).content;
+        if(!['none','normal','""',"''"].includes(content))return false;
+      }
+    }
+    for(let ancestor=node.parentElement;ancestor;ancestor=ancestor.parentElement){
+      if(!paintSafe(getComputedStyle(ancestor)))return false;
+    }
+    return true;
+  };
+  for(let i=0;i<4;i++){
+    const row=expected[i],bubble=bubbles[i];
+    if(!visible(bubble)||!literalVisual(bubble))return false;
+    if(!row||typeof row.content!=='string'||!row.content.trim()||
+       typeof row.message_id!=='string'||!row.message_id.trim())return false;
+    if(row.role!==(bubble.classList.contains('nox')?'assistant':'user'))return false;
+    const bodies=[...bubble.querySelectorAll('.body')];
+    if(bodies.length!==1||!bodies[0].getClientRects().length||
+       !visible(bodies[0])||typeof bodies[0].innerText!=='string'||
+       bodies[0].innerText!==row.content||
+       bodies[0].textContent!==row.content)return false;
+    // Some UI builds expose durable row identity; when present it must agree.
+    // Absent DOM IDs are not claimed as independently verified row identities.
+    // Both DOM layers can carry the durable ID. A matching bubble ID must
+    // never hide a conflicting or blank body ID (or vice versa).
+    const bubbleId=bubble.getAttribute('data-message-id');
+    const bodyId=bodies[0].getAttribute('data-message-id');
+    for(const candidate of [bubbleId,bodyId]){
+      if(candidate!==null&&(!candidate.trim()||candidate!==row.message_id))
+        return false;
+    }
+  }
+  return true;
+}"""
+
+
+SNAPSHOT_JS = r"""async () => {
  const q=window.__NOX_BROWSER_QA;if(!q)return null;
+ // A per-browser ephemeral secret protects the low-entropy numeric answer
+ // against dictionary reversal if snapshots are written to diagnostics.
+ const answerText=typeof q.answer==='string'?q.answer:'';
+ let answerDigest=null;
+ try{
+   if(typeof crypto!=='undefined'&&crypto.subtle&&typeof TextEncoder!=='undefined'){
+     if(!q.__qaDigestSalt){
+       const salt=new Uint8Array(32);
+       crypto.getRandomValues(salt);
+       q.__qaDigestSalt=salt;
+     }
+     const answerBytes=new TextEncoder().encode(answerText);
+     const salted=new Uint8Array(q.__qaDigestSalt.length+answerBytes.length);
+     salted.set(q.__qaDigestSalt,0);
+     salted.set(answerBytes,q.__qaDigestSalt.length);
+     const hashed=await crypto.subtle.digest('SHA-256',salted);
+     answerDigest=Array.from(new Uint8Array(hashed),b=>b.toString(16).padStart(2,'0')).join('');
+   }
+ }catch{answerDigest=null;}
  const normalize=s=>s.replace(/\s+/g,'');
  const mount=document.getElementById('messages'),body=q.uiBody;
  const rendered=!!(mount&&body&&mount.contains(body)&&q.answer&&
@@ -414,13 +1469,15 @@ SNAPSHOT_JS = r"""() => {
  }).slice(0,8);
  return {native_first_ms:q.nativeFirst,native_done_ms:q.nativeDone,native_delta_count:q.nativeDeltas,
    native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,error:q.error,
+   native_terminal_count:q.nativeTerminalCount,native_stream_complete:q.nativeStreamComplete,
    ui_first_ms:q.uiFirst,ui_before_native_done:q.uiBeforeDone,ui_lengths:q.uiLengths,
    ui_prefix_lengths_before_done:q.uiPrefixLengthsBeforeDone,ui_body_visible:q.uiVisible,
    ui_token_span_peak:q.uiMaxTokenSpans,
    ui_measurement_kind:'CUMULATIVE_VISIBLE_ASSISTANT_BODY',
    intl_segmenter_available:typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function',
    stop_samples:q.stopSamples,stop_visible_samples:q.stopVisibleSamples,stop_occluded_samples:q.stopOccludedSamples,
-   answer_characters:q.answer.length,dom_answer_matches_native:rendered,contexts,draw_calls:q.draws,
+   answer_characters:answerText.length,answer_sha256:answerDigest,
+   dom_answer_matches_native:rendered,contexts,draw_calls:q.draws,
    native_owner:window.NOX_NATIVE_OWNER===true,v135:window.__NOX_V135_OWNER_RESONANCE==='OWNER_NATIVE_ONLY',
    v137:window.__NOX_V137_SELF_STATUS==='READ_ONLY',owner_live:window.__NOX_OWNER_LIVE_UI===true,
    build:document.querySelector('meta[name="nox-live-build"]')?.content||null,
@@ -560,27 +1617,277 @@ async def click_send(page, report, expected_before=0):
             # Observe that real request; never submit a duplicate generation.
             detail['native_request_already_started']=True
             return
-        control=await target.evaluate(CONTROL_JS)
-        detail['after_wait']=control
-        if calls!=expected_before or not await target.is_enabled() or not control['in_view'] or not control['pointer_hit_own_button']:
-            raise RuntimeError('HOLD_QA_SEND_POINTER_OR_STATE') from None
-        await page.mouse.click(control['x'],control['y'])
-        detail['physical_pointer_click']=True
+        # A Playwright click failure does not prove that a submit was not
+        # enqueued. A second pointer click could duplicate an already-pending
+        # owner-scoped model generation (first OR second conversational turn).
+        # Observe an already-started request above, otherwise fail closed.
+        detail['native_request_outcome_unknown']=True
+        detail['observed_native_calls']=calls if type(calls) is int else None
+        raise RuntimeError('HOLD_QA_SEND_OUTCOME_UNKNOWN') from None
 
 
 async def json_response(response, limit=200000):
     if response.status!=200:
         raise RuntimeError('HOLD_OWNER_HTTP_'+str(response.status))
+    # Only an actual JSON API representation may certify owner-scoped RU/ES
+    # persistence. Login/proxy HTML or text containing JSON-shaped content
+    # must not be misread as a second-turn history witness. Real Playwright
+    # APIResponse exposes headers; lightweight legacy unit fakes may omit it.
+    headers = getattr(response, 'headers', None)
+    if headers is not None:
+        if not isinstance(headers, dict):
+            raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
+        types = [v for k, v in headers.items()
+                 if isinstance(k, str) and k.lower() == 'content-type']
+        if len(types) != 1 or not isinstance(types[0], str):
+            raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
+        parts = [part.strip() for part in types[0].split(';')]
+        media = parts[0].lower()
+        if not (media == 'application/json'
+                or (media.startswith('application/') and media.endswith('+json'))):
+            raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
+        charsets = []
+        params = set()
+        for part in parts[1:]:
+            key, sep, value = part.partition('=')
+            key = key.strip().lower()
+            # Invalid/duplicate MIME parameters make a claimed JSON history
+            # representation ambiguous, even if its charset looks valid.
+            # Do not let malformed proxy headers certify another RU/ES turn.
+            if (not sep or not re.fullmatch(r"[a-z0-9!#$%&'*+.^_`|~-]+", key)
+                    or not value.strip() or key in params):
+                raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
+            params.add(key)
+            if key == 'charset':
+                charsets.append(value.strip().strip('"').lower())
+        if any(value != 'utf-8' for value in charsets):
+            raise RuntimeError('HOLD_OWNER_HTTP_CONTENT_TYPE')
     raw=await response.body()
+    return strict_owner_json_bytes(raw, limit)
+
+
+def strict_owner_json_bytes(raw, limit=200000):
+    """Decode bounded UTF-8 JSON without ambiguous wire representations."""
     if len(raw)>limit:
         raise RuntimeError('HOLD_OWNER_HTTP_SIZE')
-    return json.loads(raw)
+    # The owner history is an RFC 8259 UTF-8 wire witness. json.loads(bytes)
+    # auto-detects UTF-16/32; a second browser or canonical S03 reader may
+    # decode the same bytes differently. Reject ambiguous encodings before
+    # checking four persisted RU/ES turns, without changing response limits.
+    if b'\x00' in raw:
+        raise RuntimeError('HOLD_OWNER_HTTP_UTF8_WIRE')
+    try:
+        decoded = raw.decode('utf-8', errors='strict')
+    except UnicodeDecodeError:
+        raise RuntimeError('HOLD_OWNER_HTTP_UTF8_WIRE') from None
+    if decoded.startswith('\ufeff'):
+        raise RuntimeError('HOLD_OWNER_HTTP_UTF8_WIRE')
+    # Bounded GET bodies can still contain enough nested containers to
+    # exhaust Python's JSON decoder stack, concealing a malformed owner-
+    # history witness behind an unclassified RecursionError. Preflight the
+    # structure without counting brackets inside quoted/escaped RU/ES text.
+    # This is a wire-evidence guard, NOT a model context/token limit.
+    depth = 0
+    in_string = False
+    escaped = False
+    for char in decoded:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == '\\':
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+        elif char in '[{':
+            depth += 1
+            if depth > 64:
+                raise RuntimeError('HOLD_OWNER_HTTP_JSON_DEPTH')
+        elif char in ']}':
+            depth -= 1
+    # Browser history and S03 candidate witnesses must not accept ambiguous
+    # JSON objects: json.loads normally keeps the last duplicate key, allowing
+    # conflicting dialog/message identities to be silently overwritten.
+    def unique_keys(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise RuntimeError('HOLD_OWNER_HTTP_DUPLICATE_JSON_KEY')
+            value[key] = item
+        return value
+
+    def finite_float(literal):
+        value = float(literal)
+        if not math.isfinite(value):
+            raise RuntimeError('HOLD_OWNER_HTTP_NONFINITE_JSON_NUMBER')
+        return value
+
+    def reject_nonfinite(_literal):
+        raise RuntimeError('HOLD_OWNER_HTTP_NONFINITE_JSON_NUMBER')
+
+    def bounded_int(literal):
+        # A legal-size history GET can still include a 4301+ digit JSON
+        # integer. Python 3.11 rejects it with an unclassified ValueError;
+        # bound it first, preserving ordinary integer metadata and all text.
+        if len(literal.lstrip('-')) > 1024:
+            raise RuntimeError('HOLD_OWNER_HTTP_INTEGER_DIGITS')
+        try:
+            return int(literal)
+        except ValueError:
+            raise RuntimeError('HOLD_OWNER_HTTP_INTEGER_DIGITS') from None
+
+    # All callers consume one owner-scoped API object. A syntactically valid
+    # JSON scalar/list/null or a truncated document is not trusted history,
+    # even if it passed wire/MIME checks. Classify shape failures as HOLD
+    # instead of leaking JSONDecodeError or later unclassified .get() errors.
+    try:
+        document = json.loads(decoded, object_pairs_hook=unique_keys,
+                              parse_constant=reject_nonfinite, parse_float=finite_float,
+                              parse_int=bounded_int)
+    except json.JSONDecodeError:
+        raise RuntimeError('HOLD_OWNER_HTTP_JSON_ROOT') from None
+    return document
+
+
+async def owner_history_json_response(response):
+    """Owner-history root fence; generic JSON API endpoints may return arrays.
+
+    Require one object BEFORE browser continuity and S03 candidate readback.
+    Other JSON representations retain their established generic semantics.
+    """
+    document = await json_response(response)
+    if not isinstance(document, dict):
+        raise RuntimeError('HOLD_OWNER_HTTP_JSON_ROOT')
+    return document
+
+
+def canonical_s03_pinned_evidence_valid(writer_raw, readback_raw,
+                                        writer_sha256, readback_sha256,
+                                        dialog_id, expected_messages, *,
+                                        expected_session_id, expected_sequence=2,
+                                        expected_prior_messages=None,
+                                        prior_witnesses=None, _prefix_only=False):
+    """Verify immutable bytes for the strict two-/three-turn S03 contract.
+
+    The caller MUST obtain both expected hashes independently from the
+    authorized owner/immutable-verifier path, not from the candidate files.
+    The expected session ID must also come from authenticated owner context,
+    independently of the candidate receipts and transcript. The dialog ID
+    must be canonical and explicitly present on every persisted row.
+    For turn three the caller must independently obtain the prior four
+    authenticated rows and independently pinned sequence-two writer/readback
+    bytes before the next request, not from either new witness. The prior
+    tuple is (writer bytes, reader bytes, writer SHA256, reader SHA256).
+    This pure adapter cannot establish that authority or native admission.
+    It never reads S03, accepts a browser history as a writer, or issues POST.
+    """
+    if (type(expected_sequence) is not int
+            or expected_sequence not in ((1,) if _prefix_only is True else (2, 3))
+            or not isinstance(dialog_id, str) or not dialog_id.strip()
+            or dialog_id != dialog_id.strip() or not dialog_id.isprintable()
+            or not isinstance(expected_session_id, str)
+            or not expected_session_id.strip()
+            or expected_session_id != expected_session_id.strip()
+            or not expected_session_id.isprintable()
+            or not isinstance(expected_messages, list)
+            or len(expected_messages) != 2 * expected_sequence
+            or any(not isinstance(row, dict) or
+                   row.get('session_id') != expected_session_id or
+                   row.get('dialog_id') != dialog_id
+                   for row in expected_messages)
+            or type(writer_raw) is not bytes or type(readback_raw) is not bytes
+            or not 0 < len(writer_raw) <= 200000
+            or not 0 < len(readback_raw) <= 200000
+            or any(not isinstance(pin, str) or
+                   re.fullmatch(r'[a-f0-9]{64}', pin) is None
+                   for pin in (writer_sha256, readback_sha256))
+            or writer_sha256 == readback_sha256
+            or digest(writer_raw) != writer_sha256
+            or digest(readback_raw) != readback_sha256):
+        return False
+    if expected_sequence == 3:
+        if (not isinstance(expected_prior_messages, list)
+                or len(expected_prior_messages) != 4
+                or expected_messages[:4] != expected_prior_messages):
+            return False
+        if (type(prior_witnesses) is not tuple or len(prior_witnesses) != 4
+                or not canonical_s03_pinned_evidence_valid(
+                    *prior_witnesses, dialog_id, expected_prior_messages,
+                    expected_session_id=expected_session_id)):
+            return False
+    elif expected_prior_messages is not None or prior_witnesses is not None:
+        return False
+    try:
+        writer = strict_owner_json_bytes(writer_raw)
+        readback = strict_owner_json_bytes(readback_raw)
+        if (not isinstance(writer, dict) or not isinstance(readback, dict)
+                or writer.get('session_id') != expected_session_id
+                or readback.get('session_id') != expected_session_id):
+            return False
+        if expected_sequence == 3:
+            prior_writer = strict_owner_json_bytes(prior_witnesses[0])
+            # A third turn must have its own durable event and turn identity,
+            # not merely updated text and sequence under a reused receipt ID.
+            if any(writer.get(key) == prior_writer.get(key)
+                   for key in ('event_id', 'turn_id')):
+                return False
+        return canonical_s03_proof_valid(
+            writer, readback, dialog_id, expected_messages,
+            require_full_transcript_pin=True, expected_sequence=expected_sequence,
+            _prefix_only=_prefix_only)
+    except (RuntimeError, ValueError, TypeError, UnicodeError, RecursionError):
+        return False
+
+
+def canonical_s03_firstturn_prefix_valid(writer_raw, readback_raw, writer_sha256,
+                                         readback_sha256, dialog_id, prior_messages, *,
+                                         expected_session_id):
+    """Read-only gate for an EXISTING first turn; not multi-turn acceptance.
+
+    Pins and owner/session/dialog selection must come from the independent
+    trusted verifier before any second POST. Never recreate/replay turn one.
+    This function does not grant native admission or perform network I/O.
+    """
+    return canonical_s03_pinned_evidence_valid(
+        writer_raw, readback_raw, writer_sha256, readback_sha256, dialog_id,
+        prior_messages, expected_session_id=expected_session_id,
+        expected_sequence=1, _prefix_only=True)
+
+
+def canonical_s03_resumed_second_turn_valid(writer_raw, readback_raw, writer_sha256,
+                                            readback_sha256, dialog_id, messages, *,
+                                            expected_session_id, prior_messages,
+                                            prior_witnesses):
+    """Bind subsequent turn-two evidence to the independently pinned old turn.
+
+    The caller must obtain prior_messages and prior_witnesses before the
+    second POST; these are not derived from the new receipt. Keep the old
+    two exact rows and require two new durable IDs plus a fresh event/turn.
+    """
+    if (not isinstance(prior_messages, list) or len(prior_messages) != 2
+            or not isinstance(messages, list) or len(messages) != 4
+            or messages[:2] != prior_messages
+            or type(prior_witnesses) is not tuple or len(prior_witnesses) != 4
+            or not canonical_s03_firstturn_prefix_valid(
+                *prior_witnesses, dialog_id, prior_messages,
+                expected_session_id=expected_session_id)
+            or not canonical_s03_pinned_evidence_valid(
+                writer_raw, readback_raw, writer_sha256, readback_sha256,
+                dialog_id, messages, expected_session_id=expected_session_id)):
+        return False
+    try:
+        old = strict_owner_json_bytes(prior_witnesses[0])
+        new = strict_owner_json_bytes(writer_raw)
+        return all(new.get(key) != old.get(key) for key in ('event_id', 'turn_id'))
+    except (RuntimeError, ValueError, TypeError, UnicodeError, RecursionError):
+        return False
 
 
 async def capture_private_screenshot(page, report, directory, name, masks, content,
                                      timeout_errors=(TimeoutError,)):
     """Defer only capture timeouts; all privacy and file guards stay mandatory."""
-    if name not in ('empty', 'completed'):
+    if name not in ('empty', 'completed', 'second_turn'):
         raise RuntimeError('HOLD_SCREENSHOT_SCOPE')
     if stop_present():
         raise RuntimeError('HOLD_OWNER_STOP')
@@ -612,8 +1919,10 @@ async def capture_private_screenshot(page, report, directory, name, masks, conte
 
 def require_screenshot_captures(report):
     captures = report.get('screenshot_captures', [])
-    complete = (len(captures)==2
-                and {row.get('stage') for row in captures}=={'empty','completed'}
+    expected = ({'empty','completed','second_turn'}
+                if report.get('two_turn_mode') is True else {'empty','completed'})
+    complete = (len(captures)==len(expected)
+                and {row.get('stage') for row in captures}==expected
                 and all(row.get('state')=='CAPTURED' for row in captures))
     report['screenshot_capture_verified'] = complete
     if not complete:
@@ -626,13 +1935,19 @@ async def browser_run(report, directory, available):
     origin=urllib.parse.urlsplit(base).netloc
     token=secrets.token_hex(6).translate(str.maketrans('0123456789','ghijklmnop'))
     title='NOX Browser QA '+token
-    prompt='[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.'
-    second_prompt=('[NOX UI QA '+token+'] Используя предыдущий ответ, перечисли '
-                   'те же числа в обратном порядке через запятую. Без пояснений.')
+    ru_es=report.get('language_pair')=='RU_ES'
+    expected_first=None if ru_es else EXPECTED
+    prompt=ru_es_unleaked_first_prompt(token) if ru_es else (
+            '[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.')
+    expected_second=None if ru_es else '10,9,8,7,6,5,4,3,2,1'
+    second_prompt=multiturn_followup_prompt(
+        token, 'multiturn_ru_es' if report.get('language_pair') == 'RU_ES' else 'multiturn')
     second_permitted=False
     stream_admitted=0
     report.update(nonloopback_auth=True,resources=budget(),synthetic_prompt_sha256=digest(prompt.encode()))
     network=[];console=collections.Counter();page_errors=[];blocked=collections.Counter();did=None
+    report['network_response_overflow_count']=0
+    report['critical_requestfailed_count']=0
     sys.path.insert(0,str(ROOT/'scripts'))
     import chat_proxy
     password=chat_proxy._read_chat_password()
@@ -665,6 +1980,9 @@ async def browser_run(report, directory, available):
             session=await context.request.get(base+'/chat/session',max_redirects=0,timeout=6000)
             if session.status!=200:
                 raise RuntimeError('HOLD_SIGNED_OWNER_SESSION')
+            owner_session_pin=owner_session_cookie_pin(await context.cookies(base))
+            if owner_session_pin is None:
+                raise RuntimeError('HOLD_OWNER_SESSION_COOKIE_IDENTITY')
             report['actual_native_backend']=True
             created=await json_response(await context.request.post(base+'/api/ui/memory/dialogs/create',
                 data={'title':title,'confirmed':True},max_redirects=0,timeout=8000))
@@ -690,10 +2008,14 @@ async def browser_run(report, directory, available):
                     if identifier!=[did]:
                         blocked['non_qa_dialog_history']+=1
                         return await route.abort()
-                if url.path=='/api/nox/chat/stream':
+                if native_chat_route_candidate(url.path):
+                    if url.path != '/api/nox/chat/stream':
+                        blocked['alternate_native_chat_route']+=1
+                        return await route.abort()
                     try:
                         body=request.post_data_json
-                        own=(request.method=='POST' and allowed_qa_request(
+                        own=(request.method=='POST' and allowed_qa_stream_url(request.url, origin)
+                             and allowed_qa_request(
                              stream_admitted,second_permitted,prompt,second_prompt,body,did))
                     except Exception:
                         own=False
@@ -710,9 +2032,18 @@ async def browser_run(report, directory, available):
 
             def on_response(response):
                 if len(network)>=250:
+                    # The bounded log can no longer prove critical JS/CSS health.
+                    report['network_response_overflow_count']+=1
                     return
                 network.append({'path':safe_route(response.url),'status':response.status,
                                 'resource_type':response.request.resource_type})
+
+            def on_request_failed(request):
+                # Playwright emits this when no HTTP response exists; the
+                # 'response' observer alone cannot witness broken JS/CSS.
+                # Store only an aggregate count, never request URLs or bodies.
+                if request.resource_type in ('script', 'stylesheet'):
+                    report['critical_requestfailed_count']+=1
 
             def on_console(message):
                 if message.type in ('error','warning'):
@@ -725,6 +2056,7 @@ async def browser_run(report, directory, available):
                     page_errors.append({'category':found[1] if found else 'JAVASCRIPT_EXCEPTION'})
 
             page.on('response',on_response)
+            page.on('requestfailed',on_request_failed)
             page.on('console',on_console)
             page.on('pageerror',on_page_error)
             page.on('dialog',lambda dialog:asyncio.create_task(dialog.dismiss()))
@@ -771,9 +2103,9 @@ async def browser_run(report, directory, available):
             await page.wait_for_function("title=>[...document.querySelectorAll('#nativeChats button[role=listitem]')].some(b=>b.getAttribute('aria-current')==='true'&&b.querySelector('.t')?.textContent===title)",arg=title,timeout=7000)
             report['browser_stage']='QA_DIALOG_HISTORY'
             await page.wait_for_timeout(350)
-            initial=await json_response(await context.request.get(
+            initial=await owner_history_json_response(await context.request.get(
                 base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))
-            if initial.get('messages')!=[]:
+            if not empty_dialog_history_valid(initial, did):
                 raise RuntimeError('HOLD_SYNTHETIC_DIALOG_NOT_EMPTY')
             report['empty_dialog_history_verified']=True
             report['browser_stage']='QA_EMPTY_SCREENSHOT'
@@ -808,29 +2140,39 @@ async def browser_run(report, directory, available):
                 final=await page.evaluate(SNAPSHOT_JS)
                 if final and final.get('error'):
                     raise RuntimeError(final['error'])
-                if final and final.get('done') and final.get('dom_answer_matches_native'):
+                if (final and final.get('done') and final.get('dom_answer_matches_native')
+                        and native_terminal_stream_valid(final)):
                     break
                 await page.wait_for_timeout(120)
-            if not final or not final.get('done') or not final.get('dom_answer_matches_native'):
+            if (not final or not final.get('done') or not final.get('dom_answer_matches_native')
+                    or not native_terminal_stream_valid(final)):
                 raise RuntimeError('HOLD_REAL_STREAM_NOT_RENDERED')
             # V135 performs its own real S03 readback after native done; wait for
             # the original submit button to be usable again before final proof.
             report['browser_stage']='QA_SEND_RELEASE'
             await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
             report['browser_stage']='QA_PERSISTED_HISTORY'
-            history=await json_response(await context.request.get(
+            history=await owner_history_json_response(await context.request.get(
                 base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))
             rows=history.get('messages')
-            saved=(isinstance(rows,list) and len(rows)==2 and rows[0].get('role')=='user'
-                   and rows[0].get('content')==prompt and rows[1].get('role')=='assistant'
-                   and isinstance(rows[1].get('content'),str))
-            answer=rows[1]['content'] if saved else ''
+            candidate=(rows[1].get('content') if isinstance(rows,list)
+                       and len(rows)==2 and isinstance(rows[1],dict) else None)
+            saved=firstturn_history_valid(history,prompt,candidate,did)
+            answer=candidate if saved else ''
             native_equal=await page.evaluate('(value)=>window.__NOX_BROWSER_QA.answer===value',answer)
             public=public_numeric_answer(answer)
-            report.update(stream=final,s03_readback_verified=bool(saved and native_equal),
+            first_numeric_pass=(ru_es_unleaked_first_answer_valid(public) if ru_es
+                                else public==expected_first)
+            if ru_es and first_numeric_pass:
+                # Derive the second-turn answer ONLY from the genuine first
+                # assistant message after stream and dialog-history equality.
+                expected_first=public
+                expected_second=','.join(reversed(public.split(',')))
+            report.update(stream=final,
+                          **readback_evidence(saved, native_equal, report.get('two_turn_mode') is True),
                           actual_native_model_stream_verified=bool(final['native_calls']==1 and all(final['done'].values())),
                           answer_sha256=digest(answer.encode()),answer_characters=len(answer),
-                          synthetic_number_sequence_pass=public==EXPECTED,
+                          synthetic_number_sequence_pass=first_numeric_pass,
                           synthetic_public_numeric_answer=public,
                           progressive_stream_render_verified=progressive_stream_valid(final),
                           elapsed_turn_ms=round((time.monotonic()-started)*1000))
@@ -839,11 +2181,11 @@ async def browser_run(report, directory, available):
             if not report['stop_visible_during_generation']:
                 raise RuntimeError('HOLD_QA_ACTIVE_STOP_LAYOUT')
             masks=[page.locator(selector) for selector in SENSITIVE_MASKS]
-            if not saved or public!=EXPECTED:
+            if not saved or not first_numeric_pass:
                 masks.append(page.locator('#messages'))
             report['browser_stage']='QA_COMPLETED_SCREENSHOT'
             await capture_private_screenshot(page,report,directory,'completed',masks,
-                'VERIFIED_PUBLIC_NUMERIC_QA' if public==EXPECTED and saved else 'MASKED_QA_MESSAGES',
+                'VERIFIED_PUBLIC_NUMERIC_QA' if first_numeric_pass and saved else 'MASKED_QA_MESSAGES',
                 (TimeoutError,PlaywrightTimeoutError))
             core=(report['webgl_visible'] and report['canvas_animation_observed']
                   and all(final['done'].values()) and saved and native_equal
@@ -852,18 +2194,53 @@ async def browser_run(report, directory, available):
                 raise RuntimeError('HOLD_GRAPHICAL_ACCEPTANCE_INCOMPLETE')
             if not report['progressive_stream_render_verified']:
                 raise RuntimeError('HOLD_PROGRESSIVE_STREAM_NOT_OBSERVED')
-            if public!=EXPECTED:
+            if not first_numeric_pass:
                 raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')
+            if not exact_native_post_fence(final, stream_admitted, 1):
+                raise RuntimeError('HOLD_FIRST_TURN_POST_ADMISSION')
             if report.get('two_turn_mode') is True:
                 # The owner-scoped second request is allowed only after a full
                 # first-turn browser/S03 proof. Never replay an ambiguous POST.
                 report['browser_stage']='QA_SECOND_TURN_PREP'
-                second_permitted=True
+                # Freeze the first persisted identities before the second POST.
+                # Text equivalence alone cannot prove a row was not replaced.
+                firstturn_id_snapshot=verified_two_turn_firstturn_ids(rows)
+                if firstturn_id_snapshot is None:
+                    raise RuntimeError('HOLD_MULTITURN_FIRSTTURN_IDS_NOT_PERSISTED')
+                report['multiturn_firstturn_ids_verified']=True
+                # Read-only signed session check after turn 1, before allowing
+                # the Spanish POST. Cookie identity stays private in memory.
+                signed_again=await context.request.get(
+                    base+'/chat/session',max_redirects=0,timeout=6000)
+                if not owner_session_continuity_valid(
+                        signed_again.status, await context.cookies(base),
+                        owner_session_pin):
+                    raise RuntimeError('HOLD_MULTITURN_OWNER_SESSION_CHANGED')
+                report['multiturn_owner_session_continuity_verified']=True
+                # A valid history GET does not prove the browser is still
+                # displaying the same synthetic dialog selected before turn 1.
+                # Never admit the Spanish POST into a changed UI selection.
+                if (urllib.parse.urlsplit(page.url).path!=PAGE
+                        or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
+                    raise RuntimeError('HOLD_MULTITURN_ACTIVE_DIALOG_CHANGED_BEFORE_SECOND_POST')
+                report['multiturn_presecond_active_dialog_verified']=True
                 if stop_present():
                     raise RuntimeError('HOLD_OWNER_STOP')
                 idle_slots()
                 await page.locator('#prompt').fill(second_prompt)
                 await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
+                # Screenshots, layout checks and composer waits can outlast the
+                # original two-row read. Never admit Spanish generation against
+                # a mutated history or a newly authenticated/selected dialog.
+                report['browser_stage']='QA_PRESECOND_HISTORY_OWNER_FENCE'
+                if not await presecond_owner_history_fence(
+                        context, base, owner_session_pin, page, title,
+                        history, prompt, answer, did):
+                    raise RuntimeError('HOLD_MULTITURN_PRESECOND_HISTORY_OWNER_DRIFT')
+                report['multiturn_presecond_fresh_history_verified']=True
+                if stop_present():
+                    raise RuntimeError('HOLD_OWNER_STOP')
+                second_permitted=True
                 report['browser_stage']='QA_SECOND_TURN_SEND'
                 second_started=time.monotonic()
                 await click_send(page,report,expected_before=1)
@@ -876,14 +2253,26 @@ async def browser_run(report, directory, available):
                     if second_final and second_final.get('error'):
                         raise RuntimeError(second_final['error'])
                     if (second_final and second_final.get('native_calls')==2
-                            and second_final.get('done') and second_final.get('dom_answer_matches_native')):
+                            and second_final.get('done') and second_final.get('dom_answer_matches_native')
+                            and native_terminal_stream_valid(second_final)):
                         break
                     await page.wait_for_timeout(120)
                 if (not second_final or second_final.get('native_calls')!=2
-                        or not second_final.get('done') or not second_final.get('dom_answer_matches_native')):
+                        or not second_final.get('done') or not second_final.get('dom_answer_matches_native')
+                        or not native_terminal_stream_valid(second_final)):
                     raise RuntimeError('HOLD_SECOND_TURN_STREAM_NOT_RENDERED')
                 await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
-                second_history=await json_response(await context.request.get(
+                # A terminal second SSE is not owner-session continuity proof.
+                # The extra read-only GET never repeats native generation.
+                report['browser_stage']='QA_POSTSECOND_SESSION_RECHECK'
+                signed_after_second=await context.request.get(
+                    base+'/chat/session',max_redirects=0,timeout=6000)
+                if not owner_session_continuity_valid(
+                        signed_after_second.status, await context.cookies(base),
+                        owner_session_pin):
+                    raise RuntimeError('HOLD_MULTITURN_OWNER_SESSION_CHANGED')
+                report['multiturn_postsecond_owner_session_verified']=True
+                second_history=await owner_history_json_response(await context.request.get(
                     base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
                     max_redirects=0,timeout=6000))
                 second_rows=second_history.get('messages')
@@ -891,8 +2280,23 @@ async def browser_run(report, directory, available):
                                and len(second_rows)==4 and isinstance(second_rows[3],dict) else '')
                 second_native_equal=await page.evaluate(
                     '(value)=>window.__NOX_BROWSER_QA.answer===value',second_answer)
-                second_saved=multiturn_history_valid(
-                    second_rows,prompt,answer,second_prompt,second_answer)
+                # Query scope alone is insufficient if the response/row
+                # explicitly reports a different dialog identity.
+                second_scope_valid=('dialog_id' not in second_history
+                                    or second_history['dialog_id']==did)
+                second_saved=(second_scope_valid
+                              and firstturn_root_session_continuity_valid(
+                                  history, second_history)
+                              and firstturn_session_continuity_valid(
+                                  rows, second_rows)
+                              and firstturn_prefix_identity_valid(
+                                  firstturn_id_snapshot,second_rows)
+                              and multiturn_history_valid(
+                    second_rows,prompt,answer,second_prompt,second_answer,dialog_id=did))
+                # Preserve a full four-turn browser-history fingerprint for
+                # future independent S03 comparison, without false acceptance.
+                browser_transcript_sha = (multiturn_transcript_sha256(second_rows)
+                                          if second_saved else None)
                 # This endpoint is dialog-history, not the canonical S03 writer/readback.
                 # No trusted S03 receipt provider is wired in this source version.
                 canonical_s03_verified=False
@@ -902,7 +2306,9 @@ async def browser_run(report, directory, available):
                 second_stop=bool(second_final.get('stop_samples',0)>0
                     and second_final.get('stop_samples')==second_final.get('stop_visible_samples')
                     and second_final.get('stop_occluded_samples')==0)
-                report.update(multiturn_dialog_history_verified=second_saved,
+                report.update(multiturn_browser_history_sha256=browser_transcript_sha,
+                              multiturn_browser_history_messages=4 if browser_transcript_sha else 0,
+                              multiturn_dialog_history_verified=second_saved,
                               multiturn_canonical_s03_verified=canonical_s03_verified,
                               multiturn_s03_hold_reason='CANONICAL_S03_WRITER_AND_INDEPENDENT_READBACK_NOT_WIRED',
                               multiturn_second_native_equal=second_native_equal,
@@ -910,18 +2316,198 @@ async def browser_run(report, directory, available):
                               multiturn_second_visible_progressive=second_progressive,
                               multiturn_second_stop_visible=second_stop,
                               multiturn_second_answer_sha256=digest(second_answer.encode()),
-                              multiturn_second_numeric_pass=second_public=='10,9,8,7,6,5,4,3,2,1',
+                              multiturn_second_numeric_pass=second_public==expected_second,
                               multiturn_native_post_count=second_final['native_calls'],
                               multiturn_second_elapsed_ms=round((time.monotonic()-second_started)*1000))
+                if not exact_native_post_fence(second_final, stream_admitted, 2):
+                    raise RuntimeError('HOLD_MULTITURN_POST_ADMISSION')
                 if not (second_saved and second_native_equal and second_done
                         and second_progressive and second_stop
-                        and second_public=='10,9,8,7,6,5,4,3,2,1'):
+                        and second_public==expected_second):
                     raise RuntimeError('HOLD_MULTITURN_BROWSER')
+                # A real two-turn browser/SSE/history PASS remains measurable
+                # even while the independent canonical S03 proof is unwired.
+                # Neither this flag nor a screenshot grants native ACCEPTED.
+                report['browser_stage']='QA_SECOND_TURN_PRIVATE_SCREENSHOT'
+                second_capture=await capture_private_screenshot(
+                    page,report,directory,'second_turn',
+                    [page.locator(selector) for selector in SENSITIVE_MASKS],
+                    'VERIFIED_PUBLIC_NUMERIC_QA_SECOND_TURN',
+                    (TimeoutError,PlaywrightTimeoutError))
+                if not second_capture:
+                    raise RuntimeError('HOLD_MULTITURN_SCREENSHOT_CAPTURE_PENDING')
+                require_screenshot_captures(report)
+                report['multiturn_second_screenshot_verified']=True
+                # Drain a bounded post-terminal browser observation window
+                # before the final session and runtime fences. Do not submit
+                # a third native POST or infer indefinite quiescence.
+                report['browser_stage']='QA_SECOND_TURN_POSTTERMINAL_QUIESCENCE'
+                await page.wait_for_timeout(500)
+                if stop_present():
+                    raise RuntimeError('HOLD_OWNER_STOP')
+                quiet_snapshot=await page.evaluate(SNAPSHOT_JS)
+                quiet_native_equal=await page.evaluate(
+                    '(value)=>window.__NOX_BROWSER_QA.answer===value', second_answer)
+                if not stable_second_turn_quiescence(
+                        second_final, quiet_snapshot, stream_admitted, quiet_native_equal):
+                    raise RuntimeError('HOLD_MULTITURN_POSTTERMINAL_QUIESCENCE')
+                report['multiturn_postterminal_quiescence_verified']=True
+                # The first four-row history read predates the screenshot and
+                # quiescence. Re-read only owner history, never generate again.
+                report['browser_stage']='QA_POSTQUIET_PERSISTED_HISTORY'
+                postquiet_history=await owner_history_json_response(await context.request.get(
+                    base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
+                    max_redirects=0,timeout=6000))
+                if not postquiet_fourrow_history_stable(
+                        second_history, postquiet_history, did,
+                        browser_transcript_sha, firstturn_id_snapshot):
+                    raise RuntimeError('HOLD_MULTITURN_POSTQUIET_HISTORY_CHANGED')
+                report['multiturn_postquiet_history_verified']=True
+                # Signed session proof above predates history read and
+                # private screenshot. Rotate/expire during either? Fail closed.
+                # Only this extra read-only GET; no model generation request.
+                report['browser_stage']='QA_PRECERT_OWNER_SESSION_RECHECK'
+                signed_precert=await context.request.get(
+                    base+'/chat/session',max_redirects=0,timeout=6000)
+                if not owner_session_continuity_valid(
+                        signed_precert.status, await context.cookies(base),
+                        owner_session_pin):
+                    raise RuntimeError('HOLD_MULTITURN_OWNER_SESSION_CHANGED_BEFORE_ACCEPTANCE')
+                report['multiturn_precert_owner_session_verified']=True
+                if not clean_two_turn_browser_runtime(
+                        page_errors, network, report['network_response_overflow_count'],
+                        report['critical_requestfailed_count'],
+                        blocked['non_qa_generation'] + blocked['alternate_native_chat_route']):
+                    raise RuntimeError('HOLD_BROWSER_JAVASCRIPT_OR_RESOURCE_ERRORS')
+                # History and final owner-session GETs can outlast the 500 ms
+                # browser quiescence. Re-pin the second stream immediately
+                # before narrow browser-only PASS, without an extra model POST.
+                report['browser_stage']='QA_POSTREAD_FINAL_STREAM_FENCE'
+                postread_snapshot=await page.evaluate(SNAPSHOT_JS)
+                postread_native_equal=await page.evaluate(
+                    '(value)=>window.__NOX_BROWSER_QA.answer===value', second_answer)
+                if not stable_second_turn_quiescence(
+                        quiet_snapshot, postread_snapshot, stream_admitted, postread_native_equal):
+                    raise RuntimeError('HOLD_MULTITURN_POSTREAD_STREAM_CHANGED')
+                report['multiturn_postread_stream_verified']=True
+                # Re-pin live UI dialog selection after the slow four-row
+                # history read, owner-session check and final stream snapshot.
+                # Do not confuse a valid scoped API read with the shown chat.
+                if (urllib.parse.urlsplit(page.url).path!=PAGE
+                        or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
+                    raise RuntimeError('HOLD_MULTITURN_ACTIVE_DIALOG_CHANGED_BEFORE_ACCEPTANCE')
+                report['multiturn_preaccept_active_dialog_verified']=True
+                # Reload only AFTER the final second-turn SSE fence; a reload
+                # destroys the page-local stream observer and cannot replace it.
+                # It must reveal the same authenticated dialog and four durable
+                # RU/ES rows without issuing another native model request.
+                report['browser_stage']='QA_RELOAD_SAME_DIALOG_FOURROW'
+                if stop_present():
+                    raise RuntimeError('HOLD_OWNER_STOP')
+                reload_response=await page.reload(wait_until='domcontentloaded',timeout=20000)
+                if (reload_response is None or reload_response.status!=200
+                        or urllib.parse.urlsplit(page.url).path!=PAGE):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_OWNER_ROUTE')
+                await page.wait_for_function(
+                    "window.__NOX_OWNER_LIVE_UI===true && !!document.querySelector('#prompt')",
+                    timeout=15000)
+                signed_reload=await context.request.get(
+                    base+'/chat/session',max_redirects=0,timeout=6000)
+                if not owner_session_continuity_valid(
+                        signed_reload.status,await context.cookies(base),owner_session_pin):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_OWNER_SESSION_CHANGED')
+                # A reload often collapses the rail. Reopen that UI only;
+                # never retry an ambiguous dialog click or a native POST.
+                rail=page.locator('#v24Rail')
+                if await rail.count()==1 and await rail.get_attribute('data-collapsed')=='true':
+                    await page.locator('[data-action="toggle-rail"]').first.click(timeout=3500)
+                reloaded_target=page.locator('#nativeChats button[role="listitem"]').filter(
+                    has=page.get_by_text(title,exact=True))
+                if await reloaded_target.count()!=1:
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_DIALOG_NOT_UNIQUE')
+                try:
+                    await reloaded_target.click(timeout=3500)
+                except Exception:
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_DIALOG_CLICK_AMBIGUOUS') from None
+                await page.wait_for_function(
+                    "title=>[...document.querySelectorAll('#nativeChats button[role=listitem]')]."
+                    "filter(b=>b.getAttribute('aria-current')==='true'&&"
+                    "b.querySelector('.t')?.textContent===title).length===1",
+                    arg=title,timeout=7000)
+                if (urllib.parse.urlsplit(page.url).path!=PAGE
+                        or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_ACTIVE_DIALOG_CHANGED')
+                reloaded_history=await owner_history_json_response(await context.request.get(
+                    base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
+                    max_redirects=0,timeout=6000))
+                if not postquiet_fourrow_history_stable(
+                        postquiet_history,reloaded_history,did,
+                        browser_transcript_sha,firstturn_id_snapshot):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_HISTORY_FOURROW_CHANGED')
+                # Owner session may rotate DURING the slow four-row history
+                # GET after reload; the earlier signed_reload pin is stale.
+                # Recheck owner status + cookie identity before any browser PASS.
+                report['browser_stage']='QA_POSTRELOAD_HISTORY_SESSION_RECHECK'
+                if not await postreload_owner_session_recheck(
+                        context,base,owner_session_pin):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_POSTHISTORY_SESSION_CHANGED')
+                report['multiturn_reload_posthistory_owner_session_verified']=True
+                if (stop_present() or not exact_native_post_fence(
+                        postread_snapshot,stream_admitted,2)
+                        or not clean_two_turn_browser_runtime(
+                            page_errors,network,report['network_response_overflow_count'],
+                            report['critical_requestfailed_count'],
+                            blocked['non_qa_generation']+blocked['alternate_native_chat_route'])):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_RUNTIME_OR_POST')
+                # The history and signed-session GETs can finish after the UI
+                # switches dialogs. Re-pin the rendered owner dialog LAST,
+                # after slow readbacks; no model POST or synthetic click here.
+                if (urllib.parse.urlsplit(page.url).path!=PAGE
+                        or await page.evaluate(ACTIVE_QA_DIALOG_JS,title) is not True):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_POSTHISTORY_ACTIVE_DIALOG_CHANGED')
+                report['multiturn_reload_posthistory_active_dialog_verified']=True
+                # API row IDs do not by themselves prove the displayed four
+                # bubbles. Match exact ordered role/text against visible DOM;
+                # when DOM IDs exist, reject disagreements. No private export.
+                report['browser_stage']='QA_RELOAD_RENDERED_FOURROW'
+                try:
+                    await page.wait_for_function(
+                        RENDERED_FOURROW_JS,arg=reloaded_history['messages'],timeout=7000)
+                except PlaywrightTimeoutError:
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_RENDERED_FOURROW_MISMATCH') from None
+                if await page.evaluate(
+                        RENDERED_FOURROW_JS,reloaded_history['messages']) is not True:
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_RENDERED_FOURROW_MISMATCH')
+                report['multiturn_reload_rendered_fourrow_verified']=True
+                # Waiting for rendered bubbles can outlive the prior owner
+                # session and live-dialog pins. Fail closed on rotation,
+                # route/UI drift or new native requests before browser PASS.
+                # Render waits can overlap a competing history write.
+                # Re-read persisted four-row IDs/text before the LAST owner
+                # session and displayed-DOM fence, without a model POST.
+                report['browser_stage']='QA_RELOAD_POSTRENDER_HISTORY_RECHECK'
+                if not await postrender_owner_history_recheck(
+                        context,base,reloaded_history,did,
+                        browser_transcript_sha,firstturn_id_snapshot):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_POSTRENDER_HISTORY_DRIFT')
+                report['multiturn_reload_postrender_history_stable']=True
+                report['browser_stage']='QA_RELOAD_POSTRENDER_FINAL_FENCE'
+                if not await postrender_owner_session_dialog_fence(
+                        context,base,owner_session_pin,page,title,
+                        reloaded_history['messages']):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_POSTRENDER_OWNER_OR_DIALOG')
+                if (stop_present() or not exact_native_post_fence(
+                        postread_snapshot,stream_admitted,2)
+                        or not clean_two_turn_browser_runtime(
+                            page_errors,network,report['network_response_overflow_count'],
+                            report['critical_requestfailed_count'],
+                            blocked['non_qa_generation']+blocked['alternate_native_chat_route'])):
+                    raise RuntimeError('HOLD_MULTITURN_RELOAD_POSTRENDER_RUNTIME_OR_POST')
+                report['multiturn_reload_postrender_final_fence_verified']=True
+                report['multiturn_reload_same_dialog_history_verified']=True
+                report['multiturn_browser_acceptance_verified']=True
                 if not canonical_s03_verified:
                     raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
-                if stream_admitted!=2:
-                    raise RuntimeError('HOLD_MULTITURN_POST_ADMISSION')
-                report['multiturn_browser_acceptance_verified']=True
         finally:
             report['network']=network
             report['console_counts']=dict(console)
@@ -979,7 +2565,10 @@ def main():
             'started_at':time.time(),'state':'RUNNING','artifacts':[],
             'actual_native_backend':False,'actual_native_model_stream_verified':False,'synthetic_backend_used':False,
             'functional_acceptance_verified':False,'screenshot_capture_verified':False,
-            'two_turn_mode':os.environ.get('NOX_BROWSER_QA_MODE')=='multiturn',
+            'two_turn_mode':os.environ.get('NOX_BROWSER_QA_MODE') in ('multiturn','multiturn_ru_es'),
+            'language_pair':'RU_ES' if os.environ.get('NOX_BROWSER_QA_MODE')=='multiturn_ru_es'
+                            else 'RU_RU' if os.environ.get('NOX_BROWSER_QA_MODE')=='multiturn'
+                            else 'SINGLE_RU',
             'screenshots_exported':False,'private_text_or_credentials_exported':False,
             'rendering_mode':'CPU_SWIFTSHADER_FUNCTIONAL_QA_NOT_CLIENT_GPU_BENCHMARK',
             'training_or_service_configuration_changed':False,'diagnostics_content':'COUNTS_PATHS_AND_PUBLIC_SYNTHETIC_NUMBERS_ONLY'}

@@ -1,0 +1,38 @@
+name: NOX B5 RU-ES multi-turn source contract
+on:
+  pull_request:
+    branches:
+      - repair/nox-continuous-execution-20261118
+    paths:
+      - 'nox-control/owner_chat_browser_qa.py'
+      - 'nox-control/test_owner_chat_ru_es_multiturn.py'
+      - '.github/workflows/nox-b5-ru-es-multiturn-source.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  b5-ru-es-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Provide pinned Playwright Chromium for real WebCrypto regression
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'playwright==1.65.2'
+          python -m playwright install chromium
+      - name: One focused RU-to-ES S03 history contract check
+        env:
+          PYTHONPATH: nox-control
+        run: |
+          set -euo pipefail
+          python -m py_compile nox-control/owner_chat_browser_qa.py nox-control/test_owner_chat_ru_es_multiturn.py
+          python -m unittest -v test_owner_chat_ru_es_multiturn
+          echo 'NOX_B5_RU_ES_SOURCE_TESTED=true'
+          echo 'NOX_B5_NATIVE_ACCEPTED=false'
+          echo 'NOX_B5_S03_WRITER_READBACK_LIVE=false'
