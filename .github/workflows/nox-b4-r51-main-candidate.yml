@@ -1,4 +1,4 @@
-name: NOX B4 R52 Browser Dialect Exact Node22 SSE Suite
+name: NOX B4 R53 Existing Turn Pair Exact Node22 SSE Suite
 on:
   push:
     branches:
@@ -40,4 +40,6 @@ jobs:
           printf 'B4_R52_EXACT_SOURCE_TEST_SHA256='
           sha256sum test_b4_sse_latency_probe.mjs
           node --version
-          node --test test_b4_sse_latency_probe.mjs
+          test "$(git hash-object b4_existing_turn_pair.mjs)" = "aad89a93467e638cfcac5af8a099d2127f4ae0fc"
+          test "$(git hash-object test_b4_existing_turn_pair.mjs)" = "27146b97f7472796582864cee1753ff90683b11b"
+          node --test test_b4_sse_latency_probe.mjs test_b4_existing_turn_pair.mjs
