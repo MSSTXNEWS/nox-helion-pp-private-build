@@ -12,6 +12,6 @@
 .nmc-m.u{align-self:flex-end;background:linear-gradient(90deg,rgba(176,44,32,.8),rgba(110,26,20,.6))}.nmc-m.a{align-self:flex-start;background:rgba(255,235,220,.07)}
 .nmc-m.sys{align-self:center;opacity:.55;font-size:11px;letter-spacing:.06em;text-align:center}.nmc-m.err{color:#ff9a86}
 .nmc form{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,225,200,.08)}
-.nmc textarea{flex:1;resize:none;max-height:90px;background:rgba(255,235,220,.06);border:1px solid rgba(255,225,200,.1);border-radius:10px;color:inherit;padding:8px 10px;font:inherit;outline:none}.nmc textarea:focus{border-color:rgba(214,70,48,.6)}
+.nmc textarea{flex:1;height:40px;align-self:flex-end;resize:none;max-height:90px;background:rgba(255,235,220,.06);border:1px solid rgba(255,225,200,.1);border-radius:10px;color:inherit;padding:8px 10px;font:inherit;outline:none}.nmc textarea:focus{border-color:rgba(214,70,48,.6)}
 .nmc form button{width:40px;border-radius:10px;border:0;background:linear-gradient(90deg,rgba(176,44,32,.9),rgba(120,30,22,.7));color:#fff;font-size:16px;cursor:pointer}
 @media(max-width:600px){.nmc-fab{right:10px;bottom:96px;width:42px;height:42px}.nmc{right:8px;bottom:146px;width:calc(100vw - 16px);height:min(440px,calc(100vh - 230px))}}
