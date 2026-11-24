@@ -1,0 +1,29 @@
+name: NOX B1 R76 scope compose
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b1-r76/**'
+      - '.github/workflows/nox-b1-r76-scope-compose.yml'
+permissions:
+  contents: read
+jobs:
+  exact-scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 98e955c00fbd45c781e8d9ca81c309462f86a480
+          path: b3-pinned
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD:nox-control/b1-r74/wire_guard.cjs)" = 22bb2217f82bb44bfadc92b979e1af22e0dfaab8
+          test "$(git rev-parse HEAD:nox-control/b1-r75/b1_browser_bundle.js)" = d0c0a689810be2bbad2d986f02c305e978d4f38f
+          test "$(git -C b3-pinned rev-parse HEAD:coordination/onepass/b3_r69_exchange_scope_binding.cjs)" = 18b3be8fc4264b32d51a57ad4db367b3ba786d41
+          test "$(git -C b3-pinned rev-parse HEAD:coordination/onepass/b3_r68_route_binding.cjs)" = 6d0fef57783346fe33d59ca39a625015514ae168
+          node --unhandled-rejections=strict nox-control/b1-r76/test_scope_compose.cjs b3-pinned/coordination/onepass/b3_r69_exchange_scope_binding.cjs
