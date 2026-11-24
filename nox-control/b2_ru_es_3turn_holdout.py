@@ -125,6 +125,8 @@ def verify_capture(capture: object) -> dict:
             value = capture.get(key)
             require(type(value) is str and SHA256.fullmatch(value) is not None,
                     "HOLD_B2_NATIVE_PROVENANCE_MISSING")
+        require(capture["installed_sha256"] == capture["served_sha256"],
+                "HOLD_B2_NATIVE_ARTIFACT_SHA_MISMATCH")
     return {
         "schema": SCHEMA,
         "trace_structure": "PASS",

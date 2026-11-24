@@ -21,8 +21,8 @@ jobs:
           name: Verify B2 RU-ES multi-turn read-only capture contract
           command: |
             set -eu
-            test "$(git hash-object nox-control/b2_ru_es_3turn_holdout.py)" = "cf0af2c954b7704dfb83dff88fef83baa1077fac"
-            test "$(git hash-object nox-control/tests/test_b2_ru_es_3turn_holdout.py)" = "e531a7d427cf61635f9916e288c3253e451d9dbe"
+            test "$(git hash-object nox-control/b2_ru_es_3turn_holdout.py)" = "38a00de3a374487c3e0ad9067445fa30ada5a8ab"
+            test "$(git hash-object nox-control/tests/test_b2_ru_es_3turn_holdout.py)" = "57ea3c68e3db4f39a74a0f1ab8466d9530e8d7fc"
             python -B -m py_compile nox-control/b2_ru_es_3turn_holdout.py nox-control/tests/test_b2_ru_es_3turn_holdout.py
             python -B -m unittest discover -s nox-control/tests -p 'test_b2_ru_es_3turn_holdout.py' -v
       - run:
