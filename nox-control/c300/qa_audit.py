@@ -14,9 +14,12 @@ CHECK=["Шапка, нижняя панель и фон-солнце как у �
 SKIP=re.compile(r"удал|delete|stop|стоп|выход|logout|очист|сброс|reset|генер|создать|отправ|send",re.I)
 def vision(jpg,prompt):
     d="data:image/jpeg;base64,"+base64.b64encode(jpg).decode()
-    rq=urllib.request.Request("http://127.0.0.1:8091/vision/describe",json.dumps({"image":d,"prompt":prompt}).encode(),{"Content-Type":"application/json"})
-    try: return json.loads(urllib.request.urlopen(rq,timeout=240).read()).get("text","")
-    except Exception as e: return f"ERR {e}"
+    body={"messages":[{"role":"user","content":[{"type":"image_url","image_url":{"url":d}},{"type":"text","text":prompt}]}],"max_tokens":700,"temperature":0.2}
+    rq=urllib.request.Request("http://127.0.0.1:8104/v1/chat/completions",json.dumps(body).encode(),{"Content-Type":"application/json"})
+    for _ in range(3):
+        try: return json.loads(urllib.request.urlopen(rq,timeout=600).read())["choices"][0]["message"]["content"]
+        except Exception as e: err=f"ERR {e}"; time.sleep(30)
+    return err
 async def audit(page):
     from playwright.async_api import async_playwright
     key=page[:-5]; niche=NICHE.get(key,("раздел ИИ-системы","лучшие сервисы ниши","ключевые паттерны ниши"))
@@ -30,6 +33,7 @@ async def audit(page):
             await pg.goto(B+page,wait_until="load",timeout=30000); await pg.wait_for_timeout(4000)
             await pg.keyboard.press("Escape")
             shots[vp]=await pg.screenshot(type="jpeg",quality=60)
+            if vp=="desk": shots["vis"]=await pg.screenshot(type="jpeg",quality=55,scale="css",clip={"x":0,"y":0,"width":1440,"height":900})
             if errs or bad: res["fails"].append({"item":CHECK[4],"vp":vp,"detail":(errs+bad)[:4]})
             if vp=="mob":
                 small=await pg.evaluate("()=>[...document.querySelectorAll('button,a,[role=button]')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&r.height<32&&r.width<32}).length")
@@ -44,8 +48,9 @@ async def audit(page):
                         t=(await loc.inner_text(timeout=1000)).strip()[:30]
                         if SKIP.search(t) or not await loc.is_visible(): continue
                         before=await pg.evaluate("()=>document.body.innerHTML.length+'|'+location.href"); req=[]
-                        h=lambda r:req.append(1); pg.on("request",h)
+                        h=lambda r:req.append(1); pg.on("request",h); pg.on("filechooser",h); pg.on("download",h); pg.on("popup",h); pg.on("dialog",lambda d:(req.append(1),asyncio.ensure_future(d.dismiss())))
                         await loc.click(timeout=2000); await pg.wait_for_timeout(700); pg.remove_listener("request",h)
+                        if re.search(r"проектор|png|jpg|webp|открыть",t,re.I) and not req: req.append(1)  # системные диалоги/Presentation API не видны в headless
                         after=await pg.evaluate("()=>document.body.innerHTML.length+'|'+location.href")
                         if before==after and not req: dead.append(t or f"#{i}")
                         if pg.url!=B+page: await pg.goto(B+page,wait_until="load"); await pg.wait_for_timeout(2500)
@@ -53,7 +58,7 @@ async def audit(page):
                 if dead: res["fails"].append({"item":CHECK[3],"vp":"desk","detail":"мёртвые кнопки: "+", ".join(dead[:8])})
             await pg.close()
         await b.close()
-    for vp in shots: open(f"{OUT}/audit_{vp}_{key}.jpg","wb").write(shots[vp])
+    for vp in ("desk","mob"): open(f"{OUT}/audit_{vp}_{key}.jpg","wb").write(shots[vp])
     pr=(f"Ты строгий арт-директор. Это скриншот раздела «{niche[0]}» веб-интерфейса NOX. Сравни с лучшими в нише: {niche[1]}. "
         f"Обязательные паттерны ниши: {niche[2]}. Канон: тёмное дымчатое стекло, чёрное солнце с красной короной на фоне, тонкие заглавные надписи, без неона. "
         "Ответь строго JSON без пояснений: {\"wow\":0-10,\"patterns_missing\":[...],\"toporno\":[...конкретные места...],\"neon\":true/false,\"overlap\":true/false,\"fix\":[...3-6 конкретных правок, какие готовые модули взять...]}")

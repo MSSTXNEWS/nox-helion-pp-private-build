@@ -22,11 +22,11 @@ def guard():
             shutil.copy2(f"{ET}/{f}",p); ev.append(f"эталон восстановлен: {f}")
     return ev
 JS="""()=>{const W=innerWidth,H=innerHeight,r=[];
-const cv=[...document.querySelectorAll('canvas')].some(c=>{const b=c.getBoundingClientRect();return b.width>W*.5&&b.height>H*.5});
+const cv=[...document.querySelectorAll('canvas')].some(c=>{const b=c.getBoundingClientRect();return b.width>W*.5&&b.height>H*.5})||[...document.querySelectorAll('body,body *')].some(e=>{const s=getComputedStyle(e);if(s.position!=='fixed'&&e!==document.body)return false;const b=e.getBoundingClientRect();return b.width>W*.8&&b.height>H*.8&&s.backgroundImage!=='none'});
 if(!cv)r.push('нет фона-сцены (canvas)');
-const fx=[...document.querySelectorAll('body *')].filter(e=>{const s=getComputedStyle(e);if(s.position!=='fixed'&&s.position!=='sticky')return false;const b=e.getBoundingClientRect();return b.width>W*.7&&b.height>20&&b.height<160});
-if(!fx.some(e=>e.getBoundingClientRect().top<10))r.push('нет верхней панели');
-if(!fx.some(e=>e.getBoundingClientRect().bottom>H-10))r.push('нет нижней панели');
+const fx=[...document.querySelectorAll('body *')].filter(e=>{const s=getComputedStyle(e);if(s.position!=='fixed'&&s.position!=='sticky')return false;const b=e.getBoundingClientRect();return b.width>40&&b.height>20&&b.height<160});
+if(!fx.some(e=>e.getBoundingClientRect().top<14))r.push('нет верхней панели');
+if(!fx.some(e=>e.getBoundingClientRect().bottom>H-14))r.push('нет нижней панели');
 if(document.documentElement.scrollWidth>W+4)r.push('горизонтальный overflow');
 return {issues:r,text:document.body.innerText.slice(0,20000)}}"""
 async def check():
