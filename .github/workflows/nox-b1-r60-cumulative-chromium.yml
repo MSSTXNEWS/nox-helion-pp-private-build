@@ -1,0 +1,27 @@
+name: NOX B1 R60 cumulative Chromium
+on:
+  pull_request:
+    branches:
+      - b1/r59-scope-identity-20261124
+    paths:
+      - nox-control/test_b1_r60_cumulative_chromium.py
+      - .github/workflows/nox-b1-r60-cumulative-chromium.yml
+permissions:
+  contents: read
+jobs:
+  r60:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install playwright==1.56.0
+      - run: python -m playwright install --with-deps chromium
+      - run: |
+          git rev-parse HEAD
+          python nox-control/test_b1_r60_cumulative_chromium.py
