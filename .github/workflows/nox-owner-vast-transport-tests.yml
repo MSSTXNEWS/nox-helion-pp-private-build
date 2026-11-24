@@ -31,3 +31,35 @@ jobs:
       - name: Run offline owner transport regressions
         run: |
           python3 -B -m unittest discover             -s nox-control             -p 'test_owner_vast_ssh_helper.py'             -v
+
+  frozen-inspect-source:
+    # Source-only gate for the reviewed S2 candidate; never grants owner authority.
+    if: github.event_name == 'pull_request' && github.head_ref == 'd3-s2-frozen-inspect-ci-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: d6a67804ec4c6cdab71b09ad4f22115c3a13503f
+          path: frozen-inspect
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /nox-control/owner_native_operator.py
+            /nox-control/owner_native_inspect.py
+            /nox-control/test_owner_native_operator_inspect_route.py
+            /nox_runpod/__init__.py
+            /nox_runpod/teacher_mesh/__init__.py
+            /nox_runpod/teacher_mesh/v51/
+      - name: Verify frozen source and run full offline inspect-route regression
+        working-directory: frozen-inspect
+        env:
+          NOX2: ''
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = d6a67804ec4c6cdab71b09ad4f22115c3a13503f
+          test "$(git hash-object nox-control/owner_native_operator.py)" = 34c9bf6e43d549a371b91727327a8e6de513e671
+          test "$(git hash-object nox-control/owner_native_inspect.py)" = 94e5cd8ce60745cb4254f3ccec89556c59eb6b51
+          test "$(git hash-object nox-control/test_owner_native_operator_inspect_route.py)" = 1e0307243d32ec8b29650a9ec8ef4e56f28457bd
+          test "$(git hash-object nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py)" = e544007eabbee553f292614f87084f5a1211ee96
+          python3 -B -m unittest discover -s nox-control -p 'test_owner_native_operator_inspect_route.py' -v
