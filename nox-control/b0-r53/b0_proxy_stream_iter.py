@@ -33,4 +33,8 @@ class ProxyDeltaBody:
         """Idempotent disposal, including disconnect before the first pull."""
         if not self._closed:
             self._closed = True
-            self._upstream.close()
+            try:
+                self._upstream.close()
+            except StopIteration as exc:
+                # Disposal failure must never masquerade as a clean stream EOF.
+                raise RuntimeError("HOLD_PROXY_CLOSE_FALSE_EOF") from exc

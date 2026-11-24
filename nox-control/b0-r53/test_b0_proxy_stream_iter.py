@@ -83,6 +83,23 @@ class ProxyBodyTests(unittest.TestCase):
         body.close()
         self.assertEqual(src.closes, 1)
 
+    def test_close_stopiteration_cannot_masquerade_as_eof(self):
+        for frames, fail in (([], None), ([], OSError("lost")),
+                             ([{"type": "done"}], None)):
+            with self.subTest(frames=frames, fail=fail):
+                src = Upstream(frames, fail=fail,
+                               close_fail=StopIteration("broken disposal"))
+                body = ProxyDeltaBody(src)
+                with self.assertRaisesRegex(RuntimeError, "HOLD_PROXY_CLOSE_FALSE_EOF") as ctx:
+                    next(body)
+                self.assertIsInstance(ctx.exception.__cause__, StopIteration)
+                body.close()
+                self.assertEqual(src.closes, 1)
+        src = Upstream(close_fail=StopIteration("disconnect"))
+        with self.assertRaisesRegex(RuntimeError, "HOLD_PROXY_CLOSE_FALSE_EOF"):
+            ProxyDeltaBody(src).close()
+        self.assertEqual((src.pulls, src.closes), (0, 1))
+
     def test_noncloseable_source_refused(self):
         with self.assertRaises(TypeError):
             ProxyDeltaBody(iter([]))
