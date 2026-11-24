@@ -17,9 +17,13 @@ def bind_observed_browser_prefix(*, observed_browser_rows, observed_browser_call
     """
     owner_rows = owner_evidence.get("owner_rows")
     canonical_rows = owner_evidence.get("canonical_rows")
+    def aliases(rows, other):
+        return (type(rows) is list and type(other) is list
+                and (rows is other or any(row is peer for row in rows for peer in other)))
+
     if (type(observed_browser_rows) is not list
-            or observed_browser_rows is owner_rows
-            or observed_browser_rows is canonical_rows
+            or aliases(observed_browser_rows, owner_rows)
+            or aliases(observed_browser_rows, canonical_rows)
             or len(observed_browser_rows) not in (2, 4)
             or type(observed_browser_calls) is not int
             or observed_browser_calls != owner_evidence.get("browser_calls")):

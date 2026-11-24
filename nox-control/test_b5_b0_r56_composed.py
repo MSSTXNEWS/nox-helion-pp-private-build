@@ -80,7 +80,7 @@ class ComposedIngressTests(unittest.TestCase):
                 def bind(browser=observed, calls=7):
                     return bind_observed_browser_prefix(
                         observed_browser_rows=browser, observed_browser_calls=calls, **f)
-                for wrong in (f["owner_rows"], old, [], observed[:-1]):
+                for wrong in (f["owner_rows"], old, list(f["owner_rows"]), list(old), [], observed[:-1]):
                     with self.assertRaisesRegex(ValueError, "HOLD_ACTUAL_BROWSER_PREFIX"):
                         bind(wrong)
                 for count in (True, 6, 8):
@@ -136,6 +136,38 @@ class ComposedIngressTests(unittest.TestCase):
                 self.assertEqual(new[:len(old)], old)
                 old, pins = new, newpins
             self.assertEqual(len(old), 6)
+
+    def test_r57_pinned_fd_prefix_drift_during_single_get(self):
+        from unittest.mock import patch
+        import owner_chat_probe as probe
+        from b0_resume_bridge import prepare_existing_resume_from_owner_get
+        with ExitStack() as stack:
+            for n in (1, 2):
+                old, pins = self.load(stack, n)
+                for mode in ("shallow_alias", "stale_to_matching", "matching_to_stale"):
+                    f = fixture(n)
+                    f.update(canonical_rows=old, prior_witnesses=pins)
+                    observed = list(old) if mode == "shallow_alias" else [dict(r) for r in old]
+                    if mode == "stale_to_matching":
+                        observed[-1]["content"] = "Старое / anterior"
+                    history = dict(dialog_id=f["dialog_id"], messages=f["owner_rows"])
+                    kwargs = {k: v for k, v in f.items() if k not in ("preflight", "owner_rows")}
+                    kwargs.update(client="fixture-client", row_count=2*n,
+                                  observed_browser_rows=observed, observed_browser_calls=7)
+                    def get_history(*_):
+                        if mode == "stale_to_matching":
+                            observed[-1]["content"] = old[-1]["content"]
+                        elif mode == "matching_to_stale":
+                            observed[-1]["content"] = "Подмена / cambiado"
+                        return history
+                    with self.subTest(turn=n+1, mode=mode), \
+                         patch.object(probe, "require_preturn_owner_binding"), \
+                         patch.object(probe, "owner_readback_json", side_effect=get_history) as get, \
+                         patch.object(probe, "require_postturn_owner_binding"):
+                        with self.assertRaisesRegex(ValueError, "HOLD_ACTUAL_BROWSER_PREFIX"):
+                            prepare_existing_resume_from_owner_get(**kwargs)
+                        get.assert_called_once()
+                self.assertEqual(old, rows(n))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
