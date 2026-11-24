@@ -1,41 +1,31 @@
-#!/bin/bash
-cat > /root/nox/mtp_ab2.sh <<'X'
-#!/bin/bash
-L=/root/nox/logs/mtp_ab2.log; : > $L; pkill -f glm_watch.sh
-M=/dev/shm/glm53f/GLM-5.3-Flash-UD-Q4_K_XL-00001-of-00006.gguf; BIN=/root/nox/llama.cpp-g/build/bin/llama-server
-BASE="--host 127.0.0.1 --port 8081 --parallel 2 -c 16384 -fa on --jinja -ot exps=CPU --reasoning off --no-op-offload -ub 512 -b 2048 -t 24 -tb 24"
-run() { pkill -9 -f 'llama-server.*--port 8081'; sleep 3
-  GGML_CUDA_NO_PINNED=1 nohup nice -n 19 taskset -c 0-23 $BIN -m $M $BASE $1 > /root/nox/logs/glm_8081.log 2>&1 &
-  for i in $(seq 80); do sleep 3; curl -sf -m2 127.0.0.1:8081/health >/dev/null && break; pgrep -f 'port 8081' >/dev/null || break; done
-  curl -sf -m2 127.0.0.1:8081/health >/dev/null || { echo "$2 FAILED" >> $L; return; }
-  python3 - "$2" "$1" >> $L <<'P'
-import json,urllib.request,sys
-q=["Объясни подробно, как работает память человека и почему мы забываем.","Напиши короткий план, как ускорить сервер с ИИ: шаги по порядку.","Привет! Как настроение?"]
-tg=[]
-for x in q:
-    b={"messages":[{"role":"user","content":x}],"max_tokens":160,"temperature":0.7,"cache_prompt":False}
-    r=json.load(urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:8081/v1/chat/completions",json.dumps(b).encode(),{"Content-Type":"application/json"}),timeout=900))
-    t=r["timings"]; tg.append(t["predicted_per_second"]); acc=(t.get("draft_n_accepted"),t.get("draft_n"))
-print(sys.argv[1],"avg %.2f"%(sum(tg)/len(tg)),["%.2f"%x for x in tg],"acc",acc,"|",sys.argv[2])
+S=/workspace/nox/web/site; RAW=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/assets; T=$(date +%s)
+for f in nox-minichat.js nox-minichat.css; do curl -fsSL "$RAW/$f?t=$T" -o $S/$f; done
+cd $S; n=0; for f in *.html; do [ "$f" = chat.html ] && continue; grep -q nox-minichat.js "$f" || { sed -i 's#</body>#<script src="./nox-minichat.js" defer></script>\n</body>#' "$f"; n=$((n+1)); }; done; echo tagged $n
+cd /tmp
+cat > /tmp/shot_mini.py <<'P'
+import base64,subprocess,sys
+from playwright.sync_api import sync_playwright
+def out(tag,png,w):
+    j='/tmp/s_%s.jpg'%tag
+    subprocess.run(['ffmpeg','-loglevel','error','-y','-i',png,'-vf','scale=%d:-1'%w,'-q:v','11',j])
+    b=base64.b64encode(open(j,'rb').read()).decode()
+    print('B64_%s_BEGIN'%tag)
+    for i in range(0,len(b),900): print(b[i:i+900])
+    print('B64_%s_END'%tag)
+with sync_playwright() as p:
+    b=p.chromium.launch()
+    for mob in (0,1):
+        pg=b.new_page(viewport={'width':390,'height':844} if mob else {'width':1440,'height':900}, has_touch=bool(mob), is_mobile=bool(mob))
+        errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)[:120]))
+        pg.goto('http://localhost:8091/web/index.html',wait_until='load'); pg.wait_for_timeout(5000)
+        if mob:
+            pg.click('.nmc-fab'); pg.fill('.nmc textarea','Привет'); pg.keyboard.press('Enter'); pg.wait_for_timeout(15000)
+        else:
+            pg.click('.nmc-fab'); pg.fill('.nmc textarea','Привет, где я?'); pg.keyboard.press('Enter'); pg.wait_for_timeout(15000)
+        pg.wait_for_timeout(1200)
+        pg.screenshot(path='/tmp/s.png')
+        out('mini_'+('m' if mob else 'd'),'/tmp/s.png',760 if not mob else 390)
+        print('ERRS',errs[:3])
+    b.close()
 P
-}
-run "-ngl 40" "NGL40"
-run "-ngl 36 --spec-type draft-mtp --spec-draft-n-max 2" "MTP2_ngl36"
-run "-ngl 36 --spec-type draft-mtp --spec-draft-n-max 3" "MTP3_ngl36"
-run "-ngl 38 --spec-type draft-mtp --spec-draft-n-max 2" "MTP2_ngl38"
-python3 - >> $L <<'P'
-import re
-rows=[(m.group(1),float(m.group(2)),m.group(3)) for l in open("/root/nox/logs/mtp_ab2.log") for m in [re.match(r"(\S+) avg ([\d.]+) .*\| (.*)",l)] if m]
-best=max(rows,key=lambda r:r[1]); print("BEST",best[0],best[1]); open("/tmp/mtp2_best","w").write(best[2])
-P
-X=$(cat /tmp/mtp2_best)
-cat > /root/nox/start_glm.sh <<S
-#!/bin/bash
-# c300 W061: автоподбор mtp_ab2. Ядра 26-33 оставлены быстрой модели.
-pkill -9 -f 'llama-server.*--port 8081'; sleep 3
-GGML_CUDA_NO_PINNED=1 nohup nice -n 19 taskset -c 0-23 $BIN -m $M $BASE $X > /root/nox/logs/glm_8081.log 2>&1 &
-S
-bash /root/nox/start_glm.sh; sleep 40; (nohup setsid bash /root/nox/glm_watch.sh >/dev/null 2>&1 </dev/null &)
-echo "DONE health=$(curl -s -m3 -o /dev/null -w %{http_code} 127.0.0.1:8081/health)" >> $L
-X
-(nohup setsid bash /root/nox/mtp_ab2.sh >/dev/null 2>&1 </dev/null &); echo started
+/workspace/nox/venv/bin/python /tmp/shot_mini.py 2>&1 | cut -c1-900

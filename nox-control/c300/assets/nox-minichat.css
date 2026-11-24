@@ -1,0 +1,17 @@
+.nmc-fab{position:fixed;right:16px;bottom:132px;z-index:9000;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:#f0e4da;cursor:pointer;
+  background:linear-gradient(180deg,rgba(40,30,30,.7),rgba(14,11,12,.8));border:1px solid rgba(255,200,170,.18);box-shadow:0 8px 28px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,235,220,.1);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);transition:transform .15s,border-color .15s}
+.nmc-fab:hover,.nmc-fab.on{border-color:rgba(214,70,48,.7);transform:scale(1.05)}
+.nmc{position:fixed;right:16px;bottom:188px;z-index:9001;width:360px;max-width:calc(100vw - 24px);height:min(480px,calc(100vh - 270px));min-height:260px;display:flex;flex-direction:column;border-radius:18px;overflow:hidden;color:#efe6df;
+  background:linear-gradient(180deg,rgba(24,20,20,.78),rgba(10,8,9,.86));border:1px solid rgba(255,225,200,.12);box-shadow:0 22px 60px rgba(0,0,0,.6);-webkit-backdrop-filter:blur(22px) saturate(1.2);backdrop-filter:blur(22px) saturate(1.2);font-size:13px}
+.nmc[hidden]{display:none}
+.nmc header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(255,225,200,.08);font-weight:300;letter-spacing:.22em;text-transform:uppercase;font-size:11px}
+.nmc header b{color:#d9663f;font-weight:400}.nmc-pg{flex:1;opacity:.55;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;letter-spacing:.12em}
+.nmc header button{background:none;border:0;color:inherit;opacity:.6;cursor:pointer;font:inherit;font-size:10px;letter-spacing:.14em}.nmc header .nmc-x{font-size:20px;line-height:1}.nmc header button:hover{opacity:1}
+.nmc-log{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.nmc-m{padding:8px 11px;border-radius:12px;max-width:88%;white-space:pre-wrap;word-break:break-word;line-height:1.45}
+.nmc-m.u{align-self:flex-end;background:linear-gradient(90deg,rgba(176,44,32,.8),rgba(110,26,20,.6))}.nmc-m.a{align-self:flex-start;background:rgba(255,235,220,.07)}
+.nmc-m.sys{align-self:center;opacity:.55;font-size:11px;letter-spacing:.06em;text-align:center}.nmc-m.err{color:#ff9a86}
+.nmc form{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,225,200,.08)}
+.nmc textarea{flex:1;resize:none;max-height:90px;background:rgba(255,235,220,.06);border:1px solid rgba(255,225,200,.1);border-radius:10px;color:inherit;padding:8px 10px;font:inherit;outline:none}.nmc textarea:focus{border-color:rgba(214,70,48,.6)}
+.nmc form button{width:40px;border-radius:10px;border:0;background:linear-gradient(90deg,rgba(176,44,32,.9),rgba(120,30,22,.7));color:#fff;font-size:16px;cursor:pointer}
+@media(max-width:600px){.nmc-fab{right:10px;bottom:96px;width:42px;height:42px}.nmc{right:8px;bottom:146px;width:calc(100vw - 16px);height:min(440px,calc(100vh - 230px))}}
