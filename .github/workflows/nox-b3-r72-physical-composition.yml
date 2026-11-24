@@ -4,6 +4,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - '.github/workflows/nox-b3-r72-physical-composition.yml'
+      - 'coordination/onepass/b3_r70_s03_terminal_identity.cjs'
       - 'coordination/onepass/b3_r71_physical_terminal_composition.cjs'
 permissions:
   contents: read
@@ -26,18 +27,21 @@ jobs:
           pin b3_r66_raw_readback_binding.cjs c4331cc22cb94da0c67fa765e27c838d7b354c66
           pin b3_r68_route_binding.cjs 6d0fef57783346fe33d59ca39a625015514ae168
           pin b3_r69_exchange_scope_binding.cjs 18b3be8fc4264b32d51a57ad4db367b3ba786d41
-          pin b3_r70_s03_terminal_identity.cjs ced1789a8ab19b625888489bf97faa79e07c7e1b
-          pin b3_r71_physical_terminal_composition.cjs 4c0cd74bc0453d3e450894668338499549217f50
+          pin b3_r70_s03_terminal_identity.cjs 64847800e02998aaaad98823d02dd6976c431712
+          pin b3_r71_physical_terminal_composition.cjs b006e3529832cb3ba321b1293ddcad3f9603cfe2
           node --version
           node - <<'NODE'
           const assert = require('node:assert/strict');
           const {createHash} = require('node:crypto');
           assert.equal(createHash('sha256').update('abc').digest('hex'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+          const t = require('./b3_r70_s03_terminal_identity.cjs').selfTest();
+          assert.equal(t.length, 54);
+          assert.equal(t.filter(x => x.consistent).length, 2);
           const r = require('./b3_r71_physical_terminal_composition.cjs').selfTest();
-          assert.equal(r.results.length, 18);
+          assert.equal(r.results.length, 19);
           assert.equal(r.reproduced, 12);
           assert.equal(r.results.filter(x => x.consistent).length, 1);
           assert.equal(r.native_accepted, false);
           console.log(JSON.stringify(r));
-          console.log('R71 direct Node crypto: 18/18 synthetic; native_accepted=false');
+          console.log('R76 R71 direct Node crypto: 19/19 synthetic; native_accepted=false');
           NODE
