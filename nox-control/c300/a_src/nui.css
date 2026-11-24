@@ -1,0 +1,37 @@
+/* NOX · слой UI чата (assistant-ui подход) */
+.nui-x{display:flex;flex-direction:column;gap:8px;margin:0 0 8px}.nui-x:empty{display:none}
+.nui-reason{border:1px solid rgba(255,130,80,.2);border-radius:12px;background:rgba(20,13,11,.55);backdrop-filter:blur(10px);overflow:hidden}
+.nui-rh{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:0 12px;cursor:pointer;font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#d9b8a6}
+.nui-rh em{font-style:normal;opacity:.7;margin-left:auto}.nui-rh i{font-style:normal;opacity:.8}
+.nui-rh:focus-visible{outline:2px solid #ff9a6c;outline-offset:-2px}
+.nui-dot{width:7px;height:7px;border-radius:50%;background:#7c5a4a}.nui-dot[data-live=true]{background:#ff7a4c;animation:nuip 1.2s ease-in-out infinite}
+@keyframes nuip{50%{opacity:.3;transform:scale(.7)}}
+.nui-rb{padding:2px 14px 12px;max-height:240px;overflow:auto;white-space:pre-wrap;font-size:12.5px;line-height:1.5;color:#b9a79c}
+.nui-branch{display:inline-flex;align-items:center;gap:2px;align-self:flex-start;font:600 12px 'JetBrains Mono',monospace;color:#d9b8a6}
+.nui-branch button{all:unset;box-sizing:border-box;min-width:44px;min-height:44px;display:grid;place-items:center;cursor:pointer;font-size:20px;border-radius:10px}
+.nui-branch button:hover:not(:disabled){background:rgba(255,130,80,.14)}.nui-branch button:disabled{opacity:.3;cursor:default}
+.nui-alt{padding:4px 2px;line-height:1.55}.nui-alt p{margin:0 0 .7em}
+.nui-viewalt .txt{display:none}
+.nui-art,.nui-src{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.nui-art button,.nui-src a{all:unset;box-sizing:border-box;min-height:44px;display:inline-flex;align-items:center;gap:8px;padding:0 14px;border:1px solid rgba(255,130,80,.25);border-radius:12px;background:rgba(24,16,13,.6);color:#ecd9cd;font-size:12.5px;cursor:pointer}
+.nui-art button:hover,.nui-src a:hover{border-color:#ff9a6c;background:rgba(255,120,70,.12)}.nui-art b{color:#ff9a6c;font-family:'JetBrains Mono',monospace}
+.nui-art button:focus-visible,.nui-src a:focus-visible{outline:2px solid #ff9a6c}
+.nui-src>span{font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#a58f82}
+.nui-panel,.nui-flow,.nui-voice{position:fixed;z-index:70;background:rgba(10,7,7,.84);backdrop-filter:blur(24px) saturate(1.2);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,130,80,.24);box-shadow:0 20px 60px rgba(0,0,0,.6);color:#f1e6df;display:flex;flex-direction:column}
+.nui-panel{top:72px;right:12px;bottom:86px;width:min(480px,calc(100vw - 24px));border-radius:16px}
+.nui-flow{top:72px;right:12px;bottom:86px;width:min(560px,calc(100vw - 24px));border-radius:16px}
+.nui-voice{right:12px;bottom:92px;width:min(420px,calc(100vw - 24px));height:min(520px,60vh);border-radius:16px}
+.nui-panel header,.nui-flow header,.nui-voice header{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 14px;border-bottom:1px solid rgba(255,130,80,.16);font:600 11px 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase}
+.nui-panel header>span{margin-left:auto;display:flex;gap:4px}.nui-hint{opacity:.55;letter-spacing:.06em;text-transform:none;font-weight:400}
+.nui-panel header button,.nui-flow header button,.nui-voice header button{all:unset;box-sizing:border-box;min-width:44px;min-height:44px;display:grid;place-items:center;padding:0 10px;cursor:pointer;border-radius:10px;font-size:12px}
+.nui-flow header button,.nui-voice header button{margin-left:auto;font-size:22px}
+.nui-panel header button:hover,.nui-flow header button:hover,.nui-voice header button:hover{background:rgba(255,130,80,.14)}
+.nui-panel pre{margin:0;padding:14px;overflow:auto;flex:1;font:12.5px/1.55 'JetBrains Mono',monospace;color:#f0dccf;white-space:pre}
+.nui-flow-body,.nui-voice-body{flex:1;min-height:0;position:relative}
+.nui-flow .react-flow{background:transparent}
+.nf{background:rgba(26,17,14,.88)!important;color:#f1e6df!important;border:1px solid rgba(255,130,80,.3)!important;border-radius:12px!important;font-size:11.5px!important;width:200px!important;padding:8px 10px!important;line-height:1.4}
+.nf-q{border-color:#ffb070!important}.nf-a{border-color:#ff7a4c!important;box-shadow:0 0 18px rgba(255,100,50,.25)}.nf-s{opacity:.92}.nf-u{border-style:dashed!important}
+.nui-flow .react-flow__controls button{background:rgba(26,17,14,.9);color:#f1e6df;border-color:rgba(255,130,80,.25);min-width:32px;min-height:32px}
+.nui-flow .react-flow__edge-path{stroke:rgba(255,150,100,.6)}
+@media (max-width:700px){.nui-panel,.nui-flow{left:8px;right:8px;width:auto;top:64px;bottom:76px}.nui-voice{left:8px;right:8px;width:auto;bottom:80px}}
+@media (prefers-reduced-motion:reduce){.nui-dot{animation:none}}

@@ -1,0 +1,15 @@
+/* NOX · оболочка вау: пепел, HUD-рамки, тема Shoelace «тёмное стекло» */
+#nox-fx-ash{position:fixed;left:50%;top:44%;width:min(86vmin,900px);height:min(86vmin,900px);transform:translate(-50%,-50%);z-index:0;pointer-events:none;opacity:.85;
+  -webkit-mask-image:radial-gradient(circle,#000 18%,rgba(0,0,0,.55) 48%,transparent 72%);mask-image:radial-gradient(circle,#000 18%,rgba(0,0,0,.55) 48%,transparent 72%)}
+#nox-fx-ash canvas{width:100%!important;height:100%!important}
+.nox-hud>.arwes-frames,.nox-hud>div[class*="frame"]{pointer-events:none}
+.nox-hud svg{pointer-events:none}
+.sl-theme-dark,:root{
+  --sl-color-primary-500:#ff7a4c;--sl-color-primary-600:#e8431f;--sl-color-primary-400:#ff9a6c;
+  --sl-panel-background-color:rgba(14,10,10,.78);--sl-panel-border-color:rgba(255,130,80,.2);
+  --sl-overlay-background-color:rgba(2,2,4,.6);--sl-input-background-color:rgba(20,14,12,.6);--sl-input-border-color:rgba(255,130,80,.22);
+  --sl-input-border-color-focus:#ff9a6c;--sl-focus-ring-color:rgba(255,154,108,.5);--sl-tooltip-background-color:rgba(18,12,10,.92);
+  --sl-border-radius-medium:12px;--sl-shadow-large:0 18px 50px rgba(0,0,0,.55)}
+sl-drawer::part(panel),sl-dialog::part(panel),sl-dropdown::part(panel),sl-popup::part(popup){backdrop-filter:blur(22px) saturate(1.2);-webkit-backdrop-filter:blur(22px) saturate(1.2);border:1px solid rgba(255,130,80,.2)}
+sl-button::part(base),sl-select::part(combobox),sl-input::part(base){background:rgba(24,16,14,.62);border-color:rgba(255,130,80,.22);min-height:44px}
+@media (prefers-reduced-motion:reduce){#nox-fx-ash{display:none}}
