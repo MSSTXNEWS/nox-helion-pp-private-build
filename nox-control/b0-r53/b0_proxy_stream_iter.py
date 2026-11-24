@@ -15,18 +15,32 @@ class ProxyDeltaBody:
             raise TypeError("HOLD_PROXY_CLOSEABLE_NATIVE_ITERATOR_REQUIRED")
         self._upstream = upstream
         self._closed = False
+        self._faulted = False
 
     def __iter__(self):
         return self
 
     def __next__(self):
+        if self._faulted:
+            raise RuntimeError("HOLD_PROXY_STREAM_PREVIOUS_FAULT")
         if self._closed:
             raise StopIteration
         try:
-            return encode_native_delta(next(self._upstream))
-        except BaseException:
-            # EOF also closes; a failing close must not become a clean EOF.
+            frame = next(self._upstream)
+        except StopIteration:
             self.close()
+            raise
+        except BaseException:
+            self._faulted = True
+            self.close()
+            raise
+        try:
+            return encode_native_delta(frame)
+        except BaseException as exc:
+            self._faulted = True
+            self.close()
+            if isinstance(exc, StopIteration):
+                raise RuntimeError("HOLD_PROXY_ENCODER_FALSE_EOF") from exc
             raise
 
     def close(self):
@@ -36,5 +50,9 @@ class ProxyDeltaBody:
             try:
                 self._upstream.close()
             except StopIteration as exc:
+                self._faulted = True
                 # Disposal failure must never masquerade as a clean stream EOF.
                 raise RuntimeError("HOLD_PROXY_CLOSE_FALSE_EOF") from exc
+            except BaseException:
+                self._faulted = True
+                raise

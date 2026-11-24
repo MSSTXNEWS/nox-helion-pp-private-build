@@ -65,7 +65,7 @@ class ProxyBodyTests(unittest.TestCase):
             body = ProxyDeltaBody(src)
             with self.assertRaises(HoldWire):
                 next(body)
-            with self.assertRaises(StopIteration):
+            with self.assertRaisesRegex(RuntimeError, "HOLD_PROXY_STREAM_PREVIOUS_FAULT"):
                 next(body)
             self.assertEqual((src.pulls, src.closes), (1, 1))
 
@@ -98,6 +98,34 @@ class ProxyBodyTests(unittest.TestCase):
         src = Upstream(close_fail=StopIteration("disconnect"))
         with self.assertRaisesRegex(RuntimeError, "HOLD_PROXY_CLOSE_FALSE_EOF"):
             ProxyDeltaBody(src).close()
+        self.assertEqual((src.pulls, src.closes), (0, 1))
+
+    def test_fault_is_sticky_after_partial_output_or_failed_disposal(self):
+        cases = (
+            (Upstream([frame("turn2-1", "partial")], fail=OSError("lost")), OSError, True),
+            (Upstream([frame("turn2-1", "partial"), {"type": "done"}]), HoldWire, True),
+            (Upstream(close_fail=StopIteration("broken disposal")), RuntimeError, False),
+            (Upstream(close_fail=OSError("broken disposal")), OSError, False),
+        )
+        for src, error, partial in cases:
+            with self.subTest(error=error, partial=partial):
+                body = ProxyDeltaBody(src)
+                if partial:
+                    self.assertIn(b"partial", next(body))
+                with self.assertRaises(error):
+                    next(body)
+                pulls = src.pulls
+                for _ in range(2):
+                    with self.assertRaisesRegex(RuntimeError, "HOLD_PROXY_STREAM_PREVIOUS_FAULT"):
+                        next(body)
+                    body.close()
+                self.assertEqual((src.pulls, src.closes), (pulls, 1))
+        src = Upstream(close_fail=OSError("disconnect disposal"))
+        body = ProxyDeltaBody(src)
+        with self.assertRaises(OSError):
+            body.close()
+        with self.assertRaisesRegex(RuntimeError, "HOLD_PROXY_STREAM_PREVIOUS_FAULT"):
+            next(body)
         self.assertEqual((src.pulls, src.closes), (0, 1))
 
     def test_noncloseable_source_refused(self):
