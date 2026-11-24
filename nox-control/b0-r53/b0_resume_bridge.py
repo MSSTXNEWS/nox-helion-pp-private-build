@@ -50,17 +50,33 @@ def bind_existing_resume(*, preflight, expected_owner_sha, dialog_id, session_id
 
 def prepare_existing_resume_from_owner_get(*, client, expected_owner_sha, dialog_id,
                                            session_id, row_count, canonical_rows,
-                                           prior_witnesses, browser_calls, admitted_calls):
+                                           prior_witnesses, browser_calls, admitted_calls,
+                                           observed_browser_rows, observed_browser_calls):
     """Bind the exact verified owner GET snapshot; no second history GET or POST.
 
-    The caller must supply separately authenticated pins and native admission.
+    The caller must supply a separate browser DOM observation and counter,
+    separately authenticated pins and native admission.
     The returned evidence is not permission to call the model.
     """
     from owner_chat_probe import _existing_dialog_prefix_snapshot
     preflight, owner_rows = _existing_dialog_prefix_snapshot(
         client, dialog_id, expected_owner_sha, row_count)
-    return bind_existing_resume(
+    if (type(observed_browser_rows) is not list
+            or observed_browser_rows is owner_rows
+            or observed_browser_rows is canonical_rows
+            or len(observed_browser_rows) != row_count
+            or type(observed_browser_calls) is not int
+            or type(browser_calls) is not int
+            or observed_browser_calls != browser_calls):
+        raise ValueError("HOLD_ACTUAL_BROWSER_PREFIX")
+    # Validate owner GET independently; the returned legacy fixture evidence
+    # must never be used as proof of an actual browser observation.
+    bind_existing_resume(
         preflight=preflight, expected_owner_sha=expected_owner_sha, dialog_id=dialog_id,
         session_id=session_id, owner_rows=owner_rows, canonical_rows=canonical_rows,
         prior_witnesses=prior_witnesses, browser_calls=browser_calls,
         admitted_calls=admitted_calls)
+    return BrowserResumeEvidence(
+        dialog_id=dialog_id, session_id=session_id, prior_rows=canonical_rows,
+        prior_witnesses=prior_witnesses, browser_rows=observed_browser_rows,
+        browser_calls=observed_browser_calls, admitted_calls=admitted_calls)

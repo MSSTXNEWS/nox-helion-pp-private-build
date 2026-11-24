@@ -95,7 +95,8 @@ class B0ResumeBridgeTests(unittest.TestCase):
         for n in (1, 2):
             f = fixture(n)
             kwargs = {k: v for k, v in f.items() if k not in ('preflight', 'owner_rows')}
-            kwargs.update(client='fixture-client', row_count=2*n)
+            kwargs.update(client='fixture-client', row_count=2*n,
+                          observed_browser_rows=rows(n), observed_browser_calls=7)
             history = dict(dialog_id=DIALOG, messages=f['owner_rows'])
             with self.subTest(n=n), patch.object(probe, 'require_preturn_owner_binding') as before, \
                     patch.object(probe, 'owner_readback_json', return_value=history) as get, \
@@ -118,10 +119,36 @@ class B0ResumeBridgeTests(unittest.TestCase):
         from b0_resume_bridge import prepare_existing_resume_from_owner_get
         f = fixture(1)
         kwargs = {k: v for k, v in f.items() if k not in ('preflight', 'owner_rows')}
-        kwargs.update(client='fixture-client', row_count=2)
+        kwargs.update(client='fixture-client', row_count=2,
+                      observed_browser_rows=rows(1), observed_browser_calls=7)
         with patch.object(probe, 'require_preturn_owner_binding'), \
                 patch.object(probe, 'owner_readback_json', return_value=dict(dialog_id=DIALOG, messages=f['owner_rows'])) as get, \
                 patch.object(probe, 'require_postturn_owner_binding', side_effect=RuntimeError('HOLD_OWNER')):
             with self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER'):
                 prepare_existing_resume_from_owner_get(**kwargs)
             get.assert_called_once()
+
+    def test_single_get_requires_separate_browser_prefix(self):
+        from unittest.mock import patch
+        import owner_chat_probe as probe
+        from b0_resume_bridge import prepare_existing_resume_from_owner_get
+        for n in (1, 2):
+            f = fixture(n)
+            kwargs = {k: v for k, v in f.items() if k not in ('preflight', 'owner_rows')}
+            kwargs.update(client='fixture-client', row_count=2*n)
+            wrong = rows(n)
+            wrong[-1]['content'] = 'stale browser'
+            wrong_id = rows(n)
+            wrong_id[-1]['message_id'] = 'wrong-id'
+            cases = ((None, 7), (f['canonical_rows'], 7), (rows(n), 6),
+                     (rows(n), True), (rows(n), 8), (wrong, 7), (wrong_id, 7))
+            for observed, count in cases:
+                with self.subTest(n=n, count=count), \
+                        patch.object(probe, 'require_preturn_owner_binding'), \
+                        patch.object(probe, 'owner_readback_json', return_value=dict(
+                            dialog_id=DIALOG, messages=f['owner_rows'])) as get, \
+                        patch.object(probe, 'require_postturn_owner_binding'):
+                    with self.assertRaisesRegex(ValueError, 'HOLD_(ACTUAL_BROWSER_PREFIX|RESUME_BROWSER_PREFIX)'):
+                        prepare_existing_resume_from_owner_get(**kwargs,
+                            observed_browser_rows=observed, observed_browser_calls=count)
+                    get.assert_called_once()
