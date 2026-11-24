@@ -1,0 +1,64 @@
+{
+  "schema": "NOX_D3_R93_SOURCE_RELEASE_V1",
+  "base": "2650d10dbbad77d4005177c2144b4bf02de0b273",
+  "source_only": true,
+  "native_accepted": false,
+  "claim": 7142259359,
+  "entrypoint": "nox-control/b2-r92/quality_physical_pair.py",
+  "entrypoint_blob": "cb1608cf422a146e958c154eb39a6ed91267be38",
+  "donors": [
+    {
+      "path": "nox-control/b2-r92/b3_r71_physical_terminal_composition.cjs",
+      "blob": "4c0cd74bc0453d3e450894668338499549217f50",
+      "commit": "5a061fb98bd6d9fcab4c64abbe6f65317fef3a47"
+    },
+    {
+      "path": "nox-control/b2-r92/b3_r66_raw_readback_binding.cjs",
+      "blob": "c4331cc22cb94da0c67fa765e27c838d7b354c66",
+      "commit": "5a061fb98bd6d9fcab4c64abbe6f65317fef3a47"
+    },
+    {
+      "path": "nox-control/b2-r92/b3_r65_r64_physical_pin_check.cjs",
+      "blob": "1e22eff92da6b951ad22dea2b2db09201b2d371b",
+      "commit": "5a061fb98bd6d9fcab4c64abbe6f65317fef3a47"
+    },
+    {
+      "path": "nox-control/b2-r92/b3_r70_s03_terminal_identity.cjs",
+      "blob": "ced1789a8ab19b625888489bf97faa79e07c7e1b",
+      "commit": "e636272fb8a0342c03470538fad28977d3518f2c"
+    },
+    {
+      "path": "nox-control/b2-r92/b3_r69_exchange_scope_binding.cjs",
+      "blob": "18b3be8fc4264b32d51a57ad4db367b3ba786d41",
+      "commit": "e636272fb8a0342c03470538fad28977d3518f2c"
+    },
+    {
+      "path": "nox-control/b2-r92/b3_r68_route_binding.cjs",
+      "blob": "6d0fef57783346fe33d59ca39a625015514ae168",
+      "commit": "e636272fb8a0342c03470538fad28977d3518f2c"
+    },
+    {
+      "path": "nox-control/b2-r92/retained_pair.py",
+      "blob": "acdd8421db132d7754faa1229e493920d5bf5682",
+      "commit": "1c9f984247e557f9b2e393f9e2c24246f4f6a8de"
+    }
+  ],
+  "python_paths": [
+    "nox-control/b2-r92",
+    "nox-control/d3-r91",
+    "nox-control/d3-r89",
+    "nox-control/d3-r87",
+    "nox-control/b2-r86",
+    "nox-control/d3-r85",
+    "nox-control/b2-r84",
+    "nox-control/d3-r83",
+    "nox-control/b2-r81",
+    "nox-control/d3-r80",
+    "nox-control/b2-r79",
+    "nox-control/d3-r78",
+    "nox-control/d3-r74/staging/py",
+    "nox-control/d3-r76",
+    "nox-control/b2-r77"
+  ],
+  "runtime_authority": "NONE; owner admission and independent production provider required"
+}
