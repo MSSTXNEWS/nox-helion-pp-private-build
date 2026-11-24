@@ -1,0 +1,57 @@
+{
+  "schema": "NOX_D3_R99_JOINT_SOURCE_ARTIFACT_V1",
+  "instructions_version": "0.0.6",
+  "claim": 7146368973,
+  "parent": "272b67b1755ce2bd36b62e7c3878766cb4bf5998",
+  "scope": "offline joint source only; pre-ACK independent observer and owner provider absent; no production install",
+  "native_accepted": false,
+  "authentication_verified": false,
+  "next_post_allowed": false,
+  "training_admitted": false,
+  "r93_manifest": {
+    "path": "nox-control/d3-r93/release.json",
+    "blob": "590bd23730474959ea9b6327475c217869ddb417"
+  },
+  "wire": [
+    {
+      "path": "nox-control/d3-r99/wire/b0_proxy_stream_iter.py",
+      "blob": "fa6ac58ac4af6797b1d61b0e3c1ee8950641ce79",
+      "commit": "1610a9688bae986a30621befc58b004e07b67d31"
+    },
+    {
+      "path": "nox-control/d3-r99/wire/b0_named_delta_encoder.py",
+      "blob": "c7d0c351b0239bb7155ffbc8c0362e919ee79cb1",
+      "commit": "1610a9688bae986a30621befc58b004e07b67d31"
+    },
+    {
+      "path": "nox-control/d3-r99/wire/b1_browser_bundle.js",
+      "blob": "1059f1afdfc31322f44253fd66035877a04203b5",
+      "commit": "d1f470fe40cb88f0d9221f6031e3f36b833f5346"
+    },
+    {
+      "path": "nox-control/d3-r99/recovery/canonical_text.py",
+      "blob": "8ce1165ca2e553c1e05379bb1774c09c059ca8e2",
+      "commit": "68d5dd4ea1022dc55d3ee7b54347d053fb936e19"
+    },
+    {
+      "path": "nox-control/d3-r97/browser_projection_gate.py",
+      "blob": "50b29f9ad755b09cc686cd91e2a11213f37aadba",
+      "commit": "272b67b1755ce2bd36b62e7c3878766cb4bf5998"
+    }
+  ],
+  "b5_imports": {
+    "b5_s03_verifier_r54": "df94c535273dde1fd2609f555d1d615eacfda831",
+    "b5_chain_guard": "f321f4ad36867e434ba72db9264a88cf23a91fb8",
+    "b5_retained_ingress": "3e2a8693574608bb773eb7ed4140b574bc5b1efb",
+    "retained_pair": "acdd8421db132d7754faa1229e493920d5bf5682"
+  },
+  "preserve": [
+    "R71 original manifest (R77)",
+    "R73 original manifest",
+    "R93 original import order",
+    "R95 and R97 immutable prior release"
+  ],
+  "owner_prerequisites": "HOLD: independent authenticated per-turn pre-ACK browser observer, B3 terminal link provider, native owner/CAS/STOP/lease/resources, installed/served build, original TaskID/spec receipt",
+  "production_ready": false,
+  "pre_ack_observer_bound": false
+}
