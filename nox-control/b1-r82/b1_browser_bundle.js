@@ -43,9 +43,10 @@ function create({container,host,crypto=root.crypto}){
    if(!context||typeof context!=='object')hold();
    // Historical/uncertain ACK never gets a fabricated pre-ACK observation.
    if(context.ack_state!=='NOT_SENT')return false;
-   const c=Object.freeze({...context});
-   if(c.ack_state!=='NOT_SENT'||!c.scope||!c.terminal)hold();
-   const sc=Object.freeze({...c.scope}),t=Object.freeze({...c.terminal});
+   const snapshot={...context};
+   if(snapshot.ack_state!=='NOT_SENT'||!snapshot.scope||!snapshot.terminal)hold();
+   const sc=Object.freeze({...snapshot.scope}),t=Object.freeze({...snapshot.terminal});
+   const c=Object.freeze({...snapshot,scope:sc,terminal:t});
    if(!SCOPE.every(k=>k.endsWith('sha256')?pin(sc[k]):id(sc[k]))||
       !BIND.every(k=>k==='turn'?[2,3].includes(t[k]):id(t[k]))||
       !pin(c.browser_sha256)||!pin(c.terminal_receipt_sha256)||
@@ -1044,11 +1045,13 @@ root.NOXB1PreAckObserver=Object.freeze({create});
       }
       let observed=false;
       if(observePreAck){
+        const observeCtrl=new AbortController();
         try{
-          observed=await boundedRead(()=>observePreAck(s,proof,witness,signal),
+          observed=await boundedRead(()=>observePreAck(s,proof,witness,observeCtrl.signal),
             'HOLD_STREAM_PREACK_OBSERVATION_TIMEOUT',uiProjectionTimeoutMs,signal);
           if(observed!==true&&observed!==false)hold('HOLD_STREAM_PREACK_OBSERVATION');
         }catch(err){discardReadback();if(err&&err.code)throw err;hold('HOLD_STREAM_PREACK_OBSERVATION');}
+        finally{observeCtrl.abort();}
       }
       // Origin-local, cross-tab durable fence is opt-in. RESERVE and SENDING
       // must commit in IndexedDB BEFORE network ACK. An uncertain ACK is never
