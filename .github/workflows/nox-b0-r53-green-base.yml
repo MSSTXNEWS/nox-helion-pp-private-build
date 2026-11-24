@@ -1,0 +1,32 @@
+name: B0 R53 green-base continuation offline
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b0-r53/**'
+      - '.github/workflows/nox-b0-r53-green-base.yml'
+permissions:
+  contents: read
+jobs:
+  b0-r53-offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact integration checkout and run offline tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "B0_TESTED_MERGE=$(git rev-parse HEAD)"
+          git ls-files -s nox-control/b0-r53/ .circleci/config.yml
+          test "$(git rev-parse HEAD:.circleci/config.yml)" = 7cf197b8654cba15a940b6a9685e70ac1a6b634a
+          python -B -m py_compile nox-control/b0-r53/owner_chat_probe.py nox-control/b0-r53/test_owner_chat_probe.py
+          cd nox-control/b0-r53
+          python -B - <<'PY'
+          import unittest
+          suite = unittest.defaultTestLoader.discover('.', pattern='test_owner_chat_probe.py')
+          assert suite.countTestCases() >= 108, 'missing regression coverage'
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          print('B0_NATIVE_ACCEPTED=false')
+          raise SystemExit(not result.wasSuccessful())
+          PY
