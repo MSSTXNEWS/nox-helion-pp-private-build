@@ -20,7 +20,7 @@ import base64,subprocess
 from playwright.sync_api import sync_playwright
 def out(tag,png,w,q):
     j='/tmp/s_%s.jpg'%tag
-    subprocess.run(['ffmpeg','-loglevel','error','-y','-i',png,'-vf','scale=%d:-1'%w,'-q:v',q,j])
+    subprocess.run([str(x) for x in ['ffmpeg','-loglevel','error','-y','-i',png,'-vf','scale=%d:-1'%w,'-q:v',q,j]])
     b=base64.b64encode(open(j,'rb').read()).decode()
     print('B64_%s_BEGIN'%tag)
     for i in range(0,len(b),900): print(b[i:i+900])
