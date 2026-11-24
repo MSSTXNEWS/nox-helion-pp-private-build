@@ -9,7 +9,7 @@ from playwright.async_api import async_playwright
 async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(args=["--use-gl=swiftshader","--enable-unsafe-swiftshader"]); errs=[]
-        for name,vp,q in (("desk",{"width":1440,"height":900},45),("mob",{"width":390,"height":844},45)):
+        for name,vp,q in (("desk",{"width":1440,"height":900},38),("mob",{"width":390,"height":844},40)):
             pg=await b.new_page(viewport=vp); pg.on("pageerror", lambda e: errs.append(str(e)[:150]))
             await pg.goto("http://127.0.0.1:8091/web/photo.html"); await pg.wait_for_timeout(7000); await pg.keyboard.press("Escape"); await pg.wait_for_timeout(700)
             img=await pg.screenshot(type="jpeg", quality=q)
