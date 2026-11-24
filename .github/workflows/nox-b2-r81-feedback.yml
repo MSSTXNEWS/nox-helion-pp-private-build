@@ -1,0 +1,37 @@
+name: B2 R81 reviewer feedback
+on:
+  pull_request:
+    paths: ['nox-control/b2-r81/**', '.github/workflows/nox-b2-r81-feedback.yml']
+permissions:
+  contents: read
+jobs:
+  feedback:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b2-r81-review-feedback-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Exact R80 feedback
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$PWD/nox-control/d3-r74/staging"
+          own="$PWD/nox-control/b2-r81"
+          test "$(git rev-parse HEAD:nox-control/d3-r80/review_release.py)" = ddaafb5fa397eac0418aa235a5627b2b275bec41
+          test "$(git rev-parse HEAD:nox-control/b2-r79/quality_closure.py)" = 9a84b0fe11c63ca8fab41442966bfbee2d6261ce
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$own:$PWD/nox-control/d3-r80:$PWD/nox-control/b2-r79:$PWD/nox-control/d3-r78:$stage/py:$PWD/nox-control/d3-r76:$PWD/nox-control/b2-r77:$tmp"
+          export D3_B4_MODULE="$stage/b4/b4_existing_turn_pair.mjs"
+          cd "$tmp"
+          python3 -B -m unittest -v test_review_feedback.ReviewFeedback
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false
