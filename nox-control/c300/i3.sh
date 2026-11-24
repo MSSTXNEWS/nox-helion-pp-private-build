@@ -1,5 +1,2 @@
-#!/bin/bash
-grep -n 'glm_busy\|"/api/sys"\|/api/sys' /root/nox/web_server.py | cut -c1-230
-grep -n "glm_up" /root/nox/web/nox_mode.js | cut -c1-300
-for f in nox-nav.js nox-wow.js; do node --check /root/nox/web/$f.bak_* 2>&1 | head -2 | cut -c1-120; ls /root/nox/web/$f.bak_* | tail -1; done
-head -c 300 /root/nox/web/nox-nav.js; echo; grep -c "" /root/nox/logs/web_server.log; tail -3 /root/nox/logs/web_server.log | cut -c1-200
+grep -v "requires" /workspace/nox/invoke_install.log | cut -c1-250 | tail -25
+cat /workspace/nox/invoke/lib/python3.10/site-packages/zz_nox_main.pth; /workspace/nox/invoke/bin/python -c "import numpy;print(numpy.__file__)" 2>&1|tail -1
