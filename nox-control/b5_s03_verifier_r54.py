@@ -685,5 +685,176 @@ class ResumeBridgeTests(unittest.TestCase):
         old[0]["content"] = "rewritten"
         self.assertEqual(finish(bridge, 4), "RESUME_EVIDENCE_MATCHED")
 
+
+def load_pinned_s03_artifacts(*, writer_fd, readback_fd, writer_sha256,
+                              readback_sha256, dialog_id, session_id, sequence,
+                              prior_rows=None, prior_witnesses=None):
+    """Read only from owner-opened immutable artifact descriptors.
+
+    The authenticated owner/verifier MUST supply both independent pins and
+    scope, and open the authorized writer and reader objects separately.
+    This adapter does not derive authority from files, paths or their metadata.
+    It returns (canonical rows, witness tuple) for BrowserResumeEvidence.
+    It never opens paths, writes, closes caller descriptors, moves offsets,
+    sends model requests, or grants native admission.
+    """
+    import os
+    import stat
+
+    def signature(info):
+        return (info.st_dev, info.st_ino, info.st_size,
+                info.st_mtime_ns, info.st_ctime_ns)
+
+    def read_exact(fd, before):
+        if not stat.S_ISREG(before.st_mode) or not 0 < before.st_size <= 200000:
+            raise ValueError("HOLD_S03_ARTIFACT_TYPE_OR_SIZE")
+        chunks = []
+        offset = 0
+        while offset < before.st_size:
+            chunk = os.pread(fd, min(65536, before.st_size - offset), offset)
+            if not chunk:
+                raise ValueError("HOLD_S03_ARTIFACT_CHANGED")
+            chunks.append(chunk)
+            offset += len(chunk)
+        if os.pread(fd, 1, offset) or signature(os.fstat(fd)) != signature(before):
+            raise ValueError("HOLD_S03_ARTIFACT_CHANGED")
+        return b"".join(chunks)
+
+    if (type(sequence) is not int or sequence not in (1, 2, 3)
+            or any(type(fd) is not int or fd < 0 for fd in (writer_fd, readback_fd))
+            or writer_fd == readback_fd
+            or any(not isinstance(pin, str) or re.fullmatch(r"[a-f0-9]{64}", pin) is None
+                   for pin in (writer_sha256, readback_sha256))
+            or writer_sha256 == readback_sha256):
+        raise ValueError("HOLD_S03_ARTIFACT_INPUT")
+    try:
+        wstat, rstat = os.fstat(writer_fd), os.fstat(readback_fd)
+        if (wstat.st_dev, wstat.st_ino) == (rstat.st_dev, rstat.st_ino):
+            raise ValueError("HOLD_S03_ARTIFACT_ALIAS")
+        writer_raw = read_exact(writer_fd, wstat)
+        readback_raw = read_exact(readback_fd, rstat)
+        if (signature(os.fstat(writer_fd)) != signature(wstat)
+                or signature(os.fstat(readback_fd)) != signature(rstat)):
+            raise ValueError("HOLD_S03_ARTIFACT_CHANGED")
+    except OSError:
+        raise ValueError("HOLD_S03_ARTIFACT_READ") from None
+    if digest(writer_raw) != writer_sha256 or digest(readback_raw) != readback_sha256:
+        raise ValueError("HOLD_S03_ARTIFACT_PIN")
+    try:
+        document = strict_owner_json_bytes(readback_raw)
+    except RuntimeError:
+        raise ValueError("HOLD_S03_ARTIFACT_JSON") from None
+    if type(document) is not dict or type(document.get("messages")) is not list:
+        raise ValueError("HOLD_S03_ARTIFACT_JSON")
+    canonical_rows = document["messages"]
+    witnesses = (writer_raw, readback_raw, writer_sha256, readback_sha256)
+    if sequence == 1:
+        valid = (prior_rows is None and prior_witnesses is None
+                 and canonical_s03_firstturn_prefix_valid(
+                     *witnesses, dialog_id, canonical_rows,
+                     expected_session_id=session_id))
+    elif sequence == 2 and (prior_rows is not None or prior_witnesses is not None):
+        valid = canonical_s03_resumed_second_turn_valid(
+            *witnesses, dialog_id, canonical_rows, expected_session_id=session_id,
+            prior_messages=prior_rows, prior_witnesses=prior_witnesses)
+    else:
+        valid = canonical_s03_pinned_evidence_valid(
+            *witnesses, dialog_id, canonical_rows, expected_session_id=session_id,
+            expected_sequence=sequence, expected_prior_messages=prior_rows,
+            prior_witnesses=prior_witnesses)
+    if not valid:
+        raise ValueError("HOLD_S03_ARTIFACT_SCOPE_OR_CHAIN")
+    return canonical_rows, witnesses
+
+
+class PinnedArtifactIngressTests(unittest.TestCase):
+    def test_read_only_artifacts_feed_existing_dialog_bridge(self):
+        import os
+        import tempfile
+        from contextlib import ExitStack
+        session = "owner-session"
+        history = [dict(row, message_id=f"row-{i}", session_id=session,
+                        dialog_id=DIALOG)
+                   for i, row in enumerate(rows("¿Qué recuerdas? 🪐") + [
+                       dict(role="user", content="¿Y después?"),
+                       dict(role="assistant", content="Помню. Sí 🪐")], 1)]
+
+        def wire(obj):
+            return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
+
+        def pair(items):
+            sequence = len(items) // 2
+            common = dict(source="canonical_s03", event_id=f"event-{sequence}",
+                          turn_id=f"turn-{sequence}", sequence=sequence,
+                          dialog_id=DIALOG, session_id=session,
+                          full_transcript_sha256=multiturn_transcript_sha256(
+                              items, expected_sequence=sequence, _prefix_only=sequence == 1),
+                          message_ids_sha256=digest(wire([x["message_id"] for x in items])))
+            return (wire(dict(common, verified=True, durable=True)),
+                    wire(dict(common, independent=True, messages=items,
+                              full_answer_sha256=digest(items[-1]["content"].encode()))))
+
+        with ExitStack() as stack:
+            def artifact(raw):
+                handle = stack.enter_context(tempfile.TemporaryFile())
+                handle.write(raw)
+                handle.flush()
+                handle.seek(1)
+                return handle
+
+            def inputs(items):
+                writer, reader = pair(items)
+                w, r = artifact(writer), artifact(reader)
+                return dict(writer_fd=w.fileno(), readback_fd=r.fileno(),
+                            writer_sha256=digest(writer), readback_sha256=digest(reader),
+                            dialog_id=DIALOG, session_id=session, sequence=len(items)//2)
+
+            first = inputs(history[:2])
+            old, pins = load_pinned_s03_artifacts(**first)
+            self.assertEqual(old, history[:2])
+            self.assertEqual(os.lseek(first["writer_fd"], 0, os.SEEK_CUR), 1)
+            self.assertEqual(os.lseek(first["readback_fd"], 0, os.SEEK_CUR), 1)
+            for n in (4, 6):
+                args = inputs(history[:n])
+                bridge = BrowserResumeEvidence(
+                    dialog_id=DIALOG, session_id=session, prior_rows=old,
+                    prior_witnesses=pins, browser_rows=old, browser_calls=n//2-1,
+                    admitted_calls=n//2-1)
+                current, current_pins = load_pinned_s03_artifacts(
+                    **args, prior_rows=old, prior_witnesses=pins)
+                self.assertEqual(current, history[:n])
+                self.assertEqual(bridge.finish(
+                    browser_rows=current, canonical_rows=current, witnesses=current_pins,
+                    browser_calls=n//2, admitted_calls=n//2,
+                    prompt=current[-2]["content"], stream_answer=current[-1]["content"],
+                    terminal_saved=True, dom_matches=True), "RESUME_EVIDENCE_MATCHED")
+                old, pins = current, current_pins
+            cases = [
+                (dict(writer_sha256="0"*64), "PIN"),
+                (dict(session_id="foreign"), "SCOPE_OR_CHAIN"),
+                (dict(sequence=2), "SCOPE_OR_CHAIN"),
+                (dict(writer_fd=True), "INPUT"),
+                (dict(readback_fd=first["writer_fd"]), "INPUT"),
+            ]
+            alias = os.dup(first["writer_fd"])
+            stack.callback(os.close, alias)
+            cases.append((dict(readback_fd=alias), "ALIAS"))
+            large = artifact(b"x"*200001)
+            cases.append((dict(readback_fd=large.fileno()), "TYPE_OR_SIZE"))
+            rd, wr = os.pipe()
+            stack.callback(os.close, rd)
+            stack.callback(os.close, wr)
+            cases.append((dict(readback_fd=rd), "TYPE_OR_SIZE"))
+            malformed = b'{"messages":[],"messages":[]}'
+            bad = artifact(malformed)
+            cases.append((dict(readback_fd=bad.fileno(), readback_sha256=digest(malformed)), "JSON"))
+            for overrides, reason in cases:
+                with self.subTest(reason=reason), self.assertRaisesRegex(ValueError, reason):
+                    load_pinned_s03_artifacts(**dict(first, **overrides))
+            # An invalid external pin cannot be repaired by self-hashing a file.
+            os.pwrite(first["readback_fd"], b"X", 0)
+            with self.assertRaisesRegex(ValueError, "PIN"):
+                load_pinned_s03_artifacts(**first)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
