@@ -1,0 +1,24 @@
+name: B3 R56 isolated combined candidate
+on:
+  pull_request:
+    paths:
+      - 'coordination/onepass/b3_r56_*'
+      - '.github/workflows/b3-r56-candidate.yml'
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Fetch exact source inputs
+        run: |
+          git fetch --no-tags --depth=1 origin 0c2228b88cffcb489c1d1f055dabf9aa2ac8d7c9 7f6607ce3defa3e2fb743a23538ad618048915a7
+      - name: Test emitted candidate with real Node codecs and callsites
+        run: |
+          node --version
+          node --check coordination/onepass/b3_r56_combined_candidate.js
+          node coordination/onepass/b3_r56_candidate_test.cjs
