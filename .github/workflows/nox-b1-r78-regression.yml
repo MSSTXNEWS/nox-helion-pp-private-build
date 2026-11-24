@@ -1,0 +1,27 @@
+name: NOX B1 R78 exact saved regression
+on:
+  pull_request:
+    branches:
+      - b1/r77-named-delta-missing-id-fence-20261124
+    paths:
+      - '.github/workflows/nox-b1-r78-regression.yml'
+permissions:
+  contents: read
+jobs:
+  r77-readable-stream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify exact source and run saved regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object nox-control/b1-r75/b1_browser_bundle.js)" = d0c0a689810be2bbad2d986f02c305e978d4f38f
+          test "$(git hash-object nox-control/b1-r77/b1_browser_bundle.js)" = 06eb77bcbb5530f1d58778e324c6ed7c6001d86f
+          test "$(git hash-object nox-control/b1-r77/test_named_delta_id.cjs)" = b53e1eca8be628b7c68d9439467916d2e0af35d5
+          node --version
+          node nox-control/b1-r77/test_named_delta_id.cjs
