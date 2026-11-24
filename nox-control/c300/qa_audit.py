@@ -2,15 +2,25 @@
 """NOX ревизор, уровень 2: аудит разделов по ТЗ «Топ-10 WOW». Чек-лист → задание на переделку → перепроверка → интеграция."""
 import os,json,time,asyncio,base64,re,urllib.request
 SITE="/workspace/nox/web/site"; OUT=SITE+"/qa"; RW=OUT+"/rework"; B="http://127.0.0.1:8091/web/"
-NICHE={"chat":("ИИ-чат","ChatGPT, Claude, Perplexity, Gemini, LobeChat","лента диалога, дерево чатов слева, живые виджеты Система/Ядро/События справа, теги быстрых команд, оценка 👍/👎, голографическая анимация мышления"),
-"cinema":("кинотеатр","Netflix, Кинопоиск, Apple TV, Plex","герой-баннер с трейлером, ряды-карусели постеров, карточка с рейтингом и кнопкой Смотреть, плеер"),
-"news":("новостной портал","The Verge, BBC, Google News, Feedly","главная новость крупно, сетка карточек с фото, рубрики, время публикации, сводка NOX"),
-"photo":("фоторедактор","Krea, Firefly, Leonardo, Ideogram","полноэкранный холст, плавающие стеклянные панели инструментов, строка промпта, слои"),
-"studio":("ИИ-фотостудия","Krea, Firefly, Leonardo, Ideogram, Midjourney","полноэкранный холст, слои, маски, строка промпта, диалог с NOX"),
-"music":("музыкальный сервис","Spotify, Яндекс Музыка, Apple Music","обложки, плейлисты, мини-плеер, волна"),
-"tools":("набор инструментов","Notion, Figma, VS Code","сетка инструментов, быстрый запуск"),
-"index":("главный экран ИИ-системы","Apple visionOS, Arc, Raycast","сцена, приветствие, быстрые действия")}
-CHECK=["Шапка, нижняя панель и фон-солнце как у эталона, ничего поверх них","Есть обязательные паттерны ниши","Построено на готовых модулях, не топорно","Нет мёртвых кнопок, заглушек и фейковых цифр","Нет JS-ошибок, 404, выхода за край экрана","Мобильная версия удобна на 390px","Стекло, сдержанный свет, без неона (10+10+10)","WOW на уровне топ-10 ниши: 8/10 и выше"]
+NICHE={"chat":("ИИ-чат","Claude, Gemini, ChatGPT, Perplexity, Copilot, Grok, Le Chat, DeepSeek, Kimi, Meta AI","лента диалога, дерево чатов слева, блоки рассуждения, ветвление ответа, артефакты справа, источники, живые виджеты, теги быстрых команд, оценка 👍/👎"),
+"cinema":("кинотеатр","Netflix, Disney+, HBO Max, Prime Video, Apple TV, Кинопоиск, Okko, Crunchyroll, Plex, Jellyfin","герой-баннер с трейлером, ряды-карусели постеров, карточка с рейтингом и кнопкой Смотреть, плеер"),
+"music":("музыкальный сервис","Spotify, Apple Music, YouTube Music, Яндекс Музыка, Tidal, Qobuz, Deezer, SoundCloud, Amazon Music, Navidrome","обложки, плейлисты, мини-плеер, волна, очередь"),
+"news":("новостной портал","Google News, Apple News, BBC, NYT, Bloomberg, The Verge, Feedly, Substack, Meduza, Яндекс Новости","главная новость крупно, сетка карточек с фото, рубрики, время публикации, сводка NOX"),
+"photo":("фоторедактор / фотостудия","Midjourney, Nano Banana, ChatGPT Images, Firefly, Ideogram, Flux, Leonardo, Krea, Recraft, ComfyUI","полноэкранный холст, плавающие стеклянные панели инструментов, строка промпта, слои"),
+"studio":("ИИ-фотостудия","Midjourney, Nano Banana, ChatGPT Images, Firefly, Ideogram, Flux, Leonardo, Krea, Recraft, ComfyUI","холст, слои, маски, строка промпта, диалог с NOX, галерея результатов"),
+"tools":("набор инструментов","Notion, Figma, VS Code, Raycast","сетка инструментов, быстрый запуск"),
+"index":("главный экран ИИ-системы","visionOS, Raycast, Vercel Dashboard, Linear, Notion Home, Home Assistant, Dia, Homarr, Homepage, Grafana","сцена, приветствие, плиточные карточки сервисов (Homepage/Gridstack), быстрые действия, живые метрики"),
+"consciousness":("визуализатор сознания/ядра ИИ","Neuronpedia, графы атрибуции Anthropic, Transformer Explainer, LLM Visualization, Netron, TensorFlow Playground","3D-разрез трансформера, панель органов с живыми статусами, график активности, без фейковых цифр"),
+"organism":("живой организм ИИ","Neuronpedia, графы атрибуции Anthropic, Transformer Explainer, LLM Visualization, Netron, TensorFlow Playground","живая лента органов с перемоткой, граф ядер, статусы органов из реальных данных"),
+"soul":("ядро/душа ИИ","Neuronpedia, графы атрибуции Anthropic, Transformer Explainer, Netron","граф ядер, состояния, живые данные"),
+"growth":("панель роста ИИ","Neuronpedia, Transformer Explainer, TensorFlow Playground, Grafana","графики роста по реальным данным, ступени, метрики"),
+"selffeel":("самоощущение ИИ (эмоции)","Neuronpedia, графы атрибуции Anthropic, TensorFlow Playground, Grafana","радар эмоций, шкалы настроения, анимации состояний, реальные данные"),
+"training":("мониторинг обучения модели","TensorFlow Playground, Netron, Grafana, Neuronpedia","графики loss/шагов по реальным логам или честное «обучение не запущено»")}
+# реестр готовых модулей: страница -> маркеры (имена файлов в vendor/ или script src); достаточно любого
+REG={"chat":["vendor/nox-chat-ui","vendor/xyflow","nox-chat-ui"],"index":["vendor/gridstack","gridstack"],
+"consciousness":["vendor/llm-viz","llm-viz","echarts"],"organism":["echarts","3d-force-graph","cosmos"],"soul":["echarts","3d-force-graph","cosmos"],
+"growth":["echarts"],"selffeel":["echarts"],"training":["echarts"],"cinema":["swiper","vendor/"],"music":["wavesurfer","vendor/"],"news":["vendor/"],"photo":["vendor/"],"studio":["vendor/"],"tools":["vendor/"]}
+CHECK=["Шапка, нижняя панель и фон-солнце как у эталона, ничего поверх них","Есть обязательные паттерны ниши","Построено на готовых модулях, не топорно","Нет мёртвых кнопок, заглушек и фейковых цифр","Нет JS-ошибок, 404, выхода за край экрана","Мобильная версия удобна на 390px","Стекло, сдержанный свет, без неона (10+10+10)","WOW на уровне топ-10 ниши: 8/10 и выше","Используются модули из реестра (vendor/), а не самодельная вёрстка"]
 SKIP=re.compile(r"удал|delete|stop|стоп|выход|logout|очист|сброс|reset|генер|создать|отправ|send",re.I)
 def vision(jpg,prompt):
     d="data:image/jpeg;base64,"+base64.b64encode(jpg).decode()
@@ -31,6 +41,12 @@ async def audit(page):
             pg=await b.new_page(viewport={"width":w,"height":h}); errs=[]; bad=[]
             pg.on("pageerror",lambda e:errs.append(str(e)[:120])); pg.on("response",lambda r:bad.append(r.url[-60:]) if r.status>=400 else None)
             await pg.goto(B+page,wait_until="load",timeout=30000); await pg.wait_for_timeout(4000)
+            if vp=="desk":
+                try:
+                    src=open(f"{SITE}/{page}").read()+" "+" ".join(await pg.evaluate("()=>[...document.scripts].map(s=>s.src).concat([...document.querySelectorAll('link[rel=stylesheet]')].map(l=>l.href))"))
+                    mk=REG.get(key,["vendor/"])
+                    if not any(m in src for m in mk): res["fails"].append({"item":CHECK[8],"detail":"нет маркеров реестра: "+", ".join(mk)})
+                except Exception as e: res["fails"].append({"item":CHECK[8],"detail":str(e)[:80]})
             await pg.keyboard.press("Escape")
             shots[vp]=await pg.screenshot(type="jpeg",quality=60)
             if vp=="desk": shots["vis"]=await pg.screenshot(type="jpeg",quality=55,scale="css",clip={"x":0,"y":0,"width":1440,"height":900})
