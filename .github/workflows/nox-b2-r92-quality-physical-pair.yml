@@ -49,6 +49,7 @@ jobs:
           done
           export PYTHONPATH="$PWD/nox-control/d3-r91:$PWD/nox-control/d3-r89:$PWD/nox-control/d3-r87:$PWD/nox-control/b2-r86:$PWD/nox-control/d3-r85:$PWD/nox-control/b2-r84:$own:$PWD/nox-control/b2-r81:$PWD/nox-control/d3-r80:$PWD/nox-control/b2-r79:$PWD/nox-control/d3-r78:$stage/py:$PWD/nox-control/d3-r76:$PWD/nox-control/b2-r77:$tmp"
           export D3_B4_MODULE="$stage/b4/b4_existing_turn_pair.mjs"
+          set -x
           b3=5a061fb98bd6d9fcab4c64abbe6f65317fef3a47
           b5=1c9f984247e557f9b2e393f9e2c24246f4f6a8de
           git fetch --no-tags --depth=1 origin "$b3" "$b5"
