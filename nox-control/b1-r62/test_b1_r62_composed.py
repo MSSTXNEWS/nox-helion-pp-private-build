@@ -1,0 +1,66 @@
+"""Source-only Chromium composition: existing dialog, synthetic server/gate."""
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+HERE=Path(__file__).resolve().parent
+with sync_playwright() as p:
+    browser=p.chromium.launch(headless=True)
+    page=browser.new_page()
+    page.route("**/*",lambda route: route.abort())
+    page.set_content('<main id="chat"><div data-nox-b1-conversation="d" data-nox-b1-exchange="t1" data-nox-b1-state="terminal" data-nox-b1-event-id="event-t1">Existing</div></main>')
+    for src in (HERE.parent/'b1-r61'/'b1_abort_safe_ui_adapter.js',HERE/'b1_client_stream_reconnect_harness.js',HERE/'b1_sse_ui_binding.js'):
+        page.add_script_tag(path=str(src))
+    labels=page.evaluate(r"""async () => {
+      if(!crypto.randomUUID) {let nonce=0;Object.defineProperty(crypto,'randomUUID',{value:()=> 'fixture-'+(++nonce)});}
+      const labels=[],check=(name,ok)=>{if(!ok)throw Error(name);labels.push(name)};
+      const chat=document.querySelector('#chat'),original=chat.firstElementChild;
+      const s2={conversation_id:'d',exchange_id:'t2'},s3={conversation_id:'d',exchange_id:'t3'};
+      const posts=[],acks=[],gets=[],signed=[],state=new Map();
+      const row=s=>Array.from(chat.children).find(e=>e.dataset.noxB1Exchange===s.exchange_id);
+      let pausedResolve;const paused=new Promise(r=>pausedResolve=r);
+      let release;const blocked=new Promise(r=>release=r);let n=0;
+      const transport={
+        async post(s,signal){posts.push(s.exchange_id);const frames=s.exchange_id==='t2'?
+          'id: e21\nevent: delta\ndata: Hola\n\nid: e22\nevent: delta\ndata: LATE\n\n':
+          'id: e31\nevent: delta\ndata: Mundo\n\nid: e31\nevent: delta\ndata: Mundo\n\n';
+          return {ok:true,body:new ReadableStream({start(c){c.enqueue(new TextEncoder().encode(frames));c.close()}})}},
+        async readback(s){gets.push(s.exchange_id);return {...s}},
+        async ack(s){acks.push(s.exchange_id);return true},
+        async readCanonicalAck(s,e,c){signed.push(s.exchange_id);return {request_nonce:c.request_nonce,issued_at_ms:Date.now(),expires_at_ms:Date.now()+1000,ack_id:'ack-'+s.exchange_id}}
+      };
+      const host={async readCommitted(c,e){return null},
+        async verifyCanonicalAck(r,e,s){return r.ack_id==='ack-'+s.exchange_id},
+        async verifyFreshCanonicalAck(r,e,s,c){return r.request_nonce===c.request_nonce && r.ack_id==='ack-'+s.exchange_id}};
+      const bridge={async acceptTerminal(packet,s){return {...s,safe_to_ack:true,model_post:false,projection_event_id:'event-'+s.exchange_id,ack_cursor:'cursor-'+s.exchange_id}}};
+      const gate={async reserve(s){return state.has(s.exchange_id)?{status:'ALREADY_ACKED'}:{status:'RESERVED',key:s.exchange_id}},
+        async beginSend(g){state.set(g.key,'SENDING');return 'SENDING'},async confirm(){throw Error('local confirm forbidden')},
+        async requireCanonicalAck(s,event,cursor,read,verify){const e={event_id:event,ack_cursor:cursor},r=await read(e);
+          if(!await verify(r,e))throw Error('bad fixture proof');state.set(s.exchange_id,'ACKED');
+          return {status:'CANONICAL_ACK_CONFIRMED',authority:'VERIFIER_CALLBACK_APPROVED',ack_id:r.ack_id}}};
+      const client=NOXB1SseUiBinding.bind({container:chat,transport,host,bridge,ackGate:gate,
+        timeoutMs:5000, beforeCommit:async(kind,s)=>{if(kind==='delta'&&s.exchange_id==='t2'&&++n===2){pausedResolve();await blocked}}});
+      let reads=0;
+      const changing={conversation_id:'d',get exchange_id(){return ++reads===1?'t2':'foreign'}};
+      const pending=client.begin(changing);
+      await Promise.race([paused,new Promise((_,rej)=>setTimeout(()=>rej(Error('pause missing; scope changed')),2000))]);
+      check('scope getter read once, target t2',reads===1&&posts.join()==='t2');
+      check('STOP t2',client.stop(s2)===true);
+      check('t2 stopped',await pending==='STOPPED');
+      release();
+      check('no late delta',row(s2).textContent==='Hola');
+      try{await client.begin(s2);throw Error('repost allowed')}catch(e){check('no repost',e.code==='HOLD_STREAM_NO_REPOST')}
+      let r=await client.reconnect(s2);
+      check('t2 canonical synthetic receipt',r.canonical_ack_id==='ack-t2'&&row(s2).dataset.noxB1State==='terminal');
+      check('t3 stream',await client.begin(s3)==='STREAM_ENDED_READBACK_REQUIRED');
+      check('t3 wire duplicate suppressed',row(s3).textContent==='Mundo');
+      r=await client.reconnect(s3);
+      check('t3 canonical synthetic receipt',r.canonical_ack_id==='ack-t3'&&row(s3).dataset.noxB1State==='terminal');
+      await Promise.all([client.reconnect(s2),client.reconnect(s2)]);
+      check('GET-only duplicate reconnect',posts.join()==='t2,t3'&&acks.join()==='t2,t3'&&gets.length===3&&signed.length===3);
+      check('existing t1 unchanged; exactly three rows',chat.children.length===3&&chat.firstElementChild===original&&original.textContent==='Existing'&&original.dataset.noxB1EventId==='event-t1');
+      check('separate terminal identities',row(s2).dataset.noxB1EventId==='event-t2'&&row(s3).dataset.noxB1EventId==='event-t3');
+      return labels;
+    }""")
+    browser.close()
+    for label in labels: print("PASS",label)
+    print(f"B1_R62_SYNTHETIC {len(labels)}/12 PASS; NATIVE_ACCEPTED=false")
+    assert len(labels)==12
