@@ -21,6 +21,13 @@ const jget = (u, o) => fetch(u, o).then(async (r) => { const t = await r.text();
   el.setAttribute('placeholder', 'Поиск страниц и действий NOX…'); el.openHotkey = 'ctrl+alt+shift+f12'; el.noAutoLoadMdIcons = true; el.data = data; el.footerHtml = '<span style="opacity:.7;letter-spacing:.12em;font-size:10px">ENTER · ВЫБРАТЬ &nbsp; ↑↓ · ПЕРЕМЕЩЕНИЕ &nbsp; ESC · ЗАКРЫТЬ</span>';
   el.style.cssText = '--ninja-z-index:9800;--ninja-width:620px;--ninja-accent-color:#c0392b;--ninja-font-family:inherit;--ninja-text-color:#efe6df;--ninja-secondary-text-color:#a89c93;--ninja-modal-background:rgba(16,13,13,.78);--ninja-modal-shadow:0 24px 70px rgba(0,0,0,.65);--ninja-overflow-background:rgba(2,3,10,.55);--ninja-secondary-background-color:rgba(255,235,220,.06);--ninja-selected-background:rgba(176,44,32,.38);--ninja-actions-height:360px;--ninja-icon-size:1.2em;--ninja-key-border-radius:6px;--ninja-footer-background:rgba(255,235,220,.04)';
   document.body.appendChild(el);
+  let tm = 0, last = '';
+  el.addEventListener('change', (e) => { const q = ((e.detail && e.detail.search) || '').trim(); if (q === last) return; last = q; clearTimeout(tm);
+    if (q.length < 2) { el.data = data; return; }
+    tm = setTimeout(async () => { const r = await jget('/search?q=' + encodeURIComponent(q)).catch(() => null); if (q !== last) return;
+      const hits = (r && r.j && r.j.hits) || [];
+      el.data = data.concat(hits.map((h, i) => ({ id: 'q:' + i, title: h.title + (h.text && h.kind !== 'страница' ? ' · ' + String(h.text).slice(0, 60) : ''), section: 'Поиск · ' + h.kind, keywords: q + ' ' + h.title, handler: () => { location.href = h.url; } })));
+    }, 220); });
   const open = (e) => { e.preventDefault(); e.stopImmediatePropagation(); el.open(); };
   addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') open(e); }, true);
   for (const id of ['dkK', 'tbSearch']) document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('#' + id)) open(e); }, true);
