@@ -1,0 +1,36 @@
+name: NOX B5 R69 strict receipt boundary
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b5-r69/**'
+      - '.github/workflows/nox-b5-r69-strict-receipt.yml'
+permissions:
+  contents: read
+jobs:
+  receipt-binding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exact retained donors and admission receipt regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref=4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3
+          git fetch --no-tags --depth=1 origin "$ref"
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          git show "$ref:nox-control/b5_s03_verifier_r54.py" > "$tmp/b5_r55_pinned.py"
+          test "$(git hash-object "$tmp/b5_r55_pinned.py")" = df94c535273dde1fd2609f555d1d615eacfda831
+          test "$(git hash-object nox-control/b5-r63/b5_chain_guard.py)" = f321f4ad36867e434ba72db9264a88cf23a91fb8
+          test "$(git hash-object nox-control/b5-r63/test_b5_chain_guard.py)" = 96fa30430ac2a9027eec0a2a0ef9b39c670c55dd
+          test "$(git hash-object nox-control/b5-r66/b5_failed_poststate.py)" = 381a738e54bdb1bba874ee8e0295c957e92b68b5
+          test "$(git hash-object nox-control/b5-r66/test_b5_failed_poststate.py)" = a7f1a89fa806592c3a8779f0bacef0d255942aae
+          test "$(git hash-object nox-control/b5-r67/b5_bound_failed_poststate.py)" = 878128ef41095f8bf0d14a02281148e96e4a6ba3
+          test "$(git hash-object nox-control/b5-r67/test_b5_bound_failed_poststate.py)" = 72576b738fa734f7c5181fc9b6e1ab06c07ced03
+          test "$(git hash-object nox-control/b5-r68/b5_receipted_failed_poststate.py)" = c6181ce7a16f787b4b68b2507150c6990da2ef83
+          test "$(git hash-object nox-control/b5-r68/test_b5_receipted_failed_poststate.py)" = 7aaf540e8b12de8008757864079d81ed72ceb3f6
+          cp nox-control/b5-r63/*.py nox-control/b5-r66/*.py nox-control/b5-r67/*.py nox-control/b5-r68/*.py nox-control/b5-r69/*.py "$tmp/"
+          cd "$tmp"
+          python -m unittest -v test_b5_failed_poststate test_b5_bound_failed_poststate test_b5_receipted_failed_poststate.ReceiptTests test_b5_strict_receipted_poststate.StrictReceiptTests
+          echo B5_NATIVE_ACCEPTED=false
