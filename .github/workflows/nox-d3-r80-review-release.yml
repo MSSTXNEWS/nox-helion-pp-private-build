@@ -1,0 +1,38 @@
+name: D3 R80 retained review release
+on:
+  pull_request:
+    paths: ['nox-control/d3-r80/**', '.github/workflows/nox-d3-r80-review-release.yml']
+permissions:
+  contents: read
+jobs:
+  composition:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r80-r65-r79-review-release-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Exact dual-boundary review composition
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$PWD/nox-control/d3-r74/staging"
+          own="$PWD/nox-control/d3-r80"
+          test "$(git rev-parse HEAD:nox-control/d3-r80/b5_retained_ingress.py)" = 3e2a8693574608bb773eb7ed4140b574bc5b1efb
+          test "$(git rev-parse HEAD:nox-control/b2-r79/quality_closure.py)" = 9a84b0fe11c63ca8fab41442966bfbee2d6261ce
+          test "$(git rev-parse HEAD:nox-control/d3-r78/retained_snapshot_review.py)" = defcb3d18603a2af3236694e010d830e2339d1c3
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$own:$PWD/nox-control/b2-r79:$PWD/nox-control/d3-r78:$stage/py:$PWD/nox-control/d3-r76:$PWD/nox-control/b2-r77:$tmp"
+          export D3_B4_MODULE="$stage/b4/b4_existing_turn_pair.mjs"
+          cd "$tmp"
+          python3 -B -m unittest -v test_release_composition.ReleaseComposition
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false
