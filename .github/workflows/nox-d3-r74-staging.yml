@@ -1,0 +1,23 @@
+name: D3 R74 combined source staging
+on:
+  pull_request:
+    paths:
+      - 'nox-control/d3-r74/**'
+      - '.github/workflows/nox-d3-r74-staging.yml'
+permissions:
+  contents: read
+jobs:
+  stage:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r74-combined-staging-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify and materialize combined source stage
+        run: python3 -B nox-control/d3-r74/check_stage.py
