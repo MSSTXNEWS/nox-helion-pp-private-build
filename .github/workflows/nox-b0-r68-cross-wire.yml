@@ -1,0 +1,34 @@
+name: B0 R68 actual Python Node wire interoperability
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b0-r53/**'
+      - '.github/workflows/nox-b0-r68-cross-wire.yml'
+permissions:
+  contents: read
+jobs:
+  cross-wire:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 4d6bf9239669b89e30b4342374f3717dab431b1a
+          path: b1-pinned
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify pins and run actual cross-language offline transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD:nox-control/b0-r53/b0_named_delta_encoder.py)" = c7d0c351b0239bb7155ffbc8c0362e919ee79cb1
+          test "$(git -C b1-pinned rev-parse HEAD)" = 4d6bf9239669b89e30b4342374f3717dab431b1a
+          test "$(git -C b1-pinned rev-parse HEAD:nox-control/b1-r75/b1_browser_bundle.js)" = d0c0a689810be2bbad2d986f02c305e978d4f38f
+          node --version
+          node --unhandled-rejections=strict nox-control/b0-r53/test_r68_cross_wire.cjs nox-control/b0-r53/b0_named_delta_encoder.py b1-pinned/nox-control/b1-r75/b1_browser_bundle.js
