@@ -21,5 +21,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export PYTHONPATH="nox-control/d3-r97:$(python3 -c 'import json; print(":".join(json.load(open("nox-control/d3-r93/release.json"))["python_paths"]))')"
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$PWD/nox-control/d3-r97:$(python3 -c 'import json,os; print(":".join(os.path.abspath(p) for p in json.load(open("nox-control/d3-r93/release.json"))["python_paths"]))'):$tmp"
+          export D3_B4_MODULE="$PWD/nox-control/d3-r74/staging/b4/b4_existing_turn_pair.mjs"
+          cd "$tmp"
           python3 -B -m unittest -v test_browser_projection_gate
