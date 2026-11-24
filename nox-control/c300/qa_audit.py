@@ -56,10 +56,10 @@ async def audit(page):
                 if small>6: res["fails"].append({"item":CHECK[5],"vp":vp,"detail":f"{small} мелких целей нажатия (<32px)"})
             if vp=="desk":
                 # мёртвые кнопки: клик не меняет DOM, URL и не шлёт запрос
-                n=await pg.evaluate("()=>document.querySelectorAll('main button, main [role=button], .content button').length")
+                n=await pg.evaluate("()=>document.querySelectorAll('button, [role=button]').length")
                 dead=[]
                 for i in range(min(n,25)):
-                    loc=pg.locator("main button, main [role=button], .content button").nth(i)
+                    loc=pg.locator("button, [role=button]").nth(i)
                     try:
                         t=(await loc.inner_text(timeout=1000)).strip()[:30]
                         if SKIP.search(t) or not await loc.is_visible(): continue
@@ -77,7 +77,7 @@ async def audit(page):
     for vp in ("desk","mob"): open(f"{OUT}/audit_{vp}_{key}.jpg","wb").write(shots[vp])
     pr=(f"Ты строгий арт-директор. Это скриншот раздела «{niche[0]}» веб-интерфейса NOX. Сравни с лучшими в нише: {niche[1]}. "
         f"Обязательные паттерны ниши: {niche[2]}. Канон: тёмное дымчатое стекло, чёрное солнце с красной короной на фоне, тонкие заглавные надписи, без неона. "
-        "Ответь строго JSON без пояснений: {\"wow\":0-10,\"patterns_missing\":[...],\"toporno\":[...конкретные места...],\"neon\":true/false,\"overlap\":true/false,\"fix\":[...3-6 конкретных правок, какие готовые модули взять...]}")
+        "Оцени также три балла по 10: A = анимация (A01-A10: плавность, микро-анимации, переходы, живость), R = реализм/материал (R01-R10: стекло, свет, глубина, тени), U = интерфейс (U01-U10: иерархия, читаемость, цели нажатия, состояния). Ответь строго JSON без пояснений: {\"wow\":0-10,\"A\":0-10,\"R\":0-10,\"U\":0-10,\"patterns_missing\":[...],\"toporno\":[...конкретные места...],\"neon\":true/false,\"overlap\":true/false,\"fix\":[...3-6 конкретных правок, какие готовые модули взять...]}")
     v=vision(shots["desk"],pr); res["vision_raw"]=v[:1500]
     m=re.search(r"\{.*\}",v,re.S); j={}
     try: j=json.loads(m.group(0)) if m else {}
@@ -87,6 +87,9 @@ async def audit(page):
     if j.get("toporno"): res["fails"].append({"item":CHECK[2],"detail":j["toporno"]})
     if j.get("neon"): res["fails"].append({"item":CHECK[6],"detail":"неон"})
     if j.get("overlap"): res["fails"].append({"item":CHECK[0],"detail":"элементы поверх шапки/низа"})
+    for k in "ARU":
+        if not isinstance(j.get(k),(int,float)) or j[k]<8: res["fails"].append({"item":"Фильтр 10+10+10: "+k+" >= 8","detail":f"{k}={j.get(k)}"})
+    res["ARU"]=[j.get(k) for k in "ARU"]
     if not isinstance(j.get("wow"),(int,float)) or j["wow"]<8: res["fails"].append({"item":CHECK[7],"detail":f"WOW {j.get('wow')}"})
     return res
 def main():
