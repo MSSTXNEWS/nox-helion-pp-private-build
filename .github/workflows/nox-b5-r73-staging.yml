@@ -1,0 +1,42 @@
+name: NOX B5 R73 owner staging bundle
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b5-r73/**'
+      - '.github/workflows/nox-b5-r73-staging.yml'
+permissions:
+  contents: read
+jobs:
+  staged-layout:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact staging layout and independent donor pins
+        shell: bash
+        run: |
+          set -euo pipefail
+          b5=1c9f984247e557f9b2e393f9e2c24246f4f6a8de
+          r55=4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3
+          b3=5a061fb98bd6d9fcab4c64abbe6f65317fef3a47
+          git fetch --no-tags --depth=1 origin "$b5" "$r55" "$b3"
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          git show "$b5:nox-control/b5-r63/test_b5_chain_guard.py" > "$tmp/test_b5_chain_guard.py"
+          git show "$b5:nox-control/b5-r72/test_retained_pair.py" > "$tmp/test_retained_pair.py"
+          git show "$b5:nox-control/b5-r71/terminal_canonical.py" > "$tmp/terminal_canonical.py"
+          test "$(git hash-object "$tmp/test_b5_chain_guard.py")" = 96fa30430ac2a9027eec0a2a0ef9b39c670c55dd
+          test "$(git hash-object "$tmp/test_retained_pair.py")" = 6d9fe3f82a7896f8bc6b1d38cd940ae2718918fd
+          test "$(git hash-object "$tmp/terminal_canonical.py")" = 89872eef8ee3013a94f8e46ebbd4cb020947278e
+          B5_REPO="$PWD" B5_FIXTURES="$tmp" python3 -B nox-control/b5-r73/test_staged_layout.py -v
+          mkdir -p "$RUNNER_TEMP/b5-r73"
+          python3 -B nox-control/b5-r73/stage_bundle.py --repo "$PWD" --output "$RUNNER_TEMP/b5-r73/b5-r73-staging.zip"
+          sha256sum "$RUNNER_TEMP/b5-r73/b5-r73-staging.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: b5-r73-owner-staging-source-only
+          path: ${{ runner.temp }}/b5-r73/b5-r73-staging.zip
+          if-no-files-found: error
