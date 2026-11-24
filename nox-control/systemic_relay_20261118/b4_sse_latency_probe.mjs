@@ -108,7 +108,12 @@ export async function measureSseResponse(response,options={}){
     // A malformed choice is not a heartbeat or an empty valid delta.
     if(!choice||typeof choice!=='object'||Array.isArray(choice))
       throw fail('B4_BAD_CHOICES');
-    const text=choice.delta?.content??choice.text??'';
+    const delta=choice.delta;
+    // Null/missing delta is valid for legacy text and terminal choices.
+    // A present non-null delta must be an object, not a scalar or array.
+    if(delta!==null&&delta!==undefined&&(typeof delta!=='object'||Array.isArray(delta)))
+      throw fail('B4_BAD_DELTA');
+    const text=delta?.content??choice.text??'';
     if(typeof text!=='string')throw fail('B4_BAD_TEXT');
     if(seenStop&&text.length)throw fail('B4_TEXT_AFTER_STOP');
     appendVisible(text);

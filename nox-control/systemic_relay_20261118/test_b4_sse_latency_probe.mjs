@@ -1578,3 +1578,32 @@ test('R49 malformed single-choice values cannot become a verified SSE completion
   console.log('B4_R49_SOURCE_ONLY '+JSON.stringify({malformed_rejected:cases.length*3,
     healthy_digest:true,ttft_ms:result.ttft_ms,completion_ms:result.completion_ms,real_glm:false}));
 });
+
+
+test('R50 malformed non-null delta cannot pass as empty or legacy text SSE',async()=>{
+  const begin=event({delta:{role:'assistant'}}),visible=event({delta:{content:'Hola 🌈'}});
+  const stop=event({delta:{},finish_reason:'stop'}),done='data: [DONE]\n\n';
+  const cases=[false,true,0,7,'','bad',[],[{}]];
+  const response=wire=>new Response(wire,{status:200,headers:{'content-type':'text/event-stream'}});
+  for(const delta of cases){
+    const bad=event({delta}),badText=event({delta,text:'legacy'});
+    for(const wire of [begin+bad+visible+stop+done,begin+visible+badText+stop+done,
+      begin+visible+event({delta,finish_reason:'stop'})+done,
+      begin+visible+stop+bad+done]){
+      await assert.rejects(measureSseResponse(response(wire)),e=>e.code==='B4_BAD_DELTA',
+        JSON.stringify(delta));
+    }
+  }
+  const wire=begin+event({delta:{}})+visible+event({delta:null,text:' Привет'})+
+    event({text:'!'} )+event({delta:null,finish_reason:'stop'})+done;
+  const proof=await measureSseResponse(response(wire));
+  assert.equal(proof.verified,true);
+  assert.equal(proof.visible_text_sha256,hash('Hola 🌈 Привет!'));
+  assert.equal(proof.body_sha256,hash(wire));
+  assert.ok(proof.first_byte_ms<=proof.ttft_ms&&proof.ttft_ms<=proof.sse_done_ms&&proof.sse_done_ms<=proof.completion_ms);
+  assert.equal(proof.native_verified,false);
+  assert.equal(proof.browser_authenticated,false);
+  assert.equal(proof.model_tokens_per_second,null);
+  console.log('B4_R50_SOURCE_ONLY '+JSON.stringify({malformed_rejected:cases.length*4,
+    healthy_digest:true,ttft_ms:proof.ttft_ms,completion_ms:proof.completion_ms,real_glm:false}));
+});
