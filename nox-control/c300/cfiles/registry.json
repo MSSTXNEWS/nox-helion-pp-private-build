@@ -1,0 +1,694 @@
+{
+ "version": 1,
+ "updated": "2026-11-24",
+ "sections": {
+  "chat": {
+   "name": "ИИ-чат",
+   "top10_refs": [
+    "Claude",
+    "Gemini",
+    "ChatGPT",
+    "Perplexity",
+    "Copilot",
+    "Grok",
+    "Le Chat",
+    "DeepSeek",
+    "Kimi",
+    "Meta AI"
+   ],
+   "markers": [
+    "vendor/nox-chat-ui",
+    "vendor/xyflow",
+    "nox-chat-ui"
+   ],
+   "patterns": "лента диалога, дерево чатов слева, блоки рассуждения, ветвление ответа, артефакты справа, источники, живые виджеты, теги быстрых команд, оценка 👍/👎",
+   "commands": [
+    "chat.send",
+    "chat.stop",
+    "feedback.send",
+    "search",
+    "health",
+    "svc.status"
+   ]
+  },
+  "cinema": {
+   "name": "кинотеатр",
+   "top10_refs": [
+    "Netflix",
+    "Disney+",
+    "HBO Max",
+    "Prime Video",
+    "Apple TV",
+    "Кинопоиск",
+    "Okko",
+    "Crunchyroll",
+    "Plex",
+    "Jellyfin"
+   ],
+   "markers": [
+    "swiper",
+    "vendor/"
+   ],
+   "patterns": "герой-баннер с трейлером, ряды-карусели постеров, карточка с рейтингом и кнопкой Смотреть, плеер",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "music": {
+   "name": "музыкальный сервис",
+   "top10_refs": [
+    "Spotify",
+    "Apple Music",
+    "YouTube Music",
+    "Яндекс Музыка",
+    "Tidal",
+    "Qobuz",
+    "Deezer",
+    "SoundCloud",
+    "Amazon Music",
+    "Navidrome"
+   ],
+   "markers": [
+    "wavesurfer",
+    "vendor/"
+   ],
+   "patterns": "обложки, плейлисты, мини-плеер, волна, очередь",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "news": {
+   "name": "новостной портал",
+   "top10_refs": [
+    "Google News",
+    "Apple News",
+    "BBC",
+    "NYT",
+    "Bloomberg",
+    "The Verge",
+    "Feedly",
+    "Substack",
+    "Meduza",
+    "Яндекс Новости"
+   ],
+   "markers": [
+    "vendor/"
+   ],
+   "patterns": "главная новость крупно, сетка карточек с фото, рубрики, время публикации, сводка NOX",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "photo": {
+   "name": "фоторедактор / фотостудия",
+   "top10_refs": [
+    "Midjourney",
+    "Nano Banana",
+    "ChatGPT Images",
+    "Firefly",
+    "Ideogram",
+    "Flux",
+    "Leonardo",
+    "Krea",
+    "Recraft",
+    "ComfyUI"
+   ],
+   "markers": [
+    "vendor/"
+   ],
+   "patterns": "полноэкранный холст, плавающие стеклянные панели инструментов, строка промпта, слои",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "studio": {
+   "name": "ИИ-фотостудия",
+   "top10_refs": [
+    "Midjourney",
+    "Nano Banana",
+    "ChatGPT Images",
+    "Firefly",
+    "Ideogram",
+    "Flux",
+    "Leonardo",
+    "Krea",
+    "Recraft",
+    "ComfyUI"
+   ],
+   "markers": [
+    "vendor/"
+   ],
+   "patterns": "холст, слои, маски, строка промпта, диалог с NOX, галерея результатов",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "tools": {
+   "name": "набор инструментов",
+   "top10_refs": [
+    "Notion",
+    "Figma",
+    "VS Code",
+    "Raycast"
+   ],
+   "markers": [
+    "vendor/"
+   ],
+   "patterns": "сетка инструментов, быстрый запуск",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "index": {
+   "name": "главный экран ИИ-системы",
+   "top10_refs": [
+    "visionOS",
+    "Raycast",
+    "Vercel Dashboard",
+    "Linear",
+    "Notion Home",
+    "Home Assistant",
+    "Dia",
+    "Homarr",
+    "Homepage",
+    "Grafana"
+   ],
+   "markers": [
+    "vendor/gridstack",
+    "gridstack"
+   ],
+   "patterns": "сцена, приветствие, плиточные карточки сервисов (Homepage/Gridstack), быстрые действия, живые метрики",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "consciousness": {
+   "name": "визуализатор сознания/ядра ИИ",
+   "top10_refs": [
+    "Neuronpedia",
+    "графы атрибуции Anthropic",
+    "Transformer Explainer",
+    "LLM Visualization",
+    "Netron",
+    "TensorFlow Playground"
+   ],
+   "markers": [
+    "vendor/llm-viz",
+    "llm-viz",
+    "echarts"
+   ],
+   "patterns": "3D-разрез трансформера, панель органов с живыми статусами, график активности, без фейковых цифр",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "organism": {
+   "name": "живой организм ИИ",
+   "top10_refs": [
+    "Neuronpedia",
+    "графы атрибуции Anthropic",
+    "Transformer Explainer",
+    "LLM Visualization",
+    "Netron",
+    "TensorFlow Playground"
+   ],
+   "markers": [
+    "echarts",
+    "3d-force-graph",
+    "cosmos"
+   ],
+   "patterns": "живая лента органов с перемоткой, граф ядер, статусы органов из реальных данных",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "soul": {
+   "name": "ядро/душа ИИ",
+   "top10_refs": [
+    "Neuronpedia",
+    "графы атрибуции Anthropic",
+    "Transformer Explainer",
+    "Netron"
+   ],
+   "markers": [
+    "echarts",
+    "3d-force-graph",
+    "cosmos"
+   ],
+   "patterns": "граф ядер, состояния, живые данные",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "growth": {
+   "name": "панель роста ИИ",
+   "top10_refs": [
+    "Neuronpedia",
+    "Transformer Explainer",
+    "TensorFlow Playground",
+    "Grafana"
+   ],
+   "markers": [
+    "echarts"
+   ],
+   "patterns": "графики роста по реальным данным, ступени, метрики",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "selffeel": {
+   "name": "самоощущение ИИ (эмоции)",
+   "top10_refs": [
+    "Neuronpedia",
+    "графы атрибуции Anthropic",
+    "TensorFlow Playground",
+    "Grafana"
+   ],
+   "markers": [
+    "echarts"
+   ],
+   "patterns": "радар эмоций, шкалы настроения, анимации состояний, реальные данные",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  },
+  "training": {
+   "name": "мониторинг обучения модели",
+   "top10_refs": [
+    "TensorFlow Playground",
+    "Netron",
+    "Grafana",
+    "Neuronpedia"
+   ],
+   "markers": [
+    "echarts"
+   ],
+   "patterns": "графики loss/шагов по реальным логам или честное «обучение не запущено»",
+   "commands": [
+    "health",
+    "svc.status",
+    "search"
+   ]
+  }
+ },
+ "commands": {
+  "stop": {
+   "desc": "STOP: остановить ответ NOX",
+   "method": "POST",
+   "endpoint": "/api/chat/stop",
+   "params": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+   },
+   "confirm": false
+  },
+  "chat.send": {
+   "desc": "Отправить сообщение в чат NOX",
+   "method": "POST",
+   "endpoint": "/api/chat",
+   "params": {
+    "type": "object",
+    "properties": {
+     "message": {
+      "type": "string",
+      "maxLength": 8000
+     }
+    },
+    "required": [
+     "message"
+    ]
+   },
+   "confirm": false
+  },
+  "chat.stop": {
+   "desc": "Остановить генерацию чата",
+   "method": "POST",
+   "endpoint": "/api/chat/stop",
+   "params": {
+    "type": "object",
+    "properties": {}
+   },
+   "confirm": false
+  },
+  "feedback.send": {
+   "desc": "Оценка ответа 👍/👎",
+   "method": "POST",
+   "endpoint": "/api/feedback",
+   "params": {
+    "type": "object",
+    "properties": {
+     "rating": {
+      "enum": [
+       "up",
+       "down"
+      ]
+     },
+     "turn_id": {
+      "type": "string"
+     }
+    }
+   },
+   "confirm": false
+  },
+  "cal.list": {
+   "desc": "Календарь: список событий",
+   "method": "GET",
+   "endpoint": "/cal/events",
+   "params": {
+    "type": "object",
+    "properties": {}
+   },
+   "confirm": false
+  },
+  "cal.add": {
+   "desc": "Календарь: добавить событие",
+   "method": "POST",
+   "endpoint": "/cal/events",
+   "params": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string"
+     },
+     "start": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "title",
+     "start"
+    ]
+   },
+   "confirm": false
+  },
+  "search": {
+   "desc": "Поиск по системе",
+   "method": "GET",
+   "endpoint": "/search",
+   "params": {
+    "type": "object",
+    "properties": {
+     "q": {
+      "type": "string",
+      "minLength": 2
+     }
+    },
+    "required": [
+     "q"
+    ]
+   },
+   "confirm": false
+  },
+  "img.generate": {
+   "desc": "Генерация изображения",
+   "method": "POST",
+   "endpoint": "/img/generate",
+   "params": {
+    "type": "object",
+    "properties": {
+     "prompt": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "prompt"
+    ]
+   },
+   "confirm": false
+  },
+  "vision.describe": {
+   "desc": "Описать картинку (data:image/*)",
+   "method": "POST",
+   "endpoint": "/vision/describe",
+   "params": {
+    "type": "object",
+    "properties": {
+     "image": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "image"
+    ]
+   },
+   "confirm": false
+  },
+  "tts.speak": {
+   "desc": "Озвучить текст (голос)",
+   "method": "POST",
+   "endpoint": null,
+   "params": {
+    "type": "object",
+    "properties": {
+     "text": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "text"
+    ]
+   },
+   "confirm": false
+  },
+  "stt.listen": {
+   "desc": "Распознать речь",
+   "method": "POST",
+   "endpoint": null,
+   "params": {
+    "type": "object",
+    "properties": {}
+   },
+   "confirm": false
+  },
+  "depth": {
+   "desc": "Пульт: глубина ответа",
+   "method": "POST",
+   "endpoint": null,
+   "params": {
+    "type": "object",
+    "properties": {
+     "level": {
+      "enum": [
+       "fast",
+       "balanced",
+       "deep"
+      ]
+     }
+    },
+    "required": [
+     "level"
+    ]
+   },
+   "confirm": false
+  },
+  "voice": {
+   "desc": "Пульт: голос вкл/выкл",
+   "method": "POST",
+   "endpoint": null,
+   "params": {
+    "type": "object",
+    "properties": {
+     "on": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "on"
+    ]
+   },
+   "confirm": false
+  },
+  "sleep": {
+   "desc": "Пульт: усыпить NOX",
+   "method": "POST",
+   "endpoint": null,
+   "params": {
+    "type": "object",
+    "properties": {}
+   },
+   "confirm": false
+  },
+  "wake": {
+   "desc": "Пульт: разбудить NOX",
+   "method": "POST",
+   "endpoint": null,
+   "params": {
+    "type": "object",
+    "properties": {}
+   },
+   "confirm": false
+  },
+  "priority.chat": {
+   "desc": "Пульт: приоритет чата",
+   "method": "POST",
+   "endpoint": null,
+   "params": {
+    "type": "object",
+    "properties": {
+     "on": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "on"
+    ]
+   },
+   "confirm": false
+  },
+  "backup.create": {
+   "desc": "Бэкап состояния",
+   "method": "POST",
+   "endpoint": null,
+   "params": {
+    "type": "object",
+    "properties": {}
+   },
+   "confirm": false
+  },
+  "snapshot": {
+   "desc": "Снимок состояния системы",
+   "method": "GET",
+   "endpoint": null,
+   "params": {
+    "type": "object",
+    "properties": {}
+   },
+   "confirm": false
+  },
+  "health": {
+   "desc": "Состояние шлюза чата",
+   "method": "GET",
+   "endpoint": "/api/chat/health",
+   "params": {
+    "type": "object",
+    "properties": {}
+   },
+   "confirm": false
+  },
+  "svc.status": {
+   "desc": "Состояние встроенных сервисов",
+   "method": "GET",
+   "endpoint": "/svc/_status",
+   "params": {
+    "type": "object",
+    "properties": {}
+   },
+   "confirm": false
+  }
+ },
+ "checklist": [
+  {
+   "id": 1,
+   "text": "Шапка, нижняя панель, фон-солнце как эталон; ничего поверх; закреплённые файлы целы"
+  },
+  {
+   "id": 2,
+   "text": "Тёмное дымчатое стекло, один ключевой свет, без неона; плотные интервалы"
+  },
+  {
+   "id": 3,
+   "text": "10+10+10: анимация, реализм, интерфейс — каждый ≥8; кино C01–C10, эффекты FX01–FX10"
+  },
+  {
+   "id": 4,
+   "text": "WOW ≥8/10 против актуального топ-10 раздела"
+  },
+  {
+   "id": 5,
+   "text": "Собрано из 2–3 готовых модулей реестра, своего кода минимум; лицензии записаны (NC разрешено, помечено)"
+  },
+  {
+   "id": 6,
+   "text": "Адаптивность 320–3840 px: на 390 нет перекрытий и прокрутки вбок, цели ≥44 px; на 4K нет мыла"
+  },
+  {
+   "id": 7,
+   "text": "Режимы MAX/BALANCED/ECO/без движения работают; первый экран < 2,5 с"
+  },
+  {
+   "id": 8,
+   "text": "Каждая кнопка и функция работает (прокликать все); нет мёртвых кнопок, заглушек, фейковых цифр"
+  },
+  {
+   "id": 9,
+   "text": "Нет JS-ошибок, 404, 5xx"
+  },
+  {
+   "id": 10,
+   "text": "Честные статусы из реальных данных; у кнопок состояния «готово/идёт/ошибка»"
+  },
+  {
+   "id": 11,
+   "text": "Все функции раздела в реестре шины; команды срабатывают из чата, кнопками напрямую и из Ctrl+K; каждый вызов в ленте «События»"
+  },
+  {
+   "id": 12,
+   "text": "Опасные команды (удаление, откат, выгрузка, оплата, отправка наружу) — только после подтверждения владельца; произвольного shell нет"
+  },
+  {
+   "id": 13,
+   "text": "Пульт в шапке (STOP, глубина, голос, сон, приоритет чата, мини-датчики) и вкладки настроек работают"
+  },
+  {
+   "id": 14,
+   "text": "Навигация: все пункты меню ведут куда нужно, стеклянные выпадающие, мобильная нижняя панель и шторка, недавние и избранное"
+  },
+  {
+   "id": 15,
+   "text": "Мини-чат на каждой странице, не перекрывает панели; вместо пустого ответа «NOX занят, повторите»"
+  },
+  {
+   "id": 16,
+   "text": "Во время мышления кино-голограмма, а не точки"
+  },
+  {
+   "id": 17,
+   "text": "Чат: дерево слева; виджеты Система/Ядро/События справа, кликабельны; тонкие теги команд; 👍/👎; рассуждение, ветки, артефакты, источники, карта мышления, голос"
+  },
+  {
+   "id": 18,
+   "text": "Голос мужской; ударения и ё, паузы, пунктуация, интонация; числа словами в падеже («в 1996 году» → «в тысяча девятьсот девяносто шестом году»)"
+  },
+  {
+   "id": 19,
+   "text": "Уведомления и PWA работают"
+  },
+  {
+   "id": 20,
+   "text": "Диск ≥15 ГБ, VRAM ≤92%, чат первым"
+  },
+  {
+   "id": 21,
+   "text": "Бэкап, флаг, тест, откат перед правкой живого контура; прогресс в PROGRESS.md"
+  },
+  {
+   "id": 22,
+   "text": "Ничего не удалено без слова владельца; секретов нет в логах и на страницах"
+  }
+ ]
+}
