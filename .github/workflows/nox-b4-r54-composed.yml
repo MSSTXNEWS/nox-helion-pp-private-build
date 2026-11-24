@@ -1,0 +1,35 @@
+name: NOX B4 R54 pinned B3 composed response
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/systemic_relay_20261118/test_b4_r54_b3_composed.mjs'
+      - '.github/workflows/nox-b4-r54-composed.yml'
+permissions:
+  contents: read
+jobs:
+  composed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 8beb3459bf349c638c8ad836db2c72083ea4a362
+          path: b3-pinned
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify exact composition without native requests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C b3-pinned rev-parse HEAD)" = 8beb3459bf349c638c8ad836db2c72083ea4a362
+          cd nox-control/systemic_relay_20261118
+          test "$(git hash-object b4_sse_latency_probe.mjs)" = 3582fd900dde982d1abbc1ef0f7ba11025a2e0d5
+          test "$(git hash-object b4_existing_turn_pair.mjs)" = aad89a93467e638cfcac5af8a099d2127f4ae0fc
+          node --version
+          node test_b4_r54_b3_composed.mjs ../../b3-pinned
