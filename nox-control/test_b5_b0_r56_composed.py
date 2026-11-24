@@ -5,6 +5,7 @@ import unittest
 from contextlib import ExitStack
 from b5_r55_pinned import load_pinned_s03_artifacts
 from b0_resume_bridge import bind_existing_resume
+from b5_browser_prefix_gate import bind_observed_browser_prefix
 from test_b0_resume_bridge import fixture, rows, witnesses
 
 class ComposedIngressTests(unittest.TestCase):
@@ -68,6 +69,38 @@ class ComposedIngressTests(unittest.TestCase):
             self.assertEqual(bridge.finish(**args), "HOLD_RESUME_POST_OR_STREAM")
             args["browser_calls"] = 8
             self.assertEqual(bridge.finish(**args), "HOLD_RESUME_ALREADY_CONSUMED")
+
+    def test_actual_browser_prefix_before_next_post(self):
+        with ExitStack() as stack:
+            for n in (1, 2):
+                old, pins = self.load(stack, n)
+                f = fixture(n)
+                f.update(canonical_rows=old, prior_witnesses=pins)
+                observed = [{"role": r["role"], "content": r["content"]} for r in old]
+                def bind(browser=observed, calls=7):
+                    return bind_observed_browser_prefix(
+                        observed_browser_rows=browser, observed_browser_calls=calls, **f)
+                for wrong in (f["owner_rows"], old, [], observed[:-1]):
+                    with self.assertRaisesRegex(ValueError, "HOLD_ACTUAL_BROWSER_PREFIX"):
+                        bind(wrong)
+                for count in (True, 6, 8):
+                    with self.assertRaisesRegex(ValueError, "HOLD_ACTUAL_BROWSER_PREFIX"):
+                        bind(calls=count)
+                changed = [dict(r) for r in observed]
+                changed[0]["content"] = "Подмена / cambio"
+                with self.assertRaisesRegex(ValueError, "HOLD_RESUME_BROWSER_PREFIX"):
+                    bind(changed)
+                changed = [dict(r) for r in observed]
+                changed[-1]["message_id"] = "other"
+                with self.assertRaisesRegex(ValueError, "HOLD_RESUME_BROWSER_PREFIX"):
+                    bind(changed)
+                bridge = bind()
+                new, newpins = self.load(stack, n+1, prior_rows=old, prior_witnesses=pins)
+                self.assertEqual(bridge.finish(
+                    browser_rows=[dict(r) for r in new], canonical_rows=new,
+                    witnesses=newpins, browser_calls=8, admitted_calls=8,
+                    prompt=new[-2]["content"], stream_answer=new[-1]["content"],
+                    terminal_saved=True, dom_matches=True), "RESUME_EVIDENCE_MATCHED")
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

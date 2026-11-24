@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'nox-control/test_b5_b0_r56_composed.py'
+      - 'nox-control/b5_browser_prefix_gate.py'
       - '.github/workflows/nox-b5-b0-r56-composed.yml'
 permissions:
   contents: read
@@ -33,7 +34,7 @@ jobs:
           materialize "$b5" nox-control/b5_s03_verifier_r54.py df94c535273dde1fd2609f555d1d615eacfda831 b5_r55_pinned.py
           materialize "$b0" nox-control/b0-r53/b0_resume_bridge.py 0b0972c58d52ff5538520839cc35a02f4c005919 b0_resume_bridge.py
           materialize "$b0" nox-control/b0-r53/test_b0_resume_bridge.py 9c750d36bd97329b8fe699591189a616b1a80ce6 test_b0_resume_bridge.py
-          cp nox-control/test_b5_b0_r56_composed.py "$tmp/"
+          cp nox-control/test_b5_b0_r56_composed.py nox-control/b5_browser_prefix_gate.py "$tmp/"
           cd "$tmp"
           python -m unittest -v test_b5_b0_r56_composed
           echo B5_NATIVE_ACCEPTED=false
