@@ -13,3 +13,9 @@
 sl-drawer::part(panel),sl-dialog::part(panel),sl-dropdown::part(panel),sl-popup::part(popup){backdrop-filter:blur(22px) saturate(1.2);-webkit-backdrop-filter:blur(22px) saturate(1.2);border:1px solid rgba(255,130,80,.2)}
 sl-button::part(base),sl-select::part(combobox),sl-input::part(base){background:rgba(24,16,14,.62);border-color:rgba(255,130,80,.22);min-height:44px}
 @media (prefers-reduced-motion:reduce){#nox-fx-ash{display:none}}
+/* адаптивность: сетки 390 / 768 / 1280 / 1920 / 2560 / 3840 */
+img,svg,canvas,video,iframe{max-width:100%}
+@media (max-width:430px){html,body{max-width:100vw;overflow-x:hidden}.card,.cx-card{min-width:0}}
+@media (min-width:1920px){html{font-size:17px}}
+@media (min-width:2560px){html{font-size:19px}}
+@media (min-width:3840px){html{font-size:26px}}

@@ -95,5 +95,29 @@ async function train() {
     series: runs.flatMap(([n, r], i) => [{ name: n, type: 'line', showSymbol: false, data: r.points.map((p) => [p.step, p.loss]), lineStyle: { color: col[i % col.length] } }].concat(r.points.some((p) => p.ce != null) ? [{ name: n + ' · holdout CE', type: 'line', showSymbol: true, symbolSize: 5, data: r.points.filter((p) => p.ce != null).map((p) => [p.step, p.ce]), lineStyle: { color: col[i % col.length], type: 'dashed' }, itemStyle: { color: col[i % col.length] } }] : [])) });
   $('#nbxTrN').textContent = (d.running ? 'Процесс обучения активен. ' : 'Сейчас обучение не запущено; показаны последние завершённые прогоны. ') + 'Файлы: ' + runs.map(([n, r]) => n + ' (' + r.points.length + ' т., ' + new Date(r.mtime * 1000).toLocaleString('ru-RU') + ')').join('; ');
 }
+/* ---------- живые процессы: порты органов, GPU, раунд, чекпоинты, журнал правок (из data/live.json) ---------- */
+async function livePanel() {
+  const B0 = section('nbxLive', 'Органы и процессы · живые данные', '', 260, $('main .card')); const B = $('#nbxLiveB');
+  let d = null; try { const r = await fetch(U('./data/live.json?t=' + Date.now()), { cache: 'no-store' }); if (r.ok) d = await r.json(); } catch (e) { /* */ }
+  if (!d) { empty(B, 'Нет данных live.json: датчик не пишет файл.'); return; }
+  const age = Math.round(Date.now() / 1000 - d.ts);
+  const ports = Object.entries(d.ports || {});
+  const up = ports.filter((x) => x[1].ok).length;
+  $('#nbxLiveR').textContent = up + ' / ' + ports.length + ' ОТВЕЧАЮТ · ' + age + ' с назад';
+  const g = d.gpu ? 'VRAM ' + d.gpu.vram_used_mib + ' / ' + d.gpu.vram_total_mib + ' МиБ (' + d.gpu.vram_pct + '%), загрузка GPU ' + d.gpu.gpu_util_pct + '%' : 'GPU: nvidia-smi недоступен';
+  B.innerHTML = '<table class="nbx-tbl"><thead><tr><th>Орган</th><th>Порт</th><th>Статус</th><th>Ответ</th></tr></thead><tbody>' +
+    ports.map((x) => '<tr><td>' + esc(x[0]) + '</td><td class="mono">' + esc(PORT_OF[x[0]] || '') + '</td><td>' + (x[1].ok ? 'жив' : 'нет ответа') + '</td><td class="mono">' + esc(x[1].via || '—') + '</td></tr>').join('') +
+    '</tbody></table><div class="nbx-kv"><span>' + esc(g) + '</span></div>' +
+    '<div class="nbx-kv"><span>Раунд <b>' + esc(d.round || '—') + '</b></span></div>' +
+    '<div class="nbx-kv"><span>Чекпоинты <b>' + esc((d.ckpt_keep || []).join(', ') || '—') + '</b></span></div>' +
+    '<details><summary>Лог автообучения (хвост)</summary><pre class="mono">' + esc((d.autotrain_tail || []).join('\n')) + '</pre></details>' +
+    '<details><summary>Журнал изменений (хвост)</summary><pre class="mono">' + esc((d.ops_tail || []).join('\n')) + '</pre></details>';
+  $('#nbxLiveN').textContent = 'Источник: /workspace/nox/state и логи на сервере, обновляется датчиком раз в 30 с. Ничего не подставлено вручную.';
+  setTimeout(() => livePanel_refresh(), 30000);
+}
+const PORT_OF = { 'тело': 8104, 'подъядро': 8105, 'судья_учитель': 8106, 'второй_судья': 8141, 'судьи': 8300, 'каскад': 8400, 'операторы': 8130, 'API-шлюз': 8120, 'рисунок': 8097 };
+function livePanel_refresh() { const el = $('#nbxLive'); if (el) el.remove(); if (!document.hidden) livePanel(); else setTimeout(livePanel_refresh, 30000); }
+
 const go = { consc: () => consc(), organ: async () => { const first = $('#brain'); await ribbon(first); await coreGraph(first, true); }, soul: () => coreGraph($('#brain'), false), feel: () => feel(), growth: () => growth(), train: () => train() }[P];
 if (go) go();
+if (['consc', 'organ', 'train'].includes(P)) livePanel();

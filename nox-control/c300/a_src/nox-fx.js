@@ -48,3 +48,17 @@
   const start = () => { micro(); hud(); if (!RM) { motion(); idle(ash, 900); } };
   if (document.readyState === 'complete') start(); else addEventListener('load', () => setTimeout(start, 50), { once: true });
 })();
+
+/* NOX · доступность: у кнопок без текста ставим aria-label и title (из подписи иконки, класса или data-tip) */
+(() => {
+  const label = () => {
+    document.querySelectorAll('button:not([aria-label]):not([title])').forEach((b) => {
+      if (b.textContent.trim() || b.getAttribute('aria-labelledby')) return;
+      const t = b.dataset.tip || (b.querySelector('title') || {}).textContent || (b.className && String(b.className).replace(/[-_]/g, ' ').trim()) || 'Кнопка';
+      b.setAttribute('aria-label', t); b.title = t;
+    });
+  };
+  let t; const run = () => { clearTimeout(t); t = setTimeout(label, 300); };
+  const start = () => { label(); new MutationObserver(run).observe(document.body, { childList: true, subtree: true }); };
+  if (document.readyState === 'complete') start(); else addEventListener('load', start, { once: true });
+})();
