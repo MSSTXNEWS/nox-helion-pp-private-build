@@ -495,7 +495,7 @@ def dispatcher():
                 if th2.is_alive(): sql('UPDATE tasks SET hb=? WHERE id=?', (time.time(), tid2))     # heartbeat живого исполнителя
             for r in sql('SELECT id,hb FROM tasks WHERE status="running"'):      # осиротевшие (нет потока, напр. после рестарта сервиса)
                 if r['id'] not in RUNNING and time.time() - (r['hb'] or 0) > 20:
-                    sql('UPDATE tasks SET status="queued", restarts=restarts+1 WHERE id=?', (r['id'],))
+                    sql('UPDATE tasks SET status="queued", restarts=restarts+1 WHERE id=?', (r['id'],)); step(r['id'], 'requeue', f'сирота: нет потока в pid {os.getpid()}, hb {time.time() - (r["hb"] or 0):.0f} с назад', 'dispatcher')
             while True:
                 r = sql('SELECT id,prio FROM tasks WHERE status="queued" ORDER BY prio DESC, created LIMIT 1', one=True)
                 if not r: break
