@@ -27,7 +27,7 @@ async def main():
             emit("vs_"+vp,await pg.screenshot(type="jpeg",quality=60),900 if vp=="d" else 390)
             if vp=="d":
                 await pg.click("[data-act=as]"); await pg.wait_for_timeout(300)
-                await pg.click("[data-act=ru]"); await pg.wait_for_timeout(9000)
+                await pg.click("[data-act=ru]"); await pg.wait_for_timeout(14000)
                 print("LIVE status",await pg.evaluate("()=>document.querySelector('#cnLiveSt').textContent"))
                 emit("vs_live",await pg.screenshot(type="jpeg",quality=60),900)
                 await pg.click("[data-act=ru]"); await pg.wait_for_timeout(300)
