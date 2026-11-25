@@ -1,0 +1,27 @@
+name: B3 R83 independent physical admission
+on:
+  pull_request:
+    paths:
+      - 'coordination/onepass/b3_r83*'
+      - '.github/workflows/nox-b3-r83-physical-admission.yml'
+permissions:
+  contents: read
+jobs:
+  physical-admission:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b3/r80-frozen-byte-consumer-20261125'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exact R66 differential and independent admission
+        run: |
+          set -euo pipefail
+          test "$(git hash-object coordination/onepass/b3_r65_r64_physical_pin_check.cjs)" = 1e22eff92da6b951ad22dea2b2db09201b2d371b
+          test "$(git hash-object coordination/onepass/b3_r66_raw_readback_binding.cjs)" = c4331cc22cb94da0c67fa765e27c838d7b354c66
+          node coordination/onepass/b3_r83_admitted_physical_test.cjs
