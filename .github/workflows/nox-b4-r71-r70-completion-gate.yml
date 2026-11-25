@@ -1,0 +1,29 @@
+name: NOX B4 R71 exact R70 completion gate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/nox-b4-r71-r70-completion-gate.yml'
+      - 'nox-control/systemic_relay_20261118/*r70*'
+permissions:
+  contents: read
+jobs:
+  exact-r70:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify exact saved classifier and execute existing test
+        shell: bash
+        run: |
+          set -euo pipefail
+          d=nox-control/systemic_relay_20261118
+          test "$(git hash-object "$d/b4_r70_completion_metric_fence.cjs")" = f539ef04db3b8531b3b16f71eebf21f67c12cfcc
+          test "$(git hash-object "$d/test_b4_r70_completion_metric_fence.cjs")" = f1f362195d0ca8b439b9ac05c5d18d4ef1bac453
+          node --version
+          node --unhandled-rejections=strict "$d/test_b4_r70_completion_metric_fence.cjs"

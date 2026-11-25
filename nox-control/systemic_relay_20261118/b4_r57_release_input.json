@@ -1,0 +1,95 @@
+{
+  "schema": "NOX_B4_IMMUTABLE_RELEASE_INPUT_V1",
+  "task_id": "B4-R57-R56-B3R61-IMMUTABLE-RELEASE-INPUT-20261124",
+  "claim_comment_id": 7126237047,
+  "next_existing_task_id": "B4-SSE-BROWSER-CAPTURE-PROVENANCE-20261119",
+  "source_head": "f00cc722022773edaed335ffb59fdbb0664189e2",
+  "source_test_merge": "d6a3cd9a3076e9219ee0b96affbe44a0493899da",
+  "source_receipt": 7125112160,
+  "pins": [
+    {
+      "path": "nox-control/systemic_relay_20261118/b4_sse_latency_probe.mjs",
+      "git_blob_sha1": "3582fd900dde982d1abbc1ef0f7ba11025a2e0d5"
+    },
+    {
+      "path": "nox-control/systemic_relay_20261118/b4_existing_turn_pair.mjs",
+      "git_blob_sha1": "aad89a93467e638cfcac5af8a099d2127f4ae0fc"
+    },
+    {
+      "path": "nox-control/systemic_relay_20261118/b4_upstream_timing_pair.mjs",
+      "git_blob_sha1": "e0a239384f7ec054abab926d9f3fb169624ab8d0"
+    },
+    {
+      "path": "nox-control/systemic_relay_20261118/test_b4_r56_r60_composed.mjs",
+      "git_blob_sha1": "73998c265268eb10ae14c7da7a038958ef4505d4"
+    },
+    {
+      "path": ".github/workflows/nox-b4-r56-r60-composed.yml",
+      "git_blob_sha1": "1df2846d022fe526da4fd90712ccfd90e9100503"
+    }
+  ],
+  "bridge": {
+    "tested_commit": "5b50ed7166061a62b5e7b42802cefc8a45e99b5c",
+    "materialized_commit": "52cbadeb978c172b85f67578714797cab0924cf8",
+    "path": "coordination/onepass/b3_r61_release_candidate.js",
+    "git_blob_sha1": "a6e4185e47f480648c88d29b9a2046bb3e70a00e",
+    "manifest_path": "coordination/onepass/b3_r61_release_input.json",
+    "manifest_blob": "4a67f5fc7c6099387f81e0ba217a79a93d179037",
+    "sha256": "9cd1cd1ab96a01b295418b59d53669b742d804520af15e3da648716b02427ef3",
+    "bytes": 24786,
+    "sha256_evidence": "R56 test asserts emitted SHA256; B3 R61 manifest attests same materialized bytes; rehash candidate on combined build before use"
+  },
+  "fixture": {
+    "job": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/45348750570/job/138289635699",
+    "node": "22.16.0",
+    "turns": [
+      {
+        "turn": 2,
+        "browser_ttft_ms": 31.029787,
+        "browser_completion_ms": 47.623103,
+        "upstream_ttft_ms": 5.212754,
+        "upstream_completion_ms": 5.624224
+      },
+      {
+        "turn": 3,
+        "browser_ttft_ms": 5.445571,
+        "browser_completion_ms": 23.893129,
+        "upstream_ttft_ms": 0.645317,
+        "upstream_completion_ms": 0.735033
+      }
+    ],
+    "mock_browser_posts": 2,
+    "mock_admitted_posts": 2,
+    "mock_upstream_posts": 2,
+    "prior_unchanged": true,
+    "scope": "historical source fixture, not GLM, not actual Chromium",
+    "rerun": "node nox-control/systemic_relay_20261118/test_b4_r56_r60_composed.mjs /path/to/pinned-B3-R60"
+  },
+  "coordination_only": {
+    "B0": "ebf8c05b8220da0b871d26672d55237def36691e",
+    "B1": "db583e9de03eeb4c99b75c34ef2b01accd4e2904",
+    "B2": "8a9a00164d7e282aad26fa686eb81d95ef7f47df",
+    "B5": "7fad0f38fa299112a9a67781f427e21b23f3fb18"
+  },
+  "gates": {
+    "full_combined_ci": false,
+    "exclusive_shared_native_owner_cas": false,
+    "stop_resource_rollback_immutable_verifier": false,
+    "installed_served_weights_tokenizer_sha256": false,
+    "authenticated_browser_upstream_record_pins": false,
+    "actual_existing_dialog_turns_2_3": false,
+    "independent_canonical_s03": false,
+    "ready": "UNKNOWN"
+  },
+  "native_accepted": false,
+  "original_295_accepted_delta": 0,
+  "live_glm_ttft_ms": null,
+  "live_glm_completion_ms": null,
+  "model_tokens_per_second": null,
+  "notes": [
+    "One existing dialog, no first-turn replay. Exactly one POST for each next turn, no retry on ambiguous admission.",
+    "Use independently authenticated pins and distinct monotonic timing scopes; no subtraction across clocks.",
+    "No new hosted runtime test in R57. Other donor releases are coordination only, not jointly tested.",
+    "Full mandatory release gates unresolved; no deploy or native admission."
+  ]
+}

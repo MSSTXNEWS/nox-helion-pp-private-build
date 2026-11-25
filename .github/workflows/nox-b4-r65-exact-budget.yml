@@ -1,0 +1,39 @@
+name: NOX B4 R65 exact Node22 admission budget
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/nox-b4-r65-exact-budget.yml'
+      - 'nox-control/systemic_relay_20261118/b4_r64_preverifier_fence.cjs'
+      - 'nox-control/systemic_relay_20261118/test_b4_r64_preverifier_fence.cjs'
+permissions:
+  contents: read
+jobs:
+  exact-node-budget:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 3e692932a6e9393e0ffa44cf449be5787d835821
+          path: b1-pinned
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Exact saved Node CLI, source only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C b1-pinned rev-parse HEAD)" = 3e692932a6e9393e0ffa44cf449be5787d835821
+          cd nox-control/systemic_relay_20261118
+          test "$(git hash-object b4_r63_admission_budget.cjs)" = 2c5d50ee0b3719f6e9f76eaff7feede359f06cd0
+          test "$(git hash-object b4_r64_preverifier_fence.cjs)" = 119c938d14c16f359c78d6ec46acf639f23ee315
+          test "$(git hash-object test_b4_r64_preverifier_fence.cjs)" = 7ad2763b6c416b70a9014ec8b47e084ed4cbd29a
+          test "$(git hash-object ../../b1-pinned/nox-control/b1-r71/b1_browser_bundle.js)" = 6db447710b579433496dfa64ceb4118461493864
+          test "$(git hash-object ../../b1-pinned/nox-control/b1-r74/wire_guard.cjs)" = 22bb2217f82bb44bfadc92b979e1af22e0dfaab8
+          node --version
+          node test_b4_r64_preverifier_fence.cjs ../../b1-pinned/nox-control/b1-r71/b1_browser_bundle.js ../../b1-pinned/nox-control/b1-r74/wire_guard.cjs

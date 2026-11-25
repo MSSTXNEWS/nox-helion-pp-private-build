@@ -1,0 +1,38 @@
+name: NOX B4 R62 actual preadmission fence
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/systemic_relay_20261118/test_b4_r62_wire_preadmission.mjs'
+      - '.github/workflows/nox-b4-r62-wire-preadmission.yml'
+permissions:
+  contents: read
+jobs:
+  preadmission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: a2c2340afd065c49a9ec4987c4dd213b3d3b649b
+          path: b1-pinned
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 568b5e548180c039629789b57e4b22ff0abc7f9a
+          path: b3-pinned
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - run: |
+          set -euo pipefail
+          test "$(git -C b1-pinned rev-parse HEAD)" = a2c2340afd065c49a9ec4987c4dd213b3d3b649b
+          test "$(git -C b3-pinned rev-parse HEAD)" = 568b5e548180c039629789b57e4b22ff0abc7f9a
+          test "$(git hash-object b1-pinned/nox-control/b1-r71/b1_browser_bundle.js)" = 6db447710b579433496dfa64ceb4118461493864
+          test "$(git hash-object b1-pinned/nox-control/b1-r72/wire_guard.cjs)" = 6ab44250e25a9bd62f11712e8c7fbae0ebac09b0
+          test "$(git hash-object b3-pinned/coordination/onepass/b3_r64_eof_candidate.js)" = 66595eac01c562aff4daae68f5d146aaed64cbbe
+          node nox-control/systemic_relay_20261118/test_b4_r62_wire_preadmission.mjs b1-pinned/nox-control/b1-r71/b1_browser_bundle.js b1-pinned/nox-control/b1-r72/wire_guard.cjs b3-pinned/coordination/onepass/b3_r64_eof_candidate.js

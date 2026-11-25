@@ -1,0 +1,37 @@
+name: NOX B4 R61 actual wire cancellation witness
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/systemic_relay_20261118/test_b4_r61_wire_cancel_stop.mjs'
+      - '.github/workflows/nox-b4-r61-wire-cancel-stop.yml'
+permissions:
+  contents: read
+jobs:
+  wire-cancel-stop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 72de94cf56494351f8893055256907f3ab9c9cae
+          path: b1-pinned
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 568b5e548180c039629789b57e4b22ff0abc7f9a
+          path: b3-pinned
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - run: |
+          set -euo pipefail
+          test "$(git -C b1-pinned rev-parse HEAD)" = 72de94cf56494351f8893055256907f3ab9c9cae
+          test "$(git -C b3-pinned rev-parse HEAD)" = 568b5e548180c039629789b57e4b22ff0abc7f9a
+          test "$(git hash-object b1-pinned/nox-control/b1-r71/b1_browser_bundle.js)" = 6db447710b579433496dfa64ceb4118461493864
+          test "$(git hash-object b3-pinned/coordination/onepass/b3_r64_eof_candidate.js)" = 66595eac01c562aff4daae68f5d146aaed64cbbe
+          node nox-control/systemic_relay_20261118/test_b4_r61_wire_cancel_stop.mjs b1-pinned/nox-control/b1-r71/b1_browser_bundle.js b3-pinned/coordination/onepass/b3_r64_eof_candidate.js

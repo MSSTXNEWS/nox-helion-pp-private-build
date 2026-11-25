@@ -1,0 +1,37 @@
+name: NOX B4 R58 exact materialized timing
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/systemic_relay_20261118/test_b4_r58_materialized_timing.mjs'
+      - '.github/workflows/nox-b4-r58-materialized-timing.yml'
+permissions:
+  contents: read
+jobs:
+  exact-materialized-timing:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 52cbadeb978c172b85f67578714797cab0924cf8
+          path: b3-pinned
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify exact materialized bridge and delayed transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C b3-pinned rev-parse HEAD)" = 52cbadeb978c172b85f67578714797cab0924cf8
+          test "$(git hash-object b3-pinned/coordination/onepass/b3_r61_release_candidate.js)" = a6e4185e47f480648c88d29b9a2046bb3e70a00e
+          cd nox-control/systemic_relay_20261118/
+          test "$(git hash-object b4_sse_latency_probe.mjs)" = 3582fd900dde982d1abbc1ef0f7ba11025a2e0d5
+          test "$(git hash-object b4_existing_turn_pair.mjs)" = aad89a93467e638cfcac5af8a099d2127f4ae0fc
+          test "$(git hash-object b4_upstream_timing_pair.mjs)" = e0a239384f7ec054abab926d9f3fb169624ab8d0
+          node --version
+          node test_b4_r58_materialized_timing.mjs ../../b3-pinned/coordination/onepass/b3_r61_release_candidate.js

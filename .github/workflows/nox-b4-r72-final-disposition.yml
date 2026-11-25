@@ -1,0 +1,21 @@
+name: NOX B4 R72 final disposition metric gate
+on:
+  pull_request:
+    paths:
+      - 'nox-control/systemic_relay_20261118/b4_r72_final_disposition_metric_fence.cjs'
+      - 'nox-control/systemic_relay_20261118/test_b4_r72_final_disposition_metric_fence.cjs'
+      - '.github/workflows/nox-b4-r72-final-disposition.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exact R70 and R72 metric classifier
+        run: |
+          test "$(git hash-object nox-control/systemic_relay_20261118/b4_r70_completion_metric_fence.cjs)" = f539ef04db3b8531b3b16f71eebf21f67c12cfcc
+          node nox-control/systemic_relay_20261118/test_b4_r72_final_disposition_metric_fence.cjs

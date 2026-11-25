@@ -1,0 +1,36 @@
+name: NOX B4 R56 pinned R60 upstream browser composition
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/systemic_relay_20261118/test_b4_r56_r60_composed.mjs'
+      - '.github/workflows/nox-b4-r56-r60-composed.yml'
+permissions:
+  contents: read
+jobs:
+  composed-r60:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 5b50ed7166061a62b5e7b42802cefc8a45e99b5c
+          path: b3-pinned
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify pinned R60 and R55 on same fixture responses
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C b3-pinned rev-parse HEAD)" = 5b50ed7166061a62b5e7b42802cefc8a45e99b5c
+          cd nox-control/systemic_relay_20261118/
+          test "$(git hash-object b4_sse_latency_probe.mjs)" = 3582fd900dde982d1abbc1ef0f7ba11025a2e0d5
+          test "$(git hash-object b4_existing_turn_pair.mjs)" = aad89a93467e638cfcac5af8a099d2127f4ae0fc
+          test "$(git hash-object b4_upstream_timing_pair.mjs)" = e0a239384f7ec054abab926d9f3fb169624ab8d0
+          node --version
+          node test_b4_r56_r60_composed.mjs ../../b3-pinned

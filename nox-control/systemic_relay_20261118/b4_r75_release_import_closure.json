@@ -1,0 +1,84 @@
+{
+  "schema": "NOX_B4_RELEASE_IMPORT_CLOSURE_V1",
+  "task_id": "B4-SSE-BROWSER-CAPTURE-PROVENANCE-20261119",
+  "operation_key": "B4-SSE-BROWSER-CAPTURE-PROVENANCE-20261119:release-r75-r108-import-closure",
+  "claim": 7152028670,
+  "source_only": true,
+  "native_accepted": false,
+  "host_provider_bound": false,
+  "source_commit": "77802f5ba7edd44d2c0a72bff6f823c954354516",
+  "consumer_commit": "d9a7edfa1511aa9eecce065b339599efba8f62ce",
+  "entrypoint": "nox-control/b2-r108/atomic_ordered_quality.cjs",
+  "entrypoint_blob": "2bd2efcaea708498871b6f913e4b28d5bb8ca90e",
+  "export": "makeOfflinePairReview",
+  "metric_export": "classifyOrderedCompletionPair",
+  "donors": [
+    {
+      "path": "nox-control/systemic_relay_20261118/b4_r75_ordered_completion_pair.cjs",
+      "commit": "77802f5ba7edd44d2c0a72bff6f823c954354516",
+      "blob": "3bbef66163dc365fbaea50b054d9744a25fbdf31",
+      "staged_path": "nox-control/b2-r108/b4_r75_ordered_completion_pair.cjs"
+    },
+    {
+      "path": "nox-control/systemic_relay_20261118/b4_r74_completion_pair.cjs",
+      "commit": "77802f5ba7edd44d2c0a72bff6f823c954354516",
+      "blob": "ab7c5f1f82d0163af2fe60ada05b7f9cde3c42e9",
+      "staged_path": "nox-control/d3-r107/donor/b4_r74_completion_pair.cjs"
+    },
+    {
+      "path": "nox-control/systemic_relay_20261118/b4_r73_pinned_disposition_metric_bridge.cjs",
+      "commit": "77802f5ba7edd44d2c0a72bff6f823c954354516",
+      "blob": "0eb3f3e1ab9502c0014f9dd7b1b280f4e3fb04f8",
+      "staged_path": "nox-control/d3-r107/donor/b4_r73_pinned_disposition_metric_bridge.cjs"
+    },
+    {
+      "path": "nox-control/systemic_relay_20261118/b4_r72_final_disposition_metric_fence.cjs",
+      "commit": "77802f5ba7edd44d2c0a72bff6f823c954354516",
+      "blob": "3e31947d7b562d88db13c3c9e3a2a4405ef56ad7",
+      "staged_path": "nox-control/d3-r107/donor/b4_r72_final_disposition_metric_fence.cjs"
+    },
+    {
+      "path": "nox-control/systemic_relay_20261118/b4_r70_completion_metric_fence.cjs",
+      "commit": "77802f5ba7edd44d2c0a72bff6f823c954354516",
+      "blob": "f539ef04db3b8531b3b16f71eebf21f67c12cfcc",
+      "staged_path": "nox-control/d3-r107/donor/b4_r70_completion_metric_fence.cjs"
+    }
+  ],
+  "consumer_bridge": {
+    "path": "nox-control/b2-r108/b4_r74_completion_pair.cjs",
+    "commit": "d9a7edfa1511aa9eecce065b339599efba8f62ce",
+    "blob": "3668810ff5018d4a2ef7adb69952230118d1fb10"
+  },
+  "consumer_target_receipt": {
+    "job": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/45539467303/job/138954133974",
+    "receipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/493#issuecomment-7151854735",
+    "scope": "offline fixture only"
+  },
+  "disposition_contract": {
+    "r100_receipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/493#issuecomment-7147314487",
+    "pending_retained_observation_eligible": false,
+    "required": [
+      "independent host authentication",
+      "original observation/reservation/final disposition bytes with detached SHA256 pins",
+      "FINALIZED with DOM MATCHED and STOP CLEAR after durable reservation CAS",
+      "independent canonical S03 and physical binding",
+      "same independently authenticated monotonic clock for both turns; no rebase"
+    ]
+  },
+  "integration": {
+    "replace": "R107 unordered metric consumer",
+    "keep_relative_import_paths": true,
+    "do_not_count_duplicate_standalone_metric_consumer": true,
+    "metric_output": "offline_metrics; not native completion",
+    "full_joint_ci_required": true,
+    "native_owner_admission_required": true,
+    "companion_release_pins": {
+      "B0": "R78",
+      "B1": "R86",
+      "B2": "R108",
+      "B3": "R80",
+      "B5": "R80"
+    },
+    "no_first_turn_replay": true
+  }
+}

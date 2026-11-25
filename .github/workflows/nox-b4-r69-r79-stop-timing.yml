@@ -1,0 +1,44 @@
+name: NOX B4 R69 R79 joint STOP timing
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/nox-b4-r69-r79-stop-timing.yml'
+      - 'nox-control/systemic_relay_20261118/*r69*'
+permissions:
+  contents: read
+jobs:
+  exact-scoped:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 2e26491241fb2483e6b6c2a4647810ae4ed15058
+          path: b1-pinned
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 98e955c00fbd45c781e8d9ca81c309462f86a480
+          path: b3-pinned
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - run: |
+          set -euo pipefail
+          test "$(git -C b1-pinned rev-parse HEAD)" = 2e26491241fb2483e6b6c2a4647810ae4ed15058
+          test "$(git -C b3-pinned rev-parse HEAD)" = 98e955c00fbd45c781e8d9ca81c309462f86a480
+          test "$(git hash-object b1-pinned/nox-control/b1-r76/scoped_transport.cjs)" = 1d30c51d321f6691ca86e02afd5b986427a4eeb5
+          test "$(git hash-object b1-pinned/nox-control/b1-r74/wire_guard.cjs)" = 22bb2217f82bb44bfadc92b979e1af22e0dfaab8
+          test "$(git hash-object b1-pinned/nox-control/b1-r79/b1_browser_bundle.js)" = b42f00e572ad000b87d7e9e5bf210aba0362494a
+          test "$(git hash-object b3-pinned/coordination/onepass/b3_r69_exchange_scope_binding.cjs)" = 18b3be8fc4264b32d51a57ad4db367b3ba786d41
+          test "$(git hash-object b3-pinned/coordination/onepass/b3_r68_route_binding.cjs)" = 6d0fef57783346fe33d59ca39a625015514ae168
+          test "$(git hash-object nox-control/systemic_relay_20261118/b4_r64_preverifier_fence.cjs)" = 119c938d14c16f359c78d6ec46acf639f23ee315
+          test "$(git hash-object nox-control/systemic_relay_20261118/b4_r63_admission_budget.cjs)" = 2c5d50ee0b3719f6e9f76eaff7feede359f06cd0
+          test "$(git hash-object nox-control/systemic_relay_20261118/b4_r66_scoped_admission.cjs)" = 7a6a530ffb904ba2546bdaf7ef0f8a31513bf138
+          test "$(git hash-object nox-control/systemic_relay_20261118/b4_r68_hard_admission_deadline.cjs)" = 792e348e36cbe32717920793c40dd91cad433f33
+          node --unhandled-rejections=strict nox-control/systemic_relay_20261118/test_b4_r69_r79_stop_timing.cjs b1-pinned/nox-control b3-pinned/coordination/onepass/b3_r69_exchange_scope_binding.cjs

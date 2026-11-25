@@ -1,0 +1,30 @@
+name: NOX B4 R55 upstream and browser timing binding
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/systemic_relay_20261118/b4_upstream_timing_pair.mjs'
+      - 'nox-control/systemic_relay_20261118/test_b4_upstream_timing_pair.mjs'
+      - '.github/workflows/nox-b4-r55-timing-binding.yml'
+permissions:
+  contents: read
+jobs:
+  timing-binding:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Run exact pinned source composition without network requests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd nox-control/systemic_relay_20261118
+          test "$(git hash-object b4_sse_latency_probe.mjs)" = 3582fd900dde982d1abbc1ef0f7ba11025a2e0d5
+          test "$(git hash-object b4_existing_turn_pair.mjs)" = aad89a93467e638cfcac5af8a099d2127f4ae0fc
+          node --version
+          node test_b4_upstream_timing_pair.mjs

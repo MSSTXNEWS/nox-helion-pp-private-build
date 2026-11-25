@@ -1,0 +1,45 @@
+name: NOX B4 R53 Existing Turn Pair Exact Node22 SSE Suite
+on:
+  push:
+    branches:
+      - b4/r51-main-sse-candidate-20261124
+    paths:
+      - .github/workflows/nox-b4-r51-main-candidate.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - nox-control/systemic_relay_20261118/b4_sse_latency_probe.mjs
+      - nox-control/systemic_relay_20261118/test_b4_sse_latency_probe.mjs
+      - .github/workflows/nox-b4-r51-main-candidate.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-b4-r51-source-only
+  cancel-in-progress: false
+jobs:
+  full-exact-b4-suite:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify B4 exact source and run ALL test cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd nox-control/systemic_relay_20261118
+          test "$(git hash-object b4_sse_latency_probe.mjs)" = "3582fd900dde982d1abbc1ef0f7ba11025a2e0d5"
+          test "$(git hash-object test_b4_sse_latency_probe.mjs)" = "62483645cf5c037d4366467caa2c80679729a5b6"
+          printf 'B4_R52_EXACT_SOURCE_PROBE_SHA256='
+          sha256sum b4_sse_latency_probe.mjs
+          printf 'B4_R52_EXACT_SOURCE_TEST_SHA256='
+          sha256sum test_b4_sse_latency_probe.mjs
+          node --version
+          test "$(git hash-object b4_existing_turn_pair.mjs)" = "aad89a93467e638cfcac5af8a099d2127f4ae0fc"
+          test "$(git hash-object test_b4_existing_turn_pair.mjs)" = "27146b97f7472796582864cee1753ff90683b11b"
+          node --test test_b4_sse_latency_probe.mjs test_b4_existing_turn_pair.mjs

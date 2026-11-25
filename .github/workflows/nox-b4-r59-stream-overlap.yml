@@ -1,0 +1,32 @@
+name: NOX B4 R59 overlap and native EOF witness
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/systemic_relay_20261118/test_b4_r59_stream_overlap.mjs'
+      - '.github/workflows/nox-b4-r59-stream-overlap.yml'
+permissions:
+  contents: read
+jobs:
+  overlap-witness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 52cbadeb978c172b85f67578714797cab0924cf8
+          path: b3-pinned
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Exact bridge and deterministic overlap
+        run: |
+          set -euo pipefail
+          test "$(git -C b3-pinned rev-parse HEAD)" = 52cbadeb978c172b85f67578714797cab0924cf8
+          test "$(git hash-object b3-pinned/coordination/onepass/b3_r61_release_candidate.js)" = a6e4185e47f480648c88d29b9a2046bb3e70a00e
+          test "$(git hash-object nox-control/systemic_relay_20261118/b4_sse_latency_probe.mjs)" = 3582fd900dde982d1abbc1ef0f7ba11025a2e0d5
+          node nox-control/systemic_relay_20261118/test_b4_r59_stream_overlap.mjs b3-pinned/coordination/onepass/b3_r61_release_candidate.js
