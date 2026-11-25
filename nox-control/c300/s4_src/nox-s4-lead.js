@@ -28,6 +28,24 @@
         f.innerHTML = m.map((x) => '<div class="s4lr"><i class="s4d g"></i><div><div>' + esc(String(x.text || '').slice(0, 300)) + '</div><small class="mono">' + new Date(x.ts * 1000).toLocaleString('ru-RU') + '</small></div></div>').join(''); })
         .catch(() => off(root.querySelector('#s4lf'), 'Лента уведомлений недоступна: /api/nox/outbox не отвечает.')); return;
     }
+    if (kind === 'nexus') {
+      root.innerHTML = '<div class="ph"><div><span class="kick mono">Сетевой граф · органы ядра и службы</span><h1>Nexus</h1></div><div class="acts"><span class="seg"><button type="button" id="s4nf"><sl-icon library="tabler" name="focus-centered"></sl-icon>Вписать</button></span></div></div><section class="card s4lc"><h2>Граф связей <span class="r mono" id="s4nn">…</span></h2><div class="s4nw"><div id="s4ny"></div><aside id="s4ni" class="muted">Нажмите на узел.</aside></div></section>';
+      wrap.prepend(root); hide();
+      Promise.all([fetch('/api/nox/status', { cache: 'no-store' }).then((r) => r.json()).catch(() => null), fetch('./data/live.json?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.json()).catch(() => null)]).then(([st, lv]) => {
+        const el = []; const org = st && st.health && st.health.organs || {}, ports = lv && lv.ports || {};
+        el.push({ data: { id: 'NOX', l: 'NOX', c: '#f2c14e', s: 30 } }); el.push({ data: { id: 'core', l: 'Ядро', c: '#e0954a', s: 20 } }); el.push({ data: { id: 'ec', source: 'NOX', target: 'core' } });
+        Object.keys(org).forEach((k) => { el.push({ data: { id: 'o:' + k, l: k, c: org[k] ? '#8fc28a' : '#d64630', s: 12, d: 'Орган ядра: ' + (org[k] ? 'жив' : 'не отвечает') } }); el.push({ data: { id: 'eo' + k, source: 'core', target: 'o:' + k } }); });
+        el.push({ data: { id: 'svc', l: 'Службы', c: '#6aa9d8', s: 20 } }); el.push({ data: { id: 'es', source: 'NOX', target: 'svc' } });
+        Object.keys(ports).forEach((k) => { const ok = ports[k] && ports[k].ok; el.push({ data: { id: 'p:' + k, l: k, c: ok ? '#8fc28a' : '#d64630', s: 12, d: 'Служба: ' + (ok ? 'жива' : 'нет ответа') + (ports[k] && ports[k].via ? ' (' + ports[k].via + ')' : '') } }); el.push({ data: { id: 'ep' + k, source: 'svc', target: 'p:' + k } }); });
+        root.querySelector('#s4nn').textContent = (Object.keys(org).length + Object.keys(ports).length) + ' узлов';
+        if (el.length < 6) { off(root.querySelector('#s4ny'), 'Нет данных: ядро и службы не ответили.'); return; }
+        if (!window.cytoscape) { off(root.querySelector('#s4ny'), 'Cytoscape не загружен.'); return; }
+        const cy = cytoscape({ container: root.querySelector('#s4ny'), elements: el, layout: { name: 'cose', animate: false, nodeRepulsion: 12000, idealEdgeLength: 70 }, wheelSensitivity: .25,
+          style: [{ selector: 'node', style: { 'background-color': 'data(c)', width: 'data(s)', height: 'data(s)', label: 'data(l)', color: '#cfc4bd', 'font-size': 11, 'text-valign': 'bottom', 'text-margin-y': 3 } }, { selector: 'edge', style: { width: 1, 'line-color': 'rgba(255,235,220,.2)', 'curve-style': 'haystack' } }, { selector: ':selected', style: { 'border-width': 2, 'border-color': '#fff' } }] });
+        cy.on('tap', 'node', (e) => { const d = e.target.data(); root.querySelector('#s4ni').innerHTML = '<b>' + esc(d.l) + '</b><p>' + esc(d.d || '') + '</p>'; });
+        root.querySelector('#s4nf').onclick = () => cy.fit(undefined, 30); addEventListener('resize', () => cy.resize());
+      }); return;
+    }
     if (kind === 'map') {
       root.innerHTML = '<div class="ph"><div><span class="kick mono">Google Maps · карта мира</span><h1>Карта</h1></div></div><section class="card s4lc"><div id="s4map"></div></section>';
       wrap.prepend(root); hide();

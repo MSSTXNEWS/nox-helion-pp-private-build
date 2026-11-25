@@ -4,3 +4,4 @@
 .s4lr{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,235,220,.07);font-size:14px}.s4lr small{font-size:12px;opacity:.6}
 #s4map{height:68vh;min-height:380px;border-radius:12px;overflow:hidden;filter:invert(.92) hue-rotate(180deg) saturate(.5) brightness(.9)}
 .s4ld .acts{display:flex;gap:8px;flex-wrap:wrap}
+#s4ny{height:62vh;min-height:360px;border-radius:12px;background:rgba(6,4,4,.6);border:1px solid rgba(255,235,220,.08)}.s4nw{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:10px}@media(max-width:820px){.s4nw{grid-template-columns:1fr}}#s4ni{font-size:14px}
