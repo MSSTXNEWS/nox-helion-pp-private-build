@@ -1,0 +1,65 @@
+{
+  "schema": "NOX_B3_R82_R111_R88_BROWSER_ROLE_INPUT_V1",
+  "instructions_version": "0.0.6",
+  "task_id": "5A05-B3-R80-FROZEN-BYTES-CONSUMER-PIN-20261125",
+  "operation": "R82-R111-R88-STAGED-BROWSER-IDENTITY-20261125",
+  "claim": 7153813869,
+  "native_successor": "5A05-B3-PR717-442EF93B-PHASE-CI-OWNER-CAS-LIVE-S03-20261121",
+  "parent_role_input": {
+    "commit": "92e44fb52d95d228903780843c955763975c0272",
+    "blob": "3f9e77a561c6bb970f5482322bd62a8c2dfe8b25"
+  },
+  "base": {
+    "commit": "1dc5eac0c22807b8522b67ccf95e70ffb3c87b85",
+    "manifest_path": "nox-control/d3-r111/release.json",
+    "manifest_blob": "fd6b4dd58465de1b7874c36f292acd98be7bb6c5",
+    "manifest_sha256": "d3d7035db09ef85a7ccfcac64c9bdcf29778ea4a66a076be33c61e2454312650",
+    "artifact_id": 14989839885
+  },
+  "input_browser": {
+    "path": "nox-control/d3-r111/browser/b1_browser_bundle.js",
+    "blob": "bd2e154fd2c6007cb315d310e109de470f54f72f",
+    "sha256": "e7140c983b646b7544f95774491e718bed06880ac6a6e21b8f51980cdec5542b",
+    "bytes": 84730,
+    "disposition": "HISTORICAL_INPUT_ONLY_FOR_R88"
+  },
+  "stager": {
+    "commit": "498d863d49563049a63b32750eca57e53ee35f1f",
+    "path": "nox-control/b1-r88/stage_r100.cjs",
+    "blob": "157270b88577fc0c4a92bf45f07f041ef89b1251",
+    "sha256": "3e9b5656fcf7baa19f467b6d27289f05e45d501cb3b288329308f95104692193",
+    "export": "stageR100"
+  },
+  "selected_candidate": {
+    "path": "nox-control/d3-r111-successor/browser/b1_browser_r100.js",
+    "sha256": "37a756fdc6544f8b5d73425c83221bb958504bd3199dd6245aa4d4b62549651f",
+    "bytes": 89135,
+    "disposition": "STAGED_CANDIDATE_UNBOUND_SELECT_ONCE",
+    "expected_observation_browser_sha256": "37a756fdc6544f8b5d73425c83221bb958504bd3199dd6245aa4d4b62549651f"
+  },
+  "bridge": {
+    "path": "nox-control/d3-r111/bridge/b3_r64_eof_candidate.js",
+    "blob": "66595eac01c562aff4daae68f5d146aaed64cbbe",
+    "sha256": "c44b5aa2ef3d45246276a24bbcfad30bf76533fc2e08089eb91b442002643dc7",
+    "disposition": "PINNED_UNBOUND_NO_AUTO_COLOAD"
+  },
+  "route_consumer": {
+    "commit": "51fba11cee1508c362c641aad439baf1e75ed53e",
+    "path": "nox-control/a3-r111-route/route_evidence.cjs",
+    "blob": "f1c8d5d1abac72d0f13ee0754aecec9aa50af928",
+    "disposition": "ORIGINAL_R111_REVIEW_ONLY",
+    "successor_contract": "D3/A3 validate immutable base assets and a separately pinned successor mapping. On R88 selected route require candidate digest in route browser_sha256 and both observation browser_sha256; preserve original R111 manifest, never substitute old R86 or rewrite retained receipts. Bind independent served application, server, bridge and physical evidence separately; do not infer them from candidate bytes. A3 route -> B4 timing-aware R110 once, B2 R112 after. R100 FINALIZED after independently verified durable RESERVED_NOT_SENT, DOM MATCHED and STOP CLEAR. No browser or route authority from this file."
+  },
+  "verification": {
+    "source_reconstruction_anchors": 6,
+    "source_reconstruction_only": true,
+    "hosted_target_required": true
+  },
+  "production_ready": false,
+  "native_accepted": false,
+  "authentication_verified": false,
+  "host_provider_bound": false,
+  "ack_allowed": false,
+  "next_post_allowed": false,
+  "training_admitted": false
+}
