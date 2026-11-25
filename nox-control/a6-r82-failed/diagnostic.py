@@ -1,8 +1,8 @@
 """Failed/interrupted diagnostic only. No successful turn or mutation authority."""
-from typed_failed_poststate import classify_typed_failed_turn
+from pending_wire import classify_wire_failed_turn
 def review_failed(*, evidence):
     try:
-        state=classify_typed_failed_turn(**evidence)
+        state=classify_wire_failed_turn(**evidence)
     except (TypeError, ValueError, KeyError, RuntimeError, UnicodeError, RecursionError):
         state="HOLD_S03_FAILURE_INVALID"
     if type(state) is not str or not state.startswith("HOLD_"):
