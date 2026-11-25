@@ -143,3 +143,10 @@
 | hover.css | 2.3.2 | MIT личное/open-source; коммерческая платная | vendor/hover.css/hover-min.css | class="hvr-bob" | анимации (K6 motionlib) | ok |
 | magic.css | 1.4.8 | MIT | vendor/magic.css/magic.min.css | class="magictime puffIn" | анимации (K6 motionlib) | ok |
 | @formkit/auto-animate | 0.11.0 | MIT | vendor/auto-animate/index.mjs | import autoAnimate from "./vendor/auto-animate/index.mjs" | анимация списков (K6) | ok |
+
+## Текстуры и HDRI (ассеты, не npm)
+| Ассет | Файл | Лицензия | Автор / источник | Атрибуция |
+|---|---|---|---|---|
+| Текстуры Луны и Марса 2k (2k_moon.jpg, nox-mars.jpg = 2k_mars) | vendor/nox-planets/ | CC BY 4.0 | Solar System Scope (данные NASA), https://www.solarsystemscope.com/textures/ | about.html (раздел лицензий) и реестр nox-registry.js |
+| HDRI Machine Shop 01 1k | assets/nox-approved/hdr/machine_shop_01_1k.hdr | CC0 | Poly Haven | about.html |
+| Metal012 1K Color | assets/nox-approved/metal/Metal012_1K-JPG_Color.jpg | CC0 | ambientCG | about.html |
