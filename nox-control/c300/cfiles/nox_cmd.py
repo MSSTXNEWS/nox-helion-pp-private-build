@@ -1,5 +1,5 @@
 """NOX командная шина: POST /api/cmd (белый список из qa/registry.json) и /api/cmd/confirm (одноразовый токен 60 с)."""
-import json, os, secrets, time, urllib.request, urllib.error
+import json, os, secrets, time, urllib.parse, urllib.request, urllib.error
 REG_PATH = "/workspace/nox/web/site/qa/registry.json"
 LOG = "/workspace/nox/state/cmd_log.jsonl"
 BASE = "http://127.0.0.1:8091"
@@ -48,7 +48,6 @@ def _exec(cmd, params):
     url = BASE + cmd["endpoint"]
     if cmd["method"] == "GET":
         if params:
-            import urllib.parse
             url += "?" + urllib.parse.urlencode({k: v for k, v in params.items() if isinstance(v, (str, int, float))})
     else:
         body = json.dumps(params or {}).encode()
@@ -94,6 +93,9 @@ def handle(h, path, raw):
         if not ent or ent[0] != name or ent[1] < time.time():
             _log({"cmd": name, "event": "rejected_no_token"})
             return _send(h, 403, {"ok": False, "error": "нужен confirm_token (получить после подтверждения)", "need_confirm": True})
-    code, res = _exec(cmd, params)
+    try:
+        code, res = _exec(cmd, params)
+    except Exception as e:
+        code, res = 500, {"ok": False, "error": "внутренняя ошибка: " + str(e)[:160]}
     _log({"cmd": name, "event": "run", "status": code, "ok": res.get("ok")})
     return _send(h, code, res)
