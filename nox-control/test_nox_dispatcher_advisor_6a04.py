@@ -100,6 +100,14 @@ class GpuSourceEvidenceTests(unittest.TestCase):
                 self.assertIn("GPU_RESIDUAL_RESOURCE_HOLD", found)
                 self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", found)
 
+    def test_busy_worker_cursor_overrides_cached_no_claims_for_gpu(self):
+        s = snapshot()
+        s["native_queue"]["workers"][0]["current_task"] = "6A02"
+        observed = [x["code"] for x in mod.assess(
+            s, owner_snapshot_verifier=lambda exact: exact is s)]
+        self.assertIn("GPU_RESIDUAL_RESOURCE_HOLD", observed)
+        self.assertNotIn("GPU_RESIDUAL_OBSERVED_NOT_ADMITTED", observed)
+
     def test_unattested_owner_flags_cannot_label_spare_gpu_measured(self):
         s = snapshot()
         for verifier in (None, lambda exact: True if False else 1,

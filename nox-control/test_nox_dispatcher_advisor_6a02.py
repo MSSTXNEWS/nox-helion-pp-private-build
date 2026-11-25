@@ -128,6 +128,13 @@ class NativeRefillSourceGateTests(unittest.TestCase):
         self.assertIn("NATIVE_QUEUE_UNVERIFIED", found)
         self.assertNotIn("NO_UNVERIFIED_TUNING", found)
         s["native_queue"]["workers"][1]["current_task"] = "1A03"
+        found = codes(s, lambda exact: exact is s)
+        self.assertIn("NATIVE_WORKER_CURSOR_BUSY_HOLD", found)
+        self.assertNotIn("NO_UNVERIFIED_TUNING", found)
+        # When both worker cursors are explicitly idle, the original
+        # no-change observation is still permitted.
+        for worker in s["native_queue"]["workers"]:
+            worker["current_task"] = None
         self.assertIn("NO_UNVERIFIED_TUNING",
                       codes(s, lambda exact: exact is s))
 
@@ -156,6 +163,18 @@ class NativeRefillSourceGateTests(unittest.TestCase):
         )
         self.assertIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED",
                       codes(s, lambda exact: exact is s))
+
+    def test_exhausted_worker_without_explicit_cursor_is_hold(self):
+        s = snapshot()
+        s["native_queue"].update(
+            owner_lease_cas_verified=True,
+            immutable_task_source_verified=True,
+            owner_evidence_age_sec=0,
+        )
+        del s["native_queue"]["workers"][0]["current_task"]
+        found = codes(s, lambda exact: exact is s)
+        self.assertIn("NATIVE_REFILL_OWNER_HOLD", found)
+        self.assertNotIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED", found)
 
     def test_idle_without_lease_and_source_is_hold(self):
         result = mod.assess(snapshot())

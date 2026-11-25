@@ -153,6 +153,14 @@ class TrainingResumeAttestationTests(unittest.TestCase):
                 self.assertIn("TRAIN_RESUME_OWNER_HOLD", codes)
                 self.assertNotIn("TRAIN_RESUME_CANDIDATE", codes)
 
+    def test_busy_worker_cursor_overrides_cached_no_claims_for_resume(self):
+        s = self.snapshot()
+        s["native_queue"]["workers"][0]["current_task"] = "6A02"
+        observed = [x["code"] for x in advisor.assess(
+            s, owner_snapshot_verifier=lambda exact: exact is s)]
+        self.assertIn("TRAIN_RESUME_OWNER_HOLD", observed)
+        self.assertNotIn("TRAIN_RESUME_CANDIDATE", observed)
+
     def test_chat_precedence_and_fresh_latency_gate_resume(self):
         # A cached ready_for_resume must never compete with a waiting
         # conversation, unverified chat status or exhausted latency budget.

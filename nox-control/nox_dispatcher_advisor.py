@@ -105,6 +105,10 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
         and native.get("owner_lease_cas_verified") is True
         and native.get("immutable_task_source_verified") is True
     )
+    # A valid busy cursor is an observation, not idle capacity. Even an
+    # attested active_claims=False must not hide work already held by a worker.
+    native_workers_idle = (native_complete and
+                           all(w["current_task"] is None for w in native["workers"]))
     if isinstance(native, dict):
         workers = native.get("workers")
         state = native.get("admission_state")
@@ -124,6 +128,7 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                 snapshot, owner_snapshot_verifier)
             reviewable = (
                 owner_attested
+                and native_workers_idle
                 # Refill is never safe to *review* while the serving path
                 # or canonical S03 readback is degraded or unknown.
                 and onehost.get("healthy") is True
@@ -149,6 +154,13 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                     "Await independently attested owner snapshot, age-bounded lease/CAS evidence, immutable source, zero active claims, "
                     "explicit maintenance clearance and >=2 GiB raw cgroup headroom; "
                     "do not duplicate queues or overwrite a pending run.")
+        # A stale no-claims flag cannot erase a live worker cursor even
+        # when no training or GPU advisory path is active. Preserve the
+        # owner lease; this is an observation, not a claim or repair.
+        if native_complete and not native_workers_idle and native.get("active_claims") is False:
+            add("NATIVE_WORKER_CURSOR_BUSY_HOLD", "hold",
+                "A RUNNING worker still owns a task cursor despite active_claims=false. "
+                "Reconcile the current lease and exact TaskID receipt; no refill or mutation.")
         if native.get("maintenance_busy") is True or native.get("active_claims") is True:
             add("NATIVE_OWNER_LEASE_BUSY", "hold",
                 "Do not cancel/replace a live claim or force a second publisher. Reconcile the existing owner lease and exact TaskID receipt, then retry once on new owner state.")
@@ -216,7 +228,7 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             # admission snapshot. Use the exact 6A02 completeness contract
             # (worker identities, immutable source, claims and fresh CAS)
             # before even advertising a training-resume review candidate.
-            and native_complete
+            and native_workers_idle
             and native.get("maintenance_busy") is False
             and native.get("active_claims") is False
             and type(native.get("resource_headroom_bytes")) is int
@@ -357,7 +369,7 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
             elif host["cpu_busy_pct"] >= 85 or host["io_wait_pct"] >= 10:
                 add("GPU_HOST_PIPELINE_PRESSURE", "hold",
                     "Host CPU/I/O pressure blocks further GPU work despite low compute utilization.")
-            elif (not native_complete
+            elif (not native_workers_idle
                     or type(native.get("resource_headroom_bytes")) is not int
                     or native["resource_headroom_bytes"] < 2 * 1024**3
                     or type(native.get("owner_evidence_age_sec")) is not int
@@ -369,7 +381,7 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                 add("GPU_RESIDUAL_RESOURCE_HOLD", "hold",
                     "Low utilization is not spare GPU capacity while raw cgroup "
                     "headroom is below 2 GiB, the native queue snapshot is "
-                    "incomplete, or attested owner lease/CAS is stale or absent. "
+                    "incomplete, workers have non-idle cursors, or attested owner lease/CAS is stale or absent. "
                     "No new GPU work admitted.")
             elif not _owner_snapshot_attested(snapshot, owner_snapshot_verifier):
                 # Raw JSON claims of idle leases and fresh sensors are not
