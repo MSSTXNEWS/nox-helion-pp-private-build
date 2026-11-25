@@ -28,3 +28,8 @@
 
 ## V: внешние советники (шлюз)
 Подробный контракт: ADVISORS_EXT.md. Кратко: шлюз OpenAI-совместимый на 127.0.0.1:8793 (`POST /v1/chat/completions`, `model`=`провайдер/модель` или `auto`; `GET /v1/models` со статусами). Реестр советников: /workspace/nox/state/advisors_external.json (id, provider, model, strengths, status, latency_ms, limits). Выключатель «можно наружу»: advisors_cfg.json `external_enabled`; личные данные не уходят, пока `allow_personal=false`. Ключи: /workspace/nox/state/secrets/advisors.env. UI (settings): переключатель «Внешние советники» + список из /v1/models с индикатором available/needs_key.
+
+## Арбитр ресурсов (O, 25.11)
+- /workspace/nox/agent/arbiter.py — демон (stdlib, pidfile state/arbiter.pid, автозапуск из svc/start_extra.sh). Правило владельца: чат и задачи в приоритете; обучение (distill_v2.py train, python v5_*) уходит на SIGSTOP при активности, через 60 с тишины SIGCONT; пауза не дольше 30 мин; запись ckpt не прерывается; цель GPU до 90%.
+- Состояние: /workspace/nox/state/arbiter.json {mode: chat|tasks|train, since, util, mem_mb, reason, paused, procs, signals, owner{}}. Параметры владельца — блок owner в том же файле: gpu_cap (по умолчанию 90), no_stop (true = только renice 19), force_pause. Журнал: /workspace/nox/arbiter.log (ротация 1 МБ).
+- Шина: команда arbiter.status (только чтение) = `python3 /workspace/nox/agent/arbiter.py status` -> JSON. Для виджета «Тело/Обучение» (S1): mode, since, util, mem_mb, reason, paused, procs.
