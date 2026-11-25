@@ -1,6 +1,6 @@
 """Черви-лайт (канон v5 гл. 9): поиск с квотами и белым списком, карантин находок, охота только по «Разрешаешь?»,
 голод (>1 ч, >24 ч, >7 дн), самоулучшение с откатом, «чему я научился», утренние идеи (08:00 МСК). STOP за <=10 с: файл state/worms_stop."""
-import os, re, json, time, sqlite3, threading, hashlib, shutil, urllib.request, urllib.parse
+import asyncio, os, re, json, time, sqlite3, threading, hashlib, shutil, urllib.request, urllib.parse
 W = '/workspace/nox'; ST = W + '/state'; STAGE = W + '/worm_staging'; DB = W + '/agents/worms.sqlite'
 LICENSE_OK = {'apache-2.0', 'mit', 'bsd-3-clause', 'bsd-2-clause', 'cc-by-4.0', 'cc0-1.0', 'unlicense', 'openrail', 'gemma'}   # NC и «other» только по решению Создателя
 BAD_EXT = ('.bin', '.pt', '.pth', '.pkl', '.pickle', '.ckpt', '.joblib', '.npy')
@@ -134,6 +134,12 @@ def self_candidates(book_sql):
         if len(reason) < 12 or q('SELECT 1 FROM cands WHERE title=?', ('Правило ревизора: ' + reason,), one=True): continue
         q('INSERT INTO cands(ts,kind,title,payload,status) VALUES(?,?,?,?,"proposed")', (time.time(), 'rule', 'Правило ревизора: ' + reason, json.dumps({'rule': reason}, ensure_ascii=False))); n += 1
         if n >= 3: break
+    try:   # реальные уроки из LESSONS.md: «... -> правило: X»
+        for l in open(W + '/LESSONS.md').read().split('\n'):
+            m = re.search(r'правило:\s*(.+)$', l)
+            if m and n < 2 and len(m.group(1)) > 15 and not q('SELECT 1 FROM cands WHERE title=?', ('Правило из LESSONS: ' + m.group(1)[:160],), one=True):
+                q('INSERT INTO cands(ts,kind,title,payload,status) VALUES(?,?,?,?,"proposed")', (time.time(), 'rule', 'Правило из LESSONS: ' + m.group(1)[:160], json.dumps({'rule': m.group(1)[:160]}, ensure_ascii=False))); n += 1
+    except Exception: pass
     try:   # кандидаты из уроков (state/lessons.jsonl): правило -> песочница -> «Хочу улучшить себя» -> в бриф
         for l in open(ST + '/lessons.jsonl').read().strip().split('\n')[-30:]:
             x = json.loads(l); rule = x.get('rule', '')[:160]
@@ -167,14 +173,15 @@ def self_rollback(cid):
 def dream_text():
     try: lines = open(ST + '/mind/dream.jsonl').read().strip().split('\n')[-3:]; return ' '.join(json.loads(x).get('dream', '') for x in lines)[:900]
     except Exception: return ''
-def make_agenda(llm):
-    day = time.strftime('%Y%m%d')
-    if q('SELECT 1 FROM ideas WHERE day=?', (day,), one=True): return 0
+def msk(): return time.gmtime(time.time() + 3 * 3600)
+def make_agenda(llm, force=False):
+    day = time.strftime('%Y%m%d', msk())
+    if q('SELECT 1 FROM ideas WHERE day=?', (day,), one=True) and not force: return 0
     finds = '; '.join(f'{r["name"]} ({r["score"]})' for r in q('SELECT name,score FROM finds WHERE status IN ("candidate","absorbed") ORDER BY score DESC LIMIT 5'))
     learned = '; '.join(r['text'][:80] for r in q('SELECT text FROM learned ORDER BY id DESC LIMIT 4'))
     out = llm('main', 'Ты NativeIdeaLoop. Дай 3-5 идей дня для развития NOX, каждая одной строкой «название — зачем». Только список.', f'Сон: {dream_text()}\nНаходки червей: {finds}\nНедавно узнал: {learned}', 400, 0.7, None, 240)
     n = 0
-    for l in [x.strip('-*• 0123456789.)') for x in out.split('\n') if len(x.strip()) > 8][:5]:
+    for l in [x.strip('-*• 0123456789.)') for x in out.split('\n') if len(x.strip()) > 8][:3]:
         t, _, w = l.partition('—'); q('INSERT INTO ideas(day,ts,title,why,status) VALUES(?,?,?,?,"new")', (day, time.time(), t.strip()[:120], w.strip()[:200])); n += 1
     return n
 
@@ -193,6 +200,28 @@ def shepherd(llm, busy, book_sql, running=lambda: 0):
         except Exception as e: open(W + '/agents/worms.err', 'a').write(repr(e)[:300] + '\n')
         time.sleep(5)
 
+SCAN = {'running': False}
+def run_scan(llm, book_sql):
+    SCAN.clear(); SCAN.update({'running': True, 'started': time.time(), 'phase': 'start', 'found': {}, 'errors': {}, 'percent': 0})
+    for i, (name, fn) in enumerate([('hf', lambda: hf_scan(llm)), ('github', lambda: gh_scan(llm)), ('rss', lambda: rss_scan(llm)), ('self', lambda: self_candidates(book_sql))]):
+        SCAN['phase'] = name; SCAN['percent'] = i * 25
+        try: SCAN['found'][name] = fn()
+        except Exception as e:
+            SCAN['errors'][name] = f'{type(e).__name__}: {str(e)[:160]}'
+            try: open(W + '/agents/worms.err', 'a').write(f'scan {name}: {e!r}\n')
+            except Exception: pass
+    SCAN.update({'running': False, 'phase': 'done', 'percent': 100, 'seconds': round(time.time() - SCAN['started'])})
+def agenda_loop(llm):
+    """повестка из 3 идей к 08:00 МСК: генерируем с 07:50 МСК, один раз в сутки, независимо от загрузки (идёт через гонку модель/советник)"""
+    while True:
+        try:
+            t = msk()
+            if (t.tm_hour == 7 and t.tm_min >= 50) or 8 <= t.tm_hour < 12:
+                if make_agenda(llm): history('Повестка дня готова: 3 идеи')
+        except Exception as e:
+            try: open(W + '/agents/worms.err', 'a').write('agenda: ' + repr(e)[:200] + '\n')
+            except Exception: pass
+        time.sleep(60)
 def mount(app, llm, busy, book_sql, new_task, running):
     from fastapi import Request
     @app.get('/worms')
@@ -208,16 +237,23 @@ def mount(app, llm, busy, book_sql, new_task, running):
     @app.get('/worms/learned')
     def w_l(): return [dict(r) for r in q('SELECT ts,text FROM learned ORDER BY id DESC LIMIT 30')]
     @app.get('/worms/agenda')
-    def w_ag(): return {'dream': dream_text(), 'ideas': [dict(r) for r in q('SELECT id,day,title,why,status FROM ideas ORDER BY id DESC LIMIT 5')]}
+    def w_ag(): return {'dream': dream_text(), 'day_msk': time.strftime('%Y%m%d', msk()), 'schedule': 'готовится с 07:50 МСК, показ в 08:00', 'ideas': [dict(r, actions=['Развить']) for r in q('SELECT id,day,title,why,status FROM ideas ORDER BY id DESC LIMIT 3')]}
     @app.post('/worms/agenda/make')
-    def w_mk(): return {'made': make_agenda(llm)}
+    async def w_mk(req: Request):
+        try: b = await req.json()
+        except Exception: b = {}
+        return {'made': await asyncio.to_thread(make_agenda, llm, bool(b.get('force')))}
     @app.post('/worms/develop')
     async def w_dev(req: Request):
         b = await req.json(); r = q('SELECT * FROM ideas WHERE id=?', (int(b['id']),), one=True)
         if not r: return {'ok': False}
         q('UPDATE ideas SET status="developing" WHERE id=?', (r['id'],)); return {'ok': True, 'task': new_task('Идея дня: ' + r['title'][:50], f'Разверни идею и сделай рабочий набросок: {r["title"]} — {r["why"]}', 'writer', None, 'ideas')}
     @app.post('/worms/scan')
-    def w_scan(): return {'hf': hf_scan(llm), 'github': gh_scan(llm), 'rss': rss_scan(llm), 'self': self_candidates(book_sql)}
+    def w_scan():
+        if SCAN.get('running'): return {'started': False, 'progress': SCAN}
+        threading.Thread(target=run_scan, args=(llm, book_sql), daemon=True).start(); return {'started': True, 'status_url': '/worms/scan/status'}
+    @app.get('/worms/scan/status')
+    def w_scan_st(): return SCAN
     @app.post('/worms/stop')
     def w_stop(): open(ST + '/worms_stop', 'w').write(str(time.time())); return {'stopped': True}
     @app.post('/worms/start')
@@ -226,3 +262,4 @@ def mount(app, llm, busy, book_sql, new_task, running):
         except FileNotFoundError: pass
         return {'stopped': False}
     threading.Thread(target=shepherd, args=(llm, busy, book_sql, running), daemon=True).start()
+    threading.Thread(target=agenda_loop, args=(llm,), daemon=True).start()

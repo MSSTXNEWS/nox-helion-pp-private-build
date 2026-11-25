@@ -23,10 +23,19 @@ CASES = [  # (фраза, глагол, останавливать_текуще�
  ('Останови обучение на час', 'stop', True),
  ('Добавь кнопку «подумай глубже», остальное оставь как есть', 'add', False),
 ]
-SYS = ('Ты разбираешь команду владельца. Верни ТОЛЬКО JSON {"verb": одно из add|replace|stop|move|split|speed|finish|download|delete|other, "stop_current": true|false}. '
-       'verb = главное действие. stop_current = true только если команда просит остановить/заменить/перенести то, что СЕЙЧАС в работе. «добавь» ничего не останавливает. Молчание о текущей работе = false.')
+HOLD = [('Добавь в студию кнопку скачать, остальное не трогай', 'add', False), ('Останови сервер обучения до утра', 'stop', True), ('Доделай карточку червей и покажи в чате', 'finish', False),
+ ('Перенеси охоту червей на ночь', 'move', True), ('Замени модель судьи на более лёгкую', 'replace', True), ('Ускорь ответы чата, обучение не останавливай', 'speed', False),
+ ('Скачай из интернета готовую библиотеку для очередей', 'download', False), ('Раздели задачи на две очереди, текущие не трогай', 'split', False),
+ ('Удали из репозитория старые логи', 'delete', None), ('Подключи ещё одного советника, остальное как есть', 'add', False)]
+import os
+if os.environ.get('HOLDOUT'): CASES = HOLD
+PP = json.load(open('/workspace/nox/agents/passport_prompt.json'))
+SYS = PP['system']
+SHOTS = []
+for ph, v, sc in PP['shots']:
+    SHOTS += [{'role': 'user', 'content': ph}, {'role': 'assistant', 'content': json.dumps({'verb': v, 'stop_current': sc}, ensure_ascii=False)}]
 def ask(model, phrase):
-    rq = urllib.request.Request('http://127.0.0.1:8793/v1/chat/completions', data=json.dumps({'model': model, 'messages': [{'role': 'system', 'content': SYS}, {'role': 'user', 'content': phrase}], 'max_tokens': 400, 'temperature': 0}).encode(), headers={'Content-Type': 'application/json'})
+    rq = urllib.request.Request('http://127.0.0.1:8793/v1/chat/completions', data=json.dumps({'model': model, 'messages': [{'role': 'system', 'content': SYS}] + SHOTS + [{'role': 'user', 'content': phrase}], 'max_tokens': 400, 'temperature': 0}).encode(), headers={'Content-Type': 'application/json'})
     r = json.loads(urllib.request.urlopen(rq, timeout=100).read()); tx = r['choices'][0]['message']['content']
     m = re.search(r'\{.*?\}', tx, re.S); return json.loads(m.group(0)), r.get('nox', {}).get('provider')
 res = []; okv = oks = nv = ns = 0
@@ -38,4 +47,4 @@ for ph, v, sc in CASES:
     res.append({'phrase': ph, 'want': v, 'got': gv, 'stop_want': sc, 'stop_got': gs, 'ok': a and b, 'by': prov}); print('OK ' if a and b else 'BAD', ph[:55], '|', v, gv, sc, gs, prov, flush=True); time.sleep(3)
 tot = sum(1 for r in res if r.get('ok')); n = len(CASES)
 out = {'n': n, 'answered': nv, 'full_ok': tot, 'share_full': round(tot / n, 2), 'verb_share': round(okv / max(nv, 1), 2), 'stop_share': round(oks / max(ns, 1), 2), 'cases': res, 'ts': int(time.time())}
-json.dump(out, open('/workspace/nox/agents/eval_llm.json', 'w'), ensure_ascii=False, indent=1); print('EVAL', {k: out[k] for k in ('n', 'answered', 'full_ok', 'share_full', 'verb_share', 'stop_share')})
+json.dump(out, open('/workspace/nox/agents/eval_llm%s.json' % ('_hold' if os.environ.get('HOLDOUT') else ''), 'w'), ensure_ascii=False, indent=1); print('EVAL', {k: out[k] for k in ('n', 'answered', 'full_ok', 'share_full', 'verb_share', 'stop_share')})

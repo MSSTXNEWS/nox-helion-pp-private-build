@@ -187,6 +187,19 @@ class _H(html.parser.HTMLParser):
 VERBS = [('stop', r'останов|прекрати|заверши работу|отмени'), ('replace', r'замени|вместо'), ('move', r'перенес|перенеси'), ('delete', r'удали|сотри'),
          ('add', r'добав|допиши|подключи|сделай ещ'), ('split', r'раздел|раскидай|по очеред'), ('speed', r'ускор|быстрее'), ('finish', r'доведи|заверши|доделай'),
          ('download', r'скачай|загрузи')]
+PASSPORT_PP = jload(A + '/passport_prompt.json', {})
+def passport_llm(text):
+    """глагол и «останавливать текущее» от LLM-советника по правилам владельца и few-shot (без регулярок)"""
+    gw = BACK().get('external')
+    if not gw or not PASSPORT_PP: return None
+    msgs = [{'role': 'system', 'content': PASSPORT_PP['system']}]
+    for ph, v, sc in PASSPORT_PP['shots']: msgs += [{'role': 'user', 'content': ph}, {'role': 'assistant', 'content': json.dumps({'verb': v, 'stop_current': sc}, ensure_ascii=False)}]
+    msgs.append({'role': 'user', 'content': text})
+    try:
+        r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': 'auto', 'messages': msgs, 'max_tokens': 300, 'temperature': 0}, timeout=40); r.raise_for_status()
+        m = re.search(r'\{.*?\}', r.json()['choices'][0]['message']['content'], re.S); j = json.loads(m.group(0))
+        if j.get('verb') in ('add', 'replace', 'stop', 'move', 'split', 'speed', 'finish', 'download', 'delete', 'other'): return j
+    except Exception: return None
 def passport(text, fast=False):
     low = text.lower(); verbs = [v for v, rx in VERBS if re.search(rx, low)]
     keep_cur = bool(re.search(r'не останавлива|текущее не|не трогай|не прерывай|продолжай|не переноси|не снижай', low)) or not re.search(r'останов|замени|перенес|прекрати|отмени', low)
@@ -194,6 +207,8 @@ def passport(text, fast=False):
          'constraints': [m.group(0) for m in re.finditer(r'(не [а-яё]+(?: [а-яё]+)?)', low)][:6], 'raw': text, 'ambiguous': False}
     if 'add' in verbs and not re.search(r'останов|замени|перенес', low): p['stop_current'] = False; p['verb'] = 'add'
     if 'split' in verbs and 'add' not in verbs: p['scope'] = 'только новое; текущее не трогать'
+    pl_ = None if fast else passport_llm(text)
+    if pl_: p['verb'] = pl_['verb']; p['stop_current'] = bool(pl_.get('stop_current')); p['by'] = 'llm'; p['keep'] = [] if p['stop_current'] else ['текущая работа продолжается']
     try:
         if fast: raise ValueError('fast')
         j = jparse(llm('judge_llm', 'Разбери команду владельца в JSON: {"object":"что","scope":"объём","done_when":"критерий готовности","keep":["что остаётся как есть"],"constraints":["запреты"]}. «Добавь» не значит «замени/останови/перенеси». Молчание о текущей работе = продолжать её. Только JSON.', text, 250, 0.0, None, 120), {}) or {}
@@ -364,6 +379,16 @@ def coach(t, sub, out, names, root, attempt):
                 src = open(fp, errors='ignore').read()
                 if src.count('\n') > 150 and not re.search(r'^\s*(import|from)\s+(?!os|sys|re|json|time|math|typing|collections|itertools|functools|pathlib|datetime|unittest|pytest|random|string|hashlib)\w', src, re.M):
                     return 'возьми готовое: >150 строк своего кода без библиотек; найди готовую библиотеку, свой код только клей'
+    if sub.get('role') == 'coder':
+        LIBS = [(r'markdown|маркдаун', 'markdown-it-py или mistune'), (r'yaml', 'PyYAML'), (r'очеред|queue', 'huey или litequeue'), (r'планировщик|cron|расписан', 'APScheduler'),
+                (r'http|запрос к api|скачива', 'httpx'), (r'html', 'beautifulsoup4 или selectolax'), (r'csv|таблиц', 'pandas или csv из stdlib'), (r'валидац|схем', 'pydantic'), (r'дат[аы] |время|часов', 'python-dateutil')]
+        for f in names:
+            fp = os.path.join(root, f)
+            if f.endswith('.py') and not f.startswith('test_') and os.path.isfile(fp):
+                src = open(fp, errors='ignore').read(); third = re.search(r'^\s*(import|from)\s+(?!os|sys|re|json|time|math|typing|collections|itertools|functools|pathlib|datetime|unittest|pytest|random|string|hashlib|dataclasses|argparse|logging|html|csv|textwrap|subprocess|shutil|enum)\w', src, re.M)
+                if src.count('\n') > 40 and not third:
+                    for rx, lib in LIBS:
+                        if re.search(rx, g): return f'возьми готовое: для этой задачи есть {lib} (pip install в песочницу); свой код только клей'
     if attempt >= 1 and len(names) > 3: return 'собери пакетом: объедини шаги в один скрипт/файл'
     return ''
 
@@ -470,7 +495,7 @@ def consilium(q, rounds=2, budget=170):
     except Exception as e: final = 'старший недоступен: ' + str(e)[:100]
     return {'question': q, 'opinions': waves, 'final': final, 'judge_score': best, 'seconds': round(time.time() - t0), 'external_used': bool(advisors())}
 
-ERR_ADV = []
+ERR_ADV = []; CONS_CACHE = {}
 def _adv_call(a, u, system, mt=500, timeout=70, retry=True):
     gw = BACK().get('external')
     try:
@@ -483,7 +508,15 @@ def _adv_call(a, u, system, mt=500, timeout=70, retry=True):
     return ''
 def consilium_ext(q, deep=False, budget=110):
     """волны: 3 внешних советника параллельно -> (deep) ещё 3 видят первую волну -> старший сводит. Шлюз :8793."""
-    t0 = time.time(); adv = [a for a in advisors() if not a.get('role')]; waves = []; seen = ''
+    ck = (q, bool(deep))
+    if ck in CONS_CACHE and time.time() - CONS_CACHE[ck][0] < 3600: d = dict(CONS_CACHE[ck][1]); d['cached'] = True; return d
+    t0 = time.time(); allv = [a for a in advisors() if not a.get('role')]; waves = []; seen = ''
+    byp = {}
+    for a in allv: byp.setdefault(a.get('provider'), []).append(a)
+    adv = []
+    while any(byp.values()):       # по кругу по провайдерам: нагрузка не садится на один kilo
+        for pv in list(byp):
+            if byp[pv]: adv.append(byp[pv].pop(0))
     def wave(group, u, name):
         res = []; ths = []
         def one(a): 
@@ -506,7 +539,9 @@ def consilium_ext(q, deep=False, budget=110):
             try: final = llm('main', 'Ты старший советник. Своди мнения: согласия, расхождения, итоговое решение. Кратко.', f'Вопрос: {q}\n{seen[-4500:]}', 600, 0.3, None, 100); senior = 'local main'
             except Exception: final = 'старший недоступен; см. мнения волн'
     else: final = 'внешние советники не ответили'
-    return {'question': q, 'deep': deep, 'waves': waves, 'final': final, 'senior': senior, 'seconds': round(time.time() - t0), 'advisors_available': len(adv), 'errors': ERR_ADV[-3:]}
+    res = {'question': q, 'deep': deep, 'waves': waves, 'final': final, 'senior': senior, 'seconds': round(time.time() - t0), 'advisors_available': len(adv), 'errors': ERR_ADV[-3:]}
+    if any(w['opinions'] for w in waves): CONS_CACHE[ck] = (time.time(), res)
+    return res
 
 # ---------- supervisor-граф по задаче ----------
 def run_task(tid):
