@@ -45,15 +45,19 @@ class VerdictConsistency(unittest.TestCase):
         actual = subprocess.run
         root = Path(os.environ["B2_STAGE_ROOT"]).resolve()
         before = {p.relative_to(root):p.read_bytes() for p in root.rglob("*") if p.is_file()}
-        q = root / next(iter(PINS))
-        raw = q.read_bytes()
-        try:
-            q.write_bytes(raw+b" ")
-            with self.assertRaisesRegex(ValueError, "HOLD_VERDICT_DEPENDENCY"):
-                stage_verdict(root)
-            self.assertFalse((root/DEST).exists())
-        finally:
-            q.write_bytes(raw)
+        self.assertEqual(len(PINS), 19)
+        for name in PINS:
+            with self.subTest(tampered_dependency=name):
+                q = root / name
+                raw = q.read_bytes()
+                try:
+                    q.write_bytes(raw+b" ")
+                    with self.assertRaisesRegex(ValueError, "HOLD_VERDICT_DEPENDENCY"):
+                        stage_verdict(root)
+                    self.assertFalse((root/DEST).exists())
+                finally:
+                    q.write_bytes(raw)
+        print("R112 stage: 19 pinned dependencies, each tamper rejected")
         module = stage_verdict(root)
         with self.assertRaisesRegex(ValueError, "HOLD_VERDICT_OVERWRITE"):
             stage_verdict(root)

@@ -13,6 +13,19 @@ PINS={
     "nox-control/b2-r108/atomic_ordered_quality.cjs":"2bd2efcaea708498871b6f913e4b28d5bb8ca90e",
     "nox-control/a3-r109-r80/frozen/b3_r80_frozen_byte_ingress.cjs":"8a95bf6eef67b92964f9a77c54ba71822bdb4b4d",
     "nox-control/a6-r109-r80-release/release.json":"513f61f098574f438b8f9974cfd7ca5f7002428d",
+    # Complete literal local require closure of R110, including nested timing and S03 checks.
+    "nox-control/a3-r109-r80/frozen/b3_r71_physical_terminal_composition.cjs":"a2f27861d4b7f681059aa1c41c945034c881c296",
+    "nox-control/b2-r108/b4_r75_ordered_completion_pair.cjs":"3bbef66163dc365fbaea50b054d9744a25fbdf31",
+    "nox-control/a3-r109-r80/frozen/b3_r66_raw_readback_binding.cjs":"c4331cc22cb94da0c67fa765e27c838d7b354c66",
+    "nox-control/a3-r109-r80/frozen/b3_r70_s03_terminal_identity.cjs":"64847800e02998aaaad98823d02dd6976c431712",
+    "nox-control/b2-r108/b4_r74_completion_pair.cjs":"3668810ff5018d4a2ef7adb69952230118d1fb10",
+    "nox-control/a3-r109-r80/frozen/b3_r65_r64_physical_pin_check.cjs":"1e22eff92da6b951ad22dea2b2db09201b2d371b",
+    "nox-control/a3-r109-r80/frozen/b3_r69_exchange_scope_binding.cjs":"18b3be8fc4264b32d51a57ad4db367b3ba786d41",
+    "nox-control/d3-r107/donor/b4_r74_completion_pair.cjs":"ab7c5f1f82d0163af2fe60ada05b7f9cde3c42e9",
+    "nox-control/a3-r109-r80/frozen/b3_r68_route_binding.cjs":"6d0fef57783346fe33d59ca39a625015514ae168",
+    "nox-control/d3-r107/donor/b4_r73_pinned_disposition_metric_bridge.cjs":"0eb3f3e1ab9502c0014f9dd7b1b280f4e3fb04f8",
+    "nox-control/d3-r107/donor/b4_r72_final_disposition_metric_fence.cjs":"3e31947d7b562d88db13c3c9e3a2a4405ef56ad7",
+    "nox-control/d3-r107/donor/b4_r70_completion_metric_fence.cjs":"f539ef04db3b8531b3b16f71eebf21f67c12cfcc",
 }
 SOURCE_PIN="727600ede64523c899680dec84f2edc1ec4d2d2e"
 
