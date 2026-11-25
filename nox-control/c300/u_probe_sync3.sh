@@ -1,4 +1,4 @@
-echo "C300: u_probe_sync2"
+echo "C300: u_probe_sync3"
 export PLAYWRIGHT_BROWSERS_PATH=/workspace/nox/tools/ms-playwright; PY=/workspace/nox/venv/bin/python
 cat > /tmp/u_ps.py <<'PEOF'
 import asyncio,json,urllib.request
@@ -12,7 +12,7 @@ async def m():
     c.on('response',lambda r:print('RES',r.status,r.url[-30:]) if '/api/notes' in r.url else None)
     await c.goto(B+'/web/board.html',wait_until='domcontentloaded');await c.wait_for_timeout(5000)
     print('ver',await c.evaluate("[...document.scripts].filter(s=>/pad/.test(s.src)).map(s=>s.src)"))
-    await c.evaluate("NOXNote.add("U_QA_PAD3 both",{to:"both"})");await c.wait_for_timeout(5000)
+    await c.evaluate("NOXNote.add('U_QA_PAD3 both',{to:'both'})");await c.wait_for_timeout(5000)
     print([n['id'] for n in json.load(urllib.request.urlopen(B+'/api/notes'))['notes']])
     n=json.load(urllib.request.urlopen(B+'/api/notes'))['notes'];n=[x for x in n if 'U_QA_PAD' not in x['text']]
     urllib.request.urlopen(urllib.request.Request(B+'/api/notes',json.dumps({'notes':n}).encode(),{'Content-Type':'application/json'}))
