@@ -84,3 +84,6 @@ for fp in sorted(glob.glob(os.path.join(S,'nox-*.js'))):
   except Exception: ok=False
   if ok: os.replace(tmp,fp); print('gxw',b,t.count('window.NOXgx') ,len(LIT.findall(t)))
   else: os.remove(tmp); print('gxw-skip(syntax)',b)
+
+# 10. ECharts calendar (теплокарта growth): пустые клетки по умолчанию белые
+sub('nox-k2-heat.js','TH-CAL',"itemStyle:{borderWidth:2,borderColor:'#140f0f'}","itemStyle:{borderWidth:2,borderColor:'#140f0f',color:(window.NOXgx?'#1b1c1f':'#2a1f1a')}/*TH-CAL*/")
