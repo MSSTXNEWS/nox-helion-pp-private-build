@@ -1,6 +1,6 @@
 S=/workspace/nox/web/site; R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/s4_src
 cd $S
-for f in nox-s4-projects.js nox-s4-projects.css nox-s4-grafana.js; do curl -fsSL $R/$f -o $f || exit 1; done
+for f in nox-s4-projects.js nox-s4-projects.css nox-s4-grafana.js; do curl -fsSL "$R/$f?t=$(date +%s)" -o $f || exit 1; done
 for p in dispatcher system; do cp -n $p.html $p.html.bak_s4_1; grep -q nox-s4-grafana $p.html || python3 - $p <<'P'
 import sys;p='/workspace/nox/web/site/%s.html'%sys.argv[1];t=open(p).read()
 t=t.replace('</head>','<link rel="stylesheet" href="./nox-s4-projects.css"></head>',1)
