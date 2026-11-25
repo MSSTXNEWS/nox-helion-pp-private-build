@@ -9,8 +9,10 @@ DEFAULT_CFG = {"external_enabled": True, "allow_personal": False, "personal_term
   "timeout": 60, "retries": 1, "auto_chain": [], "max_tokens_cap": 2048}
 # провайдер: base, ключ-ENV (None = без ключа), мин. интервал между запросами (с), RPM, дневная квота (оценка)
 PROV = {
- 'llm7': dict(base='https://api.llm7.io/v1', env='LLM7_API_KEY', anon='unused', gap=2.5, rpm=25, day=2000, keyless=True),
- 'pollinations': dict(base='https://text.pollinations.ai/openai', env='POLLINATIONS_API_KEY', gap=31, rpm=2, day=1500, keyless=True, full=True),
+ 'kilo': dict(base='http://127.0.0.1:4210/kilo/v1', env='KILO_API_KEY', gap=1.0, rpm=20, day=1500, keyless=True, timeout=90),
+ 'llm7': dict(base='http://127.0.0.1:4210/llm7/v1', env='LLM7_API_KEY', gap=2.5, rpm=4, day=600, keyless=True, timeout=90),
+ 'horde': dict(base='http://127.0.0.1:4210/horde/v1', env='HORDE_API_KEY', gap=8, rpm=3, day=300, keyless=True, timeout=300),
+ 'pollinations': dict(base='http://127.0.0.1:4210/pollinations/v1', env='POLLINATIONS_API_KEY', gap=50, rpm=1, day=1000, keyless=True, timeout=90),
  'openrouter': dict(base='https://openrouter.ai/api/v1', env='OPENROUTER_API_KEY', gap=3.5, rpm=18, day=50),
  'github': dict(base='https://models.github.ai/inference', env='GITHUB_MODELS_TOKEN', gap=5, rpm=10, day=150),
  'groq': dict(base='https://api.groq.com/openai/v1', env='GROQ_API_KEY', gap=2.2, rpm=28, day=1000),
@@ -27,7 +29,8 @@ STATIC = {
  'google': ['gemma-3-27b-it'],
  'mistral': ['open-mistral-nemo', 'mistral-small-latest'],
  'pollinations': ['openai'],
- 'llm7': [],
+ 'llm7': ['mistral-Nemo-Instruct-2407', 'codestral-latest'],
+ 'kilo': [], 'horde': [],
 }
 L = threading.Lock(); CACHE = {}; LAST = {}; WIN = {}; BAD = {}  # BAD: model-> until ts
 def jload(p, d):
@@ -106,15 +109,19 @@ def http(url, body, key, timeout):
 def call(p, model, body, timeout):
     pr = PROV[p]; url = pr['base'] + ('' if pr.get('full') else '/chat/completions')
     b = dict(body); b['model'] = model; b['stream'] = False
-    return http(url, b, key_of(p), timeout)
+    return http(url, b, None if pr.get('keyless') else key_of(p), max(timeout, pr.get('timeout', 0)))
 def models_of(p):
-    out = []
-    if p == 'llm7':
-        try:
-            d = http(PROV[p]['base'] + '/models', None, key_of(p), 15)
-            out = [m.get('id') for m in (d if isinstance(d, list) else d.get('data', [])) if m.get('id')]
-        except Exception: pass
-    return out or STATIC.get(p, [])
+    out = [a['model'] for a in jload(REG, {}).get('advisors', []) if a.get('provider') == p]
+    try:
+        for m in jload('/workspace/nox/router/router/catalog.json', {}).get('models', []):
+            if m.get('no_key') and m.get('enabled') and m.get('advisor') and ('/%s/' % p) in (m.get('api_base') or ''):
+                out.append(m['litellm_model'].split('/', 1)[1] if m.get('litellm_model', '').startswith('openai/') else m.get('litellm_model'))
+    except Exception: pass
+    seen = []
+    for x in out + STATIC.get(p, []):
+        if x and x not in seen: seen.append(x)
+    return seen
+
 def clean_text(r):
     try:
         m = r['choices'][0]['message']; t = m.get('content') or ''

@@ -36,16 +36,18 @@ SX=/workspace/nox/svc/start_extra.sh
 echo "--- start_extra before"; head -c 1500 $SX; echo; ls /workspace/nox/state | head -30; df -BG /workspace | tail -1
 python3 - <<P
 p='$SX'; s=open(p).read()
+s=s.replace('cd /workspace/nox/advisors && nohup setsid python3 gateway.py','nohup setsid python3 /workspace/nox/advisors/gateway.py'); open(p,'w').write(s)
 if 'advisors/gateway.py' not in s:
-    ln='\n# v: внешние советники\npgrep -f advisors/gateway.py >/dev/null || (cd /workspace/nox/advisors && nohup setsid python3 gateway.py >/workspace/nox/svc/logs/advisors.log 2>&1 </dev/null &)\n'
+    ln='\n# v: внешние советники\npgrep -f advisors/gateway.py >/dev/null || (nohup setsid python3 /workspace/nox/advisors/gateway.py >/workspace/nox/svc/logs/advisors.log 2>&1 </dev/null &)\n'
     L=s.rstrip('\n').split('\n')
     if L and L[-1].split()[:1] in (['wait'],['exec']): L.insert(len(L)-1, ln); s='\n'.join(L)+'\n'
     else: s=s.rstrip('\n')+'\n'+ln
     open(p,'w').write(s)
 P
 tail -5 $SX
-pkill -f advisors/gateway.py; pkill -f "python3 gateway.py"; sleep 1
-cd $A && nohup setsid python3 gateway.py >/workspace/nox/svc/logs/advisors.log 2>&1 </dev/null &
+kill $(pgrep -f 'python3 gateway.py' | while read p; do [ "$(readlink /proc/$p/cwd)" = /workspace/nox/advisors ] && echo $p; done) 2>/dev/null; pkill -f advisors/gateway.py; sleep 1
+setsid nohup python3 $A/gateway.py >/workspace/nox/svc/logs/advisors.log 2>&1 </dev/null &
 sleep 3; curl -s -m5 127.0.0.1:$PORT/health; echo
-cd $A && nohup setsid python3 register.py >$A/register.log 2>&1 </dev/null &
-sleep 100; cat $A/register.log | tail -30
+setsid nohup python3 $A/register.py >$A/register.log 2>&1 </dev/null &
+sleep 45; tail -15 $A/register.log
+echo END
