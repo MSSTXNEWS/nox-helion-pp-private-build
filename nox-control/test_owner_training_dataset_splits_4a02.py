@@ -141,6 +141,20 @@ class DatasetSplitTests(unittest.TestCase):
                 ):
                     split_manifest(rows)
 
+    def test_unreviewed_observation_metadata_cannot_be_silently_projected(self):
+        rows = rows_fixture()
+        for metadata in (
+            {"observation": {"id": "retained-1"}, "disposition": "PENDING"},
+            {"final_disposition": {"state": "STOPPED"}},
+            {"reservation_receipt": {"state": "SENDING"}},
+            {"final_disposition": {"state": "COMMITTED"}},
+        ):
+            with self.subTest(metadata=metadata):
+                enriched = [dict(rows[0], **metadata), *rows[1:]]
+                with self.assertRaisesRegex(SplitHold, "HOLD_UNREVIEWED_RECORD_METADATA"):
+                    split_manifest(enriched)
+        self.assertEqual(split_manifest(rows)["counts"]["kept"], 60)
+
     def test_absent_provenance_or_coverage_holds(self):
         rows = rows_fixture()
         for field in ("license", "source_id", "goal", "lang", "text"):

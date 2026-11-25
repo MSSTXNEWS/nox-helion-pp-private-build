@@ -63,7 +63,15 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
         count += 1
         if count > 300000 or type(row) is not dict:
             raise SplitHold("HOLD_INPUT_LIMIT_OR_SHAPE")
-        for field in ("id", "lang", "domain", "goal", "text", "source_id", "license"):
+        fields = ("id", "lang", "domain", "goal", "text", "source_id", "license")
+        # This splitter accepts plain provenance projections only. Do not
+        # silently discard richer observation/disposition metadata (R100):
+        # the authenticated final-disposition provider must resolve it before
+        # a trusted caller projects a record into this schema. No authority
+        # or training eligibility is inferred from these seven fields.
+        if row.keys() - set(fields):
+            raise SplitHold("HOLD_UNREVIEWED_RECORD_METADATA")
+        for field in fields:
             if type(row.get(field)) is not str or not row[field].strip():
                 raise SplitHold("HOLD_REQUIRED_PROVENANCE")
         if (row["lang"] not in LANGUAGES or row["domain"] not in DOMAINS
