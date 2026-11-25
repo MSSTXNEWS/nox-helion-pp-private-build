@@ -1,0 +1,25 @@
+name: NOX B1 R86 STOP before queued GET
+on:
+  pull_request:
+    branches: [nox/b1-r85-real-dom-last-mile-20261125]
+    paths:
+      - 'nox-control/b1-r86/**'
+      - '.github/workflows/b1-r86-queued-get-stop.yml'
+permissions:
+  contents: read
+jobs:
+  queued-get-stop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exact R84 donor and real AbortController differential
+        run: |
+          set -euo pipefail
+          test "$(git hash-object nox-control/b1-r84/b1_browser_bundle.js)" = 7d713b9144698d0923877195962ae0795397c82a
+          node --unhandled-rejections=strict nox-control/b1-r86/test_queued_get_stop.cjs
