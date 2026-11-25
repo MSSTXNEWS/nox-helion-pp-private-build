@@ -27,8 +27,26 @@ def stage_all(archive,target,donors):
     exact(a6/"a6-r111-typed/release_input.json","d19f8fa8e38110ffb5f945993f3183069e9c9329")
     exact(a6/"a6-r111-typed/freeze_typed_release.py","3881e1f6c6e229c440eabde96ef514891f27b5bc")
     load(exact(a6/"a6-r111-typed/stage_typed.py","c40841f9aaee849738c0a48a600a17d63c46d482"),"r115_typed").stage_typed(target)
-    exact(a6/"a6-r82-failed/diagnostic.py","b7fa386cf4589b7fe42ee35e79ead34177d71d83")
-    load(exact(a6/"a6-r82-failed/stage_failed.py","e274f248de93f1dd167824363916599f6749a36a"),"r115_failed").stage_failed(target)
+    exact(a6/"a6-r82-failed/diagnostic.py","c2b376d1451e681c76dc5cd212ffba133beeb42c")
+    load(exact(a6/"a6-r82-failed/stage_failed.py","f494782ce182ab45bfb08b006aa3fee154c018a6"),"r115_failed").stage_failed(target)
+    # B0 exact framework addendum; do not select or activate a framing owner.
+    b0=donors/"b0/nox-control/b0-r53"
+    r81=exact(b0/"stage_framework_r81.py","1acd388546891a48360024c2029bc54b55272e69")
+    r84=exact(b0/"stage_framework_r84.py","eb6d75d66aece439be8e92d32b4ff277a43aaa29")
+    wire=target/"nox-control/d3-r111/wire"
+    # Isolated import path, no module leakage to the other stages.
+    subprocess.run([sys.executable,"-I","-B","-c", """import sys,pathlib
+sys.path.insert(0,sys.argv[1])
+from stage_framework_r81 import stage_framework
+from stage_framework_r84 import stage_r83
+stage_framework(sys.argv[2])
+stage_r83(sys.argv[2])
+""",str(b0),str(target)],check=True,cwd=target)
+    exact(wire/"b0_framework_r80.py","659876e07af733988d8499221180f66c9d90ca20")
+    exact(wire/"b0_framework_r83.py","9f7ae9ddc837d4fb67a2584c647fdec85764e05f")
+    failed=target/"nox-control/a6-r82-failed-selected"
+    exact(failed/"pending_attempt.py","d32a5d6ca115fc4de9651a6cacd8ca8617ef3c9b")
+    exact(failed/"diagnostic.py","c2b376d1451e681c76dc5cd212ffba133beeb42c")
     for key,path,pin,func in (
         ("a3","nox-control/a3-r114-stage/stage_browser.cjs","7bac8b741e4df71d83ccc5f198446d317f80f936","stageBrowser"),
         ("b3","nox-control/b3-r84-stage/stage_physical.cjs","7df0d391b87264bf6bfe5f6891db1c6104c0c309","stagePhysical")):
@@ -40,14 +58,25 @@ def stage_all(archive,target,donors):
     with entry.open("xb") as f: f.write((ROOT/"nox-control/d3-r115/joint_extracted.cjs").read_bytes())
     after=snapshot(target)
     if any(after.get(k)!=v for k,v in before.items()): raise ValueError("HOLD_R115_BASE_MUTATION")
-    if len(after)-len(before)!=20: raise ValueError("HOLD_R115_STAGE_COUNT:"+str(len(after)-len(before)))
-    js="""const assert=require('node:assert/strict');const {makeReleaseEvidenceReview,releasePins}=require(process.argv[1]);
-assert.equal(Object.keys(releasePins().assets).length,5);
-let n=0;const a=makeReleaseEvidenceReview(()=>{n++;return null;})(Buffer.from('[]'),'{}');
-assert.equal(a.status,'HOLD_ROUTE_DETACHED');assert.equal(n,1);
-for(const k of ['native_accepted','authentication_verified','host_provider_bound','ack_allowed','next_post_allowed','training_admitted'])assert.equal(a[k],false);
-assert.equal(a.metrics,null);assert.equal(a.quality_sample,null);"""
-    subprocess.run(["node","-e",js,str(entry)],check=True,cwd=target)
+    if len(after)-len(before)!=23: raise ValueError("HOLD_R115_STAGE_COUNT:"+str(len(after)-len(before)))
+    # Only check the newly changed integration, not the previous R115 fixture.
+    subprocess.run([sys.executable,"-I","-B","-c", """import pathlib,sys
+wire=pathlib.Path(sys.argv[1])
+failed=pathlib.Path(sys.argv[2])
+sys.path.insert(0,str(wire))
+import b0_framework_r83 as r83, b0_framework_r80 as r80, b0_proxy_stream_iter as r74
+assert r83.R80Body is r80.FrameworkDeltaBody
+assert r80.ProxyDeltaBody is r74.ProxyDeltaBody
+assert all(pathlib.Path(m.__file__).parent == wire for m in (r83,r80,r74))
+assert 'b0_http_chunked_r76' not in sys.modules
+sys.path.insert(0,str(failed))
+import diagnostic, pending_attempt
+assert pathlib.Path(diagnostic.__file__).parent == failed
+assert diagnostic.classify_pending_attempt is pending_attempt.classify_pending_attempt
+r=diagnostic.review_failed(evidence={})
+assert r['state'].startswith('HOLD_')
+assert all(r[k] is False for k in ('native_accepted','ack_allowed','next_post_allowed','training_admitted','retry_allowed','successful_turn'))
+""",str(wire),str(failed)],check=True,cwd=target)
     return {"unchanged":len(before),"added":len(after)-len(before),"entry":entry.relative_to(target).as_posix(),"entry_sha256":after[entry.relative_to(target).as_posix()],"native_accepted":False,"host_provider_bound":False,"positive_dialog_verified":False}
 if __name__=="__main__":
     print(json.dumps(stage_all(*sys.argv[1:])))

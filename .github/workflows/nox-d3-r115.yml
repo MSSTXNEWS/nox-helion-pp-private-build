@@ -20,7 +20,7 @@ jobs:
           node-version: '22.16.0'
       - uses: actions/checkout@v4
         with:
-          ref: 12bfae6b332ac49aa5fa2201c2c728847caa03b2
+          ref: bc467f15fcd5831a1432020900e2be1a39cd5aab
           path: r115-donors/a6
           persist-credentials: false
       - uses: actions/checkout@v4
@@ -43,7 +43,12 @@ jobs:
           ref: 03299290104690a5523037bf862c4a2d172fad22
           path: r115-donors/b2
           persist-credentials: false
-      - name: Compose original extracted release once
+      - uses: actions/checkout@v4
+        with:
+          ref: 0dd91d62ff8288523a03de2b27096bd0518e10ca
+          path: r115-donors/b0
+          persist-credentials: false
+      - name: Compose changed extracted release once
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
