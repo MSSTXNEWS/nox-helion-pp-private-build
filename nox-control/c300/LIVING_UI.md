@@ -26,8 +26,5 @@
 Ритуалы приходят в GET /api/nox/outbox (kind=living, ritual=morning|evening). Панель «Тихие часы»: GET/POST /svc/nox-living/quiet.
 /api/feedback отвечает 200 (проверено), 503 больше не воспроизводится.
 
-## N: советники и черновик (сервис advisors, 127.0.0.1:18216, через прокси /svc/advisors/)
-- GET /svc/advisors/suggest?project=&dialog=&last= -> {commands:[{id,title,confirm,endpoint}], prompts:[{id,title,text,pinned?,generated?}]}. До 5 команд из qa/registry.json и до 6 заготовок, ранжирование по пересечению слов контекста (без модели); новые заготовки по проекту генерируются в фоне через /glm и появляются при следующем запросе (кеш 1 ч). Клик по заготовке вставляет text в поле ввода; команда из commands выполняется через /api/cmd (confirm=true: с подтверждением).
-- POST /svc/advisors/pin {text, title?, project?} -> {ok, pins}: сохранить подсказку как заготовку (state/prompts.json). POST /unpin {id}. GET /pins -> {pins:[{id,title,text,project,ts}]}.
-- GET /svc/advisors/draft?chat=<id>&page=<страница>&last=<последнее сообщение NOX>&typed=<набранное> -> {draft:"..."}. Лёгкая модель через /glm, max_tokens 40, ждёт до 3 с, иначе {draft:"", pending:true}; генерация дозавершается в фоне, повторный запрос с теми же параметрами через 1-3 с вернёт готовый черновик (кеш 10 мин). Одна фоновая генерация за раз, чтобы чат не страдал. UI: показывать серым текстом в поле ввода, Tab принимает, Esc скрывает; не показывать при nox_incognito.
-- Формат тела /api/chat у S1 не проверен; рабочий для ответа модели /api/turn.
+## V: внешние советники (шлюз)
+Подробный контракт: ADVISORS_EXT.md. Кратко: шлюз OpenAI-совместимый на 127.0.0.1:8793 (`POST /v1/chat/completions`, `model`=`провайдер/модель` или `auto`; `GET /v1/models` со статусами). Реестр советников: /workspace/nox/state/advisors_external.json (id, provider, model, strengths, status, latency_ms, limits). Выключатель «можно наружу»: advisors_cfg.json `external_enabled`; личные данные не уходят, пока `allow_personal=false`. Ключи: /workspace/nox/state/secrets/advisors.env. UI (settings): переключатель «Внешние советники» + список из /v1/models с индикатором available/needs_key.
