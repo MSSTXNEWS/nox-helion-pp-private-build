@@ -95,6 +95,28 @@ class WriterTest(unittest.TestCase):
             w.run(s)
         self.assertEqual((s.reads,s.closes),(0,1))
 
+    def test_constructor_fault_aborts_and_disposes(self):
+        for fault in ("iter_eof", "iter_error", "not_iterator", "close_eof"):
+            with self.subTest(fault=fault):
+                class BadSource(Source):
+                    def __iter__(self):
+                        if fault in ("iter_eof", "close_eof"):
+                            raise StopIteration
+                        if fault == "iter_error":
+                            raise OSError("iter")
+                        return iter(())
+                    def close(self):
+                        self.closes += 1
+                        if fault == "close_eof":
+                            raise StopIteration
+                s, w = BadSource(), Wire()
+                with self.assertRaises((OSError, TypeError, RuntimeError)) as err:
+                    w.run(s)
+                if fault in ("iter_eof", "close_eof"):
+                    self.assertIn("FALSE_EOF", str(err.exception))
+                self.assertEqual((s.reads, s.closes, w.aborts, w.flushes), (0, 1, 1, 0))
+                self.assertEqual(w.writes, [])
+
 
 if __name__=="__main__":
     unittest.main()

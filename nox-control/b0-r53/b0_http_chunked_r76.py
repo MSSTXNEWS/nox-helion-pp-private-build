@@ -14,7 +14,7 @@ def write_chunked_sse(upstream, *, start_headers, write, flush, abort_transport)
     A write must report its exact byte count. An uncertain/partial write
     aborts rather than retrying. Caller must not generate a fallback response.
     """
-    body = ProxyDeltaBody(upstream)
+    body = None
     def emit(data):
         count = write(data)
         if type(count) is not int or count != len(data):
@@ -22,6 +22,7 @@ def write_chunked_sse(upstream, *, start_headers, write, flush, abort_transport)
         flush()
 
     try:
+        body = ProxyDeltaBody(upstream)
         start_headers()
         for chunk in body:
             emit(("%x\r\n" % len(chunk)).encode("ascii") + chunk + b"\r\n")
@@ -34,7 +35,17 @@ def write_chunked_sse(upstream, *, start_headers, write, flush, abort_transport)
             except StopIteration as abort_exc:
                 raise RuntimeError("HOLD_PROXY_HTTP_ABORT_FALSE_EOF") from abort_exc
         finally:
-            body.close()
+            if body is not None:
+                body.close()
+            else:
+                # Construction failed before the adapter took ownership.
+                # Dispose the supplied source if it exposes a close callback.
+                try:
+                    close = getattr(upstream, "close", None)
+                    if callable(close):
+                        close()
+                except StopIteration as close_exc:
+                    raise RuntimeError("HOLD_PROXY_HTTP_INIT_CLOSE_FALSE_EOF") from close_exc
         if isinstance(exc, StopIteration):
             raise RuntimeError("HOLD_PROXY_HTTP_CALLBACK_FALSE_EOF") from exc
         raise
