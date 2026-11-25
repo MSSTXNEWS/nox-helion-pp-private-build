@@ -2067,7 +2067,7 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertEqual(any("index" in event for event in plans), phase == "progress")
                 self.assertEqual(calls, ["model"] if streamed else [])
                 if not streamed:
-                    self.assertFalse(any(f.get("nox_event", {}).get("step") == "think" for f in frames))
+                    self.assertFalse(any(f.get("nox_event", {}).get("text") == "формулирую ответ" for f in frames))
 
     def test_broadcast_stop_survives_new_chat_and_does_not_stop_future_chats(self):
         """New request must not clear a STOP already sent to an older stream."""
