@@ -1,7 +1,7 @@
 echo "C300: th_dep_gr7 (слой движения Графит: View Transitions, stagger карточек, микро-ховеры, градиент за курсором)"
 S=/workspace/nox/web/site; cd $S; TS=$(date +%s)
 export PLAYWRIGHT_BROWSERS_PATH=/workspace/nox/tools/ms-playwright; PY=/workspace/nox/venv/bin/python; export PATH=/workspace/nox/tools/node/bin:$PATH
-SHA=28b3bee04c3998ed1bb27f91ec83df15f5aaff9d
+SHA=b8f722dd953f10b3a607de00ac037169ceea129b
 R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/$SHA/nox-control/c300/bundles/th_graphite
 G=/tmp/th_gr7; rm -rf $G; mkdir -p $G
 for f in nox-graphite.css nox-theme.js nox-motion.css nox-motion.js patch.py th_gen_map.py; do curl -fsSL --retry 5 --retry-delay 4 --retry-all-errors $R/$f -o $G/$f && [ -s $G/$f ] || { echo "FAIL fetch $f"; exit 0; }; done
