@@ -42,6 +42,22 @@ class TestPlanner(unittest.TestCase):
         self.assertEqual(self.p.next()["id"], "normal")
         self.assertEqual(len([t for t in self.p.tasks() if t["id"] == "shared"]), 1)
 
+    def test_dispatcher_non_open_state_vetoes_stale_inbox_copy(self):
+        jl(self.cfg.inbox, [
+            {"id": "busy", "title": "stale", "status": "pending", "priority": "P0"},
+            {"id": "closed", "title": "stale", "status": "pending", "priority": "P0"},
+            {"id": "fresh", "title": "eligible", "status": "pending", "priority": "P1"},
+        ])
+        jl(self.cfg.queue, [
+            {"id": "busy", "status": "running"},
+            {"id": "closed", "status": "done"},
+        ])
+        self.assertEqual([t["id"] for t in self.p.tasks()], ["fresh"])
+        self.assertEqual(self.p.next()["id"], "fresh")
+        # A genuinely requeued task is visible again; the filter is not a claim.
+        jl(self.cfg.queue, [{"id": "busy", "status": "queued"}, {"id": "closed", "status": "done"}])
+        self.assertEqual(self.p.next()["id"], "busy")
+
     def test_original_p0_p1_priority_labels_keep_order(self):
         jl(self.cfg.inbox, [
             {"id": "p1", "title": "later", "status": "pending", "priority": "P1", "ts": 1},
