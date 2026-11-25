@@ -167,6 +167,50 @@ def plan(t):
     return {'goal': t['goal'], 'done_if': 'артефакт создан', 'subtasks': [{'id': 's1', 'role': 'coder' if re.search(r'код|python|функци|скрипт', t['goal'], re.I) else 'writer', 'task': t['goal'], 'deps': []}], 'note': 'планировщик недоступен, один шаг'}
 
 # ---------- исполнитель ----------
+
+# ---------- бриф Методолога (в промпт КАЖДОГО субисполнителя) + микро-коуч ----------
+PB = ST + '/playbooks'
+BASE_DEFAULT = ("БРИФ МЕТОДОЛОГА (обязателен):\n1) Сначала фундамент: анализ среды -> готовое из интернета -> оптимизация основы -> функции -> проверка и урок.\n"
+ "2) Только готовое, свой код лишь клей.\n3) Собирай и тестируй в песочнице/копии, на прод переноси один раз пакетом; шаги объединяй; долгое запускай в фоне.\n"
+ "4) «добавь» не значит «останови/перенеси»: текущее не трогай.\n5) Чистки только по белому списку и с проверкой импортов.\n6) Владельца спрашивай только о деньгах, доступах и удалениях.")
+def playbook_kind(t, sub):
+    g = (t['goal'] + ' ' + t['title'] + ' ' + sub.get('task', '')).lower()
+    if re.search(r'чист|удал|cleanup', g): return 'cleanup'
+    if re.search(r'сервер|установ|драйвер|gpu|k1\b', g): return 'server'
+    if re.search(r'страниц|сайт|дизайн|лендинг|html', g) or sub.get('role') == 'designer': return 'page'
+    return sub.get('role') or 'generic'
+def brief(t, sub):
+    try: base = open(PB + '/_base.yaml').read()
+    except Exception: base = BASE_DEFAULT
+    k = playbook_kind(t, sub)
+    try: pbk = open(f'{PB}/{k}.yaml').read()
+    except Exception: pbk = ''
+    return (base.strip() + ('\nПЛЕЙБУК ' + k + ':\n' + pbk.strip() if pbk else ''))[:2500], k
+COACH = {'n': 0}
+def coach(t, sub, out, names, root, attempt):
+    """Сверяет ход с брифом, даёт короткий толчок или ''."""
+    g = (t['goal'] + ' ' + sub.get('task', '')).lower(); body = out or ''
+    try:
+        for f in names:
+            fp = os.path.join(root, f)
+            if os.path.isfile(fp) and os.path.getsize(fp) < 60000: body += '\n' + open(fp, errors='ignore').read()
+    except Exception: pass
+    if re.search(r'systemctl (stop|restart|disable)|pkill|kill -9|docker (stop|rm)|shutil\.rmtree|rm -rf', body) and not re.search(r'останов|удал|перезапус|чист', g):
+        return 'отклонение: останавливаешь/удаляешь то, о чём не просили. Текущее не трогай; чистка только по белому списку'
+    if re.search(r'/workspace/nox/(web|brain)|web_server\.py', body) and re.search(r'open\([^)]*[\'"]w|>\s*/workspace', body):
+        return 'отклонение: правка прода напрямую. Собери в песочнице, на прод один пакетом, с бэкапом'
+    if re.search(r'уточните|вопрос к владельцу|подтвердите, пожалуйста|как вы хотите', body, re.I) and not re.search(r'деньг|оплат|доступ|ключ|удален', body, re.I):
+        return 'отклонение: вопрос владельцу не про деньги/доступ/удаление. Реши сам и запиши допущение'
+    if sub.get('role') == 'coder':
+        for f in names:
+            fp = os.path.join(root, f)
+            if f.endswith('.py') and os.path.isfile(fp):
+                src = open(fp, errors='ignore').read()
+                if src.count('\n') > 150 and not re.search(r'^\s*(import|from)\s+(?!os|sys|re|json|time|math|typing|collections|itertools|functools|pathlib|datetime|unittest|pytest|random|string|hashlib)\w', src, re.M):
+                    return 'возьми готовое: >150 строк своего кода без библиотек; найди готовую библиотеку, свой код только клей'
+    if attempt >= 1 and len(names) > 3: return 'собери пакетом: объедини шаги в один скрипт/файл'
+    return ''
+
 def execute(t, sub, root, feedback='', hint=''):
     r = ROLES().get(sub['role'], ROLES()['writer'])
     ctx = ''
@@ -175,8 +219,9 @@ def execute(t, sub, root, feedback='', hint=''):
         if os.path.isfile(fp) and not f.startswith('test_') and os.path.getsize(fp) < 6000: ctx += f'\n--- {f} ---\n' + open(fp).read()
     u = f'Задача: {sub["task"]}\nЦель: {t["goal"]}\n' + (f'Уже есть в песочнице:{ctx}\n' if ctx else '') + (f'ЗАМЕЧАНИЯ РЕВИЗОРА (исправь): {feedback}\n' if feedback else '') + (f'ПОДСКАЗКА ТРЕНЕРА: {hint}\n' if hint else '')
     u += '\nОтвет: каждый файл в формате\n### FILE: имя_файла\n<содержимое>\nБез пояснений вне файлов.'
-    out = llm(r.get('backend', 'main'), r['system'], u, r.get('max_tokens', 1800), r.get('temp', 0.3), t['id'])
-    names = write_files(root, out)
+    bf, bk = brief(t, sub); step(t['id'], 'brief', f'бриф Методолога в промпте ({bk}), {len(bf)} симв.', sub['role'])
+    out = llm(r.get('backend', 'main'), r['system'] + '\n\n' + bf, u, r.get('max_tokens', 1800), r.get('temp', 0.3), t['id'])
+    names = write_files(root, out); sub['_out'] = out[:6000]
     if not names:        # модель ответила без разметки: сохраняем как текст
         ext = 'html' if sub['role'] in ('designer',) else ('py' if sub['role'] == 'coder' else 'md')
         fn = f'{sub["id"]}.{ext}'; code = re.sub(r'^```[a-zA-Z0-9]*\n|\n```\s*$', '', out.strip())
@@ -282,11 +327,14 @@ def run_task(tid):
         ths = []
         def work(sub):
             nonlocal total_returns, first_pass, escal
-            fb = ''; hint = ''; errs = []; names = []; verdict = None
-            for attempt in range(3):          # 1 + максимум 2 возврата
+            fb = ''; hint = ''; errs = []; names = []; verdict = None; coached = False
+            for attempt in range(4):          # 1 + максимум 2 возврата
                 step(tid, 'exec', f'{sub["role"]} попытка {attempt + 1}', sub['role'])
                 try: names = execute(t, sub, root, fb, hint)
                 except Exception as e: errs.append('exec: ' + str(e)[:200]); fb = errs[-1]; names = []; hint = trainer(t, attempt + 1, errs); continue
+                if not coached:
+                    ch = coach(t, sub, sub.get('_out', ''), names, root, attempt)
+                    if ch: coached = True; COACH['n'] += 1; step(tid, 'coach', ch, 'coach'); hint = ch; fb = 'коуч: ' + ch; continue
                 ok, log = verify_det(t, sub, root, names)
                 v = judge(t, sub, root, names, ok, log); step(tid, 'review', f'{"ПРИНЯТО" if v["accept"] else "ВОЗВРАТ"} score={v.get("score")} {log[-200:]} | {v.get("reason", "")}', 'reviewer')
                 if v['accept']: verdict = v; break
@@ -351,7 +399,7 @@ def metrics():
     hrs = max((time.time() - min([x['created'] for x in r] or [time.time()])) / 3600, 0.01)
     return {'total': len(r), 'done': len(done), 'needs_owner': sum(x['status'] == 'needs_owner' for x in r), 'failed': sum(x['status'] == 'failed' for x in r),
             'closed_with_artifact_per_hour': round(len(done) / hrs, 2), 'first_pass_share': round(sum(x['first_pass'] or 0 for x in done) / max(len(done), 1), 2),
-            'avg_seconds': round(sum((x['finished'] or 0) - (x['started'] or 0) for x in done) / max(len(done), 1), 1), 'restarts': sum(x['restarts'] or 0 for x in r), 'tokens': sum(x['tokens'] or 0 for x in r)}
+            'avg_seconds': round(sum((x['finished'] or 0) - (x['started'] or 0) for x in done) / max(len(done), 1), 1), 'restarts': sum(x['restarts'] or 0 for x in r), 'coach_nudges': COACH['n'], 'tokens': sum(x['tokens'] or 0 for x in r)}
 
 # ---------- HTTP ----------
 app = FastAPI()
