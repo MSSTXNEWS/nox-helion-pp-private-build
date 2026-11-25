@@ -31,7 +31,7 @@ async def main():
                 pg.on("filechooser",lambda fc:None); pg.on("dialog",lambda d:asyncio.ensure_future(d.dismiss()))
                 await pg.goto(B+music+".html",wait_until="load",timeout=40000); await pg.wait_for_timeout(5000)
                 ov=await pg.evaluate("()=>[document.documentElement.scrollWidth,innerWidth]")
-                raw=await pg.screenshot(type="jpeg",quality=60); emit(music+"_"+vp,raw,ow)
+                raw=await pg.screenshot(type="jpeg",quality=60,full_page=(vp!="k")); emit(music+"_"+vp,raw,ow)
                 print("VP",vp,"overflow",ov,"errs",errs[:4],"bad",bad[:5])
                 if vp in("d","m"):
                     n=await pg.evaluate("()=>{const q=[...document.querySelectorAll('.wrap button,.wrap summary,.wrap [data-c]')].filter(e=>e.offsetParent&&e.getBoundingClientRect().width>0);return q.length}")
