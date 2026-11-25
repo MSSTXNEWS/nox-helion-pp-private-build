@@ -27,7 +27,7 @@ try:
 except Exception as e: print('kilo list err', e, flush=True)
 try:
     d = get('https://api.llm7.io/v1/models'); d = d if isinstance(d, list) else d.get('data', [])
-    cand += ['llm7/' + m['id'] for m in d if re.search(r'gemma|llama|qwen|mistral|deepseek|gpt-oss|phi', m['id'], re.I) and not m['id'].startswith('anthropic')][:8]
+    cand += ['llm7/mistral-Nemo-Instruct-2407', 'llm7/codestral-latest'] + ['llm7/' + m['id'] for m in d if re.search(r'gemma|llama|qwen|mistral|deepseek|gpt-oss|phi', m['id'], re.I) and not re.search(r'anthropic|claude|chroma|uncensored|pro$', m['id'], re.I)][:6]
 except Exception as e: print('llm7 list err', e, flush=True)
 seen = []; [seen.append(c) for c in cand if c not in seen]
 adv = []
