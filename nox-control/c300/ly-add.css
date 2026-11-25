@@ -1,0 +1,17 @@
+
+/* S3 слои: единая система z-index, safe-area, плавающие элементы внутри контентной зоны (между шапкой и доком) */
+:root{--z-content:10;--z-float:800;--z-dock:900;--z-header:950;--z-pult:1000;--z-sheet:1100;--z-toast:1200;--ds-dock-h:111px;--ds-head-h:72px;--ds-safe-t:env(safe-area-inset-top,0px);--ds-safe-b:env(safe-area-inset-b,0px)}
+@supports(padding:env(safe-area-inset-bottom)){:root{--ds-safe-b:env(safe-area-inset-bottom)}}
+.bar.tb{z-index:var(--z-header)!important;padding-top:var(--ds-safe-t)}
+#nxdock{z-index:var(--z-dock)!important;padding-bottom:var(--ds-safe-b)}
+#nxsun{z-index:calc(var(--z-header) + 1)!important}
+#nxpult{z-index:var(--z-pult)!important}
+#nxnavx,.nmc-fab,#nxmPill{z-index:var(--z-float)!important;top:auto!important;bottom:calc(var(--ds-dock-h) + var(--ds-safe-b) + 12px)!important}
+#page,main.page{padding-bottom:calc(var(--ds-dock-h) + var(--ds-safe-b) + 24px)}
+html{scroll-padding-top:calc(var(--ds-head-h) + 8px);scroll-padding-bottom:calc(var(--ds-dock-h) + 8px)}
+#nxdock .nxd-sheet,.nxd-pop,.nxdp{z-index:var(--z-sheet)!important}
+ninja-keys{z-index:var(--z-toast)}
+@media(max-width:760px){
+ #nxdock .nxd-cells a,#nxdock button,#nxdock .nxd-tools>*,#nxsun,.nxpu-tog,#nxpult button,.nmc-fab,#nxmPill,.tb-i,.tb-burger{min-height:44px;min-width:44px}
+ #nxnavx{bottom:calc(var(--ds-dock-h) + var(--ds-safe-b) + 60px)!important}
+}
