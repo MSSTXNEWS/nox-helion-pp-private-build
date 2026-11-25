@@ -28,6 +28,15 @@ def _norm(value):
     return " ".join(unicodedata.normalize("NFKC", value).casefold().split())
 
 
+def _require_scalar(value):
+    # JSON escapes can decode to lone UTF-16 surrogates even when the file
+    # itself is valid UTF-8. Refuse them before provenance hashing/serialization.
+    try:
+        value.encode("utf-8", "strict")
+    except UnicodeEncodeError as exc:
+        raise SplitHold("HOLD_INVALID_UNICODE_SCALAR") from exc
+
+
 def _digest(value):
     return hashlib.sha256(value.encode("utf-8", "strict")).hexdigest()
 
@@ -50,6 +59,7 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
     """
     if type(seed) is not str or not 1 <= len(seed) <= 128:
         raise SplitHold("HOLD_SEED")
+    _require_scalar(seed)
     groups = {}
     seen_ids = set()
     seen_content = {}
@@ -63,7 +73,15 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
         count += 1
         if count > 300000 or type(row) is not dict:
             raise SplitHold("HOLD_INPUT_LIMIT_OR_SHAPE")
-        for field in ("id", "lang", "domain", "goal", "text", "source_id", "license"):
+        fields = ("id", "lang", "domain", "goal", "text", "source_id", "license")
+        # This splitter accepts plain provenance projections only. Do not
+        # silently discard richer observation/disposition metadata (R100):
+        # the authenticated final-disposition provider must resolve it before
+        # a trusted caller projects a record into this schema. No authority
+        # or training eligibility is inferred from these seven fields.
+        if row.keys() - set(fields):
+            raise SplitHold("HOLD_UNREVIEWED_RECORD_METADATA")
+        for field in fields:
             if type(row.get(field)) is not str or not row[field].strip():
                 raise SplitHold("HOLD_REQUIRED_PROVENANCE")
         if (row["lang"] not in LANGUAGES or row["domain"] not in DOMAINS
@@ -71,6 +89,8 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
                 or len(row["text"]) > 262144 or len(row["source_id"]) > 1000
                 or len(row["license"]) > 200):
             raise SplitHold("HOLD_DATASET_FIELD")
+        for field in fields:
+            _require_scalar(row[field])
         if row["id"] in seen_ids:
             raise SplitHold("HOLD_DUPLICATE_RECORD_ID")
         seen_ids.add(row["id"])
