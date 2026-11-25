@@ -73,6 +73,7 @@ def gh_scan(llm):
         name = r['full_name']
         if q('SELECT 1 FROM finds WHERE src="github" AND name=?', (name,), one=True): continue
         sc, jw = judge_text(llm, name, r.get('description') or '')
+        if sc is None: st_ = int(r.get('stargazers_count') or 0); sc = 7.0 if st_ > 5000 else 6.0 if st_ > 1000 else 4.0; jw = f'эвристика: {st_} звёзд (судья недоступен)'
         q('INSERT OR IGNORE INTO finds(ts,src,name,url,license,verdict,score,status,note) VALUES(?,?,?,?,?,?,?,?,?)', (time.time(), 'github', name, r['html_url'], (r.get('license') or {}).get('spdx_id', '?'), 'допущено', sc, 'candidate' if sc >= 6 else 'rejected', jw)); n += 1
     return n
 def rss_scan(llm):
@@ -179,7 +180,11 @@ def make_agenda(llm, force=False):
     if q('SELECT 1 FROM ideas WHERE day=?', (day,), one=True) and not force: return 0
     finds = '; '.join(f'{r["name"]} ({r["score"]})' for r in q('SELECT name,score FROM finds WHERE status IN ("candidate","absorbed") ORDER BY score DESC LIMIT 5'))
     learned = '; '.join(r['text'][:80] for r in q('SELECT text FROM learned ORDER BY id DESC LIMIT 4'))
-    out = llm('main', 'Ты NativeIdeaLoop. Дай 3-5 идей дня для развития NOX, каждая одной строкой «название — зачем». Только список.', f'Сон: {dream_text()}\nНаходки червей: {finds}\nНедавно узнал: {learned}', 400, 0.7, None, 240)
+    try:
+        out = llm('main', 'Ты NativeIdeaLoop. Дай 3-5 идей дня для развития NOX, каждая одной строкой «название — зачем». Только список.', f'Сон: {dream_text()}\nНаходки червей: {finds}\nНедавно узнал: {learned}', 400, 0.7, None, 240)
+    except Exception as e:      # модели недоступны: идеи из находок червей, уроков и сна (без LLM, честно помечено)
+        fl = [r['name'] for r in q('SELECT name FROM finds WHERE status IN ("candidate","absorbed") ORDER BY score DESC LIMIT 2')]
+        out = '\n'.join([f'Поглотить и проверить {x} — свежая находка червей' for x in fl] + ['Разобрать последние уроки и превратить повторы в правила — меньше повторных ошибок', 'Разгрузить советников кэшем и локальными моделями — стабильные ответы без 502'])
     n = 0
     for l in [x.strip('-*• 0123456789.)') for x in out.split('\n') if len(x.strip()) > 8][:3]:
         t, _, w = l.partition('—'); q('INSERT INTO ideas(day,ts,title,why,status) VALUES(?,?,?,?,"new")', (day, time.time(), t.strip()[:120], w.strip()[:200])); n += 1
