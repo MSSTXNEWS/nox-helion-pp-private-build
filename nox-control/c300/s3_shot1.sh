@@ -15,14 +15,15 @@ files=[i['file'] for g in nav['groups'] for i in g['items']]
 print('MENU_FILES',len(files),len(set(files)))
 with sync_playwright() as p:
     b=p.chromium.launch()
-    for tag,w,h,mob in [('d',1440,900,0),('m',390,844,1)]:
+    import sys
+    for tag,w,h,mob in [x for x in [('d',1440,900,0),('m',390,844,1)] if x[0]==sys.argv[1]]:
         ctx=b.new_context(viewport={'width':w,'height':h},has_touch=bool(mob),is_mobile=bool(mob))
         bad=[]
         for f in files:
             pg=ctx.new_page(); errs=[]; st=[]
             pg.on('pageerror',lambda e:errs.append(str(e)[:80])); pg.on('response',lambda r:st.append((r.status,r.url[-40:])) if r.status>=400 else None)
             try:
-                pg.goto(B+f,wait_until='load',timeout=20000); pg.wait_for_timeout(1500)
+                pg.goto(B+f,wait_until='load',timeout=20000); pg.wait_for_timeout(900)
                 ov=pg.evaluate("document.documentElement.scrollWidth-innerWidth")
                 op=pg.evaluate("(()=>{const e=document.querySelector('ninja-keys');return !!(e&&(e.visible||e.hasAttribute('opened')))})()")
                 ok=pg.evaluate("[!!document.getElementById('nxsun'),!!document.querySelector('.tb-sun'),document.querySelectorAll('.tb-i[data-k=feel]:not([style*=none])').length]")
@@ -50,4 +51,5 @@ with sync_playwright() as p:
         ctx.close()
     b.close()
 P
-/workspace/nox/venv/bin/python -I /tmp/s3_shot1.py 2>&1 | cut -c1-900
+for v in d m; do nohup /workspace/nox/venv/bin/python -I /tmp/s3_shot1.py $v > /tmp/s3_shot1_$v.out 2>&1 & done
+sleep 5; echo started
