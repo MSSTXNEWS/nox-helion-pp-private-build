@@ -1,0 +1,5 @@
+#!/bin/bash
+D=/workspace/nox/web/site/qa/rework
+echo "nav (S3 $(date +%F), обновлено): меню 72->33; Dock-списки; чёрное солнце+пульт; лупа/Ctrl+K с командами и синонимами; серверные команды ui.state/volume/projector/focus/notify.test/svc.restart(web, confirm) в registry+nox_cmd.py (бэкап *.bak_s3_5, тесты пройдены); трансляция, второй экран, проектор (Wake Lock), радиальное меню, живые обои, жесты MediaPipe (модель скачана; камера не проверялась); View Transitions. Не сделано: svc.restart для сервисов кроме web (нет рецептов запуска), Meilisearch напрямую (нужен ключ; поиск идёт через /search), нормальный 4K для шапки и дока (контент масштабируется zoom, панели остаются мелкими)" > $D/nav.fixed
+echo "settings (S3 $(date +%F), обновлено): макет macOS на Shoelace, 7 вкладок на живых данных, 5 миров и 6 палитр, 9 из 9 планет с фото-текстурами Solar System Scope (проверено на 1440 и 390), переключатель жестов. Ползунков личности нет: сервис TRAITS не запущен, блока на Диске нет" > $D/settings.fixed
+ls -la $D/nav.fixed $D/settings.fixed
