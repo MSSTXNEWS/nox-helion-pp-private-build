@@ -1,0 +1,3 @@
+
+/* S3: карточки с графиками и таблицами плотнее: диск солнца не просвечивает (запас на браузеры без blur по WebGL-фону) */
+.card:has(canvas),.card:has(table),.card:has(.chart),.card:has(.echart){background-color:rgba(12,9,9,.95)!important}
