@@ -10,6 +10,10 @@ async def main():
       pg.on('console',lambda m:errs.append('CE '+m.text[:160]) if m.type=='error' else None)
       await pg.goto(URL,wait_until='load',timeout=30000);await pg.wait_for_timeout(3500)
       info=await pg.evaluate('''()=>{var r=[];document.querySelectorAll('#dz sl-button,#dz sl-icon-button,#dz sl-select,#dz sl-input,#dz sl-switch,#dz sl-color-picker,#dz sl-tab').forEach(e=>{var b=e.getBoundingClientRect();var vis=b.width>0&&b.height>0&&getComputedStyle(e).visibility!='hidden';var cs=e.closest('#dzSide:not(.open)');if(vis&&(b.height<43.5||b.width<43.5)&&!(innerWidth<=900&&cs))r.push(e.tagName.toLowerCase()+' '+(e.getAttribute('data-act')||e.getAttribute('data-tool')||e.id||e.getAttribute('name')||'')+' '+Math.round(b.width)+'x'+Math.round(b.height))});return{small:r.slice(0,40),n:r.length,cv:!!window.NOXDZ,tools:document.querySelectorAll('[data-tool]').length}}''')
+      for tb in ('lay','prop','ai'):
+        await pg.click('sl-tab[panel="%s"]'%tb,force=True);await pg.wait_for_timeout(400)
+        i2=await pg.evaluate('''()=>{var r=[];document.querySelectorAll('#dzSide sl-button,#dzSide sl-icon-button,#dzSide sl-select,#dzSide sl-input,#dzSide sl-switch,#dzSide sl-color-picker,#dzSide sl-tab,#dzSide sl-textarea').forEach(e=>{var b=e.getBoundingClientRect();if(b.width>0&&b.height>0&&(b.height<43.5||b.width<43.5)&&!e.closest('sl-tab-panel:not([active])'))r.push(e.tagName.toLowerCase()+' '+(e.getAttribute('data-act')||e.id||'')+' '+Math.round(b.width)+'x'+Math.round(b.height))});return r.slice(0,20)}''')
+        print('OUT: small in',tb,tag,i2)
       print('OUT:',tag,json.dumps(info,ensure_ascii=False)[:900])
       if tag=='pc':
         # прокликать все кнопки
@@ -32,6 +36,7 @@ async def main():
         await pg.click('[data-tool="select"]',force=True)
         await pg.wait_for_timeout(800)
         n=await pg.evaluate('NOXDZ.cv.getObjects().length');print('OUT: objects after doodle',n)
+        await pg.click('sl-tab[panel="ai"]');await pg.wait_for_timeout(500)
         # ctrl+a выделение всё
         await pg.evaluate("(()=>{var cv=NOXDZ.cv;var o=cv.getObjects().filter(x=>!x.dzArt);var s=new fabric.ActiveSelection(o,{canvas:cv});cv.setActiveObject(s);cv.requestRenderAll()})()")
         await pg.click('[data-act="ai-sketch"]',force=True)
