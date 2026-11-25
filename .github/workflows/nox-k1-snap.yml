@@ -1,0 +1,24 @@
+name: NOX K1 site snapshot
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  snap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.actor == 'MSSTXNEWS'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Snapshot site from K1
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          C300: snap
+        run: python3 -B nox-control/c300/k1_snap.py && ls -la site.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: k1-site
+          path: site.tgz
+          retention-days: 3
