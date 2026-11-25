@@ -3,7 +3,7 @@
 (() => {
   if (window.NOXplanets3d) return;
   const SZ = 112, RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const dirs = ['./vendor/planets/', './vendor/nox-planets/'];
+  const dirs = ['./vendor/planets/2k/', './vendor/planets/', './vendor/nox-planets/'];
   let THREE = null, ren = null, items = [], raf = 0, cur = localStorage.getItem('nox:planet') || 'earth', data = null;
   const ready = async () => {
     if (THREE) return;
