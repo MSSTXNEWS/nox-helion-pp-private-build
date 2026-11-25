@@ -1,0 +1,54 @@
+/* NOX · M: мобильная адаптация. Только @media (max-width:768px). Десктоп не затрагивается. */
+@media (max-width:768px){
+:root{--m-tab-h:calc(60px + env(safe-area-inset-bottom,0px));--ds-dock-h:var(--m-tab-h)!important;--dock-h:var(--m-tab-h)!important}
+html,body{overflow-x:hidden;max-width:100vw;-webkit-text-size-adjust:100%}
+body{font-size:max(14px,1em)}
+input,select,textarea{font-size:16px!important}
+img,video,canvas,svg,iframe,pre,table{max-width:100%}
+table{display:block;overflow-x:auto}
+pre,code{white-space:pre-wrap;word-break:break-word}
+#app{padding-left:env(safe-area-inset-left,0);padding-right:env(safe-area-inset-right,0);bottom:var(--m-tab-h)!important;height:auto!important}
+/* прячем старые плавающие кнопки и док (остаются в DOM: программные click() работают) */
+#nxdock,.nmc-fab,#nxmPill,#nxnavx,.nai-btn,.hx-ask,#miniFab,.nxpu-tog{opacity:0!important;pointer-events:none!important;position:fixed!important;left:-200px!important;bottom:0!important;width:1px!important;height:1px!important;min-width:0!important;min-height:0!important;overflow:hidden}
+#app::after{content:"";display:block;height:76px;flex:none}
+body.m-chat .lv-bar,body.m-chat #cxChips,body.m-chat .tg-head .seg.tb2,body.m-chat #tgWid,body.m-chat #hero .suggest{display:none!important}
+/* таб-бар */
+#nox-m-tab{position:fixed;left:0;right:0;bottom:0;z-index:2000;height:var(--m-tab-h);padding:6px 6px env(safe-area-inset-bottom,0px);display:flex;align-items:stretch;justify-content:space-around;background:rgba(18,14,22,.72);-webkit-backdrop-filter:blur(24px) saturate(1.4);backdrop-filter:blur(24px) saturate(1.4);border-top:1px solid rgba(255,255,255,.12);box-sizing:border-box}
+#nox-m-tab a,#nox-m-tab button{flex:1 1 0;min-width:44px;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:0;color:rgba(239,230,223,.7);font:600 14px/1 inherit;font-family:inherit;text-decoration:none;border-radius:14px;-webkit-tap-highlight-color:transparent;padding:0}
+#nox-m-tab sl-icon{font-size:22px}
+#nox-m-tab span{font-size:14px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#nox-m-tab .on{color:#e9b465}
+#nox-m-tab .on sl-icon{filter:drop-shadow(0 0 6px rgba(233,180,101,.6))}
+/* единая кнопка ИИ */
+#nox-m-ai{position:fixed;right:14px;bottom:calc(var(--m-tab-h) + 12px);z-index:2001;width:56px;height:56px;min-width:56px;min-height:56px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:radial-gradient(circle at 35% 30%,#f3c981,#c9863c 70%);color:#1a1210;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 22px rgba(233,180,101,.35);padding:0}
+/* шторки */
+#nox-m-scrim{position:fixed;inset:0;z-index:2100;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s}
+#nox-m-scrim.open{opacity:1;pointer-events:auto}
+.nox-m-sheet{position:fixed;left:0;right:0;bottom:0;z-index:2101;max-height:82vh;overflow:auto;box-sizing:border-box;padding:10px 14px calc(18px + env(safe-area-inset-bottom,0px));background:rgba(22,17,26,.9);-webkit-backdrop-filter:blur(28px);backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,.14);border-bottom:0;border-radius:24px 24px 0 0;color:#efe6df;transform:translateY(105%);transition:transform .28s cubic-bezier(.2,.8,.2,1);touch-action:pan-y}
+.nox-m-sheet.open{transform:none}
+.nox-m-sheet .m-handle{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.35);margin:2px auto 12px}
+.nox-m-sheet h3{margin:0 0 10px;font-size:16px}
+.m-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.m-grid a,.m-list button{min-height:44px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 2px;border-radius:16px;background:rgba(255,255,255,.07);color:#efe6df;text-decoration:none;font-size:14px;text-align:center;line-height:1.15;word-break:normal;overflow-wrap:anywhere;hyphens:auto;border:0;font-family:inherit}
+.m-grid a sl-icon{font-size:24px;color:#e9b465}
+.m-grid a.on{outline:1px solid #e9b465}
+.m-list{display:grid;gap:8px}
+.m-list button{flex-direction:row;justify-content:flex-start;padding:12px 16px;font-size:15px}
+.m-grp{grid-column:1/-1;font-size:14px;opacity:.65;margin-top:6px}
+/* диалоги -> нижние шторки */
+sl-dialog::part(base){align-items:flex-end!important;justify-content:center}
+sl-dialog::part(panel){width:100vw!important;max-width:100vw!important;margin:0!important;max-height:88vh;border-radius:24px 24px 0 0!important;padding-bottom:env(safe-area-inset-bottom,0px)}
+sl-dialog::part(panel)::before{content:"";display:block;width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.35);margin:8px auto 0}
+sl-dialog{--width:100vw}
+sl-drawer[placement=start]::part(panel),sl-drawer[placement=end]::part(panel){max-width:92vw}
+.s2-modal{align-items:flex-end!important}
+.s2-modal>*{width:100%!important;max-width:100vw!important;border-radius:24px 24px 0 0!important;max-height:88vh;overflow:auto}
+/* цели и текст (JS добавляет классы) */
+.m-t44{min-height:44px!important;min-width:44px!important;box-sizing:border-box}
+a.m-t44:not([style*="display:block"]),span.m-t44[role=button]{display:inline-flex;align-items:center;justify-content:center}
+.m-f14{font-size:14px!important}
+.m-wrap{max-width:100%!important;overflow-wrap:anywhere}
+.m-ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:2200;background:rgba(22,17,26,.9);color:#e9b465;border-radius:20px;padding:8px 14px;font-size:14px}
+}
+@media (max-width:768px) and (min-width:481px){.m-grid{grid-template-columns:repeat(6,1fr)}}
+@media (max-width:768px){sl-tab.m-t44,sl-button.m-t44{display:inline-flex!important;align-items:center;height:auto!important}sl-tab.m-t44::part(base){min-height:44px;display:flex;align-items:center}sl-button.m-t44::part(base){min-height:44px}}
