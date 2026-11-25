@@ -32,6 +32,7 @@ if(!document.querySelector('script[src*="nox-k8-meta"]')){const a=document.creat
       $$('#feed .m.a').forEach((m) => {
         const acts = m.querySelector('.acts'); if (!acts) return;
         const ra = m.querySelector('.rq-act'); if (ra && ra.parentElement !== acts) { ra.setAttribute('aria-label', 'Ответить'); ra.title = 'Ответить'; acts.appendChild(ra); }
+        if (window.NOXNote && window.NOXNote.add && !acts.querySelector('.cw-pin')) { const p = document.createElement('button'); p.type = 'button'; p.className = 'cw-pin'; p.title = 'В заметку'; p.setAttribute('aria-label', 'В заметку'); p.textContent = '📌'; p.addEventListener('click', () => { const t = ((m.querySelector('.txt') || m.querySelector('.bubble') || m).innerText || '').trim(); Promise.resolve(window.NOXNote.add(t, { to: 'both' })).then(() => { p.textContent = '✓'; setTimeout(() => { p.textContent = '📌'; }, 1500); }).catch(() => { }); }); acts.appendChild(p); }
         const rem = m.querySelector('.lv-rem'); if (rem && !acts.querySelector('.cw-rem')) { const b = document.createElement('button'); b.type = 'button'; b.className = 'cw-rem'; b.title = 'Запомнить'; b.setAttribute('aria-label', 'Запомнить'); b.textContent = '🔖'; b.addEventListener('click', () => rem.click()); acts.appendChild(b); }
       });
       const chips = bar.querySelector('.cw-chips'); const last = $$('#feed .m.a').pop(); const inp = $('#input'); const empty = !inp || !(inp.value || '').trim();

@@ -29,8 +29,8 @@ body.cw-clean #feed .m.a .acts{display:flex;flex-wrap:wrap;align-items:center;ga
 body.cw-clean #feed .m.a:hover .acts,body.cw-clean #feed .m.a:focus-within .acts,body.cw-clean #feed .m.a.lv-last:hover .acts{opacity:1}
 @media (hover:none){body.cw-clean #feed .m.a .acts{opacity:1}}
 body.cw-clean .acts .seg{display:inline-flex;gap:2px}
-body.cw-clean .acts button,body.cw-clean .acts .rq-act,body.cw-clean .acts .cw-rem{width:30px;height:30px;min-height:30px;min-width:30px;padding:0;border-radius:8px;display:inline-grid;place-items:center;font-size:14px;background:transparent;border:1px solid transparent;color:#d9c2b8;cursor:pointer}
-body.cw-clean .acts button:hover,body.cw-clean .acts .rq-act:hover,body.cw-clean .acts .cw-rem:hover{background:var(--hover,rgba(255,255,255,.08));border-color:var(--line,rgba(255,255,255,.2))}
+body.cw-clean .acts button,body.cw-clean .acts .rq-act,body.cw-clean .acts .cw-pin,body.cw-clean .acts .cw-rem{width:30px;height:30px;min-height:30px;min-width:30px;padding:0;border-radius:8px;display:inline-grid;place-items:center;font-size:14px;background:transparent;border:1px solid transparent;color:#d9c2b8;cursor:pointer}
+body.cw-clean .acts button:hover,body.cw-clean .acts .rq-act:hover,body.cw-clean .acts .cw-pin:hover,body.cw-clean .acts .cw-rem:hover{background:var(--hover,rgba(255,255,255,.08));border-color:var(--line,rgba(255,255,255,.2))}
 body.cw-clean .acts .rq-act::part(base){min-height:30px;border:0;background:transparent}
 body.cw-clean .acts .cw-more{width:auto;padding:0 10px;font:12px var(--sans,inherit)}
 body.cw-clean #feed .m .lv-chips,body.cw-clean #feed .m.a:has(.think) .acts,body.cw-clean #feed .m.a:has(.think) .rq-act{display:none!important}
