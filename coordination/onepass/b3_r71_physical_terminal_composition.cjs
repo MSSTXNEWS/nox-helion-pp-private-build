@@ -34,6 +34,31 @@ function check(input){
   return {status:'CONSISTENT_COMPOSED_PHYSICAL_ONLY',consistent:true,readbacks:4,turns:2,native_accepted:false,authentication_verified:false,next_post_allowed:false,requires_external_verifier:true,requires_b5_retained_chain:true};
  }catch{return fail('INVALID_INPUT');}
 }
+// Joint offline consumer of the exact B5 R78 compare_pair result.
+// The owner supplies B5 output and original link bytes independently, not from
+// the B3 candidate. This checks consistency, never authentication or ACK.
+function checkRetainedPair(input,pair,linkPayloads){
+ const fail=reason=>({status:'HOLD',reason,consistent:false,native_accepted:false,authentication_verified:false,ack_allowed:false,next_post_allowed:false});
+ try{
+  const base=check(input);
+  if(!base.consistent)return fail('R71_'+base.reason);
+  const {createHash}=require('node:crypto'),sha=s=>createHash('sha256').update(s,'utf8').digest('hex');
+  const flags=['authentication_verified','native_accepted','ack_allowed','next_post_allowed'];
+  const offline=x=>x&&flags.every(k=>x[k]===false);
+  if(!offline(pair)||pair.status!=='S03_PROJECTION_PAIR_MATCHED_OFFLINE'||!Array.isArray(pair.turns)||pair.turns.length!==2||!Array.isArray(linkPayloads)||linkPayloads.length!==2)return fail('B5_PAIR');
+  for(let i=0;i<2;i++){
+   const t=input.turns[i],p=pair.turns[i],raw=linkPayloads[i];
+   if(!offline(p)||p.status!=='S03_PROJECTION_MATCHED_OFFLINE'||p.sequence!==i+2)return fail('B5_TURN_'+(i+2));
+   if(p.writer_sha256!==t.canonical.writer_sha256||p.readback_sha256!==t.canonical.readback_sha256)return fail('B5_WITNESS_'+(i+2));
+   if(typeof raw!=='string'||raw.length>65536||sha(raw)!==p.link_sha256)return fail('B5_LINK_BYTES_'+(i+2));
+   const link=JSON.parse(raw);
+   if(!link||typeof link!=='object'||Array.isArray(link)||Object.keys(t.link).some(k=>link[k]!==t.link[k]))return fail('B5_LINK_SCOPE_'+(i+2));
+   const answer=t.canonical.rows.at(-1).content;
+   if(!answer||p.answer_sha256!==sha(answer))return fail('B5_ANSWER_'+(i+2));
+  }
+  return {...base,status:'CONSISTENT_PHYSICAL_RETAINED_PAIR_ONLY',ack_allowed:false};
+ }catch{return fail('B5_INVALID_INPUT');}
+}
 function selfTest(){
  const {createHash}=require('node:crypto'),sha=s=>createHash('sha256').update(s,'utf8').digest('hex');
  const h=n=>n.toString(16).padStart(64,'0'),copy=x=>JSON.parse(JSON.stringify(x));
@@ -56,7 +81,30 @@ function selfTest(){
  let reproduced=0;
  const results=cases.map(([name,mutate,want])=>{const x=copy(fixture);mutate(x);const separately=r66.check(x.receipts).consistent&&x.turns.every(t=>r70.check(t).consistent);const z=check(x);if(!want&&separately)reproduced++;if(z.consistent!==want||z.native_accepted!==false||z.authentication_verified!==false||z.next_post_allowed!==false)throw Error(name+JSON.stringify(z));return {name,separately,consistent:z.consistent,reason:z.reason||null};});
  if(reproduced<10)throw Error('missing differential reproduction '+reproduced);
- return {results,reproduced,native_accepted:false};
+ const flags={authentication_verified:false,native_accepted:false,ack_allowed:false,next_post_allowed:false};
+ const makePair=x=>({status:'S03_PROJECTION_PAIR_MATCHED_OFFLINE',...flags,turns:x.turns.map((t,i)=>({status:'S03_PROJECTION_MATCHED_OFFLINE',sequence:i+2,writer_sha256:t.canonical.writer_sha256,readback_sha256:t.canonical.readback_sha256,link_sha256:sha(JSON.stringify(t.link)),answer_sha256:sha(t.canonical.rows.at(-1).content),...flags}))});
+ const retainedCases=[
+ ['same independently supplied pair',()=>{},true],
+ ['different writer witness',(_x,p)=>p.turns[1].writer_sha256=h(91),false],
+ ['different readback witness',(_x,p)=>p.turns[0].readback_sha256=h(92),false],
+ ['different answer digest',(_x,p)=>p.turns[1].answer_sha256=h(93),false],
+ ['different raw link',(_x,_p,l)=>l[0]+=' ',false],
+ ['coherently repinned foreign attempt',(_x,p,l)=>{const v=JSON.parse(l[1]);v.attempt_id='foreign';l[1]=JSON.stringify(v);p.turns[1].link_sha256=sha(l[1]);},false],
+ ['swapped B5 results',(_x,p)=>p.turns.reverse(),false],
+ ['truncated B5 result',(_x,p)=>p.turns.pop(),false],
+ ['B5 authority escalation',(_x,p)=>p.ack_allowed=true,false],
+ ['turn authority escalation',(_x,p)=>p.turns[1].native_accepted=true,false],
+ ['B3 coherent changed answer',x=>{const t=x.turns[1];t.canonical.rows.at(-1).content=t.canonical.readback.messages.at(-1).content='foreign';},false],
+ ['B3 coherent changed terminal attempt',x=>{const t=x.turns[1];t.link.attempt_id=t.terminal.attempt_id='foreign';},false]
+ ];
+ const retained=retainedCases.map(([name,mutate,want])=>{
+  const x=copy(fixture),p=makePair(x),l=x.turns.map(t=>JSON.stringify(t.link));
+  mutate(x,p,l);
+  const standalone=check(x).consistent,z=checkRetainedPair(x,p,l);
+  if(!standalone||z.consistent!==want||z.native_accepted!==false||z.authentication_verified!==false||z.ack_allowed!==false||z.next_post_allowed!==false)throw Error(name+JSON.stringify(z));
+  return {name,standalone,consistent:z.consistent,reason:z.reason||null};
+ });
+ return {results,reproduced,retained,native_accepted:false};
 }
-module.exports={check,selfTest};
+module.exports={check,checkRetainedPair,selfTest};
 if(require.main===module)console.log(JSON.stringify(selfTest(),null,2));
