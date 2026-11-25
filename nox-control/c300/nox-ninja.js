@@ -46,9 +46,11 @@ const jget = (u, o) => fetch(u, o).then(async (r) => { const t = await r.text();
   let tm = 0, last = '';
   el.addEventListener('change', (e) => { const q = ((e.detail && e.detail.search) || '').trim(); if (q === last) return; last = q; clearTimeout(tm);
     if (q.length < 2) { el.data = data; return; }
-    tm = setTimeout(async () => { const r = await jget('/search?q=' + encodeURIComponent(q)).catch(() => null); if (q !== last) return;
+    tm = setTimeout(async () => { const [r, mr] = await Promise.all([jget('/search?q=' + encodeURIComponent(q)).catch(() => null), jget('/api/cmd', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'search.meili', params: { q } }) }).catch(() => null)]); if (q !== last) return;
       const hits = (r && r.j && r.j.hits) || [];
-      el.data = data.concat(hits.map((h, i) => ({ id: 'q:' + i, title: h.title + (h.text && h.kind !== 'страница' ? ' · ' + String(h.text).slice(0, 60) : ''), section: 'Поиск · ' + h.kind, keywords: q + ' ' + h.title, handler: () => { location.href = h.url; } })));
+      let mh = []; try { mh = JSON.parse((mr && mr.j && mr.j.result) || '{}').hits || []; } catch (e) { mh = []; }
+      const mei = mh.map((h, i) => { const ttl = h.title || h.name || h.file || h.path || h.id || '—'; const tx = h.text || h.content || h.body || ''; return { id: 'm:' + i, title: ttl + (tx ? ' · ' + String(tx).slice(0, 60) : ''), section: 'Meilisearch · ' + (h._index || 'файлы'), keywords: q + ' ' + ttl, handler: () => { if (h.url) location.href = h.url; else if (window.NOXactions) NOXactions.toast(String(tx || ttl).slice(0, 140)); } }; });
+      el.data = data.concat(mei).concat(hits.map((h, i) => ({ id: 'q:' + i, title: h.title + (h.text && h.kind !== 'страница' ? ' · ' + String(h.text).slice(0, 60) : ''), section: 'Поиск · ' + h.kind, keywords: q + ' ' + h.title, handler: () => { location.href = h.url; } })));
     }, 220); });
   const open = (e) => { e.preventDefault(); e.stopImmediatePropagation(); el.open(); };
   addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') open(e); }, true);

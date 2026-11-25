@@ -1,0 +1,1 @@
+cd /workspace/nox/web/site; grep -c "ed-app" editor.html; grep -n "Фотостудия\|filerobot\|<script\|<main" editor.html | cut -c1-200 | head -20; diff <(sed 's/[0-9]\{5,\}//g' editor.html.bak_s1_1) <(sed 's/[0-9]\{5,\}//g' editor.html) | head -5 | cut -c1-200

@@ -1,0 +1,9 @@
+
+/* S3 док: один ряд категорий. Верхний ряд (Команды/Ctrl+K/Избранное/Недавние/События/Заметки/Mini-NOX) убран с экрана: функции есть в лупе, шапке, мини-чате и всплывающем окне дока. Остаются эмблема-солнце по центру кромки и STOP слева над доком */
+#nxdTools{position:absolute!important;left:0;right:0;top:0;height:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;pointer-events:none;background:none!important;overflow:visible}
+#nxdTools .nxd-l,#nxdTools .nxd-r>*:not(.ds-keep){display:none!important}
+#nxdTools .nxd-r{position:absolute;left:16px;top:-48px;display:flex;pointer-events:auto}
+#nxdTools .ds-keep{display:inline-flex!important;align-items:center;min-height:44px;min-width:44px;padding:0 16px;border-radius:14px}
+#nxdTools .nxd-sun{position:absolute;left:50%;top:-22px;transform:translateX(-50%);pointer-events:auto}
+#nxdock{padding-top:0!important}
+#nxdock .nxd-cells a,#nxdock .nxd-cells a span{font-size:12px!important;letter-spacing:.02em!important}

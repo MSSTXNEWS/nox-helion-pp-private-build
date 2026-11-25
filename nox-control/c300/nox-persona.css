@@ -1,0 +1,8 @@
+.nxs-persona{margin:14px 0}.nxp-h{font:300 10px/1 inherit;letter-spacing:.26em;text-transform:uppercase;color:#d49a62;margin-bottom:12px}
+.nxp-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
+.nxp-r{display:grid;grid-template-columns:150px 1fr 34px;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:rgba(255,235,220,.05);border:1px solid rgba(255,255,255,.10);backdrop-filter:blur(20px)}
+.nxp-r b{display:block;font-weight:400;font-size:13px;color:#efe6df}.nxp-r small{color:rgba(240,232,226,.55);font-size:10.5px}
+.nxp-r output{text-align:right;font:12px/1 ui-monospace,monospace;color:#e9b465}
+.nxp-r sl-range{--track-color-active:#e9b465;--track-color-inactive:rgba(255,255,255,.14);--thumb-size:16px}
+.nxp-f{display:flex;gap:14px;align-items:center;margin-top:10px}.nxp-s{font-size:11.5px;color:rgba(240,232,226,.7)}
+@media(max-width:600px){.nxp-r{grid-template-columns:1fr 34px}.nxp-r sl-range{grid-column:1/3}}

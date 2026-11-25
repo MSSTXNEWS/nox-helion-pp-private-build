@@ -1,0 +1,12 @@
+/* NOX · настройки: крупные цели (>=44px), поиск, читаемый фокус */
+.nxm-side{display:flex;flex-direction:column;gap:6px}
+.nxm-side [role=tab]{min-height:48px;padding:10px 14px;font-size:15px}
+.nxm-search{margin:0 0 6px;--sl-input-height-large:48px;--sl-input-border-radius-large:14px;--sl-input-background-color:rgba(255,235,220,.06);--sl-input-border-color:rgba(255,255,255,.14)}
+.nxm-search::part(base){backdrop-filter:blur(20px)}
+section.setg .seg button,section.setg button[role=radio],.nxwd button,.nxs-row button{min-height:44px;min-width:44px;font-size:13px}
+section.setg sl-switch{--width:54px;--height:30px;--thumb-size:24px}
+section.setg .nxs-row{min-height:52px}
+section.setg sl-radio-group sl-radio-button::part(button){min-height:44px}
+:where(.nxm-side [role=tab],section.setg button,sl-switch,sl-range):focus-visible{outline:2px solid #e9b465;outline-offset:2px}
+.nxm-empty{padding:24px;text-align:center}
+@media(max-width:700px){.nxm-side [role=tab]{min-height:52px}}

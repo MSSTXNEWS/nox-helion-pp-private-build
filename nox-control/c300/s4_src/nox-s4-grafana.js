@@ -6,7 +6,7 @@
   const sec = document.createElement('section'); sec.className = 'card s4gf'; sec.innerHTML = '<h2>Панели · живые данные <span class="r mono" id="s4gT">…</span></h2><div class="s4gg" id="s4gg"></div><p class="muted" id="s4gn" style="font-size:12px;margin:8px 0 0"></p>';
   wrap.appendChild(sec);
   let H = {}; try { H = JSON.parse(sessionStorage.getItem('s4h') || '{}'); } catch (e) { /* */ }
-  const charts = {}, grid = sec.querySelector('#s4gg'), mk = (k, t, u) => { const d = document.createElement('div'); d.className = 's4pn'; d.innerHTML = '<div class="s4ph"><span>' + t + '</span><b class="mono" data-v>—</b></div><div class="s4pc" data-c></div>'; grid.appendChild(d); const c = echarts.init(d.querySelector('[data-c]'), null, { renderer: 'canvas' }); charts[k] = { c, d, t, u }; };
+  const charts = {}, grid = sec.querySelector('#s4gg'), mk = (k, t, u) => { const d = document.createElement('div'); d.className = 's4pn'; d.innerHTML = '<div class="s4ph"><span>' + t + '</span><b class="mono" data-v>—</b></div><div class="s4pc" data-c></div>'; grid.appendChild(d); const c = echarts.init(d.querySelector('[data-c]'), 'nox', { renderer: 'canvas' }); charts[k] = { c, d, t, u }; };
   function draw(k, max) {
     const h = H[k] || [], x = charts[k]; if (!x) return; x.d.querySelector('[data-v]').textContent = h.length ? h[h.length - 1][1] + ' ' + x.u : '—';
     x.c.setOption({ animation: false, grid: { left: 36, right: 8, top: 8, bottom: 20 }, tooltip: { trigger: 'axis', backgroundColor: 'rgba(20,16,16,.9)', borderColor: '#5a3a34', textStyle: { color: '#efe6df', fontSize: 12 } },

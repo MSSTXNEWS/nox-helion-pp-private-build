@@ -1,0 +1,12 @@
+/* NOX · превью плиток «Мир интерфейса»: у каждой плитки свой мини-кадр мира */
+.nxwd .nxwd-w button{position:relative;padding-top:58px!important;overflow:hidden}
+.nxwd .nxwd-w button::before{content:"";position:absolute;left:8px;right:8px;top:8px;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:radial-gradient(circle at 50% 120%,rgba(233,180,101,.55),transparent 62%),linear-gradient(160deg,#1a1210,#0a0707)}
+.nxwd .nxwd-w button::after{content:"";position:absolute;left:50%;top:14px;width:22px;height:22px;margin-left:-11px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#2a1a10,#050303 70%);box-shadow:0 0 12px 2px rgba(255,150,60,.65)}
+.nxwd .nxwd-w [data-w=chronos]::before{background:radial-gradient(circle at 50% 120%,rgba(230,200,120,.5),transparent 62%),linear-gradient(160deg,#1c1710,#0a0805);border-style:double;border-width:3px}
+.nxwd .nxwd-w [data-w=chronos]::after{box-shadow:0 0 0 3px rgba(230,200,120,.5),0 0 10px rgba(230,200,120,.5);background:#080604}
+.nxwd .nxwd-w [data-w=somnium]::before{background:radial-gradient(circle at 50% 120%,rgba(150,120,255,.55),transparent 62%),linear-gradient(160deg,#130f24,#07060f)}
+.nxwd .nxwd-w [data-w=somnium]::after{box-shadow:0 0 14px 3px rgba(160,130,255,.7)}
+.nxwd .nxwd-w [data-w=forge]::before{background:radial-gradient(circle at 50% 120%,rgba(255,90,40,.6),transparent 62%),linear-gradient(160deg,#201008,#0a0503);border-radius:4px}
+.nxwd .nxwd-w [data-w=forge]::after{border-radius:3px;box-shadow:0 0 12px 2px rgba(255,100,40,.75)}
+.nxwd .nxwd-w [data-w=synapse]::before{background:radial-gradient(circle at 50% 120%,rgba(60,220,230,.5),transparent 62%),linear-gradient(160deg,#08181c,#040a0c)}
+.nxwd .nxwd-w [data-w=synapse]::after{box-shadow:0 0 14px 3px rgba(70,230,240,.7)}

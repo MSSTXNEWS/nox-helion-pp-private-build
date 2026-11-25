@@ -1,0 +1,9 @@
+
+/* S3-HDR2: шапка не шире экрана на 1200-1700 px: компактные пункты, без иконок внутри подписей, без сдвига */
+@media(min-width:1200px) and (max-width:1700px){
+ .tb-t{padding-left:7px!important;padding-right:7px!important;letter-spacing:.02em!important;font-size:10px!important;gap:4px!important}
+ .tb-t svg,.tb-t .ico,.tb-t i{display:none!important}
+ .tb-l,.tb-r{gap:0!important;padding-left:2px;padding-right:2px}
+ .tb-i{width:32px!important;min-width:32px!important}
+}
+.bar.tb{overflow:hidden}.tb-l,.tb-r{overflow:hidden}
