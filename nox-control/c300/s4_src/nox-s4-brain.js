@@ -6,7 +6,7 @@
   let heart = null;
   /* капля */
   async function drop() {
-    const feel = $('.nbx-feel'); if (!feel || feel.dataset.s4) return; feel.dataset.s4 = 1;
+    const feel = $('.nbx-feel'); if (!feel || feel.dataset.s4 || !/s4drop=1/.test(location.search)) return; feel.dataset.s4 = 1;
     const P = window.NOX_paper_design_shaders; if (!P || !P.ShaderMount) return;
     let top = null, lvl = .5; try { const j = await (await fetch('/brain/selffeel', { cache: 'no-store' })).json(), d = j.sources && j.sources.selfstate && j.sources.selfstate.data || {}; const k = Object.keys(d).filter((x) => typeof d[x] === 'number').sort((a, b) => d[b] - d[a])[0]; if (k) { top = k; lvl = d[k]; } } catch (e) { /* */ }
     const box = document.createElement('div'); box.className = 's4drop'; box.setAttribute('aria-hidden', 'true'); const orb = feel.querySelector('.nbx-orb'); if (orb) { orb.style.display = 'none'; orb.before(box); } else feel.prepend(box);
