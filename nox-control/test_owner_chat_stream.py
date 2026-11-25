@@ -125,7 +125,9 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     await collect(choice,sink)
                 self.assertEqual(sink,[])
 
-    async def test_model_sse_terminal_frame_is_atomic(self):
+        await self._assert_model_sse_terminal_frame_is_atomic()
+
+    async def _assert_model_sse_terminal_frame_is_atomic(self):
         valid={'index':0,'id':'call_valid','type':'function',
                'function':{'name':'calculate','arguments':'{}'}}
         prefix=frame('previous valid text')
