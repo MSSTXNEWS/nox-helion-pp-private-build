@@ -1,4 +1,4 @@
-echo "C300: ch_r1"
+echo "C300: ch_r1b"
 S=/workspace/nox/web/site
 cd $S && find . -maxdepth 1 -type f \( -name '*.js' -o -name '*.css' -o -name 'chat.html' \) -printf '%s %f\n' | sort -k2 > /tmp/ch_sizes.txt
 echo "== count"; wc -l < /tmp/ch_sizes.txt
