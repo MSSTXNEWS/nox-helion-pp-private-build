@@ -31,17 +31,20 @@ class StagedTiming(unittest.TestCase):
     def test_staged(self):
         root=Path(os.environ["B4_STAGE_ROOT"]).resolve()
         before={p.relative_to(root):p.read_bytes() for p in root.rglob("*") if p.is_file()}
-        # Prove a bad donor fails before any destination is written.
-        rel=next(iter(PINS))
-        q=root/rel
-        original=q.read_bytes()
-        try:
-            q.write_bytes(original+b" ")
-            with self.assertRaisesRegex(ValueError,"HOLD_TIMING_DEPENDENCY"):
-                stage_timing(root)
-            self.assertFalse((root/DEST).exists())
-        finally:
-            q.write_bytes(original)
+        # Every direct and transitive donor is checked before the first write.
+        self.assertEqual(len(PINS),17)
+        for rel in PINS:
+            with self.subTest(donor=rel):
+                q=root/rel
+                original=q.read_bytes()
+                try:
+                    q.write_bytes(original+b" ")
+                    with self.assertRaisesRegex(ValueError,"HOLD_TIMING_DEPENDENCY"):
+                        stage_timing(root)
+                    self.assertFalse((root/DEST).exists())
+                finally:
+                    q.write_bytes(original)
+        print("B4_EXACT_DEPENDENCY_TAMPER_HOLD=17 (12 newly pinned transitive donors)")
         target=stage_timing(root)
         with self.assertRaisesRegex(ValueError,"HOLD_TIMING_OVERWRITE"):
             stage_timing(root)
