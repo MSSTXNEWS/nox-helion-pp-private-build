@@ -1,3 +1,4 @@
+echo S4RUN:s4_train1
 S=/workspace/nox/web/site; R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/s4_src
 cd $S; cp -n training.html training.html.bak_s4_1
 curl -fsSL $R/nox-s4-training.js -o nox-s4-training.js && curl -fsSL $R/nox-s4-training.css -o nox-s4-training.css || exit 1

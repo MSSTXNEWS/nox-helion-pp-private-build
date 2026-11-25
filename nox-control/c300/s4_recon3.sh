@@ -1,3 +1,4 @@
+echo S4RUN:s4_recon3
 S=/workspace/nox/web/site; P=/workspace/nox/web/pkg/server
 echo "== p-training"; head -c 3500 $S/nox-p-training.js
 echo "== nox-cmd.js"; head -c 3000 $S/nox-cmd.js

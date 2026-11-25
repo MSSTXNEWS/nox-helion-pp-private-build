@@ -1,3 +1,4 @@
+echo S4RUN:s4_dbg1
 S=/workspace/nox/web/site
 cd $S; grep -c s4 system.html dispatcher.html training.html; head -c 300 nox-s4-grafana.js; grep -c "pc.cpu.percent" nox-s4-grafana.js
 grep -n "echarts\|<script" system.html | cut -c1-160

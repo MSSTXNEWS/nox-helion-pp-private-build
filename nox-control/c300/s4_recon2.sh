@@ -1,3 +1,4 @@
+echo S4RUN:s4_recon2
 W=/workspace/nox/web; S=$W/site; cd $S
 echo "== libs"; find . /workspace/nox/web/build -maxdepth 6 \( -iname 'echarts*.js' -o -iname 'frappe*' -o -iname 'excalidraw*' -o -iname '*blocknote*' -o -iname 'cytoscape*.js' -o -iname 'sortable*.js' -o -iname 'fullcalendar*.js' \) -not -path '*/node_modules/*/node_modules/*' 2>/dev/null | head -40
 ls $W/build 2>/dev/null | head; ls $W/build/node_modules 2>/dev/null | head -60

@@ -1,3 +1,4 @@
+echo S4RUN:s4_rc4
 S=/workspace/nox/web/site
 grep -o 'nox-p-[a-z]*\.js' $S/projects.html $S/memory.html $S/events.html $S/calendar.html $S/system.html $S/downloads.html $S/settings.html | sort -u
 echo == projects html body; sed -n '/<body/,/<\/main>/p' $S/projects.html | cut -c1-1800

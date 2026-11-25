@@ -1,3 +1,4 @@
+echo S4RUN:s4_proj1
 S=/workspace/nox/web/site; R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/s4_src
 cd $S; cp -n projects.html projects.html.bak_s4_1
 for f in nox-s4-projects.js nox-s4-projects.css; do curl -fsSL $R/$f -o $f || exit 1; done

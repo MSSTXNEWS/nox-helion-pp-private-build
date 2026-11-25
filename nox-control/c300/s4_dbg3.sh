@@ -1,3 +1,4 @@
+echo S4RUN:s4_dbg3
 S=/workspace/nox/web/site
 head -c 1200 $S/data/train_logs.json; echo; python3 -c "
 import json;d=json.load(open('$S/data/train_logs.json'));print(type(d), list(d)[:12] if isinstance(d,dict) else len(d))"

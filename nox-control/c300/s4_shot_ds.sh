@@ -1,3 +1,4 @@
+echo S4RUN:s4_shot_ds
 #!/bin/bash
 export S4P=dispatcher,system
 # s2_shot_music.sh: Playwright 1440x900, 3840x2160, 390x844; клики по кнопкам; JPEG q38 в base64

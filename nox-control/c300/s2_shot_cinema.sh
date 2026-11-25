@@ -14,7 +14,7 @@ def emit(name,raw,w):
     if Image:
         im=Image.open(io.BytesIO(raw)).convert('RGB')
         if im.width>w: im=im.resize((w,int(im.height*w/im.width)))
-        b=io.BytesIO(); im.save(b,'JPEG',quality=38,optimize=True); raw=b.getvalue()
+        b=io.BytesIO(); im.save(b,'JPEG',quality=30,optimize=True); raw=b.getvalue()
     s=base64.b64encode(raw).decode()
     print("B64_%s_BEGIN"%name)
     for i in range(0,len(s),900): print(s[i:i+900])
@@ -22,7 +22,7 @@ def emit(name,raw,w):
 async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(args=["--use-gl=swiftshader","--enable-webgl","--ignore-gpu-blocklist"])
-        for vp,(w,h,ow) in {"d":(1440,900,1000),"k":(3840,2160,800),"m":(390,844,390)}.items():
+        for vp,(w,h,ow) in {"d":(1440,900,900),"k":(3840,2160,640),"m":(390,844,390)}.items():
             ctx=await b.new_context(viewport={"width":w,"height":h}); pg=await ctx.new_page(); errs=[];bad=[]
             pg.on("pageerror",lambda e:errs.append(str(e)[:140])); pg.on("response",lambda r:bad.append(str(r.status)+" "+r.url[-70:]) if r.status>=400 else None)
             pg.on("filechooser",lambda fc:None); pg.on("dialog",lambda d:asyncio.ensure_future(d.dismiss()))

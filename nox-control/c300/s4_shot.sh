@@ -1,3 +1,4 @@
+echo S4RUN:s4_shot
 #!/bin/bash
 # s2_shot_music.sh: Playwright 1440x900, 3840x2160, 390x844; клики по кнопкам; JPEG q38 в base64
 export PLAYWRIGHT_BROWSERS_PATH=/workspace/nox/tools/ms-playwright

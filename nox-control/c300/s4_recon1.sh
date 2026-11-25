@@ -1,3 +1,4 @@
+echo S4RUN:s4_recon1
 W=/workspace/nox/web; S=$W/site
 echo "== disk"; df -h /workspace | tail -1
 echo "== pages"; cd $S; ls -la *.html | awk '{print $5,$9}' | column -c 200
