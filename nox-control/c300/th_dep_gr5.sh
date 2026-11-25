@@ -1,7 +1,7 @@
 echo "C300: th_dep_gr5 (графики/граф/atlas/таблицы в серых тонах: JS-литералы цвета, Tabulator, Monaco)"
 S=/workspace/nox/web/site; cd $S; TS=$(date +%s)
 export PLAYWRIGHT_BROWSERS_PATH=/workspace/nox/tools/ms-playwright; PY=/workspace/nox/venv/bin/python; export PATH=/workspace/nox/tools/node/bin:$PATH
-SHA=__SHA__
+SHA=5d282497461cdd1cb811f5b2a31a54fb79e71c83
 R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/$SHA/nox-control/c300/bundles/th_graphite
 G=/tmp/th_gr5; rm -rf $G; mkdir -p $G
 for f in nox-graphite.css nox-theme.js patch.py th_gen_map.py; do curl -fsSL --retry 5 --retry-delay 4 --retry-all-errors $R/$f -o $G/$f && [ -s $G/$f ] || { echo "FAIL fetch $f"; exit 0; }; done
