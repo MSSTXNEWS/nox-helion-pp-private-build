@@ -4,12 +4,12 @@ S=/workspace/nox/web/site
 RAW=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/assets
 T=bak_navx8q
 cd /tmp
-for f in nox-ninja.js nox-pult.js nox-pult.css nox-settings-tabs.js; do curl -fsSL "$RAW/$f" -o /tmp/navx8q_$f && echo got $f; done
+for f in nox-ninja.js nox-pult.js nox-pult.css nox-settings-tabs.js nox-nav-x.js nox-nav-x.css; do curl -fsSL "$RAW/$f" -o /tmp/navx8q_$f && echo got $f; done
 # ninja-keys: бэкап и замена на версию с тихим стартом
 [ -f $S/nox-ninja.js.$T ] || cp $S/nox-ninja.js $S/nox-ninja.js.$T
 cp /tmp/navx8q_nox-ninja.js $S/nox-ninja.js && echo ninja replaced
 cp /tmp/navx8q_nox-pult.js $S/nox-pult.js; cp /tmp/navx8q_nox-pult.css $S/nox-pult.css
-cp /tmp/navx8q_nox-settings-tabs.js $S/nox-settings-tabs.js
+cp /tmp/navx8q_nox-settings-tabs.js $S/nox-settings-tabs.js; cp /tmp/navx8q_nox-nav-x.js $S/nox-nav-x.js; cp /tmp/navx8q_nox-nav-x.css $S/nox-nav-x.css
 # инъекция пульта на все страницы, вкладок — на settings.html
 np=0
 for f in $S/*.html; do
