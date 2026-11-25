@@ -1306,9 +1306,34 @@ def install(app, B):
                         except Exception as e:
                             B.log("web_plan_result_unavailable " + type(e).__name__)
                             plan = []
+                        # A STOP during the awaited planner must suppress its late
+                        # result and must not advance into primary inference.
+                        if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                            CANCEL.discard(rid)
+                            yield fr(message={"role": "assistant", "content": ""}, done=True,
+                                     done_reason="stopped",
+                                     completion_receipt={"status": "STOPPED", "request_id": rid,
+                                                         "upstream_done": False},
+                                     memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                           "s03_readback_verified": False},
+                                     memory_history={"status": "SKIPPED", "reason": "USER_STOP",
+                                                     "s03_readback_verified": False})
+                            return
                         if plan:
                             extra += "[План (следуй по порядку, нумеруй шаги): " + "; ".join("%d) %s" % (i + 1, x) for i, x in enumerate(plan)) + "]"
                             yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "план: %d шагов" % len(plan), "plan": plan})
+                            # STOP at the delivered plan must not emit a later think status.
+                            if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                                CANCEL.discard(rid)
+                                yield fr(message={"role": "assistant", "content": ""}, done=True,
+                                         done_reason="stopped",
+                                         completion_receipt={"status": "STOPPED", "request_id": rid,
+                                                             "upstream_done": False},
+                                         memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                               "s03_readback_verified": False},
+                                         memory_history={"status": "SKIPPED", "reason": "USER_STOP",
+                                                         "s03_readback_verified": False})
+                                return
                     # Mode hints are advisory. A broken formatter must not
                     # turn an otherwise valid chat into a streaming exception.
                     try:
@@ -1537,6 +1562,10 @@ def install(app, B):
                                     output_utf8_bytes += t_utf8_bytes
                                     n += 1
                                     yield fr(message={"role": "assistant", "content": t}, done=False)
+                                    # The token has already been emitted. STOP at this
+                                    # yield must not emit a later plan-progress frame.
+                                    if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                                        break
                                     if plan:
                                         plan_pending_parts.append(t)
                                         if "\n" in t:
@@ -1552,6 +1581,9 @@ def install(app, B):
                                             if k > shown and k <= len(plan):
                                                 shown = k
                                                 yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "шаг %d/%d: %s" % (k, len(plan), plan[k - 1]), "index": k, "total": len(plan)})
+                                                # Do not pull another upstream frame after STOP here.
+                                                if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                                                    break
                 except Exception as e:
                     err = type(e).__name__
                     # Keep the original HTTP error code if already classified.
@@ -1624,6 +1656,11 @@ def install(app, B):
                         except Exception as e:
                             B.log("web_skeptic_unavailable " + type(e).__name__)
                             sk = {"ok": None, "reason": "SKEPTIC_UNAVAILABLE"}
+                        # STOP may arrive while the advisory model is awaited.
+                        # Its later verdict must not append text to a cancelled turn.
+                        stopped = stopped or rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch
+                        if stopped:
+                            sk = {"ok": None, "reason": "SKEPTIC_STOPPED"}
                         if sk.get("ok") is False:
                             # A secondary verifier cannot bypass the upstream 128 KiB
                             # UTF-8 budget or add malformed Unicode to the S03 turn.
@@ -1647,7 +1684,10 @@ def install(app, B):
                                 # delivered Unicode output, not just model deltas.
                                 n += 1
                                 yield fr(message={"role": "assistant", "content": add}, done=False)
-                        yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": ("сомнение: " + sk["doubt"]) if sk.get("ok") is False else "проверка пройдена" if sk.get("ok") else "проверка недоступна", "ok": sk.get("ok")})
+                        # An annotation yield can itself allow STOP to arrive.
+                        stopped = stopped or rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch
+                        if not stopped:
+                            yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": ("сомнение: " + sk["doubt"]) if sk.get("ok") is False else "проверка пройдена" if sk.get("ok") else "проверка недоступна", "ok": sk.get("ok")})
                 # STOP may arrive while the post-generation skeptic awaits. Never
                 # persist a cancelled answer using the stale pre-skeptic flag.
                 stopped = stopped or rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch

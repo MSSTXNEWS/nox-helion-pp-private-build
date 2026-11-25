@@ -1986,6 +1986,89 @@ class FactReceiptTest(unittest.TestCase):
         self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "SKIPPED")
         self.assertFalse(frames[-1]["completion_receipt"]["upstream_done"])
 
+    def test_1a01_stop_fences_late_plan_and_progress_output(self):
+        """STOP during planner await or after token delivery suppresses later plan events."""
+        chat = next(r.endpoint for r in self.app.routes if r.path == "/api/chat")
+        stop = next(r.endpoint for r in self.app.routes if r.path == "/api/chat/stop")
+        bridge = self.bridge
+        bridge.LAST_CHAT, bridge.NKEEP, bridge.SOUL = {"t": 0}, 0, None
+        bridge.self_vol = lambda *args: ""
+        bridge.build_msgs = lambda *args: [{"role": "user", "content": "Шаги"}]
+        bridge.adapt_tokens = lambda *args: 300
+        token = "1. Начало 🌌\n"
+
+        for phase in ("planner", "plan_result", "token", "progress"):
+            with self.subTest(phase=phase):
+                rid = "stop-late-plan-" + phase
+                calls, writes, signals = [], [], []
+                memory = types.ModuleType("s03_memory")
+                memory.persist_turn = lambda *args: writes.append(args)
+
+                class Upstream:
+                    status_code = 200
+                    async def __aenter__(self): return self
+                    async def __aexit__(self, *args): return False
+                    async def aiter_lines(self):
+                        yield "data: " + json.dumps(
+                            {"choices": [{"delta": {"content": token}}]}, ensure_ascii=False)
+                        calls.append("read-after-token")
+                        yield 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}'
+                        yield 'data: [DONE]'
+
+                class Client:
+                    def stream(self, *args, **kwargs):
+                        calls.append("model")
+                        return Upstream()
+
+                class Planner:
+                    def maybe_reminder(self, *args): return None
+                    def wants_plan(self, *args): return True
+                    def mode_hint(self, *args): return ""
+                    def is_factual(self, *args): return False
+                    async def make_plan(self, *args):
+                        if phase == "planner":
+                            signals.append(await stop(Request({"request_id": rid})))
+                        return ["Начало", "Итог"]
+
+                bridge.hc = lambda: Client()
+
+                async def scenario():
+                    response = await chat(Request({
+                        "request_id": rid, "mode": "normal", "use_memory": False,
+                        "messages": [{"role": "user", "content": "Составь план"}],
+                    }))
+                    frames = []
+                    async for item in response.body_iterator:
+                        frame = json.loads(item)
+                        frames.append(frame)
+                        event = frame.get("nox_event", {})
+                        if ((phase == "token" and frame.get("message", {}).get("content") == token)
+                                or (phase == "plan_result" and event.get("step") == "plan" and "plan" in event)
+                                or (phase == "progress" and event.get("step") == "plan" and "index" in event)):
+                            signals.append(await stop(Request({"request_id": rid})))
+                    return frames
+
+                with mock.patch.object(W, "CANCEL", set()), \
+                     mock.patch.object(W, "CANCEL_ALL_EPOCH", 0), \
+                     mock.patch.object(W, "ACTIVE_CHAT_IDS", set()), \
+                     mock.patch.object(W, "CHAT_SNAPSHOTS", {}), \
+                     mock.patch.object(W, "W", Planner()), \
+                     mock.patch.dict(sys.modules, {"s03_memory": memory}):
+                    frames = asyncio.run(scenario())
+                self.assertEqual([s["status"] for s in signals], ["STOPPING"])
+                self.assertEqual(writes, [])
+                self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
+                visible = "".join(f.get("message", {}).get("content", "") for f in frames)
+                streamed = phase in ("token", "progress")
+                self.assertEqual(visible, token if streamed else "")
+                plans = [f["nox_event"] for f in frames
+                         if f.get("nox_event", {}).get("step") == "plan"]
+                self.assertEqual(len(plans), {"planner": 1, "plan_result": 2, "token": 2, "progress": 3}[phase])
+                self.assertEqual(any("index" in event for event in plans), phase == "progress")
+                self.assertEqual(calls, ["model"] if streamed else [])
+                if not streamed:
+                    self.assertFalse(any(f.get("nox_event", {}).get("text") == "формулирую ответ" for f in frames))
+
     def test_broadcast_stop_survives_new_chat_and_does_not_stop_future_chats(self):
         """New request must not clear a STOP already sent to an older stream."""
         class Upstream:
@@ -2079,7 +2162,7 @@ class FactReceiptTest(unittest.TestCase):
             async def skeptic(self, *args, **kwargs):
                 signal = await stop(Request({"request_id": "stop-in-skeptic"}))
                 self.signal = signal
-                return {"ok": True}
+                return {"ok": False, "doubt": "Не должно появиться после STOP"}
 
         thinking = Thinking()
         async def scenario():
@@ -2097,6 +2180,10 @@ class FactReceiptTest(unittest.TestCase):
              mock.patch.dict(sys.modules, {"s03_memory": memory}):
             frames = asyncio.run(scenario())
         self.assertEqual(thinking.signal["status"], "STOPPING")
+        visible = "".join(f.get("message", {}).get("content", "") for f in frames)
+        self.assertEqual(visible, "Ответ")
+        self.assertEqual(frames[-1]["skeptic"], {"ok": None, "reason": "SKEPTIC_STOPPED"})
+        self.assertEqual(sum(f.get("nox_event", {}).get("step") == "check" for f in frames), 1)
         self.assertEqual(writes, [])
         self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
         self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "HOLD")
