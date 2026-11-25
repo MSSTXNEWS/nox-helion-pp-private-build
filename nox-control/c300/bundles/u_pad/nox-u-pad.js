@@ -9,7 +9,7 @@
  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
  let root,cm,ta,tab,saved=0,rec=null;
  const CSS=`
-#u-pad{--w:320px;position:fixed;top:64px;bottom:calc(var(--ds-dock-h,48px) + 8px);right:0;width:var(--w);max-width:92vw;z-index:8000;display:flex;flex-direction:column;color:var(--ds-ink,#e6e7ea);font-family:inherit;font-size:15px;transform:translateX(0);transition:transform .25s ease;border-radius:14px 0 0 14px;border:1px solid var(--ds-line,rgba(255,255,255,.14));border-right:0;box-shadow:-10px 0 40px rgba(0,0,0,.35);overflow:hidden;
+#u-pad{--w:320px;position:fixed;top:64px;bottom:112px;right:0;width:var(--w);max-width:92vw;z-index:8000;display:flex;flex-direction:column;color:var(--ds-ink,#e6e7ea);font-family:inherit;font-size:15px;transform:translateX(0);transition:transform .25s ease;border-radius:14px 0 0 14px;border:1px solid var(--ds-line,rgba(255,255,255,.14));border-right:0;box-shadow:-10px 0 40px rgba(0,0,0,.35);overflow:hidden;
  background:linear-gradient(180deg,color-mix(in srgb,var(--ds-ink,#e6e7ea) 7%,var(--ds-bg,#25272b)),color-mix(in srgb,var(--ds-ink,#e6e7ea) 3%,var(--ds-bg,#25272b)));backdrop-filter:blur(14px)}
 #u-pad:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.05;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
 #u-pad.shut{transform:translateX(calc(100% - 0px));box-shadow:none}
@@ -35,7 +35,7 @@
 .up-f .st{margin-left:auto;opacity:.7}
 .up-s{position:relative;z-index:1;max-height:40%;overflow:auto;padding:4px 14px;border-bottom:1px solid var(--ds-line,rgba(255,255,255,.14))}
 .up-s button{display:block;width:100%;justify-content:flex-start;text-align:left;font-size:14px;padding:6px 8px}
-@media(max-width:768px){#u-pad{top:56px;width:min(92vw,420px)!important}}
+@media(max-width:768px){#u-pad{top:56px;bottom:124px;width:min(92vw,420px)!important}}
 @media (prefers-reduced-motion:reduce){#u-pad{transition:none}}`;
  /* ---- хранилище листов ---- */
  const sheet=()=>S.sheets[S.cur]||'';
