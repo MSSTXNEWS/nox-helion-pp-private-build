@@ -9,4 +9,4 @@
 .nxs-live .note a{color:#d49a62}
 @media(max-width:600px){.nxs-tbl>div{grid-template-columns:10px 1fr;}.nxs-tbl span,.nxs-tbl em{grid-column:2}}
 /* карточки скрытых вкладок не проходили вход «из прозрачности» — показываем без анимации появления */
-section.setg,.nxwd{opacity:1!important;transform:none!important;visibility:visible!important}
+section.setg,.nxwd{opacity:1!important;visibility:visible!important}

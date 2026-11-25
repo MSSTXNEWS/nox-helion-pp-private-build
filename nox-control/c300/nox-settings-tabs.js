@@ -3,7 +3,7 @@
    Чего на сервере нет — написано прямо, без заглушек-полей. */
 (() => {
   if (window.__noxSetTabs || !/settings\.html$/.test(location.pathname)) return; window.__noxSetTabs = 1;
-  const TABS = [['personality', 'Личность'], ['voice', 'Голос'], ['models', 'Модели'], ['autonomy', 'Автономия'], ['ui', 'Интерфейс'], ['safety', 'Безопасность'], ['data', 'Данные']];
+  const TABS = [['personality', 'Личность', 'user-circle'], ['voice', 'Голос', 'microphone'], ['models', 'Модели', 'cpu'], ['autonomy', 'Автономия', 'robot'], ['ui', 'Интерфейс', 'palette'], ['safety', 'Безопасность', 'shield-lock'], ['data', 'Данные', 'database']];
   const MAP = [[/Голос/, 'voice'], [/Уведомления/, 'autonomy'], [/Резонанс/, 'models'], [/О сборке/, 'data'], [/Планета|Цвет неона|Космос|Плотность/, 'ui']];
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const J = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status)))).catch(() => null);
@@ -48,14 +48,48 @@
     if (!cards.length) return setTimeout(build, 300);
     const parent = cards[0].parentNode;
     cards.forEach((c) => { const t = (c.querySelector('h3') || {}).textContent || ''; const hit = MAP.find(([re]) => re.test(t)); c.dataset.tab = hit ? hit[1] : 'ui'; });
-    const bar = document.createElement('div'); bar.className = 'nxt-tabs'; bar.setAttribute('role', 'tablist'); bar.setAttribute('aria-label', 'Разделы настроек');
-    bar.innerHTML = TABS.map(([k, t], i) => '<button type="button" role="tab" data-tab="' + k + '" aria-selected="' + (i === 0) + '">' + t + '</button>').join('');
-    const host = parent.closest('.grid') || parent; host.parentNode.insertBefore(bar, host);
-    const show = (k) => { bar.querySelectorAll('[role="tab"]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === k))); parent.querySelectorAll('section.setg').forEach((s) => s.classList.toggle('nxt-off', s.dataset.tab !== k)); try { localStorage.setItem('nox.settings.tab', k); } catch (e) { /* не критично */ } };
-    bar.addEventListener('click', (e) => { const b = e.target.closest('[role="tab"]'); if (b) show(b.dataset.tab); });
-    const live = await panels(); live.forEach((s) => parent.appendChild(s));
-    if (window.NOXworlds) { const s = document.createElement('section'); s.className = 'card c12 setg'; s.dataset.tab = 'ui'; s.appendChild(window.NOXworlds.widget()); parent.insertBefore(s, parent.firstChild); }
-    parent.addEventListener('click', (e) => { const b = e.target.closest('#nxsDepth [data-d]'); if (!b) return; try { localStorage.setItem('nox.depth', b.dataset.d); } catch (x) { /* нет хранилища */ } b.parentNode.querySelectorAll('[data-d]').forEach((x) => x.setAttribute('aria-checked', String(x === b))); });
+    /* макет как «Системные настройки» macOS: слева список разделов (стекло), справа стеклянные плашки */
+    const grid = parent.closest('.grid') || parent;
+    const mac = document.createElement('div'); mac.className = 'nxm'; mac.id = 'nxmac';
+    mac.innerHTML = '<nav class="nxm-side" role="tablist" aria-label="Разделы настроек">' + TABS.map(([k, tt, ic], i) => '<button type="button" role="tab" data-tab="' + k + '" aria-selected="' + (i === 0) + '"><span class="nxm-ic"><sl-icon library="tabler" name="' + ic + '"></sl-icon></span><span>' + tt + '</span></button>').join('') + '</nav><div class="nxm-main"><h2 class="nxm-h"></h2><div class="nxm-pl"></div></div>';
+    grid.parentNode.insertBefore(mac, grid);
+    const pl = mac.querySelector('.nxm-pl'), bar = mac.querySelector('.nxm-side');
+    cards.forEach((c) => { c.classList.add('nox-seen'); pl.appendChild(c); });
+    grid.style.display = 'none';
+    /* родные кнопки-переключатели (.opt) заменяем готовыми компонентами Shoelace: sl-switch для вкл/выкл, sl-radio-group для выбора; родные кнопки остаются скрытыми и получают клик */
+    const shoe = () => {
+      pl.querySelectorAll('.seg.opt').forEach((g) => {
+        if (g.dataset.nxm) return; g.dataset.nxm = '1';
+        const bs = [...g.querySelectorAll('button[data-v]')], label = g.getAttribute('aria-label') || '';
+        const row = document.createElement('div'); row.className = 'nxm-row'; const lab = document.createElement('span'); lab.textContent = label; row.appendChild(lab);
+        const vals = bs.map((x) => x.dataset.v), on = bs.find((x) => x.dataset.v === 'on'), cur = () => bs.find((x) => x.getAttribute('aria-checked') === 'true');
+        let ctl;
+        if (vals.length === 2 && vals.includes('on') && vals.includes('off')) {
+          ctl = document.createElement('sl-switch'); ctl.checked = !!(on && on.getAttribute('aria-checked') === 'true');
+          ctl.addEventListener('sl-change', () => { const t2 = bs.find((x) => x.dataset.v === (ctl.checked ? 'on' : 'off')); t2 && t2.click(); });
+        } else {
+          ctl = document.createElement('sl-radio-group'); ctl.size = 'small'; ctl.value = (cur() || bs[0]).dataset.v;
+          ctl.innerHTML = bs.map((x) => '<sl-radio-button value="' + esc(x.dataset.v) + '" pill>' + esc(x.textContent) + '</sl-radio-button>').join('');
+          ctl.addEventListener('sl-change', () => { const t2 = bs.find((x) => x.dataset.v === ctl.value); t2 && t2.click(); });
+        }
+        row.appendChild(ctl); g.style.display = 'none'; g.parentNode.insertBefore(row, g);
+      });
+    };
+    setTimeout(shoe, 50); setTimeout(shoe, 600);
+    const oldPl = pl.querySelector('#planets'); if (oldPl) { const card = oldPl.closest('section'); if (card) { card.dataset.nxold = '1'; } }
+    const show = (k) => {
+      bar.querySelectorAll('[role="tab"]').forEach((b2) => b2.setAttribute('aria-selected', String(b2.dataset.tab === k)));
+      mac.querySelector('.nxm-h').textContent = (TABS.find((x) => x[0] === k) || [])[1] || '';
+      const vis = [];
+      pl.querySelectorAll('section.setg').forEach((s) => { const on = s.dataset.tab === k && !s.dataset.nxold; s.classList.toggle('nxt-off', !on); if (on) vis.push(s); });
+      try { localStorage.setItem('nox.settings.tab', k); } catch (e) { /* не критично */ }
+      if (window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches) window.gsap.fromTo(vis, { y: 16, scale: .985, filter: 'blur(6px)' }, { y: 0, scale: 1, filter: 'blur(0px)', duration: .5, ease: 'power3.out', stagger: .07, clearProps: 'transform,filter' });
+    };
+    bar.addEventListener('click', (e) => { const b2 = e.target.closest('[role="tab"]'); if (b2) show(b2.dataset.tab); });
+    const live = await panels(); live.forEach((s) => { s.classList.add('nox-seen'); pl.appendChild(s); });
+    if (window.NOXplanets3d) { const s = document.createElement('section'); s.className = 'card c12 setg nox-seen'; s.dataset.tab = 'ui'; s.innerHTML = '<h3 class="mono">Планета фона</h3>'; s.appendChild(window.NOXplanets3d.widget()); pl.insertBefore(s, pl.firstChild); }
+    if (window.NOXworlds) { const s = document.createElement('section'); s.className = 'card c12 setg nox-seen'; s.dataset.tab = 'ui'; s.appendChild(window.NOXworlds.widget()); pl.insertBefore(s, pl.firstChild); }
+    pl.addEventListener('click', (e) => { const b = e.target.closest('#nxsDepth [data-d]'); if (!b) return; try { localStorage.setItem('nox.depth', b.dataset.d); } catch (x) { /* нет хранилища */ } b.parentNode.querySelectorAll('[data-d]').forEach((x) => x.setAttribute('aria-checked', String(x === b))); });
     const q = new URLSearchParams(location.search).get('tab'); let start = q || LS('nox.settings.tab', 'ui');
     show(TABS.some(([k]) => k === start) ? start : 'ui');
   };

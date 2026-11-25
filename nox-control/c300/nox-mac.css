@@ -1,0 +1,33 @@
+/* NOX · «Системные настройки» в стекле: список разделов + плашки; плашки «Цвет сцены» и планеты. Основа: Shoelace (переключатели, радио-кнопки). */
+:root{--nxg-bg:rgba(16,13,14,.58);--nxg-line:rgba(255,235,220,.16);--nxg-sh:0 14px 44px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,240,228,.1)}
+.nxm{display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px;align-items:start;margin:8px 0 40px}
+.nxm-side{position:sticky;top:78px;display:flex;flex-direction:column;gap:4px;padding:10px;border-radius:22px;background:var(--nxg-bg);border:1px solid var(--nxg-line);box-shadow:var(--nxg-sh);-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4)}
+.nxm-side button{display:flex;align-items:center;gap:12px;padding:9px 12px;border:0;border-radius:12px;background:transparent;color:rgba(244,236,230,.85);font:400 13px/1 inherit;font-family:inherit;letter-spacing:.04em;cursor:pointer;text-align:left;min-height:44px;transition:background .15s}
+.nxm-side button:hover{background:rgba(255,235,220,.08)}
+.nxm-side button[aria-selected=true]{background:linear-gradient(90deg,rgba(176,44,32,.85),rgba(120,30,22,.6));color:#fff;box-shadow:inset 0 1px 0 rgba(255,200,170,.22)}
+.nxm-ic{flex:0 0 30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;background:linear-gradient(160deg,rgba(255,235,220,.2),rgba(255,235,220,.05));border:1px solid rgba(255,235,220,.14)}
+.nxm-main{min-width:0}.nxm-h{margin:2px 4px 14px;font:300 26px/1.1 inherit;font-family:inherit;letter-spacing:.06em;color:#f4ece6}
+.nxm-pl{display:flex;flex-direction:column;gap:14px}
+.nxm-pl>section.setg,.nxs-glass,body[data-page=scene] #worlds>.card,body[data-page=scene] .wrap>section.card{background:var(--nxg-bg)!important;border:1px solid var(--nxg-line)!important;border-radius:20px!important;box-shadow:var(--nxg-sh)!important;-webkit-backdrop-filter:blur(20px) saturate(1.35);backdrop-filter:blur(20px) saturate(1.35);padding:16px 18px;position:relative;z-index:2}
+.nxm-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 4px;border-bottom:1px solid rgba(255,235,220,.07);font-size:13px;font-weight:300;color:rgba(244,236,230,.9)}
+.nxm-row:last-child{border-bottom:0}
+.nxm-row sl-switch{--width:46px;--height:26px;--thumb-size:22px}
+.nxm-row sl-radio-group::part(button-group){flex-wrap:wrap}
+sl-radio-button::part(button){background:rgba(255,235,220,.06);border-color:rgba(255,235,220,.14);color:rgba(244,236,230,.85);min-height:36px}
+sl-radio-button[checked]::part(button){background:rgba(176,44,32,.8);color:#fff;border-color:rgba(255,200,170,.3)}
+/* 3D-планеты */
+.nxpl-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.nxpl-g button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px 8px;border-radius:18px;cursor:pointer;color:rgba(244,236,230,.85);font:300 11px/1 inherit;font-family:inherit;letter-spacing:.14em;text-transform:uppercase;background:rgba(255,235,220,.04);border:1px solid rgba(255,235,220,.12);transition:border-color .2s,background .2s,box-shadow .2s;min-height:44px}
+.nxpl-g button canvas{width:84px;height:84px}.nxpl-g button:hover{background:rgba(255,235,220,.09)}
+.nxpl-g button[aria-checked=true]{border-color:rgba(233,180,101,.9);box-shadow:0 0 0 1px rgba(233,180,101,.45) inset,0 0 26px rgba(233,150,80,.25)}
+.nxpl-none i{width:84px;height:84px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#222,#050507);border:1px dashed rgba(255,235,220,.25)}
+.nxpl .note{margin:10px 2px 0;font-size:11px;color:rgba(240,232,226,.55)}
+/* Цвет сцены: подложка под плашками */
+body[data-page=scene] #worlds{display:flex;flex-direction:column;gap:14px;margin-top:14px}
+body[data-page=scene] #worlds h2{margin:0 0 10px;font-size:11px;letter-spacing:.26em;color:#d49a62}
+body[data-page=scene] #worlds .sc{backdrop-filter:blur(10px);border-radius:14px;color:#f4ece6;text-shadow:0 1px 6px rgba(0,0,0,.8)}
+@media(max-width:860px){.nxm{grid-template-columns:1fr}.nxm-side{position:sticky;top:60px;z-index:5;flex-direction:row;overflow-x:auto;scrollbar-width:none;padding:6px;border-radius:18px}.nxm-side button{flex:0 0 auto;padding:6px 12px;min-height:44px}.nxm-ic{display:none}.nxm-h{font-size:22px}}
+/* пульт — плитки Пункта управления */
+#nxpult .nxpu-pan{border-radius:26px!important;padding:14px!important;background:rgba(18,15,16,.62)!important;-webkit-backdrop-filter:blur(20px) saturate(1.4)!important;backdrop-filter:blur(20px) saturate(1.4)!important;border:1px solid rgba(255,235,220,.16)!important;box-shadow:0 22px 60px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,240,228,.12)!important}
+#nxpult .nxpu-pan button{border-radius:16px;min-height:44px}
+#nxpult .nxpu-stop{border-radius:18px!important;min-width:92px}
