@@ -1,0 +1,45 @@
+name: D3 R85 full outcome closure
+on:
+  pull_request:
+    paths: ['nox-control/d3-r85/**', '.github/workflows/nox-d3-r85-full-closure.yml']
+permissions:
+  contents: read
+jobs:
+  outcome:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r85-full-outcome-closure-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Exact R84 full-chain closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$PWD/nox-control/d3-r74/staging"
+          own="$PWD/nox-control/d3-r83"
+          test "$(git rev-parse HEAD:nox-control/b2-r81/review_feedback.py)" = eb7f7ccb4a33ae9da106bfbdf79c85b9ae737689
+          test "$(git rev-parse HEAD:nox-control/d3-r80/review_release.py)" = ddaafb5fa397eac0418aa235a5627b2b275bec41
+          test "$(git rev-parse HEAD:nox-control/d3-r78/b5_chain_guard.py)" = f321f4ad36867e434ba72db9264a88cf23a91fb8
+          test "$(git hash-object "$stage/py/b5_s03_verifier_r54.py")" = df94c535273dde1fd2609f555d1d615eacfda831
+          test "$(git hash-object "$own/b5_failed_poststate.py")" = 381a738e54bdb1bba874ee8e0295c957e92b68b5
+          test "$(git hash-object "$own/b5_bound_failed_poststate.py")" = 878128ef41095f8bf0d14a02281148e96e4a6ba3
+          test "$(git hash-object "$own/test_b5_chain_guard.py")" = 96fa30430ac2a9027eec0a2a0ef9b39c670c55dd
+          test "$(git hash-object "$own/test_b5_bound_failed_poststate.py")" = 72576b738fa734f7c5181fc9b6e1ab06c07ced03
+          test "$(git rev-parse HEAD:nox-control/b2-r84/final_feedback.py)" = 15ecd6aeef6a628a5ecbffb9411daa62b12908a7
+          test "$(git rev-parse HEAD:nox-control/d3-r83/outcome_review.py)" = 1de5a6e91f3744505bd49f4510db97343253870b
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$PWD/nox-control/d3-r85:$PWD/nox-control/b2-r84:$own:$PWD/nox-control/b2-r81:$PWD/nox-control/d3-r80:$PWD/nox-control/b2-r79:$PWD/nox-control/d3-r78:$stage/py:$PWD/nox-control/d3-r76:$PWD/nox-control/b2-r77:$tmp"
+          export D3_B4_MODULE="$stage/b4/b4_existing_turn_pair.mjs"
+          cd "$tmp"
+          python3 -B -m unittest -v test_integrated_outcome.JointOutcome
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false

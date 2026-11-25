@@ -1,0 +1,26 @@
+name: B2 R71 calibrated preanswer rubric
+on:
+  pull_request:
+    branches: [d3-r70-owner-fd-review-ingress-20261124]
+    paths:
+      - 'nox-control/b2_r71_calibrated_rubric.py'
+      - 'nox-control/tests/test_b2_r71_calibrated_rubric.py'
+      - '.github/workflows/nox-b2-r71-calibrated-rubric.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b2-r71-preanswer-calibrated-rubric-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Exact B2 source compatibility
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD:nox-control/b2_existing_dialog_review.py)" = c7e37a4a4629ca202ea1d54d80b310d8109996e8
+          python3 -B nox-control/tests/test_b2_r71_calibrated_rubric.py -v
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false
