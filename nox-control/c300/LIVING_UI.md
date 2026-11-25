@@ -40,3 +40,17 @@
 - /workspace/nox/agent/arbiter.py — демон (stdlib, pidfile state/arbiter.pid, автозапуск из svc/start_extra.sh). Правило владельца: чат и задачи в приоритете; обучение (distill_v2.py train и потомки, python v5_*) уходит на SIGSTOP при активности, через 60 с тишины SIGCONT; пауза не дольше 30 мин; запись ckpt не прерывается; цель GPU до 90%. Признаки чата: state/orch/chat_hold (свежий <4 с, пишет chat_guard), core :8090/health running/glm.inflight; llama-swap :8200/running (loading/busy); /svc/agents/, /svc/advisors/ (404 пока нет); при остановленном обучении чужая нагрузка GPU >=40%.
 - Состояние: /workspace/nox/state/arbiter.json (копия для сайта: /data/arbiter.json) {mode: chat|tasks|train, since, util, mem_mb, reason, paused, nprocs, procs, signals, owner{}}. Параметры владельца — блок owner: gpu_cap (90 по умолчанию), no_stop (true = не SIGSTOP, только renice 19/ionice), force_pause. Журнал /workspace/nox/arbiter.log (ротация 1 МБ).
 - Шина: команда arbiter.status (GET /data/arbiter.json, только чтение, confirm=false) в site/qa/registry.json. Для виджета «Тело/Обучение» (S1): mode, since, util, mem_mb, paused, reason, nprocs.
+
+## C: meta конвейера ответа (25.11)
+Сервис-конвейер `pipeline_svc.py` (127.0.0.1:18217) вызывается из chat_core после того, как Talker дослал ответ (первый токен не задерживается). Флаг: persona.json `living_engines.pipeline` (откат: false или chat_core.py.bak_c_1). Поток /api/turn после `done` ещё держится до ~24 с и шлёт события `meta2` (полный meta) и `thought` (текст «додумал»); итог также лежит в сохранённом сообщении и в GET /svc/nox-living/meta?cid=.
+Поля meta (читает nox-chat-rq.js):
+| поле | тип | смысл |
+|---|---|---|
+| judges | число | сколько судей :8300 дали отчёт (UI: «проверено N судьями») |
+| judged | bool | false = судьи подняли флаг (UI: «не прошло проверку») |
+| confidence | 0..1 | уверенность (UI: «уверенность N%») |
+| thought | строка | блок «Додумал» (сворачиваемый): дополнение советника, лучший из best-of-N или честное «не знаю» |
+| sources | [строки] | «память», «сеть», «советник», «не знаю» + прежние |
+| pipeline | [строки] | какие шаги отработали: судьи, перегенерация, best-of-N, память, сеть, советник, додумал |
+| best_of, regen, unsure | число/bool | трудный запрос (N=3+Talker), была перегенерация, ответ помечен «не знаю» |
+reply_to и quote: chat_core принимает их в теле /api/turn (reply_to {index, role, preview}, quote «текст»), добавляет в начало сообщения строку «> цитата» и сохраняет поля в сообщении пользователя.
