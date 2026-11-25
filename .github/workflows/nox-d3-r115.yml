@@ -35,6 +35,11 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
+          ref: 77ff340d4ba7342abee2445dc061b5b65458a569
+          path: r115-donors/b3snapshot
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
           ref: b96cc7a6cc42279ae59cf82b97e8fe8278115344
           path: r115-donors/b4
           persist-credentials: false

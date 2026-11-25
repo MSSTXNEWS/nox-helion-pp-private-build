@@ -54,13 +54,16 @@ stage_r83(sys.argv[2])
         ("b3","nox-control/b3-r84-stage/stage_physical.cjs","7df0d391b87264bf6bfe5f6891db1c6104c0c309","stagePhysical")):
         entry=exact(donors/key/path,pin)
         subprocess.run(["node","-e","require(process.argv[1])[process.argv[2]](process.argv[3])",str(entry),func,str(target)],check=True,cwd=target)
+    snapshot_donor=exact(donors/"b3snapshot/nox-control/b3-r89-stage/stage_snapshot.cjs","13450b470306727aca3295d3e2d6974846f29d1a")
+    subprocess.run(["node","-e","require(process.argv[1]).stageSnapshot(process.argv[2])",str(snapshot_donor),str(target)],check=True,cwd=target)
+    exact(target/"nox-control/d3-r114/serving_snapshot.cjs","417da2652bbe0d04630d0340478b3ad9b1a15bdd")
     load(exact(donors/"b4/nox-control/b4-r111-stage/stage_timing.py","61be5423e18f7bff24d336bef0222158fe618798"),"r115_timing").stage_timing(target,joint=True)
     load(exact(donors/"b2/nox-control/b2-r112-stage/stage_verdict.py","12f40698dc1a0c8c372b5308607725f88ae5d9c1"),"r115_verdict").stage_verdict(target)
     entry=target/"nox-control/d3-r114/joint_extracted.cjs"
     with entry.open("xb") as f: f.write((ROOT/"nox-control/d3-r115/joint_extracted.cjs").read_bytes())
     after=snapshot(target)
     if any(after.get(k)!=v for k,v in before.items()): raise ValueError("HOLD_R115_BASE_MUTATION")
-    if len(after)-len(before)!=24: raise ValueError("HOLD_R115_STAGE_COUNT:"+str(len(after)-len(before)))
+    if len(after)-len(before)!=25: raise ValueError("HOLD_R115_STAGE_COUNT:"+str(len(after)-len(before)))
     # Only check the newly changed integration, not the previous R115 fixture.
     subprocess.run([sys.executable,"-I","-B","-c", """import pathlib,sys
 wire=pathlib.Path(sys.argv[1])

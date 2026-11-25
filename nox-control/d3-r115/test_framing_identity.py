@@ -48,21 +48,24 @@ for(const mode of ['framework_managed','raw_http_1_1']){
  assert.equal(a.framing_authenticated,false);assert.equal(a.framing_receipt_sha256,e.framing_receipt_sha256);
  assert.equal(a.offline_browser_timing.status,'OFFLINE_BROWSER_TIMING_ONLY');
 }
-// New closure-specific cases: omitted transitive modules, runtime drift and cross-mode contamination.
-for(const [mode,paths] of [['raw_http_1_1',raw],['framework_managed',managed]]){
- for(const name of paths.slice(-2)){
-  const {e,f}=evidence(mode);delete f.modules[name];attach(e,f);run(e,'HOLD_ROUTE_FRAMING_IDENTITY');
-  const {e:e2,f:f2}=evidence(mode);f2.modules[name].loaded_sha256='f'.repeat(64);attach(e2,f2);run(e2,'HOLD_ROUTE_FRAMING_IDENTITY');
- }
+// Selected B3 snapshot: getters must never execute, proxy traps must never execute,
+ // and shared-memory identities are not immutable host observations.
+for(const field of ['packet_sha256','payload_sha256','route_sha256','route_bytes','admitted_envelope_bytes','framing_receipt_bytes','framing_receipt_sha256']){
+ const {e}=evidence('framework_managed');let getterReads=0;
+ Object.defineProperty(e,field,{enumerable:true,get(){getterReads++;return 'f'.repeat(64)}});
+ run(e,'HOLD_ROUTE_DETACHED');assert.equal(getterReads,0);
 }
-const {e:mixed,f:mf}=evidence('raw_http_1_1');mf.modules[managed[0]]=mf.modules[raw[0]];attach(mixed,mf);run(mixed,'HOLD_ROUTE_FRAMING_IDENTITY');
-const closurePath=path.join(root,'framing_source_closure_r86.json'), original=fs.readFileSync(closurePath);
-try{
- const {e}=evidence('framework_managed');
- fs.writeFileSync(closurePath,Buffer.concat([original,Buffer.from(' ')]));
- run(e,'HOLD_ROUTE_FRAMING_IDENTITY');
-}finally{fs.writeFileSync(closurePath,original);}
-console.log('R115 B0 R86 closure: both exact modes matched; 8 omitted/drift transitive dependency, mixed adapter and donor-map tamper cases HOLD; one provider read; authority false.');
+{
+ const {e}=evidence('framework_managed');let traps=0;
+ run(new Proxy(e,{get(){traps++;throw Error('proxy')},ownKeys(){traps++;throw Error('proxy')}}),'HOLD_ROUTE_DETACHED');
+ assert.equal(traps,0);
+}
+for(const field of ['route_bytes','admitted_envelope_bytes','framing_receipt_bytes']){
+ const {e}=evidence('raw_http_1_1'), original=e[field];
+ const shared=Buffer.from(new SharedArrayBuffer(original.length));original.copy(shared);e[field]=shared;
+ run(e,'HOLD_ROUTE_DETACHED');
+}
+console.log('R115 B3 R89 snapshot: 2 mode matches, 11 getter/proxy/shared-byte HOLD; one provider read; authority false.');
 
 """
 class RouteEvidence(unittest.TestCase):

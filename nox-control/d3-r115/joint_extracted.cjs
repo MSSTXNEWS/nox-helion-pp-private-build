@@ -8,6 +8,7 @@ const {makeTimingEvidenceReview}=require('../d3-r113/timing_review.cjs');
 const {checkReportedVerdicts}=require('../b2-r112/verdict_consistency.cjs');
 const {checkSelectedBrowser}=require('../a3-r113-browser/browser_selection.cjs');
 const {checkAdmittedPhysical}=require('./admitted_physical.cjs');
+const {captureServingIdentity}=require('./serving_snapshot.cjs');
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const gitBlob=b=>createHash('sha1').update(Buffer.from('blob '+b.length+'\0')).update(b).digest('hex');
 const hold=status=>({status,quality_sample:null,metrics:null,reported_review_diagnostics:null,
@@ -77,7 +78,7 @@ function makeReleaseEvidenceReview(readDetachedEvidence){
       typeof packet!=='string'||Buffer.byteLength(packet)>4*1024*1024)return hold('HOLD_ROUTE_INPUT');
    if(typeof readDetachedEvidence!=='function')return hold('HOLD_ROUTE_PROVIDER');
    const raw=Buffer.from(bytes),packetPin=hash(Buffer.from(packet,'utf8')),payloadPin=hash(raw);
-   const detached=readDetachedEvidence(packetPin);
+   const detached=captureServingIdentity(readDetachedEvidence(packetPin));
    if(!detached||detached.packet_sha256!==packetPin||detached.payload_sha256!==payloadPin||
       !Buffer.isBuffer(detached.route_bytes)||detached.route_bytes.length===0||
       detached.route_bytes.length>65536)return hold('HOLD_ROUTE_DETACHED');
