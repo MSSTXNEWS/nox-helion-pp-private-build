@@ -106,7 +106,7 @@ def _safe(fn):
 TRANSLATORS = ("http://127.0.0.1:8141/v1/chat/completions", "http://127.0.0.1:8142/v1/chat/completions", "http://127.0.0.1:8104/v1/chat/completions")
 _CYR = re.compile(r"[а-яёА-ЯЁ]")
 _MINOR = re.compile(r"(ребён|ребен|дет[иейям]|малолет|школьни|школьниц|подрост|несовершеннолет|лолит|\bloli|child|kid\b|minor|underage|teen|toddler|infant|schoolgirl|schoolboy|\bniñ[oa]s?\b|menor)", re.I)
-_SEXUAL = re.compile(r"(секс|эрот|обнаж|голая|голый|порн|интим|nsfw|\bsex|nude|naked|erotic|porn|lingerie|fetish|desnud|erótic)", re.I)
+_SEXUAL = re.compile(r"(секс|эрот|обнаж|голенк|гол(?:ая|ый|ую|ое|ые|ым|ой|ых)\b|раздет|порн|интим|nsfw|\bsex|nude|naked|erotic|porn|lingerie|fetish|desnud|erótic)", re.I)
 _DEEPFAKE = re.compile(r"(дипфейк|deepfake|deep fake|подмени(?:ть)? лицо|face ?swap|лицо (?:реального|настоящего)|как у (?:путина|трампа|зеленск))", re.I)
 _ILLEGAL = re.compile(r"(как (?:сделать|изготовить) (?:бомб|взрывчат|наркот)|child abuse|csam|детская порн)", re.I)
 
@@ -181,7 +181,7 @@ def _flux(prompt, cancelled):
     pr = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     t0 = time.time()
     while pr.poll() is None:
-        if (cancelled and cancelled()) or time.time() - t0 > 300 or not _window_still_ok():
+        if (cancelled and cancelled()) or time.time() - t0 > 300 or (not os.environ.get("NOX_DRAW_FORCE") and not _window_still_ok()):
             pr.kill(); raise DrawError("flux прерван (чат/таймаут/отмена)")
         time.sleep(0.5)
     if pr.returncode != 0 or not os.path.isfile(out):
