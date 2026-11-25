@@ -7,4 +7,5 @@ ls -la $S/nox-dz-creative.* $S/creative.html
 echo "== icons missing"; for n in $(grep -o "name=\"[a-z0-9-]*\"\|ib('[a-z0-9-]*'" $S/nox-dz-creative.js | sed "s/name=\"//;s/ib('//;s/[\"']//g" | sort -u); do [ -f $S/vendor/shoelace/cdn/assets/icons/$n.svg ] || echo MISSING $n; done
 ls $S/vendor/sortablejs | head -5
 PY=/workspace/nox/venv/bin/python; $PY -c "import playwright" 2>/dev/null || PY=python3
-timeout 280 $PY /tmp/dz_qa.py 2>&1 | cut -c1-70000 | sed 's/^/OUT: /' | tail -40
+nohup $PY /tmp/dz_qa.py > /tmp/dz_qa_out.txt 2>&1 &
+echo started QA
