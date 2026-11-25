@@ -1,0 +1,1 @@
+cat /workspace/nox/state/p3/flux_test.txt | cut -c1-420; tail -3 /tmp/p3_fluxtest.err | cut -c1-200; tail -2 /workspace/nox/models/flux/dl2.log | cut -c1-120; nvidia-smi --query-gpu=memory.used --format=csv,noheader
