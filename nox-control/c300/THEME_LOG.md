@@ -53,3 +53,7 @@
 - downloads/operators: проверены, операторы в теме.
 - Деплой th_dep_gr6.sh, откат th_rb_gr6.sh (бэкап nox-*.js + live.html + css).
 - Развёрнуто gr6 (QA 23 страницы, новых JS-ошибок 0). Серверные снимки: screens_th/gr6_server_A.jpg, gr6_server_B.jpg (на сервере agent/out/th6_*_1440.jpg). Остаток: красный хаб NOX на nexus, зелёно-жёлтые бары на live (смысловые цвета).
+
+## gr7 (слой движения, Графит)
+- nox-motion.css/js (грузятся из nox-theme.js только в graphite): View Transitions между страницами (@view-transition navigation:auto, fade 160/280 мс), stagger-появление .card/sl-card (IntersectionObserver, класс nx-m-in, fill backwards), микро-ховеры карточек/кнопок, градиент фона плавно следует за курсором (--mx/--my). prefers-reduced-motion: всё отключено. Вёрстка не менялась. Без внешних библиотек (чистый CSS/JS).
+- Деплой th_dep_gr7.sh (QA 23 стр., 0 новых ошибок), откат th_rb_gr7.sh. Снимки screens_th/gr7_server_A/B.jpg.
