@@ -5,7 +5,7 @@ import subprocess
 import unittest
 from unittest.mock import patch
 from test_frozen_ordered import FrozenOrderedCallsite
-from stage_timing import stage_timing, PINS, DEST, JOINT_DEST
+from stage_timing import stage_timing, PINS, DEST, JOINT_DEST, SOURCE_PIN, blob
 
 JS=r"""
 const a=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
@@ -24,6 +24,24 @@ a.equal(r.offline_browser_timing.model_ttft_ms,null);
 a.equal(r.offline_browser_timing.model_tokens_per_second,null);
 for(const k of ['native_accepted','authentication_verified','training_admitted','ack_allowed','next_post_allowed'])a.equal(r[k],false);
 a.equal(make()(bytes,d.packet).status,'HOLD_RELEASE_PROVIDER');
+let safe=0;
+for(const field of ['first_visible_ms','eof_ms','dom_commit_ms'])for(const i of [0,1]){
+ const row=d.host.turns[i].trusted, parent=field==='dom_commit_ms'?row.proof:row.sample;
+ const value=parent[field];let access=0,calls=0;
+ Object.defineProperty(parent,field,{configurable:true,enumerable:true,get(){return ++access===1?value-1:value;}});
+ try{
+  const result=make(()=>{calls++;return evidence;})(bytes,d.packet);
+  a.equal(calls,1);a.equal(result.native_accepted,false);
+  if(result.status==='MATCHED_FROZEN_ORDERED_OFFLINE'){
+   const s=result.offline_browser_timing.samples[i];
+   const delay={first_visible_ms:'first_visible_delay_ms',eof_ms:'stream_eof_delay_ms',dom_commit_ms:'dom_completion_delay_ms'}[field];
+   a.equal(s[field]-s.begin_ms,s[delay]);
+  } else a.equal(result.offline_browser_timing,null);
+  safe++;
+ }finally{Object.defineProperty(parent,field,{configurable:true,enumerable:true,writable:true,value});}
+}
+a.equal(safe,6);
+console.log(JSON.stringify({staged_projection_safe:safe}));
 for(const p of Object.keys(require.cache))a.ok(p.startsWith(root+path.sep),p);
 console.log(JSON.stringify({staged_positive:1,provider_reads:reads,unbound_hold:1,native_accepted:false}));
 """
@@ -48,6 +66,8 @@ class StagedTiming(unittest.TestCase):
         target=stage_timing(root,joint=True)
         self.assertEqual(target,root/JOINT_DEST)
         original=target.read_bytes()
+        self.assertEqual(blob(original),SOURCE_PIN)
+        self.assertEqual(SOURCE_PIN,'fbdeb1828385814b4fe991704178915c34ef84c4')
         stat=target.stat()
         self.assertEqual(stage_timing(root,joint=True),target)
         self.assertEqual(target.stat().st_mtime_ns,stat.st_mtime_ns)

@@ -4,7 +4,7 @@ from pathlib import Path
 import subprocess
 
 HERE=Path(__file__).resolve().parent
-SOURCE=HERE.parent/"b4-r111/timing_review.cjs"
+SOURCE=HERE.parent/"b4-r111/timing_review_projection.cjs"
 DEST="nox-control/b4-r111/timing_review.cjs"
 JOINT_DEST="nox-control/d3-r113/timing_review.cjs"
 PINS={
@@ -27,7 +27,7 @@ PINS={
     "nox-control/a3-r109-r80/frozen/b3_r69_exchange_scope_binding.cjs":"18b3be8fc4264b32d51a57ad4db367b3ba786d41",
     "nox-control/a3-r109-r80/frozen/b3_r68_route_binding.cjs":"6d0fef57783346fe33d59ca39a625015514ae168",
 }
-SOURCE_PIN="b202135f9ba1114c4501b1c8c5be40fe8faa5a51"
+SOURCE_PIN="fbdeb1828385814b4fe991704178915c34ef84c4"
 
 def blob(b):
     return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
