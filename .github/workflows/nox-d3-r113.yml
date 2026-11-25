@@ -1,0 +1,45 @@
+name: D3 R113 typed joint release
+on:
+  pull_request:
+    paths: ['nox-control/d3-r113/**', '.github/workflows/nox-d3-r113.yml']
+permissions:
+  contents: read
+jobs:
+  reported-review:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r113-joint-release-20261125'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Exact existing fixture and new diagnostic projection
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object nox-control/a3-r109-r80/joint_frozen.cjs)" = 8ccc4877f610e6ba32f0bf19efdd7105b6fdedf9
+          test "$(git hash-object nox-control/a3-r109-r80/test_frozen_ordered.py)" = 8c5afe0b077f6bee9443d24e571ace25bfb7ae52
+          test "$(git hash-object nox-control/b2-r108/atomic_ordered_quality.cjs)" = 2bd2efcaea708498871b6f913e4b28d5bb8ca90e
+          test "$(git hash-object nox-control/d3-r113/timing_review.cjs)" = b202135f9ba1114c4501b1c8c5be40fe8faa5a51
+          test "$(git hash-object nox-control/d3-r113/verdict_consistency.cjs)" = 727600ede64523c899680dec84f2edc1ec4d2d2e
+          test "$(git hash-object nox-control/d3-r113/typed/typed_prefix.py)" = f6ff3501466ed376afff2c9475833428267ccc8f
+          test "$(git hash-object nox-control/d3-r113/typed/freeze_typed_release.py)" = 3881e1f6c6e229c440eabde96ef514891f27b5bc
+          test "$(git hash-object nox-control/d3-r111/release.json)" = fd6b4dd58465de1b7874c36f292acd98be7bb6c5
+          for f in typed_prefix.py freeze_typed_release.py; do
+            test ! -e "nox-control/a3-r109-r80/frozen/$f"
+            cp "nox-control/d3-r113/typed/$f" "nox-control/a3-r109-r80/frozen/$f"
+          done
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$PWD/nox-control/d3-r113:$PWD/nox-control/b2-r110:$PWD/nox-control/a3-r109-r80:$PWD/nox-control/b2-r108:$PWD/nox-control/d3-r107:$PWD/nox-control/d3-r105:$PWD/nox-control/b2-r104:$PWD/nox-control/d3-r101:$PWD/nox-control/d3-r97:$(python3 -c 'import json,os; print(":".join(os.path.abspath(p) for p in json.load(open("nox-control/d3-r93/release.json"))["python_paths"]))'):$tmp"
+          export D3_B4_MODULE="$PWD/nox-control/d3-r74/staging/b4/b4_existing_turn_pair.mjs"
+          export B2_R108_MODULE="$PWD/nox-control/b2-r108/atomic_ordered_quality.cjs"
+          cd "$tmp"
+          python3 -B -m unittest -v test_joint_release.RouteEvidence.test_route_evidence

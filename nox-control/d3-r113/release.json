@@ -1,0 +1,34 @@
+{
+  "schema": "NOX_D3_R113_SOURCE_ONLY",
+  "parent": "51fba11cee1508c362c641aad439baf1e75ed53e",
+  "original_a6_artifact": 14989839885,
+  "original_a6_inner_sha256": "42d701736798b62d8f12c51d064fae5c2bc5a0e30cee3542082cb0c1083e199d",
+  "r111_manifest_blob": "fd6b4dd58465de1b7874c36f292acd98be7bb6c5",
+  "source_claim": 7153961741,
+  "donors": {
+    "route": {
+      "ref": "51fba11cee1508c362c641aad439baf1e75ed53e",
+      "blob": "f1c8d5d1abac72d0f13ee0754aecec9aa50af928"
+    },
+    "timing": {
+      "ref": "4d1d4c9fec680b9b736b5f72811dd0a2f8ad26db",
+      "blob": "b202135f9ba1114c4501b1c8c5be40fe8faa5a51"
+    },
+    "verdict": {
+      "ref": "c41e9c99739485384f866ba81c6e35dd04622965",
+      "blob": "727600ede64523c899680dec84f2edc1ec4d2d2e"
+    },
+    "typed": {
+      "ref": "3506b4d6d6f1371482bbcca44b7d180c8138a0da",
+      "blob": "f6ff3501466ed376afff2c9475833428267ccc8f"
+    },
+    "freeze": {
+      "ref": "3506b4d6d6f1371482bbcca44b7d180c8138a0da",
+      "blob": "3881e1f6c6e229c440eabde96ef514891f27b5bc"
+    }
+  },
+  "entrypoint": "joint_release.cjs",
+  "native_accepted": false,
+  "host_provider_bound": false,
+  "production_ready": false
+}
