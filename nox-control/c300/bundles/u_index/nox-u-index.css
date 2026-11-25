@@ -2,7 +2,7 @@
 #nox-fx-ash{opacity:.3 !important}
 canvas#space{opacity:.55 !important}
 #k4-fab{top:68px !important;bottom:auto !important;left:14px !important;width:auto !important;height:auto !important;flex-direction:row !important;flex-wrap:wrap;gap:8px !important;z-index:46}
-#k4-fab>*{min-height:44px;font-size:14px;border-radius:14px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:rgba(20,15,15,.55) !important;border:1px solid rgba(255,255,255,.14) !important}
+#k4-fab>*{min-height:44px;font-size:14px;border-radius:14px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:color-mix(in srgb,var(--ds-glass,#140f0f) 55%,transparent) !important;border:1px solid rgba(255,255,255,.14) !important}
 #k5-pulse,.k5-pulse{bottom:auto !important;top:68px !important;right:14px !important;left:auto !important;border-radius:14px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);min-height:44px;font-size:14px}
 #app .card,#app [class*=card],#app section{backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25)}
 #app p,#app span,#app small,#app label,#app li{font-size:max(14px,1em)}
@@ -11,9 +11,13 @@ canvas#space{opacity:.55 !important}
 /* U2: отступы между блоками, единая гарнитура, состояния загрузки, фокус */
 #page>*+*,#app section+section{margin-top:24px}
 #app,#app *{font-family:inherit}
-#app :is(button,a,input,[tabindex]):focus-visible{outline:2px solid #e9b465;outline-offset:2px;border-radius:12px}
+#app :is(button,a,input,[tabindex]):focus-visible{outline:2px solid var(--ds-acc,#e9b465);outline-offset:2px;border-radius:12px}
 #app [aria-busy=true],#app .loading{position:relative;overflow:hidden}
 #app [aria-busy=true]::after,#app .loading::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.08) 50%,transparent 70%);animation:usk 1.4s linear infinite}
 @keyframes usk{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
 #app .card:hover,#app [class*=card]:hover{transform:translateY(-2px);transition:transform .2s}
 @media (prefers-reduced-motion:reduce){#app *{animation:none!important;transition:none!important}}
+
+/* U3: метки HUD (.hud-lbl) не перекрывают содержимое карточек: сверху слева, мелко, видны при наведении */
+.hud-lbl{top:6px !important;bottom:auto !important;left:12px !important;right:auto !important;font-size:12px !important;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:0 !important;pointer-events:none;transition:opacity .2s}
+.grid-stack-item-content:hover>.hud-lbl,.card:hover>.hud-lbl{opacity:.6 !important}
