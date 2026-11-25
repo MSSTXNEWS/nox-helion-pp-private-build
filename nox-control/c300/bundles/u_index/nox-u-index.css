@@ -7,3 +7,13 @@ canvas#space{opacity:.55 !important}
 #app .card,#app [class*=card],#app section{backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25)}
 #app p,#app span,#app small,#app label,#app li{font-size:max(14px,1em)}
 @media (max-width:768px){#k4-fab{top:auto !important;bottom:calc(var(--ds-dock-h,64px) + 12px) !important}}
+
+/* U2: отступы между блоками, единая гарнитура, состояния загрузки, фокус */
+#page>*+*,#app section+section{margin-top:24px}
+#app,#app *{font-family:inherit}
+#app :is(button,a,input,[tabindex]):focus-visible{outline:2px solid #e9b465;outline-offset:2px;border-radius:12px}
+#app [aria-busy=true],#app .loading{position:relative;overflow:hidden}
+#app [aria-busy=true]::after,#app .loading::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.08) 50%,transparent 70%);animation:usk 1.4s linear infinite}
+@keyframes usk{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+#app .card:hover,#app [class*=card]:hover{transform:translateY(-2px);transition:transform .2s}
+@media (prefers-reduced-motion:reduce){#app *{animation:none!important;transition:none!important}}
