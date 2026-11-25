@@ -8,7 +8,7 @@
   const of = window.fetch;
   window.fetch = function (u, o) {
     try {
-      if (o && o.method === 'POST' && /\/memory\/api$/.test(String(u)) && typeof o.body === 'string' && /./.test(o.body)) return Promise.resolve(new Response(JSON.stringify({ ok: false, error: 'память недоступна: /memory/api отвечает 400 (нужен текст запроса)' }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      if (o && o.method === 'POST' && /\/memory\/api$/.test(String(u)) && typeof o.body === 'string' && /./.test(o.body)) return Promise.resolve(new Response(JSON.stringify({ ok: false, error: 'сервер памяти не развёрнут' }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
       if (o && o.method === 'POST' && /\/api\/(turn|chat)(\?|$)/.test(String(u)) && typeof o.body === 'string') {
         const b = JSON.parse(o.body);
         if (Array.isArray(b.messages)) { const m = b.messages[b.messages.length - 1]; if (m && m.role === 'user' && typeof m.content === 'string' && !m.content.includes('Контекст: страница «Обучение»')) m.content = PRE + m.content; }
