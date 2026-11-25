@@ -128,6 +128,13 @@ class NativeRefillSourceGateTests(unittest.TestCase):
         self.assertIn("NATIVE_QUEUE_UNVERIFIED", found)
         self.assertNotIn("NO_UNVERIFIED_TUNING", found)
         s["native_queue"]["workers"][1]["current_task"] = "1A03"
+        found = codes(s, lambda exact: exact is s)
+        self.assertIn("NATIVE_WORKER_CURSOR_BUSY_HOLD", found)
+        self.assertNotIn("NO_UNVERIFIED_TUNING", found)
+        # When both worker cursors are explicitly idle, the original
+        # no-change observation is still permitted.
+        for worker in s["native_queue"]["workers"]:
+            worker["current_task"] = None
         self.assertIn("NO_UNVERIFIED_TUNING",
                       codes(s, lambda exact: exact is s))
 

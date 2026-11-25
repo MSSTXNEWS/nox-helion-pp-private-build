@@ -153,6 +153,13 @@ def assess(snapshot, *, owner_snapshot_verifier=None):
                     "Await independently attested owner snapshot, age-bounded lease/CAS evidence, immutable source, zero active claims, "
                     "explicit maintenance clearance and >=2 GiB raw cgroup headroom; "
                     "do not duplicate queues or overwrite a pending run.")
+        # A stale no-claims flag cannot erase a live worker cursor even
+        # when no training or GPU advisory path is active. Preserve the
+        # owner lease; this is an observation, not a claim or repair.
+        if native_complete and not native_workers_idle and native.get("active_claims") is False:
+            add("NATIVE_WORKER_CURSOR_BUSY_HOLD", "hold",
+                "A RUNNING worker still owns a task cursor despite active_claims=false. "
+                "Reconcile the current lease and exact TaskID receipt; no refill or mutation.")
         if native.get("maintenance_busy") is True or native.get("active_claims") is True:
             add("NATIVE_OWNER_LEASE_BUSY", "hold",
                 "Do not cancel/replace a live claim or force a second publisher. Reconcile the existing owner lease and exact TaskID receipt, then retry once on new owner state.")
