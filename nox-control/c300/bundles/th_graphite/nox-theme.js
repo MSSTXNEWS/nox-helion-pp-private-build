@@ -5,7 +5,7 @@
   var q = (location.search.match(/[?&]theme=(graphite|sun)/) || [])[1];
   if (q) { try { localStorage.setItem('nox.ui.theme', q); } catch (e) { /* без хранилища */ } }
   var th = q || g('nox.ui.theme'); if (th !== 'sun') th = 'graphite';
-  d.setAttribute('data-nox-theme', th);
+  d.setAttribute('data-nox-theme', th); window.NOXgx = th === 'graphite';
   window.NOXtheme = { get: function () { return d.getAttribute('data-nox-theme'); }, set: function (t) { try { localStorage.setItem('nox.ui.theme', t); } catch (e) { /* */ } location.reload(); } };
   (function () { var s0 = document.currentScript, b0 = s0 && s0.src ? s0.src.replace(/[^\/]*$/, '') : './'; if (document.readyState === 'loading') document.write('<link rel="stylesheet" href="' + b0 + 'nox-th-fix.css?v=th5" data-nox-thfix>'); })();
   if (th === 'graphite') {

@@ -35,3 +35,52 @@ sub('vendor/nox-x/filerobot/filerobot-image-editor.min.js','Array.isArray(a.resp
 
 # 7. Filerobot: переводы локально (fie-i18n.json), без внешнего i18n-fastly.ultrafast.io
 sub('vendor/nox-x/filerobot/filerobot-image-editor.min.js','vendor/nox-x/filerobot/fie-i18n.json','a.open("GET","https://i18n-fastly.ultrafast.io/api/export?grid=".concat(SC))','a.open("GET","./vendor/nox-x/filerobot/fie-i18n.json")')
+# 8. граф памяти (cytoscape, canvas): цвета узлов, рёбер и подписей в Графите
+F='nox-s4-memory.js'
+sub(F,'TH-GRAPHITE-COL',"const COL = ['#e0654a', '#d9a441', '#6aa9d8', '#8fc28a', '#b48ad8', '#d68aa6', '#9a8f88'];",
+ "const GX = document.documentElement.getAttribute('data-nox-theme') === 'graphite'; /* TH-GRAPHITE-COL */ const COL = GX ? ['#9db1d1', '#c9ad7c', '#7fb5a8', '#9a9cc4', '#b0b4ba', '#c98f8f', '#6f7782'] : ['#e0654a', '#d9a441', '#6aa9d8', '#8fc28a', '#b48ad8', '#d68aa6', '#9a8f88'];")
+sub(F,'GX ? \'#c2d0e8\' : \'#fff\'',"c: '#fff'","c: GX ? '#c2d0e8' : '#fff'")
+sub(F,"GX ? '#c2d0e8' : '#fff' }","'border-color': '#fff'","'border-color': GX ? '#c2d0e8' : '#fff'")
+sub(F,"GX ? 'rgba(255,255,255,.12)'","'line-color': 'rgba(255,235,220,.18)'","'line-color': GX ? 'rgba(255,255,255,.12)' : 'rgba(255,235,220,.18)'")
+sub(F,"GX ? '#b0b4ba' : '#cfc4bd'","color: '#cfc4bd'","color: GX ? '#b0b4ba' : '#cfc4bd'")
+
+# 9. цвета-литералы в JS (графики, сцены, canvas): '#hex' / 'rgba(...)' с тёплым цветом -> (window.NOXgx ? серо-голубой : прежний). Идемпотентно (маркер TH-GXW).
+import re,glob,subprocess,colorsys
+ACC=(157,177,209)
+def _clamp(v): return max(0,min(255,int(round(v))))
+def _warm(r,g,b):
+  mx=max(r,g,b)
+  if mx<30 or r<g or r<b or (r-b)/max(mx,1)<.2 or (r-b)<20: return None
+  h=colorsys.rgb_to_hls(r/255,g/255,b/255)[0]*360
+  if not(h<=62 or h>=340): return None
+  if h<=12 or h>=340:  # красный оставляем (danger/ошибка)
+    return None
+  L=(r*.2126+g*.7152+b*.0722)/255; ch=(mx-min(r,g,b))/255
+  if ch>.5 and L>.45:
+    k=min(1.15,L/.66); return (_clamp(ACC[0]*k),_clamp(ACC[1]*k),_clamp(ACC[2]*k))
+  Y=L*255; return (_clamp(Y-2),_clamp(Y),_clamp(Y+5))
+LIT=re.compile(r"(?<![\w$.\\/#-])(['\"])(#[0-9a-fA-F]{6}|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(?:,\s*[\d.]+\s*)?\))\1(?![\w-])")
+SKIP=('nox-dz-creative.js','nox-worlds.js','nox-theme.js','nox-icons.js','nox-sun.js','nox-sun-x.js','nox-wow-bg-legacy.js','nox-wow-data.js','nox-wow-shaders.js','nox-live.js','nox-k6-live.js')
+def _rep(m):
+  q,c=m.group(1),m.group(2)
+  if c.startswith('#'): r,g,b=int(c[1:3],16),int(c[3:5],16),int(c[5:7],16); a=None
+  else:
+    n=re.findall(r'[\d.]+',c); r,g,b=int(n[0]),int(n[1]),int(n[2]); a=n[3] if len(n)>3 else None
+  w=_warm(r,g,b)
+  if not w: return m.group(0)
+  new=('#%02x%02x%02x'%w) if (c.startswith('#')) else ('rgba(%d,%d,%d,%s)'%(w+(a,)) if a is not None else 'rgb(%d,%d,%d)'%w)
+  return '(window.NOXgx?%s%s%s:%s%s%s)'%(q,new,q,q,c,q)
+for fp in sorted(glob.glob(os.path.join(S,'nox-*.js'))):
+  b=os.path.basename(fp)
+  if b in SKIP or '.bak' in b: continue
+  try: t=open(fp,encoding='utf-8').read()
+  except Exception: continue
+  if 'TH-GXW' in t: continue
+  n=LIT.sub(_rep,t)
+  if n==t: continue
+  tmp=fp+'.thgxw.tmp.js'; open(tmp,'w',encoding='utf-8').write(n+'\n/*TH-GXW*/\n')
+  ok=True
+  try: ok=subprocess.run(['node','--check',tmp],capture_output=True).returncode==0
+  except Exception: ok=False
+  if ok: os.replace(tmp,fp); print('gxw',b,t.count('window.NOXgx') ,len(LIT.findall(t)))
+  else: os.remove(tmp); print('gxw-skip(syntax)',b)

@@ -160,3 +160,12 @@ html[data-nox-theme=graphite] sl-badge[variant=warning]::part(base){background:r
 html[data-nox-theme=graphite] sl-badge[variant=success]::part(base){background:rgba(108,197,154,.12);color:#8dd6b3;border-color:rgba(108,197,154,.3)}
 html[data-nox-theme=graphite] sl-badge[variant=danger]::part(base){background:rgba(229,115,107,.12);color:#f0a8a2;border-color:rgba(229,115,107,.32)}
 html[data-nox-theme=graphite] sl-badge[variant=primary]::part(base){background:rgba(157,177,209,.14);color:#c2d0e8;border-color:rgba(157,177,209,.32)}
+
+/* ===== gr5: таблицы Tabulator, редактор Monaco, нейтральные фоны ===== */
+html[data-nox-theme=graphite] .tabulator,html[data-nox-theme=graphite] .tabulator-table,html[data-nox-theme=graphite] .tabulator .tabulator-tableholder{background:transparent!important}
+html[data-nox-theme=graphite] .tabulator .tabulator-row{background:transparent!important;color:#edeef0}
+html[data-nox-theme=graphite] .tabulator .tabulator-row.tabulator-row-even{background:rgba(255,255,255,.03)!important}
+html[data-nox-theme=graphite] .tabulator .tabulator-row:hover{background:rgba(157,177,209,.10)!important}
+html[data-nox-theme=graphite] .tabulator .tabulator-header,html[data-nox-theme=graphite] .tabulator .tabulator-header .tabulator-col{background:rgba(255,255,255,.04)!important;color:#b0b4ba;border-color:rgba(255,255,255,.08)!important}
+html[data-nox-theme=graphite] .monaco-editor,html[data-nox-theme=graphite] .monaco-editor-background,html[data-nox-theme=graphite] .monaco-editor .margin,html[data-nox-theme=graphite] .monaco-editor .inputarea.ime-input{background-color:#0e0f11!important}
+html[data-nox-theme=graphite] .monaco-editor .current-line{background:rgba(255,255,255,.045)!important;border-color:transparent!important}
