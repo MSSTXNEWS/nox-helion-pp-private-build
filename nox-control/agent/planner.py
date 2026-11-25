@@ -111,10 +111,17 @@ class Planner:
         for r in _read_jsonl(self.cfg.inbox):
             t = self._norm(r, "inbox", {"pending": "pending", "queued": "pending", "new": "pending"})
             if t: items.append(t)
-        for r in _read_jsonl(self.cfg.queue):
+        board = _read_jsonl(self.cfg.queue)
+        # The dispatcher board is an atomic current-state snapshot, not an
+        # event log. A non-open row vetoes stale copies from the inbox/calendar.
+        # This is a read-side filter only; actual execution still needs a lease.
+        blocked_ids = {str(r["id"]) for r in board if r.get("id") and
+                       str(r.get("status", "pending")).lower() not in ("queued", "pending")}
+        for r in board:
             t = self._norm(r, "kanban", {"queued": "pending", "pending": "pending"})
             if t: items.append(t)
         items += self._calendar_tasks(now)
+        items = [t for t in items if t["id"] not in blocked_ids]
         # Existing inbox/kanban may refer to the same TaskID. Rank candidates
         # before ID deduplication so an earlier low-priority copy cannot hide
         # the higher-priority one. This does not create or claim any native job.
