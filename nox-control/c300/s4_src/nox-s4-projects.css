@@ -15,3 +15,4 @@
 .s4dl iframe{filter:invert(.92) hue-rotate(180deg) brightness(.95)}
 .s4sv{background:rgba(10,7,7,.93)!important;backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);margin-bottom:12px}.s4sv iframe{width:100%;height:62vh;min-height:380px;border:1px solid rgba(255,235,220,.1);border-radius:12px;background:#0d0b0b}
 .s4vm sl-button-group{display:inline-flex}.s4fb sl-button,.s4b sl-button,.s4mq sl-button{min-width:44px}.s4mk{--sl-input-height-large:48px}.s4mq{align-items:center}
+sl-button[disabled]::part(base){opacity:.7;border-style:dashed}.s4lc sl-button{margin:2px}

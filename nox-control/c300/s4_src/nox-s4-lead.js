@@ -29,7 +29,7 @@
         .catch(() => off(root.querySelector('#s4lf'), 'Лента уведомлений недоступна: /api/nox/outbox не отвечает.')); return;
     }
     if (kind === 'nexus') {
-      root.innerHTML = '<div class="ph"><div><span class="kick mono">Сетевой граф · органы ядра и службы</span><h1>Nexus</h1></div><div class="acts"><span class="seg"><button type="button" id="s4nf"><sl-icon library="tabler" name="focus-centered"></sl-icon>Вписать</button></span></div></div><section class="card s4lc"><h2>Граф связей <span class="r mono" id="s4nn">…</span></h2><div class="s4nw"><div id="s4ny"></div><aside id="s4ni" class="muted">Нажмите на узел.</aside></div></section>';
+      root.innerHTML = '<div class="ph"><div><span class="kick mono">Сетевой граф · органы ядра и службы</span><h1>Nexus</h1></div><div class="acts"><sl-button id="s4nf" size="medium"><sl-icon slot="prefix" library="tabler" name="focus-centered"></sl-icon>Вписать</sl-button></div></div><section class="card s4lc"><h2>Граф связей <span class="r mono" id="s4nn">…</span></h2><div class="s4nw"><div id="s4ny"></div><aside id="s4ni" class="muted">Нажмите на узел.</aside></div></section>';
       wrap.prepend(root); hide();
       Promise.all([fetch('/api/nox/status', { cache: 'no-store' }).then((r) => r.json()).catch(() => null), fetch('./data/live.json?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.json()).catch(() => null)]).then(([st, lv]) => {
         const el = []; const org = st && st.health && st.health.organs || {}, ports = lv && lv.ports || {};

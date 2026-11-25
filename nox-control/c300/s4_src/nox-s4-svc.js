@@ -9,7 +9,7 @@
     wrap.appendChild(sec);
     const fr = sec.querySelector('iframe'), st = sec.querySelector('[data-st]'), er = sec.querySelector('[data-e]');
     const url = '/svc/' + n + '/';
-    const H = { memos: async () => { const r = await fetch('/svc/memos/api/memos', { cache: 'no-store' }); if (r.status === 401) return { off: 'Memos требует входа: откройте отдельно, создайте учётную запись и заметки.' }; const j = await r.json(); return j.memos && j.memos.length ? { off: 'Заметок: ' + j.memos.length + '. Откройте отдельно.' } : { empty: 'Заметок пока нет.' }; },
+    const H = { memos: async () => ({ off: 'Memos установлен (:18201), но требует входа и отдаёт ассеты без префикса /svc/: откройте отдельно, создайте учётную запись и заметки.' }),
       kuma: async () => { const j = await (await fetch('/svc/kuma/api/entry-page', { cache: 'no-store' })).json(); if (j.type === 'setup-database') return { off: 'Uptime Kuma установлена, но не настроена: нужна первичная настройка (создание БД и учётной записи).' }; return { off: 'Данные мониторов Kuma требуют входа: откройте отдельно.' }; },
       beszel: async () => { const j = await (await fetch('/svc/beszel/api/collections/systems/records', { cache: 'no-store' })).json(); if (!j.items) return { off: 'Beszel требует входа: откройте отдельно.' }; if (!j.items.length) return { empty: 'Агенты Beszel не добавлены: хостов для мониторинга пока нет.' }; return { rows: j.items }; } };
     if (H[n]) {
