@@ -5,7 +5,7 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const empty = (el, icon, title, text) => { if (window.NOXds) NOXds.empty(el, { icon, title, text }); else el.innerHTML = '<p class="muted">' + esc(title + '. ' + text) + '</p>'; };
   const off = (el, why) => { if (window.NOXds) NOXds.unavailable(el, why); else el.textContent = why; };
-  const btn = (id, ic, t, v, dis) => '<sl-button size="medium" variant="' + (v || 'default') + '" id="' + id + '"' + (dis ? ' disabled' : '') + '><sl-icon slot="prefix" library="tabler" name="' + ic + '"></sl-icon>' + t + '</sl-button>';
+  const btn = (id, ic, t, v, dis) => '<span class="seg"><button type="button" id="' + id + '"' + (dis ? ' disabled' : '') + '><sl-icon library="tabler" name="' + ic + '"></sl-icon>' + t + '</button></span>';
   const C = {
     mail: { lead: 'Gmail', kick: 'Входящие · отправка · фильтры', title: 'Почта', cols: [['Папки', ['Входящие', 'Отправленные', 'Черновики', 'Спам', 'Корзина']], ['Письма'], ['Чтение']], act: [['Написать', 'pencil'], ['Подключить ящик (IMAP/SMTP)', 'plug']], why: 'Почтовый ящик не подключён: нет IMAP/SMTP-учётных данных. Подключите его в «Подключениях».', icon: 'mail' },
     messenger: { lead: 'Telegram', kick: 'Единые диалоги подключённых аккаунтов', title: 'Мессенджеры', cols: [['Чаты', ['Все', 'Личные', 'Группы']], ['Диалог'], ['Профиль']], act: [['Новый чат', 'message-plus'], ['Подключить аккаунт', 'plug']], why: 'Аккаунты мессенджеров не подключены. Подключите их в «Подключениях».', icon: 'message-circle' },
