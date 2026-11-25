@@ -23,3 +23,11 @@ OPENROUTER_API_KEY (модели :free), GITHUB_MODELS_TOKEN (PAT с право�
 
 ## Ограничения
 Анонимные тарифы без SLA, лимиты могут меняться. Pollinations classic: 1 запрос в 31 с на IP, одна модель. LLM7: 30 RPM анонимно, набор моделей меняется (берётся из /models). Запросы идут внешним сервисам: чувствительное в них не класть.
+
+## Старшие советники по рисованию (V + A2, проверено вживую 2026-11-25)
+Реестр `state/advisors_external.json`, поле `roles`: `drawing_senior_gen`, `drawing_senior_critic`. Ключи в `state/secrets/advisors.env` (для бесплатных путей ниже не нужны). Только официальные API.
+- Генерация: `POST 127.0.0.1:8793/v1/images/generations` `{"prompt","model":"auto|pollinations/flux|horde/","size":"768x768","response_format":"b64_json"(опц.)}` -> `data[0].path` (файл в state/advisor_images). Живой тест: pollinations/flux ok ~9 с, AI Horde (анонимный ключ 0000000000, официальный) ok ~15 с.
+- Критика: `POST 127.0.0.1:8793/v1/images/critique` `{"image_path"|"image_b64","prompt","model":"auto|kilo/<vision>"}` -> `critique` {score, prompt_match, composition, anatomy, light_color, issues, fixes, improved_prompt} и `text`. Живой тест: kilo/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free ok ~15 с (score 5, нашёл расхождение с промптом). nemotron-3.5-super-vl: пустой ответ, статус weak.
+- Приватность: наружу уходят только картинки, сгенерированные советниками (хеш в .index). Фото владельца и пути вне advisor_images дают 403 (проверено), пока в cfg нет `allow_external_images=true` И в запросе `x_nox_allow_image=true`. Промпт проходит санитайзер.
+- Цикл для студии: gen -> critique -> `improved_prompt` -> gen (1-2 круга). Лимиты: pollinations ~1 запрос/20 с на IP, horde очередь, kilo 150/ч.
+- С ключом (опционально, статус need_key): google/gemini-2.5-flash, groq llama-4-scout, openrouter qwen2.5-vl:free.
