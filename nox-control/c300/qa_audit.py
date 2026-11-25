@@ -13,6 +13,8 @@ CHECK = [c["text"] for c in REGISTRY["checklist"]]
 SKIP = re.compile(r"удал|delete|stop|стоп|выход|logout|очист|сброс|reset|генер|создать|отправ|send", re.I)
 AUTO = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 19, 20, 21}  # пункты, которые ревизор проверяет сам; остальные — manual
 DANGER_OK = True
+HANDMADE = {"chat": "assistant-ui, Deep Chat, React Flow, highlight.js", "index": "Gridstack, Sortable.js, Tremor, ECharts", "cinema": "Swiper, Video.js/Plyr, hls.js", "music": "wavesurfer.js, Howler, Plyr", "news": "Swiper, Tremor, Shoelace", "photo": "Cropper.js, Fabric.js/Konva, Shoelace", "studio": "Konva, Fabric.js, Shoelace, Motion", "tools": "cmdk, ninja-keys, Shoelace", "consciousness": "llm-viz, 3d-force-graph, three.js, ECharts", "organism": "ECharts, 3d-force-graph, cosmos.gl", "soul": "3d-force-graph, cosmos.gl, React Flow", "growth": "ECharts, Tremor", "selffeel": "ECharts, Tremor", "training": "ECharts, Tremor, Grafana-стиль"}
+
 
 def vision(jpg, prompt):
     d = "data:image/jpeg;base64," + base64.b64encode(jpg).decode()
@@ -95,7 +97,7 @@ async def audit(page):
     for vp in ("desk", "mob"): open(f"{OUT}/audit_{vp}_{key}.jpg", "wb").write(shots[vp])
     pr = (f"Ты строгий арт-директор. Это скриншот раздела «{niche[0]}» веб-интерфейса NOX. Сравни с лучшими в нише: {niche[1]}. "
           f"Обязательные паттерны ниши: {niche[2]}. Канон: тёмное дымчатое стекло, чёрное солнце с красной короной на фоне, тонкие заглавные надписи, без неона. "
-          "Оцени также три балла по 10: A = анимация, R = реализм/материал, U = интерфейс. Ответь строго JSON без пояснений: {\"wow\":0-10,\"A\":0-10,\"R\":0-10,\"U\":0-10,\"patterns_missing\":[...],\"toporno\":[...],\"neon\":true/false,\"overlap\":true/false,\"fix\":[...3-6 правок, какие готовые модули взять...]}")
+          "Оцени также три балла по 10: A = анимация, R = реализм/материал, U = интерфейс. Ответь строго JSON без пояснений: {\"wow\":0-10,\"A\":0-10,\"R\":0-10,\"U\":0-10,\"patterns_missing\":[...],\"toporno\":[...],\"neon\":true/false,\"handmade\":true/false (интерфейс свёрстан вручную/выглядит самодельно, колхозно, топорно вместо готовых профессиональных компонентов),\"overlap\":true/false,\"fix\":[...3-6 правок, какие готовые модули взять...]}")
     v = vision(shots["desk"], pr); res["vision_raw"] = v[:1500]
     m = re.search(r"\{.*\}", v, re.S); j = {}
     try: j = json.loads(m.group(0)) if m else {}
@@ -105,6 +107,9 @@ async def audit(page):
     item(2, "rework" if j.get("neon") else ("ok" if j else "manual"), "неон" if j.get("neon") else "")
     item(3, "ok" if j and all(isinstance(j.get(k), (int, float)) and j[k] >= 8 for k in "ARU") else ("rework" if j else "manual"), f"A/R/U={res['ARU']}")
     item(4, "ok" if isinstance(j.get("wow"), (int, float)) and j["wow"] >= 8 else ("rework" if j else "manual"), f"WOW {j.get('wow')}")
+    hm = bool(j.get("handmade")) or bool(j.get("toporno"))
+    if len(CHECK) >= 23:
+        item(23, "rework" if hm else ("ok" if j else "manual"), ("самодельный/топорный интерфейс, взять готовые модули из DONORS.md: " + HANDMADE.get(key, "см. DONORS.md") + "; замечания: " + str(j.get("toporno"))[:300]) if hm else "")
     if j.get("patterns_missing"): res["fails"].append({"item": CHECK[1], "detail": j["patterns_missing"]})
     item(20, "ok" if disk_ok() else "rework", "диск >=15 ГБ свободно" if disk_ok() else "диск <15 ГБ")
     item(21, "ok" if os.path.exists("/workspace/nox/ops/controller/PROGRESS.md") else "rework", "PROGRESS.md")
