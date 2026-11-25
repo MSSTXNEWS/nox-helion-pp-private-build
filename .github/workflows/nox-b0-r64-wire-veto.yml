@@ -1,0 +1,32 @@
+name: B0 R64 frozen release wire veto
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b0-r53/b0_route_release_preflight.py'
+      - '.github/workflows/nox-b0-r64-wire-veto.yml'
+permissions:
+  contents: read
+jobs:
+  frozen-route-veto:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: a5b191979bbd7fc4b1b230cbea23e9f2b595bae6
+          path: b1-pinned
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 568b5e548180c039629789b57e4b22ff0abc7f9a
+          path: b3-pinned
+          persist-credentials: false
+      - run: |
+          set -euo pipefail
+          test "$(git -C b1-pinned rev-parse HEAD)" = a5b191979bbd7fc4b1b230cbea23e9f2b595bae6
+          test "$(git -C b3-pinned rev-parse HEAD)" = 568b5e548180c039629789b57e4b22ff0abc7f9a
+          git ls-files -s nox-control/b0-r53/b0_route_release_preflight.py nox-control/b0-r53/release_input_r63.json
+          python -B nox-control/b0-r53/b0_route_release_preflight.py selftest nox-control/b0-r53/release_input_r63.json b1-pinned/nox-control/b1-r70/b1_browser_bundle.js b3-pinned/coordination/onepass/b3_r64_eof_candidate.js

@@ -1,0 +1,20 @@
+name: B0 R76 HTTP1 chunked owner writer
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b0-r53/**'
+      - '.github/workflows/b0-r76-http1-writer.yml'
+permissions:
+  contents: read
+jobs:
+  target:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify pinned donors and run focused regression
+        run: |
+          cd nox-control/b0-r53
+          test "$(git hash-object b0_proxy_stream_iter.py)" = 385906bc443effbea92f38b881c13d04d2103e28
+          test "$(git hash-object b0_named_delta_encoder.py)" = c7d0c351b0239bb7155ffbc8c0362e919ee79cb1
+          python3 -B -m unittest -v test_b0_http_chunked_r76

@@ -1,0 +1,38 @@
+name: B0 R78 actual raw writer HTTP continuity
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b0-r53/**'
+      - '.github/workflows/nox-b0-r78-raw-writer-http.yml'
+permissions:
+  contents: read
+jobs:
+  actual-writer-http:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b0/green-base-continuation-r53-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exact R77 writer to R84 client over HTTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          d="$(mktemp -d)"
+          trap 'rm -rf "$d"' EXIT
+          git fetch --no-tags origin 672b9814d34ee4b589030d069d97d79e0845cf07
+          git show 672b9814d34ee4b589030d069d97d79e0845cf07:nox-control/b1-r84/b1_browser_bundle.js > "$d/b1_browser_bundle.js"
+          test "$(git hash-object "$d/b1_browser_bundle.js")" = 7d713b9144698d0923877195962ae0795397c82a
+          cd nox-control/b0-r53
+          test "$(git hash-object b0_http_chunked_r76.py)" = 0f2698d56723bed3615b40ad8c4f98894189ed50
+          test "$(git hash-object b0_proxy_stream_iter.py)" = 385906bc443effbea92f38b881c13d04d2103e28
+          test "$(git hash-object b0_named_delta_encoder.py)" = c7d0c351b0239bb7155ffbc8c0362e919ee79cb1
+          test "$(git hash-object test_http_continuity_r75.cjs)" = ca82202be7ddb190a9c06c3668cd53de8a3f2ffa
+          cp b0_http_chunked_r76.py b0_proxy_stream_iter.py b0_named_delta_encoder.py "$d/"
+          cp http_fixture_r78.py "$d/fixture.py"
+          node --unhandled-rejections=strict test_http_continuity_r75.cjs "$d"
+          echo R78_ACTUAL_RAW_WRITER_HTTP_SOURCE_ONLY_NATIVE_ACCEPTED=false

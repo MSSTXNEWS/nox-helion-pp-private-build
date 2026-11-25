@@ -1,0 +1,16 @@
+name: B0 R67 proxy named delta source
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b0-r53/**'
+      - '.github/workflows/nox-b0-r67-named-delta.yml'
+permissions:
+  contents: read
+jobs:
+  named-delta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Focused proxy wire regression
+        run: python3 nox-control/b0-r53/test_b0_named_delta_encoder.py

@@ -1,0 +1,25 @@
+name: B0 R69 closeable proxy response body
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b0-r53/**'
+      - '.github/workflows/nox-b0-r69-proxy-body.yml'
+permissions:
+  contents: read
+jobs:
+  proxy-body:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b0/green-base-continuation-r53-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exact encoder and exercise response iterator
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD:nox-control/b0-r53/b0_named_delta_encoder.py)" = c7d0c351b0239bb7155ffbc8c0362e919ee79cb1
+          cd nox-control/b0-r53
+          python3 -B -m unittest -v test_b0_proxy_stream_iter
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false

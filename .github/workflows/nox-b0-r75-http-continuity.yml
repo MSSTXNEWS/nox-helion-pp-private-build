@@ -1,0 +1,34 @@
+name: NOX B0 R75 HTTP transport continuity
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b0-r53/**'
+      - '.github/workflows/nox-b0-r75-http-continuity.yml'
+permissions:
+  contents: read
+jobs:
+  exact-http:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Materialize exact donors and exercise actual HTTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          d="$(mktemp -d)"
+          trap 'rm -rf "$d"' EXIT
+          git fetch --no-tags origin 5ddc8275d2a5a65173688dcd79e7a2e73bd578fe
+          git show 5ddc8275d2a5a65173688dcd79e7a2e73bd578fe:nox-control/b1-r82/b1_browser_bundle.js > "$d/b1_browser_bundle.js"
+          git show 33db5758d93e8734cffa6d8623b5833f761f79d9:nox-control/b0-r53/b0_proxy_stream_iter.py > "$d/b0_proxy_stream_iter.py"
+          git show 33db5758d93e8734cffa6d8623b5833f761f79d9:nox-control/b0-r53/b0_named_delta_encoder.py > "$d/b0_named_delta_encoder.py"
+          test "$(git hash-object "$d/b1_browser_bundle.js")" = af09a602a69390ecbbfc21becfd394b15c6dc836
+          test "$(git hash-object "$d/b0_proxy_stream_iter.py")" = 385906bc443effbea92f38b881c13d04d2103e28
+          test "$(git hash-object "$d/b0_named_delta_encoder.py")" = c7d0c351b0239bb7155ffbc8c0362e919ee79cb1
+          cp nox-control/b0-r53/http_fixture_r75.py "$d/fixture.py"
+          node nox-control/b0-r53/test_http_continuity_r75.cjs "$d"

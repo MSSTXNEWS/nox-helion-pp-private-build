@@ -1,0 +1,36 @@
+name: B0 R81 extracted R111 framework entrypoint
+on:
+  pull_request:
+    paths: ['nox-control/b0-r53/**', '.github/workflows/nox-b0-r81-stage-framework.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  framework-stage:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b0/green-base-continuation-r53-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 1dc5eac0c22807b8522b67ccf95e70ffb3c87b85
+          path: r111-donor
+          persist-credentials: false
+      - name: Extract exact release and test only additive entrypoint
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C r111-donor rev-parse HEAD)" = 1dc5eac0c22807b8522b67ccf95e70ffb3c87b85
+          test "$(git -C r111-donor hash-object nox-control/d3-r111/release.json)" = fd6b4dd58465de1b7874c36f292acd98be7bb6c5
+          test "$(git -C r111-donor hash-object nox-control/d3-r111/stage_overlay.py)" = 82cbfac33a5cc56d53d9547dc8511d5968efbe58
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/14989839885/zip" > "$RUNNER_TEMP/a6-b0-r81.zip"
+          python3 -B r111-donor/nox-control/d3-r111/stage_overlay.py "$RUNNER_TEMP/a6-b0-r81.zip" "$RUNNER_TEMP/r111-b0-r81"
+          export B0_STAGE_ROOT="$RUNNER_TEMP/r111-b0-r81"
+          cd nox-control/b0-r53
+          python3 -B -m unittest -v stage_framework_r81_check

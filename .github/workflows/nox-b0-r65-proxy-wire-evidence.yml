@@ -1,0 +1,15 @@
+name: B0 R65 static proxy wire evidence
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b0-r53/b0_proxy_wire_static_evidence.py'
+      - '.github/workflows/nox-b0-r65-proxy-wire-evidence.yml'
+permissions:
+  contents: read
+jobs:
+  static-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 nox-control/b0-r53/b0_proxy_wire_static_evidence.py selftest
