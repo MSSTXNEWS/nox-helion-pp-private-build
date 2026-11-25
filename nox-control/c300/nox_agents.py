@@ -496,15 +496,16 @@ def consilium(q, rounds=2, budget=170):
     return {'question': q, 'opinions': waves, 'final': final, 'judge_score': best, 'seconds': round(time.time() - t0), 'external_used': bool(advisors())}
 
 ERR_ADV = []; CONS_CACHE = {}
-def _adv_call(a, u, system, mt=500, timeout=70, retry=True):
-    gw = BACK().get('external')
-    try:
-        r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': a['provider'] + '/' + a['model'], 'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': u}], 'max_tokens': mt}, timeout=timeout)
-        if r.status_code == 200: return (r.json()['choices'][0]['message'].get('content') or '').strip()
-        ERR_ADV.append(f'{a.get("model")}: HTTP {r.status_code} {r.text[:80]}')
-        if r.status_code in (429, 502) and retry:
-            time.sleep(12); return _adv_call(a, u, system, mt, timeout, False)
-    except Exception as e: ERR_ADV.append(f'{a.get("model")}: {type(e).__name__}')
+def _adv_call(a, u, system, mt=500, timeout=110, retry=True):
+    gw = BACK().get('external'); last = ''
+    for mdl in (a['provider'] + '/' + a['model'], 'auto'):      # конкретный советник, затем ротация пула (kilo/pollinations/локальные)
+        try:
+            r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': mdl, 'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': u}], 'max_tokens': mt, 'x_nox_prio': 5}, timeout=timeout)
+            if r.status_code == 200:
+                j = r.json(); tx = (j['choices'][0]['message'].get('content') or '').strip()
+                if tx: return tx
+            else: ERR_ADV.append(f'{mdl}: HTTP {r.status_code}')
+        except Exception as e: ERR_ADV.append(f'{mdl}: {type(e).__name__}')
     return ''
 def consilium_ext(q, deep=False, budget=110):
     """волны: 3 внешних советника параллельно -> (deep) ещё 3 видят первую волну -> старший сводит. Шлюз :8793."""
