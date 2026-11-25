@@ -21,6 +21,8 @@ _db_lock = threading.RLock()
 def db():
     c = sqlite3.connect(DB, timeout=30, check_same_thread=False); c.row_factory = sqlite3.Row; return c
 CON = db()
+try: CON.execute('ALTER TABLE tasks ADD COLUMN prio INT DEFAULT 0'); CON.commit()
+except Exception: pass
 def sql(q, a=(), one=False):
     with _db_lock:
         cur = CON.execute(q, a); CON.commit()
@@ -204,7 +206,7 @@ def card(tid):
     last = st[-1] if st else {'kind': 'queued', 'text': '', 'ts': r['created']}
     el = (time.time() - (r['started'] or r['created'])) if r['status'] != 'done' else ((r['finished'] or 0) - (r['started'] or 0))
     eta = int(el / pct * (100 - pct)) if r['status'] == 'running' and pct >= 20 else 0
-    col = 'Готово' if r['status'] == 'done' else 'Нужен ты' if r['status'] in ('needs_owner', 'failed') else 'В работе' if r['status'] == 'running' else 'Очередь'
+    col = 'Отменено' if r['status'] == 'cancelled' else 'Готово' if r['status'] == 'done' else 'Нужен ты' if r['status'] in ('needs_owner', 'failed') else 'В работе' if r['status'] == 'running' else 'Очередь'
     return {'id': tid, 'title': r['title'], 'column': col, 'stage': STAGES.get(last['kind'], last['kind']), 'blocker': stop, 'doing': f"{last['kind']}: {last['text'][:140]}", 'pct': pct, 'eta_sec': eta, 'idle_sec': int(time.time() - last['ts'])}
 def stall_check():
     """нет шагов N минут -> толчок коуча -> смена подхода -> эскалация диспетчеру (перезапуск/Нужен ты)"""
@@ -431,7 +433,7 @@ def run_task(tid):
     ok = all(r['accepted'] for r in results)
     arts = [{'path': f'{tid}/{f}', 'url': f'/svc/agents/artifact/{tid}/{f}'} for r in results for f in r['files']]
     card = {'done': [r for r in results if r['accepted']], 'failed': [r for r in results if not r['accepted']], 'artifacts': arts, 'goal': pl.get('goal'), 'actions': ['Принять', 'Доработать', 'Откатить']}
-    sql('UPDATE tasks SET status=?, finished=?, result=?, first_pass=?, returns=? WHERE id=?', ('done' if ok else 'needs_owner', time.time(), json.dumps(card, ensure_ascii=False), first_pass if ok else 0, total_returns, tid))
+    sql('UPDATE tasks SET status=?, finished=?, result=?, first_pass=?, returns=? WHERE id=? AND status!="cancelled"', ('done' if ok else 'needs_owner', time.time(), json.dumps(card, ensure_ascii=False), first_pass if ok else 0, total_returns, tid))
     step(tid, 'final', 'готово' if ok else 'не всё получилось, нужен владелец')
 
 # ---------- диспетчер-1 (lease, очередь, heartbeat) ----------
@@ -455,9 +457,10 @@ def dispatcher():
             for r in sql('SELECT id,hb FROM tasks WHERE status="running"'):      # осиротевшие (нет потока, напр. после рестарта сервиса)
                 if r['id'] not in RUNNING and time.time() - (r['hb'] or 0) > 20:
                     sql('UPDATE tasks SET status="queued", restarts=restarts+1 WHERE id=?', (r['id'],))
-            while len(RUNNING) < QUEUE_WORKERS:
-                r = sql('SELECT id FROM tasks WHERE status="queued" ORDER BY created LIMIT 1', one=True)
+            while True:
+                r = sql('SELECT id,prio FROM tasks WHERE status="queued" ORDER BY prio DESC, created LIMIT 1', one=True)
                 if not r: break
+                if len(RUNNING) >= QUEUE_WORKERS + (3 if (r['prio'] or 0) >= 10 else 0): break
                 sql('UPDATE tasks SET status="running", hb=? WHERE id=?', (time.time(), r['id']))
                 th = threading.Thread(target=lambda i=r['id']: _safe(i), daemon=True); RUNNING[r['id']] = th; th.start()
         except Exception as e: print('disp err', e, flush=True)
@@ -467,9 +470,10 @@ def _safe(i):
     except Exception as e:
         step(i, 'error', repr(e)[:400]); sql('UPDATE tasks SET status="failed", finished=? WHERE id=?', (time.time(), i))
 
-def new_task(title, goal, role=None, team=None, project='', spec=None):
+def new_task(title, goal, role=None, team=None, project='', spec=None, prio=None):
+    if prio is None: prio = 10 if project == 'chat' else -5 if project == 'golden' else -1 if re.match(r'(worm|idea|self)', project or '') else 0
     tid = time.strftime('%m%d') + '-' + uuid.uuid4().hex[:6]
-    sql('INSERT INTO tasks(id,title,goal,role,team,project,status,created,spec) VALUES(?,?,?,?,?,?,"queued",?,?)', (tid, title, goal, role, team, project, time.time(), json.dumps(spec or {}, ensure_ascii=False)))
+    sql('INSERT INTO tasks(id,title,goal,role,team,project,status,created,spec,prio) VALUES(?,?,?,?,?,?,"queued",?,?,?)', (tid, title, goal, role, team, project, time.time(), json.dumps(spec or {}, ensure_ascii=False), prio))
     return tid
 
 def metrics():
@@ -492,7 +496,7 @@ def root():
 async def post_task(req: Request):
     b = await req.json()
     if b.get('dangerous'): return JSONResponse({'error': 'опасные операции только с подтверждением владельца'}, 403)
-    tid = new_task(b.get('title') or (b.get('goal', '')[:60]), b['goal'], b.get('role'), b.get('team'), b.get('project', ''), b.get('spec'))
+    tid = new_task(b.get('title') or (b.get('goal', '')[:60]), b['goal'], b.get('role'), b.get('team'), ('chat' if b.get('source') == 'chat' else b.get('project', '')), b.get('spec'))
     return {'id': tid, 'status': 'queued'}
 @app.get('/task/{tid}')
 def get_task(tid: str):
@@ -506,7 +510,7 @@ def get_task(tid: str):
 def get_card(tid: str): return card(tid) or JSONResponse({'error': 'нет'}, 404)
 @app.get('/board')
 def board():
-    cols = {'Нужен ты': [], 'В работе': [], 'Очередь': [], 'Готово': []}
+    cols = {'Нужен ты': [], 'В работе': [], 'Очередь': [], 'Готово': [], 'Отменено': []}
     for r in sql('SELECT id FROM tasks ORDER BY created DESC LIMIT 60'):
         c = card(r['id']); cols[c['column']].append(c)
     return cols
@@ -514,6 +518,9 @@ def board():
 def inspect_now(): return inspector()
 @app.get('/lessons')
 def get_lessons(): return [json.loads(l) for l in open(LESS)][-50:] if os.path.exists(LESS) else []
+@app.post('/task/{tid}/cancel')
+def cancel(tid: str):
+    sql('UPDATE tasks SET status="cancelled", finished=? WHERE id=? AND status IN ("queued","running")', (time.time(), tid)); lesson(tid, 'задача отменена (дубль/зависшая)', 'владелец/диспетчер', 'перед запуском пакета проверять дубли по title+goal', 'cancel'); return {'ok': True}
 @app.get('/tasks')
 def tasks(): return [dict(r) for r in sql('SELECT id,title,status,role,team,created,finished,returns,restarts FROM tasks ORDER BY created DESC LIMIT 100')]
 def make_team(preset, goal, title=None, project=''):
@@ -535,7 +542,7 @@ async def command(req: Request):      # чат-команда /команда <�
     b = await req.json(); txt = b.get('text', '').strip(); m = re.match(r'^/(команда|team)\s*(\S+)?\s*(.*)$', txt, re.S)
     if not m: return JSONResponse({'error': 'формат: /команда <пресет> <цель>'}, 400)
     pre, goal = m.group(2) or 'dev2', m.group(3)
-    ids = make_team(pre, goal)
+    ids = make_team(pre, goal, project='chat')
     return {'preset': pre, 'ids': ids} if ids else JSONResponse({'error': 'нет пресета', 'presets': list(TEAMS())}, 404)
 @app.post('/correction')
 async def post_corr(req: Request):
