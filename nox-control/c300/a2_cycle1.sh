@@ -5,7 +5,7 @@ curl -fsSL "$R/nox_agents.py?$(date +%s)" -o $A/nox_agents.py.new && $A/venv/bin
 curl -fsSL "$R/LESSONS.md?$(date +%s)" -o $W/LESSONS.md
 echo "- проверка импортов до удаления; чистка только по белому списку (урок: чистка удалила ops/draw)" >> $S/playbooks/_lessons.yaml
 echo '{"ts":1,"task":"seed","src":"owner","what":"чистка удалила ops/draw","why":"не проверены импорты","rule":"проверка импортов до удаления; чистка только по белому списку","repeat":0}' >> $S/lessons.jsonl
-pkill -f 'python nox_agents.py'; sleep 4; pkill -9 -f 'python nox_agents.py'; sleep 1
+
 cd $A && NOX_STALL_MIN=6 nohup setsid $A/venv/bin/python nox_agents.py </dev/null >>service.log 2>&1 &
 sleep 12; pgrep -fc 'python nox_agents.py'; curl -s -m5 127.0.0.1:8810/health | head -c 120; echo
 mk(){ curl -s -m20 -X POST 127.0.0.1:8810/task -H 'Content-Type: application/json' -d "$1"; echo; }

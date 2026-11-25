@@ -171,7 +171,7 @@ def plan(t):
 
 # ---------- Доведение и самоулучшение: уроки (S03/Reflexion), карточка, инспектор ----------
 LESS = ST + '/lessons.jsonl'; PAIRS = ST + '/night_pairs.jsonl'; NUDGE = {}; STALL = {}; REPEAT = {'n': 0, 'lessons': 0}
-STALL_MIN = float(os.environ.get('NOX_STALL_MIN', '6'))
+STALL_MIN = float(os.environ.get('NOX_STALL_MIN', '15'))
 def _norm(x): return re.sub(r'[^a-zа-яё0-9]+', ' ', x.lower())[:90].strip()
 def lesson(tid, what, why, rule, src='task'):
     """Reflexion: что случилось -> почему -> правило. В S03-файл, в плейбук (бриф всем следующим), в пары для ночного обучения."""
@@ -203,7 +203,7 @@ def card(tid):
     if r['status'] in ('done', 'needs_owner'): stop = stop if r['status'] == 'needs_owner' else ''
     last = st[-1] if st else {'kind': 'queued', 'text': '', 'ts': r['created']}
     el = (time.time() - (r['started'] or r['created'])) if r['status'] != 'done' else ((r['finished'] or 0) - (r['started'] or 0))
-    eta = int(el / max(pct, 5) * (100 - pct)) if r['status'] == 'running' and pct else 0
+    eta = int(el / pct * (100 - pct)) if r['status'] == 'running' and pct >= 20 else 0
     col = 'Готово' if r['status'] == 'done' else 'Нужен ты' if r['status'] in ('needs_owner', 'failed') else 'В работе' if r['status'] == 'running' else 'Очередь'
     return {'id': tid, 'title': r['title'], 'column': col, 'stage': STAGES.get(last['kind'], last['kind']), 'blocker': stop, 'doing': f"{last['kind']}: {last['text'][:140]}", 'pct': pct, 'eta_sec': eta, 'idle_sec': int(time.time() - last['ts'])}
 def stall_check():
@@ -211,10 +211,11 @@ def stall_check():
     for r in sql('SELECT id FROM tasks WHERE status="running"'):
         tid = r['id']; last = sql('SELECT MAX(ts) m FROM steps WHERE task=?', (tid,), one=True)['m'] or 0
         idle = (time.time() - last) / 60; lvl = STALL.get(tid, 0)
+        if tid not in RUNNING: continue
         if idle < STALL_MIN: STALL[tid] = 0; continue
         want = 3 if idle >= 3 * STALL_MIN else 2 if idle >= 2 * STALL_MIN else 1
         if want <= lvl: continue
-        STALL[tid] = want
+        STALL[tid] = want; COACH['n'] += 1
         if want == 1: NUDGE[tid] = 'нет прогресса: упрости шаг, выдай рабочий черновик'; step(tid, 'coach', f'нет прогресса {idle:.0f} мин: толчок', 'coach')
         elif want == 2: NUDGE[tid] = 'смени подход: пересоздай с нуля, возьми готовое'; step(tid, 'coach', 'нет прогресса: смена подхода', 'coach')
         else:
