@@ -13,7 +13,7 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 CASE = r"""async () => {
-const assert={equal:(a,b)=>{if(a!==b)throw Error('assert '+a+' !== '+b)},rejects:async fn=>{let ok=false;try{await fn()}catch(e){ok=e.code==='HOLD_B1_PREACK_OBSERVATION'}if(!ok)throw Error('expected HOLD')}};
+const assert={equal:(a,b)=>{if(a!==b)throw Error('assert '+a+' !== '+b)},rejects:async fn=>{let err;try{await fn()}catch(e){err=e}if(!err||err.code!=='HOLD_B1_PREACK_OBSERVATION')throw Error('expected HOLD, got '+String(err))}};
 const sha=async s=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))),b=>b.toString(16).padStart(2,'0')).join('');
 const container=document.querySelector('#chat'),cases=[];
 assert.equal(isSecureContext,true);
@@ -31,18 +31,18 @@ const observe=NOXB1PreAckObserver.create({container,host,crypto});
 const w={projection_event_id:'projection'+n};
 const run=()=>observe(s,proof,w,new AbortController().signal);
 assert.equal(await run(),true);const pair=retained.pop(),doc=JSON.parse(pair.bytes);assert.equal(pair.sha256,await sha(pair.bytes));assert.equal(doc.visible_text_sha256,hash);assert.equal(doc.turn,n);assert.equal(Object.keys(doc).length,23);cases.push('turn'+n);
-el.hidden=true;await assert.rejects(run());el.hidden=false;
-const dup=el.cloneNode(true);container.append(dup);await assert.rejects(run());dup.remove();
-container.style.opacity='0';await assert.rejects(run());container.style.opacity='';
-el.style.visibility='hidden';await assert.rejects(run());el.style.visibility='';
-el.setAttribute('aria-hidden','true');await assert.rejects(run());el.removeAttribute('aria-hidden');
-el.textContent+='!';await assert.rejects(run());el.textContent=text;
-t.attempt_id='foreign';await assert.rejects(run());t.attempt_id=proof.attempt_id;
+el.hidden=true;await assert.rejects(run);el.hidden=false;
+const dup=el.cloneNode(true);container.append(dup);await assert.rejects(run);dup.remove();
+container.style.opacity='0';await assert.rejects(run);container.style.opacity='';
+el.style.visibility='hidden';await assert.rejects(run);el.style.visibility='';
+el.setAttribute('aria-hidden','true');await assert.rejects(run);el.removeAttribute('aria-hidden');
+el.textContent+='!';await assert.rejects(run);el.textContent=text;
+t.attempt_id='foreign';await assert.rejects(run);t.attempt_id=proof.attempt_id;
 context.ack_state='SENDING';assert.equal(await run(),false);context.ack_state='NOT_SENT';
 const stop=new AbortController();stop.abort();await assert.rejects(()=>observe(s,proof,w,stop.signal));
 assert.equal(retained.length,0);
 const during=new AbortController();mutate=()=>during.abort();await assert.rejects(()=>observe(s,proof,w,during.signal));assert.equal(retained.length,1);retained.pop();
-mutate=()=>{el.textContent='changed'};await assert.rejects(run());retained.pop();el.textContent=text;cases.push('negative'+n);
+mutate=()=>{el.textContent='changed'};await assert.rejects(run);retained.pop();el.textContent=text;cases.push('negative'+n);
 }
 
 assert.equal(container.children.length,2);
