@@ -1,0 +1,19 @@
+echo S4RUN:s6_p28
+cd /workspace/nox/web/site
+export PLAYWRIGHT_BROWSERS_PATH=/workspace/nox/tools/ms-playwright
+(python3 -m http.server 18777 --bind 127.0.0.1 --directory /workspace/nox/web/site >/dev/null 2>&1 &) ; sleep 1
+cat > /tmp/m.py <<'PY'
+import time
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    b=p.chromium.launch()
+    for i in range(3):
+        pg=b.new_page(viewport={'width':1440,'height':900});errs=[]
+        pg.on('pageerror',lambda e:errs.append(str(e)[:100]))
+        t=time.time();pg.goto('http://127.0.0.1:18777/music.html',wait_until='load')
+        pg.wait_for_timeout(5000)
+        print(pg.evaluate("[document.title,document.body.innerText.length,document.querySelectorAll('.mu-al,.mu-it,.mu-grid').length,[...document.scripts].map(s=>s.src.slice(-22)).filter(s=>/music|s2/.test(s)).join()]"),'load',round(time.time()-t-5,2),'errs',errs[:2],'vis',pg.evaluate("document.querySelectorAll('[style*=\"--cv:\"].vis').length"),'cv',pg.evaluate("document.querySelectorAll('.cv').length"),'bg',pg.evaluate("[...document.querySelectorAll('.cv')].filter(e=>getComputedStyle(e).backgroundImage!='none').length"),'all',pg.evaluate("document.querySelectorAll('[style*=\"--cv:\"]').length"))
+    b.close()
+PY
+ls -la data/music_catalog.json; /workspace/nox/venv/bin/python /tmp/m.py 2>&1 | tail -6
+pkill -f 'http.server 18777'
