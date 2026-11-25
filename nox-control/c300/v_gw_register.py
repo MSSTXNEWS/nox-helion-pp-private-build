@@ -32,7 +32,10 @@ except Exception as e: print('llm7 list err', e, flush=True)
 seen = []; [seen.append(c) for c in cand if c not in seen]
 adv = []
 def save(done=False):
-    json.dump({'updated': time.strftime('%Y-%m-%d %H:%M:%S'), 'gateway': G + '/v1', 'done': done, 'advisors': adv}, open(OUT, 'w'), ensure_ascii=False, indent=1)
+    try: old = json.load(open(OUT))
+    except Exception: old = {}
+    keep = [a for a in old.get('advisors', []) if a.get('role')]
+    json.dump({'updated': time.strftime('%Y-%m-%d %H:%M:%S'), 'gateway': G + '/v1', 'done': done, 'roles': old.get('roles', {}), 'advisors': adv + keep}, open(OUT, 'w'), ensure_ascii=False, indent=1)
 for mid in seen:
     p, name = mid.split('/', 1); t = time.time(); st = 'fail'; ans = ''
     try:
