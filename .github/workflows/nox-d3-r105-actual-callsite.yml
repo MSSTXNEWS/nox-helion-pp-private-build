@@ -1,0 +1,36 @@
+name: D3 R105 actual offline joint callsite
+on:
+  pull_request:
+    paths: ['nox-control/d3-r105/**', '.github/workflows/nox-d3-r105-actual-callsite.yml']
+permissions:
+  contents: read
+jobs:
+  actual_joint:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r105-actual-joint-callsite-20261125'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Exact donor and one new actual callsite test
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object nox-control/d3-r101/finalized_observation.py)" = d0687f2ec337c6ea0b67fe7818c9134e97148f1c
+          test "$(git hash-object nox-control/b2-r104/receipt_id_fence.py)" = 43d29a344d606875d97ada415b46ae20a45b8e5c
+          test "$(git hash-object nox-control/d3-r103/joint_metric.cjs)" = af7e043a9c61dcd7c1f16af05684992aeb839dbc
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$PWD/nox-control/d3-r105:$PWD/nox-control/b2-r104:$PWD/nox-control/d3-r101:$PWD/nox-control/d3-r97:$(python3 -c 'import json,os; print(":".join(os.path.abspath(p) for p in json.load(open("nox-control/d3-r93/release.json"))["python_paths"]))'):$tmp"
+          export D3_B4_MODULE="$PWD/nox-control/d3-r74/staging/b4/b4_existing_turn_pair.mjs"
+          export D3_R103_MODULE="$PWD/nox-control/d3-r103/joint_metric.cjs"
+          cd "$tmp"
+          python3 -B -m unittest -v test_actual_joint_callsite
