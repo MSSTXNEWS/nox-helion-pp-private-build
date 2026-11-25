@@ -8,7 +8,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: nox-c300
+  group: nox-c300-${{ inputs.script }}
+  cancel-in-progress: false
 jobs:
   run:
     runs-on: ubuntu-latest
