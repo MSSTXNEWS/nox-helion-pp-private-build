@@ -13,10 +13,8 @@
       try {
         const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status);
         const h = await r.text(), abs = [...h.matchAll(/(?:src|href)="(\/[^\/"][^"]*\.(?:js|css))"/g)].map((m) => m[1]).filter((p) => !p.startsWith('/svc/')).slice(0, 3);
-        let bad = 0; for (const p of abs) { try { const a = await fetch(p, { method: 'HEAD' }); if (!a.ok || /text\/html/.test(a.headers.get('content-type') || '')) bad++; } catch (e) { bad++; } }
-        st.textContent = bad ? 'на связи, но ассеты не грузятся (' + bad + ')' : 'на связи';
-        if (bad) { er.hidden = false; er.textContent = 'Приложение ссылается на абсолютные пути без префикса /svc/: окно может быть пустым. Нужен режим sub_filter в прокси.'; }
-        fr.hidden = false; fr.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+        if (abs.length) { st.textContent = 'на связи, встраивание невозможно'; fr.hidden = true; er.hidden = false; er.textContent = 'Приложение запрашивает ассеты по абсолютным путям (' + abs[0] + ') без префикса /svc/: в рамке оно не загрузится. Откройте отдельно или включите переписывание путей в прокси.'; return; }
+        st.textContent = 'на связи'; fr.hidden = false; fr.src = url + '?t=' + Date.now();
       } catch (e) { st.textContent = 'нет связи'; fr.hidden = true; er.hidden = false; er.textContent = 'Служба «' + n + '» недоступна (' + e.message + '). Подключите её или проверьте /svc/' + n + '/.'; }
     };
     sec.querySelector('[data-o]').onclick = () => window.open(url, '_blank', 'noopener'); sec.querySelector('[data-r]').onclick = load; load();
