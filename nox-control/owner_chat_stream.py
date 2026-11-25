@@ -388,6 +388,11 @@ async def _model_events(client, url, payload):
                 if not isinstance(choices,list) or len(choices)!=1:
                     raise ValueError('choices')
                 choice=choices[0]
+                # Streaming choices must not carry non-streaming completion
+                # payloads: ignoring a message/text field can certify a partial
+                # answer or hide an unexecuted tool call in the S03 transcript.
+                if not isinstance(choice,dict) or 'message' in choice or 'text' in choice:
+                    raise ValueError('mixed completion choice')
                 # A native model response is one assistant choice. An explicit
                 # nonzero/bool index could splice a different choice into the
                 # single browser/S03 transcript. Keep index-less legacy frames.
@@ -434,8 +439,6 @@ async def _model_events(client, url, payload):
                     size+=len(part.encode('utf-8','strict'))
                     if size>FINAL_RESPONSE_LIMIT:
                         raise StreamFailure('HOLD_MODEL_OUTPUT_SIZE')
-                    text.append(part)
-                    yield 'token',part
                 for fragment in fragments:
                     index=fragment.get('index')
                     if not isinstance(index,int) or isinstance(index,bool) or not 0<=index<8:
@@ -470,6 +473,22 @@ async def _model_events(client, url, payload):
                     if (len(call['function']['arguments'].encode('utf-8','strict'))>100000 or
                             len(call['function']['name'].encode('utf-8','strict'))>200):
                         raise StreamFailure('HOLD_TOOL_CALL_SIZE')
+                # A terminal frame makes cumulative tool-call identity and
+                # finish reason knowable now, not at the later [DONE] marker.
+                if reason is not None:
+                    if bool(calls)!=(reason=='tool_calls'):
+                        raise StreamFailure('HOLD_TOOL_CALL_TERMINAL')
+                    if calls:
+                        if any(not call['id'] or not call['function']['name']
+                               for call in calls.values()):
+                            raise StreamFailure('HOLD_TOOL_CALL_ID')
+                        if len({call['id'] for call in calls.values()})!=len(calls):
+                            raise StreamFailure('HOLD_TOOL_CALL_ID')
+                # Publish text only after every field in this frame is valid.
+                # A malformed tool fragment must not leak its associated token.
+                if part:
+                    text.append(part)
+                    yield 'token',part
             except StreamFailure:
                 raise
             except (AttributeError,TypeError,ValueError):

@@ -72,25 +72,31 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         # 1A03: an upstream role/index must not silently become an assistant
         # completion in the browser or the S03 postflight. Legacy omitted
         # index/role is still supported by the existing fixture tests.
-        async def collect(choice):
+        async def collect(choice, sink):
             packet=('data: '+json.dumps({'choices':[choice]},
                     ensure_ascii=False)+'\n\n').encode()
             native_stream=Chunks([packet,frame(finish='stop'),b'data: [DONE]\n\n'])
             def respond(request):
                 return httpx.Response(200,stream=native_stream,request=request)
             async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
-                result=[event async for event in stream._model_events(
+                async for event in stream._model_events(
                     client,'https://native.invalid/v1/chat/completions',
-                    {'messages':[{'role':'user','content':'hello'}]})]
+                    {'messages':[{'role':'user','content':'hello'}]}):
+                    sink.append(event)
             self.assertTrue(native_stream.closed)
-            return result
+            return sink
 
         ok=await collect({'index':0,'delta':{'role':'assistant','content':'Hola'},
-                          'finish_reason':None})
+                          'finish_reason':None}, [])
         self.assertEqual(ok[0],('token','Hola'))
         self.assertEqual(ok[-1][0],'message')
 
         for choice in (
+            {'index':0,'delta':{'content':'visible prefix'},
+             'message':{'role':'assistant','tool_calls':[{'id':'hidden','type':'function',
+                 'function':{'name':'dispatch','arguments':'{}'}}]},'finish_reason':None},
+            {'index':0,'delta':{'content':'visible prefix'},
+             'text':'discarded completion','finish_reason':None},
             {'index':1,'delta':{'role':'assistant','content':'wrong choice'},
              'finish_reason':None},
             {'index':True,'delta':{'role':'assistant','content':'bool choice'},
@@ -107,10 +113,56 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             {'index':0,'delta':{'role':'assistant','content':'unsafe',
                                 'function_call':None},
              'finish_reason':None},
+            {'index':0,'delta':{'content':'must not escape','tool_calls':[
+                {'index':0,'id':'call_valid','function':{'name':'calculate','arguments':'{}'}},
+                {'index':True,'function':{'name':'bad'}}]},'finish_reason':None},
+            {'index':0,'delta':{'content':'must not escape','tool_calls':[
+                {'index':0,'function':False}]},'finish_reason':None},
         ):
-            with self.subTest(choice=choice), self.assertRaisesRegex(
-                    stream.StreamFailure,'HOLD_MODEL_SSE_INVALID'):
-                await collect(choice)
+            sink=[]
+            with self.subTest(choice=choice):
+                with self.assertRaisesRegex(stream.StreamFailure,'HOLD_MODEL_SSE_INVALID'):
+                    await collect(choice,sink)
+                self.assertEqual(sink,[])
+
+        await self._assert_model_sse_terminal_frame_is_atomic()
+
+    async def _assert_model_sse_terminal_frame_is_atomic(self):
+        valid={'index':0,'id':'call_valid','type':'function',
+               'function':{'name':'calculate','arguments':'{}'}}
+        prefix=frame('previous valid text')
+        prior=frame(calls=[valid])
+        async def collect(parts,sink):
+            native_stream=Chunks(parts+[b'data: [DONE]\n\n'])
+            def respond(request):
+                return httpx.Response(200,stream=native_stream,request=request)
+            async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+                async for event in stream._model_events(
+                    client,'https://native.invalid/v1/chat/completions',
+                    {'messages':[{'role':'user','content':'hello'}]}):
+                    sink.append(event)
+
+        for parts,code in (
+            ([prefix,frame('must not escape','stop',[valid])],'HOLD_TOOL_CALL_TERMINAL'),
+            ([prefix,prior,frame('must not escape','stop')],'HOLD_TOOL_CALL_TERMINAL'),
+            ([prefix,frame('must not escape','tool_calls')],'HOLD_TOOL_CALL_TERMINAL'),
+            ([prefix,frame('must not escape','tool_calls',[{'index':0}])],'HOLD_TOOL_CALL_ID'),
+            ([prefix,frame('must not escape','tool_calls',
+                           [valid,dict(valid,index=1)])],'HOLD_TOOL_CALL_ID'),
+        ):
+            sink=[]
+            with self.subTest(code=code,parts=parts):
+                with self.assertRaisesRegex(stream.StreamFailure,code):
+                    await collect(parts,sink)
+                self.assertEqual(sink,[('token','previous valid text')])
+
+        sink=[]
+        await collect([prior,frame('valid terminal text','tool_calls')],sink)
+        self.assertEqual(sink[0],('token','valid terminal text'))
+        self.assertEqual(sink[-1],('message',{'role':'assistant',
+            'content':'valid terminal text','tool_calls':[
+                {'id':'call_valid','type':'function',
+                 'function':{'name':'calculate','arguments':'{}'}}]}))
 
     async def test_total_answer_limit_across_model_and_tool_cycles(self):
         # Count UTF-8 bytes, not codepoints: RU/ES + emoji can exceed RAM
