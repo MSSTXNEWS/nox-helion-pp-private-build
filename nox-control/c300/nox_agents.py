@@ -75,8 +75,15 @@ def llm(backend, system, user, max_tokens=1500, temp=0.3, tid=None, timeout=420)
                 'max_tokens': max_tokens, 'temperature': temp, 'chat_template_kwargs': {'enable_thinking': False}}
         hdr = {'Content-Type': 'application/json'}
         if b.get('key_env') and os.environ.get(b['key_env']): hdr['Authorization'] = 'Bearer ' + os.environ[b['key_env']]
-        r = httpx.post(b['url'].rstrip('/') + '/chat/completions', json=body, headers=hdr, timeout=timeout)
-        r.raise_for_status(); j = r.json()
+        try:
+            r = httpx.post(b['url'].rstrip('/') + '/chat/completions', json=body, headers=hdr, timeout=min(timeout, 100) if backend != 'external' else timeout)
+            r.raise_for_status(); j = r.json()
+        except Exception as e:      # локальная модель занята/недоступна: не виснуть, уйти к внешним советникам (шлюз :8793, с очисткой личного)
+            gw = BACK().get('external')
+            if not gw or backend == 'external': raise
+            if tid: step(tid, 'fallback', f'{backend} недоступен ({type(e).__name__}), иду к внешним советникам', 'dispatcher')
+            r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': 'auto', 'messages': body['messages'], 'max_tokens': min(max_tokens, 1800), 'temperature': temp}, timeout=150)
+            r.raise_for_status(); j = r.json()
         if tid: sql('UPDATE tasks SET tokens=tokens+? WHERE id=?', (int(j.get('usage', {}).get('completion_tokens', 0)), tid))
         t = j['choices'][0]['message'].get('content') or ''
         return re.sub(r'<think>.*?</think>', '', t, flags=re.S).strip()
