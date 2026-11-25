@@ -130,6 +130,7 @@ def plan_drift(pp, plan_obj, text):
 def save_correction(said, understood, wanted):
     d = INTENTS(); d.setdefault('_corrections', []).append({'ts': int(time.time()), 'said': said, 'understood': understood, 'wanted': wanted})
     json.dump(d, open(ST + '/owner_intents.json', 'w'), ensure_ascii=False, indent=1)
+    lesson('owner', f'понял: {understood}', f'владелец сказал: {said}', f'надо: {wanted}', 'owner')
 
 # ---------- Planner (1 вызов основной модели) ----------
 def expand_intent(goal):
@@ -168,6 +169,75 @@ def plan(t):
 
 # ---------- исполнитель ----------
 
+# ---------- Доведение и самоулучшение: уроки (S03/Reflexion), карточка, инспектор ----------
+LESS = ST + '/lessons.jsonl'; PAIRS = ST + '/night_pairs.jsonl'; NUDGE = {}; STALL = {}; REPEAT = {'n': 0, 'lessons': 0}
+STALL_MIN = float(os.environ.get('NOX_STALL_MIN', '6'))
+def _norm(x): return re.sub(r'[^a-zа-яё0-9]+', ' ', x.lower())[:90].strip()
+def lesson(tid, what, why, rule, src='task'):
+    """Reflexion: что случилось -> почему -> правило. В S03-файл, в плейбук (бриф всем следующим), в пары для ночного обучения."""
+    try:
+        key = _norm(rule); seen = [json.loads(l) for l in open(LESS)] if os.path.exists(LESS) else []
+        dup = [x for x in seen if _norm(x['rule']) == key]
+        rec = {'ts': int(time.time()), 'task': tid, 'src': src, 'what': str(what)[:300], 'why': str(why)[:300], 'rule': str(rule)[:300], 'repeat': len(dup)}
+        open(LESS, 'a').write(json.dumps(rec, ensure_ascii=False) + '\n'); REPEAT['lessons'] += 1
+        if dup:
+            REPEAT['n'] += 1; step(tid, 'lesson', 'ПОВТОР ошибки (правило уже было): ' + rule[:120], 'inspector')
+            return
+        os.makedirs(PB, exist_ok=True)
+        open(PB + '/_lessons.yaml', 'a').write('- ' + rec['rule'].replace('\n', ' ') + '\n')
+        open(PAIRS, 'a').write(json.dumps({'prompt': rec['what'], 'response': rec['rule'], 'why': rec['why']}, ensure_ascii=False) + '\n')
+        step(tid, 'lesson', f'урок: {what[:80]} -> {rule[:100]}', 'inspector')
+    except Exception as e: print('lesson err', e, flush=True)
+def lessons_text(n=12):
+    try: return '\n'.join(open(PB + '/_lessons.yaml').read().strip().splitlines()[-n:])
+    except Exception: return ''
+STAGES = {'plan': 'планирование', 'passport': 'планирование', 'plan_check': 'планирование', 'brief': 'выполнение', 'exec': 'выполнение', 'review': 'проверка', 'coach': 'коррекция', 'trainer': 'коррекция', 'search': 'поиск решения', 'stopper': 'стопор', 'escalate': 'эскалация', 'lesson': 'урок', 'final': 'готово'}
+def card(tid):
+    r = sql('SELECT * FROM tasks WHERE id=?', (tid,), one=True)
+    if not r: return None
+    st = [dict(x) for x in sql('SELECT ts,kind,role,text FROM steps WHERE task=? ORDER BY id', (tid,))]
+    pl = jload(r['plan'] or '', None) or {}; subs = pl.get('subtasks', []) if isinstance(pl, dict) else []
+    acc = sum(1 for x in st if x['kind'] == 'review' and x['text'].startswith('ПРИНЯТО')); tot = max(len(subs), 1)
+    pct = 100 if r['status'] == 'done' else min(95, int(100 * acc / tot)) if subs else (5 if st else 0)
+    stop = next((x['text'][:200] for x in reversed(st) if x['kind'] in ('stopper', 'coach', 'escalate')), '')
+    if r['status'] in ('done', 'needs_owner'): stop = stop if r['status'] == 'needs_owner' else ''
+    last = st[-1] if st else {'kind': 'queued', 'text': '', 'ts': r['created']}
+    el = (time.time() - (r['started'] or r['created'])) if r['status'] != 'done' else ((r['finished'] or 0) - (r['started'] or 0))
+    eta = int(el / max(pct, 5) * (100 - pct)) if r['status'] == 'running' and pct else 0
+    col = 'Готово' if r['status'] == 'done' else 'Нужен ты' if r['status'] in ('needs_owner', 'failed') else 'В работе' if r['status'] == 'running' else 'Очередь'
+    return {'id': tid, 'title': r['title'], 'column': col, 'stage': STAGES.get(last['kind'], last['kind']), 'blocker': stop, 'doing': f"{last['kind']}: {last['text'][:140]}", 'pct': pct, 'eta_sec': eta, 'idle_sec': int(time.time() - last['ts'])}
+def stall_check():
+    """нет шагов N минут -> толчок коуча -> смена подхода -> эскалация диспетчеру (перезапуск/Нужен ты)"""
+    for r in sql('SELECT id FROM tasks WHERE status="running"'):
+        tid = r['id']; last = sql('SELECT MAX(ts) m FROM steps WHERE task=?', (tid,), one=True)['m'] or 0
+        idle = (time.time() - last) / 60; lvl = STALL.get(tid, 0)
+        if idle < STALL_MIN: STALL[tid] = 0; continue
+        want = 3 if idle >= 3 * STALL_MIN else 2 if idle >= 2 * STALL_MIN else 1
+        if want <= lvl: continue
+        STALL[tid] = want
+        if want == 1: NUDGE[tid] = 'нет прогресса: упрости шаг, выдай рабочий черновик'; step(tid, 'coach', f'нет прогресса {idle:.0f} мин: толчок', 'coach')
+        elif want == 2: NUDGE[tid] = 'смени подход: пересоздай с нуля, возьми готовое'; step(tid, 'coach', 'нет прогресса: смена подхода', 'coach')
+        else:
+            step(tid, 'escalate', f'нет прогресса {idle:.0f} мин: эскалация диспетчеру, перезапуск', 'dispatcher'); lesson(tid, f'задача зависла {idle:.0f} мин', 'LLM/шаг не отвечает', 'при простое шага >N мин: толчок, смена подхода, перезапуск; не ждать молча', 'stall')
+            RUNNING.pop(tid, None); sql('UPDATE tasks SET status="queued", restarts=restarts+1 WHERE id=?', (tid,)); STALL[tid] = 0
+def inspector():
+    """часовой инспектор: движение у активных, уроки записаны и применены, повторов нет"""
+    act = sql('SELECT id FROM tasks WHERE status IN ("running","queued")'); stuck = []
+    for r in act:
+        last = sql('SELECT MAX(ts) m FROM steps WHERE task=?', (r['id'],), one=True)['m'] or 0
+        if time.time() - last > 3 * STALL_MIN * 60: stuck.append(r['id'])
+    for tid in stuck: step(tid, 'escalate', 'инспектор: нет движения, перезапуск', 'inspector'); sql('UPDATE tasks SET status="queued", restarts=restarts+1 WHERE id=?', (tid,))
+    allt = sql('SELECT status FROM tasks'); n = max(len(allt), 1); les = [json.loads(l) for l in open(LESS)] if os.path.exists(LESS) else []
+    rep = sum(1 for x in les if x.get('repeat'))
+    out = {'ts': int(time.time()), 'active': len(act), 'stuck_restarted': stuck, 'completion_share': round(sum(x['status'] == 'done' for x in allt) / n, 2), 'lessons': len(les), 'repeat_errors': rep,
+           'repeat_rate': round(rep / max(len(les), 1), 2), 'lessons_in_brief': len(lessons_text(999).splitlines()), 'nudges': COACH['n']}
+    json.dump(out, open(ST + '/inspector.json', 'w'), ensure_ascii=False, indent=1); return out
+def _inspector_loop():
+    while True:
+        time.sleep(3600)
+        try: inspector()
+        except Exception as e: print('insp err', e, flush=True)
+
 # ---------- бриф Методолога (в промпт КАЖДОГО субисполнителя) + микро-коуч ----------
 PB = ST + '/playbooks'
 BASE_DEFAULT = ("БРИФ МЕТОДОЛОГА (обязателен):\n1) Сначала фундамент: анализ среды -> готовое из интернета -> оптимизация основы -> функции -> проверка и урок.\n"
@@ -185,6 +255,8 @@ def brief(t, sub):
     k = playbook_kind(t, sub)
     try: pbk = open(f'{PB}/{k}.yaml').read()
     except Exception: pbk = ''
+    cyc = '\nЦИКЛ ДОВЕДЕНИЯ: стопор (что мешает, причина) -> поиск решения (интернет/советники) -> загрузка готового -> внедрение -> замер и улучшение -> следующий стопор, пока нет артефакта. Не зависай молча.'
+    ls = lessons_text(); base = base + cyc + ('\nУРОКИ ПРОШЛЫХ ОШИБОК (не повторять):\n' + ls if ls else '')
     return (base.strip() + ('\nПЛЕЙБУК ' + k + ':\n' + pbk.strip() if pbk else ''))[:2500], k
 COACH = {'n': 0}
 def coach(t, sub, out, names, root, attempt):
@@ -219,6 +291,7 @@ def execute(t, sub, root, feedback='', hint=''):
         if os.path.isfile(fp) and not f.startswith('test_') and os.path.getsize(fp) < 6000: ctx += f'\n--- {f} ---\n' + open(fp).read()
     u = f'Задача: {sub["task"]}\nЦель: {t["goal"]}\n' + (f'Уже есть в песочнице:{ctx}\n' if ctx else '') + (f'ЗАМЕЧАНИЯ РЕВИЗОРА (исправь): {feedback}\n' if feedback else '') + (f'ПОДСКАЗКА ТРЕНЕРА: {hint}\n' if hint else '')
     u += '\nОтвет: каждый файл в формате\n### FILE: имя_файла\n<содержимое>\nБез пояснений вне файлов.'
+    if NUDGE.get(t['id']): u += 'ТОЛЧОК КОУЧА: ' + NUDGE.pop(t['id']) + '\n'
     bf, bk = brief(t, sub); step(t['id'], 'brief', f'бриф Методолога в промпте ({bk}), {len(bf)} симв.', sub['role'])
     out = llm(r.get('backend', 'main'), r['system'] + '\n\n' + bf, u, r.get('max_tokens', 1800), r.get('temp', 0.3), t['id'])
     names = write_files(root, out); sub['_out'] = out[:6000]
@@ -334,14 +407,18 @@ def run_task(tid):
                 except Exception as e: errs.append('exec: ' + str(e)[:200]); fb = errs[-1]; names = []; hint = trainer(t, attempt + 1, errs); continue
                 if not coached:
                     ch = coach(t, sub, sub.get('_out', ''), names, root, attempt)
-                    if ch: coached = True; COACH['n'] += 1; step(tid, 'coach', ch, 'coach'); hint = ch; fb = 'коуч: ' + ch; continue
+                    if ch: coached = True; COACH['n'] += 1; step(tid, 'coach', ch, 'coach'); lesson(tid, 'отклонение от брифа: ' + sub.get('task', '')[:80], 'коуч', ch.split(':', 1)[-1].strip(), 'coach'); hint = ch; fb = 'коуч: ' + ch; continue
                 ok, log = verify_det(t, sub, root, names)
                 v = judge(t, sub, root, names, ok, log); step(tid, 'review', f'{"ПРИНЯТО" if v["accept"] else "ВОЗВРАТ"} score={v.get("score")} {log[-200:]} | {v.get("reason", "")}', 'reviewer')
                 if v['accept']: verdict = v; break
+                step(tid, 'stopper', 'стопор: ' + (v.get('reason', '') + ' | ' + log)[-250:], 'reviewer'); lesson(tid, 'возврат ревизора: ' + sub['task'][:60], (v.get('reason', '') + ' ' + log)[-150:], 'до сдачи проверь: ' + (v.get('reason', '') or log)[:120], 'review')
+                if attempt >= 1 and advisors():
+                    try: hint = (hint + ' СОВЕТНИК: ' + ext_call('Как решить стопор: ' + (v.get('reason', '') + ' ' + log)[-300:] + ' Ответь 2 предложениями.')[:300]).strip(); step(tid, 'search', 'решение у советников: ' + hint[-150:], 'advisor')
+                    except Exception: pass
                 total_returns += 1; first_pass = 0; fb = (v.get('reason', '') + ' | ' + log)[-700:]; errs.append(fb)
                 hint = trainer(t, attempt + 1, errs)
             if not verdict:
-                escal = True; step(tid, 'escalate', f'{sub["id"]}: 2 возврата исчерпаны', 'reviewer')
+                escal = True; step(tid, 'escalate', f'{sub["id"]}: возвраты исчерпаны', 'reviewer'); lesson(tid, f'подзадача {sub["id"]} не принята', fb[:150], 'при 2 возвратах: смени подход и возьми готовое сразу', 'escalate')
                 out = ext_call(f'Задача: {sub["task"]}\nЗамечания: {fb}\nДай исправленный результат файлами в формате ### FILE: имя') if advisors() else None
                 if out and write_files(root, out):
                     ok, log = verify_det(t, sub, root, names); verdict = {'accept': ok, 'reason': 'внешний советник: ' + log[-100:]}
@@ -366,7 +443,7 @@ def lease_beat():
 def dispatcher():
     while True:
         try:
-            lease_beat()
+            lease_beat(); stall_check()
             if time.time() - (os.path.getmtime(ST + '/agents_guard.hb') if os.path.exists(ST + '/agents_guard.hb') else 0) > 60:   # взаимный перезапуск: диспетчер-1 поднимает стража
                 subprocess.Popen(['setsid', 'nohup', sys.executable, A + '/agents_guard.py'], stdin=subprocess.DEVNULL, stdout=open(A + '/guard.log', 'a'), stderr=subprocess.STDOUT, start_new_session=True)
                 open(ST + '/agents_guard.hb', 'a').close(); os.utime(ST + '/agents_guard.hb')
@@ -399,7 +476,7 @@ def metrics():
     hrs = max((time.time() - min([x['created'] for x in r] or [time.time()])) / 3600, 0.01)
     return {'total': len(r), 'done': len(done), 'needs_owner': sum(x['status'] == 'needs_owner' for x in r), 'failed': sum(x['status'] == 'failed' for x in r),
             'closed_with_artifact_per_hour': round(len(done) / hrs, 2), 'first_pass_share': round(sum(x['first_pass'] or 0 for x in done) / max(len(done), 1), 2),
-            'avg_seconds': round(sum((x['finished'] or 0) - (x['started'] or 0) for x in done) / max(len(done), 1), 1), 'restarts': sum(x['restarts'] or 0 for x in r), 'coach_nudges': COACH['n'], 'tokens': sum(x['tokens'] or 0 for x in r)}
+            'avg_seconds': round(sum((x['finished'] or 0) - (x['started'] or 0) for x in done) / max(len(done), 1), 1), 'restarts': sum(x['restarts'] or 0 for x in r), 'coach_nudges': COACH['n'], 'lessons': REPEAT['lessons'], 'repeat_errors': REPEAT['n'], 'tokens': sum(x['tokens'] or 0 for x in r)}
 
 # ---------- HTTP ----------
 app = FastAPI()
@@ -424,6 +501,18 @@ def get_task(tid: str):
     d['result'] = json.loads(d['result']) if d['result'] else None; d.pop('spec', None)
     d['steps'] = [dict(s) for s in sql('SELECT ts,kind,role,text FROM steps WHERE task=? ORDER BY id', (tid,))]
     return d
+@app.get('/task/{tid}/card')
+def get_card(tid: str): return card(tid) or JSONResponse({'error': 'нет'}, 404)
+@app.get('/board')
+def board():
+    cols = {'Нужен ты': [], 'В работе': [], 'Очередь': [], 'Готово': []}
+    for r in sql('SELECT id FROM tasks ORDER BY created DESC LIMIT 60'):
+        c = card(r['id']); cols[c['column']].append(c)
+    return cols
+@app.get('/inspect')
+def inspect_now(): return inspector()
+@app.get('/lessons')
+def get_lessons(): return [json.loads(l) for l in open(LESS)][-50:] if os.path.exists(LESS) else []
 @app.get('/tasks')
 def tasks(): return [dict(r) for r in sql('SELECT id,title,status,role,team,created,finished,returns,restarts FROM tasks ORDER BY created DESC LIMIT 100')]
 def make_team(preset, goal, title=None, project=''):
@@ -484,7 +573,7 @@ def golden_result():
 
 @app.on_event('startup')
 def _start():
-    threading.Thread(target=dispatcher, daemon=True).start()
+    threading.Thread(target=dispatcher, daemon=True).start(); threading.Thread(target=_inspector_loop, daemon=True).start()
     try:
         sys.path.insert(0, A); import nox_worms
         nox_worms.mount(app, lambda b, s, u, mt=600, tp=0.3, tid=None, to=300: llm(b, s, u, mt, tp, tid, to), chat_busy, lambda x, a=(): sql(x, a), new_task, lambda: len(RUNNING))
