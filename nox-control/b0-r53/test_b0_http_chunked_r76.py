@@ -86,5 +86,15 @@ class WriterTest(unittest.TestCase):
         self.assertEqual((s.closes,w.aborts,w.writes.count(FINAL)),(1,1,1))
 
 
+    def test_abort_callback_false_eof(self):
+        s,w=Source(),Wire("headers")
+        def bad_abort():
+            raise StopIteration
+        w.abort=bad_abort
+        with self.assertRaisesRegex(RuntimeError,"ABORT_FALSE_EOF"):
+            w.run(s)
+        self.assertEqual((s.reads,s.closes),(0,1))
+
+
 if __name__=="__main__":
     unittest.main()

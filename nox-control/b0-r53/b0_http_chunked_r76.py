@@ -29,7 +29,10 @@ def write_chunked_sse(upstream, *, start_headers, write, flush, abort_transport)
         emit(b"0\r\n\r\n")
     except BaseException as exc:
         try:
-            abort_transport()
+            try:
+                abort_transport()
+            except StopIteration as abort_exc:
+                raise RuntimeError("HOLD_PROXY_HTTP_ABORT_FALSE_EOF") from abort_exc
         finally:
             body.close()
         if isinstance(exc, StopIteration):
