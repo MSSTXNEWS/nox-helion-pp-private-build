@@ -11,7 +11,7 @@
     const url = '/svc/' + n + '/';
     const load = async () => {
       try {
-        const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status);
+        const r = await fetch(url, { cache: 'no-store', redirect: 'manual' }); if (r.type === 'opaqueredirect') { st.textContent = 'редирект, встраивание невозможно'; fr.hidden = true; er.hidden = false; er.textContent = 'Служба «' + n + '» отвечает перенаправлением на путь вне /svc/ (начальная настройка не завершена или нет режима strip). Откройте отдельно.'; return; } if (!r.ok) throw new Error('HTTP ' + r.status);
         const h = await r.text(), abs = [...h.matchAll(/(?:src|href)="(\/[^\/"][^"]*\.(?:js|css))"/g)].map((m) => m[1]).filter((p) => !p.startsWith('/svc/')).slice(0, 3);
         if (abs.length) { st.textContent = 'на связи, встраивание невозможно'; fr.hidden = true; er.hidden = false; er.textContent = 'Приложение запрашивает ассеты по абсолютным путям (' + abs[0] + ') без префикса /svc/: в рамке оно не загрузится. Откройте отдельно или включите переписывание путей в прокси.'; return; }
         st.textContent = 'на связи'; fr.hidden = false; fr.src = url + '?t=' + Date.now();
