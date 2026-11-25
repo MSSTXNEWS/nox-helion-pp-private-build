@@ -1,0 +1,12 @@
+S=/workspace/nox/web/site
+cd $S
+[ -f nox-chat-living.css ] && cp -p nox-chat-living.css nox-chat-living.css.bak_s1_$(date +%H%M%S)
+base64 -d > nox-chat-living.css <<'S1EOF'
+Lmx2LWJhcntkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDo4cHg7cGFkZGluZzo0cHggMTBweDttYXgtd2lkdGg6MTAwJX0KLmx2LW1lbTo6cGFydChiYXNlKXttaW4taGVpZ2h0OjQ0cHg7YmFja2dyb3VuZDpyZ2JhKDIwLDEyLDEwLC42KTtib3Jk
+ZXItY29sb3I6cmdiYSgyNTUsMTYwLDEyMCwuMjUpfQoubHYtc3R7Zm9udDoxMnB4LzEgdmFyKC0tbW9ubyxtb25vc3BhY2UpO2xldHRlci1zcGFjaW5nOi4wNmVtO2NvbG9yOnZhcigtLW11LCNjMmE5YTApO3BhZGRpbmc6MCA4cHg7d2hpdGUtc3BhY2U6bm93cmFw
+fQoubHYtc3Q6OmJlZm9yZXtjb250ZW50OiIiO2Rpc3BsYXk6aW5saW5lLWJsb2NrO3dpZHRoOjhweDtoZWlnaHQ6OHB4O2JvcmRlci1yYWRpdXM6NTAlO2JhY2tncm91bmQ6IzZlY2I4YTttYXJnaW4tcmlnaHQ6NnB4fQoubHYtc3RbZGF0YS1vaz0iMCJdOjpiZWZv
+cmV7YmFja2dyb3VuZDojZTVhMTNhfQoubHYtaGVhbHRoe21hcmdpbjo2cHggMTJweH0KLmx2LWNoaXBze2Rpc3BsYXk6bm9uZTtnYXA6OHB4O2ZsZXgtd3JhcDp3cmFwO21hcmdpbi10b3A6OHB4fQoubS5sdi1sYXN0IC5sdi1jaGlwc3tkaXNwbGF5OmZsZXh9Ci5s
+di1jaGlwcyBzbC1idXR0b246OnBhcnQoYmFzZSl7bWluLWhlaWdodDo0NHB4O21pbi13aWR0aDo0NHB4fQpAbWVkaWEgKG1heC13aWR0aDo3MDBweCl7Lmx2LXN0e2Rpc3BsYXk6bm9uZX19Ci5sdi1pbmNbaGlkZGVuXXtkaXNwbGF5Om5vbmUhaW1wb3J0YW50fQo=
+S1EOF
+echo OK nox-chat-living.css $(wc -c <nox-chat-living.css)
+cd /workspace/nox/web/site; sed -i "s#nox-chat-living.css?v=[0-9]*#nox-chat-living.css?v=$(date +%s)#" chat.html; echo w11 ok
