@@ -5,7 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 ROOT = '/workspace/nox'; ST = ROOT + '/state'
 ENV = ST + '/secrets/advisors.env'; CFG = ST + '/advisors_cfg.json'; USE = ST + '/advisors_usage.json'
 REG = ST + '/advisors_external.json'; PORT = int(os.environ.get('ADV_PORT', '8793'))
-DEFAULT_CFG = {"allow_external_images": False, "art_critic_chain": [], "external_enabled": True, "allow_personal": False, "personal_terms": [], "cache_ttl": 3600,
+DEFAULT_CFG = {"allow_external_images": False, "art_critic_chain": [], "external_enabled": True, "allow_personal": False, "personal_terms": [], "cache_ttl": 21600,
   "timeout": 60, "retries": 1, "auto_chain": [], "max_tokens_cap": 2048}
 # провайдер: base, ключ-ENV (None = без ключа), мин. интервал между запросами (с), RPM, дневная квота (оценка)
 PROV = {
@@ -13,6 +13,9 @@ PROV = {
  'llm7': dict(base='http://127.0.0.1:4210/llm7/v1', env='LLM7_API_KEY', gap=2.5, rpm=4, day=600, keyless=True, timeout=90),
  'horde': dict(base='http://127.0.0.1:4210/horde/v1', env='HORDE_API_KEY', gap=8, rpm=3, day=300, keyless=True, timeout=300),
  'pollinations': dict(base='http://127.0.0.1:4210/pollinations/v1', env='POLLINATIONS_API_KEY', gap=50, rpm=1, day=1000, keyless=True, timeout=90),
+ 'lcoder': dict(base='http://127.0.0.1:8811/v1', env='X_LOCAL', gap=0.3, rpm=40, day=10**6, keyless=True, timeout=120, local=True),
+ 'ltrainer': dict(base='http://127.0.0.1:8812/v1', env='X_LOCAL', gap=0.3, rpm=40, day=10**6, keyless=True, timeout=120, local=True),
+ 'ltlite': dict(base='http://127.0.0.1:8152/v1', env='X_LOCAL', gap=1.0, rpm=20, day=10**6, keyless=True, timeout=150, local=True),
  'openrouter': dict(base='https://openrouter.ai/api/v1', env='OPENROUTER_API_KEY', gap=3.5, rpm=18, day=50),
  'github': dict(base='https://models.github.ai/inference', env='GITHUB_MODELS_TOKEN', gap=5, rpm=10, day=150),
  'groq': dict(base='https://api.groq.com/openai/v1', env='GROQ_API_KEY', gap=2.2, rpm=28, day=1000),
@@ -30,8 +33,9 @@ STATIC = {
  'mistral': ['open-mistral-nemo', 'mistral-small-latest'],
  'pollinations': ['openai'],
  'llm7': ['mistral-Nemo-Instruct-2407', 'codestral-latest'],
- 'kilo': [], 'horde': [],
+ 'kilo': [], 'horde': [], 'lcoder': ['coder3b'], 'ltrainer': ['trainer17b'], 'ltlite': ['judge_tlite_cpu'],
 }
+ROT = [0]; PBAD = {}; FAILS = {}
 L = threading.Lock(); CACHE = {}; LAST = {}; WIN = {}; BAD = {}  # BAD: model-> until ts
 def jload(p, d):
     try: return json.load(open(p))
@@ -148,30 +152,50 @@ def chat(body):
         pref = want.split('/', 1)[0] if want.split('/', 1)[0] in PROV else None
         cand = [(a['provider'], a['model']) for a in reg if a.get('status') in ('ok','untested','need_key') and avail(a['provider']) and (not pref or a['provider'] == pref)]
         chain = cand or [tuple(x.split('/', 1)) for x in c['auto_chain']]
+    prio = int(body.get('x_nox_prio', 5)); local_only = bool(body.get('x_nox_local_only')) or prio < 0
+    rem = [x for x in chain if not PROV.get(x[0], {}).get('local')]
+    if len(rem) > 1:        # ротация по провайдерам: не садимся всё время на один kilo
+        byp = {}
+        for x in rem: byp.setdefault(x[0], []).append(x)
+        ROT[0] += 1; order = list(byp); order = order[ROT[0] % len(order):] + order[:ROT[0] % len(order)]; rem = []
+        while any(byp.values()):
+            for pv in order:
+                if byp[pv]: rem.append(byp[pv].pop(0))
+    locs = [(p, STATIC[p][0]) for p in PROV if PROV[p].get('local')]
+    chain = ([] if local_only else rem) + locs
     ck = hashlib.sha256(json.dumps([want, nb], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    if body.get('x_nox_only_cache'):
+        with L: h = CACHE.get(ck)
+        return (200, h[1]) if h else (404, {'error': 'cache miss'})
     with L:
         h = CACHE.get(ck)
     if h and time.time() - h[0] < c['cache_ttl']:
         r = dict(h[1]); r['nox'] = dict(r.get('nox', {}), cached=True); return 200, r
     tried = []
     for p, m in chain:
-        if p not in PROV or not avail(p) or BAD.get(p + '/' + m, 0) > time.time() or day_left(p) <= 0: continue
+        if p not in PROV or not avail(p) or BAD.get(p + '/' + m, 0) > time.time() or PBAD.get(p, 0) > time.time() or day_left(p) <= 0: continue
+        if prio < 5 and not PROV[p].get('local') and len([x for x in WIN.get(p, []) if time.time() - x < 60]) > PROV[p]['rpm'] * 0.5: continue    # низкий приоритет не съедает квоту
         for att in range(1 + int(c['retries'])):
-            if not wait_slot(p, 40): tried.append(p + '/' + m + ':busy'); break
+            if not wait_slot(p, 40 if not PROV[p].get('local') else 90): tried.append(p + '/' + m + ':busy'); break
             try:
                 r = call(p, m, nb, c['timeout'])
                 tx = clean_text(r)
                 if not tx: raise ValueError('empty')
-                count(p, True)
+                count(p, True); FAILS[p] = 0
                 out = {'id': 'nox-' + ck[:12], 'object': 'chat.completion', 'created': int(time.time()), 'model': p + '/' + m,
                        'choices': [{'index': 0, 'message': {'role': 'assistant', 'content': tx}, 'finish_reason': 'stop'}],
-                       'usage': r.get('usage', {}), 'nox': {'provider': p, 'redacted': nred, 'ms': int((time.time() - t0) * 1000), 'tried': tried, 'cached': False}}
+                       'usage': r.get('usage', {}), 'nox': {'provider': p, 'label': 'локальный советник' if PROV[p].get('local') else '', 'local': bool(PROV[p].get('local')), 'redacted': nred, 'ms': int((time.time() - t0) * 1000), 'tried': tried, 'cached': False}}
                 with L: CACHE[ck] = (time.time(), out)
                 return 200, out
             except urllib.error.HTTPError as e:
                 count(p, False); tried.append('%s/%s:%d' % (p, m, e.code))
                 if e.code in (401, 403, 404): BAD[p + '/' + m] = time.time() + 600; break
-                if e.code in (402, 429): BAD[p + '/' + m] = time.time() + 60; break
+                if e.code in (402, 429):
+                    try: ra = float(e.headers.get('Retry-After') or 0)
+                    except Exception: ra = 0
+                    FAILS[p] = FAILS.get(p, 0) + 1; back = max(ra, min(60 * 2 ** (FAILS[p] - 1), 900)); BAD[p + '/' + m] = time.time() + back
+                    if p == 'kilo' or ra: PBAD[p] = time.time() + min(back, 300)       # окно лимита на весь провайдер: не долбить остальные модели
+                    break
             except Exception as e:
                 count(p, False); tried.append('%s/%s:%s' % (p, m, type(e).__name__))
                 BAD[p + '/' + m] = time.time() + 120 if att else BAD.get(p + '/' + m, 0)
@@ -203,7 +227,7 @@ def _post_vision(model, msgs, c):
         if p not in PROV or not avail(p) or BAD.get(full, 0) > time.time(): continue
         if not wait_slot(p, 30): tried.append(full + ':busy'); continue
         try:
-            r = call(p, m, {'messages': msgs, 'max_tokens': 3500}, c['timeout']); tx = clean_text(r)
+            r = call(p, m, {'messages': msgs, 'max_tokens': 1200}, c['timeout']); tx = clean_text(r)
             if not tx: raise ValueError('empty')
             count(p, True); return full, tx, tried
         except Exception as e:
