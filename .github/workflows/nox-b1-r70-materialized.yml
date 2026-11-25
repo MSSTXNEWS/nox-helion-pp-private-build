@@ -1,0 +1,48 @@
+name: NOX B1 R70 materialized browser asset
+on:
+  pull_request:
+    branches: [b1/r69-r68-composed-20261124]
+    paths:
+      - 'nox-control/b1-r70/**'
+      - '.github/workflows/nox-b1-r70-materialized.yml'
+permissions:
+  contents: read
+jobs:
+  materialized:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install playwright==1.56.0
+      - run: python -m playwright install --with-deps chromium
+      - run: |
+          git rev-parse HEAD
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          from subprocess import check_output
+          donors = [
+              ('nox-control/b1-r61/b1_abort_safe_ui_adapter.js','9a9365258888e218990e0126bdc918605005777f'),
+              ('nox-control/b1-r68/b1_client_stream_reconnect_harness.js','653972f1fde98ac4646cc9f22fd503b4562f1039'),
+              ('nox-control/b1-r62/b1_sse_ui_binding.js','f3cf260b98838039f2daf1005795d5adf6049bc8')]
+          def pinned(path, sha):
+              data=Path(path).read_bytes()
+              assert check_output(['git','hash-object',path],text=True).strip()==sha,path
+              return data
+          asset=Path('nox-control/b1-r70/b1_browser_bundle.js').resolve()
+          data=pinned(str(asset),'8fbd18f35c96924f9330622a8148b273f6199f31')
+          assert data==b'\n;\n'.join(pinned(*p) for p in donors),'materialized byte mismatch'
+          print('B1_R70_ASSET_SHA256',hashlib.sha256(data).hexdigest(),len(data),flush=True)
+          test=Path('nox-control/b1-r69/test_b1_r69_composed.py').resolve()
+          src=pinned(str(test),'bcd74119169635ca2d16fe484b2b287a8b855b76').decode('utf-8')
+          old="    for src in (HERE.parent/'b1-r61'/'b1_abort_safe_ui_adapter.js',HERE.parent/'b1-r68'/'b1_client_stream_reconnect_harness.js',HERE.parent/'b1-r62'/'b1_sse_ui_binding.js'):\n        page.add_script_tag(path=str(src))"
+          assert src.count(old)==1,'unexpected fixture loader'
+          replacement='    page.add_script_tag(path='+repr(str(asset))+')'
+          exec(compile(src.replace(old,replacement,1),str(test),'exec'),{'__file__':str(test),'__name__':'__main__'})
+          print('B1_R70_MATERIALIZED_SOURCE_ONLY; NATIVE_ACCEPTED=false')
+          PY

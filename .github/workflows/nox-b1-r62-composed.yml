@@ -1,0 +1,28 @@
+name: NOX B1 R62 composed stream and UI
+on:
+  pull_request:
+    branches: [b1/r61-main-ui-candidate-20261124]
+    paths:
+      - 'nox-control/b1-r62/**'
+      - '.github/workflows/nox-b1-r62-composed.yml'
+permissions:
+  contents: read
+jobs:
+  composed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install playwright==1.56.0
+      - run: python -m playwright install --with-deps chromium
+      - run: |
+          git rev-parse HEAD
+          test "$(git hash-object nox-control/b1-r61/b1_abort_safe_ui_adapter.js)" = 9a9365258888e218990e0126bdc918605005777f
+          test "$(git hash-object nox-control/b1-r62/b1_sse_ui_binding.js)" = f3cf260b98838039f2daf1005795d5adf6049bc8
+          git hash-object nox-control/b1-r62/b1_client_stream_reconnect_harness.js
+          python nox-control/b1-r62/test_b1_r62_composed.py

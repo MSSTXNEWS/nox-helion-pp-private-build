@@ -1,0 +1,26 @@
+name: NOX B1 R68 read result snapshot
+on:
+  pull_request:
+    branches: [b1/r67-r66-release-input-20261124]
+    paths:
+      - 'nox-control/b1-r68/**'
+      - '.github/workflows/nox-b1-r68-read-result.yml'
+permissions:
+  contents: read
+jobs:
+  read-result:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          git rev-parse HEAD
+          test "$(git hash-object nox-control/b1-r65/b1_client_stream_reconnect_harness.js)" = dc40fa933db679b8529e8fce96b653c2d867beab
+          git hash-object nox-control/b1-r68/b1_client_stream_reconnect_harness.js nox-control/b1-r68/test_read_result.cjs
+          node --test nox-control/b1-r68/test_read_result.cjs
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false

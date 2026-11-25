@@ -1,0 +1,26 @@
+name: NOX B1 R63 reconnect witness
+on:
+  pull_request:
+    branches: [b1/r62-stream-ui-compose-20261124]
+    paths:
+      - 'nox-control/b1-r63/**'
+      - '.github/workflows/nox-b1-r63-witness.yml'
+permissions:
+  contents: read
+jobs:
+  witness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          git rev-parse HEAD
+          test "$(git hash-object nox-control/b1-r62/b1_client_stream_reconnect_harness.js)" = 4ba5f4d2e67ed28ffdc74b2877c5bb528ef9feda
+          git hash-object nox-control/b1-r63/b1_client_stream_reconnect_harness.js
+          git hash-object nox-control/b1-r63/test_witness_snapshot.cjs
+          node nox-control/b1-r63/test_witness_snapshot.cjs
