@@ -125,6 +125,43 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                     await collect(choice,sink)
                 self.assertEqual(sink,[])
 
+    async def test_model_sse_terminal_frame_is_atomic(self):
+        valid={'index':0,'id':'call_valid','type':'function',
+               'function':{'name':'calculate','arguments':'{}'}}
+        prefix=frame('previous valid text')
+        prior=frame(calls=[valid])
+        async def collect(parts,sink):
+            native_stream=Chunks(parts+[b'data: [DONE]\n\n'])
+            def respond(request):
+                return httpx.Response(200,stream=native_stream,request=request)
+            async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+                async for event in stream._model_events(
+                    client,'https://native.invalid/v1/chat/completions',
+                    {'messages':[{'role':'user','content':'hello'}]}):
+                    sink.append(event)
+
+        for parts,code in (
+            ([prefix,frame('must not escape','stop',[valid])],'HOLD_TOOL_CALL_TERMINAL'),
+            ([prefix,prior,frame('must not escape','stop')],'HOLD_TOOL_CALL_TERMINAL'),
+            ([prefix,frame('must not escape','tool_calls')],'HOLD_TOOL_CALL_TERMINAL'),
+            ([prefix,frame('must not escape','tool_calls',[{'index':0}])],'HOLD_TOOL_CALL_ID'),
+            ([prefix,frame('must not escape','tool_calls',
+                           [valid,dict(valid,index=1)])],'HOLD_TOOL_CALL_ID'),
+        ):
+            sink=[]
+            with self.subTest(code=code,parts=parts):
+                with self.assertRaisesRegex(stream.StreamFailure,code):
+                    await collect(parts,sink)
+                self.assertEqual(sink,[('token','previous valid text')])
+
+        sink=[]
+        await collect([prior,frame('valid terminal text','tool_calls')],sink)
+        self.assertEqual(sink[0],('token','valid terminal text'))
+        self.assertEqual(sink[-1],('message',{'role':'assistant',
+            'content':'valid terminal text','tool_calls':[
+                {'id':'call_valid','type':'function',
+                 'function':{'name':'calculate','arguments':'{}'}}]}))
+
     async def test_total_answer_limit_across_model_and_tool_cycles(self):
         # Count UTF-8 bytes, not codepoints: RU/ES + emoji can exceed RAM
         # even while Python len() stays below the numeric limit.

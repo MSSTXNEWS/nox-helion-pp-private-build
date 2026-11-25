@@ -473,6 +473,17 @@ async def _model_events(client, url, payload):
                     if (len(call['function']['arguments'].encode('utf-8','strict'))>100000 or
                             len(call['function']['name'].encode('utf-8','strict'))>200):
                         raise StreamFailure('HOLD_TOOL_CALL_SIZE')
+                # A terminal frame makes cumulative tool-call identity and
+                # finish reason knowable now, not at the later [DONE] marker.
+                if reason is not None:
+                    if bool(calls)!=(reason=='tool_calls'):
+                        raise StreamFailure('HOLD_TOOL_CALL_TERMINAL')
+                    if calls:
+                        if any(not call['id'] or not call['function']['name']
+                               for call in calls.values()):
+                            raise StreamFailure('HOLD_TOOL_CALL_ID')
+                        if len({call['id'] for call in calls.values()})!=len(calls):
+                            raise StreamFailure('HOLD_TOOL_CALL_ID')
                 # Publish text only after every field in this frame is valid.
                 # A malformed tool fragment must not leak its associated token.
                 if part:
