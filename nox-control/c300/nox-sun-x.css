@@ -21,3 +21,10 @@ html[data-nox-state=joy] #nxsun::before{inset:-90%;background:radial-gradient(ci
 @keyframes nxsun-talk{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.18);opacity:1}}
 @keyframes nxsun-joy{0%{opacity:0;transform:scale(.6)}30%{opacity:1}100%{opacity:0;transform:scale(1.3)}}
 @media (prefers-reduced-motion:reduce){html[data-nox-state] #nxsun *,html[data-nox-state] #nxsun::before,html[data-nox-state] #nxsun::after{animation:none!important}}
+/* пульт крепится к чёрному солнцу: кнопка-таблетка скрыта, панель открывается под солнцем по клику */
+body:has(#nxsun) #nxpult{left:50%;right:auto;top:74px;bottom:auto;transform:translateX(-50%)}
+body:has(#nxsun) #nxpult .nxpu-tog{display:none}
+body:has(#nxsun) #nxpult .nxpu-pan{position:static;display:none}
+body:has(#nxsun) #nxpult .nxpu-pan.on{display:block}
+body:has(#nxsun) #nxpult:hover .nxpu-pan:not(.on),body:has(#nxsun) #nxpult:focus-within .nxpu-pan:not(.on){display:none}
+@media (max-width:760px){body:has(#nxsun) #nxpult{left:10px;top:76px;transform:none}}

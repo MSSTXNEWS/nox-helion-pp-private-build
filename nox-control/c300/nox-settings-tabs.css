@@ -8,3 +8,5 @@
 .nxs-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;padding:6px 0}
 .nxs-live .note a{color:#d49a62}
 @media(max-width:600px){.nxs-tbl>div{grid-template-columns:10px 1fr;}.nxs-tbl span,.nxs-tbl em{grid-column:2}}
+/* карточки скрытых вкладок не проходили вход «из прозрачности» — показываем без анимации появления */
+section.setg,.nxwd{opacity:1!important;transform:none!important;visibility:visible!important}
