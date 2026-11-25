@@ -1,0 +1,1 @@
+cd /tmp; curl -s -o /dev/null -w "web:%{http_code}\n" http://localhost:8091/web/atlas.html; /workspace/nox/venv/bin/python /workspace/nox/tools/s1_shot.py atlas.html at8 vp=pc,mob 2>&1 | cut -c1-600 | tail -12
