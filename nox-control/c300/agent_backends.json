@@ -1,0 +1,37 @@
+{
+ "main": {
+  "url": "http://127.0.0.1:8104/v1",
+  "model": "x",
+  "slots": 2,
+  "yield_chat": true,
+  "note": "Qwen3.6-35B-A3B, np=3, один слот оставлен чату"
+ },
+ "judge_llm": {
+  "url": "http://127.0.0.1:8141/v1",
+  "model": "mgr_core",
+  "slots": 2,
+  "note": "Qwen3.5-9B CPU"
+ },
+ "tlite": {
+  "url": "http://127.0.0.1:8142/v1",
+  "model": "t_tlite",
+  "slots": 2,
+  "note": "T-lite 2.1 CPU"
+ },
+ "coder_lite": {
+  "url": "http://127.0.0.1:8811/v1",
+  "model": "coder3b",
+  "slots": 2,
+  "note": "Qwen2.5-Coder-3B CPU"
+ },
+ "trainer": {
+  "url": "http://127.0.0.1:8812/v1",
+  "model": "trainer17b",
+  "slots": 2,
+  "note": "Qwen3-1.7B CPU"
+ },
+ "external": {
+  "url": "http://127.0.0.1:8793/v1",
+  "note": "шлюз внешних советников (исполнитель V)"
+ }
+}

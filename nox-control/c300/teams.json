@@ -1,0 +1,94 @@
+{
+ "dev2": {
+  "desc": "2 программиста",
+  "members": [
+   {
+    "role": "coder",
+    "task": "Часть A:"
+   },
+   {
+    "role": "coder",
+    "task": "Часть B (тесты и граничные случаи):"
+   }
+  ]
+ },
+ "web": {
+  "desc": "2 дизайнера + редактор",
+  "members": [
+   {
+    "role": "designer",
+    "task": "Вариант 1:"
+   },
+   {
+    "role": "designer",
+    "task": "Вариант 2:"
+   },
+   {
+    "role": "editor",
+    "task": "Тексты для страницы:"
+   }
+  ]
+ },
+ "full10": {
+  "desc": "10 исполнителей",
+  "members": [
+   {
+    "role": "coder",
+    "task": "Исполнитель 1:"
+   },
+   {
+    "role": "coder",
+    "task": "Исполнитель 2:"
+   },
+   {
+    "role": "coder_lite",
+    "task": "Исполнитель 3:"
+   },
+   {
+    "role": "designer",
+    "task": "Исполнитель 4:"
+   },
+   {
+    "role": "designer",
+    "task": "Исполнитель 5:"
+   },
+   {
+    "role": "writer",
+    "task": "Исполнитель 6:"
+   },
+   {
+    "role": "researcher",
+    "task": "Исполнитель 7:"
+   },
+   {
+    "role": "researcher",
+    "task": "Исполнитель 8:"
+   },
+   {
+    "role": "editor",
+    "task": "Исполнитель 9:"
+   },
+   {
+    "role": "editor",
+    "task": "Исполнитель 10:"
+   }
+  ]
+ },
+ "research": {
+  "desc": "2 исследователя + редактор",
+  "members": [
+   {
+    "role": "researcher",
+    "task": "Ракурс 1:"
+   },
+   {
+    "role": "researcher",
+    "task": "Ракурс 2:"
+   },
+   {
+    "role": "editor",
+    "task": "Свести и вычитать:"
+   }
+  ]
+ }
+}
