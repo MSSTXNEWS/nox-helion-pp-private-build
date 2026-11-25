@@ -1,4 +1,4 @@
-.s4drop{position:relative;width:170px;height:170px;flex:none;border-radius:50%;overflow:hidden;background:radial-gradient(circle,rgba(224,101,74,.12),transparent 70%)}.s4drop canvas{width:100%!important;height:100%!important}
+.s4drop{position:relative;width:170px;height:170px;min-width:170px;flex:none;display:block;border-radius:50%;overflow:hidden;background:radial-gradient(circle,rgba(224,101,74,.12),transparent 70%)}.s4drop canvas{width:100%!important;height:100%!important}
 body.s4beat .s4drop,body.s4beat .nbx-orb{transform:scale(1.06)}.s4drop{transition:transform .17s ease-out}
 #nbxVizB{border-radius:14px;overflow:hidden;border:1px solid rgba(255,235,220,.12);box-shadow:inset 0 0 0 1px rgba(0,0,0,.4),0 0 30px rgba(176,44,32,.12);background:#0b0808}
 #nbxVizB iframe{filter:invert(.93) hue-rotate(180deg) saturate(.8) brightness(.92);background:#0b0808}
