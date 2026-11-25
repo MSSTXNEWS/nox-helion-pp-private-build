@@ -203,7 +203,7 @@ def _post_vision(model, msgs, c):
         if p not in PROV or not avail(p) or BAD.get(full, 0) > time.time(): continue
         if not wait_slot(p, 30): tried.append(full + ':busy'); continue
         try:
-            r = call(p, m, {'messages': msgs, 'max_tokens': 1200}, c['timeout']); tx = clean_text(r)
+            r = call(p, m, {'messages': msgs, 'max_tokens': 3500}, c['timeout']); tx = clean_text(r)
             if not tx: raise ValueError('empty')
             count(p, True); return full, tx, tried
         except Exception as e:
