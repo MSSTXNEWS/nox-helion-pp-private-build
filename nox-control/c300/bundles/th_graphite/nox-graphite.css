@@ -149,3 +149,14 @@ html[data-nox-theme=graphite] .nx-btn[aria-busy=true],html[data-nox-theme=graphi
 html[data-nox-theme=graphite] .nx-btn.icon:active,html[data-nox-theme=graphite] sl-icon-button:active{transform:scale(.96)}
 html[data-nox-theme=graphite] .nx-btn.primary:active{background:linear-gradient(180deg,#d8dce2,#c2c7ce)}
 @media (prefers-reduced-motion:reduce){html[data-nox-theme=graphite] .nx-btn,html[data-nox-theme=graphite] sl-button::part(base){transition:none}}
+
+/* ===== gr4: единый primary и спокойные бейджи ===== */
+html[data-nox-theme=graphite] sl-button[variant=primary]::part(base),html[data-nox-theme=graphite] sl-button.s6sl[variant=primary]::part(base){background:linear-gradient(180deg,#f4f5f7,#d2d6dc)!important;color:#111113!important;border-color:transparent!important;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 2px 8px rgba(0,0,0,.35)!important}
+html[data-nox-theme=graphite] sl-button[variant=primary]:not([disabled])::part(base):hover{background:linear-gradient(180deg,#fff,#dfe2e7)!important}
+html[data-nox-theme=graphite] sl-button[variant=primary] sl-icon,html[data-nox-theme=graphite] sl-button[variant=primary]::part(label){color:#111113!important}
+html[data-nox-theme=graphite] :is(.nxu-btn.primary,.btn-primary,button.primary,.k4-btn.pri,button.pri){background:linear-gradient(180deg,#f4f5f7,#d2d6dc)!important;color:#111113!important;border-color:transparent!important}
+html[data-nox-theme=graphite] sl-badge::part(base){background:rgba(255,255,255,.08);color:#d6d8dc;border:1px solid rgba(255,255,255,.14);font-weight:500}
+html[data-nox-theme=graphite] sl-badge[variant=warning]::part(base){background:rgba(224,184,120,.12);color:#e0b878;border-color:rgba(224,184,120,.32)}
+html[data-nox-theme=graphite] sl-badge[variant=success]::part(base){background:rgba(108,197,154,.12);color:#8dd6b3;border-color:rgba(108,197,154,.3)}
+html[data-nox-theme=graphite] sl-badge[variant=danger]::part(base){background:rgba(229,115,107,.12);color:#f0a8a2;border-color:rgba(229,115,107,.32)}
+html[data-nox-theme=graphite] sl-badge[variant=primary]::part(base){background:rgba(157,177,209,.14);color:#c2d0e8;border-color:rgba(157,177,209,.32)}

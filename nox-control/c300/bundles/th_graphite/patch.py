@@ -32,3 +32,6 @@ for fn in ('operators.html','live.html'):
       open(p_,'w',encoding='utf-8').write(t.replace('<head>','<head>\n<script src="./nox-theme.js"></script>',1)); print('theme-added',fn)
 # 6. Filerobot: ответ сервера переводов не массив (внешний i18n, офлайн/шлюз) не должен ронять редактор
 sub('vendor/nox-x/filerobot/filerobot-image-editor.min.js','Array.isArray(a.response)','(a.response||[]).forEach','(Array.isArray(a.response)?a.response:[]).forEach')
+
+# 7. Filerobot: переводы локально (fie-i18n.json), без внешнего i18n-fastly.ultrafast.io
+sub('vendor/nox-x/filerobot/filerobot-image-editor.min.js','vendor/nox-x/filerobot/fie-i18n.json','a.open("GET","https://i18n-fastly.ultrafast.io/api/export?grid=".concat(SC))','a.open("GET","./vendor/nox-x/filerobot/fie-i18n.json")')
