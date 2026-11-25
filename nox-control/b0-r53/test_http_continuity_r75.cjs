@@ -21,7 +21,7 @@ const events=[];
     async ack(){acks++}
   };
   const client=root.NOXB1StreamReconnect.createClient({
-    transport,host:{readCommitted:async()=>null},
+    transport,host:{readCommitted:async()=>null,verifyCanonicalText:async()=>{terminal++;return false}},
     bridge:{acceptTerminal:async()=>{terminal++;return null}},
     ui:{onDelta:async(s,t,signal,id)=>{
       events.push({exchange:s.exchange_id,id,t});
