@@ -18,3 +18,15 @@ sub('nox-ds.js','TH-GRAPHITE','  const reg = () => { if (window.echarts',
 # 3. команды палитры: смена темы
 sub('nox-actions.js','TH-GRAPHITE',"    ['world.helion',",
  "    ['theme.graphite', 'Тема: Графит', 'palette', 'тема графит серый', () => window.NOXtheme && NOXtheme.set('graphite')], /* TH-GRAPHITE */\n    ['theme.sun', 'Тема: Солнце (классика)', 'sun', 'тема солнце огонь классика', () => window.NOXtheme && NOXtheme.set('sun')],\n    ['world.helion',")
+
+# 4. иконки: резолвер библиотеки tabler берёт карту NOXiconUrl (Lucide в Графите), иначе прежний путь
+OLD="resolver: (n) => new URL(V + 'tabler-icons/icons/outline/' + n + '.svg', location.href).href"
+NEW="resolver: (n) => (window.NOXiconUrl ? NOXiconUrl(n, V, location.href) : new URL(V + 'tabler-icons/icons/outline/' + n + '.svg', location.href).href) /* TH-ICONS */"
+for fn in ('nox-nav.js','nox-wow.js'): sub(fn,'TH-ICONS',OLD,NEW)
+# 5. страницы без nox-theme.js: подключить (только <script> в head)
+for fn in ('operators.html','live.html'):
+  p_=os.path.join(S,fn)
+  if os.path.exists(p_):
+    t=open(p_,encoding='utf-8').read()
+    if 'nox-theme.js' not in t and '<head>' in t:
+      open(p_,'w',encoding='utf-8').write(t.replace('<head>','<head>\n<script src="./nox-theme.js"></script>',1)); print('theme-added',fn)

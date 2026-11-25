@@ -9,8 +9,8 @@
   window.NOXtheme = { get: function () { return d.getAttribute('data-nox-theme'); }, set: function (t) { try { localStorage.setItem('nox.ui.theme', t); } catch (e) { /* */ } location.reload(); } };
   if (th === 'graphite') {
     var s = document.currentScript, base = s && s.src ? s.src.replace(/[^\/]*$/, '') : './';
-    var fs = ['nox-graphite.css?v=th1', 'nox-graphite-map.css?v=th1'];
-    if (document.readyState === 'loading') fs.forEach(function (f) { document.write('<link rel="stylesheet" href="' + base + f + '" data-nox-graphite>'); });
+    var fs = ['nox-graphite.css?v=th2', 'nox-graphite-map.css?v=th2'];
+    if (document.readyState === 'loading') { fs.forEach(function (f) { document.write('<link rel="stylesheet" href="' + base + f + '" data-nox-graphite>'); }); document.write('<script src="' + base + 'nox-icons.js?v=th2"><\/script>'); }
     else fs.forEach(function (f) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = base + f; document.head.appendChild(l); });
   }
   var a = g('nox.ui.accent');

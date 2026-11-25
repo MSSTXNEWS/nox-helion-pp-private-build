@@ -9,7 +9,7 @@ html[data-nox-theme=graphite]{
   --gx-acc:#9db1d1;--gx-acc-rgb:157,177,209;--gx-acc-hi:#c2d0e8;
   --gx-ok:#6cc59a;--gx-warn:#e0b878;--gx-bad:#e5736b;
   --bg:#0e0f11;--tx:#edeef0;--mu:#b0b4ba;--mu2:#8b9098;
-  --cy:157,177,209!important;--am:224,184,120!important;--mg:229,115,107!important;
+  --cy:157,177,209!important;--am:224,184,120!important;--mg:165,155,205!important;
   --line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.15);
   --glass:rgba(24,25,27,.62);--glass2:rgba(33,34,37,.72);
   /* DS */
@@ -122,3 +122,11 @@ html[data-nox-theme=graphite] :is(.nxu-btn,.k4-btn,.btn,a.btn,.seg button,.ph bu
 html[data-nox-theme=graphite] :is(.k4-btn.pri,button.pri){background:linear-gradient(180deg,#f4f5f7,#d2d6dc)!important;color:#111113!important;border-color:transparent!important}
 html[data-nox-theme=graphite] :is(button,a,[role=button],[role=tab],input,select,textarea):focus-visible{outline:none;box-shadow:var(--nxb-ring)}
 html[data-nox-theme=graphite] :is(button,[role=button]):disabled{opacity:.45;cursor:not-allowed}
+
+/* ===== gr2: логотип NOX вместо аватара-кляксы, иконки Lucide ===== */
+html[data-nox-theme=graphite] .tg-av-orb{background:url("./nox-logo.svg") center/contain no-repeat!important;box-shadow:none!important;border-radius:50%}
+html[data-nox-theme=graphite] .tg-av-orb .tg-orb,html[data-nox-theme=graphite] .tg-av-orb canvas{opacity:0!important}
+html[data-nox-theme=graphite] .tg-av-orb::after{border-color:rgba(157,177,209,.45)!important}
+html[data-nox-theme=graphite] .nbx-orb i{border-color:rgba(157,177,209,.35)!important;box-shadow:none!important}
+html[data-nox-theme=graphite] sl-icon::part(svg){stroke-width:1.75}
+html[data-nox-theme=graphite] .nox-logo{display:inline-block;width:1.6em;height:1.6em;background:url("./nox-logo.svg") center/contain no-repeat}

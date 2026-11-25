@@ -102,9 +102,26 @@ for f in sorted(glob.glob(os.path.join(SITE,'*.css'))):
 for f in sorted(glob.glob(os.path.join(SITE,'*.html'))):
   t=open(f,encoding='utf-8',errors='ignore').read()
   for m in re.finditer(r'<style[^>]*>(.*?)</style>',t,flags=re.S): src.append((os.path.basename(f),m.group(1)))
+# JSSTR: CSS внутри строк JS (инжектируемые стили)
+STR=re.compile(r"'((?:[^'\\\n]|\\.){20,}?)'|`((?:[^`\\]|\\.){20,}?)`")
+VALID=re.compile(r'^[^{}]+\{[^{}]*\}$')
+for f in sorted(glob.glob(os.path.join(SITE,'*.js'))):
+  b=os.path.basename(f)
+  if '.bak' in b or b.startswith(('nox-icons','nox-theme')): continue
+  try: t=open(f,encoding='utf-8',errors='ignore').read()
+  except Exception: continue
+  if 'rgba(' not in t and '#' not in t: continue
+  for m in STR.finditer(t):
+    sv=(m.group(1) or m.group(2) or '')
+    if '{' not in sv or ':' not in sv or sv.count('{')!=sv.count('}'): continue
+    if not COL.search(sv) : continue
+    sv=sv.replace('\\n',' ').replace("\\'","'")
+    if re.search(r'function|=>|return |\bconst\b|\blet\b|\$\{',sv): continue
+    src.append((b,sv))
 seen=set(); res=['/* NOX TH: авто-карта «Графит» (th_gen_map.py). Тёплые цвета исходных стилей переведены в серо-голубую гамму. Не править руками. */']
 for b,c in src:
   r=process(c)
+  if b.endswith('.js'): r=''.join(x for x in re.findall(r'(?:@media[^{]*\{(?:[^{}]*\{[^{}]*\})+\}|[^{}]+\{[^{}]*\})',r) if x.startswith('@media') or VALID.match(x))
   if r and r not in seen: seen.add(r); res.append(r)
 open(OUT,'w',encoding='utf-8').write('\n'.join(res))
 print('map bytes',os.path.getsize(OUT),'sources',len(src))
