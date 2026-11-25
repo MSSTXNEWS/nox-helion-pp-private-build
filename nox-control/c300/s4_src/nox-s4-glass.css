@@ -1,0 +1,7 @@
+/* S4 · плотное тёмное стекло (замечание ревизора: сквозь панели не должно светить солнце) */
+body[data-page] main .card,body[data-page] main section.card,body[data-page] main [class*="nbx"][class*="sec"]{background:rgba(12,9,9,.84)!important;backdrop-filter:blur(26px) saturate(1.15);-webkit-backdrop-filter:blur(26px) saturate(1.15);border:1px solid rgba(255,235,220,.1)}
+.s4wb .card,.s4tl,.s4p,.s4gf,.s4dl,.s4cs{background:rgba(12,9,9,.84)!important}
+body[data-page="consc"] #nbxLive,body[data-page="train"] #nbxLive{display:none!important}
+.s4dlg{position:fixed;inset:0;z-index:2147483500;display:flex;align-items:center;justify-content:center;background:rgba(6,4,4,.6);backdrop-filter:blur(6px)}
+.s4dlg>div{max-width:420px;padding:22px;border-radius:18px;background:rgba(18,14,14,.92);border:1px solid rgba(255,255,255,.14);color:#efe6df;font:300 14px/1.5 inherit}
+.s4dlg button{min-height:44px;padding:0 18px;margin:12px 8px 0 0;border-radius:12px;border:1px solid rgba(255,225,200,.18);background:rgba(255,235,220,.08);color:inherit;cursor:pointer;font:inherit}.s4dlg button[data-y]{background:rgba(176,44,32,.6)}

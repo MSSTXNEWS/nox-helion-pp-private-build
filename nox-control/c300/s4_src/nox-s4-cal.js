@@ -22,7 +22,7 @@
       const days = new Set(), mark = () => { days.clear(); main.getEvents().forEach((e) => e.start && days.add(e.start.toISOString().slice(0, 10))); mini.render(); };
       const mini = new Base(side.querySelector('#s4mini'), { initialView: 'dayGridMonth', locale: 'ru', firstDay: 1, height: 'auto', fixedWeekCount: false, headerToolbar: { left: 'title', right: 'prev,next' },
         dateClick: (i) => main.gotoDate(i.date), dayCellDidMount: (a) => { const d = a.date.getFullYear() + '-' + String(a.date.getMonth() + 1).padStart(2, '0') + '-' + String(a.date.getDate()).padStart(2, '0'); if (days.has(d)) a.el.classList.add('s4has'); } });
-      mini.render(); main.on('eventsSet', mark); main.on('datesSet', (i) => { try { mini.gotoDate(main.getDate()); } catch (e) { /* */ } }); mark();
+      mini.render(); setTimeout(() => main.updateSize(), 150); addEventListener('resize', () => main.updateSize()); main.on('eventsSet', mark); main.on('datesSet', (i) => { try { mini.gotoDate(main.getDate()); } catch (e) { /* */ } }); mark();
     }, 250);
   });
 })();
