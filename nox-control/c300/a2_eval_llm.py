@@ -35,7 +35,7 @@ SHOTS = []
 for ph, v, sc in PP['shots']:
     SHOTS += [{'role': 'user', 'content': ph}, {'role': 'assistant', 'content': json.dumps({'verb': v, 'stop_current': sc}, ensure_ascii=False)}]
 def ask(model, phrase):
-    rq = urllib.request.Request('http://127.0.0.1:8793/v1/chat/completions', data=json.dumps({'model': model, 'messages': [{'role': 'system', 'content': SYS}] + SHOTS + [{'role': 'user', 'content': phrase}], 'max_tokens': 400, 'temperature': 0}).encode(), headers={'Content-Type': 'application/json'})
+    rq = urllib.request.Request('http://127.0.0.1:8793/v1/chat/completions', data=json.dumps({'model': model, 'messages': [{'role': 'system', 'content': SYS}] + SHOTS + [{'role': 'user', 'content': phrase}], 'max_tokens': 400, 'temperature': 0, 'x_nox_prio': 0}).encode(), headers={'Content-Type': 'application/json'})
     r = json.loads(urllib.request.urlopen(rq, timeout=100).read()); tx = r['choices'][0]['message']['content']
     m = re.search(r'\{.*?\}', tx, re.S); return json.loads(m.group(0)), r.get('nox', {}).get('provider')
 res = []; okv = oks = nv = ns = 0
