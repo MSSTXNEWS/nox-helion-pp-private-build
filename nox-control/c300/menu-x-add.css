@@ -1,0 +1,4 @@
+
+/* S3: шапка не обрезается слева на узких десктопах (7 иконок скрыты на всех страницах, плотнее подписи) */
+@media(max-width:1700px){.tb-l .tb-t{padding-left:9px;padding-right:9px;letter-spacing:.05em}.tb-l,.tb-r{gap:1px}}
+.tb-l{overflow:visible;flex-wrap:nowrap;min-width:0}
