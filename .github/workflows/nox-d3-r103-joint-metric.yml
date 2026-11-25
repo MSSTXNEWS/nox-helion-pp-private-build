@@ -1,0 +1,26 @@
+name: D3 R103 joint disposition metric source
+on:
+  pull_request:
+    paths: ['nox-control/d3-r103/**', '.github/workflows/nox-d3-r103-joint-metric.yml']
+permissions:
+  contents: read
+jobs:
+  source:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r103-disposition-metric-20261125'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: One exact joint source gate
+        run: |
+          set -euo pipefail
+          cd nox-control/d3-r103
+          test "$(git hash-object b4_r72_final_disposition_metric_fence.cjs)" = 3e31947d7b562d88db13c3c9e3a2a4405ef56ad7
+          test "$(git hash-object b4_r70_completion_metric_fence.cjs)" = f539ef04db3b8531b3b16f71eebf21f67c12cfcc
+          node test_joint_metric.cjs
