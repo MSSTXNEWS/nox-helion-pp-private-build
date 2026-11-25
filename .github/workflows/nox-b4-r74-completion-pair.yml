@@ -1,0 +1,23 @@
+name: NOX B4 R74 cross-turn metric receipt uniqueness
+on:
+  pull_request:
+    paths:
+      - 'nox-control/systemic_relay_20261118/b4_r74_completion_pair.cjs'
+      - 'nox-control/systemic_relay_20261118/test_b4_r74_completion_pair.cjs'
+      - '.github/workflows/nox-b4-r74-completion-pair.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exact donor and paired synthetic metric admission
+        run: |
+          test "$(git hash-object nox-control/systemic_relay_20261118/b4_r70_completion_metric_fence.cjs)" = f539ef04db3b8531b3b16f71eebf21f67c12cfcc
+          test "$(git hash-object nox-control/systemic_relay_20261118/b4_r72_final_disposition_metric_fence.cjs)" = 3e31947d7b562d88db13c3c9e3a2a4405ef56ad7
+          test "$(git hash-object nox-control/systemic_relay_20261118/b4_r73_pinned_disposition_metric_bridge.cjs)" = 0eb3f3e1ab9502c0014f9dd7b1b280f4e3fb04f8
+          node nox-control/systemic_relay_20261118/test_b4_r74_completion_pair.cjs
