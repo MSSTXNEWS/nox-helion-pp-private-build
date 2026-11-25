@@ -13,6 +13,8 @@ async def main():
         await pg.wait_for_selector(".nw-lead a, a.nw-lead",timeout=15000); t2=time.time()-t
         print("load",round(t1*1000),"lead",round(t2*1000),"requests",n[0])
         print("first buttons",await pg.evaluate("""()=>[...document.querySelectorAll('button,sl-button,[role=button]')].filter(e=>e.offsetParent).slice(0,4).map(e=>e.tagName+'#'+e.id+'.'+(e.className||'').toString().slice(0,30)+':'+(e.textContent||e.getAttribute('aria-label')||'').trim().slice(0,20)+':'+Math.round(e.getBoundingClientRect().top))"""))
+        print("slow",await pg.evaluate("""()=>performance.getEntriesByType('resource').sort((a,b)=>b.responseEnd-a.responseEnd).slice(0,10).map(r=>Math.round(r.responseEnd)+' '+Math.round(r.duration)+' '+Math.round(r.transferSize/1024)+'k '+r.name.slice(-55))"""))
+        print("big",await pg.evaluate("""()=>performance.getEntriesByType('resource').sort((a,b)=>b.transferSize-a.transferSize).slice(0,6).map(r=>Math.round(r.transferSize/1024)+'k '+Math.round(r.duration)+' '+r.name.slice(-50))"""))
         print("errs",errs); await b.close()
 asyncio.run(main())
 P
