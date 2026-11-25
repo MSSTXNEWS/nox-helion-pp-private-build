@@ -1,0 +1,1 @@
+cd /workspace/nox/web/site; ls vendor/wavesurfer.js/dist | grep -i "esm\|bundle\|\.min"; echo BEG; sed -n 52,62p nox-voice-x.js | cut -c1-700; grep -n "function speak\|const speak" nox-voice-x.js | head -3
