@@ -1,0 +1,42 @@
+name: B2 R108 ordered quality admission
+on:
+  pull_request:
+    paths: ['nox-control/b2-r108/**', '.github/workflows/nox-b2-r108-ordered-quality.yml']
+permissions:
+  contents: read
+jobs:
+  pair:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b2-r108-ordered-quality-admission-20261125'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Exact donors and new atomic callsite
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object nox-control/d3-r107/donor/b4_r74_completion_pair.cjs)" = ab7c5f1f82d0163af2fe60ada05b7f9cde3c42e9
+          test "$(git hash-object nox-control/d3-r107/donor/b4_r73_pinned_disposition_metric_bridge.cjs)" = 0eb3f3e1ab9502c0014f9dd7b1b280f4e3fb04f8
+          test "$(git hash-object nox-control/d3-r107/donor/b4_r72_final_disposition_metric_fence.cjs)" = 3e31947d7b562d88db13c3c9e3a2a4405ef56ad7
+          test "$(git hash-object nox-control/d3-r107/donor/b4_r70_completion_metric_fence.cjs)" = f539ef04db3b8531b3b16f71eebf21f67c12cfcc
+          test "$(git hash-object nox-control/d3-r105/joint_packet.py)" = 409f8fff9b7af087cc9477c9d303a6f1219954a3
+          test "$(git hash-object nox-control/d3-r105/test_actual_joint_callsite.py)" = ea398601c6d214bf767de052cd4aa92e31f9759f
+          test "$(git hash-object nox-control/d3-r107/atomic_pair.cjs)" = d55082b54a4f7d78a192e7c659e0a4e745254883
+          test "$(git hash-object nox-control/b2-r108/b4_r75_ordered_completion_pair.cjs)" = 3bbef66163dc365fbaea50b054d9744a25fbdf31
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$PWD/nox-control/b2-r108:$PWD/nox-control/d3-r107:$PWD/nox-control/d3-r105:$PWD/nox-control/b2-r104:$PWD/nox-control/d3-r101:$PWD/nox-control/d3-r97:$(python3 -c 'import json,os; print(":".join(os.path.abspath(p) for p in json.load(open("nox-control/d3-r93/release.json"))["python_paths"]))'):$tmp"
+          export D3_B4_MODULE="$PWD/nox-control/d3-r74/staging/b4/b4_existing_turn_pair.mjs"
+          export D3_R107_MODULE="$PWD/nox-control/d3-r107/atomic_pair.cjs"
+          export B2_R108_MODULE="$PWD/nox-control/b2-r108/atomic_ordered_quality.cjs"
+          cd "$tmp"
+          python3 -B -m unittest -v test_ordered_quality_callsite.AtomicPairCallsite.test_atomic_pair_callsite
