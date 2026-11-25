@@ -1,0 +1,28 @@
+name: A3 R114 extracted R88 consumer
+on:
+  pull_request:
+    paths: ['nox-control/a3-r114-stage/**', '.github/workflows/nox-a3-r114-extracted-browser.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  extracted-browser:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'a3-r113-r88-browser-selection-20261125'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Extract existing A6 and select R88
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/14989839885/zip" > "$RUNNER_TEMP/a6-exact.zip"
+          python3 -B -c 'import sys,pathlib;sys.path.insert(0,"nox-control/d3-r111");from stage_overlay import stage;stage(pathlib.Path(sys.argv[1]).read_bytes(),pathlib.Path(sys.argv[2]))' "$RUNNER_TEMP/a6-exact.zip" "$RUNNER_TEMP/r111-extracted"
+          node nox-control/a3-r114-stage/test_extracted_browser.cjs "$RUNNER_TEMP/r111-extracted"
