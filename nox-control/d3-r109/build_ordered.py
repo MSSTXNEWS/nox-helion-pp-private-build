@@ -60,7 +60,9 @@ def build(out):
 def verify(out,cfg):
     with tempfile.TemporaryDirectory() as tmp,zipfile.ZipFile(out) as z:
         root=pathlib.Path(tmp)
-        m=json.loads(z.read(MANIFEST))
+        manifest_bytes=z.read(MANIFEST)
+        m=json.loads(manifest_bytes)
+        (root/MANIFEST).write_bytes(manifest_bytes)
         assert all(m[k] is False for k in FLAGS)
         assert m["node_entrypoint"]==cfg["node_entrypoint"] and m["python_entrypoint"]==cfg["python_entrypoint"]
         names=[x["path"] for x in m["files"]]
