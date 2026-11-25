@@ -1624,6 +1624,11 @@ def install(app, B):
                         except Exception as e:
                             B.log("web_skeptic_unavailable " + type(e).__name__)
                             sk = {"ok": None, "reason": "SKEPTIC_UNAVAILABLE"}
+                        # STOP may arrive while the advisory model is awaited.
+                        # Its later verdict must not append text to a cancelled turn.
+                        stopped = stopped or rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch
+                        if stopped:
+                            sk = {"ok": None, "reason": "SKEPTIC_STOPPED"}
                         if sk.get("ok") is False:
                             # A secondary verifier cannot bypass the upstream 128 KiB
                             # UTF-8 budget or add malformed Unicode to the S03 turn.
@@ -1647,7 +1652,10 @@ def install(app, B):
                                 # delivered Unicode output, not just model deltas.
                                 n += 1
                                 yield fr(message={"role": "assistant", "content": add}, done=False)
-                        yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": ("сомнение: " + sk["doubt"]) if sk.get("ok") is False else "проверка пройдена" if sk.get("ok") else "проверка недоступна", "ok": sk.get("ok")})
+                        # An annotation yield can itself allow STOP to arrive.
+                        stopped = stopped or rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch
+                        if not stopped:
+                            yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "check", "text": ("сомнение: " + sk["doubt"]) if sk.get("ok") is False else "проверка пройдена" if sk.get("ok") else "проверка недоступна", "ok": sk.get("ok")})
                 # STOP may arrive while the post-generation skeptic awaits. Never
                 # persist a cancelled answer using the stale pre-skeptic flag.
                 stopped = stopped or rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch

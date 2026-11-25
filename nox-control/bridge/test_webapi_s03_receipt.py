@@ -2079,7 +2079,7 @@ class FactReceiptTest(unittest.TestCase):
             async def skeptic(self, *args, **kwargs):
                 signal = await stop(Request({"request_id": "stop-in-skeptic"}))
                 self.signal = signal
-                return {"ok": True}
+                return {"ok": False, "doubt": "Не должно появиться после STOP"}
 
         thinking = Thinking()
         async def scenario():
@@ -2097,6 +2097,10 @@ class FactReceiptTest(unittest.TestCase):
              mock.patch.dict(sys.modules, {"s03_memory": memory}):
             frames = asyncio.run(scenario())
         self.assertEqual(thinking.signal["status"], "STOPPING")
+        visible = "".join(f.get("message", {}).get("content", "") for f in frames)
+        self.assertEqual(visible, "Ответ")
+        self.assertEqual(frames[-1]["skeptic"], {"ok": None, "reason": "SKEPTIC_STOPPED"})
+        self.assertEqual(sum(f.get("nox_event", {}).get("step") == "check" for f in frames), 1)
         self.assertEqual(writes, [])
         self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
         self.assertEqual(frames[-1]["memory_write_receipt"]["status"], "HOLD")
