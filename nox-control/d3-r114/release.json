@@ -1,0 +1,25 @@
+{
+  "schema": "NOX_D3_R114_SOURCE_ONLY",
+  "parent": "68d7b919d6d67d6797ac26d1de37b01cdfec0c58",
+  "source_claim": 7154950009,
+  "a6_artifact": 14989839885,
+  "r111_manifest_blob": "fd6b4dd58465de1b7874c36f292acd98be7bb6c5",
+  "donors": {
+    "a3": {
+      "ref": "7f5affbbaf772c3d6605718fa752edc68953f5cc",
+      "blobs": [
+        "452e8b58b5b9c8559e72ea23f5f2447eb3a3ce71",
+        "a3c10fa7ee627d3f5d7517e55f36d8f68005b1e4",
+        "157270b88577fc0c4a92bf45f07f041ef89b1251"
+      ]
+    },
+    "b3": {
+      "ref": "67a33074725f0c189c15bf2726f79489a87feefa",
+      "blob": "a0c5fb3a7770af48d69e8e2382ce1c94d0137ba7"
+    }
+  },
+  "entrypoint": "joint_release.cjs",
+  "native_accepted": false,
+  "host_provider_bound": false,
+  "production_ready": false
+}

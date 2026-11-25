@@ -1,0 +1,106 @@
+name: B2 R75 staged RU ES functional review
+on:
+  pull_request:
+    branches: [d3-r74-combined-staging-20261124]
+    paths: ['.github/workflows/nox-b2-r75-staged-rues.yml']
+permissions:
+  contents: read
+jobs:
+  staged-functional:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b2-r75-staged-rues-functional-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Functional review against exact R74 staged bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$PWD/nox-control/d3-r74/staging"
+          test "$(git rev-parse HEAD:nox-control/d3-r74/staging/py/d3_r72_calibrated_descriptor_gate.py)" = 68b0ffc7e683afcdf2a8bc82b78740576dcd1bec
+          test "$(git rev-parse HEAD:nox-control/d3-r74/staging/py/b5_s03_verifier_r54.py)" = df94c535273dde1fd2609f555d1d615eacfda831
+          test "$(git rev-parse HEAD:nox-control/d3-r74/staging/b4/b4_existing_turn_pair.mjs)" = aad89a93467e638cfcac5af8a099d2127f4ae0fc
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress test_d3_r72_calibrated_descriptor_gate; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$stage/py:$tmp"
+          export D3_B4_MODULE="$stage/b4/b4_existing_turn_pair.mjs"
+          export B2_STAGE="$stage/py"
+          cd "$tmp"
+          python3 -B - <<'PY'
+          import copy, json, os, pathlib, sys, unittest
+          from test_d3_r70_owner_fd_review_ingress import DescriptorIntegration
+          from test_d3_r68_review_binding import raw, digest, actual_b4_pair
+          from test_b2_r69_strict_review_ingress import inputs, witness
+          from b2_r71_calibrated_rubric import build_preanswer_rubric
+          from d3_r72_calibrated_descriptor_gate import prepare_calibrated_review, verify_calibrated_reviews
+          from test_d3_r72_calibrated_descriptor_gate import CalibratedComposition
+
+          class StagedBilingual(unittest.TestCase):
+              def test_real_staged_imports(self):
+                  names = ("b2_existing_dialog_review", "b2_r69_strict_review_ingress",
+                           "b2_r71_calibrated_rubric", "b5_s03_verifier_r54",
+                           "d3_r68_review_binding", "d3_r70_owner_fd_review_ingress",
+                           "d3_r72_calibrated_descriptor_gate")
+                  for name in names:
+                      self.assertEqual(pathlib.Path(sys.modules[name].__file__).resolve().parent,
+                                       pathlib.Path(os.environ["B2_STAGE"]).resolve())
+              def test_ru_correction_es_uncertainty_and_disagreement(self):
+                  base = inputs()
+                  rows = copy.deepcopy(base["turn3_rows"])
+                  texts = ("Бюджет 120 евро, 3 покупки. Доставка неизвестна.",
+                           "Запомнил: 120 евро, 3 покупки, доставка неизвестна.",
+                           "Исправление: бюджет 90 евро. Сколько на покупку без доставки?",
+                           "30 евро на покупку без доставки.",
+                           "En español: ¿cuánto queda si el envío cuesta una cantidad desconocida?",
+                           "Quedan exactamente 90 euros después del envío.")
+                  for row, content in zip(rows, texts):
+                      row["content"] = content
+                  for seq, name in enumerate(("prior", "turn2", "turn3"), 1):
+                      base[name+"_rows"] = rows[:2*seq]
+                      base[name+"_witnesses"] = witness(rows[:2*seq], seq)
+                  plan = dict(dialog_id=base["dialog_id"], session_id=base["session_id"],
+                              planned_turns=[
+                                  dict(turn=2, prompt=texts[2], locale="ru", owner_reference="90 / 3 = 30 евро без доставки; исправление бюджета обязательно."),
+                                  dict(turn=3, prompt=texts[4], locale="es", owner_reference="El saldo después del envío es 90 menos su coste desconocido; no hay una cifra exacta.")])
+                  base["rubric_raw"], base["rubric_pin"] = build_preanswer_rubric(**plan)
+                  base["pair_raw"] = actual_b4_pair((texts[3], texts[5]))
+                  base["pair_pin"] = digest(base["pair_raw"])
+                  fixture = DescriptorIntegration()
+                  fixture.setUp()
+                  self.addCleanup(fixture.doCleanups)
+                  args = fixture.args(base)
+                  args.update(plan_raw=raw(plan), plan_pin=digest(raw(plan)))
+                  packet = prepare_calibrated_review(**args)["review_packet"]
+                  self.assertEqual([item["requested_locale"] for item in packet["evidence"]], ["ru","es"])
+                  self.assertEqual([item["answer"] for item in packet["evidence"]], [texts[3],texts[5]])
+                  self.assertEqual([item["history"][-1]["content"] for item in packet["evidence"]], [texts[2],texts[4]])
+                  self.assertEqual(packet["quality_grade"], "NOT_MEASURED")
+                  submissions = {}
+                  for side, second_verdict in (("a","incorrect"),("b","uncertain")):
+                      doc = copy.deepcopy(packet["submission"])
+                      doc["reviewer_id"] = "synthetic-reviewer-" + side
+                      doc["decisions"][0].update(verdict="correct", reason="Synthetic: corrected budget 90 / 3 = 30.")
+                      doc["decisions"][1].update(verdict=second_verdict, reason="Synthetic: unknown shipping precludes exact balance.")
+                      data = raw(doc)
+                      submissions.update({"submission_"+side+"_raw":data, "submission_"+side+"_pin":digest(data)})
+                  result = verify_calibrated_reviews(**args, **submissions)
+                  summary = result["review_summary"]
+                  self.assertEqual(summary["reported_incorrect"], [3])
+                  self.assertEqual(summary["reported_uncertain"], [3])
+                  self.assertEqual(summary["disagreements"], [3])
+                  self.assertFalse(summary["reviewer_identity_verified"])
+                  self.assertTrue(result["native_acceptance"].startswith("HOLD"))
+          suite = unittest.TestSuite()
+          for cls in (StagedBilingual, CalibratedComposition):
+              suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(cls))
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          if not result.wasSuccessful():
+              sys.exit(1)
+          print("B2_R75_STAGED_FUNCTIONAL_TESTS="+str(result.testsRun)+" NATIVE_ACCEPTED=false QUALITY_NOT_MEASURED=true")
+          PY

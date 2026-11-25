@@ -1,0 +1,85 @@
+{
+  "schema": "NOX_D3_R111_ADDITIVE_RELEASE_OVERLAY_V1",
+  "instructions_version": "0.0.6",
+  "claim": 7152900329,
+  "base": {
+    "artifact_id": 14989839885,
+    "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+    "outer_sha256": "f85cce8c84d63e8d506aa7faebe8d6b8f94d19e73bfd1c88e991a3f3cc4160f5",
+    "inner_sha256": "42d701736798b62d8f12c51d064fae5c2bc5a0e30cee3542082cb0c1083e199d",
+    "manifest_blob": "513f61f098574f438b8f9974cfd7ca5f7002428d",
+    "files": 83
+  },
+  "pins": [
+    {
+      "destination": "nox-control/d3-r111/inputs/b0.json",
+      "commit": "199fb767f75316aafc13d74bd1fcad67076d0d96",
+      "path": "nox-control/b0-r53/release_input_r79.json",
+      "blob": "b0ec743f17d94a1399b1fc3d8860d6d9a4d55d14"
+    },
+    {
+      "destination": "nox-control/d3-r111/inputs/b1.json",
+      "commit": "5b7baa85e21685ed4e07926ff118c9a0d7b592af",
+      "path": "nox-control/b1-r86/release_input_r87.json",
+      "blob": "3de1fd004cfd76ca17cf7a83dabd7036fb874a38"
+    },
+    {
+      "destination": "nox-control/d3-r111/inputs/b3.json",
+      "commit": "92e44fb52d95d228903780843c955763975c0272",
+      "path": "coordination/onepass/b3_r81_release_role_input.json",
+      "blob": "3f9e77a561c6bb970f5482322bd62a8c2dfe8b25"
+    },
+    {
+      "destination": "nox-control/d3-r111/wire/b0_http_chunked_r76.py",
+      "commit": "199fb767f75316aafc13d74bd1fcad67076d0d96",
+      "path": "nox-control/b0-r53/b0_http_chunked_r76.py",
+      "blob": "0f2698d56723bed3615b40ad8c4f98894189ed50"
+    },
+    {
+      "destination": "nox-control/d3-r111/wire/b0_proxy_stream_iter.py",
+      "commit": "199fb767f75316aafc13d74bd1fcad67076d0d96",
+      "path": "nox-control/b0-r53/b0_proxy_stream_iter.py",
+      "blob": "385906bc443effbea92f38b881c13d04d2103e28"
+    },
+    {
+      "destination": "nox-control/d3-r111/wire/b0_named_delta_encoder.py",
+      "commit": "199fb767f75316aafc13d74bd1fcad67076d0d96",
+      "path": "nox-control/b0-r53/b0_named_delta_encoder.py",
+      "blob": "c7d0c351b0239bb7155ffbc8c0362e919ee79cb1"
+    },
+    {
+      "destination": "nox-control/d3-r111/browser/b1_browser_bundle.js",
+      "commit": "1934f1295d2700a9d925d44ba1b605dfec264a59",
+      "path": "nox-control/b1-r86/b1_browser_bundle.js",
+      "blob": "bd2e154fd2c6007cb315d310e109de470f54f72f"
+    },
+    {
+      "destination": "nox-control/d3-r111/bridge/b3_r64_eof_candidate.js",
+      "commit": "3581b30134446f5e131a0510bb719a78dbf75c0d",
+      "path": "coordination/onepass/b3_r64_eof_candidate.js",
+      "blob": "66595eac01c562aff4daae68f5d146aaed64cbbe"
+    },
+    {
+      "destination": "nox-control/b2-r110/reported_review.cjs",
+      "commit": "4152fd2e573aae2a05e264a4e716d18d440a57d0",
+      "path": "nox-control/b2-r110/reported_review.cjs",
+      "blob": "ea2a46f68770ae613ae6645ddb48de52d37eb9b7"
+    }
+  ],
+  "roles": {
+    "wire": "R79 isolated; framing HOLD until independent owner selects exactly one",
+    "browser": "R86 once per realm; unbound",
+    "bridge": "R64 owner fetch interceptor; unbound; do not co-load automatically",
+    "review": "R110 offline diagnostics only",
+    "r100": "PENDING ineligible; independent FINALIZED after durable RESERVED_NOT_SENT CAS and DOM MATCHED / STOP CLEAR",
+    "historical": "R99/R81 retained unbound"
+  },
+  "production_ready": false,
+  "native_accepted": false,
+  "authentication_verified": false,
+  "host_provider_bound": false,
+  "pre_ack_observer_bound": false,
+  "ack_allowed": false,
+  "next_post_allowed": false,
+  "training_admitted": false
+}

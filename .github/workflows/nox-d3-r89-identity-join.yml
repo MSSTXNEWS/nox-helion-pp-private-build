@@ -1,0 +1,31 @@
+name: D3 R89 retained identity join
+on:
+  pull_request:
+    paths: ['nox-control/d3-r89/**', '.github/workflows/nox-d3-r89-identity-join.yml']
+permissions:
+  contents: read
+jobs:
+  join:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r89-s03-identity-join-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Actual retained S03 identity join
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$PWD/nox-control/d3-r74/staging/py"
+          own="$PWD/nox-control/d3-r83"
+          test "$(git hash-object "$stage/b5_s03_verifier_r54.py")" = df94c535273dde1fd2609f555d1d615eacfda831
+          test "$(git rev-parse HEAD:nox-control/d3-r78/b5_chain_guard.py)" = f321f4ad36867e434ba72db9264a88cf23a91fb8
+          test "$(git hash-object "$own/test_b5_chain_guard.py")" = 96fa30430ac2a9027eec0a2a0ef9b39c670c55dd
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          cp "$stage/b5_s03_verifier_r54.py" "$tmp/b5_r55_pinned.py"
+          export PYTHONPATH="$PWD/nox-control/d3-r89:$PWD/nox-control/d3-r78:$own:$tmp"
+          python3 -B -m unittest -v test_s03_identity_join.IdentityJoin
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false

@@ -1,0 +1,42 @@
+name: D3 R93 offline source release
+on:
+  pull_request:
+    paths: ['nox-control/d3-r93/**', '.github/workflows/nox-d3-r93-offline-release.yml']
+permissions:
+  contents: read
+jobs:
+  closure:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r93-r92-offline-donor-closure-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify tracked offline release and load real entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B - <<'PY'
+          import json, subprocess, pathlib, hashlib, sys, os
+          root = pathlib.Path.cwd()
+          m = json.loads((root/'nox-control/d3-r93/release.json').read_text())
+          assert m['source_only'] is True and m['native_accepted'] is False
+          for x in m['donors'] + [{'path':m['entrypoint'],'blob':m['entrypoint_blob']}]:
+              p = root/x['path']
+              b = p.read_bytes()
+              assert hashlib.sha1(('blob %d' % len(b)).encode()+bytes([0])+b).hexdigest() == x['blob'], x['path']
+              assert subprocess.check_output(['git','rev-parse','HEAD:'+x['path']],text=True).strip() == x['blob']
+          for p in reversed(m['python_paths']):
+              sys.path.insert(0,str(root/p))
+          os.environ['D3_B4_MODULE']=str(root/'nox-control/d3-r74/staging/b4/b4_existing_turn_pair.mjs')
+          import quality_physical_pair
+          assert callable(quality_physical_pair.review_physical_pair)
+          assert quality_physical_pair.NODE.is_file()
+          subprocess.run(['node','-e','if(typeof require(process.argv[1]).check !== "function") process.exit(1)',str(quality_physical_pair.NODE)],check=True)
+          print('OFFLINE_TRACKED_DONORS=7 ENTRYPOINT_IMPORT=PASS NODE_REQUIRE=PASS NATIVE_ACCEPTED=false')
+          PY

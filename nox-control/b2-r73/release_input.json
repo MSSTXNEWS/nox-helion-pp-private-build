@@ -1,0 +1,101 @@
+{
+  "schema": "nox.b2.release-input.v1",
+  "task_id": "B2-4A02-R72-IMMUTABLE-RELEASE-INPUT-20261124",
+  "claim": 7126026709,
+  "parent_task": "4A02",
+  "status": "SOURCE_REVIEWED_NATIVE_HOLD",
+  "native_accepted": false,
+  "admission": false,
+  "donors": [
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/d3_r72_calibrated_descriptor_gate.py",
+      "git_blob": "68b0ffc7e683afcdf2a8bc82b78740576dcd1bec"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/tests/test_d3_r72_calibrated_descriptor_gate.py",
+      "git_blob": "f58806360dd741d8c75208c1e743e3889b4218df"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": ".github/workflows/nox-d3-r72-calibrated-descriptor-gate.yml",
+      "git_blob": "5ad6e9b5bfd653d330263f82787f3dbce5e7ce93"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/b2_r71_calibrated_rubric.py",
+      "git_blob": "cfd339f5674e976bedf2284ebfbe38783305930a"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/d3_r70_owner_fd_review_ingress.py",
+      "git_blob": "79c55e54b8504bc75fbabec1f2dd387dbefb6cae"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/b2_r69_strict_review_ingress.py",
+      "git_blob": "acdf9ed60f6061f665c1061d8e6343cb22bb7156"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/d3_r68_review_binding.py",
+      "git_blob": "1fcf2b6414838943c32914d2d0b03eceaf06e5d3"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/b2_existing_dialog_review.py",
+      "git_blob": "c7e37a4a4629ca202ea1d54d80b310d8109996e8"
+    },
+    {
+      "commit": "4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3",
+      "path": "nox-control/b5_s03_verifier_r54.py",
+      "git_blob": "df94c535273dde1fd2609f555d1d615eacfda831"
+    },
+    {
+      "commit": "57f575437f7d98d46722188e133522ba722d796c",
+      "path": "nox-control/systemic_relay_20261118/b4_existing_turn_pair.mjs",
+      "git_blob": "aad89a93467e638cfcac5af8a099d2127f4ae0fc"
+    }
+  ],
+  "coordination_only": {
+    "b0": {
+      "commit": "ebf8c05b8220da0b871d26672d55237def36691e",
+      "path": "nox-control/b0-r53/release_input_r59.json",
+      "git_blob": "ebd042ad06b2dedc483eddcb66390d6c1e2bf87c"
+    },
+    "b1": {
+      "commit": "db583e9de03eeb4c99b75c34ef2b01accd4e2904",
+      "path": "nox-control/b1-r67/release_input.json",
+      "git_blob": "235dcb7f86b3aa88fa11068c586bce173b31eb75"
+    },
+    "b3": "5b50ed7166061a62b5e7b42802cefc8a45e99b5c",
+    "b4": "f00cc722022773edaed335ffb59fdbb0664189e2",
+    "b5": "7fad0f38fa299112a9a67781f427e21b23f3fb18",
+    "jointly_tested": false
+  },
+  "evidence": {
+    "r72_receipt": 7125130774,
+    "r72_run": 45348931344,
+    "r72_job": 138290229185,
+    "tests": 1,
+    "passed": 1,
+    "scope": "historical hosted synthetic exact composition; raw log independently re-read; no new test run",
+    "head_circleci": "owner-command-safety:success",
+    "combined_release": "NOT_ESTABLISHED",
+    "pin_readback": "12/12"
+  },
+  "handoff": {
+    "owner": "D3",
+    "task_id": "B2-4A02-RUES-STACKED-R58-R63-NATIVE-ADMISSION-S03-20261124",
+    "steps": [
+      "Reconcile mandatory full release CI and exact B0/B1/B3/B4/B5 donor composition. R72 tests older B4 pair module and canonical B5 verifier; do not substitute moving PR tips. Resolve cross-lane adapters explicitly.",
+      "Obtain exclusive native/shared claim, fresh preimage CAS, STOP/resource/rollback/immutable verifier and installed/served SHA256 before writes. READY is unverified; no enqueue or new native ID from this manifest.",
+      "Owner independently approves and pins plan bytes and R71 rubric bytes before either next POST. Reuse authentic first-turn evidence; exactly one new browser SSE POST per turn 2 and 3, no replay or retry of uncertain POST/ACK.",
+      "Supply six distinct owner-opened writer/readback descriptors ordered by turn, separate trusted SHA256 pins, same dialog/session, independent canonical four/six row IDs, and actual B4 browser pair bytes and pin.",
+      "Call prepare_calibrated_review(plan_raw=..., plan_pin=..., dialog_id=..., session_id=..., descriptor_sets=((writer1,reader1,wsha1,rsha1),(writer2,reader2,wsha2,rsha2),(writer3,reader3,wsha3,rsha3)), rubric_raw=..., rubric_pin=..., pair_raw=..., pair_pin=...).",
+      "Two independently authenticated reviewers submit originals, then verify_calibrated_reviews with same inputs plus submission_a_raw, submission_a_pin, submission_b_raw, submission_b_pin. No fixture-derived grades. Verify real integration receipt and S03/serving readback before ACCEPTED.",
+      "Training criterion separate, not admitted; no model/route/weights/workers changes."
+    ]
+  }
+}

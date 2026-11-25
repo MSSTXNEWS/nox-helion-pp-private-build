@@ -1,0 +1,75 @@
+name: D3 R115 extracted joint staging
+on:
+  pull_request:
+    paths: ['nox-control/d3-r115/**', '.github/workflows/nox-d3-r115.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  extracted-joint:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r113-joint-release-20261125'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - uses: actions/checkout@v4
+        with:
+          ref: bc467f15fcd5831a1432020900e2be1a39cd5aab
+          path: r115-donors/a6
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: a06aa8581229bcc98d49a6d1d0be36adbcfe748b
+          path: r115-donors/a3
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ff285d579a3594018d82eca375c36cda8ceba13b
+          path: r115-donors/b3
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 77ff340d4ba7342abee2445dc061b5b65458a569
+          path: r115-donors/b3snapshot
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: b96cc7a6cc42279ae59cf82b97e8fe8278115344
+          path: r115-donors/b4
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 03299290104690a5523037bf862c4a2d172fad22
+          path: r115-donors/b2
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: b11a6fa3f9b564632a2617cb60d61d740cdff28b
+          path: r115-donors/b0
+          persist-credentials: false
+      - name: Compose changed extracted release once
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/14989839885/zip" > "$RUNNER_TEMP/a6-exact.zip"
+          python3 -B nox-control/d3-r115/stage_joint.py "$RUNNER_TEMP/a6-exact.zip" "$RUNNER_TEMP/r115-extracted" "$PWD/r115-donors"
+
+          export R115_EXTRACTED="$RUNNER_TEMP/r115-extracted"
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$PWD/nox-control/d3-r115:$PWD/nox-control/d3-r114:$PWD/nox-control/d3-r113:$PWD/nox-control/b2-r110:$PWD/nox-control/a3-r109-r80:$PWD/nox-control/b2-r108:$PWD/nox-control/d3-r107:$PWD/nox-control/d3-r105:$PWD/nox-control/b2-r104:$PWD/nox-control/d3-r101:$PWD/nox-control/d3-r97:$(python3 -c 'import json,os; print(":".join(os.path.abspath(p) for p in json.load(open("nox-control/d3-r93/release.json"))["python_paths"]))'):$tmp"
+          export D3_B4_MODULE="$PWD/nox-control/d3-r74/staging/b4/b4_existing_turn_pair.mjs"
+          export B2_R108_MODULE="$PWD/nox-control/b2-r108/atomic_ordered_quality.cjs"
+
+          cd "$tmp"
+          python3 -B -m unittest -v test_framing_identity.RouteEvidence.test_route_evidence

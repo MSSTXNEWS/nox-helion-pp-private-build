@@ -1,0 +1,28 @@
+name: D3 R111 exact existing release overlay
+on:
+  pull_request:
+    paths: ['nox-control/d3-r111/**', '.github/workflows/nox-d3-r111.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  exact-existing-overlay:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r111-exact-release-overlay-20261125'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Reuse immutable A6 artifact and verify additive offline overlay
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/14989839885/zip" > "$RUNNER_TEMP/a6-exact.zip"
+          python3 -B nox-control/d3-r111/stage_overlay.py "$RUNNER_TEMP/a6-exact.zip" "$RUNNER_TEMP/r111-extracted"

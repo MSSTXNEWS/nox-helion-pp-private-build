@@ -1,0 +1,117 @@
+{
+  "schema": "NOX_B0_R79_WIRE_RELEASE_INPUT_V1",
+  "instructions_version": "0.0.6",
+  "task_id": "B0-PR445-7D0AB-CI-SUCCESS-OWNER-CAS-BROWSER-S03-20261119",
+  "operation": "B0-R79-R109-R80-WIRE-PIN-RECONCILIATION-20261125",
+  "claim": 7152557131,
+  "source_parent": "0dc3d9ef713722affcec8d4b4af99ec209d77bc0",
+  "base_release": {
+    "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+    "manifest": "nox-control/a6-r109-r80-release/release.json",
+    "blob": "513f61f098574f438b8f9974cfd7ca5f7002428d",
+    "artifact_id": 14989839885,
+    "inner_sha256": "42d701736798b62d8f12c51d064fae5c2bc5a0e30cee3542082cb0c1083e199d",
+    "receipt": 7152502336,
+    "ordered_manifest_blob": "ea0a1f646b9ec9357cdb279592edc76b2b24c9a7",
+    "frozen_consumer_blob": "8ccc4877f610e6ba32f0bf19efdd7105b6fdedf9"
+  },
+  "wire_candidates": [
+    {
+      "path": "nox-control/b0-r53/b0_http_chunked_r76.py",
+      "blob": "0f2698d56723bed3615b40ad8c4f98894189ed50",
+      "version": "R77",
+      "entrypoint": "b0_http_chunked_r76.write_chunked_sse",
+      "imports": [
+        "b0_proxy_stream_iter"
+      ],
+      "historical_path": null
+    },
+    {
+      "path": "nox-control/b0-r53/b0_proxy_stream_iter.py",
+      "blob": "385906bc443effbea92f38b881c13d04d2103e28",
+      "version": "R74",
+      "entrypoint": "b0_proxy_stream_iter.ProxyDeltaBody",
+      "imports": [
+        "b0_named_delta_encoder"
+      ],
+      "historical_path": "nox-control/d3-r99/wire/b0_proxy_stream_iter.py",
+      "historical_blob": "fa6ac58ac4af6797b1d61b0e3c1ee8950641ce79"
+    },
+    {
+      "path": "nox-control/b0-r53/b0_named_delta_encoder.py",
+      "blob": "c7d0c351b0239bb7155ffbc8c0362e919ee79cb1",
+      "version": "R67",
+      "entrypoint": "b0_named_delta_encoder.encode_native_delta",
+      "imports": [],
+      "historical_path": "nox-control/d3-r99/wire/b0_named_delta_encoder.py",
+      "historical_blob": "c7d0c351b0239bb7155ffbc8c0362e919ee79cb1"
+    }
+  ],
+  "import_layout": {
+    "isolated_namespace_required": true,
+    "keep_basenames": true,
+    "do_not_append_to_canonical_or_frozen_python_paths": true,
+    "do_not_activate_historical_r70_iterator": true
+  },
+  "framing": {
+    "selection": "HOLD_UNTIL_AUTHENTICATED_ROUTE_OWNER_BINDS_FRAMING",
+    "raw_http_1_1": {
+      "entrypoint": "b0_http_chunked_r76.write_chunked_sse",
+      "requires": [
+        "sole HTTP chunk-framing owner",
+        "actual underlying connection abort",
+        "exact write counts",
+        "no fallback or retry"
+      ]
+    },
+    "framework_managed": {
+      "entrypoint": "b0_proxy_stream_iter.ProxyDeltaBody",
+      "requires": [
+        "framework owns framing",
+        "serialized close on disconnect/finally",
+        "no manual HTTP chunk markers"
+      ]
+    },
+    "unknown": "HOLD",
+    "double_framing": "HOLD"
+  },
+  "browser_compatibility": {
+    "tested_commit": "672b9814d34ee4b589030d069d97d79e0845cf07",
+    "tested_blob": "7d713b9144698d0923877195962ae0795397c82a",
+    "receipt": 7151690659,
+    "job": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/45538144742/job/138949742266",
+    "scope": "R84 loopback only; B1 release owner selects current browser/observer; no R84 or historical R81 automatic promotion"
+  },
+  "r100": {
+    "receipt": 7147314487,
+    "consumer": "nox-control/a3-r109-r80/joint_frozen.cjs",
+    "rule": "Transport EOF, retained pre-ACK observations and partial text are not terminal authority. Independently authenticated terminal + exact frozen pair/digest + final DOM/STOP disposition after durable reservation CAS + separate S03 readbacks required; pending/aborted/STOP-rejected ineligible.",
+    "no_first_turn_replay": true
+  },
+  "verification": {
+    "kind": "static immutable Git blob and import/authority reconciliation",
+    "pins_matched": 9,
+    "predicates_matched": 7,
+    "new_functional_test": false,
+    "prior_r78_functional_receipt": 7151690659
+  },
+  "native_admission_required": [
+    "fresh exclusive owner",
+    "exact native preimages/CAS",
+    "STOP",
+    "resource admission",
+    "rollback",
+    "immutable verifier",
+    "installed and served SHA256",
+    "independent authenticated provider"
+  ],
+  "production_ready": false,
+  "native_accepted": false,
+  "host_provider_bound": false,
+  "authentication_verified": false,
+  "ack_allowed": false,
+  "next_post_allowed": false,
+  "training_admitted": false,
+  "quarantined_release": "R72",
+  "handoff": "D3/O1/A6: consume exact B0 candidate closure in existing R109/R80 release successor, keep old R99 wire historical, select current B1 donor under B1 claim, test integrated route only after independent admission; no duplicate package by B0."
+}
