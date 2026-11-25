@@ -1,10 +1,12 @@
 /* C: чистый режим чата (как ChatGPT/Claude): одна колонка чтения, «Режимы»/«Шаблоны»/«Система» по запросу, компактные иконки под ответом, ≤2 чипа над полем.
    Флаг: localStorage nox.clean=0 или ?classic=1 вернёт прежний вид. Все функции сохранены, просто открываются по кнопке. */
+/* K8meta: эмоция из meta.emo подсвечивает интерфейс; вызывается после каждого ответа */
+(function(){const w=window;let n=0;const t=setInterval(()=>{if(++n>80)clearInterval(t);if(!w.__rqRender||w.__rqRender.__k8)return;const o=w.__rqRender;const f=function(meta,nox){try{if(meta&&w.K8meta)w.K8meta.handle({meta:meta})}catch(e){}return o.apply(this,arguments)};f.__k8=1;w.__rqRender=f;clearInterval(t)},250);
+if(!document.querySelector('script[src*="nox-k8-meta"]')){const a=document.createElement('script');a.src='/web/nox-k8-meta.js';a.defer=true;(document.head||document.documentElement).appendChild(a)}})();
 (function () {
   'use strict';
   if (localStorage.getItem('nox.clean') === '0' || /[?&]classic=1/.test(location.search)) return;
   try { localStorage.setItem('nox.cx5.col', JSON.stringify({ cmd: 0, pr: 0, sys: 0 })); } catch (e) { }
-  document.documentElement.classList.add('cw-clean');
   const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => [...(r || document).querySelectorAll(s)];
   const t0 = setInterval(() => { if ($('#stage') && $('#composer') && $('.cx5-cmd') && $('.cx-right') && $('.cx5-pr')) { clearInterval(t0); init(); } }, 250);
   function init() {
@@ -23,7 +25,7 @@
     const fixTpl = () => $$('.cx5-list > *').forEach((el) => { if (!el.title) el.title = (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 400); });
     setInterval(fixTpl, 2000);
     /* кнопка STOP вне поля ввода скрыта: стоп только внутри кнопки отправки */
-    const hideStop = () => $$('button,a,sl-button').forEach((el) => { if (el.closest('#composer')) return; if ((el.textContent || '').trim().toUpperCase() === 'STOP') el.classList.add('cw-hide'); });
+    const hideStop = () => $$('button,a,sl-button').forEach((el) => { if (el.closest('#composer')) return; if ((el.textContent || '').trim().toUpperCase() === 'STOP') { el.classList.add('cw-hide'); el.style.setProperty('display','none','important'); } });
     setInterval(hideStop, 1500);
     /* иконки под ответом, чипы эмоции -> максимум 2 над полем ввода */
     function decorate() {
