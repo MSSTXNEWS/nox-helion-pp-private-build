@@ -1,0 +1,35 @@
+name: NOX B5 R74 role-closed staging
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b5-r74/**'
+      - '.github/workflows/nox-b5-r74-staging.yml'
+permissions:
+  contents: read
+jobs:
+  role-layout:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact evidence and physical bridge roles
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin 1c9f984247e557f9b2e393f9e2c24246f4f6a8de 4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3 5a061fb98bd6d9fcab4c64abbe6f65317fef3a47 3581b30134446f5e131a0510bb719a78dbf75c0d 241761e6b4fe58be3e38a5189666cfd4dde4905b
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          git show "241761e6b4fe58be3e38a5189666cfd4dde4905b:nox-control/b5-r73/stage_bundle.py" > "$tmp/stage_bundle.py"
+          test "$(git hash-object "$tmp/stage_bundle.py")" = c30c9d5bd44e70a0ec4cb176c002b45e5bbbe526
+          python3 -B "$tmp/stage_bundle.py" --repo "$PWD" --output "$tmp/r73.zip"
+          R73_EVIDENCE="$tmp/r73.zip" B5_REPO="$PWD" python3 -B nox-control/b5-r74/test_roles.py -v
+          mkdir -p "$RUNNER_TEMP/b5-r74"
+          python3 -B nox-control/b5-r74/stage_roles.py --repo "$PWD" --evidence "$tmp/r73.zip" --output "$RUNNER_TEMP/b5-r74/b5-r74-role-staging.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: b5-r74-role-closed-staging-source-only
+          path: ${{ runner.temp }}/b5-r74/b5-r74-role-staging.zip
+          if-no-files-found: error

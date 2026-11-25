@@ -1,0 +1,31 @@
+name: NOX B5 R76 independent S03 projection match
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b5-r76/**'
+      - '.github/workflows/nox-b5-r76-projection-match.yml'
+permissions:
+  contents: read
+jobs:
+  exact-retained-text:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Independent retained projection comparison, no native calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin 68d5dd4ea1022dc55d3ee7b54347d053fb936e19 1c9f984247e557f9b2e393f9e2c24246f4f6a8de 4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          load() { git show "$1:$2" > "$tmp/$3"; test "$(git hash-object "$tmp/$3")" = "$4"; }
+          load 4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3 nox-control/b5_s03_verifier_r54.py b5_r55_pinned.py df94c535273dde1fd2609f555d1d615eacfda831
+          load 1c9f984247e557f9b2e393f9e2c24246f4f6a8de nox-control/b5-r63/b5_chain_guard.py b5_chain_guard.py f321f4ad36867e434ba72db9264a88cf23a91fb8
+          load 1c9f984247e557f9b2e393f9e2c24246f4f6a8de nox-control/b5-r65/b5_retained_ingress.py b5_retained_ingress.py 3e2a8693574608bb773eb7ed4140b574bc5b1efb
+          load 1c9f984247e557f9b2e393f9e2c24246f4f6a8de nox-control/b5-r63/test_b5_chain_guard.py test_b5_chain_guard.py 96fa30430ac2a9027eec0a2a0ef9b39c670c55dd
+          load 68d5dd4ea1022dc55d3ee7b54347d053fb936e19 nox-control/b5-r75/canonical_text.py canonical_text.py 8ce1165ca2e553c1e05379bb1774c09c059ca8e2
+          PYTHONPATH="$tmp" python3 -B nox-control/b5-r76/test_projection_match.py

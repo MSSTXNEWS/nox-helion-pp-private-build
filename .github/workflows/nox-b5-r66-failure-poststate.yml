@@ -1,0 +1,30 @@
+name: NOX B5 R66 failed attempt S03 poststate
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b5-r66/**'
+      - '.github/workflows/nox-b5-r66-failure-poststate.yml'
+permissions:
+  contents: read
+jobs:
+  failure-poststate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exact retained prefix and failed attempt regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref=4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3
+          git fetch --no-tags --depth=1 origin "$ref"
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          git show "$ref:nox-control/b5_s03_verifier_r54.py" > "$tmp/b5_r55_pinned.py"
+          test "$(git hash-object "$tmp/b5_r55_pinned.py")" = df94c535273dde1fd2609f555d1d615eacfda831
+          test "$(git hash-object nox-control/b5-r63/b5_chain_guard.py)" = f321f4ad36867e434ba72db9264a88cf23a91fb8
+          test "$(git hash-object nox-control/b5-r63/test_b5_chain_guard.py)" = 96fa30430ac2a9027eec0a2a0ef9b39c670c55dd
+          cp nox-control/b5-r63/*.py nox-control/b5-r66/*.py "$tmp/"
+          cd "$tmp"
+          python -m unittest -v test_b5_failed_poststate
+          echo B5_NATIVE_ACCEPTED=false

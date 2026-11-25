@@ -1,0 +1,44 @@
+name: NOX B5 R71 terminal canonical bridge
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b5-r71/**'
+      - '.github/workflows/nox-b5-r71-terminal-bridge.yml'
+permissions:
+  contents: read
+jobs:
+  terminal-bridge:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Actual retained descriptors to R70 Node linkage
+        shell: bash
+        run: |
+          set -euo pipefail
+          own="$PWD"
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          r55=4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3
+          r70=829eddf2fe284f4b45cd357b43f565c25d49490f
+          git fetch --no-tags --depth=1 origin "$r55" "$r70"
+          git show "$r55:nox-control/b5_s03_verifier_r54.py" > "$tmp/b5_r55_pinned.py"
+          for f in b3_r70_s03_terminal_identity b3_r69_exchange_scope_binding b3_r68_route_binding; do
+            git show "$r70:coordination/onepass/$f.cjs" > "$tmp/$f.cjs"
+          done
+          test "$(git hash-object "$tmp/b5_r55_pinned.py")" = df94c535273dde1fd2609f555d1d615eacfda831
+          test "$(git hash-object "$tmp/b3_r70_s03_terminal_identity.cjs")" = ced1789a8ab19b625888489bf97faa79e07c7e1b
+          test "$(git hash-object "$tmp/b3_r69_exchange_scope_binding.cjs")" = 18b3be8fc4264b32d51a57ad4db367b3ba786d41
+          test "$(git hash-object "$tmp/b3_r68_route_binding.cjs")" = 6d0fef57783346fe33d59ca39a625015514ae168
+          test "$(git hash-object nox-control/b5-r63/b5_chain_guard.py)" = f321f4ad36867e434ba72db9264a88cf23a91fb8
+          test "$(git hash-object nox-control/b5-r65/b5_retained_ingress.py)" = 3e2a8693574608bb773eb7ed4140b574bc5b1efb
+          test "$(git hash-object nox-control/b5-r63/test_b5_chain_guard.py)" = 96fa30430ac2a9027eec0a2a0ef9b39c670c55dd
+          export PYTHONPATH="$tmp:$own/nox-control/b5-r63:$own/nox-control/b5-r65:$own/nox-control/b5-r71"
+          export B3_R70="$tmp/b3_r70_s03_terminal_identity.cjs"
+          export B5_R71_NODE="$own/nox-control/b5-r71/check_terminal.cjs"
+          cd "$tmp"
+          python3 -B -m unittest -v test_terminal_bridge.TerminalBridge
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false

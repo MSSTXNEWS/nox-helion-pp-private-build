@@ -1,0 +1,131 @@
+{
+  "schema": "nox.b5.release-input.v1",
+  "task_id": "B5-RUES-R61-IMMUTABLE-RELEASE-INPUT-20261124",
+  "claim": 7126335056,
+  "source_status": "SOURCE_COMPOSITION_VERIFIED_NATIVE_HOLD",
+  "native_accepted": false,
+  "admission": false,
+  "donors": [
+    {
+      "commit": "4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3",
+      "path": "nox-control/b5_s03_verifier_r54.py",
+      "git_blob": "df94c535273dde1fd2609f555d1d615eacfda831",
+      "import_alias": "b5_r55_pinned.py",
+      "role": "runtime_donor"
+    },
+    {
+      "commit": "ea2926cd4c88868f731052c4f2fd649c7f673c5a",
+      "path": "nox-control/b0-r53/b0_resume_bridge.py",
+      "git_blob": "a090f0bd0cf9a654b7aeee9c694338bd184fb92f",
+      "import_alias": "b0_resume_bridge.py",
+      "role": "runtime_donor"
+    },
+    {
+      "commit": "ea2926cd4c88868f731052c4f2fd649c7f673c5a",
+      "path": "nox-control/b0-r53/owner_chat_probe.py",
+      "git_blob": "87b9f3d2e3eb109327bd9f403b26b53d926ab803",
+      "import_alias": "owner_chat_probe.py",
+      "role": "runtime_donor_owner_selected_callsite_only"
+    },
+    {
+      "commit": "ea2926cd4c88868f731052c4f2fd649c7f673c5a",
+      "path": "nox-control/b0-r53/test_b0_resume_bridge.py",
+      "git_blob": "c0bae6c1086241c95fc29584ff4044717ea7d790",
+      "import_alias": "test_b0_resume_bridge.py",
+      "role": "test_only"
+    },
+    {
+      "commit": "7fad0f38fa299112a9a67781f427e21b23f3fb18",
+      "path": "nox-control/b5_browser_prefix_gate.py",
+      "git_blob": "6ff5e729ce7b431b25f28e66391ae81fa9c73f4a",
+      "import_alias": "b5_browser_prefix_gate.py",
+      "role": "legacy_fixture_only"
+    },
+    {
+      "commit": "7fad0f38fa299112a9a67781f427e21b23f3fb18",
+      "path": "nox-control/test_b5_b0_r56_composed.py",
+      "git_blob": "1faf4032c2ce1f077ee8125ac098870caf02d0ae",
+      "import_alias": "test_b5_b0_r56_composed.py",
+      "role": "test_only"
+    },
+    {
+      "commit": "7fad0f38fa299112a9a67781f427e21b23f3fb18",
+      "path": ".github/workflows/nox-b5-b0-r56-composed.yml",
+      "git_blob": "3865557cb7e7973f82eaa0dee23250f4f2aa8982",
+      "import_alias": null,
+      "role": "historical_ci_only"
+    }
+  ],
+  "coordination_only": [
+    {
+      "lane": "B0 R59",
+      "commit": "ebf8c05b8220da0b871d26672d55237def36691e",
+      "path": "nox-control/b0-r53/release_input_r59.json",
+      "git_blob": "ebd042ad06b2dedc483eddcb66390d6c1e2bf87c",
+      "jointly_tested": false
+    },
+    {
+      "lane": "B1 R67",
+      "commit": "db583e9de03eeb4c99b75c34ef2b01accd4e2904",
+      "path": "nox-control/b1-r67/release_input.json",
+      "git_blob": "235dcb7f86b3aa88fa11068c586bce173b31eb75",
+      "jointly_tested": false
+    },
+    {
+      "lane": "B2 R73",
+      "commit": "8a9a00164d7e282aad26fa686eb81d95ef7f47df",
+      "path": "nox-control/b2-r73/release_input.json",
+      "git_blob": "16de955cec7df2c3539b99e2a28ac38d1b714361",
+      "jointly_tested": false
+    },
+    {
+      "lane": "B3 R61",
+      "commit": "52cbadeb978c172b85f67578714797cab0924cf8",
+      "path": "coordination/onepass/b3_r61_release_input.json",
+      "git_blob": "4a67f5fc7c6099387f81e0ba217a79a93d179037",
+      "jointly_tested": false
+    },
+    {
+      "lane": "B4 R57",
+      "commit": "5ee308e7d09064b380cb57f8f197415402f36956",
+      "path": "nox-control/systemic_relay_20261118/b4_r57_release_input.json",
+      "git_blob": "743241364a66262ba92a9d5459d66e75a05298a8",
+      "jointly_tested": false
+    }
+  ],
+  "evidence": {
+    "r61_receipt": 7125175068,
+    "head": "7fad0f38fa299112a9a67781f427e21b23f3fb18",
+    "test_merge": "fa65d592af7b6e954322d1ee30239e34ea31c5ec",
+    "job": 138291304064,
+    "tests": 7,
+    "seconds": 0.057,
+    "combined_release": "NOT_ESTABLISHED",
+    "new_runtime_test": false,
+    "verified_pin_reads": 15
+  },
+  "integration": {
+    "entrypoint": "b0_resume_bridge.prepare_existing_resume_from_owner_get",
+    "s03_ingress": "b5_r55_pinned.load_pinned_s03_artifacts",
+    "terminal": "returned independent evidence.finish",
+    "legacy_not_authorized": [
+      "bind_existing_resume",
+      "bind_observed_browser_prefix",
+      "BrowserResumeEvidence direct fixture path"
+    ],
+    "sequence": [
+      "Read existing first-turn independent writer/readback using separately trusted pins; no model POST.",
+      "Prepare independent actual DOM prefix and counters; owner authenticated single GET and pinned history. HOLD blocks POST.",
+      "Only with separate native admission: one POST for turn2, stream terminal, independent S03 writer/readback pinned using prior rows/witnesses; finish once. Any HOLD means reconcile, never replay.",
+      "Repeat only for turn3 after verified turn2, with same dialog/session and four/six canonical message IDs; previous rows unchanged."
+    ],
+    "requirements": [
+      "Do not install fixture/test files or replace active shared owner probe wholesale.",
+      "Resolve import aliases in authorized integration staging; check all donor blobs; verify installed/served SHA256.",
+      "Full combined mandatory CI; exclusive shared/native claim; fresh preimage CAS, STOP, resources, rollback, immutable verifier.",
+      "Genuine browser SSE and independent canonical S03 receipts; no first-turn replay."
+    ],
+    "handoff_task_id": "B5-RUES-PR435-PR441-OWNER-CAS-S03-3F66C8CF",
+    "handoff_owner": "D3/A6/A3"
+  }
+}
