@@ -94,6 +94,7 @@ def in_quiet(now=None):
     if not q.get("enabled", True): return False
     now = now or datetime.datetime.now(); hm = now.strftime("%H:%M"); a, b = q["from"], q["to"]
     return (a <= hm or hm < b) if a > b else (a <= hm < b)
+LASTMETA = {}
 STATUS = {"text": "жду сообщений", "ts": time.time()}
 
 # ---------- ритуалы ----------
@@ -188,9 +189,10 @@ def journal(n=100):
 QUICK = {"sadness": ["Расскажу подробнее", "Нужна поддержка", "Отвлеки меня"], "anger": ["Выговориться", "Что делать?", "Давай остынем"], "fear": ["Что меня тревожит", "Разложим по шагам", "Успокой"],
          "joy": ["Расскажу подробнее", "Что дальше?"], "none": ["Подробнее", "Коротко", "Дальше"], "surprise": ["Расскажу", "Подробнее"]}
 def pre(b):
-    text = str(b.get("text") or ""); cid = str(b.get("cid") or "x"); inc = bool(b.get("incognito"))
+    text = str(b.get("text") or ""); cid = str(b.get("cid") or "x"); inc = bool(b.get("incognito")) or bool(modes().get(cid, {}).get("incognito"))
     r = command(text, cid)
-    if r is not None: return {"reply": r, "meta": {"sources": ["команда"], "quick": ["/память", "/помощь"]}}
+    if r is not None:
+        LASTMETA[cid] = {"sources": ["команда"], "quick": ["/память", "/помощь"]}; return {"reply": r, "meta": LASTMETA[cid]}
     ctx = []; src = []; e = {"label": "none"}
     md = modes().get(cid, {})
     if md.get("learn"): ctx.append("Режим обучения: объясняй по шагам, давай пример, в конце задай один проверочный вопрос."); src.append("режим")
@@ -205,7 +207,8 @@ def pre(b):
     if not inc and e["label"] != "none":
         open(ST + "/emo.jsonl", "a").write(json.dumps({"ts": time.time(), "cid": cid, "emo": e["label"], "score": e["score"]}) + "\n")
     STATUS.update(text="отвечаю на сообщение", ts=time.time())
-    return {"reply": None, "context": "\n".join(ctx), "emo": e["label"], "meta": {"sources": src, "emo": e["ru"], "quick": QUICK.get(e["label"], QUICK["none"]), "incognito": inc}}
+    mt = {"sources": src, "emo": e["ru"], "quick": QUICK.get(e["label"], QUICK["none"]), "incognito": inc}; LASTMETA[cid] = mt
+    return {"reply": None, "context": "\n".join(ctx), "emo": e["label"], "meta": mt}
 
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -224,6 +227,8 @@ class H(BaseHTTPRequestHandler):
         if p == "/emo": return self._j(emo((q.get("text") or [""])[0]))
         if p == "/status": return self._j({"ok": True, "status": STATUS["text"], "ts": STATUS["ts"], "quiet": in_quiet()})
         if p == "/quiet": return self._j(quiet())
+        if p == "/meta": return self._j({"ok": True, "meta": LASTMETA.get((q.get("cid") or [""])[0])})
+        if p == "/incognito": return self._j({"ok": True, "on": bool(modes().get((q.get("cid") or [""])[0], {}).get("incognito"))})
         self._j({"ok": False}, 404)
     def do_POST(self):
         p = urlparse(self.path).path.rstrip("/"); b = self._body()
@@ -241,6 +246,7 @@ class H(BaseHTTPRequestHandler):
                 if b.get("rating") not in (1, -1, 0): return self._j({"ok": False, "error": "rating 1|-1|0"}, 400)
                 open(ST + "/feedback.jsonl", "a", encoding="utf-8").write(json.dumps({"ts": time.time(), "rating": b["rating"], "cid": str(b.get("conversation_id", ""))[:80], "turn_id": b.get("turn_id")}, ensure_ascii=False) + "\n")
                 return self._j({"ok": True})
+            if p == "/incognito": set_mode(str(b.get("cid") or "x"), incognito=bool(b.get("on"))); return self._j({"ok": True})
             if p == "/ritual/run": return self._j(ritual(str(b.get("name")), force=bool(b.get("force"))))
             if p == "/quiet": q = quiet(); q.update({k: v for k, v in b.items() if k in ("from", "to", "daily_limit", "enabled")}); jw(ST + "/quiet.json", q); return self._j(q)
         except Exception as ex: return self._j({"ok": False, "error": str(ex)[:200]}, 500)

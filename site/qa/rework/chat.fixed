@@ -1,1 +1,2 @@
 N: движки памяти (SQLite FTS5, /запомни /память /забудь_всё /экспорт), эмоции текста (rubert-tiny2-cedr ONNX), ритуалы утро/вечер/ночь, тихие часы в chat_core за флагом living_engines; тест /api/turn ок, откат .bak_n_1
+N: советники и черновик: /svc/advisors/suggest, /pin, /pins, /draft (эвристика без загруженной модели); обход incognito/meta для /api/chat через /svc/nox-living; правило 11 в rules.md

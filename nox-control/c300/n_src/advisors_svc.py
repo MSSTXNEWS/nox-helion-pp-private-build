@@ -39,12 +39,19 @@ def jl(p, d):
     try: return json.load(open(p, encoding="utf-8"))
     except Exception: return d
 def pins(): return jl(PINS, [])
+def _walk(o, out, key=None):
+    if isinstance(o, dict):
+        if (o.get("id") or key) and any(k in o for k in ("title", "endpoint", "label")) and not any(isinstance(v, (dict, list)) and k in ("commands", "items") for k, v in o.items()):
+            out.append(dict(o, id=o.get("id") or key))
+        else:
+            for k, v in o.items(): _walk(v, out, k if isinstance(k, str) else None)
+    elif isinstance(o, list):
+        for v in o: _walk(v, out)
 def commands():
-    r = jl(REG, [])
-    if isinstance(r, dict): r = r.get("commands") or r.get("items") or list(r.values())
-    out = []
-    for c in r if isinstance(r, list) else []:
-        if isinstance(c, dict) and c.get("id"): out.append({"id": c["id"], "title": c.get("title") or c["id"], "confirm": bool(c.get("confirm")), "endpoint": c.get("endpoint"), "_k": toks(str(c.get("id")) + " " + str(c.get("title")) + " " + str(c.get("desc", "")))})
+    L = []; _walk(jl(REG, {}), L); out = []
+    for c in L:
+        t = c.get("title") or c.get("label") or c["id"]
+        out.append({"id": c["id"], "title": t, "confirm": bool(c.get("confirm")), "endpoint": c.get("endpoint"), "_k": toks(str(c["id"]) + " " + str(t) + " " + str(c.get("desc", "")))})
     return out
 def get(url, t=2):
     with urllib.request.urlopen(url, timeout=t) as r: return json.loads(r.read())
@@ -55,13 +62,10 @@ def pick_model():
             n = m.get("model") if isinstance(m, dict) else m
             if n: return str(n)
     except Exception: pass
-    try:
-        d = get(GLM + "/models", 2).get("data", [])
-        if d: return d[0]["id"]
-    except Exception: pass
     return None
 def llm(system, user, max_tokens=40, timeout=60):
     m = pick_model()
+    if not m: raise RuntimeError("нет загруженной модели")
     b = {"model": m, "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": max_tokens, "temperature": 0.4, "stream": False}
     rq = urllib.request.Request(GLM + "/chat/completions", data=json.dumps(b).encode(), headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(rq, timeout=timeout) as r: d = json.loads(r.read())
@@ -76,10 +80,24 @@ def draft_job(key, chat, page, last, typed):
         d = llm(sysm, u, 40, 90)[:240]
         with LOCK: CACHE[key] = (time.time(), d)
     except Exception: 
-        with LOCK: CACHE[key] = (time.time(), "")
+        with LOCK: CACHE[key] = (time.time(), heur(last, typed))
     finally: SEM.release()
+def heur(last, typed):
+    l = (last or "").strip().lower()
+    if typed: return ""
+    if not l: return ""
+    if re.search(r"(хотите|хочешь|давайте|сделать|продолж|запустить|подтверд).{0,80}\?\s*$", l): return "Да, давай."
+    if l.endswith("?"): return "Расскажи подробнее."
+    if re.search(r"готово|сделано|выполнено", l): return "Спасибо. Что дальше?"
+    return "Понятно. Продолжай."
 def draft(q):
     chat, page, last, typed = [(q.get(k) or [""])[0] for k in ("chat", "page", "last", "typed")]
+    typed = typed or (q.get("text") or [""])[0]
+    if not last.strip() and re.fullmatch(r"[A-Za-z0-9_-]{1,64}", chat or ""):
+        try:
+            ms = [m for m in jl("/workspace/nox/state/web_conv/%s.json" % chat, {}).get("messages", []) if m.get("role") == "assistant"]
+            last = str(ms[-1].get("content", ""))[:600] if ms else ""
+        except Exception: pass
     if not last.strip() and not typed.strip(): return {"draft": ""}
     key = hashlib.md5(("|".join([chat, page, last[-300:], typed])).encode()).hexdigest()
     with LOCK: c = CACHE.get(key)
@@ -90,7 +108,8 @@ def draft(q):
         with LOCK: c = CACHE.get(key)
         if c: return {"draft": c[1]}
         time.sleep(0.1)
-    return {"draft": "", "pending": True}
+    h = heur(last, typed)
+    return {"draft": h, "pending": True, "heuristic": bool(h)}
 def gen_prompts(project):
     try:
         t = llm("Придумай 3 коротких полезных заготовки запросов к ИИ-ассистенту для проекта. Верни по одной в строке, без нумерации.", "Проект: " + project[:80], 120, 120)
