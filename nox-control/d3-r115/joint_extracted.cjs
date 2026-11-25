@@ -32,14 +32,15 @@ function releasePins(){
 
 /* Detached framing readback is checked for consistency, never treated as authentication.
    A real host verifier must authenticate this receipt independently of the candidate. */
-const framingRoles={
- raw_http_1_1:{adapter:'wire/b0_http_chunked_r76.py',modules:{
-  'wire/b0_http_chunked_r76.py':expected['wire/b0_http_chunked_r76.py']}},
- framework_managed:{adapter:'wire/b0_framework_r83.py',modules:{
-  'wire/b0_framework_r83.py':'9f7ae9ddc837d4fb67a2584c647fdec85764e05f',
-  'wire/b0_framework_r80.py':'659876e07af733988d8499221180f66c9d90ca20',
-  'wire/b0_proxy_stream_iter.py':expected['wire/b0_proxy_stream_iter.py']}}
-};
+function framingRole(mode){
+ const bytes=readFileSync(resolve(root,'framing_source_closure_r86.json'));
+ if(gitBlob(bytes)!=='7a2d7e9b3c9abf1a5af2a296e55fb0dcce4c40cc')throw Error('closure pin');
+ const map=JSON.parse(new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes));
+ if(map.schema!=='NOX_B0_SELECTED_FRAMING_SOURCE_CLOSURE_V1'||
+    map.staging_root!=='nox-control/d3-r111'||map.digest_kind!=='git_blob_sha1_source_only')throw Error('closure schema');
+ if(mode!=='raw_http_1_1'&&mode!=='framework_managed')return null;
+ return map.framing_roles[mode];
+}
 const exactKeys=(o,keys)=>o!==null&&typeof o==='object'&&!Array.isArray(o)&&
  Object.keys(o).length===keys.length&&keys.every(k=>Object.hasOwn(o,k));
 function checkFramingIdentity(detached,d,p,packetPin,payloadPin){
@@ -50,7 +51,7 @@ function checkFramingIdentity(detached,d,p,packetPin,payloadPin){
   if(hash(bytes)!==detached.framing_receipt_sha256)return false;
   const f=JSON.parse(new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes));
   if(!Buffer.from(JSON.stringify(f),'utf8').equals(bytes))return false;
-  const role=framingRoles[d.framing];
+  const role=framingRole(d.framing);
   if(!role||!exactKeys(f,['schema','packet_sha256','payload_sha256','route_sha256',
     'owner_admission_receipt_sha256','framing','adapter_path','process','modules'])||
     f.schema!=='NOX_D3_SELECTED_FRAMING_READBACK_V1'||f.packet_sha256!==packetPin||

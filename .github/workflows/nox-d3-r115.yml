@@ -45,7 +45,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
-          ref: 0dd91d62ff8288523a03de2b27096bd0518e10ca
+          ref: b11a6fa3f9b564632a2617cb60d61d740cdff28b
           path: r115-donors/b0
           persist-credentials: false
       - name: Compose changed extracted release once

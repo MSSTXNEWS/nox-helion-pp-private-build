@@ -44,6 +44,8 @@ stage_r83(sys.argv[2])
 """,str(b0),str(target)],check=True,cwd=target)
     exact(wire/"b0_framework_r80.py","659876e07af733988d8499221180f66c9d90ca20")
     exact(wire/"b0_framework_r83.py","9f7ae9ddc837d4fb67a2584c647fdec85764e05f")
+    closure=exact(b0/"framing_source_closure_r86.json","7a2d7e9b3c9abf1a5af2a296e55fb0dcce4c40cc")
+    with (wire.parent/"framing_source_closure_r86.json").open("xb") as f: f.write(closure.read_bytes())
     failed=target/"nox-control/a6-r82-failed-selected"
     exact(failed/"pending_attempt.py","d32a5d6ca115fc4de9651a6cacd8ca8617ef3c9b")
     exact(failed/"diagnostic.py","c2b376d1451e681c76dc5cd212ffba133beeb42c")
@@ -58,7 +60,7 @@ stage_r83(sys.argv[2])
     with entry.open("xb") as f: f.write((ROOT/"nox-control/d3-r115/joint_extracted.cjs").read_bytes())
     after=snapshot(target)
     if any(after.get(k)!=v for k,v in before.items()): raise ValueError("HOLD_R115_BASE_MUTATION")
-    if len(after)-len(before)!=23: raise ValueError("HOLD_R115_STAGE_COUNT:"+str(len(after)-len(before)))
+    if len(after)-len(before)!=24: raise ValueError("HOLD_R115_STAGE_COUNT:"+str(len(after)-len(before)))
     # Only check the newly changed integration, not the previous R115 fixture.
     subprocess.run([sys.executable,"-I","-B","-c", """import pathlib,sys
 wire=pathlib.Path(sys.argv[1])

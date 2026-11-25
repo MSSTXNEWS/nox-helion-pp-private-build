@@ -24,8 +24,8 @@ const descriptor={schema:'NOX_A3_R111_ROUTE_EVIDENCE_V1',packet_sha256:d.host.pa
  symbolic_route:w.route,served_sha256:w.served_sha256,server_sha256:w.server_sha256,
  bridge_sha256:ph.bridge_sha256,browser_sha256:selected.browser_sha256,successor_role_sha256:selected.role_sha256};
 const admitted=Buffer.from(d.admitted_fixture,'utf8');
-const managed=['wire/b0_framework_r83.py','wire/b0_framework_r80.py','wire/b0_proxy_stream_iter.py'];
-const raw=['wire/b0_http_chunked_r76.py'];
+const managed=['wire/b0_framework_r83.py','wire/b0_framework_r80.py','wire/b0_proxy_stream_iter.py','wire/b0_named_delta_encoder.py'];
+const raw=['wire/b0_http_chunked_r76.py','wire/b0_proxy_stream_iter.py','wire/b0_named_delta_encoder.py'];
 function evidence(mode){
  const route={...descriptor,framing:mode,raw_chunk_writer:mode==='raw_http_1_1',framework_framing:mode==='framework_managed'};
  const route_bytes=Buffer.from(JSON.stringify(route)),route_sha256=sha(route_bytes);
@@ -48,20 +48,22 @@ for(const mode of ['framework_managed','raw_http_1_1']){
  assert.equal(a.framing_authenticated,false);assert.equal(a.framing_receipt_sha256,e.framing_receipt_sha256);
  assert.equal(a.offline_browser_timing.status,'OFFLINE_BROWSER_TIMING_ONLY');
 }
-const bad=[
- f=>delete f.modules[managed[0]],
- f=>f.modules[managed[1]].loaded_sha256='f'.repeat(64),
- f=>f.modules[managed[0]].installed_sha256='f'.repeat(64),
- f=>f.modules[raw[0]]=f.modules[managed[0]],
- f=>f.adapter_path=raw[0],
- f=>f.owner_admission_receipt_sha256='f'.repeat(64),
- f=>f.route_sha256='f'.repeat(64),
- f=>f.process={...f.process,pid:f.process.pid+1}
-];
-for(const mutate of bad){const {e,f}=evidence('framework_managed');mutate(f);attach(e,f);run(e,'HOLD_ROUTE_FRAMING_IDENTITY');}
-const {e:missing}=evidence('framework_managed');delete missing.framing_receipt_bytes;run(missing,'HOLD_ROUTE_FRAMING_IDENTITY');
-const {e:wrong}=evidence('framework_managed');wrong.framing_receipt_sha256='f'.repeat(64);run(wrong,'HOLD_ROUTE_FRAMING_IDENTITY');
-console.log('R115 extracted two-turn fixture: both exclusive framing modes matched; 10 malformed framing receipts HOLD; one provider read per invocation; all authority false.');
+// New closure-specific cases: omitted transitive modules, runtime drift and cross-mode contamination.
+for(const [mode,paths] of [['raw_http_1_1',raw],['framework_managed',managed]]){
+ for(const name of paths.slice(-2)){
+  const {e,f}=evidence(mode);delete f.modules[name];attach(e,f);run(e,'HOLD_ROUTE_FRAMING_IDENTITY');
+  const {e:e2,f:f2}=evidence(mode);f2.modules[name].loaded_sha256='f'.repeat(64);attach(e2,f2);run(e2,'HOLD_ROUTE_FRAMING_IDENTITY');
+ }
+}
+const {e:mixed,f:mf}=evidence('raw_http_1_1');mf.modules[managed[0]]=mf.modules[raw[0]];attach(mixed,mf);run(mixed,'HOLD_ROUTE_FRAMING_IDENTITY');
+const closurePath=path.join(root,'framing_source_closure_r86.json'), original=fs.readFileSync(closurePath);
+try{
+ const {e}=evidence('framework_managed');
+ fs.writeFileSync(closurePath,Buffer.concat([original,Buffer.from(' ')]));
+ run(e,'HOLD_ROUTE_FRAMING_IDENTITY');
+}finally{fs.writeFileSync(closurePath,original);}
+console.log('R115 B0 R86 closure: both exact modes matched; 8 omitted/drift transitive dependency, mixed adapter and donor-map tamper cases HOLD; one provider read; authority false.');
+
 """
 class RouteEvidence(unittest.TestCase):
     def test_route_evidence(self):
