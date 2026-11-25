@@ -1,3 +1,4 @@
+echo S4RUN:l_recon1
 cd /workspace/nox
 echo "== persona"; python3 - <<'P'
 import json;d=json.load(open('/workspace/nox/state/persona.json'));print(list(d.keys()))
