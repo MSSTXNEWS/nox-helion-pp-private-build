@@ -2,6 +2,7 @@ import asyncio,json,base64,sys,os
 from playwright.async_api import async_playwright
 nav=json.load(open('/workspace/nox/web/site/nav.json'))
 pages=['index']+[i['file'][:-5] for g in nav['groups'] for i in g['items']]
+if os.environ.get('PAGES'): pages=os.environ['PAGES'].split(',')
 W=[int(x) for x in os.environ.get('WIDTHS','390').split(',')]
 SHOT=os.environ.get('SHOTS','').split(',')
 JS="""()=>{const w=innerWidth,r={};const tab=document.querySelector('#nox-m-tab');r.tab=!!tab;
@@ -28,7 +29,7 @@ async def main():
                         except Exception as e:
                             if t==2: raise
                             await asyncio.sleep(3)
-                    await c.wait_for_timeout(3500)
+                    await c.wait_for_timeout(int(os.environ.get('WAIT','3500')))
                     r=await c.evaluate(JS)
                     bad=len(errs)+(1 if r['sw']>w else 0)+len(r['small'])+len(r['ovl'])+len(r['wide'])
                     print("OUT: %d %-14s js%d sw%d tab%d small%d font%d wide%d ovl%d %s"%(w,pg,len(errs),r['sw'],r['tab'],len(r['small']),r['font'],len(r['wide']),len(r['ovl']),"OK" if not bad and not r['font'] else "!!"))

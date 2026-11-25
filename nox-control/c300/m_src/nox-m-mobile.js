@@ -41,9 +41,9 @@
   const dialogs = () => { const b = $('#btnThreads'); if (b) b.click(); else sheet('<h3>Диалоги</h3><p>Список диалогов недоступен.</p>'); };
   const commands = () => {
     const it = []; const lab = (e) => (e.textContent || e.getAttribute('aria-label') || e.title || '').trim().replace(/\s+/g, ' ').slice(0, 40);
-    document.querySelectorAll('.lv-dd sl-menu-item').forEach((e) => it.push(['Память и режимы', lab(e), e]));
+    document.querySelectorAll('.lv-dd sl-menu-item').forEach((e) => it.push(['Память и режимы', lab(e), { click: () => { if (e.type === 'checkbox') e.checked = !e.checked; const m = e.closest('sl-menu'); if (m) m.dispatchEvent(new CustomEvent('sl-select', { bubbles: true, detail: { item: e } })); else e.click(); } }]));
     document.querySelectorAll('.lv-tag').forEach((e) => it.push(['Теги', lab(e), e]));
-    const inc = $('.lv-inc'); if (inc) it.push(['Память', 'Без памяти', inc]);
+    
     [['.nai-btn', 'NOX, …'], ['#nuiVoice', 'Голос'], ['#nuiFlow', 'Карта мышления'], ['#btnPalette', 'Палитра'], ['#btnSettings', 'Настройки чата'], ['#nxsun', 'Пульт NOX']].forEach((a) => { const e = $(a[0]); if (e) it.push(['Функции', a[1], e]); });
     proxyList('Команды', it);
   };
@@ -83,14 +83,14 @@
   const fix = () => {
     if (!mq.matches) return;
     const q = 'a,button,[role=button],[role=tab],input:not([type=hidden]),select,summary,label[for],sl-button,sl-icon-button,sl-tab,sl-checkbox,sl-switch';
-    document.querySelectorAll(q).forEach((e) => { if (e.closest('#nox-m-tab,.nox-m-sheet,#nox-m-ai,#nxdock')) return; const r = e.getBoundingClientRect(); if (!r.width || !r.height) return; if (r.width < 44 || r.height < 44) { e.classList.add('m-t44'); if (r.height < 44) e.style.setProperty('min-height', '44px', 'important'); if (r.width < 44) e.style.setProperty('min-width', '44px', 'important'); } });
+    document.querySelectorAll(q).forEach((e) => { if (e.closest('#nox-m-tab,.nox-m-sheet,#nox-m-ai,#nxdock')) return; const r = e.getBoundingClientRect(); if (!r.width || !r.height) return; if (r.width < 44 || r.height < 44) { e.classList.add('m-t44'); if (r.height < 44) { e.style.setProperty('min-height', '44px', 'important'); e.style.setProperty('max-height', 'none', 'important'); } if (r.width < 44) e.style.setProperty('min-width', '44px', 'important'); } });
     const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n; const seen = new Set();
     while ((n = w.nextNode())) { if (!n.nodeValue.trim()) continue; const e = n.parentElement; if (!e || seen.has(e) || e.closest('script,style,svg,canvas')) continue; seen.add(e); const fs = parseFloat(getComputedStyle(e).fontSize); if (fs >= 1 && fs < 14) { e.classList.add('m-f14'); e.style.setProperty('font-size', '14px', 'important'); } }
     const W = innerWidth; document.querySelectorAll('body *').forEach((e) => { if (e.closest('#nox-m-tab,.nox-m-sheet,#nxdock,.swiper,[class*=carousel],[class*=scroll],[class*=track]')) return; const r = e.getBoundingClientRect(); if (r.width > W + 1 && getComputedStyle(e).position !== 'fixed') e.classList.add('m-wrap'); });
   };
   window.__noxMfix = fix;
-  let tmr; const later = () => { clearTimeout(tmr); tmr = setTimeout(fix, 300); };
-  const start = () => { if (!document.body) return; if (mq.matches) build(); later(); new MutationObserver(later).observe(document.body, { childList: true, subtree: true }); [1000, 2000, 3500, 6000, 10000, 15000].forEach((t) => setTimeout(fix, t)); setInterval(fix, 5000); };
+  let tmr; const later = () => { clearTimeout(tmr); tmr = setTimeout(fix, 120); };
+  const start = () => { if (!document.body) return; if (mq.matches) build(); later(); new MutationObserver(later).observe(document.body, { childList: true, subtree: true }); [300, 700, 1200, 2000, 3000, 4500, 7000, 10000].forEach((t) => setTimeout(fix, t)); setInterval(fix, 3000); };
   mq.addEventListener && mq.addEventListener('change', () => { if (mq.matches) build(); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

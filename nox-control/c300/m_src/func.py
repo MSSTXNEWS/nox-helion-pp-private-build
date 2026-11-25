@@ -20,18 +20,13 @@ async def main():
         await pg.click('a[href="#cmd"]');await pg.wait_for_timeout(700)
         items=await pg.evaluate("[...document.querySelectorAll('.nox-m-sheet button')].map(b=>b.innerText.trim())")
         print('OUT: cmd items',items)
-        before=await val()
-        tag=[i for i in items if i.startswith('/')][:1]
-        if tag:
-            await pg.click('.nox-m-sheet button:has-text("%s")'%tag[0]);await pg.wait_for_timeout(900)
-            print('OUT: cmd tag',tag,'input before',repr(before),'after',repr(await val()),'sheetopen',await pg.evaluate("!!document.querySelector('.nox-m-sheet.open')"))
+        n0=len(reqs);m0=await pg.evaluate("document.querySelectorAll('#msgs > *').length")
+        await pg.click('.nox-m-sheet button:has-text("/коротко")');await pg.wait_for_timeout(2500)
+        print('OUT: cmd tag /коротко posts',reqs[n0:][:2],'msgs',m0,'->',await pg.evaluate("document.querySelectorAll('#msgs > *').length"))
         await pg.click('a[href="#cmd"]');await pg.wait_for_timeout(600)
-        mode=[i for i in items if i.startswith('Режим')][:1]
-        if mode:
-            st0=await pg.evaluate("document.querySelector('.lv-dd sl-button').innerText+'|'+[...document.querySelectorAll('.lv-tag')].map(t=>t.getAttribute('variant')+t.className).join(',')")
-            await pg.click('.nox-m-sheet button:has-text("%s")'%mode[0]);await pg.wait_for_timeout(900)
-            st1=await pg.evaluate("document.querySelector('.lv-dd sl-button').innerText+'|'+[...document.querySelectorAll('.lv-tag')].map(t=>t.getAttribute('variant')+t.className).join(',')")
-            print('OUT: cmd mode',mode,'state changed',st0!=st1,'|',st1[:80],'input',repr(await val()))
+        i0=await pg.evaluate("document.querySelector('.lv-inc').hidden")
+        await pg.click('.nox-m-sheet button:has-text("Без памяти (временный чат)")');await pg.wait_for_timeout(1200)
+        print('OUT: cmd no-memory inc hidden',i0,'->',await pg.evaluate("document.querySelector('.lv-inc').hidden"))
         # Заготовки
         await pg.click('a[href="#tpl"]');await pg.wait_for_timeout(700)
         it2=await pg.evaluate("[...document.querySelectorAll('.nox-m-sheet button')].map(b=>b.innerText.trim())")
