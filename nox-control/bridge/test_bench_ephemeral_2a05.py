@@ -6,9 +6,11 @@ import io
 import json
 import os
 import tempfile
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 import unittest
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from unittest import mock
 
 spec = importlib.util.spec_from_file_location("bench_2a05", Path(__file__).with_name("bench.py"))
@@ -54,7 +56,7 @@ class BoundedReadResponse:
         raise AssertionError("unbounded wire iterator must not be consumed")
 
 
-def run_sample(write=None, token=None):
+def run_sample(write=None, token=None, model="NOX"):
     text = "Ответ NOX 👍"
     digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
     receipts = {"status": "SKIPPED", "s03_write_returned": False, "s03_readback_verified": False}
@@ -69,7 +71,7 @@ def run_sample(write=None, token=None):
         common = {"request_id": rid, "stream_id": "a" * 32}
         a = {**common, "event_seq": 1, "message": {"content": text}, "done": False}
         b = {**common, "event_seq": 2, "message": {"content": ""}, "done": True,
-             "done_reason": "stop", "frames": 1, "digest": digest, "model": "NOX",
+             "done_reason": "stop", "frames": 1, "digest": digest, "model": model,
              "completion_receipt": {"status": "GENERATED", "upstream_done": True},
              "memory_history": {"status": "SKIPPED", "reason": "ephemeral"},
              "memory_write_receipt": receipts}
@@ -153,6 +155,87 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
         self.assertEqual(report["completed"], 0)
         self.assertFalse(report["native_acceptance"])
 
+    def test_local_authenticated_probe_does_not_follow_redirect(self):
+        seen = []
+        class RedirectHandler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+            def do_POST(self):
+                seen.append((self.command, self.path))
+                self.rfile.read(int(self.headers["Content-Length"]))
+                self.send_response(302)
+                self.send_header("Location", "/unexpected")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            def do_GET(self):
+                seen.append((self.command, self.path))
+                self.send_response(200)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+        with HTTPServer(("127.0.0.1", 0), RedirectHandler) as server:
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            worker.start()
+            try:
+                url = f"http://127.0.0.1:{server.server_port}/api/chat"
+                with mock.patch.object(bench, "URL", url):
+                    with self.assertRaises(HTTPError) as error:
+                        bench._sample(0, auth_token="fixture-not-a-real-token")
+                    self.assertEqual(error.exception.code, 302)
+                    error.exception.close()
+                self.assertEqual(seen, [("POST", "/api/chat")])
+            finally:
+                server.shutdown()
+                worker.join(timeout=2)
+
+    def test_truncated_chunked_post_returns_unknown_receipt_without_retry(self):
+        seen = []
+
+        class TruncatedHandler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_POST(self):
+                seen.append((self.command, self.path))
+                self.rfile.read(int(self.headers["Content-Length"]))
+                self.send_response(200)
+                self.send_header("Transfer-Encoding", "chunked")
+                self.send_header("Connection", "close")
+                self.end_headers()
+                # Declares a larger chunk than the bytes actually sent.
+                self.wfile.write(b"40\r\nprivate-fixture-payload")
+                self.wfile.flush()
+                self.close_connection = True
+
+        output = io.StringIO()
+        with HTTPServer(("127.0.0.1", 0), TruncatedHandler) as server:
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            worker.start()
+            try:
+                url = f"http://127.0.0.1:{server.server_port}/api/chat"
+                with mock.patch.object(bench, "URL", url), mock.patch.object(
+                        bench, "_owner_web_token", return_value=None):
+                    with contextlib.redirect_stdout(output):
+                        code = bench.main(["--model-sha", "a" * 64,
+                                           "--route-sha", "b" * 40,
+                                           "--s03-revision", "S03-1",
+                                           "--samples", "20"])
+            finally:
+                server.shutdown()
+                worker.join(timeout=2)
+        self.assertEqual(code, 2)
+        self.assertEqual(seen, [("POST", "/api/chat")])
+        result = json.loads(output.getvalue())
+        self.assertEqual(result["status"], "HOLD_PROBE_OUTCOME_UNKNOWN")
+        self.assertEqual(result["errors"], [{"sample": 1,
+                         "error": "IncompleteRead", "reason": "TRANSPORT_UNAVAILABLE"}])
+        self.assertEqual(result["completed"], 0)
+        self.assertIsNone(result["s03_writes"])
+        self.assertIsNone(result["latency_s"])
+        self.assertIsNone(result["observed_chunks_per_s"])
+        self.assertFalse(result["native_acceptance"])
+        self.assertNotIn("private-fixture-payload", output.getvalue())
+
     def test_confirmed_write_risk_fails_closed(self):
         with self.assertRaisesRegex(bench.UnsafeEphemeralWriteReceipt,
                                     "BENCH_EPHEMERAL_WRITE_RISK"):
@@ -162,6 +245,14 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
     def test_unknown_receipt_is_not_success(self):
         with self.assertRaisesRegex(bench.UnsafeEphemeralWriteReceipt, "BENCH_EPHEMERAL_WRITE_RISK"):
             run_sample({"status": "SKIPPED", "s03_readback_verified": False})
+
+    def test_malformed_terminal_receipt_and_missing_model_fail_closed(self):
+        with self.assertRaisesRegex(bench.UnsafeEphemeralWriteReceipt, "BENCH_EPHEMERAL_WRITE_RISK"):
+            run_sample(write=["SKIPPED"])
+        for model in (None, [], "", " "):
+            with self.subTest(model=model):
+                with self.assertRaisesRegex(ValueError, "MODEL_ID_UNVERIFIED"):
+                    run_sample(model=model)
 
     def test_batch_stops_on_ambiguous_post_even_without_a_receipt(self):
         # A transport error or an incomplete NDJSON frame may arrive AFTER
@@ -181,6 +272,8 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
                 self.assertEqual(result["status"], "HOLD_PROBE_OUTCOME_UNKNOWN")
                 self.assertEqual(result["completed"], 0)
                 self.assertEqual(result["errors"][0]["sample"], 1)
+                self.assertIsNone(result["s03_writes"])
+                self.assertIsNone(result["latency_s"])
                 self.assertFalse(result["native_acceptance"])
 
     def test_batch_stops_on_first_possible_write(self):
@@ -196,6 +289,8 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
         self.assertEqual(sampler.call_count, 1)
         result = json.loads(output.getvalue())
         self.assertEqual(result["status"], "HOLD_EPHEMERAL_WRITE_RISK")
+        self.assertIsNone(result["s03_writes"])
+        self.assertIsNone(result["latency_s"])
         self.assertEqual(result["completed"], 0)
         self.assertFalse(result["native_acceptance"])
 

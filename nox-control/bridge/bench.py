@@ -16,6 +16,7 @@ import stat
 import sys
 import time
 import urllib.request
+from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 
 URL = "http://127.0.0.1:8091/api/chat"
@@ -110,7 +111,22 @@ def _percentile(values, percentile):
     return ordered[max(0, math.ceil(percentile * len(ordered)) - 1)]
 
 
-def _sample(index, clock=time.perf_counter, opener=urllib.request.urlopen, auth_token=None):
+class _NoBenchmarkRedirect(urllib.request.HTTPRedirectHandler):
+    """An owner-authenticated local POST must never follow redirects."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _open_local_benchmark(request, timeout):
+    # Do not inherit environment proxy configuration or forward the private
+    # X-NOX-Token on a redirect. A redirect is an ambiguous POST outcome.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}),
+                                         _NoBenchmarkRedirect())
+    return opener.open(request, timeout=timeout)
+
+
+def _sample(index, clock=time.perf_counter, opener=_open_local_benchmark, auth_token=None):
     request_id = f"bench2a05-{index}-{time.monotonic_ns()}"
     data = {"request_id": request_id, "ephemeral": True, "use_memory": True,
             "messages": [{"role": "user", "content": PROMPT}],
@@ -168,6 +184,8 @@ def _sample(index, clock=time.perf_counter, opener=urllib.request.urlopen, auth_
     receipt = terminal.get("completion_receipt") or {}
     memory = terminal.get("memory_history") or {}
     write = terminal.get("memory_write_receipt") or {}
+    if not all(isinstance(value, dict) for value in (receipt, memory, write)):
+        raise UnsafeEphemeralWriteReceipt("BENCH_EPHEMERAL_WRITE_RISK")
     # A benchmark is observational, not training or chat history. If the
     # supposedly ephemeral request may have committed S03, stop the entire
     # sampling batch immediately instead of issuing another POST.
@@ -186,6 +204,9 @@ def _sample(index, clock=time.perf_counter, opener=urllib.request.urlopen, auth_
         raise ValueError("OUTPUT_DIGEST_MISMATCH")
     if terminal.get("frames") != len(chunks):
         raise ValueError("OUTPUT_CHUNK_COUNT_MISMATCH")
+    model = terminal.get("model")
+    if not isinstance(model, str) or not model.strip() or len(model) > 256:
+        raise ValueError("MODEL_ID_UNVERIFIED")
     total = ended - started
     ttft = first - started
     if not (total > ttft >= 0):
@@ -194,7 +215,7 @@ def _sample(index, clock=time.perf_counter, opener=urllib.request.urlopen, auth_
             "chunks_per_s": round(len(chunks) / (ended - first), 4),
             "chunks": len(chunks), "output_utf8_bytes": len(full.encode("utf-8")),
             "token_per_s": None, "s03_write": "SKIPPED_EPHEMERAL",
-            "model_reported": terminal.get("model")}
+            "model_reported": model}
 
 
 def main(argv=None):
@@ -233,7 +254,7 @@ def main(argv=None):
                            "reason": "BENCH_EPHEMERAL_WRITE_RISK"})
             unsafe_write = True
             break
-        except (HTTPError, URLError, OSError, ValueError, UnicodeError, TypeError) as exc:
+        except (HTTPException, HTTPError, URLError, OSError, ValueError, UnicodeError, TypeError) as exc:
             # A failed/truncated/invalid response cannot attest ephemeral
             # non-persistence. Continuing the batch would issue another POST.
             errors.append({"sample": index + 1, "error": type(exc).__name__,
@@ -250,7 +271,10 @@ def main(argv=None):
               "route_sha_claim": a.route_sha, "s03_revision_claim": a.s03_revision,
               "model_reported": next(iter(models)) if len(models) == 1 else None,
               "endpoint": "/api/chat", "scenario_id": "NOX_2A05_CACHE_4_SENTENCES_V1",
-              "ephemeral": True, "s03_reads": True, "s03_writes": False,
+              "ephemeral": True, "s03_reads": True,
+              # An unobserved/unsafe POST may have committed. Report unknown,
+              # never a negative write assertion based on missing evidence.
+              "s03_writes": None if unsafe_write or ambiguous_outcome else False,
               "planned": a.samples, "completed": len(observations), "errors": errors,
               "tokens_per_second": None,
               "latency_s": ({name: {"p50": _percentile([v[name] for v in observations], .50),
