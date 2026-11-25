@@ -52,3 +52,4 @@
 - live.html: только токены --bg/--card/--fg/--mut серые (TH-LIVE); nox-theme.js на live НЕ подключаем (слои темы перекрывают контент).
 - downloads/operators: проверены, операторы в теме.
 - Деплой th_dep_gr6.sh, откат th_rb_gr6.sh (бэкап nox-*.js + live.html + css).
+- Развёрнуто gr6 (QA 23 страницы, новых JS-ошибок 0). Серверные снимки: screens_th/gr6_server_A.jpg, gr6_server_B.jpg (на сервере agent/out/th6_*_1440.jpg). Остаток: красный хаб NOX на nexus, зелёно-жёлтые бары на live (смысловые цвета).
