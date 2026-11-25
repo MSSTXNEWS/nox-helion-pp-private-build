@@ -10,3 +10,9 @@
   - JS-фиксы: цели >= 44 px, шрифт >= 14 px (inline !important), без горизонтального скролла.
 - Согласование с S1: классы колонок чата не известны; шторки опираются на текущие селекторы (.lv-bar, .lv-dd sl-menu-item, .lv-tag, .lv-inc, #cxChips button, #btnThreads, #tgWid, #nuiVoice, #nuiFlow, #btnPalette, #btnSettings). При смене классов обновить функции commands()/tpls() в nox-m-mobile.js.
 - Инфра: лимит GitHub API и 503 при общем опросе run.sh; сервер раньше давал ERR_CONNECTION_REFUSED на ходу.
+## Итог QA (Playwright, 43 страницы меню + index)
+- 390: 0 ошибок JS (кроме разовой гонки AMD define на assistant, не воспроизводится), 0 переполнений, 0 перекрытий шапки/таб-бара; цели <44 px и шрифт <14 px: 0 везде, кроме assistant (редактор: вкладка «заметки.md» 104x36 и строки line-numbers).
+- 430: 0 JS, 0 переполнений; шрифт <14 на поздно подгружаемых элементах index, widgets, training, system.
+- 768: 0 JS, 0 переполнений; chat: баннер «NOX пишет первым» (Ответить/Скрыть) подгружается позже проходов fix.
+- .fixed со строкой «M: мобильная адаптация…» записаны в site/qa/rework для 43 страниц.
+- Скриншоты 390 просмотрены: chat, шторки «Ещё»/«Команды», news, music, settings.
