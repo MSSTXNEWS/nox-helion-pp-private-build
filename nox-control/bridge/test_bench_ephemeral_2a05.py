@@ -54,7 +54,7 @@ class BoundedReadResponse:
         raise AssertionError("unbounded wire iterator must not be consumed")
 
 
-def run_sample(write=None, token=None):
+def run_sample(write=None, token=None, model="NOX"):
     text = "Ответ NOX 👍"
     digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
     receipts = {"status": "SKIPPED", "s03_write_returned": False, "s03_readback_verified": False}
@@ -69,7 +69,7 @@ def run_sample(write=None, token=None):
         common = {"request_id": rid, "stream_id": "a" * 32}
         a = {**common, "event_seq": 1, "message": {"content": text}, "done": False}
         b = {**common, "event_seq": 2, "message": {"content": ""}, "done": True,
-             "done_reason": "stop", "frames": 1, "digest": digest, "model": "NOX",
+             "done_reason": "stop", "frames": 1, "digest": digest, "model": model,
              "completion_receipt": {"status": "GENERATED", "upstream_done": True},
              "memory_history": {"status": "SKIPPED", "reason": "ephemeral"},
              "memory_write_receipt": receipts}
@@ -163,6 +163,14 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
         with self.assertRaisesRegex(bench.UnsafeEphemeralWriteReceipt, "BENCH_EPHEMERAL_WRITE_RISK"):
             run_sample({"status": "SKIPPED", "s03_readback_verified": False})
 
+    def test_malformed_terminal_receipt_and_missing_model_fail_closed(self):
+        with self.assertRaisesRegex(bench.UnsafeEphemeralWriteReceipt, "BENCH_EPHEMERAL_WRITE_RISK"):
+            run_sample(write=["SKIPPED"])
+        for model in (None, [], "", " "):
+            with self.subTest(model=model):
+                with self.assertRaisesRegex(ValueError, "MODEL_ID_UNVERIFIED"):
+                    run_sample(model=model)
+
     def test_batch_stops_on_ambiguous_post_even_without_a_receipt(self):
         # A transport error or an incomplete NDJSON frame may arrive AFTER
         # S03 was written. Neither permits issuing another benchmark POST.
@@ -181,6 +189,8 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
                 self.assertEqual(result["status"], "HOLD_PROBE_OUTCOME_UNKNOWN")
                 self.assertEqual(result["completed"], 0)
                 self.assertEqual(result["errors"][0]["sample"], 1)
+                self.assertIsNone(result["s03_writes"])
+                self.assertIsNone(result["latency_s"])
                 self.assertFalse(result["native_acceptance"])
 
     def test_batch_stops_on_first_possible_write(self):
@@ -196,6 +206,8 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
         self.assertEqual(sampler.call_count, 1)
         result = json.loads(output.getvalue())
         self.assertEqual(result["status"], "HOLD_EPHEMERAL_WRITE_RISK")
+        self.assertIsNone(result["s03_writes"])
+        self.assertIsNone(result["latency_s"])
         self.assertEqual(result["completed"], 0)
         self.assertFalse(result["native_acceptance"])
 
