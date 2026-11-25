@@ -1,7 +1,7 @@
 echo "C300: th_dep_gr4 (дубли кнопок s6h, единый primary, бейджи, переводы Filerobot локально)"
 S=/workspace/nox/web/site; cd $S; TS=$(date +%s)
 export PLAYWRIGHT_BROWSERS_PATH=/workspace/nox/tools/ms-playwright; PY=/workspace/nox/venv/bin/python; export PATH=/workspace/nox/tools/node/bin:$PATH
-SHA=ecd14f85b701cbeae254ae6fc64fe1fa40081fb0
+SHA=4db365f58b36df9a05343fa1984690e73481e309
 R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/$SHA/nox-control/c300/bundles/th_graphite
 G=/tmp/th_gr4; rm -rf $G; mkdir -p $G
 for f in nox-graphite.css nox-th-fix.css nox-theme.js patch.py th_gen_map.py fie-i18n.json; do curl -fsSL --retry 5 --retry-delay 4 --retry-all-errors $R/$f -o $G/$f && [ -s $G/$f ] || { echo "FAIL fetch $f"; exit 0; }; done
