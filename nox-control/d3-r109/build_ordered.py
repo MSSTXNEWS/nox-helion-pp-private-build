@@ -52,7 +52,7 @@ def build(out):
     data[MANIFEST]=(json.dumps(layout,sort_keys=True,indent=2)+"\n").encode()
     with zipfile.ZipFile(out,"x",compression=zipfile.ZIP_STORED) as z:
         for path,raw in sorted(data.items()):
-            info=zipfile.ZipInfo(path,(1980,1,1,0,0))
+            info=zipfile.ZipInfo(path,(1980,1,1,0,0,0))
             info.create_system=3
             info.external_attr=0o100644<<16
             z.writestr(info,raw)
