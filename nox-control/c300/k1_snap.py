@@ -6,7 +6,7 @@ import json, os, re, subprocess, sys, tempfile, time, urllib.request
 INSTANCE = 62038702  # S2 (США); S1 (Квебек) = 61825960, выбирается маркером #S1 в начале REMOTE
 KEY = os.environ["NOX2"]
 _REF = os.environ.get('GITHUB_SHA') or 'main'
-REMOTE = '#S1\ncd /workspace/nox/web && tar czf - --exclude="*.bak*" --exclude="*.mp4" --exclude="*.webm" --exclude="*.gguf" --exclude="*.safetensors" --exclude="site/media" --exclude="site/qa/shots" site pkg/server/*.py 2>/dev/null'
+REMOTE = '#S1\ncd /workspace/nox/web && tar czf - --exclude="*.bak*" --exclude="*.mp4" --exclude="*.webm" --exclude="*.gguf" --exclude="*.safetensors" --exclude="site/media" --exclude="site/qa/shots" --exclude="site/qa/*.png" --exclude="*.zip" --exclude="*.tgz" site pkg/server/*.py 2>/dev/null; e=$?; [ $e -le 1 ] && exit 0 || exit $e'
 
 if REMOTE.startswith("#S1"):
     INSTANCE = int(os.environ.get("C300_INST", "62038702"))
