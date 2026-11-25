@@ -188,6 +188,54 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
                 server.shutdown()
                 worker.join(timeout=2)
 
+    def test_truncated_chunked_post_returns_unknown_receipt_without_retry(self):
+        seen = []
+
+        class TruncatedHandler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_POST(self):
+                seen.append((self.command, self.path))
+                self.rfile.read(int(self.headers["Content-Length"]))
+                self.send_response(200)
+                self.send_header("Transfer-Encoding", "chunked")
+                self.send_header("Connection", "close")
+                self.end_headers()
+                # Declares a larger chunk than the bytes actually sent.
+                self.wfile.write(b"40\r\nprivate-fixture-payload")
+                self.wfile.flush()
+                self.close_connection = True
+
+        output = io.StringIO()
+        with HTTPServer(("127.0.0.1", 0), TruncatedHandler) as server:
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            worker.start()
+            try:
+                url = f"http://127.0.0.1:{server.server_port}/api/chat"
+                with mock.patch.object(bench, "URL", url), mock.patch.object(
+                        bench, "_owner_web_token", return_value=None):
+                    with contextlib.redirect_stdout(output):
+                        code = bench.main(["--model-sha", "a" * 64,
+                                           "--route-sha", "b" * 40,
+                                           "--s03-revision", "S03-1",
+                                           "--samples", "20"])
+            finally:
+                server.shutdown()
+                worker.join(timeout=2)
+        self.assertEqual(code, 2)
+        self.assertEqual(seen, [("POST", "/api/chat")])
+        result = json.loads(output.getvalue())
+        self.assertEqual(result["status"], "HOLD_PROBE_OUTCOME_UNKNOWN")
+        self.assertEqual(result["errors"], [{"sample": 1,
+                         "error": "IncompleteRead", "reason": "TRANSPORT_UNAVAILABLE"}])
+        self.assertEqual(result["completed"], 0)
+        self.assertIsNone(result["s03_writes"])
+        self.assertIsNone(result["latency_s"])
+        self.assertIsNone(result["observed_chunks_per_s"])
+        self.assertFalse(result["native_acceptance"])
+        self.assertNotIn("private-fixture-payload", output.getvalue())
+
     def test_confirmed_write_risk_fails_closed(self):
         with self.assertRaisesRegex(bench.UnsafeEphemeralWriteReceipt,
                                     "BENCH_EPHEMERAL_WRITE_RISK"):

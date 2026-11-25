@@ -16,6 +16,7 @@ import stat
 import sys
 import time
 import urllib.request
+from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 
 URL = "http://127.0.0.1:8091/api/chat"
@@ -253,7 +254,7 @@ def main(argv=None):
                            "reason": "BENCH_EPHEMERAL_WRITE_RISK"})
             unsafe_write = True
             break
-        except (HTTPError, URLError, OSError, ValueError, UnicodeError, TypeError) as exc:
+        except (HTTPException, HTTPError, URLError, OSError, ValueError, UnicodeError, TypeError) as exc:
             # A failed/truncated/invalid response cannot attest ephemeral
             # non-persistence. Continuing the batch would issue another POST.
             errors.append({"sample": index + 1, "error": type(exc).__name__,
