@@ -1,7 +1,7 @@
 echo "C300: th_dep_gr6 (теплокарта growth серая, dataZoom, glance фильтр, live токены, снимки th6)"
 S=/workspace/nox/web/site; cd $S; TS=$(date +%s)
 export PLAYWRIGHT_BROWSERS_PATH=/workspace/nox/tools/ms-playwright; PY=/workspace/nox/venv/bin/python; export PATH=/workspace/nox/tools/node/bin:$PATH
-SHA=5d282497461cdd1cb811f5b2a31a54fb79e71c83
+SHA=28b3bee04c3998ed1bb27f91ec83df15f5aaff9d
 R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/$SHA/nox-control/c300/bundles/th_graphite
 G=/tmp/th_gr6; rm -rf $G; mkdir -p $G
 for f in nox-graphite.css nox-theme.js patch.py th_gen_map.py; do curl -fsSL --retry 5 --retry-delay 4 --retry-all-errors $R/$f -o $G/$f && [ -s $G/$f ] || { echo "FAIL fetch $f"; exit 0; }; done
