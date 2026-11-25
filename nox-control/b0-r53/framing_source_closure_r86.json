@@ -1,0 +1,63 @@
+{
+  "schema": "NOX_B0_SELECTED_FRAMING_SOURCE_CLOSURE_V1",
+  "task_id": "B0-PR445-7D0AB-CI-SUCCESS-OWNER-CAS-BROWSER-S03-20261119",
+  "operation": "B0-R86-SELECTED-FRAMING-DONOR-CLOSURE-20261125",
+  "source_commit": "0dd91d62ff8288523a03de2b27096bd0518e10ca",
+  "joint_reference_commit": "fe5dad03d30f9cd4d6dcee66db921ec3172bcfda",
+  "joint_reference_blob": "40242972c09c05e350daae4412b1a89b1f1255ab",
+  "staging_root": "nox-control/d3-r111",
+  "digest_kind": "git_blob_sha1_source_only",
+  "framing_roles": {
+    "raw_http_1_1": {
+      "adapter": "wire/b0_http_chunked_r76.py",
+      "modules": {
+        "wire/b0_http_chunked_r76.py": "0f2698d56723bed3615b40ad8c4f98894189ed50",
+        "wire/b0_proxy_stream_iter.py": "385906bc443effbea92f38b881c13d04d2103e28",
+        "wire/b0_named_delta_encoder.py": "c7d0c351b0239bb7155ffbc8c0362e919ee79cb1"
+      }
+    },
+    "framework_managed": {
+      "adapter": "wire/b0_framework_r83.py",
+      "modules": {
+        "wire/b0_framework_r83.py": "9f7ae9ddc837d4fb67a2584c647fdec85764e05f",
+        "wire/b0_framework_r80.py": "659876e07af733988d8499221180f66c9d90ca20",
+        "wire/b0_proxy_stream_iter.py": "385906bc443effbea92f38b881c13d04d2103e28",
+        "wire/b0_named_delta_encoder.py": "c7d0c351b0239bb7155ffbc8c0362e919ee79cb1"
+      }
+    }
+  },
+  "direct_b0_import_edges": {
+    "b0_http_chunked_r76": [
+      "b0_proxy_stream_iter"
+    ],
+    "b0_proxy_stream_iter": [
+      "b0_named_delta_encoder"
+    ],
+    "b0_named_delta_encoder": [],
+    "b0_framework_r80": [
+      "b0_proxy_stream_iter"
+    ],
+    "b0_framework_r83": [
+      "b0_framework_r80"
+    ]
+  },
+  "receipt_requirements": {
+    "exact_selected_module_keys": true,
+    "for_each": [
+      "expected_sha256",
+      "installed_sha256",
+      "loaded_sha256"
+    ],
+    "expected": "sha256 of pinned staged bytes",
+    "installed_and_loaded": "independently authenticated native readback, never infer from staged source",
+    "preserve_existing_route_assets_schema": true,
+    "provider_reads": 1,
+    "terminal_authority": "independently authenticated R100 FINALIZED after reservation CAS, DOM MATCHED and STOP CLEAR"
+  },
+  "native_accepted": false,
+  "host_provider_bound": false,
+  "authentication_verified": false,
+  "ack_allowed": false,
+  "next_post_allowed": false,
+  "training_admitted": false
+}
