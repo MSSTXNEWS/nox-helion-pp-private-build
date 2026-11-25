@@ -15,3 +15,13 @@
 | chat | режимы: /учить, /коротко, /подробно | выбор режима | команды чата |
 | settings | «Тихие часы» (от-до) и лимит проактивных в день | управление инициативой | state/living/quiet.json |
 | settings | ползунки личности + переключатель «Правила живого общения» | включает living | persona.json: living=true/false |
+
+## N: бэкенд живых движков (проверено 25.11)
+Эндпоинт чата: **POST /api/turn** (SSE, тело {conversation_id, message, nox_incognito?}). /api/chat на тесте даёт 400.
+События SSE: meta, level, delta, done. В `done` и в сохранённом сообщении есть поле **meta**: {sources:[«память»|«команда»|«режим»], emo:«грусть», quick:[чипы быстрых ответов], incognito}. Чипы отправлять как обычное сообщение.
+Команды (отвечают мгновенно без модели, backend=living): /запомни <текст>, /память [запрос], /забудь <№>, /забудь_всё (первый раз просит подтверждение; кнопка шлёт «/забудь_всё да»), /экспорт, /учить [выкл], /коротко, /подробно, /статус, /тихие_часы 23:00-08:00, /помощь.
+«Без памяти»: слать в теле /api/turn `"nox_incognito": true`.
+Сервис (через прокси /svc/nox-living/): GET /mem/list, /mem/search?q=, /mem/export, /mem/journal, /status, /quiet, /emo?text=; POST /mem/add {text}, /mem/forget {id} или {all:true, confirm:true}, /quiet {from,to,daily_limit,enabled}, /ritual/run {name: morning|evening|night, force}, /feedback {rating, conversation_id}.
+Строка «я сейчас»: GET /svc/nox-living/status -> {status, ts, quiet}.
+Ритуалы приходят в GET /api/nox/outbox (kind=living, ritual=morning|evening). Панель «Тихие часы»: GET/POST /svc/nox-living/quiet.
+/api/feedback отвечает 200 (проверено), 503 больше не воспроизводится.
