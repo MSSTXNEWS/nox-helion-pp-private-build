@@ -16,7 +16,7 @@
   });
   const rgb = (a) => a.map((x) => Math.round(x * 255));
   const build = async (p) => {
-    const sc = new THREE.Scene(); const cam = new THREE.PerspectiveCamera(30, 1, .1, 20); cam.position.set(0, 0, p.ring ? 4.6 : 3.4);
+    const sc = new THREE.Scene(); const cam = new THREE.PerspectiveCamera(30, 1, .1, 20); cam.position.set(0, 0, p.ring ? 6.4 : 4.3);
     sc.add(new THREE.AmbientLight(0xffffff, .35)); const sun = new THREE.DirectionalLight(0xfff2dd, 2.6); sun.position.set(-3, 1.5, 3); sc.add(sun);
     let map = p.tex ? await loadTex(p.tex) : null, mat;
     if (map) mat = new THREE.MeshStandardMaterial({ map, roughness: .95, metalness: 0 });
