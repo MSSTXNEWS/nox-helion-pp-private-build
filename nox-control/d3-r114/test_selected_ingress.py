@@ -82,7 +82,7 @@ class RouteEvidence(unittest.TestCase):
         source=source.replace('browser=h(77)',f'browser="{browser_sha}"')
         anchor='positive["frozen"]=payload.decode("utf8")'
         assert source.count(anchor)==1
-        source=source.replace(anchor, 'positive["admitted_fixture"]=json.dumps(dict(schema="NOX_B3_R83_INDEPENDENT_PHYSICAL_ENVELOPE_V1",expected=physical,receipt_index=json.loads(receipts[0])["receipt_index"]),separators=(",",":"),ensure_ascii=False)\\n        '+anchor)
+        source=source.replace(anchor, 'positive["admitted_fixture"]=json.dumps(dict(schema="NOX_B3_R83_INDEPENDENT_PHYSICAL_ENVELOPE_V1",expected=physical,receipt_index=json.loads(receipts[0])["receipt_index"]),separators=(",",":"),ensure_ascii=False)\n        '+anchor)
         namespace=types.ModuleType('route_fixture')
         namespace.__file__=str(path)
         exec(compile(source,str(path),'exec'),namespace.__dict__)
