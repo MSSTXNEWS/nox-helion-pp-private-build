@@ -1,0 +1,17 @@
+name: NOX B1 R88 R100 finalization hook
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b1-r88/**'
+      - '.github/workflows/nox-b1-r88.yml'
+permissions:
+  contents: read
+jobs:
+  target:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node nox-control/b1-r88/test_r100.cjs
