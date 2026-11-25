@@ -8,6 +8,7 @@
   const of = window.fetch;
   window.fetch = function (u, o) {
     try {
+      if (o && o.method === 'POST' && /\/memory\/api$/.test(String(u)) && typeof o.body === 'string' && /"op":"(journal|health)"/.test(o.body)) return Promise.resolve(new Response(JSON.stringify({ ok: false, error: 'журнал правок недоступен: /memory/api не принимает операцию' }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
       if (o && o.method === 'POST' && /\/api\/(turn|chat)(\?|$)/.test(String(u)) && typeof o.body === 'string') {
         const b = JSON.parse(o.body);
         if (Array.isArray(b.messages)) { const m = b.messages[b.messages.length - 1]; if (m && m.role === 'user' && typeof m.content === 'string' && !m.content.includes('Контекст: страница «Обучение»')) m.content = PRE + m.content; }
@@ -35,7 +36,36 @@
   const side = document.createElement('div'); side.className = 's4-w';
   side.innerHTML = '<section class="card s4-sug"><h2>Предложения NOX <span class="r mono" id="s4sn"></span></h2><div id="s4sug" class="muted">Загрузка…</div></section>'
     + '<aside class="card s4-feed"><h2>События <span class="r mono"><i class="s4d g"></i><i class="s4d y"></i><i class="s4d r"></i></span></h2><div id="s4feed" class="muted">Загрузка…</div></aside>';
-  const grid = $('.grid', wrap); grid ? grid.before(side) : wrap.appendChild(side);
+  const wb = document.createElement('div'); wb.className = 's4wb';
+  wb.innerHTML = '<div class="s4tiles" id="s4t"></div><aside class="card s4runs"><h2>Запуски <span class="r mono" id="s4rn"></span></h2><div id="s4rl" class="muted">Загрузка…</div></aside>'
+    + '<div class="s4charts" id="s4ch"></div><div class="s4side"></div>';
+  const ph = $('.ph', wrap); ph ? ph.after(wb) : wrap.prepend(wb);
+  const sideCol = $('.s4side', wb); [...side.children].forEach((c) => sideCol.appendChild(c));
+  [...wrap.querySelectorAll('section.card > h2')].forEach((h) => { if (/Кривые обучения/i.test(h.textContent)) h.parentNode.classList.add('s4hide'); });
+  const COL = ['#e0654a', '#d9a441', '#6aa9d8', '#8fc28a', '#b48ad8', '#d68aa6'];
+  async function runs() {
+    let d = null, L = null; try { d = await (await fetch('./data/train_logs.json?t=' + Date.now(), { cache: 'no-store' })).json(); } catch (e) { /* */ }
+    try { L = await (await fetch('./data/live.json?t=' + Date.now(), { cache: 'no-store' })).json(); } catch (e) { /* */ }
+    const R = d && d.runs ? Object.keys(d.runs).filter((k) => (d.runs[k].points || []).length) : [];
+    const pts = R.flatMap((k) => d.runs[k].points), best = (f) => { const a = pts.map((p) => p[f]).filter((v) => typeof v === 'number'); return a.length ? Math.min(...a) : null; };
+    const last = R.length ? d.runs[R.slice().sort((a, b) => d.runs[b].mtime - d.runs[a].mtime)[0]].points.slice(-1)[0] : null;
+    const tile = (k, v, s) => '<div class="s4tl"><small>' + k + '</small><b>' + v + '</b><em>' + (s || '') + '</em></div>';
+    $('#s4t').innerHTML = tile('Статус', d ? (d.running ? 'идёт' : 'остановлено') : 'нет данных', d && d.ts ? when(d.ts) : '') + tile('Запусков', R.length, 'с точками') + tile('Последний шаг', last ? last.step : '—', last ? 'loss ' + last.loss : '') + tile('Лучший loss', best('loss') == null ? '—' : best('loss')) + tile('Лучший CE', best('ce') == null ? '—' : best('ce').toFixed(3)) + tile('VRAM', L && L.gpu ? L.gpu.vram_pct + '%' : '—', L && L.gpu ? 'GPU ' + L.gpu.gpu_util_pct + '%' : '');
+    const hid = JSON.parse(localStorage.getItem('s4_hid') || '[]');
+    $('#s4rn').textContent = R.length + ' шт.'; $('#s4rl').className = R.length ? '' : 'muted';
+    $('#s4rl').innerHTML = R.length ? R.map((k, i) => '<label class="s4rr"><input type="checkbox" data-k="' + esc(k) + '"' + (hid.includes(k) ? '' : ' checked') + '><i style="background:' + COL[i % 6] + '"></i><span>' + esc(k.replace(/\.log$/, '')) + '</span><small class="mono">' + d.runs[k].points.length + ' т.</small></label>').join('') : 'Логов обучения пока нет.';
+    const draw = () => {
+      const off = JSON.parse(localStorage.getItem('s4_hid') || '[]'), box = $('#s4ch');
+      if (!R.length) { box.innerHTML = '<section class="card"><p class="muted">Кривых нет: нет логов обучения (data/train_logs.json).</p></section>'; return; }
+      if (!box.children.length || !box.querySelector('.s4cp')) box.innerHTML = [['loss', 'Train loss'], ['ce', 'Holdout CE']].map(([f, t]) => '<section class="card s4cp"><h2>' + t + ' <span class="r mono">шаг</span></h2><div class="s4cc" id="s4c_' + f + '"></div></section>').join('') + '<p class="muted s4note">' + (pts.length < 12 ? 'Точек мало (' + pts.length + '): логи пишутся раз в 10 шагов, кривая достроится по мере обучения.' : '') + '</p>';
+      ['loss', 'ce'].forEach((f) => { const el = $('#s4c_' + f), c = echarts.getInstanceByDom(el) || echarts.init(el);
+        c.setOption({ animation: false, color: COL, grid: { left: 40, right: 12, top: 12, bottom: 28 }, tooltip: { trigger: 'axis', backgroundColor: 'rgba(20,16,16,.92)', borderColor: '#5a3a34', textStyle: { color: '#efe6df', fontSize: 12 } },
+          xAxis: { type: 'value', name: '', axisLabel: { color: '#9a8f88', fontSize: 10 }, splitLine: { show: false }, axisLine: { lineStyle: { color: '#3a302d' } } }, yAxis: { type: 'value', scale: true, axisLabel: { color: '#9a8f88', fontSize: 10 }, splitLine: { lineStyle: { color: 'rgba(255,235,220,.07)' } } },
+          series: R.map((k, i) => ({ name: k, type: 'line', showSymbol: true, symbolSize: 5, smooth: true, lineStyle: { width: 1.8 }, data: off.includes(k) ? [] : d.runs[k].points.filter((p) => typeof p[f] === 'number').map((p) => [p.step, p[f]]) })) }, true); });
+    };
+    draw(); $('#s4rl').querySelectorAll('input').forEach((i) => (i.onchange = () => { const a = [...$('#s4rl').querySelectorAll('input')].filter((x) => !x.checked).map((x) => x.dataset.k); localStorage.setItem('s4_hid', JSON.stringify(a)); draw(); }));
+  }
+  runs(); setInterval(runs, 60000); addEventListener('resize', () => document.querySelectorAll('.s4cc').forEach((e) => { const c = echarts.getInstanceByDom(e); c && c.resize(); }));
   let seen = new Set(JSON.parse(localStorage.getItem('s4_push_seen') || '[]'));
   async function push(m) {
     const id = m.id || m.ts; if (seen.has(id)) return; seen.add(id); localStorage.setItem('s4_push_seen', JSON.stringify([...seen].slice(-200)));
