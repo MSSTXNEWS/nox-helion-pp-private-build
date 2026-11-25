@@ -73,8 +73,13 @@ FIRST_TOKEN_S = float(os.environ.get('NOX_FIRST_TOKEN_S', '8')); FIRST_TOKEN_EXE
 def _clean(t): return re.sub(r'<think>.*?</think>', '', t or '', flags=re.S).strip()
 def _ext_chat(messages, max_tokens, temp, timeout=60):
     gw = BACK().get('external')
-    r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': 'auto', 'messages': messages, 'max_tokens': min(max_tokens, 1800), 'temperature': temp}, timeout=timeout)
-    r.raise_for_status(); j = r.json(); return j['choices'][0]['message'].get('content') or '', int(j.get('usage', {}).get('completion_tokens', 0))
+    last = None
+    for mdl in ('auto', 'pollinations/auto', 'llm7/auto'):      # kilo часто упирается в 429 (общий лимит на IP): запасные провайдеры
+        try:
+            r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': mdl, 'messages': messages, 'max_tokens': min(max_tokens, 1800), 'temperature': temp}, timeout=timeout)
+            r.raise_for_status(); j = r.json(); return j['choices'][0]['message'].get('content') or '', int(j.get('usage', {}).get('completion_tokens', 0))
+        except Exception as e: last = e
+    raise last
 def _local_stream(b, body, hdr, timeout, st):
     """локальный вызов потоком: фиксируем момент первого токена; результат в st"""
     try:
