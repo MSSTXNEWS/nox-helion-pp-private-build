@@ -29,6 +29,46 @@ function releasePins(){
  }
  return {manifest_sha256:hash(manifest),assets:out};
 }
+
+/* Detached framing readback is checked for consistency, never treated as authentication.
+   A real host verifier must authenticate this receipt independently of the candidate. */
+const framingRoles={
+ raw_http_1_1:{adapter:'wire/b0_http_chunked_r76.py',modules:{
+  'wire/b0_http_chunked_r76.py':expected['wire/b0_http_chunked_r76.py']}},
+ framework_managed:{adapter:'wire/b0_framework_r83.py',modules:{
+  'wire/b0_framework_r83.py':'9f7ae9ddc837d4fb67a2584c647fdec85764e05f',
+  'wire/b0_framework_r80.py':'659876e07af733988d8499221180f66c9d90ca20',
+  'wire/b0_proxy_stream_iter.py':expected['wire/b0_proxy_stream_iter.py']}}
+};
+const exactKeys=(o,keys)=>o!==null&&typeof o==='object'&&!Array.isArray(o)&&
+ Object.keys(o).length===keys.length&&keys.every(k=>Object.hasOwn(o,k));
+function checkFramingIdentity(detached,d,p,packetPin,payloadPin){
+ try{
+  const input=detached.framing_receipt_bytes;
+  if(!Buffer.isBuffer(input)||!input.length||input.length>65536)return false;
+  const bytes=Buffer.from(input);
+  if(hash(bytes)!==detached.framing_receipt_sha256)return false;
+  const f=JSON.parse(new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes));
+  if(!Buffer.from(JSON.stringify(f),'utf8').equals(bytes))return false;
+  const role=framingRoles[d.framing];
+  if(!role||!exactKeys(f,['schema','packet_sha256','payload_sha256','route_sha256',
+    'owner_admission_receipt_sha256','framing','adapter_path','process','modules'])||
+    f.schema!=='NOX_D3_SELECTED_FRAMING_READBACK_V1'||f.packet_sha256!==packetPin||
+    f.payload_sha256!==payloadPin||f.route_sha256!==detached.route_sha256||
+    f.owner_admission_receipt_sha256!==p.owner_admission_receipt_sha256||
+    f.framing!==d.framing||f.adapter_path!==role.adapter||
+    !exactKeys(f.process,['boot_id','pid','start_ticks'])||
+    ['boot_id','pid','start_ticks'].some(k=>f.process[k]!==p.process[k])||
+    !exactKeys(f.modules,Object.keys(role.modules)))return false;
+  for(const [name,blob] of Object.entries(role.modules)){
+   const staged=readFileSync(resolve(root,name)),m=f.modules[name],pin=hash(staged);
+   if(gitBlob(staged)!==blob||!exactKeys(m,['expected_sha256','installed_sha256','loaded_sha256'])||
+      m.expected_sha256!==pin||m.installed_sha256!==pin||m.loaded_sha256!==pin)return false;
+  }
+  return true;
+ }catch{return false;}
+}
+
 function makeReleaseEvidenceReview(readDetachedEvidence){
  return (bytes,packet)=>{
   try{
@@ -75,10 +115,11 @@ function makeReleaseEvidenceReview(readDetachedEvidence){
        o.browser_sha256!==browser||o.served_sha256!==d.served_sha256||
        o.server_sha256!==d.server_sha256)return hold('HOLD_ROUTE_SERVED_BROWSER');
    }
+   if(!checkFramingIdentity(detached,d,p,packetPin,payloadPin))return hold('HOLD_ROUTE_FRAMING_IDENTITY');
    const result=checkReportedVerdicts(makeTimingEvidenceReview(pin=>pin===packetPin?detached:null)(raw,packet));
    if(result.status!=='MATCHED_FROZEN_ORDERED_OFFLINE')return {...hold(result.status),offline_browser_timing:null};
    return {...result,status:'MATCHED_R114_JOINT_OFFLINE',selected_browser_sha256:browser,admitted_envelope_sha256:admitted.admitted_envelope_sha256,route_evidence_sha256:detached.route_sha256,
-     framing:d.framing,host_provider_bound:false,route_authenticated:false,production_ready:false};
+     framing:d.framing,framing_receipt_sha256:detached.framing_receipt_sha256,framing_authenticated:false,host_provider_bound:false,route_authenticated:false,production_ready:false};
   }catch{return hold('HOLD_ROUTE_INVALID');}
  };
 }

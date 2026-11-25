@@ -55,3 +55,16 @@ jobs:
           set -euo pipefail
           gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/14989839885/zip" > "$RUNNER_TEMP/a6-exact.zip"
           python3 -B nox-control/d3-r115/stage_joint.py "$RUNNER_TEMP/a6-exact.zip" "$RUNNER_TEMP/r115-extracted" "$PWD/r115-donors"
+
+          export R115_EXTRACTED="$RUNNER_TEMP/r115-extracted"
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$PWD/nox-control/d3-r115:$PWD/nox-control/d3-r114:$PWD/nox-control/d3-r113:$PWD/nox-control/b2-r110:$PWD/nox-control/a3-r109-r80:$PWD/nox-control/b2-r108:$PWD/nox-control/d3-r107:$PWD/nox-control/d3-r105:$PWD/nox-control/b2-r104:$PWD/nox-control/d3-r101:$PWD/nox-control/d3-r97:$(python3 -c 'import json,os; print(":".join(os.path.abspath(p) for p in json.load(open("nox-control/d3-r93/release.json"))["python_paths"]))'):$tmp"
+          export D3_B4_MODULE="$PWD/nox-control/d3-r74/staging/b4/b4_existing_turn_pair.mjs"
+          export B2_R108_MODULE="$PWD/nox-control/b2-r108/atomic_ordered_quality.cjs"
+
+          cd "$tmp"
+          python3 -B -m unittest -v test_framing_identity.RouteEvidence.test_route_evidence
