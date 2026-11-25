@@ -33,3 +33,4 @@
 .nxt-off{display:none !important}
 .nxt-ph{opacity:.85}
 .nxt-ph p{margin:6px 0 0;color:rgba(240,232,226,.6);font-size:13px;line-height:1.5}
+@media (max-width:760px){#nxpult{left:10px;top:66px;bottom:auto}#nxpult .nxpu-pan{bottom:auto;top:44px}}

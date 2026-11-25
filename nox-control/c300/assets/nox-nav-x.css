@@ -35,3 +35,4 @@
   #nxnavx .nxx-crumb{display:none}
   #nxnavx .nxx-lab{display:none}
 }
+@media (max-width:760px){#nxnavx{display:none}}
