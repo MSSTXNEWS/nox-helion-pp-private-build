@@ -14,7 +14,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     const grid = document.querySelector('.grid'); if (!grid || !document.getElementById('cNew')) return;
     const side = document.createElement('aside'); side.className = 'card s4cs';
-    side.innerHTML = '<button type="button" class="s4mk" id="s4new"><sl-icon library="tabler" name="plus"></sl-icon>Создать</button><div id="s4mini"></div><h3 class="mono s4sh">Календари</h3><label class="s4cl"><input type="checkbox" checked disabled><i></i>События и сроки задач</label><p class="muted" style="font-size:11.5px;margin:6px 0 0">Источник: задачи «Проектов» и /cal/events. Внешние календари не подключены.</p>';
+    side.innerHTML = '<sl-button class="s4mk" id="s4new" variant="primary" pill size="large"><sl-icon slot="prefix" library="tabler" name="plus"></sl-icon>Создать</sl-button><div id="s4mini"></div><h3 class="mono s4sh">Календари</h3><label class="s4cl"><input type="checkbox" checked disabled><i></i>События и сроки задач</label><p class="muted" style="font-size:11.5px;margin:6px 0 0">Источник: задачи «Проектов» и /cal/events. Внешние календари не подключены.</p>';
     grid.classList.add('s4cg'); grid.prepend(side);
     side.querySelector('#s4new').onclick = () => document.getElementById('cNew').click();
     let t = 0; const iv = setInterval(() => {

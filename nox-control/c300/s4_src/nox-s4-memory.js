@@ -12,7 +12,7 @@
     const bad = await probe();
     const sec = document.createElement('section'); sec.className = 'card s4mg';
     sec.innerHTML = (bad ? '<div class="s4mb">Сервер памяти не развёрнут: факты и журнал правок недоступны. Ниже граф по индексу поиска NOX.</div>' : '')
-      + '<h2>Граф знаний <span class="r mono" id="s4gi">…</span></h2><form class="s4mq" id="s4mf"><input type="search" id="s4mqi" placeholder="Что искать: страница, файл, запись" value="nox" maxlength="120" autocomplete="off"><button type="submit">Найти</button><button type="button" id="s4mfit">Вписать</button></form>'
+      + '<h2>Граф знаний <span class="r mono" id="s4gi">…</span></h2><form class="s4mq" id="s4mf"><input type="search" id="s4mqi" placeholder="Что искать: страница, файл, запись" value="nox" maxlength="120" autocomplete="off"><sl-button size="medium" variant="primary" id="s4mgo"><sl-icon slot="prefix" library="tabler" name="search"></sl-icon>Найти</sl-button><sl-button size="medium" id="s4mfit"><sl-icon slot="prefix" library="tabler" name="focus-centered"></sl-icon>Вписать</sl-button></form>'
       + '<div class="s4mw"><div id="s4cy"></div><aside id="s4mi" class="s4mn muted">Нажмите на узел: двойной клик ищет по его названию, клик по ссылке открывает.</aside></div>';
     ph ? ph.after(sec) : wrap.prepend(sec);
     const COL = ['#e0654a', '#d9a441', '#6aa9d8', '#8fc28a', '#b48ad8', '#d68aa6', '#9a8f88'];
@@ -34,7 +34,7 @@
       if (!hits.length) sec.querySelector('#s4mi').innerHTML = 'По запросу «' + esc(q) + '» индекс поиска пуст.';
     }
     sec.querySelector('#s4mf').onsubmit = (e) => { e.preventDefault(); const q = sec.querySelector('#s4mqi').value.trim(); if (q.length > 1) load(q); };
-    sec.querySelector('#s4mfit').onclick = () => cy.fit(undefined, 30);
+    sec.querySelector('#s4mgo').onclick = () => sec.querySelector('#s4mf').requestSubmit(); sec.querySelector('#s4mfit').onclick = () => cy.fit(undefined, 30);
     cy.on('tap', 'node', (e) => { const d = e.target.data(); sec.querySelector('#s4mi').innerHTML = '<b>' + esc(d.l) + '</b><br><small class="mono">' + esc(d.kind || 'узел') + '</small>' + (d.text ? '<p>' + esc(String(d.text).slice(0, 240)) + '</p>' : '') + (d.url ? '<a class="s4ml" href="' + esc(d.url) + '">Открыть</a>' : ''); });
     cy.on('dbltap', 'node', (e) => { const d = e.target.data(); if (d.l && d.l.length > 1) { sec.querySelector('#s4mqi').value = d.l; load(d.l, true); } });
     cy.on('mouseover', 'node', (e) => { const n = e.target; cy.elements().addClass('dim'); n.closedNeighborhood().removeClass('dim'); n.addClass('hov'); }); cy.on('mouseout', 'node', () => { cy.elements().removeClass('dim hov'); });

@@ -5,7 +5,7 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   cfg.forEach(([n, title]) => {
     const sec = document.createElement('section'); sec.className = 'card s4sv';
-    sec.innerHTML = '<h2>' + esc(title) + ' <span class="r mono" data-st>проверка…</span></h2><div class="s4fb"><button type="button" data-o>Открыть отдельно</button><button type="button" data-r>Обновить</button></div><iframe title="' + esc(title) + '" loading="lazy" hidden></iframe><p class="muted" data-e hidden></p>';
+    sec.innerHTML = '<h2>' + esc(title) + ' <span class="r mono" data-st>проверка…</span></h2><div class="s4fb"><sl-button size="medium" data-o><sl-icon slot="prefix" library="tabler" name="external-link"></sl-icon>Открыть отдельно</sl-button><sl-button size="medium" data-r><sl-icon slot="prefix" library="tabler" name="refresh"></sl-icon>Обновить</sl-button></div><iframe title="' + esc(title) + '" loading="lazy" hidden></iframe><p class="muted" data-e hidden></p>';
     wrap.appendChild(sec);
     const fr = sec.querySelector('iframe'), st = sec.querySelector('[data-st]'), er = sec.querySelector('[data-e]');
     const url = '/svc/' + n + '/';

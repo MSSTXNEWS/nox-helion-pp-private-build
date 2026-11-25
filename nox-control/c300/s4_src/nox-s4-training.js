@@ -91,8 +91,8 @@
     ms.filter((m) => lvl(m) === 'r').slice(0, 3).forEach(push);
     const ps = ms.filter(isProp).slice(0, 4); $('#s4sn').textContent = ps.length ? ps.length + ' шт.' : '';
     sug.className = ps.length ? '' : 'muted';
-    sug.innerHTML = ps.length ? ps.map((m, i) => '<div class="s4c"><div>' + esc(String(m.text || '').slice(0, 360)) + '</div><div class="s4b">' + ACT.map(([k, l, re]) => { const n = find(re), un = !n || /недоступн/i.test((reg[n] || {}).desc || ''); return '<button type="button" data-i="' + i + '" data-k="' + k + '"' + (un ? ' disabled title="' + esc(n ? (reg[n].desc || 'недоступно') : 'команда не в реестре шины') + '"' : '') + '>' + l + (un ? ' · недоступно' : '') + '</button>'; }).join('') + '</div></div>').join('') : 'Предложений от NOX сейчас нет.';
-    sug.querySelectorAll('button').forEach((b) => (b.onclick = () => { const a = ACT.find((x) => x[0] === b.dataset.k); run(find(a[2]), a[1], ps[+b.dataset.i]); }));
+    sug.innerHTML = ps.length ? ps.map((m, i) => '<div class="s4c"><div>' + esc(String(m.text || '').slice(0, 360)) + '</div><div class="s4b">' + ACT.map(([k, l, re]) => { const n = find(re), un = !n || /недоступн/i.test((reg[n] || {}).desc || ''); return '<sl-button size="medium" variant="' + (k === 'apply' ? 'primary' : 'default') + '" data-i="' + i + '" data-k="' + k + '"' + (un ? ' disabled title="' + esc(n ? (reg[n].desc || 'недоступно') : 'команда не в реестре шины') + '"' : '') + '>' + l + (un ? ' · недоступно' : '') + '</sl-button>'; }).join('') + '</div></div>').join('') : 'Предложений от NOX сейчас нет.';
+    sug.querySelectorAll('sl-button').forEach((b) => (b.onclick = () => { const a = ACT.find((x) => x[0] === b.dataset.k); run(find(a[2]), a[1], ps[+b.dataset.i]); }));
   }
   tick(); setInterval(tick, 30000);
 })();

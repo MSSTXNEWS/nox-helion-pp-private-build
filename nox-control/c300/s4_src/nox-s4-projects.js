@@ -35,12 +35,12 @@
   function gant() {
     const T = tasks().filter((t) => t.due), no = tasks().length - T.length;
     if (!T.length) { G.innerHTML = '<h2>Гант</h2><p class="muted">Нет задач со сроком: Гант строится по сроку. Задайте срок у задачи.</p>'; return; }
-    G.innerHTML = '<h2>Гант <span class="r mono">' + T.length + ' со сроком' + (no ? ' · ' + no + ' без срока скрыто' : '') + '</span></h2><div class="s4vm"><button type="button" data-m="Day">День</button><button type="button" data-m="Week">Неделя</button><button type="button" data-m="Month">Месяц</button></div><div id="s4gt" class="s4gt"><svg id="s4gs"></svg></div>';
+    G.innerHTML = '<h2>Гант <span class="r mono">' + T.length + ' со сроком' + (no ? ' · ' + no + ' без срока скрыто' : '') + '</span></h2><div class="s4vm"><sl-button-group><sl-button size="medium" data-m="Day">День</sl-button><sl-button size="medium" data-m="Week">Неделя</sl-button><sl-button size="medium" data-m="Month">Месяц</sl-button></sl-button-group></div><div id="s4gt" class="s4gt"><svg id="s4gs"></svg></div>';
     const rows = T.map((t) => { const e = new Date(t.due + 'T12:00:00'), s = new Date(Math.min(t.created || e - 6048e5, e - 864e5)); return { id: String(t.id), name: t.title, start: iso(s), end: iso(e), progress: t.col === 'done' ? 100 : t.col === 'review' ? 75 : t.col === 'doing' ? 40 : 0 }; });
     try {
       const Gt = window.Gantt && (window.Gantt.default || window.Gantt);
       gantt = new Gt('#s4gs', rows, { view_mode: 'Week', language: 'ru' });
-      G.querySelectorAll('.s4vm button').forEach((b) => (b.onclick = () => gantt.change_view_mode(b.dataset.m)));
+      G.querySelectorAll('.s4vm sl-button').forEach((b) => (b.onclick = () => gantt.change_view_mode(b.dataset.m)));
     } catch (e) { G.insertAdjacentHTML('beforeend', '<p class="muted">Гант не загрузился: ' + esc(e.message) + '</p>'); }
   }
   addEventListener('storage', () => { if (!L.hidden) list(); if (!G.hidden) gant(); });
