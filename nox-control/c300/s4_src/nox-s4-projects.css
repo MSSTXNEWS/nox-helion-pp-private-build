@@ -7,3 +7,6 @@
 .s4gt{overflow:auto;border-radius:12px;background:rgba(10,8,8,.45)}
 .s4gt .gantt .grid-background{fill:transparent}.s4gt .gantt .grid-header{fill:rgba(255,235,220,.05);stroke:rgba(255,235,220,.1)}.s4gt .gantt .grid-row{fill:transparent}.s4gt .gantt .row-line,.s4gt .gantt .tick{stroke:rgba(255,235,220,.08)}
 .s4gt .gantt .lower-text,.s4gt .gantt .upper-text{fill:#cfc4bd}.s4gt .gantt .bar{fill:#6b2a24}.s4gt .gantt .bar-progress{fill:#c0432f}.s4gt .gantt .bar-label{fill:#fff}.s4gt .gantt .today-highlight{fill:rgba(214,70,48,.12)}
+.ph .seg{flex-wrap:wrap}.s4p .s4vm{flex-wrap:wrap}
+.s4gg{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}.s4pn{border:1px solid rgba(255,235,220,.1);border-radius:14px;background:rgba(10,8,8,.45);padding:8px 10px}
+.s4ph{display:flex;justify-content:space-between;font-size:12px;opacity:.9}.s4ph b{font-size:20px;font-weight:300}.s4pc{height:150px}.s4gf{background:rgba(22,18,18,.55);backdrop-filter:blur(18px)}
