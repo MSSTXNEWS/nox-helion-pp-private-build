@@ -1,0 +1,9 @@
+.s4-w{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:12px;margin-bottom:12px}
+@media(max-width:820px){.s4-w{grid-template-columns:1fr}}
+.s4-w .card{background:rgba(22,18,18,.55);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);border:1px solid rgba(255,235,220,.1);border-radius:16px;padding:12px 14px}
+.s4-feed{max-height:340px;overflow:auto}.s4e{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,235,220,.06);font-size:12.5px}
+.s4d{display:inline-block;width:9px;height:9px;border-radius:50%;margin:5px 2px 0 0;flex:none}.s4d.g{background:#5fb27a}.s4d.y{background:#d9a441}.s4d.r{background:#d64630;box-shadow:0 0 8px #d64630aa}
+.s4c{padding:8px 0;border-bottom:1px solid rgba(255,235,220,.06);font-size:13px}.s4b{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.s4b button{min-height:44px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,225,200,.16);background:rgba(255,235,220,.07);color:inherit;font:inherit;cursor:pointer}
+.s4b button:hover:not(:disabled){background:rgba(176,44,32,.55)}.s4b button:disabled{opacity:.4;cursor:not-allowed}
+.s4-toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:2147483600;padding:10px 18px;border-radius:12px;background:rgba(16,13,13,.85);border:1px solid rgba(255,255,255,.14);color:#efe6df;font-size:12px}
