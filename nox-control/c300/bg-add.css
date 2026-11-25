@@ -1,0 +1,8 @@
+
+/* S3 слои фона: фон строго под контентом. space 0 < dust 1 < fx 2 < контент (#app) 10 < vignette 89 < grain 90 */
+#space{z-index:0!important;pointer-events:none}
+#dust{z-index:1!important;pointer-events:none}
+#nox-fx-ash,[id^="nox-fx"]{z-index:2!important;pointer-events:none}
+#app{z-index:10!important}
+/* стеклянные карточки размывают фон, резкий диск солнца не просвечивает */
+.card{-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
