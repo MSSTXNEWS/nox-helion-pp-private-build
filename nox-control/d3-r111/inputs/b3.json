@@ -1,0 +1,139 @@
+{
+  "schema": "NOX_B3_R81_RELEASE_ROLE_INPUT_V1",
+  "instructions_version": "0.0.6",
+  "task_id": "5A05-B3-R80-FROZEN-BYTES-CONSUMER-PIN-20261125",
+  "native_successor": "5A05-B3-PR717-442EF93B-PHASE-CI-OWNER-CAS-LIVE-S03-20261121",
+  "operation": "R81-R80-R109-EXECUTABLE-BRIDGE-ROLE-20261125",
+  "claim": 7152841679,
+  "source_parent": "dd2ec3cd569cfc31ef725cc039a7319c4961f2c3",
+  "release": {
+    "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+    "artifact_id": 14989839885,
+    "inner_sha256": "42d701736798b62d8f12c51d064fae5c2bc5a0e30cee3542082cb0c1083e199d",
+    "receipt": 7152502336
+  },
+  "pins": [
+    {
+      "commit": "3581b30134446f5e131a0510bb719a78dbf75c0d",
+      "path": "coordination/onepass/b3_r64_eof_candidate.js",
+      "blob": "66595eac01c562aff4daae68f5d146aaed64cbbe",
+      "sha256": "c44b5aa2ef3d45246276a24bbcfad30bf76533fc2e08089eb91b442002643dc7"
+    },
+    {
+      "commit": "1934f1295d2700a9d925d44ba1b605dfec264a59",
+      "path": "nox-control/b1-r86/b1_browser_bundle.js",
+      "blob": "bd2e154fd2c6007cb315d310e109de470f54f72f",
+      "sha256": "e7140c983b646b7544f95774491e718bed06880ac6a6e21b8f51980cdec5542b"
+    },
+    {
+      "commit": "5b7baa85e21685ed4e07926ff118c9a0d7b592af",
+      "path": "nox-control/b1-r86/release_input_r87.json",
+      "blob": "3de1fd004cfd76ca17cf7a83dabd7036fb874a38",
+      "sha256": "6ef554cd1b6496e6d8025ebb8e4cc1d7744c2fe996dd836c9cdba755dc333740"
+    },
+    {
+      "commit": "199fb767f75316aafc13d74bd1fcad67076d0d96",
+      "path": "nox-control/b0-r53/release_input_r79.json",
+      "blob": "b0ec743f17d94a1399b1fc3d8860d6d9a4d55d14",
+      "sha256": "60551cb4f7b8973bc6db66220f7858874ff9a00b1a880df1632fe3e96cbafa0c"
+    },
+    {
+      "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+      "path": "nox-control/a6-r109-r80-release/release.json",
+      "blob": "513f61f098574f438b8f9974cfd7ca5f7002428d",
+      "sha256": "3cc730fc24276e46860ecb08ed645894d65f61582195752c4b2b07fffb9fb86d"
+    },
+    {
+      "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+      "path": "nox-control/d3-r109/release.json",
+      "blob": "ea0a1f646b9ec9357cdb279592edc76b2b24c9a7",
+      "sha256": "43ab47987c23b5b2ed9be96a716812b8542c86f5af65a2a28123840543601251"
+    },
+    {
+      "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+      "path": "nox-control/d3-r99/release.json",
+      "blob": "dc637fb065b534d7a37e0003a23a8aa8ce846268",
+      "sha256": "8ff1bd0327eeaeb475dcf0ce2b012d4fca52fb830de7bffb7eb470b56952c634"
+    },
+    {
+      "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+      "path": "nox-control/a3-r109-r80/frozen/b3_r65_r64_physical_pin_check.cjs",
+      "blob": "1e22eff92da6b951ad22dea2b2db09201b2d371b",
+      "sha256": "fbcb4987510080442be7aa2a7fc31f110fb52cf5e6012f8a02fe7238b01776dc"
+    },
+    {
+      "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+      "path": "nox-control/a3-r109-r80/joint_frozen.cjs",
+      "blob": "8ccc4877f610e6ba32f0bf19efdd7105b6fdedf9",
+      "sha256": "ed33e156236eab2e628b7241da7ba3aed6c8d304a6cbae260a5a32587a062683"
+    },
+    {
+      "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+      "path": "nox-control/a3-r109-r80/frozen/b3_r80_frozen_byte_ingress.cjs",
+      "blob": "8a95bf6eef67b92964f9a77c54ba71822bdb4b4d",
+      "sha256": "f1abb69a5ad22688bd1a2c12e7bff48d1e2f34acc19e2dcaae385401ab5cd69b"
+    },
+    {
+      "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+      "path": "nox-control/d3-r93/release.json",
+      "blob": "590bd23730474959ea9b6327475c217869ddb417",
+      "sha256": "349b5ed6d6fbb731f525ebd6e63097db26f40b8425167053ae4c596f43999853"
+    },
+    {
+      "commit": "4152fd2e573aae2a05e264a4e716d18d440a57d0",
+      "path": "nox-control/b2-r110/reported_review.cjs",
+      "blob": "ea2a46f68770ae613ae6645ddb48de52d37eb9b7",
+      "sha256": "ef6791a75451f26f34cda3b3570c3055ea07f1dd41a11f01807263f86930a140"
+    }
+  ],
+  "roles": {
+    "physical_bridge": {
+      "commit": "3581b30134446f5e131a0510bb719a78dbf75c0d",
+      "path": "coordination/onepass/b3_r64_eof_candidate.js",
+      "blob": "66595eac01c562aff4daae68f5d146aaed64cbbe",
+      "sha256": "c44b5aa2ef3d45246276a24bbcfad30bf76533fc2e08089eb91b442002643dc7",
+      "disposition": "RETAIN_PINNED_EXECUTABLE_UNBOUND",
+      "required_readback_fields": [
+        "installed_bridge_sha256",
+        "served_bridge_sha256"
+      ],
+      "note": "R64 is owner-only browser fetch interceptor, not the model endpoint. A6/R109 manifests do not explicitly select its executable. Do not auto-install or co-load with R86; authorized host must prove route/stream/STOP compatibility."
+    },
+    "browser_adapter": {
+      "commit": "1934f1295d2700a9d925d44ba1b605dfec264a59",
+      "path": "nox-control/b1-r86/b1_browser_bundle.js",
+      "blob": "bd2e154fd2c6007cb315d310e109de470f54f72f",
+      "sha256": "e7140c983b646b7544f95774491e718bed06880ac6a6e21b8f51980cdec5542b",
+      "disposition": "SELECT_R86_ONCE_PER_REALM_UNBOUND",
+      "expected_browser_sha256": "e7140c983b646b7544f95774491e718bed06880ac6a6e21b8f51980cdec5542b",
+      "note": "browser_sha256 is exact R86 script digest; served_sha256 must be separately measured on deployed application representation, not inferred from script, server or bridge digest."
+    },
+    "server": {
+      "disposition": "HOLD_UNBOUND",
+      "required": "actual server_sha256, symbolic route and physical endpoint from independent authorized host; no substitution with Git blob or bridge digest"
+    }
+  },
+  "provider_required": {
+    "release_roles": "Bind A6 exact release, B0 R79 and B1 R87, actual served application SHA256 and exact R86 browser asset SHA256, R64 installed and served SHA256, actual server SHA256 and route under same independent owner admission; candidate/producer digest never authority.",
+    "physical": "Independent model_id, route, weights_manifest_sha256, tokenizer_manifest_sha256, original_checkpoint_sha256, process boot_id/pid/start_ticks, fresh admission receipt, four ordered before/after readbacks and exact request IDs for turns 2/3. Preserve current model and route.",
+    "retained": "Actual A3 joint_frozen -> checkFrozenPayload with independently authenticated detached payload SHA256; R100 PENDING ineligible. Bind each observation browser_sha256 to exact R86 bytes plus served_sha256, server_sha256, admission and terminal/attempt/event/turn/scope; independently FINALIZED only after durable RESERVED_NOT_SENT CAS + same-row DOM MATCHED and STOP CLEAR. No EOF/local true/SENDING/later ACK substitute.",
+    "integration": "Reuse A6 archive; add only exact R64 executable role as unbound input if not already verified by extracted bytes. No duplicate packaging or co-load. Historical R99 wire/R81 browser unbound. Existing D3 release owner selects B0 R79/B1 R87, verifies R64 compatibility and actual routes, invokes joint source target/full joint CI before native admission.",
+    "native": "Fresh authorized owner/CAS/STOP/resources/rollback/immutable verifier, installed/served readback, existing-dialog RU/ES turns2/3 independent S03. Parent 5A05 also requires 320/390/1440+ viewport/frame timing/Reduced Motion/stream/STOP/voice."
+  },
+  "verification": {
+    "exact_remote_git_blobs": 12,
+    "static_predicates": 14,
+    "sha256_computed_from_fetched_utf8": true,
+    "archive_bytes_downloaded": false,
+    "new_functional_test": false,
+    "full_joint_ci": false
+  },
+  "production_ready": false,
+  "native_accepted": false,
+  "authentication_verified": false,
+  "host_provider_bound": false,
+  "pre_ack_observer_bound": false,
+  "ack_allowed": false,
+  "next_post_allowed": false,
+  "training_admitted": false
+}

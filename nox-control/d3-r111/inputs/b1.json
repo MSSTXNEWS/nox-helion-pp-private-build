@@ -1,0 +1,127 @@
+{
+  "schema": "NOX_B1_R87_BROWSER_RELEASE_INPUT_V1",
+  "instructions_version": "0.0.6",
+  "task_id": "B1-UI-ADAPTER-SSE-CALLSITE-2TURN-20261120",
+  "operation": "B1-R87-R86-R109-R80-BROWSER-RELEASE-INPUT-20261125",
+  "claim": 7152727120,
+  "source_parent": "1934f1295d2700a9d925d44ba1b605dfec264a59",
+  "base_release": {
+    "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+    "manifest": "nox-control/a6-r109-r80-release/release.json",
+    "blob": "513f61f098574f438b8f9974cfd7ca5f7002428d",
+    "artifact_id": 14989839885,
+    "inner_sha256": "42d701736798b62d8f12c51d064fae5c2bc5a0e30cee3542082cb0c1083e199d",
+    "receipt": 7152502336
+  },
+  "browser": {
+    "commit": "1934f1295d2700a9d925d44ba1b605dfec264a59",
+    "path": "nox-control/b1-r86/b1_browser_bundle.js",
+    "blob": "bd2e154fd2c6007cb315d310e109de470f54f72f",
+    "entrypoint": "NOXB1SseUiBinding.bind",
+    "load_mode": "classic browser script, once per realm; do not co-load historical bundles",
+    "globals": [
+      "NOXB1PreAckObserver",
+      "NOXB1AbortSafeUI",
+      "NOXB1StreamReconnect",
+      "NOXB1SseUiBinding"
+    ],
+    "historical": {
+      "path": "nox-control/d3-r99/wire/b1_browser_bundle.js",
+      "blob": "1059f1afdfc31322f44253fd66035877a04203b5",
+      "disposition": "RETAIN_UNBOUND"
+    }
+  },
+  "wire_input": {
+    "commit": "199fb767f75316aafc13d74bd1fcad67076d0d96",
+    "path": "nox-control/b0-r53/release_input_r79.json",
+    "blob": "b0ec743f17d94a1399b1fc3d8860d6d9a4d55d14",
+    "compatibility": "R84 prior loopback only; R86 full joint target required"
+  },
+  "qa": [
+    {
+      "commit": "1934f1295d2700a9d925d44ba1b605dfec264a59",
+      "path": "nox-control/b1-r86/test_queued_get_stop.cjs",
+      "blob": "cbc66ec0894ff9f6ede0009877d376f518a3b632",
+      "receipt": 7151767924,
+      "job": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/45538843359/job/138952074636"
+    },
+    {
+      "commit": "bf1b9b8967f2ab1e7ad9895ff38a1550fe6c8b41",
+      "path": "nox-control/b1-r85/test_real_last_mile.py",
+      "blob": "c9c5eb9f4db9519789e8827d5ac2efae659d105d",
+      "receipt": 7150538712,
+      "job": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/45531780041/job/138928594502",
+      "scope": "R84 prior only; not R86 joint evidence"
+    },
+    {
+      "commit": "672b9814d34ee4b589030d069d97d79e0845cf07",
+      "path": "nox-control/b1-r84/b1_browser_bundle.js",
+      "blob": "7d713b9144698d0923877195962ae0795397c82a",
+      "scope": "QA baseline only"
+    }
+  ],
+  "r100": {
+    "receipt": 7147314487,
+    "consumer": {
+      "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+      "path": "nox-control/a3-r109-r80/joint_frozen.cjs",
+      "blob": "8ccc4877f610e6ba32f0bf19efdd7105b6fdedf9"
+    },
+    "ordered_consumer": {
+      "commit": "410b174423ea6eaad91a23d7c90d941ad2165f7b",
+      "path": "nox-control/b2-r108/atomic_ordered_quality.cjs",
+      "blob": "2bd2efcaea708498871b6f913e4b28d5bb8ca90e"
+    },
+    "host_callbacks": [
+      "readPreAckContext",
+      "retainPreAckObservation",
+      "verifyCanonicalAck",
+      "verifyFreshCanonicalAck"
+    ],
+    "durable_gate": [
+      "reserve",
+      "beginSend",
+      "requireCanonicalAck",
+      "confirm"
+    ],
+    "retention": "exact observation bytes and detached SHA256 retained PENDING; true return is retention only",
+    "reservation": "independently authenticated RESERVED_NOT_SENT CAS receipt; must bind original observation/terminal digests, observation ID, scope, served/browser/server build, request/attempt/event/turn and reservation",
+    "finalization": "independent FINALIZED disposition only after reservation CAS and successful same-row DOM and STOP recheck; DOM MATCHED, STOP CLEAR. R86 recheck is not a disposition producer; current host must implement/authenticate and bind it. Local SENDING, true/void callback, later ACK or EOF do not substitute.",
+    "negative": "pending, rejected, aborted, timeout, STOP or changed DOM: retain exact bytes, never admit completed quality, no ACK on their behalf; no reserialization or overwrite",
+    "required_joint_cases": [
+      "retain then mutate/hide/replace row",
+      "STOP while retaining or while reserve pending",
+      "timeout/uncertain ACK: GET only",
+      "positive existing-dialog RU/ES turns 2 and 3 with independently authenticated final disposition and S03/physical pair"
+    ],
+    "provider_status": "HOLD_UNBOUND"
+  },
+  "verification": {
+    "kind": "static immutable pin and source boundary reconciliation",
+    "prior_functional_receipts_reused": true,
+    "new_functional_test": false,
+    "full_joint_ci": false,
+    "pins_matched": 9,
+    "predicates_matched": 13
+  },
+  "native_admission_required": [
+    "fresh exclusive owner",
+    "preimage CAS",
+    "STOP",
+    "resource admission",
+    "rollback",
+    "immutable verifier",
+    "installed and served SHA256",
+    "independent authenticated host/provider"
+  ],
+  "production_ready": false,
+  "native_accepted": false,
+  "authentication_verified": false,
+  "host_provider_bound": false,
+  "pre_ack_observer_bound": false,
+  "ack_allowed": false,
+  "next_post_allowed": false,
+  "training_admitted": false,
+  "quarantined_release": "R72",
+  "handoff": "D3/O1/A6 existing R109/R80 successor: select R86 once, keep old R81 unbound, consume B0 R79 closure, bind independently authorized provider and R100 disposition, run full joint CI, then native admission and actual turns 2/3. No duplicate package or replay."
+}

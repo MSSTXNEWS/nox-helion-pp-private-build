@@ -1,0 +1,43 @@
+name: A3 R109 frozen ordered release
+on:
+  pull_request:
+    paths: ['nox-control/a3-r109-r80/**', '.github/workflows/nox-a3-r109-r80.yml']
+permissions:
+  contents: read
+jobs:
+  frozen-ordered:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'a3-r109-r80-frozen-ingress-20261125'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: One exact new joint source callsite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          root=pathlib.Path('nox-control/a3-r109-r80')
+          m=(root/'release_input.json').read_bytes()
+          blob=lambda b:hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
+          assert blob(m)=='1f2b54532ed6c71b3d489bb416973e7601284c17'
+          for f in json.loads(m)['files']:
+              assert blob((root/'frozen'/f['destination']).read_bytes())==f['blob'],f['destination']
+          assert blob(pathlib.Path('nox-control/b2-r108/atomic_ordered_quality.cjs').read_bytes())=='2bd2efcaea708498871b6f913e4b28d5bb8ca90e'
+          PY
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$PWD/nox-control/a3-r109-r80:$PWD/nox-control/b2-r108:$PWD/nox-control/d3-r107:$PWD/nox-control/d3-r105:$PWD/nox-control/b2-r104:$PWD/nox-control/d3-r101:$PWD/nox-control/d3-r97:$(python3 -c 'import json,os; print(":".join(os.path.abspath(p) for p in json.load(open("nox-control/d3-r93/release.json"))["python_paths"]))'):$tmp"
+          export D3_B4_MODULE="$PWD/nox-control/d3-r74/staging/b4/b4_existing_turn_pair.mjs"
+          export B2_R108_MODULE="$PWD/nox-control/b2-r108/atomic_ordered_quality.cjs"
+          cd "$tmp"
+          python3 -B -m unittest -v test_frozen_ordered.FrozenOrderedCallsite.test_frozen_ordered_callsite

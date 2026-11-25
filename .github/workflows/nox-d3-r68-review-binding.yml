@@ -1,0 +1,38 @@
+name: D3 R68 source-only B4-B2 composition
+on:
+  pull_request:
+    branches: [b2-r65-main-rues-candidate-20261124]
+    paths:
+      - nox-control/d3_r68_review_binding.py
+      - nox-control/tests/test_d3_r68_review_binding.py
+      - .github/workflows/nox-d3-r68-review-binding.yml
+permissions:
+  contents: read
+jobs:
+  exact-source-composition:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r68-b4-b2-evidence-binding-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 57f575437f7d98d46722188e133522ba722d796c
+          path: .d3-b4-source
+          persist-credentials: false
+      - name: Verify immutable component blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD:nox-control/b2_existing_dialog_review.py)" = c7e37a4a4629ca202ea1d54d80b310d8109996e8
+          test "$(git -C .d3-b4-source rev-parse HEAD:nox-control/systemic_relay_20261118/b4_existing_turn_pair.mjs)" = aad89a93467e638cfcac5af8a099d2127f4ae0fc
+      - name: Real B4 function and B2 source with synthetic fixtures only
+        shell: bash
+        run: |
+          set -euo pipefail
+          export D3_B4_MODULE="$PWD/.d3-b4-source/nox-control/systemic_relay_20261118/b4_existing_turn_pair.mjs"
+          python3 -B nox-control/tests/test_d3_r68_review_binding.py
+          echo 'SOURCE_ONLY; native acceptance remains HOLD'

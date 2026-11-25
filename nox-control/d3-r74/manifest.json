@@ -1,0 +1,132 @@
+{
+  "schema": "nox.d3.combined-source-stage.v1",
+  "instructions_version": "0.0.6",
+  "claim": 7126281196,
+  "original_task_id": "4A02",
+  "native_accepted": false,
+  "admission": false,
+  "release_status": "STAGING_ONLY",
+  "donors": [
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/d3_r72_calibrated_descriptor_gate.py",
+      "git_blob": "68b0ffc7e683afcdf2a8bc82b78740576dcd1bec",
+      "target": "py/d3_r72_calibrated_descriptor_gate.py"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/b2_r71_calibrated_rubric.py",
+      "git_blob": "cfd339f5674e976bedf2284ebfbe38783305930a",
+      "target": "py/b2_r71_calibrated_rubric.py"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/d3_r70_owner_fd_review_ingress.py",
+      "git_blob": "79c55e54b8504bc75fbabec1f2dd387dbefb6cae",
+      "target": "py/d3_r70_owner_fd_review_ingress.py"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/b2_r69_strict_review_ingress.py",
+      "git_blob": "acdf9ed60f6061f665c1061d8e6343cb22bb7156",
+      "target": "py/b2_r69_strict_review_ingress.py"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/d3_r68_review_binding.py",
+      "git_blob": "1fcf2b6414838943c32914d2d0b03eceaf06e5d3",
+      "target": "py/d3_r68_review_binding.py"
+    },
+    {
+      "commit": "55152345d90d09d5b9cedd91efc21ef0b7c69f75",
+      "path": "nox-control/b2_existing_dialog_review.py",
+      "git_blob": "c7e37a4a4629ca202ea1d54d80b310d8109996e8",
+      "target": "py/b2_existing_dialog_review.py"
+    },
+    {
+      "commit": "4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3",
+      "path": "nox-control/b5_s03_verifier_r54.py",
+      "git_blob": "df94c535273dde1fd2609f555d1d615eacfda831",
+      "target": "py/b5_s03_verifier_r54.py"
+    },
+    {
+      "commit": "ea2926cd4c88868f731052c4f2fd649c7f673c5a",
+      "path": "nox-control/b0-r53/b0_resume_bridge.py",
+      "git_blob": "a090f0bd0cf9a654b7aeee9c694338bd184fb92f",
+      "target": "py/b0_resume_bridge.py"
+    },
+    {
+      "commit": "ea2926cd4c88868f731052c4f2fd649c7f673c5a",
+      "path": "nox-control/b0-r53/owner_chat_probe.py",
+      "git_blob": "87b9f3d2e3eb109327bd9f403b26b53d926ab803",
+      "target": "py/owner_chat_probe.py"
+    },
+    {
+      "commit": "7fad0f38fa299112a9a67781f427e21b23f3fb18",
+      "path": "nox-control/b5_browser_prefix_gate.py",
+      "git_blob": "6ff5e729ce7b431b25f28e66391ae81fa9c73f4a",
+      "target": "py/b5_browser_prefix_gate.py"
+    },
+    {
+      "commit": "0747c70155676b58865e2b46957c0fd41474699d",
+      "path": "nox-control/b1-r61/b1_abort_safe_ui_adapter.js",
+      "git_blob": "9a9365258888e218990e0126bdc918605005777f",
+      "target": "browser/b1_abort_safe_ui_adapter.js"
+    },
+    {
+      "commit": "0747c70155676b58865e2b46957c0fd41474699d",
+      "path": "nox-control/b1-r65/b1_client_stream_reconnect_harness.js",
+      "git_blob": "dc40fa933db679b8529e8fce96b653c2d867beab",
+      "target": "browser/b1_client_stream_reconnect_harness.js"
+    },
+    {
+      "commit": "0747c70155676b58865e2b46957c0fd41474699d",
+      "path": "nox-control/b1-r62/b1_sse_ui_binding.js",
+      "git_blob": "f3cf260b98838039f2daf1005795d5adf6049bc8",
+      "target": "browser/b1_sse_ui_binding.js"
+    },
+    {
+      "commit": "5b50ed7166061a62b5e7b42802cefc8a45e99b5c",
+      "path": "coordination/onepass/b3_r56_combined_candidate.js",
+      "git_blob": "6fb70b91eac58ab24167d66729074ce1889c3687",
+      "target": "b3/b3_r56_combined_candidate.js"
+    },
+    {
+      "commit": "5b50ed7166061a62b5e7b42802cefc8a45e99b5c",
+      "path": "coordination/onepass/b3_r57_phase_transition_port.cjs",
+      "git_blob": "a4ec982ab0e25959a100a21c765ba1d13df06bc0",
+      "target": "b3/b3_r57_phase_transition_port.cjs"
+    },
+    {
+      "commit": "5b50ed7166061a62b5e7b42802cefc8a45e99b5c",
+      "path": "coordination/onepass/b3_r60_identity_readback_race.cjs",
+      "git_blob": "6fa1fa32d229339ded8ecd861cbe35696f184e3e",
+      "target": "b3/b3_r60_identity_readback_race.cjs"
+    },
+    {
+      "commit": "f00cc722022773edaed335ffb59fdbb0664189e2",
+      "path": "nox-control/systemic_relay_20261118/b4_sse_latency_probe.mjs",
+      "git_blob": "3582fd900dde982d1abbc1ef0f7ba11025a2e0d5",
+      "target": "b4/b4_sse_latency_probe.mjs"
+    },
+    {
+      "commit": "f00cc722022773edaed335ffb59fdbb0664189e2",
+      "path": "nox-control/systemic_relay_20261118/b4_existing_turn_pair.mjs",
+      "git_blob": "aad89a93467e638cfcac5af8a099d2127f4ae0fc",
+      "target": "b4/b4_existing_turn_pair.mjs"
+    },
+    {
+      "commit": "f00cc722022773edaed335ffb59fdbb0664189e2",
+      "path": "nox-control/systemic_relay_20261118/b4_upstream_timing_pair.mjs",
+      "git_blob": "e0a239384f7ec054abab926d9f3fb169624ab8d0",
+      "target": "b4/b4_upstream_timing_pair.mjs"
+    }
+  ],
+  "browser_load_order": [
+    "browser/b1_abort_safe_ui_adapter.js",
+    "browser/b1_client_stream_reconnect_harness.js",
+    "browser/b1_sse_ui_binding.js"
+  ],
+  "b3_emit": "b3/b3_r60_identity_readback_race.cjs --emit",
+  "notes": "No production callsite or owner authorization. Python alias preserves canonical B5 class identity. Stage is not deployment."
+}
