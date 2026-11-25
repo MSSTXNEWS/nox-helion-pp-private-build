@@ -1,0 +1,3 @@
+/* NOX · порядок в шапке (расширение): в шапке остаются 4+4 системных пункта; страницы «мозга» и «О сборке» живут в выпадающем списке РЕЗОНАНС/ВИДЖЕТЫ. */
+.tb-i[data-k="feel"],.tb-i[data-k="organ"],.tb-i[data-k="growth"],.tb-i[data-k="consc"],.tb-i[data-k="soul"],.tb-i[data-k="intents"],.tb-i[data-k="about"]{display:none!important}
+.tb-l .tb-sep:not(:last-child){display:none}
