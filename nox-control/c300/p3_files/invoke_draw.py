@@ -1,0 +1,129 @@
+"""ops/draw/invoke_draw.py (P3, 2026-11-25): рисование в чате. Контракт: draw_request(text)->None|(locale,prompt); photo_request(text)->bool;
+local_generate(prompt, cancelled=None, photographic=False)->dict(url,path,source,seconds); DrawError.
+Канал 1: локальный POST :8091/img/generate (sun_adapter :8097 -> imgsvc :8500). Канал 2 (если korea_img_disabled/503/ошибка): шлюз :8793 /v1/images/generations
+(pollinations/horde). Только стандартная библиотека. Откат: invoke_draw.py.stub_bak_p3 (заглушка). Выключатель: state/flags.json {"draw_chat": false}."""
+import json, os, re, time, base64, threading, urllib.parse, urllib.request
+
+LOCAL = os.environ.get("NOX_DRAW_LOCAL", "http://127.0.0.1:8091/img/generate")
+GATE = os.environ.get("NOX_DRAW_GATE", "http://127.0.0.1:8793/v1/images/generations")
+OUT_DIR = "/workspace/nox/state/advisor_images"
+FLAGS = "/workspace/nox/state/flags.json"
+
+
+class DrawError(Exception):
+    pass
+
+
+_VERB = re.compile(
+    r"^\s*(?:пожалуйста[,\s]+|please[,\s]+|por favor[,\s]+|ты\s+(?:мог(?:ла)?\s+бы\s+)?)?"
+    r"(?:нарису(?:й|йте)|изобрази|сгенерируй|сгенерируйте|создай|создайте|сделай|сделайте|сформируй|покажи|draw|paint|sketch|generate|create|make|dibuja|dibújame|genera|crea)"
+    r"(?:\s+(?:мне\s+|для\s+меня\s+|me\s+)?(.*))?$", re.I | re.S)
+_OBJ = re.compile(r"(картинк|изображени|рисун|иллюстраци|фото|фотограф|арт\b|постер|логотип|аватар|портрет|пейзаж|image|picture|photo|drawing|illustration|portrait|logo|imagen|dibujo|foto)", re.I)
+_BARE = re.compile(r"^\s*(?:нарису(?:й|йте)|draw|dibuja)\b", re.I)
+_PHOTO = re.compile(r"(фото|фотограф|реалистич|photo|photograph|realistic|fotograf|realista)", re.I)
+_STRIP = re.compile(r"^(?:на\s+тему\s+|картинк[ауи][:\s]+|изображени[ея][:\s]+|рисунок[:\s]+|фото(?:графию)?[:\s]+|an?\s+(?:image|picture|photo|drawing)\s+of\s+|(?:image|picture|photo|drawing)\s+of\s+|una?\s+(?:imagen|foto|dibujo)\s+de\s+)", re.I)
+
+
+def _flag_on():
+    try:
+        return bool(json.load(open(FLAGS, encoding="utf-8")).get("draw_chat", True))
+    except Exception:
+        return True
+
+
+def _locale(t):
+    if re.search(r"[а-яё]", t, re.I):
+        return "ru"
+    if re.search(r"[¿¡ñáéíóú]|\b(dibuja|genera|crea|una|un|de|el|la)\b", t, re.I):
+        return "es"
+    return "en"
+
+
+def draw_request(text):
+    if not text or not _flag_on():
+        return None
+    t = str(text).strip()
+    if len(t) > 1500:
+        return None
+    m = _VERB.match(t)
+    if not m:
+        return None
+    rest = (m.group(1) or "").strip(" .!?:;,\n")
+    # «нарисуй ...» — всегда рисование; «сделай/покажи/создай ...» только если есть слово про изображение
+    if not _BARE.match(t) and not _OBJ.search(t):
+        return None
+    prompt = _STRIP.sub("", rest).strip(" .!?:;,\n")
+    return (_locale(t), prompt)
+
+
+def photo_request(text):
+    return bool(text and _PHOTO.search(str(text)))
+
+
+def _post(url, body, timeout):
+    req = urllib.request.Request(url, json.dumps(body).encode(), {"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as e:
+        try:
+            return e.code, json.loads(e.read() or b"{}")
+        except Exception:
+            return e.code, {}
+
+
+def _url(path):
+    return "/img/file?p=" + urllib.parse.quote(path)
+
+
+def _run(fn, cancelled, limit):
+    box = {}
+    th = threading.Thread(target=lambda: box.update(r=_safe(fn)), daemon=True)
+    th.start(); t0 = time.time()
+    while th.is_alive() and time.time() - t0 < limit:
+        if cancelled and cancelled():
+            raise DrawError("отменено")
+        th.join(0.5)
+    if "r" not in box:
+        raise DrawError("таймаут генерации")
+    return box["r"]
+
+
+def _safe(fn):
+    try:
+        return fn()
+    except Exception as e:
+        return (0, {"error": "%s: %s" % (type(e).__name__, str(e)[:120])})
+
+
+def _local(prompt, photographic):
+    w = h = 1024
+    return _post(LOCAL, {"prompt": prompt, "model": "auto", "width": w, "height": h, "seed": -1}, 240)
+
+
+def _gate(prompt, photographic):
+    return _post(GATE, {"prompt": prompt, "model": "auto"}, 150)
+
+
+def local_generate(prompt, cancelled=None, photographic=False):
+    t0 = time.time()
+    p = str(prompt).strip()
+    if photographic:
+        p += ", photorealistic, natural light, high detail"
+    why = []
+    st, d = _run(lambda: _local(p, photographic), cancelled, 250)
+    path = (d or {}).get("path")
+    if st == 200 and path and os.path.isfile(path) and (d.get("ok", True) is not False):
+        return {"status": "ok", "source": "local", "path": path, "url": _url(path), "seconds": round(time.time() - t0, 1)}
+    why.append("local:%s:%s" % (st, str((d or {}).get("error") or (d or {}).get("reason") or "")[:60]))
+    st, d = _run(lambda: _gate(p, photographic), cancelled, 160)
+    x = ((d or {}).get("data") or [{}])[0] if isinstance(d, dict) else {}
+    path = x.get("path")
+    if not path and x.get("b64_json"):
+        os.makedirs(OUT_DIR, exist_ok=True)
+        path = "%s/p3_%d.png" % (OUT_DIR, int(time.time() * 1000))
+        open(path, "wb").write(base64.b64decode(x["b64_json"]))
+    if st == 200 and path and os.path.isfile(path):
+        return {"status": "ok", "source": "gate8793", "path": path, "url": _url(path), "seconds": round(time.time() - t0, 1), "local": why[0]}
+    why.append("gate:%s:%s" % (st, str((d or {}).get("error") or "")[:60]))
+    raise DrawError("; ".join(why))
