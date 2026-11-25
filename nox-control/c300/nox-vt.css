@@ -1,0 +1,8 @@
+/* NOX · плавные переходы между страницами (View Transitions, Chrome 126+); поиск-лупа заметнее */
+@view-transition{navigation:auto}
+::view-transition-old(root){animation:nxvt-out .22s ease both}::view-transition-new(root){animation:nxvt-in .32s cubic-bezier(.2,.8,.2,1) both}
+@keyframes nxvt-out{to{opacity:0;transform:scale(.985);filter:blur(4px)}}@keyframes nxvt-in{from{opacity:0;transform:scale(1.012);filter:blur(4px)}}
+@media(prefers-reduced-motion:reduce){::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}
+#tbSearch{width:42px!important;height:42px!important;border-radius:50%!important;background:rgba(255,235,220,.1)!important;border:1px solid rgba(255,235,220,.22)!important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+#tbSearch sl-icon{font-size:22px!important;color:#f6d7b4}
+@media(min-width:2200px){html{font-size:125%}}

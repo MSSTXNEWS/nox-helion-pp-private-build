@@ -26,6 +26,15 @@ const jget = (u, o) => fetch(u, o).then(async (r) => { const t = await r.text();
   for (const [k, c] of Object.entries(reg.commands || {})) if (c.endpoint && !((c.params || {}).required || []).length) data.push({ id: 'c:' + k, title: c.desc + (c.confirm ? ' (с подтверждением)' : ''), section: 'Команды шины', keywords: k, handler: () => { window.NOXcmd && window.NOXcmd(k, {}); } });
   const st = await jget('/svc/_status').then((r) => r.j || {}).catch(() => ({}));
   for (const [k, v] of Object.entries(st.services || {})) if (v.ui !== false) data.push({ id: 's:' + k, title: (v.title || k) + (v.up ? '' : ' · не запущен'), section: 'Сервисы', keywords: k, handler: () => { v.up ? window.open('/svc/' + k + '/', '_blank') : toast((v.title || k) + ': сервис не запущен', 1); } });
+  /* Raycast-стиль: сначала действия (команды) с русскими синонимами, страницы вторым блоком */
+  const scriptP = new Promise((ok) => { if (window.NOXactions) return ok(); const s = document.createElement('script'); s.src = './nox-actions.js'; s.onload = s.onerror = ok; document.head.appendChild(s); });
+  await scriptP;
+  const ico = (n) => (customElements.get('sl-icon') ? '<sl-icon library="tabler" name="' + n + '"></sl-icon>' : undefined);
+  const acts = (window.NOXactions ? window.NOXactions.list : []).map((a) => ({ id: 'x:' + a.id, title: a.title, section: 'Команды', keywords: a.syn, icon: ico(a.icon), handler: () => a.run() }));
+  const SYN = { stop: 'стоп остановить хватит прервать', health: 'статус состояние здоровье шлюз', 'svc.status': 'сервисы статус службы', search: 'поиск найти', snapshot: 'снимок состояние', 'cal.list': 'календарь события список' };
+  data.forEach((d) => { if (d.id && d.id.startsWith('c:')) { d.section = 'Команды'; d.keywords = (d.keywords || '') + ' ' + (SYN[d.keywords] || ''); d.icon = ico('bolt'); } });
+  data.sort((a, b) => ({ 'Команды': 0, 'Избранное': 1, 'Недавние': 2 }[a.section] ?? 3) - ({ 'Команды': 0, 'Избранное': 1, 'Недавние': 2 }[b.section] ?? 3));
+  data.unshift(...acts);
   const el = document.createElement('ninja-keys');
   el.setAttribute('placeholder', 'Поиск страниц и действий NOX…'); el.openHotkey = 'ctrl+alt+shift+f12'; el.noAutoLoadMdIcons = true; el.data = data; el.footerHtml = '<span style="opacity:.7;letter-spacing:.12em;font-size:10px">ENTER · ВЫБРАТЬ &nbsp; ↑↓ · ПЕРЕМЕЩЕНИЕ &nbsp; ESC · ЗАКРЫТЬ</span>';
   el.style.cssText = '--ninja-z-index:9800;--ninja-width:620px;--ninja-accent-color:#c0392b;--ninja-font-family:inherit;--ninja-text-color:#efe6df;--ninja-secondary-text-color:#a89c93;--ninja-modal-background:rgba(16,13,13,.78);--ninja-modal-shadow:0 24px 70px rgba(0,0,0,.65);--ninja-overflow-background:rgba(2,3,10,.55);--ninja-secondary-background-color:rgba(255,235,220,.06);--ninja-selected-background:rgba(176,44,32,.38);--ninja-actions-height:360px;--ninja-icon-size:1.2em;--ninja-key-border-radius:6px;--ninja-footer-background:rgba(255,235,220,.04)';
