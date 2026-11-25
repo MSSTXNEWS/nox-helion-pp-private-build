@@ -1,0 +1,46 @@
+name: B2 R111 extracted verdict entrypoint
+on:
+  pull_request:
+    paths: ['nox-control/b2-r112-stage/**', '.github/workflows/nox-b2-r112-stage.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  staged-verdict:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b2-r112-verdict-consistency-20261125'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Actual immutable A6/R111 extraction and staged verdict fixture
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object nox-control/a3-r109-r80/joint_frozen.cjs)" = 8ccc4877f610e6ba32f0bf19efdd7105b6fdedf9
+          test "$(git hash-object nox-control/a3-r109-r80/test_frozen_ordered.py)" = 8c5afe0b077f6bee9443d24e571ace25bfb7ae52
+          test "$(git hash-object nox-control/b2-r108/atomic_ordered_quality.cjs)" = 2bd2efcaea708498871b6f913e4b28d5bb8ca90e
+          test "$(git hash-object nox-control/b2-r110/reported_review.cjs)" = ea2a46f68770ae613ae6645ddb48de52d37eb9b7
+          test "$(git hash-object nox-control/d3-r111/release.json)" = fd6b4dd58465de1b7874c36f292acd98be7bb6c5
+          test "$(git hash-object nox-control/d3-r111/stage_overlay.py)" = 82cbfac33a5cc56d53d9547dc8511d5968efbe58
+          test "$(git hash-object nox-control/b2-r112/verdict_consistency.cjs)" = 727600ede64523c899680dec84f2edc1ec4d2d2e
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/14989839885/zip" > "$RUNNER_TEMP/a6-b2-exact.zip"
+          python3 -B nox-control/d3-r111/stage_overlay.py "$RUNNER_TEMP/a6-b2-exact.zip" "$RUNNER_TEMP/r111-b2-extracted"
+          export B2_STAGE_ROOT="$RUNNER_TEMP/r111-b2-extracted"
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$PWD/nox-control/b2-r112-stage:$PWD/nox-control/b2-r112:$PWD/nox-control/b2-r110:$PWD/nox-control/a3-r109-r80:$PWD/nox-control/b2-r108:$PWD/nox-control/d3-r107:$PWD/nox-control/d3-r105:$PWD/nox-control/b2-r104:$PWD/nox-control/d3-r101:$PWD/nox-control/d3-r97:$(python3 -c 'import json,os; print(":".join(os.path.abspath(p) for p in json.load(open("nox-control/d3-r93/release.json"))["python_paths"]))'):$tmp"
+          export D3_B4_MODULE="$PWD/nox-control/d3-r74/staging/b4/b4_existing_turn_pair.mjs"
+          export B2_R108_MODULE="$PWD/nox-control/b2-r108/atomic_ordered_quality.cjs"
+          cd "$tmp"
+          python3 -B -m unittest -v test_staged_verdict.VerdictConsistency.test_verdict_consistency
