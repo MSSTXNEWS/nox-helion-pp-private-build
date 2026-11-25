@@ -10,7 +10,7 @@
 })();
 /* growth: три карточки «служба недоступна» -> одно состояние; слайдеры ECharts в стекле */
 (function () {
-  if (document.body.dataset.page !== 'growth') return;
+
   const fix = () => {
     const secs = [...document.querySelectorAll('main section, main .card')].filter((s) => !s.querySelector('section') && /СЛУЖБА НЕДОСТУПНА/i.test(s.textContent) && !s.dataset.s4);
     if (secs.length > 1) {

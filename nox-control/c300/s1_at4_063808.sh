@@ -1,0 +1,1 @@
+cd /workspace/nox/web/site/vendor; ls nox-x/globe globe-gl earth 2>&1 | head -40; find . -maxdepth 4 \( -iname "*night*" -o -iname "*cloud*" -o -iname "*countries*" -o -iname "*.geojson" -o -iname "*topology*" -o -iname "*bump*" \) 2>/dev/null | head -12; grep -o "sl-switch" -r shoelace/cdn/components 2>/dev/null | head -1; ls shoelace/cdn/components/switch 2>/dev/null | head -3

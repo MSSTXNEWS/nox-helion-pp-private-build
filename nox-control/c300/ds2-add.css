@@ -1,0 +1,5 @@
+
+.ds-skel-set{display:flex;gap:24px;margin:24px 0}
+.nxm-grp{margin:14px 6px 2px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ds-mute,rgba(240,232,226,.62))}
+.ph .nxu-btn.primary,.ph button.primary,button.primary,.btn-primary{background:linear-gradient(180deg,#f0c27a,#d98a3c)!important;color:#1a0e06!important;border-color:transparent!important;font-weight:500}
+button.primary:hover,.btn-primary:hover{filter:brightness(1.08)}

@@ -37,7 +37,7 @@
 | echarts | 6.1.0 | Apache-2.0 | vendor/echarts/echarts.min.js | <script src="./vendor/echarts/echarts.min.js"></script> | органы, финансы | ok |
 | embla-carousel | 8.6.0 | MIT | vendor/embla-carousel/embla-carousel.esm.js | import * as M from "./vendor/embla-carousel/embla-carousel.esm.js" | см. IDEAS.md | ok |
 | excalidraw-excalidraw | 0.18.1 | MIT | vendor/excalidraw-excalidraw/excalidraw-excalidraw.esm.js | import * as M from "./vendor/excalidraw-excalidraw/excalidraw-excalidraw.esm.js" | см. IDEAS.md | ok |
-| excalidraw-mermaid-to-excalidraw | 2.2.2 | MIT | vendor/excalidraw-mermaid-to-excalidraw/excalidraw-mermaid-to-excalidraw.esm.js | import * as M from "./vendor/excalidraw-mermaid-to-excalidraw/excalidraw-mermaid-to-excalidraw.esm.js" | см. IDEAS.md | ok |
+| excalidraw-mermaid-to-excalidraw | 2.2.2 | MIT | vendor/excalidraw-mermaid-to-excalidraw/excalidraw-mermaid-to-excalidraw.esm.js | import * as M from "./vendor/excalidraw-mermaid-to-excalidraw/excalidraw-mermaid-to-excalidraw.esm.js" | см. IDEAS.
 | fabric | 7.4.0 | MIT | vendor/fabric/index.min.js | <script src="./vendor/fabric/index.min.js"></script> | фото, доска | ok |
 | fast-average-color | 9.6.0 | MIT | vendor/fast-average-color/fast-average-color.esm.js | import * as M from "./vendor/fast-average-color/fast-average-color.esm.js" | см. IDEAS.md | ok |
 | ffmpeg | 0.12.15 | MIT | vendor/ffmpeg/esm/classes.js | <script src="./vendor/ffmpeg/esm/classes.js"></script> | студия, видео | ok |
@@ -72,7 +72,7 @@
 | maplibre-gl | 6.19.0 | BSD-3-Clause | vendor/maplibre-gl/maplibre-gl-shared.mjs | <script src="./vendor/maplibre-gl/maplibre-gl-shared.mjs"></script> | атлас, карты | ok |
 | markdown-it | 15.0.3 | MIT | vendor/markdown-it/markdown-it.esm.js | import * as M from "./vendor/markdown-it/markdown-it.esm.js" | см. IDEAS.md | ok |
 | masonry | 4.2.2 | MIT | vendor/masonry/masonry.pkgd.min.js | <script src="./vendor/masonry/masonry.pkgd.min.js"></script> | фото, новости | ok |
-| mediapipe-tasks-vision | 1.2.3 | Apache-2.0 | vendor/mediapipe-tasks-vision/vision_bundle.mjs | import {FilesetResolver,GestureRecognizer} from "./vendor/mediapipe-tasks-vision/vision_bundle.mjs"; FilesetResolver.forVisionTasks("./vendo | вся сборка (жесты) | ok |
+| mediapipe-tasks-vision | 1.2.3 | Apache-2.0 | vendor/mediapipe-tasks-vision/vision_bundle.mjs | import {FilesetResolver,GestureRecognizer} from "./vendor/mediapipe-tasks-vision/vision_bundle.mjs"; FilesetResolver.forVisionTasks("./vendo | вся с
 | mermaid | 12.3.0 | MIT | vendor/mermaid/mermaid.esm.min.mjs | <script src="./vendor/mermaid/mermaid.min.js"></script> | чат | ok |
 | meyda | 5.6.3 | MIT | vendor/meyda/meyda.esm.js | import * as M from "./vendor/meyda/meyda.esm.js" | см. IDEAS.md | ok |
 | motion | 14.14.0 | MIT | vendor/motion/dist/motion.js |  | все | уже стоял |
@@ -91,7 +91,7 @@
 | phaser | 4.2.1 | MIT | vendor/phaser/phaser.min.js | <script src="./vendor/phaser/phaser.min.js"></script> | игры | ok |
 | pixi-filters | 6.1.5 | MIT | vendor/pixi-filters/pixi-filters.esm.js | import * as M from "./vendor/pixi-filters/pixi-filters.esm.js" | см. IDEAS.md | ok |
 | pixi.js | 8.23.0 | MIT | vendor/pixi.js/pixi.js.esm.js | import * as M from "./vendor/pixi.js/pixi.js.esm.js" | см. IDEAS.md | ok |
-| planets | - | CC BY 4.0 | vendor/planets/2k/ | new THREE.TextureLoader().load("./vendor/planets/8k/8k_earth_daymap.jpg"); кольца Сатурна: 2k/2k_saturn_ring_alpha.png; облака/ночь: *_earth | фон (планеты); LICENSE и ATTRIBUTION.txt в папке | ok |
+| planets | - | CC BY 4.0 | vendor/planets/2k/ | new THREE.TextureLoader().load("./vendor/planets/8k/8k_earth_daymap.jpg"); кольца Сатурна: 2k/2k_saturn_ring_alpha.png; облака/ночь: *_earth | фон (планеты); LICENSE и
 | pmtiles | 4.5.0 | BSD-3-Clause | vendor/pmtiles/pmtiles.esm.js | import * as M from "./vendor/pmtiles/pmtiles.esm.js" | см. IDEAS.md | ok |
 | postprocessing | 6.39.6 | Zlib | vendor/postprocessing/build/index.js |  | фон, сцена | уже стоял |
 | qrcode | 1.5.4 | MIT | vendor/qrcode/qrcode.esm.js | import * as M from "./vendor/qrcode/qrcode.esm.js" | см. IDEAS.md | ok |
@@ -114,7 +114,7 @@
 | style-dictionary | 5.8.0 | Apache-2.0 | vendor/style-dictionary/style-dictionary.esm.js | import * as M from "./vendor/style-dictionary/style-dictionary.esm.js" | см. IDEAS.md | ok |
 | suncalc | 2.1.4 | см. LICENSE: Copyright (c) 2026, Volodymyr Agafonkin | vendor/suncalc/suncalc.esm.js | import * as M from "./vendor/suncalc/suncalc.esm.js" | см. IDEAS.md | ok |
 | swiper | 14.4.0 | MIT | vendor/swiper/swiper-bundle.min.css |  | кино, новости, фото | уже стоял |
-| talkinghead | 1.8.2 | MIT | vendor/talkinghead/modules/talkinghead.mjs | import {TalkingHead} from "./vendor/talkinghead/modules/talkinghead.mjs" (нужен importmap three + three/addons, GLB-аватары в vendor/talking | чат, голос, ТВ | ok |
+| talkinghead | 1.8.2 | MIT | vendor/talkinghead/modules/talkinghead.mjs | import {TalkingHead} from "./vendor/talkinghead/modules/talkinghead.mjs" (нужен importmap three + three/addons, GLB-аватары в vendor/talking | чат, голос,
 | tesseract | 7.0.0 | Apache-2.0 | vendor/tesseract/dist/tesseract.esm.min.js | <script src="./vendor/tesseract/dist/tesseract.esm.min.js"></script> | фото, документы (OCR) | ok |
 | theatre | 0.7.2 | Apache-2.0 | vendor/theatre/theatre.esm.js | import * as M from "./vendor/theatre/theatre.esm.js" | сцена, анимации | ok |
 | three | 0.187.0 | MIT | vendor/three/addons/loaders/RGBELoader.js | import * as THREE from "./vendor/three/three.module.js" | фон, сцена | уже стоял |
