@@ -46,9 +46,10 @@
  function flip(dir){const ds=dates();if(!ds.includes(S.cur))ds.push(S.cur),ds.sort();const i=ds.indexOf(S.cur)+dir;if(i>=0&&i<ds.length)load(ds[i]);else if(dir>0)load(today())}
 
  /* ---- синхронизация листов с сервером (/api/notes, id=pad-YYYY-MM-DD); localStorage = офлайн-кэш ---- */
- let pt=0,pulling=0;
+ let pt=0,pulling=0,Q=Promise.resolve();function seq(f){Q=Q.then(f,f);return Q}
  function push(){clearTimeout(pt);pt=setTimeout(doPush,1500)}
- async function doPush(){try{const j=await jget('/api/notes');if(!j)return;let list=(j.notes||[]).slice();
+ function doPush(){return seq(doPush0)}
+ async function doPush0(){try{const j=await jget('/api/notes');if(!j)return;let list=(j.notes||[]).slice();
    Object.keys(S.sheets).forEach(function(d){const t=S.sheets[d];if(!t||!t.trim())return;const id='pad-'+d;const rec={id:id,text:t,ts:S.ts[d]||Date.now()/1000,proj:S.proj[d]||'',pad:1};const i=list.findIndex(function(n){return n.id===id});if(i>=0){if((list[i].ts||0)>rec.ts+1)return;list[i]=rec}else list.push(rec)});
    const r=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:list})});if(r.ok)flash('синхронизировано')}catch(e){}}
  async function pull(){if(pulling)return;pulling=1;try{const j=await jget('/api/notes');if(!j)return;let ch=0;(j.notes||[]).forEach(function(n){if(!n||!/^pad-\d{4}-\d\d-\d\d$/.test(n.id))return;const d=n.id.slice(4);if((n.ts||0)>(S.ts[d]||0)+1){S.sheets[d]=n.text||'';S.ts[d]=n.ts;if(n.proj)S.proj[d]=n.proj;ch=1}});
@@ -56,8 +57,8 @@
  /* ---- действия ---- */
  async function jget(u){try{const r=await fetch(u,{cache:'no-store'});return r.ok?await r.json():null}catch(e){return null}}
  async function toNox(text){text=String(text||'').trim();if(!text)return false;let ok=false;
-  const j=await jget('/api/notes');const list=(j&&j.notes)||[];list.push({id:String(Date.now()),text:text.slice(0,4000),ts:Date.now()/1000});
-  try{const r=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:list})});ok=r.ok}catch(e){}
+  await seq(async function(){const j=await jget('/api/notes');const list=(j&&j.notes)||[];list.push({id:String(Date.now()),text:text.slice(0,4000),ts:Date.now()/1000});
+  try{const r=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:list})});ok=r.ok}catch(e){}});
   try{const r=await fetch('/svc/nox-living/mem/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'Заметка владельца: '+text.slice(0,1500)})});ok=ok||r.ok}catch(e){}
   return ok}
  function toBoard(text){text=String(text||'').trim();if(!text)return false;try{const d=JSON.parse(localStorage.getItem(BK)||'{}');const els=d.elements||[];let y=40;els.forEach(function(e){if(e&&typeof e.y==='number')y=Math.max(y,e.y+(e.height||0)+20)});
