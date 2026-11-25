@@ -1,0 +1,10 @@
+/* NOX · живые панели вкладок настроек */
+.nxs-kv{display:grid;gap:6px;margin:6px 0 10px}.nxs-kv>div{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:300;padding:8px 12px;border-radius:12px;background:rgba(255,235,220,.04);border:1px solid rgba(255,235,220,.08)}
+.nxs-kv span{flex:1;color:rgba(240,232,226,.7)}.nxs-kv b{font-weight:400;color:#f4ede8}
+.nxs-d{width:8px;height:8px;border-radius:50%;background:#6b6f76;flex:0 0 8px}.nxs-d[data-s=ok]{background:#7fd6a0;box-shadow:0 0 8px rgba(127,214,160,.6)}.nxs-d[data-s=bad]{background:#d9483b}.nxs-d[data-s=warn]{background:#e0b35a}
+.nxs-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.nxs-chips span{padding:5px 12px;border-radius:999px;font-size:11px;letter-spacing:.1em;border:1px solid rgba(255,235,220,.12);background:rgba(255,235,220,.05)}.nxs-chips span[data-s=ok]{border-color:rgba(127,214,160,.5)}.nxs-chips span[data-s=bad]{border-color:rgba(217,72,59,.6)}
+.nxs-tbl{display:grid;gap:4px}.nxs-tbl>div{display:grid;grid-template-columns:10px minmax(110px,1fr) 2fr auto;gap:10px;align-items:center;font-size:12px;font-weight:300;padding:7px 12px;border-radius:10px;background:rgba(255,235,220,.03)}
+.nxs-tbl em{font-style:normal;color:rgba(240,232,226,.6);font-size:11px;white-space:nowrap}.nxs-tbl span{color:rgba(240,232,226,.65);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nxs-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;padding:6px 0}
+.nxs-live .note a{color:#d49a62}
+@media(max-width:600px){.nxs-tbl>div{grid-template-columns:10px 1fr;}.nxs-tbl span,.nxs-tbl em{grid-column:2}}

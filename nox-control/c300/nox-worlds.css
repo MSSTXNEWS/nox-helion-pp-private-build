@@ -1,0 +1,30 @@
+/* NOX · пять миров интерфейса (HELION, CHRONOS, SOMNIUM, FORGE, SYNAPSE) и шесть палитр сцены.
+   Основа — исходник владельца NOX_V13_SOURCE_nox-world-controls-v13.css (Диск): материал кнопок и кромок зависит от мира, живой фон HOME один. */
+html[data-nox-world]{--nox-ui-rgb:var(--nox-world-rgb,233,180,101);--nox-ui-line:rgba(var(--nox-ui-rgb),.38);--nox-ui-shape:12px;--nox-ui-clip:none}
+html[data-nox-world]::after{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.2;mix-blend-mode:soft-light;
+  background:radial-gradient(ellipse at 18% 8%,rgba(var(--nox-ui-rgb),.55),transparent 55%),radial-gradient(ellipse at 85% 95%,rgba(var(--nox-ui-rgb),.35),transparent 60%)}
+html[data-nox-world=chronos]::after{background:repeating-conic-gradient(from 0deg at 50% 38%,rgba(var(--nox-ui-rgb),.28) 0 1deg,transparent 1deg 15deg)}
+html[data-nox-world=somnium]::after{opacity:.26;background:radial-gradient(circle at 20% 15%,rgba(216,155,245,.6),transparent 50%),radial-gradient(circle at 80% 80%,rgba(78,191,225,.5),transparent 55%)}
+html[data-nox-world=forge]::after{opacity:.24;background:linear-gradient(0deg,rgba(235,110,60,.55),transparent 38%),repeating-linear-gradient(128deg,transparent 0 22px,rgba(255,255,255,.06) 23px 24px)}
+html[data-nox-world=synapse]::after{background:radial-gradient(circle at 12% 18%,rgba(var(--nox-ui-rgb),.7) 0 2px,transparent 3px),radial-gradient(circle at 88% 70%,rgba(var(--nox-ui-rgb),.6) 0 2px,transparent 3px),radial-gradient(ellipse at 50% 50%,rgba(var(--nox-ui-rgb),.3),transparent 62%)}
+html[data-nox-world] :is(.tb-t,.seg button,.card button,.nxu-btn,.nxwd button):not(.stop):not([data-action=stop]){position:relative;border-radius:var(--nox-ui-shape);border-color:var(--nox-ui-line);clip-path:var(--nox-ui-clip);
+  background-image:linear-gradient(145deg,rgba(var(--nox-ui-rgb),.14),rgba(200,217,233,.04) 38%,rgba(5,11,20,.28));backdrop-filter:blur(10px) saturate(140%);-webkit-backdrop-filter:blur(10px) saturate(140%)}
+html[data-nox-world] :is(.seg button,.card button,.nxwd button):hover{border-color:rgba(var(--nox-ui-rgb),.8);box-shadow:0 0 18px rgba(var(--nox-ui-rgb),.18)}
+html[data-nox-world=helion]{--nox-ui-shape:18px 6px 20px 7px}
+html[data-nox-world=chronos]{--nox-ui-shape:3px 13px 3px 13px;--nox-ui-line:rgba(var(--nox-ui-rgb),.5)}
+html[data-nox-world=chronos] :is(.seg button,.card button,.nxwd button){border-style:double;border-width:2px}
+html[data-nox-world=somnium]{--nox-ui-shape:29% 15% 29% 11% / 18% 34% 21% 30%}
+html[data-nox-world=forge]{--nox-ui-shape:0px;--nox-ui-clip:polygon(0 0,92% 0,100% 21%,100% 100%,8% 100%,0 78%)}
+html[data-nox-world=synapse]{--nox-ui-shape:26px 13px 27px 13px}
+html[data-nox-world] .card,html[data-nox-world] .nxp-box,html[data-nox-world] .ndp{border-color:rgba(var(--nox-ui-rgb),.28)}
+html[data-nox-world=forge] .card{border-radius:3px}html[data-nox-world=somnium] .card{border-radius:22px 9px 24px 10px}html[data-nox-world=synapse] .card{border-radius:18px}
+.nxwd{display:flex;flex-direction:column;gap:12px}
+.nxwd .nxwd-w{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.nxwd .nxwd-w button{padding:12px 10px;min-height:56px;text-align:left;color:#efe6df;font:300 12px/1.25 inherit;font-family:inherit;cursor:pointer;background-color:rgba(255,235,220,.04);border:1px solid rgba(255,235,220,.14)}
+.nxwd .nxwd-w button b{display:block;font-weight:400;letter-spacing:.14em;font-size:11px;text-transform:uppercase}.nxwd .nxwd-w button small{color:rgba(240,232,226,.55);font-size:10px}
+.nxwd [aria-checked=true]{border-color:rgba(var(--nox-ui-rgb,233,180,101),.9)!important;box-shadow:0 0 0 1px rgba(var(--nox-ui-rgb,233,180,101),.5) inset}
+.nxwd .nxwd-p{display:flex;gap:10px;flex-wrap:wrap}.nxwd .nxwd-p button{width:44px;height:44px;border-radius:50%!important;padding:0;clip-path:none!important}
+.nxwd .nxwd-p i{display:block;width:22px;height:22px;border-radius:50%;margin:auto}
+.nxwd h4{margin:0;font:300 10px/1 inherit;letter-spacing:.26em;text-transform:uppercase;color:#d49a62;font-family:inherit}
+@media(prefers-reduced-motion:reduce){html[data-nox-world]::after{opacity:.12}}
+html[data-nox-demo-mode=ECO][data-nox-world]::after{display:none}
