@@ -388,6 +388,11 @@ async def _model_events(client, url, payload):
                 if not isinstance(choices,list) or len(choices)!=1:
                     raise ValueError('choices')
                 choice=choices[0]
+                # Streaming choices must not carry non-streaming completion
+                # payloads: ignoring a message/text field can certify a partial
+                # answer or hide an unexecuted tool call in the S03 transcript.
+                if not isinstance(choice,dict) or 'message' in choice or 'text' in choice:
+                    raise ValueError('mixed completion choice')
                 # A native model response is one assistant choice. An explicit
                 # nonzero/bool index could splice a different choice into the
                 # single browser/S03 transcript. Keep index-less legacy frames.

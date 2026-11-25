@@ -91,6 +91,11 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ok[-1][0],'message')
 
         for choice in (
+            {'index':0,'delta':{'content':'visible prefix'},
+             'message':{'role':'assistant','tool_calls':[{'id':'hidden','type':'function',
+                 'function':{'name':'dispatch','arguments':'{}'}}]},'finish_reason':None},
+            {'index':0,'delta':{'content':'visible prefix'},
+             'text':'discarded completion','finish_reason':None},
             {'index':1,'delta':{'role':'assistant','content':'wrong choice'},
              'finish_reason':None},
             {'index':True,'delta':{'role':'assistant','content':'bool choice'},
