@@ -6,6 +6,7 @@ import subprocess
 HERE=Path(__file__).resolve().parent
 SOURCE=HERE.parent/"b4-r111/timing_review.cjs"
 DEST="nox-control/b4-r111/timing_review.cjs"
+JOINT_DEST="nox-control/d3-r113/timing_review.cjs"
 PINS={
     "nox-control/b2-r110/reported_review.cjs":"ea2a46f68770ae613ae6645ddb48de52d37eb9b7",
     "nox-control/a3-r109-r80/joint_frozen.cjs":"8ccc4877f610e6ba32f0bf19efdd7105b6fdedf9",
@@ -31,7 +32,7 @@ SOURCE_PIN="b202135f9ba1114c4501b1c8c5be40fe8faa5a51"
 def blob(b):
     return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
 
-def stage_timing(root):
+def stage_timing(root, *, joint=False):
     # Caller must have verified the original archive and R111 overlay.
     root=Path(root).resolve(strict=True)
     for p,pin in PINS.items():
@@ -41,8 +42,16 @@ def stage_timing(root):
     raw=SOURCE.read_bytes()
     if blob(raw)!=SOURCE_PIN:
         raise ValueError("HOLD_TIMING_SOURCE")
-    dst=root/DEST
-    if dst.resolve()!=dst or dst.exists():
+    dst=root/(JOINT_DEST if joint else DEST)
+    other=root/(DEST if joint else JOINT_DEST)
+    if other.exists() or other.is_symlink():
+        raise ValueError("HOLD_TIMING_DUPLICATE_DESTINATION")
+    if dst.resolve()!=dst or dst.is_symlink():
+        raise ValueError("HOLD_TIMING_OVERWRITE")
+    if dst.exists():
+        # The joint owner may already have staged this exact immutable donor.
+        if joint and dst.is_file() and dst.read_bytes()==raw:
+            return dst
         raise ValueError("HOLD_TIMING_OVERWRITE")
     dst.parent.mkdir(parents=True,exist_ok=True)
     with dst.open("xb") as f:

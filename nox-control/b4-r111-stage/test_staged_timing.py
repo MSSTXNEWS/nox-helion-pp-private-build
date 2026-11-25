@@ -5,11 +5,11 @@ import subprocess
 import unittest
 from unittest.mock import patch
 from test_frozen_ordered import FrozenOrderedCallsite
-from stage_timing import stage_timing, PINS, DEST
+from stage_timing import stage_timing, PINS, DEST, JOINT_DEST
 
 JS=r"""
 const a=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const root=process.argv[1], entry=path.join(root,'nox-control/b4-r111/timing_review.cjs');
+const root=process.argv[1], entry=path.join(root,'nox-control/d3-r113/timing_review.cjs');
 const {makeTimingEvidenceReview:make}=require(entry);
 const d=JSON.parse(fs.readFileSync(0,'utf8'));
 for(const t of d.host.turns)for(const k of ['observation','reservation','disposition'])
@@ -40,15 +40,29 @@ class StagedTiming(unittest.TestCase):
                 try:
                     q.write_bytes(original+b" ")
                     with self.assertRaisesRegex(ValueError,"HOLD_TIMING_DEPENDENCY"):
-                        stage_timing(root)
-                    self.assertFalse((root/DEST).exists())
+                        stage_timing(root,joint=True)
+                    self.assertFalse((root/JOINT_DEST).exists())
                 finally:
                     q.write_bytes(original)
         print("B4_EXACT_DEPENDENCY_TAMPER_HOLD=17 (12 newly pinned transitive donors)")
-        target=stage_timing(root)
-        with self.assertRaisesRegex(ValueError,"HOLD_TIMING_OVERWRITE"):
+        target=stage_timing(root,joint=True)
+        self.assertEqual(target,root/JOINT_DEST)
+        original=target.read_bytes()
+        stat=target.stat()
+        self.assertEqual(stage_timing(root,joint=True),target)
+        self.assertEqual(target.stat().st_mtime_ns,stat.st_mtime_ns)
+        with self.assertRaisesRegex(ValueError,"HOLD_TIMING_DUPLICATE_DESTINATION"):
             stage_timing(root)
-        self.assertEqual(set(p.relative_to(root) for p in root.rglob("*") if p.is_file())-set(before),{Path(DEST)})
+        self.assertFalse((root/DEST).exists())
+        try:
+            target.write_bytes(original+b" ")
+            with self.assertRaisesRegex(ValueError,"HOLD_TIMING_OVERWRITE"):
+                stage_timing(root,joint=True)
+            self.assertEqual(target.read_bytes(),original+b" ")
+        finally:
+            target.write_bytes(original)
+        self.assertEqual(set(p.relative_to(root) for p in root.rglob("*") if p.is_file())-set(before),{Path(JOINT_DEST)})
+        print("B4_JOINT_TIMING_DESTINATION=1 exact_reuse=1 conflicting_hold=1 duplicate_hold=1")
         for p,b in before.items():
             self.assertEqual((root/p).read_bytes(),b,str(p))
         actual=subprocess.run
