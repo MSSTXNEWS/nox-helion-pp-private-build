@@ -7,7 +7,7 @@ INSTANCE = 60509551  # S2 (США); S1 (Квебек) = 61825960, выбирае
 KEY = os.environ["NOX2"]
 _REF = os.environ.get('GITHUB_SHA') or 'main'
 _TMP = '/tmp/c300_' + os.environ['C300'] + '_' + _REF[:10] + '.sh'
-REMOTE = '#S1\ncurl -fsSL https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/' + _REF + '/nox-control/c300/' + os.environ['C300'] + ' -o ' + _TMP + ' && bash ' + _TMP + ' 2>&1 | tail -c 400000'
+REMOTE = '#S1\ncurl -fsSL --retry 6 --retry-delay 5 --retry-all-errors https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/' + _REF + '/nox-control/c300/' + os.environ['C300'] + ' -o ' + _TMP + ' && bash ' + _TMP + ' 2>&1 | tail -c 400000'
 
 if REMOTE.startswith("#S1"):
     INSTANCE = int(os.environ.get("C300_INST", "62038702"))
