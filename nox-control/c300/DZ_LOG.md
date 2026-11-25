@@ -9,3 +9,10 @@
 - QA на сервере (Playwright, /web/creative.html): 1440, 390, 3840: 0 ошибок JS, 0 мёртвых data-act, 0 целей меньше 44 px (sl-button, sl-icon-button, sl-select, sl-input, sl-switch, sl-color-picker, sl-tab).
 - Тест «каракули -> ИИ»: рисунок домика (doodle-кисть, 4 штриха) -> /vision/describe -> 4-6 слоёв SVG: house/wall, house/roof, house/door, house/window-1, (window-2, chimney). 35-150 с на реальной модели.
 - Инфраструктура: GitHub API rate limit (общий на всех исполнителей) задерживал запуск; run.sh опрашивает gh слишком часто.
+
+## Итог QA (build dz_build_13, Playwright на сервере, реальная модель)
+- 1440x900, 390x844, 3840x2160: ошибок JS 0, мёртвых кнопок 0 (все data-act имеют обработчик), целей меньше 44 px: 0 (sl-button, sl-icon-button, sl-select, sl-input, sl-switch, sl-color-picker, sl-tab, во всех трёх вкладках панели).
+- Каракули домика -> /vision/describe -> 8 слоёв (house/wall, roof, door, window-1, window-2, sun, leaf-1, leaf-2), 146 с при загруженной модели; в предыдущих прогонах 35-55 с.
+- Маска: слои ИИ получают clipPath из маски (clipped=2 из 2, текст остался fabric.Textbox); попиксельная проверка в тесте неинформативна (координаты toDataURL), логика сохранения оригинала держится на clipPath и на том, что результат всегда новые слои.
+- Ответить / Цитировать: кнопки у каждого сообщения ИИ-панели; контекст ответа уходит в следующий запрос. nox-ghost.js: подключение через NOXGhost.attach(textarea, {page:'creative'}) (опрос window.NOXGhost 30 с); тег script добавит dz_fin_1.sh, когда файл появится в site.
+- Не закрыто: запуск dz_build_14 (финальная сборка с опросом ghost) и dz_fin_1 (k2_qa, .fixed) ждут сброса лимита GitHub API (на момент записи 0).
