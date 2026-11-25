@@ -41,7 +41,7 @@
     });
     const bar = document.createElement('div'); bar.className = 'nxt-tabs'; bar.setAttribute('role', 'tablist'); bar.setAttribute('aria-label', 'Разделы настроек');
     bar.innerHTML = TABS.map(([k, t], i) => '<button type="button" role="tab" data-tab="' + k + '" aria-selected="' + (i === 0) + '">' + t + '</button>').join('');
-    parent.insertBefore(bar, cards[0]);
+    const host = parent.closest(".grid") || parent; host.parentNode.insertBefore(bar, host);
     const show = (k) => {
       bar.querySelectorAll('[role="tab"]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
       parent.querySelectorAll('section.setg').forEach((s) => s.classList.toggle('nxt-off', s.dataset.tab !== k));
