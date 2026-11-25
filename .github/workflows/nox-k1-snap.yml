@@ -2,7 +2,7 @@ name: NOX K1 site snapshot
 on:
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   snap:
     runs-on: ubuntu-latest
@@ -17,8 +17,11 @@ jobs:
           NOX2: ${{ secrets.NOX2 }}
           C300: snap
         run: python3 -B nox-control/c300/k1_snap.py && ls -la site.tgz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: k1-site
-          path: site.tgz
-          retention-days: 3
+      - name: Publish snapshot to branch k1-snap (chunks <90MB)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir snapout && split -b 90m -d site.tgz snapout/site.tgz.part
+          sha256sum site.tgz > snapout/SHA256
+          cd snapout && git init -q -b k1-snap && git add . && git -c user.email=ci@nox -c user.name=nox-ci commit -qm "k1 site snapshot $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" k1-snap
