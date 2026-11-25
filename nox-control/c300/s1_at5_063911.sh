@@ -1,0 +1,1 @@
+cd /workspace/nox/web/site/vendor; ls nox-planets | head -30; ls earth/data | head; ls d3-celestial/data 2>/dev/null | grep -i "world\|countr\|land" | head; ls | grep -i "world\|topo\|geo\|countr"; ls shoelace/cdn/shoelace.js shoelace/cdn/shoelace-autoloader.js 2>&1 | head -2; grep -o "shoelace[a-z./-]*js" ../voice.html ../chat.html ../nox-nav.js 2>/dev/null | head -3
