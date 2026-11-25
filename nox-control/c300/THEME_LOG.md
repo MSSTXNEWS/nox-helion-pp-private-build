@@ -45,3 +45,10 @@
 - Не правили: белые ячейки теплокарты на growth, красный узел NOX на nexus (hub), столбцы benchmark (данные), страницы glance/downloads (белый iframe в моём моке, не проверено на сервере).
 - Откат: th_rb_gr5.sh (восстанавливает все nox-*.js из резервной папки /workspace/nox/web/th_gr5_bak_<ts>).
 - Сторожа темы не ставил (запрещено).
+
+## gr6 (доделка)
+- growth: heatmap серая шкала (patch #10 TH-CAL), dataZoom слайдер серо-голубой (patch #12, nox-brain-x.js).
+- glance iframe: filter saturate(.3) в graphite (сервис со своей темой).
+- live.html: только токены --bg/--card/--fg/--mut серые (TH-LIVE); nox-theme.js на live НЕ подключаем (слои темы перекрывают контент).
+- downloads/operators: проверены, операторы в теме.
+- Деплой th_dep_gr6.sh, откат th_rb_gr6.sh (бэкап nox-*.js + live.html + css).

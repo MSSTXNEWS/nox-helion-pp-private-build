@@ -169,3 +169,6 @@ html[data-nox-theme=graphite] .tabulator .tabulator-row:hover{background:rgba(15
 html[data-nox-theme=graphite] .tabulator .tabulator-header,html[data-nox-theme=graphite] .tabulator .tabulator-header .tabulator-col{background:rgba(255,255,255,.04)!important;color:#b0b4ba;border-color:rgba(255,255,255,.08)!important}
 html[data-nox-theme=graphite] .monaco-editor,html[data-nox-theme=graphite] .monaco-editor-background,html[data-nox-theme=graphite] .monaco-editor .margin,html[data-nox-theme=graphite] .monaco-editor .inputarea.ime-input{background-color:#0e0f11!important}
 html[data-nox-theme=graphite] .monaco-editor .current-line{background:rgba(255,255,255,.045)!important;border-color:transparent!important}
+
+/* ===== gr6: встроенный Glance (сервис со своей оранжевой темой) приглушён ===== */
+html[data-nox-theme=graphite] iframe[src*="/svc/glance"]{filter:saturate(.3)}

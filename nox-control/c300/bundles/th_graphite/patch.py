@@ -87,3 +87,18 @@ for fp in sorted(glob.glob(os.path.join(S,'nox-*.js'))):
 
 # 10. ECharts calendar (теплокарта growth): пустые клетки по умолчанию белые
 sub('nox-k2-heat.js','TH-CAL',"itemStyle:{borderWidth:2,borderColor:'#140f0f'}","itemStyle:{borderWidth:2,borderColor:'#140f0f',color:(window.NOXgx?'#1b1c1f':'#2a1f1a')}/*TH-CAL*/")
+# 11. live.html (отдельная страница статуса, синяя палитра): нейтральные серые токены (nox-theme.js не подключаем: фоновые слои темы перекрывают контент без z-index)
+_p=os.path.join(S,'live.html')
+if os.path.exists(_p):
+  _t=open(_p,encoding='utf-8').read()
+  if 'TH-LIVE' not in _t and '--bg:#0b1020' in _t:
+    open(_p,'w',encoding='utf-8').write(_t.replace('--bg:#0b1020; --card:#151b2e; --fg:#e8eefc; --mut:#8b97b3;','--bg:#0e0f11; --card:#18191b; --fg:#edeef0; --mut:#8b9098; /*TH-LIVE*/',1)); print('live themed')
+
+# 12. dataZoom слайдер ECharts (nox-brain-x.js): серо-голубой филлер/ручки вместо оранжево-красных
+_p=os.path.join(S,'nox-brain-x.js')
+if os.path.exists(_p):
+  _t=open(_p,encoding='utf-8').read(); _o=_t
+  _t=_t.replace("fillerColor: 'rgba(224,101,74,.22)'","fillerColor: (window.NOXgx?'rgba(157,177,209,.18)':'rgba(224,101,74,.22)')")
+  _t=_t.replace("handleStyle: { color: '#e0654a', borderColor: '#e0654a' }","handleStyle: (window.NOXgx?{ color: '#9db1d1', borderColor: '#9db1d1' }:{ color: '#e0654a', borderColor: '#e0654a' })")
+  _t=_t.replace("moveHandleStyle: { color: 'rgba(224,101,74,.5)' }","moveHandleStyle: (window.NOXgx?{ color: 'rgba(157,177,209,.5)' }:{ color: 'rgba(224,101,74,.5)' })")
+  if _t!=_o: open(_p,'w',encoding='utf-8').write(_t); print('dz grey')
