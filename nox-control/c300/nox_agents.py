@@ -437,5 +437,9 @@ def golden_result():
 @app.on_event('startup')
 def _start():
     threading.Thread(target=dispatcher, daemon=True).start()
+    try:
+        sys.path.insert(0, A); import nox_worms
+        nox_worms.mount(app, lambda b, s, u, mt=600, tp=0.3, tid=None, to=300: llm(b, s, u, mt, tp, tid, to), chat_busy, lambda x, a=(): sql(x, a), new_task, lambda: len(RUNNING))
+    except Exception as e: print('worms mount fail', e, flush=True)
 if __name__ == '__main__':
     import uvicorn; uvicorn.run(app, host='127.0.0.1', port=PORT, log_level='warning')
