@@ -110,7 +110,22 @@ def _percentile(values, percentile):
     return ordered[max(0, math.ceil(percentile * len(ordered)) - 1)]
 
 
-def _sample(index, clock=time.perf_counter, opener=urllib.request.urlopen, auth_token=None):
+class _NoBenchmarkRedirect(urllib.request.HTTPRedirectHandler):
+    """An owner-authenticated local POST must never follow redirects."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _open_local_benchmark(request, timeout):
+    # Do not inherit environment proxy configuration or forward the private
+    # X-NOX-Token on a redirect. A redirect is an ambiguous POST outcome.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}),
+                                         _NoBenchmarkRedirect())
+    return opener.open(request, timeout=timeout)
+
+
+def _sample(index, clock=time.perf_counter, opener=_open_local_benchmark, auth_token=None):
     request_id = f"bench2a05-{index}-{time.monotonic_ns()}"
     data = {"request_id": request_id, "ephemeral": True, "use_memory": True,
             "messages": [{"role": "user", "content": PROMPT}],

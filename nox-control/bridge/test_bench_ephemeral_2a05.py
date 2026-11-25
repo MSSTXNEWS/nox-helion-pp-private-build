@@ -6,9 +6,11 @@ import io
 import json
 import os
 import tempfile
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 import unittest
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from unittest import mock
 
 spec = importlib.util.spec_from_file_location("bench_2a05", Path(__file__).with_name("bench.py"))
@@ -152,6 +154,39 @@ class EphemeralBenchmarkGuardTest(unittest.TestCase):
         self.assertEqual(report["status"], "HOLD_WEB_TOKEN_UNVERIFIED")
         self.assertEqual(report["completed"], 0)
         self.assertFalse(report["native_acceptance"])
+
+    def test_local_authenticated_probe_does_not_follow_redirect(self):
+        seen = []
+        class RedirectHandler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+            def do_POST(self):
+                seen.append((self.command, self.path))
+                self.rfile.read(int(self.headers["Content-Length"]))
+                self.send_response(302)
+                self.send_header("Location", "/unexpected")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            def do_GET(self):
+                seen.append((self.command, self.path))
+                self.send_response(200)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+        with HTTPServer(("127.0.0.1", 0), RedirectHandler) as server:
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            worker.start()
+            try:
+                url = f"http://127.0.0.1:{server.server_port}/api/chat"
+                with mock.patch.object(bench, "URL", url):
+                    with self.assertRaises(HTTPError) as error:
+                        bench._sample(0, auth_token="fixture-not-a-real-token")
+                    self.assertEqual(error.exception.code, 302)
+                    error.exception.close()
+                self.assertEqual(seen, [("POST", "/api/chat")])
+            finally:
+                server.shutdown()
+                worker.join(timeout=2)
 
     def test_confirmed_write_risk_fails_closed(self):
         with self.assertRaisesRegex(bench.UnsafeEphemeralWriteReceipt,
