@@ -71,12 +71,14 @@ DOWN = {}   # backend -> ts последнего отказа (предохра�
 LATE = {'n': 0, 'won_ext': 0, 'won_local': 0}
 FIRST_TOKEN_S = float(os.environ.get('NOX_FIRST_TOKEN_S', '8')); FIRST_TOKEN_EXEC_S = float(os.environ.get('NOX_FIRST_TOKEN_EXEC_S', '15'))
 def _clean(t): return re.sub(r'<think>.*?</think>', '', t or '', flags=re.S).strip()
+import contextvars
+PRIO = contextvars.ContextVar('prio', default=5); NOCACHE = contextvars.ContextVar('nocache', default=False)
 def _ext_chat(messages, max_tokens, temp, timeout=60):
     gw = BACK().get('external')
     last = None
     for mdl in ('auto', 'pollinations/auto', 'llm7/auto'):      # kilo часто упирается в 429 (общий лимит на IP): запасные провайдеры
         try:
-            r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': mdl, 'messages': messages, 'max_tokens': min(max_tokens, 1800), 'temperature': temp}, timeout=timeout)
+            r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': mdl, 'messages': messages, 'max_tokens': min(max_tokens, 1800), 'temperature': temp, 'x_nox_prio': PRIO.get(), 'no_cache': NOCACHE.get()}, timeout=timeout)
             r.raise_for_status(); j = r.json(); return j['choices'][0]['message'].get('content') or '', int(j.get('usage', {}).get('completion_tokens', 0))
         except Exception as e: last = e
     raise last
@@ -674,6 +676,7 @@ def get_task(tid: str):
 @app.post('/llm')
 async def post_llm(req: Request):      # для чата/других сервисов: гонка локальной модели и советников, ответ + кто ответил и за сколько
     b = await req.json(); t0 = time.time(); w0 = (LATE['won_local'], LATE['won_ext'])
+    PRIO.set(int(b.get('prio', 5))); NOCACHE.set(bool(b.get('no_cache')))     # чат: prio 9+ и no_cache -> резерв квоты шлюза
     def run(): return llm(b.get('backend', 'main'), b.get('system', 'Отвечай кратко.'), b['prompt'], int(b.get('max_tokens', 300)), 0.3, b.get('task'), 120)
     try: ans = await asyncio.to_thread(run)
     except Exception as e: return JSONResponse({'error': str(e)[:200], 'seconds': round(time.time() - t0, 1)}, 502)

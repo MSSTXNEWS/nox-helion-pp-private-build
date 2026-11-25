@@ -92,14 +92,14 @@ def count(p, ok):
 def day_left(p):
     r = usage().get(p, {}); used = r.get('n', 0) if r.get('day') == time.strftime('%Y-%m-%d') else 0
     return PROV[p]['day'] - used
-def wait_slot(p, maxwait):
+def wait_slot(p, maxwait, frac=1.0):
     pr = PROV[p]; t0 = time.time()
     while True:
         with L:
             now = time.time(); w = WIN.setdefault(p, [])
             w[:] = [x for x in w if now - x < 60]
             need = max(LAST.get(p, 0) + pr['gap'] - now, 0)
-            if len(w) >= pr['rpm']: need = max(need, 60 - (now - w[0]))
+            if len(w) >= max(1, int(pr['rpm'] * frac)): need = max(need, 60 - (now - w[0]))
             if need <= 0:
                 LAST[p] = now; w.append(now); return True
         if time.time() - t0 + need > maxwait: return False
@@ -132,7 +132,21 @@ def clean_text(r):
         t = re.sub(r'(?s)<think>.*?</think>', '', t).strip()
         return t
     except Exception: return ''
+CHATM = []   # (ts, ok, provider) запросов чата (prio>=9)
+RESERVE = 0.4   # доля лимита каждого провайдера, которая держится только для чата
 def chat(body):
+    code, out = _chat(body)
+    pr_ = int(body.get('x_nox_prio', 5))
+    if pr_ >= 9:
+        with L:
+            CHATM.append((time.time(), code == 200, (out.get('nox') or {}).get('provider', '') if isinstance(out, dict) else '')); del CHATM[:-2000]
+    return code, out
+def chat_metric():
+    now = time.time(); w = [x for x in CHATM if now - x[0] < 3600]; ok = sum(1 for x in w if x[1])
+    byp = {}
+    for x in w: byp[x[2] or 'fail'] = byp.get(x[2] or 'fail', 0) + 1
+    return {'window': '1h', 'chat_requests': len(w), 'chat_ok': ok, 'share_ok': round(ok / len(w), 3) if w else None, 'target': 0.98, 'by_provider': byp, 'reserve_for_chat': RESERVE}
+def _chat(body):
     c = cfg(); t0 = time.time()
     if not c['external_enabled']: return 403, {'error': 'external advisors disabled in advisors_cfg.json'}
     msgs = body.get('messages') or []
@@ -152,7 +166,7 @@ def chat(body):
         pref = want.split('/', 1)[0] if want.split('/', 1)[0] in PROV else None
         cand = [(a['provider'], a['model']) for a in reg if a.get('status') in ('ok','untested','need_key') and avail(a['provider']) and (not pref or a['provider'] == pref)]
         chain = cand or [tuple(x.split('/', 1)) for x in c['auto_chain']]
-    prio = int(body.get('x_nox_prio', 5)); local_only = bool(body.get('x_nox_local_only')) or prio < 0
+    prio = int(body.get('x_nox_prio', 5)); is_chat = prio >= 9; frac = 1.0 if is_chat else 1.0 - RESERVE; no_cache = bool(body.get('no_cache')) or False; local_only = bool(body.get('x_nox_local_only')) or prio < 0
     rem = [x for x in chain if not PROV.get(x[0], {}).get('local')]
     if len(rem) > 1:        # ротация по провайдерам: не садимся всё время на один kilo
         byp = {}
@@ -164,19 +178,20 @@ def chat(body):
     locs = [(p, STATIC[p][0]) for p in PROV if PROV[p].get('local')]
     chain = ([] if local_only else rem) + locs
     ck = hashlib.sha256(json.dumps([want, nb], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
-    if body.get('x_nox_only_cache'):
+    if body.get('x_nox_only_cache') and not no_cache:
         with L: h = CACHE.get(ck)
         return (200, h[1]) if h else (404, {'error': 'cache miss'})
     with L:
-        h = CACHE.get(ck)
+        h = None if no_cache else CACHE.get(ck)
     if h and time.time() - h[0] < c['cache_ttl']:
         r = dict(h[1]); r['nox'] = dict(r.get('nox', {}), cached=True); return 200, r
     tried = []
     for p, m in chain:
         if p not in PROV or not avail(p) or BAD.get(p + '/' + m, 0) > time.time() or PBAD.get(p, 0) > time.time() or day_left(p) <= 0: continue
-        if prio < 5 and not PROV[p].get('local') and len([x for x in WIN.get(p, []) if time.time() - x < 60]) > PROV[p]['rpm'] * 0.5: continue    # низкий приоритет не съедает квоту
+        if not is_chat and not PROV[p].get('local'):       # резерв чата: исполнителям/тестам не больше 60% минутного и дневного лимита провайдера
+            if len([x for x in WIN.get(p, []) if time.time() - x < 60]) >= max(1, int(PROV[p]['rpm'] * frac)) or day_left(p) < PROV[p]['day'] * RESERVE: continue
         for att in range(1 + int(c['retries'])):
-            if not wait_slot(p, 40 if not PROV[p].get('local') else 90): tried.append(p + '/' + m + ':busy'); break
+            if not wait_slot(p, (15 if is_chat else 40) if not PROV[p].get('local') else 90, 1.0 if PROV[p].get('local') else frac): tried.append(p + '/' + m + ':busy'); break
             try:
                 r = call(p, m, nb, c['timeout'])
                 tx = clean_text(r)
@@ -185,7 +200,8 @@ def chat(body):
                 out = {'id': 'nox-' + ck[:12], 'object': 'chat.completion', 'created': int(time.time()), 'model': p + '/' + m,
                        'choices': [{'index': 0, 'message': {'role': 'assistant', 'content': tx}, 'finish_reason': 'stop'}],
                        'usage': r.get('usage', {}), 'nox': {'provider': p, 'label': 'локальный советник' if PROV[p].get('local') else '', 'local': bool(PROV[p].get('local')), 'redacted': nred, 'ms': int((time.time() - t0) * 1000), 'tried': tried, 'cached': False}}
-                with L: CACHE[ck] = (time.time(), out)
+                if not no_cache:
+                    with L: CACHE[ck] = (time.time(), out)
                 return 200, out
             except urllib.error.HTTPError as e:
                 count(p, False); tried.append('%s/%s:%d' % (p, m, e.code))
@@ -273,6 +289,7 @@ class H(BaseHTTPRequestHandler):
         b = json.dumps(obj, ensure_ascii=False).encode(); self.send_response(code)
         self.send_header('Content-Type', 'application/json; charset=utf-8'); self.send_header('Content-Length', str(len(b))); self.end_headers(); self.wfile.write(b)
     def do_GET(self):
+        if self.path.startswith('/v1/chat_metric'): return self.send(200, chat_metric())
         if self.path.startswith('/v1/models'): return self.send(200, listing())
         if self.path.startswith('/health'): return self.send(200, {'ok': True, 'port': PORT, 'cfg': {k: v for k, v in cfg().items() if k != 'personal_terms'}})
         self.send(404, {'error': 'not found'})
