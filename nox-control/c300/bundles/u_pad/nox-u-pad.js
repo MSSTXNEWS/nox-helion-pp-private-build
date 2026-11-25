@@ -50,9 +50,9 @@
  function push(){clearTimeout(pt);pt=setTimeout(doPush,1500)}
  function doPush(){return seq(doPush0)}
  async function doPush0(){try{const j=await jget('/api/notes');if(!j)return;let list=(j.notes||[]).slice();
-   Object.keys(S.sheets).forEach(function(d){const t=S.sheets[d];if(!t||!t.trim())return;const id='pad-'+d;const rec={id:id,text:t,ts:S.ts[d]||Date.now()/1000,proj:S.proj[d]||'',pad:1};const i=list.findIndex(function(n){return n.id===id});if(i>=0){if((list[i].ts||0)>rec.ts+1)return;list[i]=rec}else list.push(rec)});
+   Object.keys(S.sheets).forEach(function(d){const t=S.sheets[d];if(!t||!t.trim())return;const id='pad-'+d;const rec={id:id,text:(S.proj[d]?'@@proj:'+S.proj[d]+'\n':'')+t,ts:S.ts[d]||Date.now()/1000};const i=list.findIndex(function(n){return n.id===id});if(i>=0){if((list[i].ts||0)>rec.ts+1)return;list[i]=rec}else list.push(rec)});
    const r=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:list})});if(r.ok)flash('синхронизировано')}catch(e){}}
- async function pull(){if(pulling)return;pulling=1;try{const j=await jget('/api/notes');if(!j)return;let ch=0;(j.notes||[]).forEach(function(n){if(!n||!/^pad-\d{4}-\d\d-\d\d$/.test(n.id))return;const d=n.id.slice(4);if((n.ts||0)>(S.ts[d]||0)+1){S.sheets[d]=n.text||'';S.ts[d]=n.ts;if(n.proj)S.proj[d]=n.proj;ch=1}});
+ async function pull(){if(pulling)return;pulling=1;try{const j=await jget('/api/notes');if(!j)return;let ch=0;(j.notes||[]).forEach(function(n){if(!n||!/^pad-\d{4}-\d\d-\d\d$/.test(n.id))return;const d=n.id.slice(4);if((n.ts||0)>(S.ts[d]||0)+1){let tx=n.text||'';const mm=/^@@proj:([^\n]*)\n?/.exec(tx);if(mm){S.proj[d]=mm[1];tx=tx.slice(mm[0].length)}else delete S.proj[d];S.sheets[d]=tx;S.ts[d]=n.ts;ch=1}});
    if(ch){save();window.__upSilent=1;try{if(cm&&cm.getValue()!==sheet())cm.setValue(sheet());else if(!cm&&ta)ta.value=sheet();head()}finally{window.__upSilent=0}}}finally{pulling=0}}
  /* ---- действия ---- */
  async function jget(u){try{const r=await fetch(u,{cache:'no-store'});return r.ok?await r.json():null}catch(e){return null}}
