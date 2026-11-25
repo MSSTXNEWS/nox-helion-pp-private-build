@@ -33,7 +33,7 @@ const M = [
  ['xyflow','@xyflow/react',{bundle:1,css:['dist/style.css'],page:'карта мышления, конструктор'}],
  ['ag-ui','@ag-ui/client',{bundle:1,page:'чат (протокол агентов)'}],
  ['highlight.js','highlight.js',{bundle:'highlight.js/lib/common',copycss:'styles',copy:['styles/github-dark.min.css','styles/github.min.css','styles/atom-one-dark.min.css'],page:'чат, код'}],
- ['vidstack','vidstack',{copy:['bundle','player','icons','styles'],bundle:'vidstack/elements',page:'кино, видео'}],
+ ['vidstack','vidstack',{copy:['player','icons'],bundle:'vidstack/elements',page:'кино, видео'}],
  ['vidstack-react','@vidstack/react',{bundle:1,page:'кино (React)'}],
  ['shaka-player','shaka-player',{copy:['dist/shaka-player.ui.js','dist/shaka-player.compiled.js','dist/controls.css','dist/locales.js'],page:'кино, ТВ (HLS/DASH)',ex:'<script src="./vendor/shaka-player/shaka-player.ui.js"></script>'}],
  ['dashjs','dashjs',{copy:['dist/modern/esm/dash.all.min.js','dist/modern/umd/dash.all.min.js'],page:'кино, ТВ (DASH)'}],
@@ -71,6 +71,7 @@ const M = [
  ['pdfjs','pdfjs-dist',{copy:['build/pdf.min.mjs','build/pdf.worker.min.mjs'],page:'документы'}],
  ['pdf-lib','pdf-lib',{copy:['dist/pdf-lib.min.js'],page:'документы'}],
 ];
+if (process.env.EXTRA && fs.existsSync(process.env.EXTRA)) { const have = new Set(M.map(m => m[1])); for (const pkg of fs.readFileSync(process.env.EXTRA, 'utf8').split(/\s+/).filter(Boolean)) { if (have.has(pkg) || /kokoro/.test(pkg)) continue; have.add(pkg); const n = pkg.replace(/^@/, '').replace(/\//g, '-'); M.push([n, pkg, { bundle: 1, page: 'см. IDEAS.md', extra: 1 }]); } }
 const out = []; const log = (...a) => console.log(...a);
 for (const [n, pkg, o] of M) {
   if (only && !only.includes(n)) continue;
