@@ -7,7 +7,7 @@ async def main():
     for tag,w,h,sc in (('pc',1440,900,1),('mob',390,844,1),('4k',3840,2160,1)):
       c=await b.new_context(viewport={'width':w,'height':h},device_scale_factor=sc);pg=await c.new_page();errs=[]
       pg.on('pageerror',lambda e:errs.append('PE '+str(e)[:160]))
-      pg.on('console',lambda m:errs.append('CE '+m.text[:160]) if m.type=='error' else None)
+      pg.on('console',lambda m:errs.append('CE '+m.text[:160]) if m.type=='error' else None);pg.on('response',lambda r:errs.append('HTTP%d %s'%(r.status,r.url[-70:])) if r.status>=400 else None)
       await pg.goto(URL,wait_until='load',timeout=30000);await pg.wait_for_timeout(3500)
       info=await pg.evaluate('''()=>{var r=[];document.querySelectorAll('#dz sl-button,#dz sl-icon-button,#dz sl-select,#dz sl-input,#dz sl-switch,#dz sl-color-picker,#dz sl-tab').forEach(e=>{var b=e.getBoundingClientRect();var vis=b.width>0&&b.height>0&&getComputedStyle(e).visibility!='hidden';var cs=e.closest('#dzSide:not(.open)');if(vis&&(b.height<43.5||b.width<43.5)&&!(innerWidth<=900&&cs))r.push(e.tagName.toLowerCase()+' '+(e.getAttribute('data-act')||e.getAttribute('data-tool')||e.id||e.getAttribute('name')||'')+' '+Math.round(b.width)+'x'+Math.round(b.height))});return{small:r.slice(0,40),n:r.length,cv:!!window.NOXDZ,tools:document.querySelectorAll('[data-tool]').length}}''')
       for tb in ('lay','prop','ai'):
@@ -57,4 +57,4 @@ async def main():
       print('B64',tag,base64.b64encode(open('/tmp/dz_%s.jpg'%tag,'rb').read()).decode())
       await c.close()
     await b.close()
-asyncio.run(main())
+asyncio.run(main());print('OUT_END')
