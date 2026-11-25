@@ -1,0 +1,4 @@
+/* C: приёмка чата ПК/моб: кнопки команд не обрезаются, маскот не перекрывает виджеты и поле ввода */
+.cx5-b{max-width:100%}.cx5-b::part(base){white-space:normal;height:auto;line-height:1.25;padding-block:5px}
+body.cx5 .cx-right{max-height:calc(100vh - 330px);overflow-y:auto}
+body.m-chat #k5-mc,body.m-chat .k5-mc{bottom:calc(262px + env(safe-area-inset-bottom))!important;top:auto!important}
