@@ -155,6 +155,28 @@ class DatasetSplitTests(unittest.TestCase):
                     split_manifest(enriched)
         self.assertEqual(split_manifest(rows)["counts"]["kept"], 60)
 
+    def test_non_scalar_provenance_is_classified_before_hashing(self):
+        original = rows_fixture()
+        for field in ("id", "goal", "text", "source_id", "license"):
+            for surrogate in ("\ud800", "\udfff"):
+                with self.subTest(field=field, surrogate=repr(surrogate)):
+                    rows = [dict(original[0], **{field: original[0][field] + surrogate}),
+                            *original[1:]]
+                    with self.assertRaisesRegex(SplitHold, "HOLD_INVALID_UNICODE_SCALAR"):
+                        split_manifest(rows)
+        with self.assertRaisesRegex(SplitHold, "HOLD_INVALID_UNICODE_SCALAR"):
+            split_manifest(original, seed="seed\ud800")
+        rows = [dict(original[0], text="Память · memoria 🌍"), *original[1:]]
+        self.assertEqual(split_manifest(rows, seed="semilla 🌍")["counts"]["kept"], 60)
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "dataset.jsonl"
+            output = Path(folder) / "splits.json"
+            source.write_text(json.dumps(dict(original[0], text="\ud800")) + "\n",
+                              encoding="utf-8")
+            with self.assertRaisesRegex(SplitHold, "HOLD_INVALID_UNICODE_SCALAR"):
+                main(["--input", str(source), "--output", str(output)])
+            self.assertFalse(output.exists())
+
     def test_absent_provenance_or_coverage_holds(self):
         rows = rows_fixture()
         for field in ("license", "source_id", "goal", "lang", "text"):

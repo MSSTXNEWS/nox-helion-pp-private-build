@@ -28,6 +28,15 @@ def _norm(value):
     return " ".join(unicodedata.normalize("NFKC", value).casefold().split())
 
 
+def _require_scalar(value):
+    # JSON escapes can decode to lone UTF-16 surrogates even when the file
+    # itself is valid UTF-8. Refuse them before provenance hashing/serialization.
+    try:
+        value.encode("utf-8", "strict")
+    except UnicodeEncodeError as exc:
+        raise SplitHold("HOLD_INVALID_UNICODE_SCALAR") from exc
+
+
 def _digest(value):
     return hashlib.sha256(value.encode("utf-8", "strict")).hexdigest()
 
@@ -50,6 +59,7 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
     """
     if type(seed) is not str or not 1 <= len(seed) <= 128:
         raise SplitHold("HOLD_SEED")
+    _require_scalar(seed)
     groups = {}
     seen_ids = set()
     seen_content = {}
@@ -79,6 +89,8 @@ def split_manifest(records, *, seed="nox-4a02-v1"):
                 or len(row["text"]) > 262144 or len(row["source_id"]) > 1000
                 or len(row["license"]) > 200):
             raise SplitHold("HOLD_DATASET_FIELD")
+        for field in fields:
+            _require_scalar(row[field])
         if row["id"] in seen_ids:
             raise SplitHold("HOLD_DUPLICATE_RECORD_ID")
         seen_ids.add(row["id"])
