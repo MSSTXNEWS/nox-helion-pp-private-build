@@ -164,6 +164,18 @@ class NativeRefillSourceGateTests(unittest.TestCase):
         self.assertIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED",
                       codes(s, lambda exact: exact is s))
 
+    def test_exhausted_worker_without_explicit_cursor_is_hold(self):
+        s = snapshot()
+        s["native_queue"].update(
+            owner_lease_cas_verified=True,
+            immutable_task_source_verified=True,
+            owner_evidence_age_sec=0,
+        )
+        del s["native_queue"]["workers"][0]["current_task"]
+        found = codes(s, lambda exact: exact is s)
+        self.assertIn("NATIVE_REFILL_OWNER_HOLD", found)
+        self.assertNotIn("NATIVE_REFILL_OWNER_REVIEW_REQUIRED", found)
+
     def test_idle_without_lease_and_source_is_hold(self):
         result = mod.assess(snapshot())
         self.assertIn("NATIVE_REFILL_OWNER_HOLD", [r["code"] for r in result])
