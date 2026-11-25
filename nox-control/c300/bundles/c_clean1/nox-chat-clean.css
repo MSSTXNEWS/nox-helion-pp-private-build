@@ -1,0 +1,49 @@
+/* C: чистый режим чата. Всё под body.cw-clean; откат: nox.clean=0 */
+body.tg.cx5.cw-clean .stage{--c1:232px;--c2:0px;--c4:0px;--c5:0px}
+body.cw-clean .cx5-restore{display:none!important}
+/* центральная колонка ~760px */
+body.cw-clean #feed{padding-inline:max(16px,calc((100% - 760px)/2))!important}
+body.cw-clean .dock,body.cw-clean .tg-head{max-width:760px;width:100%;margin-inline:auto}
+body.cw-clean #feed .m.a .bubble{max-width:min(100%,760px)!important;background:rgba(12,8,8,.92)!important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+body.cw-clean #feed .m{max-width:760px;width:fit-content;min-width:0}
+body.cw-clean #feed .m.u{margin-left:auto}
+/* фон: планета приглушена */
+body.cw-clean #stage::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(8,5,5,.78),rgba(8,5,5,.45) 70%);pointer-events:none;z-index:0}
+/* поповеры: Режимы / Шаблоны / Система */
+body.tg.cx5.cw-clean.cw-open-cmd .cx5-cmd,body.tg.cx5.cw-clean.cw-open-pr .cx5-pr{display:flex!important;position:fixed!important;left:max(12px,calc(50% - 380px))!important;bottom:150px!important;top:auto!important;width:min(380px,calc(100vw - 24px))!important;max-height:min(62vh,560px)!important;grid-column:auto!important;z-index:1300;border-radius:14px;background:rgba(14,10,10,.97)!important;border:1px solid rgba(255,160,120,.3);box-shadow:0 18px 50px rgba(0,0,0,.6);overflow:auto;padding:8px}
+body.tg.cx5.cw-clean.cw-open-sys .cx-right{display:flex!important;position:fixed!important;right:0!important;top:60px!important;bottom:0!important;width:min(320px,100vw)!important;z-index:1300;background:rgba(12,8,8,.97)!important;border-left:1px solid rgba(255,160,120,.3);box-shadow:-18px 0 50px rgba(0,0,0,.55);flex-direction:column;overflow:auto;padding:8px;grid-column:auto!important}
+body.cw-clean .cx5-grid{display:grid!important;grid-template-columns:1fr 1fr;gap:6px}
+body.cw-clean .cx5-b{width:100%}body.cw-clean .cx5-b::part(base){white-space:nowrap;overflow:hidden;text-overflow:ellipsis;justify-content:flex-start;min-height:32px;height:32px;padding-block:0;font-size:13px}
+body.cw-clean .cx5-list>*{max-height:44px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:13px;line-height:1.3;padding:6px 10px!important;min-height:0!important}
+/* единая сетка кнопок (DS): 32px, радиус 8, шрифт 13, без капса */
+body.cw-clean sl-button::part(base){min-height:32px;border-radius:8px;font-size:13px;letter-spacing:0;text-transform:none;font-weight:500}
+body.cw-clean sl-button[pill]::part(base){border-radius:16px}
+body.cw-clean sl-button[outline]::part(base),body.cw-clean sl-button:not([variant=primary])::part(base){background:transparent;border:1px solid rgba(255,160,120,.28);box-shadow:none}
+body.cw-clean sl-button:hover::part(base){background:rgba(255,138,76,.1);border-color:#ff8a4c}
+@media (pointer:coarse){body.cw-clean sl-button::part(base),body.cw-clean .acts button{min-height:44px}}
+/* панель над полем: одна строка мелких кнопок и ≤2 чипа */
+body.cw-clean .lv-bar,body.cw-clean #k3-shot,body.cw-clean #btnSpeak,body.cw-clean #tgDepth,body.cw-clean #tgCmd,body.cw-clean .cw-hide{display:none!important}
+.cw-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;max-width:760px;margin:0 auto 8px;padding:0 4px}.cw-chips{display:flex;gap:6px;margin-left:auto}
+/* иконки под ответом: одна тонкая строка, по наведению */
+body.cw-clean #feed .m.a .acts{display:flex;flex-wrap:wrap;align-items:center;gap:4px;opacity:0;transition:opacity .15s;margin-top:4px}
+body.cw-clean #feed .m.a:hover .acts,body.cw-clean #feed .m.a:focus-within .acts,body.cw-clean #feed .m.a.lv-last:hover .acts{opacity:1}
+@media (hover:none){body.cw-clean #feed .m.a .acts{opacity:1}}
+body.cw-clean .acts .seg{display:inline-flex;gap:2px}
+body.cw-clean .acts button,body.cw-clean .acts .rq-act,body.cw-clean .acts .cw-rem{width:30px;height:30px;min-height:30px;min-width:30px;padding:0;border-radius:8px;display:inline-grid;place-items:center;font-size:14px;background:transparent;border:1px solid transparent;color:#d9c2b8;cursor:pointer}
+body.cw-clean .acts button:hover,body.cw-clean .acts .rq-act:hover,body.cw-clean .acts .cw-rem:hover{background:rgba(255,138,76,.12);border-color:rgba(255,160,120,.3)}
+body.cw-clean .acts .rq-act::part(base){min-height:30px;border:0;background:transparent}
+body.cw-clean .acts .cw-more{width:auto;padding:0 10px;font:12px var(--sans,inherit)}
+body.cw-clean #feed .m .lv-chips,body.cw-clean #feed .m.a:has(.think) .acts,body.cw-clean #feed .m.a:has(.think) .rq-act{display:none!important}
+body.cw-clean #feed .m.u .rq-act{width:auto;height:26px;min-height:26px;font-size:12px;padding:0 8px;margin-top:2px}
+/* ожидание ответа: компактная строка внутри будущего пузыря */
+body.cw-clean .cx-th{display:inline-flex!important;align-items:center;gap:10px;width:fit-content!important;max-width:100%;padding:8px 14px!important;min-height:0!important}
+body.cw-clean .cx-holo{width:44px!important;height:28px!important;flex:none}body.cw-clean .cx-holo canvas{width:44px!important;height:28px!important}
+body.cw-clean .cx-hl{display:inline-flex!important;gap:8px;align-items:center;font:12px var(--sans,inherit)!important;position:static!important;width:auto!important;text-transform:none!important;letter-spacing:0!important}
+/* баннер «NOX пишет первым» */
+body.cw-clean .nox-first{position:static!important;width:fit-content!important;max-width:min(100%,520px)!important;margin:8px auto!important;padding:8px 12px!important;border-radius:12px!important;font-size:13px!important}
+/* маскот маленький, в углу, ничего не перекрывает */
+body.cw-clean #k5-mc,body.cw-clean .k5-mc{transform:scale(.42);transform-origin:100% 100%;right:8px!important;bottom:60px!important;left:auto!important;top:auto!important;opacity:.85}
+body.cw-clean .k5-mc *{font-size:0!important}
+/* аватар: круглый логотип вместо кляксы */
+body.cw-clean .tg-av-orb{background:#140c0a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='27' fill='none' stroke='%23ff8a4c' stroke-width='3'/%3E%3Cpath d='M21 44V20l22 24V20' fill='none' stroke='%23ffd9a0' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/78% no-repeat!important;border:1px solid rgba(255,160,120,.5);border-radius:50%!important;box-shadow:none!important}
+body.cw-clean .tg-av-orb>*{display:none!important}
