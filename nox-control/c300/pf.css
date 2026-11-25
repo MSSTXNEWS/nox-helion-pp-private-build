@@ -1,0 +1,6 @@
+
+/* S3 pf: читаемая глубина ответа и бейджи */
+sl-radio-group#nxsDepth2 sl-radio-button{color:#efe6df}
+sl-radio-group#nxsDepth2 sl-radio-button::part(label){color:#efe6df;font-size:14px}
+sl-radio-group#nxsDepth2 sl-radio-button[checked]::part(label),sl-radio-group#nxsDepth2 sl-radio-button::part(button--checked){color:#1a0e06}
+sl-radio-group#nxsDepth2 sl-radio-button::part(button--checked){background:linear-gradient(180deg,#e9b465,#c8782e);border-color:transparent}
