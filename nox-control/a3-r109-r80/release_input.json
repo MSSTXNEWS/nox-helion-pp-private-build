@@ -1,0 +1,228 @@
+{
+  "schema": "NOX_B5_R80_B3_R80_RELEASE_INPUT_V1",
+  "instructions_version": "0.0.6",
+  "task_id": "B5-RUES-PR435-PR441-OWNER-CAS-S03-3F66C8CF",
+  "operation": "release-r80-b3-r80-import-closure",
+  "claim": 7152121298,
+  "base_release": {
+    "commit": "275fef48e469281a657ebcda2e7b87f9c78c06d1",
+    "manifest_blob": "ea0a1f646b9ec9357cdb279592edc76b2b24c9a7",
+    "disposition_receipt": 7147314487
+  },
+  "layout": "one dedicated directory; keep destination basenames unchanged; do not shadow prior release Python paths",
+  "files": [
+    {
+      "commit": "4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3",
+      "source": "nox-control/b5_s03_verifier_r54.py",
+      "destination": "b5_r55_pinned.py",
+      "blob": "df94c535273dde1fd2609f555d1d615eacfda831"
+    },
+    {
+      "commit": "1c9f984247e557f9b2e393f9e2c24246f4f6a8de",
+      "source": "nox-control/b5-r63/b5_chain_guard.py",
+      "destination": "b5_chain_guard.py",
+      "blob": "f321f4ad36867e434ba72db9264a88cf23a91fb8"
+    },
+    {
+      "commit": "1c9f984247e557f9b2e393f9e2c24246f4f6a8de",
+      "source": "nox-control/b5-r65/b5_retained_ingress.py",
+      "destination": "b5_retained_ingress.py",
+      "blob": "3e2a8693574608bb773eb7ed4140b574bc5b1efb"
+    },
+    {
+      "commit": "68d5dd4ea1022dc55d3ee7b54347d053fb936e19",
+      "source": "nox-control/b5-r75/canonical_text.py",
+      "destination": "canonical_text.py",
+      "blob": "8ce1165ca2e553c1e05379bb1774c09c059ca8e2"
+    },
+    {
+      "commit": "ef3e7aa7ff26584d2bbb44b5e094b93de39a8014",
+      "source": "nox-control/b5-r76/projection_match.py",
+      "destination": "projection_match.py",
+      "blob": "664d05fce5d98e69c9f196ed54a0c2fd5ad1de4c"
+    },
+    {
+      "commit": "40b6ad0eeea8498b222e39feb2558e5922deccb1",
+      "source": "nox-control/b5-r77/link_fields.py",
+      "destination": "link_fields.py",
+      "blob": "04eca1bacf9a45cbafa77dc6b21b5b00b9ff9729"
+    },
+    {
+      "commit": "26312a2184599f1d906c2df1a4b809beaba045e8",
+      "source": "nox-control/b5-r78/pair_projection.py",
+      "destination": "pair_projection.py",
+      "blob": "350ead207c91681d7a4c817331f5b37f9c394a9d"
+    },
+    {
+      "commit": "5baffc57294661eb31867575a7af18fec4de3d71",
+      "source": "coordination/onepass/b3_r65_r64_physical_pin_check.cjs",
+      "destination": "b3_r65_r64_physical_pin_check.cjs",
+      "blob": "1e22eff92da6b951ad22dea2b2db09201b2d371b"
+    },
+    {
+      "commit": "5baffc57294661eb31867575a7af18fec4de3d71",
+      "source": "coordination/onepass/b3_r66_raw_readback_binding.cjs",
+      "destination": "b3_r66_raw_readback_binding.cjs",
+      "blob": "c4331cc22cb94da0c67fa765e27c838d7b354c66"
+    },
+    {
+      "commit": "5baffc57294661eb31867575a7af18fec4de3d71",
+      "source": "coordination/onepass/b3_r68_route_binding.cjs",
+      "destination": "b3_r68_route_binding.cjs",
+      "blob": "6d0fef57783346fe33d59ca39a625015514ae168"
+    },
+    {
+      "commit": "5baffc57294661eb31867575a7af18fec4de3d71",
+      "source": "coordination/onepass/b3_r69_exchange_scope_binding.cjs",
+      "destination": "b3_r69_exchange_scope_binding.cjs",
+      "blob": "18b3be8fc4264b32d51a57ad4db367b3ba786d41"
+    },
+    {
+      "commit": "5baffc57294661eb31867575a7af18fec4de3d71",
+      "source": "coordination/onepass/b3_r70_s03_terminal_identity.cjs",
+      "destination": "b3_r70_s03_terminal_identity.cjs",
+      "blob": "64847800e02998aaaad98823d02dd6976c431712"
+    },
+    {
+      "commit": "5baffc57294661eb31867575a7af18fec4de3d71",
+      "source": "coordination/onepass/b3_r71_physical_terminal_composition.cjs",
+      "destination": "b3_r71_physical_terminal_composition.cjs",
+      "blob": "a2f27861d4b7f681059aa1c41c945034c881c296"
+    },
+    {
+      "commit": "590cf2a3cdf1aed0fb60027326493a28cd78bf8f",
+      "source": "nox-control/b5-r79/bind_retained_pair.py",
+      "destination": "bind_retained_pair.py",
+      "blob": "315be5af40c40ef0dfc66024b56d0b16a2c84cda"
+    },
+    {
+      "commit": "53f7ab42912938db8b6d4f4a3ba170fa7b36c91f",
+      "source": "nox-control/b5-r80/frozen_consumer.py",
+      "destination": "frozen_consumer.py",
+      "blob": "67a2c36a201202734cd4b1ed453f7fc6735097ec"
+    },
+    {
+      "commit": "dd2ec3cd569cfc31ef725cc039a7319c4961f2c3",
+      "source": "coordination/onepass/b3_r80_frozen_byte_ingress.cjs",
+      "destination": "b3_r80_frozen_byte_ingress.cjs",
+      "blob": "8a95bf6eef67b92964f9a77c54ba71822bdb4b4d"
+    }
+  ],
+  "import_edges": [
+    [
+      "b5_chain_guard.py",
+      "b5_r55_pinned.py"
+    ],
+    [
+      "b5_retained_ingress.py",
+      "b5_r55_pinned.py"
+    ],
+    [
+      "b5_retained_ingress.py",
+      "b5_chain_guard.py"
+    ],
+    [
+      "canonical_text.py",
+      "b5_retained_ingress.py"
+    ],
+    [
+      "canonical_text.py",
+      "b5_r55_pinned.py"
+    ],
+    [
+      "projection_match.py",
+      "canonical_text.py"
+    ],
+    [
+      "link_fields.py",
+      "b5_retained_ingress.py"
+    ],
+    [
+      "link_fields.py",
+      "b5_r55_pinned.py"
+    ],
+    [
+      "link_fields.py",
+      "canonical_text.py"
+    ],
+    [
+      "pair_projection.py",
+      "projection_match.py"
+    ],
+    [
+      "pair_projection.py",
+      "canonical_text.py"
+    ],
+    [
+      "b3_r66_raw_readback_binding.cjs",
+      "b3_r65_r64_physical_pin_check.cjs"
+    ],
+    [
+      "b3_r69_exchange_scope_binding.cjs",
+      "b3_r68_route_binding.cjs"
+    ],
+    [
+      "b3_r70_s03_terminal_identity.cjs",
+      "b3_r69_exchange_scope_binding.cjs"
+    ],
+    [
+      "b3_r71_physical_terminal_composition.cjs",
+      "b3_r66_raw_readback_binding.cjs"
+    ],
+    [
+      "b3_r71_physical_terminal_composition.cjs",
+      "b3_r70_s03_terminal_identity.cjs"
+    ],
+    [
+      "bind_retained_pair.py",
+      "b5_retained_ingress.py"
+    ],
+    [
+      "bind_retained_pair.py",
+      "b5_r55_pinned.py"
+    ],
+    [
+      "bind_retained_pair.py",
+      "pair_projection.py"
+    ],
+    [
+      "frozen_consumer.py",
+      "bind_retained_pair.py"
+    ],
+    [
+      "frozen_consumer.py",
+      "b5_r55_pinned.py"
+    ],
+    [
+      "b3_r80_frozen_byte_ingress.cjs",
+      "b3_r71_physical_terminal_composition.cjs"
+    ]
+  ],
+  "entrypoints": {
+    "python": "frozen_consumer.freeze_consumer_payload",
+    "node": "b3_r80_frozen_byte_ingress.cjs#checkFrozenPayload"
+  },
+  "required_call_order": [
+    "authenticate original S03 descriptors and independent physical/served identity",
+    "freeze_consumer_payload returns exact immutable UTF-8 bytes",
+    "obtain expected payload SHA256 through separately authenticated evidence channel; do not self-authenticate using producer-returned digest",
+    "checkFrozenPayload on exact bytes and detached digest",
+    "require independently authenticated final DOM/STOP disposition after durable reservation CAS linked to same observation, terminal, scope, build, attempt, event, turn and reservation",
+    "only then allow offline R109 quality admission; no native authority"
+  ],
+  "pending_observation": "INELIGIBLE; reject retain-then-mutate, STOP, abort, timeout, foreign or stale disposition; preserve immutable audit",
+  "production_ready": false,
+  "native_accepted": false,
+  "authentication_verified": false,
+  "host_provider_bound": false,
+  "pre_ack_observer_bound": false,
+  "ack_allowed": false,
+  "next_post_allowed": false,
+  "training_admitted": false,
+  "source_evidence": {
+    "b5_job": 138936659719,
+    "b3_job": 138956031362,
+    "workflow_blob": "f328fd97978f76484d708d5b28c732e4399e531e",
+    "check": "16 exact remote blobs and 22 static import edges, not joint functional or native test"
+  }
+}

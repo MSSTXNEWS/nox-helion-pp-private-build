@@ -1,0 +1,30 @@
+name: NOX D3 R99 corrected joint source
+on:
+  pull_request:
+    paths:
+      - 'nox-control/d3-r99/**'
+      - '.github/workflows/nox-d3-r99-joint-source.yml'
+permissions:
+  contents: read
+jobs:
+  corrected-source-artifact:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r99-r81-r75-joint-release-20261125'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Assemble corrected immutable source and verify extracted imports
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B nox-control/d3-r99/build_joint.py --repo . --output "$RUNNER_TEMP/nox-r99-joint-source.zip"
+          python3 -B nox-control/d3-r99/verify_joint.py "$RUNNER_TEMP/nox-r99-joint-source.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nox-r99-joint-source
+          path: ${{ runner.temp }}/nox-r99-joint-source.zip
+          retention-days: 14

@@ -1,0 +1,37 @@
+name: D3 R78 retained snapshot review
+on:
+  pull_request:
+    paths: ['nox-control/d3-r78/**', '.github/workflows/nox-d3-r78-retained.yml']
+permissions:
+  contents: read
+jobs:
+  retained:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r78-retained-snapshot-review-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: One retained snapshot composition
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$PWD/nox-control/d3-r74/staging"
+          own="$PWD/nox-control/d3-r78"
+          test "$(git rev-parse HEAD:nox-control/d3-r78/b5_retained_ingress.py)" = 75af979a9d84216485e0333f8f9afcffb61f6ce6
+          test "$(git rev-parse HEAD:nox-control/d3-r78/b5_chain_guard.py)" = f321f4ad36867e434ba72db9264a88cf23a91fb8
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$own:$stage/py:$PWD/nox-control/d3-r76:$PWD/nox-control/b2-r77:$tmp"
+          export D3_B4_MODULE="$stage/b4/b4_existing_turn_pair.mjs"
+          cd "$tmp"
+          python3 -B -c 'import unittest; s=unittest.defaultTestLoader.loadTestsFromName("test_retained_snapshot.RetainedSnapshotTest"); assert s.countTestCases()==1; raise SystemExit(not unittest.TextTestRunner(verbosity=2).run(s).wasSuccessful())'
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false
