@@ -1,0 +1,31 @@
+name: B3 R84 extracted physical admission
+on:
+  pull_request:
+    paths: ['nox-control/b3-r84-stage/**', '.github/workflows/nox-b3-r84-extracted-physical.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  extracted-physical:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b3/r80-frozen-byte-consumer-20261125'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Stage exact original A6 and R111, then R83
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin 1dc5eac0c22807b8522b67ccf95e70ffb3c87b85
+          git worktree add --detach "$RUNNER_TEMP/r111-source" 1dc5eac0c22807b8522b67ccf95e70ffb3c87b85
+          test "$(git -C "$RUNNER_TEMP/r111-source" hash-object nox-control/d3-r111/stage_overlay.py)" = 82cbfac33a5cc56d53d9547dc8511d5968efbe58
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/14989839885/zip" > "$RUNNER_TEMP/a6-exact.zip"
+          (cd "$RUNNER_TEMP/r111-source" && python3 -B -c 'import sys,pathlib;sys.path.insert(0,"nox-control/d3-r111");from stage_overlay import stage;stage(pathlib.Path(sys.argv[1]).read_bytes(),pathlib.Path(sys.argv[2]))' "$RUNNER_TEMP/a6-exact.zip" "$RUNNER_TEMP/r111-extracted")
+          node nox-control/b3-r84-stage/test_extracted_physical.cjs "$RUNNER_TEMP/r111-extracted"

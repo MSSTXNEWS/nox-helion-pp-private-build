@@ -1,0 +1,47 @@
+name: NOX B3 R80 frozen byte ingress
+on:
+  pull_request:
+    paths:
+      - 'coordination/onepass/b3_r80*'
+      - '.github/workflows/nox-b3-r80-frozen-byte-ingress.yml'
+permissions:
+  contents: read
+jobs:
+  exact-retained-text:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Single retained S03 chain and actual projection pair, no native calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin 40b6ad0eeea8498b222e39feb2558e5922deccb1 ef3e7aa7ff26584d2bbb44b5e094b93de39a8014 68d5dd4ea1022dc55d3ee7b54347d053fb936e19 1c9f984247e557f9b2e393f9e2c24246f4f6a8de 4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          load() { git show "$1:$2" > "$tmp/$3"; test "$(git hash-object "$tmp/$3")" = "$4"; }
+          load 4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3 nox-control/b5_s03_verifier_r54.py b5_r55_pinned.py df94c535273dde1fd2609f555d1d615eacfda831
+          load 1c9f984247e557f9b2e393f9e2c24246f4f6a8de nox-control/b5-r63/b5_chain_guard.py b5_chain_guard.py f321f4ad36867e434ba72db9264a88cf23a91fb8
+          load 1c9f984247e557f9b2e393f9e2c24246f4f6a8de nox-control/b5-r65/b5_retained_ingress.py b5_retained_ingress.py 3e2a8693574608bb773eb7ed4140b574bc5b1efb
+          load 1c9f984247e557f9b2e393f9e2c24246f4f6a8de nox-control/b5-r63/test_b5_chain_guard.py test_b5_chain_guard.py 96fa30430ac2a9027eec0a2a0ef9b39c670c55dd
+          load 68d5dd4ea1022dc55d3ee7b54347d053fb936e19 nox-control/b5-r75/canonical_text.py canonical_text.py 8ce1165ca2e553c1e05379bb1774c09c059ca8e2
+          load ef3e7aa7ff26584d2bbb44b5e094b93de39a8014 nox-control/b5-r76/projection_match.py projection_match.py 664d05fce5d98e69c9f196ed54a0c2fd5ad1de4c
+          load 40b6ad0eeea8498b222e39feb2558e5922deccb1 nox-control/b5-r77/link_fields.py link_fields.py 04eca1bacf9a45cbafa77dc6b21b5b00b9ff9729
+          git fetch --no-tags --depth=1 origin 26312a2184599f1d906c2df1a4b809beaba045e8 5baffc57294661eb31867575a7af18fec4de3d71
+          load 26312a2184599f1d906c2df1a4b809beaba045e8 nox-control/b5-r78/pair_projection.py pair_projection.py 350ead207c91681d7a4c817331f5b37f9c394a9d
+          load 5baffc57294661eb31867575a7af18fec4de3d71 coordination/onepass/b3_r65_r64_physical_pin_check.cjs b3_r65_r64_physical_pin_check.cjs 1e22eff92da6b951ad22dea2b2db09201b2d371b
+          load 5baffc57294661eb31867575a7af18fec4de3d71 coordination/onepass/b3_r66_raw_readback_binding.cjs b3_r66_raw_readback_binding.cjs c4331cc22cb94da0c67fa765e27c838d7b354c66
+          load 5baffc57294661eb31867575a7af18fec4de3d71 coordination/onepass/b3_r68_route_binding.cjs b3_r68_route_binding.cjs 6d0fef57783346fe33d59ca39a625015514ae168
+          load 5baffc57294661eb31867575a7af18fec4de3d71 coordination/onepass/b3_r69_exchange_scope_binding.cjs b3_r69_exchange_scope_binding.cjs 18b3be8fc4264b32d51a57ad4db367b3ba786d41
+          load 5baffc57294661eb31867575a7af18fec4de3d71 coordination/onepass/b3_r70_s03_terminal_identity.cjs b3_r70_s03_terminal_identity.cjs 64847800e02998aaaad98823d02dd6976c431712
+          load 5baffc57294661eb31867575a7af18fec4de3d71 coordination/onepass/b3_r71_physical_terminal_composition.cjs b3_r71_physical_terminal_composition.cjs a2f27861d4b7f681059aa1c41c945034c881c296
+          git fetch --no-tags --depth=1 origin 590cf2a3cdf1aed0fb60027326493a28cd78bf8f
+          load 590cf2a3cdf1aed0fb60027326493a28cd78bf8f nox-control/b5-r79/bind_retained_pair.py bind_retained_pair.py 315be5af40c40ef0dfc66024b56d0b16a2c84cda
+          git fetch --no-tags --depth=1 origin 53f7ab42912938db8b6d4f4a3ba170fa7b36c91f
+          load 53f7ab42912938db8b6d4f4a3ba170fa7b36c91f nox-control/b5-r80/frozen_consumer.py frozen_consumer.py 67a2c36a201202734cd4b1ed453f7fc6735097ec
+          cp coordination/onepass/b3_r80_frozen_byte_ingress.cjs "$tmp/b3_r80_frozen_byte_ingress.cjs"
+          node --version
+          PYTHONPATH="$tmp" python3 -B coordination/onepass/b3_r80_frozen_byte_test.py "$tmp/b3_r80_frozen_byte_ingress.cjs"

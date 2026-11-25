@@ -1,0 +1,55 @@
+name: B3 R82 staged browser identity
+on:
+  pull_request:
+    paths:
+      - 'coordination/onepass/b3_r82_browser_role_input.json'
+      - '.github/workflows/nox-b3-r82-browser-pin.yml'
+permissions:
+  contents: read
+jobs:
+  staged-pin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify exact donor bytes and real stager output
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          git fetch --no-tags --depth=1 origin 1dc5eac0c22807b8522b67ccf95e70ffb3c87b85 498d863d49563049a63b32750eca57e53ee35f1f
+          git show 1dc5eac0c22807b8522b67ccf95e70ffb3c87b85:nox-control/d3-r111/browser/b1_browser_bundle.js > "$tmp/browser.js"
+          git show 1dc5eac0c22807b8522b67ccf95e70ffb3c87b85:nox-control/d3-r111/release.json > "$tmp/release.json"
+          git show 1dc5eac0c22807b8522b67ccf95e70ffb3c87b85:nox-control/d3-r111/bridge/b3_r64_eof_candidate.js > "$tmp/bridge.js"
+          git show 498d863d49563049a63b32750eca57e53ee35f1f:nox-control/b1-r88/stage_r100.cjs > "$tmp/stager.cjs"
+          node - "$tmp" <<'NODE'
+          const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{createHash}=require('node:crypto');
+          const cfg=JSON.parse(fs.readFileSync('coordination/onepass/b3_r82_browser_role_input.json','utf8')),dir=process.argv[2];
+          const sha=b=>createHash('sha256').update(b).digest('hex');
+          const blob=b=>createHash('sha1').update(Buffer.from('blob '+b.length+'\0')).update(b).digest('hex');
+          const read=n=>fs.readFileSync(path.join(dir,n));
+          const original=read('browser.js'),stager=read('stager.cjs'),manifest=read('release.json'),bridge=read('bridge.js');
+          for(const [raw,pin] of [[original,cfg.input_browser],[stager,cfg.stager],[bridge,cfg.bridge]]) {
+            assert.equal(blob(raw),pin.blob);assert.equal(sha(raw),pin.sha256);
+          }
+          assert.equal(blob(manifest),cfg.base.manifest_blob);assert.equal(sha(manifest),cfg.base.manifest_sha256);
+          assert.equal(original.length,cfg.input_browser.bytes);
+          const {stageR100}=require(path.join(dir,'stager.cjs'));
+          const staged=stageR100(original);
+          assert.equal(sha(staged),cfg.selected_candidate.sha256);
+          assert.equal(staged.length,cfg.selected_candidate.bytes);
+          assert.equal(cfg.selected_candidate.expected_observation_browser_sha256,sha(staged));
+          assert.notEqual(sha(staged),sha(original));assert.notEqual(sha(staged),sha(bridge));
+          assert.deepEqual(stageR100(original),staged);
+          assert.equal(sha(original),cfg.input_browser.sha256);
+          assert.throws(()=>stageR100(Buffer.concat([original,Buffer.from('\n')])),/HOLD_R88_R86_PIN/);
+          fs.writeFileSync(path.join(dir,'staged.js'),staged,{flag:'wx'});
+          console.log(JSON.stringify({node:process.version,original_sha256:sha(original),staged_sha256:sha(staged),staged_bytes:staged.length,repeat_identical:true,tampered_input:'HOLD',native_accepted:false}));
+          NODE
+          node --check "$tmp/staged.js"
