@@ -28,7 +28,7 @@ jobs:
           pin b3_r68_route_binding.cjs 6d0fef57783346fe33d59ca39a625015514ae168
           pin b3_r69_exchange_scope_binding.cjs 18b3be8fc4264b32d51a57ad4db367b3ba786d41
           pin b3_r70_s03_terminal_identity.cjs 64847800e02998aaaad98823d02dd6976c431712
-          pin b3_r71_physical_terminal_composition.cjs b006e3529832cb3ba321b1293ddcad3f9603cfe2
+          pin b3_r71_physical_terminal_composition.cjs 0ada1782fca0f8a563b68759fa9dd79534198f91
           node --version
           node - <<'NODE'
           const assert = require('node:assert/strict');
@@ -38,10 +38,10 @@ jobs:
           assert.equal(t.length, 54);
           assert.equal(t.filter(x => x.consistent).length, 2);
           const r = require('./b3_r71_physical_terminal_composition.cjs').selfTest();
-          assert.equal(r.results.length, 19);
-          assert.equal(r.reproduced, 12);
+          assert.equal(r.results.length, 25);
+          assert.equal(r.reproduced, 18);
           assert.equal(r.results.filter(x => x.consistent).length, 1);
           assert.equal(r.native_accepted, false);
           console.log(JSON.stringify(r));
-          console.log('R76 R71 direct Node crypto: 19/19 synthetic; native_accepted=false');
+          console.log('R77 R71 direct Node crypto: 25/25 synthetic; native_accepted=false');
           NODE
