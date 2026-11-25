@@ -410,12 +410,14 @@ def consilium(q, rounds=2, budget=170):
     except Exception as e: final = 'старший недоступен: ' + str(e)[:100]
     return {'question': q, 'opinions': waves, 'final': final, 'judge_score': best, 'seconds': round(time.time() - t0), 'external_used': bool(advisors())}
 
+ERR_ADV = []
 def _adv_call(a, u, system, mt=500, timeout=70):
     gw = BACK().get('external')
     try:
         r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': a['provider'] + '/' + a['model'], 'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': u}], 'max_tokens': mt}, timeout=timeout)
         if r.status_code == 200: return (r.json()['choices'][0]['message'].get('content') or '').strip()
-    except Exception: pass
+        ERR_ADV.append(f'{a.get("model")}: HTTP {r.status_code} {r.text[:80]}')
+    except Exception as e: ERR_ADV.append(f'{a.get("model")}: {type(e).__name__}')
     return ''
 def consilium_ext(q, deep=False, budget=110):
     """волны: 3 внешних советника параллельно -> (deep) ещё 3 видят первую волну -> старший сводит. Шлюз :8793."""
@@ -431,9 +433,18 @@ def consilium_ext(q, deep=False, budget=110):
     w1 = wave(adv[0:3], 'Вопрос: ' + q, 1); seen = '\n'.join(f'[{o["advisor"]}] {o["text"]}' for o in w1)
     if deep and w1 and time.time() - t0 < budget:
         w2 = wave(adv[3:6] or adv[0:3], f'Вопрос: {q}\nМнения первой волны:\n{seen[-2500:]}\nКритикуй и дай улучшенную версию.', 2); seen += '\n' + '\n'.join(f'[{o["advisor"]}] {o["text"]}' for o in w2)
-    try: final = llm('main', 'Ты старший советник. Своди мнения: согласия, расхождения, итоговое решение. Кратко.', f'Вопрос: {q}\n{seen[-4500:]}', 600, 0.3, None, 120) if seen else 'внешние советники не ответили'
-    except Exception as e: final = 'старший (локальный) недоступен; сводка волн выше'
-    return {'question': q, 'deep': deep, 'waves': waves, 'final': final, 'seconds': round(time.time() - t0), 'advisors_available': len(adv)}
+    final = ''; senior = ''
+    if seen:
+        pref = ['gpt-oss-120b', 'gpt-oss', 'llama-3.3-70b', 'qwen3', 'deepseek', 'nemotron']
+        cand = sorted(advisors(), key=lambda a: next((i for i, p in enumerate(pref) if p in a.get('model', '').lower()), 99))
+        for a in cand[:3]:     # старший = внешний сильный, пока локальная модель перегружена
+            final = _adv_call(a, f'Вопрос: {q}\n{seen[-4500:]}', 'Ты старший советник. Своди мнения: согласия, расхождения, итоговое решение. Кратко.', 600, 60)
+            if final: senior = a.get('model'); break
+        if not final:
+            try: final = llm('main', 'Ты старший советник. Своди мнения: согласия, расхождения, итоговое решение. Кратко.', f'Вопрос: {q}\n{seen[-4500:]}', 600, 0.3, None, 100); senior = 'local main'
+            except Exception: final = 'старший недоступен; см. мнения волн'
+    else: final = 'внешние советники не ответили'
+    return {'question': q, 'deep': deep, 'waves': waves, 'final': final, 'senior': senior, 'seconds': round(time.time() - t0), 'advisors_available': len(adv), 'errors': ERR_ADV[-3:]}
 
 # ---------- supervisor-граф по задаче ----------
 def run_task(tid):
@@ -479,6 +490,16 @@ def run_task(tid):
     ok = all(r['accepted'] for r in results)
     arts = [{'path': f'{tid}/{f}', 'url': f'/svc/agents/artifact/{tid}/{f}'} for r in results for f in r['files']]
     card = {'done': [r for r in results if r['accepted']], 'failed': [r for r in results if not r['accepted']], 'artifacts': arts, 'goal': pl.get('goal'), 'actions': ['Принять', 'Доработать', 'Откатить']}
+    now = time.time(); t0_ = sql('SELECT started FROM tasks WHERE id=?', (tid,), one=True)['started'] or now; rc = {'task': tid, 'title': t['title'], 'goal': pl.get('goal'), 'done': [{'sub': r['sub'], 'role': r['role'], 'accepted': r['accepted'], 'note': r['note'][:120]} for r in results],
+          'artifacts': [], 'started': t0_, 'finished': now, 'seconds': round(now - t0_), 'returns': total_returns,
+          'fallbacks': sql('SELECT count(*) c FROM steps WHERE task=? AND kind="fallback"', (tid,), one=True)['c'], 'accepted': ok}
+    for a in arts:
+        fp = os.path.join(SB, a['path'])
+        try: rc['artifacts'].append({'path': a['path'], 'bytes': os.path.getsize(fp), 'sha256': hashlib.sha256(open(fp, 'rb').read()).hexdigest()})
+        except Exception: pass
+    card['receipt'] = rc
+    try: json.dump(rc, open(os.path.join(root, 'receipt.json'), 'w'), ensure_ascii=False, indent=1)
+    except Exception: pass
     sql('UPDATE tasks SET status=?, finished=?, result=?, first_pass=?, returns=? WHERE id=? AND status!="cancelled"', ('done' if ok else 'needs_owner', time.time(), json.dumps(card, ensure_ascii=False), first_pass if ok else 0, total_returns, tid))
     step(tid, 'final', 'готово' if ok else 'не всё получилось, нужен владелец')
 
@@ -552,6 +573,11 @@ def get_task(tid: str):
     d['result'] = json.loads(d['result']) if d['result'] else None; d.pop('spec', None)
     d['steps'] = [dict(s) for s in sql('SELECT ts,kind,role,text FROM steps WHERE task=? ORDER BY id', (tid,))]
     return d
+@app.get('/task/{tid}/receipt')
+def get_receipt(tid: str):
+    r = sql('SELECT result FROM tasks WHERE id=?', (tid,), one=True)
+    rc = (json.loads(r['result']) if r and r['result'] else {}).get('receipt')
+    return rc or JSONResponse({'error': 'квитанции нет (задача не завершена)'}, 404)
 @app.get('/task/{tid}/card')
 def get_card(tid: str): return card(tid) or JSONResponse({'error': 'нет'}, 404)
 @app.get('/board')
