@@ -4,7 +4,7 @@
  const K='nox.pad.v1',BK='nox.s2.board';
  const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
  let S;try{S=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){S={}}
- S.sheets=S.sheets||{};S.w=S.w||320;S.open=!!S.open;S.cur=S.cur||today();S.proj=S.proj||{};
+ S.sheets=S.sheets||{};S.ts=S.ts||{};S.w=S.w||320;S.open=!!S.open;S.cur=S.cur||today();S.proj=S.proj||{};
  const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
  let root,cm,ta,tab,saved=0,rec=null;
@@ -39,11 +39,20 @@
 @media (prefers-reduced-motion:reduce){#u-pad{transition:none}}`;
  /* ---- хранилище листов ---- */
  const sheet=()=>S.sheets[S.cur]||'';
- function setSheet(t){S.sheets[S.cur]=t;save()}
+ function setSheet(t){S.sheets[S.cur]=t;S.ts[S.cur]=Date.now()/1000;save();push()}
  function dates(){return Object.keys(S.sheets).filter(function(d){return S.sheets[d]&&S.sheets[d].trim()}).sort()}
  function head(){const el=root.querySelector('.up-h b');el.textContent=S.cur===today()?'Сегодня · '+S.cur:S.cur;root.querySelector('.up-p input').value=S.proj[S.cur]||''}
- function load(d){S.cur=d;save();if(cm)cm.setValue(sheet());else if(ta)ta.value=sheet();head()}
+ function load(d){S.cur=d;save();window.__upSilent=1;try{if(cm)cm.setValue(sheet());else if(ta)ta.value=sheet()}finally{window.__upSilent=0}head()}
  function flip(dir){const ds=dates();if(!ds.includes(S.cur))ds.push(S.cur),ds.sort();const i=ds.indexOf(S.cur)+dir;if(i>=0&&i<ds.length)load(ds[i]);else if(dir>0)load(today())}
+
+ /* ---- синхронизация листов с сервером (/api/notes, id=pad-YYYY-MM-DD); localStorage = офлайн-кэш ---- */
+ let pt=0,pulling=0;
+ function push(){clearTimeout(pt);pt=setTimeout(doPush,1500)}
+ async function doPush(){try{const j=await jget('/api/notes');if(!j)return;let list=(j.notes||[]).slice();
+   Object.keys(S.sheets).forEach(function(d){const t=S.sheets[d];if(!t||!t.trim())return;const id='pad-'+d;const rec={id:id,text:t,ts:S.ts[d]||Date.now()/1000,proj:S.proj[d]||'',pad:1};const i=list.findIndex(function(n){return n.id===id});if(i>=0){if((list[i].ts||0)>rec.ts+1)return;list[i]=rec}else list.push(rec)});
+   const r=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:list})});if(r.ok)flash('синхронизировано')}catch(e){}}
+ async function pull(){if(pulling)return;pulling=1;try{const j=await jget('/api/notes');if(!j)return;let ch=0;(j.notes||[]).forEach(function(n){if(!n||!/^pad-\d{4}-\d\d-\d\d$/.test(n.id))return;const d=n.id.slice(4);if((n.ts||0)>(S.ts[d]||0)+1){S.sheets[d]=n.text||'';S.ts[d]=n.ts;if(n.proj)S.proj[d]=n.proj;ch=1}});
+   if(ch){save();window.__upSilent=1;try{if(cm&&cm.getValue()!==sheet())cm.setValue(sheet());else if(!cm&&ta)ta.value=sheet();head()}finally{window.__upSilent=0}}}finally{pulling=0}}
  /* ---- действия ---- */
  async function jget(u){try{const r=await fetch(u,{cache:'no-store'});return r.ok?await r.json():null}catch(e){return null}}
  async function toNox(text){text=String(text||'').trim();if(!text)return false;let ok=false;
@@ -56,7 +65,7 @@
    els.push(Object.assign({},base,{id:id,type:'rectangle',x:40,y:y,width:w,height:h,strokeColor:'#9aa3b2',backgroundColor:'#d9dde3',fillStyle:'solid',roundness:{type:3},boundElements:[{type:'text',id:tid}]}));
    els.push(Object.assign({},base,{id:tid,type:'text',x:50,y:y+12,width:w-20,height:h-24,strokeColor:'#1f2124',backgroundColor:'transparent',fillStyle:'solid',roundness:null,boundElements:null,text:text,fontSize:18,fontFamily:1,textAlign:'left',verticalAlign:'top',containerId:id,originalText:text,lineHeight:1.25}));
    localStorage.setItem(BK,JSON.stringify(Object.assign({},d,{elements:els})));if(/board/.test(location.pathname))setTimeout(function(){location.reload()},600);return true}catch(e){return false}}
- function append(text){text=String(text||'').trim();if(!text)return;const cur=(cm?cm.getValue():sheet()).replace(/\s+$/,'');const nv=(cur?cur+'\n':'')+text+'\n';S.sheets[today()]=(S.cur===today()?nv:(S.sheets[today()]||'')+(S.sheets[today()]?'\n':'')+text+'\n');if(S.cur!==today())S.cur=today();save();if(cm){cm.setValue(sheet());cm.setCursor(cm.lineCount(),0)}else if(ta)ta.value=sheet();if(root)head()}
+ function append(text){text=String(text||'').trim();if(!text)return;const cur=(cm?cm.getValue():sheet()).replace(/\s+$/,'');const nv=(cur?cur+'\n':'')+text+'\n';S.sheets[today()]=(S.cur===today()?nv:(S.sheets[today()]||'')+(S.sheets[today()]?'\n':'')+text+'\n');if(S.cur!==today())S.cur=today();S.ts[S.cur]=Date.now()/1000;save();push();if(cm){cm.setValue(sheet());cm.setCursor(cm.lineCount(),0)}else if(ta)ta.value=sheet();if(root)head()}
  async function add(text,o){o=o||{};const to=o.to||'pad';if(to==='pad'||to==='both')append(text);let r=true;if(to==='nox'||to==='both')r=(await toNox(text))&&r;if(to==='board'||to==='both')r=toBoard(text)&&r;flash(r?'Записано':'Не удалось записать');return r}
  function selText(){let t=cm?cm.getSelection():'';if(!t&&cm){t=cm.getLine(cm.getCursor().line)}return(t||'').trim()}
  function flash(m){const s=root&&root.querySelector('.st');if(!s)return;s.textContent=m;clearTimeout(flash.t);flash.t=setTimeout(function(){s.textContent=saved?'сохранено':''},2200)}
@@ -73,9 +82,9 @@
    '<div class="up-ed"><textarea class="up-raw" aria-label="Лист блокнота" placeholder="Пиши сюда. Каждая строка — запись."></textarea></div>'+
    '<div class="up-f"><button type="button" class="up-go" data-a="nox" title="Выделенное или текущая строка в память NOX">→ NOX</button><button type="button" class="up-go" data-a="board" title="Стикер на доску">→ Доска</button><button type="button" data-a="mic" aria-label="Голосовой ввод" title="Голос">Голос</button><button type="button" data-a="new" title="Новый лист (сегодня)">+ Лист</button><span class="st"></span></div>';
   document.body.appendChild(root);
-  tab=document.createElement('button');tab.id='u-tab';tab.type='button';tab.textContent='Блокнот';tab.setAttribute('aria-label','Открыть блокнот');document.body.appendChild(tab);
+  tab=document.createElement('button');tab.id='u-tab';tab.type='button';tab.textContent='Блокнот';tab.setAttribute('aria-label','Открыть блокнот');document.body.appendChild(tab);if(S.open){document.body.classList.add('u-pad-open');document.documentElement.style.setProperty('--u-pad-w',S.w+'px')}
   ta=root.querySelector('.up-raw');ta.value=sheet();head();
-  const onchg=function(){setSheet(cm?cm.getValue():ta.value);saved=1;flash('сохранено')};
+  const onchg=function(){if(window.__upSilent)return;setSheet(cm?cm.getValue():ta.value);saved=1;flash('сохранено')};
   ta.addEventListener('input',onchg);
   /* CodeMirror 5 из vendor */
   const l=document.createElement('link');l.rel='stylesheet';l.href='./vendor/codemirror/codemirror.css';document.head.appendChild(l);
@@ -86,7 +95,7 @@
    else if(a==='nox')toNox(selText()).then(function(ok){flash(ok?'→ NOX: записано':'Не удалось')});
    else if(a==='board')flash(toBoard(selText())?'→ Доска: стикер':'Не удалось');
    else if(a==='mic')mic();else if(a==='new'){load(today())}});
-  root.querySelector('.up-p input').addEventListener('input',function(e){S.proj[S.cur]=e.target.value;save()});
+  root.querySelector('.up-p input').addEventListener('input',function(e){S.proj[S.cur]=e.target.value;S.ts[S.cur]=Date.now()/1000;save();push()});
   root.querySelector('.up-q').addEventListener('input',function(e){showSearch(e.target.value)});
   tab.addEventListener('click',open);
   /* ширина */
@@ -103,9 +112,9 @@
     pop.innerHTML='<button type="button" data-t="pad">В блокнот</button><button type="button" data-t="nox">→ NOX</button><button type="button" data-t="board">→ Доска</button>';pop.querySelectorAll('button').forEach(function(b){b.style.cssText='min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--ds-line,rgba(255,255,255,.2));background:transparent;color:var(--ds-ink,#e6e7ea);font:inherit;font-size:14px;cursor:pointer';b.addEventListener('click',function(){add(s,{to:b.dataset.t});pop.remove();pop=null})});document.body.appendChild(pop)},10)});
   document.addEventListener('mousedown',function(e){if(pop&&!(e.target.closest&&e.target.closest('#u-pop'))){pop.remove();pop=null}});
  }
- function open(focus){root.classList.remove('shut');root.classList.add('open');S.open=true;save();setTimeout(function(){if(cm){cm.refresh();if(focus===true)cm.focus()}else if(focus===true)ta.focus()},280)}
- function close(){root.classList.add('shut');root.classList.remove('open');S.open=false;save()}
- function init(){build()}
+ function open(focus){document.body.classList.add('u-pad-open');root.style.setProperty('--w',S.w+'px');document.documentElement.style.setProperty('--u-pad-w',S.w+'px');root.classList.remove('shut');root.classList.add('open');S.open=true;save();setTimeout(function(){if(cm){cm.refresh();if(focus===true)cm.focus()}else if(focus===true)ta.focus()},280)}
+ function close(){document.body.classList.remove('u-pad-open');root.classList.add('shut');root.classList.remove('open');S.open=false;save()}
+ function init(){build();pull();setInterval(function(){if(!document.hidden)pull()},60000);document.addEventListener('visibilitychange',function(){if(!document.hidden)pull()})}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
  window.NOXNote={add:add,open:function(){open(true)},close:close,toggle:function(){root.classList.contains('open')?close():open(true)},search:search,sheets:function(){return Object.assign({},S.sheets)}};
 })();
