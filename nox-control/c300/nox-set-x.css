@@ -1,0 +1,11 @@
+.nxm-side [role=tab]{position:relative;display:flex;align-items:center;gap:10px}
+.nxm-side [role=tab] sl-badge.nxm-st{margin-left:auto}
+.nxm-side sl-badge.nxm-st::part(base){font-size:12px;min-height:22px;padding:0 8px;border:0}
+sl-switch::part(thumb){transition:transform .28s cubic-bezier(.34,1.56,.64,1),width .2s,background-color .2s,box-shadow .2s}
+sl-switch::part(control){transition:background-color .25s,border-color .25s,box-shadow .25s}
+sl-switch:active::part(thumb){width:calc(var(--thumb-size,24px) + 6px)}
+sl-switch.nxm-flash::part(control){box-shadow:0 0 0 6px rgba(233,180,101,.22),0 0 18px rgba(233,180,101,.5)}
+sl-switch[checked]::part(control){background-color:#c8782e;border-color:#e9b465}
+sl-radio-group#nxsDepth2 sl-radio-button::part(button){min-height:44px;min-width:76px;background:rgba(255,235,220,.06);border-color:rgba(255,255,255,.16);color:#efe6df}
+sl-radio-group#nxsDepth2 sl-radio-button[checked]::part(button){background:linear-gradient(180deg,#e9b465,#c8782e);color:#1a0e06;border-color:transparent}
+@media(prefers-reduced-motion:reduce){sl-switch::part(thumb){transition:none}}
