@@ -1,0 +1,1 @@
+cd /workspace/nox/web/site/vendor/talkinghead; ls -la | head -30; cat package.json 2>/dev/null | head -20; find . -maxdepth 3 \( -name "*.mjs" -o -name "*.glb" -o -name "*.js" \) | head -20; ls /workspace/nox/web/site/vendor/three-vrm | head; ls /workspace/nox/web/site/*.glb /workspace/nox/web/site/vendor/*/*.glb 2>/dev/null | head
