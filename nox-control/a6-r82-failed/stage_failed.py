@@ -1,4 +1,4 @@
-"""Select diagnostic-only B5 R82/R83 on the verified R111 extracted layout."""
+"""Select diagnostic-only B5 R82/R83/R84 on the verified R111 extracted layout."""
 import hashlib, json, pathlib, sys
 HERE = pathlib.Path(__file__).resolve().parent
 PINS = {
@@ -7,7 +7,8 @@ PINS = {
     "b5_receipted_failed_poststate.py": "c6181ce7a16f787b4b68b2507150c6990da2ef83",
     "b5_strict_receipted_poststate.py": "e2997a136b47f06d47eba519e4cd6a87f1c68fb0",
     "typed_failed_poststate.py": "321c12aff561fa6769ce08e1f7b6854e0ebf08ae",
-    "pending_wire.py": "a2509734cdac48085442ffe9a64da932599ae547"
+    "pending_wire.py": "a2509734cdac48085442ffe9a64da932599ae547",
+    "pending_attempt.py": "d32a5d6ca115fc4de9651a6cacd8ca8617ef3c9b"
 }
 BASE = {"b5_r55_pinned.py":"df94c535273dde1fd2609f555d1d615eacfda831",
         "b5_chain_guard.py":"f321f4ad36867e434ba72db9264a88cf23a91fb8"}

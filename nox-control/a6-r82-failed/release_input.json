@@ -1,7 +1,7 @@
 {
-  "schema": "NOX_A6_FAILED_DIAGNOSTIC_SELECTION_V2",
+  "schema": "NOX_A6_FAILED_DIAGNOSTIC_SELECTION_V3",
   "instructions_version": "0.0.6",
-  "claim": 7155447207,
+  "claim": 7157867558,
   "source_commit": "74c66bef63d58bbc1cd79004ace6e05d694a8e26",
   "original_artifact": 14989839885,
   "selected_namespace": "nox-control/a6-r82-failed-selected",
@@ -13,7 +13,8 @@
     "b5_receipted_failed_poststate.py": "c6181ce7a16f787b4b68b2507150c6990da2ef83",
     "b5_strict_receipted_poststate.py": "e2997a136b47f06d47eba519e4cd6a87f1c68fb0",
     "typed_failed_poststate.py": "321c12aff561fa6769ce08e1f7b6854e0ebf08ae",
-    "pending_wire.py": "a2509734cdac48085442ffe9a64da932599ae547"
+    "pending_wire.py": "a2509734cdac48085442ffe9a64da932599ae547",
+    "pending_attempt.py": "d32a5d6ca115fc4de9651a6cacd8ca8617ef3c9b"
   },
   "host_provider_bound": false,
   "native_accepted": false,
@@ -21,6 +22,7 @@
   "next_post_allowed": false,
   "retry_allowed": false,
   "training_admitted": false,
-  "previous_claim": 7154402207,
-  "wire_source_commit": "220e52a3426def6aee6d3c47758846722957536a"
+  "previous_claim": 7155447207,
+  "wire_source_commit": "220e52a3426def6aee6d3c47758846722957536a",
+  "pending_attempt_source_commit": "958372ba4a08d7a4742b2ad6957d10f7be7abb48"
 }
