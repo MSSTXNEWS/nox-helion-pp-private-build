@@ -1,5 +1,5 @@
 /* NOX · пульт и вкладки настроек (расширение, канон не меняет) */
-#nxpult{position:fixed;left:14px;bottom:14px;z-index:9300;font-family:inherit;font-weight:300;color:rgba(240,232,226,.8)}
+#nxpult{position:fixed;left:14px;bottom:100px;z-index:9300;font-family:inherit;font-weight:300;color:rgba(240,232,226,.8)}
 #nxpult .nxpu-tog{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;cursor:pointer;
   border:1px solid rgba(255,225,200,.12);background:linear-gradient(180deg,rgba(26,22,22,.7),rgba(12,10,11,.8));color:inherit;font:inherit;font-size:10px;letter-spacing:.2em;
   -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
@@ -24,10 +24,10 @@
 #nxpult .nxpu-st{min-height:14px;margin-top:8px;font-size:10px;letter-spacing:.1em;color:rgba(240,232,226,.6)}
 #nxpult .nxpu-st[data-state="bad"]{color:#e88a7e}
 #nxpult .nxpu-st[data-state="ok"]{color:#9fdcb4}
-@media (max-width:760px){#nxpult{left:10px;bottom:84px}#nxpult .nxpu-pan{width:min(320px,92vw)}}
+@media (max-width:760px){#nxpult{left:10px;bottom:150px}#nxpult .nxpu-tog{padding:6px 9px}#nxpult .nxpu-pan{width:min(320px,92vw)}}
 
 /* вкладки настроек */
-.nxt-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 16px}
+.nxt-tabs{grid-column:1/-1;width:100%;display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 16px}
 .nxt-tabs button{font:inherit;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(240,232,226,.75);background:rgba(255,235,220,.05);border:1px solid rgba(255,225,200,.12);border-radius:999px;padding:8px 14px;cursor:pointer}
 .nxt-tabs button[aria-selected="true"]{background:linear-gradient(90deg,rgba(176,44,32,.88),rgba(110,26,20,.62));color:#fff}
 .nxt-off{display:none !important}
