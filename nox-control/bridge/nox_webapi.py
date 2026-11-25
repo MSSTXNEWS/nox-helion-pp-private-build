@@ -1306,6 +1306,19 @@ def install(app, B):
                         except Exception as e:
                             B.log("web_plan_result_unavailable " + type(e).__name__)
                             plan = []
+                        # A STOP during the awaited planner must suppress its late
+                        # result and must not advance into primary inference.
+                        if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                            CANCEL.discard(rid)
+                            yield fr(message={"role": "assistant", "content": ""}, done=True,
+                                     done_reason="stopped",
+                                     completion_receipt={"status": "STOPPED", "request_id": rid,
+                                                         "upstream_done": False},
+                                     memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                           "s03_readback_verified": False},
+                                     memory_history={"status": "SKIPPED", "reason": "USER_STOP",
+                                                     "s03_readback_verified": False})
+                            return
                         if plan:
                             extra += "[План (следуй по порядку, нумеруй шаги): " + "; ".join("%d) %s" % (i + 1, x) for i, x in enumerate(plan)) + "]"
                             yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "план: %d шагов" % len(plan), "plan": plan})
@@ -1537,6 +1550,10 @@ def install(app, B):
                                     output_utf8_bytes += t_utf8_bytes
                                     n += 1
                                     yield fr(message={"role": "assistant", "content": t}, done=False)
+                                    # The token has already been emitted. STOP at this
+                                    # yield must not emit a later plan-progress frame.
+                                    if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                                        break
                                     if plan:
                                         plan_pending_parts.append(t)
                                         if "\n" in t:
