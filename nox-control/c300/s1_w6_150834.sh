@@ -1,0 +1,25 @@
+S=/workspace/nox/web/site
+cd $S
+[ -f nox-ai-s1.css ] && cp -p nox-ai-s1.css nox-ai-s1.css.bak_s1_$(date +%H%M%S)
+base64 -d > nox-ai-s1.css <<'S1EOF'
+Lm5haS1idG57cG9zaXRpb246Zml4ZWQ7bGVmdDphdXRvO3JpZ2h0OjEycHg7dHJhbnNmb3JtOm5vbmU7dG9wOmF1dG87Ym90dG9tOmNhbGModmFyKC0tZHMtZG9jay1oLDkycHgpICsgNjRweCk7ei1pbmRleDp2YXIoLS16LWZsb2F0LDgwMCl9Ci5uYWktYnRuOjpw
+YXJ0KGJhc2Upe2JveC1zaGFkb3c6MCA4cHggMjhweCByZ2JhKDIyOSw4NCwzMSwuNCk7bWluLWhlaWdodDo0NHB4fQoubmFpLWRyey0tc2l6ZTptaW4oNDQwcHgsMTAwdncpOy0tc2wtei1pbmRleC1kcmF3ZXI6MTE1MH0KLm5haS1kcjo6cGFydChwYW5lbCl7YmFj
+a2dyb3VuZDpyZ2JhKDE0LDksOSwuODgpOy13ZWJraXQtYmFja2Ryb3AtZmlsdGVyOmJsdXIoMjZweCkgc2F0dXJhdGUoMS4zKTtiYWNrZHJvcC1maWx0ZXI6Ymx1cigyNnB4KSBzYXR1cmF0ZSgxLjMpO2JvcmRlci1sZWZ0OjFweCBzb2xpZCByZ2JhKDI1NSwxNjAs
+MTIwLC4yMik7Ym94LXNoYWRvdzotMThweCAwIDYwcHggcmdiYSgwLDAsMCwuNTUpO2NvbG9yOiNmZmYzZWN9Ci5uYWktZHI6OnBhcnQodGl0bGUpe2ZvbnQ6NTAwIDEzcHggdmFyKC0tbW9ubyxtb25vc3BhY2UpO2xldHRlci1zcGFjaW5nOi4xNGVtO3RleHQtdHJh
+bnNmb3JtOnVwcGVyY2FzZX0KLm5haS1kcjo6cGFydChmb290ZXIpe2Rpc3BsYXk6ZmxleDtnYXA6MTBweDthbGlnbi1pdGVtczpmbGV4LWVuZH0ubmFpLWRyIC5uYWktcXtmbGV4OjF9Ci5uYWktYW5ze2Rpc3BsYXk6ZmxleDtmbGV4LWRpcmVjdGlvbjpjb2x1bW47
+Z2FwOjEycHg7Zm9udC1zaXplOjE1cHg7bGluZS1oZWlnaHQ6MS41NX0KLm5haS11e21hcmdpbjowO2FsaWduLXNlbGY6ZmxleC1lbmQ7bWF4LXdpZHRoOjkwJTtwYWRkaW5nOjEwcHggMTRweDtib3JkZXItcmFkaXVzOjE2cHggMTZweCA0cHggMTZweDtiYWNrZ3Jv
+dW5kOmxpbmVhci1ncmFkaWVudCgxNjBkZWcscmdiYSgxNTAsNzYsNDAsLjgpLHJnYmEoMTEwLDUwLDI2LC44KSl9Ci5uYWktYSwubmFpLW5vbmUsLm5haS1oaW50e21hcmdpbjowO3BhZGRpbmc6MTJweCAxNHB4O2JvcmRlci1yYWRpdXM6MTZweCAxNnB4IDE2cHgg
+NHB4O2JhY2tncm91bmQ6cmdiYSgyNTUsMjU1LDI1NSwuMDYpO3doaXRlLXNwYWNlOnByZS13cmFwfQoubmFpLWEuZXJye2NvbG9yOiNmZjlhNzZ9Lm5haS1oaW50LC5uYWktbm9uZXtjb2xvcjojZDliZmI0fQpAbWVkaWEgKG1heC13aWR0aDo3MDBweCl7Lm5haS1i
+dG57bWF4LXdpZHRoOmNhbGMoMTAwdncgLSA4MHB4KX0ubmFpLWJ0bjo6cGFydChsYWJlbCl7b3ZlcmZsb3c6aGlkZGVuO3RleHQtb3ZlcmZsb3c6ZWxsaXBzaXM7d2hpdGUtc3BhY2U6bm93cmFwfX0K
+S1EOF
+echo OK nox-ai-s1.css $(wc -c <nox-ai-s1.css)
+cd /workspace/nox/web/site
+python3 - <<'P'
+import re,time,glob
+t=str(int(time.time()))
+for fn in glob.glob('*.html'):
+    s=open(fn,encoding='utf-8').read()
+    n=re.sub(r'nox-ai-s1\.css\?v=[0-9]*','nox-ai-s1.css?v='+t,s)
+    if n!=s: open(fn,'w',encoding='utf-8').write(n)
+print('w6 ok')
+P
