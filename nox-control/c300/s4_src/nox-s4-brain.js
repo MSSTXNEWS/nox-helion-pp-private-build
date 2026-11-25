@@ -12,8 +12,8 @@
     const box = document.createElement('div'); box.className = 's4drop'; box.setAttribute('aria-hidden', 'true'); const orb = feel.querySelector('.nbx-orb'); if (orb) { orb.style.display = 'none'; orb.before(box); } else feel.prepend(box);
     const c = hex(EMC[top] || '#e0654a'), c2 = hex('#ffb070');
     try {
-      const u = {}; Object.entries(P.defaultObjectSizing || {}).forEach(([k, v]) => { u['u_' + k] = k === 'fit' ? 2 : v; });
-      Object.assign(u, { u_colors: [c, c2, hex('#7a2a20')], u_colorsCount: 3, u_colorBack: [0, 0, 0, 0], u_count: 5, u_size: .8, u_scale: 1, u_worldWidth: 0, u_worldHeight: 0 });
+      const u = {}; Object.entries(P.defaultObjectSizing || {}).forEach(([k, v]) => { u['u_' + k] = k === 'fit' ? 0 : v; });
+      Object.assign(u, { u_colors: [c, c2, hex('#7a2a20')], u_colorsCount: 3, u_colorBack: [0.03, 0.02, 0.02, 1], u_count: 10, u_size: .83, u_scale: 1, u_worldWidth: 0, u_worldHeight: 0 });
       window.__s4drop = new P.ShaderMount(box, P.metaballsFragmentShader, u, { alpha: true, premultipliedAlpha: false }, .6 + lvl);
     } catch (e) { box.remove(); if (orb) orb.style.display = ''; }
   }
