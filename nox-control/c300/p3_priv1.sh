@@ -1,0 +1,1 @@
+N=/workspace/nox; sed -n 150,170p $N/advisors/gateway.py | cut -c1-230; echo ----; sed -n 272,300p $N/advisors/gateway.py | cut -c1-200; cat $N/state/advisors_cfg.json 2>/dev/null | head -c 400; echo; echo "== flux test2"; cat $N/state/p3/flux_test2.txt | tail -6 | cut -c1-300
