@@ -1,0 +1,157 @@
+/* NOX · чат в раскладке Telegram Desktop/Web, тёмное прозрачное стекло. Поверх nox-wow.css и nox-chat-x.css; логика не тронута. Размеры в em от --tgs (масштаб для 4K). */
+body.tg{--tgs:1;--tg-lw:300px;--tg-rw:288px;--tg-g:rgba(14,10,10,.5);--tg-b:rgba(255,140,100,.16);--tg-me:255,150,84}
+@media (min-width:2200px){body.tg{--tgs:1.35}}
+@media (min-width:3000px){body.tg{--tgs:1.75}}
+body.tg .stage{font-size:calc(14px*var(--tgs));display:grid;grid-template-columns:var(--tg-lw) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;position:relative;overflow:hidden;--colw:52em}
+body.tg.cx-noside .stage{--tg-lw:4.6em}
+body.tg .edge,body.tg .ctb,body.tg .cx-chips,body.tg .composer>i.br,body.tg .hint,body.tg .hero .suggest,body.tg #draftHint{display:none!important}
+/* ---- шапка чата ---- */
+.tg-head{grid-column:2;grid-row:1;display:flex;align-items:center;gap:.7em;min-height:3.4em;padding:0 .8em;background:rgba(10,7,7,.55);-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);border-bottom:1px solid var(--tg-b);z-index:6}
+.tg-av{flex:none;width:2.4em;height:2.4em;border-radius:50%;display:grid;place-items:center;font:600 .95em/1 var(--head,sans-serif);letter-spacing:.04em;color:#fff3ea;background:radial-gradient(circle at 30% 25%,#ffb070,#d4452a 60%,#5a1608);box-shadow:0 0 0 1px rgba(255,160,110,.4)}
+.tg-who{min-width:0;flex:1;display:flex;flex-direction:column;gap:.15em}
+.tg-who b{font:600 1.05em/1.1 var(--head,sans-serif);letter-spacing:.06em;color:#fff}
+.tg-sub{font:400 .82em/1.1 var(--body,sans-serif);color:var(--mu,#c2a9a0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tg-sub::after{content:'в сети'}
+body.nox-busy .tg-sub::after{content:'думает…';color:rgb(var(--am))}
+.tg-head button,.tg-head .tb2 button{min-width:2.4em;min-height:2.4em;width:auto;padding:0 .5em;display:inline-grid;place-items:center;background:none!important;border:0;border-radius:50%;color:var(--mu,#c2a9a0)!important;-webkit-text-fill-color:currentColor!important;font-size:1.25em;cursor:pointer;animation:none!important;filter:none!important;text-shadow:none!important}
+.tg-head button:hover{color:#fff!important;background:rgba(255,140,100,.12)!important}
+.tg-head .tb2{display:inline-flex!important;background:none;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;gap:.1em}
+.tg-head .tb2>*::before,.tg-head .tb2>*::after{display:none!important}
+#tgBack{display:none}
+/* ---- лента ---- */
+body.tg .feed{grid-column:2;grid-row:2;padding:.4em 0 .2em!important;-webkit-mask-image:none;mask-image:none}
+body.tg .col{width:min(var(--colw),calc(100% - 1.6em))}
+body.tg .hero{gap:.8em;padding:1vh 0 3vh}
+body.tg .hero h1{font-size:clamp(22px,2.4em,40px);letter-spacing:.34em;opacity:.7}
+body.tg .hero-kicker{font-size:.72em}
+body.tg .msgs{padding-bottom:.4em}
+body.tg .m{position:relative;margin:.2em 0;animation:none;max-width:100%}
+body.tg .m+.m.u,body.tg .m.u+.m.a{margin-top:.45em}
+body.tg .m .lab{display:none}
+body.tg .bubble{display:flex;flex-wrap:wrap;align-items:flex-end;column-gap:.7em;max-width:min(80%,42em);padding:.45em .75em .35em;border-radius:1em;background:var(--tg-g);-webkit-backdrop-filter:blur(14px) saturate(1.25);backdrop-filter:blur(14px) saturate(1.25);border:1px solid var(--tg-b);box-shadow:0 .1em .6em rgba(0,0,0,.28);text-shadow:none}
+body.tg .m.a .bubble{max-width:min(88%,46em);border-left:1px solid var(--tg-b);border-bottom-left-radius:.3em}
+body.tg .m.u .bubble{margin-left:auto;background:linear-gradient(160deg,rgba(var(--tg-me),.30),rgba(200,80,40,.26));border:1px solid rgba(var(--tg-me),.34);border-bottom-right-radius:.3em;box-shadow:0 .1em .6em rgba(0,0,0,.28)}
+body.tg .m.u{align-items:flex-end}
+body.tg .bubble.err{border-color:rgba(255,70,110,.55)}
+body.tg .txt{order:1;flex:1 1 auto;min-width:0;font-size:1.04em;line-height:1.42;color:#f6ece6}
+body.tg .txt p{margin:0 0 .45em}body.tg .txt p:last-child{margin:0}
+body.tg .txt li{margin:0 0 .2em}body.tg .txt ul,body.tg .txt ol{margin:.2em 0 .4em 1.2em}
+body.tg .txt h1,body.tg .txt h2,body.tg .txt h3,body.tg .txt h4{font-size:1.04em;margin:.6em 0 .25em;letter-spacing:.05em}
+body.tg .tg-time{order:2;flex:none;margin-left:auto;padding-left:.2em;font:400 .72em/1.6 var(--mono,monospace);color:rgba(255,235,225,.5);letter-spacing:.04em;user-select:none}
+body.tg .via,body.tg .meta{order:3;flex:1 0 100%;margin:.25em 0 0;padding-top:.3em;font-size:.68em;letter-spacing:.1em;border-top:1px solid rgba(255,140,100,.1)}
+body.tg .meta{margin-top:.2em}
+/* действия по наведению / долгому тапу */
+body.tg .m .acts{position:absolute;top:-1.15em;z-index:4;margin:0;opacity:0;pointer-events:none;transform:translateY(.3em);transition:opacity .12s,transform .12s}
+body.tg .m.a .acts{left:.8em}body.tg .m.u .acts{right:.8em}
+body.tg .m:hover .acts,body.tg .m:focus-within .acts,body.tg .m.tg-tap .acts{opacity:1;pointer-events:auto;transform:none}
+body.tg .m .acts[hidden]{display:none}
+body.tg .acts{display:flex;gap:.3em}
+body.tg .acts .seg{background:rgba(14,9,9,.88);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--tg-b);border-radius:1.1em;padding:.1em .25em;box-shadow:0 .2em .8em rgba(0,0,0,.4);gap:0}
+body.tg .acts .seg>button{min-height:1.9em!important;min-width:1.9em!important;width:1.9em;padding:0!important;border:0!important;background:none!important;color:var(--mu,#c2a9a0)!important;-webkit-text-fill-color:currentColor!important;font-size:1.05em;filter:none!important;animation:none!important;text-shadow:none!important;border-radius:50%}
+body.tg .acts .seg>button::before,body.tg .acts .seg>button::after{display:none!important}
+body.tg .acts .seg>button:hover{color:#fff!important;background:rgba(255,140,100,.16)!important}
+body.tg .acts .seg.fb button.on{color:rgb(var(--am))!important}
+@media (hover:none){body.tg .acts .seg>button{min-height:2.4em!important;min-width:2.4em!important;width:2.4em}}
+/* «печатает…» голограмма */
+body.tg .think.cx-th{gap:.6em;padding:0;align-items:center}
+body.tg .cx-holo{width:3.6em;height:2.3em;margin:-.3em 0 -.3em -.3em}
+body.tg .cx-hl{flex-direction:row;align-items:baseline;gap:.5em;font-size:.78em;letter-spacing:.14em}
+body.tg .cx-hl em{font-size:.9em;letter-spacing:.06em}
+/* ---- «NOX пишет первым» ---- */
+body.tg .stage>.nox-first{grid-column:2;grid-row:2;align-self:start;position:relative;z-index:5;display:flex;align-items:center;gap:.7em;margin:.5em .8em 0;padding:.35em .5em .35em .8em;max-width:none;border-radius:1em;border:1px solid rgba(var(--am),.35);background:rgba(20,12,8,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);font-size:.95em;line-height:1.3;white-space:nowrap;overflow:hidden}
+body.tg .nox-first .h{flex:none;margin:0;font-size:.7em;letter-spacing:.14em;color:rgb(var(--am));opacity:1}
+body.tg .nox-first .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+body.tg .nox-first button{flex:none;margin:0!important;min-height:1.9em;padding:0 .8em;border-radius:1em;border:1px solid var(--tg-b);background:rgba(255,140,100,.1);color:#ffe9e0;font:inherit;font-size:.85em;cursor:pointer}
+body.tg .nox-first button[data-a=hide]{width:2em;padding:0;font-size:0;border-radius:50%;border:0;background:none}
+body.tg .nox-first button[data-a=hide]::before{content:'\2715';font-size:1.1rem;color:var(--mu,#c2a9a0)}
+/* ---- поле ввода ---- */
+body.tg .dock{grid-column:2;grid-row:3;width:auto;margin:0;padding:.3em .8em .7em}
+body.tg .dock>*{width:min(var(--colw),100%);margin-left:auto;margin-right:auto}
+body.tg .composer{display:flex;flex-wrap:wrap;align-items:flex-end;gap:.15em;padding:.25em .35em;min-height:3.15em;border-radius:1.4em;background:rgba(16,11,11,.62);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);border:1px solid var(--tg-b);box-shadow:0 .2em 1.2em rgba(0,0,0,.35)}
+body.tg .composer:focus-within{border-color:rgba(var(--cy),.5);box-shadow:0 .2em 1.2em rgba(0,0,0,.35)}
+body.tg .composer .row,body.tg .composer .tools{display:contents!important}
+body.tg .composer .wavebox{order:-1;flex:1 0 100%}
+body.tg .composer #input{order:3;flex:1 1 0;min-width:0;min-height:2.6em;max-height:9.6em;padding:.62em .35em;font:400 1.07em/1.38 var(--sans,inherit);align-self:center;overflow-y:auto;scrollbar-width:thin}
+body.tg .composer #input::placeholder{color:var(--mu2,#9c8279)}
+body.tg .composer button{order:5;flex:none;width:2.6em;height:2.6em;min-height:2.6em;min-width:2.6em;padding:0;border-radius:50%;display:inline-grid;place-items:center;border:0;background:none;color:var(--mu,#c2a9a0);font-size:1.35em;cursor:pointer;-webkit-text-fill-color:currentColor!important;animation:none!important;filter:none!important;text-shadow:none!important;box-shadow:none;transition:background .12s,color .12s}
+body.tg .composer button::before,body.tg .composer button::after{display:none!important}
+body.tg .composer button:hover{color:#fff;background:rgba(255,140,100,.14)}
+body.tg .composer #btnAttach{order:1}
+body.tg .composer #tgCmd{order:4;font:600 1.1em/1 var(--mono,monospace)}
+body.tg .composer #tgDepth{order:4;width:auto;min-width:0;padding:0 .75em;border-radius:1em;font:500 .62em/1 var(--mono,monospace);letter-spacing:.12em;text-transform:uppercase;height:2.6em;border:1px solid var(--tg-b);background:rgba(255,140,100,.06);align-self:center;height:2.4em;min-height:2.4em;margin:0 .15em}
+body.tg .composer #tgDepth i{display:inline-block;width:.55em;height:.55em;border-radius:50%;margin-right:.55em;background:rgb(var(--am))}
+body.tg .composer #tgDepth[data-m=deep] i{background:rgb(var(--cy));box-shadow:0 0 .5em rgba(var(--cy),.8)}
+body.tg .composer #tgDepth[data-m=fast] i{background:#7fd6a4}
+body.tg .composer #btnSpeak{order:4}body.tg .composer #btnSpeak[aria-pressed=true]{color:rgb(var(--am))}
+body.tg .composer #btnMic{order:6}
+body.tg .composer .send{order:6;color:#fff;background:linear-gradient(160deg,rgb(var(--am)),rgb(var(--cy)))!important;box-shadow:0 0 .8em rgba(var(--cy),.35)}
+body.tg .composer .send span{display:none}
+body.tg .composer .send.stop{background:linear-gradient(160deg,#ff4b7a,#b3123a)!important}
+body.tg .composer:not(.has-text) #btnSend{display:none!important}
+body.tg .composer.has-text #btnMic,body.tg .composer.busy #btnMic{display:none!important}
+body.tg .composer .send[hidden]{display:none!important}
+body.tg .composer.rec #input{display:none}
+/* меню «/» */
+.tg-slash{position:absolute;left:.8em;right:.8em;bottom:100%;margin:0 auto .4em;width:min(var(--colw,52em),100%);max-height:min(46vh,24em);overflow-y:auto;z-index:20;padding:.3em;border-radius:1em;background:rgba(14,9,9,.94);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border:1px solid var(--tg-b);box-shadow:0 .5em 2em rgba(0,0,0,.55);scrollbar-width:thin}
+.tg-slash[hidden]{display:none}
+.tg-slash button{display:grid;grid-template-columns:2.2em 9em minmax(0,1fr);align-items:center;gap:.5em;width:100%;min-height:2.6em;padding:0 .6em;border:0;border-radius:.7em;background:none;color:#f3e9e4;font:400 1em/1.2 var(--body,inherit);text-align:left;cursor:pointer}
+.tg-slash button.on,.tg-slash button:hover{background:rgba(var(--cy),.18)}
+.tg-slash .c{width:1.9em;height:1.9em;border-radius:50%;display:grid;place-items:center;background:rgba(var(--cy),.2);color:#ffd9c8;font:600 .85em/1 var(--mono,monospace)}
+.tg-slash .n{font-weight:600;white-space:nowrap}
+.tg-slash .d{color:var(--mu,#c2a9a0);font-size:.88em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tg-slash .e{padding:.8em;color:var(--mu2,#9c8279)}
+/* ---- список чатов ---- */
+body.tg .cx-side{position:relative;grid-column:1;grid-row:1/4;left:auto;top:auto;bottom:auto;width:auto;display:flex!important;padding:0;gap:0;z-index:4;min-height:0}
+body.tg .cx-side-in{padding:.5em .4em .4em;border-radius:0;border:0;border-right:1px solid var(--tg-b);background:rgba(10,7,7,.55);box-shadow:none}
+body.tg .cx-new{min-height:2.4em;margin-bottom:.5em;border-radius:1.2em;font-size:.82em;letter-spacing:.12em}
+body.tg .cx-q{min-height:2.4em;border-radius:1.2em;margin-bottom:.5em;padding:0 .9em;font-size:.95em;background:rgba(0,0,0,.3)}
+body.tg .cx-hd{margin:.2em .4em .3em}
+body.tg .cx-side .threads{gap:0}
+body.tg .cx-side .threads li{display:grid!important;grid-template-columns:3em minmax(0,1fr) auto auto;grid-template-rows:auto auto;column-gap:.7em;align-items:center;min-height:3.7em;padding:.35em .35em .35em .5em;margin:.1em 0;border-radius:.9em;border-left:0}
+body.tg .cx-side .threads li::before{content:attr(data-ini);grid-column:1;grid-row:1/3;width:3em;height:3em;border-radius:50%;display:grid;place-items:center;font:600 1em/1 var(--head,sans-serif);color:#fff;background:linear-gradient(145deg,hsl(var(--h,12) 70% 52%),hsl(calc(var(--h,12) + 30) 70% 28%))}
+body.tg .cx-side .threads li.on::before{box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+body.tg .cx-side .threads li button.t{grid-column:2;grid-row:1;padding:0!important;min-height:0!important;font:600 1em/1.2 var(--body,inherit)!important;color:#fff;background:none;border:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;align-self:end}
+body.tg .cx-side .threads li button.t small{display:none}
+body.tg .cx-side .threads li .tg-last{grid-column:2/4;grid-row:2;font-size:.88em;color:var(--mu,#c2a9a0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:start}
+body.tg .cx-side .threads li .tg-when{grid-column:3;grid-row:1;font-size:.74em;color:var(--mu2,#9c8279);align-self:end}
+body.tg .cx-side .threads li button.x{grid-column:4;grid-row:1/3;width:1.8em;min-width:1.8em;opacity:0;font-size:1em;background:none;border:0;color:var(--mu,#c2a9a0)}
+body.tg .cx-side .threads li:hover button.x{opacity:1}
+body.tg .cx-side .threads li .cx-mv{display:none}
+body.tg .cx-side .threads li.on,body.tg .cx-side .threads li[aria-current]{background:rgba(var(--cy),.2)}
+body.tg .cx-side .threads li:hover{background:rgba(255,140,100,.09)}
+body.tg.cx-noside .cx-side-in{padding:.5em .3em}
+body.tg.cx-noside .cx-new,body.tg.cx-noside .cx-q,body.tg.cx-noside .cx-hd,body.tg.cx-noside #cxPrj,body.tg.cx-noside .tg-last,body.tg.cx-noside .tg-when,body.tg.cx-noside .threads li button.t,body.tg.cx-noside .threads li button.x{display:none!important}
+body.tg.cx-noside .cx-side .threads li{grid-template-columns:3em;justify-content:center;padding:.3em}
+/* ---- правая панель ---- */
+body.tg .cx-right{display:flex!important;position:absolute;right:0;top:3.4em;bottom:0;left:auto;width:var(--tg-rw);padding:.6em;transform:translateX(104%);visibility:hidden;transition:transform .2s,visibility 0s .2s;z-index:7;background:rgba(10,7,7,.8);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-left:1px solid var(--tg-b);gap:.5em}
+body.tg.tg-r-open .cx-right{transform:none;visibility:visible;transition:transform .2s}
+body.tg .cx-card{padding:.7em .8em;border-radius:.9em;font-size:.95em}
+@media (min-width:1600px){body.tg.tg-r-open .stage{grid-template-columns:var(--tg-lw) minmax(0,1fr) var(--tg-rw)}body.tg.tg-r-open .cx-right{position:relative;top:auto;grid-column:3;grid-row:1/4;transform:none}}
+/* ---- ширина меньше 1100 / мобильная ---- */
+@media (max-width:1099px){
+ body.tg .stage{grid-template-columns:minmax(0,1fr)}
+ body.tg .cx-side{position:fixed;left:0;right:0;top:var(--tb-h,50px);bottom:var(--dock-h,0px);width:auto;transform:translateX(-102%);transition:transform .22s;z-index:130}
+ body.tg.cx-open .cx-side{transform:none}
+ body.tg .cx-side-in{background:rgba(8,5,5,.94);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+ body.tg.cx-open .cx-scrim{display:none}
+ body.tg.cx-noside .stage{--tg-lw:0}
+ body.tg.cx-noside .cx-new,body.tg.cx-noside .cx-q,body.tg.cx-noside .cx-hd,body.tg.cx-noside #cxPrj,body.tg.cx-noside .tg-last,body.tg.cx-noside .tg-when,body.tg.cx-noside .threads li button.t{display:revert!important}
+ body.tg.cx-noside .cx-side .threads li{grid-template-columns:3em minmax(0,1fr) auto auto}
+ body.tg.cx-noside .cx-side .threads li button.x{display:block!important}
+ body.tg .tg-head,body.tg .feed,body.tg .dock,body.tg .stage>.nox-first{grid-column:1}
+ body.tg .cx-right{width:min(92vw,var(--tg-rw))}
+ #tgBack{display:inline-grid}
+}
+@media (max-width:760px){
+ body.tg .stage{font-size:15px}
+ body.tg .col{width:calc(100% - 12px)}
+ body.tg .bubble,body.tg .m.a .bubble{max-width:90%}
+ body.tg .dock{padding:.25em .4em .4em}
+ body.tg .composer #btnSpeak,body.tg .composer #tgCmd{display:none}
+ body.tg .hero{display:none}
+ body.tg.cx-open .tg-back-lbl{display:inline}
+}
+@media (max-height:520px){body.tg .hero{display:none}}
+@media (prefers-reduced-motion:reduce){body.tg .m .acts,body.tg .cx-right,body.tg .cx-side{transition:none}}
+.tg-fix{margin-top:.5em;min-height:2.2em;padding:0 1em;border-radius:1.1em;border:1px solid rgba(var(--am),.5);background:rgba(var(--am),.14);color:#ffe9d0;font:500 1em var(--body,inherit);letter-spacing:.02em;text-transform:none;cursor:pointer}
+.tg-fix:hover{background:rgba(var(--am),.28)}.tg-fix:disabled{opacity:.6;cursor:default}
