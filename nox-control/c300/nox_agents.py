@@ -47,11 +47,14 @@ SEM = {}; SEMLOCK = threading.Lock()
 class PSem:
     """семафор с приоритетом: сначала задачи из чата (prio 10), потом обычные, потом golden/идеи"""
     def __init__(self, n): self.n = n; self.c = threading.Condition(); self.q = []; self.seq = 0
-    def acquire(self, prio=0):
+    def acquire(self, prio=0, timeout=None):
+        t_end = time.time() + timeout if timeout else None
         with self.c:
             self.seq += 1; me = (-prio, self.seq); self.q.append(me); self.q.sort()
-            while not (self.n > 0 and self.q[0] == me): self.c.wait(5)
-            self.q.pop(0); self.n -= 1
+            while not (self.n > 0 and self.q[0] == me):
+                if t_end and time.time() >= t_end: self.q.remove(me); self.c.notify_all(); return False
+                self.c.wait(min(5, max(0.1, (t_end - time.time()) if t_end else 5)))
+            self.q.pop(0); self.n -= 1; return True
     def release(self):
         with self.c: self.n += 1; self.c.notify_all()
 def _prio(tid):
@@ -65,32 +68,81 @@ def chat_busy():
     try: return time.time() - os.path.getmtime(ST + '/orch/chat_hold') < 6
     except Exception: return False
 DOWN = {}   # backend -> ts последнего отказа (предохранитель 180 с)
-def llm(backend, system, user, max_tokens=1500, temp=0.3, tid=None, timeout=420):
-    b = BACK().get(backend) or BACK()['main']
-    s = sem(backend if backend in BACK() else 'main'); s.acquire(_prio(tid) if tid else 0)
+LATE = {'n': 0, 'won_ext': 0, 'won_local': 0}
+FIRST_TOKEN_S = float(os.environ.get('NOX_FIRST_TOKEN_S', '8')); FIRST_TOKEN_EXEC_S = float(os.environ.get('NOX_FIRST_TOKEN_EXEC_S', '15'))
+def _clean(t): return re.sub(r'<think>.*?</think>', '', t or '', flags=re.S).strip()
+def _ext_chat(messages, max_tokens, temp, timeout=60):
+    gw = BACK().get('external')
+    r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': 'auto', 'messages': messages, 'max_tokens': min(max_tokens, 1800), 'temperature': temp}, timeout=timeout)
+    r.raise_for_status(); j = r.json(); return j['choices'][0]['message'].get('content') or '', int(j.get('usage', {}).get('completion_tokens', 0))
+def _local_stream(b, body, hdr, timeout, st):
+    """локальный вызов потоком: фиксируем момент первого токена; результат в st"""
     try:
-        for _ in range(60):          # чат важнее: уступаем, пока идёт ход чата (только для общей основной модели)
-            if b.get('yield_chat') and chat_busy(): time.sleep(2)
-            else: break
-        body = {'model': b.get('model', 'x'), 'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}],
-                'max_tokens': max_tokens, 'temperature': temp, 'chat_template_kwargs': {'enable_thinking': False}}
-        hdr = {'Content-Type': 'application/json'}
-        if b.get('key_env') and os.environ.get(b['key_env']): hdr['Authorization'] = 'Bearer ' + os.environ[b['key_env']]
-        try:
-            if backend != 'external' and BACK().get('external') and time.time() - DOWN.get(backend, 0) < 180: raise RuntimeError('breaker: локальная модель недавно не отвечала')
-            r = httpx.post(b['url'].rstrip('/') + '/chat/completions', json=body, headers=hdr, timeout=min(timeout, 100) if backend != 'external' else timeout)
-            r.raise_for_status(); j = r.json()
-        except Exception as e:
-            if backend != 'external' and 'breaker' not in str(e): DOWN[backend] = time.time()      # локальная модель занята/недоступна: не виснуть, уйти к внешним советникам (шлюз :8793, с очисткой личного)
-            gw = BACK().get('external')
-            if not gw or backend == 'external': raise
-            if tid: step(tid, 'fallback', f'{backend} недоступен ({type(e).__name__}), иду к внешним советникам', 'dispatcher')
-            r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': 'auto', 'messages': body['messages'], 'max_tokens': min(max_tokens, 1800), 'temperature': temp}, timeout=150)
-            r.raise_for_status(); j = r.json()
-        if tid: sql('UPDATE tasks SET tokens=tokens+? WHERE id=?', (int(j.get('usage', {}).get('completion_tokens', 0)), tid))
-        t = j['choices'][0]['message'].get('content') or ''
-        return re.sub(r'<think>.*?</think>', '', t, flags=re.S).strip()
-    finally: s.release()
+        with httpx.stream('POST', b['url'].rstrip('/') + '/chat/completions', json=dict(body, stream=True), headers=hdr, timeout=httpx.Timeout(timeout, connect=5)) as r:
+            r.raise_for_status(); parts = []
+            for line in r.iter_lines():
+                if not line.startswith('data:') or line.strip() == 'data: [DONE]': continue
+                try: d = json.loads(line[5:])['choices'][0]['delta'].get('content') or ''
+                except Exception: continue
+                if d and not st['first'].is_set(): st['first'].set()
+                parts.append(d)
+            st['text'] = ''.join(parts)
+    except Exception as e: st['err'] = e
+    finally:
+        st['done'].set(); st['first'].set()
+        if st.get('sem'): st['sem'].release()
+def llm(backend, system, user, max_tokens=1500, temp=0.3, tid=None, timeout=420):
+    """Гонка: локальная модель не дала первый токен за 8 с (исполнителям 15 с) -> параллельно быстрый советник :8793, берём первый ответ.
+    Локальная не убивается: если дойдёт позже, её ответ пишется шагом late («додумал»)."""
+    b = BACK().get(backend) or BACK()['main']; ext = BACK().get('external'); bn = backend if backend in BACK() else 'main'
+    msgs = [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]
+    lim = FIRST_TOKEN_EXEC_S if tid else FIRST_TOKEN_S
+    def count(tok):
+        if tid and tok: sql('UPDATE tasks SET tokens=tokens+? WHERE id=?', (tok, tid))
+    if backend == 'external' or not ext:
+        t, tok = _ext_chat(msgs, max_tokens, temp, timeout) if backend == 'external' else ('', 0)
+        if backend == 'external': count(tok); return _clean(t)
+    if time.time() - DOWN.get(bn, 0) < 120:      # предохранитель: локальная недавно молчала -> сразу советник, локальную не ждём
+        t, tok = _ext_chat(msgs, max_tokens, temp); count(tok)
+        if tid: step(tid, 'fallback', f'{bn} молчит, ответил советник сразу', 'dispatcher')
+        return _clean(t)
+    if b.get('yield_chat') and chat_busy():      # идёт ход чата: локальную не трогаем, отвечает советник
+        t, tok = _ext_chat(msgs, max_tokens, temp); count(tok); return _clean(t)
+    s = sem(bn); got = s.acquire(_prio(tid) if tid else 0, lim)
+    if not got:       # слот локальной не освободился за lim с
+        DOWN[bn] = time.time(); t, tok = _ext_chat(msgs, max_tokens, temp); count(tok)
+        if tid: step(tid, 'fallback', f'нет свободного слота {bn} за {lim:.0f} с, ответил советник', 'dispatcher')
+        return _clean(t)
+    body = {'model': b.get('model', 'x'), 'messages': msgs, 'max_tokens': max_tokens, 'temperature': temp, 'chat_template_kwargs': {'enable_thinking': False}}
+    hdr = {'Content-Type': 'application/json'}
+    if b.get('key_env') and os.environ.get(b['key_env']): hdr['Authorization'] = 'Bearer ' + os.environ[b['key_env']]
+    st = {'first': threading.Event(), 'done': threading.Event(), 'text': '', 'sem': s}
+    threading.Thread(target=_local_stream, args=(b, body, hdr, min(timeout, 300), st), daemon=True).start()
+    if st['first'].wait(lim) and not st.get('err'):          # первый токен вовремя: ждём локальную как обычно
+        st['done'].wait(min(timeout, 300))
+        if st['text'] and not st.get('err'): LATE['won_local'] += 1; return _clean(st['text'])
+    if st.get('err') and st['done'].is_set() and not st['text']: DOWN[bn] = time.time()
+    if not st['done'].is_set(): DOWN[bn] = time.time()
+    box = {}; ex_done = threading.Event()
+    def ex():
+        try: box['t'], box['tok'] = _ext_chat(msgs, max_tokens, temp)
+        except Exception as e: box['err'] = e
+        ex_done.set()
+    threading.Thread(target=ex, daemon=True).start()
+    if tid: step(tid, 'race', f'{bn}: первый токен не за {lim:.0f} с -> гонка с советником', 'dispatcher')
+    t_end = time.time() + min(timeout, 150)
+    while time.time() < t_end:
+        if st['done'].is_set() and st['text'] and not st.get('err'): LATE['won_local'] += 1; return _clean(st['text'])
+        if ex_done.is_set() and box.get('t'):
+            LATE['won_ext'] += 1; count(box.get('tok', 0))
+            def late(tid=tid, bn=bn, ans=box['t']):          # локальная дойдёт позже -> «додумал»
+                st['done'].wait(300)
+                if st['text'] and tid: LATE['n'] += 1; step(tid, 'late', f'{bn} додумал: ' + _clean(st['text'])[:600], bn)
+            threading.Thread(target=late, daemon=True).start()
+            return _clean(box['t'])
+        if ex_done.is_set() and st['done'].is_set(): break
+        time.sleep(0.2)
+    raise RuntimeError('ни локальная модель, ни советники не ответили: ' + str(box.get('err') or st.get('err'))[:120])
 
 def jparse(t, default=None):
     m = re.search(r'\{.*\}', t, re.S)
@@ -553,7 +605,7 @@ def metrics():
     hrs = max((time.time() - min([x['created'] for x in r] or [time.time()])) / 3600, 0.01)
     return {'total': len(r), 'done': len(done), 'needs_owner': sum(x['status'] == 'needs_owner' for x in r), 'failed': sum(x['status'] == 'failed' for x in r),
             'closed_with_artifact_per_hour': round(len(done) / hrs, 2), 'first_pass_share': round(sum(x['first_pass'] or 0 for x in done) / max(len(done), 1), 2),
-            'avg_seconds': round(sum((x['finished'] or 0) - (x['started'] or 0) for x in done) / max(len(done), 1), 1), 'restarts': sum(x['restarts'] or 0 for x in r), 'coach_nudges': COACH['n'], 'lessons': REPEAT['lessons'], 'repeat_errors': REPEAT['n'], 'tokens': sum(x['tokens'] or 0 for x in r)}
+            'avg_seconds': round(sum((x['finished'] or 0) - (x['started'] or 0) for x in done) / max(len(done), 1), 1), 'restarts': sum(x['restarts'] or 0 for x in r), 'coach_nudges': COACH['n'], 'lessons': REPEAT['lessons'], 'race': LATE, 'repeat_errors': REPEAT['n'], 'tokens': sum(x['tokens'] or 0 for x in r)}
 
 # ---------- HTTP ----------
 app = FastAPI()
@@ -578,6 +630,13 @@ def get_task(tid: str):
     d['result'] = json.loads(d['result']) if d['result'] else None; d.pop('spec', None)
     d['steps'] = [dict(s) for s in sql('SELECT ts,kind,role,text FROM steps WHERE task=? ORDER BY id', (tid,))]
     return d
+@app.post('/llm')
+async def post_llm(req: Request):      # для чата/других сервисов: гонка локальной модели и советников, ответ + кто ответил и за сколько
+    b = await req.json(); t0 = time.time(); w0 = (LATE['won_local'], LATE['won_ext'])
+    def run(): return llm(b.get('backend', 'main'), b.get('system', 'Отвечай кратко.'), b['prompt'], int(b.get('max_tokens', 300)), 0.3, b.get('task'), 120)
+    try: ans = await asyncio.to_thread(run)
+    except Exception as e: return JSONResponse({'error': str(e)[:200], 'seconds': round(time.time() - t0, 1)}, 502)
+    return {'answer': ans, 'seconds': round(time.time() - t0, 1), 'by': 'local' if LATE['won_local'] > w0[0] else 'advisor' if LATE['won_ext'] > w0[1] else 'advisor(breaker)'}
 @app.get('/task/{tid}/receipt')
 def get_receipt(tid: str):
     r = sql('SELECT result FROM tasks WHERE id=?', (tid,), one=True)
