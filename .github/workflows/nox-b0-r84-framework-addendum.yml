@@ -1,0 +1,29 @@
+name: B0 R84 pinned framework addendum
+on:
+  pull_request:
+    paths: ['nox-control/b0-r53/**', '.github/workflows/nox-b0-r84-framework-addendum.yml']
+permissions:
+  contents: read
+jobs:
+  addendum:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b0/green-base-continuation-r53-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 000cca377714e5ce1328f054a86d10aaecdbc734
+          path: r115-donor
+          persist-credentials: false
+      - name: Verify one additive stage on exact donor bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C r115-donor rev-parse HEAD)" = 000cca377714e5ce1328f054a86d10aaecdbc734
+          export B0_R84_DONOR="$PWD/r115-donor"
+          cd nox-control/b0-r53
+          python3 -B -m unittest -v stage_framework_r84_check
