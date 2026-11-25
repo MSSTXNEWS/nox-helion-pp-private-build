@@ -1,0 +1,107 @@
+/* nox-chat-tg.css (исполнитель T): компактный чат в стиле Telegram поверх nox-chat-x.
+   Плотность: текст 14-15px, межстрочный 1.4, пузыри 6-8px по вертикали, 2-4px между пузырями.
+   Фон-солнце, шапка и нижняя панель не трогаются. */
+:root{
+  --tg-mine: rgba(122,44,20,.46);
+  --tg-mine-line: rgba(255,160,90,.30);
+  --tg-their: rgba(6,8,16,.42);
+  --tg-line: rgba(255,255,255,.10);
+  --tg-r: 16px;
+}
+[hidden]{display:none !important}
+
+/* 1. лента на всю высоту, прокрутка только у ленты */
+body[data-page="wow-chat"] .feed{overflow-y:auto;scroll-behavior:smooth;min-height:0}
+body[data-page="wow-chat"] .col{min-height:100%;display:flex;flex-direction:column;justify-content:flex-end}
+body[data-page="wow-chat"] .feed:has(#msgs:not(:empty)) #hero{display:none}
+body[data-page="wow-chat"] #msgs{display:flex;flex-direction:column;gap:3px;padding:8px 10px 12px}
+
+/* 2. пузыри: мои справа (тёплые), NOX слева (тёмное стекло), до 70% ширины */
+body[data-page="wow-chat"] #msgs > *{
+  max-width:70%;width:fit-content;position:relative;
+  padding:6px 10px 6px;border-radius:var(--tg-r);
+  font-size:14.5px;line-height:1.4;
+  background:var(--tg-their);
+  -webkit-backdrop-filter:blur(16px) saturate(120%);backdrop-filter:blur(16px) saturate(120%);
+  border:1px solid var(--tg-line);
+}
+body[data-page="wow-chat"] #msgs > [data-role="user"],
+body[data-page="wow-chat"] #msgs > .me,
+body[data-page="wow-chat"] #msgs > .mine,
+body[data-page="wow-chat"] #msgs > [class*="user"]{
+  margin-left:auto;background:var(--tg-mine);border-color:var(--tg-mine-line);
+}
+body[data-page="wow-chat"] #msgs pre{width:100%;max-width:100%;font-size:13px;margin:4px 0;overflow-x:auto}
+body[data-page="wow-chat"] #msgs p{margin:0 0 4px}
+
+/* 3. кнопки действий скрыты, показываются по наведению */
+body[data-page="wow-chat"] #msgs [class*="actions"],
+body[data-page="wow-chat"] #msgs [class*="toolbar"]{opacity:0;transition:opacity .15s;display:flex;gap:2px}
+body[data-page="wow-chat"] #msgs > *:hover [class*="actions"],
+body[data-page="wow-chat"] #msgs > *:focus-within [class*="actions"],
+body[data-page="wow-chat"] #msgs > *:hover [class*="toolbar"]{opacity:1}
+body[data-page="wow-chat"] #msgs [class*="actions"] button,
+body[data-page="wow-chat"] #msgs [class*="toolbar"] button{width:28px;height:28px;min-width:28px;padding:0;font-size:14px}
+
+/* 4. поле ввода: одна строка, растёт до 6, скрепка слева, микрофон/отправка справа */
+body[data-page="wow-chat"] #hint,
+body[data-page="wow-chat"] #btnSpeak,
+body[data-page="wow-chat"] .composer .br,
+body[data-page="wow-chat"] .composer > .draft,
+body[data-page="wow-chat"] #draftHint{display:none !important}
+body[data-page="wow-chat"] .composer{
+  display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:end;gap:2px;
+  padding:4px 6px;min-height:44px;max-height:none;
+  background:var(--tg-their);border:1px solid var(--tg-line);border-radius:22px;
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+}
+body[data-page="wow-chat"] .composer .row{display:contents}
+body[data-page="wow-chat"] .composer .tools{display:contents}
+body[data-page="wow-chat"] .composer > .wavebox{grid-column:1/-1;grid-row:1}
+body[data-page="wow-chat"] #input{
+  grid-column:2;grid-row:2;field-sizing:content;resize:none;
+  min-height:32px;max-height:calc(6 * 1.4em + 14px);overflow-y:auto;
+  font-size:15px;line-height:1.4;padding:7px 4px;background:transparent;border:0;
+}
+body[data-page="wow-chat"] #btnAttach{grid-column:1;grid-row:2}
+body[data-page="wow-chat"] #btnMic{grid-column:5;grid-row:2}
+body[data-page="wow-chat"] #btnSend{grid-column:5;grid-row:2}
+body[data-page="wow-chat"] #btnStop{grid-column:5;grid-row:2}
+body[data-page="wow-chat"] .tg-btn.cmd{grid-column:3;grid-row:2}
+body[data-page="wow-chat"] .tg-btn.mode{grid-column:4;grid-row:2}
+body[data-page="wow-chat"] .composer:has(#input:placeholder-shown) #btnSend{display:none}
+body[data-page="wow-chat"] .composer:has(#input:not(:placeholder-shown)) #btnMic{display:none}
+body[data-page="wow-chat"] #btnSend span{display:none}
+body[data-page="wow-chat"] #btnAttach,
+body[data-page="wow-chat"] #btnMic,
+body[data-page="wow-chat"] .composer #btnSend{width:34px;height:34px;min-width:34px;padding:0;border-radius:50%}
+body[data-page="wow-chat"] .composer:has(#input:placeholder-shown) #btnSend{display:none}
+body[data-page="wow-chat"] .composer #btnSend{background:var(--tg-mine);border:1px solid var(--tg-mine-line)}
+
+/* 5. команды и режимы: постоянные чипы и вкладки убраны; открываются через «/» и кнопки у поля */
+body[data-page="wow-chat"] #suggest,
+body[data-page="wow-chat"] #ctb{display:none !important}
+body[data-page="wow-chat"] .tg-btn{
+  width:32px;height:32px;min-width:32px;padding:0;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:transparent;border:0;color:inherit;cursor:pointer;font-size:13px;font-weight:600;
+}
+body[data-page="wow-chat"] .tg-btn.mode{color:var(--tg-mine-line);width:28px;min-width:28px;height:28px}
+
+/* 6. плашка «NOX пишет первым»: одна строка */
+body[data-page="wow-chat"] #msgs .notice,
+body[data-page="wow-chat"] #msgs [class*="proactive"],
+body[data-page="wow-chat"] #msgs [class*="first"]{
+  max-width:100%;padding:4px 10px;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* 7. «думает» маленьким, в пузыре NOX */
+body[data-page="wow-chat"] #msgs .think,
+body[data-page="wow-chat"] #msgs [class*="think"]{font-size:12px;padding:4px 8px;min-height:0}
+
+/* 8. мобильная 390: лента на весь экран, без лишних зон */
+@media (max-width:600px){
+  body[data-page="wow-chat"] #msgs > *{max-width:82%;font-size:15px}
+  body[data-page="wow-chat"] .edge,
+  body[data-page="wow-chat"] .split{display:none !important}
+}
