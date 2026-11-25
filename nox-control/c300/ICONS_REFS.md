@@ -16,3 +16,18 @@
 - Иконки: топ-1 Lucide (ISC), запасные Phosphor (MIT) и Tabler (MIT, прежний). Сравнение: screens_th/icons_compare.png. Покрытие: Lucide 59 из 59 используемых (через карту имён), Phosphor 24 из 59 под теми же именами. Замена глобальная через резолвер (nox-icons.js), без правки страниц.
 - Web Awesome 3: MIT, 16 МБ dist-cdn, пилот на settings (screens_th/wa_*). Не внедрён: светлая тема по умолчанию, глобальные стили конфликтуют с нашими, иконки с CDN.
 - Референсы по 10 продуктам (Linear, Vercel, Raycast, Arc, SF Symbols, Notion, Figma, Stripe, ChatGPT, Claude) с толщинами линий и состояниями: не собраны.
+
+## Референсы 10 продуктов: что применено к кнопкам (ориентиры из общеизвестных публичных дизайн-систем, не замеры)
+| Продукт | Берём | Где в нашем CSS |
+|---|---|---|
+| Linear | плотные кнопки 32-36 px, hover +4-6% яркости фона, фокус-кольцо 2 px с отступом, иконки 16 px линией 1.5 | .nx-btn md/sm, --nxb-bg-h |
+| Vercel/Geist | высоты 32/40/48, радиус 6-8, рамка 1 px, primary светлая (инверсия), переход 150 мс | .nx-btn.primary, --nxb-r:8px |
+| Raycast | ghost-кнопки без рамки, подсказка клавиш мелким моно | .nx-btn.ghost |
+| Arc | мягкий hover-фон без обводки у навигации | .nxd-cells a:hover |
+| Apple SF Symbols | иконка выравнивается по базовой линии, вес линии = весу текста | font-size иконки 14/16/18, stroke 1.5-1.75 |
+| Notion | ghost по умолчанию, рамка только на hover | .nx-btn.ghost:hover |
+| Figma | icon-кнопки квадрат 32, активное состояние заливкой | .nx-btn.icon, :active scale .96 |
+| Stripe | danger: тонированный фон + красный текст, а не сплошная заливка | .nx-btn.danger |
+| ChatGPT | primary в чате светлая, secondary прозрачная | button.primary / .k4-btn.pri |
+| Claude | спокойный hover, disabled .45, без теней-свечений | [disabled]{opacity:.45} |
+Состояния во всех кнопках: hover (фон +, рамка +), active (фон ++, сдвиг 1 px), focus-visible (кольцо 2 px #9db1d1 с зазором 2 px от тёмной подложки), disabled (.45, курсор not-allowed), loading (aria-busy: .7, курсор progress). Линия иконок Lucide: 1.75 по умолчанию, 1.5 в sm-кнопках, шапке и доке, 1.75 в lg; reduced-motion отключает переходы.

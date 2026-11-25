@@ -20,3 +20,10 @@
 - Web Awesome 3: лицензия MIT (Fonticons), 3.15.0, 20 МБ распакованно / 16 МБ dist-cdn / 2645 файлов. Пилот локально на settings (screens_th/wa_before_settings_1440.jpg, wa_after_settings_1440.jpg): компоненты работают, но default-тема WA светлая, а её глобальные стили перекрашивают существующие кнопки страницы; иконки WA грузятся с CDN FontAwesome (нужна офлайн-библиотека). Вывод: в прод не ставили, нужна отдельная тёмная тема на --wa-* и изоляция; пока CSS-мост поверх sl-* (gr1).
 - Снимки 2560 и 390: screens_th/gr2_<page>_<2560|390>.jpg (Графит) и sun_<page>_<2560|390>.jpg (Солнце), 8 страниц: index, chat, creative, settings, system, music, news, photo.
 - Откат: th_rb_gr2.sh (возврат к gr1), th_rb_gr1.sh (полный откат темы).
+
+## Пакет gr3
+- 4K: на index (body[data-page=home]) был двойной zoom (nox-4k.css html{zoom:1.55} + nox-home-v.css .page{zoom:1.5}), макет вылезал. nox-th-fix.css (грузится всегда, обе темы): page zoom 1, .wrap max-width 1560 css px по центру, отступ сверху. Снимок: screens_th/gr3_index_2560.jpg.
+- photo: ошибка `(a.response||[]).forEach is not a function` приходила из Filerobot (vendor/nox-x/filerobot/filerobot-image-editor.min.js): при language ru он грузит переводы с внешнего i18n-fastly.ultrafast.io, и если ответ не массив, падает. Патч: Array.isArray(a.response). Воспроизводилась только когда ответ-объект (в моём тесте мок), на сервере QA её не показывал. Внешний запрос остаётся (стоит убрать в отдельной задаче: отдать переводы локально).
+- Логотип NOX: шапка/пульт (#nxsun, она же на мобильном), аватар чата .tg-av-orb, мини-чат .nmc-fab.
+- Регрессия gr2, найденная и исправленная: сканер строк JS породил правило `html[graphite] button{background:#515358}` (из nox-k6-live.js), все кнопки стали серыми. Сканер теперь отбрасывает правила по голым тегам. Порядок CSS: сначала карта, потом nox-graphite.css, чтобы ручные правила побеждали.
+- Откат: th_rb_gr3.sh возвращает к gr2.

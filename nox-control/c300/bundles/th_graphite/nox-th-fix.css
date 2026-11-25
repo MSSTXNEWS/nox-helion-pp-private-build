@@ -1,0 +1,5 @@
+/* TH gr3: адаптация под 4K. html{zoom} из nox-4k.css уже масштабирует страницу; nox-home-v.css добавлял второй zoom на .page (двойное масштабирование, макет вылезал). Центровка и max-width. */
+@media (min-width:2200px){body[data-page=home] .page{zoom:1!important}}
+@media (min-width:2200px){body[data-page=home] .wrap,body[data-page=home] .page>.wrap{max-width:1560px;margin-left:auto;margin-right:auto}}
+@media (min-width:2200px){.wrap{margin-left:auto;margin-right:auto}}
+@media (min-width:2200px){body[data-page=home] .wrap{padding-top:28px}}

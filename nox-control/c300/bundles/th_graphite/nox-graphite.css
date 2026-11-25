@@ -130,3 +130,22 @@ html[data-nox-theme=graphite] .tg-av-orb::after{border-color:rgba(157,177,209,.4
 html[data-nox-theme=graphite] .nbx-orb i{border-color:rgba(157,177,209,.35)!important;box-shadow:none!important}
 html[data-nox-theme=graphite] sl-icon::part(svg){stroke-width:1.75}
 html[data-nox-theme=graphite] .nox-logo{display:inline-block;width:1.6em;height:1.6em;background:url("./nox-logo.svg") center/contain no-repeat}
+
+/* ===== gr3: логотип NOX в шапке (малое солнце = пульт) и мини-чате; штрихи иконок и состояния кнопок по референсам ===== */
+html[data-nox-theme=graphite] #nxsun.nxsun-x .nxsun-core{background:url("./nox-logo.svg") center/contain no-repeat!important;box-shadow:none!important;border-radius:50%}
+html[data-nox-theme=graphite] #nxsun.nxsun-x:hover .nxsun-core{filter:brightness(1.15);box-shadow:none!important}
+html[data-nox-theme=graphite] #nxsun.nxsun-x::before{opacity:.5}
+html[data-nox-theme=graphite] .nmc-fab{background:url("./nox-logo.svg") center/78% no-repeat,rgba(24,25,27,.9)!important;border-color:rgba(255,255,255,.14)!important}
+html[data-nox-theme=graphite] .nmc-fab>*{opacity:0}
+html[data-nox-theme=graphite] .nmc-fab:hover,html[data-nox-theme=graphite] .nmc-fab.on{border-color:rgba(157,177,209,.6)!important}
+html[data-nox-theme=graphite] .nmc-m.u{background:rgba(157,177,209,.16)!important}
+/* линии иконок: 1.75 по умолчанию, 1.5 в мелких кнопках (Lucide: чем меньше размер, тем тоньше штрих) */
+html[data-nox-theme=graphite] :is(.nx-btn.sm,sl-button[size=small],.nxd-cells a,.tb-t,.tb-i) sl-icon::part(svg){stroke-width:1.5}
+html[data-nox-theme=graphite] .nx-btn.lg sl-icon::part(svg){stroke-width:1.75}
+html[data-nox-theme=graphite] .nx-btn sl-icon,html[data-nox-theme=graphite] .nx-btn svg{width:16px;height:16px;font-size:16px;flex:none}
+html[data-nox-theme=graphite] .nx-btn.sm sl-icon{font-size:14px}html[data-nox-theme=graphite] .nx-btn.lg sl-icon{font-size:18px}
+/* состояния: loading, нажатие иконочных кнопок, reduced-motion */
+html[data-nox-theme=graphite] .nx-btn[aria-busy=true],html[data-nox-theme=graphite] .nx-btn[data-loading]{opacity:.7;cursor:progress;pointer-events:none}
+html[data-nox-theme=graphite] .nx-btn.icon:active,html[data-nox-theme=graphite] sl-icon-button:active{transform:scale(.96)}
+html[data-nox-theme=graphite] .nx-btn.primary:active{background:linear-gradient(180deg,#d8dce2,#c2c7ce)}
+@media (prefers-reduced-motion:reduce){html[data-nox-theme=graphite] .nx-btn,html[data-nox-theme=graphite] sl-button::part(base){transition:none}}

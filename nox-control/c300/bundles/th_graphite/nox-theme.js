@@ -7,10 +7,11 @@
   var th = q || g('nox.ui.theme'); if (th !== 'sun') th = 'graphite';
   d.setAttribute('data-nox-theme', th);
   window.NOXtheme = { get: function () { return d.getAttribute('data-nox-theme'); }, set: function (t) { try { localStorage.setItem('nox.ui.theme', t); } catch (e) { /* */ } location.reload(); } };
+  (function () { var s0 = document.currentScript, b0 = s0 && s0.src ? s0.src.replace(/[^\/]*$/, '') : './'; if (document.readyState === 'loading') document.write('<link rel="stylesheet" href="' + b0 + 'nox-th-fix.css?v=th4" data-nox-thfix>'); })();
   if (th === 'graphite') {
     var s = document.currentScript, base = s && s.src ? s.src.replace(/[^\/]*$/, '') : './';
-    var fs = ['nox-graphite.css?v=th2', 'nox-graphite-map.css?v=th2'];
-    if (document.readyState === 'loading') { fs.forEach(function (f) { document.write('<link rel="stylesheet" href="' + base + f + '" data-nox-graphite>'); }); document.write('<script src="' + base + 'nox-icons.js?v=th2"><\/script>'); }
+    var fs = ['nox-graphite-map.css?v=th4', 'nox-graphite.css?v=th4'];
+    if (document.readyState === 'loading') { fs.forEach(function (f) { document.write('<link rel="stylesheet" href="' + base + f + '" data-nox-graphite>'); }); document.write('<script src="' + base + 'nox-icons.js?v=th4"><\/script>'); }
     else fs.forEach(function (f) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = base + f; document.head.appendChild(l); });
   }
   var a = g('nox.ui.accent');

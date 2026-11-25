@@ -121,7 +121,7 @@ for f in sorted(glob.glob(os.path.join(SITE,'*.js'))):
 seen=set(); res=['/* NOX TH: авто-карта «Графит» (th_gen_map.py). Тёплые цвета исходных стилей переведены в серо-голубую гамму. Не править руками. */']
 for b,c in src:
   r=process(c)
-  if b.endswith('.js'): r=''.join(x for x in re.findall(r'(?:@media[^{]*\{(?:[^{}]*\{[^{}]*\})+\}|[^{}]+\{[^{}]*\})',r) if x.startswith('@media') or VALID.match(x))
+  if b.endswith('.js'): r=''.join(x for x in re.findall(r'(?:@media[^{]*\{(?:[^{}]*\{[^{}]*\})+\}|[^{}]+\{[^{}]*\})',r) if (x.startswith('@media') or VALID.match(x)) and not re.search(r'graphite\] [a-z][a-z0-9]*(?:[,{ ]|$)',x))
   if r and r not in seen: seen.add(r); res.append(r)
 open(OUT,'w',encoding='utf-8').write('\n'.join(res))
 print('map bytes',os.path.getsize(OUT),'sources',len(src))

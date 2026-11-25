@@ -30,3 +30,5 @@ for fn in ('operators.html','live.html'):
     t=open(p_,encoding='utf-8').read()
     if 'nox-theme.js' not in t and '<head>' in t:
       open(p_,'w',encoding='utf-8').write(t.replace('<head>','<head>\n<script src="./nox-theme.js"></script>',1)); print('theme-added',fn)
+# 6. Filerobot: ответ сервера переводов не массив (внешний i18n, офлайн/шлюз) не должен ронять редактор
+sub('vendor/nox-x/filerobot/filerobot-image-editor.min.js','Array.isArray(a.response)','(a.response||[]).forEach','(Array.isArray(a.response)?a.response:[]).forEach')
