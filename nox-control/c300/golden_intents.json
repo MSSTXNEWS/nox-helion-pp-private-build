@@ -1,0 +1,62 @@
+[
+ {
+  "phrase": "возьми забытое, быстрое добавь сейчас, остальное раздели на V2 и V3, текущее не останавливай",
+  "verb": "add",
+  "stop_current": false
+ },
+ {
+  "phrase": "добавь кнопку Сделать задачей, остальное не трогай",
+  "verb": "add",
+  "stop_current": false
+ },
+ {
+  "phrase": "добавь консилиум в чат",
+  "verb": "add",
+  "stop_current": false
+ },
+ {
+  "phrase": "останови обучение на час",
+  "verb": "stop",
+  "stop_current": true
+ },
+ {
+  "phrase": "замени основную модель на coder",
+  "verb": "replace",
+  "stop_current": true
+ },
+ {
+  "phrase": "перенеси черви в V2",
+  "verb": "move",
+  "stop_current": true
+ },
+ {
+  "phrase": "раздели оставшееся на очереди V2 и V3",
+  "verb": "split",
+  "stop_current": false
+ },
+ {
+  "phrase": "ускорь чат, текущее не останавливай",
+  "verb": "speed",
+  "stop_current": false
+ },
+ {
+  "phrase": "доведи ревизора до конца",
+  "verb": "finish",
+  "stop_current": false
+ },
+ {
+  "phrase": "скачай готовое по теме UI",
+  "verb": "download",
+  "stop_current": false
+ },
+ {
+  "phrase": "удали старое",
+  "verb": "delete",
+  "stop_current": false
+ },
+ {
+  "phrase": "добавь идеи дня и продолжай всё остальное",
+  "verb": "add",
+  "stop_current": false
+ }
+]

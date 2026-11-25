@@ -101,6 +101,36 @@ class _H(html.parser.HTMLParser):
     def handle_starttag(s, t, a): s.tags.append(t); [s.ids.add(v) for k, v in a if k == 'id' and v]
     def handle_data(s, d): s.txt += d
 
+# ---------- Паспорт намерения и сверка плана (роли на тех же моделях) ----------
+VERBS = [('stop', r'останов|прекрати|заверши работу|отмени'), ('replace', r'замени|вместо'), ('move', r'перенес|перенеси'), ('delete', r'удали|сотри'),
+         ('add', r'добав|допиши|подключи|сделай ещ'), ('split', r'раздел|раскидай|по очеред'), ('speed', r'ускор|быстрее'), ('finish', r'доведи|заверши|доделай'),
+         ('download', r'скачай|загрузи')]
+def passport(text):
+    low = text.lower(); verbs = [v for v, rx in VERBS if re.search(rx, low)]
+    keep_cur = bool(re.search(r'не останавлива|текущее не|не трогай|не прерывай|продолжай|не переноси|не снижай', low)) or not re.search(r'останов|замени|перенес|прекрати|отмени', low)
+    p = {'verbs': verbs, 'verb': verbs[0] if verbs else 'other', 'stop_current': False if keep_cur else True, 'keep': ['текущая работа продолжается'] if keep_cur else [],
+         'constraints': [m.group(0) for m in re.finditer(r'(не [а-яё]+(?: [а-яё]+)?)', low)][:6], 'raw': text, 'ambiguous': False}
+    if 'add' in verbs and not re.search(r'останов|замени|перенес', low): p['stop_current'] = False; p['verb'] = 'add'
+    if 'split' in verbs and 'add' not in verbs: p['scope'] = 'только новое; текущее не трогать'
+    try:
+        j = jparse(llm('judge_llm', 'Разбери команду владельца в JSON: {"object":"что","scope":"объём","done_when":"критерий готовности","keep":["что остаётся как есть"],"constraints":["запреты"]}. «Добавь» не значит «замени/останови/перенеси». Молчание о текущей работе = продолжать её. Только JSON.', text, 250, 0.0, None, 120), {}) or {}
+        for k in ('object', 'scope', 'done_when'): p[k] = j.get(k, p.get(k, ''))
+        p['keep'] = list(dict.fromkeys(p['keep'] + [str(x) for x in j.get('keep', [])][:5])); p['constraints'] = list(dict.fromkeys(p['constraints'] + [str(x) for x in j.get('constraints', [])][:5]))
+    except Exception: pass
+    return p
+def plan_drift(pp, plan_obj, text):
+    txt = json.dumps(plan_obj, ensure_ascii=False).lower(); reasons = []
+    if not pp.get('stop_current') and re.search(r'останов|перенест|отмен|замен|удал', txt): reasons.append('в плане остановка/перенос/замена, о которых не просили')
+    if pp.get('verb') == 'add' and re.search(r'вместо|заменить', txt): reasons.append('«добавь» превращено в «замени»')
+    try:
+        j = jparse(llm('main', 'Сверь план с исходной фразой владельца и паспортом. Ищи дрейф: сужение объёма, остановку или перенос того, о чём не просили, снижение планки, подмену цели. Верни JSON {"drift":true|false,"reason":"кратко"}.', f'Фраза: {text}\nПаспорт: {json.dumps(pp, ensure_ascii=False)[:800]}\nПлан: {json.dumps(plan_obj, ensure_ascii=False)[:1500]}', 150, 0.0, None, 200), {}) or {}
+        if j.get('drift'): reasons.append(str(j.get('reason', 'дрейф'))[:150])
+    except Exception: pass
+    return reasons
+def save_correction(said, understood, wanted):
+    d = INTENTS(); d.setdefault('_corrections', []).append({'ts': int(time.time()), 'said': said, 'understood': understood, 'wanted': wanted})
+    json.dump(d, open(ST + '/owner_intents.json', 'w'), ensure_ascii=False, indent=1)
+
 # ---------- Planner (1 вызов основной модели) ----------
 def expand_intent(goal):
     hints = []
@@ -117,12 +147,22 @@ def plan(t):
         return {'goal': t['goal'], 'done_if': 'артефакт создан и принят ревизором', 'subtasks': [{'id': 's1', 'role': t['role'], 'task': t['goal'], 'deps': []}], 'note': 'роль задана'}
     sysmsg = 'Ты планировщик. Верни ТОЛЬКО JSON: {"goal":"...","done_if":"проверяемое условие","subtasks":[{"id":"s1","role":"<роль>","task":"...","deps":[]}]}. Не более 4 подзадач, минимум достаточно. Роли: ' + rl
     u = f'Задача: {t["title"]}\nЦель: {t["goal"]}\nИнтерпретации команд владельца: {hints or "нет"}\n' + (f'Команда: {forced}' if forced else '')
+    pp = passport(t['goal'] + ' ' + t['title']); step(t['id'], 'passport', json.dumps(pp, ensure_ascii=False)[:700], 'advisor')
+    corr = INTENTS().get('_corrections', [])[-5:]
+    if corr: u += '\nПрошлые поправки владельца (учти): ' + json.dumps(corr, ensure_ascii=False)[:600]
+    u += f'\nПаспорт намерения: {json.dumps(pp, ensure_ascii=False)[:800]}. «добавь» не значит «останови/перенеси/замени»; текущее не трогай, если не просили.'
     try:
-        p = jparse(llm('main', sysmsg, u, 700, 0.2, t['id']))
-        if p and p.get('subtasks'):
+        for rnd in range(3):
+            p = jparse(llm('main', sysmsg, u, 700, 0.2, t['id']))
+            if not (p and p.get('subtasks')): break
             for s in p['subtasks']:
                 if s.get('role') not in roles: s['role'] = 'writer'
-            p['interpreted'] = hints; return p
+            p['interpreted'] = hints; p['passport'] = pp
+            dr = plan_drift(pp, p, t['goal'])
+            step(t['id'], 'plan_check', 'дрейф: ' + '; '.join(dr) if dr else 'дрейфа нет', 'advisor')
+            if not dr: return p
+            u += '\nДРЕЙФ ПЛАНА, исправь: ' + '; '.join(dr)
+        if p and p.get('subtasks'): p['question'] = 'Уточни одним словом: что именно сделать с текущей работой — продолжать или менять?'; return p
     except Exception as e: step(t['id'], 'warn', 'planner: ' + str(e)[:200])
     return {'goal': t['goal'], 'done_if': 'артефакт создан', 'subtasks': [{'id': 's1', 'role': 'coder' if re.search(r'код|python|функци|скрипт', t['goal'], re.I) else 'writer', 'task': t['goal'], 'deps': []}], 'note': 'планировщик недоступен, один шаг'}
 
@@ -181,7 +221,9 @@ def judge(t, sub, root, names, det_ok, det_log):
         try: j = jparse(llm('main', rub, u, 300, 0.0, t['id']))
         except Exception as e2: step(t['id'], 'warn', 'судья недоступен: ' + str(e2)[:150])
     if not j: j = {'score': 7 if det_ok else 3, 'accept': det_ok, 'reason': 'судья недоступен, решает автопроверка'}
-    j['accept'] = bool(j.get('accept')) and det_ok          # автопроверка имеет право вето
+    try: sc = float(j.get('score', 0))
+    except Exception: sc = 0
+    j['accept'] = (sc >= 7) and det_ok          # автопроверка имеет право вето
     return j
 
 # ---------- тренер: молчит без триггера ----------
@@ -282,9 +324,11 @@ def dispatcher():
                 open(ST + '/agents_guard.hb', 'a').close(); os.utime(ST + '/agents_guard.hb')
             for tid, th in list(RUNNING.items()):
                 if not th.is_alive(): RUNNING.pop(tid)
-            for r in sql('SELECT id,hb FROM tasks WHERE status="running"'):      # зависшие: нет heartbeat 10 мин и нет потока
-                if r['id'] not in RUNNING or (time.time() - (r['hb'] or 0) > 600):
-                    sql('UPDATE tasks SET status="queued", restarts=restarts+1 WHERE id=?', (r['id'],)); RUNNING.pop(r['id'], None)
+            for tid2, th2 in list(RUNNING.items()):
+                if th2.is_alive(): sql('UPDATE tasks SET hb=? WHERE id=?', (time.time(), tid2))     # heartbeat живого исполнителя
+            for r in sql('SELECT id,hb FROM tasks WHERE status="running"'):      # осиротевшие (нет потока, напр. после рестарта сервиса)
+                if r['id'] not in RUNNING and time.time() - (r['hb'] or 0) > 20:
+                    sql('UPDATE tasks SET status="queued", restarts=restarts+1 WHERE id=?', (r['id'],))
             while len(RUNNING) < QUEUE_WORKERS:
                 r = sql('SELECT id FROM tasks WHERE status="queued" ORDER BY created LIMIT 1', one=True)
                 if not r: break
@@ -355,6 +399,16 @@ async def command(req: Request):      # чат-команда /команда <�
     pre, goal = m.group(2) or 'dev2', m.group(3)
     ids = make_team(pre, goal)
     return {'preset': pre, 'ids': ids} if ids else JSONResponse({'error': 'нет пресета', 'presets': list(TEAMS())}, 404)
+@app.post('/correction')
+async def post_corr(req: Request):
+    b = await req.json(); save_correction(b['said'], b.get('understood', ''), b['wanted']); return {'ok': True}
+@app.get('/intents/eval')
+def intents_eval():
+    g = jload(A + '/golden_intents.json', []); res = []
+    for c in g:
+        p = passport(c['phrase']); ok = (p['verb'] == c['verb'] or c['verb'] in p['verbs']) and (p['stop_current'] == c.get('stop_current', False))
+        res.append({'phrase': c['phrase'][:80], 'got': p['verb'], 'stop_current': p['stop_current'], 'ok': ok})
+    return {'n': len(res), 'ok': sum(r['ok'] for r in res), 'share': round(sum(r['ok'] for r in res) / max(len(res), 1), 2), 'cases': res}
 @app.get('/metrics')
 def get_metrics(): return metrics()
 @app.get('/events')
