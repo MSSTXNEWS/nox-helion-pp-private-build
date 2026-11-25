@@ -35,7 +35,7 @@ def judge_text(llm, name, desc):
     try:
         r = llm('judge_llm', 'Оцени находку для проекта NOX (локальный ИИ: код, UI, русский, нано-классификаторы). JSON {"score":1-10,"why":"кратко"}', f'{name}\n{desc}'[:1200], 120, 0.0, None, 90)
         m = re.search(r'\{.*\}', r, re.S); j = json.loads(m.group(0)) if m else {}; return float(j.get('score', 0)), str(j.get('why', ''))[:160]
-    except Exception: return 0.0, 'судья недоступен'
+    except Exception: return None, 'судья недоступен'
 
 def quarantine(model_json):
     """Только safetensors/GGUF, без pickle, чистая лицензия. Возвращает (ok, причина, файлы, размер)."""
@@ -59,6 +59,8 @@ def hf_scan(llm):
             if q('SELECT 1 FROM finds WHERE src="hf" AND name=?', (name,), one=True): continue
             ok, why, files, _ = quarantine(m)
             sc, jw = judge_text(llm, name, f'теги: {m.get("tags", [])[:12]}; {why}') if ok else (0.0, '')
+            if sc is None:   # судья недоступен: не отклонять, а оценить по популярности (дёшево и честно помечено)
+                dl = int(m.get('downloads') or 0); sc = 7.0 if dl > 50000 else 6.0 if dl > 5000 else 4.0; jw = f'эвристика: {dl} загрузок (судья недоступен)'
             q('INSERT OR IGNORE INTO finds(ts,src,name,url,license,size_gb,files,verdict,score,status,note) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
               (time.time(), 'hf', name, 'https://huggingface.co/' + name, why, 0, json.dumps(files[:6]), 'допущено' if ok else 'отклонено: ' + why, sc, 'candidate' if ok and sc >= 6 else 'rejected', jw)); n += 1
     return n

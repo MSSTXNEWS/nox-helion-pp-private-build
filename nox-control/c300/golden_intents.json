@@ -58,5 +58,45 @@
   "phrase": "добавь идеи дня и продолжай всё остальное",
   "verb": "add",
   "stop_current": false
+ },
+ {
+  "phrase": "добавь кнопку «подумай глубже» в консилиум, всё остальное оставь как есть",
+  "verb": "add",
+  "stop_current": false
+ },
+ {
+  "phrase": "добавь к работе червей охоту на RSS, ничего не переноси",
+  "verb": "add",
+  "stop_current": false
+ },
+ {
+  "phrase": "ускорь сервер и обучение, остальное не трогай",
+  "verb": "speed",
+  "stop_current": false
+ },
+ {
+  "phrase": "останови чистку и замени её на белый список",
+  "verb": "stop",
+  "stop_current": true
+ },
+ {
+  "phrase": "замени судью на другую модель",
+  "verb": "replace",
+  "stop_current": true
+ },
+ {
+  "phrase": "перенеси идеи из сна на утро",
+  "verb": "move",
+  "stop_current": true
+ },
+ {
+  "phrase": "раздели новые задачи на очереди, текущие не трогай",
+  "verb": "split",
+  "stop_current": false
+ },
+ {
+  "phrase": "доделай карточку задачи, продолжай остальное",
+  "verb": "finish",
+  "stop_current": false
  }
 ]

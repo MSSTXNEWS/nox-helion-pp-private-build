@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """NOX субисполнители: книга задач (SQLite), диспетчер-1, планировщик, исполнители, ревизор, тренер, консилиум, карточка.
 Порт 8810, только 127.0.0.1. Песочница /workspace/nox/agents/<id>. Без rm вне песочницы, без sudo."""
-import os, re, json, time, sqlite3, threading, subprocess, hashlib, shutil, sys, queue, uuid, html.parser
+import asyncio, os, re, json, time, sqlite3, threading, subprocess, hashlib, shutil, sys, queue, uuid, html.parser
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -120,7 +120,7 @@ class _H(html.parser.HTMLParser):
 VERBS = [('stop', r'останов|прекрати|заверши работу|отмени'), ('replace', r'замени|вместо'), ('move', r'перенес|перенеси'), ('delete', r'удали|сотри'),
          ('add', r'добав|допиши|подключи|сделай ещ'), ('split', r'раздел|раскидай|по очеред'), ('speed', r'ускор|быстрее'), ('finish', r'доведи|заверши|доделай'),
          ('download', r'скачай|загрузи')]
-def passport(text):
+def passport(text, fast=False):
     low = text.lower(); verbs = [v for v, rx in VERBS if re.search(rx, low)]
     keep_cur = bool(re.search(r'не останавлива|текущее не|не трогай|не прерывай|продолжай|не переноси|не снижай', low)) or not re.search(r'останов|замени|перенес|прекрати|отмени', low)
     p = {'verbs': verbs, 'verb': verbs[0] if verbs else 'other', 'stop_current': False if keep_cur else True, 'keep': ['текущая работа продолжается'] if keep_cur else [],
@@ -128,6 +128,7 @@ def passport(text):
     if 'add' in verbs and not re.search(r'останов|замени|перенес', low): p['stop_current'] = False; p['verb'] = 'add'
     if 'split' in verbs and 'add' not in verbs: p['scope'] = 'только новое; текущее не трогать'
     try:
+        if fast: raise ValueError('fast')
         j = jparse(llm('judge_llm', 'Разбери команду владельца в JSON: {"object":"что","scope":"объём","done_when":"критерий готовности","keep":["что остаётся как есть"],"constraints":["запреты"]}. «Добавь» не значит «замени/останови/перенеси». Молчание о текущей работе = продолжать её. Только JSON.', text, 250, 0.0, None, 120), {}) or {}
         for k in ('object', 'scope', 'done_when'): p[k] = j.get(k, p.get(k, ''))
         p['keep'] = list(dict.fromkeys(p['keep'] + [str(x) for x in j.get('keep', [])][:5])); p['constraints'] = list(dict.fromkeys(p['constraints'] + [str(x) for x in j.get('constraints', [])][:5]))
@@ -402,6 +403,31 @@ def consilium(q, rounds=2, budget=170):
     except Exception as e: final = 'старший недоступен: ' + str(e)[:100]
     return {'question': q, 'opinions': waves, 'final': final, 'judge_score': best, 'seconds': round(time.time() - t0), 'external_used': bool(advisors())}
 
+def _adv_call(a, u, system, mt=500, timeout=70):
+    gw = BACK().get('external')
+    try:
+        r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': a['provider'] + '/' + a['model'], 'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': u}], 'max_tokens': mt}, timeout=timeout)
+        if r.status_code == 200: return (r.json()['choices'][0]['message'].get('content') or '').strip()
+    except Exception: pass
+    return ''
+def consilium_ext(q, deep=False, budget=110):
+    """волны: 3 внешних советника параллельно -> (deep) ещё 3 видят первую волну -> старший сводит. Шлюз :8793."""
+    t0 = time.time(); adv = [a for a in advisors() if not a.get('role')]; waves = []; seen = ''
+    def wave(group, u, name):
+        res = []; ths = []
+        def one(a): 
+            o = _adv_call(a, u, 'Ты советник консилиума. Отвечай кратко (до 120 слов), по делу.')
+            if o: res.append({'advisor': a.get('model'), 'text': o[:900]})
+        for a in group: th = threading.Thread(target=one, args=(a,)); th.start(); ths.append(th)
+        for th in ths: th.join(max(1, budget - (time.time() - t0)))
+        waves.append({'wave': name, 'opinions': res}); return res
+    w1 = wave(adv[0:3], 'Вопрос: ' + q, 1); seen = '\n'.join(f'[{o["advisor"]}] {o["text"]}' for o in w1)
+    if deep and w1 and time.time() - t0 < budget:
+        w2 = wave(adv[3:6] or adv[0:3], f'Вопрос: {q}\nМнения первой волны:\n{seen[-2500:]}\nКритикуй и дай улучшенную версию.', 2); seen += '\n' + '\n'.join(f'[{o["advisor"]}] {o["text"]}' for o in w2)
+    try: final = llm('main', 'Ты старший советник. Своди мнения: согласия, расхождения, итоговое решение. Кратко.', f'Вопрос: {q}\n{seen[-4500:]}', 600, 0.3, None, 120) if seen else 'внешние советники не ответили'
+    except Exception as e: final = 'старший (локальный) недоступен; сводка волн выше'
+    return {'question': q, 'deep': deep, 'waves': waves, 'final': final, 'seconds': round(time.time() - t0), 'advisors_available': len(adv)}
+
 # ---------- supervisor-граф по задаче ----------
 def run_task(tid):
     t = dict(sql('SELECT * FROM tasks WHERE id=?', (tid,), one=True))
@@ -549,7 +575,9 @@ async def post_team(req: Request):
 def teams(): return TEAMS()
 @app.post('/consilium')
 async def post_consilium(req: Request):
-    b = await req.json(); return consilium(b['question'], int(b.get('rounds', 2)), int(b.get('budget', 170)))
+    b = await req.json()
+    if b.get('mode', 'ext') == 'ext': return await asyncio.to_thread(consilium_ext, b['question'], bool(b.get('deep')), int(b.get('budget', 110)))
+    return await asyncio.to_thread(consilium, b['question'], int(b.get('rounds', 2)), int(b.get('budget', 170)))
 @app.post('/command')
 async def command(req: Request):      # чат-команда /команда <цель> [--team пресет]
     b = await req.json(); txt = b.get('text', '').strip(); m = re.match(r'^/(команда|team)\s*(\S+)?\s*(.*)$', txt, re.S)
@@ -564,7 +592,7 @@ async def post_corr(req: Request):
 def intents_eval():
     g = jload(A + '/golden_intents.json', []); res = []
     for c in g:
-        p = passport(c['phrase']); ok = (p['verb'] == c['verb'] or c['verb'] in p['verbs']) and (p['stop_current'] == c.get('stop_current', False))
+        p = passport(c['phrase'], fast=True); ok = (p['verb'] == c['verb'] or c['verb'] in p['verbs']) and (p['stop_current'] == c.get('stop_current', False))
         res.append({'phrase': c['phrase'][:80], 'got': p['verb'], 'stop_current': p['stop_current'], 'ok': ok})
     return {'n': len(res), 'ok': sum(r['ok'] for r in res), 'share': round(sum(r['ok'] for r in res) / max(len(res), 1), 2), 'cases': res}
 @app.get('/metrics')
