@@ -44,16 +44,29 @@ EV = queue.Queue(maxsize=1000)
 
 # ---------- LLM клиент с лимитом слотов ----------
 SEM = {}; SEMLOCK = threading.Lock()
+class PSem:
+    """семафор с приоритетом: сначала задачи из чата (prio 10), потом обычные, потом golden/идеи"""
+    def __init__(self, n): self.n = n; self.c = threading.Condition(); self.q = []; self.seq = 0
+    def acquire(self, prio=0):
+        with self.c:
+            self.seq += 1; me = (-prio, self.seq); self.q.append(me); self.q.sort()
+            while not (self.n > 0 and self.q[0] == me): self.c.wait(5)
+            self.q.pop(0); self.n -= 1
+    def release(self):
+        with self.c: self.n += 1; self.c.notify_all()
+def _prio(tid):
+    try: return (sql('SELECT prio FROM tasks WHERE id=?', (tid,), one=True) or {'prio': 0})['prio'] or 0
+    except Exception: return 0
 def sem(name):
     with SEMLOCK:
-        if name not in SEM: SEM[name] = threading.BoundedSemaphore(int(BACK().get(name, {}).get('slots', 1)))
+        if name not in SEM: SEM[name] = PSem(int(BACK().get(name, {}).get('slots', 1)))
         return SEM[name]
 def chat_busy():
     try: return time.time() - os.path.getmtime(ST + '/orch/chat_hold') < 6
     except Exception: return False
 def llm(backend, system, user, max_tokens=1500, temp=0.3, tid=None, timeout=420):
     b = BACK().get(backend) or BACK()['main']
-    s = sem(backend if backend in BACK() else 'main'); s.acquire()
+    s = sem(backend if backend in BACK() else 'main'); s.acquire(_prio(tid) if tid else 0)
     try:
         for _ in range(60):          # чат важнее: уступаем, пока идёт ход чата (только для общей основной модели)
             if b.get('yield_chat') and chat_busy(): time.sleep(2)
