@@ -139,3 +139,7 @@
 | y-webrtc | 10.3.0 | MIT | vendor/y-webrtc/y-webrtc.esm.js | import * as M from "./vendor/y-webrtc/y-webrtc.esm.js" | см. IDEAS.md | ok |
 | yjs | 13.6.33 | MIT | vendor/yjs/yjs.esm.js | import * as M from "./vendor/yjs/yjs.esm.js" | доска, совместная работа | ok |
 | zustand | 5.1.0 | MIT | vendor/zustand/zustand.esm.js | import * as M from "./vendor/zustand/zustand.esm.js" | см. IDEAS.md | ok |
+| animate.css | 4.1.1 | MIT | vendor/animate.css/animate.min.css | classList.add("animate__animated","animate__tada") | анимации (K6 motionlib) | ok |
+| hover.css | 2.3.2 | MIT личное/open-source; коммерческая платная | vendor/hover.css/hover-min.css | class="hvr-bob" | анимации (K6 motionlib) | ok |
+| magic.css | 1.4.8 | MIT | vendor/magic.css/magic.min.css | class="magictime puffIn" | анимации (K6 motionlib) | ok |
+| @formkit/auto-animate | 0.11.0 | MIT | vendor/auto-animate/index.mjs | import autoAnimate from "./vendor/auto-animate/index.mjs" | анимация списков (K6) | ok |

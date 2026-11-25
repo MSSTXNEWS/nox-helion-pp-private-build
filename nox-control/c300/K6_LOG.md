@@ -1,0 +1,3 @@
+## K6 (внедренец K6, 25.11.2026)
+Пакет 1 (k6_motion_1, k6_f_1*): motionlib (animate.css/hover.css/magic.css/auto-animate в vendor, 63 ANM на классах библиотек), №85 mention (chat), №86 dash (system), №87 mindmap (knowledge), №88 slides (pdf), №89 karaoke (music). Файлы site/nox-k6-<имя>.js, общий nox-k6-ui.css; бэкапы *.bak_k6_<ts>; строки «K6: …» в qa/rework/<стр>.fixed. QA 1440/390: ошибок JS 0.
+Заметки: hover.css в npm без поля license, по README MIT только для личного/open-source, для коммерции платная лицензия. ИИ в QA отвечает «NOX занят», поэтому карта/слайды проверены на локальном запасном разборе.

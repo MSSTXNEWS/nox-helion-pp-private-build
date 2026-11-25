@@ -1,7 +1,7 @@
 # MOTION100: 100 анимаций NOX (K5)
 
-Источник: собственные пресеты (CSS @keyframes + GSAP keyframes), написанные в духе перечисленных открытых библиотек. Код сторонних библиотек НЕ копировался и не скачивался (Animate.css, Hover.css, Magic.css, AutoAnimate в vendor отсутствуют; GSAP, Motion, Lottie-web есть в vendor).
-Лицензия кода пресетов: проект NOX (свой код). Вдохновение/названия приёмов: Animate.css (MIT, bounce/tada/jello/rubberBand/shakeX/headShake/flash/fadeIn*), Hover.css (MIT, float/bob/pulse/wobble), Magic.css (MIT, puffIn/swap-перспектива), GSAP (Standard no-charge, vendor/gsap, исполнитель keyframes), AutoAnimate (MIT, идея мягких входов).
+Источник (K6, реальный): настоящие библиотеки из npm registry, лежат в site/vendor/: animate.css 4.1.1 (MIT, vendor/animate.css/animate.min.css, 72 КБ), hover.css 2.3.2 (бесплатно для личного/open-source использования по MIT; для коммерческого проекта нужна платная лицензия Ian Lunn, в npm-пакете поле license пустое; vendor/hover.css/hover-min.css, 95 КБ), magic.css 1.4.8 (MIT, vendor/magic.css/magic.min.css, 34 КБ), @formkit/auto-animate 0.11.0 (MIT, vendor/auto-animate/index.mjs, 37 КБ). GSAP (vendor/gsap) остаётся исполнителем для пресетов без аналога.
+Лицензия: код библиотек остаётся под их лицензиями (см. LICENSE в vendor/<имя>/). Собственные пресеты NOX без аналога (float/glow/hue/spin/orbit/dots/scan/ripple/eq/vibrate-красный и др.) оставлены на GSAP и CSS .anm-NNN из K5. Подключение: site/nox-k6-motionlib.js (до nox-k5-motion100.js) перехватывает NOXMotion.play и играет классы библиотек (animate__*, magictime, keyframes hover.css); AutoAnimate (NOXMotionLib.autoAnimate) навешен на #msgs и [data-auto-animate].
 Файлы: site/nox-k5-motion100.css (классы .anm-001…100), site/nox-k5-motion100.js (NOXMotion.play(el,id|состояние), пресеты GSAP, привязка к состояниям).
 Применено: chat.html (талисман #k5-mc, состояния idle/listen->ожидание, think->думает, speak->говорит; переход страницы), index.html и voice.html (переход страницы, NOXMotion.state(name) для радости/тревоги).
 
@@ -107,3 +107,78 @@
 | ANM-098 | переход (вход страницы) | flip-in | 0.45 | 1 | талисман/#page |
 | ANM-099 | переход (вход страницы) | blur-in | 0.45 | 1 | талисман/#page |
 | ANM-100 | переход (вход страницы) | rotate-in | 0.45 | 1 | талисман/#page |
+
+
+## K6: соответствие библиотекам
+
+С классами/keyframes библиотек: 67 из 100; остальные 33 остались собственными (GSAP/CSS K5), т.к. прямого аналога нет.
+
+| ANM | Библиотека | Класс/keyframes |
+|---|---|---|
+| ANM-001 | hover.css | hvr-bob |
+| ANM-002 | hover.css | hvr-bob |
+| ANM-003 | hover.css | hvr-bob |
+| ANM-004 | hover.css | hvr-bob |
+| ANM-005 | animate.css | pulse |
+| ANM-006 | animate.css | pulse |
+| ANM-007 | animate.css | pulse |
+| ANM-008 | animate.css | swing |
+| ANM-009 | animate.css | swing |
+| ANM-010 | animate.css | swing |
+| ANM-014 | hover.css | hvr-wobble-horizontal |
+| ANM-015 | hover.css | hvr-wobble-horizontal |
+| ANM-034 | hover.css | hvr-buzz |
+| ANM-035 | hover.css | hvr-buzz |
+| ANM-036 | animate.css | flip |
+| ANM-037 | animate.css | swing |
+| ANM-038 | animate.css | swing |
+| ANM-044 | hover.css | hvr-hang |
+| ANM-045 | hover.css | hvr-hang |
+| ANM-046 | hover.css | hvr-hang |
+| ANM-052 | animate.css | bounce |
+| ANM-053 | animate.css | bounce |
+| ANM-056 | animate.css | bounce |
+| ANM-057 | animate.css | bounce |
+| ANM-058 | animate.css | bounce |
+| ANM-059 | animate.css | bounceIn |
+| ANM-060 | animate.css | bounceIn |
+| ANM-061 | animate.css | bounceIn |
+| ANM-062 | animate.css | tada |
+| ANM-063 | animate.css | tada |
+| ANM-064 | animate.css | jello |
+| ANM-065 | animate.css | jello |
+| ANM-066 | animate.css | heartBeat |
+| ANM-067 | animate.css | heartBeat |
+| ANM-068 | magic.css | puffIn |
+| ANM-069 | magic.css | puffIn |
+| ANM-070 | animate.css | wobble |
+| ANM-071 | animate.css | wobble |
+| ANM-072 | animate.css | rubberBand |
+| ANM-073 | animate.css | rubberBand |
+| ANM-074 | animate.css | flash |
+| ANM-075 | animate.css | flash |
+| ANM-076 | animate.css | shakeX |
+| ANM-077 | animate.css | shakeX |
+| ANM-078 | animate.css | shakeX |
+| ANM-079 | animate.css | headShake |
+| ANM-080 | animate.css | headShake |
+| ANM-081 | animate.css | flash |
+| ANM-082 | animate.css | flash |
+| ANM-083 | animate.css | flash |
+| ANM-084 | animate.css | pulse |
+| ANM-085 | animate.css | pulse |
+| ANM-086 | hover.css | hvr-buzz |
+| ANM-087 | hover.css | hvr-buzz |
+| ANM-088 | animate.css | bounce |
+| ANM-089 | animate.css | wobble |
+| ANM-090 | animate.css | wobble |
+| ANM-091 | animate.css | fadeIn |
+| ANM-092 | animate.css | fadeInUp |
+| ANM-093 | animate.css | fadeInDown |
+| ANM-094 | animate.css | fadeInRight |
+| ANM-095 | animate.css | fadeInLeft |
+| ANM-096 | animate.css | zoomIn |
+| ANM-097 | magic.css | puffIn |
+| ANM-098 | animate.css | flipInY |
+| ANM-099 | magic.css | vanishIn |
+| ANM-100 | animate.css | rotateIn |
