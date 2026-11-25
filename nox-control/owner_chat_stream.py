@@ -439,8 +439,6 @@ async def _model_events(client, url, payload):
                     size+=len(part.encode('utf-8','strict'))
                     if size>FINAL_RESPONSE_LIMIT:
                         raise StreamFailure('HOLD_MODEL_OUTPUT_SIZE')
-                    text.append(part)
-                    yield 'token',part
                 for fragment in fragments:
                     index=fragment.get('index')
                     if not isinstance(index,int) or isinstance(index,bool) or not 0<=index<8:
@@ -475,6 +473,11 @@ async def _model_events(client, url, payload):
                     if (len(call['function']['arguments'].encode('utf-8','strict'))>100000 or
                             len(call['function']['name'].encode('utf-8','strict'))>200):
                         raise StreamFailure('HOLD_TOOL_CALL_SIZE')
+                # Publish text only after every field in this frame is valid.
+                # A malformed tool fragment must not leak its associated token.
+                if part:
+                    text.append(part)
+                    yield 'token',part
             except StreamFailure:
                 raise
             except (AttributeError,TypeError,ValueError):
