@@ -33,4 +33,4 @@ jobs:
           python3 -B r111-donor/nox-control/d3-r111/stage_overlay.py "$RUNNER_TEMP/a6-b0-r81.zip" "$RUNNER_TEMP/r111-b0-r81"
           export B0_STAGE_ROOT="$RUNNER_TEMP/r111-b0-r81"
           cd nox-control/b0-r53
-          python3 -B -m unittest -v test_stage_framework_r81
+          python3 -B -m unittest -v stage_framework_r81_check
