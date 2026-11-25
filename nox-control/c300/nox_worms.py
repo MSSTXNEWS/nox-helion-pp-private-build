@@ -223,10 +223,40 @@ def agenda_loop(llm):
             t = msk()
             if (t.tm_hour == 7 and t.tm_min >= 50) or 8 <= t.tm_hour < 12:
                 if make_agenda(llm): history('Повестка дня готова: 3 идеи')
+            agenda_selfcheck()
+            if time.strftime('%H%M', t) >= '0805' and time.strftime('%H', t) < '12': make_agenda(llm)   # добивка после сбоя
         except Exception as e:
             try: open(W + '/agents/worms.err', 'a').write('agenda: ' + repr(e)[:200] + '\n')
             except Exception: pass
         time.sleep(60)
+NIGHT = ST + '/worms_night.json'
+def night_loop(llm, book_sql):
+    """ночь 00:00-07:45 МСК: скан раз в 30 мин по квотам (spend), находки копятся для утренних карточек; чату не мешаем"""
+    last = 0
+    while True:
+        try:
+            t = msk(); night = t.tm_hour < 7 or (t.tm_hour == 7 and t.tm_min < 45)
+            if night and not stopped() and time.time() - last > 1800:
+                last = time.time(); r = {'ts': int(last), 'hf': hf_scan(llm), 'github': gh_scan(llm), 'rss': rss_scan(llm), 'self': self_candidates(book_sql)}
+                st = jl(NIGHT, {}); st.setdefault('runs', []).append(r); st['runs'] = st['runs'][-30:]; json.dump(st, open(NIGHT, 'w'))
+                if any(r[k] for k in ('hf', 'github', 'rss', 'self')): history(f'Ночной скан: hf={r["hf"]} github={r["github"]} rss={r["rss"]} кандидатов самоулучшения={r["self"]}')
+        except Exception as e:
+            try: open(W + '/agents/worms.err', 'a').write('night: ' + repr(e)[:200] + '\n')
+            except Exception: pass
+        time.sleep(60)
+def agenda_selfcheck():
+    """08:05-12:00 МСК: если повестки на сегодня нет, запись в LESSONS (однажды в сутки)"""
+    t = msk(); day = time.strftime('%Y%m%d', t); st = jl(ST + '/agenda_check.json', {})
+    if not ((t.tm_hour == 8 and t.tm_min >= 5) or 9 <= t.tm_hour < 12) or st.get('day') == day: return
+    ok = bool(q('SELECT 1 FROM ideas WHERE day=?', (day,), one=True)); st = {'day': day, 'ok': ok, 'ts': int(time.time())}; json.dump(st, open(ST + '/agenda_check.json', 'w'))
+    if ok: history('Самопроверка 08:05: повестка на сегодня есть'); return
+    line = f'- (A2 self-check {day}) повестка 08:00 МСК не сгенерировалась сама -> правило: проверить agenda_loop и доступность моделей/советников; повестка запущена принудительно.\n'
+    for p in (W + '/LESSONS.md', ST + '/lessons_selfcheck.md'):
+        try: open(p, 'a').write(line)
+        except Exception: pass
+    try: open(ST + '/lessons.jsonl', 'a').write(json.dumps({'ts': int(time.time()), 'task': 'selfcheck', 'src': 'stall', 'what': 'повестка 08:00 не сгенерировалась', 'why': 'agenda_loop/модели недоступны', 'rule': 'проверить agenda_loop и доступность моделей; запускать принудительно', 'repeat': 0}, ensure_ascii=False) + '\n')
+    except Exception: pass
+    history('Самопроверка 08:05: повестки не было, записан урок, запускаю принудительно')
 def mount(app, llm, busy, book_sql, new_task, running):
     from fastapi import Request
     @app.get('/worms')
@@ -257,6 +287,10 @@ def mount(app, llm, busy, book_sql, new_task, running):
     def w_scan():
         if SCAN.get('running'): return {'started': False, 'progress': SCAN}
         threading.Thread(target=run_scan, args=(llm, book_sql), daemon=True).start(); return {'started': True, 'status_url': '/worms/scan/status'}
+    @app.get('/worms/night')
+    def w_night(): return jl(NIGHT, {})
+    @app.get('/worms/agenda/check')
+    def w_chk(): return {'selfcheck': jl(ST + '/agenda_check.json', {}), 'msk': time.strftime('%Y-%m-%d %H:%M', msk())}
     @app.get('/worms/scan/status')
     def w_scan_st(): return SCAN
     @app.post('/worms/stop')
@@ -268,3 +302,4 @@ def mount(app, llm, busy, book_sql, new_task, running):
         return {'stopped': False}
     threading.Thread(target=shepherd, args=(llm, busy, book_sql, running), daemon=True).start()
     threading.Thread(target=agenda_loop, args=(llm,), daemon=True).start()
+    threading.Thread(target=night_loop, args=(llm, book_sql), daemon=True).start()
