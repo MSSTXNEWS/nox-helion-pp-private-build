@@ -1,6 +1,5 @@
 echo "C300: k2_qa1"
 export PLAYWRIGHT_BROWSERS_PATH=/workspace/nox/tools/ms-playwright; PY=/workspace/nox/venv/bin/python
-sed -i 's#127.0.0.1:8080/web/#127.0.0.1:8090/web/#; s#errs.append(.goto .+str(e)\[:80\])#errs.append("goto "+str(e)[:80])#' /tmp/k2_qa.py
-curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8090/web/index.html
-timeout 200 $PY /tmp/k2_qa.py index system growth news memory chat pdf assistant knowledge 2>&1 | tail -20
+for u in /index.html /web/ /web/index.html /web/site/index.html; do for p in 8090 4100; do echo "$p$u $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$p$u)"; done; done
+grep -rn "8090\|4100" /workspace/nox/web/pkg/server/run_web.sh | cut -c1-200 | head -3
 exit 0
