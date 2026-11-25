@@ -1,0 +1,1 @@
+cd /workspace/nox/web/site/qa/rework 2>/dev/null && ls | head -40; ls *.fixed 2>/dev/null | head; for f in $(ls *.fixed 2>/dev/null | head -2); do echo == $f; head -c 600 $f; done; ls *.json 2>/dev/null | head -3; f=$(ls *.json 2>/dev/null | head -1); [ -n "$f" ] && head -c 800 $f
