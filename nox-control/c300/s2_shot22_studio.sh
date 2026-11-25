@@ -26,7 +26,7 @@ async def main():
             ctx=await b.new_context(viewport={"width":w,"height":h}); pg=await ctx.new_page(); errs=[];bad=[]
             pg.on("pageerror",lambda e:errs.append(str(e)[:140])); pg.on("response",lambda r:bad.append(str(r.status)+" "+r.url[-70:]) if r.status>=400 else None)
             pg.on("filechooser",lambda fc:None); pg.on("dialog",lambda d:asyncio.ensure_future(d.dismiss()))
-            await pg.goto(B+PAGE+".html",wait_until="load",timeout=40000); await pg.wait_for_timeout(5000)
+            await pg.goto(B+PAGE+".html",wait_until="load",timeout=40000); await pg.wait_for_timeout(11000)
             ov=await pg.evaluate("()=>[document.documentElement.scrollWidth,innerWidth]")
             raw=await pg.screenshot(type="jpeg",quality=60); emit(PAGE+"_"+vp,raw,ow)
             print("VP",vp,"overflow",ov,"errs",errs[:4],"bad",bad[:5])
