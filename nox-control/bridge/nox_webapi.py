@@ -1322,6 +1322,18 @@ def install(app, B):
                         if plan:
                             extra += "[План (следуй по порядку, нумеруй шаги): " + "; ".join("%d) %s" % (i + 1, x) for i, x in enumerate(plan)) + "]"
                             yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "план: %d шагов" % len(plan), "plan": plan})
+                            # STOP at the delivered plan must not emit a later think status.
+                            if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                                CANCEL.discard(rid)
+                                yield fr(message={"role": "assistant", "content": ""}, done=True,
+                                         done_reason="stopped",
+                                         completion_receipt={"status": "STOPPED", "request_id": rid,
+                                                             "upstream_done": False},
+                                         memory_write_receipt={"status": "SKIPPED", "request_id": rid,
+                                                               "s03_readback_verified": False},
+                                         memory_history={"status": "SKIPPED", "reason": "USER_STOP",
+                                                         "s03_readback_verified": False})
+                                return
                     # Mode hints are advisory. A broken formatter must not
                     # turn an otherwise valid chat into a streaming exception.
                     try:
@@ -1569,6 +1581,9 @@ def install(app, B):
                                             if k > shown and k <= len(plan):
                                                 shown = k
                                                 yield fr(message={"role": "assistant", "content": ""}, done=False, nox_event={"step": "plan", "text": "шаг %d/%d: %s" % (k, len(plan), plan[k - 1]), "index": k, "total": len(plan)})
+                                                # Do not pull another upstream frame after STOP here.
+                                                if rid in CANCEL or CANCEL_ALL_EPOCH != request_stop_epoch:
+                                                    break
                 except Exception as e:
                     err = type(e).__name__
                     # Keep the original HTTP error code if already classified.

@@ -1997,7 +1997,7 @@ class FactReceiptTest(unittest.TestCase):
         bridge.adapt_tokens = lambda *args: 300
         token = "1. Начало 🌌\n"
 
-        for phase in ("planner", "token"):
+        for phase in ("planner", "plan_result", "token", "progress"):
             with self.subTest(phase=phase):
                 rid = "stop-late-plan-" + phase
                 calls, writes, signals = [], [], []
@@ -2041,7 +2041,10 @@ class FactReceiptTest(unittest.TestCase):
                     async for item in response.body_iterator:
                         frame = json.loads(item)
                         frames.append(frame)
-                        if phase == "token" and frame.get("message", {}).get("content") == token:
+                        event = frame.get("nox_event", {})
+                        if ((phase == "token" and frame.get("message", {}).get("content") == token)
+                                or (phase == "plan_result" and event.get("step") == "plan" and "plan" in event)
+                                or (phase == "progress" and event.get("step") == "plan" and "index" in event)):
                             signals.append(await stop(Request({"request_id": rid})))
                     return frames
 
@@ -2056,12 +2059,15 @@ class FactReceiptTest(unittest.TestCase):
                 self.assertEqual(writes, [])
                 self.assertEqual(frames[-1]["completion_receipt"]["status"], "STOPPED")
                 visible = "".join(f.get("message", {}).get("content", "") for f in frames)
-                self.assertEqual(visible, token if phase == "token" else "")
+                streamed = phase in ("token", "progress")
+                self.assertEqual(visible, token if streamed else "")
                 plans = [f["nox_event"] for f in frames
                          if f.get("nox_event", {}).get("step") == "plan"]
-                self.assertEqual(len(plans), 2 if phase == "token" else 1)
-                self.assertFalse(any("index" in event for event in plans))
-                self.assertEqual(calls, ["model"] if phase == "token" else [])
+                self.assertEqual(len(plans), {"planner": 1, "plan_result": 2, "token": 2, "progress": 3}[phase])
+                self.assertEqual(any("index" in event for event in plans), phase == "progress")
+                self.assertEqual(calls, ["model"] if streamed else [])
+                if not streamed:
+                    self.assertFalse(any(f.get("nox_event", {}).get("step") == "think" for f in frames))
 
     def test_broadcast_stop_survives_new_chat_and_does_not_stop_future_chats(self):
         """New request must not clear a STOP already sent to an older stream."""
