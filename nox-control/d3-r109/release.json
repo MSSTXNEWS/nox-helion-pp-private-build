@@ -1,0 +1,39 @@
+{
+  "schema": "NOX_D3_R109_ORDERED_OFFLINE_RELEASE_V1",
+  "instructions_version": "0.0.6",
+  "claim": 7152015730,
+  "parent": "d9a7edfa1511aa9eecce065b339599efba8f62ce",
+  "r99_manifest_blob": "dc637fb065b534d7a37e0003a23a8aa8ce846268",
+  "r99_builder_blob": "a7586d4dace789af82c8b4a44db73c82c00277f6",
+  "r100": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/493#issuecomment-7147314487",
+  "r108": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/493#issuecomment-7151854735",
+  "pins": {
+    "nox-control/d3-r101/finalized_observation.py": "d0687f2ec337c6ea0b67fe7818c9134e97148f1c",
+    "nox-control/b2-r104/receipt_id_fence.py": "43d29a344d606875d97ada415b46ae20a45b8e5c",
+    "nox-control/d3-r105/joint_packet.py": "409f8fff9b7af087cc9477c9d303a6f1219954a3",
+    "nox-control/b2-r108/atomic_ordered_quality.cjs": "2bd2efcaea708498871b6f913e4b28d5bb8ca90e",
+    "nox-control/b2-r108/b4_r75_ordered_completion_pair.cjs": "3bbef66163dc365fbaea50b054d9744a25fbdf31",
+    "nox-control/b2-r108/b4_r74_completion_pair.cjs": "3668810ff5018d4a2ef7adb69952230118d1fb10",
+    "nox-control/d3-r107/donor/b4_r74_completion_pair.cjs": "ab7c5f1f82d0163af2fe60ada05b7f9cde3c42e9",
+    "nox-control/d3-r107/donor/b4_r73_pinned_disposition_metric_bridge.cjs": "0eb3f3e1ab9502c0014f9dd7b1b280f4e3fb04f8",
+    "nox-control/d3-r107/donor/b4_r72_final_disposition_metric_fence.cjs": "3e31947d7b562d88db13c3c9e3a2a4405ef56ad7",
+    "nox-control/d3-r107/donor/b4_r70_completion_metric_fence.cjs": "f539ef04db3b8531b3b16f71eebf21f67c12cfcc"
+  },
+  "python_prefix": [
+    "nox-control/d3-r105",
+    "nox-control/b2-r104",
+    "nox-control/d3-r101",
+    "nox-control/d3-r97"
+  ],
+  "python_entrypoint": "joint_packet.prepare_joint_packet",
+  "node_entrypoint": "nox-control/b2-r108/atomic_ordered_quality.cjs",
+  "browser_pin_state": "R99 historical R81; producer unbound; do not deploy",
+  "production_ready": false,
+  "native_accepted": false,
+  "authentication_verified": false,
+  "host_provider_bound": false,
+  "pre_ack_observer_bound": false,
+  "ack_allowed": false,
+  "next_post_allowed": false,
+  "training_admitted": false
+}

@@ -1,0 +1,27 @@
+name: A6 R109 R80 extracted frozen release
+on:
+  pull_request:
+    paths: ['nox-control/a6-r109-r80-release/**', '.github/workflows/nox-a6-r109-r80-release.yml']
+permissions:
+  contents: read
+jobs:
+  frozen-source-release:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'a6-r109-r80-extracted-release-20261125'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Extracted frozen ingress and isolated imports
+        run: python3 -B nox-control/a6-r109-r80-release/build_release.py "$RUNNER_TEMP/nox-r109-r80-frozen-offline.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nox-r109-r80-frozen-offline
+          path: ${{ runner.temp }}/nox-r109-r80-frozen-offline.zip
+          retention-days: 14

@@ -1,0 +1,21 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {createHash}=require('node:crypto');
+const {stageSelectedBrowser,checkSelectedBrowser}=require('./browser_selection.cjs');
+const hash=b=>createHash('sha256').update(b).digest('hex');
+const staged=stageSelectedBrowser();
+const pair=o=>{const s=JSON.stringify(o);return [s,hash(s)];};
+const make=(browser=staged.browser_sha256)=>({turns:[1,2].map(i=>({observation:pair({observation_id:'obs'+i,browser_sha256:browser,served_sha256:'a'.repeat(64),server_sha256:'b'.repeat(64)})}))});
+const packet=JSON.stringify(make());
+const route={manifest_sha256:staged.manifest_sha256,successor_role_sha256:staged.role_sha256,assets:{'browser/b1_browser_bundle.js':staged.historical_browser_sha256},browser_sha256:staged.browser_sha256,served_sha256:'a'.repeat(64),server_sha256:'b'.repeat(64),bridge_sha256:'c'.repeat(64),packet_sha256:hash(packet)};
+function run(d=route,p=packet,bytes=staged.bytes){const b=Buffer.from(JSON.stringify(d));return checkSelectedBrowser(b,hash(b),p,bytes);}
+const ok=run();assert.equal(ok.status,'MATCHED_R88_BROWSER_OFFLINE');assert.equal(ok.native_accepted,false);assert.equal(ok.ack_allowed,false);
+const old=staged.historical_browser_sha256;
+assert.equal(run({...route,browser_sha256:old}).status,'HOLD_R88_ROUTE_PIN');
+assert.equal(run({...route,successor_role_sha256:'0'.repeat(64)}).status,'HOLD_R88_ROUTE_PIN');
+const mixed=make();mixed.turns[1].observation=make(old).turns[1].observation;const p=JSON.stringify(mixed);
+assert.equal(run({...route,packet_sha256:hash(p)},p).status,'HOLD_R88_OBSERVATION_PIN');
+const changed=Buffer.from(staged.bytes);changed[0]^=1;assert.equal(run(route,packet,changed).status,'HOLD_R88_INPUT');
+const corrupted=make();corrupted.turns[0].observation[1]='0'.repeat(64);const q=JSON.stringify(corrupted);
+assert.equal(run({...route,packet_sha256:hash(q)},q).status,'HOLD_R88_OBSERVATION_DIGEST');
+console.log('R88_BROWSER_SELECTION_OFFLINE=1 HOLD=5 NATIVE_ACCEPTED=false');

@@ -1,0 +1,43 @@
+name: D3 R70 owner descriptor review ingress
+on:
+  pull_request:
+    branches: [b2-r69-strict-b5-review-ingress-20261124]
+    paths:
+      - 'nox-control/d3_r70_owner_fd_review_ingress.py'
+      - 'nox-control/tests/test_d3_r70_owner_fd_review_ingress.py'
+      - '.github/workflows/nox-d3-r70-owner-fd-review-ingress.yml'
+permissions:
+  contents: read
+jobs:
+  exact-composition:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'd3-r70-owner-fd-review-ingress-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 4eafa7701e4e3e01c4fc3ecb0cd360054dd9deb3
+          path: .b5-source
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 57f575437f7d98d46722188e133522ba722d796c
+          path: .b4-source
+          persist-credentials: false
+      - name: Exact descriptor composition
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD:nox-control/b2_r69_strict_review_ingress.py)" = acdf9ed60f6061f665c1061d8e6343cb22bb7156
+          test "$(git rev-parse HEAD:nox-control/d3_r68_review_binding.py)" = 1fcf2b6414838943c32914d2d0b03eceaf06e5d3
+          test "$(git rev-parse HEAD:nox-control/b2_existing_dialog_review.py)" = c7e37a4a4629ca202ea1d54d80b310d8109996e8
+          test "$(git -C .b5-source rev-parse HEAD:nox-control/b5_s03_verifier_r54.py)" = df94c535273dde1fd2609f555d1d615eacfda831
+          test "$(git -C .b4-source rev-parse HEAD:nox-control/systemic_relay_20261118/b4_existing_turn_pair.mjs)" = aad89a93467e638cfcac5af8a099d2127f4ae0fc
+          export PYTHONPATH="$PWD/.b5-source/nox-control"
+          export D3_B4_MODULE="$PWD/.b4-source/nox-control/systemic_relay_20261118/b4_existing_turn_pair.mjs"
+          python3 -B nox-control/tests/test_d3_r70_owner_fd_review_ingress.py
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false

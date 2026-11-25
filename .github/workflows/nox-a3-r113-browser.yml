@@ -1,0 +1,20 @@
+name: A3 R113 R88 browser selection
+on:
+  pull_request:
+    paths: ['nox-control/a3-r113-browser/**', '.github/workflows/nox-a3-r113-browser.yml']
+permissions:
+  contents: read
+jobs:
+  selected-browser:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'a3-r113-r88-browser-selection-20261125'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - run: node nox-control/a3-r113-browser/test_browser_selection.cjs

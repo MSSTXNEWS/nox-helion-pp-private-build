@@ -1,0 +1,16 @@
+{
+  "schema": "nox.d3.strict-receipt-source-integration.v1",
+  "source_parent": "3f739914428307213485aa7605142c8062d715a2",
+  "entrypoint": "nox-control/b2-r86/receipted_outcome.py:review_attempt",
+  "entrypoint_blob": "935c97ef18126eb40d6af3f66f3bf062f2500084",
+  "evidence": "synthetic source integration only",
+  "native_accepted": false,
+  "training_admitted": false,
+  "requires": [
+    "independently authenticated wire and receipt digest",
+    "full joint release",
+    "owner CAS/STOP/resource admission",
+    "actual existing-dialog turns and independent S03"
+  ],
+  "original_task_context": "4A02"
+}

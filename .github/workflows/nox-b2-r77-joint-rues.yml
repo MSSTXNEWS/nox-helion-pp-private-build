@@ -1,0 +1,39 @@
+name: B2 R77 joint bilingual stale-review regression
+on:
+  pull_request:
+    paths: ['nox-control/b2-r77/**', '.github/workflows/nox-b2-r77-joint-rues.yml']
+permissions:
+  contents: read
+jobs:
+  joint-rues:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'b2-r77-joint-rues-stale-review-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Run exact R76 joint review regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$PWD/nox-control/d3-r74/staging"
+          own="$PWD/nox-control/d3-r76"
+          test "$(git rev-parse HEAD:nox-control/d3-r74/staging/py/d3_r72_calibrated_descriptor_gate.py)" = 68b0ffc7e683afcdf2a8bc82b78740576dcd1bec
+          test "$(git rev-parse HEAD:nox-control/d3-r74/staging/py/b2_existing_dialog_review.py)" = c7e37a4a4629ca202ea1d54d80b310d8109996e8
+          test "$(git rev-parse HEAD:nox-control/d3-r74/staging/py/b2_r71_calibrated_rubric.py)" = cfd339f5674e976bedf2284ebfbe38783305930a
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for name in test_d3_r68_review_binding test_b2_r69_strict_review_ingress test_d3_r70_owner_fd_review_ingress; do
+            cp "nox-control/tests/$name.py" "$tmp/"
+          done
+          export PYTHONPATH="$stage/py:$own:$tmp"
+          export D3_B4_MODULE="$stage/b4/b4_existing_turn_pair.mjs"
+          fixture="$PWD/nox-control/b2-r77/test_joint_rues.py"
+          cd "$tmp"
+          python3 -B "$fixture"
+          echo SOURCE_ONLY_NATIVE_ACCEPTED=false QUALITY_NOT_MEASURED=true
