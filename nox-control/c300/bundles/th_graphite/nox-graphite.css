@@ -1,0 +1,124 @@
+/* NOX · тема «Графит» (по умолчанию). Нейтральный серый, один приглушённый акцент.
+   Шкала серых: Radix Colors slate (dark), MIT. Акцент: серебристо-голубой. Янтарь только малыми дозами.
+   Включается атрибутом html[data-nox-theme=graphite] (nox-theme.js). Тема «Солнце» (классика) = без атрибута, прежний вид.
+   Откат: localStorage nox.ui.theme=sun или удалить <link nox-graphite.css>. */
+html[data-nox-theme=graphite]{
+  /* Radix slate dark 1-12 */
+  --gx-1:#111113;--gx-2:#18191b;--gx-3:#212225;--gx-4:#272a2d;--gx-5:#2e3135;--gx-6:#363a3f;
+  --gx-7:#43484e;--gx-8:#5a6169;--gx-9:#696e77;--gx-10:#777b84;--gx-11:#b0b4ba;--gx-12:#edeef0;
+  --gx-acc:#9db1d1;--gx-acc-rgb:157,177,209;--gx-acc-hi:#c2d0e8;
+  --gx-ok:#6cc59a;--gx-warn:#e0b878;--gx-bad:#e5736b;
+  --bg:#0e0f11;--tx:#edeef0;--mu:#b0b4ba;--mu2:#8b9098;
+  --cy:157,177,209!important;--am:224,184,120!important;--mg:229,115,107!important;
+  --line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.15);
+  --glass:rgba(24,25,27,.62);--glass2:rgba(33,34,37,.72);
+  /* DS */
+  --ds-glass:rgba(255,255,255,.04);--ds-glass-hi:rgba(255,255,255,.08);--ds-line:rgba(255,255,255,.10);
+  --ds-acc:var(--gx-acc);--ds-ink:var(--gx-12);--ds-mute:rgba(237,238,240,.62);--ds-bad:var(--gx-bad);--ds-ok:var(--gx-ok);--ds-r:10px;
+  /* миры: нейтральные цвета, ровные радиусы */
+  --nox-world-rgb:157,177,209!important;--nox-ui-rgb:157,177,209!important;--nox-ui-shape:10px!important;--nox-ui-clip:none!important;
+  --k8-running:var(--gx-acc);--k8-glow:transparent!important;
+  /* Shoelace */
+  --sl-color-primary-50:#f1f4fa;--sl-color-primary-100:#dde5f2;--sl-color-primary-200:#c2d0e8;--sl-color-primary-300:#a9bbdb;--sl-color-primary-400:#9db1d1;
+  --sl-color-primary-500:#8aa0c4;--sl-color-primary-600:#9db1d1;--sl-color-primary-700:#6f86ad;--sl-color-primary-800:#566b90;--sl-color-primary-900:#3f5070;--sl-color-primary-950:#2a3550;
+  --sl-color-neutral-0:#111113;--sl-color-neutral-50:#18191b;--sl-color-neutral-100:#212225;--sl-color-neutral-200:#272a2d;--sl-color-neutral-300:#2e3135;
+  --sl-color-neutral-400:#43484e;--sl-color-neutral-500:#5a6169;--sl-color-neutral-600:#777b84;--sl-color-neutral-700:#b0b4ba;--sl-color-neutral-800:#d6d8dc;--sl-color-neutral-900:#edeef0;--sl-color-neutral-950:#fff;
+  --sl-color-success-600:#6cc59a;--sl-color-success-500:#6cc59a;--sl-color-warning-600:#e0b878;--sl-color-warning-500:#e0b878;--sl-color-danger-600:#e5736b;--sl-color-danger-500:#e5736b;
+  --sl-focus-ring-color:var(--gx-acc);--sl-focus-ring-width:2px;--sl-focus-ring-offset:2px;
+  --sl-panel-background-color:#18191b;--sl-panel-border-color:rgba(255,255,255,.10);
+  --sl-input-background-color:rgba(255,255,255,.04);--sl-input-border-color:rgba(255,255,255,.12);--sl-input-border-color-hover:rgba(255,255,255,.24);--sl-input-border-color-focus:var(--gx-acc);
+  --sl-input-color:#edeef0;--sl-input-placeholder-color:#777b84;--sl-input-label-color:#b0b4ba;
+  --sl-border-radius-medium:8px;--sl-border-radius-large:12px;
+  --sl-shadow-large:0 16px 48px rgba(0,0,0,.5);
+  color-scheme:dark;background:var(--bg);
+}
+/* Фон: радиальный градиент, деликатная сетка, зерно, медленная аврора. Планета и солнце скрыты. */
+html[data-nox-theme=graphite] #space,html[data-nox-theme=graphite] #dust,html[data-nox-theme=graphite] #bgfx,html[data-nox-theme=graphite] canvas[id^=nox-fx]{display:none!important}
+html[data-nox-theme=graphite]::before{content:"";position:fixed;inset:-12%;z-index:0;pointer-events:none;
+  background:
+   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.06'/></svg>"),
+   radial-gradient(ellipse 60% 50% at 18% 6%,rgba(120,140,185,.20),transparent 70%),
+   radial-gradient(ellipse 50% 45% at 86% 12%,rgba(150,160,190,.12),transparent 70%),
+   radial-gradient(ellipse 70% 55% at 55% 105%,rgba(90,105,140,.16),transparent 70%),
+   radial-gradient(ellipse 90% 70% at 50% 40%,#17181b 0%,#0e0f11 70%);
+  animation:gx-aurora 90s ease-in-out infinite alternate}
+html[data-nox-theme=graphite]::after{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.5;mix-blend-mode:normal;animation:none;
+  background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);background-size:64px 64px;
+  -webkit-mask-image:radial-gradient(ellipse 75% 65% at 50% 38%,#000 0%,transparent 100%);mask-image:radial-gradient(ellipse 75% 65% at 50% 38%,#000 0%,transparent 100%)}
+@keyframes gx-aurora{0%{transform:translate3d(-2%,-1%,0) scale(1)}100%{transform:translate3d(2%,1.5%,0) scale(1.06)}}
+@media (prefers-reduced-motion:reduce){html[data-nox-theme=graphite]::before{animation:none}}
+html[data-nox-theme=graphite] body{background:transparent}
+html[data-nox-theme=graphite] .grain{opacity:.03;animation:none;mix-blend-mode:overlay}
+html[data-nox-theme=graphite] .vignette{background:radial-gradient(ellipse at 50% 42%,transparent 60%,rgba(0,0,0,.4) 100%)}
+/* Шапка и док: тонкое стекло, без цветных свечений */
+html[data-nox-theme=graphite] .bar{background:rgba(17,17,19,.72)!important;-webkit-backdrop-filter:blur(16px) saturate(1.1);backdrop-filter:blur(16px) saturate(1.1)}
+html[data-nox-theme=graphite] .bar::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.14) 50%,transparent)!important;box-shadow:none!important}
+html[data-nox-theme=graphite] #nxdock{background:rgba(24,25,27,.78)!important;border-color:rgba(255,255,255,.10)!important;box-shadow:0 8px 32px rgba(0,0,0,.45)!important;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+html[data-nox-theme=graphite] .nxd-cells a{color:var(--gx-11)}
+html[data-nox-theme=graphite] .nxd-cells a:hover{color:var(--gx-12);background:rgba(255,255,255,.06)}
+html[data-nox-theme=graphite] .nxd-pop li{border-bottom-color:rgba(255,255,255,.06)}
+/* Малое солнце шапки: серебряное кольцо вместо красного */
+html[data-nox-theme=graphite] #nxsun.nxsun-x::before{background:radial-gradient(circle,rgba(157,177,209,.22) 0%,rgba(157,177,209,.07) 42%,transparent 68%)}
+html[data-nox-theme=graphite] #nxsun.nxsun-x .nxsun-core{background:radial-gradient(circle at 50% 38%,#1c1d20,#0b0b0d 72%);box-shadow:0 0 0 1px rgba(255,255,255,.28),0 0 12px rgba(157,177,209,.22),inset 0 0 8px rgba(0,0,0,.9)}
+html[data-nox-theme=graphite] #nxsun.nxsun-x:hover .nxsun-core,html[data-nox-theme=graphite] #nxsun.nxsun-x:focus-visible .nxsun-core{box-shadow:0 0 0 1px rgba(255,255,255,.5),0 0 18px rgba(157,177,209,.4),inset 0 0 8px rgba(0,0,0,.9)}
+html[data-nox-theme=graphite] #nxsun:focus-visible{outline-color:var(--gx-acc)}
+html[data-nox-theme=graphite][data-nox-state=listening] #nxsun::after{border-color:rgba(157,177,209,.7)}
+html[data-nox-theme=graphite][data-nox-state=joy] #nxsun::before{background:radial-gradient(circle,rgba(224,184,120,.4),rgba(157,177,209,.12) 40%,transparent 70%)}
+html[data-nox-theme=graphite] .brand .mark{border-color:rgba(var(--am),.8);box-shadow:0 0 8px rgba(var(--am),.3),inset 0 0 4px rgba(var(--am),.3)}
+/* Карточки, плитки: тонкая рамка, мягкая тень */
+html[data-nox-theme=graphite] .card,html[data-nox-theme=graphite] .nxp-box,html[data-nox-theme=graphite] .ndp{border-color:rgba(255,255,255,.09)!important;box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 10px 30px rgba(0,0,0,.28)}
+html[data-nox-theme=graphite] .card:hover{border-color:rgba(255,255,255,.16)!important}
+html[data-nox-theme=graphite][data-nox-world]::after{opacity:.5}
+/* Кнопки: primary = светлая, как у Vercel/Linear; остальные стеклянные */
+html[data-nox-theme=graphite] button.primary,html[data-nox-theme=graphite] .ph .nxu-btn.primary,html[data-nox-theme=graphite] .ph button.primary,html[data-nox-theme=graphite] .btn-primary{background:linear-gradient(180deg,#f4f5f7,#cfd3d9)!important;color:#111113!important;border-color:transparent!important;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 4px 14px rgba(0,0,0,.35)}
+html[data-nox-theme=graphite] sl-button[variant=primary]::part(base){background:linear-gradient(180deg,#f4f5f7,#cfd3d9);color:#111113;border-color:transparent}
+html[data-nox-theme=graphite] sl-button:not([disabled]):not([loading])::part(base):hover{border-color:rgba(255,255,255,.26);box-shadow:0 0 0 3px rgba(157,177,209,.10)}
+html[data-nox-theme=graphite] sl-button:not([disabled])::part(base):active{background:rgba(255,255,255,.12)}
+html[data-nox-theme=graphite] sl-input:hover::part(base),html[data-nox-theme=graphite] sl-select:hover::part(combobox){border-color:rgba(255,255,255,.24)}
+html[data-nox-theme=graphite] sl-input[focused]::part(base),html[data-nox-theme=graphite] sl-select[open]::part(combobox),html[data-nox-theme=graphite] sl-textarea[focused]::part(base){box-shadow:0 0 0 3px rgba(157,177,209,.22)}
+html[data-nox-theme=graphite] sl-select::part(listbox){background:rgba(24,25,27,.94)}
+html[data-nox-theme=graphite] sl-tooltip{--sl-tooltip-background-color:rgba(33,34,37,.96)}
+html[data-nox-theme=graphite] .ds-badge-off{color:#f0b8b3;background:rgba(229,115,107,.10);border-color:rgba(229,115,107,.35)}
+html[data-nox-theme=graphite] .ds-skel{background:rgba(255,255,255,.06)}
+html[data-nox-theme=graphite] .ds-skel::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)}
+html[data-nox-theme=graphite] ::selection{background:rgba(157,177,209,.35)}
+html[data-nox-theme=graphite] ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:8px}
+html[data-nox-theme=graphite] ::-webkit-scrollbar-track{background:transparent}
+/* Статусные акценты в малых дозах */
+html[data-nox-theme=graphite] #nox-public-safe-preview{background:rgba(24,25,27,.6)!important}
+html[data-nox-theme=graphite] .ds-empty sl-icon{color:var(--gx-acc)}
+/* ===== Единая система кнопок «Графит»: .nx-btn + sl-button + разовые кнопки страниц (только вид, без размеров/вёрстки) ===== */
+html[data-nox-theme=graphite]{--nxb-r:8px;--nxb-bg:rgba(255,255,255,.055);--nxb-bg-h:rgba(255,255,255,.10);--nxb-bg-a:rgba(255,255,255,.14);--nxb-bd:rgba(255,255,255,.12);--nxb-bd-h:rgba(255,255,255,.24);--nxb-fg:#edeef0;--nxb-ring:0 0 0 2px #111113,0 0 0 4px #9db1d1;--nxb-h-sm:32px;--nxb-h-md:36px;--nxb-h-lg:44px}
+html[data-nox-theme=graphite] .nx-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:var(--nxb-h-md);padding:0 14px;border:1px solid var(--nxb-bd);border-radius:var(--nxb-r);background:var(--nxb-bg);color:var(--nxb-fg);font:500 14px/1 var(--sans,Inter,system-ui,sans-serif);letter-spacing:0;text-transform:none;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,box-shadow .15s,transform .1s}
+html[data-nox-theme=graphite] .nx-btn:hover{background:var(--nxb-bg-h);border-color:var(--nxb-bd-h)}
+html[data-nox-theme=graphite] .nx-btn:active{background:var(--nxb-bg-a);transform:translateY(1px)}
+html[data-nox-theme=graphite] .nx-btn:focus-visible{outline:none;box-shadow:var(--nxb-ring)}
+html[data-nox-theme=graphite] .nx-btn[disabled],html[data-nox-theme=graphite] .nx-btn[aria-disabled=true]{opacity:.45;cursor:not-allowed;pointer-events:none}
+html[data-nox-theme=graphite] .nx-btn.sm{height:var(--nxb-h-sm);padding:0 10px;font-size:13px}
+html[data-nox-theme=graphite] .nx-btn.lg{height:var(--nxb-h-lg);padding:0 18px;font-size:15px}
+html[data-nox-theme=graphite] .nx-btn.primary{background:linear-gradient(180deg,#f4f5f7,#d2d6dc);color:#111113;border-color:transparent;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 2px 8px rgba(0,0,0,.35)}
+html[data-nox-theme=graphite] .nx-btn.primary:hover{background:linear-gradient(180deg,#fff,#dfe2e7)}
+html[data-nox-theme=graphite] .nx-btn.secondary{background:var(--nxb-bg);border-color:var(--nxb-bd)}
+html[data-nox-theme=graphite] .nx-btn.ghost{background:transparent;border-color:transparent;color:var(--gx-11,#b0b4ba)}
+html[data-nox-theme=graphite] .nx-btn.ghost:hover{background:var(--nxb-bg);color:var(--nxb-fg)}
+html[data-nox-theme=graphite] .nx-btn.danger{background:rgba(229,115,107,.10);border-color:rgba(229,115,107,.35);color:#f2b1ab}
+html[data-nox-theme=graphite] .nx-btn.danger:hover{background:rgba(229,115,107,.20);border-color:rgba(229,115,107,.6)}
+html[data-nox-theme=graphite] .nx-btn.icon{width:var(--nxb-h-md);padding:0}
+html[data-nox-theme=graphite] .nx-btn.icon.sm{width:var(--nxb-h-sm)}html[data-nox-theme=graphite] .nx-btn.icon.lg{width:var(--nxb-h-lg)}
+/* sl-button: те же токены */
+html[data-nox-theme=graphite] sl-button{--sl-input-height-small:32px;--sl-input-height-medium:36px;--sl-input-height-large:44px}
+html[data-nox-theme=graphite] sl-button::part(base){border-radius:var(--nxb-r);background:var(--nxb-bg);border:1px solid var(--nxb-bd);color:var(--nxb-fg);font-weight:500;letter-spacing:0;backdrop-filter:none;box-shadow:none}
+html[data-nox-theme=graphite] sl-button[size=small]::part(base){min-height:32px}html[data-nox-theme=graphite] sl-button[size=medium]::part(base),html[data-nox-theme=graphite] sl-button:not([size])::part(base){min-height:36px}html[data-nox-theme=graphite] sl-button[size=large]::part(base){min-height:44px}
+html[data-nox-theme=graphite] sl-button::part(base):focus-visible{outline:none;box-shadow:var(--nxb-ring)}
+html[data-nox-theme=graphite] sl-button[variant=text]::part(base){background:transparent;border-color:transparent}
+html[data-nox-theme=graphite] sl-button[variant=danger]::part(base){background:rgba(229,115,107,.10);border-color:rgba(229,115,107,.35);color:#f2b1ab}
+html[data-nox-theme=graphite] sl-button[variant=danger]:not([disabled])::part(base):hover{background:rgba(229,115,107,.2);border-color:rgba(229,115,107,.6);box-shadow:none}
+html[data-nox-theme=graphite] sl-icon-button::part(base){border-radius:var(--nxb-r);color:var(--gx-11,#b0b4ba)}
+html[data-nox-theme=graphite] sl-icon-button::part(base):hover{background:var(--nxb-bg-h);color:#edeef0}
+html[data-nox-theme=graphite] sl-icon-button::part(base):focus-visible{outline:none;box-shadow:var(--nxb-ring)}
+/* разовые кнопки страниц: единый вид (радиус, рамка, фон, состояния), размеры не трогаем */
+html[data-nox-theme=graphite] :is(.nxu-btn,.k4-btn,.btn,a.btn,.seg button,.card button:not(.nx-btn),.ph button){border-radius:var(--nxb-r);transition:background .15s,border-color .15s,box-shadow .15s}
+html[data-nox-theme=graphite] :is(.nxu-btn,.k4-btn,.btn,a.btn,.seg button,.ph button):not(.primary):not(.pri):not([aria-pressed=true]):not([aria-selected=true]):hover{background:var(--nxb-bg-h);border-color:var(--nxb-bd-h)}
+html[data-nox-theme=graphite] :is(.k4-btn.pri,button.pri){background:linear-gradient(180deg,#f4f5f7,#d2d6dc)!important;color:#111113!important;border-color:transparent!important}
+html[data-nox-theme=graphite] :is(button,a,[role=button],[role=tab],input,select,textarea):focus-visible{outline:none;box-shadow:var(--nxb-ring)}
+html[data-nox-theme=graphite] :is(button,[role=button]):disabled{opacity:.45;cursor:not-allowed}
