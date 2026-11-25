@@ -21,7 +21,7 @@ async def m():
 asyncio.run(m())
 PEOF
 timeout 80 $PY /tmp/u_b3.py | tee /tmp/u_b3.out
-! grep -q "errs_bad" /tmp/u_b3.out || { cp nox-u-board.js.bak_u3_$TS nox-u-board.js; sed -i "s#nox-u-board.js?v=u4#nox-u-board.js?v=u3#" chat.html; echo ROLLBACK; }
+grep -E "^QA " /tmp/u_b3.out | grep -q "Unexpected\|Error" && { cp nox-u-board.js.bak_u3_$TS nox-u-board.js; sed -i "s#nox-u-board.js?v=u4#nox-u-board.js?v=u3#" chat.html; echo ROLLBACK; } || echo QA_CLEAN
 echo "U: панель NOX: задачи/карточки worms/идеи/выучено, отмена, подумай глубже" >> qa/rework/chat.fixed
 echo "== qa_audit progress"; cat /workspace/nox/agent/out/u_qaa_prog.txt 2>/dev/null; tail -c 400 /workspace/nox/agent/out/u_qaa_1.out
 echo done
