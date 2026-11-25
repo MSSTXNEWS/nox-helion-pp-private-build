@@ -41,6 +41,39 @@ for(const field of ['first_visible_ms','eof_ms','dom_commit_ms'])for(const i of 
  }finally{Object.defineProperty(parent,field,{configurable:true,enumerable:true,writable:true,value});}
 }
 a.equal(safe,6);
+// Exercise the actual extracted entrypoint with immutable invalid packets and
+// host getters that would later try to present a valid order. No provider read
+// is necessary for packet-internal contradictions.
+const hash=s=>require('node:crypto').createHash('sha256').update(s,'utf8').digest('hex');
+let pairHeld=0;
+for(const mode of ['clock','overlap','digest']){
+ const doc=JSON.parse(d.packet), row=doc.turns[1], trusted=d.host.turns[1].trusted;
+ let parent,field,value;
+ if(mode==='clock'){row.proof.clock_id=row.sample.clock_id='other-clock';parent=trusted.proof;field='clock_id';value='other-clock';}
+ else if(mode==='overlap'){row.sample.begin_ms=doc.turns[0].proof.dom_commit_ms-1;parent=trusted.sample;field='begin_ms';value=row.sample.begin_ms;}
+ else {row.proof.disposition_sha256='f'.repeat(64);parent=trusted.proof;field='disposition_sha256';value=row.proof.disposition_sha256;}
+ const old=parent[field];let accesses=0,calls=0;
+ Object.defineProperty(parent,field,{configurable:true,enumerable:true,get(){return ++accesses===1?value:old;}});
+ try{
+  const packet=JSON.stringify(doc), result=make(()=>{calls++;return {...evidence,packet_sha256:hash(packet),host:{...d.host,packet_sha256:hash(packet)}};})(bytes,packet);
+  a.equal(result.status,mode==='digest'?'HOLD_TIMING_PROOF_PIN':'HOLD_TIMING_PAIR_ORDER',JSON.stringify(result));
+  a.equal(result.offline_browser_timing,null);a.equal(result.native_accepted,false);a.equal(calls,0);a.equal(accesses,0);pairHeld++;
+ }finally{Object.defineProperty(parent,field,{configurable:true,enumerable:true,writable:true,value:old});}
+}
+a.equal(pairHeld,3);
+// Positive packet with changing clock getter: either hold or keep the packet clock.
+let clockReads=0,providerReads=0;
+const proof=d.host.turns[1].trusted.proof,clock=proof.clock_id;
+Object.defineProperty(proof,'clock_id',{configurable:true,enumerable:true,get(){return ++clockReads===1?clock:'late-other-clock';}});
+try{
+ const result=make(()=>{providerReads++;return evidence;})(bytes,d.packet);
+ a.equal(providerReads,1);a.equal(result.native_accepted,false);
+ if(result.status==='MATCHED_FROZEN_ORDERED_OFFLINE'){
+  const [first,second]=result.offline_browser_timing.samples;
+  a.equal(first.clock_id,second.clock_id);a.ok(second.begin_ms>=first.dom_commit_ms);
+ }else a.equal(result.offline_browser_timing,null);
+}finally{Object.defineProperty(proof,'clock_id',{configurable:true,enumerable:true,writable:true,value:clock});}
+console.log(JSON.stringify({immutable_pair_holds:pairHeld,changing_clock_safe:1}));
 console.log(JSON.stringify({staged_projection_safe:safe}));
 for(const p of Object.keys(require.cache))a.ok(p.startsWith(root+path.sep),p);
 console.log(JSON.stringify({staged_positive:1,provider_reads:reads,unbound_hold:1,native_accepted:false}));
@@ -67,7 +100,7 @@ class StagedTiming(unittest.TestCase):
         self.assertEqual(target,root/JOINT_DEST)
         original=target.read_bytes()
         self.assertEqual(blob(original),SOURCE_PIN)
-        self.assertEqual(SOURCE_PIN,'fbdeb1828385814b4fe991704178915c34ef84c4')
+        self.assertEqual(SOURCE_PIN,'dd1aaf8637c6ffa04ac45d32b05941e9446facc7')
         stat=target.stat()
         self.assertEqual(stage_timing(root,joint=True),target)
         self.assertEqual(target.stat().st_mtime_ns,stat.st_mtime_ns)

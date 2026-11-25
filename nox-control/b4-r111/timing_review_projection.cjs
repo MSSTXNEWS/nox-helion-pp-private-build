@@ -1,6 +1,8 @@
 'use strict';
 // Existing R111/R110 release callsite, not an authenticator or native timing source.
 const {makeReportedReview}=require('../b2-r110/reported_review.cjs');
+const {createHash}=require('node:crypto');
+const kinds=['observation','reservation','disposition'];
 const pin=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
 const hold=status=>({status,quality_sample:null,metrics:null,native_accepted:false,
  authentication_verified:false,training_admitted:false,ack_allowed:false,next_post_allowed:false,
@@ -8,6 +10,20 @@ const hold=status=>({status,quality_sample:null,metrics:null,native_accepted:fal
 function makeTimingEvidenceReview(readDetachedEvidence){
  return (bytes,packet)=>{
   try {
+   // Fence the immutable packet, not later reads of mutable host proof objects.
+   if(typeof packet!=='string'||Buffer.byteLength(packet)>4*1024*1024)
+    return hold('HOLD_TIMING_PROJECTION');
+   const rows=JSON.parse(packet).turns;
+   if(!Array.isArray(rows)||rows.length!==2)return hold('HOLD_TIMING_PROJECTION');
+   const bound=rows.map(row=>({clock_id:row.proof.clock_id,begin_ms:row.sample.begin_ms,
+    first_visible_ms:row.sample.first_visible_ms,eof_ms:row.sample.eof_ms,dom_commit_ms:row.proof.dom_commit_ms}));
+   if(bound.some((b,i)=>typeof b.clock_id!=='string'||!b.clock_id||rows[i].sample.clock_id!==b.clock_id||
+    ![b.begin_ms,b.first_visible_ms,b.eof_ms,b.dom_commit_ms].every(Number.isFinite)||
+    b.begin_ms>b.first_visible_ms||b.first_visible_ms>b.eof_ms||b.eof_ms>b.dom_commit_ms)||
+    bound[0].clock_id!==bound[1].clock_id||bound[1].begin_ms<bound[0].dom_commit_ms)
+    return hold('HOLD_TIMING_PAIR_ORDER');
+   if(rows.some(row=>kinds.some(k=>!Array.isArray(row[k])||!pin(row[k][1])||
+    row.proof[k+'_sha256']!==row[k][1])))return hold('HOLD_TIMING_PROOF_PIN');
    let inconsistent=false;
    const provider=typeof readDetachedEvidence==='function'?key=>{
     const evidence=readDetachedEvidence(key);
@@ -30,10 +46,9 @@ function makeTimingEvidenceReview(readDetachedEvidence){
     return hold('HOLD_TIMING_PROJECTION');
    // The immutable packet was already bound to host proof/sample by R108.
    // Project only those validated packet timestamps; never re-read provider getters.
-   const rows=JSON.parse(packet).turns;
-   if(!Array.isArray(rows)||rows.length!==2)return hold('HOLD_TIMING_PROJECTION');
-   const bound=rows.map(row=>({clock_id:row.proof.clock_id,begin_ms:row.sample.begin_ms,
-    first_visible_ms:row.sample.first_visible_ms,eof_ms:row.sample.eof_ms,dom_commit_ms:row.proof.dom_commit_ms}));
+   if(result.reported_review_diagnostics?.packet_sha256!==createHash('sha256').update(packet,'utf8').digest('hex')||
+    result.offline_metrics.some((s,i)=>kinds.some(k=>s[k+'_sha256']!==rows[i][k][1])))
+    return hold('HOLD_TIMING_PROOF_PIN');
    if(result.offline_metrics.some((s,i)=>{const b=bound[i];return s.turn!==i+2||
     ![b.begin_ms,b.first_visible_ms,b.eof_ms,b.dom_commit_ms].every(Number.isFinite)||
     b.first_visible_ms-b.begin_ms!==s.ttft_ms||b.eof_ms-b.begin_ms!==s.stream_eof_ms||

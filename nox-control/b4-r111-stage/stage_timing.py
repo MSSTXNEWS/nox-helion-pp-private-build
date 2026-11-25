@@ -27,7 +27,7 @@ PINS={
     "nox-control/a3-r109-r80/frozen/b3_r69_exchange_scope_binding.cjs":"18b3be8fc4264b32d51a57ad4db367b3ba786d41",
     "nox-control/a3-r109-r80/frozen/b3_r68_route_binding.cjs":"6d0fef57783346fe33d59ca39a625015514ae168",
 }
-SOURCE_PIN="fbdeb1828385814b4fe991704178915c34ef84c4"
+SOURCE_PIN="dd1aaf8637c6ffa04ac45d32b05941e9446facc7"
 
 def blob(b):
     return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
