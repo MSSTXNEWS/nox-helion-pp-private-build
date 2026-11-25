@@ -21,6 +21,10 @@ const jget = (u, o) => fetch(u, o).then(async (r) => { const t = await r.text();
   el.setAttribute('placeholder', 'Поиск страниц и действий NOX…'); el.openHotkey = 'ctrl+alt+shift+f12'; el.noAutoLoadMdIcons = true; el.data = data; el.footerHtml = '<span style="opacity:.7;letter-spacing:.12em;font-size:10px">ENTER · ВЫБРАТЬ &nbsp; ↑↓ · ПЕРЕМЕЩЕНИЕ &nbsp; ESC · ЗАКРЫТЬ</span>';
   el.style.cssText = '--ninja-z-index:9800;--ninja-width:620px;--ninja-accent-color:#c0392b;--ninja-font-family:inherit;--ninja-text-color:#efe6df;--ninja-secondary-text-color:#a89c93;--ninja-modal-background:rgba(16,13,13,.78);--ninja-modal-shadow:0 24px 70px rgba(0,0,0,.65);--ninja-overflow-background:rgba(2,3,10,.55);--ninja-secondary-background-color:rgba(255,235,220,.06);--ninja-selected-background:rgba(176,44,32,.38);--ninja-actions-height:360px;--ninja-icon-size:1.2em;--ninja-key-border-radius:6px;--ninja-footer-background:rgba(255,235,220,.04)';
   document.body.appendChild(el);
+  /* палитра открывается только по Ctrl+K или кнопке: при загрузке без действия пользователя гасим её */
+  let touched = 0; ['keydown', 'pointerdown', 'touchstart'].forEach((t) => addEventListener(t, () => { touched = 1; }, true));
+  const quiet = () => { if (!touched) { try { if (typeof el.close === 'function') el.close(); } catch (e) { /* нет close: оставляем как есть */ } } };
+  setTimeout(quiet, 700); setTimeout(quiet, 2000);
   let tm = 0, last = '';
   el.addEventListener('change', (e) => { const q = ((e.detail && e.detail.search) || '').trim(); if (q === last) return; last = q; clearTimeout(tm);
     if (q.length < 2) { el.data = data; return; }

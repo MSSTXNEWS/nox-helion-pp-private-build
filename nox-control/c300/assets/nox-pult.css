@@ -1,0 +1,35 @@
+/* NOX · пульт и вкладки настроек (расширение, канон не меняет) */
+#nxpult{position:fixed;left:14px;bottom:14px;z-index:9300;font-family:inherit;font-weight:300;color:rgba(240,232,226,.8)}
+#nxpult .nxpu-tog{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(255,225,200,.12);background:linear-gradient(180deg,rgba(26,22,22,.7),rgba(12,10,11,.8));color:inherit;font:inherit;font-size:10px;letter-spacing:.2em;
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+#nxpult .nxpu-tog:focus-visible,#nxpult button:focus-visible{outline:2px solid #d49a62;outline-offset:2px}
+.nxpu-d{width:6px;height:6px;border-radius:50%;background:#6b6f76;display:inline-block}
+.nxpu-d[data-state="ok"]{background:#7fd6a0}.nxpu-d[data-state="warn"]{background:#e0b35a}.nxpu-d[data-state="bad"]{background:#d9483b}
+#nxpult .nxpu-pan{display:none;position:absolute;left:0;bottom:44px;width:min(340px,92vw);padding:12px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(26,22,22,.82),rgba(12,10,11,.9));border:1px solid rgba(255,225,200,.10);box-shadow:0 18px 50px rgba(0,0,0,.55);
+  -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
+#nxpult:hover .nxpu-pan,#nxpult:focus-within .nxpu-pan,#nxpult .nxpu-pan.on{display:block}
+#nxpult .nxpu-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;align-items:center}
+#nxpult button{font:inherit;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(240,232,226,.85);background:rgba(255,235,220,.05);
+  border:1px solid rgba(255,225,200,.12);border-radius:10px;padding:7px 10px;cursor:pointer}
+#nxpult button:hover{background:rgba(255,235,220,.1)}
+#nxpult button:disabled{opacity:.42;cursor:not-allowed}
+#nxpult .nxpu-stop{background:rgba(176,44,32,.88);color:#fff;border-color:rgba(255,200,170,.2);font-weight:500;padding:8px 14px}
+#nxpult .nxpu-seg{display:inline-flex;border-radius:10px;overflow:hidden;border:1px solid rgba(255,225,200,.12)}
+#nxpult .nxpu-seg button{border:0;border-radius:0;background:transparent}
+#nxpult .nxpu-seg button[aria-checked="true"]{background:rgba(212,154,98,.25);color:#fff}
+#nxpult .nxpu-sens{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+#nxpult .nxpu-det{margin:8px 0 0;max-height:160px;overflow:auto;font-size:10px;color:rgba(240,232,226,.7);white-space:pre-wrap}
+#nxpult .nxpu-st{min-height:14px;margin-top:8px;font-size:10px;letter-spacing:.1em;color:rgba(240,232,226,.6)}
+#nxpult .nxpu-st[data-state="bad"]{color:#e88a7e}
+#nxpult .nxpu-st[data-state="ok"]{color:#9fdcb4}
+@media (max-width:760px){#nxpult{left:10px;bottom:84px}#nxpult .nxpu-pan{width:min(320px,92vw)}}
+
+/* вкладки настроек */
+.nxt-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 16px}
+.nxt-tabs button{font:inherit;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(240,232,226,.75);background:rgba(255,235,220,.05);border:1px solid rgba(255,225,200,.12);border-radius:999px;padding:8px 14px;cursor:pointer}
+.nxt-tabs button[aria-selected="true"]{background:linear-gradient(90deg,rgba(176,44,32,.88),rgba(110,26,20,.62));color:#fff}
+.nxt-off{display:none !important}
+.nxt-ph{opacity:.85}
+.nxt-ph p{margin:6px 0 0;color:rgba(240,232,226,.6);font-size:13px;line-height:1.5}
