@@ -39,13 +39,26 @@ def models():
             L.sort(key=lambda m: m.get("latency_ms") or 9999); _M["l"] = [m["id"] for m in L]; _M["t"] = time.time()
         except Exception: pass
     return _M["l"]
+import collections
+_REQ = collections.deque(); _FAILS = {"n": 0, "until": 0.0}
+def quota(prio):
+    now = time.time()
+    while _REQ and now - _REQ[0] > 3600: _REQ.popleft()
+    if now < _FAILS["until"] and not prio: return False
+    return len(_REQ) < (180 if prio else 100)      # пул советников ~200 запросов/час на IP: фоновым 100, срочным (гонка) до 180
 def _one(model, msgs, mt, q, tmo):
+    _REQ.append(time.time())
     try:
         r = post(ADV + "/v1/chat/completions", {"model": model, "messages": msgs, "max_tokens": mt, "temperature": 0.4}, tmo)
         t = (r["choices"][0]["message"]["content"] or "").strip()
-        if t: q.put((t, r.get("model") or model))
+        if t: q.put((t, r.get("model") or model)); _FAILS["n"] = 0
+    except urllib.error.HTTPError as e:
+        if e.code in (429, 502, 503):
+            _FAILS["n"] += 1
+            if _FAILS["n"] >= 4: _FAILS["until"] = time.time() + 90
     except Exception: pass
-def advise(prompt, system=None, mt=350, tmo=14, k=3, want=1, msgs=None):
+def advise(prompt, system=None, mt=350, tmo=14, k=2, want=1, msgs=None, prio=False):
+    if not quota(prio): return []
     """хедж: k моделей параллельно, возвращает до want первых непустых ответов"""
     ids = models()[:k] or ["auto"]; q = queue.Queue(); msgs = msgs or (([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": prompt}])
     for m in ids: threading.Thread(target=_one, args=(m, msgs, mt, q, tmo), daemon=True).start()
@@ -162,8 +175,9 @@ SYS_FAST = "Ты NOX, умный и тёплый ассистент. Отвеч�
 def fast(b):
     t0 = time.time(); q = str(b.get("q") or ""); h = [m for m in (b.get("history") or []) if isinstance(m, dict) and m.get("content")][-6:]
     msgs = [{"role": "system", "content": SYS_FAST}] + [{"role": m.get("role") if m.get("role") in ("user", "assistant") else "user", "content": str(m["content"])[:600]} for m in h] + [{"role": "user", "content": q[:3000]}]
-    r = advise(q, None, 700, min(float(b.get("tmo") or 12), 12), 3, 1, msgs)
-    return {"text": r[0][0], "model": r[0][1], "ms": int((time.time() - t0) * 1000)} if r else {"text": None, "ms": int((time.time() - t0) * 1000)}
+    if not quota(True): return {"text": None, "limited": True, "ms": 0}
+    r = advise(q, None, 700, min(float(b.get("tmo") or 12), 12), 3, 1, msgs, True)
+    return {"text": r[0][0], "model": r[0][1], "ms": int((time.time() - t0) * 1000)} if r else {"text": None, "limited": time.time() < _FAILS["until"], "ms": int((time.time() - t0) * 1000)}
 FB = "/workspace/nox/state/dataset/feedback.jsonl"; LS = "/workspace/nox/state/lessons_feedback.md"
 def feedback(b):
     import os
@@ -177,6 +191,7 @@ class H(BaseHTTPRequestHandler):
     def _j(self, o, c=200):
         d = json.dumps(o, ensure_ascii=False).encode(); self.send_response(c); self.send_header("Content-Type", "application/json; charset=utf-8"); self.send_header("Content-Length", str(len(d))); self.end_headers(); self.wfile.write(d)
     def do_GET(self):
+        if self.path.startswith("/quota"): return self._j({"last_hour": len(_REQ), "fails": _FAILS["n"], "break_s": max(0, int(_FAILS["until"] - time.time()))})
         if self.path.startswith("/health"): return self._j({"ok": True, "models": len(models())})
         self._j({"error": "not found"}, 404)
     def do_POST(self):
