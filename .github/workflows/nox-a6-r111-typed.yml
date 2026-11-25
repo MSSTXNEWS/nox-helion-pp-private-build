@@ -1,0 +1,27 @@
+name: A6 R111 typed frozen entrypoint
+on:
+  pull_request:
+    paths: ['nox-control/a6-r111-typed/**', '.github/workflows/nox-a6-r111-typed.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  selected-typed-producer:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'a6-r111-typed-frozen-entrypoint-20261125'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Select typed entrypoint on immutable release; one focused synthetic check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/14989839885/zip" > "$RUNNER_TEMP/a6-exact.zip"
+          python3 -B -c 'import sys,pathlib;sys.path.insert(0,"nox-control/d3-r111");from stage_overlay import stage;stage(pathlib.Path(sys.argv[1]).read_bytes(),pathlib.Path(sys.argv[2]))' "$RUNNER_TEMP/a6-exact.zip" "$RUNNER_TEMP/r111-extracted"
+          python3 -B nox-control/a6-r111-typed/stage_typed.py "$RUNNER_TEMP/r111-extracted"
+          python3 -I -B nox-control/a6-r111-typed/test_selected_producer.py "$RUNNER_TEMP/r111-extracted"

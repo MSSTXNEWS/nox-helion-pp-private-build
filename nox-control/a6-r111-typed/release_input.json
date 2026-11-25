@@ -1,0 +1,20 @@
+{
+  "schema": "NOX_A6_R111_TYPED_FROZEN_INPUT_V1",
+  "instructions_version": "0.0.6",
+  "claim": 7153497326,
+  "base_commit": "1dc5eac0c22807b8522b67ccf95e70ffb3c87b85",
+  "base_r111_manifest_blob": "fd6b4dd58465de1b7874c36f292acd98be7bb6c5",
+  "base_artifact": 14989839885,
+  "typed_donor_commit": "545b8e23c5673a3cb0067de116ed26d4eaf8a055",
+  "typed_donor_blob": "f6ff3501466ed376afff2c9475833428267ccc8f",
+  "frozen_namespace": "nox-control/a3-r109-r80/frozen",
+  "selected_entrypoint": "freeze_typed_release.freeze_release_payload",
+  "old_entrypoint": "freeze_release.freeze_release_payload",
+  "old_entrypoint_selected": false,
+  "host_provider_bound": false,
+  "native_accepted": false,
+  "authentication_verified": false,
+  "ack_allowed": false,
+  "next_post_allowed": false,
+  "training_admitted": false
+}
