@@ -24,7 +24,7 @@ async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(args=["--use-gl=swiftshader","--enable-webgl","--ignore-gpu-blocklist"])
         for music in PAGES:
-            for vp,(w,h,ow) in {"d":(1440,900,1000),"k":(3840,2160,1100),"m":(390,844,390)}.items():
+            for vp,(w,h,ow) in {"d":(1440,int(os.environ.get("S4H","900")),1000),"k":(3840,2160,1100),"m":(390,844,390)}.items():
                 ctx=await b.new_context(viewport={"width":w,"height":h}); pg=await ctx.new_page(); errs=[];bad=[]
                 pg.on("pageerror",lambda e:errs.append(str(e)[:140])); pg.on("response",lambda r:bad.append(str(r.status)+" "+r.url[-70:]) if r.status>=400 else None)
                 pg.on("filechooser",lambda fc:None); pg.on("dialog",lambda d:asyncio.ensure_future(d.dismiss()))
