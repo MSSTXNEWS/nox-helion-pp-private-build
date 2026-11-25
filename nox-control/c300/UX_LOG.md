@@ -13,3 +13,9 @@ U до/после пока не измерены: qa_audit.py на сервер�
 - Не исправлено: board (excalidraw с unpkg не грузится без сети - вендорить), qa.html (JS: prepend of null), about/integrations (404 hdr/metal/moon/mars текстур в снимке), #k8-live 25 px на 390.
 ## Замер U (очередь: u_audit5 -> ux_aud_p1 -> ux_aud_p2, flock /tmp/qaa.lock)
 Результаты: $O/ux_qa_prog.txt (system widgets memory map cinema knowledge) и ux_qa2_prog.txt (projects pdf atlas); забирать ux_get_p2.sh. U до -> после: заполнить по факту.
+## Пакет ux_p3 (ux_dep_p3, прогон 45701689515, QA_CLEAN)
+- qa.html: JS «prepend of null» (nox-shell искал #app) -> main обёрнут в div#app.
+- board: EXCALIDRAW_ASSET_PATH ставился после загрузки скрипта, чанки шли с unpkg -> путь задан inline до excalidraw.production.min.js (вендор уже лежал в vendor/nox-x/excalidraw/dist); запросов на unpkg нет.
+- about/integrations: на сервере отсутствовали текстуры реестра; докачаны HDRI machine_shop_01_1k (CC0 Poly Haven), Metal012_1K Color (CC0 ambientCG), 2k_moon, 2k_mars -> nox-mars.jpg (Solar System Scope, CC BY 4.0).
+- qa_audit.py: режим QA_FAST=1 (1 vision-прогон, только 1440, max_tokens 600; бэкап qa_audit.py.bak_ux_fast_*, по умолчанию выключен). Очередь ux_fast1.sh (после u_audit5, flock): system widgets memory map cinema knowledge projects pdf atlas board qa about integrations -> $O/ux_f_prog.txt.
+- Цвета в правках: только CSS-переменные (под тему «Графит»).
