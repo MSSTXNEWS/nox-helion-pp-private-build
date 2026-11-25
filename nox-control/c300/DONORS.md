@@ -135,3 +135,24 @@
 1. F-модули сразу: всё, что не помечено «стоит», через npm в /workspace/nox/web/build, сборка esbuild в site/vendor/<имя>/ (мало места).
 2. S-сервисы без Docker, по одному, следя за диском ≥15 ГБ.
 3. M-модели и тяжёлые S — после решения владельца по диску.
+
+## Новые вау-сервисы (25.11, очередь после текущих задач)
+| Движок | Тип | Источник | Что даёт | Куда |
+|---|---|---|---|---|
+| TalkingHead | F | https://github.com/met4citizen/TalkingHead | 3D-аватар NOX с синхронизацией губ под голос | чат, голос, ТВ |
+| three-vrm | F | https://github.com/pixiv/three-vrm | VRM-аватары для three.js | чат, ТВ |
+| MediaPipe Tasks | F | https://github.com/google-ai-edge/mediapipe | управление интерфейсом жестами рук с камеры | вся сборка |
+| transformers.js | F | https://github.com/huggingface/transformers.js | модели прямо в браузере: удаление фона, распознавание объектов | фото, камера |
+| Perplexica | S | https://github.com/ItzCrazyKns/Perplexica | ИИ-поиск в стиле Perplexity поверх SearXNG | знания, исследования |
+| Podcastfy | S | https://github.com/souzatharsis/podcastfy | подкаст-диалог из любого текста или ссылки | подкасты, новости |
+| Open Notebook | S | https://github.com/lfnovo/open-notebook | открытый аналог NotebookLM | знания |
+| screenshot-to-code | S | https://github.com/abi/screenshot-to-code | код страницы по скриншоту | помощник, конструктор |
+| Glance | S | https://github.com/glanceapp/glance | лёгкая лента: погода, рынки, RSS, YouTube, Reddit | главная, виджеты |
+| JupyterLite | F | https://github.com/jupyterlite/jupyterlite | Python-блокноты прямо в браузере | помощник, обучение |
+| Mermaid + KaTeX | F | https://github.com/mermaid-js/mermaid + https://github.com/KaTeX/KaTeX | диаграммы и формулы прямо в ответах чата | чат |
+| draw.io (embed) | F | https://github.com/jgraph/drawio | профессиональные схемы | доска |
+| Stellarium Web Engine | F | https://github.com/Stellarium/stellarium-web-engine | живое звёздное небо в реальном времени | атлас, сцена |
+| earth (ветра Земли) | F | https://github.com/cambecc/earth | живая карта ветров и океанов | атлас |
+| lightweight-charts | F | https://github.com/tradingview/lightweight-charts | биржевые графики уровня TradingView | финансы, главная |
+| WhisperLive | S | https://github.com/collabora/WhisperLive | живые субтитры речи в реальном времени | голос, звонки, кино |
+| Kiwix (Википедия офлайн) | S | https://github.com/kiwix/kiwix-tools | офлайн-Википедия для NOX | знания (только после диска) |
