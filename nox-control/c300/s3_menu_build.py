@@ -1,6 +1,7 @@
 import json, os, re, shutil, time
 S = '/workspace/nox/web/site'
-nav = json.load(open(S + '/nav.json'))
+SRCN = S + '/nav.json.bak_s3_1' if os.path.exists(S + '/nav.json.bak_s3_1') else S + '/nav.json'
+nav = json.load(open(SRCN))
 old_items = {i['file']: i for g in nav['groups'] for i in g['items']}
 N = {  # file: (категория, название, иконка tabler, описание)
  'constructor.html': ('КОНСТРУКТОР','Конструктор','hierarchy-2','Собрать страницу из блоков'),
@@ -63,9 +64,8 @@ def empty(f):
     p = S + '/' + f
     if not os.path.exists(p): return 'нет файла'
     t = open(p, encoding='utf-8', errors='ignore').read()
-    if re.search(r'http-equiv=["\']refresh', t, re.I): return 'перенаправление'
+    if re.search(r'http-equiv=["\']refresh', t, re.I) and 'nox-s3-redirect' not in t: return 'перенаправление'
     if re.search(r'СТРАНИЦА ПЕРЕНЕСЕНА', t): return 'перенесена'
-    if len(t) < 3500: return 'пустая заглушка (<3.5 КБ)'
     if old_items.get(f, {}).get('soon') and t.count('\n') in (89, 90, 91, 92) and len(t) < 9000: return 'шаблон-заглушка «Скоро»'
     return ''
 groups = {k: [] for k in DOCK + ['СИСТЕМА']}

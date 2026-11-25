@@ -11,13 +11,3 @@
 #nxsun.nxsun-x:focus-visible{outline:2px solid #d49a62;outline-offset:3px}
 @keyframes nxsun-breathe{0%,100%{opacity:.8;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
 @media (prefers-reduced-motion:reduce){#nxsun.nxsun-x::before{animation:none}}
-/* живые состояния NOX (html[data-nox-state]) */
-html[data-nox-state=thinking] #nxsun .nxsun-core{animation:nxsun-think 1.1s ease-in-out infinite}
-html[data-nox-state=listening] #nxsun::after{content:"";position:absolute;inset:-18%;border-radius:50%;border:1.5px solid rgba(224,70,58,.75);animation:nxsun-ring 1.3s ease-out infinite}
-html[data-nox-state=speaking] #nxsun::before{animation:nxsun-talk .55s ease-in-out infinite}
-html[data-nox-state=joy] #nxsun::before{inset:-90%;background:radial-gradient(circle,rgba(233,180,101,.7) 0%,rgba(176,44,32,.3) 40%,rgba(176,44,32,0) 70%);animation:nxsun-joy 1.8s ease-out 1}
-@keyframes nxsun-think{0%,100%{box-shadow:0 0 0 1.5px #b3261e,0 0 14px rgba(176,44,32,.55),inset 0 0 8px rgba(0,0,0,.9)}50%{box-shadow:0 0 0 2.5px #e0463a,0 0 30px rgba(224,70,58,.9),inset 0 0 8px rgba(0,0,0,.9)}}
-@keyframes nxsun-ring{from{transform:scale(.9);opacity:.9}to{transform:scale(1.5);opacity:0}}
-@keyframes nxsun-talk{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.18);opacity:1}}
-@keyframes nxsun-joy{0%{opacity:0;transform:scale(.6)}30%{opacity:1}100%{opacity:0;transform:scale(1.3)}}
-@media (prefers-reduced-motion:reduce){html[data-nox-state] #nxsun *,html[data-nox-state] #nxsun::before,html[data-nox-state] #nxsun::after{animation:none!important}}
