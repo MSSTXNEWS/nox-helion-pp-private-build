@@ -2,7 +2,7 @@
 (function () {
   const wrap = document.querySelector('.wrap'); if (!wrap || !window.echarts) return;
   const flat = (o, p, out) => { out = out || {}; if (o && typeof o === 'object') for (const k in o) { const v = o[k], kk = p ? p + '.' + k : k; if (typeof v === 'number' && isFinite(v)) out[kk] = v; else if (v && typeof v === 'object' && !Array.isArray(v)) flat(v, kk, out); } return out; };
-  const PAN = [['gpu.util_pct', 'GPU загрузка', '%', 100], ['gpu.vram_pct', 'VRAM', '%', 100], ['gpu.temp_c', 'GPU температура', '°C'], ['gpu.power_w', 'GPU мощность', 'Вт'], ['disk.used_pct', 'Диск занят', '%', 100], ['disk.free_gb', 'Диск свободно', 'ГБ']];
+  const PAN = [['gpu.util_pct', 'GPU загрузка', '%', 100], ['gpu.vram_pct', 'VRAM', '%', 100], ['gpu.temp_c', 'GPU температура', '°C'], ['gpu.power_w', 'GPU мощность', 'Вт'], ['disk.used_pct', 'Диск занят', '%', 100], ['disk.free_gb', 'Диск свободно', 'ГБ'], ['pc.cpu.percent', 'CPU', '%', 100], ['pc.ram.percent', 'RAM', '%', 100], ['pc.cpu_temp.celsius', 'CPU температура', '°C']];
   const sec = document.createElement('section'); sec.className = 'card s4gf'; sec.innerHTML = '<h2>Панели · живые данные <span class="r mono" id="s4gT">…</span></h2><div class="s4gg" id="s4gg"></div><p class="muted" id="s4gn" style="font-size:12px;margin:8px 0 0"></p>';
   wrap.appendChild(sec);
   let H = {}; try { H = JSON.parse(sessionStorage.getItem('s4h') || '{}'); } catch (e) { /* */ }
@@ -18,7 +18,7 @@
     let f = {}; try { f = flat(await (await fetch('/api/nox-live', { cache: 'no-store' })).json()); } catch (e) { /* */ }
     try { const pm = flat(await (await fetch('/api/pc-metrics', { cache: 'no-store' })).json(), 'pc'); Object.assign(f, pm); } catch (e) { /* */ }
     const now = Date.now(); let n = 0;
-    const list = PAN.filter((p) => p[0] in f).concat(Object.keys(f).filter((k) => /^pc\..*(cpu|mem|load|ram)/i.test(k)).slice(0, 4).map((k) => [k, k.replace('pc.', '').toUpperCase(), '']));
+    const list = PAN.filter((p) => p[0] in f);
     list.forEach(([k, t, u, mx]) => { if (!charts[k]) mk(k, t, u); (H[k] = H[k] || []).push([now, Math.round(f[k] * 10) / 10]); if (H[k].length > 240) H[k].shift(); draw(k, mx); n++; });
     sessionStorage.setItem('s4h', JSON.stringify(H));
     sec.querySelector('#s4gT').textContent = n ? n + ' панелей · обновление 5 с' : 'нет данных';
