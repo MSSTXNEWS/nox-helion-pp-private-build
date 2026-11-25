@@ -34,3 +34,4 @@
 - (P3) sysctl vm.swappiness/vfs_cache_pressure в контейнере read-only → правило: давление на RAM снимать только уменьшением anon-потребителей.
 - (U) Правила CSS для .nmc-fab (bottom/z-index) не работали даже с высокой специфичностью (конкурент с !important в другом файле); помог сдвиг соседней .nai-btn (right:90px) -> правило: при споре двух fixed-кнопок подбирать вариант фикса прямо в Playwright через add_style_tag, потом писать в CSS победителя.
 - (U) Фоновый qa_audit (3 прогона, vision) идёт десятки минут -> правило: запускать через setsid с логами в /workspace/nox/agent/out и забирать отдельным коротким скриптом.
+- (U) vendor/auto-animate/index.min.js — ES-модуль: как обычный <script> даёт «Unexpected token 'export'» -> правило: подключать только через import('./vendor/auto-animate/index.mjs'); и проверять откат по явному признаку ошибки, а не по пустому выводу.
