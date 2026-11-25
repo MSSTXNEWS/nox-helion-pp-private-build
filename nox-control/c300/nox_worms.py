@@ -287,6 +287,12 @@ def mount(app, llm, busy, book_sql, new_task, running):
     def w_scan():
         if SCAN.get('running'): return {'started': False, 'progress': SCAN}
         threading.Thread(target=run_scan, args=(llm, book_sql), daemon=True).start(); return {'started': True, 'status_url': '/worms/scan/status'}
+    @app.post('/worms/night/run')
+    def w_night_run():       # принудительный ночной скан (проверка накопления находок)
+        def go():
+            r = {'ts': int(time.time()), 'forced': True, 'hf': hf_scan(llm), 'github': gh_scan(llm), 'rss': rss_scan(llm), 'self': self_candidates(book_sql)}
+            st = jl(NIGHT, {}); st.setdefault('runs', []).append(r); json.dump(st, open(NIGHT, 'w'))
+        threading.Thread(target=go, daemon=True).start(); return {'started': True}
     @app.get('/worms/night')
     def w_night(): return jl(NIGHT, {})
     @app.get('/worms/agenda/check')
