@@ -47,3 +47,20 @@ body.cw-clean .k5-mc *{font-size:0!important}
 /* аватар: круглый логотип вместо кляксы */
 body.cw-clean .tg-av-orb{background:#140c0a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='27' fill='none' stroke='%23c9ced6' stroke-width='3'/%3E%3Cpath d='M21 44V20l22 24V20' fill='none' stroke='%23ffffff' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/78% no-repeat!important;border:1px solid var(--line,rgba(255,255,255,.3));border-radius:50%!important;box-shadow:none!important}
 body.cw-clean .tg-av-orb>*{display:none!important}
+/* v1.1: плотная ровная сетка (одинаковая ширина, 32px, зазор 6px) */
+body.cw-clean .cx5-cmd .cx5-grid,body.cw-clean .cx5-cmd [class*=grid],body.cw-clean .cx5-pr .cx5-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;padding:6px 8px!important;margin:0!important}
+body.cw-clean .cx5-cmd sl-button,body.cw-clean .cx5-cmd .cx5-b,body.cw-clean .cx5-pr .cx5-b{width:100%!important;min-width:0!important;margin:0!important}
+body.cw-clean .cx5-cmd sl-button::part(base),body.cw-clean .cx5-cmd .cx5-b::part(base){height:32px;min-height:32px;padding:0 10px;justify-content:flex-start}
+body.cw-clean .cx5-cmd sl-details::part(summary),body.cw-clean .cx5-cmd summary,body.cw-clean .cx5-pr summary{padding:6px 10px!important;font-size:12px!important;min-height:0!important}
+body.cw-clean .cx5-cmd sl-details::part(content){padding:2px 0 6px!important}
+body.cw-clean .cx5-cmd,body.cw-clean .cx5-pr,body.cw-clean .cx-right{gap:6px!important;padding:8px!important}
+body.cw-clean .cx5-list{display:flex!important;flex-direction:column;gap:6px!important;padding:6px 8px!important}
+body.cw-clean .cx5-list>*{height:32px!important;max-height:32px!important;min-height:32px!important;display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;-webkit-line-clamp:unset!important;line-height:20px!important;padding:6px 10px!important;margin:0!important;box-sizing:border-box}
+/* приветствие пустого чата */
+.cw-hello{display:none;max-width:560px;margin:12vh auto 0;text-align:center}
+body.cw-clean .cw-hello.on{display:block}
+.cw-hello h2{font:600 24px/1.3 var(--sans,inherit);margin:0 0 6px;color:var(--text,#e8eaee)}.cw-hello p{margin:0 0 16px;font-size:14px;opacity:.7}
+.cw-hello .cw-h4{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cw-hello .cw-h4 button{height:40px;border-radius:10px;border:1px solid var(--line,rgba(255,255,255,.2));background:transparent;color:inherit;font:13px var(--sans,inherit);cursor:pointer;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cw-hello .cw-h4 button:hover{background:var(--hover,rgba(255,255,255,.08))}
+@media(max-width:600px){.cw-hello .cw-h4{grid-template-columns:1fr}.cw-hello .cw-h4 button{height:44px}}

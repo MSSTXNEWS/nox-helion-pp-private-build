@@ -44,6 +44,11 @@ if(!document.querySelector('script[src*="nox-k8-meta"]')){const a=document.creat
     }
     setInterval(decorate, 700); new MutationObserver(() => { clearTimeout(decorate.t); decorate.t = setTimeout(decorate, 120); }).observe($('#feed') || document.body, { childList: true, subtree: true });
     const i = $('#input'); i && i.addEventListener('input', decorate);
+    /* приветствие и 4 подсказки при пустом чате */
+    const hello = document.createElement('div'); hello.className = 'cw-hello'; hello.innerHTML = '<h2>Чем помочь?</h2><p>Спросите что угодно или выберите подсказку. Команды: «/» или ⌘K.</p><div class="cw-h4"></div>';
+    ['Что ты помнишь обо мне?', 'Объясни простыми словами…', 'Помоги написать текст', 'Что нового сегодня?'].forEach((q) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = q; b.addEventListener('click', () => { const i = $('#input'); if (i) { i.value = q; i.dispatchEvent(new Event('input', { bubbles: true })); i.focus(); } }); $('.cw-h4', hello).appendChild(b); });
+    const feed = $('#feed'); feed && feed.parentElement.insertBefore(hello, feed);
+    setInterval(() => { hello.classList.toggle('on', !$('#feed .m')); }, 600);
     /* баннер «NOX пишет первым» — карточкой внутри ленты */
     setInterval(() => { const nf = $('.nox-first'); const f = $('#feed'); if (nf && f && nf.parentElement !== f) f.insertBefore(nf, f.firstChild); }, 1500);
   }
