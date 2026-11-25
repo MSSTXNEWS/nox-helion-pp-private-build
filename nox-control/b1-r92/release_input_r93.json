@@ -1,0 +1,61 @@
+{
+  "schema": "nox.b1.candidate-release-input.v1",
+  "task_id": "B1-UI-ADAPTER-SSE-CALLSITE-2TURN-20261120",
+  "operation": "B1-R93-R92-RELEASE-PIN-CLOSURE-20261125",
+  "source_commit": "5298267b8e5af8946783a52efaee747472b18fcc",
+  "claim": 7162141285,
+  "selection": "UNSELECTED_D3_OWNER_ONLY",
+  "dependencies": [
+    {
+      "path": "nox-control/b1-r86/b1_browser_bundle.js",
+      "git_blob_sha1": "bd2e154fd2c6007cb315d310e109de470f54f72f",
+      "sha256": "e7140c983b646b7544f95774491e718bed06880ac6a6e21b8f51980cdec5542b",
+      "bytes": 84730
+    },
+    {
+      "path": "nox-control/b1-r88/stage_r100.cjs",
+      "git_blob_sha1": "157270b88577fc0c4a92bf45f07f041ef89b1251",
+      "sha256": "3e9b5656fcf7baa19f467b6d27289f05e45d501cb3b288329308f95104692193",
+      "bytes": 6161
+    },
+    {
+      "path": "nox-control/b1-r92/stage_provider_fence.cjs",
+      "git_blob_sha1": "e7ca43fb27ca7ab390ddab4cf82e222b037c859f",
+      "sha256": "af8ac0f3af512dcdce4cf80f42f1f19c8177914f378d882d8c0e77044f2c3864",
+      "bytes": 1655
+    }
+  ],
+  "stage": {
+    "module": "nox-control/b1-r92/stage_provider_fence.cjs",
+    "export": "stageProviderFence",
+    "input": "nox-control/b1-r86/b1_browser_bundle.js",
+    "prior_selected": {
+      "sha256": "37a756fdc6544f8b5d73425c83221bb958504bd3199dd6245aa4d4b62549651f",
+      "bytes": 89135
+    },
+    "candidate": {
+      "sha256": "2cffd237300f677285ef7203e46b2395b39245bf59cabd125742ac89837efac7",
+      "bytes": 89401,
+      "git_blob_sha1": "4362cbe4b548125a70901526093698b0ff30da2e"
+    },
+    "replace_selected_once_only": true
+  },
+  "source_evidence": {
+    "r92_fixture_job": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/45592968482/job/139131652651",
+    "r92_exact_head_actions": [
+      45592968364,
+      45592968482,
+      45592968505,
+      45592968484
+    ],
+    "note": "R89 real Chromium qualifies R88 only. R92 differential Node/WebCrypto fixture only. New pin verified by exact source staging in isolated V8 with byte/hash compatibility shim, not native or Node/Chromium acceptance."
+  },
+  "required": {
+    "independent_d3_selection": true,
+    "authenticated_r100_finalized_after_reservation_cas_dom_matched_stop_clear": true,
+    "independent_retained_turns_2_3_s03": true,
+    "fresh_native_owner_cas_stop_resources_rollback_verifier": true,
+    "installed_and_served_hashes": true
+  },
+  "native_accepted": false
+}

@@ -1,0 +1,22 @@
+name: NOX B1 R89 selected R88 real browser
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b1-r89/**'
+      - '.github/workflows/nox-b1-r89.yml'
+permissions:
+  contents: read
+jobs:
+  target:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.51.0
+      - run: python -m playwright install --with-deps chromium
+      - run: python nox-control/b1-r89/test_selected_browser.py

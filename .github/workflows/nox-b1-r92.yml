@@ -1,0 +1,25 @@
+name: NOX B1 R92 provider lookup STOP fence
+on:
+  pull_request:
+    paths:
+      - 'nox-control/b1-r92/**'
+      - '.github/workflows/nox-b1-r92.yml'
+permissions:
+  contents: read
+jobs:
+  target:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exact retained R88 versus candidate provider call fence
+        run: |
+          set -euo pipefail
+          test "$(git hash-object nox-control/b1-r88/stage_r100.cjs)" = 157270b88577fc0c4a92bf45f07f041ef89b1251
+          node --unhandled-rejections=strict nox-control/b1-r92/test_provider_fence.cjs baseline
+          node --unhandled-rejections=strict nox-control/b1-r92/test_provider_fence.cjs candidate
