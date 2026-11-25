@@ -64,6 +64,7 @@ def sem(name):
 def chat_busy():
     try: return time.time() - os.path.getmtime(ST + '/orch/chat_hold') < 6
     except Exception: return False
+DOWN = {}   # backend -> ts последнего отказа (предохранитель 180 с)
 def llm(backend, system, user, max_tokens=1500, temp=0.3, tid=None, timeout=420):
     b = BACK().get(backend) or BACK()['main']
     s = sem(backend if backend in BACK() else 'main'); s.acquire(_prio(tid) if tid else 0)
@@ -76,9 +77,11 @@ def llm(backend, system, user, max_tokens=1500, temp=0.3, tid=None, timeout=420)
         hdr = {'Content-Type': 'application/json'}
         if b.get('key_env') and os.environ.get(b['key_env']): hdr['Authorization'] = 'Bearer ' + os.environ[b['key_env']]
         try:
+            if backend != 'external' and BACK().get('external') and time.time() - DOWN.get(backend, 0) < 180: raise RuntimeError('breaker: локальная модель недавно не отвечала')
             r = httpx.post(b['url'].rstrip('/') + '/chat/completions', json=body, headers=hdr, timeout=min(timeout, 100) if backend != 'external' else timeout)
             r.raise_for_status(); j = r.json()
-        except Exception as e:      # локальная модель занята/недоступна: не виснуть, уйти к внешним советникам (шлюз :8793, с очисткой личного)
+        except Exception as e:
+            if backend != 'external' and 'breaker' not in str(e): DOWN[backend] = time.time()      # локальная модель занята/недоступна: не виснуть, уйти к внешним советникам (шлюз :8793, с очисткой личного)
             gw = BACK().get('external')
             if not gw or backend == 'external': raise
             if tid: step(tid, 'fallback', f'{backend} недоступен ({type(e).__name__}), иду к внешним советникам', 'dispatcher')
@@ -411,12 +414,14 @@ def consilium(q, rounds=2, budget=170):
     return {'question': q, 'opinions': waves, 'final': final, 'judge_score': best, 'seconds': round(time.time() - t0), 'external_used': bool(advisors())}
 
 ERR_ADV = []
-def _adv_call(a, u, system, mt=500, timeout=70):
+def _adv_call(a, u, system, mt=500, timeout=70, retry=True):
     gw = BACK().get('external')
     try:
         r = httpx.post(gw['url'].rstrip('/') + '/chat/completions', json={'model': a['provider'] + '/' + a['model'], 'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': u}], 'max_tokens': mt}, timeout=timeout)
         if r.status_code == 200: return (r.json()['choices'][0]['message'].get('content') or '').strip()
         ERR_ADV.append(f'{a.get("model")}: HTTP {r.status_code} {r.text[:80]}')
+        if r.status_code in (429, 502) and retry:
+            time.sleep(12); return _adv_call(a, u, system, mt, timeout, False)
     except Exception as e: ERR_ADV.append(f'{a.get("model")}: {type(e).__name__}')
     return ''
 def consilium_ext(q, deep=False, budget=110):

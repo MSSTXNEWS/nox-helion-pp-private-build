@@ -134,6 +134,12 @@ def self_candidates(book_sql):
         if len(reason) < 12 or q('SELECT 1 FROM cands WHERE title=?', ('Правило ревизора: ' + reason,), one=True): continue
         q('INSERT INTO cands(ts,kind,title,payload,status) VALUES(?,?,?,?,"proposed")', (time.time(), 'rule', 'Правило ревизора: ' + reason, json.dumps({'rule': reason}, ensure_ascii=False))); n += 1
         if n >= 3: break
+    try:   # кандидаты из уроков (state/lessons.jsonl): правило -> песочница -> «Хочу улучшить себя» -> в бриф
+        for l in open(ST + '/lessons.jsonl').read().strip().split('\n')[-30:]:
+            x = json.loads(l); rule = x.get('rule', '')[:160]
+            if x.get('src') in ('review', 'coach', 'escalate', 'stall', 'owner') and len(rule) > 12 and not q('SELECT 1 FROM cands WHERE title=?', ('Правило из урока: ' + rule,), one=True) and n < 5:
+                q('INSERT INTO cands(ts,kind,title,payload,status) VALUES(?,?,?,?,"proposed")', (time.time(), 'rule', 'Правило из урока: ' + rule, json.dumps({'rule': rule}, ensure_ascii=False))); n += 1
+    except Exception: pass
     return n
 def test_candidate(c):      # песочница: кандидат-правило проверяется на валидность и отсутствие запрещённого
     p = json.loads(c['payload']); ok = bool(p.get('rule')) and not re.search(r'rm |sudo|pickle|удали', p['rule'], re.I)
@@ -147,11 +153,15 @@ def self_apply(cid, yes):
     if not yes: q('UPDATE cands SET status="declined" WHERE id=?', (cid,)); return {'ok': True, 'status': 'declined'}
     p = ST + '/owner_intents.json'; bk = p + f'.bak_self_{cid}'; shutil.copy(p, bk)
     d = jl(p, {}); d.setdefault('_reviewer_rules', []).append(json.loads(c['payload'])['rule']); json.dump(d, open(p, 'w'), ensure_ascii=False, indent=1)
+    pl = ST + '/playbooks/_lessons.yaml'
+    if os.path.exists(pl): shutil.copy(pl, bk + '.lessons'); open(pl, 'a').write('- ' + json.loads(c['payload'])['rule'].replace('\n', ' ') + ' (само-улучшение)\n')
     q('UPDATE cands SET status="applied", backup=? WHERE id=?', (bk, cid)); history('Научился: ' + c['title']); return {'ok': True, 'status': 'applied', 'rollback': f'/worms/self/rollback/{cid}'}
 def self_rollback(cid):
     c = q('SELECT * FROM cands WHERE id=?', (cid,), one=True)
     if not c or c['status'] != 'applied' or not os.path.exists(c['backup'] or ''): return {'ok': False}
-    shutil.copy(c['backup'], ST + '/owner_intents.json'); q('UPDATE cands SET status="rolled_back" WHERE id=?', (cid,)); history('Откат: ' + c['title']); return {'ok': True}
+    shutil.copy(c['backup'], ST + '/owner_intents.json')
+    if os.path.exists(c['backup'] + '.lessons'): shutil.copy(c['backup'] + '.lessons', ST + '/playbooks/_lessons.yaml')
+    q('UPDATE cands SET status="rolled_back" WHERE id=?', (cid,)); history('Откат: ' + c['title']); return {'ok': True}
 
 # ---- сон и утренняя повестка ----
 def dream_text():
