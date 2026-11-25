@@ -4,17 +4,19 @@ S=/workspace/nox/web/site
 RAW=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/assets
 T=bak_navx8q
 cd /tmp
-for f in nox-ninja.js nox-pult.js nox-pult.css nox-settings-tabs.js nox-nav-x.js nox-nav-x.css; do curl -fsSL "$RAW/$f" -o /tmp/navx8q_$f && echo got $f; done
+for f in nox-ninja.js nox-pult.js nox-pult.css nox-settings-tabs.js nox-nav-x.js nox-nav-x.css nox-sun-x.js nox-sun-x.css; do curl -fsSL "$RAW/$f" -o /tmp/navx8q_$f && echo got $f; done
 # ninja-keys: бэкап и замена на версию с тихим стартом
 [ -f $S/nox-ninja.js.$T ] || cp $S/nox-ninja.js $S/nox-ninja.js.$T
 cp /tmp/navx8q_nox-ninja.js $S/nox-ninja.js && echo ninja replaced
 cp /tmp/navx8q_nox-pult.js $S/nox-pult.js; cp /tmp/navx8q_nox-pult.css $S/nox-pult.css
 cp /tmp/navx8q_nox-settings-tabs.js $S/nox-settings-tabs.js; cp /tmp/navx8q_nox-nav-x.js $S/nox-nav-x.js; cp /tmp/navx8q_nox-nav-x.css $S/nox-nav-x.css
+cp /tmp/navx8q_nox-sun-x.js $S/nox-sun-x.js; cp /tmp/navx8q_nox-sun-x.css $S/nox-sun-x.css
 # инъекция пульта на все страницы, вкладок — на settings.html
 np=0
 for f in $S/*.html; do
   grep -q 'nox-pult.js' "$f" || { cp "$f" "$f.$T" 2>/dev/null; sed -i 's#</body>#<script src="./nox-pult.js" defer></script>\n</body>#' "$f" && np=$((np+1)); }
 done
+for f in $S/*.html; do grep -q "nox-sun-x.js" "$f" || sed -i "s#</body>#<script src=\"./nox-sun-x.js\" defer></script>\n</body>#" "$f"; done
 grep -q 'nox-settings-tabs.js' $S/settings.html || sed -i 's#</body>#<script src="./nox-settings-tabs.js" defer></script>\n</body>#' $S/settings.html
 echo "pult injected: $np"
 mkdir -p $S/qa/rework && echo "nav: nox-nav-x.js (крошка, датчики), nox-pult.js (пульт: STOP, глубина, голос, датчики), вкладки настроек, ninja-keys без самооткрытия; канон не менялся" > $S/qa/rework/nav.fixed
@@ -28,7 +30,7 @@ def out(tag,png,w):
     print('B64_%s_BEGIN'%tag)
     for i in range(0,len(b),900): print(b[i:i+900])
     print('B64_%s_END'%tag)
-ST="()=>{const e=document.querySelector('ninja-keys');return {ninja: !!e, open: e?e.hasAttribute('open'):null, isOpen: e?e.isOpen:null, crumb: (document.getElementById('nxx-crumb')||{}).textContent||'', pult: !!document.getElementById('nxpult'), tabs: document.querySelectorAll('.nxt-tabs [role=tab]').length}}"
+ST="()=>{const e=document.querySelector('ninja-keys');return {sun: !!document.getElementById('nxsun'), ninja: !!e, open: e?e.hasAttribute('open'):null, isOpen: e?e.isOpen:null, crumb: (document.getElementById('nxx-crumb')||{}).textContent||'', pult: !!document.getElementById('nxpult'), tabs: document.querySelectorAll('.nxt-tabs [role=tab]').length}}"
 J=[('index_d',1440,900,'index.html',0),('index_m',390,844,'index.html',1),('chat_d',1440,900,'chat.html',0),('chat_m',390,844,'chat.html',1),('set_d',1440,900,'settings.html',0)]
 with sync_playwright() as p:
     b=p.chromium.launch()

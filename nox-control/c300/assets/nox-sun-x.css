@@ -1,0 +1,13 @@
+/* NOX · малое чёрное солнце шапки (расширение): чёрный диск, красный ободок, мягкая корона, без лавовой текстуры */
+#nxsun.nxsun-x{position:fixed;z-index:9450;margin:0;padding:0;border:0;border-radius:50%;cursor:pointer;background:transparent;
+  display:flex;align-items:center;justify-content:center;isolation:isolate}
+#nxsun.nxsun-x::before{content:"";position:absolute;inset:-46%;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(176,44,32,.42) 0%,rgba(176,44,32,.16) 42%,rgba(176,44,32,0) 68%);
+  animation:nxsun-breathe 5.5s ease-in-out infinite}
+#nxsun.nxsun-x .nxsun-core{position:relative;width:100%;height:100%;border-radius:50%;
+  background:radial-gradient(circle at 50% 42%,#0b0909 0%,#000 70%);
+  box-shadow:0 0 0 1.5px #b3261e,0 0 14px rgba(176,44,32,.55),inset 0 0 8px rgba(0,0,0,.9)}
+#nxsun.nxsun-x:hover .nxsun-core,#nxsun.nxsun-x:focus-visible .nxsun-core{box-shadow:0 0 0 1.5px #e0463a,0 0 20px rgba(224,70,58,.7),inset 0 0 8px rgba(0,0,0,.9)}
+#nxsun.nxsun-x:focus-visible{outline:2px solid #d49a62;outline-offset:3px}
+@keyframes nxsun-breathe{0%,100%{opacity:.8;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
+@media (prefers-reduced-motion:reduce){#nxsun.nxsun-x::before{animation:none}}
