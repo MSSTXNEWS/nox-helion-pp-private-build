@@ -90,3 +90,5 @@ body.dc-mini #dcGlassDock{display:none}
 .dc-c5 .dc-w{display:block;padding:10px 0 2px;font-size:13px;color:var(--gx-11,#b0b4ba)}
 .dc-c5 .dc-w b{display:block;font-size:30px;font-weight:650;line-height:1.1;color:var(--gx-12,#edeef0);margin-top:2px}
 .dc-c5 .dc-pb{--height:6px;margin:6px 0 14px}
+/* v7: мобильная шапка без обрезки */
+@media(max-width:700px){.dc-lg,#dcPad{display:none!important}.dc-head{gap:8px;padding-left:12px;padding-right:12px}.dc-sub{display:none}.dc-b{padding:0 12px}}
