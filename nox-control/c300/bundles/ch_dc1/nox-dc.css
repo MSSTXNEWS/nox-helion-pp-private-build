@@ -100,3 +100,6 @@ body.dc-mini #dcGlassDock{display:none}
 .dc-sheet{--size:auto}.dc-sheet::part(panel){border-radius:20px 20px 0 0;background:var(--gx-2,#17181a)}
 .dc-sheet-t{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 0 12px}
 .dc-tile{min-height:64px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:color-mix(in srgb,var(--gx-3,#212225) 70%,transparent);color:var(--gx-12,#edeef0);font:inherit;font-size:16px;font-weight:500;display:grid;place-items:center;text-decoration:none;cursor:pointer}
+/* v10: плотнее на >=1440, карточки на всю высоту, система проще */
+@media(min-width:1440px){.dc-col{display:flex;flex-direction:column;padding:12px 0}.dc-col sl-card{flex:1 1 auto;--padding:20px}.dc-col sl-card::part(base){height:100%}.dc-col sl-card::part(body){height:100%}.dc-c5 .dc-w b{font-size:34px}.dc-c4 .dc-pr span{font-size:15px}}
+@media(min-width:1440px){.dc-col>.dc-gl{flex:1 1 auto;display:flex}.dc-col .dc-gl>sl-card{flex:1 1 auto;min-width:0}.dc-col>sl-card{flex:1 1 auto}}
