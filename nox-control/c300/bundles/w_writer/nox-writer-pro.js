@@ -87,7 +87,7 @@ function init(){
  var st=document.createElement('style');st.textContent=css+'#rs-ch-h>*:not(sl-icon):not(b){display:none!important}';document.head.appendChild(st);
  var a=document.createElement('aside');a.id='wr-book';a.className='rs-card';a.setAttribute('aria-label','Книга');a.innerHTML='<div id="rs-ch-h"><sl-icon library="tabler" name="books" aria-hidden="true"></sl-icon><b>Книга</b><span class="wr-h" id="wr-sync" style="margin-left:auto">синхронизация…</span></div><div id="wr-body" style="flex:1;min-height:0;display:flex;flex-direction:column"></div>';
  r.insertBefore(a,r.firstChild);r.classList.add('wr');
- if(!S.chapters.length){S.chapters.push({id:uid(),title:'Глава 1',text:cm.getValue()||''});S.cur=S.chapters[0].id;S.ts=Date.now()}
+ if(!S.chapters.length){S.chapters.push({id:uid(),title:'Глава 1',text:cm.getValue()||''});S.cur=S.chapters[0].id}
  else if(!chap(S.cur))S.cur=S.chapters[0].id;
  cm.setValue(chap(S.cur).text||'');
  var t=0;cm.on('change',function(){clearTimeout(t);t=setTimeout(function(){flush();S.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}push()},700)});
