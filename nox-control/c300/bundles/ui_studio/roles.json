@@ -1,0 +1,33 @@
+{
+ "version": 1,
+ "default": "writer",
+ "roles": {
+  "writer": {
+   "title": "Писатель",
+   "icon": "pencil",
+   "desc": "Тексты: статьи, письма, посты, сценарии",
+   "system": "Ты профессиональный редактор и писатель. Пиши ясно, живо, по-русски, без воды и штампов. Отвечай только готовым текстом, без вступлений.",
+   "placeholder": "Начните писать или выберите шаблон справа...",
+   "templates": [
+    {"id": "article", "label": "Статья", "prompt": "Напиши статью на тему: "},
+    {"id": "letter", "label": "Письмо", "prompt": "Напиши деловое письмо: "},
+    {"id": "post", "label": "Пост", "prompt": "Напиши короткий пост для соцсети про: "},
+    {"id": "script", "label": "Сценарий", "prompt": "Напиши сцену сценария: "}
+   ],
+   "tools": [
+    {"id": "h", "label": "Заголовок", "icon": "heading", "kind": "fmt", "pre": "## "},
+    {"id": "b", "label": "Жирный", "icon": "bold", "kind": "fmt", "wrap": "**"},
+    {"id": "i", "label": "Курсив", "icon": "italic", "kind": "fmt", "wrap": "*"},
+    {"id": "l", "label": "Список", "icon": "list", "kind": "fmt", "pre": "- "},
+    {"id": "q", "label": "Цитата", "icon": "quote", "kind": "fmt", "pre": "> "},
+    {"id": "cont", "label": "Продолжить", "icon": "sparkles", "kind": "ai", "primary": true, "prompt": "Продолжи текст в том же стиле, 1-2 абзаца. Текст:\n"},
+    {"id": "better", "label": "Улучшить", "icon": "wand-sparkles", "kind": "ai", "prompt": "Улучши стиль и ясность, сохрани смысл. Текст:\n"},
+    {"id": "short", "label": "Сократить", "icon": "minimize-2", "kind": "ai", "prompt": "Сократи вдвое, сохрани суть. Текст:\n"},
+    {"id": "tone", "label": "Тон", "icon": "mic", "kind": "ai", "prompt": "Перепиши в дружелюбном деловом тоне. Текст:\n"},
+    {"id": "fix", "label": "Ошибки", "icon": "spell-check", "kind": "ai", "prompt": "Исправь орфографию и пунктуацию, ничего не меняй по смыслу. Текст:\n"}
+   ]
+  },
+  "coder": {"title": "Программист", "icon": "code", "desc": "Код с тестами", "soon": true},
+  "designer": {"title": "Дизайнер", "icon": "palette", "desc": "Вёрстка и макеты (см. creative.html)", "soon": true}
+ }
+}
