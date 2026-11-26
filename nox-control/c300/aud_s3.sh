@@ -14,6 +14,16 @@ echo "-- adapter 8510 tail err context"
 grep -a -B3 "BrokenPipeError" agent/out/adapter_chain_8510.log | grep -a -E "File|line" | sed -E 's/[0-9]+/N/g' | sort | uniq -c | sort -rn | head -6 | cut -c1-200
 echo "-- timings in adapter/web logs"
 grep -a -o -E "(ttft|first_token|first|dt|elapsed|ms)[=: ]+[0-9.]+" agent/out/adapter_chain_8510.log | tail -20 | tr '\n' ' '; echo
+echo "== chat diag"
+CF=$(ls /workspace/nox/svc/caddy/Caddyfile /workspace/nox/Caddyfile /etc/caddy/Caddyfile 2>/dev/null | head -2); echo "caddyfiles: $CF"
+for f in $CF; do grep -n -E "api/turn|handle_path /api|handle /api|reverse_proxy|:18091" $f | grep -v -i -E "key|token|auth" | head -20; done
+B='{"conversation_id":"qa-audit-diag-'$(date +%s)'","message":"привет","mode":"fast"}'
+for u in http://127.0.0.1:18091/api/turn http://127.0.0.1:8091/api/turn http://127.0.0.1:8090/api/turn; do
+ curl -s -N -m 45 -o /tmp/aud_t.out -w "$u code=%{http_code} ttfb=%{time_starttransfer} total=%{time_total}\n" -H 'Content-Type: application/json' -d "$B" $u; echo "  bytes=$(wc -c </tmp/aud_t.out) events=$(grep -o '"type": *"[a-z]*"' /tmp/aud_t.out | sort | uniq -c | tr '\n' ' ')"; done
+curl -s -m 30 -o /dev/null -w "8510 chat code=%{http_code} t=%{time_total}\n" -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"привет"}],"max_tokens":20}' http://127.0.0.1:8510/v1/chat/completions
+curl -s -m 30 -o /dev/null -w "8104 direct code=%{http_code} t=%{time_total}\n" -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"привет"}],"max_tokens":20}' http://127.0.0.1:8104/v1/chat/completions
+curl -s -m 5 http://127.0.0.1:8104/slots 2>/dev/null | python3 -c "import json,sys;d=json.load(sys.stdin);print('8104 slots',[(s.get('id'),s.get('is_processing'),s.get('n_ctx')) for s in d])" 2>&1 | head -2
+tail -c 2000 agent/out/web_server.log | grep -a -v -i -E "token|key" | tail -8 | cut -c1-200
 echo "== training detail"
 R=agent/autotrain/rounds; for r in r036 r037 r038 r039; do ls $R/$r | tr '\n' ' ' | cut -c1-300; echo; done
 for r in r036 r037 r038; do echo "-- $r"; for f in $R/$r/*.json; do python3 - "$f" <<'PY'
