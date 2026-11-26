@@ -9,6 +9,7 @@
   win.style.cssText = 'display:flex;flex-direction:column;padding:0;overflow:hidden';
   win.innerHTML = '<header style="flex:0 0 40px;display:flex;align-items:center;gap:8px;padding:0 10px"><b>NOX</b><span class="nmc-pg" style="flex:1;opacity:.6;font-size:12px"></span><a href="./chat.html" style="font-size:12px;color:inherit">Открыть чат</a><button type="button" class="nmc-x" aria-label="Закрыть">×</button></header>';
   win.querySelector('.nmc-pg').textContent = page;
+  if (matchMedia('(max-width:768px)').matches) fab.style.cssText = 'opacity:1!important;pointer-events:auto!important;position:fixed!important;left:auto!important;right:12px!important;bottom:88px!important;width:44px!important;height:44px!important;z-index:9000!important';
   const fr = document.createElement('iframe'); fr.title = 'Чат NOX'; fr.style.cssText = 'flex:1;min-height:0;width:100%;border:0;background:transparent'; fr.setAttribute('allow', 'microphone');
   win.appendChild(fr); document.body.append(fab, win);
   const toggle = (on) => { win.hidden = !on; fab.classList.toggle('on', on); if (on && !fr.src) fr.src = './chat-dc.html?mini=1&ctx=' + encodeURIComponent(page); };
