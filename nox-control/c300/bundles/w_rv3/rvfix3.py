@@ -18,7 +18,7 @@ function fixIn(root){
 }
 function fixAll(){
  document.querySelectorAll('button[aria-label],[role=button][aria-label]').forEach(fixBtnEl);
- document.querySelectorAll('.tabulator').forEach(function(g){g.removeAttribute('aria-owns');if(g.getAttribute('role')==='grid'){g.removeAttribute('role');g.removeAttribute('aria-rowcount');g.removeAttribute('aria-colcount');g.querySelectorAll('[aria-sort],[aria-rowindex],[aria-colindex],[aria-selected]').forEach(function(x){if(!x.getAttribute('role')){x.removeAttribute('aria-sort');x.removeAttribute('aria-rowindex');x.removeAttribute('aria-colindex');x.removeAttribute('aria-selected')}});g.querySelectorAll('[role=rowgroup],[role=row],[role=columnheader],[role=gridcell],[role=cell]').forEach(function(x){x.removeAttribute('role')})}});
+ document.querySelectorAll('.tabulator').forEach(function(g){g.removeAttribute('aria-owns');if(g.getAttribute('role')==='grid')g.removeAttribute('role');if(g.getAttribute('role'))return;g.removeAttribute('aria-rowcount');g.removeAttribute('aria-colcount');g.querySelectorAll('[aria-sort],[aria-rowindex],[aria-colindex],[role=rowgroup],[role=row],[role=columnheader],[role=gridcell],[role=cell]').forEach(function(x){['aria-sort','aria-rowindex','aria-colindex','role'].forEach(function(k){x.removeAttribute(k)})})});
  // grid без строк (Tabulator до загрузки данных)
  document.querySelectorAll('[role=grid],[role=table],[role=treegrid]').forEach(function(g){if(g.querySelector('[role=row],tr'))return;var o=g.getAttribute('aria-owns');if(o&&o.split(' ').some(function(id){var x=document.getElementById(id);return x&&(x.querySelector('[role=row],tr')||x.getAttribute('role')==='row')}))return;g.removeAttribute('role');g.removeAttribute('aria-owns')});
  // div/span с aria-label без роли
