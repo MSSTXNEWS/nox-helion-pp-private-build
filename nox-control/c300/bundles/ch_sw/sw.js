@@ -2,10 +2,10 @@
 const V = 'nox-s1-v4-ch';
 self.addEventListener('install', (e) => { self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil((async () => {
-  let fresh = false;
-  try { const mk = 'nox-ver:' + V; fresh = !(await caches.has(mk)); for (const k of await caches.keys()) if (k !== V && k !== mk) await caches.delete(k); await caches.open(mk); } catch (x) { fresh = true; }
+  let fresh = false, hadAny = false;
+  try { const mk = 'nox-ver:' + V; fresh = !(await caches.has(mk)); const ks = await caches.keys(); hadAny = ks.some((k) => k !== mk); for (const k of ks) if (k !== V && k !== mk) await caches.delete(k); await caches.open(mk); } catch (x) { fresh = false; }
   await self.clients.claim();
-  if (fresh) { try { const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true }); for (const c of cs) { try { c.navigate(c.url).catch(() => { }); } catch (x) { /* вкладка не даёт навигацию (не ждём: активация не должна зависеть от навигации) */ } } } catch (x) { /* нет клиентов */ } }
+  if (fresh && hadAny) { try { const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true }); for (const c of cs) { try { c.navigate(c.url).catch(() => { }); } catch (x) { /* вкладка не даёт навигацию (не ждём: активация не должна зависеть от навигации) */ } } } catch (x) { /* нет клиентов */ } }
 })()); });
 const OWN = (u) => { try { const p = new URL(u); return p.origin === location.origin && (/\.html?$|\/$/.test(p.pathname) || /\/nox-[^/]*\.(js|css)$/.test(p.pathname) || /\/(vendor\/nox-chat-ui)\//.test(p.pathname)); } catch (x) { return false; } };
 self.addEventListener('fetch', (e) => {
