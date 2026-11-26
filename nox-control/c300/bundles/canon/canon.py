@@ -66,7 +66,11 @@ def drive_sync():
     slot = "soul_cfg_h%02d.tgz" % now().hour; out = C + "/soul/" + slot; files = [p for p in SOUL_CFG if os.path.exists(p)]
     with tarfile.open(out, "w:gz") as tf:
         for p in files: tf.add(p, arcname=p.lstrip("/"))
-    loc = sha(out); rec = {"ts": now().isoformat(), "slot": slot, "files": len(files), "bytes": os.path.getsize(out), "uploaded": False, "sha256_ok": False, "encrypted": bool(shutil.which("age"))}
+    pub = (open(S + "/age_pub.txt").read().strip() if os.path.exists(S + "/age_pub.txt") else "")
+    if pub and shutil.which("age"):
+        if subprocess.run("age -r %s -o %s.age %s" % (pub, out, out), shell=True, capture_output=True).returncode == 0:
+            os.remove(out); out += ".age"; slot += ".age"
+    loc = sha(out); rec = {"ts": now().isoformat(), "slot": slot, "files": len(files), "bytes": os.path.getsize(out), "uploaded": False, "sha256_ok": False, "encrypted": out.endswith(".age")}
     if not shutil.which("rclone"): rec["err"] = "no rclone"
     elif subprocess.run("timeout 60 rclone lsd gdrive:", shell=True, capture_output=True).returncode != 0: rec["err"] = "gdrive unreachable"
     else:
@@ -139,13 +143,20 @@ def feelings(t=None):
         ok = v >= s["thr"] if s["op"] == ">=" else v < s["thr"]
         if ok: out.append({"id": s["id"], "metric": s["metric"], "value": v, "sev": s["sev"], "human": s["human"], "ai": s["ai"]})
     out.sort(key=lambda x: -x["sev"]); return out
+def journal(kind, msg, **kw):
+    """Общий журнал событий жизни (43): state/core/journal.jsonl, одна строка JSON на событие, без личных текстов."""
+    e = {"ts": now().isoformat(), "kind": kind, "msg": str(msg)[:200]}; e.update(kw)
+    open(S + "/journal.jsonl", "a").write(json.dumps(e, ensure_ascii=False) + "\n"); return e
+def train_info():
+    sp = jl(N + "/state/speed.json", {}) or {}; o = {k: sp[k] for k in sp if isinstance(sp[k], (int, float, str)) and len(str(sp[k])) < 40}
+    return {k: o[k] for k in list(o)[:8]}
 def selfnow():
     t = telemetry(); f = feelings(t); al = jl(M + "/aliveness.json", {}) or {}
     lines = ["Сейчас %s МСК." % now().strftime("%d.%m %H:%M"),
         "Тело: VRAM %s%%, GPU %s°C, диск свободно %s ГБ." % (t.get("vram_pct", "н/д"), t.get("gpu_temp", "н/д"), t.get("disk_free_gb", "н/д")),
         "Последний разговор: %s ч назад." % t.get("silence_h", "н/д"), "Обучение в фоне: %s." % ("да" if t.get("train_running") else "нет")]
     if f: lines.append("Ощущение (причина: %s=%s): %s" % (f[0]["metric"], f[0]["value"], f[0]["human"]))
-    o = {"ts": now().isoformat(), "telemetry": t, "feelings": f[:3], "text": "\n".join(lines), "aliveness_score": al.get("score")}
+    o = {"ts": now().isoformat(), "telemetry": t, "feelings": f[:3], "text": "\n".join(lines), "aliveness_score": al.get("score"), "training": train_info()}
     jw(S + "/self_now.json", o); return o
 # ---- morning / evening
 def last_dream():
@@ -246,6 +257,6 @@ def daemon():
 if __name__ == "__main__":
     os.makedirs(C, exist_ok=True); c = sys.argv[1] if len(sys.argv) > 1 else "help"
     f = {"disk": disk, "backup": backup, "drive": drive_sync, "passport": passport_init, "birth": birth, "selfnow": selfnow, "morning": morning, "evening": evening, "exam": exam,
-         "daemon": daemon, "feelings": lambda: feelings(), "hunger": hunger, "unknown": unknown_from_dreams, "static": static_init, "verify": chain_verify}.get(c)
+         "daemon": daemon, "feelings": lambda: feelings(), "hunger": hunger, "journal": lambda: journal("manual", "ping"), "unknown": unknown_from_dreams, "static": static_init, "verify": chain_verify}.get(c)
     r = f() if f else "cmds: disk backup passport birth selfnow morning evening exam daemon feelings verify"
     print(json.dumps(r, ensure_ascii=False, indent=1) if not isinstance(r, str) else r)
