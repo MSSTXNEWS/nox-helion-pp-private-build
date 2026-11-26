@@ -17,7 +17,7 @@ function title(){$('#dcSub').textContent=cur.title&&cur.title!=='Новый ди
 var V=function(n){return 'var('+n+')'};
 dc.style.cssText='';
 dc.chatStyle={backgroundColor:'transparent',border:'none',fontFamily:'inherit'};
-dc.messageStyles={default:{shared:{bubble:{borderRadius:'12px',padding:'8px 12px',maxWidth:'92%',fontSize:'15px',lineHeight:'1.55'}},
+dc.messageStyles={default:{shared:{bubble:{borderRadius:'12px',padding:'8px 12px',maxWidth:'92%',fontSize:'clamp(15px,0.35vw + 10px,18px)',lineHeight:'1.6'}},
  user:{bubble:{backgroundColor:V('--gx-4'),color:V('--gx-12'),border:'1px solid '+V('--gx-6')}},
  ai:{bubble:{backgroundColor:'transparent',color:V('--gx-12'),padding:'4px 4px'}}}};
 dc.textInput={styles:{container:{backgroundColor:V('--gx-3'),border:'1px solid '+V('--gx-6'),borderRadius:'14px',margin:'0 8px 10px',padding:'2px 4px'},text:{color:V('--gx-12'),fontSize:'15px'}},placeholder:{text:'Напишите сообщение…',style:{color:V('--gx-10')}}};
