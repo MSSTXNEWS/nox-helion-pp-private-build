@@ -179,3 +179,110 @@
 | writer | 9.2 | 8.8 | 9.5 | 7.6 |
 
 Остаются ниже 8 (честно): index (FASTWOW эталон, не менять; 390: JS-ошибка, 17 мелких целей) U 5.0 / A 4.8; photo U 7.7 (axe: h3 role=button в чате, minor; Filerobot); live A 5.0 (замер до правки темы, перемерить); studio A 6.8 и tv A 6.7 (Lighthouse perf и best-practices); qa (служебная) U 7.9. A занижена там, где Lighthouse perf < 30 под нагрузкой сервера (GPU 91%).
+
+
+## СВОДКА U/A v2 (26.11, после ленивой загрузки и моста)
+U>=8.4 на всех 82 страницах. A<8 остаётся на страницах, где есть Lighthouse: A там тянет perf, замеренный на загруженном сервере (CPU/GPU заняты, WebGL без ускорения; a11y 93-100, best-practices 92-100). Честный perf по зеркалу без нагрузки ниже. index: эталон FASTWOW не менялся (U 4.9 -> 9.1).
+
+| Страница | U | A |
+|---|---|---|
+| about | 9.5 | 5.5 |
+| advisors | 9.5 | 6.0 |
+| ai-learning | 9.4 | 5.9 |
+| assistant | 9.6 | 5.7 |
+| atlas | 9.0 | 6.2 |
+| benchmark | 9.5 | 5.7 |
+| board | 8.9 | 5.7 |
+| book-reader | 9.6 | 6.2 |
+| browser | 9.5 | 6.1 |
+| calendar | 9.4 | 6.0 |
+| calls | 8.9 | 7.7 |
+| chat | 9.0 | 6.7 |
+| chat-dc | 9.0 | 6.9 |
+| cinema | 8.7 | 7.5 |
+| connections | 9.5 | 7.5 |
+| consciousness | 9.5 | 7.1 |
+| constructor | 9.5 | 7.7 |
+| contacts | 8.9 | 7.7 |
+| creative | 8.8 | 7.7 |
+| dispatcher | 9.8 | 7.3 |
+| downloads | 9.7 | 7.8 |
+| editor | 8.8 | 7.8 |
+| effects | 9.5 | 7.5 |
+| events | 9.3 | 7.5 |
+| evolution | 9.5 | 7.7 |
+| finance | 8.8 | 7.2 |
+| forge | 9.5 | 7.5 |
+| g01-status | 9.7 | 7.6 |
+| g02-owner | 9.5 | 7.6 |
+| g03-release | 9.5 | 7.9 |
+| g04-provider | 9.5 | 7.9 |
+| g05-evidence | 9.5 | 7.7 |
+| g06-orchestrator | 9.3 | 7.7 |
+| g07-hardware | 9.7 | 8.7 |
+| games | 8.4 | 9.1 |
+| glance | 9.4 | 9.1 |
+| growth | 9.4 | 9.1 |
+| index | 9.1 | 6.0 |
+| install | 9.4 | 9.1 |
+| integrations | 9.8 | 9.7 |
+| intents | 9.4 | 9.1 |
+| knowledge | 9.7 | 7.9 |
+| live | 9.4 | 8.5 |
+| mail | 9.8 | 8.0 |
+| map | 9.5 | 7.6 |
+| marketing | 9.3 | 8.9 |
+| memory | 9.7 | 5.8 |
+| messenger | 8.4 | 9.1 |
+| mini | 9.4 | 9.1 |
+| models | 8.7 | 8.3 |
+| money | 8.4 | 8.3 |
+| music | 9.6 | 7.9 |
+| news | 9.8 | 9.7 |
+| nexus | 9.4 | 9.1 |
+| notifications | 9.4 | 9.1 |
+| operators | 8.6 | 9.4 |
+| ops | 9.2 | 9.1 |
+| organism | 8.9 | 9.1 |
+| pc-control | 9.4 | 9.1 |
+| pc-maintenance | 9.4 | 9.1 |
+| pdf | 8.9 | 9.1 |
+| photo | 9.4 | 7.5 |
+| planets | 9.2 | 9.1 |
+| projects | 9.8 | 9.7 |
+| qa | 8.7 | 6.7 |
+| resonance | 8.8 | 9.7 |
+| scene | 9.4 | 9.1 |
+| selffeel | 9.4 | 9.1 |
+| settings | 9.6 | 6.0 |
+| social | 8.4 | 9.1 |
+| soul | 9.4 | 9.1 |
+| spaces | 9.4 | 9.1 |
+| studio | 9.0 | 6.8 |
+| system | 9.8 | 6.0 |
+| tools | 9.8 | 9.7 |
+| training | 9.3 | 9.7 |
+| tv | 8.9 | 5.3 |
+| voice | 8.7 | 7.4 |
+| weights | 9.3 | 9.7 |
+| widgets | 9.8 | 9.7 |
+| writer | 9.5 | 7.5 |
+
+### Perf, зеркало k1mirror без нагрузки сервера (Chromium, 390 px, CPU x4, swiftshader): было -> стало
+Замер: bundles/w_perf (m.py), TBT = сумма долгих задач >50 мс до 3 с после load; шум +-20%.
+Правки: nox-nav.js (three-фон и пыль tsParticles стартуют по простою после load или по первому действию), nox-ninja.js (ninja-keys по простою/первому действию, Ctrl+K до загрузки открывает палитру сразу после неё).
+
+| Страница | JS КБ было -> стало | Всего КБ было -> стало | load, мс |
+|---|---|---|---|
+| settings | 2557 -> 1045 | 3496 -> 1541 | 2426 -> 2839 |
+| system | 3654 -> 1983 | 4107 -> 2398 | 2996 -> 2300 |
+| memory | 2750 -> 1238 | 3205 -> 1655 | 2313 -> 1850 |
+| writer | 1321 -> 1049 | 1791 -> 1474 | 2334 -> 994 |
+| studio | 1189 -> 921 | 1681 -> 1374 | 2070 -> 1340 |
+| tv | 2500 -> 989 | 3352 -> 1802 | 1872 -> 1081 |
+| photo | 3651 -> 2140 | 4097 -> 2547 | 3261 -> 2739 |
+| chat | 4695 -> 4456 | 5664 -> 5361 | 4920 -> 4796 |
+| index | 5065 -> 4805 | 6351 -> 6053 | 4631 -> 5015 |
+| live | 0 -> 0 | 5 -> 5 | - |
+
+index и chat имеют собственные загрузчики (не nox-nav): сдвиг там в пределах шума, index не менялся по решению владельца. Следующий шаг: ленивые nox-wow.js/nox-registry.js (tsParticles/three на chat/index-семействе) и пакет из ~110 defer-скриптов оболочки.
