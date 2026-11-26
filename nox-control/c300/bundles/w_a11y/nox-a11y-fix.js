@@ -1,8 +1,9 @@
 /* NOX a11y-fix (WEB): точечные aria-правки общих скриптов и готовых компонентов. Откат: ?a11y=0 */
 (function(){if(/[?&]a11y=0/.test(location.search))return;
-var st=document.createElement('style');st.textContent='.tb-t,.tb-i{min-height:44px}.tb-i{min-width:44px}#u-tab{min-width:44px}.nox-worlds-open{min-height:44px}#dkToggle{min-width:44px;min-height:44px}sl-button::part(base){min-height:44px}.nx-sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}sl-input.nx-hl::part(form-control-label),sl-textarea.nx-hl::part(form-control-label),sl-select.nx-hl::part(form-control-label){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}';document.head.appendChild(st);
+var st=document.createElement('style');st.textContent='.tb-t,.tb-i{min-height:44px}.tb-i{min-width:44px}#u-tab{min-width:44px}.nox-worlds-open{min-height:44px}#dkToggle{min-width:44px;min-height:44px}sl-button::part(base){min-height:44px}.tb-burger,.nmc-x,.nxsun-x{min-width:44px}.tb-sun{min-height:44px}.nx-sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}sl-input.nx-hl::part(form-control-label),sl-textarea.nx-hl::part(form-control-label),sl-select.nx-hl::part(form-control-label){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}';document.head.appendChild(st);
 function $$(s,f){document.querySelectorAll(s).forEach(f)}
 function fix(){
+try{document.querySelectorAll('.tb-t,.tb-sun').forEach(function(e){if(getComputedStyle(e).display==='inline')e.style.display='inline-flex',e.style.alignItems='center'})}catch(e){}
 $$('#nxdock[role=region]',function(e){e.removeAttribute('role')});
 $$('#nxpult:not([role]),#nxnavx:not([role])',function(e){e.setAttribute('role','region')});
 $$('[role=tablist]',function(e){if(!e.querySelector('[role=tab]')||e.classList.contains('nxm-side')){e.removeAttribute('role');e.querySelectorAll('[role=tab]').forEach(function(t){t.removeAttribute('role');if(t.hasAttribute('aria-selected')){t.setAttribute('aria-current',t.getAttribute('aria-selected')==='true'?'true':'false');t.removeAttribute('aria-selected')}})}});
