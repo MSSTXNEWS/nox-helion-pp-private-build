@@ -31,3 +31,4 @@
 - WEB w_u1/w_u3 (26.11): /api/nox/agenda + карточки-инициативы в chat-dc (?agenda=0), «Обучение» через мост (?tb=0), слой 44 px на intents/cinema/index (#noxSharedHeaderV10) (?t44=0). Замеры за ревизором.
 - WEB w_v1 (26.11): ACCEPT пачка 2: unload-shim (board/scene), guard Transition aborted, битые превью (cinema), слой 44 px на studio/voice/scene/board/calendar/photo/settings; откат ?w2=0 ?t44=0
 - WEB w_v2 (26.11): guard только «Transition was aborted»; Semantic Scholar через мост с честным статусом (429/HOLD)
+- WEB w_v3 (26.11): вау-проход: live.html получил оболочку мира (фон, стекло, шапка, док, ds) как system; tv 390 шапка не налезает
