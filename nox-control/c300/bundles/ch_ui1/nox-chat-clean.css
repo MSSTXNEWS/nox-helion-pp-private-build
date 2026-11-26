@@ -169,3 +169,12 @@ body.cw-clean .tg-head{margin-top:20px!important}
 }
 body.cw-clean #feed .rq-meta .rq-qk::part(base){display:flex;align-items:center;justify-content:center;line-height:1}
 body.cw-clean #feed .rq-meta .rq-qk::part(label){padding:0;line-height:1}
+
+/* fix5: шапка чата узкая полоса 56px при любом размере; liquid-glass слои не раздувают шапку */
+body.cw-clean .tg-head{height:56px!important;min-height:56px!important;max-height:56px!important;align-self:start!important;box-sizing:border-box!important;padding-block:0!important}
+body.cw-clean .tg-head>.lg-layer,body.cw-clean .tg-head>.lg-sheen{position:absolute!important;inset:0!important;height:auto!important;width:auto!important;pointer-events:none}
+body.cw-clean .tg-head{overflow:visible}
+/* точка солнца в доке не налезает на поле; кнопка «?» и плашка «NOX пишет первым» - компактно, без перекрытия */
+body.cw-clean #form.dock{margin-bottom:24px}
+body.cw-clean .nox-first{position:relative!important;z-index:1!important;margin:4px auto!important;max-width:min(100% - 24px,640px)!important}
+body.cw-clean .nox-first .t{white-space:nowrap}
