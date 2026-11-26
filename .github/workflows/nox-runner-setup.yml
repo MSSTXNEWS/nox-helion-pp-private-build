@@ -1,0 +1,27 @@
+name: NOX K1 runner setup
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: setup script in nox-control/c300
+        required: true
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.actor == 'MSSTXNEWS'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install runners on K1 (token via stdin only)
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          TS_AUTHKEY: ${{ secrets.K1_RUNNER_TOKEN }}
+          C300: ${{ inputs.script }}
+        run: |
+          case "$C300" in *[!A-Za-z0-9_.-]*) echo bad name; exit 1;; esac
+          test -n "$TS_AUTHKEY" || { echo "secret K1_RUNNER_TOKEN missing"; exit 1; }
+          python3 -B nox-control/c300/run_c300.py

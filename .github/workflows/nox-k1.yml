@@ -1,0 +1,28 @@
+name: NOX K1 local run
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: script name in nox-control/c300
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: nox-k1-${{ inputs.script }}
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: [self-hosted, k1]
+    timeout-minutes: 30
+    if: github.actor == 'MSSTXNEWS'
+    steps:
+      - name: Run script locally on K1
+        env:
+          C300: ${{ inputs.script }}
+          REF: ${{ github.sha }}
+        run: |
+          case "$C300" in *[!A-Za-z0-9_.-]*) echo bad name; exit 1;; esac
+          echo "C300: $C300"
+          f=/tmp/k1_${C300}_${REF:0:10}.sh
+          curl -fsSL --retry 6 --retry-delay 5 --retry-all-errors "https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/${REF}/nox-control/c300/${C300}" -o "$f"
+          bash "$f" 2>&1 | tail -c 400000
