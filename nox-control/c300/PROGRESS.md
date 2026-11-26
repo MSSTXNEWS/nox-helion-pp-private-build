@@ -11,3 +11,6 @@
 | 26.11 | zip в v29src удалены; диск /workspace 17 ГБ свободно | server | df |
 | 26.11 | Чат v4: подписи и прогресс в колонке «Система», воздух, фон; оверлей миров на чате отключён (ломал цвет и перекрывал) | chat-dc, nox-dc.css, nox-dc-cols.js | WOW на глаз ~6, замер vision не запускал |
 | 26.11 | Чат v5: hero-приветствие (плитки быстрых запросов), типографика, шапка/кнопки 40 px (ch_dc30) | chat-dc, nox-dc.js/css | Lighthouse (desktop, нагруженный сервер): perf 36, a11y 100, BP 96; vision 1920: A8 R7 WOW6 (правая панель перегружена); axe: label critical x1, region x2 |
+| 26.11 | Чат v6-v8: Система = 4 крупные метрики, Shoelace по idle, aria для полей, мобильная шапка/подложка (ch_dc34-36) | chat-dc | vision 1920/390: A8 R7 WOW6 (итерация 1 из 3 по vision) |
+| 26.11 | nox-a11y-fix.js (aria-правки общих скриптов, Shoelace, FullCalendar, FilerobotImageEditor) на 78 страницах кроме index/chat-dc; откат ?a11y=0 | site, webroot | axe: settings 0, photo 1 minor, calendar 1 minor (было 5-7 с critical) |
+| 26.11 | nox-frame.js: единый каркас Shoelace (sl-card, sl-tab-group при >=3 секций) на 27 шаблонных заглушках, откат ?legacy=1 | site, webroot | axe advisors/contacts/mail: 0 нарушений |
