@@ -44,6 +44,20 @@ async def training(request):
     if v: d.update({'verdict': v.get('verdict'), 'status': v.get('verdict'), 'accepted': v.get('accepted'), 'last_gates': v.get('last_gates'), 'note': v.get('note'), 'verdict_ts': v.get('t')})
     if r: d.update({'round': r.get('round'), 'rows_total': r.get('rows_total'), 'new_rows': r.get('new_rows'), 'total_min': r.get('total_min')})
     if b: d.update({'best': b.get('best'), 'step': b.get('step'), 'best_ts': b.get('t')})
+    try:
+        import glob, re, datetime
+        ck = sorted(glob.glob(N + '/distill_v2/ckpt_keep/*'))
+        d['checkpoint_count'] = len(ck)
+        bd = (v or {}).get('best_dir') or ''
+        m = re.search(r'step_(\d+)', bd)
+        if m: d['checkpoints'] = [{'step': int(m.group(1)), 'name': os.path.basename(bd)}]
+        if v and v.get('t'):
+            t0 = datetime.datetime.strptime(v['t'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=datetime.timezone.utc).timestamp()
+            d['receipt_age_seconds'] = max(0, int(time.time() - t0))
+    except Exception: pass
+    if v: d['phase'] = v.get('verdict')
+    if r: d['cycle'] = r.get('round')
+    if b and b.get('step') is not None: d['step'] = b.get('step')
     return web.json_response(d)
 
 async def activity(request):
@@ -55,7 +69,10 @@ async def activity(request):
     done = [slim(t) for t in cols.get('Готово', [])[:5]]
     d = {'ok': True, 'ts': int(time.time()), 'source': ':8810 /board', 'counts': {k: len(v) for k, v in cols.items()},
          'active': len(cols.get('В работе', [])) > 0, 'items': items, 'recent_done': done}
-    if h: d.update({'running': h.get('running'), 'queued': h.get('queued'), 'inflight': h.get('inflight')})
+    if h:
+        d.update({'running': h.get('running'), 'queued': h.get('queued'), 'inflight': h.get('inflight')})
+        if isinstance(h.get('inflight'), int):
+            d.update({'status': 'OBSERVED_NATIVE_OWNER', 'active_generations': h['inflight'], 'sampled_at': time.time(), 'phases': {}})
     if not items: d['note'] = 'Активных задач нет'
     return web.json_response(d)
 
@@ -66,7 +83,9 @@ async def notifications(request):
     if isinstance(w, list):
         for x in w[:30]:
             items.append({'ts': x.get('ts'), 'text': x.get('text'), 'kind': 'learned'})
-    d = {'ok': True, 'ts': int(time.time()), 'source': ':8810 /worms/learned + state/agenda_check.json', 'items': items, 'notifications': items, 'unread': 0}
+    events = [{'id': int(x['ts']), 'message': x['text'], 'ts': x['ts']} for x in items if isinstance(x.get('ts'), (int, float)) and x.get('text')]
+    events.sort(key=lambda e: -e['id'])
+    d = {'ok': True, 'ts': int(time.time()), 'source': ':8810 /worms/learned + state/agenda_check.json', 'events': events, 'items': items, 'notifications': items, 'unread': 0}
     if ag: d['agenda'] = ag
     if not items: d['note'] = 'Новых уведомлений нет'
     return web.json_response(d)
@@ -87,8 +106,8 @@ async def settings(request):
         except Exception as e:
             return web.json_response({'ok': False, 'error': str(e)[:120]}, status=400)
     cur = rj(SETTINGS)
-    if cur is None: return web.json_response(hold('настройки ещё не сохранялись (state/ui_settings.json нет)', settings={}))
-    return web.json_response({'ok': True, 'settings': cur, 'ts': int(time.time()), **cur})
+    if cur is None: return web.json_response(hold('настройки ещё не сохранялись (state/ui_settings.json нет)', settings={}, stored=False))
+    return web.json_response({'ok': True, 'stored': True, 'settings': cur, 'ts': int(time.time()), **cur})
 
 def up(port):
     try:
@@ -100,7 +119,16 @@ async def status(request):
     res = await asyncio.gather(*[loop.run_in_executor(None, up, p) for p in SERVICES.values()])
     sv = {k: {'port': p, 'up': u} for (k, p), u in zip(SERVICES.items(), res)}
     n = sum(1 for v in sv.values() if v['up'])
-    return web.json_response({'ok': True, 'ts': int(time.time()), 'source': 'tcp health сервисов', 'services': sv, 'up': n, 'total': len(sv), 'status': 'ok' if n == len(sv) else 'degraded'})
+    out = {'ok': True, 'ts': int(time.time()), 'source': 'tcp health сервисов', 'services': sv, 'up': n, 'total': len(sv), 'status': 'ok' if n == len(sv) else 'degraded'}
+    try:
+        async with ClientSession(timeout=ClientTimeout(total=4)) as sess:
+            async with sess.get('http://127.0.0.1:8091/api/nox/status') as r:
+                if r.status == 200:
+                    up_d = await r.json(content_type=None)
+                    if isinstance(up_d, dict):
+                        up_d.update({'services': sv, 'services_up': n, 'services_total': len(sv)}); out = up_d
+    except Exception: pass
+    return web.json_response(out)
 
 app = web.Application()
 for p, h in (('/api/training/status', training), ('/api/nox/activity', activity), ('/api/notifications', notifications), ('/api/nox/status', status)):
