@@ -22,7 +22,7 @@ JS_CLICKABLES='''()=>{function vis(e){var b=e.getBoundingClientRect(),s=getCompu
  a.forEach((e,i)=>e.setAttribute('data-rvi',i));return a.map((e,i)=>({i:i,t:e.tagName.toLowerCase()+' "'+((e.innerText||e.getAttribute('aria-label')||e.title||'')+'').trim().slice(0,24)+'"'+(e.id?' #'+e.id:''),href:e.getAttribute('href')||''}))}'''
 def run():
   with sync_playwright() as p:
-    b=p.chromium.launch(args=['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
+    b=p.chromium.launch(args=(['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'] if os.environ.get('RV_GL') else []))
     for name in pages:
       for w,h in WS:
         res={'page':name,'w':w}

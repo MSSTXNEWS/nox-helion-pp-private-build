@@ -8,7 +8,7 @@ OUT='/workspace/nox/state/rv'
 SR="document.querySelector('deep-chat').shadowRoot"
 def L(): return "(()=>{var s=%s;return s?s.textContent.length:-1})()"%SR
 with sync_playwright() as p:
-  b=p.chromium.launch(args=['--use-gl=swiftshader','--enable-unsafe-swiftshader'])
+  b=p.chromium.launch(args=(['--use-gl=swiftshader','--enable-unsafe-swiftshader'] if os.environ.get('RV_GL') else []))
   for w,h in ((390,844),(1440,900),(1920,1080)):
     res={'w':w}
     signal.alarm(200)
