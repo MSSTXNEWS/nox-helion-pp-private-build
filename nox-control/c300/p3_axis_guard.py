@@ -47,19 +47,38 @@ def verdict():
          "verdict": "NO_GAIN" if L and acc == 0 else ("GAIN" if L and L[-1].get("pass") else "MIXED"),
          "note": "NO_GAIN: ни один из последних кандидатов не прошёл ворота; обучение стартует с принятого лучшего" if L and acc == 0 else ""}
     json.dump(v, open(VERD, "w"), ensure_ascii=False, indent=1)
+TR_CORES = {0, 1, 2, 3, 16, 17, 18, 19}; SPARE = "8-15,24-31"
+KEEP = ("ckpt_guard", "distill_v2", "chat_guard")
+def repin():  # REPIN_P3: убрать конкурентов с ядер тренера (nice 19 уступает всем на общих ядрах)
+    try:
+        import psutil
+    except Exception: return 0
+    n = 0
+    for p in psutil.process_iter(["pid", "cmdline"]):
+        try:
+            cl = " ".join(p.info["cmdline"] or [])
+            if any(k in cl for k in KEEP) or p.pid == os.getpid(): continue
+            aff = set(p.cpu_affinity())
+            if not (aff & TR_CORES): continue
+            if p.cpu_percent(interval=0.2) < 4: continue
+            subprocess.run(["taskset", "-a", "-cp", SPARE, str(p.pid)], capture_output=True); n += 1
+            open(OUT + "/repin.log", "a").write("%s pin %d %s\n" % (time.strftime("%T"), p.pid, cl[:80]))
+        except Exception: pass
+    return n
 def training():
     return subprocess.run(["pgrep", "-f", "distill_v2.py train"], capture_output=True).returncode == 0
 def main():
     os.makedirs(OUT, exist_ok=True)
     seen = set()
     done = set(json.loads(l).get('cand_sha16') for l in open(LOGF)) if os.path.exists(LOGF) else set()
-    last_touch = 0
+    last_touch = 0; last_pin = 0
     while True:
         try:
             for f in sorted(glob.glob(GD + "/decision_*.json"), key=os.path.getmtime)[-3:]:
                 s = (jl(f) or {}).get("cand_sha16")
                 if s and s not in done: check(f, seen); done.add(s)
             verdict()
+            if training() and time.time() - last_pin > 40: repin(); last_pin = time.time()
             g = jl(GJ, {}); b = g.get("dir")
             if b and os.path.isdir(b) and not training() and time.time() - last_touch > 25:
                 os.utime(b, None); last_touch = time.time()
