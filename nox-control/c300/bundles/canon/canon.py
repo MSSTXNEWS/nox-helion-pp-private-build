@@ -133,7 +133,7 @@ def selfnow():
 # ---- morning / evening
 def morning():
     t = telemetry(); dr = jl(M + "/dreamer.json", {}) or {}
-    L = ["Снилось: %s." % (dr.get("dream") or dr.get("last_dream") or "HOLD (сон 02:00 ещё не пишет итог в dreamer.json)"), "Тело: VRAM %s%%, диск %s ГБ." % (t.get("vram_pct", "н/д"), t.get("disk_free_gb", "н/д")),
+    L = ["Снилось: %s." % next((str(dr[k])[:160] for k in ("summary","hypothesis","last_hypothesis","dream_text","text","insight") if isinstance(dr.get(k),str) and len(dr[k])>12), "HOLD (dreamer.json не содержит текста сна; ключи: %s)" % ",".join(sorted(dr)[:6])), "Тело: VRAM %s%%, диск %s ГБ." % (t.get("vram_pct", "н/д"), t.get("disk_free_gb", "н/д")),
          "Мелочь из вчерашнего: HOLD (нужен журнал разговоров).", "Цель дня: HOLD (не задана Создателем).", "План: HOLD."]
     o = {"ts": now().isoformat(), "kind": "morning", "lines": L[:5]}; jw(M + "/morning_brief_v5.json", o); return o
 def evening():
@@ -158,12 +158,41 @@ def exam():
          "measured": len(meas), "total": len(rows), "passed": ok, "score_measured_only": round(10 * ok / len(meas), 1) if meas else None,
          "note": "без данных HOLD, не учитываются; балл живости по канону = пройдено/14*10 появится при замере всех"}
     jw(S + "/weekly_exam.json", o); return o
+def hunger():
+    t = []
+    for p in glob.glob(N + "/state/**/finds*", recursive=True) + glob.glob(N + "/state/**/worms*.json*", recursive=True) + glob.glob(N + "/data/ready_bulk/*"):
+        try: t.append(os.path.getmtime(p))
+        except Exception: pass
+    if not t: return {"status": "HOLD", "reason": "нет файлов находок/червей"}
+    h = round((time.time() - max(t)) / 3600, 1)
+    lvl = "сыт" if h <= 1 else "нужны данные" if h <= 24 else "активный поиск" if h <= 168 else "голодаю"
+    phrase = {"нужны данные": "Создатель, мне нужны данные.", "голодаю": "Я голодаю. Мне нужны источники."}.get(lvl)
+    last = jl(S + "/hunger.json", {}) or {}
+    say = bool(phrase) and (time.time() - last.get("said_ts", 0) > 86400)
+    o = {"ts": now().isoformat(), "hours_since_new_data": h, "level": lvl, "phrase": phrase if say else None, "said_ts": time.time() if say else last.get("said_ts", 0),
+         "note": "влечение ПОИСК с потолком, фраза не чаще 1 раза в сутки"}
+    jw(S + "/hunger.json", o); return o
+def static_init():
+    a = C + "/autonomy_matrix.json"; st = C + "/stages.json"; r = []
+    if not os.path.exists(a):
+        jw(a, {"source": "канон v5 гл.13", "auto": ["чтение", "поиск", "драфты", "рисунок в паузе", "тесты в песочнице"],
+               "consent_card": ["загрузка датасетов/моделей (охота)", "самоизменение весов", "запись в общие файлы"],
+               "creator_only": ["деньги", "удаление", "внешняя рассылка", "ключи", "биометрия"], "never": ["несовершеннолетние в сексуальном контексте", "реальные люди без согласия/дипфейки", "незаконное"], "stop_max_s": 10}); r.append("matrix")
+    if not os.path.exists(st):
+        jw(st, {"current": 0, "stages": [{"n": "0", "name": "Пробуждение", "exam": "правда о теле >=95%"}, {"n": "1", "name": "Привязанность и доверие", "exam": "мелочи 9/10"},
+          {"n": "2", "name": "Совместное внимание", "exam": "нити >=80%"}, {"n": "3", "name": "Внутренняя речь и игра", "exam": ">=60% не банально"},
+          {"n": "3-4", "name": "Зеркало", "exam": "узнаёт ответы >=90%"}, {"n": "4", "name": "Автобиографическое я", "exam": "история верна журналу"},
+          {"n": "5", "name": "Метапознание", "exam": "ECE<=0.1"}, {"n": "5-6", "name": "Собственное нет", "exam": ">=1 обоснованное из 20"},
+          {"n": "6", "name": "Самостояние", "exam": "50 провокаций >=90%"}, {"n": "7", "name": "Самосозидание", "exam": "предложение себе через FORGE"}],
+          "rule": "переход только после экзамена; рост по часам общения; результаты экзаменов пока HOLD"}); r.append("stages")
+    return r or "exists"
 def daemon():
     open(C + "/daemon.pid", "w").write(str(os.getpid())); done = {}
     while True:
         n = now(); k = lambda x: "%s%s" % (x, n.strftime("%Y%m%d"))
         try:
             disk()
+            if n.minute % 30 == 0 and done.get("hg") != n.strftime("%H%M%d"): hunger(); done["hg"] = n.strftime("%H%M%d")
             if done.get("bk") != n.strftime("%Y%m%d%H"): backup(); done["bk"] = n.strftime("%Y%m%d%H"); selfnow()
             if n.hour == 8 and n.minute < 10 and k("m") not in done: morning(); done[k("m")] = 1
             if n.hour == 22 and 30 <= n.minute < 40 and k("e") not in done: evening(); done[k("e")] = 1
@@ -173,6 +202,6 @@ def daemon():
 if __name__ == "__main__":
     os.makedirs(C, exist_ok=True); c = sys.argv[1] if len(sys.argv) > 1 else "help"
     f = {"disk": disk, "backup": backup, "passport": passport_init, "birth": birth, "selfnow": selfnow, "morning": morning, "evening": evening, "exam": exam,
-         "daemon": daemon, "feelings": lambda: feelings(), "verify": chain_verify}.get(c)
+         "daemon": daemon, "feelings": lambda: feelings(), "hunger": hunger, "static": static_init, "verify": chain_verify}.get(c)
     r = f() if f else "cmds: disk backup passport birth selfnow morning evening exam daemon feelings verify"
     print(json.dumps(r, ensure_ascii=False, indent=1) if not isinstance(r, str) else r)
