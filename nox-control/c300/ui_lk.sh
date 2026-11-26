@@ -1,0 +1,1 @@
+echo "C300: ui_lk"; ps -o pid,etimes,stat,args -p 202584,198950,198951,268761,268763,3508489 2>&1 | cut -c1-150; ls -la /tmp/qaa.lock; (command -v fuser >/dev/null && fuser -v /tmp/qaa.lock 2>&1 | head -5); tail -c 400 /workspace/nox/agent/out/qa_audit.log 2>/dev/null; tail -3 /workspace/nox/agent/out/ui_q3_system.out 2>/dev/null
