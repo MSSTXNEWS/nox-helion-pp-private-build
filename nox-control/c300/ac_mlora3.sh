@@ -1,10 +1,10 @@
-echo "C300: ac_mlora2"
+echo "C300: ac_mlora3"
 D=/workspace/nox/tmp/ml; mkdir -p $D
 cat > $D/ml.py <<'PY'
 import time,torch,sys,json
 from transformers import AutoModelForCausalLM
 from peft import LoraConfig,get_peft_model
-torch.cuda.set_per_process_memory_fraction(0.065)
+torch.cuda.set_per_process_memory_fraction(0.1)
 P='/workspace/nox/models/gpu/Qwen/Qwen3-0.6B'
 m=AutoModelForCausalLM.from_pretrained(P,torch_dtype=torch.float16).cuda()
 m.gradient_checkpointing_enable(); m.enable_input_require_grads()
@@ -18,10 +18,10 @@ def run(n,mode,B=1,L=128,steps=3):
     names=[f'a{i}' for i in range(n)]
     for nm in names:
         pm.set_adapter(nm)
-    params={nm:[p for k,p in pm.named_parameters() if f'.{nm}.' in k and p.requires_grad] for nm in names}
+    params={nm:[p for k,p in pm.named_parameters() if f'.{nm}.' in k] for nm in names}
     # make all trainable
     for nm in names:
-        for p in params[nm]: p.requires_grad=True
+        for p in params[nm]: p.requires_grad_(True)
     opts={nm:torch.optim.AdamW(params[nm],lr=1e-4) for nm in names}
     x=torch.randint(0,150000,(B,L),device='cuda')
     torch.cuda.synchronize(); torch.cuda.reset_peak_memory_stats()
