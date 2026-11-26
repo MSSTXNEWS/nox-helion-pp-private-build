@@ -109,7 +109,7 @@
     var cv = document.getElementById('rs-cv'); if (!cv || document.getElementById('rx2')) return false;
     var h = document.createElement('div'); h.id = 'rx2'; cv.appendChild(h);
     if (rid !== 'writer') memPanel(h);
-    if (rid === 'scientist') sciPanel(h);
+    if (rid === 'scientist') { sciPanel(h); var o = document.querySelector('#rs-media .rx-hold'); if (o) o.textContent = 'Формулы в записи $…$ и $$…$$ отображаются в «Просмотре» и в ответах (KaTeX). Источники ищутся панелью ниже.'; }
     if (rid === 'music' || rid === 'video') holdPanel(h);
     if (!h.children.length) h.remove();
     return true;

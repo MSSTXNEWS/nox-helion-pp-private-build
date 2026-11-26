@@ -44,7 +44,7 @@
         if (T) { T.msgs.push({ role: 'assistant', content: '![' + prompt.replace(/[\[\]\n]/g, ' ') + '](' + url + ')\n\n' + prompt, ts: Date.now() }); NOXdc.save(); }
       })
       .catch(function (e) {
-        var msg = /503|занят/.test(String(e.message)) ? 'Видеокарта занята — попробуйте через минуту.' : 'Не получилось нарисовать: ' + e.message;
+        var msg = /disabled|отключ/i.test(String(e.message)) ? 'Генерация картинок сейчас отключена (GPU занят обучением). Попробуйте позже.' : /503|занят/.test(String(e.message)) ? 'Видеокарта занята — попробуйте через минуту.' : 'Не получилось нарисовать: ' + e.message;
         signals.onResponse({ text: msg }); if (T) { T.msgs.push({ role: 'assistant', content: msg, ts: Date.now() }); NOXdc.save(); }
       })
       .then(function () { signals.onClose(); });
