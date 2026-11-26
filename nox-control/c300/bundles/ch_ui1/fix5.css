@@ -1,0 +1,4 @@
+/* fix5: шапка чата узкая полоса 56px при любом размере; liquid-glass слои не раздувают шапку */
+body.cw-clean .tg-head{height:56px!important;min-height:56px!important;max-height:56px!important;align-self:start!important;box-sizing:border-box!important;padding-block:0!important}
+body.cw-clean .tg-head>.lg-layer,body.cw-clean .tg-head>.lg-sheen{position:absolute!important;inset:0!important;height:auto!important;width:auto!important;pointer-events:none}
+body.cw-clean .tg-head{overflow:visible}
