@@ -1,4 +1,4 @@
-echo "C300: k1_gate3"
+echo "K1: k1_gate3"; export RUNNER_TRACKING_ID=""
 N=/workspace/nox; G=$N/state/owner_gate
 P=$(mktemp); curl -fsSL "https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/bundles/enc/owner_pub.pem?cb=$(date +%s)" -o $P
 CADDY=$(command -v caddy || ls $N/tools/caddy* /usr/local/bin/caddy /usr/bin/caddy 2>/dev/null | head -1)
