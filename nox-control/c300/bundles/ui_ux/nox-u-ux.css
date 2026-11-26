@@ -30,12 +30,10 @@ html[data-nox-theme=graphite] :is(.seg>a,.seg>button,.seg>.more>button,.mnav .sw
 
 .u-sec:not(.u-cta):not(sl-button){background:transparent !important;color:var(--gx-12,#edeef0) !important;-webkit-text-fill-color:var(--gx-12,#edeef0) !important;border:1px solid var(--gx-7,#43484e) !important;box-shadow:none !important}
 
-/* v5: широкие экраны (2200+ css px после zoom 1.3-1.55): шапка не обрезается, пилюля обучения не лезет на главную */
-@media (min-width:2200px){.tb-t sl-icon{display:none !important}.tb-t{padding-left:8px !important;padding-right:8px !important;letter-spacing:.04em !important}.tb-l,.tb-r{gap:0 !important}}
+/* v5: широкие экраны. Классы ставит nox-u-ux.js (html[data-uz] + --u-z) только на страницах с html{zoom} из nox-4k.css */
+html[data-uz] .tb-t sl-icon{display:none !important}
+html[data-uz] .tb-t{padding-left:8px !important;padding-right:8px !important;letter-spacing:.04em !important}
+html[data-uz] .tb-l,html[data-uz] .tb-r{gap:0 !important}
+html[data-uz] #nxsun{left:calc(50vw / var(--u-z) - 36px) !important;top:6px !important}
+html[data-uz] #nxpult{left:calc(50vw / var(--u-z)) !important}
 body[data-page=home] #k8-live{display:none !important}
-/* v5: fixed-элементы с left:50% при html{zoom} (nox-4k.css) считали 50% от неотмасштабированной ширины, дубль-солнце и пульт уезжали вправо */
-@media (min-width:2200px){#nxsun{left:calc(50vw / 1.3 - 36px) !important}#nxpult{left:calc(50vw / 1.3) !important}}
-@media (min-width:2560px){#nxsun{left:calc(50vw / 1.55 - 36px) !important}#nxpult{left:calc(50vw / 1.55) !important}}
-@media (min-width:3200px){#nxsun{left:calc(50vw / 1.95 - 36px) !important}#nxpult{left:calc(50vw / 1.95) !important}}
-@media (min-width:3700px){#nxsun{left:calc(50vw / 2.3 - 36px) !important}#nxpult{left:calc(50vw / 2.3) !important}}
-@media (min-width:2200px){#nxsun{top:6px !important}}

@@ -25,6 +25,7 @@
  }
  function run(){
   if(document.body&&document.body.dataset.page==='home')document.querySelectorAll('input[placeholder*="Быстрый запрос"]').forEach(function(i){i.placeholder='Спросить NOX или найти'});
+  try{var z=parseFloat(getComputedStyle(document.documentElement).zoom)||1;if(z>1.05){document.documentElement.setAttribute('data-uz',z);document.documentElement.style.setProperty('--u-z',z)}}catch(x){}
   try{clean()}catch(x){}
   try{empties()}catch(x){}
   try{cta()}catch(x){}
