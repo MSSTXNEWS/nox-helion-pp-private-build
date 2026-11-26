@@ -16,7 +16,7 @@ def top(m, tok):
     return out
 m, tok = FastLanguageModel.from_pretrained(SRC, max_seq_length=1024, load_in_4bit=True, dtype=torch.float16)
 tk = getattr(tok, "tokenizer", tok); a = top(m, tk); print("src top5", a, flush=True)
-os.makedirs(DST, exist_ok=True); m.save_pretrained(DST); tk.save_pretrained(DST)
+os.makedirs(DST, exist_ok=True); m.save_pretrained(DST, max_shard_size="4GB", safe_serialization=True); tk.save_pretrained(DST)
 sz = sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(DST) for f in fs); print("saved %.1f ГБ" % (sz / 1e9), flush=True)
 del m; torch.cuda.empty_cache()
 m, tok = FastLanguageModel.from_pretrained(DST, max_seq_length=1024, load_in_4bit=True, dtype=torch.float16)
