@@ -133,7 +133,7 @@ def selfnow():
 # ---- morning / evening
 def morning():
     t = telemetry(); dr = jl(M + "/dreamer.json", {}) or {}
-    L = ["Снилось: %s." % (dr.get("status") or "нет данных"), "Тело: VRAM %s%%, диск %s ГБ." % (t.get("vram_pct", "н/д"), t.get("disk_free_gb", "н/д")),
+    L = ["Снилось: %s." % (dr.get("dream") or dr.get("last_dream") or "HOLD (сон 02:00 ещё не пишет итог в dreamer.json)"), "Тело: VRAM %s%%, диск %s ГБ." % (t.get("vram_pct", "н/д"), t.get("disk_free_gb", "н/д")),
          "Мелочь из вчерашнего: HOLD (нужен журнал разговоров).", "Цель дня: HOLD (не задана Создателем).", "План: HOLD."]
     o = {"ts": now().isoformat(), "kind": "morning", "lines": L[:5]}; jw(M + "/morning_brief_v5.json", o); return o
 def evening():

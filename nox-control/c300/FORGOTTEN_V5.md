@@ -40,3 +40,11 @@
 
 ## Сделано (CANON)
 (строки добавляются по ходу)
+
+| 2026-11-26 13:38Z | disk_guard (#1,#3) | СДЕЛАНО: canon.py disk, цикл 60 с в supervisor-программе nox_canon (RUNNING). Только предупреждение: state/core/disk_low.flag + canon/disk_guard.log, ничего не удаляет. Проверено: прогон показал LOW 5.6. Пауза записи чекпоинтов тренером: тренер должен читать флаг (ДЕЖУРНОМУ/УСКОРИТЕЛЮ подключить). |
+| 2026-11-26 13:38Z | почасовой бэкап души + restore-тест (#4) | СДЕЛАНО: canon/soul/soul_hNN.tgz (24 слота, перезапись своих, ~11 КБ), MANIFEST sha256, restore-тест после каждого бэкапа, canon/soul_hourly_ok.json: restore_ok=true. Без age/Drive (нет ключей): HOLD. |
+| 2026-11-26 13:38Z | passport.json (#22) | СДЕЛАНО: state/core/passport.json (идемпотентно, не перезаписывает); HEXACO/Шварц/смысл = HOLD (нет данных, не выдумано), обращения и три закона заполнены. |
+| 2026-11-26 13:38Z | birth_ritual + hash-chain (#23) | СДЕЛАНО: canon.py birth (HOLD без state/core/birth_evidence.json с delta_sha/reload_ok/test_pass; при них пишет born_at и 3 фразы), state/core/genesis_chain.jsonl, verify=true. Проверено: birth вернул HOLD, цепочка валидна. Старый genesis_ledger.json не тронут. |
+| 2026-11-26 13:38Z | сенсориум + "Я сейчас" (#10,#18) | СДЕЛАНО: canon/sensorium.json (15 сенсоров на реальных метриках, остальные из 130: HOLD), canon.py feelings/selfnow -> state/core/self_now.json. Проверено: ощущение выдаётся с метрикой-причиной (disk_free_gb=5.6). Подключить self_now.json к чату: WEB/ДЕЖУРНЫЙ. |
+| 2026-11-26 13:38Z | утро 08:00 / вечер 22:30 (#21) | СДЕЛАНО в демоне: state/mind/morning_brief_v5.json, evening_brief_v5.json (<=5 строк, пустое = HOLD). Старый morning_brief.json не тронут; доставка в чат не подключена (WEB). crontab не трогал. |
+| 2026-11-26 13:38Z | weekly_exam (#34) | СДЕЛАНО: canon.py exam, вс 03:00 МСК в демоне -> state/core/weekly_exam.json; 14 глав, измерено 2 (диск, аптайм), остальные HOLD. |
