@@ -76,3 +76,12 @@ body.dc-mini #dcGlassDock{display:none}
 .dc-pb{--height:4px;margin:0 0 8px;--indicator-color:var(--gx-acc,#c8b6a2)}
 .dc-main deep-chat{font-size:17px;line-height:1.6}
 @media(max-width:700px){.dc-b{min-height:44px}}
+
+/* v5 (WEB): иерархия, hero, крупный текст, стекло шапки */
+.dc-main deep-chat{font-size:18px;line-height:1.65}
+.dc-brand h1{font-size:20px;font-weight:650;letter-spacing:-.01em}
+.dc-sub{font-size:14px}
+.dc-b{min-height:40px;padding:0 14px;font-size:14px;border-radius:12px}
+.dc-col sl-card::part(base){border-radius:16px}
+.dc-col h2{font-size:13px;font-weight:650;margin-bottom:14px}
+@media(min-width:1440px){.dc-col{padding:8px 4px}}
