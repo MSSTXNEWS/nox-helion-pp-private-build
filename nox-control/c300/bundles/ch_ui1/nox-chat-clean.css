@@ -1,0 +1,121 @@
+/* C: чистый режим чата. Всё под body.cw-clean; откат: nox.clean=0 */
+body.tg.cx5.cw-clean .stage{--c1:232px;--c2:0px;--c4:0px;--c5:0px}
+body.cw-clean .cx5-restore{display:none!important}
+/* центральная колонка ~760px */
+body.cw-clean #feed{padding-inline:max(16px,calc((100% - 760px)/2))!important}
+body.cw-clean .dock,body.cw-clean .tg-head{max-width:760px;width:100%;margin-inline:auto}
+body.cw-clean #feed .m.a .bubble{max-width:min(100%,760px)!important;background:rgba(12,8,8,.92)!important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+body.cw-clean #feed .m{max-width:760px;width:fit-content;min-width:0}
+body.cw-clean #feed .m.u{margin-left:auto}
+/* фон: планета приглушена */
+body.cw-clean #stage::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(8,5,5,.78),rgba(8,5,5,.45) 70%);pointer-events:none;z-index:0}
+/* поповеры: Режимы / Шаблоны / Система */
+body.tg.cx5.cw-clean.cw-open-cmd .cx5-cmd,body.tg.cx5.cw-clean.cw-open-pr .cx5-pr{display:flex!important;position:fixed!important;left:max(12px,calc(50% - 380px))!important;bottom:150px!important;top:auto!important;width:min(380px,calc(100vw - 24px))!important;max-height:min(62vh,560px)!important;grid-column:auto!important;z-index:1300;border-radius:14px;background:rgba(14,10,10,.97)!important;border:1px solid var(--line,rgba(255,255,255,.2));box-shadow:0 18px 50px rgba(0,0,0,.6);overflow:auto;padding:8px}
+body.tg.cx5.cw-clean.cw-open-sys .cx-right{display:flex!important;position:fixed!important;right:0!important;top:60px!important;bottom:0!important;width:min(320px,100vw)!important;z-index:1300;background:rgba(12,8,8,.97)!important;border-left:1px solid var(--line,rgba(255,255,255,.2));box-shadow:-18px 0 50px rgba(0,0,0,.55);flex-direction:column;overflow:auto;padding:8px;grid-column:auto!important}
+body.cw-clean .cx5-grid{display:grid!important;grid-template-columns:1fr 1fr;gap:6px}
+body.cw-clean .cx5-b{width:100%}body.cw-clean .cx5-b::part(base){white-space:nowrap;overflow:hidden;text-overflow:ellipsis;justify-content:flex-start;min-height:32px;height:32px;padding-block:0;font-size:13px}
+body.cw-clean .cx5-list>*{max-height:44px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:13px;line-height:1.3;padding:6px 10px!important;min-height:0!important}
+/* единая сетка кнопок (DS): 32px, радиус 8, шрифт 13, без капса */
+body.cw-clean sl-button::part(base){min-height:32px;border-radius:8px;font-size:13px;letter-spacing:0;text-transform:none;font-weight:500}
+body.cw-clean sl-button[pill]::part(base){border-radius:16px}
+body.cw-clean sl-button[outline]::part(base),body.cw-clean sl-button:not([variant=primary])::part(base){background:transparent;border:1px solid var(--line,rgba(255,255,255,.18));box-shadow:none}
+body.cw-clean sl-button:hover::part(base){background:var(--hover,rgba(255,255,255,.08));border-color:var(--accent,#8ab4ff)}
+@media (pointer:coarse){body.cw-clean sl-button::part(base),body.cw-clean .acts button{min-height:44px}}
+/* панель над полем: одна строка мелких кнопок и ≤2 чипа */
+body.cw-clean .lv-bar,body.cw-clean #k3-shot,body.cw-clean #btnSpeak,body.cw-clean #tgDepth,body.cw-clean #tgCmd,body.cw-clean .cw-hide{display:none!important}
+.cw-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;max-width:760px;margin:0 auto 8px;padding:0 4px}.cw-chips{display:flex;gap:6px;margin-left:auto}
+/* иконки под ответом: одна тонкая строка, по наведению */
+body.cw-clean #feed .m.a .acts{display:flex;flex-wrap:wrap;align-items:center;gap:4px;opacity:0;transition:opacity .15s;margin-top:4px}
+body.cw-clean #feed .m.a:hover .acts,body.cw-clean #feed .m.a:focus-within .acts,body.cw-clean #feed .m.a.lv-last:hover .acts{opacity:1}
+@media (hover:none){body.cw-clean #feed .m.a .acts{opacity:1}}
+body.cw-clean .acts .seg{display:inline-flex;gap:2px}
+body.cw-clean .acts button,body.cw-clean .acts .rq-act,body.cw-clean .acts .cw-pin,body.cw-clean .acts .cw-rem{width:30px;height:30px;min-height:30px;min-width:30px;padding:0;border-radius:8px;display:inline-grid;place-items:center;font-size:14px;background:transparent;border:1px solid transparent;color:#d9c2b8;cursor:pointer}
+body.cw-clean .acts button:hover,body.cw-clean .acts .rq-act:hover,body.cw-clean .acts .cw-pin:hover,body.cw-clean .acts .cw-rem:hover{background:var(--hover,rgba(255,255,255,.08));border-color:var(--line,rgba(255,255,255,.2))}
+body.cw-clean .acts .rq-act::part(base){min-height:30px;border:0;background:transparent}
+body.cw-clean .acts .cw-more{width:auto;padding:0 10px;font:12px var(--sans,inherit)}
+body.cw-clean #feed .m .lv-chips,body.cw-clean #feed .m.a:has(.think) .acts,body.cw-clean #feed .m.a:has(.think) .rq-act{display:none!important}
+body.cw-clean #feed .m.u .rq-act{width:auto;height:26px;min-height:26px;font-size:12px;padding:0 8px;margin-top:2px}
+/* ожидание ответа: компактная строка внутри будущего пузыря */
+body.cw-clean .cx-th{display:inline-flex!important;align-items:center;gap:10px;width:fit-content!important;max-width:100%;padding:8px 14px!important;min-height:0!important}
+body.cw-clean .cx-holo{width:44px!important;height:28px!important;flex:none}body.cw-clean .cx-holo canvas{width:44px!important;height:28px!important}
+body.cw-clean .cx-hl{display:inline-flex!important;gap:8px;align-items:center;font:12px var(--sans,inherit)!important;position:static!important;width:auto!important;text-transform:none!important;letter-spacing:0!important}
+/* баннер «NOX пишет первым» */
+body.cw-clean .nox-first{position:static!important;width:fit-content!important;max-width:min(100%,520px)!important;margin:8px auto!important;padding:8px 12px!important;border-radius:12px!important;font-size:13px!important}
+/* маскот маленький, в углу, ничего не перекрывает */
+body.cw-clean #k5-mc,body.cw-clean .k5-mc{transform:scale(.42);transform-origin:100% 100%;right:8px!important;bottom:60px!important;left:auto!important;top:auto!important;opacity:.85}
+body.cw-clean .k5-mc *{font-size:0!important}
+/* аватар: круглый логотип вместо кляксы */
+body.cw-clean .tg-av-orb{background:#140c0a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='27' fill='none' stroke='%23c9ced6' stroke-width='3'/%3E%3Cpath d='M21 44V20l22 24V20' fill='none' stroke='%23ffffff' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/78% no-repeat!important;border:1px solid var(--line,rgba(255,255,255,.3));border-radius:50%!important;box-shadow:none!important}
+body.cw-clean .tg-av-orb>*{display:none!important}
+/* v1.1: плотная ровная сетка (одинаковая ширина, 32px, зазор 6px) */
+body.cw-clean .cx5-cmd .cx5-grid,body.cw-clean .cx5-cmd [class*=grid],body.cw-clean .cx5-pr .cx5-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;padding:6px 8px!important;margin:0!important}
+body.cw-clean .cx5-cmd sl-button,body.cw-clean .cx5-cmd .cx5-b,body.cw-clean .cx5-pr .cx5-b{width:100%!important;min-width:0!important;margin:0!important}
+body.cw-clean .cx5-cmd sl-button::part(base),body.cw-clean .cx5-cmd .cx5-b::part(base){height:32px;min-height:32px;padding:0 10px;justify-content:flex-start}
+body.cw-clean .cx5-cmd sl-details::part(summary),body.cw-clean .cx5-cmd summary,body.cw-clean .cx5-pr summary{padding:6px 10px!important;font-size:12px!important;min-height:0!important}
+body.cw-clean .cx5-cmd sl-details::part(content){padding:2px 0 6px!important}
+body.cw-clean .cx5-cmd,body.cw-clean .cx5-pr,body.cw-clean .cx-right{gap:6px!important;padding:8px!important}
+body.cw-clean .cx5-list{display:flex!important;flex-direction:column;gap:6px!important;padding:6px 8px!important}
+body.cw-clean .cx5-list>*{height:32px!important;max-height:32px!important;min-height:32px!important;display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;-webkit-line-clamp:unset!important;line-height:20px!important;padding:6px 10px!important;margin:0!important;box-sizing:border-box}
+/* приветствие пустого чата */
+.cw-hello{display:none;max-width:560px;margin:12vh auto 0;text-align:center}
+body.cw-clean .cw-hello.on{display:block}
+.cw-hello h2{font:600 24px/1.3 var(--sans,inherit);margin:0 0 6px;color:var(--text,#e8eaee)}.cw-hello p{margin:0 0 16px;font-size:14px;opacity:.7}
+.cw-hello .cw-h4{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cw-hello .cw-h4 button{height:40px;border-radius:10px;border:1px solid var(--line,rgba(255,255,255,.2));background:transparent;color:inherit;font:13px var(--sans,inherit);cursor:pointer;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cw-hello .cw-h4 button:hover{background:var(--hover,rgba(255,255,255,.08))}
+@media(max-width:600px){.cw-hello .cw-h4{grid-template-columns:1fr}.cw-hello .cw-h4 button{height:44px}}
+.cw-pinmenu{position:fixed;z-index:2000;display:flex;flex-direction:column;gap:2px;padding:4px;border-radius:10px;background:var(--panel,rgba(20,20,24,.98));border:1px solid var(--line,rgba(255,255,255,.2));box-shadow:0 10px 30px rgba(0,0,0,.5)}.cw-pinmenu button{height:32px;padding:0 12px;text-align:left;background:transparent;border:0;border-radius:6px;color:inherit;font:13px var(--sans,inherit);cursor:pointer}.cw-pinmenu button:hover{background:var(--hover,rgba(255,255,255,.08))}
+@media(max-width:600px){.cw-bar{flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none}.cw-bar sl-button{flex:none}.cw-bar sl-button::part(base){padding:0 10px}.cw-chips{display:none}}
+/* v2 (CH): компактно и ровно. Кнопки .nx-btn sm = 32, плашки по содержимому, цвета только токены Графита */
+body.cw-clean{--cw-h:var(--nxb-h-sm,32px);--cw-bd:var(--nxb-bd,rgba(255,255,255,.12));--cw-bg:var(--nxb-bg,rgba(255,255,255,.055));--cw-bgh:var(--nxb-bg-h,rgba(255,255,255,.10));--cw-fg:var(--gx-11,#b0b4ba)}
+/* строка действий под ответом: одна линия иконок 32px, видна у последнего ответа */
+body.cw-clean #feed .m.a .acts{position:static!important;display:flex!important;flex-wrap:nowrap!important;align-items:center;gap:2px!important;margin:6px 0 0!important;padding:0!important;opacity:.0;transform:none!important;background:none!important;border:0!important;box-shadow:none!important;width:auto!important;height:auto!important}
+body.cw-clean #feed .m.a:hover .acts,body.cw-clean #feed .m.a.lv-last .acts,body.cw-clean #feed .m.a:focus-within .acts{opacity:1!important}
+body.cw-clean #feed .m.a .acts .seg{display:contents!important}
+body.cw-clean #feed .m.a .acts button,body.cw-clean #feed .m.a .acts .cw-pin{position:static!important;width:var(--cw-h)!important;height:var(--cw-h)!important;min-width:var(--cw-h)!important;min-height:var(--cw-h)!important;padding:0!important;margin:0!important;border-radius:8px!important;display:inline-grid!important;place-items:center;background:transparent!important;border:1px solid transparent!important;color:var(--cw-fg)!important;font-size:16px;box-shadow:none!important;opacity:1!important}
+body.cw-clean #feed .m.a .acts button:hover,body.cw-clean #feed .m.a .acts .cw-pin:hover{background:var(--cw-bgh)!important;border-color:var(--cw-bd)!important;color:var(--gx-12,#edeef0)!important}
+body.cw-clean #feed .m.a .acts sl-icon{font-size:16px}
+body.cw-clean #feed .m.a .acts .cw-fb-up,body.cw-clean #feed .m.a .acts .cw-fb-dn,body.cw-clean #feed .m.a .acts .cw-more,body.cw-clean #feed .m.a .acts .cw-rem,body.cw-clean #feed .m.a .acts .rq-act,body.cw-clean #feed .m.a .acts [data-act=fork]{display:none!important}
+body.cw-clean #feed .m.a .acts .cw-pin sl-icon{pointer-events:none}
+/* «Ответить» у реплики пользователя: маленькая иконка-кнопка, не пилюля */
+body.cw-clean #feed .m.u .rq-act{display:none!important}
+body.cw-clean #feed .m.u:hover .rq-act{display:inline-flex!important}
+/* Додумал: компактная плашка по содержимому */
+body.cw-clean #feed sl-details.rq-think{display:block;width:fit-content!important;max-width:100%;margin:6px 0 0!important}
+body.cw-clean #feed sl-details.rq-think::part(base){border:1px solid var(--cw-bd);border-radius:8px;background:var(--cw-bg)}
+body.cw-clean #feed sl-details.rq-think::part(header){padding:0 12px!important;min-height:var(--cw-h);height:var(--cw-h);gap:8px}
+body.cw-clean #feed sl-details.rq-think::part(summary){font:500 13px/1 var(--sans,inherit);color:var(--cw-fg)}
+body.cw-clean #feed sl-details.rq-think::part(content){padding:8px 12px 10px;font-size:13px;line-height:1.5;color:var(--cw-fg);max-width:640px}
+/* строка meta: одна линия, высоты выровнены */
+body.cw-clean #feed .rq-meta{display:flex!important;flex-wrap:wrap;align-items:center;gap:6px!important;margin:8px 0 0!important;padding:0!important;border:0!important;min-height:0}
+body.cw-clean #feed .rq-meta::before,body.cw-clean #feed .rq-meta::after{display:none!important}
+body.cw-clean #feed .rq-judge{font:500 12px/1 var(--sans,inherit)!important;letter-spacing:0!important;text-transform:none!important;color:var(--cw-fg)!important;padding:0 10px;height:24px;display:inline-flex;align-items:center;border:1px solid var(--cw-bd);border-radius:12px}
+body.cw-clean #feed .rq-meta sl-badge::part(base){height:24px;padding:0 10px;font:500 12px/1 var(--sans,inherit);letter-spacing:0;text-transform:none;border-radius:12px;background:var(--cw-bg);border:1px solid var(--cw-bd);color:var(--cw-fg)}
+body.cw-clean #feed .rq-meta sl-badge[variant=success]::part(base){color:var(--gx-acc,#9db1d1);border-color:var(--cw-bd);background:var(--cw-bg);box-shadow:none}
+body.cw-clean #feed .rq-meta sl-badge::part(base){animation:none!important}
+body.cw-clean #feed .rq-meta .rq-qk{margin-left:0}
+body.cw-clean #feed .rq-meta .rq-qk::part(base){height:var(--cw-h);min-height:var(--cw-h);padding:0 12px;font-size:13px;border-radius:8px}
+/* бабл ответа плотнее */
+body.cw-clean #feed .m.a .bubble{padding:12px 16px!important}
+body.cw-clean #feed .m.u .bubble{padding:8px 14px!important}
+body.cw-clean #feed .m .lab{margin:0 0 4px!important}
+body.cw-clean #feed{gap:12px!important}
+/* поле и панель над ним */
+.cw-bar{gap:6px!important;margin-bottom:6px!important}
+body.cw-clean .cw-bar sl-button::part(base){height:var(--cw-h);min-height:var(--cw-h);padding:0 12px}
+body.cw-clean .cw-chips sl-button::part(base){height:var(--cw-h);min-height:var(--cw-h)}
+/* мобильный */
+@media(max-width:600px){
+ body.cw-clean #feed .m.a .acts button,body.cw-clean #feed .m.a .acts .cw-pin{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important}
+ body.cw-clean #feed .m.a .acts{opacity:1!important;gap:0!important;margin-top:4px!important}
+ body.cw-clean #feed .m.a .acts .seg{display:contents!important}
+ body.cw-clean .cw-bar sl-button::part(base){height:36px;min-height:36px}
+}
+body.cw-clean #feed .rq-meta>*{flex:0 0 auto!important;width:auto!important;max-width:100%}
+body.cw-clean #feed .rq-meta .rq-judge{order:1;border-right:1px solid var(--cw-bd)}
+body.cw-clean #feed .rq-meta sl-tooltip{order:2}
+body.cw-clean #feed .rq-meta .rq-qk{order:3}
+body.cw-clean #feed .rq-meta sl-tooltip:last-child{order:2}
+body.cw-clean #feed .rq-meta sl-tooltip{display:inline-flex}
+body.cw-clean #feed .col{justify-content:flex-start!important}
+body.cw-clean #feed .col>.msgs{margin-top:0!important;padding-top:16px}
