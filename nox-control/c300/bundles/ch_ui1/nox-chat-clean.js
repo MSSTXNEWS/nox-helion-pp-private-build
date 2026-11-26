@@ -50,6 +50,8 @@ if(document.head&&!document.querySelector('script[src*="nox-k8-meta"]')){const a
     ['Что ты помнишь обо мне?', 'Объясни простыми словами…', 'Помоги написать текст', 'Что нового сегодня?'].forEach((q) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = q; b.addEventListener('click', () => { const i = $('#input'); if (i) { i.value = q; i.dispatchEvent(new Event('input', { bubbles: true })); i.focus(); } }); $('.cw-h4', hello).appendChild(b); });
     const feed = $('#feed'); feed && feed.parentElement.insertBefore(hello, feed);
     setInterval(() => { hello.classList.toggle('on', !$('#feed .m')); }, 600);
+    /* связанные вопросы (k7) - в колонку чтения, под последним ответом, а не отдельной строкой сетки над лентой */
+    setInterval(() => { const rel = $('#k7-rel'); const col = $('#feed .col'); if (rel && col && rel.parentElement !== col) col.appendChild(rel); }, 1000);
     /* баннер «NOX пишет первым» — карточкой внутри ленты */
     setInterval(() => { const nf = $('.nox-first'); const f = $('#feed'); if (nf && f && nf.parentElement !== f) f.insertBefore(nf, f.firstChild); }, 1500);
   }

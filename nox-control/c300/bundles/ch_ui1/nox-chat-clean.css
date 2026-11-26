@@ -129,3 +129,24 @@ body.cw-clean .cx5-cmd sl-details::part(content){padding:4px 6px 8px!important}
 body.cw-clean .cx5-cmd .cx5-grid{padding:0!important}
 body.cw-clean .cx5-cmd>*:first-child,body.cw-clean .cx5-pr>*:first-child{margin-bottom:0!important}
 body.cw-clean .cx5-list>*{display:flex!important;align-items:center}
+/* пустой чат: приветствие поверх сцены (не элемент сетки), одна подборка подсказок */
+body.cw-clean #stage .cw-hello,body.cw-clean .cw-hello{position:absolute;left:0;right:0;top:13vh;margin:0 auto;z-index:2;pointer-events:none;max-width:560px;padding:0 16px;box-sizing:border-box}
+body.cw-clean .cw-hello *{pointer-events:auto}
+body.cw-clean .cw-hello h2{color:var(--gx-12,#edeef0);font-size:24px}
+body.cw-clean .cw-hello p{color:var(--gx-11,#b0b4ba);opacity:1}
+body.cw-clean .cw-hello .cw-h4 button{color:var(--gx-12,#edeef0);background:var(--cw-bg);border-color:var(--cw-bd);height:40px}
+body.cw-clean .cw-hello .cw-h4 button:hover{background:var(--cw-bgh)}
+body.cw-clean #feed .hero,body.cw-clean #feed .suggest{display:none!important}
+@media(max-width:600px){body.cw-clean .cw-hello{top:9vh}body.cw-clean .cw-hello .cw-h4 button{height:44px}}
+body.cw-clean #tgEmpty{display:none!important}
+/* вкладка «Блокнот» и плавающее не перекрывают контент: у края, ниже центра */
+body.cw-clean #u-tab{top:auto;bottom:calc(var(--cw-dock,150px) + 24px);transform:none;min-height:80px;opacity:.85}
+@media(max-width:600px){body.cw-clean #u-tab{bottom:260px;min-width:24px;min-height:72px;font-size:12px;padding:6px 2px}}
+body.cw-clean #feed #k7-rel{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px;padding:0;max-width:760px;width:100%;align-self:center;box-sizing:border-box}
+body.cw-clean #feed #k7-rel .k7-chip,body.cw-clean #feed #k7-rel button{height:var(--cw-h);min-height:var(--cw-h);padding:0 12px;border-radius:8px;font-size:13px;background:var(--cw-bg);border:1px solid var(--cw-bd);color:var(--gx-12,#edeef0);cursor:pointer}
+body.cw-clean #feed #k7-rel .k7-chip:hover{background:var(--cw-bgh)}
+@media (pointer:coarse){
+ body.cw-clean .cw-bar sl-button::part(base),body.cw-clean .cw-chips sl-button::part(base){height:44px;min-height:44px}
+ body.cw-clean #feed .m.a .acts button,body.cw-clean #feed .m.a .acts .cw-pin{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important}
+ body.cw-clean #feed .rq-meta .rq-qk::part(base),body.cw-clean #feed #k7-rel .k7-chip,body.cw-clean #feed sl-details.rq-think::part(header){min-height:44px;height:44px}
+}
