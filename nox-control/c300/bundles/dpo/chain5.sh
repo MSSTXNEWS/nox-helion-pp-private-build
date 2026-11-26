@@ -4,7 +4,7 @@ N=/workspace/nox; D=$N/ops/dpo; PY=$N/venv/bin/python; L=$D/run5.log
 trap 'rm -f $N/STOP; echo "$(date -u +%T) chain5: STOP снят" >> $L' EXIT
 touch $N/STOP
 for i in $(seq 1500); do
-  if ! pgrep -f 'distill_v2.py (gen|judge|prep|train)' >/dev/null && ! pgrep -f 'agent/ckpt_guard.py' >/dev/null; then break; fi
+  if ! pgrep -f 'venv/bin/python.* distill_v2.py (gen|judge|prep|train)' >/dev/null; then break; fi
   [ -e $N/agent/LIVE_TURN ] && sleep 5; sleep 10
 done
 echo "$(date -u +%T) chain5: окно. df: $(df -h /workspace | tail -1)" >> $L
