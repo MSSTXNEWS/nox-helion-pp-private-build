@@ -119,3 +119,13 @@ body.cw-clean #feed .rq-meta sl-tooltip:last-child{order:2}
 body.cw-clean #feed .rq-meta sl-tooltip{display:inline-flex}
 body.cw-clean #feed .col{justify-content:flex-start!important}
 body.cw-clean #feed .col>.msgs{margin-top:0!important;padding-top:16px}
+/* popover: ровные 32px, текст по центру, без лишнего воздуха */
+body.cw-clean .cx5-cmd sl-button::part(base),body.cw-clean .cx5-pr sl-button::part(base){display:flex;align-items:center;height:var(--cw-h);min-height:var(--cw-h);line-height:1}
+body.cw-clean .cx5-cmd sl-button::part(label),body.cw-clean .cx5-pr sl-button::part(label){padding:0!important;line-height:1!important;display:block}
+body.cw-clean .cx5-cmd sl-details::part(base),body.cw-clean .cx5-pr sl-details::part(base){border-radius:8px;border-color:var(--cw-bd)}
+body.cw-clean .cx5-cmd sl-details::part(header){padding:0 10px!important;height:var(--cw-h);min-height:var(--cw-h)}
+body.cw-clean .cx5-cmd sl-details::part(summary){font-size:12px;line-height:1}
+body.cw-clean .cx5-cmd sl-details::part(content){padding:4px 6px 8px!important}
+body.cw-clean .cx5-cmd .cx5-grid{padding:0!important}
+body.cw-clean .cx5-cmd>*:first-child,body.cw-clean .cx5-pr>*:first-child{margin-bottom:0!important}
+body.cw-clean .cx5-list>*{display:flex!important;align-items:center}
