@@ -8,7 +8,7 @@ W = "/workspace/nox"
 ap = argparse.ArgumentParser()
 ap.add_argument("--init-adapter", default=W + "/distill_v2/ckpt_keep/best_step_0075_hold1.1159_11231724")
 ap.add_argument("--data", default=W + "/ops/dpo/dpo_train.jsonl"); ap.add_argument("--eval", default=W + "/ops/dpo/dpo_eval.jsonl")
-ap.add_argument("--steps", type=int, default=150); ap.add_argument("--accum", type=int, default=16)
+ap.add_argument("--steps", type=int, default=100); ap.add_argument("--accum", type=int, default=16)
 ap.add_argument("--lr", type=float, default=1e-5); ap.add_argument("--beta", type=float, default=0.1); ap.add_argument("--rpo", type=float, default=0.1)
 ap.add_argument("--max-len", type=int, default=768); ap.add_argument("--dry", action="store_true", help="2 шага для проверки связки")
 a = ap.parse_args()
@@ -27,6 +27,7 @@ if tok.pad_token is None: tok.pad_token = tok.eos_token
 m = PeftModel.from_pretrained(m, a.init_adapter, is_trainable=True)
 ts = time.strftime("%m%d%H%M"); out = "%s/distill_v2/ckpt_keep/cand_dpo_%s" % (W, ts)
 tr = load_dataset("json", data_files=a.data, split="train"); ev = load_dataset("json", data_files=a.eval, split="train")
+tr = tr.shuffle(seed=7).select(range(min(len(tr), a.steps * a.accum))); ev = ev.select(range(min(len(ev), 8 if a.dry else 40)))  # ref-logprobs считаются заранее: берём ровно столько пар, сколько увидит обучение
 cfg = DPOConfig(output_dir=out + "_trainer", per_device_train_batch_size=1, gradient_accumulation_steps=a.accum, max_steps=a.steps, learning_rate=a.lr,
                 lr_scheduler_type="cosine", warmup_ratio=0.1, beta=a.beta, loss_type=["sigmoid", "sft"], loss_weights=[1.0, a.rpo], max_length=a.max_len,
                 fp16=True, bf16=False, optim="paged_adamw_8bit", gradient_checkpointing=True, precompute_ref_log_probs=True,
