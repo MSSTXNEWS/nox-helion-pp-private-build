@@ -198,6 +198,9 @@ async def sci_semantic(request):
     except Exception as ex:
         return web.json_response(hold('Semantic Scholar недоступен: %s' % str(ex)[:80], data=[]))
 
+async def glm_props(request):
+    return web.json_response(hold('/glm/props: llama-server не отдаёт props (модель не подключена или обучение)'))
+
 app = web.Application()
 for p, h in (('/api/training/status', training), ('/api/nox/activity', activity), ('/api/notifications', notifications), ('/api/nox/status', status)):
     app.router.add_get(p, h)
@@ -205,6 +208,7 @@ app.router.add_get('/api/nox/training/status', training)
 app.router.add_get('/api/sci/arxiv', sci_arxiv)
 app.router.add_get('/api/sci/semantic', sci_semantic)
 app.router.add_get('/api/nox/self_now', self_now)
+app.router.add_get('/glm/props', glm_props)
 app.router.add_get('/api/nox/briefs', briefs)
 app.router.add_route('*', '/api/settings', settings)
 if __name__ == '__main__':

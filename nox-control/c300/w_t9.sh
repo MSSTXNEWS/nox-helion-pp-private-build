@@ -2,8 +2,9 @@ echo "C300: w_t9"
 N=/workspace/nox; S=$N/web/site; R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/bundles
 ok=0; for k in 1 2 3 4 5 6 7 8; do t=$(date +%s)$k
  curl -fsSL "$R/ch_dc1/nox-dc-live.js?cb=$t" -o /tmp/live.js; curl -fsSL "$R/ch_dc1/nox-dc-fix.js?cb=$t" -o /tmp/fix.js
- grep -q 'telemetry' /tmp/live.js && grep -q 'nxfix' /tmp/fix.js && { ok=1; break; }; sleep 15; done
+ curl -fsSL "$R/w_bridge/api_bridge.py?cb=$t" -o /tmp/br.py; grep -q 'glm_props' /tmp/br.py && grep -q 'telemetry' /tmp/live.js && grep -q 'nxfix' /tmp/fix.js && { ok=1; break; }; sleep 15; done
 [ $ok = 1 ] || { echo STALE; exit 0; }
+B=$N/ops/api_bridge/api_bridge.py; cp $B $B.bak_t9; cp /tmp/br.py $B; supervisorctl restart nox_api_bridge | tail -1
 cp /tmp/live.js $S/nox-dc-live.js; cp /tmp/fix.js $S/nox-dc-fix.js
 python3 - <<'P'
 S='/workspace/nox/web/site/'
@@ -18,14 +19,14 @@ if 'nox-dc-fix.js' not in c:
 P
 CF=$N/ops/web_chat_auth/Caddyfile
 echo "routes:"; grep -n 'handle /api/\(nox\|sci\|notif\|settings\|training\)' $CF | cut -c1-120
-if ! grep -q 'handle /api/nox/self_now' $CF; then
+if ! grep -q 'handle /api/nox/self_now' $CF || ! grep -q 'handle /web/api/nox/status' $CF; then
  cp $CF $CF.bak_t6_$(date +%s)
  PORT=$(grep -o 'BRIDGE_PORT="[0-9]*"' /etc/supervisor/conf.d/nox_api_bridge.conf | grep -o '[0-9]*')
  python3 - $CF $PORT <<'P'
 import sys
 f,port=sys.argv[1],sys.argv[2]
 s=open(f).read(); k="\thandle /api/sci/* {"; assert k in s
-s=s.replace(k,"\thandle /api/nox/self_now {\n\t\treverse_proxy 127.0.0.1:%s\n\t}\n\thandle /api/nox/briefs {\n\t\treverse_proxy 127.0.0.1:%s\n\t}\n"%(port,port)+k,1); open(f,'w').write(s); print('caddy inserted')
+s=s.replace(k,"\thandle /web/api/nox/status {\n\t\trewrite * /api/nox/status\n\t\treverse_proxy 127.0.0.1:%s\n\t}\n\thandle /api/nox/self_now {\n\t\treverse_proxy 127.0.0.1:%s\n\t}\n\thandle /api/nox/briefs {\n\t\treverse_proxy 127.0.0.1:%s\n\t}\n"%(port,port,port)+k,1); g='\thandle /glm/*'; s=s.replace(g,"\thandle /glm/props {\n\t\treverse_proxy 127.0.0.1:%s\n\t}\n"%port+g,1); open(f,'w').write(s); print('caddy inserted')
 P
  export HOME=$N/ops/web_chat_auth XDG_CONFIG_HOME=$N/ops/web_chat_auth/xdg XDG_DATA_HOME=$N/ops/web_chat_auth/xdg-data
  if /opt/instance-tools/bin/caddy validate --config $CF --adapter caddyfile 2>&1 | tail -2 | grep -qi valid; then supervisorctl restart nox_web_chat_auth | tail -1; sleep 6; ps -eo pid,cmd | grep -c '[w]eb_chat_auth/Caddyfile'
@@ -45,3 +46,4 @@ with sync_playwright() as p:
     b.close()
 P
 timeout 100 $N/venv/bin/python /tmp/t6.py 2>&1 | cut -c1-300
+echo -n "glm/props: "; curl -s -o /dev/null -w "%{http_code}\n" -m8 http://127.0.0.1:18091/glm/props; echo -n "web status: "; curl -s -o /dev/null -w "%{http_code}\n" -m8 http://127.0.0.1:18091/web/api/nox/status
