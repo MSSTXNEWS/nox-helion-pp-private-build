@@ -1,0 +1,56 @@
+/* NOX · Резонанс: «вау»-слой поверх Graphite. Техники (MIT): Aceternity UI Aurora Background / Spotlight, Magic UI Border Beam / Magic Card / Shimmer; анимации Motion+GSAP из vendor. Откат ?wow=0 */
+@property --nxw-a{syntax:"<angle>";inherits:true;initial-value:0deg}
+:root{--nxw-rgb:var(--gx-acc-rgb,157,177,209)}
+html[data-nox-world]:not([data-nox-world=helion]){--nxw-rgb:var(--nox-world-rgb,157,177,209)}
+html[data-nox-world=helion]::after{display:none}
+/* живой фон: три мягких пятна, только transform (композитор, без перерисовки) */
+.nxw-aurora{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;contain:strict}
+.nxw-aurora i{position:absolute;width:70vmax;height:70vmax;border-radius:50%;background:radial-gradient(closest-side,rgba(var(--nxw-rgb),.34),rgba(var(--nxw-rgb),.1) 55%,transparent 72%);opacity:.55;will-change:transform;transform:translate3d(0,0,0)}
+.nxw-aurora i:nth-child(1){left:-22vmax;top:-30vmax;animation:nxw-a1 26s ease-in-out infinite alternate}
+.nxw-aurora i:nth-child(2){right:-26vmax;top:8vh;background:radial-gradient(closest-side,rgba(110,150,255,.22),rgba(110,150,255,.06) 55%,transparent 72%);animation:nxw-a2 32s ease-in-out infinite alternate}
+.nxw-aurora i:nth-child(3){left:18vw;bottom:-44vmax;background:radial-gradient(closest-side,rgba(150,120,255,.2),transparent 70%);animation:nxw-a3 38s ease-in-out infinite alternate}
+@keyframes nxw-a1{to{transform:translate3d(18vmax,10vmax,0) scale(1.15)}}
+@keyframes nxw-a2{to{transform:translate3d(-16vmax,12vmax,0) scale(.9)}}
+@keyframes nxw-a3{to{transform:translate3d(-12vmax,-14vmax,0) scale(1.2)}}
+.dc-head{z-index:5}.dc-grid{position:relative;z-index:1}
+#nox-fx-ash{position:fixed;left:50%;top:34%;width:min(86vmin,900px);height:min(86vmin,900px);transform:translate(-50%,-50%);z-index:0;pointer-events:none;opacity:.5;-webkit-mask-image:radial-gradient(circle,#000 18%,rgba(0,0,0,.55) 48%,transparent 72%);mask-image:radial-gradient(circle,#000 18%,rgba(0,0,0,.55) 48%,transparent 72%)}#nox-fx-ash canvas{width:100%!important;height:100%!important}@media(prefers-reduced-motion:reduce){#nox-fx-ash{display:none}}
+/* панели рабочего стола: подсветка по курсору, луч по рамке, shimmer */
+#dcFill .nxw-card,.nxw-tile{position:relative;overflow:hidden;isolation:isolate}
+#dcFill sl-card::part(base){position:relative}
+.nxw-spot::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%),rgba(var(--nxw-rgb),.2),transparent 70%)}
+.nxw-spot:hover::before{opacity:1}
+.nxw-spot::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:1px;opacity:0;transition:opacity .25s;background:radial-gradient(160px circle at var(--mx,50%) var(--my,50%),rgba(var(--nxw-rgb),.9),transparent 70%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.nxw-spot:hover::after{opacity:1}
+/* shimmer: мягкий блик раз в несколько секунд */
+@keyframes nxw-sheen{0%,70%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+#dcFill sl-card{position:relative}
+#dcFill .nxw-sheen{position:absolute;inset:0;border-radius:16px;overflow:hidden;pointer-events:none;z-index:0}
+#dcFill .nxw-sheen::after{content:"";position:absolute;inset:0;width:60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.07),transparent);animation:nxw-sheen 9s ease-in-out infinite}
+#dcFill sl-card:nth-child(2) .nxw-sheen::after{animation-delay:1.5s}#dcFill sl-card:nth-child(3) .nxw-sheen::after{animation-delay:3s}
+#dcFill.nxw-load button{color:transparent!important;background:linear-gradient(100deg,rgba(255,255,255,.04) 30%,rgba(255,255,255,.12) 50%,rgba(255,255,255,.04) 70%)!important;background-size:250% 100%;animation:nxw-sk 1.3s linear infinite}
+@keyframes nxw-sk{to{background-position:-150% 0}}
+/* луч по рамке карточек (Magic UI Border Beam): offset-path */
+.nxw-beam{position:absolute;inset:0;border-radius:inherit;pointer-events:none;border:1px solid transparent;-webkit-mask-clip:padding-box,border-box;mask-clip:padding-box,border-box;-webkit-mask-composite:intersect;mask-composite:intersect;-webkit-mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000);mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)}
+.nxw-beam::after{content:"";position:absolute;width:90px;aspect-ratio:1;background:linear-gradient(to left,rgba(var(--nxw-rgb),.95),rgba(180,160,255,.8),transparent);offset-path:rect(0 auto auto 0 round 16px);animation:nxw-beam 9s linear infinite}
+@keyframes nxw-beam{to{offset-distance:100%}}
+#dcFill sl-card:nth-child(1) .nxw-beam::after{animation-duration:11s}
+/* раскладка панелей: ниже плиток, над полем ввода; на узких экранах только инициативы */
+@media(min-width:1200px){body:not(.dc-mini) #dcFill{top:auto!important;bottom:128px;max-width:980px}}
+@media(min-width:1200px) and (max-height:820px){#dcFill .nxw-cmd button:nth-of-type(n+4),#dcFill .nxw-rec button:nth-of-type(n+3){display:none}}
+@media(max-width:1199px){
+ body:not(.dc-mini) #dcFill{display:grid!important;grid-template-columns:1fr;position:absolute;left:12px;right:12px;bottom:132px;z-index:1;gap:0;transition:opacity .35s,transform .35s}
+ body.dc-started #dcFill{opacity:0;transform:translateY(8px);pointer-events:none}
+ #dcFill .nxw-cmd,#dcFill .nxw-rec{display:none}
+ #dcFill sl-card::part(base){background:rgba(255,255,255,.055);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+ #dcFill sl-card{--border-radius:16px;--padding:10px;--border-color:rgba(255,255,255,.1)}
+ #dcFill h3{margin:0 0 6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.65}
+ #dcFill button{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;margin:0 0 6px;padding:6px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:inherit;font:inherit;font-size:14px;text-align:left;cursor:pointer}
+ #dcFill small{display:none}
+ #dcFill button:nth-of-type(n+3){display:none}
+}
+@media(max-width:1199px) and (max-height:700px){#dcFill{display:none!important}}
+/* цели >= 44 px (аналог nox-t44 для chat-dc) */
+.dc-b,#dcFill button{min-height:44px}
+@media(pointer:coarse){.dc-b{height:44px!important}}
+@media(prefers-reduced-motion:reduce){.nxw-aurora i,.nxw-beam::after,#dcFill .nxw-sheen::after,#dcFill.nxw-load button{animation:none!important}.nxw-beam{display:none}}
+@media(max-width:700px){.nxw-aurora i:nth-child(3){display:none}.nxw-beam,#dcFill .nxw-sheen{display:none}}
