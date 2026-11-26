@@ -91,6 +91,12 @@ body.dc-mini #dcGlassDock{display:none}
 .dc-c5 .dc-w b{display:block;font-size:30px;font-weight:650;line-height:1.1;color:var(--gx-12,#edeef0);margin-top:2px}
 .dc-c5 .dc-pb{--height:6px;margin:6px 0 14px}
 /* v7: мобильная шапка без обрезки */
-@media(max-width:700px){.dc-lg,#dcPad{display:none!important}.dc-head{gap:8px;padding-left:12px;padding-right:12px}.dc-sub{display:none}.dc-b{padding:0 12px}}
+@media(max-width:700px){.dc-lg,#dcPad{display:none!important}.dc-head{gap:8px;padding-left:12px;padding-right:12px}.dc-sub{display:none}.dc-b{padding:0 12px}.dc-more{display:inline-grid!important}}
 /* v8 мобильная подложка */
 @media(max-width:700px){#dcGlassDock{display:none!important}}
+
+/* v9 лист «Ещё» (sl-drawer снизу, плитки) */
+.dc-more{display:none;min-width:44px;font-size:20px;line-height:1;place-items:center}
+.dc-sheet{--size:auto}.dc-sheet::part(panel){border-radius:20px 20px 0 0;background:var(--gx-2,#17181a)}
+.dc-sheet-t{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 0 12px}
+.dc-tile{min-height:64px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:color-mix(in srgb,var(--gx-3,#212225) 70%,transparent);color:var(--gx-12,#edeef0);font:inherit;font-size:16px;font-weight:500;display:grid;place-items:center;text-decoration:none;cursor:pointer}
