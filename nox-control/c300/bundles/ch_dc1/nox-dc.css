@@ -68,3 +68,11 @@ body.dc-mini #dcGlassDock{display:none}
 .dc-w{font-size:13px;color:var(--gx-11,#b0b4ba)}
 .dc-gl,#dcGlassDock,.dc-head.lg-host{--lg-tint:rgb(255 255 255 / .07)}
 .dc-sub{color:var(--gx-11,#b0b4ba)}
+
+/* v4 (WEB): воздух, акцент, прогресс, стекло карточек */
+.dc{background:radial-gradient(900px 520px at 50% -8%,color-mix(in srgb,var(--gx-acc,#c8b6a2) 16%,transparent),transparent 70%),var(--gx-1,#0f1012)}
+.dc-col sl-card,.dc-col .dc-card{backdrop-filter:blur(14px) saturate(1.2);border:1px solid color-mix(in srgb,var(--gx-acc,#c8b6a2) 18%,transparent)}
+.dc-w{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:4px 0}
+.dc-pb{--height:4px;margin:0 0 8px;--indicator-color:var(--gx-acc,#c8b6a2)}
+.dc-main deep-chat{font-size:17px;line-height:1.6}
+@media(max-width:700px){.dc-b{min-height:44px}}
