@@ -1,7 +1,9 @@
 echo "C300: w_r2"
-S=/workspace/nox/web/site
-grep -o "data-nox-ui-button[^;]\{0,160\}" $S/*.js 2>/dev/null | head -6 | cut -c1-260
-grep -o "nox-wow-button-skin[^;]\{0,200\}" $S/*.js 2>/dev/null | head -6 | cut -c1-300
-grep -o "button-skin'[^)]\{0,100\}" $S/*.js | head -3
-grep -o "ui-button[^;]\{0,100\}" $S/studio.html | head -5 | cut -c1-200
-grep -n -o "skins\?\s*[:=]\s*\[[^]]\{0,200\}\]\|SKINS\s*=\s*[^;]\{0,200\}" $S/*.js $S/studio.html 2>/dev/null | head -5 | cut -c1-300
+python3 - <<'P'
+import glob,re
+for f in glob.glob('/workspace/nox/web/site/*.js')+glob.glob('/workspace/nox/web/site/studio.html'):
+    s=open(f,errors='ignore').read()
+    for k in ('nox-ui-button','nox-wow-button-skin','noxUiButton','buttonSkin'):
+        for m in list(re.finditer(k,s))[:2]:
+            print(f.split('/')[-1],k,'|',s[max(0,m.start()-120):m.end()+180].replace('\n',' ')[:320])
+P
