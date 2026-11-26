@@ -1,13 +1,13 @@
 /* NOX frame (WEB): единый каркас шаблонных страниц на Shoelace (sl-card, sl-tab-group). Тонкий адаптер: узлы переносятся, обработчики сохраняются. Откат: ?legacy=1 */
 (function(){
 if(/[?&]legacy=1/.test(location.search))return;
-var wrap=document.querySelector('main.page .wrap, .page .wrap');if(!wrap)return;
+var wrap=document.querySelector('main.page .wrap, .page .wrap')||(/operators/.test(location.pathname)?document.querySelector('body > main'):null);if(!wrap)return;
 var secs=[].slice.call(wrap.querySelectorAll(':scope > section.card'));if(!secs.length)return;
 var b=new URL('./vendor/shoelace/cdn/',document.currentScript?document.currentScript.src:location.href).href;
 function boot(){var s=document.createElement('script');s.type='module';s.src=b+'shoelace-autoloader.js';s.setAttribute('data-shoelace',b.replace(/\/$/,''));document.head.appendChild(s)}
 var css=document.createElement('style');css.textContent='.nxf-tabs{--indicator-color:var(--gx-acc,#c8b6a2);margin:8px 0 16px}.nxf-tabs sl-tab-panel::part(base){padding:16px 0}.nxf-card{display:block;margin:0 0 16px;--border-radius:16px;--padding:20px;--border-color:rgba(255,255,255,.1)}.nxf-card::part(base){background:color-mix(in srgb,rgba(30,30,34,1) 58%,transparent);backdrop-filter:blur(14px) saturate(1.25);-webkit-backdrop-filter:blur(14px) saturate(1.25)}.nxf-card h2{margin:0 0 12px!important;font-size:14px!important}.page .ph h1{font-size:clamp(28px,3vw,44px);letter-spacing:-.01em}.page .purpose{font-size:clamp(16px,1.2vw,18px);line-height:1.55;max-width:70ch}.page .note,.page li .note{font-size:14px}.page .badge{font-size:12px}sl-tab::part(base){min-height:44px;font-size:15px}@media(min-width:1440px){.page .wrap{max-width:1180px}}';
 document.head.appendChild(css);
-var cards=secs.map(function(s){var c=document.createElement('sl-card');c.className='nxf-card';var h=s.querySelector(':scope > h2');var t=h?h.textContent.trim():'';s.parentNode.insertBefore(c,s);while(s.firstChild)c.appendChild(s.firstChild);s.remove();return [t,c]});
-if(cards.length>=3){var tg=document.createElement('sl-tab-group');tg.className='nxf-tabs';tg.setAttribute('placement','top');var first=cards[0][1];first.parentNode.insertBefore(tg,first);cards.forEach(function(x,i){var tab=document.createElement('sl-tab');tab.slot='nav';tab.panel='p'+i;tab.textContent=x[0]||('Раздел '+(i+1));tg.appendChild(tab);var p=document.createElement('sl-tab-panel');p.name='p'+i;p.appendChild(x[1]);tg.appendChild(p)})}
+var cards=secs.map(function(s){var c=document.createElement('sl-card');c.className='nxf-card';var h=s.querySelector(':scope > h2, :scope > h3');var t=h?h.textContent.trim().replace(/\s*\(.*$/,''):'';s.parentNode.insertBefore(c,s);while(s.firstChild)c.appendChild(s.firstChild);s.remove();return [t,c]});
+if(cards.length>=3){var tg=document.createElement('sl-tab-group');tg.className='nxf-tabs';tg.setAttribute('placement','top');var first=cards[0][1];first.parentNode.insertBefore(tg,first);cards.forEach(function(x,i){var tab=document.createElement('sl-tab');tab.slot='nav';tab.panel='p'+i;tab.textContent=x[0]||(/operators/.test(location.pathname)?['Нагрузка','Задачи','Журнал'][i]:null)||('Раздел '+(i+1));tg.appendChild(tab);var p=document.createElement('sl-tab-panel');p.name='p'+i;p.appendChild(x[1]);tg.appendChild(p)})}
 boot();document.documentElement.setAttribute('data-nxf','1');
 })();

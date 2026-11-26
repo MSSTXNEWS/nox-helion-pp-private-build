@@ -9,10 +9,11 @@ box.innerHTML='<div id="nxtv-bar"><input id="nxtv-url" placeholder="Адрес �
 document.body.appendChild(box);
 var op=document.createElement('button');op.id='nxtv-open';op.type='button';op.className='b';op.textContent='Эфир';var tries=0,iv=setInterval(function(){var p=document.querySelector('#s2tv .top #s2p');if(p){p.insertAdjacentElement('afterend',op);clearInterval(iv)}else if(++tries>40){document.body.appendChild(op);op.style.cssText='position:fixed;right:16px;top:16px;z-index:70';clearInterval(iv)}},250);
 var pl=null;
-function play(u){if(!u)return;box.classList.add('on');document.getElementById('nxtv-hold').style.display='none';var old=document.getElementById('vid');if(old){try{old.pause()}catch(e){}old.style.display='none'}
+function play(u){if(!u)return;if(!window.__nxHls&&/\.m3u8/i.test(u)){import('./vendor/hls.js/hls.js.esm.js').then(function(m){window.__nxHls=m.default;play(u)}).catch(function(){window.__nxHls=null;play2(u)});return}play2(u)}
+function play2(u){box.classList.add('on');document.getElementById('nxtv-hold').style.display='none';var old=document.getElementById('vid');if(old){try{old.pause()}catch(e){}old.style.display='none'}
  if(!pl){customElements.whenDefined('media-player').then(function(){})}
  if(pl)pl.remove();pl=document.createElement('media-player');pl.setAttribute('playsinline','');pl.setAttribute('autoplay','');pl.setAttribute('title','Эфир NOX');pl.innerHTML='<media-provider></media-provider><media-video-layout></media-video-layout>';box.insertBefore(pl,box.firstChild.nextSibling);
- pl.addEventListener('provider-change',function(e){var p=e.detail;if(p&&p.type==='hls')p.library=function(){return import('./vendor/hls.js/hls.js.esm.js')}});
+ pl.addEventListener('provider-change',function(e){var p=e.detail;if(p&&p.type==='hls')if(window.__nxHls)p.library=window.__nxHls});
  pl.src=/\.m3u8(\?|$)/i.test(u)?{src:u,type:'application/x-mpegurl'}:u}
 function load(){if(window.customElements&&customElements.get('media-player'))return Promise.resolve();return new Promise(function(ok){var s=document.createElement('script');s.src='./vendor/vidstack/vidstack.iife.js';s.onload=function(){var V=window.NOX_vidstack;try{if(V&&V.defineCustomElement&&!customElements.get('media-player')){['MediaPlayerElement','MediaProviderElement','MediaVideoLayoutElement'].forEach(function(k){if(V[k]&&!customElements.get(V[k].tagName||'x'))V.defineCustomElement(V[k])})}}catch(e){}ok()};s.onerror=ok;document.head.appendChild(s)})}
 op.onclick=function(){box.classList.add('on')};document.getElementById('nxtv-x').onclick=function(){box.classList.remove('on');if(pl){try{pl.pause()}catch(e){}}};
