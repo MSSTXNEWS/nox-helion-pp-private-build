@@ -7,7 +7,8 @@
 <title>Резонанс · NOX</title>
 <link rel="icon" href="favicon.svg">
 <script src="./nox-theme.js"></script>
-<link rel="stylesheet" href="./nox-dc.css?v=dc1">
+<link rel="stylesheet" href="./vendor/shoelace/cdn/themes/dark.css">
+<link rel="stylesheet" href="./nox-dc.css?v=dc2">
 </head>
 <body data-page="wow-chat" class="dc">
 <header class="dc-head" id="dcHead">
@@ -21,10 +22,18 @@
 </header>
 <div class="dc-toast" id="dcToast" role="status" aria-live="polite" hidden></div>
 <aside class="dc-thr" id="dcThr" hidden><div class="dc-thr-in" id="dcThrIn"></div></aside>
+<div class="dc-grid" id="dcGrid">
+<aside class="dc-col dc-c1" id="dcL" aria-label="Диалоги"></aside>
+<aside class="dc-col dc-c2" id="dcQ" aria-label="Быстрые команды"></aside>
 <main class="dc-main"><deep-chat id="chat"></deep-chat></main>
+<aside class="dc-col dc-c4" id="dcP" aria-label="Заготовки"></aside>
+<aside class="dc-col dc-c5" id="dcW" aria-label="Система"></aside>
+</div>
 <script src="./vendor/deep-chat/deep-chat.iife.js"></script>
 <script src="./nox-k8-meta.js"></script>
 <script src="./nox-u-pad.js?v=p8" defer></script>
-<script src="./nox-dc.js?v=dc1"></script>
+<script src="./nox-dc.js?v=dc2"></script>
+<script>(function(){var b=new URL("./vendor/shoelace/cdn/",location.href).href;var s=document.createElement("script");s.type="module";s.src=b+"shoelace-autoloader.js";s.setAttribute("data-shoelace",b.replace(/\/$/,""));document.head.appendChild(s)})()</script>
+<script src="./nox-dc-cols.js?v=dc2" defer></script>
 </body>
 </html>
