@@ -7,13 +7,10 @@
   #k8-live{top:calc(var(--ds-head-h,56px) + 6px) !important;bottom:auto !important;left:14px !important;right:14px !important;max-width:none !important;width:auto}
 }
 /* информативное пустое состояние: подсказка действия вместо голого «пусто» */
-.ds-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 16px;text-align:center;color:var(--gx-11,#b0b4ba);border:1px dashed var(--gx-6,#43484e);border-radius:14px;background:color-mix(in srgb,var(--gx-3,#18191b) 60%,transparent)}
-.ds-empty b{color:var(--gx-12,#edeef0);font-size:16px}
-.ds-empty .ds-empty-cta{min-height:44px;padding:0 18px;border-radius:12px;background:var(--gx-12,#edeef0);color:var(--gx-1,#111113);font-weight:600;border:0;cursor:pointer}
+.ds-empty{display:block}
+.ds-empty sl-card{width:100%;--border-color:var(--gx-5,#2a2c30);--border-radius:14px}
+.ds-empty-in{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:8px;color:var(--gx-11,#b0b4ba)}.ds-empty-in b{color:var(--gx-12,#edeef0);font-size:16px}
 /* скелетон загрузки */
-.u-skel{display:block;border-radius:10px;min-height:16px;background:linear-gradient(100deg,var(--gx-3,#18191b) 30%,var(--gx-5,#2a2c30) 50%,var(--gx-3,#18191b) 70%);background-size:220% 100%;animation:u-skel 1.3s linear infinite}
-@keyframes u-skel{from{background-position:120% 0}to{background-position:-120% 0}}
-@media (prefers-reduced-motion:reduce){.u-skel{animation:none}}
 .tb-i,#tbFav,#tbBell,#tbNotes,#tbSearch{min-width:44px !important;min-height:44px !important}
 #dkToggle{min-width:44px !important;min-height:44px !important}
 /* кнопки .seg: градиентный текст nox-wow при background-image:none давал невидимые подписи (Опросить сейчас и др.) */
@@ -25,16 +22,14 @@ html[data-nox-theme=graphite] :is(.seg>a,.seg>button,.seg>.more>button,.mnav .sw
 .fc .fc-col-header-cell-cushion,.fc .fc-daygrid-day-number{padding:8px;min-height:32px;display:inline-block}
 
 /* v4: главный CTA страницы: один залитый светлый акцент, остальные кнопки вторичные */
-.u-cta{background:var(--gx-12,#edeef0) !important;color:var(--gx-1,#111113) !important;-webkit-text-fill-color:var(--gx-1,#111113) !important;font-weight:700 !important;border:0 !important;min-height:44px;box-shadow:0 0 0 1px rgba(157,177,209,.35),0 6px 22px rgba(157,177,209,.22);animation:u-cta-pulse 3.2s ease-in-out infinite}
-.u-cta sl-icon{color:inherit !important}
-.u-cta:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.u-cta:not(sl-button){background:var(--gx-12,#edeef0) !important;color:var(--gx-1,#111113) !important;-webkit-text-fill-color:var(--gx-1,#111113) !important;font-weight:700 !important;border:0 !important;min-height:44px;box-shadow:0 0 0 1px rgba(157,177,209,.35),0 6px 22px rgba(157,177,209,.22);animation:u-cta-pulse 3.2s ease-in-out infinite}
+.u-cta:not(sl-button) sl-icon{color:inherit !important}
+.u-cta:not(sl-button):hover{filter:brightness(1.06);transform:translateY(-1px)}
 @keyframes u-cta-pulse{0%,100%{box-shadow:0 0 0 1px rgba(157,177,209,.35),0 6px 22px rgba(157,177,209,.18)}50%{box-shadow:0 0 0 1px rgba(157,177,209,.55),0 8px 30px rgba(157,177,209,.36)}}
-@media (prefers-reduced-motion:reduce){.u-cta{animation:none}}
+@media (prefers-reduced-motion:reduce){.u-cta:not(sl-button){animation:none}}
 
-.u-sec:not(.u-cta){background:transparent !important;color:var(--gx-12,#edeef0) !important;-webkit-text-fill-color:var(--gx-12,#edeef0) !important;border:1px solid var(--gx-7,#43484e) !important;box-shadow:none !important}
+.u-sec:not(.u-cta):not(sl-button){background:transparent !important;color:var(--gx-12,#edeef0) !important;-webkit-text-fill-color:var(--gx-12,#edeef0) !important;border:1px solid var(--gx-7,#43484e) !important;box-shadow:none !important}
 
-sl-button.u-cta::part(base){background:var(--gx-12,#edeef0);color:var(--gx-1,#111113);border:0;font-weight:700;min-height:44px}
-sl-button.u-sec:not(.u-cta)::part(base){background:transparent;color:var(--gx-12,#edeef0);border:1px solid var(--gx-7,#43484e)}
 /* v5: широкие экраны (2200+ css px после zoom 1.3-1.55): шапка не обрезается, пилюля обучения не лезет на главную */
 @media (min-width:2200px){.tb-t sl-icon{display:none !important}.tb-t{padding-left:8px !important;padding-right:8px !important;letter-spacing:.04em !important}.tb-l,.tb-r{gap:0 !important}}
 body[data-page=home] #k8-live{display:none !important}
