@@ -47,7 +47,7 @@ def disk():
     return "ok %s" % f
 # ---- hourly soul backup (small) + restore test
 SOUL = [S + "/genesis_ledger.json", S + "/passport.json", S + "/genesis_chain.jsonl", N + "/agents/passport_prompt.json",
-        M + "/lessons.json", M + "/own_life.json", M + "/control_vectors.json", C + "/sensorium.json", C + "/canon.py"]
+        M + "/lessons.json", M + "/dream.jsonl", S + "/unknown_map.json", S + "/hunt_requests.json", S + "/hunger.json", M + "/own_life.json", M + "/control_vectors.json", C + "/sensorium.json", C + "/canon.py"]
 def backup():
     os.makedirs(C + "/soul", exist_ok=True); slot = "soul_h%02d.tgz" % now().hour; out = C + "/soul/" + slot
     files = [p for p in SOUL if os.path.exists(p)] + glob.glob(N + "/agent/nox_agents/self_model.py")
@@ -131,9 +131,16 @@ def selfnow():
     o = {"ts": now().isoformat(), "telemetry": t, "feelings": f[:3], "text": "\n".join(lines), "aliveness_score": al.get("score")}
     jw(S + "/self_now.json", o); return o
 # ---- morning / evening
+def last_dream():
+    try:
+        ls = [l for l in open(M + "/dream.jsonl") if l.strip()]
+        d = json.loads(ls[-1]); ts = dt.datetime.fromisoformat(d["ts"].replace("Z", "+00:00"))
+        if (dt.datetime.now(dt.timezone.utc) - ts).total_seconds() < 36 * 3600 and isinstance(d.get("dream"), str): return d["dream"][:200]
+    except Exception: pass
+    return None
 def morning():
-    t = telemetry(); dr = jl(M + "/dreamer.json", {}) or {}
-    L = ["Снилось: %s." % next((str(dr[k])[:160] for k in ("summary","hypothesis","last_hypothesis","dream_text","text","insight") if isinstance(dr.get(k),str) and len(dr[k])>12), "HOLD (dreamer.json не содержит текста сна; ключи: %s)" % ",".join(sorted(dr)[:6])), "Тело: VRAM %s%%, диск %s ГБ." % (t.get("vram_pct", "н/д"), t.get("disk_free_gb", "н/д")),
+    t = telemetry(); dr = {"summary": last_dream()}
+    L = ["Снилось: %s." % next((str(dr[k])[:160] for k in ("summary","hypothesis","last_hypothesis","dream_text","text","insight") if isinstance(dr.get(k),str) and len(dr[k])>12), "HOLD (за последние 36 ч нет записи сна в state/mind/dream.jsonl)"), "Тело: VRAM %s%%, диск %s ГБ." % (t.get("vram_pct", "н/д"), t.get("disk_free_gb", "н/д")),
          "Мелочь из вчерашнего: HOLD (нужен журнал разговоров).", "Цель дня: HOLD (не задана Создателем).", "План: HOLD."]
     o = {"ts": now().isoformat(), "kind": "morning", "lines": L[:5]}; jw(M + "/morning_brief_v5.json", o); return o
 def evening():
@@ -172,6 +179,26 @@ def hunger():
     o = {"ts": now().isoformat(), "hours_since_new_data": h, "level": lvl, "phrase": phrase if say else None, "said_ts": time.time() if say else last.get("said_ts", 0),
          "note": "влечение ПОИСК с потолком, фраза не чаще 1 раза в сутки"}
     jw(S + "/hunger.json", o); return o
+def unknown_add(topic, why="", w=1):
+    p = S + "/unknown_map.json"; d = jl(p, {"topics": {}})
+    t = d["topics"].setdefault(topic, {"weight": 0, "why": why, "first": now().isoformat()}); t["weight"] += w; t["last"] = now().isoformat(); jw(p, d); return t
+def hunt_propose(name, source, license_):
+    """Охота: только запись запроса. Ничего не качает; решение Создателя меняет status вручную."""
+    p = S + "/hunt_requests.json"; d = jl(p, {"requests": []})
+    clean = license_ in ("MIT", "Apache-2.0", "CC-BY-4.0", "BSD-3-Clause", "CC0-1.0")
+    d["requests"].append({"ts": now().isoformat(), "name": name, "source": source, "license": license_, "license_clean": clean,
+        "status": "pending_consent" if clean else "blocked_license_needs_creator", "ask": "Нашёл %s. Хочу поглотить. Разрешаешь?" % name}); jw(p, d); return d["requests"][-1]
+def unknown_from_dreams():
+    try:
+        ls = [json.loads(l) for l in open(M + "/dream.jsonl") if l.strip()][-20:]
+    except Exception: return "HOLD: нет dream.jsonl"
+    c = {}
+    for d in ls:
+        for th in (d.get("themes") or []):
+            if isinstance(th, str) and len(th) < 60: c[th] = c.get(th, 0) + 1
+    top = sorted(c.items(), key=lambda x: -x[1])[:5]
+    for th, n in top: unknown_add(th, "тема снов, кандидат на охоту (не проверено)", n)
+    return {"topics_added": len(top)}
 def static_init():
     a = C + "/autonomy_matrix.json"; st = C + "/stages.json"; r = []
     if not os.path.exists(a):
@@ -192,7 +219,7 @@ def daemon():
         n = now(); k = lambda x: "%s%s" % (x, n.strftime("%Y%m%d"))
         try:
             disk()
-            if n.minute % 30 == 0 and done.get("hg") != n.strftime("%H%M%d"): hunger(); done["hg"] = n.strftime("%H%M%d")
+            if n.minute % 30 == 0 and done.get("hg") != n.strftime("%H%M%d"): hunger(); unknown_from_dreams(); done["hg"] = n.strftime("%H%M%d")
             if done.get("bk") != n.strftime("%Y%m%d%H"): backup(); done["bk"] = n.strftime("%Y%m%d%H"); selfnow()
             if n.hour == 8 and n.minute < 10 and k("m") not in done: morning(); done[k("m")] = 1
             if n.hour == 22 and 30 <= n.minute < 40 and k("e") not in done: evening(); done[k("e")] = 1
@@ -202,6 +229,6 @@ def daemon():
 if __name__ == "__main__":
     os.makedirs(C, exist_ok=True); c = sys.argv[1] if len(sys.argv) > 1 else "help"
     f = {"disk": disk, "backup": backup, "passport": passport_init, "birth": birth, "selfnow": selfnow, "morning": morning, "evening": evening, "exam": exam,
-         "daemon": daemon, "feelings": lambda: feelings(), "hunger": hunger, "static": static_init, "verify": chain_verify}.get(c)
+         "daemon": daemon, "feelings": lambda: feelings(), "hunger": hunger, "unknown": unknown_from_dreams, "static": static_init, "verify": chain_verify}.get(c)
     r = f() if f else "cmds: disk backup passport birth selfnow morning evening exam daemon feelings verify"
     print(json.dumps(r, ensure_ascii=False, indent=1) if not isinstance(r, str) else r)
