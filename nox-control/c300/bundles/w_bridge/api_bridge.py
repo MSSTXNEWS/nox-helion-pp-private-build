@@ -152,10 +152,32 @@ async def status(request):
     except Exception: pass
     return web.json_response(out)
 
+
+async def sci_arxiv(request):
+    """Поиск arXiv (у arXiv нет CORS): мост ходит сам. Нет ответа -> hold."""
+    import xml.etree.ElementTree as ET
+    from urllib.parse import quote
+    q = request.query.get('q', '').strip()[:200]
+    if not q: return web.json_response(hold('пустой запрос', items=[]))
+    try:
+        async with ClientSession(timeout=ClientTimeout(total=12)) as sess:
+            async with sess.get('http://export.arxiv.org/api/query?search_query=all:' + quote(q) + '&max_results=8') as r:
+                if r.status != 200: return web.json_response(hold('arXiv ответил %s' % r.status, items=[]))
+                xml = await r.text()
+        ns = {'a': 'http://www.w3.org/2005/Atom'}
+        items = []
+        for e in ET.fromstring(xml).findall('a:entry', ns):
+            g = lambda t: (e.findtext('a:' + t, '', ns) or '').strip()
+            items.append({'title': ' '.join(g('title').split()), 'url': g('id'), 'year': g('published')[:4], 'authors': [(a.findtext('a:name', '', ns) or '').strip() for a in e.findall('a:author', ns)][:6], 'venue': 'arXiv', 'summary': ' '.join(g('summary').split())[:300]})
+        return web.json_response({'ok': True, 'source': 'arXiv API', 'items': items, 'ts': int(time.time())})
+    except Exception as ex:
+        return web.json_response(hold('arXiv недоступен: %s' % str(ex)[:80], items=[]))
+
 app = web.Application()
 for p, h in (('/api/training/status', training), ('/api/nox/activity', activity), ('/api/notifications', notifications), ('/api/nox/status', status)):
     app.router.add_get(p, h)
 app.router.add_get('/api/nox/training/status', training)
+app.router.add_get('/api/sci/arxiv', sci_arxiv)
 app.router.add_route('*', '/api/settings', settings)
 if __name__ == '__main__':
     web.run_app(app, host='127.0.0.1', port=PORT, print=None)
