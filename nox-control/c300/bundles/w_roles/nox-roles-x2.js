@@ -68,10 +68,12 @@
     host.appendChild(box);
     var q = box.querySelector('#rx2-q'), ss = box.querySelector('#rx2-ss'), res = box.querySelector('#rx2-res');
     box.querySelectorAll('.rx2-t').forEach(function (b) { b.addEventListener('click', function () { cur = b.dataset.s; box.querySelectorAll('.rx2-t').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); }); if (q.value.trim()) run(); }); });
+    var tok = 0;
     function run() {
-      var t = (q.value || '').trim(); if (!t) { ss.textContent = 'Введите запрос.'; return; }
+      var my = ++tok, t = (q.value || '').trim(); if (!t) { ss.textContent = 'Введите запрос.'; return; }
       ss.textContent = 'Ищу…'; res.innerHTML = '';
       FIND[cur](t).then(function (items) {
+        if (my !== tok) return;
         items = (items || []).filter(function (x) { return x && x.title; });
         ss.textContent = items.length ? 'Найдено: ' + items.length + ' (' + SRC.filter(function (s) { return s[0] === cur; })[0][1] + ')' : 'Нет результатов в этом источнике.';
         items.forEach(function (it) {
@@ -80,7 +82,7 @@
           b.addEventListener('click', function () { var t2 = cite(it); (navigator.clipboard ? navigator.clipboard.writeText(t2) : Promise.reject()).then(function () { ss.textContent = 'Скопировано.'; }, function () { ss.textContent = t2; }); });
           c.appendChild(b); res.appendChild(c);
         });
-      }).catch(function (e) { ss.textContent = 'Источник недоступен: ' + e.message + '. Попробуйте другой.'; });
+      }).catch(function (e) { if (my !== tok) return; ss.textContent = 'Источник недоступен: ' + e.message + '. Попробуйте другой.'; });
     }
     box.querySelector('#rx2-go').addEventListener('click', run);
     q.addEventListener('keydown', function (e) { if (e.key === 'Enter') run(); });
