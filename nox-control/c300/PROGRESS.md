@@ -14,3 +14,5 @@
 | 26.11 | Чат v6-v8: Система = 4 крупные метрики, Shoelace по idle, aria для полей, мобильная шапка/подложка (ch_dc34-36) | chat-dc | vision 1920/390: A8 R7 WOW6 (итерация 1 из 3 по vision) |
 | 26.11 | nox-a11y-fix.js (aria-правки общих скриптов, Shoelace, FullCalendar, FilerobotImageEditor) на 78 страницах кроме index/chat-dc; откат ?a11y=0 | site, webroot | axe: settings 0, photo 1 minor, calendar 1 minor (было 5-7 с critical) |
 | 26.11 | nox-frame.js: единый каркас Shoelace (sl-card, sl-tab-group при >=3 секций) на 27 шаблонных заглушках, откат ?legacy=1 | site, webroot | axe advisors/contacts/mail: 0 нарушений |
+| 26.11 | Calendar: role=presentation откатан (нативная grid-семантика FullCalendar); tabindex только у реально прокручиваемых контейнеров; settings heading-order (w_a10) | site, webroot | axe calendar 1440: 0, 390: 1 serious (scrollable-region); settings 0 |
+| 26.11 | Чат v9: на 390 кнопка «⋯» открывает sl-drawer снизу с плитками «Блокнот» / «Классический чат» (ch_dc37) | chat-dc | vision 390: A9 R8 WOW7; 1920: A8 R7 WOW6; axe: critical label ушёл, остался region x2 |
