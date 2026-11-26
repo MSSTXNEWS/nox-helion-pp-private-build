@@ -1,0 +1,50 @@
+/* NOX: five complete cinematic worlds x six independent palettes.
+ * Non-destructive dynamic skinning: the same original links/buttons/data stay intact.
+ */
+html[data-nox-world]{--nox-world-font:"Tektur",sans-serif;--nox-world-rgb:233,180,101;--nox-world-radius:10px;--nox-world-border:1px solid rgba(var(--nox-world-rgb),.43);}
+#noxCinematicWorldCanvas{display:none;left:0;top:0;width:100%;height:100%;z-index:13;pointer-events:none;mix-blend-mode:screen;}
+html:not([data-nox-world="helion"]) body.helion-home #noxEclipseCanvas,
+html:not([data-nox-world="helion"]) body.helion-home #noxWorldsV6Canvas{opacity:0!important;pointer-events:none!important;}
+html:not([data-nox-world="helion"]) body.helion-home .home-palette-planet{opacity:.50!important;filter:grayscale(1) brightness(.6)!important}
+html:not([data-nox-world="helion"]) body.helion-home :is(.helion-monitor,.helion-system,.helion-lower,.helion-deck,.helion-panel,.nox-command-center){position:relative;z-index:35;}
+html[data-nox-world] body :is(button,.graphic-button,.helion-card,[role="button"],a.helion-card){font-family:var(--nox-world-font)!important;transition:background-color .25s,border-color .25s,box-shadow .25s,transform .22s!important;}
+html[data-nox-world] body :is(button,.graphic-button,.helion-card,[role="button"],a.helion-card):focus-visible{outline:2px solid rgb(var(--nox-world-rgb))!important;outline-offset:3px!important;}
+html[data-nox-world] body :is(button,.graphic-button,.helion-card,[role="button"],a.helion-card):not(:disabled):hover{filter:brightness(1.12);}
+html[data-nox-world] body :is(button,.graphic-button,.helion-card,[role="button"],a.helion-card):active{transform:scale(.978);}
+html[data-nox-world="chronos"]{--nox-world-radius:50px}
+html[data-nox-world="chronos"] body :is(.nox-wow-btn,.graphic-button,.helion-card){background:radial-gradient(circle at 50% -20%,rgba(var(--nox-world-rgb),.2),transparent 64%),repeating-linear-gradient(115deg,#1c1c1c,#101215 6px,#22272b 7px,#080b0f 10px)!important;border:2px ridge rgba(var(--nox-world-rgb),.55)!important;border-radius:19px 4px 19px 4px!important;box-shadow:inset 0 1px 0 rgba(var(--nox-world-rgb),.36),inset 0 -8px 14px #000b,0 8px 28px #0009!important;letter-spacing:.06em!important}
+html[data-nox-world="chronos"] body :is(.helion-stage,.workspace-page){background:radial-gradient(ellipse at 50% 50%,#1d1915,#06090c 75%)!important}
+html[data-nox-world="chronos"] body.helion-home .home-palette-planet{background:repeating-conic-gradient(from 4deg,rgba(var(--nox-world-rgb),.55) 0 13deg,#25252b 14deg 27deg)!important;border-radius:45%;}
+html[data-nox-world="somnium"]{--nox-world-radius:26px}
+html[data-nox-world="somnium"] body :is(.nox-wow-btn,.graphic-button,.helion-card){border:1px solid rgba(var(--nox-world-rgb),.6)!important;border-radius:31% 16% 28% 16%/24% 26% 34% 22%!important;background:linear-gradient(135deg,rgba(var(--nox-world-rgb),.16),#16172a 43%,rgba(var(--nox-world-rgb),.11))!important;box-shadow:inset 2px 1px 5px #fff3,inset -9px -12px 26px #020308b9,0 7px 24px #0008,0 0 14px rgba(var(--nox-world-rgb),.1)!important;backdrop-filter:blur(9px)}
+html[data-nox-world="somnium"] body :is(.helion-stage,.workspace-page){background:conic-gradient(from 110deg at 50% 52%,#061020,#1b0e24,#05121b,#170e20,#061020)!important}
+html[data-nox-world="forge"]{--nox-world-radius:2px}
+html[data-nox-world="forge"] body :is(.nox-wow-btn,.graphic-button,.helion-card){border:1px solid rgba(var(--nox-world-rgb),.48)!important;clip-path:polygon(0 0,94% 0,100% 24%,100% 100%,6% 100%,0 76%)!important;border-radius:0!important;background:linear-gradient(155deg,#34383b,#181a1c 36%,#0a0e12 66%,rgba(var(--nox-world-rgb),.25))!important;box-shadow:inset 0 2px #ffffff30,inset 0 -5px #040405,0 9px 19px #000a!important;letter-spacing:.12em!important}
+html[data-nox-world="forge"] body :is(.helion-stage,.workspace-page){background:linear-gradient(155deg,#1a1311,#090a0c 58%,#0f1013)!important}
+html[data-nox-world="synapse"]{--nox-world-radius:28px}
+html[data-nox-world="synapse"] body :is(.nox-wow-btn,.graphic-button,.helion-card){border:1px solid rgba(var(--nox-world-rgb),.48)!important;border-radius:26px 20px 28px 18px!important;background:radial-gradient(ellipse at 24% 0%,rgba(var(--nox-world-rgb),.27),transparent 72%),linear-gradient(125deg,#09201d,#061016 80%)!important;box-shadow:inset 0 0 18px rgba(var(--nox-world-rgb),.08),0 0 14px rgba(var(--nox-world-rgb),.13),0 6px 20px #0009!important}
+html[data-nox-world="synapse"] body :is(.helion-stage,.workspace-page){background:radial-gradient(ellipse at 46% 50%,#0b2a24,#030c0e 65%)!important}
+.nox-worlds-control{box-sizing:border-box;position:fixed;right:12px;top:70px;z-index:200000;max-width:min(355px,calc(100vw - 22px));font-family:"Segoe UI",sans-serif;color:#e5e9ed}
+.nox-worlds-open{cursor:pointer;letter-spacing:.1em;font:750 11px/1.1 "Segoe UI",sans-serif!important;padding:8px 10px!important;min-height:36px!important;color:#f3e5c9!important;background:linear-gradient(145deg,#19212adf,#05070bfa)!important;border:1px solid rgba(var(--nox-world-rgb),.53)!important;border-radius:8px!important;box-shadow:0 3px 18px #000b,inset 0 1px rgba(var(--nox-world-rgb),.3)!important}
+.nox-worlds-panel{background:linear-gradient(155deg,#121920f7,#03060dfb)!important;border:1px solid rgba(var(--nox-world-rgb),.45);border-radius:14px;padding:14px;margin-top:7px;box-shadow:0 16px 42px #000d;max-height:min(72vh,640px);overflow:auto}
+.nox-worlds-panel[hidden]{display:none!important}
+.nox-worlds-panel strong{display:block;color:rgb(var(--nox-world-rgb));font:700 12px/1.4 "Segoe UI",sans-serif;letter-spacing:.1em}
+.nox-worlds-panel p{margin:5px 0 12px;color:#b2bdc8;font-size:11px;line-height:1.45}
+.nox-worlds-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0 18px}
+.nox-worlds-choice{font:600 10px "Segoe UI",sans-serif!important;border:1px solid #415063!important;border-radius:9px!important;padding:11px 8px!important;min-height:53px!important;color:#e6eaf1!important;background:linear-gradient(130deg,#1e2732,#101822)!important;cursor:pointer;text-align:left}
+.nox-worlds-choice[aria-pressed="true"]{border-color:rgb(var(--nox-world-rgb))!important;box-shadow:0 0 11px rgba(var(--nox-world-rgb),.24)!important}
+.nox-worlds-colors{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:10px 0}
+.nox-worlds-colors>button{height:39px!important;min-height:39px!important;border-radius:8px!important;cursor:pointer;border:1px solid #667380!important;background:radial-gradient(circle at 30% 32%,#fff9,var(--nox-color-swatch) 35%,#090d12 95%)!important;}
+.nox-worlds-colors>button[aria-pressed="true"]{outline:2px solid #f4e8d5;outline-offset:1px}
+html[data-nox-world] body .nox-worlds-control :is(button,[role="button"]){clip-path:none!important;transform:none;letter-spacing:normal!important}
+@media(max-width:700px){.nox-worlds-control{top:65px;right:7px}.nox-worlds-panel{padding:9px}.nox-worlds-open{min-height:31px!important;font-size:9px!important}}
+@media(prefers-reduced-motion:reduce){html[data-nox-world] body *,html[data-nox-world] body *::before,html[data-nox-world] body *::after{animation-duration:.01ms!important;transition-duration:.01ms!important}#noxCinematicWorldCanvas{display:none!important}}
+
+/* Critical STOP remains visually unmistakable across all 30 combinations. */
+html[data-nox-world] body :is(button[data-nox-stop],button[id*="stop" i],button[class*="stop" i],button[aria-label*="stop" i],button[aria-label*="стоп" i]){background:linear-gradient(145deg,#661d21,#23070a)!important;border:1px solid #ff6669!important;box-shadow:0 0 0 1px #b64042,inset 0 1px #ff999938!important;color:#fff!important;clip-path:none!important;border-radius:8px!important}
+
+/* V7: explicit direct navigation, never a collapsible dropdown. */
+.nox-worlds-direct{max-width:none}.nox-worlds-direct-link{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-weight:750}
+.nox-worlds-direct-link:focus-visible{outline:2px solid rgb(var(--nox-world-rgb));outline-offset:3px}
+body[data-nox-page="dispatcher"] .nox-worlds-direct,body[data-nox-page="downloads"] .nox-worlds-direct{top:64px}
+@media(max-width:700px){.nox-worlds-direct{right:8px;top:54px}.nox-worlds-direct-link{font-size:9px!important;padding:7px!important}}

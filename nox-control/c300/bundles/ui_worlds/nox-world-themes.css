@@ -1,0 +1,41 @@
+/* NOX cinematic physical-world skins. No fake sensor metrics. Theme styles are chosen by the giant itself. */
+html[data-nox-color=gold]{--nox-accent:#f7b75b;--nox-accent-bright:#ffe5ad;--nox-accent-soft:#644120;--nox-edge:#aa7a43;--nox-secondary:#64d2ba}
+html[data-nox-color=copper]{--nox-accent:#ff7851;--nox-accent-bright:#ffd0a5;--nox-accent-soft:#702819;--nox-edge:#a65339;--nox-secondary:#f7b777}
+html[data-nox-color=glacier]{--nox-accent:#70cfff;--nox-accent-bright:#e6f9ff;--nox-accent-soft:#15416a;--nox-edge:#4782c1;--nox-secondary:#c8f2ff}
+html[data-nox-color=ion]{--nox-accent:#42ecdd;--nox-accent-bright:#cffff8;--nox-accent-soft:#095453;--nox-edge:#278e9b;--nox-secondary:#81ffdc}
+html[data-nox-color=amethyst]{--nox-accent:#c793ff;--nox-accent-bright:#f0d6ff;--nox-accent-soft:#492361;--nox-edge:#9363be;--nox-secondary:#f3b2fa}
+html[data-nox-color=classic]{--nox-accent:#89bee9;--nox-accent-bright:#e9f7ff;--nox-accent-soft:#24506a;--nox-edge:#4c8ca2;--nox-secondary:#8bddb0}
+html[data-nox-skin=helion]{--nox-metal:#22170f;--nox-metal2:#5f3c21;--nox-dim:#100b08;--nox-radius:12px;--nox-sky:radial-gradient(ellipse 55% 65% at 12% 22%,#b8592467,transparent 73%),radial-gradient(ellipse 57% 60% at 83% 31%,#5c331b5a,transparent 67%),radial-gradient(ellipse 48% 42% at 45% 88%,#1b47604c,transparent 74%),linear-gradient(132deg,#0f090a,#03050c 67%,#0c101c)}
+html[data-nox-skin=obsidian]{--nox-metal:#0e1018;--nox-metal2:#342332;--nox-dim:#03040b;--nox-radius:9px;--nox-sky:radial-gradient(ellipse 63% 46% at 20% 76%,#66307050,transparent 67%),radial-gradient(ellipse 55% 60% at 80% 20%,#23446759,transparent 72%),radial-gradient(ellipse 44% 52% at 52% 42%,#361e3150,transparent 75%),linear-gradient(156deg,#080811,#030409 62%,#0b0b19)}
+html[data-nox-skin=reactor]{--nox-metal:#101c32;--nox-metal2:#174267;--nox-dim:#03091b;--nox-radius:11px;--nox-sky:radial-gradient(ellipse 68% 49% at 15% 23%,#143d8f66,transparent 74%),radial-gradient(ellipse 59% 63% at 88% 63%,#0b70ab69,transparent 73%),radial-gradient(ellipse 39% 32% at 51% 16%,#42baf244,transparent 72%),linear-gradient(115deg,#030920,#02040e 75%)}
+html[data-nox-skin=liquid]{--nox-metal:#1d2731;--nox-metal2:#516379;--nox-dim:#08111b;--nox-radius:21px;--nox-sky:radial-gradient(ellipse 55% 57% at 19% 21%,#8d9da13b,transparent 69%),radial-gradient(ellipse 66% 63% at 78% 82%,#596ca650,transparent 72%),radial-gradient(ellipse 35% 39% at 50% 28%,#d8f2fa16,transparent 70%),linear-gradient(135deg,#131927,#050912 61%,#0d1828)}
+html[data-nox-skin=aurora]{--nox-metal:#11252a;--nox-metal2:#28615e;--nox-dim:#041019;--nox-radius:18px;--nox-sky:radial-gradient(ellipse 56% 61% at 15% 68%,#069f8262,transparent 72%),radial-gradient(ellipse 51% 56% at 82% 20%,#117f9a61,transparent 75%),radial-gradient(ellipse 39% 46% at 89% 91%,#6336a753,transparent 78%),linear-gradient(115deg,#041622,#02080e 60%,#14091b)}
+html[data-nox-skin] body.helion-home .helion-stage{background:var(--nox-sky)!important;background-color:#03050a!important;transition:background-color .4s ease!important}
+html[data-nox-skin] body.helion-home{background:var(--nox-sky)!important}
+html[data-nox-skin] body.helion-home .nox-app-header.sidebar{border-color:var(--nox-accent-soft)!important}
+html[data-nox-skin] body.helion-home .helion-stage nav.home-primary-navigation>a.helion-card{border-color:color-mix(in srgb,var(--nox-accent) 40%,#b8c2da)!important}
+html[data-nox-skin] body.helion-home .helion-stage nav.home-primary-navigation>a.helion-card :is(svg,i){color:var(--nox-accent)!important;stroke:var(--nox-accent)!important}
+html[data-nox-skin] body.helion-home .helion-system,
+html[data-nox-skin] body.helion-home .helion-monitor{border-color:color-mix(in srgb,var(--nox-accent) 30%,transparent)!important}
+html[data-nox-skin] body.helion-home .helion-system .nox-flow-title{color:var(--nox-secondary)!important}
+html[data-nox-skin] body.helion-home .nox-orbital-controls{z-index:15!important}
+html[data-nox-skin] body.helion-home .nox-orbital-controls button[aria-pressed=true]::after{opacity:0!important}
+html[data-nox-skin] body.helion-home .nox-orbital-controls button .nox-three-ring{
+position:absolute!important;display:block!important;inset:0 1px 16px!important;
+border:2px solid #ffd381!important;border-radius:50%!important;
+pointer-events:none!important;z-index:21!important;
+box-shadow:0 0 0 3px #b07c2938,0 0 18px #ffbe57bf,inset 0 0 10px #ffd87869!important;
+background:none!important;filter:none!important}
+/* Do not let obsolete CSS-drawn planet surfaces appear behind the genuine WebGL meshes. */
+html[data-nox-live-rendered=yes] body.helion-home .nox-orbital-controls :is(.home-palette-planet,.nox-world-ball,.nox-gas-planet,.nox-asteroid-stone){
+opacity:0!important;visibility:hidden!important}
+html[data-nox-style-ready=yes] body.helion-home .nox-preview-ribbon{display:none!important}
+/* Keep the genuine existing black-sun layer in FRONT of the background but behind orbiting worlds. */
+html body.helion-home .helion-stage #noxEclipseCanvas{
+position:absolute!important;left:50%!important;top:50%!important;
+right:auto!important;bottom:auto!important;inset:auto!important;
+width:100vw!important;height:100vh!important;transform:translate(-50%,-50%)!important;
+z-index:2!important;pointer-events:none!important;mix-blend-mode:screen!important;}
+html body.helion-home .helion-stage #noxWorldsV3Canvas{z-index:11!important}
+@media(prefers-reduced-motion:reduce){html[data-nox-skin] body.helion-home .helion-stage{transition:none!important}}
+
