@@ -201,6 +201,14 @@ async def sci_semantic(request):
 async def glm_props(request):
     return web.json_response(hold('/glm/props: llama-server не отдаёт props (модель не подключена или обучение)'))
 
+async def agenda(request):
+    a = await board('/worms/agenda'); c = await board('/worms/agenda/check')
+    if a is None and c is None: return web.json_response(hold('повестка :8810 /worms/agenda недоступна', ideas=[]))
+    ideas = (a or {}).get('ideas') if isinstance(a, dict) else a
+    if not isinstance(ideas, list): ideas = []
+    out = [{k: i.get(k) for k in ('id', 'day', 'title', 'why', 'status', 'actions')} for i in ideas if isinstance(i, dict)][:40]
+    return web.json_response({'ok': True, 'ts': int(time.time()), 'source': ':8810 /worms/agenda', 'ideas': out, 'check': c if isinstance(c, dict) else None})
+
 app = web.Application()
 for p, h in (('/api/training/status', training), ('/api/nox/activity', activity), ('/api/notifications', notifications), ('/api/nox/status', status)):
     app.router.add_get(p, h)
@@ -208,6 +216,7 @@ app.router.add_get('/api/nox/training/status', training)
 app.router.add_get('/api/sci/arxiv', sci_arxiv)
 app.router.add_get('/api/sci/semantic', sci_semantic)
 app.router.add_get('/api/nox/self_now', self_now)
+app.router.add_get('/api/nox/agenda', agenda)
 app.router.add_get('/glm/props', glm_props)
 app.router.add_get('/api/nox/briefs', briefs)
 app.router.add_route('*', '/api/settings', settings)
