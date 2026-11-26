@@ -20,6 +20,15 @@
 html[data-nox-theme=graphite] :is(.seg>a,.seg>button,.seg>.more>button,.mnav .swiper-slide){-webkit-text-fill-color:currentColor !important;background-clip:border-box !important;-webkit-background-clip:border-box !important}
 #nxdock .nxd-cells{padding-right:52px}
 /* v3: цели 44 px на memory (граф) и calendar (FullCalendar), зум Leaflet */
-#s4mgo,#s4mfit,.fc .fc-button,.fc .fc-button-primary{min-height:44px !important;min-width:44px}
+#s4mgo,#s4mfit,.fc .fc-button,.fc .fc-button-primary{min-height:44px !important;min-width:44px !important}
 .leaflet-bar a,.leaflet-control-zoom a{min-width:44px !important;min-height:44px !important;line-height:44px !important}
 .fc .fc-col-header-cell-cushion,.fc .fc-daygrid-day-number{padding:8px;min-height:32px;display:inline-block}
+
+/* v4: главный CTA страницы: один залитый светлый акцент, остальные кнопки вторичные */
+.u-cta{background:var(--gx-12,#edeef0) !important;color:var(--gx-1,#111113) !important;-webkit-text-fill-color:var(--gx-1,#111113) !important;font-weight:700 !important;border:0 !important;min-height:44px;box-shadow:0 0 0 1px rgba(157,177,209,.35),0 6px 22px rgba(157,177,209,.22);animation:u-cta-pulse 3.2s ease-in-out infinite}
+.u-cta sl-icon{color:inherit !important}
+.u-cta:hover{filter:brightness(1.06);transform:translateY(-1px)}
+@keyframes u-cta-pulse{0%,100%{box-shadow:0 0 0 1px rgba(157,177,209,.35),0 6px 22px rgba(157,177,209,.18)}50%{box-shadow:0 0 0 1px rgba(157,177,209,.55),0 8px 30px rgba(157,177,209,.36)}}
+@media (prefers-reduced-motion:reduce){.u-cta{animation:none}}
+
+.u-sec:not(.u-cta){background:transparent !important;color:var(--gx-12,#edeef0) !important;-webkit-text-fill-color:var(--gx-12,#edeef0) !important;border:1px solid var(--gx-7,#43484e) !important;box-shadow:none !important}
