@@ -172,3 +172,12 @@ html[data-nox-theme=graphite] .monaco-editor .current-line{background:rgba(255,2
 
 /* ===== gr6: встроенный Glance (сервис со своей оранжевой темой) приглушён ===== */
 html[data-nox-theme=graphite] iframe[src*="/svc/glance"]{filter:saturate(.3)}
+
+/* TH-PALETTE: палитра сцены тонирует единственный акцент Графита (gold = штатный серебристо-голубой). Миры/материалы кнопок в Графите остаются нейтральными. */
+html[data-nox-theme=graphite][data-nox-color=copper]{--gx-acc:#f17c4d;--gx-acc-rgb:241,124,77;--gx-acc-hi:#f7a98a;--ds-acc:#f17c4d;--sl-color-primary-300:#f7a98a;--sl-color-primary-400:#f17c4d;--sl-color-primary-500:#f17c4d;--sl-color-primary-600:#f17c4d}
+html[data-nox-theme=graphite][data-nox-color=glacier]{--gx-acc:#8ec9fa;--gx-acc-rgb:142,201,250;--gx-acc-hi:#c4e3fc;--ds-acc:#8ec9fa;--sl-color-primary-300:#c4e3fc;--sl-color-primary-400:#8ec9fa;--sl-color-primary-500:#8ec9fa;--sl-color-primary-600:#8ec9fa}
+html[data-nox-theme=graphite][data-nox-color=ion]{--gx-acc:#47e0d1;--gx-acc-rgb:71,224,209;--gx-acc-hi:#9ef0e6;--ds-acc:#47e0d1;--sl-color-primary-300:#9ef0e6;--sl-color-primary-400:#47e0d1;--sl-color-primary-500:#47e0d1;--sl-color-primary-600:#47e0d1}
+html[data-nox-theme=graphite][data-nox-color=amethyst]{--gx-acc:#bf92fb;--gx-acc-rgb:191,146,251;--gx-acc-hi:#dcc4fd;--ds-acc:#bf92fb;--sl-color-primary-300:#dcc4fd;--sl-color-primary-400:#bf92fb;--sl-color-primary-500:#bf92fb;--sl-color-primary-600:#bf92fb}
+html[data-nox-theme=graphite][data-nox-color=platinum]{--gx-acc:#dce7f0;--gx-acc-rgb:220,231,240;--gx-acc-hi:#f0f5f9;--ds-acc:#dce7f0;--sl-color-primary-300:#f0f5f9;--sl-color-primary-400:#dce7f0;--sl-color-primary-500:#dce7f0;--sl-color-primary-600:#dce7f0}
+/* TH-PALETTE-FOCUS */
+html[data-nox-theme=graphite] :focus-visible{outline-color:var(--gx-acc)}

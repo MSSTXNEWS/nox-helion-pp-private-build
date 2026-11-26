@@ -44,3 +44,5 @@
     var n = 0, t = setInterval(function () { if (build() || ++n > 40) clearInterval(t); }, 250);
   });
 })();
+/* TH-PALETTE */
+(function(){try{var H=document.documentElement,p=localStorage.getItem('nox.cinematic.palette.v3')||localStorage.getItem('nox.palette.v3');if(p&&/^(gold|copper|glacier|ion|amethyst|platinum)$/.test(p)&&!H.getAttribute('data-nox-color'))H.setAttribute('data-nox-color',p)}catch(e){}})();
