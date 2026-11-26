@@ -28,7 +28,7 @@ m = PeftModel.from_pretrained(m, a.init_adapter, is_trainable=True)
 ts = time.strftime("%m%d%H%M"); out = "%s/distill_v2/ckpt_keep/cand_dpo_%s" % (W, ts)
 tr = load_dataset("json", data_files=a.data, split="train"); ev = load_dataset("json", data_files=a.eval, split="train")
 cfg = DPOConfig(output_dir=out + "_trainer", per_device_train_batch_size=1, gradient_accumulation_steps=a.accum, max_steps=a.steps, learning_rate=a.lr,
-                lr_scheduler_type="cosine", warmup_ratio=0.1, beta=a.beta, loss_type="sigmoid", rpo_alpha=a.rpo, max_length=a.max_len,
+                lr_scheduler_type="cosine", warmup_ratio=0.1, beta=a.beta, loss_type=["sigmoid", "sft"], loss_weights=[1.0, a.rpo], max_length=a.max_len,
                 fp16=True, bf16=False, optim="paged_adamw_8bit", gradient_checkpointing=True, precompute_ref_log_probs=True,
                 logging_steps=5, save_strategy="no", eval_strategy="no", report_to="none", seed=7)
 t0 = time.time()
