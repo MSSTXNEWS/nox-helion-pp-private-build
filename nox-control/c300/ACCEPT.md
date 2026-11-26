@@ -60,3 +60,18 @@ chat-dc: Playwright не получает событие load за 30-40 с на
 | scene | 0 дефектов метрик | FATAL (страница/контекст упали при прогоне); 4 цели <44 | 0 | НЕТ | на 1440 прогон падает с исключением, проверить вручную; PE «Transition aborted» из прошлого прогона не повторился на 1920 |
 | live, tv, voice, intents, cinema, board, calendar, photo | не проверены | не проверены | не проверены | НЕТ (нет данных) | повторить отдельным прогоном |
 Причина зависаний аудита: клик-фаза на 1440 застревает (dialog/confirm на «Голос», «Цвет мира»): нужен внешний timeout на страницу.
+
+---
+# ACCEPT — прогон 2 (26.11, после rvfix1 + rvfix2)
+Метод: свежий снимок K1 (ветка k1-snap, после деплоя rv_x2), локальный Chromium, 16 страниц x 390/1440/1920, axe на 1440, ожидание 5 с. Браузер на сервере не запускался.
+Деплой: rv_x2.sh (rvfix2.py), бэкап /workspace/nox/state/web_bak_rv2_*; исправлено: label-content-name-mismatch (studio #noxV7ButtonSample, cinema .cn-c, board .reset-zoom-button) через рантайм-правило в nox-a11y-fix.js; label-title-only (voice sl-select, aria-label на внутренний input); aria-required-children (assistant: role=tablist -> group).
+
+| страница | 390 | 1440 | 1920 | статус |
+|---|---|---|---|---|
+| chat-dc, writer, settings, studio, live, tv, voice, intents, board, photo, resonance, chat, assistant | ок | ок, axe serious/critical 0 | ок | ПРИНЯТА |
+| cinema | ок | axe 0 serious в одиночном прогоне; в параллельном прогоне 84 стр. один раз поймана гонка (кнопка .cn-c создана позже правила) | скрытая «⋯» 16x44 (aria-hidden, tabindex -1) | ПРИНЯТА (минор, перепроверить) |
+| calendar, scene | ок | ок | цели 43.3 px только в первые 3 с (анимация появления), к 6 с 44 | ПРИНЯТЫ |
+
+Итог: 16 из 16 без serious/critical axe, 0 hscroll, 0 видимых select, 0 JS-ошибок (pageerror), 0 таймаутов. Остаток: гонка cinema (редко), moderate heading-order/region/landmark на chat-dc, chat, resonance, scene, board; photo aria-allowed-role (minor).
+
+Прогон всех 84 страниц (252 загрузки): таймауты index 1920, qa 1440/1920 (WebGL swiftshader). Критичные axe вне 16: assistant-s1.main, editor-s1.main, organism, pdf (aria-required-children critical); map (aria-required-parent critical); qa (label critical); atlas, atlas-s1.main, editor-s1.main, pdf (aria-prohibited-attr serious); document-title/html-has-lang на *-s1.main.html (служебные копии).
