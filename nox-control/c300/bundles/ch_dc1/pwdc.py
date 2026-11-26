@@ -19,6 +19,9 @@ with sync_playwright() as p:
             pg.wait_for_timeout(500)
         print(w,'first',first,'total',round(time.time()-t0,1),pg.evaluate("[document.querySelector('.dc-head').offsetHeight,document.documentElement.getAttribute('data-nox-theme'),[...document.querySelector('deep-chat').shadowRoot.querySelectorAll('.ai-message-text')].pop().innerText.slice(0,200)]"),errs[:2])
         pg.screenshot(path='/tmp/dc%d.jpg'%w,type='jpeg',quality=60)
-        if w!=2560: print('B64BEGIN');print(base64.b64encode(open('/tmp/dc%d.jpg'%w,'rb').read()).decode()[:0]);print('B64END')
+        import textwrap
+        if os.environ.get('SHOT','1')=='1' and w!=2560:
+            pg.screenshot(path='/tmp/dcs%d.jpg'%w,type='jpeg',quality=38);d=base64.b64encode(open('/tmp/dcs%d.jpg'%w,'rb').read()).decode()
+            print('B64BEGIN%d'%w);print('\n'.join(textwrap.wrap(d,170)));print('B64END%d'%w)
         pg.close()
     b.close()
