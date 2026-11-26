@@ -2,7 +2,9 @@
 S=/workspace/nox/web/site; cd $S; TS=$(date +%s)
 export PLAYWRIGHT_BROWSERS_PATH=/workspace/nox/tools/ms-playwright; PY=/workspace/nox/venv/bin/python; export PATH=/workspace/nox/tools/node/bin:$PATH
 ok(){ grep -q "graphite" nox-theme.js 2>/dev/null && [ -s nox-graphite.css ] && [ -s nox-graphite-map.css ] && grep -q "TH-GRAPHITE" nox-wow-bg.js && grep -q "NOXiconUrl" nox-nav.js && [ -s nox-motion.js ] && [ -d vendor/lucide/icons ]; }
-if [ "$1" != force ] && ok; then echo "TH_MARKER_OK"; exit 0; fi
+
+synchro(){ curl -fsSL --retry 5 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/bundles/th_graphite/webroot_sync.sh -o /tmp/webroot_sync.sh && bash /tmp/webroot_sync.sh; }
+if [ "$1" != force ] && ok; then echo "TH_MARKER_OK"; synchro; exit 0; fi
 echo "TH_REAPPLY"
 R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/bundles/th_graphite
 G=/tmp/th_ens; rm -rf $G; mkdir -p $G
@@ -15,3 +17,4 @@ mkdir -p vendor/nox-x/filerobot; cp $G/fie-i18n.json vendor/nox-x/filerobot/
 $PY $G/patch.py $S | grep -v "^already" | tr '\n' ';'; echo
 $PY $G/th_gen_map.py $S $S/nox-graphite-map.css
 if ok; then echo "TH_REAPPLY_OK"; else echo "TH_REAPPLY_INCOMPLETE"; for c in "grep -q graphite nox-theme.js" "grep -q TH-GRAPHITE nox-wow-bg.js" "grep -q NOXiconUrl nox-nav.js" "[ -s nox-graphite-map.css ]"; do eval "$c" && echo "  ok: $c" || echo "  MISSING: $c"; done; fi
+synchro
