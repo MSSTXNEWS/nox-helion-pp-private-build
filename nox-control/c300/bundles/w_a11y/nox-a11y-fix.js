@@ -15,6 +15,8 @@ $$('[aria-selected]:not([role]),.FIE_tab[aria-selected],.FIE_crop-tool[aria-sele
 $$('button:not([aria-label])',function(e){if(e.textContent.trim()||e.getAttribute('aria-labelledby')||e.querySelector('img[alt]'))return;e.setAttribute('aria-label',e.title||e.getAttribute('data-tooltip')||'Кнопка')});
 $$('.fc-icon[role=img]',function(e){e.removeAttribute('role');e.setAttribute('aria-hidden','true')});
 $$('.fc-scroller:not([tabindex])',function(e){var o=getComputedStyle(e);if(/(auto|scroll)/.test(o.overflowX+o.overflowY)&&(e.scrollWidth>e.clientWidth||e.scrollHeight>e.clientHeight)){e.setAttribute('tabindex','0');if(!e.getAttribute('role')){e.setAttribute('role','region');e.setAttribute('aria-label','Прокручиваемая область календаря')}}});
+$$('.fc-view-harness div:not([tabindex])',function(e){var o=getComputedStyle(e);if(/(auto|scroll)/.test(o.overflowX+o.overflowY)&&(e.scrollWidth>e.clientWidth+1||e.scrollHeight>e.clientHeight+1)){e.setAttribute('tabindex','0')}});
+if(!document.querySelector('h2,h3'))$$('h4',function(e){if(!e.hasAttribute('aria-level'))e.setAttribute('aria-level','2')});
 $$('#k4-nl > h3',function(e){e.setAttribute('aria-level','2')});
 }
 var t=0;function sch(){clearTimeout(t);t=setTimeout(fix,250)}
