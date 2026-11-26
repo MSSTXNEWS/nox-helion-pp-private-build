@@ -1,4 +1,4 @@
-echo "C300: w_t6"
+echo "C300: w_t9"
 N=/workspace/nox; S=$N/web/site; R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/bundles
 ok=0; for k in 1 2 3 4 5 6 7 8; do t=$(date +%s)$k
  curl -fsSL "$R/ch_dc1/nox-dc-live.js?cb=$t" -o /tmp/live.js; curl -fsSL "$R/ch_dc1/nox-dc-fix.js?cb=$t" -o /tmp/fix.js
