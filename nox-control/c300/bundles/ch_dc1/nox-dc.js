@@ -151,6 +151,15 @@ $('#dcNew').onclick=function(){if(busy)return;var t={id:uid(),title:'Новый 
 $('#dcThreads').onclick=function(){var a=$('#dcThr');renderThr();a.hidden=!a.hidden};
 document.addEventListener('click',function(e){var a=$('#dcThr');if(!a.hidden&&!e.target.closest('#dcThr,#dcThreads'))a.hidden=true});
 $('#dcPad').onclick=function(){if(window.NOXNote)NOXNote.toggle();else toast('Блокнот загружается…')};
+
+/* стекло: оригинал V29.3 (vendor/nox-liquid-glass = kwlck/liquid-glass-web), на шапку, подложку поля и 1-2 карточки; ECO/слабое железо: CSS-фолбэк */
+(function(){var q=[],mod=null;var eco=false;try{eco=LS.g('nox.eco','')==='1'||matchMedia('(prefers-reduced-transparency: reduce)').matches||(navigator.hardwareConcurrency||8)<4}catch(e){}
+ var l=document.createElement('link');l.rel='stylesheet';l.href='./vendor/nox-liquid-glass/liquid-glass.css';document.head.appendChild(l);
+ function apply(el,o){try{el.classList.add('lg-host');mod.createLiquidGlass(el,Object.assign({refraction:60,blur:12,light:14,radius:16,shape:'rounded',mode:eco?'css':'auto',pointer:false},o||{}))}catch(e){el.classList.add('lg-host')}}
+ window.NOXdcGlass=function(el,o){if(mod)apply(el,o);else q.push([el,o])};
+ import('./vendor/nox-liquid-glass/liquid-glass.js').then(function(m){mod=m;q.splice(0).forEach(function(x){apply(x[0],x[1])})}).catch(function(){});
+ var h=$('#dcHead');if(h)NOXdcGlass(h,{radius:0});var gd=$('#dcGlassDock');if(gd)NOXdcGlass(gd,{radius:18});
+})();
 title();
 if(cur.msgs.length&&cur.msgs[cur.msgs.length-1].role!=='user')setTimeout(function(){actsFor(cur.msgs[cur.msgs.length-1].content,null,'')},700);
 /* NOX пишет первым: тост, без перекрытия ленты */

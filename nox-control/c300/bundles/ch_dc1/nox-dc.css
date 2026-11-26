@@ -51,3 +51,11 @@ body.dc-mini{grid-template-rows:minmax(0,1fr)}body.dc-mini .dc-head,body.dc-mini
 .dc-w{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:12px;color:var(--dc-mu)}.dc-w b{color:var(--dc-tx);font-weight:500}
 
 .dc-col h2{margin-bottom:12px}.dc-cmd,.dc-pr{min-height:36px;margin-bottom:8px}
+
+#dcGlassDock{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;width:min(860px,calc(100% - 16px));height:88px;pointer-events:none;z-index:0;--lg-tint:rgb(255 255 255 / .04)}
+.dc-main{position:relative}deep-chat{position:relative;z-index:1}
+.dc-head.lg-host{background:transparent!important;-webkit-backdrop-filter:none;backdrop-filter:none;--lg-tint:rgb(255 255 255 / .05)}
+.dc-gl{position:relative;isolation:isolate;border-radius:12px;--lg-tint:rgb(255 255 255 / .045);width:100%}
+.dc-gl sl-card::part(base){background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
+.lg-sheen{opacity:.1!important}
+body.dc-mini #dcGlassDock{display:none}
