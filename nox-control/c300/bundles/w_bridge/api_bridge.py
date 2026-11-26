@@ -37,6 +37,23 @@ def last_round():
     except Exception: pass
     return r, best
 
+SLOT_PORTS = {'8104': 'vision', '8811': 'llama-8811', '8812': 'llama-8812', '8151': 'llama-8151', '8152': 'llama-8152'}
+
+async def slots_state():
+    """Реальный счётчик: llama-server /slots, is_processing. None если ни один не ответил."""
+    async def one(sess, port):
+        try:
+            async with sess.get('http://127.0.0.1:%s/slots' % port) as r:
+                if r.status != 200: return None
+                j = await r.json(content_type=None)
+                return sum(1 for x in j if x.get('is_processing')) if isinstance(j, list) else None
+        except Exception: return None
+    async with ClientSession(timeout=ClientTimeout(total=2)) as sess:
+        res = await asyncio.gather(*[one(sess, p) for p in SLOT_PORTS])
+    ok = {SLOT_PORTS[p]: c for p, c in zip(SLOT_PORTS, res) if c is not None}
+    if not ok: return None
+    return {'active_generations': sum(ok.values()), 'per_server': ok, 'servers_observed': len(ok), 'sampled_at': time.time(), 'source': 'llama-server /slots is_processing'}
+
 async def training(request):
     v = rj(N + '/state/p3/train_verdict.json'); r, b = last_round()
     if not v and not r: return web.json_response(hold('нет train_verdict.json и round_last.json'))
@@ -58,6 +75,8 @@ async def training(request):
     if v: d['phase'] = v.get('verdict')
     if r: d['cycle'] = r.get('round')
     if b and b.get('step') is not None: d['step'] = b.get('step')
+    sl = await slots_state()
+    if sl: d['generation_slots'] = sl
     return web.json_response(d)
 
 async def activity(request):
@@ -71,8 +90,11 @@ async def activity(request):
          'active': len(cols.get('В работе', [])) > 0, 'items': items, 'recent_done': done}
     if h:
         d.update({'running': h.get('running'), 'queued': h.get('queued'), 'inflight': h.get('inflight')})
-        if isinstance(h.get('inflight'), int):
-            d.update({'status': 'OBSERVED_NATIVE_OWNER', 'active_generations': h['inflight'], 'sampled_at': time.time(), 'phases': {}})
+    sl = await slots_state()
+    if sl:
+        d.update({'status': 'OBSERVED_NATIVE_OWNER', 'active_generations': sl['active_generations'], 'sampled_at': sl['sampled_at'], 'phases': {}, 'generation_source': sl['source'], 'per_server': sl['per_server']})
+    else:
+        d.update({'status': 'HOLD', 'hold': True, 'hold_reason': 'счётчик генераций недоступен (/slots не отвечает)'})
     if not items: d['note'] = 'Активных задач нет'
     return web.json_response(d)
 
@@ -133,6 +155,7 @@ async def status(request):
 app = web.Application()
 for p, h in (('/api/training/status', training), ('/api/nox/activity', activity), ('/api/notifications', notifications), ('/api/nox/status', status)):
     app.router.add_get(p, h)
+app.router.add_get('/api/nox/training/status', training)
 app.router.add_route('*', '/api/settings', settings)
 if __name__ == '__main__':
     web.run_app(app, host='127.0.0.1', port=PORT, print=None)
