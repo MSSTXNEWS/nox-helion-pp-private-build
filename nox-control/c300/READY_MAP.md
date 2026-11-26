@@ -63,3 +63,15 @@
 | ⌘K | ЕСТЬ самописный (nox-cmd, nox-ninja) | kbar/cmdk (есть в vendor) |
 
 Блокер: ТЗ веба на Диске (5 миров, 6 цветов, «МАКСИМАЛЬНАЯ ЗАГРУЗКА ГОТОВОГО», 125 репозиториев NOX WOW) подключить Google Drive коннектором в основной сессии и прочитать; без него строки про миры и цвета остаются «ПРОВЕРИТЬ».
+
+## Интернет-кандидаты для заглушек (WebSearch 26.11; звёзды GitHub и демо НЕ проверены, поиск их не вернул)
+
+| Страница | Интернет-кандидат 1 | 2 | 3 | Источник |
+|---|---|---|---|---|
+| calls | Jitsi Meet (Apache-2.0) | LiveKit (Apache-2.0, SFU + JS SDK) | MiroTalk SFU (AGPL, проверить лицензию) | https://webrtc.ventures/2026/06/open-source-webrtc-media-servers/ , https://selfhosting-sh.pages.dev/best/video-conferencing/ |
+| messenger / social | Deep Chat (MIT, уже в vendor) | chatscope chat-ui-kit-react (MIT) | Element Web / matrix-react-sdk (Apache-2.0, тяжёлый) | https://github.com/Tantuss/chat-ui-kit-react , https://medevel.com/react-chat-ui/ |
+| finance / money | Firefly III (AGPL, бэкенд PHP, не встроить) | Actual Budget (MIT) | ECharts + Tabulator как UI поверх своих данных | https://firefly-iii.org/ , https://openalternative.co/alternatives/actual |
+| pc-control / pc-maintenance | Apache Guacamole (Apache-2.0, HTML5 клиент) | MeshCentral (Apache-2.0) | noVNC (MPL-2.0) | https://guacamole.apache.org/ , https://www.linuxlinks.com/meshcentral-web-based-remote-computer-management-platform/ |
+| browser, games, social | не искал | | | следующий проход |
+
+Оговорка: решение «брать интернет-движок вместо оригинала» требует проверки лицензии (AGPL/MPL), размера и демо; пока это только список кандидатов.
