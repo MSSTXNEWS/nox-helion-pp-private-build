@@ -119,3 +119,6 @@ body.dc-mini #dcGlassDock{display:none}
  body:not(.dc-mini) deep-chat{max-width:820px}
  .dc-main deep-chat{font-size:18px}
 }
+
+/* v12 (WEB): цели касания 44 px */
+.dc-b{min-height:44px}.dc-brand{min-height:44px;display:inline-flex;align-items:center}
