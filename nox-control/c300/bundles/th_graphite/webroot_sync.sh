@@ -7,6 +7,10 @@ for f in $(ls | grep -E '^(.*\.html|nox-.*\.(js|css|svg)|nav\.json|roles\.json|m
   [ -f "$f" ] || continue
   if ! cmp -s "$f" "$P/$f"; then [ -f "$P/$f" ] && cp -p "$P/$f" "$BK/$f"; cp -p "$f" "$P/$f" && n=$((n+1)); fi
 done
-for d in vendor/lucide; do [ -d $S/$d ] && [ ! -d $P/$d ] && { mkdir -p $P/$(dirname $d) && cp -a $S/$d $P/$d && echo "synced dir $d"; }; done
-[ -d $S/vendor/nox-x/filerobot ] && [ -f $S/vendor/nox-x/filerobot/fie-i18n.json ] && [ -d $P/vendor/nox-x/filerobot ] && ! cmp -s $S/vendor/nox-x/filerobot/fie-i18n.json $P/vendor/nox-x/filerobot/fie-i18n.json && { cp -p $S/vendor/nox-x/filerobot/fie-i18n.json $S/vendor/nox-x/filerobot/filerobot-image-editor.min.js $P/vendor/nox-x/filerobot/ && n=$((n+2)); }
+# done_10.sh (agent, 22.11) при перезапуске делает cp -a pkg/webroot/. site/ && cp -a pkg/vendor site/ -> vendor тоже синхронизируем
+PV=$W/pkg/vendor
+if [ -d $PV ]; then
+  [ -d $S/vendor/lucide ] && [ ! -d $PV/lucide ] && { cp -a $S/vendor/lucide $PV/lucide && echo "synced pkg/vendor/lucide"; }
+  for f in fie-i18n.json filerobot-image-editor.min.js; do if [ -f $S/vendor/nox-x/filerobot/$f ] && [ -d $PV/nox-x/filerobot ] && ! cmp -s $S/vendor/nox-x/filerobot/$f $PV/nox-x/filerobot/$f; then mkdir -p $BK/vendor_filerobot; [ -f $PV/nox-x/filerobot/$f ] && cp -p $PV/nox-x/filerobot/$f $BK/vendor_filerobot/; cp -p $S/vendor/nox-x/filerobot/$f $PV/nox-x/filerobot/$f; n=$((n+1)); fi; done
+else echo "нет $PV"; fi
 echo "WEBROOT_SYNC: обновлено $n файлов, бэкап $BK ($(ls $BK | wc -l) шт.)"
