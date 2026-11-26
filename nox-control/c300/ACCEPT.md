@@ -75,3 +75,12 @@ chat-dc: Playwright не получает событие load за 30-40 с на
 Итог: 16 из 16 без serious/critical axe, 0 hscroll, 0 видимых select, 0 JS-ошибок (pageerror), 0 таймаутов. Остаток: гонка cinema (редко), moderate heading-order/region/landmark на chat-dc, chat, resonance, scene, board; photo aria-allowed-role (minor).
 
 Прогон всех 84 страниц (252 загрузки): таймауты index 1920, qa 1440/1920 (WebGL swiftshader). Критичные axe вне 16: assistant-s1.main, editor-s1.main, organism, pdf (aria-required-children critical); map (aria-required-parent critical); qa (label critical); atlas, atlas-s1.main, editor-s1.main, pdf (aria-prohibited-attr serious); document-title/html-has-lang на *-s1.main.html (служебные копии).
+
+---
+# ACCEPT — прогон 3 (26.11, после rvfix3)
+Метод: свежий снимок K1 (k1-snap, содержит rvfix3), локальный Chromium, 24 страницы (16 основных + organism, pdf, assistant-s1.main, editor-s1.main, map, qa, atlas, atlas-s1.main) x 390/1440/1920, 8 воркеров, ожидание 5 с, axe на 1440.
+Результат: 72 загрузки, 0 JS-ошибок, 0 hscroll, 0 видимых select, 0 таймаутов.
+serious/critical axe: 0 на 23 из 24 страниц. Закрыты: organism, map, qa, atlas, atlas-s1.main, assistant-s1.main, editor-s1.main, гонка cinema; 16 основных страниц чистые.
+ОСТАЛОСЬ: pdf.html — aria-required-children critical мигает (в одиночном прогоне чисто, при 8 воркерах виден). Причина: в pdf.html и editor.html `<div class="ed-tabs" role="tablist">` содержит sl-tab-group (нет прямых role=tab), a11y-fix снимает роль только если role=tab нет. Лечение (rvfix4, не выложено): заменить role="tablist" на role="group" в pdf.html и editor.html, как в assistant.html.
+Мелочи, не дефекты: цели 43.3 px на 1920 первые секунды (анимация); малые цели <44 в служебных *-s1.main.html (фрагменты без CSS), qa (86 целей <44, служебная страница), map (3), pdf «‹» 36x44.
+Moderate не трогались: region, heading-order, landmark.
