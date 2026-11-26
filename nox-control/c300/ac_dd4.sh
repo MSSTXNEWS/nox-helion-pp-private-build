@@ -1,0 +1,31 @@
+echo "C300: ac_dd4"
+D=/workspace/nox/tmp/dd; V=/workspace/nox/venv/bin/python
+F=/workspace/nox/ops/v5_knowledge_gpu_20261125/knowledge-rows.jsonl
+wc -l $F; head -c 500 $F; echo
+cat > $D/dd2.py <<'PY'
+import sys,json,re,time
+sys.path.insert(0,'/workspace/nox/tmp/dd')
+from datasketch import MinHash, MinHashLSH
+F=sys.argv[1]
+def txt(r):
+    if isinstance(r,dict): return ' '.join(txt(v) for v in r.values())
+    if isinstance(r,list): return ' '.join(txt(v) for v in r)
+    return r if isinstance(r,str) else ''
+t=time.time(); lsh=MinHashLSH(threshold=0.85,num_perm=64); n=dup=0; ex=[]; exact=set(); ed=0
+for i,l in enumerate(open(F)):
+    try: r=json.loads(l)
+    except Exception: continue
+    s=txt(r)[:3000].lower(); n+=1
+    h=hash(s)
+    if h in exact: ed+=1
+    exact.add(h)
+    w=re.findall(r'\w+',s); sh={' '.join(w[j:j+5]) for j in range(max(1,len(w)-4))}
+    m=MinHash(num_perm=64)
+    for x in sh: m.update(x.encode())
+    c=lsh.query(m)
+    if c: dup+=1; ex.append((i,int(c[0])))
+    else: lsh.insert(str(i),m)
+    if time.time()-t>230: print('TIME CUT at',n); break
+print('rows',n,'exact-dups',ed,'near-dups(J>=0.85,5-gram)',dup,'%.1f%%'%(100*dup/max(n,1)),'sec %.0f'%(time.time()-t)); print(ex[:8])
+PY
+nice -n 19 taskset -c 4-7,20-23 timeout 260 $V -I $D/dd2.py $F 2>&1 | tail -5 | cut -c1-300
